@@ -8,7 +8,7 @@ export const defaultDatabaseUrl =
   "postgresql://cowards:cowards@localhost:5432/cowards_game"
 
 export const loadDatabaseConfig = (
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): DatabaseConfig => ({
   connectionString: env.DATABASE_URL ?? defaultDatabaseUrl,
 })

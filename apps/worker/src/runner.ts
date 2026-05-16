@@ -1,4 +1,5 @@
 import { buildChronicleFromMatch } from "@cowards/replay"
+import { setTimeout as sleep } from "node:timers/promises"
 import {
   createRepositories,
   claimNextMatchJob,
@@ -22,17 +23,11 @@ export interface WorkerRunnerOptions {
 
 export interface WorkerRunnerDependencies {
   claimNextMatchJob: typeof claimNextMatchJob
-  loadRunMatchInput: (
-    pool: Pool,
-    matchId: string,
-  ) => Promise<RunMatchInput>
+  loadRunMatchInput: (pool: Pool, matchId: string) => Promise<RunMatchInput>
   buildChronicleFromMatch: typeof buildChronicleFromMatch
   completeMatch: typeof completeMatch
   recordAttemptFailure: typeof recordAttemptFailure
 }
-
-const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms))
 
 export const createSideDispatchRuntime = (
   bottomRuntime: StrategyRuntime,
@@ -152,13 +147,12 @@ export const runWorkerLoop = async (
   dependencies: WorkerRunnerDependencies = defaultDependencies,
 ): Promise<void> => {
   const pollMs = options.pollMs ?? 1_000
-  do {
+  let shouldContinue = true
+  while (shouldContinue) {
     await runWorkerOnce(pool, options, dependencies)
-    if (options.once) {
-      break
-    }
+    shouldContinue = options.once !== true
     await sleep(pollMs)
-  } while (true)
+  }
 }
 
 export const createClaimedMatchJobForTest = (

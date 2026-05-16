@@ -43,9 +43,7 @@ export const MATCH_SET_PRESETS = [
   },
 ] as const satisfies readonly MatchSetPreset[]
 
-export const getMatchSetPreset = (
-  id: MatchSetPresetId,
-): MatchSetPreset => {
+export const getMatchSetPreset = (id: MatchSetPresetId): MatchSetPreset => {
   const preset = MATCH_SET_PRESETS.find((candidate) => candidate.id === id)
   if (!preset) {
     throw new Error(`Unknown MatchSet preset: ${id}`)

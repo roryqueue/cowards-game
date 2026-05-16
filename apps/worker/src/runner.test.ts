@@ -6,9 +6,7 @@ import { createClaimedMatchJobForTest, runWorkerOnce } from "./runner.js"
 const pool = {} as Pool
 
 const baseDependencies = (): WorkerRunnerDependencies => ({
-  claimNextMatchJob: vi
-    .fn()
-    .mockResolvedValue(createClaimedMatchJobForTest()),
+  claimNextMatchJob: vi.fn().mockResolvedValue(createClaimedMatchJobForTest()),
   loadRunMatchInput: vi.fn().mockResolvedValue({}),
   buildChronicleFromMatch: vi.fn().mockReturnValue({
     chronicle: {

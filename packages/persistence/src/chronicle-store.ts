@@ -1,7 +1,4 @@
-import {
-  createChronicleContentHash,
-  validateChronicle,
-} from "@cowards/replay"
+import { createChronicleContentHash, validateChronicle } from "@cowards/replay"
 import type {
   ArenaVariantId,
   Chronicle,
@@ -68,7 +65,9 @@ export const createChronicleMetadata = (
   const hash = createChronicleContentHash(chronicle).normalizedContentHash
   const [bottomStrategyRevisionId, topStrategyRevisionId] =
     chronicle.reproducibility.strategyRevisionIds
-  const started = chronicle.events.find((event) => event.type === "MATCH_STARTED")
+  const started = chronicle.events.find(
+    (event) => event.type === "MATCH_STARTED",
+  )
   const bottomPlayerId =
     typeof started?.payload === "object" && started.payload !== null
       ? "player:bottom"

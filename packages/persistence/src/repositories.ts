@@ -129,9 +129,7 @@ export const createRepositories = (db: Queryable) => ({
     }
   },
 
-  async assertStrategyRevisionCanBeUsed(
-    id: StrategyRevisionId,
-  ): Promise<void> {
+  async assertStrategyRevisionCanBeUsed(id: StrategyRevisionId): Promise<void> {
     const revision = await this.getStrategyRevision(id)
     if (!revision) {
       throw new Error(`StrategyRevision not found: ${id}`)

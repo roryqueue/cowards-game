@@ -23,12 +23,10 @@ const matchInput: CreateMatchInput = {
 describe("match creation contracts", () => {
   it("requires seed and explicit locked side assignment inputs", () => {
     expect(() => validateCreateMatchInput(matchInput)).not.toThrow()
-    expect(() =>
-      validateCreateMatchInput({ ...matchInput, seed: "" }),
-    ).toThrow("Match seed is required")
-    expect(matchInput.bottomStrategyRevisionId).toBe(
-      "strategy-revision:bottom",
+    expect(() => validateCreateMatchInput({ ...matchInput, seed: "" })).toThrow(
+      "Match seed is required",
     )
+    expect(matchInput.bottomStrategyRevisionId).toBe("strategy-revision:bottom")
     expect(matchInput.topStrategyRevisionId).toBe("strategy-revision:top")
     expect(matchInput.bottomPlayerId).toBe("player:bottom")
     expect(matchInput.topPlayerId).toBe("player:top")
@@ -36,9 +34,7 @@ describe("match creation contracts", () => {
 
   it("uses the fixed Phase 5 retry count for queued jobs", () => {
     expect(DEFAULT_MAX_JOB_ATTEMPTS).toBe(3)
-    expect(createMatchJobId("match:test:001")).toBe(
-      "match-job:match:test:001",
-    )
+    expect(createMatchJobId("match:test:001")).toBe("match-job:match:test:001")
   })
 
   it("blocks locked_at StrategyRevision content mutations", () => {

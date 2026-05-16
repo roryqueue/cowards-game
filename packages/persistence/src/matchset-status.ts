@@ -31,7 +31,10 @@ export const determineMatchSetStatus = (
   scoring: MatchSetScore,
   statuses: readonly MatchStatus[],
 ): MatchSetStatus => {
-  if (statuses.length === 0 || statuses.every((status) => status === "pending")) {
+  if (
+    statuses.length === 0 ||
+    statuses.every((status) => status === "pending")
+  ) {
     return "pending"
   }
   if (statuses.some((status) => status === "running")) {

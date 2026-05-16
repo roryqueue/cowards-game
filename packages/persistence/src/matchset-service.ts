@@ -6,14 +6,8 @@ import type {
 } from "@cowards/spec"
 import type { Pool } from "pg"
 import { withTransaction } from "./db.js"
-import {
-  createMatchJobId,
-  type CreateMatchInput,
-} from "./match-service.js"
-import {
-  getMatchSetPreset,
-  type MatchSetPresetId,
-} from "./presets.js"
+import { createMatchJobId, type CreateMatchInput } from "./match-service.js"
+import { getMatchSetPreset, type MatchSetPresetId } from "./presets.js"
 import type { MatchSetStatus } from "./schema.js"
 
 export interface CreateMatchSetFromMatrixInput {

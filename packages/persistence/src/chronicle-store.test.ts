@@ -18,10 +18,7 @@ const validChronicle = (): Chronicle => ({
     seed: "seed:chronicle:001",
     arenaVariantId: "arena:smoke:v1",
     arenaVariantVersion: "arena-v1",
-    strategyRevisionIds: [
-      "strategy-revision:bottom",
-      "strategy-revision:top",
-    ],
+    strategyRevisionIds: ["strategy-revision:bottom", "strategy-revision:top"],
     versions: {
       spec: "1.0.0",
       engine: "0.1.0",
