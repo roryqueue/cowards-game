@@ -85,7 +85,28 @@ const applyRuntimeViolation = (
   violation: RuntimeViolation,
   advanced: boolean,
 ): TransitionResult => {
-  const events = [event("RUNTIME_VIOLATION", violation)]
+  const events = [
+    event(
+      "RUNTIME_VIOLATION",
+      {
+        soldierId: soldier.id,
+        ownerPlayerId: soldier.ownerPlayerId,
+        type: violation.type,
+      },
+      {
+        context: {
+          actingPlayerId: soldier.ownerPlayerId,
+          soldierId: soldier.id,
+        },
+        privacy: "owner",
+        privatePayload: {
+          soldierId: soldier.id,
+          ownerPlayerId: soldier.ownerPlayerId,
+          violation,
+        },
+      },
+    ),
+  ]
   if (advanced || soldier.status === "FALLEN") {
     return { state, events }
   }
@@ -109,7 +130,17 @@ export const resolveActivationSelection = (
   if (!result.ok) {
     return {
       state: { state, orders: [] },
-      events: [event("RUNTIME_VIOLATION", result.violation)],
+      events: [
+        event(
+          "RUNTIME_VIOLATION",
+          { playerId, type: result.violation.type },
+          {
+            context: { actingPlayerId: playerId },
+            privacy: "owner",
+            privatePayload: { playerId, violation: result.violation },
+          },
+        ),
+      ],
     }
   }
 
@@ -118,10 +149,21 @@ export const resolveActivationSelection = (
     return {
       state: { state, orders: [] },
       events: [
-        event("RUNTIME_VIOLATION", {
-          type: "INVALID_OUTPUT",
-          message: parsed.error.message,
-        }),
+        event(
+          "RUNTIME_VIOLATION",
+          { playerId, type: "INVALID_OUTPUT" },
+          {
+            context: { actingPlayerId: playerId },
+            privacy: "owner",
+            privatePayload: {
+              playerId,
+              violation: {
+                type: "INVALID_OUTPUT",
+                message: parsed.error.message,
+              },
+            },
+          },
+        ),
       ],
     }
   }
@@ -140,7 +182,20 @@ export const resolveActivationSelection = (
       state: nextState,
       orders: validOrders(nextState, playerId, parsed.data.activationOrders),
     },
-    events: [event("STRATEGY_EVALUATED", { playerId })],
+    events: [
+      event(
+        "STRATEGY_EVALUATED",
+        { playerId },
+        {
+          context: { actingPlayerId: playerId },
+          privacy: "owner",
+          privatePayload: {
+            playerId,
+            strategyMemory: parsed.data.strategyMemory,
+          },
+        },
+      ),
+    ],
   }
 }
 
@@ -183,7 +238,28 @@ export const resolveActivation = (
       cycleIndex,
       objective,
     )
-    events.push(event("AWARENESS_GRID_OBSERVED", { soldierId, cycleIndex }))
+    events.push(
+      event(
+        "AWARENESS_GRID_OBSERVED",
+        { soldierId, cycleIndex },
+        {
+          context: {
+            soldierId,
+            cycleIndex,
+            actingPlayerId: soldier.ownerPlayerId,
+          },
+          privacy: "owner",
+          privatePayload: {
+            soldierId,
+            ownerPlayerId: soldier.ownerPlayerId,
+            cycleIndex,
+            awarenessGrid: input.awarenessGrid,
+            objectiveRef: { hasObjective: objective !== undefined },
+            objectivePayload: objective,
+          },
+        },
+      ),
+    )
     const runtimeResult = runtime.runSoldierBrain(input)
     if (!runtimeResult.ok) {
       const violationResult = applyRuntimeViolation(
@@ -213,7 +289,23 @@ export const resolveActivation = (
       soldierMemory: parsed.data.soldierMemory,
     })
     events.push(
-      event("ACTION_EMITTED", { soldierId, action: parsed.data.action }),
+      event(
+        "ACTION_EMITTED",
+        { soldierId, action: parsed.data.action },
+        {
+          context: {
+            soldierId,
+            cycleIndex,
+            actingPlayerId: soldier.ownerPlayerId,
+          },
+          privacy: "owner",
+          privatePayload: {
+            soldierId,
+            ownerPlayerId: soldier.ownerPlayerId,
+            soldierMemory: parsed.data.soldierMemory,
+          },
+        },
+      ),
     )
     const actionResult = resolveAction(current, soldierId, parsed.data.action, {
       advanced,

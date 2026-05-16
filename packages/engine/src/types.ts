@@ -2,7 +2,9 @@ import type {
   ActivationOrder,
   ArenaVariant,
   BoardBounds,
+  ChronicleEventContext,
   ChronicleEventType,
+  ChroniclePrivacy,
   CompatibilityVersions,
   JsonValue,
   MatchId,
@@ -57,6 +59,9 @@ export interface TransitionEventSummary {
   type: ChronicleEventType
   sequence: number
   payload: JsonValue
+  context?: ChronicleEventContext | undefined
+  privacy?: ChroniclePrivacy | undefined
+  privatePayload?: JsonValue | undefined
 }
 
 export interface TransitionResult<TState = GameState> {
@@ -129,8 +134,14 @@ export const violation = <T = never>(
 export const event = (
   type: ChronicleEventType,
   payload: unknown = {},
+  options: {
+    context?: ChronicleEventContext | undefined
+    privacy?: ChroniclePrivacy | undefined
+    privatePayload?: JsonValue | undefined
+  } = {},
 ): TransitionEventSummary => ({
   type,
   sequence: 0,
   payload: payload as JsonValue,
+  ...options,
 })
