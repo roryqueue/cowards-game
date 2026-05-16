@@ -63,13 +63,28 @@ importers:
 
   apps/worker:
     dependencies:
+      '@cowards/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@cowards/persistence':
+        specifier: workspace:*
+        version: link:../../packages/persistence
+      '@cowards/replay':
+        specifier: workspace:*
+        version: link:../../packages/replay
       '@cowards/runtime-js':
         specifier: workspace:*
         version: link:../../packages/runtime-js
       '@cowards/spec':
         specifier: workspace:*
         version: link:../../packages/spec
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
     devDependencies:
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
       tsx:
         specifier: ^4.21.0
         version: 4.22.0

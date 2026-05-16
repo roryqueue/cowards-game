@@ -11,10 +11,15 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@cowards/engine": "workspace:*",
+    "@cowards/persistence": "workspace:*",
+    "@cowards/replay": "workspace:*",
     "@cowards/runtime-js": "workspace:*",
-    "@cowards/spec": "workspace:*"
+    "@cowards/spec": "workspace:*",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
+    "@types/pg": "^8.20.0",
     "tsx": "^4.21.0"
   }
 }
