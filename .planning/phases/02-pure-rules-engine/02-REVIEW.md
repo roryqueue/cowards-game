@@ -1,23 +1,23 @@
 ---
 phase: 2
 phase_name: Pure Rules Engine
-status: fixed
-depth: standard
+status: findings
+depth: deep
 files_reviewed: 27
 finding_counts:
   critical: 0
-  warning: 0
-  info: 0
-  total: 0
+  warning: 2
+  info: 1
+  total: 3
 reviewed_at: 2026-05-16
-fixed_at: 2026-05-16
+supersedes: standard review in commit 4707c52 and fix commit c2b6420
 ---
 
-# Code Review: Phase 2 Pure Rules Engine
+# Deep Code Review: Phase 2 Pure Rules Engine
 
 ## Scope
 
-Reviewed Phase 2 source changes from implementation commit `7646578` through closeout commit `cb6ba80`.
+Reviewed Phase 2 source changes through `c2b6420 fix(02): resolve code review findings`, using a deep pass over cross-file state transitions, import/call relationships, rule ordering, and Chronicle-facing event semantics.
 
 Reviewed source/config files:
 
@@ -51,50 +51,66 @@ Reviewed source/config files:
 
 ## Findings
 
-### WR-001: Post-advance Backstab can eliminate a player without ending the match immediately
+### WR-001: Push-off-board can eliminate a player but still allow extra SoldierBrain cycles
 
-**Severity:** Warning  
-**Status:** Fixed
-**File:** `packages/engine/src/activation.ts`  
-**Lines:** 218-238  
-**Requirements:** ENG-15, ENG-19
+**Severity:** Warning
+**File:** `packages/engine/src/activation.ts`
+**Lines:** 218-237
+**Requirements:** ENG-14, ENG-19
 
-After `resolveAction` returns, the activation loop updates `current` and `advanced`, then only breaks on `terminalReason`. A successful MOVE or push can run `resolveBackstabBoundary(..., "post-advance")` inside `movement.ts`, stone all remaining enemy ACTIVE Soldiers, and return with `advanced: true` and no terminal reason. The loop can then continue to another SoldierBrain cycle before `checkAndApplyMatchEnd` runs at activation end.
+The previous review fix checks match-end immediately after actions that emitted `BACKSTAB_RESOLVED`. That closes the post-advance Backstab case, but another successful Advance can also eliminate a player: side-pushing the last enemy ACTIVE Soldier off-board.
 
-That violates the source rule: "After Backstab boundary resolution, immediately check match-end conditions." It can also change outcomes incorrectly. For example, a Soldier could win by post-advance Backstab, continue acting in the same Activation, then later fall or stone itself before the delayed match-end check.
+Call chain:
 
-**Recommendation:** After every `resolveAction`, call `checkAndApplyMatchEnd(current)` before deciding whether to continue the activation loop. If the match ends, append the `MATCH_ENDED` event and break/return before any additional SoldierBrain cycles.
+- `resolveActivation` calls `resolveAction`.
+- `resolveMove` delegates to `resolveActiveCollision`.
+- `resolveActiveCollision` can mark the pushed Soldier `FALLEN` with reason `PUSHED_OFF_BOARD`, return `advanced: true`, and omit `terminalReason`.
+- If no Backstab also happened, `resolveActivation` does not call `checkAndApplyMatchEnd` and continues to the next SoldierBrain cycle.
 
-**Resolution:** `resolveActivation` now checks match-end immediately when an action emits `BACKSTAB_RESOLVED`. A regression test verifies a post-advance Backstab that eliminates a player stops before a second SoldierBrain call.
+That violates the rule that the match ends immediately when one Player has zero ACTIVE Soldiers. It also allows a winning pusher to keep acting and potentially change the final outcome before the delayed activation-end check.
 
-### IN-001: Off-board movement test asserts the opposite of the intended event payload
+**Recommendation:** Run `checkAndApplyMatchEnd` after every resolved action, before continuing the activation loop. If it returns an outcome, append its events and return immediately. Pair this with idempotence for `checkAndApplyMatchEnd` so callers do not duplicate `MATCH_ENDED`.
 
-**Severity:** Info  
-**Status:** Fixed
-**File:** `packages/engine/src/movement.test.ts`  
-**Lines:** 101-105  
-**Requirements:** TEST-01
+### WR-002: `MATCH_ENDED` can be emitted twice after activation-level match end
 
-The off-board movement test confirms the Soldier becomes `FALLEN`, but the event assertion currently expects no payload string containing `MOVED_OFF_BOARD`. The implementation emits `event("SOLDIER_FELL", { soldierId, reason: "MOVED_OFF_BOARD" })`, so this assertion does not validate the documented reason and appears inverted.
+**Severity:** Warning
+**File:** `packages/engine/src/match.ts`
+**Lines:** 52-60, 151-156
+**Requirements:** ENG-19, REPLAY-02 readiness
 
-**Recommendation:** Change the assertion to verify that a `SOLDIER_FELL` event exists with payload reason `MOVED_OFF_BOARD`.
+`checkAndApplyMatchEnd` does not guard `state.outcome`. If an activation already ended the match and emitted `MATCH_ENDED`, `runMatch` calls `checkAndApplyMatchEnd` again after `resolveRound`, recomputes the same zero-active outcome, and emits a second `MATCH_ENDED`.
 
-**Resolution:** The test now asserts a `SOLDIER_FELL` event whose payload includes `MOVED_OFF_BOARD`.
+This is especially likely after activation-start Backstab, post-advance Backstab, no-advance stoning, TURN_TO_STONE, or falling eliminates the last ACTIVE Soldier. Phase 3 Chronicle work will need a single terminal event, so this duplication would be easy to accidentally canonize in replay data.
+
+**Recommendation:** Make `checkAndApplyMatchEnd` idempotent:
+
+```ts
+if (state.outcome) return { state, events: [] }
+```
+
+Then add a regression test asserting a full `runMatch` result has exactly one `MATCH_ENDED` event.
+
+### IN-001: Match-end helpers live in a circular import chain
+
+**Severity:** Info
+**Files:** `packages/engine/src/activation.ts`, `packages/engine/src/match.ts`, `packages/engine/src/contraction.ts`
+**Lines:** `activation.ts` 12-14, `match.ts` 6-13, `contraction.ts` 7-11
+
+The current import graph has `activation -> match -> activation` and `match -> contraction -> match`. Tests pass today because the referenced exports are initialized before use in current execution paths, but the graph is fragile. Adding more top-level constants, derived helpers, or future Chronicle integration could turn this into a temporal-dead-zone failure or make module ownership harder to reason about.
+
+**Recommendation:** Extract terminal match helpers into a small acyclic module, for example `outcome.ts` or `match-end.ts`, containing `checkImmediateMatchEnd`, `applyMatchOutcome`, and `checkAndApplyMatchEnd`. Then `activation`, `contraction`, and `match` can depend on that module without cycles.
+
+## Previously Fixed Findings
+
+- Standard review WR-001: post-advance Backstab now checks match-end immediately.
+- Standard review IN-001: off-board movement test now asserts the expected `MOVED_OFF_BOARD` fall reason.
 
 ## Positive Notes
 
-- Engine production code remains synchronous and pure; the purity test covers filesystem, network, clock, random, process, database, and cache access patterns.
-- The core state transitions use immutable replacement helpers and keep derived board lookups out of `GameState`.
-- Activation, movement, Backstab, Contraction, match runner, and invariant tests give Phase 3 a useful baseline before Chronicle work begins.
+- The state transition functions remain deterministic and side-effect free.
+- The post-advance Backstab regression test added in `c2b6420` is well-targeted and caught the original lifecycle gap.
+- The invariant and purity tests provide useful guardrails before the Chronicle phase.
 
-## Verification Context
+## Suggested Next Step
 
-Latest full verification before review:
-
-- `pnpm verify` passed.
-- Engine tests: 8 files, 34 tests passed.
-
-## Resolution Verification
-
-- `pnpm --filter @cowards/engine test` passed with 35 tests.
-- `pnpm verify` passed.
+Fix `WR-001` and `WR-002` before Phase 3. They share the same natural repair: make match-end checks idempotent and run them after every action-level state transition before the activation loop can continue.
