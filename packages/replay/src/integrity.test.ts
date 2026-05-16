@@ -94,10 +94,10 @@ describe("Chronicle integrity", () => {
       ...chronicle,
       events: [
         {
-          ...chronicle.events[0],
+          ...chronicle.events[0]!,
           payload: { seed: "different", matchId: "integrity-match" },
         },
-        chronicle.events[1],
+        chronicle.events[1]!,
       ],
     }
 

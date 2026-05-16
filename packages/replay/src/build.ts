@@ -71,6 +71,8 @@ const ownerFromPrivatePayload = (
 
 const createPrivateRecorder = () => {
   const byPlayerId: Record<PlayerId, Record<string, JsonValue>> = {}
+  const sanitize = (payload: JsonValue): JsonValue =>
+    JSON.parse(JSON.stringify(payload)) as JsonValue
 
   return {
     record(
@@ -83,7 +85,7 @@ const createPrivateRecorder = () => {
       }
       byPlayerId[ownerPlayerId] = {
         ...(byPlayerId[ownerPlayerId] ?? {}),
-        [ref]: payload,
+        [ref]: sanitize(payload),
       }
     },
     sections(debug?: JsonValue): ChroniclePrivateSections | undefined {
