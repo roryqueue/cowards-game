@@ -5,7 +5,7 @@ export interface DatabaseConfig {
 }
 
 export const defaultDatabaseUrl =
-  "postgresql://cowards:cowards@localhost:5432/cowards"
+  "postgresql://cowards:cowards@localhost:5432/cowards_game"
 
 export const loadDatabaseConfig = (
   env: NodeJS.ProcessEnv = process.env,
