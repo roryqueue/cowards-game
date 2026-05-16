@@ -3,8 +3,12 @@
   "compilerOptions": {
     "composite": true,
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "types": ["node"]
   },
-  "references": [{ "path": "../../packages/spec" }],
+  "references": [
+    { "path": "../../packages/spec" },
+    { "path": "../../packages/runtime-js" }
+  ],
   "include": ["src"]
 }
