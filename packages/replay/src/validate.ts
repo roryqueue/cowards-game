@@ -64,7 +64,15 @@ export const migrateChronicle = (
         },
       )
     }
-    return parsed.data as Chronicle
+    const parsedChronicle = parsed.data as Chronicle
+    const validation = validateParsedChronicle(parsedChronicle)
+    if (!validation.ok) {
+      return (
+        validation.errors[0] ??
+        error("SCHEMA_INVALID", "Chronicle validation failed.")
+      )
+    }
+    return parsedChronicle
   }
   return error(
     "UNSUPPORTED_MIGRATION",
@@ -301,6 +309,20 @@ const validateHash = (chronicle: Chronicle): ChronicleValidationError[] => {
   return []
 }
 
+const validateParsedChronicle = (
+  chronicle: Chronicle,
+): ChronicleValidationResult => {
+  const errors = [
+    ...validateVersion(chronicle),
+    ...validateEventOrder(chronicle),
+    ...validateRequiredEvents(chronicle),
+    ...validateSnapshots(chronicle),
+    ...validateHash(chronicle),
+  ]
+
+  return errors.length === 0 ? { ok: true } : { ok: false, errors }
+}
+
 export const validateChronicle = (
   chronicle: unknown,
 ): ChronicleValidationResult => {
@@ -343,15 +365,7 @@ export const validateChronicle = (
   }
 
   const parsedChronicle = parsed.data as Chronicle
-  const errors = [
-    ...validateVersion(parsedChronicle),
-    ...validateEventOrder(parsedChronicle),
-    ...validateRequiredEvents(parsedChronicle),
-    ...validateSnapshots(parsedChronicle),
-    ...validateHash(parsedChronicle),
-  ]
-
-  return errors.length === 0 ? { ok: true } : { ok: false, errors }
+  return validateParsedChronicle(parsedChronicle)
 }
 
 export const assertChronicleCompatible = (chronicle: unknown): Chronicle => {

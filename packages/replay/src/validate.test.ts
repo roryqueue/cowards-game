@@ -1,10 +1,12 @@
-import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
+import type { JsonValue, SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { COMPATIBILITY_VERSIONS } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import type { StrategyRuntime } from "@cowards/engine"
 import { buildChronicleFromMatch } from "./build.js"
 import { createChronicleContentHash } from "./hash.js"
 import { migrateChronicle, validateChronicle } from "./validate.js"
+
+const asJson = (value: unknown): JsonValue => value as JsonValue
 
 const runtime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
@@ -78,6 +80,39 @@ describe("validateChronicle", () => {
         events: [],
       }),
     ).toMatchObject({ code: "UNSUPPORTED_MIGRATION" })
+  })
+
+  it("returns semantic validation errors during current-version migration", () => {
+    const chronicle = createChronicle()
+
+    expect(
+      migrateChronicle(
+        asJson({
+          ...chronicle,
+          events: chronicle.events.map((event, index) =>
+            index === 1 ? { ...event, sequence: 3 } : event,
+          ),
+        }),
+      ),
+    ).toMatchObject({ code: "EVENT_ORDER_INVALID" })
+    expect(
+      migrateChronicle(
+        asJson({
+          ...chronicle,
+          snapshots: chronicle.snapshots.filter(
+            (snapshot) => snapshot.kind !== "TERMINAL",
+          ),
+        }),
+      ),
+    ).toMatchObject({ code: "SNAPSHOT_MISSING" })
+    expect(
+      migrateChronicle(
+        asJson({
+          ...chronicle,
+          integrity: { algorithm: "sha256", normalizedContentHash: "stale" },
+        }),
+      ),
+    ).toMatchObject({ code: "HASH_MISMATCH" })
   })
 
   it("rejects corrupted replay-driving event payloads during validation", () => {
