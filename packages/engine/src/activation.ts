@@ -79,6 +79,8 @@ const validOrders = (
   return filtered
 }
 
+const privateJson = (value: unknown): JsonValue => value as JsonValue
+
 const applyRuntimeViolation = (
   state: GameState,
   soldier: Soldier,
@@ -99,11 +101,11 @@ const applyRuntimeViolation = (
           soldierId: soldier.id,
         },
         privacy: "owner",
-        privatePayload: {
+        privatePayload: privateJson({
           soldierId: soldier.id,
           ownerPlayerId: soldier.ownerPlayerId,
           violation,
-        },
+        }),
       },
     ),
   ]
@@ -137,7 +139,10 @@ export const resolveActivationSelection = (
           {
             context: { actingPlayerId: playerId },
             privacy: "owner",
-            privatePayload: { playerId, violation: result.violation },
+            privatePayload: privateJson({
+              playerId,
+              violation: result.violation,
+            }),
           },
         ),
       ],
@@ -155,13 +160,13 @@ export const resolveActivationSelection = (
           {
             context: { actingPlayerId: playerId },
             privacy: "owner",
-            privatePayload: {
+            privatePayload: privateJson({
               playerId,
               violation: {
                 type: "INVALID_OUTPUT",
                 message: parsed.error.message,
               },
-            },
+            }),
           },
         ),
       ],
@@ -249,14 +254,14 @@ export const resolveActivation = (
             actingPlayerId: soldier.ownerPlayerId,
           },
           privacy: "owner",
-          privatePayload: {
+          privatePayload: privateJson({
             soldierId,
             ownerPlayerId: soldier.ownerPlayerId,
             cycleIndex,
             awarenessGrid: input.awarenessGrid,
             objectiveRef: { hasObjective: objective !== undefined },
             objectivePayload: objective,
-          },
+          }),
         },
       ),
     )

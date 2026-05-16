@@ -11,10 +11,11 @@
   "scripts": {
     "build": "tsc -b",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@cowards/engine": "workspace:*",
     "@cowards/spec": "workspace:*"
   }
 }
