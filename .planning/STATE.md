@@ -1,7 +1,7 @@
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Phase 3 context gathered; ready to plan Phase 3
+**Status:** Ready to execute Phase 3
 
 ## Project Reference
 
@@ -9,7 +9,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** Phase 3 - Chronicle and Replay Core
-**Resume file:** `.planning/phases/03-chronicle-and-replay-core/03-CONTEXT.md`
+**Resume file:** `.planning/phases/03-chronicle-and-replay-core/03-01-PLAN.md`
 **Completed phase:** Phase 2 - Pure Rules Engine
 **Plan count:** 5
 
@@ -30,7 +30,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 |-------|------|--------|
 | 1 | Foundation and Spec Contracts | Complete |
 | 2 | Pure Rules Engine | Complete |
-| 3 | Chronicle and Replay Core | Pending |
+| 3 | Chronicle and Replay Core | Planned |
 | 4 | Strategy Runtime Sandbox | Pending |
 | 5 | Match Orchestration and Persistence | Pending |
 | 6 | Strategy Workshop UX | Pending |
@@ -77,14 +77,22 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 - `.planning/spec-amendments/02-backstab-rule.md`
 - `.planning/phases/03-chronicle-and-replay-core/03-CONTEXT.md`
 - `.planning/phases/03-chronicle-and-replay-core/03-DISCUSSION-LOG.md`
+- `.planning/phases/03-chronicle-and-replay-core/03-RESEARCH.md`
+- `.planning/phases/03-chronicle-and-replay-core/03-VALIDATION.md`
+- `.planning/phases/03-chronicle-and-replay-core/03-PATTERNS.md`
+- `.planning/phases/03-chronicle-and-replay-core/03-01-PLAN.md`
+- `.planning/phases/03-chronicle-and-replay-core/03-02-PLAN.md`
+- `.planning/phases/03-chronicle-and-replay-core/03-03-PLAN.md`
+- `.planning/phases/03-chronicle-and-replay-core/03-04-PLAN.md`
+- `.planning/phases/03-chronicle-and-replay-core/03-05-PLAN.md`
 
 ## Next Command
 
-`$gsd-plan-phase 3`
+`$gsd-execute-phase 3`
 
 Alternative:
 
-`$gsd-ui-phase 3` only if a replay UI design contract is intentionally pulled earlier, which is not recommended for this infrastructure phase.
+`$gsd-code-review 3` after execution if you want an extra review pass before moving to Phase 4.
 
 ---
-*Last updated: 2026-05-16 after Phase 3 context gathering*
+*Last updated: 2026-05-16 after Phase 3 planning*

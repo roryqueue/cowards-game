@@ -13,7 +13,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 |-------|------|------|--------------|--------|
 | 1 | Foundation and Spec Contracts | Establish the monorepo, local workflow, canonical contracts, and versioning spine. | 11 | Complete |
 | 2 | Pure Rules Engine | Implement the canonical deterministic game engine and rule test suite. | 23 | Complete |
-| 3 | Chronicle and Replay Core | Make every Match reproducible, inspectable, and safe to project publicly. | 8 | Pending |
+| 3 | Chronicle and Replay Core | Make every Match reproducible, inspectable, and safe to project publicly. | 8 | Planned |
 | 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Pending |
 | 5 | Match Orchestration and Persistence | Queue, execute, persist, and score Matches and MatchSets with correct failure semantics. | 13 | Pending |
 | 6 | Strategy Workshop UX | Let users create, validate, revise, and test doctrines in a Workshop loop. | 6 | Pending |
@@ -121,6 +121,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 
 **Goal:** Make every Match reproducible, inspectable, and safe to project publicly.
 **Mode:** mvp
+**Status:** Planned
 
 **Requirements:** REPLAY-01, REPLAY-02, REPLAY-03, REPLAY-04, REPLAY-05, REPLAY-06, REPLAY-07, TEST-03
 
@@ -133,6 +134,37 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 **Notes:**
 - Treat Chronicle integrity as core infrastructure, not a viewer feature.
 - Include Awareness Grid events early, even before the UI can display them richly.
+
+**Plans:**
+
+| Plan | Wave | Depends On | Objective | Requirements |
+|------|------|------------|-----------|--------------|
+| 03-01 | 1 | None | Chronicle contracts and schemas | REPLAY-02, REPLAY-04, REPLAY-05, REPLAY-06, REPLAY-07 |
+| 03-02 | 2 | 03-01 | Chronicle construction and boundary capture | REPLAY-01, REPLAY-02, REPLAY-03, REPLAY-04, REPLAY-07 |
+| 03-03 | 3 | 03-01, 03-02 | Replay reconstruction, validation, and integrity | REPLAY-03, REPLAY-04, REPLAY-05, TEST-03 |
+| 03-04 | 4 | 03-01, 03-02, 03-03 | Public and owner replay projections | REPLAY-06, REPLAY-07, TEST-03 |
+| 03-05 | 5 | 03-01, 03-02, 03-03, 03-04 | Determinism, integration tests, and replay package polish | REPLAY-01 through REPLAY-07, TEST-03 |
+
+**Wave dependency notes:**
+
+**Wave 1** — Define canonical Chronicle contracts and schemas in `@cowards/spec`.
+
+**Wave 2 *(blocked on Wave 1 completion)*** — Enrich engine summaries and build canonical Chronicles with boundary snapshots and private debug sections.
+
+**Wave 3 *(blocked on Waves 1-2 completion)*** — Implement normalization, integrity hashing, typed validation, `stateAt(sequence)`, and linear replay.
+
+**Wave 4 *(blocked on Waves 1-3 completion)*** — Implement public and owner projection boundaries.
+
+**Wave 5 *(blocked on Waves 1-4 completion)*** — Prove deterministic normalized Chronicles, integrate all replay APIs, and document the replay package.
+
+**Cross-cutting constraints:**
+
+- `GameState` must not gain a Chronicle log.
+- `packages/spec` owns canonical Chronicle contracts and schemas.
+- `packages/replay` owns construction, normalization, hashing, validation, reconstruction, and projection.
+- Public projections must strip exact Awareness Grids, objectives, StrategyMemory, SoldierMemory, strategy source, and raw runtime details.
+- Replay reconstruction must not rerun strategies or depend on runtime execution.
+- Strict exhaustive Chronicle grammar remains deferred to the post-Phase-7 hardening phase.
 
 ### Phase 4: Strategy Runtime Sandbox
 
