@@ -52,22 +52,30 @@ const validChronicle = (): Chronicle => ({
       payload: { playerId: "player:bottom" },
     },
     {
-      type: "ACTIVATION_STARTED",
+      type: "STRATEGY_EVALUATED",
       sequence: 3,
+      context: { actingPlayerId: "player:top" },
+      privacy: "private",
+      privateRef: "private:event:3",
+      payload: { playerId: "player:top" },
+    },
+    {
+      type: "ACTIVATION_STARTED",
+      sequence: 4,
       context: { activationId: "1:1:0", activationIndex: 0 },
       privacy: "public",
       payload: { soldierId: "soldier:1" },
     },
     {
       type: "AWARENESS_GRID_OBSERVED",
-      sequence: 4,
+      sequence: 5,
       context: { cycleIndex: 0 },
       privacy: "owner",
       payload: { soldierId: "soldier:1", cycleIndex: 0 },
     },
     {
       type: "ACTION_EMITTED",
-      sequence: 5,
+      sequence: 6,
       context: { cycleIndex: 0 },
       privacy: "public",
       payload: {
@@ -77,7 +85,7 @@ const validChronicle = (): Chronicle => ({
     },
     {
       type: "MATCH_ENDED",
-      sequence: 6,
+      sequence: 7,
       context: {},
       privacy: "public",
       payload: { type: "DRAW" },
@@ -88,27 +96,27 @@ const validChronicle = (): Chronicle => ({
     { kind: "ROUND_START", sequence: 1, context: { roundNumber: 1 }, board },
     {
       kind: "ACTIVATION_START",
-      sequence: 3,
+      sequence: 4,
       context: { activationId: "1:1:0" },
       board,
     },
     {
       kind: "ACTIVATION_END",
-      sequence: 5,
+      sequence: 6,
       context: { activationId: "1:1:0" },
       board,
     },
-    { kind: "ROUND_END", sequence: 5, context: { roundNumber: 1 }, board },
+    { kind: "ROUND_END", sequence: 6, context: { roundNumber: 1 }, board },
     {
       kind: "MATCH_END",
-      sequence: 6,
+      sequence: 7,
       context: {},
       board,
       outcome: { type: "DRAW" },
     },
     {
       kind: "TERMINAL",
-      sequence: 6,
+      sequence: 7,
       context: {},
       board,
       outcome: { type: "DRAW" },
@@ -130,13 +138,15 @@ describe("Chronicle storage", () => {
 
     expect(stored.metadata.schemaVersion).toBe("chronicle-v1")
     expect(stored.metadata.hash).toMatch(/^[a-f0-9]{64}$/)
-    expect(stored.metadata.eventCount).toBe(7)
+    expect(stored.metadata.eventCount).toBe(8)
     expect(stored.metadata.snapshotCount).toBe(7)
+    expect(stored.metadata.bottomPlayerId).toBe("player:bottom")
+    expect(stored.metadata.topPlayerId).toBe("player:top")
     expect(stored.metadata.bottomStrategyRevisionId).toBe(
       "strategy-revision:bottom",
     )
     expect(stored.metadata.arenaVariantId).toBe("arena:smoke:v1")
-    expect(stored.artifact.events).toHaveLength(7)
+    expect(stored.artifact.events).toHaveLength(8)
     expect(stored.artifact.private?.byPlayerId["player:bottom"]).toBeDefined()
   })
 

@@ -2,12 +2,13 @@ import { createChronicleContentHash, validateChronicle } from "@cowards/replay"
 import type {
   ArenaVariantId,
   Chronicle,
+  ChronicleEvent,
   JsonValue,
   MatchId,
   PlayerId,
   StrategyRevisionId,
 } from "@cowards/spec"
-import type { Pool } from "pg"
+import type { Queryable } from "./repositories.js"
 
 export interface ChronicleMetadata {
   id: string
@@ -53,6 +54,27 @@ const terminalOutcome = (chronicle: Chronicle): JsonValue => {
   return outcome as unknown as JsonValue
 }
 
+const playerIdFromEvent = (event: ChronicleEvent): PlayerId | undefined => {
+  const payload =
+    typeof event.payload === "object" && event.payload !== null
+      ? event.payload
+      : {}
+  const playerId = "playerId" in payload ? payload.playerId : undefined
+  return typeof playerId === "string" ? playerId : event.context.actingPlayerId
+}
+
+const playerIdsFromChronicle = (chronicle: Chronicle): [PlayerId, PlayerId] => {
+  const distinct = [
+    ...new Set(
+      chronicle.events.flatMap((event) => {
+        const playerId = playerIdFromEvent(event)
+        return playerId ? [playerId] : []
+      }),
+    ),
+  ]
+  return [distinct[0] ?? "player:bottom", distinct[1] ?? "player:top"]
+}
+
 export const createChronicleMetadata = (
   chronicle: Chronicle,
 ): ChronicleMetadata => {
@@ -65,13 +87,7 @@ export const createChronicleMetadata = (
   const hash = createChronicleContentHash(chronicle).normalizedContentHash
   const [bottomStrategyRevisionId, topStrategyRevisionId] =
     chronicle.reproducibility.strategyRevisionIds
-  const started = chronicle.events.find(
-    (event) => event.type === "MATCH_STARTED",
-  )
-  const bottomPlayerId =
-    typeof started?.payload === "object" && started.payload !== null
-      ? "player:bottom"
-      : "player:bottom"
+  const [bottomPlayerId, topPlayerId] = playerIdsFromChronicle(chronicle)
 
   return {
     id: `chronicle:${hash}`,
@@ -82,7 +98,7 @@ export const createChronicleMetadata = (
     eventCount: chronicle.events.length,
     snapshotCount: chronicle.snapshots.length,
     bottomPlayerId,
-    topPlayerId: "player:top",
+    topPlayerId,
     bottomStrategyRevisionId,
     topStrategyRevisionId,
     arenaVariantId: chronicle.reproducibility.arenaVariantId,
@@ -121,7 +137,9 @@ const rowToStored = (row: {
   artifact: row.artifact,
 })
 
-export const createPostgresChronicleStore = (pool: Pool): ChronicleStore => ({
+export const createPostgresChronicleStore = (
+  pool: Queryable,
+): ChronicleStore => ({
   async put(chronicle) {
     const metadata = createChronicleMetadata(chronicle)
     const result = await pool.query(

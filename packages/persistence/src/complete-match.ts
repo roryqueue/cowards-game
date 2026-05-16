@@ -41,9 +41,8 @@ export const completeMatch = async (
   pool: Pool,
   input: CompleteMatchInput,
 ): Promise<{ status: "complete"; matchId: MatchId; chronicleId: string }> => {
-  const store = createPostgresChronicleStore(pool)
-  const stored = await store.put(input.chronicle)
   const fields = deriveMatchCompletionFields(input.finalState)
+  let chronicleId: string | undefined
 
   await withTransaction(pool, async (client) => {
     const job = await client.query(
@@ -54,15 +53,25 @@ export const completeMatch = async (
       [input.jobId, input.leaseToken],
     )
     if ((job.rowCount ?? 0) === 0) {
-      const existing = await client.query(
-        "select id from matches where id = $1 and status = 'complete'",
+      const existing = await client.query<{ id: string }>(
+        `
+          select c.id
+          from matches m
+          join chronicles c on c.match_id = m.id
+          where m.id = $1 and m.status = 'complete'
+        `,
         [fields.matchId],
       )
-      if ((existing.rowCount ?? 0) === 0) {
+      const existingChronicleId = existing.rows[0]?.id
+      if (!existingChronicleId) {
         throw new Error("Cannot complete Match without a valid running lease")
       }
+      chronicleId = existingChronicleId
       return
     }
+    const store = createPostgresChronicleStore(client)
+    const stored = await store.put(input.chronicle)
+    chronicleId = stored.metadata.id
     await client.query(
       `
         update matches
@@ -108,6 +117,6 @@ export const completeMatch = async (
   return {
     status: "complete",
     matchId: fields.matchId,
-    chronicleId: stored.metadata.id,
+    chronicleId: chronicleId ?? "",
   }
 }
