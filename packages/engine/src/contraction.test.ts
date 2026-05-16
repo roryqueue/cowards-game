@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
 import { resolveContraction } from "./contraction.js"
-import { checkImmediateMatchEnd } from "./match.js"
+import { checkImmediateMatchEnd } from "./outcome.js"
 import { createInitialGameState } from "./state.js"
 import type { GameState } from "./types.js"
 

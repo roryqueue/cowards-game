@@ -10,8 +10,8 @@ import {
   type Soldier,
 } from "@cowards/spec"
 import { resolveBackstabBoundary } from "./backstab.js"
-import { checkAndApplyMatchEnd } from "./match.js"
 import { resolveAction } from "./movement.js"
+import { checkAndApplyMatchEnd } from "./outcome.js"
 import {
   getActiveSoldiers,
   getPlayer,
@@ -221,17 +221,11 @@ export const resolveActivation = (
     current = actionResult.state
     events.push(...actionResult.events)
     advanced = advanced || actionResult.advanced
-    if (
-      actionResult.events.some(
-        (summary) => summary.type === "BACKSTAB_RESOLVED",
-      )
-    ) {
-      const postBackstabEnd = checkAndApplyMatchEnd(current)
-      current = postBackstabEnd.state
-      events.push(...postBackstabEnd.events)
-      if (current.outcome) {
-        return { state: current, events }
-      }
+    const actionEnd = checkAndApplyMatchEnd(current)
+    current = actionEnd.state
+    events.push(...actionEnd.events)
+    if (current.outcome) {
+      return { state: current, events }
     }
     if (actionResult.terminalReason) {
       break

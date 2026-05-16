@@ -1,15 +1,12 @@
-import {
-  ROUND_ACTIVATION_COUNTS,
-  type MatchOutcome,
-  type PlayerId,
-} from "@cowards/spec"
+import { ROUND_ACTIVATION_COUNTS, type PlayerId } from "@cowards/spec"
 import {
   getRoundPlayerOrder,
   resolveActivation,
   resolveActivationSelection,
 } from "./activation.js"
 import { resolveContraction } from "./contraction.js"
-import { countActiveByPlayer, getOpponentPlayer } from "./selectors.js"
+import { applyMatchOutcome, checkAndApplyMatchEnd } from "./outcome.js"
+import { getOpponentPlayer } from "./selectors.js"
 import { createInitialGameState } from "./state.js"
 import {
   event,
@@ -19,46 +16,6 @@ import {
   type StrategyRuntime,
   type TransitionResult,
 } from "./types.js"
-
-export const checkImmediateMatchEnd = (
-  state: GameState,
-): MatchOutcome | undefined => {
-  const counts = countActiveByPlayer(state)
-  const [first, second] = state.players
-  const firstActive = counts.get(first.id) ?? 0
-  const secondActive = counts.get(second.id) ?? 0
-
-  if (firstActive === 0 && secondActive === 0) {
-    return { type: "DRAW" }
-  }
-  if (firstActive === 0) {
-    return { type: "WIN", winnerPlayerId: second.id }
-  }
-  if (secondActive === 0) {
-    return { type: "WIN", winnerPlayerId: first.id }
-  }
-  return undefined
-}
-
-export const applyMatchOutcome = (
-  state: GameState,
-  outcome: MatchOutcome,
-): GameState => ({
-  ...state,
-  phase: "COMPLETE",
-  outcome,
-})
-
-export const checkAndApplyMatchEnd = (state: GameState): TransitionResult => {
-  const outcome = checkImmediateMatchEnd(state)
-  if (!outcome) {
-    return { state, events: [] }
-  }
-  return {
-    state: applyMatchOutcome(state, outcome),
-    events: [event("MATCH_ENDED", outcome)],
-  }
-}
 
 export const getNextRoundNumber = (roundNumber: RoundNumber): RoundNumber =>
   roundNumber === 4 ? 1 : ((roundNumber + 1) as RoundNumber)

@@ -8,7 +8,7 @@ import {
   applyMatchOutcome,
   checkAndApplyMatchEnd,
   checkImmediateMatchEnd,
-} from "./match.js"
+} from "./outcome.js"
 import { event, type GameState, type TransitionResult } from "./types.js"
 
 export const getContractedBounds = (bounds: BoardBounds): BoardBounds => ({

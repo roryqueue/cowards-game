@@ -118,4 +118,46 @@ describe("activation selection and runtime inputs", () => {
     const result = resolveActivation(state, runtime, mover!.id)
     expect(result.state.soldiers[0]!.status).toBe("ACTIVE")
   })
+
+  it("ends immediately when a push off-board eliminates a player", () => {
+    const state = {
+      ...stateWithSoldiers([
+        {
+          ...createInitialGameState(baseInput).soldiers[0]!,
+          id: "mover",
+          ownerPlayerId: "bottom-player",
+          position: { x: 4, y: 5 },
+          facing: "RIGHT",
+        },
+        {
+          ...createInitialGameState(baseInput).soldiers[8]!,
+          id: "target",
+          ownerPlayerId: "top-player",
+          position: { x: 5, y: 5 },
+          facing: "UP",
+        },
+      ]),
+      bounds: { minX: 0, maxX: 5, minY: 0, maxY: 11 },
+    }
+    let calls = 0
+    const runtime = createFakeRuntime({
+      action: () => {
+        calls += 1
+        return calls === 1
+          ? { type: "MOVE", direction: "RIGHT" }
+          : { type: "TURN_TO_STONE" }
+      },
+    })
+
+    const result = resolveActivation(state, runtime, "mover")
+
+    expect(calls).toBe(1)
+    expect(result.state.outcome).toEqual({
+      type: "WIN",
+      winnerPlayerId: "bottom-player",
+    })
+    expect(result.events.map((summary) => summary.type)).toContain(
+      "MATCH_ENDED",
+    )
+  })
 })

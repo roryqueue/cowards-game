@@ -46,4 +46,11 @@ describe("runMatch golden behavior", () => {
       "MATCH_ENDED",
     )
   })
+
+  it("emits one terminal MATCH_ENDED event", () => {
+    const result = runMatch(input)
+    expect(
+      result.events.filter((summary) => summary.type === "MATCH_ENDED"),
+    ).toHaveLength(1)
+  })
 })
