@@ -63,6 +63,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@cowards/runtime-js':
+        specifier: workspace:*
+        version: link:../../packages/runtime-js
       '@cowards/spec':
         specifier: workspace:*
         version: link:../../packages/spec
@@ -94,6 +97,9 @@ importers:
 
   packages/runtime-js:
     dependencies:
+      '@cowards/engine':
+        specifier: workspace:*
+        version: link:../engine
       '@cowards/spec':
         specifier: workspace:*
         version: link:../spec

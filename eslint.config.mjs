@@ -93,7 +93,11 @@ export default [
       "no-restricted-imports": [
         "error",
         {
-          patterns: ["@cowards/runtime-js", "packages/runtime-js/**"],
+          patterns: [
+            "@cowards/runtime-js",
+            "@cowards/runtime-js/worker",
+            "packages/runtime-js/**",
+          ],
         },
       ],
     },
@@ -106,11 +110,25 @@ export default [
         {
           patterns: [
             "@cowards/runtime-js",
+            "@cowards/runtime-js/worker",
             "@cowards/web",
             "@cowards/worker",
             "apps/**",
             "packages/runtime-js/**",
           ],
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      "packages/{spec,engine,replay,map-configs,test-utils}/src/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: ["@cowards/runtime-js/worker"],
         },
       ],
     },

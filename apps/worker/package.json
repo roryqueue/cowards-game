@@ -11,6 +11,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@cowards/runtime-js": "workspace:*",
     "@cowards/spec": "workspace:*"
   },
   "devDependencies": {
