@@ -53,7 +53,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **REPLAY-02**: Every Match produces a Chronicle containing Match start, Round start, Strategy evaluation, Activation start, Awareness Grid observation, Action emitted, movement, push, Backstab, stoning, fall, contraction, runtime violation, and Match end events.
 - [x] **REPLAY-03**: Chronicle records enough information to reconstruct board states and final Match outcome without re-executing strategy source code.
 - [x] **REPLAY-04**: Chronicle supports checkpoints for partial replay and debugging.
-- [ ] **REPLAY-05**: Replay utilities can validate Chronicle integrity and fail clearly on corrupted or version-incompatible replay data.
+- [x] **REPLAY-05**: Replay utilities can validate Chronicle integrity and fail clearly on corrupted or version-incompatible replay data.
 - [ ] **REPLAY-06**: Public replay projection excludes Strategy source code, StrategyMemory, SoldierMemory, and objective payloads by default.
 - [x] **REPLAY-07**: Owner-only replay projection can expose private debug data for the owning Player when available.
 
@@ -111,7 +111,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **TEST-01**: Engine unit tests cover every canonical movement, collision, Backstab, push, stoning, falling, contraction, and end-condition rule.
 - [x] **TEST-02**: Engine property/invariant tests cover occupancy uniqueness, bounds validity, status semantics, and deterministic ordering.
-- [ ] **TEST-03**: Replay tests verify Chronicle reconstruction and integrity validation.
+- [x] **TEST-03**: Replay tests verify Chronicle reconstruction and integrity validation.
 - [ ] **TEST-04**: Runtime tests cover invalid outputs, timeout behavior, forbidden capabilities, memory/source limits, and output schema validation.
 - [ ] **TEST-05**: Worker tests distinguish strategy failures from system failures.
 - [ ] **TEST-06**: Playwright tests cover strategy editing, revision submission, MatchSet creation, Match execution status, and replay viewing.
@@ -205,7 +205,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPLAY-02 | Phase 3 | Complete |
 | REPLAY-03 | Phase 3 | Complete |
 | REPLAY-04 | Phase 3 | Complete |
-| REPLAY-05 | Phase 3 | Pending |
+| REPLAY-05 | Phase 3 | Complete |
 | REPLAY-06 | Phase 3 | Pending |
 | REPLAY-07 | Phase 3 | Complete |
 | RUN-01 | Phase 4 | Pending |
@@ -245,7 +245,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VIEW-07 | Phase 7 | Pending |
 | TEST-01 | Phase 2 | Complete |
 | TEST-02 | Phase 2 | Complete |
-| TEST-03 | Phase 3 | Pending |
+| TEST-03 | Phase 3 | Complete |
 | TEST-04 | Phase 4 | Pending |
 | TEST-05 | Phase 5 | Pending |
 | TEST-06 | Phase 7 | Pending |

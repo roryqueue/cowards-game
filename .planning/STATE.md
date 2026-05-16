@@ -1,7 +1,7 @@
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Ready to execute Phase 3 Plan 03-03
+**Status:** Ready to execute Phase 3 Plan 03-04
 
 ## Project Reference
 
@@ -9,7 +9,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** Phase 3 - Chronicle and Replay Core
-**Resume file:** `.planning/phases/03-chronicle-and-replay-core/03-03-PLAN.md`
+**Resume file:** `.planning/phases/03-chronicle-and-replay-core/03-04-PLAN.md`
 **Completed phase:** Phase 2 - Pure Rules Engine
 **Plan count:** 5
 
@@ -87,6 +87,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 - `.planning/phases/03-chronicle-and-replay-core/03-05-PLAN.md`
 - `.planning/phases/03-chronicle-and-replay-core/03-01-SUMMARY.md`
 - `.planning/phases/03-chronicle-and-replay-core/03-02-SUMMARY.md`
+- `.planning/phases/03-chronicle-and-replay-core/03-03-SUMMARY.md`
 
 ## Next Command
 
@@ -97,4 +98,4 @@ Alternative:
 `$gsd-code-review 3` after execution if you want an extra review pass before moving to Phase 4.
 
 ---
-*Last updated: 2026-05-16 after Phase 3 Plan 03-02 execution*
+*Last updated: 2026-05-16 after Phase 3 Plan 03-03 execution*
