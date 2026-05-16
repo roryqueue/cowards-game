@@ -1,7 +1,7 @@
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Ready for Phase 1 planning  
+**Status:** Phase 1 context gathered
 
 ## Project Reference
 
@@ -9,6 +9,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** Phase 1 - Foundation and Spec Contracts
+**Resume file:** `.planning/phases/01-foundation-and-spec-contracts/01-CONTEXT.md`
 
 ## Workflow Settings
 
@@ -48,11 +49,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 ## Next Command
 
-`$gsd-discuss-phase 1`
+`$gsd-plan-phase 1`
 
 Alternative:
 
-`$gsd-plan-phase 1`
+`$gsd-plan-phase 1 --skip-research`
 
 ---
 *Last updated: 2026-05-16 after project initialization*
