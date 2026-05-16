@@ -14,7 +14,11 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 ### Validated
 
-(None yet - ship to validate)
+- Phase 1 validated the TypeScript monorepo, local workflow, canonical contracts, and versioning spine.
+- Phase 2 validated the pure deterministic Coward's Game rules engine.
+- Phase 3 validated Chronicle creation, validation, hashing, reconstruction, and public/private replay projection.
+- Phase 4 validated immutable JS/TS Strategy Revisions and worker-only runtime execution boundaries.
+- Phase 5 validated Match/MatchSet persistence, SQL migrations, queued worker execution, Chronicle storage, retry semantics, and deterministic MatchSet scoring.
 
 ### Active
 
@@ -144,4 +148,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-16 after initialization*
+*Last updated: 2026-05-16 after Phase 5 execution*

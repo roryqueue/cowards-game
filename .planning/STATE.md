@@ -3,28 +3,28 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready
-last_updated: "2026-05-16T18:36:27.174Z"
+last_updated: "2026-05-16T18:58:25.037Z"
 progress:
   total_phases: 7
-  completed_phases: 4
-  total_plans: 18
-  completed_plans: 18
+  completed_phases: 5
+  total_plans: 23
+  completed_plans: 23
   percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Phase 5 planned; ready to execute Phase 5
+**Status:** Phase 5 complete; ready to discuss Phase 6
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 5 - Match Orchestration and Persistence
-**Resume file:** `.planning/phases/05-match-orchestration-and-persistence/05-CONTEXT.md`
-**Completed phase:** Phase 4 - Strategy Runtime Sandbox
+**Current focus:** Phase 6 - Strategy Workshop UX
+**Resume file:** None
+**Completed phase:** Phase 5 - Match Orchestration and Persistence
 **Plan count:** 5
 
 ## Workflow Settings
@@ -46,7 +46,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 | 2 | Pure Rules Engine | Complete |
 | 3 | Chronicle and Replay Core | Complete |
 | 4 | Strategy Runtime Sandbox | Complete |
-| 5 | Match Orchestration and Persistence | Planned |
+| 5 | Match Orchestration and Persistence | Complete |
 | 6 | Strategy Workshop UX | Pending |
 | 7 | Replay Viewer and End-to-End Verification | Pending |
 
@@ -127,14 +127,21 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 - `.planning/phases/05-match-orchestration-and-persistence/05-03-PLAN.md`
 - `.planning/phases/05-match-orchestration-and-persistence/05-04-PLAN.md`
 - `.planning/phases/05-match-orchestration-and-persistence/05-05-PLAN.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-01-SUMMARY.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-02-SUMMARY.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-03-SUMMARY.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-04-SUMMARY.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-05-SUMMARY.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-REVIEW.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-VERIFICATION.md`
 
 ## Next Command
 
-`$gsd-execute-phase 5`
+`$gsd-discuss-phase 6`
 
 Alternative:
 
-`$gsd-review --phase 5 --all` if you want external peer review before execution.
+`$gsd-plan-phase 6` if you want to plan Phase 6 without additional discussion.
 
 ---
-*Last updated: 2026-05-16 after Phase 5 planning*
+*Last updated: 2026-05-16 after Phase 5 execution*

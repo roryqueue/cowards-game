@@ -15,7 +15,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 | 2 | Pure Rules Engine | Implement the canonical deterministic game engine and rule test suite. | 23 | Complete |
 | 3 | Chronicle and Replay Core | Make every Match reproducible, inspectable, and safe to project publicly. | 8 | Complete |
 | 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Complete |
-| 5 | Match Orchestration and Persistence | Queue, execute, persist, and score Matches and MatchSets with correct failure semantics. | 13 | Planned |
+| 5 | Match Orchestration and Persistence | Queue, execute, persist, and score Matches and MatchSets with correct failure semantics. | 13 | Complete |
 | 6 | Strategy Workshop UX | Let users create, validate, revise, and test doctrines in a Workshop loop. | 6 | Pending |
 | 7 | Replay Viewer and End-to-End Verification | Deliver the visible replay experience and full edit-to-replay verification path. | 8 | Pending |
 
@@ -220,7 +220,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 
 **Goal:** Queue, execute, persist, and score Matches and MatchSets with correct failure semantics.
 **Mode:** mvp
-**Status:** Planned
+**Status:** Complete
 
 **Requirements:** MATCH-01, MATCH-02, MATCH-03, MATCH-04, MATCH-05, MATCH-06, MATCH-07, DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, TEST-05
 
@@ -262,6 +262,8 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 - Strategy runtime violations are gameplay events; unexpected non-strategy failures are retryable system failures.
 - MatchSet presets generate a concrete matrix once, and the persisted matrix is canonical.
 - Chronicle storage starts behind an adapter with PostgreSQL JSONB as the first implementation.
+
+**Execution:** Completed in Phase 5 commits through `9a74252`; summaries are recorded in `05-01-SUMMARY.md` through `05-05-SUMMARY.md`, with verification in `05-VERIFICATION.md`.
 
 ### Phase 6: Strategy Workshop UX
 
