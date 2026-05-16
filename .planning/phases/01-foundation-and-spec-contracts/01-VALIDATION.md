@@ -19,7 +19,7 @@ created: 2026-05-16
 |----------|-------|
 | **Framework** | Vitest |
 | **Config file** | `vitest.config.ts` |
-| **Quick run command** | `pnpm lint && pnpm typecheck` |
+| **Quick run command** | `pnpm format:check && pnpm lint && pnpm typecheck` |
 | **Full suite command** | `pnpm verify` |
 | **Estimated runtime** | ~60 seconds after dependencies are installed |
 
@@ -27,7 +27,7 @@ created: 2026-05-16
 
 ## Sampling Rate
 
-- **After every task commit:** Run `pnpm lint && pnpm typecheck` when dependencies/config exist; otherwise run the narrow command introduced by that task.
+- **After every task commit:** Run `pnpm format:check && pnpm lint && pnpm typecheck` when dependencies/config exist; otherwise run the narrow command introduced by that task.
 - **After every plan wave:** Run `pnpm verify`.
 - **Before `$gsd-verify-work`:** Full suite must be green.
 - **Max feedback latency:** 90 seconds for scaffold checks.

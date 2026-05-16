@@ -11,7 +11,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 
 | Phase | Name | Goal | Requirements | Status |
 |-------|------|------|--------------|--------|
-| 1 | Foundation and Spec Contracts | Establish the monorepo, local workflow, canonical contracts, and versioning spine. | 11 | Pending |
+| 1 | Foundation and Spec Contracts | Establish the monorepo, local workflow, canonical contracts, and versioning spine. | 11 | Planned |
 | 2 | Pure Rules Engine | Implement the canonical deterministic game engine and rule test suite. | 23 | Pending |
 | 3 | Chronicle and Replay Core | Make every Match reproducible, inspectable, and safe to project publicly. | 8 | Pending |
 | 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Pending |
@@ -39,6 +39,30 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 **Notes:**
 - Use the source specs as the authority for names and constraints.
 - Avoid broad shared utilities until a package boundary has a real consumer.
+
+**Plans:**
+
+| Plan | Wave | Depends On | Objective | Requirements |
+|------|------|------------|-----------|--------------|
+| 01-01 | 1 | None | Root workspace and local verification | FOUND-01, FOUND-03, TEST-07 |
+| 01-02 | 2 | 01-01 | Package and app skeleton boundaries | FOUND-02, FOUND-04, FOUND-05 |
+| 01-03 | 2 | 01-01, 01-02 | Canonical spec contracts and fixtures | FOUND-05, SPEC-01, SPEC-02, SPEC-03, SPEC-04, SPEC-05 |
+| 01-04 | 3 | 01-01, 01-02, 01-03 | Full local dev topology and documentation | FOUND-02, TEST-07 |
+
+**Wave dependency notes:**
+
+**Wave 1** — Establish root workspace/tooling before package plans run.
+
+**Wave 2 *(blocked on Wave 1 completion)*** — Create package/app boundaries and `packages/spec` contract layer.
+
+**Wave 3 *(blocked on Waves 1-2 completion)*** — Wire full local dev topology and final documentation/verification.
+
+**Cross-cutting constraints:**
+
+- `packages/spec` is the root contract package and must not depend on internal workspace packages.
+- `pnpm verify` is the local quality gate.
+- Do not create hosted CI in Phase 1.
+- Do not implement engine rules, strategy runtime execution, persistence schema, Chronicle behavior, or gameplay UI in Phase 1.
 
 ### Phase 2: Pure Rules Engine
 
