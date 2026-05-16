@@ -3,6 +3,7 @@ import {
   OBJECTIVE_PAYLOAD_BYTES,
   SOLDIER_MEMORY_BYTES,
   STRATEGY_MEMORY_BYTES,
+  STRATEGY_SOURCE_BYTES,
 } from "./constants.js"
 import type { JsonValue } from "./types.js"
 
@@ -178,6 +179,82 @@ export const RuntimeViolationTypeSchema = z.enum([
   "FORBIDDEN_CAPABILITY",
   "OVERSIZED_OUTPUT",
 ])
+
+export const StrategyRuntimeNameSchema = z.literal("runtime-js")
+
+export const StrategyRevisionValidationSeveritySchema = z.enum([
+  "error",
+  "warning",
+])
+
+export const StrategyRevisionValidationCodeSchema = z.enum([
+  "SOURCE_TOO_LARGE",
+  "FORBIDDEN_PATTERN",
+  "MISSING_DEFAULT_EXPORT",
+  "MISSING_SELECT_ACTIVATIONS",
+  "MISSING_SOLDIER_BRAIN",
+  "ASYNC_METHOD_NOT_ALLOWED",
+  "IMPORT_NOT_ALLOWED",
+  "TRANSPILE_FAILED",
+  "ENGINE_INCOMPATIBLE",
+])
+
+export const StrategyRevisionValidationIssueSchema = z.object({
+  code: StrategyRevisionValidationCodeSchema,
+  severity: StrategyRevisionValidationSeveritySchema,
+  message: z.string().min(1),
+  pattern: z.string().min(1).optional(),
+})
+
+export const StrategyRevisionValidationReportSchema = z
+  .object({
+    valid: z.boolean(),
+    errors: z.array(StrategyRevisionValidationIssueSchema),
+    warnings: z.array(StrategyRevisionValidationIssueSchema),
+    sourceBytes: z.number().int().min(0).max(STRATEGY_SOURCE_BYTES),
+    forbiddenPatterns: z.array(z.string()),
+    sourceHash: z.string().min(1),
+    runtimeVersion: z.string().min(1),
+    engineCompatibility: z.object({
+      spec: z.string().min(1),
+      engine: z.string().min(1),
+    }),
+  })
+  .refine((report) => report.valid === (report.errors.length === 0), {
+    message: "valid must match whether errors is empty",
+    path: ["valid"],
+  })
+
+export const StrategyRevisionMetadataSchema = z.object({
+  createdBy: z.string().min(1).optional(),
+  label: z.string().min(1).optional(),
+  tags: z.array(z.string().min(1)).optional(),
+})
+
+export const StrategyRevisionSchema = z.object({
+  id: z.string().min(1),
+  strategyId: z.string().min(1).optional(),
+  source: z
+    .string()
+    .min(1)
+    .refine(
+      (source) =>
+        new TextEncoder().encode(source).length <= STRATEGY_SOURCE_BYTES,
+      "Strategy source exceeds 64KB",
+    ),
+  sourceHash: z.string().min(1),
+  sourceBytes: z.number().int().min(0).max(STRATEGY_SOURCE_BYTES),
+  runtime: z.object({
+    name: StrategyRuntimeNameSchema,
+    version: z.string().min(1),
+  }),
+  engineCompatibility: z.object({
+    spec: z.string().min(1),
+    engine: z.string().min(1),
+  }),
+  validation: StrategyRevisionValidationReportSchema,
+  metadata: StrategyRevisionMetadataSchema,
+})
 
 export const ArenaVariantSchema = z.object({
   id: z.string().min(1),

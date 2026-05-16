@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { ActionSchema, ChronicleSchema, SoldierSchema } from "./schemas.js"
+import {
+  ActionSchema,
+  ChronicleSchema,
+  SoldierSchema,
+  StrategyRevisionSchema,
+} from "./schemas.js"
 import { fixtures } from "./fixtures/index.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
+import { STRATEGY_SOURCE_BYTES } from "./constants.js"
 
 describe("Coward's Game spec contracts", () => {
   it("compatibility versions have exactly the core six keys", () => {
@@ -172,5 +178,122 @@ describe("Coward's Game spec contracts", () => {
     }
 
     expect(ChronicleSchema.parse(chronicle)).toEqual(chronicle)
+  })
+
+  it("StrategyRevisionSchema accepts a valid runtime-js revision artifact", () => {
+    const source =
+      "export default { selectActivations() {}, soldierBrain() {} }"
+    const revision = {
+      id: "strategy-revision:abc123",
+      strategyId: "strategy-1",
+      source,
+      sourceHash: "abc123",
+      sourceBytes: new TextEncoder().encode(source).length,
+      runtime: {
+        name: "runtime-js",
+        version: COMPATIBILITY_VERSIONS.runtimeJs,
+      },
+      engineCompatibility: {
+        spec: COMPATIBILITY_VERSIONS.spec,
+        engine: COMPATIBILITY_VERSIONS.engine,
+      },
+      validation: {
+        valid: true,
+        errors: [],
+        warnings: [],
+        sourceBytes: new TextEncoder().encode(source).length,
+        forbiddenPatterns: [],
+        sourceHash: "abc123",
+        runtimeVersion: COMPATIBILITY_VERSIONS.runtimeJs,
+        engineCompatibility: {
+          spec: COMPATIBILITY_VERSIONS.spec,
+          engine: COMPATIBILITY_VERSIONS.engine,
+        },
+      },
+      metadata: {
+        createdBy: "player-1",
+        label: "Opening test",
+        tags: ["fixture"],
+      },
+    }
+
+    expect(StrategyRevisionSchema.parse(revision)).toEqual(revision)
+  })
+
+  it("StrategyRevisionSchema rejects oversized source", () => {
+    const source = "x".repeat(STRATEGY_SOURCE_BYTES + 1)
+
+    expect(
+      StrategyRevisionSchema.safeParse({
+        id: "strategy-revision:oversized",
+        source,
+        sourceHash: "oversized",
+        sourceBytes: STRATEGY_SOURCE_BYTES + 1,
+        runtime: {
+          name: "runtime-js",
+          version: COMPATIBILITY_VERSIONS.runtimeJs,
+        },
+        engineCompatibility: {
+          spec: COMPATIBILITY_VERSIONS.spec,
+          engine: COMPATIBILITY_VERSIONS.engine,
+        },
+        validation: {
+          valid: true,
+          errors: [],
+          warnings: [],
+          sourceBytes: STRATEGY_SOURCE_BYTES + 1,
+          forbiddenPatterns: [],
+          sourceHash: "oversized",
+          runtimeVersion: COMPATIBILITY_VERSIONS.runtimeJs,
+          engineCompatibility: {
+            spec: COMPATIBILITY_VERSIONS.spec,
+            engine: COMPATIBILITY_VERSIONS.engine,
+          },
+        },
+        metadata: {},
+      }).success,
+    ).toBe(false)
+  })
+
+  it("StrategyRevisionSchema rejects reports where valid: true has errors", () => {
+    const source =
+      "export default { selectActivations() {}, soldierBrain() {} }"
+
+    expect(
+      StrategyRevisionSchema.safeParse({
+        id: "strategy-revision:invalid-report",
+        source,
+        sourceHash: "invalid-report",
+        sourceBytes: new TextEncoder().encode(source).length,
+        runtime: {
+          name: "runtime-js",
+          version: COMPATIBILITY_VERSIONS.runtimeJs,
+        },
+        engineCompatibility: {
+          spec: COMPATIBILITY_VERSIONS.spec,
+          engine: COMPATIBILITY_VERSIONS.engine,
+        },
+        validation: {
+          valid: true,
+          errors: [
+            {
+              code: "MISSING_DEFAULT_EXPORT",
+              severity: "error",
+              message: "Missing export default",
+            },
+          ],
+          warnings: [],
+          sourceBytes: new TextEncoder().encode(source).length,
+          forbiddenPatterns: [],
+          sourceHash: "invalid-report",
+          runtimeVersion: COMPATIBILITY_VERSIONS.runtimeJs,
+          engineCompatibility: {
+            spec: COMPATIBILITY_VERSIONS.spec,
+            engine: COMPATIBILITY_VERSIONS.engine,
+          },
+        },
+        metadata: {},
+      }).success,
+    ).toBe(false)
   })
 })
