@@ -170,91 +170,91 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | TBD | Pending |
-| FOUND-02 | TBD | Pending |
-| FOUND-03 | TBD | Pending |
-| FOUND-04 | TBD | Pending |
-| FOUND-05 | TBD | Pending |
-| SPEC-01 | TBD | Pending |
-| SPEC-02 | TBD | Pending |
-| SPEC-03 | TBD | Pending |
-| SPEC-04 | TBD | Pending |
-| SPEC-05 | TBD | Pending |
-| ENG-01 | TBD | Pending |
-| ENG-02 | TBD | Pending |
-| ENG-03 | TBD | Pending |
-| ENG-04 | TBD | Pending |
-| ENG-05 | TBD | Pending |
-| ENG-06 | TBD | Pending |
-| ENG-07 | TBD | Pending |
-| ENG-08 | TBD | Pending |
-| ENG-09 | TBD | Pending |
-| ENG-10 | TBD | Pending |
-| ENG-11 | TBD | Pending |
-| ENG-12 | TBD | Pending |
-| ENG-13 | TBD | Pending |
-| ENG-14 | TBD | Pending |
-| ENG-15 | TBD | Pending |
-| ENG-16 | TBD | Pending |
-| ENG-17 | TBD | Pending |
-| ENG-18 | TBD | Pending |
-| ENG-19 | TBD | Pending |
-| ENG-20 | TBD | Pending |
-| ENG-21 | TBD | Pending |
-| REPLAY-01 | TBD | Pending |
-| REPLAY-02 | TBD | Pending |
-| REPLAY-03 | TBD | Pending |
-| REPLAY-04 | TBD | Pending |
-| REPLAY-05 | TBD | Pending |
-| REPLAY-06 | TBD | Pending |
-| REPLAY-07 | TBD | Pending |
-| RUN-01 | TBD | Pending |
-| RUN-02 | TBD | Pending |
-| RUN-03 | TBD | Pending |
-| RUN-04 | TBD | Pending |
-| RUN-05 | TBD | Pending |
-| RUN-06 | TBD | Pending |
-| RUN-07 | TBD | Pending |
-| RUN-08 | TBD | Pending |
-| RUN-09 | TBD | Pending |
-| RUN-10 | TBD | Pending |
-| MATCH-01 | TBD | Pending |
-| MATCH-02 | TBD | Pending |
-| MATCH-03 | TBD | Pending |
-| MATCH-04 | TBD | Pending |
-| MATCH-05 | TBD | Pending |
-| MATCH-06 | TBD | Pending |
-| MATCH-07 | TBD | Pending |
-| DATA-01 | TBD | Pending |
-| DATA-02 | TBD | Pending |
-| DATA-03 | TBD | Pending |
-| DATA-04 | TBD | Pending |
-| DATA-05 | TBD | Pending |
-| UX-01 | TBD | Pending |
-| UX-02 | TBD | Pending |
-| UX-03 | TBD | Pending |
-| UX-04 | TBD | Pending |
-| UX-05 | TBD | Pending |
-| UX-06 | TBD | Pending |
-| VIEW-01 | TBD | Pending |
-| VIEW-02 | TBD | Pending |
-| VIEW-03 | TBD | Pending |
-| VIEW-04 | TBD | Pending |
-| VIEW-05 | TBD | Pending |
-| VIEW-06 | TBD | Pending |
-| VIEW-07 | TBD | Pending |
-| TEST-01 | TBD | Pending |
-| TEST-02 | TBD | Pending |
-| TEST-03 | TBD | Pending |
-| TEST-04 | TBD | Pending |
-| TEST-05 | TBD | Pending |
-| TEST-06 | TBD | Pending |
-| TEST-07 | TBD | Pending |
+| FOUND-01 | Phase 1 | Pending |
+| FOUND-02 | Phase 1 | Pending |
+| FOUND-03 | Phase 1 | Pending |
+| FOUND-04 | Phase 1 | Pending |
+| FOUND-05 | Phase 1 | Pending |
+| SPEC-01 | Phase 1 | Pending |
+| SPEC-02 | Phase 1 | Pending |
+| SPEC-03 | Phase 1 | Pending |
+| SPEC-04 | Phase 1 | Pending |
+| SPEC-05 | Phase 1 | Pending |
+| ENG-01 | Phase 2 | Pending |
+| ENG-02 | Phase 2 | Pending |
+| ENG-03 | Phase 2 | Pending |
+| ENG-04 | Phase 2 | Pending |
+| ENG-05 | Phase 2 | Pending |
+| ENG-06 | Phase 2 | Pending |
+| ENG-07 | Phase 2 | Pending |
+| ENG-08 | Phase 2 | Pending |
+| ENG-09 | Phase 2 | Pending |
+| ENG-10 | Phase 2 | Pending |
+| ENG-11 | Phase 2 | Pending |
+| ENG-12 | Phase 2 | Pending |
+| ENG-13 | Phase 2 | Pending |
+| ENG-14 | Phase 2 | Pending |
+| ENG-15 | Phase 2 | Pending |
+| ENG-16 | Phase 2 | Pending |
+| ENG-17 | Phase 2 | Pending |
+| ENG-18 | Phase 2 | Pending |
+| ENG-19 | Phase 2 | Pending |
+| ENG-20 | Phase 2 | Pending |
+| ENG-21 | Phase 2 | Pending |
+| REPLAY-01 | Phase 3 | Pending |
+| REPLAY-02 | Phase 3 | Pending |
+| REPLAY-03 | Phase 3 | Pending |
+| REPLAY-04 | Phase 3 | Pending |
+| REPLAY-05 | Phase 3 | Pending |
+| REPLAY-06 | Phase 3 | Pending |
+| REPLAY-07 | Phase 3 | Pending |
+| RUN-01 | Phase 4 | Pending |
+| RUN-02 | Phase 4 | Pending |
+| RUN-03 | Phase 4 | Pending |
+| RUN-04 | Phase 4 | Pending |
+| RUN-05 | Phase 4 | Pending |
+| RUN-06 | Phase 4 | Pending |
+| RUN-07 | Phase 4 | Pending |
+| RUN-08 | Phase 4 | Pending |
+| RUN-09 | Phase 4 | Pending |
+| RUN-10 | Phase 4 | Pending |
+| MATCH-01 | Phase 5 | Pending |
+| MATCH-02 | Phase 5 | Pending |
+| MATCH-03 | Phase 5 | Pending |
+| MATCH-04 | Phase 5 | Pending |
+| MATCH-05 | Phase 5 | Pending |
+| MATCH-06 | Phase 5 | Pending |
+| MATCH-07 | Phase 5 | Pending |
+| DATA-01 | Phase 5 | Pending |
+| DATA-02 | Phase 5 | Pending |
+| DATA-03 | Phase 5 | Pending |
+| DATA-04 | Phase 5 | Pending |
+| DATA-05 | Phase 5 | Pending |
+| UX-01 | Phase 6 | Pending |
+| UX-02 | Phase 6 | Pending |
+| UX-03 | Phase 6 | Pending |
+| UX-04 | Phase 6 | Pending |
+| UX-05 | Phase 6 | Pending |
+| UX-06 | Phase 6 | Pending |
+| VIEW-01 | Phase 7 | Pending |
+| VIEW-02 | Phase 7 | Pending |
+| VIEW-03 | Phase 7 | Pending |
+| VIEW-04 | Phase 7 | Pending |
+| VIEW-05 | Phase 7 | Pending |
+| VIEW-06 | Phase 7 | Pending |
+| VIEW-07 | Phase 7 | Pending |
+| TEST-01 | Phase 2 | Pending |
+| TEST-02 | Phase 2 | Pending |
+| TEST-03 | Phase 3 | Pending |
+| TEST-04 | Phase 4 | Pending |
+| TEST-05 | Phase 5 | Pending |
+| TEST-06 | Phase 7 | Pending |
+| TEST-07 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements: 79 total
-- Mapped to phases: 0
-- Unmapped: 79
+- v1 requirements: 80 total
+- Mapped to phases: 80
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-16*
