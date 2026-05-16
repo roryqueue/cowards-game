@@ -59,16 +59,16 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Strategy Runtime
 
-- [ ] **RUN-01**: User can validate a JavaScript or TypeScript Strategy Revision before submitting it.
-- [ ] **RUN-02**: User can submit an immutable Strategy Revision that stores source, runtime version, engine compatibility, validation result, and metadata.
-- [ ] **RUN-03**: Runtime can evaluate `selectActivations` against full-board StrategyInput and return activation orders plus StrategyMemory.
-- [ ] **RUN-04**: Runtime can evaluate `soldierBrain` against SoldierBrainInput and return exactly one Action plus SoldierMemory.
-- [ ] **RUN-05**: Runtime enforces source size, StrategyMemory size, SoldierMemory size, objective payload size, and output schema limits.
-- [ ] **RUN-06**: Runtime handles invalid output as an interrupted Activation and logs a Chronicle violation.
-- [ ] **RUN-07**: Runtime handles timeout or thrown exception as a no-op/invalid evaluation according to the strategy failure policy.
-- [ ] **RUN-08**: Runtime prevents strategy code from accessing network, filesystem, environment variables, secrets, database, process APIs, wall-clock time, nondeterministic randomness, `eval`, `Function`, dynamic imports, worker spawning, native modules, or package installation.
-- [ ] **RUN-09**: Runtime executes only in worker/local sandbox contexts and never in the main web/API process.
-- [ ] **RUN-10**: Runtime boundary is replaceable so future non-JS runtimes can implement the same StrategyRuntime interface.
+- [x] **RUN-01**: User can validate a JavaScript or TypeScript Strategy Revision before submitting it.
+- [x] **RUN-02**: User can submit an immutable Strategy Revision that stores source, runtime version, engine compatibility, validation result, and metadata.
+- [x] **RUN-03**: Runtime can evaluate `selectActivations` against full-board StrategyInput and return activation orders plus StrategyMemory.
+- [x] **RUN-04**: Runtime can evaluate `soldierBrain` against SoldierBrainInput and return exactly one Action plus SoldierMemory.
+- [x] **RUN-05**: Runtime enforces source size, StrategyMemory size, SoldierMemory size, objective payload size, and output schema limits.
+- [x] **RUN-06**: Runtime handles invalid output as an interrupted Activation and logs a Chronicle violation.
+- [x] **RUN-07**: Runtime handles timeout or thrown exception as a no-op/invalid evaluation according to the strategy failure policy.
+- [x] **RUN-08**: Runtime prevents strategy code from accessing network, filesystem, environment variables, secrets, database, process APIs, wall-clock time, nondeterministic randomness, `eval`, `Function`, dynamic imports, worker spawning, native modules, or package installation.
+- [x] **RUN-09**: Runtime executes only in worker/local sandbox contexts and never in the main web/API process.
+- [x] **RUN-10**: Runtime boundary is replaceable so future non-JS runtimes can implement the same StrategyRuntime interface.
 
 ### Match Orchestration
 
@@ -112,7 +112,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TEST-01**: Engine unit tests cover every canonical movement, collision, Backstab, push, stoning, falling, contraction, and end-condition rule.
 - [x] **TEST-02**: Engine property/invariant tests cover occupancy uniqueness, bounds validity, status semantics, and deterministic ordering.
 - [x] **TEST-03**: Replay tests verify Chronicle reconstruction and integrity validation.
-- [ ] **TEST-04**: Runtime tests cover invalid outputs, timeout behavior, forbidden capabilities, memory/source limits, and output schema validation.
+- [x] **TEST-04**: Runtime tests cover invalid outputs, timeout behavior, forbidden capabilities, memory/source limits, and output schema validation.
 - [ ] **TEST-05**: Worker tests distinguish strategy failures from system failures.
 - [ ] **TEST-06**: Playwright tests cover strategy editing, revision submission, MatchSet creation, Match execution status, and replay viewing.
 - [x] **TEST-07**: CI or local verification command runs typecheck, lint, unit tests, integration tests, and selected E2E tests.
@@ -208,16 +208,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPLAY-05 | Phase 3 | Complete |
 | REPLAY-06 | Phase 3 | Complete |
 | REPLAY-07 | Phase 3 | Complete |
-| RUN-01 | Phase 4 | Pending |
-| RUN-02 | Phase 4 | Pending |
-| RUN-03 | Phase 4 | Pending |
-| RUN-04 | Phase 4 | Pending |
-| RUN-05 | Phase 4 | Pending |
-| RUN-06 | Phase 4 | Pending |
-| RUN-07 | Phase 4 | Pending |
-| RUN-08 | Phase 4 | Pending |
-| RUN-09 | Phase 4 | Pending |
-| RUN-10 | Phase 4 | Pending |
+| RUN-01 | Phase 4 | Complete |
+| RUN-02 | Phase 4 | Complete |
+| RUN-03 | Phase 4 | Complete |
+| RUN-04 | Phase 4 | Complete |
+| RUN-05 | Phase 4 | Complete |
+| RUN-06 | Phase 4 | Complete |
+| RUN-07 | Phase 4 | Complete |
+| RUN-08 | Phase 4 | Complete |
+| RUN-09 | Phase 4 | Complete |
+| RUN-10 | Phase 4 | Complete |
 | MATCH-01 | Phase 5 | Pending |
 | MATCH-02 | Phase 5 | Pending |
 | MATCH-03 | Phase 5 | Pending |
@@ -246,7 +246,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-01 | Phase 2 | Complete |
 | TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 3 | Complete |
-| TEST-04 | Phase 4 | Pending |
+| TEST-04 | Phase 4 | Complete |
 | TEST-05 | Phase 5 | Pending |
 | TEST-06 | Phase 7 | Pending |
 | TEST-07 | Phase 1 | Complete |

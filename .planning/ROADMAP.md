@@ -14,7 +14,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 | 1 | Foundation and Spec Contracts | Establish the monorepo, local workflow, canonical contracts, and versioning spine. | 11 | Complete |
 | 2 | Pure Rules Engine | Implement the canonical deterministic game engine and rule test suite. | 23 | Complete |
 | 3 | Chronicle and Replay Core | Make every Match reproducible, inspectable, and safe to project publicly. | 8 | Complete |
-| 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Planned |
+| 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Complete |
 | 5 | Match Orchestration and Persistence | Queue, execute, persist, and score Matches and MatchSets with correct failure semantics. | 13 | Pending |
 | 6 | Strategy Workshop UX | Let users create, validate, revise, and test doctrines in a Workshop loop. | 6 | Pending |
 | 7 | Replay Viewer and End-to-End Verification | Deliver the visible replay experience and full edit-to-replay verification path. | 8 | Pending |
@@ -172,7 +172,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 
 **Goal:** Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary.
 **Mode:** mvp
-**Status:** Planned
+**Status:** Complete
 
 **Requirements:** RUN-01, RUN-02, RUN-03, RUN-04, RUN-05, RUN-06, RUN-07, RUN-08, RUN-09, RUN-10, TEST-04
 
@@ -213,6 +213,8 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 - Runtime output validation is atomic; invalid or oversized output must not update memory.
 - Runtime violations expose public markers while raw details remain owner-only.
 - Phase 4 documents the worker sandbox as a prototype, replaceable boundary rather than production-grade hostile-code isolation.
+
+**Execution:** Completed. Plan 04-01 completed in commits `1356708`, `0e838e7`, `1005465`, and `58bc243`; summary recorded in `04-01-SUMMARY.md`. Plan 04-02 completed in commits `33bec11`, `970b299`, `146bd76`, `b1b00e5`, and `49b78fb`; summary recorded in `04-02-SUMMARY.md`. Plan 04-03 completed in commits `54fcccc`, `e7ead70`, `101a0c6`, `77c26fd`, `a96ea77`, `e8e881f`, and `8e75570`; summary recorded in `04-03-SUMMARY.md`. Plan 04-04 completed in commits `3aba9c4`, `4054dd2`, `47df0bc`, and `d786e40`; summary recorded in `04-04-SUMMARY.md`.
 
 ### Phase 5: Match Orchestration and Persistence
 
