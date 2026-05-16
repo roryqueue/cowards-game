@@ -12,6 +12,7 @@ export default [
       ".next/**",
       ".turbo/**",
       "dist/**",
+      "**/dist/**",
       "coverage/**",
       "pnpm-lock.yaml",
     ],

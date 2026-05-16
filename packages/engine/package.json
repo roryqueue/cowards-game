@@ -11,8 +11,8 @@
   "scripts": {
     "build": "tsc -b",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "typecheck": "tsc -b",
+    "test": "vitest run"
   },
   "dependencies": {
     "@cowards/spec": "workspace:*"

@@ -36,6 +36,16 @@ pnpm verify
 
 `pnpm verify` is the local quality gate for Phase 1. Hosted CI is intentionally not included in Phase 1.
 
+## Engine
+
+```sh
+pnpm --filter @cowards/engine test
+pnpm --filter @cowards/engine typecheck
+pnpm verify
+```
+
+Backstab uses the Phase 2 activation-boundary clarification recorded in `.planning/spec-amendments/02-backstab-rule.md`.
+
 ## Package Boundaries
 
 `packages/spec` is the canonical contract package. It owns Coward's Game types, constants, Zod schemas, compatibility versions, and canonical fixtures.
