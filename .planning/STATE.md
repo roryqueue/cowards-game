@@ -1,7 +1,7 @@
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Phase 2 complete; ready to discuss Phase 3
+**Status:** Phase 3 context gathered; ready to plan Phase 3
 
 ## Project Reference
 
@@ -9,7 +9,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** Phase 3 - Chronicle and Replay Core
-**Resume file:** `.planning/phases/02-pure-rules-engine/02-05-SUMMARY.md`
+**Resume file:** `.planning/phases/03-chronicle-and-replay-core/03-CONTEXT.md`
 **Completed phase:** Phase 2 - Pure Rules Engine
 **Plan count:** 5
 
@@ -75,14 +75,16 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 - `.planning/phases/02-pure-rules-engine/02-04-SUMMARY.md`
 - `.planning/phases/02-pure-rules-engine/02-05-SUMMARY.md`
 - `.planning/spec-amendments/02-backstab-rule.md`
+- `.planning/phases/03-chronicle-and-replay-core/03-CONTEXT.md`
+- `.planning/phases/03-chronicle-and-replay-core/03-DISCUSSION-LOG.md`
 
 ## Next Command
 
-`/gsd discuss phase 3`
+`$gsd-plan-phase 3`
 
 Alternative:
 
-`$gsd-plan-phase 3`
+`$gsd-ui-phase 3` only if a replay UI design contract is intentionally pulled earlier, which is not recommended for this infrastructure phase.
 
 ---
-*Last updated: 2026-05-16 after Phase 2 execution*
+*Last updated: 2026-05-16 after Phase 3 context gathering*
