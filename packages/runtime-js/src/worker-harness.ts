@@ -71,7 +71,7 @@ const compileStrategy = (source) => {
     sanitizedMath,
     sanitizedGlobalThis,
   ]
-  return Function(...blockedNames, \`"use strict";\\n\${body}\`)(...blockedValues)
+  return Function(...blockedNames, body)(...blockedValues)
 }
 
 const port = workerData.port

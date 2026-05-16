@@ -1,10 +1,111 @@
 import { describe, expect, it } from "vitest"
+import type {
+  AwarenessCell,
+  SoldierBrainInput,
+  SoldierSnapshot,
+  StrategyInput,
+  StrategyRevision,
+} from "@cowards/spec"
+import { createRuntimeFromRevision } from "./executor.js"
 import {
   createRuntimeViolation,
   toInvalidOutputViolation,
   toOversizedOutputViolation,
   toThrownExceptionViolation,
 } from "./guards.js"
+import { buildStrategyRevision } from "./revision.js"
+
+const bottomSoldier: SoldierSnapshot = {
+  id: "bottom-1",
+  ownerPlayerId: "bottom",
+  status: "ACTIVE",
+  position: { x: 5, y: 10 },
+  facing: "UP",
+  lastSuccessfulMoveDirection: null,
+}
+
+const topSoldier: SoldierSnapshot = {
+  id: "top-1",
+  ownerPlayerId: "top",
+  status: "ACTIVE",
+  position: { x: 5, y: 1 },
+  facing: "DOWN",
+  lastSuccessfulMoveDirection: null,
+}
+
+const awarenessCells = (): AwarenessCell[] => {
+  const cells: AwarenessCell[] = []
+  for (const dy of [-2, -1, 0, 1, 2] as const) {
+    for (const dx of [-2, -1, 0, 1, 2] as const) {
+      cells.push({
+        dx,
+        dy,
+        absoluteX: bottomSoldier.position?.x ?? 0,
+        absoluteY: bottomSoldier.position?.y ?? 0,
+        contents: dx === 0 && dy === 0 ? "FRIENDLY_ACTIVE" : "EMPTY",
+      })
+    }
+  }
+  return cells
+}
+
+const strategyInput: StrategyInput = {
+  phaseNumber: 1,
+  roundNumber: 1,
+  activationCount: 1,
+  board: {
+    bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+    soldiers: [bottomSoldier, topSoldier],
+    terrainStones: [],
+  },
+  mySoldiers: [bottomSoldier],
+  enemySoldiers: [topSoldier],
+  strategyMemory: {},
+}
+
+const soldierBrainInput: SoldierBrainInput = {
+  self: bottomSoldier,
+  awarenessGrid: { cells: awarenessCells() },
+  cycleIndex: 0,
+  maxCycles: 12,
+  soldierMemory: {},
+}
+
+const validSource = `
+export default {
+  selectActivations(input) {
+    return {
+      activationOrders: input.mySoldiers.slice(0, input.activationCount).map((soldier) => ({
+        soldierId: soldier.id,
+        objective: { target: soldier.id },
+      })),
+      strategyMemory: { seenSoldiers: input.board.soldiers.length },
+    }
+  },
+  soldierBrain(input) {
+    return {
+      action: { type: "TURN_TO_STONE" },
+      soldierMemory: { cycle: input.cycleIndex },
+    }
+  },
+}
+`
+
+const runtimeForSource = (source: string) =>
+  createRuntimeFromRevision(buildStrategyRevision({ source }))
+
+const forgedValidRevision = (source: string): StrategyRevision => {
+  const revision = buildStrategyRevision({ source: validSource })
+  return {
+    ...revision,
+    source,
+    validation: {
+      ...revision.validation,
+      valid: true,
+      errors: [],
+    },
+  }
+}
 
 describe("runtime guard helpers", () => {
   it("maps ordinary exceptions to THROWN_EXCEPTION", () => {
@@ -32,5 +133,213 @@ describe("runtime guard helpers", () => {
       type: "TIMEOUT",
       message: "too slow",
     })
+  })
+})
+
+describe("StrategyRuntime execution adapter", () => {
+  it("valid selectActivations returns ok true with activation orders and StrategyMemory", () => {
+    const result =
+      runtimeForSource(validSource).selectActivations(strategyInput)
+
+    expect(result.ok).toBe(true)
+    expect(result.ok && result.value.activationOrders).toEqual([
+      { soldierId: "bottom-1", objective: { target: "bottom-1" } },
+    ])
+    expect(result.ok && result.value.strategyMemory).toEqual({
+      seenSoldiers: 2,
+    })
+  })
+
+  it("valid soldierBrain returns ok true with exactly one Action and SoldierMemory", () => {
+    const result =
+      runtimeForSource(validSource).runSoldierBrain(soldierBrainInput)
+
+    expect(result.ok).toBe(true)
+    expect(result.ok && result.value.action).toEqual({ type: "TURN_TO_STONE" })
+    expect(result.ok && result.value.soldierMemory).toEqual({ cycle: 0 })
+  })
+
+  it("invalid revisions return INVALID_OUTPUT before worker execution", () => {
+    const runtime = createRuntimeFromRevision(
+      buildStrategyRevision({
+        source: "export default { selectActivations() {} }",
+      }),
+    )
+
+    const result = runtime.selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
+    expect(!result.ok && result.violation.message).toBe(
+      "Strategy Revision is not valid",
+    )
+  })
+
+  it("invalid selectActivations output returns INVALID_OUTPUT", () => {
+    const result = runtimeForSource(`
+export default {
+  selectActivations() {
+    return { activationOrders: "bad", strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`).selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
+  })
+
+  it("invalid soldierBrain output returns INVALID_OUTPUT", () => {
+    const result = runtimeForSource(`
+export default {
+  selectActivations() {
+    return { activationOrders: [], strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "FLY" }, soldierMemory: {} }
+  },
+}
+`).runSoldierBrain(soldierBrainInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
+  })
+
+  it("oversized StrategyMemory returns OVERSIZED_OUTPUT", () => {
+    const result = runtimeForSource(`
+export default {
+  selectActivations() {
+    return { activationOrders: [], strategyMemory: "x".repeat(32769) }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`).selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("OVERSIZED_OUTPUT")
+  })
+
+  it("oversized SoldierMemory returns OVERSIZED_OUTPUT", () => {
+    const result = runtimeForSource(`
+export default {
+  selectActivations() {
+    return { activationOrders: [], strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: "x".repeat(2049) }
+  },
+}
+`).runSoldierBrain(soldierBrainInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("OVERSIZED_OUTPUT")
+  })
+
+  it("oversized objective payload returns OVERSIZED_OUTPUT", () => {
+    const result = runtimeForSource(`
+export default {
+  selectActivations() {
+    return {
+      activationOrders: [{ soldierId: "bottom-1", objective: "x".repeat(1025) }],
+      strategyMemory: {},
+    }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`).selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("OVERSIZED_OUTPUT")
+  })
+
+  it("thrown exception returns THROWN_EXCEPTION", () => {
+    const result = runtimeForSource(`
+export default {
+  selectActivations() {
+    throw new Error("owner-only failure")
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`).selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("THROWN_EXCEPTION")
+  })
+
+  it("infinite loop returns TIMEOUT", () => {
+    const result = runtimeForSource(`
+export default {
+  selectActivations() {
+    while (true) {}
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`).selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("TIMEOUT")
+  })
+
+  it("forbidden access attempt returns FORBIDDEN_CAPABILITY", () => {
+    const runtime = createRuntimeFromRevision(
+      forgedValidRevision(`
+export default {
+  selectActivations() {
+    globalThis.process
+    return { activationOrders: [], strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`),
+    )
+
+    const result = runtime.selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("FORBIDDEN_CAPABILITY")
+  })
+
+  it("async Promise return is rejected as INVALID_OUTPUT", () => {
+    const result = runtimeForSource(`
+export default {
+  selectActivations() {
+    return Promise.resolve({ activationOrders: [], strategyMemory: {} })
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`).selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
+  })
+
+  it("returns no success until the full output schema parse succeeds", () => {
+    const result = runtimeForSource(`
+export default {
+  selectActivations() {
+    return { activationOrders: [], strategyMemory: undefined }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`).selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
   })
 })
