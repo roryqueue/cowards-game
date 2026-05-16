@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready
-last_updated: "2026-05-16T18:27:27.800Z"
+last_updated: "2026-05-16T18:36:27.174Z"
 progress:
   total_phases: 7
   completed_phases: 4
@@ -15,7 +15,7 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Phase 5 context gathered; ready to plan Phase 5
+**Status:** Phase 5 planned; ready to execute Phase 5
 
 ## Project Reference
 
@@ -25,7 +25,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 **Current focus:** Phase 5 - Match Orchestration and Persistence
 **Resume file:** `.planning/phases/05-match-orchestration-and-persistence/05-CONTEXT.md`
 **Completed phase:** Phase 4 - Strategy Runtime Sandbox
-**Plan count:** 0
+**Plan count:** 5
 
 ## Workflow Settings
 
@@ -46,7 +46,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 | 2 | Pure Rules Engine | Complete |
 | 3 | Chronicle and Replay Core | Complete |
 | 4 | Strategy Runtime Sandbox | Complete |
-| 5 | Match Orchestration and Persistence | Context Ready |
+| 5 | Match Orchestration and Persistence | Planned |
 | 6 | Strategy Workshop UX | Pending |
 | 7 | Replay Viewer and End-to-End Verification | Pending |
 
@@ -119,14 +119,22 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 - `.planning/phases/04-strategy-runtime-sandbox/04-04-SUMMARY.md`
 - `.planning/phases/05-match-orchestration-and-persistence/05-CONTEXT.md`
 - `.planning/phases/05-match-orchestration-and-persistence/05-DISCUSSION-LOG.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-RESEARCH.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-VALIDATION.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-PATTERNS.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-01-PLAN.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-02-PLAN.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-03-PLAN.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-04-PLAN.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-05-PLAN.md`
 
 ## Next Command
 
-`$gsd-plan-phase 5`
+`$gsd-execute-phase 5`
 
 Alternative:
 
-`$gsd-discuss-phase 5` if you want to revisit or extend the Phase 5 context before planning.
+`$gsd-review --phase 5 --all` if you want external peer review before execution.
 
 ---
-*Last updated: 2026-05-16 after Phase 5 context gathering*
+*Last updated: 2026-05-16 after Phase 5 planning*

@@ -15,7 +15,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 | 2 | Pure Rules Engine | Implement the canonical deterministic game engine and rule test suite. | 23 | Complete |
 | 3 | Chronicle and Replay Core | Make every Match reproducible, inspectable, and safe to project publicly. | 8 | Complete |
 | 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Complete |
-| 5 | Match Orchestration and Persistence | Queue, execute, persist, and score Matches and MatchSets with correct failure semantics. | 13 | Pending |
+| 5 | Match Orchestration and Persistence | Queue, execute, persist, and score Matches and MatchSets with correct failure semantics. | 13 | Planned |
 | 6 | Strategy Workshop UX | Let users create, validate, revise, and test doctrines in a Workshop loop. | 6 | Pending |
 | 7 | Replay Viewer and End-to-End Verification | Deliver the visible replay experience and full edit-to-replay verification path. | 8 | Pending |
 
@@ -220,6 +220,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 
 **Goal:** Queue, execute, persist, and score Matches and MatchSets with correct failure semantics.
 **Mode:** mvp
+**Status:** Planned
 
 **Requirements:** MATCH-01, MATCH-02, MATCH-03, MATCH-04, MATCH-05, MATCH-06, MATCH-07, DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, TEST-05
 
@@ -232,6 +233,35 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 **Notes:**
 - MatchSet scoring must be deterministic.
 - Keep Chronicle blob storage abstract enough to move large artifacts out of PostgreSQL later.
+
+**Plans:**
+
+| Plan | Wave | Depends On | Objective | Requirements |
+|------|------|------------|-----------|--------------|
+| 05-01 | 1 | None | Persistence package, SQL schema, migrations, and seeds | DATA-01, DATA-04, DATA-05 |
+| 05-02 | 2 | 05-01 | Match and MatchSet creation services | MATCH-01, MATCH-02, MATCH-03, MATCH-07, DATA-01, DATA-02, DATA-04 |
+| 05-03 | 2 | 05-01 | Chronicle storage adapter and metadata persistence | MATCH-04, DATA-01, DATA-03 |
+| 05-04 | 3 | 05-02, 05-03 | Worker job claiming, execution, retry, and idempotent completion | MATCH-04, MATCH-05, MATCH-07, TEST-05 |
+| 05-05 | 4 | 05-02, 05-04 | MatchSet scoring, status aggregation, and end-to-end smoke path | MATCH-02, MATCH-04, MATCH-06, MATCH-07, DATA-03, DATA-04, TEST-05 |
+
+**Wave dependency notes:**
+
+**Wave 1** — Establish the persistence package, repeatable SQL schema, migrations, and deterministic seeds.
+
+**Wave 2 *(blocked on Wave 1 completion)*** — Build creation services and Chronicle storage in parallel on top of the schema foundation.
+
+**Wave 3 *(blocked on Wave 2 completion)*** — Wire worker claiming, simulation execution, retry policy, and idempotent completion through the services.
+
+**Wave 4 *(blocked on Wave 3 completion)*** — Aggregate MatchSet scoring/status and prove the local seed-to-score smoke path.
+
+**Cross-cutting constraints:**
+
+- Match creation is StrategyRevision-ID based; dev source shortcuts must create revisions first, then call the same creation service.
+- A Match is locked at creation: Strategy Revision IDs, seed, Arena Variant, and side assignment are fixed before execution.
+- Match completion requires both durable outcome persistence and durable Chronicle storage.
+- Strategy runtime violations are gameplay events; unexpected non-strategy failures are retryable system failures.
+- MatchSet presets generate a concrete matrix once, and the persisted matrix is canonical.
+- Chronicle storage starts behind an adapter with PostgreSQL JSONB as the first implementation.
 
 ### Phase 6: Strategy Workshop UX
 
