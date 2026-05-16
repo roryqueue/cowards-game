@@ -97,7 +97,7 @@ describe("Coward's Game spec contracts", () => {
           sequence: 1,
           context: { phaseNumber: 1, roundNumber: 1 },
           privacy: "public",
-          payload: { initiativePlayerId: "bottom" },
+          payload: { roundNumber: 1 },
         },
         {
           type: "ACTIVATION_STARTED",
@@ -126,7 +126,7 @@ describe("Coward's Game spec contracts", () => {
             soldierId: "bottom-1",
           },
           privacy: "owner",
-          payload: { marker: "observed" },
+          payload: { soldierId: "bottom-1", cycleIndex: 0 },
           privateRef: "bottom.awareness.3",
         },
         {
@@ -134,7 +134,7 @@ describe("Coward's Game spec contracts", () => {
           sequence: 4,
           context: { phaseNumber: 1 },
           privacy: "public",
-          payload: { outcome: { type: "WIN", winnerPlayerId: "bottom" } },
+          payload: { type: "WIN", winnerPlayerId: "bottom" },
         },
       ],
       snapshots: [

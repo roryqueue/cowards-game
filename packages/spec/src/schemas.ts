@@ -171,6 +171,14 @@ export const SoldierBrainResultSchema = z.object({
   ),
 })
 
+export const RuntimeViolationTypeSchema = z.enum([
+  "INVALID_OUTPUT",
+  "TIMEOUT",
+  "THROWN_EXCEPTION",
+  "FORBIDDEN_CAPABILITY",
+  "OVERSIZED_OUTPUT",
+])
+
 export const ArenaVariantSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -249,14 +257,142 @@ export const ChronicleEventContextSchema = z.object({
 
 export const ChroniclePrivacySchema = z.enum(["public", "owner", "private"])
 
-export const ChronicleEventSchema = z.object({
+export const ChronicleEventBaseSchema = z.object({
   type: ChronicleEventTypeSchema,
   sequence: z.number().int().nonnegative(),
   context: ChronicleEventContextSchema,
   privacy: ChroniclePrivacySchema,
-  payload: JsonValueSchema,
   privateRef: z.string().min(1).optional(),
 })
+
+const SoldierIdPayloadSchema = z.object({
+  soldierId: z.string().min(1),
+})
+
+const OptionalReasonPayloadSchema = SoldierIdPayloadSchema.extend({
+  reason: z.string().min(1).optional(),
+})
+
+export const ChronicleEventSchema = z.discriminatedUnion("type", [
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("MATCH_STARTED"),
+    payload: z.object({
+      matchId: z.string().min(1),
+      seed: z.string().min(1).optional(),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("ROUND_STARTED"),
+    payload: z.object({
+      roundNumber: z.union([
+        z.literal(1),
+        z.literal(2),
+        z.literal(3),
+        z.literal(4),
+      ]),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("STRATEGY_EVALUATED"),
+    payload: z.object({
+      playerId: z.string().min(1),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("ACTIVATION_STARTED"),
+    payload: SoldierIdPayloadSchema,
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("AWARENESS_GRID_OBSERVED"),
+    payload: SoldierIdPayloadSchema.extend({
+      cycleIndex: z.number().int().nonnegative(),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("ACTION_EMITTED"),
+    payload: SoldierIdPayloadSchema.extend({
+      action: ActionSchema,
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("MOVE_ADVANCED"),
+    payload: SoldierIdPayloadSchema.extend({
+      direction: DirectionSchema,
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("MOVE_BLOCKED"),
+    payload: SoldierIdPayloadSchema.extend({
+      reason: z.string().min(1),
+      targetSoldierId: z.string().min(1).optional(),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("TURN_RESOLVED"),
+    payload: SoldierIdPayloadSchema.extend({
+      direction: DirectionSchema,
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("PUSH_ATTEMPTED"),
+    payload: SoldierIdPayloadSchema.extend({
+      targetSoldierId: z.string().min(1),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("PUSH_RESOLVED"),
+    payload: SoldierIdPayloadSchema.extend({
+      targetSoldierId: z.string().min(1),
+      pushedOffBoard: z.boolean(),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("PUSH_BLOCKED"),
+    payload: SoldierIdPayloadSchema.extend({
+      targetSoldierId: z.string().min(1),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("BACKSTAB_RESOLVED"),
+    payload: z.object({
+      boundary: z.enum(["activation-start", "activation-end", "post-advance"]),
+      pairs: z.array(
+        z.object({
+          attackerId: z.string().min(1),
+          victimId: z.string().min(1),
+        }),
+      ),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("SOLDIER_STONED"),
+    payload: OptionalReasonPayloadSchema,
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("SOLDIER_FELL"),
+    payload: OptionalReasonPayloadSchema,
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("CONTRACTION_RESOLVED"),
+    payload: z.object({
+      bounds: BoardBoundsSchema,
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("MATCH_ENDED"),
+    payload: MatchOutcomeSchema,
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("RUNTIME_VIOLATION"),
+    payload: z.object({
+      type: RuntimeViolationTypeSchema,
+      category: z.string().min(1).optional(),
+      playerId: z.string().min(1).optional(),
+      ownerPlayerId: z.string().min(1).optional(),
+      soldierId: z.string().min(1).optional(),
+    }),
+  }),
+])
 
 export const ChronicleBoundarySnapshotSchema = z.object({
   kind: ChronicleSnapshotKindSchema,
@@ -337,11 +473,11 @@ export const ChronicleViewerSchema = z.discriminatedUnion("access", [
   ChronicleOwnerViewerSchema,
 ])
 
-export const ChroniclePublicEventSchema = ChronicleEventSchema.pick({
-  type: true,
-  sequence: true,
-  context: true,
-  payload: true,
+export const ChroniclePublicEventSchema = z.object({
+  type: ChronicleEventTypeSchema,
+  sequence: z.number().int().nonnegative(),
+  context: ChronicleEventContextSchema,
+  payload: JsonValueSchema,
 })
 
 export const ChronicleOwnerPrivateSectionSchema = z.object({

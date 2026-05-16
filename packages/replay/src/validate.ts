@@ -51,7 +51,20 @@ export const migrateChronicle = (
     )
   }
   if (chronicle.schemaVersion === SUPPORTED_SCHEMA_VERSION) {
-    return chronicle as unknown as Chronicle
+    const parsed = ChronicleSchema.safeParse(chronicle)
+    if (!parsed.success) {
+      return error(
+        "SCHEMA_INVALID",
+        "Chronicle does not match the canonical schema.",
+        {
+          actual: parsed.error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })) as JsonValue,
+        },
+      )
+    }
+    return parsed.data as Chronicle
   }
   return error(
     "UNSUPPORTED_MIGRATION",

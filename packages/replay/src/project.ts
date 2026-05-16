@@ -86,9 +86,6 @@ export const projectPublicChronicle = (
   reproducibility: cloneJson(chronicle.reproducibility),
   events: chronicle.events.map(projectEvent),
   snapshots: cloneJson(chronicle.snapshots),
-  ...(chronicle.integrity === undefined
-    ? {}
-    : { integrity: cloneJson(chronicle.integrity) }),
 })
 
 export const projectOwnerChronicle = (

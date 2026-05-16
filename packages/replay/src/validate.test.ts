@@ -66,6 +66,9 @@ describe("validateChronicle", () => {
     expect(errorCodes({ schemaVersion: "chronicle-v1" })).toContain(
       "SCHEMA_INVALID",
     )
+    expect(migrateChronicle({ schemaVersion: "chronicle-v1" })).toMatchObject({
+      code: "SCHEMA_INVALID",
+    })
     expect(
       errorCodes({ ...createChronicle(), schemaVersion: "chronicle-v0" }),
     ).toContain("VERSION_INCOMPATIBLE")
@@ -75,6 +78,43 @@ describe("validateChronicle", () => {
         events: [],
       }),
     ).toMatchObject({ code: "UNSUPPORTED_MIGRATION" })
+  })
+
+  it("rejects corrupted replay-driving event payloads during validation", () => {
+    const chronicle = createChronicle()
+    const corruptedPayloadCases = [
+      {
+        type: "MOVE_ADVANCED",
+        payload: { soldierId: "bottom-soldier-1" },
+      },
+      {
+        type: "PUSH_RESOLVED",
+        payload: { soldierId: "bottom-soldier-1", pushedOffBoard: false },
+      },
+      {
+        type: "SOLDIER_FELL",
+        payload: { reason: "MOVED_OFF_BOARD" },
+      },
+      {
+        type: "MATCH_ENDED",
+        payload: { type: "WIN" },
+      },
+    ]
+
+    for (const corrupted of corruptedPayloadCases) {
+      expect(
+        errorCodes({
+          ...chronicle,
+          events: [
+            {
+              ...chronicle.events[0],
+              ...corrupted,
+            },
+            ...chronicle.events.slice(1),
+          ],
+        }),
+      ).toContain("SCHEMA_INVALID")
+    }
   })
 
   it("detects incompatible component versions", () => {

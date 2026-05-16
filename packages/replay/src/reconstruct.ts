@@ -10,6 +10,7 @@ import type {
   Position,
   SoldierSnapshot,
 } from "@cowards/spec"
+import { MatchOutcomeSchema } from "@cowards/spec"
 import { stableStringify } from "./hash.js"
 import { validateChronicle } from "./validate.js"
 
@@ -401,11 +402,22 @@ const applyEvent = (
       }
     }
     case "MATCH_ENDED": {
+      const parsed = MatchOutcomeSchema.safeParse(event.payload)
+      if (!parsed.success) {
+        return {
+          ok: false,
+          errors: [
+            error("SNAPSHOT_MISMATCH", "MATCH_ENDED payload is invalid.", {
+              sequence: event.sequence,
+            }),
+          ],
+        }
+      }
       return {
         ok: true,
         state: {
           ...state,
-          outcome: event.payload as MatchOutcome,
+          outcome: parsed.data as MatchOutcome,
         },
       }
     }

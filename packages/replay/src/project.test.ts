@@ -199,6 +199,20 @@ describe("Chronicle projections", () => {
     })
   })
 
+  it("omits full Chronicle integrity from public projection", () => {
+    const projection = projectPublicChronicle({
+      ...createChronicle(),
+      integrity: {
+        algorithm: "sha256",
+        normalizedContentHash: "PRIVATE_HASH_COMMITMENT",
+      },
+    })
+    const serialized = JSON.stringify(projection)
+
+    expect(projection.integrity).toBeUndefined()
+    expect(serialized).not.toContain("PRIVATE_HASH_COMMITMENT")
+  })
+
   it("dispatches owner projection through projectChronicle", () => {
     const projection = projectChronicle(createChronicle(), {
       access: "owner",
