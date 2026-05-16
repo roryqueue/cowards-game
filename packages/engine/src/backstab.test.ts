@@ -178,4 +178,37 @@ describe("activation-boundary Backstab", () => {
       winnerPlayerId: "bottom",
     })
   })
+
+  it("ends immediately after a post-advance Backstab eliminates a player", () => {
+    const state = stateWith([
+      soldier({ id: "mover", position: { x: 5, y: 7 }, facing: "UP" }),
+      soldier({
+        id: "victim",
+        ownerPlayerId: "top",
+        position: { x: 5, y: 5 },
+        facing: "UP",
+      }),
+    ])
+    let calls = 0
+    const result = resolveActivation(
+      state,
+      createFakeRuntime({
+        action: () => {
+          calls += 1
+          return calls === 1
+            ? { type: "MOVE", direction: "UP" }
+            : { type: "TURN_TO_STONE" }
+        },
+      }),
+      "mover",
+    )
+    expect(calls).toBe(1)
+    expect(result.state.outcome).toEqual({
+      type: "WIN",
+      winnerPlayerId: "bottom",
+    })
+    expect(result.events.map((summary) => summary.type)).toContain(
+      "MATCH_ENDED",
+    )
+  })
 })

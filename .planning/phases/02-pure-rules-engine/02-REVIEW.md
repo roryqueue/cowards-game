@@ -1,15 +1,16 @@
 ---
 phase: 2
 phase_name: Pure Rules Engine
-status: findings
+status: fixed
 depth: standard
 files_reviewed: 27
 finding_counts:
   critical: 0
-  warning: 1
-  info: 1
-  total: 2
+  warning: 0
+  info: 0
+  total: 0
 reviewed_at: 2026-05-16
+fixed_at: 2026-05-16
 ---
 
 # Code Review: Phase 2 Pure Rules Engine
@@ -53,6 +54,7 @@ Reviewed source/config files:
 ### WR-001: Post-advance Backstab can eliminate a player without ending the match immediately
 
 **Severity:** Warning  
+**Status:** Fixed
 **File:** `packages/engine/src/activation.ts`  
 **Lines:** 218-238  
 **Requirements:** ENG-15, ENG-19
@@ -63,9 +65,12 @@ That violates the source rule: "After Backstab boundary resolution, immediately 
 
 **Recommendation:** After every `resolveAction`, call `checkAndApplyMatchEnd(current)` before deciding whether to continue the activation loop. If the match ends, append the `MATCH_ENDED` event and break/return before any additional SoldierBrain cycles.
 
+**Resolution:** `resolveActivation` now checks match-end immediately when an action emits `BACKSTAB_RESOLVED`. A regression test verifies a post-advance Backstab that eliminates a player stops before a second SoldierBrain call.
+
 ### IN-001: Off-board movement test asserts the opposite of the intended event payload
 
 **Severity:** Info  
+**Status:** Fixed
 **File:** `packages/engine/src/movement.test.ts`  
 **Lines:** 101-105  
 **Requirements:** TEST-01
@@ -73,6 +78,8 @@ That violates the source rule: "After Backstab boundary resolution, immediately 
 The off-board movement test confirms the Soldier becomes `FALLEN`, but the event assertion currently expects no payload string containing `MOVED_OFF_BOARD`. The implementation emits `event("SOLDIER_FELL", { soldierId, reason: "MOVED_OFF_BOARD" })`, so this assertion does not validate the documented reason and appears inverted.
 
 **Recommendation:** Change the assertion to verify that a `SOLDIER_FELL` event exists with payload reason `MOVED_OFF_BOARD`.
+
+**Resolution:** The test now asserts a `SOLDIER_FELL` event whose payload includes `MOVED_OFF_BOARD`.
 
 ## Positive Notes
 
@@ -87,6 +94,7 @@ Latest full verification before review:
 - `pnpm verify` passed.
 - Engine tests: 8 files, 34 tests passed.
 
-## Suggested Next Step
+## Resolution Verification
 
-Run `$gsd-code-review 2 --fix` or address `WR-001` manually before Phase 3 so Chronicle/replay does not encode the delayed match-end behavior.
+- `pnpm --filter @cowards/engine test` passed with 35 tests.
+- `pnpm verify` passed.

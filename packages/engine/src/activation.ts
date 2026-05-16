@@ -221,6 +221,18 @@ export const resolveActivation = (
     current = actionResult.state
     events.push(...actionResult.events)
     advanced = advanced || actionResult.advanced
+    if (
+      actionResult.events.some(
+        (summary) => summary.type === "BACKSTAB_RESOLVED",
+      )
+    ) {
+      const postBackstabEnd = checkAndApplyMatchEnd(current)
+      current = postBackstabEnd.state
+      events.push(...postBackstabEnd.events)
+      if (current.outcome) {
+        return { state: current, events }
+      }
+    }
     if (actionResult.terminalReason) {
       break
     }

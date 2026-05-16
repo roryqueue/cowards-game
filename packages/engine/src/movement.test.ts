@@ -100,10 +100,12 @@ describe("movement rules", () => {
     )
     expect(result.state.soldiers[0]!.status).toBe("FALLEN")
     expect(
-      result.events.some((summary) =>
-        String(summary.payload).includes("MOVED_OFF_BOARD"),
+      result.events.some(
+        (summary) =>
+          summary.type === "SOLDIER_FELL" &&
+          JSON.stringify(summary.payload).includes("MOVED_OFF_BOARD"),
       ),
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it("blocks movement into TerrainStone and STONE Soldiers", () => {
