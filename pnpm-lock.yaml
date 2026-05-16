@@ -106,6 +106,13 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+    devDependencies:
+      '@cowards/replay':
+        specifier: workspace:*
+        version: link:../replay
+      '@cowards/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
 
   packages/spec:
     dependencies:

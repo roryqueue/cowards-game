@@ -19,5 +19,9 @@
     "@cowards/engine": "workspace:*",
     "@cowards/spec": "workspace:*",
     "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@cowards/replay": "workspace:*",
+    "@cowards/test-utils": "workspace:*"
   }
 }
