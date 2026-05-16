@@ -4,8 +4,8 @@ import {
   createStrategyRevisionId,
   hashStrategySource,
   isValidStrategyRevision,
-  stableStringify,
 } from "./index.js"
+import { stableStringify } from "./hash.js"
 import { StrategyRevisionSchema } from "@cowards/spec"
 
 const validSource = `
