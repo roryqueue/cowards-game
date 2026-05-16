@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: cowards-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: cowards
+      POSTGRES_PASSWORD: cowards
+      POSTGRES_DB: cowards_game
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cowards -d cowards_game"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8
+    container_name: cowards-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
+  redis-data:

@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "apps/web" },
+    { "path": "apps/worker" },
+    { "path": "packages/spec" },
+    { "path": "packages/engine" },
+    { "path": "packages/runtime-js" },
+    { "path": "packages/replay" },
+    { "path": "packages/map-configs" },
+    { "path": "packages/test-utils" }
+  ]
+}

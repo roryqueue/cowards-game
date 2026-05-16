@@ -1,0 +1,29 @@
+{
+  "name": "cowards-game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.1.2",
+  "scripts": {
+    "dev": "turbo dev --filter='./apps/*' --filter='./packages/*'",
+    "dev:full": "docker compose up -d postgres redis && turbo dev --filter='./apps/*' --filter='./packages/*'",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^24.10.1",
+    "@typescript-eslint/eslint-plugin": "^8.48.1",
+    "@typescript-eslint/parser": "^8.48.1",
+    "eslint": "^9.39.2",
+    "eslint-plugin-boundaries": "^5.4.0",
+    "prettier": "^3.7.4",
+    "turbo": "^2.9.14",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.6"
+  }
+}
