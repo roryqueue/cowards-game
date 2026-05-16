@@ -54,7 +54,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **REPLAY-03**: Chronicle records enough information to reconstruct board states and final Match outcome without re-executing strategy source code.
 - [x] **REPLAY-04**: Chronicle supports checkpoints for partial replay and debugging.
 - [x] **REPLAY-05**: Replay utilities can validate Chronicle integrity and fail clearly on corrupted or version-incompatible replay data.
-- [ ] **REPLAY-06**: Public replay projection excludes Strategy source code, StrategyMemory, SoldierMemory, and objective payloads by default.
+- [x] **REPLAY-06**: Public replay projection excludes Strategy source code, StrategyMemory, SoldierMemory, and objective payloads by default.
 - [x] **REPLAY-07**: Owner-only replay projection can expose private debug data for the owning Player when available.
 
 ### Strategy Runtime
@@ -206,7 +206,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPLAY-03 | Phase 3 | Complete |
 | REPLAY-04 | Phase 3 | Complete |
 | REPLAY-05 | Phase 3 | Complete |
-| REPLAY-06 | Phase 3 | Pending |
+| REPLAY-06 | Phase 3 | Complete |
 | REPLAY-07 | Phase 3 | Complete |
 | RUN-01 | Phase 4 | Pending |
 | RUN-02 | Phase 4 | Pending |
@@ -258,4 +258,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-16 after initial definition*
+*Last updated: 2026-05-16 after Phase 3 Plan 03-04 execution*
