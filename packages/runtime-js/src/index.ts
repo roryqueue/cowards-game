@@ -6,6 +6,10 @@ export {
   hashStrategySource,
   stableStringify,
 } from "./hash.js"
+export {
+  FORBIDDEN_SOURCE_PATTERNS,
+  validateStrategySource,
+} from "./validation.js"
 
 export type {
   StrategyRevision,
