@@ -356,7 +356,7 @@ export default {
   },
 }
 `)
-    const inputBefore = structuredClone(soldierBrainInput)
+    const inputBefore = JSON.parse(JSON.stringify(soldierBrainInput))
     const first = runtime.runSoldierBrain(soldierBrainInput)
     const second = runtime.runSoldierBrain(soldierBrainInput)
 
