@@ -10,6 +10,7 @@ export {
   FORBIDDEN_SOURCE_PATTERNS,
   validateStrategySource,
 } from "./validation.js"
+export { transpileStrategySource } from "./transpile.js"
 
 export type {
   StrategyRevision,

@@ -97,6 +97,9 @@ importers:
       '@cowards/spec':
         specifier: workspace:*
         version: link:../spec
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   packages/spec:
     dependencies:
