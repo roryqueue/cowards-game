@@ -47,9 +47,10 @@ strategies, call the StrategyRuntime, or depend on strategy source code.
 
 Use `projectPublicChronicle(chronicle)` for default public replay output. Public
 projection preserves board truth, event markers, snapshots, outcomes, and
-integrity metadata while stripping private refs, exact Awareness Grids,
-objective payloads, StrategyMemory, SoldierMemory, strategy source, and raw
-runtime details.
+public-safe replay data while stripping full-Chronicle integrity metadata,
+private refs, exact Awareness Grids, objective payloads, StrategyMemory,
+SoldierMemory, strategy source, and raw runtime details. Full Chronicle
+integrity hashes cover private content and stay out of public projections.
 
 Use `projectOwnerChronicle(chronicle, playerId)` for owner debug views. Owner
 projection includes the public projection plus only that player's private debug
