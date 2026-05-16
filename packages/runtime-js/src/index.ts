@@ -11,6 +11,7 @@ export {
   validateStrategySource,
 } from "./validation.js"
 export { transpileStrategySource } from "./transpile.js"
+export { buildStrategyRevision, isValidStrategyRevision } from "./revision.js"
 
 export type {
   StrategyRevision,

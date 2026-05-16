@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest"
 import {
+  buildStrategyRevision,
   createStrategyRevisionId,
   hashStrategySource,
+  isValidStrategyRevision,
   stableStringify,
-} from "./hash.js"
+} from "./index.js"
+import { StrategyRevisionSchema } from "@cowards/spec"
+
+const validSource = `
+export default {
+  selectActivations() {
+    return { activationOrders: [], strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`
 
 describe("Strategy Revision hashing", () => {
   it("stableStringify sorts object keys recursively", () => {
@@ -32,5 +46,48 @@ describe("Strategy Revision hashing", () => {
       createStrategyRevisionId(input),
     )
     expect(createStrategyRevisionId(input)).toContain("strategy-revision:")
+  })
+
+  it("buildStrategyRevision creates deterministic immutable artifacts", () => {
+    const first = buildStrategyRevision({
+      source: validSource,
+      strategyId: "strategy-1",
+      metadata: { label: "Fixture" },
+    })
+    const second = buildStrategyRevision({
+      source: validSource,
+      strategyId: "strategy-1",
+      metadata: { label: "Fixture" },
+    })
+
+    expect(first.id).toBe(second.id)
+    expect(first.source).toBe(validSource)
+    expect(first.sourceHash).toBe(hashStrategySource(validSource))
+    expect(StrategyRevisionSchema.parse(first)).toEqual(first)
+    expect(isValidStrategyRevision(first)).toBe(true)
+    expect(Object.isFrozen(first)).toBe(true)
+    expect(Object.isFrozen(first.runtime)).toBe(true)
+    expect(Object.isFrozen(first.validation.errors)).toBe(true)
+  })
+
+  it("changing source changes Strategy Revision ID", () => {
+    const first = buildStrategyRevision({ source: validSource })
+    const second = buildStrategyRevision({
+      source: validSource.replace("TURN_TO_STONE", "TURN"),
+    })
+
+    expect(first.id).not.toBe(second.id)
+  })
+
+  it("returns invalid artifacts for normal validation failures without throwing", () => {
+    const revision = buildStrategyRevision({
+      source: "export default { selectActivations() {} }",
+    })
+
+    expect(revision.validation.valid).toBe(false)
+    expect(revision.validation.errors.map((error) => error.code)).toContain(
+      "MISSING_SOLDIER_BRAIN",
+    )
+    expect(isValidStrategyRevision(revision)).toBe(true)
   })
 })
