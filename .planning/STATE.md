@@ -1,7 +1,7 @@
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Phase 1 complete; ready to discuss Phase 2
+**Status:** Phase 2 context gathered; ready to plan Phase 2
 
 ## Project Reference
 
@@ -9,7 +9,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** Phase 2 - Pure Rules Engine
-**Resume file:** `.planning/phases/01-foundation-and-spec-contracts/01-04-SUMMARY.md`
+**Resume file:** `.planning/phases/02-pure-rules-engine/02-CONTEXT.md`
 **Completed phase:** Phase 1 - Foundation and Spec Contracts
 **Plan count:** 4
 
@@ -59,14 +59,16 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 - `.planning/phases/01-foundation-and-spec-contracts/01-02-SUMMARY.md`
 - `.planning/phases/01-foundation-and-spec-contracts/01-03-SUMMARY.md`
 - `.planning/phases/01-foundation-and-spec-contracts/01-04-SUMMARY.md`
+- `.planning/phases/02-pure-rules-engine/02-CONTEXT.md`
+- `.planning/phases/02-pure-rules-engine/02-DISCUSSION-LOG.md`
 
 ## Next Command
 
-`/gsd discuss phase 2`
+`$gsd-plan-phase 2`
 
 Alternative:
 
 `$gsd-plan-phase 2`
 
 ---
-*Last updated: 2026-05-16 after Phase 1 execution*
+*Last updated: 2026-05-16 after Phase 2 context session*
