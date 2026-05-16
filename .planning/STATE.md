@@ -1,7 +1,7 @@
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Phase 2 context gathered; ready to plan Phase 2
+**Status:** Ready to execute Phase 2
 
 ## Project Reference
 
@@ -9,9 +9,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** Phase 2 - Pure Rules Engine
-**Resume file:** `.planning/phases/02-pure-rules-engine/02-CONTEXT.md`
+**Resume file:** `.planning/phases/02-pure-rules-engine/02-01-PLAN.md`
 **Completed phase:** Phase 1 - Foundation and Spec Contracts
-**Plan count:** 4
+**Plan count:** 5
 
 ## Workflow Settings
 
@@ -29,7 +29,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 | Phase | Name | Status |
 |-------|------|--------|
 | 1 | Foundation and Spec Contracts | Complete |
-| 2 | Pure Rules Engine | Pending |
+| 2 | Pure Rules Engine | Planned |
 | 3 | Chronicle and Replay Core | Pending |
 | 4 | Strategy Runtime Sandbox | Pending |
 | 5 | Match Orchestration and Persistence | Pending |
@@ -61,14 +61,22 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 - `.planning/phases/01-foundation-and-spec-contracts/01-04-SUMMARY.md`
 - `.planning/phases/02-pure-rules-engine/02-CONTEXT.md`
 - `.planning/phases/02-pure-rules-engine/02-DISCUSSION-LOG.md`
+- `.planning/phases/02-pure-rules-engine/02-RESEARCH.md`
+- `.planning/phases/02-pure-rules-engine/02-VALIDATION.md`
+- `.planning/phases/02-pure-rules-engine/02-PATTERNS.md`
+- `.planning/phases/02-pure-rules-engine/02-01-PLAN.md`
+- `.planning/phases/02-pure-rules-engine/02-02-PLAN.md`
+- `.planning/phases/02-pure-rules-engine/02-03-PLAN.md`
+- `.planning/phases/02-pure-rules-engine/02-04-PLAN.md`
+- `.planning/phases/02-pure-rules-engine/02-05-PLAN.md`
 
 ## Next Command
 
-`$gsd-plan-phase 2`
+`$gsd-execute-phase 2`
 
 Alternative:
 
 `$gsd-plan-phase 2`
 
 ---
-*Last updated: 2026-05-16 after Phase 2 context session*
+*Last updated: 2026-05-16 after Phase 2 planning*

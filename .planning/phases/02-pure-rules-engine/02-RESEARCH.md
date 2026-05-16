@@ -129,7 +129,7 @@ Create small engine modules rather than one large `index.ts`:
 - Quick engine test command: `pnpm --filter @cowards/engine test`
 - Quick test-utils test command when relevant: `pnpm --filter @cowards/test-utils test`
 - Full local gate: `pnpm verify`
-- Purity grep: `! rg "Math\\.random|Date\\.now|new Date\\(|fetch\\(|from ['\\\"]fs|from ['\\\"]node:fs|process\\.env|postgres|redis" packages/engine/src`
+- Purity grep: `! rg "Math\\.random|Date\\.now|new Date\\(|fetch\\(|from ['\\\"]fs|from ['\\\"]node:fs|process\\.env|postgres|redis" packages/engine/src --glob '!*.test.ts' --glob '!test/**'`
 
 ### Required Test Suites
 
@@ -169,4 +169,3 @@ Create small engine modules rather than one large `index.ts`:
 - Use one activation-loop plan before movement rules.
 - Use one movement/Backstab plan with a dedicated Backstab suite.
 - Use one contraction/end/invariant/full-match plan to close remaining rules and run the full verification gate.
-
