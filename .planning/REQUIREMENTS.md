@@ -49,13 +49,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Determinism and Replay
 
-- [ ] **REPLAY-01**: Developer can run a deterministic replay test proving same seed, Strategy Revisions, Arena Variant, engine version, and runtime version produce the same Chronicle.
-- [ ] **REPLAY-02**: Every Match produces a Chronicle containing Match start, Round start, Strategy evaluation, Activation start, Awareness Grid observation, Action emitted, movement, push, Backstab, stoning, fall, contraction, runtime violation, and Match end events.
-- [ ] **REPLAY-03**: Chronicle records enough information to reconstruct board states and final Match outcome without re-executing strategy source code.
-- [ ] **REPLAY-04**: Chronicle supports checkpoints for partial replay and debugging.
+- [x] **REPLAY-01**: Developer can run a deterministic replay test proving same seed, Strategy Revisions, Arena Variant, engine version, and runtime version produce the same Chronicle.
+- [x] **REPLAY-02**: Every Match produces a Chronicle containing Match start, Round start, Strategy evaluation, Activation start, Awareness Grid observation, Action emitted, movement, push, Backstab, stoning, fall, contraction, runtime violation, and Match end events.
+- [x] **REPLAY-03**: Chronicle records enough information to reconstruct board states and final Match outcome without re-executing strategy source code.
+- [x] **REPLAY-04**: Chronicle supports checkpoints for partial replay and debugging.
 - [ ] **REPLAY-05**: Replay utilities can validate Chronicle integrity and fail clearly on corrupted or version-incompatible replay data.
 - [ ] **REPLAY-06**: Public replay projection excludes Strategy source code, StrategyMemory, SoldierMemory, and objective payloads by default.
-- [ ] **REPLAY-07**: Owner-only replay projection can expose private debug data for the owning Player when available.
+- [x] **REPLAY-07**: Owner-only replay projection can expose private debug data for the owning Player when available.
 
 ### Strategy Runtime
 
@@ -201,13 +201,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENG-19 | Phase 2 | Complete |
 | ENG-20 | Phase 2 | Complete |
 | ENG-21 | Phase 2 | Complete |
-| REPLAY-01 | Phase 3 | Pending |
-| REPLAY-02 | Phase 3 | Pending |
-| REPLAY-03 | Phase 3 | Pending |
-| REPLAY-04 | Phase 3 | Pending |
+| REPLAY-01 | Phase 3 | Complete |
+| REPLAY-02 | Phase 3 | Complete |
+| REPLAY-03 | Phase 3 | Complete |
+| REPLAY-04 | Phase 3 | Complete |
 | REPLAY-05 | Phase 3 | Pending |
 | REPLAY-06 | Phase 3 | Pending |
-| REPLAY-07 | Phase 3 | Pending |
+| REPLAY-07 | Phase 3 | Complete |
 | RUN-01 | Phase 4 | Pending |
 | RUN-02 | Phase 4 | Pending |
 | RUN-03 | Phase 4 | Pending |

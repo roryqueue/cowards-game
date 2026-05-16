@@ -166,7 +166,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 - Replay reconstruction must not rerun strategies or depend on runtime execution.
 - Strict exhaustive Chronicle grammar remains deferred to the post-Phase-7 hardening phase.
 
-**Execution:** Plan 03-01 completed in commits `ef19c39` and `a4dd902`; summary recorded in `03-01-SUMMARY.md`.
+**Execution:** Plans 03-01 and 03-02 completed. Plan 03-01 completed in commits `ef19c39` and `a4dd902`; summary recorded in `03-01-SUMMARY.md`. Plan 03-02 completed in commits `bbcf6c3`, `0e2b5ee`, and `8c3e73b`; summary recorded in `03-02-SUMMARY.md`.
 
 ### Phase 4: Strategy Runtime Sandbox
 
