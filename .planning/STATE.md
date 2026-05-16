@@ -1,3 +1,17 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: planning
+last_updated: "2026-05-16T16:59:17.935Z"
+progress:
+  total_phases: 7
+  completed_phases: 3
+  total_plans: 14
+  completed_plans: 14
+  percent: 100
+---
+
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
@@ -9,7 +23,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** Phase 4 - Strategy Runtime Sandbox
-**Resume file:** `.planning/ROADMAP.md`
+**Resume file:** .planning/phases/04-strategy-runtime-sandbox/04-CONTEXT.md
 **Completed phase:** Phase 3 - Chronicle and Replay Core
 **Plan count:** 5
 
