@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready
-last_updated: "2026-05-16T17:39:12.000Z"
+last_updated: "2026-05-16T18:27:27.800Z"
 progress:
   total_phases: 7
   completed_phases: 4
@@ -15,7 +15,7 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Phase 4 complete; ready to discuss Phase 5
+**Status:** Phase 5 context gathered; ready to plan Phase 5
 
 ## Project Reference
 
@@ -23,7 +23,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** Phase 5 - Match Orchestration and Persistence
-**Resume file:** None
+**Resume file:** `.planning/phases/05-match-orchestration-and-persistence/05-CONTEXT.md`
 **Completed phase:** Phase 4 - Strategy Runtime Sandbox
 **Plan count:** 0
 
@@ -46,7 +46,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 | 2 | Pure Rules Engine | Complete |
 | 3 | Chronicle and Replay Core | Complete |
 | 4 | Strategy Runtime Sandbox | Complete |
-| 5 | Match Orchestration and Persistence | Pending |
+| 5 | Match Orchestration and Persistence | Context Ready |
 | 6 | Strategy Workshop UX | Pending |
 | 7 | Replay Viewer and End-to-End Verification | Pending |
 
@@ -117,14 +117,16 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 - `.planning/phases/04-strategy-runtime-sandbox/04-02-SUMMARY.md`
 - `.planning/phases/04-strategy-runtime-sandbox/04-03-SUMMARY.md`
 - `.planning/phases/04-strategy-runtime-sandbox/04-04-SUMMARY.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-CONTEXT.md`
+- `.planning/phases/05-match-orchestration-and-persistence/05-DISCUSSION-LOG.md`
 
 ## Next Command
 
-`$gsd-discuss-phase 5`
+`$gsd-plan-phase 5`
 
 Alternative:
 
-`$gsd-verify-work 4` if you want conversational UAT before moving into Phase 5 planning.
+`$gsd-discuss-phase 5` if you want to revisit or extend the Phase 5 context before planning.
 
 ---
-*Last updated: 2026-05-16 after Phase 4 execution*
+*Last updated: 2026-05-16 after Phase 5 context gathering*
