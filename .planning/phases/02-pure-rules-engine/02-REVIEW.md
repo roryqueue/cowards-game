@@ -1,9 +1,9 @@
 ---
 phase: 2
 phase_name: Pure Rules Engine
-status: fixed
+status: clean
 depth: deep
-files_reviewed: 27
+files_reviewed: 28
 finding_counts:
   critical: 0
   warning: 0
@@ -11,6 +11,7 @@ finding_counts:
   total: 0
 reviewed_at: 2026-05-16
 fixed_at: 2026-05-16
+latest_review_commit: 514f784
 supersedes: standard review in commit 4707c52 and fix commit c2b6420
 ---
 
@@ -18,7 +19,7 @@ supersedes: standard review in commit 4707c52 and fix commit c2b6420
 
 ## Scope
 
-Reviewed Phase 2 source changes through `c2b6420 fix(02): resolve code review findings`, using a deep pass over cross-file state transitions, import/call relationships, rule ordering, and Chronicle-facing event semantics.
+Reviewed Phase 2 source changes through `514f784 fix(02): close deep review findings`, using a deep pass over cross-file state transitions, import/call relationships, rule ordering, and Chronicle-facing event semantics.
 
 Reviewed source/config files:
 
@@ -38,6 +39,7 @@ Reviewed source/config files:
 - `packages/engine/src/match.ts`
 - `packages/engine/src/movement.test.ts`
 - `packages/engine/src/movement.ts`
+- `packages/engine/src/outcome.ts`
 - `packages/engine/src/purity.test.ts`
 - `packages/engine/src/runtime-inputs.ts`
 - `packages/engine/src/selectors.ts`
@@ -51,6 +53,10 @@ Reviewed source/config files:
 - `packages/test-utils/src/index.ts`
 
 ## Findings
+
+No active findings remain in the latest deep review.
+
+## Fixed Findings
 
 ### WR-001: Push-off-board can eliminate a player but still allow extra SoldierBrain cycles
 
@@ -118,7 +124,8 @@ The current import graph has `activation -> match -> activation` and `match -> c
 ## Positive Notes
 
 - The state transition functions remain deterministic and side-effect free.
-- The post-advance Backstab regression test added in `c2b6420` is well-targeted and caught the original lifecycle gap.
+- Terminal match-end behavior is now centralized in `outcome.ts`, idempotent, and checked after each action transition.
+- The post-advance Backstab, push-off-board victory, and single terminal event regression tests cover the lifecycle gaps found during review.
 - The invariant and purity tests provide useful guardrails before the Chronicle phase.
 
 ## Resolution Verification
