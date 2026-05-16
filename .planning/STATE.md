@@ -1,16 +1,16 @@
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Ready to execute Phase 3 Plan 03-05
+**Status:** Ready to plan Phase 4
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 3 - Chronicle and Replay Core
-**Resume file:** `.planning/phases/03-chronicle-and-replay-core/03-05-PLAN.md`
-**Completed phase:** Phase 2 - Pure Rules Engine
+**Current focus:** Phase 4 - Strategy Runtime Sandbox
+**Resume file:** `.planning/ROADMAP.md`
+**Completed phase:** Phase 3 - Chronicle and Replay Core
 **Plan count:** 5
 
 ## Workflow Settings
@@ -30,7 +30,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 |-------|------|--------|
 | 1 | Foundation and Spec Contracts | Complete |
 | 2 | Pure Rules Engine | Complete |
-| 3 | Chronicle and Replay Core | Planned |
+| 3 | Chronicle and Replay Core | Complete |
 | 4 | Strategy Runtime Sandbox | Pending |
 | 5 | Match Orchestration and Persistence | Pending |
 | 6 | Strategy Workshop UX | Pending |
@@ -89,14 +89,15 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 - `.planning/phases/03-chronicle-and-replay-core/03-02-SUMMARY.md`
 - `.planning/phases/03-chronicle-and-replay-core/03-03-SUMMARY.md`
 - `.planning/phases/03-chronicle-and-replay-core/03-04-SUMMARY.md`
+- `.planning/phases/03-chronicle-and-replay-core/03-05-SUMMARY.md`
 
 ## Next Command
 
-`$gsd-execute-phase 3`
+`$gsd-discuss-phase 4`
 
 Alternative:
 
-`$gsd-code-review 3` after execution if you want an extra review pass before moving to Phase 4.
+`$gsd-code-review 3` if you want an extra review pass before planning Phase 4.
 
 ---
-*Last updated: 2026-05-16 after Phase 3 Plan 03-04 execution*
+*Last updated: 2026-05-16 after Phase 3 Plan 03-05 execution*

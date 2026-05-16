@@ -13,7 +13,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 |-------|------|------|--------------|--------|
 | 1 | Foundation and Spec Contracts | Establish the monorepo, local workflow, canonical contracts, and versioning spine. | 11 | Complete |
 | 2 | Pure Rules Engine | Implement the canonical deterministic game engine and rule test suite. | 23 | Complete |
-| 3 | Chronicle and Replay Core | Make every Match reproducible, inspectable, and safe to project publicly. | 8 | Planned |
+| 3 | Chronicle and Replay Core | Make every Match reproducible, inspectable, and safe to project publicly. | 8 | Complete |
 | 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Pending |
 | 5 | Match Orchestration and Persistence | Queue, execute, persist, and score Matches and MatchSets with correct failure semantics. | 13 | Pending |
 | 6 | Strategy Workshop UX | Let users create, validate, revise, and test doctrines in a Workshop loop. | 6 | Pending |
@@ -121,7 +121,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 
 **Goal:** Make every Match reproducible, inspectable, and safe to project publicly.
 **Mode:** mvp
-**Status:** Planned
+**Status:** Complete
 
 **Requirements:** REPLAY-01, REPLAY-02, REPLAY-03, REPLAY-04, REPLAY-05, REPLAY-06, REPLAY-07, TEST-03
 
@@ -166,7 +166,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 - Replay reconstruction must not rerun strategies or depend on runtime execution.
 - Strict exhaustive Chronicle grammar remains deferred to the post-Phase-7 hardening phase.
 
-**Execution:** Plans 03-01, 03-02, 03-03, and 03-04 completed. Plan 03-01 completed in commits `ef19c39` and `a4dd902`; summary recorded in `03-01-SUMMARY.md`. Plan 03-02 completed in commits `bbcf6c3`, `0e2b5ee`, and `8c3e73b`; summary recorded in `03-02-SUMMARY.md`. Plan 03-03 completed in commits `24edd98`, `adc629a`, `f153227`, and `40709a5`; summary recorded in `03-03-SUMMARY.md`. Plan 03-04 completed in commits `efa3f4a` and `d37a475`; summary recorded in `03-04-SUMMARY.md`.
+**Execution:** Completed. Plan 03-01 completed in commits `ef19c39` and `a4dd902`; summary recorded in `03-01-SUMMARY.md`. Plan 03-02 completed in commits `bbcf6c3`, `0e2b5ee`, and `8c3e73b`; summary recorded in `03-02-SUMMARY.md`. Plan 03-03 completed in commits `24edd98`, `adc629a`, `f153227`, and `40709a5`; summary recorded in `03-03-SUMMARY.md`. Plan 03-04 completed in commits `efa3f4a` and `d37a475`; summary recorded in `03-04-SUMMARY.md`. Plan 03-05 completed in commits `174f690`, `287c7f1`, and `6657012`; summary recorded in `03-05-SUMMARY.md`.
 
 ### Phase 4: Strategy Runtime Sandbox
 
