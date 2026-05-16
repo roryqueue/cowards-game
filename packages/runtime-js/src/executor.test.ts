@@ -343,3 +343,27 @@ export default {
     expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
   })
 })
+
+describe("runtime failure matrix", () => {
+  it("INVALID_OUTPUT repeat failing SoldierBrain is stable and does not mutate input", () => {
+    const runtime = runtimeForSource(`
+export default {
+  selectActivations() {
+    return { activationOrders: [], strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "FLY" }, soldierMemory: {} }
+  },
+}
+`)
+    const inputBefore = structuredClone(soldierBrainInput)
+    const first = runtime.runSoldierBrain(soldierBrainInput)
+    const second = runtime.runSoldierBrain(soldierBrainInput)
+
+    expect(first.ok).toBe(false)
+    expect(second.ok).toBe(false)
+    expect(!first.ok && first.violation.type).toBe("INVALID_OUTPUT")
+    expect(!second.ok && second.violation.type).toBe("INVALID_OUTPUT")
+    expect(soldierBrainInput).toEqual(inputBefore)
+  })
+})
