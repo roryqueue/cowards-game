@@ -187,27 +187,174 @@ export const CompatibilityVersionsSchema = z.object({
   arenaVariant: z.string(),
 })
 
+export const MatchOutcomeSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("WIN"),
+    winnerPlayerId: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal("DRAW"),
+  }),
+  z.object({
+    type: z.literal("FAILED"),
+    reason: z.string().min(1),
+  }),
+])
+
+export const ChronicleEventTypeSchema = z.enum([
+  "MATCH_STARTED",
+  "ROUND_STARTED",
+  "STRATEGY_EVALUATED",
+  "ACTIVATION_STARTED",
+  "AWARENESS_GRID_OBSERVED",
+  "ACTION_EMITTED",
+  "MOVE_ADVANCED",
+  "MOVE_BLOCKED",
+  "TURN_RESOLVED",
+  "PUSH_ATTEMPTED",
+  "PUSH_RESOLVED",
+  "PUSH_BLOCKED",
+  "BACKSTAB_RESOLVED",
+  "SOLDIER_STONED",
+  "SOLDIER_FELL",
+  "CONTRACTION_RESOLVED",
+  "MATCH_ENDED",
+  "RUNTIME_VIOLATION",
+])
+
+export const ChronicleSchemaVersionSchema = z.literal("chronicle-v1")
+
+export const ChronicleSnapshotKindSchema = z.enum([
+  "MATCH_START",
+  "MATCH_END",
+  "ROUND_START",
+  "ROUND_END",
+  "ACTIVATION_START",
+  "ACTIVATION_END",
+  "CONTRACTION",
+  "TERMINAL",
+])
+
+export const ChronicleEventContextSchema = z.object({
+  phaseNumber: z.number().int().positive().optional(),
+  roundNumber: z
+    .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
+    .optional(),
+  activationId: z.string().min(1).optional(),
+  activationIndex: z.number().int().nonnegative().optional(),
+  cycleIndex: z.number().int().nonnegative().optional(),
+  actingPlayerId: z.string().min(1).optional(),
+  soldierId: z.string().min(1).optional(),
+})
+
+export const ChroniclePrivacySchema = z.enum(["public", "owner", "private"])
+
 export const ChronicleEventSchema = z.object({
-  type: z.enum([
-    "MATCH_STARTED",
-    "ROUND_STARTED",
-    "STRATEGY_EVALUATED",
-    "ACTIVATION_STARTED",
-    "AWARENESS_GRID_OBSERVED",
-    "ACTION_EMITTED",
-    "MOVE_ADVANCED",
-    "MOVE_BLOCKED",
-    "TURN_RESOLVED",
-    "PUSH_ATTEMPTED",
-    "PUSH_RESOLVED",
-    "PUSH_BLOCKED",
-    "BACKSTAB_RESOLVED",
-    "SOLDIER_STONED",
-    "SOLDIER_FELL",
-    "CONTRACTION_RESOLVED",
-    "MATCH_ENDED",
-    "RUNTIME_VIOLATION",
-  ]),
+  type: ChronicleEventTypeSchema,
   sequence: z.number().int().nonnegative(),
+  context: ChronicleEventContextSchema,
+  privacy: ChroniclePrivacySchema,
   payload: JsonValueSchema,
+  privateRef: z.string().min(1).optional(),
+})
+
+export const ChronicleBoundarySnapshotSchema = z.object({
+  kind: ChronicleSnapshotKindSchema,
+  sequence: z.number().int().nonnegative(),
+  context: ChronicleEventContextSchema,
+  board: FullBoardSnapshotSchema,
+  outcome: MatchOutcomeSchema.optional(),
+})
+
+export const ChronicleReproducibilityEnvelopeSchema = z.object({
+  matchId: z.string().min(1),
+  seed: z.string().min(1),
+  arenaVariantId: z.string().min(1),
+  arenaVariantVersion: z.string().min(1),
+  strategyRevisionIds: z.tuple([z.string().min(1), z.string().min(1)]),
+  versions: CompatibilityVersionsSchema,
+})
+
+export const ChronicleIntegritySchema = z.object({
+  algorithm: z.literal("sha256"),
+  normalizedContentHash: z.string().min(1),
+})
+
+export const ChroniclePrivateSectionsSchema = z.object({
+  byPlayerId: z.record(z.string().min(1), JsonValueSchema),
+  debug: JsonValueSchema.optional(),
+})
+
+export const ChronicleSchema = z.object({
+  schemaVersion: ChronicleSchemaVersionSchema,
+  reproducibility: ChronicleReproducibilityEnvelopeSchema,
+  events: z.array(ChronicleEventSchema),
+  snapshots: z.array(ChronicleBoundarySnapshotSchema),
+  private: ChroniclePrivateSectionsSchema.optional(),
+  integrity: ChronicleIntegritySchema.optional(),
+  storageMetadata: JsonValueSchema.optional(),
+})
+
+export const ChronicleValidationErrorCodeSchema = z.enum([
+  "SCHEMA_INVALID",
+  "VERSION_INCOMPATIBLE",
+  "EVENT_ORDER_INVALID",
+  "REQUIRED_EVENT_MISSING",
+  "SNAPSHOT_MISSING",
+  "SNAPSHOT_MISMATCH",
+  "HASH_MISMATCH",
+  "PRIVATE_ACCESS_DENIED",
+  "UNSUPPORTED_MIGRATION",
+])
+
+export const ChronicleValidationErrorSchema = z.object({
+  code: ChronicleValidationErrorCodeSchema,
+  sequence: z.number().int().nonnegative().optional(),
+  message: z.string().min(1),
+  expected: JsonValueSchema.optional(),
+  actual: JsonValueSchema.optional(),
+})
+
+export const ChronicleValidationResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true) }),
+  z.object({
+    ok: z.literal(false),
+    errors: z.array(ChronicleValidationErrorSchema).min(1),
+  }),
+])
+
+export const ChroniclePublicViewerSchema = z.object({
+  access: z.literal("public"),
+})
+
+export const ChronicleOwnerViewerSchema = z.object({
+  access: z.literal("owner"),
+  playerId: z.string().min(1),
+})
+
+export const ChronicleViewerSchema = z.discriminatedUnion("access", [
+  ChroniclePublicViewerSchema,
+  ChronicleOwnerViewerSchema,
+])
+
+export const ChroniclePublicEventSchema = ChronicleEventSchema.pick({
+  type: true,
+  sequence: true,
+  context: true,
+  payload: true,
+})
+
+export const ChronicleOwnerPrivateSectionSchema = z.object({
+  playerId: z.string().min(1),
+  data: JsonValueSchema,
+})
+
+export const ChronicleProjectionSchema = z.object({
+  schemaVersion: ChronicleSchemaVersionSchema,
+  viewer: ChronicleViewerSchema,
+  reproducibility: ChronicleReproducibilityEnvelopeSchema,
+  events: z.array(ChroniclePublicEventSchema),
+  snapshots: z.array(ChronicleBoundarySnapshotSchema),
+  ownerPrivate: ChronicleOwnerPrivateSectionSchema.optional(),
+  integrity: ChronicleIntegritySchema.optional(),
 })

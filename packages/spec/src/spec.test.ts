@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { ActionSchema, SoldierSchema } from "./schemas.js"
+import { ActionSchema, ChronicleSchema, SoldierSchema } from "./schemas.js"
 import { fixtures } from "./fixtures/index.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 
@@ -48,5 +48,129 @@ describe("Coward's Game spec contracts", () => {
     expect(
       SoldierSchema.safeParse(fixtures.invalid.illegalSoldierStatus).success,
     ).toBe(false)
+  })
+
+  it("ChronicleSchema accepts a minimal replay artifact with private owner data", () => {
+    const board = {
+      bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+      soldiers: [
+        {
+          id: "bottom-1",
+          ownerPlayerId: "bottom",
+          status: "ACTIVE",
+          position: { x: 5, y: 10 },
+          facing: "UP",
+          lastSuccessfulMoveDirection: null,
+        },
+        {
+          id: "top-1",
+          ownerPlayerId: "top",
+          status: "FALLEN",
+          position: null,
+          facing: null,
+          lastSuccessfulMoveDirection: null,
+        },
+      ],
+      terrainStones: [],
+    }
+
+    const chronicle = {
+      schemaVersion: "chronicle-v1",
+      reproducibility: {
+        matchId: "match-1",
+        seed: "seed-1",
+        arenaVariantId: "arena-standard",
+        arenaVariantVersion: "arena-v1",
+        strategyRevisionIds: ["strategy-bottom-v1", "strategy-top-v1"],
+        versions: COMPATIBILITY_VERSIONS,
+      },
+      events: [
+        {
+          type: "MATCH_STARTED",
+          sequence: 0,
+          context: { phaseNumber: 1 },
+          privacy: "public",
+          payload: { matchId: "match-1" },
+        },
+        {
+          type: "ROUND_STARTED",
+          sequence: 1,
+          context: { phaseNumber: 1, roundNumber: 1 },
+          privacy: "public",
+          payload: { initiativePlayerId: "bottom" },
+        },
+        {
+          type: "ACTIVATION_STARTED",
+          sequence: 2,
+          context: {
+            phaseNumber: 1,
+            roundNumber: 1,
+            activationId: "activation-1",
+            activationIndex: 0,
+            actingPlayerId: "bottom",
+            soldierId: "bottom-1",
+          },
+          privacy: "public",
+          payload: { soldierId: "bottom-1" },
+        },
+        {
+          type: "AWARENESS_GRID_OBSERVED",
+          sequence: 3,
+          context: {
+            phaseNumber: 1,
+            roundNumber: 1,
+            activationId: "activation-1",
+            activationIndex: 0,
+            cycleIndex: 0,
+            actingPlayerId: "bottom",
+            soldierId: "bottom-1",
+          },
+          privacy: "owner",
+          payload: { marker: "observed" },
+          privateRef: "bottom.awareness.3",
+        },
+        {
+          type: "MATCH_ENDED",
+          sequence: 4,
+          context: { phaseNumber: 1 },
+          privacy: "public",
+          payload: { outcome: { type: "WIN", winnerPlayerId: "bottom" } },
+        },
+      ],
+      snapshots: [
+        {
+          kind: "MATCH_START",
+          sequence: 0,
+          context: { phaseNumber: 1 },
+          board,
+        },
+        {
+          kind: "TERMINAL",
+          sequence: 4,
+          context: { phaseNumber: 1 },
+          board,
+          outcome: { type: "WIN", winnerPlayerId: "bottom" },
+        },
+      ],
+      private: {
+        byPlayerId: {
+          bottom: {
+            awareness: {
+              "bottom.awareness.3": {
+                soldierId: "bottom-1",
+                cycleIndex: 0,
+                grid: "owner-only-grid",
+              },
+            },
+          },
+        },
+      },
+      integrity: {
+        algorithm: "sha256",
+        normalizedContentHash: "hash-fixture",
+      },
+    }
+
+    expect(ChronicleSchema.parse(chronicle)).toEqual(chronicle)
   })
 })
