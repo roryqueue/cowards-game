@@ -151,6 +151,66 @@ export interface RuntimeViolation {
   message: string
 }
 
+export type StrategyRuntimeName = "runtime-js"
+
+export type StrategyRevisionValidationSeverity = "error" | "warning"
+
+export type StrategyRevisionValidationCode =
+  | "SOURCE_TOO_LARGE"
+  | "FORBIDDEN_PATTERN"
+  | "MISSING_DEFAULT_EXPORT"
+  | "MISSING_SELECT_ACTIVATIONS"
+  | "MISSING_SOLDIER_BRAIN"
+  | "ASYNC_METHOD_NOT_ALLOWED"
+  | "IMPORT_NOT_ALLOWED"
+  | "TRANSPILE_FAILED"
+  | "ENGINE_INCOMPATIBLE"
+
+export interface StrategyRevisionValidationIssue {
+  code: StrategyRevisionValidationCode
+  severity: StrategyRevisionValidationSeverity
+  message: string
+  pattern?: string | undefined
+}
+
+export interface StrategyRevisionValidationReport {
+  valid: boolean
+  errors: StrategyRevisionValidationIssue[]
+  warnings: StrategyRevisionValidationIssue[]
+  sourceBytes: number
+  forbiddenPatterns: string[]
+  sourceHash: string
+  runtimeVersion: string
+  engineCompatibility: {
+    spec: string
+    engine: string
+  }
+}
+
+export interface StrategyRevisionMetadata {
+  createdBy?: string | undefined
+  label?: string | undefined
+  tags?: string[] | undefined
+}
+
+export interface StrategyRevision {
+  id: StrategyRevisionId
+  strategyId?: StrategyId | undefined
+  source: string
+  sourceHash: string
+  sourceBytes: number
+  runtime: {
+    name: StrategyRuntimeName
+    version: string
+  }
+  engineCompatibility: {
+    spec: string
+    engine: string
+  }
+  validation: StrategyRevisionValidationReport
+  metadata: StrategyRevisionMetadata
+}
+
 export type ChronicleEventType =
   | "MATCH_STARTED"
   | "ROUND_STARTED"
