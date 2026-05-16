@@ -88,6 +88,15 @@ importers:
 
   packages/persistence:
     dependencies:
+      '@cowards/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@cowards/map-configs':
+        specifier: workspace:*
+        version: link:../map-configs
+      '@cowards/replay':
+        specifier: workspace:*
+        version: link:../replay
       '@cowards/runtime-js':
         specifier: workspace:*
         version: link:../runtime-js

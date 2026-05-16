@@ -15,6 +15,9 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@cowards/engine": "workspace:*",
+    "@cowards/map-configs": "workspace:*",
+    "@cowards/replay": "workspace:*",
     "@cowards/runtime-js": "workspace:*",
     "@cowards/spec": "workspace:*",
     "dotenv": "^17.4.2",
