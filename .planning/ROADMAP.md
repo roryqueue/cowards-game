@@ -12,7 +12,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 | Phase | Name | Goal | Requirements | Status |
 |-------|------|------|--------------|--------|
 | 1 | Foundation and Spec Contracts | Establish the monorepo, local workflow, canonical contracts, and versioning spine. | 11 | Complete |
-| 2 | Pure Rules Engine | Implement the canonical deterministic game engine and rule test suite. | 23 | Planned |
+| 2 | Pure Rules Engine | Implement the canonical deterministic game engine and rule test suite. | 23 | Complete |
 | 3 | Chronicle and Replay Core | Make every Match reproducible, inspectable, and safe to project publicly. | 8 | Pending |
 | 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Pending |
 | 5 | Match Orchestration and Persistence | Queue, execute, persist, and score Matches and MatchSets with correct failure semantics. | 13 | Pending |
@@ -71,7 +71,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 
 **Goal:** Implement the canonical deterministic game engine and rule test suite.
 **Mode:** mvp
-**Status:** Planned
+**Status:** Complete
 
 **Requirements:** ENG-01, ENG-02, ENG-03, ENG-04, ENG-05, ENG-06, ENG-07, ENG-08, ENG-09, ENG-10, ENG-11, ENG-12, ENG-13, ENG-14, ENG-15, ENG-16, ENG-17, ENG-18, ENG-19, ENG-20, ENG-21, TEST-01, TEST-02
 
@@ -114,6 +114,8 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 - Backstab source-spec clarification must happen before Backstab implementation/tests.
 - `GameState` remains canonical and minimal; derived lookups are selectors.
 - Testing uses Vitest with unit, scenario, invariant-style matrix, and small golden full-match tests.
+
+**Execution:** Completed in commit `7646578`; summaries are recorded in `02-01-SUMMARY.md` through `02-05-SUMMARY.md`.
 
 ### Phase 3: Chronicle and Replay Core
 

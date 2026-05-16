@@ -1,16 +1,16 @@
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Ready to execute Phase 2
+**Status:** Phase 2 complete; ready to discuss Phase 3
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 2 - Pure Rules Engine
-**Resume file:** `.planning/phases/02-pure-rules-engine/02-01-PLAN.md`
-**Completed phase:** Phase 1 - Foundation and Spec Contracts
+**Current focus:** Phase 3 - Chronicle and Replay Core
+**Resume file:** `.planning/phases/02-pure-rules-engine/02-05-SUMMARY.md`
+**Completed phase:** Phase 2 - Pure Rules Engine
 **Plan count:** 5
 
 ## Workflow Settings
@@ -29,7 +29,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 | Phase | Name | Status |
 |-------|------|--------|
 | 1 | Foundation and Spec Contracts | Complete |
-| 2 | Pure Rules Engine | Planned |
+| 2 | Pure Rules Engine | Complete |
 | 3 | Chronicle and Replay Core | Pending |
 | 4 | Strategy Runtime Sandbox | Pending |
 | 5 | Match Orchestration and Persistence | Pending |
@@ -69,14 +69,20 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 - `.planning/phases/02-pure-rules-engine/02-03-PLAN.md`
 - `.planning/phases/02-pure-rules-engine/02-04-PLAN.md`
 - `.planning/phases/02-pure-rules-engine/02-05-PLAN.md`
+- `.planning/phases/02-pure-rules-engine/02-01-SUMMARY.md`
+- `.planning/phases/02-pure-rules-engine/02-02-SUMMARY.md`
+- `.planning/phases/02-pure-rules-engine/02-03-SUMMARY.md`
+- `.planning/phases/02-pure-rules-engine/02-04-SUMMARY.md`
+- `.planning/phases/02-pure-rules-engine/02-05-SUMMARY.md`
+- `.planning/spec-amendments/02-backstab-rule.md`
 
 ## Next Command
 
-`$gsd-execute-phase 2`
+`/gsd discuss phase 3`
 
 Alternative:
 
-`$gsd-plan-phase 2`
+`$gsd-plan-phase 3`
 
 ---
-*Last updated: 2026-05-16 after Phase 2 planning*
+*Last updated: 2026-05-16 after Phase 2 execution*

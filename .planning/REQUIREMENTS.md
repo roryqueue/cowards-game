@@ -25,27 +25,27 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Engine Rules
 
-- [ ] **ENG-01**: Developer can create the canonical initial 12x12 Match state with 8 Soldiers per Player at the specified starting positions and facings.
-- [ ] **ENG-02**: Engine advances Matches through repeating Phases of Round 1, Round 2, Round 3, Round 4, then Contraction.
-- [ ] **ENG-03**: Engine applies the correct per-player activation counts of 1, 2, 3, and 4 for Rounds 1 through 4.
-- [ ] **ENG-04**: Engine applies the interleaved snake activation pattern and alternates initiative every Round after deterministic seed-based initial initiative.
-- [ ] **ENG-05**: Engine rejects duplicate, excess, malformed, STONE, or FALLEN Soldier activation selections according to the canonical rules.
-- [ ] **ENG-06**: Engine invokes SoldierBrain for up to 12 Cycles per Activation and provides only the Soldier snapshot, 5x5 Awareness Grid, cycle metadata, objective payload, and SoldierMemory.
-- [ ] **ENG-07**: Engine resolves TURN actions by updating facing, consuming one Cycle, and not counting as an Advance.
-- [ ] **ENG-08**: Engine resolves TURN_TO_STONE as Coward's Way Out by immediately changing the Soldier to STONE and ending the Activation.
-- [ ] **ENG-09**: Engine resolves successful MOVE actions by Advancing one square, updating facing, and updating lastSuccessfulMoveDirection.
-- [ ] **ENG-10**: Engine enforces the immediate reversal rule based on lastSuccessfulMoveDirection.
-- [ ] **ENG-11**: Engine resolves off-board movement by making the moving Soldier FALLEN with reason MOVED_OFF_BOARD.
-- [ ] **ENG-12**: Engine blocks movement into TerrainStones or Stone Soldiers and interrupts the Activation.
-- [ ] **ENG-13**: Engine resolves head-to-head collisions as blocked movement without push or Backstab.
-- [ ] **ENG-14**: Engine resolves side pushes for friendly or enemy ACTIVE Soldiers, including blocked pushes and pushes off-board.
-- [ ] **ENG-15**: Engine resolves Backstabs after each successful Advance and supports one Advance Backstabbing multiple enemy ACTIVE Soldiers.
-- [ ] **ENG-16**: Engine turns any Soldier that ends an Activation without Advancing into STONE unless that Soldier became FALLEN.
-- [ ] **ENG-17**: Engine contracts board bounds inward by one square after Round 4 and makes out-of-bounds ACTIVE or STONE Soldiers FALLEN.
-- [ ] **ENG-18**: Engine removes TerrainStones outside bounds after Contraction.
-- [ ] **ENG-19**: Engine ends Matches immediately when one Player has zero ACTIVE Soldiers, with DRAW if both Players have zero ACTIVE Soldiers.
-- [ ] **ENG-20**: Engine applies final 2x2 resolution by comparing ACTIVE Soldier counts and producing a win or DRAW.
-- [ ] **ENG-21**: Engine remains pure and never accesses database, network, filesystem, wall-clock time, or `Math.random`.
+- [x] **ENG-01**: Developer can create the canonical initial 12x12 Match state with 8 Soldiers per Player at the specified starting positions and facings.
+- [x] **ENG-02**: Engine advances Matches through repeating Phases of Round 1, Round 2, Round 3, Round 4, then Contraction.
+- [x] **ENG-03**: Engine applies the correct per-player activation counts of 1, 2, 3, and 4 for Rounds 1 through 4.
+- [x] **ENG-04**: Engine applies the interleaved snake activation pattern and alternates initiative every Round after deterministic seed-based initial initiative.
+- [x] **ENG-05**: Engine rejects duplicate, excess, malformed, STONE, or FALLEN Soldier activation selections according to the canonical rules.
+- [x] **ENG-06**: Engine invokes SoldierBrain for up to 12 Cycles per Activation and provides only the Soldier snapshot, 5x5 Awareness Grid, cycle metadata, objective payload, and SoldierMemory.
+- [x] **ENG-07**: Engine resolves TURN actions by updating facing, consuming one Cycle, and not counting as an Advance.
+- [x] **ENG-08**: Engine resolves TURN_TO_STONE as Coward's Way Out by immediately changing the Soldier to STONE and ending the Activation.
+- [x] **ENG-09**: Engine resolves successful MOVE actions by Advancing one square, updating facing, and updating lastSuccessfulMoveDirection.
+- [x] **ENG-10**: Engine enforces the immediate reversal rule based on lastSuccessfulMoveDirection.
+- [x] **ENG-11**: Engine resolves off-board movement by making the moving Soldier FALLEN with reason MOVED_OFF_BOARD.
+- [x] **ENG-12**: Engine blocks movement into TerrainStones or Stone Soldiers and interrupts the Activation.
+- [x] **ENG-13**: Engine resolves head-to-head collisions as blocked movement without push or Backstab.
+- [x] **ENG-14**: Engine resolves side pushes for friendly or enemy ACTIVE Soldiers, including blocked pushes and pushes off-board.
+- [x] **ENG-15**: Engine resolves Backstabs after each successful Advance and supports one Advance Backstabbing multiple enemy ACTIVE Soldiers.
+- [x] **ENG-16**: Engine turns any Soldier that ends an Activation without Advancing into STONE unless that Soldier became FALLEN.
+- [x] **ENG-17**: Engine contracts board bounds inward by one square after Round 4 and makes out-of-bounds ACTIVE or STONE Soldiers FALLEN.
+- [x] **ENG-18**: Engine removes TerrainStones outside bounds after Contraction.
+- [x] **ENG-19**: Engine ends Matches immediately when one Player has zero ACTIVE Soldiers, with DRAW if both Players have zero ACTIVE Soldiers.
+- [x] **ENG-20**: Engine applies final 2x2 resolution by comparing ACTIVE Soldier counts and producing a win or DRAW.
+- [x] **ENG-21**: Engine remains pure and never accesses database, network, filesystem, wall-clock time, or `Math.random`.
 
 ### Determinism and Replay
 
@@ -109,8 +109,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Testing and Quality
 
-- [ ] **TEST-01**: Engine unit tests cover every canonical movement, collision, Backstab, push, stoning, falling, contraction, and end-condition rule.
-- [ ] **TEST-02**: Engine property/invariant tests cover occupancy uniqueness, bounds validity, status semantics, and deterministic ordering.
+- [x] **TEST-01**: Engine unit tests cover every canonical movement, collision, Backstab, push, stoning, falling, contraction, and end-condition rule.
+- [x] **TEST-02**: Engine property/invariant tests cover occupancy uniqueness, bounds validity, status semantics, and deterministic ordering.
 - [ ] **TEST-03**: Replay tests verify Chronicle reconstruction and integrity validation.
 - [ ] **TEST-04**: Runtime tests cover invalid outputs, timeout behavior, forbidden capabilities, memory/source limits, and output schema validation.
 - [ ] **TEST-05**: Worker tests distinguish strategy failures from system failures.
@@ -180,27 +180,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SPEC-03 | Phase 1 | Complete |
 | SPEC-04 | Phase 1 | Complete |
 | SPEC-05 | Phase 1 | Complete |
-| ENG-01 | Phase 2 | Pending |
-| ENG-02 | Phase 2 | Pending |
-| ENG-03 | Phase 2 | Pending |
-| ENG-04 | Phase 2 | Pending |
-| ENG-05 | Phase 2 | Pending |
-| ENG-06 | Phase 2 | Pending |
-| ENG-07 | Phase 2 | Pending |
-| ENG-08 | Phase 2 | Pending |
-| ENG-09 | Phase 2 | Pending |
-| ENG-10 | Phase 2 | Pending |
-| ENG-11 | Phase 2 | Pending |
-| ENG-12 | Phase 2 | Pending |
-| ENG-13 | Phase 2 | Pending |
-| ENG-14 | Phase 2 | Pending |
-| ENG-15 | Phase 2 | Pending |
-| ENG-16 | Phase 2 | Pending |
-| ENG-17 | Phase 2 | Pending |
-| ENG-18 | Phase 2 | Pending |
-| ENG-19 | Phase 2 | Pending |
-| ENG-20 | Phase 2 | Pending |
-| ENG-21 | Phase 2 | Pending |
+| ENG-01 | Phase 2 | Complete |
+| ENG-02 | Phase 2 | Complete |
+| ENG-03 | Phase 2 | Complete |
+| ENG-04 | Phase 2 | Complete |
+| ENG-05 | Phase 2 | Complete |
+| ENG-06 | Phase 2 | Complete |
+| ENG-07 | Phase 2 | Complete |
+| ENG-08 | Phase 2 | Complete |
+| ENG-09 | Phase 2 | Complete |
+| ENG-10 | Phase 2 | Complete |
+| ENG-11 | Phase 2 | Complete |
+| ENG-12 | Phase 2 | Complete |
+| ENG-13 | Phase 2 | Complete |
+| ENG-14 | Phase 2 | Complete |
+| ENG-15 | Phase 2 | Complete |
+| ENG-16 | Phase 2 | Complete |
+| ENG-17 | Phase 2 | Complete |
+| ENG-18 | Phase 2 | Complete |
+| ENG-19 | Phase 2 | Complete |
+| ENG-20 | Phase 2 | Complete |
+| ENG-21 | Phase 2 | Complete |
 | REPLAY-01 | Phase 3 | Pending |
 | REPLAY-02 | Phase 3 | Pending |
 | REPLAY-03 | Phase 3 | Pending |
@@ -243,8 +243,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VIEW-05 | Phase 7 | Pending |
 | VIEW-06 | Phase 7 | Pending |
 | VIEW-07 | Phase 7 | Pending |
-| TEST-01 | Phase 2 | Pending |
-| TEST-02 | Phase 2 | Pending |
+| TEST-01 | Phase 2 | Complete |
+| TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 3 | Pending |
 | TEST-04 | Phase 4 | Pending |
 | TEST-05 | Phase 5 | Pending |
