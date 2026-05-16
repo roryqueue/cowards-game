@@ -11,7 +11,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 
 | Phase | Name | Goal | Requirements | Status |
 |-------|------|------|--------------|--------|
-| 1 | Foundation and Spec Contracts | Establish the monorepo, local workflow, canonical contracts, and versioning spine. | 11 | Planned |
+| 1 | Foundation and Spec Contracts | Establish the monorepo, local workflow, canonical contracts, and versioning spine. | 11 | Complete |
 | 2 | Pure Rules Engine | Implement the canonical deterministic game engine and rule test suite. | 23 | Pending |
 | 3 | Chronicle and Replay Core | Make every Match reproducible, inspectable, and safe to project publicly. | 8 | Pending |
 | 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Pending |
@@ -27,6 +27,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 
 **Goal:** Establish the monorepo, local workflow, canonical contracts, and versioning spine.
 **Mode:** mvp
+**Status:** Complete
 
 **Requirements:** FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05, SPEC-01, SPEC-02, SPEC-03, SPEC-04, SPEC-05, TEST-07
 
@@ -63,6 +64,8 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 - `pnpm verify` is the local quality gate.
 - Do not create hosted CI in Phase 1.
 - Do not implement engine rules, strategy runtime execution, persistence schema, Chronicle behavior, or gameplay UI in Phase 1.
+
+**Execution:** Completed in commit `2303a50`; summaries are recorded in `01-01-SUMMARY.md` through `01-04-SUMMARY.md`.
 
 ### Phase 2: Pure Rules Engine
 

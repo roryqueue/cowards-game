@@ -1,15 +1,16 @@
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Ready to execute Phase 1
+**Status:** Phase 1 complete; ready to discuss Phase 2
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 1 - Foundation and Spec Contracts
-**Resume file:** `.planning/phases/01-foundation-and-spec-contracts/01-CONTEXT.md`
+**Current focus:** Phase 2 - Pure Rules Engine
+**Resume file:** `.planning/phases/01-foundation-and-spec-contracts/01-04-SUMMARY.md`
+**Completed phase:** Phase 1 - Foundation and Spec Contracts
 **Plan count:** 4
 
 ## Workflow Settings
@@ -27,7 +28,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | Foundation and Spec Contracts | Planned |
+| 1 | Foundation and Spec Contracts | Complete |
 | 2 | Pure Rules Engine | Pending |
 | 3 | Chronicle and Replay Core | Pending |
 | 4 | Strategy Runtime Sandbox | Pending |
@@ -54,14 +55,18 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 - `.planning/phases/01-foundation-and-spec-contracts/01-02-PLAN.md`
 - `.planning/phases/01-foundation-and-spec-contracts/01-03-PLAN.md`
 - `.planning/phases/01-foundation-and-spec-contracts/01-04-PLAN.md`
+- `.planning/phases/01-foundation-and-spec-contracts/01-01-SUMMARY.md`
+- `.planning/phases/01-foundation-and-spec-contracts/01-02-SUMMARY.md`
+- `.planning/phases/01-foundation-and-spec-contracts/01-03-SUMMARY.md`
+- `.planning/phases/01-foundation-and-spec-contracts/01-04-SUMMARY.md`
 
 ## Next Command
 
-`$gsd-execute-phase 1`
+`/gsd discuss phase 2`
 
 Alternative:
 
-`$gsd-review --phase 1 --all`
+`$gsd-plan-phase 2`
 
 ---
-*Last updated: 2026-05-16 after project initialization*
+*Last updated: 2026-05-16 after Phase 1 execution*

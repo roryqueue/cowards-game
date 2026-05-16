@@ -9,19 +9,19 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Foundation
 
-- [ ] **FOUND-01**: Developer can install dependencies and run the monorepo with pnpm.
-- [ ] **FOUND-02**: Developer can run a single command that starts the web app, worker, database, queue dependency, and local sandbox dependencies.
-- [ ] **FOUND-03**: Developer can run unit, integration, and E2E test commands from the repo root.
-- [ ] **FOUND-04**: The repository enforces package boundaries so UI, worker, engine, runtime, replay, map configs, and shared contracts remain separate.
-- [ ] **FOUND-05**: The project records engine, runtime, spec, Chronicle, Strategy Revision, and Arena Variant versions wherever Match reproducibility depends on them.
+- [x] **FOUND-01**: Developer can install dependencies and run the monorepo with pnpm.
+- [x] **FOUND-02**: Developer can run a single command that starts the web app, worker, database, queue dependency, and local sandbox dependencies.
+- [x] **FOUND-03**: Developer can run unit, integration, and E2E test commands from the repo root.
+- [x] **FOUND-04**: The repository enforces package boundaries so UI, worker, engine, runtime, replay, map configs, and shared contracts remain separate.
+- [x] **FOUND-05**: The project records engine, runtime, spec, Chronicle, Strategy Revision, and Arena Variant versions wherever Match reproducibility depends on them.
 
 ### Spec Contracts
 
-- [ ] **SPEC-01**: Developer can import canonical TypeScript types for Player, Strategy, StrategyRevision, Soldier, Match, MatchSet, ArenaVariant, Chronicle, and runtime inputs/outputs.
-- [ ] **SPEC-02**: Developer can validate all runtime inputs and outputs with Zod schemas.
-- [ ] **SPEC-03**: Developer can rely on canonical constants for 12x12 initial board bounds, initial Soldier positions, Round activation counts, 12-cycle Activation budget, memory limits, and source size limits.
-- [ ] **SPEC-04**: Developer can use canonical discriminated unions for Soldier statuses, Directions, Actions, AwarenessCell contents, event types, and runtime violation types.
-- [ ] **SPEC-05**: Developer can generate valid test fixtures for starting boards, Soldiers, Arena Variants, seeds, Strategies, and Match inputs.
+- [x] **SPEC-01**: Developer can import canonical TypeScript types for Player, Strategy, StrategyRevision, Soldier, Match, MatchSet, ArenaVariant, Chronicle, and runtime inputs/outputs.
+- [x] **SPEC-02**: Developer can validate all runtime inputs and outputs with Zod schemas.
+- [x] **SPEC-03**: Developer can rely on canonical constants for 12x12 initial board bounds, initial Soldier positions, Round activation counts, 12-cycle Activation budget, memory limits, and source size limits.
+- [x] **SPEC-04**: Developer can use canonical discriminated unions for Soldier statuses, Directions, Actions, AwarenessCell contents, event types, and runtime violation types.
+- [x] **SPEC-05**: Developer can generate valid test fixtures for starting boards, Soldiers, Arena Variants, seeds, Strategies, and Match inputs.
 
 ### Engine Rules
 
@@ -115,7 +115,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **TEST-04**: Runtime tests cover invalid outputs, timeout behavior, forbidden capabilities, memory/source limits, and output schema validation.
 - [ ] **TEST-05**: Worker tests distinguish strategy failures from system failures.
 - [ ] **TEST-06**: Playwright tests cover strategy editing, revision submission, MatchSet creation, Match execution status, and replay viewing.
-- [ ] **TEST-07**: CI or local verification command runs typecheck, lint, unit tests, integration tests, and selected E2E tests.
+- [x] **TEST-07**: CI or local verification command runs typecheck, lint, unit tests, integration tests, and selected E2E tests.
 
 ## v2 Requirements
 
@@ -170,16 +170,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1 | Pending |
-| FOUND-02 | Phase 1 | Pending |
-| FOUND-03 | Phase 1 | Pending |
-| FOUND-04 | Phase 1 | Pending |
-| FOUND-05 | Phase 1 | Pending |
-| SPEC-01 | Phase 1 | Pending |
-| SPEC-02 | Phase 1 | Pending |
-| SPEC-03 | Phase 1 | Pending |
-| SPEC-04 | Phase 1 | Pending |
-| SPEC-05 | Phase 1 | Pending |
+| FOUND-01 | Phase 1 | Complete |
+| FOUND-02 | Phase 1 | Complete |
+| FOUND-03 | Phase 1 | Complete |
+| FOUND-04 | Phase 1 | Complete |
+| FOUND-05 | Phase 1 | Complete |
+| SPEC-01 | Phase 1 | Complete |
+| SPEC-02 | Phase 1 | Complete |
+| SPEC-03 | Phase 1 | Complete |
+| SPEC-04 | Phase 1 | Complete |
+| SPEC-05 | Phase 1 | Complete |
 | ENG-01 | Phase 2 | Pending |
 | ENG-02 | Phase 2 | Pending |
 | ENG-03 | Phase 2 | Pending |
@@ -249,7 +249,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-04 | Phase 4 | Pending |
 | TEST-05 | Phase 5 | Pending |
 | TEST-06 | Phase 7 | Pending |
-| TEST-07 | Phase 1 | Pending |
+| TEST-07 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 80 total
