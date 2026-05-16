@@ -47,8 +47,8 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 The source context for initialization comes from:
 
-- `/Users/roryquinlan/Downloads/CowardsGameSpec_Full_Consolidated_v1.md`
-- `/Users/roryquinlan/Downloads/CowardsGame_Technical_Architecture_Spec_V1.md`
+- `./CowardsGameSpec_Full_Consolidated_v1.md`
+- `./CowardsGame_Technical_Architecture_Spec_V1.md`
 
 Gameplay summary:
 
