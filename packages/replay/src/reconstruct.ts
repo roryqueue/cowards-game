@@ -64,10 +64,7 @@ const cloneState = (snapshot: ChronicleBoundarySnapshot): ReplayState => ({
 const isRecord = (value: unknown): value is Record<string, JsonValue> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
 
-const readString = (
-  payload: JsonValue,
-  key: string,
-): string | undefined => {
+const readString = (payload: JsonValue, key: string): string | undefined => {
   if (!isRecord(payload)) {
     return undefined
   }
@@ -75,10 +72,7 @@ const readString = (
   return typeof value === "string" ? value : undefined
 }
 
-const readBoolean = (
-  payload: JsonValue,
-  key: string,
-): boolean | undefined => {
+const readBoolean = (payload: JsonValue, key: string): boolean | undefined => {
   if (!isRecord(payload)) {
     return undefined
   }
@@ -91,12 +85,17 @@ const readDirection = (
   key: string,
 ): Direction | undefined => {
   const value = readString(payload, key)
-  return value === "UP" || value === "DOWN" || value === "LEFT" || value === "RIGHT"
+  return value === "UP" ||
+    value === "DOWN" ||
+    value === "LEFT" ||
+    value === "RIGHT"
     ? value
     : undefined
 }
 
-const readBounds = (payload: JsonValue): FullBoardSnapshot["bounds"] | undefined => {
+const readBounds = (
+  payload: JsonValue,
+): FullBoardSnapshot["bounds"] | undefined => {
   if (!isRecord(payload)) {
     return undefined
   }
@@ -173,14 +172,24 @@ const applyEvent = (
     case "MOVE_ADVANCED": {
       const soldierId = readString(event.payload, "soldierId")
       const direction = readDirection(event.payload, "direction")
-      const soldier = soldierId === undefined ? undefined : findSoldier(state, soldierId)
-      if (!soldierId || !direction || soldier?.position === null || soldier === undefined) {
+      const soldier =
+        soldierId === undefined ? undefined : findSoldier(state, soldierId)
+      if (
+        !soldierId ||
+        !direction ||
+        soldier?.position === null ||
+        soldier === undefined
+      ) {
         return {
           ok: false,
           errors: [
-            error("SNAPSHOT_MISMATCH", "MOVE_ADVANCED payload cannot be applied.", {
-              sequence: event.sequence,
-            }),
+            error(
+              "SNAPSHOT_MISMATCH",
+              "MOVE_ADVANCED payload cannot be applied.",
+              {
+                sequence: event.sequence,
+              },
+            ),
           ],
         }
       }
@@ -211,9 +220,13 @@ const applyEvent = (
         return {
           ok: false,
           errors: [
-            error("SNAPSHOT_MISMATCH", "TURN_RESOLVED payload cannot be applied.", {
-              sequence: event.sequence,
-            }),
+            error(
+              "SNAPSHOT_MISMATCH",
+              "TURN_RESOLVED payload cannot be applied.",
+              {
+                sequence: event.sequence,
+              },
+            ),
           ],
         }
       }
@@ -228,10 +241,14 @@ const applyEvent = (
     case "PUSH_RESOLVED": {
       const soldierId = readString(event.payload, "soldierId")
       const targetSoldierId = readString(event.payload, "targetSoldierId")
-      const pushedOffBoard = readBoolean(event.payload, "pushedOffBoard") ?? false
-      const mover = soldierId === undefined ? undefined : findSoldier(state, soldierId)
+      const pushedOffBoard =
+        readBoolean(event.payload, "pushedOffBoard") ?? false
+      const mover =
+        soldierId === undefined ? undefined : findSoldier(state, soldierId)
       const target =
-        targetSoldierId === undefined ? undefined : findSoldier(state, targetSoldierId)
+        targetSoldierId === undefined
+          ? undefined
+          : findSoldier(state, targetSoldierId)
       if (
         !targetSoldierId ||
         mover?.position === null ||
@@ -242,9 +259,13 @@ const applyEvent = (
         return {
           ok: false,
           errors: [
-            error("SNAPSHOT_MISMATCH", "PUSH_RESOLVED payload cannot be applied.", {
-              sequence: event.sequence,
-            }),
+            error(
+              "SNAPSHOT_MISMATCH",
+              "PUSH_RESOLVED payload cannot be applied.",
+              {
+                sequence: event.sequence,
+              },
+            ),
           ],
         }
       }
@@ -253,9 +274,13 @@ const applyEvent = (
         return {
           ok: false,
           errors: [
-            error("SNAPSHOT_MISMATCH", "PUSH_RESOLVED soldiers are not adjacent.", {
-              sequence: event.sequence,
-            }),
+            error(
+              "SNAPSHOT_MISMATCH",
+              "PUSH_RESOLVED soldiers are not adjacent.",
+              {
+                sequence: event.sequence,
+              },
+            ),
           ],
         }
       }
@@ -264,7 +289,10 @@ const applyEvent = (
         state: updateSoldier(state, targetSoldierId, (soldier) =>
           pushedOffBoard
             ? { ...soldier, status: "FALLEN", position: null }
-            : { ...soldier, position: movePosition(target.position!, direction) },
+            : {
+                ...soldier,
+                position: movePosition(target.position!, direction),
+              },
         ),
       }
     }
@@ -275,7 +303,9 @@ const applyEvent = (
         return { ok: true, state }
       }
       const victimIds = event.payload.pairs.flatMap((pair) =>
-        isRecord(pair) && typeof pair.victimId === "string" ? [pair.victimId] : [],
+        isRecord(pair) && typeof pair.victimId === "string"
+          ? [pair.victimId]
+          : [],
       )
       return {
         ok: true,
@@ -295,9 +325,13 @@ const applyEvent = (
         return {
           ok: false,
           errors: [
-            error("SNAPSHOT_MISMATCH", "SOLDIER_STONED payload cannot be applied.", {
-              sequence: event.sequence,
-            }),
+            error(
+              "SNAPSHOT_MISMATCH",
+              "SOLDIER_STONED payload cannot be applied.",
+              {
+                sequence: event.sequence,
+              },
+            ),
           ],
         }
       }
@@ -315,9 +349,13 @@ const applyEvent = (
         return {
           ok: false,
           errors: [
-            error("SNAPSHOT_MISMATCH", "SOLDIER_FELL payload cannot be applied.", {
-              sequence: event.sequence,
-            }),
+            error(
+              "SNAPSHOT_MISMATCH",
+              "SOLDIER_FELL payload cannot be applied.",
+              {
+                sequence: event.sequence,
+              },
+            ),
           ],
         }
       }
@@ -396,11 +434,15 @@ const compareSnapshot = (
   return stableStringify(state) === stableStringify(expected)
     ? []
     : [
-        error("SNAPSHOT_MISMATCH", "Reconstructed state did not match boundary snapshot.", {
-          sequence: snapshot.sequence,
-          expected: expected as unknown as JsonValue,
-          actual: state as unknown as JsonValue,
-        }),
+        error(
+          "SNAPSHOT_MISMATCH",
+          "Reconstructed state did not match boundary snapshot.",
+          {
+            sequence: snapshot.sequence,
+            expected: expected as unknown as JsonValue,
+            actual: state as unknown as JsonValue,
+          },
+        ),
       ]
 }
 
@@ -411,9 +453,13 @@ const createStateAt =
       return {
         ok: false,
         errors: [
-          error("EVENT_ORDER_INVALID", "Replay sequence must be a nonnegative integer.", {
-            actual: sequence,
-          }),
+          error(
+            "EVENT_ORDER_INVALID",
+            "Replay sequence must be a nonnegative integer.",
+            {
+              actual: sequence,
+            },
+          ),
         ],
       }
     }
@@ -433,9 +479,13 @@ const createStateAt =
       return {
         ok: false,
         errors: [
-          error("SNAPSHOT_MISSING", "No boundary snapshot exists before sequence.", {
-            sequence,
-          }),
+          error(
+            "SNAPSHOT_MISSING",
+            "No boundary snapshot exists before sequence.",
+            {
+              sequence,
+            },
+          ),
         ],
       }
     }
@@ -450,9 +500,13 @@ const createStateAt =
         return {
           ok: false,
           errors: [
-            error("EVENT_ORDER_INVALID", "Replay event sequence does not exist.", {
-              actual: eventIndex,
-            }),
+            error(
+              "EVENT_ORDER_INVALID",
+              "Replay event sequence does not exist.",
+              {
+                actual: eventIndex,
+              },
+            ),
           ],
         }
       }

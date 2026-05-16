@@ -3,7 +3,6 @@ import {
   COMPATIBILITY_VERSIONS,
   type Chronicle,
   type ChronicleEventType,
-  type ChronicleMigration,
   type ChronicleSnapshotKind,
   type ChronicleValidationError,
   type ChronicleValidationResult,
@@ -54,13 +53,17 @@ export const migrateChronicle = (
   if (chronicle.schemaVersion === SUPPORTED_SCHEMA_VERSION) {
     return chronicle as unknown as Chronicle
   }
-  return error("UNSUPPORTED_MIGRATION", "No Chronicle migrations are supported.", {
-    expected: SUPPORTED_SCHEMA_VERSION,
-    actual:
-      typeof chronicle.schemaVersion === "string"
-        ? chronicle.schemaVersion
-        : "missing",
-  })
+  return error(
+    "UNSUPPORTED_MIGRATION",
+    "No Chronicle migrations are supported.",
+    {
+      expected: SUPPORTED_SCHEMA_VERSION,
+      actual:
+        typeof chronicle.schemaVersion === "string"
+          ? chronicle.schemaVersion
+          : "missing",
+    },
+  )
 }
 
 const validateVersion = (chronicle: Chronicle): ChronicleValidationError[] => {
@@ -91,7 +94,9 @@ const validateVersion = (chronicle: Chronicle): ChronicleValidationError[] => {
   return errors
 }
 
-const validateEventOrder = (chronicle: Chronicle): ChronicleValidationError[] => {
+const validateEventOrder = (
+  chronicle: Chronicle,
+): ChronicleValidationError[] => {
   const errors: ChronicleValidationError[] = []
   chronicle.events.forEach((event, index) => {
     if (event.sequence !== index) {
@@ -128,9 +133,13 @@ const validateEventOrder = (chronicle: Chronicle): ChronicleValidationError[] =>
   }
   if (firstRoundStart >= 0 && firstRoundStart < firstMatchStart) {
     errors.push(
-      error("EVENT_ORDER_INVALID", "ROUND_STARTED cannot precede MATCH_STARTED.", {
-        sequence: chronicle.events[firstRoundStart]?.sequence,
-      }),
+      error(
+        "EVENT_ORDER_INVALID",
+        "ROUND_STARTED cannot precede MATCH_STARTED.",
+        {
+          sequence: chronicle.events[firstRoundStart]?.sequence,
+        },
+      ),
     )
   }
   if (firstActivationStart >= 0 && firstActivationStart < firstRoundStart) {
@@ -144,10 +153,14 @@ const validateEventOrder = (chronicle: Chronicle): ChronicleValidationError[] =>
   }
   if (matchEnded.length !== 1) {
     errors.push(
-      error("EVENT_ORDER_INVALID", "Chronicle must contain exactly one MATCH_ENDED event.", {
-        expected: 1,
-        actual: matchEnded.length,
-      }),
+      error(
+        "EVENT_ORDER_INVALID",
+        "Chronicle must contain exactly one MATCH_ENDED event.",
+        {
+          expected: 1,
+          actual: matchEnded.length,
+        },
+      ),
     )
   } else if (matchEnded[0]?.index !== chronicle.events.length - 1) {
     errors.push(
@@ -163,7 +176,9 @@ const validateEventOrder = (chronicle: Chronicle): ChronicleValidationError[] =>
 const validateRequiredEvents = (
   chronicle: Chronicle,
 ): ChronicleValidationError[] => {
-  const isCompleted = chronicle.events.some((event) => event.type === "MATCH_ENDED")
+  const isCompleted = chronicle.events.some(
+    (event) => event.type === "MATCH_ENDED",
+  )
   if (!isCompleted) {
     return []
   }
@@ -181,7 +196,9 @@ const validateRequiredEvents = (
   )
 }
 
-const validateSnapshots = (chronicle: Chronicle): ChronicleValidationError[] => {
+const validateSnapshots = (
+  chronicle: Chronicle,
+): ChronicleValidationError[] => {
   const present = new Set(chronicle.snapshots.map((snapshot) => snapshot.kind))
   const errors = REQUIRED_COMPLETED_SNAPSHOT_KINDS.flatMap((kind) =>
     present.has(kind)
@@ -230,7 +247,9 @@ const validateSnapshots = (chronicle: Chronicle): ChronicleValidationError[] => 
     )
   }
 
-  const eventSequences = new Set(chronicle.events.map((event) => event.sequence))
+  const eventSequences = new Set(
+    chronicle.events.map((event) => event.sequence),
+  )
   for (const snapshot of chronicle.snapshots) {
     if (!eventSequences.has(snapshot.sequence)) {
       errors.push(
@@ -296,12 +315,16 @@ export const validateChronicle = (
     return {
       ok: false,
       errors: [
-        error("SCHEMA_INVALID", "Chronicle does not match the canonical schema.", {
-          actual: parsed.error.issues.map((issue) => ({
-            path: issue.path.join("."),
-            message: issue.message,
-          })) as JsonValue,
-        }),
+        error(
+          "SCHEMA_INVALID",
+          "Chronicle does not match the canonical schema.",
+          {
+            actual: parsed.error.issues.map((issue) => ({
+              path: issue.path.join("."),
+              message: issue.message,
+            })) as JsonValue,
+          },
+        ),
       ],
     }
   }

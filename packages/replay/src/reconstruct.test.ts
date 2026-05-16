@@ -147,7 +147,10 @@ const movementChronicle = (): Chronicle => {
         sequence: 5,
         context: { soldierId: "mover", cycleIndex: 0 },
         privacy: "owner",
-        payload: { soldierId: "mover", action: { type: "MOVE", direction: "RIGHT" } },
+        payload: {
+          soldierId: "mover",
+          action: { type: "MOVE", direction: "RIGHT" },
+        },
       },
       {
         type: "PUSH_RESOLVED",
@@ -267,8 +270,9 @@ describe("createReplay", () => {
     expect(afterPush.ok).toBe(true)
     expect(
       afterPush.ok
-        ? afterPush.state.board.soldiers.find((soldier) => soldier.id === "target")
-            ?.position
+        ? afterPush.state.board.soldiers.find(
+            (soldier) => soldier.id === "target",
+          )?.position
         : undefined,
     ).toEqual({ x: 3, y: 1 })
 
@@ -276,7 +280,9 @@ describe("createReplay", () => {
     expect(afterMove.ok).toBe(true)
     expect(
       afterMove.ok
-        ? afterMove.state.board.soldiers.find((soldier) => soldier.id === "mover")
+        ? afterMove.state.board.soldiers.find(
+            (soldier) => soldier.id === "mover",
+          )
         : undefined,
     ).toMatchObject({
       position: { x: 2, y: 1 },
