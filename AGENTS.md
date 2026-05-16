@@ -14,8 +14,8 @@ Read these planning files before implementation work:
 
 Primary source specs:
 
-- `/Users/roryquinlan/Downloads/CowardsGameSpec_Full_Consolidated_v1.md`
-- `/Users/roryquinlan/Downloads/CowardsGame_Technical_Architecture_Spec_V1.md`
+- `./CowardsGameSpec_Full_Consolidated_v1.md`
+- `./CowardsGame_Technical_Architecture_Spec_V1.md`
 
 ## Non-Negotiables
 
