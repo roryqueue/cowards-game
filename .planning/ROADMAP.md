@@ -14,7 +14,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 | 1 | Foundation and Spec Contracts | Establish the monorepo, local workflow, canonical contracts, and versioning spine. | 11 | Complete |
 | 2 | Pure Rules Engine | Implement the canonical deterministic game engine and rule test suite. | 23 | Complete |
 | 3 | Chronicle and Replay Core | Make every Match reproducible, inspectable, and safe to project publicly. | 8 | Complete |
-| 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Pending |
+| 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Planned |
 | 5 | Match Orchestration and Persistence | Queue, execute, persist, and score Matches and MatchSets with correct failure semantics. | 13 | Pending |
 | 6 | Strategy Workshop UX | Let users create, validate, revise, and test doctrines in a Workshop loop. | 6 | Pending |
 | 7 | Replay Viewer and End-to-End Verification | Deliver the visible replay experience and full edit-to-replay verification path. | 8 | Pending |
@@ -172,6 +172,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 
 **Goal:** Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary.
 **Mode:** mvp
+**Status:** Planned
 
 **Requirements:** RUN-01, RUN-02, RUN-03, RUN-04, RUN-05, RUN-06, RUN-07, RUN-08, RUN-09, RUN-10, TEST-04
 
@@ -184,6 +185,34 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 **Notes:**
 - Do not use Node `vm` as the security boundary.
 - Prototype isolation is acceptable only if the boundary remains replaceable for stronger future isolation.
+
+**Plans:**
+
+| Plan | Wave | Depends On | Objective | Requirements |
+|------|------|------------|-----------|--------------|
+| 04-01 | 1 | None | Strategy Revision contracts and safe API surface | RUN-01, RUN-02, RUN-05, RUN-10 |
+| 04-02 | 2 | 04-01 | Validation, hashing, transpilation, and immutable revisions | RUN-01, RUN-02, RUN-05, RUN-08, RUN-10, TEST-04 |
+| 04-03 | 3 | 04-01, 04-02 | Worker-only runtime execution adapter | RUN-03, RUN-04, RUN-05, RUN-06, RUN-07, RUN-08, RUN-09, RUN-10, TEST-04 |
+| 04-04 | 4 | 04-01, 04-02, 04-03 | Runtime integration, documentation, and verification closure | RUN-01 through RUN-10, TEST-04 |
+
+**Wave dependency notes:**
+
+**Wave 1** — Define canonical Strategy Revision contracts and safe non-executable runtime package exports.
+
+**Wave 2 *(blocked on Wave 1 completion)*** — Implement validation, deterministic hashing, transpilation, and immutable in-memory revision construction.
+
+**Wave 3 *(blocked on Waves 1-2 completion)*** — Add worker-only executable runtime entrypoint, synchronous worker bridge, timeout/failure mapping, and import boundaries.
+
+**Wave 4 *(blocked on Waves 1-3 completion)*** — Prove engine/Chronicle integration, document prototype sandbox limits, and close validation coverage.
+
+**Cross-cutting constraints:**
+
+- Do not use Node `vm` as the security boundary.
+- `@cowards/runtime-js` default exports remain safe validation/artifact APIs; executable APIs live only at `@cowards/runtime-js/worker`.
+- `apps/web` and `packages/engine` must not import runtime execution APIs.
+- Runtime output validation is atomic; invalid or oversized output must not update memory.
+- Runtime violations expose public markers while raw details remain owner-only.
+- Phase 4 documents the worker sandbox as a prototype, replaceable boundary rather than production-grade hostile-code isolation.
 
 ### Phase 5: Match Orchestration and Persistence
 

@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-05-16T16:59:17.935Z"
+status: executing
+last_updated: "2026-05-16T17:07:50.662Z"
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 14
+  total_plans: 18
   completed_plans: 14
-  percent: 100
+  percent: 78
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Ready to plan Phase 4
+**Status:** Ready to execute
 
 ## Project Reference
 
@@ -25,7 +25,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 **Current focus:** Phase 4 - Strategy Runtime Sandbox
 **Resume file:** .planning/phases/04-strategy-runtime-sandbox/04-CONTEXT.md
 **Completed phase:** Phase 3 - Chronicle and Replay Core
-**Plan count:** 5
+**Plan count:** 4
 
 ## Workflow Settings
 
@@ -45,7 +45,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 | 1 | Foundation and Spec Contracts | Complete |
 | 2 | Pure Rules Engine | Complete |
 | 3 | Chronicle and Replay Core | Complete |
-| 4 | Strategy Runtime Sandbox | Pending |
+| 4 | Strategy Runtime Sandbox | Ready to execute |
 | 5 | Match Orchestration and Persistence | Pending |
 | 6 | Strategy Workshop UX | Pending |
 | 7 | Replay Viewer and End-to-End Verification | Pending |
@@ -104,14 +104,23 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 - `.planning/phases/03-chronicle-and-replay-core/03-03-SUMMARY.md`
 - `.planning/phases/03-chronicle-and-replay-core/03-04-SUMMARY.md`
 - `.planning/phases/03-chronicle-and-replay-core/03-05-SUMMARY.md`
+- `.planning/phases/04-strategy-runtime-sandbox/04-CONTEXT.md`
+- `.planning/phases/04-strategy-runtime-sandbox/04-DISCUSSION-LOG.md`
+- `.planning/phases/04-strategy-runtime-sandbox/04-RESEARCH.md`
+- `.planning/phases/04-strategy-runtime-sandbox/04-VALIDATION.md`
+- `.planning/phases/04-strategy-runtime-sandbox/04-PATTERNS.md`
+- `.planning/phases/04-strategy-runtime-sandbox/04-01-PLAN.md`
+- `.planning/phases/04-strategy-runtime-sandbox/04-02-PLAN.md`
+- `.planning/phases/04-strategy-runtime-sandbox/04-03-PLAN.md`
+- `.planning/phases/04-strategy-runtime-sandbox/04-04-PLAN.md`
 
 ## Next Command
 
-`$gsd-discuss-phase 4`
+`$gsd-execute-phase 4`
 
 Alternative:
 
-`$gsd-code-review 3` if you want an extra review pass before planning Phase 4.
+`$gsd-review --phase 4 --all` if you want external peer review before execution.
 
 ---
-*Last updated: 2026-05-16 after Phase 3 Plan 03-05 execution*
+*Last updated: 2026-05-16 after Phase 4 planning*
