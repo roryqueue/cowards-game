@@ -171,10 +171,37 @@ export type ChronicleEventType =
   | "MATCH_ENDED"
   | "RUNTIME_VIOLATION"
 
+export type ChronicleSchemaVersion = "chronicle-v1"
+
+export type ChronicleSnapshotKind =
+  | "MATCH_START"
+  | "MATCH_END"
+  | "ROUND_START"
+  | "ROUND_END"
+  | "ACTIVATION_START"
+  | "ACTIVATION_END"
+  | "CONTRACTION"
+  | "TERMINAL"
+
+export interface ChronicleEventContext {
+  phaseNumber?: number
+  roundNumber?: 1 | 2 | 3 | 4
+  activationId?: string
+  activationIndex?: number
+  cycleIndex?: number
+  actingPlayerId?: PlayerId
+  soldierId?: SoldierId
+}
+
+export type ChroniclePrivacy = "public" | "owner" | "private"
+
 export interface ChronicleEvent {
   type: ChronicleEventType
   sequence: number
+  context: ChronicleEventContext
+  privacy: ChroniclePrivacy
   payload: JsonValue
+  privateRef?: string | undefined
 }
 
 export interface CompatibilityVersions {
@@ -190,6 +217,100 @@ export type MatchOutcome =
   | { type: "WIN"; winnerPlayerId: PlayerId }
   | { type: "DRAW" }
   | { type: "FAILED"; reason: string }
+
+export interface ChronicleBoundarySnapshot {
+  kind: ChronicleSnapshotKind
+  sequence: number
+  context: ChronicleEventContext
+  board: FullBoardSnapshot
+  outcome?: MatchOutcome | undefined
+}
+
+export interface ChronicleReproducibilityEnvelope {
+  matchId: MatchId
+  seed: string
+  arenaVariantId: ArenaVariantId
+  arenaVariantVersion: string
+  strategyRevisionIds: [StrategyRevisionId, StrategyRevisionId]
+  versions: CompatibilityVersions
+}
+
+export interface ChronicleIntegrity {
+  algorithm: "sha256"
+  normalizedContentHash: string
+}
+
+export interface ChroniclePrivateSections {
+  byPlayerId: Record<PlayerId, JsonValue>
+  debug?: JsonValue | undefined
+}
+
+export interface Chronicle {
+  schemaVersion: ChronicleSchemaVersion
+  reproducibility: ChronicleReproducibilityEnvelope
+  events: ChronicleEvent[]
+  snapshots: ChronicleBoundarySnapshot[]
+  private?: ChroniclePrivateSections | undefined
+  integrity?: ChronicleIntegrity | undefined
+  storageMetadata?: JsonValue | undefined
+}
+
+export type ChronicleValidationErrorCode =
+  | "SCHEMA_INVALID"
+  | "VERSION_INCOMPATIBLE"
+  | "EVENT_ORDER_INVALID"
+  | "REQUIRED_EVENT_MISSING"
+  | "SNAPSHOT_MISSING"
+  | "SNAPSHOT_MISMATCH"
+  | "HASH_MISMATCH"
+  | "PRIVATE_ACCESS_DENIED"
+  | "UNSUPPORTED_MIGRATION"
+
+export interface ChronicleValidationError {
+  code: ChronicleValidationErrorCode
+  sequence?: number | undefined
+  message: string
+  expected?: JsonValue | undefined
+  actual?: JsonValue | undefined
+}
+
+export type ChronicleValidationResult =
+  | { ok: true }
+  | { ok: false; errors: ChronicleValidationError[] }
+
+export type ChronicleViewerAccess = "public" | "owner"
+
+export type ChronicleViewer =
+  | { access: "public" }
+  | { access: "owner"; playerId: PlayerId }
+
+export interface ChroniclePublicEvent {
+  type: ChronicleEventType
+  sequence: number
+  context: ChronicleEventContext
+  payload: JsonValue
+}
+
+export interface ChronicleOwnerPrivateSection {
+  playerId: PlayerId
+  data: JsonValue
+}
+
+export interface ChronicleProjection {
+  schemaVersion: ChronicleSchemaVersion
+  viewer: ChronicleViewer
+  reproducibility: ChronicleReproducibilityEnvelope
+  events: ChroniclePublicEvent[]
+  snapshots: ChronicleBoundarySnapshot[]
+  ownerPrivate?: ChronicleOwnerPrivateSection | undefined
+  integrity?: ChronicleIntegrity | undefined
+}
+
+export interface ChronicleMigration {
+  from: string
+  to: ChronicleSchemaVersion
+  migrate: (chronicle: JsonValue) => Chronicle | ChronicleValidationError
+}
 
 export interface Match {
   id: MatchId
