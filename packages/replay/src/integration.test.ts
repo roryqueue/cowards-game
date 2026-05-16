@@ -17,17 +17,18 @@ const deterministicRuntime: StrategyRuntime = {
     const activeSoldiers = input.mySoldiers.filter(
       (soldier) => soldier.status === "ACTIVE",
     )
+    const ownerPlayerId = activeSoldiers[0]?.ownerPlayerId ?? "unknown"
     return {
       ok: true,
       value: {
         activationOrders: activeSoldiers.map((soldier) => ({
           soldierId: soldier.id,
           objective: {
-            marker: `${PRIVATE_OBJECTIVE_PAYLOAD_MARKER}:${input.playerId}:${soldier.id}`,
+            marker: `${PRIVATE_OBJECTIVE_PAYLOAD_MARKER}:${ownerPlayerId}:${soldier.id}`,
           },
         })),
         strategyMemory: {
-          marker: `${PRIVATE_STRATEGY_MEMORY_MARKER}:${input.playerId}:${input.roundNumber}`,
+          marker: `${PRIVATE_STRATEGY_MEMORY_MARKER}:${ownerPlayerId}:${input.roundNumber}`,
         },
       },
     }
@@ -63,9 +64,8 @@ const createMatchInput = (): RunMatchInput => ({
 
 describe("replay package integration", () => {
   it("builds, validates, hashes, reconstructs, iterates, and projects a deterministic Match", () => {
-    const { chronicle, finalState } = buildChronicleFromMatch(
-      createMatchInput(),
-    )
+    const { chronicle, finalState } =
+      buildChronicleFromMatch(createMatchInput())
     const chronicleWithIntegrity = {
       ...chronicle,
       integrity: createChronicleContentHash(chronicle),
@@ -82,8 +82,9 @@ describe("replay package integration", () => {
     const lastSequence = chronicleWithIntegrity.events.at(-1)?.sequence ?? 0
     const finalReplayState = replay.replay.stateAt(lastSequence)
     expect(finalReplayState.ok).toBe(true)
-    expect(finalReplayState.ok ? finalReplayState.state.outcome : undefined)
-      .toEqual(finalState.outcome)
+    expect(
+      finalReplayState.ok ? finalReplayState.state.outcome : undefined,
+    ).toEqual(finalState.outcome)
 
     const timeline = [...replay.replay.iterateReplay()]
     expect(timeline).toHaveLength(chronicleWithIntegrity.events.length)

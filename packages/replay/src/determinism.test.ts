@@ -7,6 +7,9 @@ import { normalizeChronicle } from "./normalize.js"
 
 const deterministicRuntime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
+    const ownerPlayerId =
+      input.mySoldiers.find((soldier) => soldier.status === "ACTIVE")
+        ?.ownerPlayerId ?? "unknown"
     return {
       ok: true,
       value: {
@@ -15,7 +18,7 @@ const deterministicRuntime: StrategyRuntime = {
           .map((soldier) => ({ soldierId: soldier.id })),
         strategyMemory: {
           selectedRound: input.roundNumber,
-          selectedPlayer: input.playerId,
+          selectedPlayer: ownerPlayerId,
         },
       },
     }
