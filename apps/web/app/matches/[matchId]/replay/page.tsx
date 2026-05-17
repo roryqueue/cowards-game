@@ -1,5 +1,6 @@
 import { getMatchReplay } from "../../server.js"
 import type { ReplayViewMode } from "../../types.js"
+import { ReplayClient } from "./replay-client.js"
 import { ReplayUnavailable } from "./replay-unavailable.js"
 
 export const dynamic = "force-dynamic"
@@ -40,42 +41,5 @@ export default async function ReplayPage({
     return <ReplayUnavailable data={data} />
   }
 
-  const statusLabel = data.mode === "owner" ? "Owner debug" : "Public view"
-
-  return (
-    <main className="replay-page">
-      <header className="replay-header">
-        <div>
-          <p className="replay-product-label">Coward&apos;s Game</p>
-          <h1>Replay</h1>
-        </div>
-        <span className="replay-status-chip">{statusLabel}</span>
-      </header>
-
-      <section className="replay-shell" aria-label="Match replay">
-        <aside className="replay-rail" aria-label="Match metadata">
-          <p className="replay-label">Match</p>
-          <p className="replay-mono" title={data.metadata.matchId}>
-            {data.metadata.matchId}
-          </p>
-          <p className="replay-label">Events</p>
-          <p>{data.metadata.eventCount}</p>
-        </aside>
-
-        <section className="replay-arena-placeholder" aria-label="Replay board">
-          <p className="replay-label">Current position</p>
-          <p className="replay-position">
-            {data.timeline[0]?.label ?? "Match start"}
-          </p>
-        </section>
-
-        <aside className="replay-rail" aria-label="Replay inspector">
-          <p className="replay-label">Inspector</p>
-          <p>{statusLabel}</p>
-          <p className="replay-label">Initial sequence</p>
-          <p>{data.initialSequence}</p>
-        </aside>
-      </section>
-    </main>
-  )
+  return <ReplayClient data={data} />
 }
