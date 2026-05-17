@@ -199,6 +199,27 @@ describe("Match replay server facade", () => {
     })
   })
 
+  it("decodes URL-encoded persisted Match ids before Chronicle lookup", async () => {
+    const stored = createStoredChronicle()
+    const seen: string[] = []
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async (matchId) => {
+          seen.push(matchId)
+          return stored
+        },
+      }),
+    })
+
+    const response = await server.getMatchReplay(
+      encodeURIComponent("match:replay-test"),
+    )
+
+    expect(response.status).toBe("ready")
+    expect(seen).toEqual(["match:replay-test"])
+  })
+
   it("returns public replay data by default without private markers", async () => {
     const stored = createStoredChronicle()
     const server = createMatchReplayServer({
@@ -280,5 +301,6 @@ describe("Match replay server facade", () => {
       playerId: "player:bottom",
     })
     expect(response.ownerPlayerId).toBe("player:bottom")
+    expect(JSON.stringify(response)).toContain("PRIVATE_AWARENESS_GRID")
   })
 })

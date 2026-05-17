@@ -32,8 +32,7 @@ requirements:
     status: verified
 gaps: []
 residual_risks:
-  - "Live PostgreSQL smoke remains gated by DATABASE_URL and was skipped in the default test run."
-  - "The Phase 7 service-backed Playwright helper /api/test-support/run-worker-once still returns 503; this is an end-to-end service harness risk, not a Phase 5 orchestration blocker."
+  - "Live PostgreSQL smoke remains gated by DATABASE_URL in the default test run; the later Phase 7 gap-resolution pass exercised the database-backed browser flow with local PostgreSQL."
 ---
 
 # Phase 05 Verification: Match Orchestration and Persistence
@@ -98,7 +97,7 @@ No blocking gaps were found for MATCH-01 through MATCH-07, DATA-01 through DATA-
 | Worker completion -> Chronicle store -> Match rows | Verified | `completeMatch` validates the running lease, stores Chronicle through `createPostgresChronicleStore`, updates outcome/stat fields, and marks job attempt complete. |
 | Match rows -> MatchSet scoring/status | Verified | `refreshMatchSetStatus` loads constituent Matches in matrix order, maps winner player IDs back to side Strategy Revisions, scores, and persists MatchSet status/scoring. |
 | Workshop status display path | Verified | `getWorkshopTestSummary` refreshes status and returns matches with `hasReplay`; web client maps pending/running/complete/failed_system/blocked/degraded statuses. |
-| Full service-backed browser worker helper | Residual risk | `/api/test-support/run-worker-once` still returns 503 and `workshop-to-replay.spec.ts` accepts 503 when enabled. This is tracked as a milestone/Phase 7 E2E harness risk. |
+| Full service-backed browser worker helper | Verified by Phase 7 closure | `/api/test-support/run-worker-once` now invokes a gated one-shot worker process in test mode, and `workshop-to-replay.spec.ts` requires a 200 `{ status: "ok" }` helper response. The full service-backed browser flow passed on 2026-05-17 with local PostgreSQL and migrations applied. |
 
 ## Automated Checks
 
@@ -112,10 +111,9 @@ No blocking gaps were found for MATCH-01 through MATCH-07, DATA-01 through DATA-
 
 ## Residual Risk
 
-- Live PostgreSQL smoke is intentionally skipped unless `DATABASE_URL` is set. The code exports `runDevelopmentMatchSetSmoke`, and the default URL matches `compose.yaml`, but this verification did not prove a real database migration/seed/worker run.
+- Live PostgreSQL smoke remains optional for normal local unit runs. During the Phase 7 gap-resolution pass, local PostgreSQL was started, migrations were applied, and the Workshop edit -> execute -> replay Playwright smoke passed against the database.
 - `dev-smoke.test.ts` has a skipped integration test and uses an optional `runQueuedMatch` callback; without a real worker callback it does not prove Chronicle creation against a live DB.
-- The milestone audit's service-backed browser concern remains true: `apps/web/app/api/test-support/run-worker-once/route.ts` returns 503, and the Phase 7 Playwright service E2E accepts 503. This does not block Phase 5's service/worker requirements, but it should stay visible before claiming the full edit-to-replay browser path.
-- REQUIREMENTS.md body checkboxes for Phase 5 remain unchecked even though the traceability table marks them Complete. This is documentation drift, not an implementation blocker.
+- REQUIREMENTS.md body checkboxes for Phase 5 are now aligned with the passed verification and traceability table.
 
 ## Gaps Summary
 

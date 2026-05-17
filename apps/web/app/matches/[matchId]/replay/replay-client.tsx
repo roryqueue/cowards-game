@@ -8,6 +8,7 @@ import {
   getCurrentPositionSummary,
   getEventInspector,
   getInitialReplaySequence,
+  getOwnerAwarenessGridInspection,
   getSoldierInspector,
   getTimelineEntryAt,
   groupTimelineEntries,
@@ -49,6 +50,7 @@ export function ReplayClient({ data }: ReplayClientProps) {
     selectedSoldierId,
     selectedEntry.sequence,
   )
+  const awarenessGrid = getOwnerAwarenessGridInspection(data, selectedEntry)
   const groups = useMemo(
     () => groupTimelineEntries(data.timeline),
     [data.timeline],
@@ -263,9 +265,35 @@ export function ReplayClient({ data }: ReplayClientProps) {
                 Owner debug
               </label>
               {ownerDebugVisible ? (
-                <pre className="replay-debug-panel">
-                  {JSON.stringify(data.projection.ownerPrivate, null, 2)}
-                </pre>
+                <>
+                  {awarenessGrid ? (
+                    <div
+                      className="replay-awareness-grid"
+                      aria-label="Awareness Grid"
+                    >
+                      <p className="replay-label">Awareness Grid</p>
+                      <p className="replay-muted">
+                        {awarenessGrid.soldierId} · Cycle{" "}
+                        {awarenessGrid.cycle ?? "unknown"}
+                      </p>
+                      <div className="replay-awareness-cells">
+                        {awarenessGrid.cells.map((cell) => (
+                          <div
+                            key={cell.key}
+                            className="replay-awareness-cell"
+                            title={`dx ${cell.dx}, dy ${cell.dy}`}
+                          >
+                            <span>{cell.contents}</span>
+                            {cell.facing ? <small>{cell.facing}</small> : null}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <pre className="replay-debug-panel">
+                    {JSON.stringify(data.projection.ownerPrivate, null, 2)}
+                  </pre>
+                </>
               ) : null}
             </section>
           ) : null}

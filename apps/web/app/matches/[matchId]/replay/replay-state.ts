@@ -57,6 +57,20 @@ export interface EventInspector {
   privacyLabel: "Public event" | "Owner-only debug available"
 }
 
+export interface OwnerAwarenessCell {
+  key: string
+  dx: number
+  dy: number
+  contents: string
+  facing?: string | undefined
+}
+
+export interface OwnerAwarenessGridInspection {
+  soldierId: string
+  cycle: number | null
+  cells: OwnerAwarenessCell[]
+}
+
 export const getInitialReplaySequence = (data: ReplayPageData): number =>
   data.status === "ready" ? data.initialSequence : 0
 
@@ -273,3 +287,95 @@ export const canShowOwnerDebug = (data: ReplayPageData): boolean =>
   data.status === "ready" &&
   data.projection.viewer.access === "owner" &&
   data.projection.ownerPrivate !== undefined
+
+const isRecord = (
+  value: JsonValue | undefined,
+): value is Record<string, JsonValue> =>
+  value !== undefined &&
+  value !== null &&
+  typeof value === "object" &&
+  !Array.isArray(value)
+
+const readNumber = (
+  record: Record<string, JsonValue>,
+  key: string,
+): number | undefined =>
+  typeof record[key] === "number" ? (record[key] as number) : undefined
+
+const readString = (
+  record: Record<string, JsonValue>,
+  key: string,
+): string | undefined =>
+  typeof record[key] === "string" ? (record[key] as string) : undefined
+
+const readAwarenessGrid = (
+  value: JsonValue | undefined,
+): OwnerAwarenessCell[] | null => {
+  if (!isRecord(value) || !Array.isArray(value.cells)) {
+    return null
+  }
+
+  const cells = value.cells.map((cell, index) => {
+    if (!isRecord(cell)) {
+      return null
+    }
+    const dx = readNumber(cell, "dx")
+    const dy = readNumber(cell, "dy")
+    const contents = readString(cell, "contents")
+    if (dx === undefined || dy === undefined || contents === undefined) {
+      return null
+    }
+    return {
+      key: `${dx}:${dy}:${index}`,
+      dx,
+      dy,
+      contents,
+      ...(readString(cell, "facing") === undefined
+        ? {}
+        : { facing: readString(cell, "facing") }),
+    }
+  })
+
+  if (cells.length !== 25 || cells.some((cell) => cell === null)) {
+    return null
+  }
+  return cells as OwnerAwarenessCell[]
+}
+
+export const getOwnerAwarenessGridInspection = (
+  data: ReplayReadyDto,
+  entry: ReplayTimelineEntryDto,
+): OwnerAwarenessGridInspection | null => {
+  if (
+    !canShowOwnerDebug(data) ||
+    entry.type !== "AWARENESS_GRID_OBSERVED" ||
+    !data.projection.ownerPrivate
+  ) {
+    return null
+  }
+
+  const ownerData = data.projection.ownerPrivate.data
+  if (!isRecord(ownerData)) {
+    return null
+  }
+
+  const privatePayload = ownerData[`private:event:${entry.sequence}`]
+  const payloadGrid = isRecord(privatePayload)
+    ? readAwarenessGrid(privatePayload.awarenessGrid)
+    : null
+  const fallbackGrid = readAwarenessGrid(ownerData.awarenessGrid)
+  const cells = payloadGrid ?? fallbackGrid
+  const soldierId =
+    typeof entry.context.soldierId === "string" ? entry.context.soldierId : ""
+
+  return cells
+    ? {
+        soldierId,
+        cycle:
+          typeof entry.context.cycleIndex === "number"
+            ? entry.context.cycleIndex
+            : null,
+        cells,
+      }
+    : null
+}

@@ -523,6 +523,36 @@ textarea {
   font-size: 12px;
 }
 
+.replay-awareness-grid {
+  margin-top: 10px;
+}
+
+.replay-awareness-cells {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin: 8px 0;
+}
+
+.replay-awareness-cell {
+  min-height: 42px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-secondary);
+  padding: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.replay-awareness-cell span,
+.replay-awareness-cell small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 1179px) {
   .workshop-grid {
     grid-template-columns: 1fr 1fr;

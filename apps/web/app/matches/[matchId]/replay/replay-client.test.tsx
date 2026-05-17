@@ -32,6 +32,8 @@ describe("ReplayClient", () => {
     )
     expect(source).toContain("ownerDebugAvailable ?")
     expect(source).toContain("Owner debug")
+    expect(source).toContain("Awareness Grid")
+    expect(source).toContain("getOwnerAwarenessGridInspection")
     expect(source).toContain("data.projection.ownerPrivate")
   })
 })

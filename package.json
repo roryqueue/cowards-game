@@ -9,10 +9,11 @@
     "dev:full": "docker compose up -d postgres redis && turbo dev --filter='./apps/*' --filter='./packages/*'",
     "build": "turbo build",
     "e2e": "playwright test",
+    "e2e:smoke": "PLAYWRIGHT_TEST=1 pnpm e2e -- replay.fixture.spec.ts",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm e2e:smoke",
     "format:check": "prettier --check ."
   },
   "devDependencies": {

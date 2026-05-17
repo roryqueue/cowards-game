@@ -6,6 +6,7 @@ import {
   formatTimelinePosition,
   getEventInspector,
   getInitialReplaySequence,
+  getOwnerAwarenessGridInspection,
   getSoldierInspector,
   getTimelineEntryAt,
   groupTimelineEntries,
@@ -209,5 +210,39 @@ describe("replay state helpers", () => {
     )
     expect(canShowOwnerDebug(data)).toBe(false)
     expect(canShowOwnerDebug(createReplayData(true))).toBe(true)
+  })
+
+  it("extracts owner-only Awareness Grid data for the selected Cycle", () => {
+    const data = createReplayData(true)
+    data.projection.ownerPrivate = {
+      playerId: "player:bottom",
+      data: {
+        "private:event:2": {
+          awarenessGrid: {
+            cells: Array.from({ length: 25 }, (_, index) => ({
+              dx: (index % 5) - 2,
+              dy: Math.floor(index / 5) - 2,
+              contents: index === 12 ? "FRIENDLY_ACTIVE" : "EMPTY",
+              ...(index === 12 ? { facing: "UP" } : {}),
+            })),
+          },
+        },
+      },
+    }
+
+    const inspection = getOwnerAwarenessGridInspection(data, data.timeline[2]!)
+
+    expect(inspection?.soldierId).toBe("soldier:bottom:2")
+    expect(inspection?.cycle).toBe(0)
+    expect(inspection?.cells).toHaveLength(25)
+    expect(inspection?.cells[12]).toMatchObject({
+      dx: 0,
+      dy: 0,
+      contents: "FRIENDLY_ACTIVE",
+      facing: "UP",
+    })
+    expect(
+      getOwnerAwarenessGridInspection(createReplayData(), data.timeline[2]!),
+    ).toBeNull()
   })
 })

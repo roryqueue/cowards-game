@@ -161,10 +161,10 @@ export const refreshMatchSetStatus = async (
   await pool.query(
     `
       update match_sets
-      set status = $1,
+      set status = $1::match_set_status,
           scoring = $2,
           degraded = $3,
-          completed_at = case when $1 in ('complete', 'degraded') then now() else completed_at end
+          completed_at = case when $1::match_set_status in ('complete', 'degraded') then now() else completed_at end
       where id = $4
     `,
     [status, scoring, scoring.degraded, matchSetId],

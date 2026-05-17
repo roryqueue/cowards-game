@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
 import type {
   AwarenessCell,
   SoldierBrainInput,
@@ -137,6 +138,19 @@ describe("runtime guard helpers", () => {
 })
 
 describe("StrategyRuntime execution adapter", () => {
+  it("does not use Node vm in the production worker harness", () => {
+    const harnessSource = readFileSync(
+      new URL("./worker-harness.ts", import.meta.url),
+      "utf8",
+    )
+
+    const forbiddenRuntimeBoundaryPattern = new RegExp(
+      "node:" + "vm|vm" + "\\.",
+    )
+
+    expect(harnessSource).not.toMatch(forbiddenRuntimeBoundaryPattern)
+  })
+
   it("valid selectActivations returns ok true with activation orders and StrategyMemory", () => {
     const result =
       runtimeForSource(validSource).selectActivations(strategyInput)
@@ -296,6 +310,27 @@ export default {
 export default {
   selectActivations() {
     globalThis.process
+    return { activationOrders: [], strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`),
+    )
+
+    const result = runtime.selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("FORBIDDEN_CAPABILITY")
+  })
+
+  it("blocks runtime-only forbidden globals inside the worker", () => {
+    const runtime = createRuntimeFromRevision(
+      forgedValidRevision(`
+export default {
+  selectActivations() {
+    Math.random()
     return { activationOrders: [], strategyMemory: {} }
   },
   soldierBrain() {

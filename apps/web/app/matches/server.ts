@@ -52,6 +52,14 @@ const withDatabasePool: WithPool = async (fn) => {
   }
 }
 
+const decodeMatchId = (matchId: MatchId): MatchId => {
+  try {
+    return decodeURIComponent(matchId) as MatchId
+  } catch {
+    return matchId
+  }
+}
+
 const eventLabels = {
   MATCH_STARTED: "Match start",
   ROUND_STARTED: "Round",
@@ -170,18 +178,19 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
       matchId: MatchId,
       options: GetMatchReplayOptions = {},
     ): Promise<ReplayPageData> {
-      if (isReplayFixtureMatch(matchId)) {
-        return createReplayFixtureData()
+      const resolvedMatchId = decodeMatchId(matchId)
+      if (isReplayFixtureMatch(resolvedMatchId)) {
+        return createReplayFixtureData(options)
       }
 
       const stored = await withPool((pool) =>
-        createStore(pool).getByMatchId(matchId),
+        createStore(pool).getByMatchId(resolvedMatchId),
       )
 
       if (!stored) {
         return {
           status: "unavailable",
-          matchId,
+          matchId: resolvedMatchId,
           reason: "missing-chronicle",
           message: "Replay unavailable: no Chronicle is stored for this Match.",
         }

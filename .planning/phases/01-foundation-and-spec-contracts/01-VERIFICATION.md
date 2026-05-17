@@ -1,8 +1,8 @@
 ---
 phase: 01-foundation-and-spec-contracts
-status: gaps_found
-verified_at: 2026-05-17T23:10:52Z
-score: 10/11 requirements verified
+status: passed
+verified_at: 2026-05-17T23:21:43Z
+score: 11/11 requirements verified
 requirements:
   - id: FOUND-01
     status: verified
@@ -25,27 +25,17 @@ requirements:
   - id: SPEC-05
     status: verified
   - id: TEST-07
-    status: failed
-gaps:
-  - truth: "Local verification command runs typecheck, lint, unit tests, integration tests, and selected E2E tests"
-    status: failed
-    reason: "Root pnpm verify runs format, lint, typecheck, and turbo test, but does not invoke Playwright or any selected E2E command."
-    artifacts:
-      - path: "package.json"
-        issue: "\"verify\" is \"pnpm format:check && pnpm lint && pnpm typecheck && pnpm test\" while \"e2e\" is a separate script."
-      - path: "playwright.config.ts"
-        issue: "E2E tests are configured under apps/web/e2e, but no selected E2E subset is wired into the local verification gate."
-    missing:
-      - "Add a selected E2E command to the local verification gate or define a separate documented local quality gate that includes it."
+    status: verified
+gaps: []
 ---
 
 # Phase 1: Foundation and Spec Contracts Verification Report
 
 ## Verdict
 
-**Status:** gaps_found
+**Status:** verified
 
-Phase 1 largely achieved the foundation and spec-contract goal: the monorepo exists, package boundaries are enforced at source-import level, canonical `@cowards/spec` contracts are substantive and tested, and local PostgreSQL/Redis topology is declared. One assigned requirement is not actually met: `TEST-07` says the local verification command must run selected E2E tests, but `pnpm verify` does not run Playwright or any E2E subset.
+Phase 1 achieved the foundation and spec-contract goal: the monorepo exists, package boundaries are enforced at source-import level, canonical `@cowards/spec` contracts are substantive and tested, local PostgreSQL/Redis topology is declared, and the local verification gate now runs selected Playwright E2E coverage through the stable replay fixture smoke.
 
 ## Goal Check
 
@@ -55,13 +45,13 @@ Phase 1 largely achieved the foundation and spec-contract goal: the monorepo exi
 | Monorepo packages exist with boundaries for spec, engine, runtime, replay, map configs, test utilities, web, and worker. | VERIFIED | `pnpm-workspace.yaml` covers `apps/*` and `packages/*`; package manifests exist for `@cowards/spec`, `engine`, `runtime-js`, `replay`, `map-configs`, `test-utils`, `web`, and `worker`. |
 | Canonical TypeScript types, constants, Zod schemas, and test fixtures are importable by downstream packages. | VERIFIED | `packages/spec/src/index.ts` exports constants, schemas, types, versions, and fixtures; `@cowards/spec` tests passed 9/9. |
 | Version metadata fields exist for deterministic Match reproduction. | VERIFIED | `CompatibilityVersions` and `COMPATIBILITY_VERSIONS` contain `spec`, `engine`, `runtimeJs`, `chronicle`, `strategyRevision`, and `arenaVariant`; `Match`, `ChronicleReproducibilityEnvelope`, and `StrategyRevision` carry version fields. |
-| Local verification gate includes selected E2E coverage. | FAILED | `package.json` has `verify: pnpm format:check && pnpm lint && pnpm typecheck && pnpm test`; E2E is only available as separate `pnpm e2e`. |
+| Local verification gate includes selected E2E coverage. | VERIFIED | `package.json` defines `e2e:smoke: PLAYWRIGHT_TEST=1 pnpm e2e -- replay.fixture.spec.ts`, and `verify` ends with `pnpm e2e:smoke`; `pnpm verify` passed with 2 Playwright fixture tests. |
 
 ## Required Artifacts
 
 | Artifact | Expected | Status | Details |
 | --- | --- | --- | --- |
-| `package.json` | Root pnpm/Turbo scripts and local quality gate | PARTIAL | Core scripts exist, but `verify` omits selected E2E tests required by `TEST-07`. |
+| `package.json` | Root pnpm/Turbo scripts and local quality gate | VERIFIED | Core scripts exist, and `verify` runs format, lint, typecheck, unit/integration tests, then selected E2E smoke coverage. |
 | `pnpm-workspace.yaml` | Workspace globs for apps/packages | VERIFIED | Includes `apps/*` and `packages/*`. |
 | `turbo.json` | Build/lint/typecheck/test/dev task graph | VERIFIED | Contains `build`, `lint`, `typecheck`, `test`, and persistent uncached `dev`. |
 | `tsconfig.base.json`, `tsconfig.json` | Strict TS config and project references | VERIFIED | Strict flags and package/app references are present. |
@@ -84,7 +74,7 @@ Phase 1 largely achieved the foundation and spec-contract goal: the monorepo exi
 | SPEC-03 | VERIFIED | Constants cover 12x12 bounds, starting positions, activation counts, 12-cycle budget, memory limits, objective limit, and source size limit. |
 | SPEC-04 | VERIFIED | Discriminated/string unions cover statuses, directions, actions, AwarenessCell contents, Chronicle event types, and runtime violation types. |
 | SPEC-05 | VERIFIED | `fixtures.valid` and `fixtures.invalid` provide starting boards, Soldiers, Arena Variants, seeds, strategy/runtime examples, and named rule scenarios. |
-| TEST-07 | FAILED | No CI exists, and the local `pnpm verify` gate omits selected E2E tests despite `playwright.config.ts` and root `pnpm e2e` existing. |
+| TEST-07 | VERIFIED | Root `pnpm verify` now invokes `pnpm e2e:smoke`, which runs `PLAYWRIGHT_TEST=1 pnpm e2e -- replay.fixture.spec.ts`; `pnpm verify` passed on 2026-05-17. |
 
 ## Integration/Data Flow
 
@@ -94,7 +84,7 @@ Phase 1 largely achieved the foundation and spec-contract goal: the monorepo exi
 | `@cowards/spec` | Downstream packages | VERIFIED | Downstream packages depend on `@cowards/spec`; `packages/spec/package.json` has only external `zod`, with no workspace dependency. |
 | Spec constants/types | Spec schemas/fixtures/tests | VERIFIED | Fixtures parse through schemas; spec tests validate compatibility keys, initial Soldiers, action schemas, Chronicle, StrategyRevision, and oversize rejection. |
 | ESLint boundary config | Effective source import policy | VERIFIED | `eslint --print-config` shows spec blocks `@cowards/engine` and runtime imports; web blocks `@cowards/runtime-js` and worker entrypoint imports. |
-| E2E config | Local verify gate | FAILED | `playwright.config.ts` exists, but `pnpm verify` does not invoke `pnpm e2e` or a selected Playwright subset. |
+| E2E config | Local verify gate | VERIFIED | `playwright.config.ts` runs `apps/web/e2e`; root `verify` invokes the selected fixture-backed replay Playwright smoke. |
 
 ## Automated Checks
 
@@ -105,21 +95,23 @@ Phase 1 largely achieved the foundation and spec-contract goal: the monorepo exi
 | `pnpm lint` | 9 workspace lint tasks successful | PASS |
 | `pnpm exec eslint --print-config packages/spec/src/index.ts \| rg ...` | Effective config contains spec forbidden imports | PASS |
 | `pnpm exec eslint --print-config apps/web/app/page.tsx \| rg ...` | Effective config contains web runtime-js import ban | PASS |
+| `pnpm e2e:smoke` | `replay.fixture.spec.ts` passed on desktop and mobile projects, 2 passed | PASS |
+| `pnpm verify` | Format, lint, typecheck, Turbo tests, and selected replay fixture E2E smoke passed | PASS |
 | `docker compose config` | `docker` command not found | SKIPPED |
 
 ## Residual Risk
 
 Docker is unavailable in this verification environment, so Compose syntax and container health were checked by file inspection only. Long-running `pnpm dev` and `pnpm dev:full` boot behavior was not started because this audit avoids live services and persistent processes.
 
-`01-VALIDATION.md` still has stale frontmatter and tables (`wave_0_complete: false`, pending file checks) despite the implementation being present. That is planning artifact drift, not a source-code failure for the Phase 1 goal.
+Running Playwright/Next locally generated `test-results/.last-run.json` and updated the Next-managed `apps/web/next-env.d.ts` route import during verification. Those generated local changes were removed/restored after the checks; future local E2E runs may regenerate them.
 
 Later phases added `@cowards/runtime-js` as an `apps/web` package dependency for safe validation flows, but current web source does not import the executable worker entrypoint. This is acceptable for the Phase 1 boundary goal as verified by effective ESLint source-import restrictions.
 
 ## Gaps Summary
 
-Blocking gap: `TEST-07` is not fully satisfied because the local verification command does not run selected E2E tests. Everything else required for Phase 1 foundation and spec contracts is present, substantive, wired, and covered by focused automated checks.
+No blocking gaps remain for Phase 1. `TEST-07` is satisfied by the root `e2e:smoke` script and its inclusion in `pnpm verify`.
 
 ---
 
-_Verified: 2026-05-17T23:10:52Z_  
+_Verified: 2026-05-17T23:21:43Z_
 _Verifier: the agent (gsd-verifier)_

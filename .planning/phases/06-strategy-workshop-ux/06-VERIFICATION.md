@@ -91,16 +91,16 @@ This verification did not trust SUMMARY claims. It inspected the actual page, cl
 
 | Risk | Impact | Disposition |
 |---|---|---|
-| Live Postgres/Redis-backed browser flow was not run during this pass. | Could hide deployment/service configuration failures in submit/test launch. | Residual risk, not a Phase 6 blocker. Code has storage-unavailable fallbacks and focused unit/integration coverage. |
+| Live Postgres/Redis-backed browser flow was not run during the original Phase 6 pass. | Could hide deployment/service configuration failures in submit/test launch. | Closed by the later Phase 7 gap-resolution pass: local PostgreSQL was started, migrations were applied, and the service-backed Workshop edit -> execute -> replay Playwright smoke passed. Redis is still not exercised by this app path. |
 | Worker execution is not triggered by Phase 6 itself. | Created Workshop MatchSets remain pending until worker services run. | Not a blocker for Phase 6 success criteria, which require launching Workshop/local test Matches and showing status. Full worker-to-replay E2E is Phase 7/milestone scope. |
-| `apps/web/e2e/workshop-to-replay.spec.ts` is skipped unless `RUN_SERVICE_E2E=1`, and test-support worker route returns 503. | The complete edit -> execute -> replay browser proof remains unverified. | Residual risk already captured by milestone audit and Phase 7 scope, not assigned UX-01..UX-06 blocker. |
+| `apps/web/e2e/workshop-to-replay.spec.ts` is skipped unless `RUN_SERVICE_E2E=1`. | The complete edit -> execute -> replay browser proof requires local services. | Closed for v1.0 verification: the spec now requires the worker helper to return 200 and passed with `RUN_SERVICE_E2E=1` against local PostgreSQL. |
 | Visual/browser quality was not rerun in this verifier pass. | Possible regressions in Monaco rendering or responsive layout may require manual browser confirmation. | Prior Phase 6 validation records browser checks at desktop/tablet/mobile widths; this pass verified CSS/layout wiring and automated code paths only. |
 
 ## Gaps Summary
 
 No blocking Phase 6 gaps found. UX-01 through UX-06 are implemented and wired through real client, API, validation, persistence, revision-history, and MatchSet launch/status paths.
 
-The only remaining concerns are service-backed/live-environment verification risks that belong to the broader Phase 7 or milestone-level edit-to-replay proof, not to the Phase 6 Strategy Workshop UX contract.
+The previous service-backed/live-environment verification concern was closed by the Phase 7 gap-resolution pass. No Phase 6 Strategy Workshop UX verification gaps remain.
 
 ---
 

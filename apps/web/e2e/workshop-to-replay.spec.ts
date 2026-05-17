@@ -23,7 +23,10 @@ test("Workshop edit-to-replay path opens a completed Match replay", async ({
   const workerResponse = await page.request.post(
     "/api/test-support/run-worker-once",
   )
-  expect([200, 503]).toContain(workerResponse.status())
+  expect(workerResponse.status()).toBe(200)
+  await expect(workerResponse.json()).resolves.toMatchObject({
+    status: "ok",
+  })
 
   await expect(
     page.getByText(/Test complete|Some Matches failed/),

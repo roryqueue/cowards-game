@@ -1,8 +1,8 @@
 ---
 phase: 04-strategy-runtime-sandbox
-status: gaps_found
-verified_at: 2026-05-17T23:11:09Z
-score: "10/11 requirements verified"
+status: passed
+verified_at: 2026-05-17T23:27:40Z
+score: "11/11 requirements verified"
 requirements:
   RUN-01: verified
   RUN-02: verified
@@ -11,29 +11,20 @@ requirements:
   RUN-05: verified
   RUN-06: verified
   RUN-07: verified
-  RUN-08: failed
+  RUN-08: verified
   RUN-09: verified
   RUN-10: verified
   TEST-04: verified
-gaps:
-  - requirement: RUN-08
-    truth: "Runtime prevents forbidden capabilities without using Node vm as the security boundary"
-    status: failed
-    reason: "The active worker harness imports node:vm and executes user strategy source with vm.createContext and vm.Script, despite Phase 4 roadmap notes and AGENTS.md explicitly saying not to use Node vm as the security boundary."
-    artifacts:
-      - path: packages/runtime-js/src/worker-harness.ts
-        issue: "WORKER_HARNESS_SOURCE imports node:vm, creates the strategy sandbox with vm.createContext, and runs strategy source with vm.Script."
-    missing:
-      - "Replace the node:vm-based execution boundary with a non-vm worker/subprocess/container/WASM/WASI boundary, or add an explicit accepted override if this prototype deviation is intentional."
+gaps: []
 ---
 
 # Phase 4: Strategy Runtime Sandbox Verification
 
 ## Verdict
 
-**Status: gaps_found.** Phase 4 is mostly implemented and the focused automated checks pass, but the phase goal is not fully achieved because the active runtime sandbox relies on `node:vm` to execute user Strategy source. That directly conflicts with the Phase 4 roadmap note and project non-negotiable: do not use Node `vm` as the security boundary.
+**Status: passed.** Phase 4 is implemented to the planned prototype level, and RUN-08 is resolved: the active runtime harness no longer imports `node:vm` or uses `vm.Script`/`vm.createContext`. Strategy source is loaded only inside the one-shot worker boundary as a generated data-URL module with runtime forbidden-capability shadows and typed violation mapping preserved.
 
-**Score:** 10/11 assigned requirements verified. RUN-08 is blocked by the `node:vm` execution boundary.
+**Score:** 11/11 assigned requirements verified.
 
 ## Goal Check
 
@@ -43,7 +34,7 @@ gaps:
 | --- | --- | --- |
 | User-authored JS/TS strategy source can be validated and wrapped into an immutable Strategy Revision artifact. | VERIFIED | `validateStrategySource` checks size, required export/methods, forbidden patterns, async methods, and transpilation in `packages/runtime-js/src/validation.ts`; `buildStrategyRevision` creates schema-parsed frozen artifacts in `packages/runtime-js/src/revision.ts`. |
 | Runtime evaluates `selectActivations` and `soldierBrain` through the canonical `StrategyRuntime` interface. | VERIFIED | `createRuntimeFromRevision` returns `selectActivations` and `runSoldierBrain` methods matching `StrategyRuntime` and delegates to the worker bridge in `packages/runtime-js/src/executor.ts`. |
-| Runtime enforces schema, source, memory, objective, timeout, and forbidden capability constraints. | FAILED | Schema/source/memory/objective/timeout checks exist, but forbidden capability enforcement is implemented in `packages/runtime-js/src/worker-harness.ts` with `node:vm`, which violates the explicit Phase 4 boundary constraint. |
+| Runtime enforces schema, source, memory, objective, timeout, and forbidden capability constraints. | VERIFIED | Schema/source/memory/objective/timeout checks pass; forbidden capability enforcement now runs inside `packages/runtime-js/src/worker-harness.ts` without `node:vm`, using the one-shot worker module boundary and runtime shadows for blocked capabilities. |
 | Runtime tests demonstrate invalid output, timeout, thrown exception, and forbidden access behavior. | VERIFIED | `packages/runtime-js/src/executor.test.ts` covers invalid outputs, oversized memory/objective outputs, thrown exceptions, timeouts, forbidden access, constructor recovery, Promise outputs, and schema-atomic success. |
 
 ## Required Artifacts
@@ -57,7 +48,7 @@ gaps:
 | `packages/runtime-js/src/revision.ts` | Immutable Strategy Revision builder. | VERIFIED | Calls validation, computes deterministic id/hash/version metadata, parses with StrategyRevisionSchema, and deep-freezes the artifact. |
 | `packages/runtime-js/src/worker.ts` | Worker-only executable export. | VERIFIED | Exports `createRuntimeFromRevision` only through `@cowards/runtime-js/worker`. |
 | `packages/runtime-js/src/worker-bridge.ts` | Replaceable synchronous worker bridge. | VERIFIED | Uses `node:worker_threads`, `SharedArrayBuffer`, `Atomics.wait`, resource limits, empty env, and typed timeout/worker-message failure mapping. |
-| `packages/runtime-js/src/worker-harness.ts` | Isolated one-shot strategy execution harness. | FAILED | Active execution harness uses `node:vm` and `vm.Script`; this is the blocking boundary gap. |
+| `packages/runtime-js/src/worker-harness.ts` | Isolated one-shot strategy execution harness. | VERIFIED | Active execution harness imports only `node:worker_threads`, builds a generated strategy module inside the worker, and preserves typed `INVALID_OUTPUT`, `THROWN_EXCEPTION`, `FORBIDDEN_CAPABILITY`, and timeout behavior without `node:vm`. |
 | `packages/runtime-js/src/executor.ts` | StrategyRuntime adapter and schema/failure normalization. | VERIFIED | Validates revision, runs each method in worker, parses outputs atomically, maps oversized/invalid outputs, preserves worker violations. |
 | `packages/runtime-js/README.md` | Prototype boundary and API split documentation. | VERIFIED | Documents safe API, worker-only API, forbidden capabilities, failure semantics, prototype boundary, and future replacement path. |
 
@@ -72,7 +63,7 @@ gaps:
 | RUN-05 | VERIFIED | Source, StrategyMemory, SoldierMemory, objective payload, and output schema limits are enforced by validation/schemas/executor normalization. |
 | RUN-06 | VERIFIED | Engine converts runtime violations into `RUNTIME_VIOLATION` events and interrupts activation; integration tests prove invalid output stones a Soldier that did not Advance. |
 | RUN-07 | VERIFIED | Executor and tests map thrown exceptions to `THROWN_EXCEPTION` and infinite loops to `TIMEOUT`; engine handles violations without uncaught runtime exceptions. |
-| RUN-08 | FAILED | Forbidden capability checks exist, but the active execution boundary is `node:vm` in `packages/runtime-js/src/worker-harness.ts`, contrary to the explicit Phase 4 and project security rule. |
+| RUN-08 | VERIFIED | `packages/runtime-js/src/worker-harness.ts` no longer imports `node:vm` or uses `vm.*`; `rg -n "node:vm|vm\\." packages/runtime-js/src` returns no matches, and runtime tests include a harness source regression check. |
 | RUN-09 | VERIFIED | No `@cowards/runtime-js/worker` imports were found in `apps/web`, `packages/engine`, `packages/replay`, or `packages/persistence`; worker execution is imported by `apps/worker/src/runner.ts`. |
 | RUN-10 | VERIFIED | Engine depends on the `StrategyRuntime` interface; runtime-js is an adapter behind `createRuntimeFromRevision`, and the README states the boundary is replaceable. |
 | TEST-04 | VERIFIED | Runtime tests cover invalid outputs, timeout behavior, forbidden capabilities, memory/source limits, and output schema validation. |
@@ -86,34 +77,31 @@ gaps:
 | Worker match execution | VERIFIED | `apps/worker/src/runner.ts` loads persisted Strategy Revisions and wraps bottom/top revisions with `createRuntimeFromRevision` from `@cowards/runtime-js/worker`. |
 | Runtime to engine | VERIFIED | `createSideDispatchRuntime` dispatches engine calls to the correct player runtime; engine consumes only `StrategyRuntime`. |
 | Runtime violation to Chronicle | VERIFIED | `packages/engine/src/activation.ts` emits `RUNTIME_VIOLATION` with private violation payload; `packages/replay/src/project.ts` strips raw details from public projections. |
-| Forbidden capability boundary | FAILED | The boundary is wired, but it is implemented by `vm.createContext` and `vm.Script` in the harness. |
+| Forbidden capability boundary | VERIFIED | The boundary is wired through a worker-only generated module harness, forbidden globals are shadowed or blocked at method execution, and the bridge remains replaceable behind `runStrategyMethodInWorker`. |
 
 ## Automated Checks
 
 | Command | Result | Notes |
 | --- | --- | --- |
 | `pnpm --filter @cowards/spec test -- spec.test.ts` | PASS | 1 test file, 9 tests passed. |
-| `pnpm --filter @cowards/runtime-js test -- validation.test.ts revision.test.ts executor.test.ts integration.test.ts` | PASS | 5 test files, 62 tests passed. |
+| `pnpm --filter @cowards/runtime-js test` | PASS | 5 test files, 64 tests passed. |
 | `pnpm --filter @cowards/runtime-js typecheck` | PASS | `tsc --noEmit` completed successfully. |
-| `pnpm lint` | PASS | 9 package lint tasks successful; all cached in this run. |
+| `rg -n "node:vm|vm\\." packages/runtime-js/src` | PASS | No matches in runtime-js source, including production files and tests. |
+| `pnpm --filter @cowards/runtime-js lint` | PASS | `eslint .` completed successfully for the runtime package. |
 | Anti-pattern scan over runtime/spec/worker files | WARNING | Only benign worker startup `console.log` calls and test fixture forbidden-pattern strings found. |
 
 ## Residual Risk
 
 - The roadmap marks Phase 4 as `mode: mvp`, but the phase goal is not a user story. This verification used the explicit Phase 4 goal, success criteria, and assigned requirements.
-- Static forbidden-pattern scanning is intentionally not a full hostile-code proof. Even after the `node:vm` gap is fixed, RUN-08 should be treated as prototype-grade unless a stronger isolation boundary is implemented.
+- Static forbidden-pattern scanning and worker-global shadowing are intentionally not a full hostile-code proof. RUN-08 is verified for the Phase 4 prototype contract, but production hostile-code isolation still requires a stronger subprocess/container/WASM/WASI-style boundary.
 - Live database/queue services were not started. That is not a Phase 4 blocker because focused runtime, worker integration, and API wiring were inspectable without live services.
 - `apps/web/package.json` and Next config include the safe `@cowards/runtime-js` package for validation workflows, but executable `@cowards/runtime-js/worker` imports are absent from web/API code.
 
 ## Gaps Summary
 
-One blocking gap prevents a passing verdict:
-
-1. **RUN-08: Runtime forbidden capability boundary uses Node vm.** `packages/runtime-js/src/worker-harness.ts` imports `node:vm`, creates a context with `vm.createContext`, and executes user strategy source with `new vm.Script(...).runInContext(...)`. This may be a pragmatic prototype, but it directly violates the Phase 4 contract and project non-negotiable unless explicitly overridden.
-
-Structured gap details are included in the YAML frontmatter for follow-up planning.
+No blocking gaps remain for Phase 4 verification. RUN-08 was rechecked after replacing the Node vm execution path with the worker-only generated module harness.
 
 ---
 
-_Verified: 2026-05-17T23:11:09Z_
+_Verified: 2026-05-17T23:27:40Z_
 _Verifier: the agent (gsd-verifier)_

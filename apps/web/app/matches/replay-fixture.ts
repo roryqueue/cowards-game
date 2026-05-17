@@ -1,4 +1,9 @@
-import type { ReplayReadyDto, ReplayTimelineEntryDto } from "./types.js"
+import type {
+  ReplayReadyDto,
+  ReplayTimelineEntryDto,
+  ReplayViewMode,
+} from "./types.js"
+import type { GetMatchReplayOptions } from "./server.js"
 
 export const replayFixtureMatchId = "match:e2e-replay-fixture"
 
@@ -25,6 +30,7 @@ const event = (
   type: ReplayTimelineEntryDto["type"],
   label: string,
   payload: ReplayTimelineEntryDto["payload"] = {},
+  privacy: ReplayTimelineEntryDto["privacy"] = "public",
 ): ReplayTimelineEntryDto => ({
   sequence,
   type,
@@ -32,7 +38,7 @@ const event = (
   activation: sequence <= 1 ? undefined : 0,
   cycle: sequence >= 2 && sequence <= 4 ? sequence - 2 : undefined,
   label,
-  privacy: "public",
+  privacy,
   context: {
     ...(sequence === 0 ? {} : { roundNumber: 1 as const }),
     ...(sequence <= 1 ? {} : { activationIndex: 0 }),
@@ -45,6 +51,22 @@ const event = (
   },
   payload,
 })
+
+const awarenessGrid = {
+  cells: Array.from({ length: 25 }, (_, index) => {
+    const dx = (index % 5) - 2
+    const dy = Math.floor(index / 5) - 2
+    return {
+      dx,
+      dy,
+      contents:
+        dx === 0 && dy === 0
+          ? ("FRIENDLY_ACTIVE" as const)
+          : ("EMPTY" as const),
+      ...(dx === 0 && dy === 0 ? { facing: "UP" as const } : {}),
+    }
+  }),
+}
 
 const board = {
   bounds: { minX: 1, maxX: 10, minY: 1, maxY: 10 },
@@ -80,68 +102,100 @@ const board = {
   ],
 }
 
-export const createReplayFixtureData = (): ReplayReadyDto => ({
-  status: "ready",
-  mode: "public",
-  metadata: {
-    matchId: replayFixtureMatchId,
-    chronicleId: "chronicle:e2e-replay-fixture",
-    hash: "fixture-hash",
-    schemaVersion: "chronicle-v1",
-    eventCount: 10,
-    snapshotCount: 10,
-    outcome: { type: "DRAW" },
-    bottomPlayerId: "player:bottom",
-    topPlayerId: "player:top",
-    arenaVariantId: "arena:e2e-replay-fixture",
-  },
-  projection: {
-    schemaVersion: "chronicle-v1",
-    viewer: { access: "public" },
-    reproducibility: {
+export const createReplayFixtureData = (
+  options: GetMatchReplayOptions = {},
+): ReplayReadyDto => {
+  const mode: ReplayViewMode =
+    options.allowOwnerDebug === true &&
+    options.mode === "owner" &&
+    options.ownerPlayerId
+      ? "owner"
+      : "public"
+
+  return {
+    status: "ready",
+    mode,
+    metadata: {
       matchId: replayFixtureMatchId,
-      seed: "seed:e2e-replay-fixture",
+      chronicleId: "chronicle:e2e-replay-fixture",
+      hash: "fixture-hash",
+      schemaVersion: "chronicle-v1",
+      eventCount: 11,
+      snapshotCount: 11,
+      outcome: { type: "DRAW" },
+      bottomPlayerId: "player:bottom",
+      topPlayerId: "player:top",
       arenaVariantId: "arena:e2e-replay-fixture",
-      arenaVariantVersion: "arena-variant-v1",
-      strategyRevisionIds: ["revision:bottom", "revision:top"],
-      versions: {
-        spec: "spec-v1",
-        engine: "engine-v1",
-        runtimeJs: "runtime-js-v1",
-        chronicle: "chronicle-v1",
-        strategyRevision: "strategy-revision-v1",
-        arenaVariant: "arena-variant-v1",
-      },
     },
-    events: [],
-    snapshots: [],
-  },
-  timeline: [
-    event(0, "MATCH_STARTED", "Match start"),
-    event(1, "ROUND_STARTED", "Round start"),
-    event(2, "MOVE_ADVANCED", "Advance", {
-      from: { x: 2, y: 9 },
-      to: { x: 2, y: 8 },
-    }),
-    event(3, "BACKSTAB_RESOLVED", "Backstab", {
-      from: { x: 2, y: 8 },
-      to: { x: 2, y: 7 },
-    }),
-    event(4, "PUSH_RESOLVED", "Push", {
-      from: { x: 2, y: 7 },
-      to: { x: 2, y: 6 },
-    }),
-    event(5, "SOLDIER_FELL", "Fall", { position: { x: 1, y: 10 } }),
-    event(6, "SOLDIER_STONED", "Stone", { position: { x: 6, y: 3 } }),
-    event(7, "MOVE_BLOCKED", "Blocked", { position: { x: 4, y: 4 } }),
-    event(8, "CONTRACTION_RESOLVED", "Contraction"),
-    event(9, "RUNTIME_VIOLATION", "Runtime violation"),
-    event(10, "MATCH_ENDED", "Outcome"),
-  ],
-  states: Array.from({ length: 11 }, (_, sequence) => ({
-    sequence,
-    board,
-    ...(sequence === 10 ? { outcome: { type: "DRAW" as const } } : {}),
-  })),
-  initialSequence: 0,
-})
+    projection: {
+      schemaVersion: "chronicle-v1",
+      viewer:
+        mode === "owner" && options.ownerPlayerId
+          ? { access: "owner", playerId: options.ownerPlayerId }
+          : { access: "public" },
+      reproducibility: {
+        matchId: replayFixtureMatchId,
+        seed: "seed:e2e-replay-fixture",
+        arenaVariantId: "arena:e2e-replay-fixture",
+        arenaVariantVersion: "arena-variant-v1",
+        strategyRevisionIds: ["revision:bottom", "revision:top"],
+        versions: {
+          spec: "spec-v1",
+          engine: "engine-v1",
+          runtimeJs: "runtime-js-v1",
+          chronicle: "chronicle-v1",
+          strategyRevision: "strategy-revision-v1",
+          arenaVariant: "arena-variant-v1",
+        },
+      },
+      events: [],
+      snapshots: [],
+      ...(mode === "owner" && options.ownerPlayerId
+        ? {
+            ownerPrivate: {
+              playerId: options.ownerPlayerId,
+              data: {
+                "private:event:2": {
+                  awarenessGrid,
+                },
+              },
+            },
+          }
+        : {}),
+    },
+    timeline: [
+      event(0, "MATCH_STARTED", "Match start"),
+      event(1, "ROUND_STARTED", "Round start"),
+      event(
+        2,
+        "AWARENESS_GRID_OBSERVED",
+        "Awareness",
+        { soldierId: "soldier:bottom:1", cycleIndex: 0 },
+        "owner",
+      ),
+      event(3, "BACKSTAB_RESOLVED", "Backstab", {
+        from: { x: 2, y: 8 },
+        to: { x: 2, y: 7 },
+      }),
+      event(4, "PUSH_RESOLVED", "Push", {
+        from: { x: 2, y: 7 },
+        to: { x: 2, y: 6 },
+      }),
+      event(5, "SOLDIER_FELL", "Fall", { position: { x: 1, y: 10 } }),
+      event(6, "SOLDIER_STONED", "Stone", { position: { x: 6, y: 3 } }),
+      event(7, "MOVE_BLOCKED", "Blocked", { position: { x: 4, y: 4 } }),
+      event(8, "CONTRACTION_RESOLVED", "Contraction"),
+      event(9, "RUNTIME_VIOLATION", "Runtime violation"),
+      event(10, "MATCH_ENDED", "Outcome"),
+    ],
+    states: Array.from({ length: 11 }, (_, sequence) => ({
+      sequence,
+      board,
+      ...(sequence === 10 ? { outcome: { type: "DRAW" as const } } : {}),
+    })),
+    initialSequence: 0,
+    ...(mode === "owner" && options.ownerPlayerId
+      ? { ownerPlayerId: options.ownerPlayerId }
+      : {}),
+  }
+}

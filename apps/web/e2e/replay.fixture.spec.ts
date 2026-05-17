@@ -82,3 +82,25 @@ test("replay fixture renders board, timeline, inspector, callouts, and public pr
     expect(body).not.toContain(marker)
   }
 })
+
+test("owner debug replay fixture exposes Awareness Grid only through gated owner mode", async ({
+  page,
+}) => {
+  const fixture = (await (
+    await page.request.get("/api/test-support/replay-fixture")
+  ).json()) as { matchId: string; replayHref: string }
+
+  await page.goto(fixture.replayHref)
+  await expect(page.getByText("Public view")).toBeVisible()
+  await expect(page.getByText("Owner debug")).toHaveCount(0)
+  await expect(page.getByText("Awareness Grid")).toHaveCount(0)
+
+  await page.goto(
+    `${fixture.replayHref}?ownerDebug=1&ownerPlayerId=player%3Abottom`,
+  )
+  await expect(page.locator(".replay-status-chip")).toHaveText("Owner debug")
+  await page.getByRole("button", { name: "Awareness" }).click()
+  const awarenessGrid = page.getByLabel("Awareness Grid")
+  await expect(awarenessGrid).toBeVisible()
+  await expect(awarenessGrid.getByText("FRIENDLY_ACTIVE")).toBeVisible()
+})

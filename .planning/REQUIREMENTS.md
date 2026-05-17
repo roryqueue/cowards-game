@@ -72,21 +72,21 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Match Orchestration
 
-- [ ] **MATCH-01**: User can create a Match between two Strategy Revisions with a selected Arena Variant and deterministic seed.
-- [ ] **MATCH-02**: User can create a MatchSet between two Strategy Revisions across configured hand-authored Arena Variants and side assignments.
-- [ ] **MATCH-03**: System locks Strategy Revisions before seed, Arena Variant, and initiative reveal.
-- [ ] **MATCH-04**: Worker can claim queued Match jobs, execute simulations, persist outcomes, and attach Chronicle references.
-- [ ] **MATCH-05**: Worker retries transient system failures up to a fixed limit and marks exhausted system failures as Match failed rather than strategy loss.
-- [ ] **MATCH-06**: MatchSet scoring orders results by Match wins, cumulative surviving Soldiers, then cumulative survival time with deterministic tie-breakers.
-- [ ] **MATCH-07**: User can see Match and MatchSet status: pending, running, complete, failed, or blocked.
+- [x] **MATCH-01**: User can create a Match between two Strategy Revisions with a selected Arena Variant and deterministic seed.
+- [x] **MATCH-02**: User can create a MatchSet between two Strategy Revisions across configured hand-authored Arena Variants and side assignments.
+- [x] **MATCH-03**: System locks Strategy Revisions before seed, Arena Variant, and initiative reveal.
+- [x] **MATCH-04**: Worker can claim queued Match jobs, execute simulations, persist outcomes, and attach Chronicle references.
+- [x] **MATCH-05**: Worker retries transient system failures up to a fixed limit and marks exhausted system failures as Match failed rather than strategy loss.
+- [x] **MATCH-06**: MatchSet scoring orders results by Match wins, cumulative surviving Soldiers, then cumulative survival time with deterministic tie-breakers.
+- [x] **MATCH-07**: User can see Match and MatchSet status: pending, running, complete, failed, or blocked.
 
 ### Persistence
 
-- [ ] **DATA-01**: System persists Users, Strategies, StrategyRevisions, ArenaVariants, Matches, MatchSets, Chronicle metadata, and job/run metadata in PostgreSQL.
-- [ ] **DATA-02**: System preserves immutable StrategyRevision records after they are used in any Match or MatchSet.
-- [ ] **DATA-03**: System stores or references Chronicle artifacts so they can be replayed after Match completion.
-- [ ] **DATA-04**: System can seed local users, sample Strategies, Arena Variants, MatchSets, Matches, and Chronicles for development.
-- [ ] **DATA-05**: System can migrate database schema repeatably in local and deployed environments.
+- [x] **DATA-01**: System persists Users, Strategies, StrategyRevisions, ArenaVariants, Matches, MatchSets, Chronicle metadata, and job/run metadata in PostgreSQL.
+- [x] **DATA-02**: System preserves immutable StrategyRevision records after they are used in any Match or MatchSet.
+- [x] **DATA-03**: System stores or references Chronicle artifacts so they can be replayed after Match completion.
+- [x] **DATA-04**: System can seed local users, sample Strategies, Arena Variants, MatchSets, Matches, and Chronicles for development.
+- [x] **DATA-05**: System can migrate database schema repeatably in local and deployed environments.
 
 ### Strategy Authoring UX
 
@@ -113,7 +113,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TEST-02**: Engine property/invariant tests cover occupancy uniqueness, bounds validity, status semantics, and deterministic ordering.
 - [x] **TEST-03**: Replay tests verify Chronicle reconstruction and integrity validation.
 - [x] **TEST-04**: Runtime tests cover invalid outputs, timeout behavior, forbidden capabilities, memory/source limits, and output schema validation.
-- [ ] **TEST-05**: Worker tests distinguish strategy failures from system failures.
+- [x] **TEST-05**: Worker tests distinguish strategy failures from system failures.
 - [x] **TEST-06**: Playwright tests cover strategy editing, revision submission, MatchSet creation, Match execution status, and replay viewing.
 - [x] **TEST-07**: CI or local verification command runs typecheck, lint, unit tests, integration tests, and selected E2E tests.
 
