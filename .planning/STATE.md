@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready
-last_updated: "2026-05-17T19:35:33.956Z"
+status: planning
+last_updated: "2026-05-17T19:52:56.841Z"
 progress:
   total_phases: 7
   completed_phases: 5
@@ -23,7 +23,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** Phase 6 - Strategy Workshop UX
-**Resume file:** .planning/phases/06-strategy-workshop-ux/06-CONTEXT.md
+**Resume file:** .planning/phases/06-strategy-workshop-ux/06-UI-SPEC.md
 **Completed phase:** Phase 5 - Match Orchestration and Persistence
 **Plan count:** 5
 
