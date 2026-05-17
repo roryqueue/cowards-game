@@ -17,7 +17,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 | 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Complete |
 | 5 | Match Orchestration and Persistence | Queue, execute, persist, and score Matches and MatchSets with correct failure semantics. | 13 | Complete |
 | 6 | Strategy Workshop UX | Let users create, validate, revise, and test doctrines in a Workshop loop. | 6 | Complete |
-| 7 | Replay Viewer and End-to-End Verification | Deliver the visible replay experience and full edit-to-replay verification path. | 8 | Pending |
+| 7 | Replay Viewer and End-to-End Verification | Deliver the visible replay experience and full edit-to-replay verification path. | 8 | In Progress |
 
 **Coverage:** 80 v1 requirements mapped, 0 unmapped.
 
@@ -303,6 +303,8 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 - Prioritize legibility over spectacle: facing, ACTIVE/STONE/FALLEN, occupancy, and Contraction must be instantly readable.
 
 **Plans:**
+
+1/5 plans executed
 
 | Plan | Wave | Depends On | Objective | Requirements |
 |------|------|------------|-----------|--------------|
