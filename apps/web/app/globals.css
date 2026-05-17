@@ -258,6 +258,7 @@ textarea {
 
 .replay-page {
   min-height: 100dvh;
+  overflow-x: hidden;
   padding: 16px;
 }
 

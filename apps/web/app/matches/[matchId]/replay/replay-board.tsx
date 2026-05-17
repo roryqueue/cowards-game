@@ -367,8 +367,14 @@ export function ReplayBoard({
   ])
 
   return (
-    <div className="replay-board-host" ref={hostRef}>
-      <p className="replay-board-status">
+    <div
+      aria-label={`Replay board at sequence ${selectedSequence}, ${selectedEvent.type}`}
+      className="replay-board-host"
+      ref={hostRef}
+      role="img"
+      title={selectedEvent.label}
+    >
+      <p aria-live="polite" className="replay-board-status">
         Sequence {selectedSequence} · {selectedEvent.type}
       </p>
     </div>
