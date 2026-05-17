@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@cowards/persistence": "workspace:*",
+    "@cowards/replay": "workspace:*",
     "@cowards/runtime-js": "workspace:*",
     "@cowards/spec": "workspace:*",
     "@monaco-editor/react": "^4.7.0",

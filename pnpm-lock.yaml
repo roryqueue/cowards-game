@@ -44,6 +44,9 @@ importers:
       '@cowards/persistence':
         specifier: workspace:*
         version: link:../../packages/persistence
+      '@cowards/replay':
+        specifier: workspace:*
+        version: link:../../packages/replay
       '@cowards/runtime-js':
         specifier: workspace:*
         version: link:../../packages/runtime-js
