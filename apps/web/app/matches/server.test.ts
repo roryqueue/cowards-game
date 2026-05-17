@@ -1,5 +1,8 @@
 import { COMPATIBILITY_VERSIONS, type Chronicle } from "@cowards/spec"
-import { createChronicleMetadata, type StoredChronicle } from "@cowards/persistence"
+import {
+  createChronicleMetadata,
+  type StoredChronicle,
+} from "@cowards/persistence"
 import { describe, expect, it } from "vitest"
 import { createMatchReplayServer } from "./server.js"
 

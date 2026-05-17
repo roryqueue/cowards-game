@@ -1,4 +1,8 @@
-import { createReplay, projectOwnerChronicle, projectPublicChronicle } from "@cowards/replay"
+import {
+  createReplay,
+  projectOwnerChronicle,
+  projectPublicChronicle,
+} from "@cowards/replay"
 import { createDatabasePool } from "@cowards/persistence/db"
 import {
   createPostgresChronicleStore,
@@ -148,9 +152,7 @@ const buildReadyReplay = (
   } satisfies ReplayReadyDto
 }
 
-export const createMatchReplayServer = (
-  deps: MatchReplayServerDeps = {},
-) => {
+export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
   const withPool = deps.withPool ?? withDatabasePool
   const createStore = deps.createChronicleStore ?? createPostgresChronicleStore
 
@@ -185,4 +187,3 @@ export const getMatchReplay = (
 ) => matchReplayServer.getMatchReplay(matchId, options)
 
 export type MatchReplayServer = ReturnType<typeof createMatchReplayServer>
-
