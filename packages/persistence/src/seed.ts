@@ -1,7 +1,7 @@
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import type { ArenaVariant, StrategyRevision } from "@cowards/spec"
 
-const cautiousSource = `
+export const cautiousSource = `
 export default {
   selectActivations(input) {
     return {
@@ -21,7 +21,7 @@ export default {
 }
 `.trim()
 
-const recklessSource = `
+export const recklessSource = `
 export default {
   selectActivations(input) {
     return {
@@ -106,6 +106,12 @@ export const createDevelopmentSeedData = (): DevelopmentSeedData => {
           { x: 4, y: 3 },
           { x: 3, y: 4 },
         ],
+      },
+      {
+        id: "arena:open-field:v1",
+        name: "Open Field",
+        initialBounds: { minX: 0, maxX: 8, minY: 0, maxY: 8 },
+        terrainStones: [],
       },
     ],
     matchSets: [
