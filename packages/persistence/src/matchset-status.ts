@@ -1,4 +1,10 @@
-import type { MatchId, MatchSetId, StrategyRevisionId } from "@cowards/spec"
+import type {
+  JsonValue,
+  MatchId,
+  MatchSetId,
+  PlayerId,
+  StrategyRevisionId,
+} from "@cowards/spec"
 import type { Pool } from "pg"
 import {
   scoreMatchSet,
@@ -7,24 +13,56 @@ import {
 } from "./scoring.js"
 import type { MatchSetStatus, MatchStatus } from "./schema.js"
 
+export interface MatchSetMatchSummary {
+  matchId: MatchId
+  status: MatchStatus
+  outcome?: JsonValue | undefined
+  winnerPlayerId?: PlayerId | undefined
+  hasReplay: boolean
+}
+
+export const LIST_MATCH_STATUSES_FOR_SET_SQL = `
+  select
+    m.id as match_id,
+    m.status,
+    m.outcome,
+    m.winner_player_id,
+    c.match_id as chronicle_match_id
+  from match_set_matches msm
+  join matches m on m.id = msm.match_id
+  left join chronicles c on c.match_id = m.id
+  where msm.match_set_id = $1
+  order by msm.matrix_index asc
+`
+
+export const mapMatchSetMatchSummaryRow = (row: {
+  match_id: MatchId
+  status: MatchStatus
+  outcome: JsonValue | null
+  winner_player_id: PlayerId | null
+  chronicle_match_id: MatchId | null
+}): MatchSetMatchSummary => ({
+  matchId: row.match_id,
+  status: row.status,
+  ...(row.outcome === null ? {} : { outcome: row.outcome }),
+  ...(row.winner_player_id === null
+    ? {}
+    : { winnerPlayerId: row.winner_player_id }),
+  hasReplay: row.status === "complete" && row.chronicle_match_id !== null,
+})
+
 export const listMatchStatusesForSet = async (
   pool: Pool,
   matchSetId: MatchSetId,
-): Promise<Array<{ matchId: MatchId; status: MatchStatus }>> => {
-  const result = await pool.query<{ match_id: MatchId; status: MatchStatus }>(
-    `
-      select m.id as match_id, m.status
-      from match_set_matches msm
-      join matches m on m.id = msm.match_id
-      where msm.match_set_id = $1
-      order by msm.matrix_index asc
-    `,
-    [matchSetId],
-  )
-  return result.rows.map((row) => ({
-    matchId: row.match_id,
-    status: row.status,
-  }))
+): Promise<MatchSetMatchSummary[]> => {
+  const result = await pool.query<{
+    match_id: MatchId
+    status: MatchStatus
+    outcome: JsonValue | null
+    winner_player_id: PlayerId | null
+    chronicle_match_id: MatchId | null
+  }>(LIST_MATCH_STATUSES_FOR_SET_SQL, [matchSetId])
+  return result.rows.map(mapMatchSetMatchSummaryRow)
 }
 
 export const determineMatchSetStatus = (

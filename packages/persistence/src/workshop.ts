@@ -17,6 +17,7 @@ import { withTransaction } from "./db.js"
 import { createMatchSetService } from "./matchset-service.js"
 import {
   listMatchStatusesForSet,
+  type MatchSetMatchSummary,
   refreshMatchSetStatus,
 } from "./matchset-status.js"
 import { getMatchSetPreset, type MatchSetPresetId } from "./presets.js"
@@ -27,7 +28,7 @@ import {
   createDevelopmentSeedData,
   recklessSource,
 } from "./seed.js"
-import type { MatchSetStatus, MatchStatus } from "./schema.js"
+import type { MatchSetStatus } from "./schema.js"
 
 export const WORKSHOP_USER_ID = "user:local"
 export const WORKSHOP_STRATEGY_ID = "strategy:local-workshop" as StrategyId
@@ -155,7 +156,7 @@ export interface WorkshopTestSummary {
   status: MatchSetStatus
   matchCount: number
   matchIds?: MatchId[] | undefined
-  matches: Array<{ matchId: MatchId; status: MatchStatus }>
+  matches: MatchSetMatchSummary[]
   scoring: MatchSetScore
 }
 
@@ -410,6 +411,7 @@ export const createWorkshopTestMatchSet = async (
     matches: created.matchIds.map((matchId) => ({
       matchId,
       status: "pending",
+      hasReplay: false,
     })),
     scoring: { complete: false, degraded: false, rankings: [] },
   }

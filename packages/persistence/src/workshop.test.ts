@@ -14,6 +14,10 @@ import {
   workshopTemplateSource,
 } from "./workshop.js"
 import { MATCH_SET_STATUSES } from "./schema.js"
+import {
+  LIST_MATCH_STATUSES_FOR_SET_SQL,
+  mapMatchSetMatchSummaryRow,
+} from "./matchset-status.js"
 
 describe("Workshop service contracts", () => {
   it("ships valid built-in template and opponent sources", () => {
@@ -96,6 +100,48 @@ describe("Workshop service contracts", () => {
       "blocked",
       "degraded",
     ])
+  })
+
+  it("maps Match rows with outcome and replay availability", () => {
+    expect(LIST_MATCH_STATUSES_FOR_SET_SQL).toContain("left join chronicles")
+    expect(LIST_MATCH_STATUSES_FOR_SET_SQL).toContain("winner_player_id")
+    expect(
+      mapMatchSetMatchSummaryRow({
+        match_id: "match:complete",
+        status: "complete",
+        outcome: { type: "WIN", winnerPlayerId: "player:bottom" },
+        winner_player_id: "player:bottom",
+        chronicle_match_id: "match:complete",
+      }),
+    ).toEqual({
+      matchId: "match:complete",
+      status: "complete",
+      outcome: { type: "WIN", winnerPlayerId: "player:bottom" },
+      winnerPlayerId: "player:bottom",
+      hasReplay: true,
+    })
+    expect(
+      mapMatchSetMatchSummaryRow({
+        match_id: "match:missing-chronicle",
+        status: "complete",
+        outcome: { type: "DRAW" },
+        winner_player_id: null,
+        chronicle_match_id: null,
+      }),
+    ).toMatchObject({ hasReplay: false })
+    expect(
+      mapMatchSetMatchSummaryRow({
+        match_id: "match:failed",
+        status: "failed_system",
+        outcome: null,
+        winner_player_id: null,
+        chronicle_match_id: "match:failed",
+      }),
+    ).toEqual({
+      matchId: "match:failed",
+      status: "failed_system",
+      hasReplay: false,
+    })
   })
 
   it("only allows valid local Workshop revisions into Workshop tests", () => {
