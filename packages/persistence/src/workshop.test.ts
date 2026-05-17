@@ -6,9 +6,11 @@ import {
   listWorkshopOpponents,
   listWorkshopPresets,
   listWorkshopTemplates,
+  WORKSHOP_MATCH_SET_PREFIX,
   WORKSHOP_OPPONENTS,
   workshopTemplateSource,
 } from "./workshop.js"
+import { MATCH_SET_STATUSES } from "./schema.js"
 
 describe("Workshop service contracts", () => {
   it("ships valid built-in template and opponent sources", () => {
@@ -75,5 +77,21 @@ describe("Workshop service contracts", () => {
       "top_strategy_revision_id = sr.id",
     )
     expect(GET_WORKSHOP_REVISION_SOURCE_SQL).toContain("strategy_id = $2")
+  })
+
+  it("defines safe Workshop test summary vocabulary", () => {
+    expect(WORKSHOP_MATCH_SET_PREFIX).toBe("match-set:workshop:")
+    expect(listWorkshopPresets()[0]).toMatchObject({
+      id: "smoke-v1",
+      matchCount: 1,
+    })
+    expect(MATCH_SET_STATUSES).toEqual([
+      "pending",
+      "running",
+      "complete",
+      "failed_system",
+      "blocked",
+      "degraded",
+    ])
   })
 })

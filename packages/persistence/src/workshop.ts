@@ -147,6 +147,7 @@ export interface WorkshopTestSummary {
   matchSetId: MatchSetId
   status: MatchSetStatus
   matchCount: number
+  matchIds?: MatchId[] | undefined
   matches: Array<{ matchId: MatchId; status: MatchStatus }>
   scoring: MatchSetScore
 }
@@ -358,10 +359,10 @@ export const createWorkshopTestMatchSet = async (
     presetId: MatchSetPresetId
     matchSetId?: MatchSetId | undefined
   },
-): Promise<{ matchSetId: MatchSetId; matchIds: MatchId[] }> => {
+): Promise<WorkshopTestSummary & { matchIds: MatchId[] }> => {
   await ensureWorkshopSeed(pool)
   const opponent = findWorkshopOpponent(input.opponentId)
-  return createMatchSetService(pool).createFromPreset({
+  const created = await createMatchSetService(pool).createFromPreset({
     id: input.matchSetId ?? createWorkshopMatchSetId(),
     presetId: input.presetId,
     bottomStrategyRevisionId: input.revisionId,
@@ -369,6 +370,17 @@ export const createWorkshopTestMatchSet = async (
     bottomPlayerId: WORKSHOP_PLAYER_ID,
     topPlayerId: opponent.playerId,
   })
+  return {
+    matchSetId: created.matchSetId,
+    status: "pending",
+    matchIds: created.matchIds,
+    matchCount: created.matchIds.length,
+    matches: created.matchIds.map((matchId) => ({
+      matchId,
+      status: "pending",
+    })),
+    scoring: { complete: false, degraded: false, rankings: [] },
+  }
 }
 
 export const getWorkshopTestSummary = async (

@@ -52,6 +52,10 @@ export interface WorkshopLaunchTestRequest {
 export interface WorkshopLaunchTestResponse {
   matchSetId: MatchSetId
   matchIds: string[]
+  status: WorkshopTestSummary["status"]
+  matchCount: number
+  matches: WorkshopTestSummary["matches"]
+  scoring: WorkshopTestSummary["scoring"]
 }
 
 export interface WorkshopErrorResponse {

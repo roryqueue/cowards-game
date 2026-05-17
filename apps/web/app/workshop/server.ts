@@ -109,9 +109,14 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
       return withPool((pool) => source(pool, revisionId))
     },
 
-    async launchTest(
-      request: WorkshopLaunchTestRequest,
-    ): Promise<{ matchSetId: MatchSetId; matchIds: string[] }> {
+    async launchTest(request: WorkshopLaunchTestRequest): Promise<{
+      matchSetId: MatchSetId
+      matchIds: string[]
+      status: WorkshopTestSummary["status"]
+      matchCount: number
+      matches: WorkshopTestSummary["matches"]
+      scoring: WorkshopTestSummary["scoring"]
+    }> {
       return withPool((pool) => createTest(pool, request))
     },
 
