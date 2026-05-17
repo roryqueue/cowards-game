@@ -256,6 +256,44 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.workshop-match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.workshop-match-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding: 8px 0;
+}
+
+.workshop-match-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workshop-match-id {
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workshop-replay-link {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
 .replay-page {
   min-height: 100dvh;
   overflow-x: hidden;
