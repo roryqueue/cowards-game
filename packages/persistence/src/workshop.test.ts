@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest"
 import { validateStrategySource } from "@cowards/runtime-js"
 import {
+  assertWorkshopRevisionCanBeTested,
+  buildWorkshopRevision,
   GET_WORKSHOP_REVISION_SOURCE_SQL,
   LIST_WORKSHOP_REVISIONS_SQL,
   listWorkshopOpponents,
   listWorkshopPresets,
   listWorkshopTemplates,
+  WORKSHOP_STRATEGY_ID,
   WORKSHOP_MATCH_SET_PREFIX,
   WORKSHOP_OPPONENTS,
   workshopTemplateSource,
@@ -93,5 +96,34 @@ describe("Workshop service contracts", () => {
       "blocked",
       "degraded",
     ])
+  })
+
+  it("only allows valid local Workshop revisions into Workshop tests", () => {
+    const localRevision = buildWorkshopRevision({
+      source: workshopTemplateSource,
+    })
+
+    expect(
+      assertWorkshopRevisionCanBeTested(localRevision, localRevision.id),
+    ).toBe(localRevision)
+    expect(() =>
+      assertWorkshopRevisionCanBeTested(null, "strategy-revision:missing"),
+    ).toThrow("Workshop revision not found")
+    expect(() =>
+      assertWorkshopRevisionCanBeTested(
+        { ...localRevision, strategyId: "strategy:opponent" },
+        localRevision.id,
+      ),
+    ).toThrow("local Workshop revision")
+    expect(() =>
+      assertWorkshopRevisionCanBeTested(
+        {
+          ...localRevision,
+          strategyId: WORKSHOP_STRATEGY_ID,
+          validation: { ...localRevision.validation, valid: false },
+        },
+        localRevision.id,
+      ),
+    ).toThrow("valid Strategy revision")
   })
 })

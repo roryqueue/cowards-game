@@ -34,6 +34,13 @@ export const WORKSHOP_STRATEGY_ID = "strategy:local-workshop" as StrategyId
 export const WORKSHOP_PLAYER_ID = "player:workshop-local" as PlayerId
 export const WORKSHOP_MATCH_SET_PREFIX = "match-set:workshop:"
 
+export class WorkshopInputError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "WorkshopInputError"
+  }
+}
+
 export const workshopTemplateSource = `
 export default {
   selectActivations(input) {
@@ -346,9 +353,29 @@ const findWorkshopOpponent = (
     (candidate) => candidate.id === opponentId,
   )
   if (!opponent) {
-    throw new Error(`Unknown Workshop opponent: ${opponentId}`)
+    throw new WorkshopInputError(`Unknown Workshop opponent: ${opponentId}`)
   }
   return opponent
+}
+
+export const assertWorkshopRevisionCanBeTested = (
+  revision: StrategyRevision | null,
+  revisionId: StrategyRevisionId,
+): StrategyRevision => {
+  if (!revision) {
+    throw new WorkshopInputError(`Workshop revision not found: ${revisionId}`)
+  }
+  if (revision.strategyId !== WORKSHOP_STRATEGY_ID) {
+    throw new WorkshopInputError(
+      "Workshop tests require a local Workshop revision",
+    )
+  }
+  if (!revision.validation.valid) {
+    throw new WorkshopInputError(
+      "Workshop tests require a valid Strategy revision",
+    )
+  }
+  return revision
 }
 
 export const createWorkshopTestMatchSet = async (
@@ -361,6 +388,11 @@ export const createWorkshopTestMatchSet = async (
   },
 ): Promise<WorkshopTestSummary & { matchIds: MatchId[] }> => {
   await ensureWorkshopSeed(pool)
+  const repositories = createRepositories(pool)
+  assertWorkshopRevisionCanBeTested(
+    await repositories.getStrategyRevision(input.revisionId),
+    input.revisionId,
+  )
   const opponent = findWorkshopOpponent(input.opponentId)
   const created = await createMatchSetService(pool).createFromPreset({
     id: input.matchSetId ?? createWorkshopMatchSetId(),

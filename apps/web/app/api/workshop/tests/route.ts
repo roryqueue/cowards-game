@@ -4,6 +4,9 @@ import type {
   WorkshopLaunchTestRequest,
 } from "../../../workshop/types.js"
 
+const isWorkshopInputError = (error: unknown): error is Error =>
+  error instanceof Error && error.name === "WorkshopInputError"
+
 const readLaunchRequest = async (
   request: Request,
 ): Promise<WorkshopLaunchTestRequest | WorkshopErrorResponse> => {
@@ -31,7 +34,13 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     return Response.json(await workshopServer.launchTest(body), { status: 201 })
-  } catch {
+  } catch (error) {
+    if (isWorkshopInputError(error)) {
+      return Response.json(
+        { error: error.message } satisfies WorkshopErrorResponse,
+        { status: 400 },
+      )
+    }
     return Response.json(
       {
         error: "Storage is unavailable; start local services and retry.",

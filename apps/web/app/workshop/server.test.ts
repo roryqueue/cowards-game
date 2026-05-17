@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { createWorkshopServer } from "./server.js"
+import { createWorkshopServer, isStorageUnavailableError } from "./server.js"
 
 const validSource = `
 export default {
@@ -103,5 +103,39 @@ describe("Workshop server facade", () => {
       status: "pending",
       matchCount: 1,
     })
+  })
+
+  it("falls back to static Workshop data only for storage-unavailable errors", async () => {
+    const server = createWorkshopServer({
+      withPool: async () => {
+        throw Object.assign(new Error("database is unavailable"), {
+          code: "ECONNREFUSED",
+        })
+      },
+    })
+
+    await expect(server.getInitialData()).resolves.toMatchObject({
+      revisions: [],
+      opponents: expect.any(Array),
+      presets: expect.any(Array),
+      templates: expect.any(Array),
+    })
+
+    const unexpected = createWorkshopServer({
+      withPool: async () => {
+        throw Object.assign(new Error("schema drift"), { code: "42P01" })
+      },
+    })
+
+    await expect(unexpected.getInitialData()).rejects.toThrow("schema drift")
+  })
+
+  it("recognizes storage errors through nested causes", () => {
+    expect(
+      isStorageUnavailableError({
+        cause: Object.assign(new Error("refused"), { code: "ECONNREFUSED" }),
+      }),
+    ).toBe(true)
+    expect(isStorageUnavailableError({ code: "42P01" })).toBe(false)
   })
 })

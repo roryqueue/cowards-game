@@ -43,6 +43,9 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     useState<StrategyRevisionValidationReport | null>(
       firstTemplate?.validation ?? initialData.templateValidation,
     )
+  const [validationSource, setValidationSource] = useState(
+    firstTemplate?.source ?? initialData.templateSource,
+  )
   const [checking, setChecking] = useState(false)
   const [label, setLabel] = useState("Workshop revision")
   const [notes, setNotes] = useState("")
@@ -71,13 +74,17 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     [firstTemplate, initialData.templates, selectedTemplateId],
   )
 
-  const draftState = validationStateFromReport(validation, checking)
+  const currentValidation = validationSource === source ? validation : null
+  const draftState = validationStateFromReport(currentValidation, checking)
   const submitEnabled = canSubmitRevision({
-    validation,
+    validation: currentValidation,
     checking,
     submitting,
   })
-  const submitBlockedReason = getSubmitBlockedReason({ validation, checking })
+  const submitBlockedReason = getSubmitBlockedReason({
+    validation: currentValidation,
+    checking,
+  })
   const displayedSubmitBlockedReason =
     submitBlockedReason === invalidSubmitBlockedReason
       ? invalidSubmitBlockedReason
@@ -99,6 +106,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
         validation: StrategyRevisionValidationReport
       }
       setValidation(body.validation)
+      setValidationSource(nextSource)
     } finally {
       setChecking(false)
     }
@@ -121,11 +129,14 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSelectedTemplateId(template.id)
     setSource(template.source)
     setValidation(template.validation)
+    setValidationSource(template.source)
     setIsDirty(false)
   }
 
   const onSourceChange = (nextSource: string) => {
     setSource(nextSource)
+    setValidation(null)
+    setValidationSource("")
     setIsDirty(true)
   }
 
@@ -156,6 +167,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       setRevisions((current) => prependRevision(current, body.revision!))
       setSelectedRevisionId(body.revision.id)
       setValidation(body.validation ?? body.revision.validation)
+      setValidationSource(source)
       setSubmitMessage("Revision submitted")
     } finally {
       setSubmitting(false)
@@ -173,6 +185,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     }
     setSource(body.source)
     setValidation(null)
+    setValidationSource("")
     setIsDirty(true)
   }
 
