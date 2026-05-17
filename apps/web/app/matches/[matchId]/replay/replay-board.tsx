@@ -316,7 +316,7 @@ export function ReplayBoard({
       selectedSoldierId,
     )
 
-    const start = performance.now()
+    const start = window.performance.now()
     const duration = scrubbing ? 0 : animationDurationMs
     const app = new Application()
 
@@ -336,7 +336,7 @@ export function ReplayBoard({
       app.canvas.setAttribute("title", selectedEvent.label)
 
       const draw = () => {
-        const elapsed = performance.now() - start
+        const elapsed = window.performance.now() - start
         const progress = duration === 0 ? 1 : Math.min(elapsed / duration, 1)
         renderBoard(app, model, onSelectSoldier, progress)
         if (progress < 1) {
