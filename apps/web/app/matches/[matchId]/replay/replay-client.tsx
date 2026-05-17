@@ -13,6 +13,7 @@ import {
   groupTimelineEntries,
   stepReplayIndex,
 } from "./replay-state.js"
+import { ReplayBoard } from "./replay-board.js"
 
 export interface ReplayClientProps {
   data: ReplayReadyDto
@@ -35,6 +36,7 @@ export function ReplayClient({ data }: ReplayClientProps) {
   const [selectedSoldierId, setSelectedSoldierId] = useState<string | null>(
     firstSoldierId(data),
   )
+  const [scrubbing, setScrubbing] = useState(false)
   const [ownerDebugVisible, setOwnerDebugVisible] = useState(
     canShowOwnerDebug(data),
   )
@@ -105,6 +107,14 @@ export function ReplayClient({ data }: ReplayClientProps) {
 
         <section className="replay-center" aria-label="Replay arena">
           <div className="replay-arena-placeholder" aria-label="Replay board">
+            <ReplayBoard
+              data={data}
+              selectedSequence={selectedEntry.sequence}
+              selectedSoldierId={selectedSoldierId}
+              selectedEvent={selectedEntry}
+              scrubbing={scrubbing}
+              onSelectSoldier={setSelectedSoldierId}
+            />
             <p className="replay-label">Current position</p>
             <p className="replay-position">
               {formatTimelinePosition(selectedEntry)}
@@ -125,6 +135,9 @@ export function ReplayClient({ data }: ReplayClientProps) {
               min={0}
               max={Math.max(data.timeline.length - 1, 0)}
               value={selectedIndex}
+              onPointerDown={() => setScrubbing(true)}
+              onPointerUp={() => setScrubbing(false)}
+              onBlur={() => setScrubbing(false)}
               onChange={(event) => {
                 setPlaying(false)
                 setSelectedIndex(Number(event.currentTarget.value))

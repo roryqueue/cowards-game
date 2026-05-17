@@ -15,6 +15,7 @@ describe("ReplayClient", () => {
     expect(source).toContain("Play replay")
     expect(source).toContain("Pause replay")
     expect(source).toContain("Step forward")
+    expect(source).toContain("<ReplayBoard")
   })
 
   it("keeps the scrubber wired as the primary timeline control", () => {
