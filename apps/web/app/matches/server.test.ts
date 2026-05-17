@@ -1,0 +1,248 @@
+import { COMPATIBILITY_VERSIONS, type Chronicle } from "@cowards/spec"
+import { createChronicleMetadata, type StoredChronicle } from "@cowards/persistence"
+import { describe, expect, it } from "vitest"
+import { createMatchReplayServer } from "./server.js"
+
+const board = {
+  bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+  soldiers: [
+    {
+      id: "soldier:bottom:1",
+      ownerPlayerId: "player:bottom",
+      status: "ACTIVE",
+      position: { x: 1, y: 10 },
+      facing: "UP",
+      lastSuccessfulMoveDirection: null,
+    },
+  ],
+  terrainStones: [],
+} satisfies Chronicle["snapshots"][number]["board"]
+
+const createChronicle = (): Chronicle => ({
+  schemaVersion: "chronicle-v1",
+  reproducibility: {
+    matchId: "match:replay-test",
+    seed: "seed:replay-test",
+    arenaVariantId: "arena:replay-test",
+    arenaVariantVersion: COMPATIBILITY_VERSIONS.arenaVariant,
+    strategyRevisionIds: ["revision:bottom", "revision:top"],
+    versions: COMPATIBILITY_VERSIONS,
+  },
+  events: [
+    {
+      type: "MATCH_STARTED",
+      sequence: 0,
+      context: {},
+      privacy: "public",
+      payload: { matchId: "match:replay-test" },
+    },
+    {
+      type: "ROUND_STARTED",
+      sequence: 1,
+      context: { roundNumber: 1 },
+      privacy: "public",
+      payload: { roundNumber: 1 },
+    },
+    {
+      type: "STRATEGY_EVALUATED",
+      sequence: 2,
+      context: { roundNumber: 1, actingPlayerId: "player:bottom" },
+      privacy: "owner",
+      payload: {
+        playerId: "player:bottom",
+        strategyMemory: "PRIVATE_STRATEGY_MEMORY",
+      },
+    },
+    {
+      type: "ACTIVATION_STARTED",
+      sequence: 3,
+      context: {
+        roundNumber: 1,
+        activationIndex: 0,
+        activationId: "activation:1",
+        actingPlayerId: "player:bottom",
+        soldierId: "soldier:bottom:1",
+      },
+      privacy: "public",
+      payload: { soldierId: "soldier:bottom:1" },
+    },
+    {
+      type: "AWARENESS_GRID_OBSERVED",
+      sequence: 4,
+      context: {
+        roundNumber: 1,
+        activationIndex: 0,
+        activationId: "activation:1",
+        actingPlayerId: "player:bottom",
+        soldierId: "soldier:bottom:1",
+        cycleIndex: 0,
+      },
+      privacy: "owner",
+      payload: {
+        soldierId: "soldier:bottom:1",
+        cycleIndex: 0,
+        awarenessGrid: "PRIVATE_AWARENESS_GRID",
+        objectivePayload: "PRIVATE_OBJECTIVE",
+      },
+    },
+    {
+      type: "ACTION_EMITTED",
+      sequence: 5,
+      context: {
+        roundNumber: 1,
+        activationIndex: 0,
+        activationId: "activation:1",
+        actingPlayerId: "player:bottom",
+        soldierId: "soldier:bottom:1",
+        cycleIndex: 0,
+      },
+      privacy: "owner",
+      payload: {
+        soldierId: "soldier:bottom:1",
+        action: { type: "TURN_TO_STONE" },
+        soldierMemory: "PRIVATE_SOLDIER_MEMORY",
+      },
+    },
+    {
+      type: "MATCH_ENDED",
+      sequence: 6,
+      context: {},
+      privacy: "public",
+      payload: { type: "WIN", winnerPlayerId: "player:bottom" },
+    },
+  ],
+  snapshots: [
+    { kind: "MATCH_START", sequence: 0, context: {}, board },
+    {
+      kind: "ROUND_START",
+      sequence: 1,
+      context: { roundNumber: 1 },
+      board,
+    },
+    {
+      kind: "ACTIVATION_START",
+      sequence: 3,
+      context: { roundNumber: 1, activationIndex: 0 },
+      board,
+    },
+    {
+      kind: "ACTIVATION_END",
+      sequence: 5,
+      context: { roundNumber: 1, activationIndex: 0 },
+      board,
+    },
+    {
+      kind: "ROUND_END",
+      sequence: 5,
+      context: { roundNumber: 1 },
+      board,
+    },
+    {
+      kind: "TERMINAL",
+      sequence: 6,
+      context: {},
+      board,
+      outcome: { type: "WIN", winnerPlayerId: "player:bottom" },
+    },
+    {
+      kind: "MATCH_END",
+      sequence: 6,
+      context: {},
+      board,
+      outcome: { type: "WIN", winnerPlayerId: "player:bottom" },
+    },
+  ],
+  private: {
+    byPlayerId: {
+      "player:bottom": {
+        strategyMemory: "PRIVATE_STRATEGY_MEMORY",
+        soldierMemory: "PRIVATE_SOLDIER_MEMORY",
+        objectivePayload: "PRIVATE_OBJECTIVE",
+        awarenessGrid: "PRIVATE_AWARENESS_GRID",
+        strategySource: "PRIVATE_STRATEGY_SOURCE",
+        rawRuntimeDetails: "PRIVATE_RUNTIME_DETAILS",
+      },
+    },
+  },
+})
+
+const createStoredChronicle = (): StoredChronicle => {
+  const artifact = createChronicle()
+  return { artifact, metadata: createChronicleMetadata(artifact) }
+}
+
+describe("Match replay server facade", () => {
+  it("returns unavailable when no Chronicle is stored", async () => {
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => null,
+      }),
+    })
+
+    await expect(server.getMatchReplay("match:missing")).resolves.toEqual({
+      status: "unavailable",
+      matchId: "match:missing",
+      reason: "missing-chronicle",
+      message: "Replay unavailable: no Chronicle is stored for this Match.",
+    })
+  })
+
+  it("returns public replay data by default without private markers", async () => {
+    const stored = createStoredChronicle()
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+    })
+
+    const response = await server.getMatchReplay("match:replay-test")
+
+    expect(response.status).toBe("ready")
+    if (response.status !== "ready") {
+      return
+    }
+    expect(response.projection.viewer).toEqual({ access: "public" })
+    expect(response.initialSequence).toBe(0)
+    expect(response.timeline[0]).toMatchObject({
+      sequence: 0,
+      label: "Match start",
+    })
+
+    const serialized = JSON.stringify(response)
+    expect(serialized).not.toContain("strategyMemory")
+    expect(serialized).not.toContain("soldierMemory")
+    expect(serialized).not.toContain("objectivePayload")
+    expect(serialized).not.toContain("awarenessGrid")
+    expect(serialized).not.toContain("strategySource")
+    expect(serialized).not.toContain("rawRuntimeDetails")
+    expect(serialized).not.toContain("PRIVATE_STRATEGY_MEMORY")
+    expect(serialized).not.toContain("PRIVATE_AWARENESS_GRID")
+  })
+
+  it("returns explicit owner replay data for the requested owner", async () => {
+    const stored = createStoredChronicle()
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+    })
+
+    const response = await server.getMatchReplay("match:replay-test", {
+      mode: "owner",
+      ownerPlayerId: "player:bottom",
+    })
+
+    expect(response.status).toBe("ready")
+    if (response.status !== "ready") {
+      return
+    }
+    expect(response.projection.viewer).toEqual({
+      access: "owner",
+      playerId: "player:bottom",
+    })
+    expect(response.ownerPlayerId).toBe("player:bottom")
+  })
+})
