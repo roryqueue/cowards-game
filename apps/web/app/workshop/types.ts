@@ -49,6 +49,9 @@ export interface WorkshopLaunchTestRequest {
   presetId: WorkshopPresetSummary["id"]
 }
 
+export type WorkshopMatchHasReplay =
+  WorkshopTestSummary["matches"][number]["hasReplay"]
+
 export interface WorkshopLaunchTestResponse {
   matchSetId: MatchSetId
   matchIds: string[]

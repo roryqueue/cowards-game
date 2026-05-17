@@ -107,3 +107,46 @@ export const isTerminalTestStatus = (
   status === "failed_system" ||
   status === "blocked" ||
   status === "degraded"
+
+export type WorkshopMatchSummary = WorkshopTestSummary["matches"][number]
+
+export const getReplayHref = (matchId: string): string =>
+  `/matches/${encodeURIComponent(matchId)}/replay`
+
+export const canOpenReplay = (match: WorkshopMatchSummary): boolean =>
+  match.status === "complete" && match.hasReplay === true
+
+const outcomeRecord = (
+  outcome: WorkshopMatchSummary["outcome"],
+): Record<string, unknown> | null =>
+  outcome !== null && typeof outcome === "object" && !Array.isArray(outcome)
+    ? outcome
+    : null
+
+export const formatMatchOutcome = (match: WorkshopMatchSummary): string => {
+  if (match.status === "pending") {
+    return "Pending"
+  }
+  if (match.status === "running") {
+    return "Running"
+  }
+  if (match.status === "failed_system" || match.status === "blocked") {
+    return "Failed system"
+  }
+  if (!match.hasReplay) {
+    return "Replay unavailable"
+  }
+
+  const outcome = outcomeRecord(match.outcome)
+  if (outcome?.type === "DRAW") {
+    return "Draw"
+  }
+  if (outcome?.type === "FAILED" && typeof outcome.reason === "string") {
+    return `Failed: ${outcome.reason}`
+  }
+  const winner =
+    typeof outcome?.winnerPlayerId === "string"
+      ? outcome.winnerPlayerId
+      : match.winnerPlayerId
+  return winner ? `Winner: ${winner}` : "Complete"
+}

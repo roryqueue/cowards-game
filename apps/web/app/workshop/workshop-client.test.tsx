@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest"
 import {
   canSubmitRevision,
+  canOpenReplay,
+  formatMatchOutcome,
   formatUsedInMatches,
   formatValidationIssueHeading,
   getDraftStatusLabel,
+  getReplayHref,
   getRevisionTitle,
   getSubmitBlockedReason,
   getTestStatusCopy,
@@ -136,5 +139,42 @@ describe("Strategy Workshop validation helpers", () => {
     expect("Coward's Game").toBe("Coward's Game")
     expect("Replace draft").toBe("Replace draft")
     expect("Launch test").toBe("Launch test")
+  })
+
+  it("formats replay handoff rows and blocks failed/system replay links", () => {
+    expect(getReplayHref("match:alpha/beta")).toBe(
+      "/matches/match%3Aalpha%2Fbeta/replay",
+    )
+    expect(
+      canOpenReplay({
+        matchId: "match:complete",
+        status: "complete",
+        hasReplay: true,
+      }),
+    ).toBe(true)
+    expect(
+      canOpenReplay({
+        matchId: "match:failed",
+        status: "failed_system",
+        hasReplay: true,
+      }),
+    ).toBe(false)
+    expect(
+      formatMatchOutcome({
+        matchId: "match:win",
+        status: "complete",
+        hasReplay: true,
+        outcome: { type: "WIN", winnerPlayerId: "player:bottom" },
+        winnerPlayerId: "player:bottom",
+      }),
+    ).toBe("Winner: player:bottom")
+    expect(
+      formatMatchOutcome({
+        matchId: "match:missing",
+        status: "complete",
+        hasReplay: false,
+      }),
+    ).toBe("Replay unavailable")
+    expect("Open replay").toBe("Open replay")
   })
 })

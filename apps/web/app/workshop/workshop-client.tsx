@@ -10,8 +10,11 @@ import type {
 } from "./types.js"
 import {
   canSubmitRevision,
+  canOpenReplay,
+  formatMatchOutcome,
   formatUsedInMatches,
   formatValidationIssueHeading,
+  getReplayHref,
   getDraftStatusClass,
   getDraftStatusLabel,
   getTestStatusCopy,
@@ -507,6 +510,42 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                           {ranking.survivingSoldiers}, survival turns{" "}
                           {ranking.survivalTurns}
                         </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {testResult.status === "degraded" ? (
+                  <p>
+                    Some Matches failed, but completed replays are available.
+                  </p>
+                ) : null}
+                {testResult.matches.length ? (
+                  <div className="workshop-match-list" aria-label="Matches">
+                    {testResult.matches.map((match) => (
+                      <div className="workshop-match-row" key={match.matchId}>
+                        <div className="workshop-match-main">
+                          <span
+                            className="workshop-match-id"
+                            title={match.matchId}
+                          >
+                            {match.matchId}
+                          </span>
+                          <span className="workshop-muted">
+                            {match.status} · {formatMatchOutcome(match)}
+                          </span>
+                        </div>
+                        {canOpenReplay(match) ? (
+                          <a
+                            className="workshop-replay-link"
+                            href={getReplayHref(match.matchId)}
+                          >
+                            Open replay
+                          </a>
+                        ) : (
+                          <span className="workshop-muted">
+                            Replay unavailable
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>
