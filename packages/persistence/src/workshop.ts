@@ -54,6 +54,29 @@ export default {
 }
 `.trim()
 
+export const sentinelSource = `
+export default {
+  selectActivations(input) {
+    return {
+      activationOrders: input.mySoldiers
+        .filter((soldier) => soldier.status === "ACTIVE")
+        .slice(0, input.activationCount)
+        .map((soldier) => ({ soldierId: soldier.id, objective: { hold: true } })),
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain(input) {
+    const forward = input.self.facing ?? "UP"
+    return {
+      action: input.cycleIndex === 0
+        ? { type: "TURN", direction: forward }
+        : { type: "TURN_TO_STONE" },
+      soldierMemory: input.soldierMemory
+    }
+  }
+}
+`.trim()
+
 const cautiousOpponentRevision = buildStrategyRevision({
   source: cautiousSource,
   strategyId: "strategy:cautious",
@@ -108,6 +131,13 @@ export interface WorkshopOpponentSummary {
   revisionId: StrategyRevisionId
 }
 
+export interface WorkshopTemplateSummary {
+  id: "template:cautious" | "template:reckless" | "template:sentinel"
+  label: string
+  source: string
+  validation: StrategyRevisionValidationReport
+}
+
 export interface WorkshopTestSummary {
   matchSetId: MatchSetId
   status: MatchSetStatus
@@ -122,6 +152,7 @@ export interface WorkshopSnapshot {
   revisions: WorkshopRevisionSummary[]
   presets: WorkshopPresetSummary[]
   opponents: WorkshopOpponentSummary[]
+  templates: WorkshopTemplateSummary[]
 }
 
 const presetLabels: Record<MatchSetPresetId, string> = {
@@ -152,6 +183,31 @@ export const listWorkshopOpponents = (): WorkshopOpponentSummary[] =>
     label: opponent.label,
     revisionId: opponent.revisionId,
   }))
+
+export const listWorkshopTemplates = (): WorkshopTemplateSummary[] => [
+  {
+    id: "template:cautious",
+    label: "Cautious",
+    source: cautiousSource,
+    validation: validateStrategySource(cautiousSource),
+  },
+  {
+    id: "template:reckless",
+    label: "Reckless",
+    source: recklessSource,
+    validation: validateStrategySource(recklessSource),
+  },
+  {
+    id: "template:sentinel",
+    label: "Sentinel",
+    source: sentinelSource,
+    validation: validateStrategySource(sentinelSource),
+  },
+]
+
+export const validateWorkshopSource = (
+  source: string,
+): StrategyRevisionValidationReport => validateStrategySource(source)
 
 export const ensureWorkshopSeed = async (pool: Pool): Promise<void> => {
   const seed = createDevelopmentSeedData()
@@ -327,8 +383,9 @@ export const getWorkshopSnapshot = async (
   pool: Pool,
 ): Promise<WorkshopSnapshot> => ({
   templateSource: workshopTemplateSource,
-  templateValidation: validateStrategySource(workshopTemplateSource),
+  templateValidation: validateWorkshopSource(workshopTemplateSource),
   revisions: await listWorkshopRevisions(pool),
   presets: listWorkshopPresets(),
   opponents: listWorkshopOpponents(),
+  templates: listWorkshopTemplates(),
 })

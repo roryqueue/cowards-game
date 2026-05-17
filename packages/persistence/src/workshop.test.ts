@@ -3,6 +3,7 @@ import { validateStrategySource } from "@cowards/runtime-js"
 import {
   listWorkshopOpponents,
   listWorkshopPresets,
+  listWorkshopTemplates,
   WORKSHOP_OPPONENTS,
   workshopTemplateSource,
 } from "./workshop.js"
@@ -49,5 +50,16 @@ describe("Workshop service contracts", () => {
         revisionId: expect.stringMatching(/^strategy-revision:/),
       },
     ])
+  })
+
+  it("returns only valid starter templates", () => {
+    expect(listWorkshopTemplates().map((template) => template.label)).toEqual([
+      "Cautious",
+      "Reckless",
+      "Sentinel",
+    ])
+    expect(
+      listWorkshopTemplates().every((template) => template.validation.valid),
+    ).toBe(true)
   })
 })

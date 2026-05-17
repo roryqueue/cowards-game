@@ -8,6 +8,7 @@ import type {
   WorkshopPresetSummary,
   WorkshopRevisionSummary,
   WorkshopSnapshot,
+  WorkshopTemplateSummary,
   WorkshopTestSummary,
 } from "@cowards/persistence/workshop"
 
@@ -16,6 +17,7 @@ export type {
   WorkshopPresetSummary,
   WorkshopRevisionSummary,
   WorkshopSnapshot,
+  WorkshopTemplateSummary,
   WorkshopTestSummary,
 }
 

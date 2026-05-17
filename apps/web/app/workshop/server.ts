@@ -1,6 +1,4 @@
-import {
-  createDatabasePool,
-} from "@cowards/persistence/db"
+import { createDatabasePool } from "@cowards/persistence/db"
 import {
   buildWorkshopRevision,
   createWorkshopTestMatchSet,
@@ -9,6 +7,7 @@ import {
   getWorkshopTestSummary,
   insertWorkshopRevision,
   type WorkshopTestSummary,
+  validateWorkshopSource,
   WORKSHOP_STRATEGY_ID,
 } from "@cowards/persistence/workshop"
 import type {
@@ -16,7 +15,6 @@ import type {
   StrategyRevision,
   StrategyRevisionId,
 } from "@cowards/spec"
-import { validateStrategySource } from "@cowards/runtime-js"
 import type {
   WorkshopLaunchTestRequest,
   WorkshopSubmitRequest,
@@ -76,10 +74,12 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
   return {
     getInitialData: () => withPool((pool) => snapshot(pool)),
 
+    validateSource: (source: string) => validateWorkshopSource(source),
+
     async submitSource(
       request: WorkshopSubmitRequest,
     ): Promise<WorkshopSubmitResponse> {
-      const validation = validateStrategySource(request.source)
+      const validation = validateWorkshopSource(request.source)
       if (!validation.valid) {
         return { ok: false, validation }
       }
@@ -119,5 +119,7 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
 }
 
 export const workshopServer = createWorkshopServer()
+
+export const getWorkshopInitialData = () => workshopServer.getInitialData()
 
 export type WorkshopServer = ReturnType<typeof createWorkshopServer>
