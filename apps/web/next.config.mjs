@@ -1,4 +1,11 @@
 /** @type {import("next").NextConfig} */
-const nextConfig = {}
+const nextConfig = {
+  serverExternalPackages: ["pg"],
+  transpilePackages: [
+    "@cowards/persistence",
+    "@cowards/runtime-js",
+    "@cowards/spec",
+  ],
+}
 
 export default nextConfig

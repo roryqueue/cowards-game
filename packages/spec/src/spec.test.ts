@@ -211,8 +211,9 @@ describe("Coward's Game spec contracts", () => {
         },
       },
       metadata: {
-        createdBy: "player-1",
+        createdBy: "user:local",
         label: "Opening test",
+        notes: "Workshop note",
         tags: ["fixture"],
       },
     }

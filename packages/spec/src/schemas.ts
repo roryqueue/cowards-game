@@ -228,6 +228,7 @@ export const StrategyRevisionValidationReportSchema = z
 export const StrategyRevisionMetadataSchema = z.object({
   createdBy: z.string().min(1).optional(),
   label: z.string().min(1).optional(),
+  notes: z.string().min(1).optional(),
   tags: z.array(z.string().min(1)).optional(),
 })
 

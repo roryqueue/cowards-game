@@ -190,6 +190,7 @@ export interface StrategyRevisionValidationReport {
 export interface StrategyRevisionMetadata {
   createdBy?: string | undefined
   label?: string | undefined
+  notes?: string | undefined
   tags?: string[] | undefined
 }
 
