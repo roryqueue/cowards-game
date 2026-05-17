@@ -99,13 +99,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Replay UX
 
-- [ ] **VIEW-01**: User can open a completed Match and watch a board replay.
-- [ ] **VIEW-02**: User can scrub or step through Round, Activation, Cycle, and event timeline positions.
-- [ ] **VIEW-03**: User can inspect Soldier status, position, facing, and owner during replay.
-- [ ] **VIEW-04**: User can inspect the active Soldier's Awareness Grid for recorded Cycles.
-- [ ] **VIEW-05**: Replay visually distinguishes ACTIVE, STONE, FALLEN, TerrainStone, board bounds, and Contraction.
-- [ ] **VIEW-06**: Replay emphasizes pushes, Backstabs, falls, stoning, blocked movement, and runtime violations.
-- [ ] **VIEW-07**: User can see final outcome and MatchSet aggregate scoring.
+- [x] **VIEW-01**: User can open a completed Match and watch a board replay.
+- [x] **VIEW-02**: User can scrub or step through Round, Activation, Cycle, and event timeline positions.
+- [x] **VIEW-03**: User can inspect Soldier status, position, facing, and owner during replay.
+- [x] **VIEW-04**: User can inspect the active Soldier's Awareness Grid for recorded Cycles.
+- [x] **VIEW-05**: Replay visually distinguishes ACTIVE, STONE, FALLEN, TerrainStone, board bounds, and Contraction.
+- [x] **VIEW-06**: Replay emphasizes pushes, Backstabs, falls, stoning, blocked movement, and runtime violations.
+- [x] **VIEW-07**: User can see final outcome and MatchSet aggregate scoring.
 
 ### Testing and Quality
 
@@ -114,7 +114,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TEST-03**: Replay tests verify Chronicle reconstruction and integrity validation.
 - [x] **TEST-04**: Runtime tests cover invalid outputs, timeout behavior, forbidden capabilities, memory/source limits, and output schema validation.
 - [ ] **TEST-05**: Worker tests distinguish strategy failures from system failures.
-- [ ] **TEST-06**: Playwright tests cover strategy editing, revision submission, MatchSet creation, Match execution status, and replay viewing.
+- [x] **TEST-06**: Playwright tests cover strategy editing, revision submission, MatchSet creation, Match execution status, and replay viewing.
 - [x] **TEST-07**: CI or local verification command runs typecheck, lint, unit tests, integration tests, and selected E2E tests.
 
 ## v2 Requirements
@@ -236,19 +236,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UX-04 | Phase 6 | Complete |
 | UX-05 | Phase 6 | Complete |
 | UX-06 | Phase 6 | Complete |
-| VIEW-01 | Phase 7 | Pending |
-| VIEW-02 | Phase 7 | Pending |
-| VIEW-03 | Phase 7 | Pending |
-| VIEW-04 | Phase 7 | Pending |
-| VIEW-05 | Phase 7 | Pending |
-| VIEW-06 | Phase 7 | Pending |
-| VIEW-07 | Phase 7 | Pending |
+| VIEW-01 | Phase 7 | Complete |
+| VIEW-02 | Phase 7 | Complete |
+| VIEW-03 | Phase 7 | Complete |
+| VIEW-04 | Phase 7 | Complete |
+| VIEW-05 | Phase 7 | Complete |
+| VIEW-06 | Phase 7 | Complete |
+| VIEW-07 | Phase 7 | Complete |
 | TEST-01 | Phase 2 | Complete |
 | TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 3 | Complete |
 | TEST-04 | Phase 4 | Complete |
 | TEST-05 | Phase 5 | Complete |
-| TEST-06 | Phase 7 | Pending |
+| TEST-06 | Phase 7 | Complete |
 | TEST-07 | Phase 1 | Complete |
 
 **Coverage:**

@@ -2,29 +2,29 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-05-17T22:22:48.683Z"
+status: completed
+last_updated: "2026-05-17T22:49:05.072Z"
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 33
-  completed_plans: 32
-  percent: 97
+  completed_plans: 33
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Executing Phase 7
+**Status:** Milestone complete
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 7 — Replay Viewer and End-to-End Verification
-**Resume file:** .planning/phases/07-replay-viewer-and-end-to-end-verification/07-05-PLAN.md
-**Completed phase:** Phase 6 - Strategy Workshop UX
+**Current focus:** Milestone complete — all v1.0 phases executed
+**Resume file:** None
+**Completed phase:** Phase 7 - Replay Viewer and End-to-End Verification
 **Plan count:** 5
 
 ## Workflow Settings
@@ -48,7 +48,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 | 4 | Strategy Runtime Sandbox | Complete |
 | 5 | Match Orchestration and Persistence | Complete |
 | 6 | Strategy Workshop UX | Complete |
-| 7 | Replay Viewer and End-to-End Verification | In Progress |
+| 7 | Replay Viewer and End-to-End Verification | Complete |
 
 ## Completed Initialization Artifacts
 
@@ -137,11 +137,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 ## Next Command
 
-`$gsd-execute-phase 7`
+`$gsd-audit-milestone`
 
 Alternative:
 
-Resume from `.planning/phases/07-replay-viewer-and-end-to-end-verification/07-05-PLAN.md`.
+`$gsd-complete-milestone`
 
 ---
-*Last updated: 2026-05-17 after Phase 7 Plan 07-04 execution*
+*Last updated: 2026-05-17 after Phase 7 execution*
