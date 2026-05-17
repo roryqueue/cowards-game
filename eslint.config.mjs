@@ -71,6 +71,7 @@ export default [
           patterns: [
             "@cowards/engine",
             "@cowards/runtime-js",
+            "@cowards/runtime-js/worker",
             "@cowards/replay",
             "@cowards/map-configs",
             "@cowards/test-utils",
@@ -121,9 +122,7 @@ export default [
     },
   },
   {
-    files: [
-      "packages/{spec,engine,replay,map-configs,test-utils}/src/**/*.{ts,tsx}",
-    ],
+    files: ["packages/{replay,map-configs,test-utils}/src/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
