@@ -5,9 +5,13 @@ import type { StrategyRevisionValidationReport } from "@cowards/spec"
 import { StrategySourceEditor } from "./monaco-editor.js"
 import type { WorkshopSnapshot, WorkshopTemplateSummary } from "./types.js"
 import {
+  canSubmitRevision,
+  formatUsedInMatches,
   formatValidationIssueHeading,
   getDraftStatusClass,
   getDraftStatusLabel,
+  getSubmitBlockedReason,
+  prependRevision,
   validationStateFromReport,
 } from "./workshop-client-state.js"
 
@@ -17,6 +21,8 @@ export interface WorkshopClientProps {
 
 const replaceDraftCopy =
   "Replace draft: this will overwrite the current unsaved source with the selected template."
+const invalidSubmitBlockedReason =
+  "Resolve validation errors before submitting."
 
 export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const firstTemplate = initialData.templates[0]
@@ -34,6 +40,13 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const [checking, setChecking] = useState(false)
   const [label, setLabel] = useState("Workshop revision")
   const [notes, setNotes] = useState("")
+  const [revisions, setRevisions] = useState(initialData.revisions)
+  const [selectedRevisionId, setSelectedRevisionId] = useState(
+    initialData.revisions[0]?.id ?? "",
+  )
+  const [submitting, setSubmitting] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState("")
+  const [submitError, setSubmitError] = useState("")
 
   const selectedTemplate = useMemo(
     () =>
@@ -44,6 +57,16 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   )
 
   const draftState = validationStateFromReport(validation, checking)
+  const submitEnabled = canSubmitRevision({
+    validation,
+    checking,
+    submitting,
+  })
+  const submitBlockedReason = getSubmitBlockedReason({ validation, checking })
+  const displayedSubmitBlockedReason =
+    submitBlockedReason === invalidSubmitBlockedReason
+      ? invalidSubmitBlockedReason
+      : submitBlockedReason
 
   const validateSource = async (nextSource = source) => {
     setChecking(true)
@@ -84,6 +107,53 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
 
   const onSourceChange = (nextSource: string) => {
     setSource(nextSource)
+    setIsDirty(true)
+  }
+
+  const submitRevision = async () => {
+    if (!submitEnabled) {
+      return
+    }
+    setSubmitting(true)
+    setSubmitError("")
+    setSubmitMessage("")
+    try {
+      const response = await fetch("/api/workshop/revisions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ source, label, notes }),
+      })
+      const body = (await response.json()) as {
+        error?: string
+        ok?: boolean
+        revision?: WorkshopSnapshot["revisions"][number]
+        validation?: StrategyRevisionValidationReport
+      }
+      if (!response.ok || body.ok === false || !body.revision) {
+        setValidation(body.validation ?? validation)
+        setSubmitError(body.error ?? "Revision submission failed.")
+        return
+      }
+      setRevisions((current) => prependRevision(current, body.revision!))
+      setSelectedRevisionId(body.revision.id)
+      setValidation(body.validation ?? body.revision.validation)
+      setSubmitMessage("Revision submitted")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const loadRevisionSource = async (revisionId: string) => {
+    const response = await fetch(
+      `/api/workshop/revisions/${encodeURIComponent(revisionId)}/source`,
+    )
+    const body = (await response.json()) as { source?: string; error?: string }
+    if (!response.ok || typeof body.source !== "string") {
+      setSubmitError(body.error ?? "Revision source could not be loaded.")
+      return
+    }
+    setSource(body.source)
+    setValidation(null)
     setIsDirty(true)
   }
 
@@ -129,7 +199,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
 
           <section className="workshop-panel">
             <h2 className="workshop-heading">Revision history</h2>
-            {initialData.revisions.length === 0 ? (
+            {revisions.length === 0 ? (
               <>
                 <p>No revisions yet</p>
                 <p className="workshop-muted">
@@ -138,19 +208,32 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
               </>
             ) : (
               <div className="workshop-list">
-                {initialData.revisions.map((revision) => (
-                  <button
-                    className="workshop-list-row"
+                {revisions.map((revision) => (
+                  <div
+                    className={`workshop-list-row ${revision.id === selectedRevisionId ? "active" : ""}`}
                     key={revision.id}
                     title={revision.sourceHash}
-                    type="button"
                   >
-                    {revision.metadata.label ?? "Untitled revision"}
-                    <span className="workshop-muted">
-                      {" "}
-                      {revision.sourceHash.slice(0, 10)}
-                    </span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRevisionId(revision.id)}
+                    >
+                      {revision.label ?? "Untitled revision"}
+                    </button>
+                    <p className="workshop-muted">
+                      {new Date(revision.createdAt).toLocaleString()} ·{" "}
+                      {revision.sourceHash.slice(0, 10)} ·{" "}
+                      {revision.sourceBytes} bytes ·{" "}
+                      {revision.valid ? "valid" : "invalid"} ·{" "}
+                      {formatUsedInMatches(revision)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void loadRevisionSource(revision.id)}
+                    >
+                      Load source
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -220,7 +303,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
           <section className="workshop-panel workshop-stack">
             <h2 className="workshop-heading">Submit revision</h2>
             <label>
-              <span className="workshop-label">Label</span>
+              <span className="workshop-label">Revision label</span>
               <input
                 value={label}
                 onChange={(event) => setLabel(event.target.value)}
@@ -233,7 +316,17 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 onChange={(event) => setNotes(event.target.value)}
               />
             </label>
-            <button className="primary" disabled type="button">
+            {displayedSubmitBlockedReason ? (
+              <p className="workshop-muted">{displayedSubmitBlockedReason}</p>
+            ) : null}
+            {submitMessage ? <p>{submitMessage}</p> : null}
+            {submitError ? <p role="alert">{submitError}</p> : null}
+            <button
+              className="primary"
+              disabled={!submitEnabled}
+              type="button"
+              onClick={() => void submitRevision()}
+            >
               Submit revision
             </button>
           </section>

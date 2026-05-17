@@ -49,8 +49,13 @@ const revisionToSummary = (
   validation: revision.validation,
   revision: {
     id: revision.id,
+    strategyId: WORKSHOP_STRATEGY_ID,
+    label: revision.metadata.label,
+    notes: revision.metadata.notes,
+    createdBy: revision.metadata.createdBy,
     sourceHash: revision.sourceHash,
     sourceBytes: revision.sourceBytes,
+    valid: revision.validation.valid,
     validation: revision.validation,
     metadata: revision.metadata,
     createdAt: new Date().toISOString(),
