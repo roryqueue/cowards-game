@@ -287,7 +287,9 @@ const renderBoard = (
   drawCallout(callout, model.callout, model, width, height, progress)
   root.addChild(callout)
 
-  app.stage.removeChildren()
+  for (const child of app.stage.removeChildren()) {
+    child.destroy({ children: true })
+  }
   app.stage.addChild(root)
 }
 
@@ -301,6 +303,9 @@ export function ReplayBoard({
 }: ReplayBoardProps) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const appRef = useRef<Application | null>(null)
+  const frameRef = useRef(0)
+  const renderLatestRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     const host = hostRef.current
@@ -309,18 +314,9 @@ export function ReplayBoard({
       return
     }
 
-    let frame = 0
     let destroyed = false
-    let drawBoardFrame: (() => void) | null = null
-    const model = buildReplayBoardModel(
-      data,
-      selectedSequence,
-      selectedSoldierId,
-    )
-
-    const start = window.performance.now()
-    const duration = scrubbing ? 0 : animationDurationMs
     const app = new Application()
+    const redraw = () => renderLatestRef.current?.()
 
     const boot = async () => {
       await app.init({
@@ -331,37 +327,57 @@ export function ReplayBoard({
         resizeTo: host,
       })
       if (destroyed) {
-        app.ticker?.stop()
+        app.destroy({ removeView: false }, { children: true })
         return
       }
+      appRef.current = app
       app.canvas.setAttribute("aria-label", "Replay board canvas")
-      app.canvas.setAttribute("title", selectedEvent.label)
-
-      const draw = () => {
-        const elapsed = window.performance.now() - start
-        const progress = duration === 0 ? 1 : Math.min(elapsed / duration, 1)
-        renderBoard(app, model, onSelectSoldier, progress)
-        if (progress < 1) {
-          frame = window.requestAnimationFrame(draw)
-        }
-      }
-
-      drawBoardFrame = draw
-      window.addEventListener("resize", drawBoardFrame)
-      draw()
+      window.addEventListener("resize", redraw)
+      redraw()
     }
 
     void boot()
 
     return () => {
       destroyed = true
-      window.cancelAnimationFrame(frame)
-      if (drawBoardFrame) {
-        window.removeEventListener("resize", drawBoardFrame)
+      window.cancelAnimationFrame(frameRef.current)
+      window.removeEventListener("resize", redraw)
+      if (appRef.current === app) {
+        appRef.current = null
       }
-      app.ticker?.stop()
-      app.stage.removeChildren()
+      renderLatestRef.current = null
+      app.destroy({ removeView: false }, { children: true })
     }
+  }, [])
+
+  useEffect(() => {
+    const model = buildReplayBoardModel(
+      data,
+      selectedSequence,
+      selectedSoldierId,
+    )
+    const start = window.performance.now()
+    const duration = scrubbing ? 0 : animationDurationMs
+
+    const draw = () => {
+      const app = appRef.current
+      if (!app) {
+        return
+      }
+      const elapsed = window.performance.now() - start
+      const progress = duration === 0 ? 1 : Math.min(elapsed / duration, 1)
+      app.canvas.setAttribute("title", selectedEvent.label)
+      renderBoard(app, model, onSelectSoldier, progress)
+      if (progress < 1) {
+        frameRef.current = window.requestAnimationFrame(draw)
+      }
+    }
+
+    renderLatestRef.current = draw
+    window.cancelAnimationFrame(frameRef.current)
+    draw()
+
+    return () => window.cancelAnimationFrame(frameRef.current)
   }, [
     data,
     onSelectSoldier,

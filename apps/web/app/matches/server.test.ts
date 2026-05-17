@@ -4,6 +4,7 @@ import {
   type StoredChronicle,
 } from "@cowards/persistence"
 import { describe, expect, it } from "vitest"
+import { isReplayFixtureMatch, replayFixtureMatchId } from "./replay-fixture.js"
 import { createMatchReplayServer } from "./server.js"
 
 const board = {
@@ -175,6 +176,13 @@ const createStoredChronicle = (): StoredChronicle => {
 }
 
 describe("Match replay server facade", () => {
+  it("ignores malformed encoded fixture ids instead of throwing", () => {
+    expect(isReplayFixtureMatch("%E0%A4%A")).toBe(false)
+    expect(isReplayFixtureMatch(encodeURIComponent(replayFixtureMatchId))).toBe(
+      true,
+    )
+  })
+
   it("returns unavailable when no Chronicle is stored", async () => {
     const server = createMatchReplayServer({
       withPool: async (fn) => fn({} as never),
@@ -224,7 +232,7 @@ describe("Match replay server facade", () => {
     expect(serialized).not.toContain("PRIVATE_AWARENESS_GRID")
   })
 
-  it("returns explicit owner replay data for the requested owner", async () => {
+  it("keeps owner replay data unavailable unless trusted server code allows it", async () => {
     const stored = createStoredChronicle()
     const server = createMatchReplayServer({
       withPool: async (fn) => fn({} as never),
@@ -236,6 +244,31 @@ describe("Match replay server facade", () => {
     const response = await server.getMatchReplay("match:replay-test", {
       mode: "owner",
       ownerPlayerId: "player:bottom",
+    })
+
+    expect(response.status).toBe("ready")
+    if (response.status !== "ready") {
+      return
+    }
+    expect(response.mode).toBe("public")
+    expect(response.projection.viewer).toEqual({ access: "public" })
+    expect(response).not.toHaveProperty("ownerPlayerId")
+    expect(JSON.stringify(response)).not.toContain("PRIVATE_AWARENESS_GRID")
+  })
+
+  it("returns explicit owner replay data only when trusted server code allows it", async () => {
+    const stored = createStoredChronicle()
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+    })
+
+    const response = await server.getMatchReplay("match:replay-test", {
+      mode: "owner",
+      ownerPlayerId: "player:bottom",
+      allowOwnerDebug: true,
     })
 
     expect(response.status).toBe("ready")

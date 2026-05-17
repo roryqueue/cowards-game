@@ -40,6 +40,7 @@ export interface MatchReplayServerDeps {
 export interface GetMatchReplayOptions {
   mode?: ReplayViewMode | undefined
   ownerPlayerId?: PlayerId | undefined
+  allowOwnerDebug?: boolean | undefined
 }
 
 const withDatabasePool: WithPool = async (fn) => {
@@ -106,7 +107,11 @@ const buildReadyReplay = (
   options: GetMatchReplayOptions,
 ): ReplayPageData => {
   const mode: ReplayViewMode =
-    options.mode === "owner" && options.ownerPlayerId ? "owner" : "public"
+    options.allowOwnerDebug === true &&
+    options.mode === "owner" &&
+    options.ownerPlayerId
+      ? "owner"
+      : "public"
   const projection =
     mode === "owner"
       ? projectOwnerChronicle(stored.artifact, options.ownerPlayerId!)

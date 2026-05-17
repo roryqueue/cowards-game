@@ -7,10 +7,18 @@ export const isReplayFixtureEnabled = (): boolean =>
   process.env.NODE_ENV === "test" ||
   process.env.NODE_ENV === "development"
 
+const safeDecodeURIComponent = (value: string): string | null => {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return null
+  }
+}
+
 export const isReplayFixtureMatch = (matchId: string): boolean =>
   isReplayFixtureEnabled() &&
   (matchId === replayFixtureMatchId ||
-    decodeURIComponent(matchId) === replayFixtureMatchId)
+    safeDecodeURIComponent(matchId) === replayFixtureMatchId)
 
 const event = (
   sequence: number,
