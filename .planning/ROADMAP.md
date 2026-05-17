@@ -302,6 +302,36 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 - Use PixiJS/canvas for scalable replay rendering.
 - Prioritize legibility over spectacle: facing, ACTIVE/STONE/FALLEN, occupancy, and Contraction must be instantly readable.
 
+**Plans:**
+
+| Plan | Wave | Depends On | Objective | Requirements |
+|------|------|------------|-----------|--------------|
+| 07-01 | 1 | None | Replay data facade and route contracts | VIEW-01, VIEW-03, VIEW-04 |
+| 07-02 | 2 | 07-01 | Replay client shell, timeline, and inspector | VIEW-02, VIEW-03, VIEW-04 |
+| 07-03 | 3 | 07-01, 07-02 | PixiJS replay board and event callouts | VIEW-01, VIEW-05, VIEW-06 |
+| 07-04 | 4 | 07-01 | Workshop replay handoff | VIEW-07 |
+| 07-05 | 5 | 07-02, 07-03, 07-04 | E2E harness and final replay verification | TEST-06, VIEW-01, VIEW-02, VIEW-03, VIEW-04, VIEW-05, VIEW-06, VIEW-07 |
+
+**Wave dependency notes:**
+
+**Wave 1** — Establish the persisted Chronicle replay facade and direct Match route before UI surfaces consume replay data.
+
+**Wave 2 *(blocked on Wave 1 completion)*** — Build the React timeline, playback, inspector, and privacy/debug shell around the replay DTOs.
+
+**Wave 3 *(blocked on Waves 1-2 completion)*** — Replace the arena placeholder with PixiJS board rendering and event callouts.
+
+**Wave 4 *(blocked on Wave 1 completion)*** — Add Workshop MatchSet replay handoff once completed Match replay URLs exist.
+
+**Wave 5 *(blocked on Waves 2-4 completion)*** — Add fixture-backed and service-backed Playwright verification across the replay viewer and Workshop flow.
+
+**Cross-cutting constraints:**
+
+- Replay UI must consume persisted Chronicles and `@cowards/replay`; web/API code must not execute Strategy runtime behavior.
+- Public replay mode is the default and must not expose owner-only Awareness Grid, memory, objectives, source, or raw runtime details.
+- PixiJS animation is display-only; canonical state comes from selected replay sequence data.
+- Workshop links render only for completed Matches with stored Chronicles.
+- `pnpm e2e` is separate from `pnpm verify`.
+
 ## Requirement Mapping
 
 | Requirement | Phase |
