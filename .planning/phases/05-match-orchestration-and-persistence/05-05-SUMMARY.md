@@ -1,3 +1,10 @@
+---
+phase: 5
+plan: 05-05
+status: complete
+requirements-completed: [MATCH-02, MATCH-04, MATCH-06, MATCH-07, DATA-03, DATA-04, TEST-05]
+---
+
 # Plan 05-05 Summary: MatchSet Scoring, Status Aggregation, and End-to-End Smoke Path
 
 ## Status

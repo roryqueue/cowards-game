@@ -1,3 +1,10 @@
+---
+phase: 5
+plan: 05-02
+status: complete
+requirements-completed: [MATCH-01, MATCH-02, MATCH-03, MATCH-07, DATA-01, DATA-02, DATA-04]
+---
+
 # Plan 05-02 Summary: Match and MatchSet Creation Services
 
 ## Status

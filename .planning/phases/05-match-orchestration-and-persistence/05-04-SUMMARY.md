@@ -1,3 +1,10 @@
+---
+phase: 5
+plan: 05-04
+status: complete
+requirements-completed: [MATCH-04, MATCH-05, MATCH-07, TEST-05]
+---
+
 # Plan 05-04 Summary: Worker Job Claiming, Execution, Retry, and Idempotent Completion
 
 ## Status

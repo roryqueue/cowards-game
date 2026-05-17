@@ -1,9 +1,9 @@
 ---
 phase: 1
 slug: foundation-and-spec-contracts
-status: draft
+status: complete
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-05-16
 ---
 
@@ -38,25 +38,25 @@ created: 2026-05-16
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 1-01-01 | 01 | 1 | FOUND-01 | — | N/A | config | `pnpm --version && pnpm install --lockfile-only` | ❌ W0 | pending |
-| 1-01-02 | 01 | 1 | FOUND-03 | — | N/A | command | `pnpm verify` | ❌ W0 | pending |
-| 1-02-01 | 02 | 2 | FOUND-04 | T-1-01 | Boundary rules block unsafe imports | lint | `pnpm lint` | ❌ W0 | pending |
-| 1-03-01 | 03 | 2 | SPEC-01 | — | N/A | typecheck | `pnpm typecheck` | ❌ W0 | pending |
-| 1-03-02 | 03 | 2 | SPEC-02 | — | Runtime boundary outputs are schema-validated | unit | `pnpm --filter @cowards/spec test` | ❌ W0 | pending |
-| 1-04-01 | 04 | 3 | FOUND-02 | T-1-02 | Full dev topology keeps runtime inert | command | `pnpm verify` | ❌ W0 | pending |
+| 1-01-01 | 01 | 1 | FOUND-01 | — | N/A | config | `pnpm --version && pnpm install --lockfile-only` | green | green |
+| 1-01-02 | 01 | 1 | FOUND-03 | — | N/A | command | `pnpm verify` | green | green |
+| 1-02-01 | 02 | 2 | FOUND-04 | T-1-01 | Boundary rules block unsafe imports | lint | `pnpm lint` | green | green |
+| 1-03-01 | 03 | 2 | SPEC-01 | — | N/A | typecheck | `pnpm typecheck` | green | green |
+| 1-03-02 | 03 | 2 | SPEC-02 | — | Runtime boundary outputs are schema-validated | unit | `pnpm --filter @cowards/spec test` | green | green |
+| 1-04-01 | 04 | 3 | FOUND-02 | T-1-02 | Full dev topology keeps runtime inert | command | `pnpm verify` | green | green |
 
-*Status: pending until execution creates the files and commands.*
+*Status: complete after retroactive milestone verification.*
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `package.json` — root scripts for `dev`, `dev:full`, `lint`, `typecheck`, `test`, and `verify`.
-- [ ] `pnpm-workspace.yaml` — workspace package globs.
-- [ ] `turbo.json` — task graph for build/lint/typecheck/test/dev.
-- [ ] `vitest.config.ts` — initial test configuration.
-- [ ] `eslint.config.*` — lint and boundary configuration.
-- [ ] package-level `tsconfig.json` files — TypeScript references.
+- [x] `package.json` — root scripts for `dev`, `dev:full`, `lint`, `typecheck`, `test`, and `verify`.
+- [x] `pnpm-workspace.yaml` — workspace package globs.
+- [x] `turbo.json` — task graph for build/lint/typecheck/test/dev.
+- [x] `vitest.config.ts` — initial test configuration.
+- [x] `eslint.config.*` — lint and boundary configuration.
+- [x] package-level `tsconfig.json` files — TypeScript references.
 
 ---
 

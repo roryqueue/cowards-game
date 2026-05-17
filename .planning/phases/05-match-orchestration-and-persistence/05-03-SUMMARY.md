@@ -1,3 +1,10 @@
+---
+phase: 5
+plan: 05-03
+status: complete
+requirements-completed: [MATCH-04, DATA-01, DATA-03]
+---
+
 # Plan 05-03 Summary: Chronicle Storage Adapter and Metadata Persistence
 
 ## Status
