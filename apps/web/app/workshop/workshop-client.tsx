@@ -3,14 +3,20 @@
 import { useEffect, useMemo, useState } from "react"
 import type { StrategyRevisionValidationReport } from "@cowards/spec"
 import { StrategySourceEditor } from "./monaco-editor.js"
-import type { WorkshopSnapshot, WorkshopTemplateSummary } from "./types.js"
+import type {
+  WorkshopSnapshot,
+  WorkshopTemplateSummary,
+  WorkshopTestSummary,
+} from "./types.js"
 import {
   canSubmitRevision,
   formatUsedInMatches,
   formatValidationIssueHeading,
   getDraftStatusClass,
   getDraftStatusLabel,
+  getTestStatusCopy,
   getSubmitBlockedReason,
+  isTerminalTestStatus,
   prependRevision,
   validationStateFromReport,
 } from "./workshop-client-state.js"
@@ -47,6 +53,15 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const [submitting, setSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState("")
   const [submitError, setSubmitError] = useState("")
+  const [selectedOpponentId, setSelectedOpponentId] = useState(
+    initialData.opponents[0]?.id ?? "",
+  )
+  const [selectedPresetId, setSelectedPresetId] = useState(
+    initialData.presets[0]?.id ?? "smoke-v1",
+  )
+  const [testResult, setTestResult] = useState<WorkshopTestSummary | null>(null)
+  const [launchingTest, setLaunchingTest] = useState(false)
+  const [testError, setTestError] = useState("")
 
   const selectedTemplate = useMemo(
     () =>
@@ -67,6 +82,10 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     submitBlockedReason === invalidSubmitBlockedReason
       ? invalidSubmitBlockedReason
       : submitBlockedReason
+  const selectedRevision = revisions.find(
+    (revision) => revision.id === selectedRevisionId,
+  )
+  const canLaunchTest = Boolean(selectedRevision?.valid) && !launchingTest
 
   const validateSource = async (nextSource = source) => {
     setChecking(true)
@@ -156,6 +175,62 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setValidation(null)
     setIsDirty(true)
   }
+
+  const refreshTestStatus = async (matchSetId = testResult?.matchSetId) => {
+    if (!matchSetId) {
+      return
+    }
+    const response = await fetch(
+      `/api/workshop/tests/${encodeURIComponent(matchSetId)}`,
+    )
+    const body = (await response.json()) as typeof testResult & {
+      error?: string
+    }
+    if (!response.ok || !body) {
+      setTestError(body?.error ?? "Test status could not be loaded.")
+      return
+    }
+    setTestResult(body)
+  }
+
+  const launchTest = async () => {
+    if (!selectedRevision || !canLaunchTest) {
+      return
+    }
+    setLaunchingTest(true)
+    setTestError("")
+    try {
+      const response = await fetch("/api/workshop/tests", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          revisionId: selectedRevision.id,
+          opponentId: selectedOpponentId,
+          presetId: selectedPresetId,
+        }),
+      })
+      const body = (await response.json()) as typeof testResult & {
+        error?: string
+      }
+      if (!response.ok || !body) {
+        setTestError(body?.error ?? "Test launch failed.")
+        return
+      }
+      setTestResult(body)
+    } finally {
+      setLaunchingTest(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!testResult || isTerminalTestStatus(testResult.status)) {
+      return
+    }
+    const timeout = window.setTimeout(() => {
+      void refreshTestStatus(testResult.matchSetId)
+    }, 2000)
+    return () => window.clearTimeout(timeout)
+  }, [testResult])
 
   return (
     <main className="workshop-shell">
@@ -334,8 +409,27 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
           <section className="workshop-panel workshop-stack">
             <h2 className="workshop-heading">Workshop test</h2>
             <label>
+              <span className="workshop-label">Revision</span>
+              <select
+                value={selectedRevisionId}
+                onChange={(event) => setSelectedRevisionId(event.target.value)}
+              >
+                <option value="">Select revision</option>
+                {revisions
+                  .filter((revision) => revision.valid)
+                  .map((revision) => (
+                    <option key={revision.id} value={revision.id}>
+                      {revision.label ?? revision.sourceHash.slice(0, 10)}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
               <span className="workshop-label">Opponent</span>
-              <select disabled value={initialData.opponents[0]?.id ?? ""}>
+              <select
+                value={selectedOpponentId}
+                onChange={(event) => setSelectedOpponentId(event.target.value)}
+              >
                 {initialData.opponents.map((opponent) => (
                   <option key={opponent.id} value={opponent.id}>
                     {opponent.label}
@@ -345,7 +439,14 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
             </label>
             <label>
               <span className="workshop-label">Preset</span>
-              <select disabled value={initialData.presets[0]?.id ?? ""}>
+              <select
+                value={selectedPresetId}
+                onChange={(event) =>
+                  setSelectedPresetId(
+                    event.target.value as typeof selectedPresetId,
+                  )
+                }
+              >
                 {initialData.presets.map((preset) => (
                   <option key={preset.id} value={preset.id}>
                     {preset.id}
@@ -353,12 +454,49 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 ))}
               </select>
             </label>
-            <button disabled type="button">
+            <button
+              disabled={!canLaunchTest}
+              type="button"
+              onClick={() => void launchTest()}
+            >
               Launch test
             </button>
-            <p className="workshop-muted">
-              Select a revision to launch a Workshop test.
-            </p>
+            {!canLaunchTest ? (
+              <p className="workshop-muted">
+                Select a revision to launch a Workshop test.
+              </p>
+            ) : null}
+            {testError ? <p role="alert">{testError}</p> : null}
+            {testResult ? (
+              <div>
+                <p>{getTestStatusCopy(testResult.status)}</p>
+                <p className="workshop-muted">
+                  MatchSet ID: {testResult.matchSetId} · Status:{" "}
+                  {testResult.status} · Match count: {testResult.matchCount}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void refreshTestStatus(testResult.matchSetId)}
+                >
+                  Refresh status
+                </button>
+                {testResult.scoring.rankings.length ? (
+                  <div className="details-grid">
+                    {testResult.scoring.rankings.map((ranking) => (
+                      <div key={ranking.strategyRevisionId}>
+                        <strong>{ranking.strategyRevisionId}</strong>
+                        <span>
+                          wins {ranking.wins}, losses {ranking.losses}, draws{" "}
+                          {ranking.draws}, surviving soldiers{" "}
+                          {ranking.survivingSoldiers}, survival turns{" "}
+                          {ranking.survivalTurns}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </section>
         </aside>
       </div>

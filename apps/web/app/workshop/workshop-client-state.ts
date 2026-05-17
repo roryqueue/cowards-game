@@ -1,5 +1,6 @@
 import type { StrategyRevisionValidationReport } from "@cowards/spec"
 import type { WorkshopRevisionSummary } from "./types.js"
+import type { WorkshopTestSummary } from "./types.js"
 
 export type DraftValidationState =
   | "not-checked"
@@ -79,3 +80,30 @@ export const prependRevision = (
   revision,
   ...revisions.filter((candidate) => candidate.id !== revision.id),
 ]
+
+export const getTestStatusCopy = (
+  status: WorkshopTestSummary["status"] | null,
+): string => {
+  switch (status) {
+    case "pending":
+      return "Test queued"
+    case "running":
+      return "Test running"
+    case "complete":
+      return "Test complete"
+    case "failed_system":
+    case "blocked":
+    case "degraded":
+      return "Test failed; review system status before retrying."
+    case null:
+      return ""
+  }
+}
+
+export const isTerminalTestStatus = (
+  status: WorkshopTestSummary["status"],
+): boolean =>
+  status === "complete" ||
+  status === "failed_system" ||
+  status === "blocked" ||
+  status === "degraded"
