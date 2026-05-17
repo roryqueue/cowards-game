@@ -300,16 +300,18 @@ export function ReplayBoard({
   onSelectSoldier,
 }: ReplayBoardProps) {
   const hostRef = useRef<HTMLDivElement | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
     const host = hostRef.current
-    if (!host) {
+    const canvas = canvasRef.current
+    if (!host || !canvas) {
       return
     }
 
     let frame = 0
-    let resizeObserver: ResizeObserver | null = null
     let destroyed = false
+    let drawBoardFrame: (() => void) | null = null
     const model = buildReplayBoardModel(
       data,
       selectedSequence,
@@ -325,13 +327,13 @@ export function ReplayBoard({
         antialias: true,
         autoDensity: true,
         backgroundAlpha: 0,
+        canvas,
         resizeTo: host,
       })
       if (destroyed) {
-        app.destroy()
+        app.ticker?.stop()
         return
       }
-      host.replaceChildren(app.canvas)
       app.canvas.setAttribute("aria-label", "Replay board canvas")
       app.canvas.setAttribute("title", selectedEvent.label)
 
@@ -344,8 +346,8 @@ export function ReplayBoard({
         }
       }
 
-      resizeObserver = new ResizeObserver(draw)
-      resizeObserver.observe(host)
+      drawBoardFrame = draw
+      window.addEventListener("resize", drawBoardFrame)
       draw()
     }
 
@@ -354,8 +356,11 @@ export function ReplayBoard({
     return () => {
       destroyed = true
       window.cancelAnimationFrame(frame)
-      resizeObserver?.disconnect()
-      app.destroy()
+      if (drawBoardFrame) {
+        window.removeEventListener("resize", drawBoardFrame)
+      }
+      app.ticker?.stop()
+      app.stage.removeChildren()
     }
   }, [
     data,
@@ -374,6 +379,11 @@ export function ReplayBoard({
       role="img"
       title={selectedEvent.label}
     >
+      <canvas
+        aria-label="Replay board canvas"
+        ref={canvasRef}
+        title={selectedEvent.label}
+      />
       <p aria-live="polite" className="replay-board-status">
         Sequence {selectedSequence} · {selectedEvent.type}
       </p>

@@ -8,8 +8,8 @@ import {
   createPostgresChronicleStore,
   type ChronicleStore,
   type StoredChronicle,
-  type Queryable,
-} from "@cowards/persistence"
+} from "@cowards/persistence/chronicle-store"
+import type { Queryable } from "@cowards/persistence/repositories"
 import type {
   ChronicleEvent,
   ChronicleEventType,
@@ -23,6 +23,10 @@ import type {
   ReplayTimelineEntryDto,
   ReplayViewMode,
 } from "./types.js"
+import {
+  createReplayFixtureData,
+  isReplayFixtureMatch,
+} from "./replay-fixture.js"
 
 type WithPool = <T>(fn: (pool: Queryable) => Promise<T>) => Promise<T>
 
@@ -161,6 +165,10 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
       matchId: MatchId,
       options: GetMatchReplayOptions = {},
     ): Promise<ReplayPageData> {
+      if (isReplayFixtureMatch(matchId)) {
+        return createReplayFixtureData()
+      }
+
       const stored = await withPool((pool) =>
         createStore(pool).getByMatchId(matchId),
       )

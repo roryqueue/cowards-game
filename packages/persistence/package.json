@@ -7,7 +7,9 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./chronicle-store": "./src/chronicle-store.ts",
     "./db": "./src/db.ts",
+    "./repositories": "./src/repositories.ts",
     "./workshop": "./src/workshop.ts"
   },
   "scripts": {
