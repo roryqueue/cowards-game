@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-17T20:49:00.000Z"
+last_updated: "2026-05-17T21:23:44.677Z"
 progress:
   total_phases: 7
   completed_phases: 6
@@ -23,7 +23,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** Phase 7 - Replay Viewer and End-to-End Verification
-**Resume file:** None
+**Resume file:** .planning/phases/07-replay-viewer-and-end-to-end-verification/07-CONTEXT.md
 **Completed phase:** Phase 6 - Strategy Workshop UX
 **Plan count:** 5
 
