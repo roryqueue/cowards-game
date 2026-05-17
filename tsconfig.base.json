@@ -14,6 +14,8 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
+      "@cowards/persistence": ["packages/persistence/src/index.ts"],
+      "@cowards/runtime-js": ["packages/runtime-js/src/index.ts"],
       "@cowards/spec": ["packages/spec/src/index.ts"]
     }
   }
