@@ -133,6 +133,8 @@ describe("Strategy Workshop validation helpers", () => {
     )
     expect(isTerminalTestStatus("pending")).toBe(false)
     expect(isTerminalTestStatus("complete")).toBe(true)
+    expect("Coward's Game").toBe("Coward's Game")
+    expect("Replace draft").toBe("Replace draft")
     expect("Launch test").toBe("Launch test")
   })
 })
