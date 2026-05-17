@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready
-last_updated: "2026-05-16T18:58:25.037Z"
+last_updated: "2026-05-17T19:35:33.956Z"
 progress:
   total_phases: 7
   completed_phases: 5
@@ -15,7 +15,7 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** Phase 5 complete; ready to discuss Phase 6
+**Status:** Phase 6 context gathered; ready to plan Phase 6
 
 ## Project Reference
 
@@ -23,7 +23,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** Phase 6 - Strategy Workshop UX
-**Resume file:** None
+**Resume file:** .planning/phases/06-strategy-workshop-ux/06-CONTEXT.md
 **Completed phase:** Phase 5 - Match Orchestration and Persistence
 **Plan count:** 5
 
@@ -137,11 +137,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 ## Next Command
 
-`$gsd-discuss-phase 6`
+`$gsd-plan-phase 6`
 
 Alternative:
 
-`$gsd-plan-phase 6` if you want to plan Phase 6 without additional discussion.
+`$gsd-discuss-phase 6` if you want to revisit or expand the Phase 6 context.
 
 ---
-*Last updated: 2026-05-16 after Phase 5 execution*
+*Last updated: 2026-05-17 after Phase 6 context discussion*
