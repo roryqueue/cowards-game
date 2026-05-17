@@ -84,6 +84,9 @@ export function ReplayClient({ data }: ReplayClientProps) {
         <div>
           <p className="replay-product-label">Coward&apos;s Game</p>
           <h1>Replay</h1>
+          <p className="replay-mono" title={data.metadata.matchId}>
+            {shortId(data.metadata.matchId)}
+          </p>
         </div>
         <span className="replay-status-chip">{statusLabel}</span>
       </header>

@@ -17,6 +17,14 @@ describe("ReplayClient", () => {
     expect(source).toContain("Step forward")
   })
 
+  it("keeps the scrubber wired as the primary timeline control", () => {
+    expect(source).toContain('aria-label="Replay timeline"')
+    expect(source).toContain(
+      "setSelectedIndex(Number(event.currentTarget.value))",
+    )
+    expect(source).toContain("getTimelineEntryAt(data, selectedIndex)")
+  })
+
   it("shows owner debug only when owner projection data exists", () => {
     expect(source).toContain(
       "const ownerDebugAvailable = canShowOwnerDebug(data)",
