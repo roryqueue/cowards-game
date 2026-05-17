@@ -414,3 +414,12 @@ export const getWorkshopSnapshot = async (
   opponents: listWorkshopOpponents(),
   templates: listWorkshopTemplates(),
 })
+
+export const getWorkshopStaticSnapshot = (): WorkshopSnapshot => ({
+  templateSource: workshopTemplateSource,
+  templateValidation: validateWorkshopSource(workshopTemplateSource),
+  revisions: [],
+  presets: listWorkshopPresets(),
+  opponents: listWorkshopOpponents(),
+  templates: listWorkshopTemplates(),
+})

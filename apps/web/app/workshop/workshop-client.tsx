@@ -236,7 +236,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     <main className="workshop-shell">
       <div className="workshop-grid">
         <aside className="workshop-left workshop-stack">
-          <section className="workshop-panel">
+          <section className="workshop-panel workshop-header-panel">
             <div className="workshop-row">
               <div>
                 <p className="workshop-muted">Coward's Game</p>
@@ -255,7 +255,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
             <p className="workshop-muted">Local Player</p>
           </section>
 
-          <section className="workshop-panel">
+          <section className="workshop-panel workshop-template-panel">
             <h2 className="workshop-heading">Templates</h2>
             <div className="workshop-list">
               {initialData.templates.map((template) => (
@@ -272,7 +272,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
             <p className="workshop-muted">{replaceDraftCopy}</p>
           </section>
 
-          <section className="workshop-panel">
+          <section className="workshop-panel workshop-revision-panel">
             <h2 className="workshop-heading">Revision history</h2>
             {revisions.length === 0 ? (
               <>
@@ -316,7 +316,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
         </aside>
 
         <section className="workshop-center workshop-stack">
-          <section className="workshop-panel workshop-stack">
+          <section className="workshop-panel workshop-stack workshop-editor-panel">
             <div className="workshop-row">
               <div>
                 <h2 className="workshop-heading">Editor</h2>
@@ -333,12 +333,15 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
             <StrategySourceEditor value={source} onChange={onSourceChange} />
           </section>
 
-          <section className="workshop-panel">
+          <section className="workshop-panel workshop-validation-panel">
             <h2 className="workshop-heading">Validation</h2>
             <p>
               {getDraftStatusLabel(draftState)} ·{" "}
               {validation?.errors.length ?? 0} errors ·{" "}
               {validation?.warnings.length ?? 0} warnings
+            </p>
+            <p aria-live="polite" role="status">
+              {getDraftStatusLabel(draftState)}
             </p>
             {validation?.errors.length ? (
               <ul className="validation-list">
@@ -375,7 +378,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
         </section>
 
         <aside className="workshop-right workshop-stack">
-          <section className="workshop-panel workshop-stack">
+          <section className="workshop-panel workshop-stack workshop-submit-panel">
             <h2 className="workshop-heading">Submit revision</h2>
             <label>
               <span className="workshop-label">Revision label</span>
@@ -406,7 +409,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
             </button>
           </section>
 
-          <section className="workshop-panel workshop-stack">
+          <section className="workshop-panel workshop-stack workshop-test-panel">
             <h2 className="workshop-heading">Workshop test</h2>
             <label>
               <span className="workshop-label">Revision</span>
@@ -468,7 +471,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
             ) : null}
             {testError ? <p role="alert">{testError}</p> : null}
             {testResult ? (
-              <div>
+              <div aria-live="polite" role="status">
                 <p>{getTestStatusCopy(testResult.status)}</p>
                 <p className="workshop-muted">
                   MatchSet ID: {testResult.matchSetId} · Status:{" "}

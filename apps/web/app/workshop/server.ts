@@ -4,6 +4,7 @@ import {
   createWorkshopTestMatchSet,
   getWorkshopRevisionSource,
   getWorkshopSnapshot,
+  getWorkshopStaticSnapshot,
   getWorkshopTestSummary,
   insertWorkshopRevision,
   type WorkshopTestSummary,
@@ -77,7 +78,13 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
   const testSummary = deps.getTestSummary ?? getWorkshopTestSummary
 
   return {
-    getInitialData: () => withPool((pool) => snapshot(pool)),
+    getInitialData: async () => {
+      try {
+        return await withPool((pool) => snapshot(pool))
+      } catch {
+        return getWorkshopStaticSnapshot()
+      }
+    },
 
     validateSource: (source: string) => validateWorkshopSource(source),
 

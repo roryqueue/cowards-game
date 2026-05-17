@@ -276,9 +276,43 @@ textarea {
     padding: 12px;
   }
 
+  .workshop-left,
+  .workshop-center,
+  .workshop-right {
+    display: contents;
+  }
+
   .workshop-grid {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .workshop-header-panel {
+    order: 1;
+  }
+
+  .workshop-template-panel {
+    order: 2;
+  }
+
+  .workshop-editor-panel {
+    order: 3;
+  }
+
+  .workshop-validation-panel {
+    order: 4;
+  }
+
+  .workshop-submit-panel {
+    order: 5;
+  }
+
+  .workshop-revision-panel {
+    order: 6;
+  }
+
+  .workshop-test-panel {
+    order: 7;
   }
 
   .workshop-row {

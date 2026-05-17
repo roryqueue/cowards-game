@@ -29,5 +29,14 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(body, { status: 400 })
   }
 
-  return Response.json(await workshopServer.launchTest(body), { status: 201 })
+  try {
+    return Response.json(await workshopServer.launchTest(body), { status: 201 })
+  } catch {
+    return Response.json(
+      {
+        error: "Storage is unavailable; start local services and retry.",
+      } satisfies WorkshopErrorResponse,
+      { status: 503 },
+    )
+  }
 }

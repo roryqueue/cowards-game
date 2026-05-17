@@ -1,15 +1,12 @@
 "use client"
 
 import type { ComponentType, ReactNode } from "react"
-import * as nextDynamic from "next/dist/shared/lib/dynamic.js"
+import dynamic from "next/dynamic"
 
-// Browser-only wrapper for next/dynamic App Router usage.
 type Dynamic = <P = Record<string, never>>(
   loader: () => Promise<unknown>,
   options?: { ssr?: boolean; loading?: () => ReactNode },
 ) => ComponentType<P>
-
-const dynamic = (nextDynamic as unknown as { default: Dynamic }).default
 
 interface MonacoEditorProps {
   height: string
@@ -25,7 +22,9 @@ interface MonacoEditorProps {
   }
 }
 
-const Editor = dynamic<MonacoEditorProps>(
+const browserDynamic = dynamic as unknown as Dynamic
+
+const Editor = browserDynamic<MonacoEditorProps>(
   () => import("@monaco-editor/react"),
   {
     ssr: false,

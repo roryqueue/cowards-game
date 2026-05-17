@@ -18,11 +18,21 @@ export async function POST(request: Request): Promise<Response> {
     )
   }
 
-  const response = await workshopServer.submitSource({
-    source: body.source,
-    ...(typeof body.label === "string" ? { label: body.label } : {}),
-    ...(typeof body.notes === "string" ? { notes: body.notes } : {}),
-  } satisfies WorkshopSubmitRequest)
+  let response: Awaited<ReturnType<typeof workshopServer.submitSource>>
+  try {
+    response = await workshopServer.submitSource({
+      source: body.source,
+      ...(typeof body.label === "string" ? { label: body.label } : {}),
+      ...(typeof body.notes === "string" ? { notes: body.notes } : {}),
+    } satisfies WorkshopSubmitRequest)
+  } catch {
+    return Response.json(
+      {
+        error: "Storage is unavailable; start local services and retry.",
+      } satisfies WorkshopErrorResponse,
+      { status: 503 },
+    )
+  }
 
   return Response.json(response, { status: response.ok ? 201 : 422 })
 }
