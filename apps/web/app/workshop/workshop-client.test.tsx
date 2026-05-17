@@ -6,6 +6,8 @@ import {
   getDraftStatusLabel,
   getRevisionTitle,
   getSubmitBlockedReason,
+  getTestStatusCopy,
+  isTerminalTestStatus,
   prependRevision,
   validationStateFromReport,
 } from "./workshop-client-state.js"
@@ -120,5 +122,17 @@ describe("Strategy Workshop validation helpers", () => {
     expect("Submit revision").toBe("Submit revision")
     expect("Revision submitted").toBe("Revision submitted")
     expect("Load source").toBe("Load source")
+  })
+
+  it("formats Launch test statuses and terminal states", () => {
+    expect(getTestStatusCopy("pending")).toBe("Test queued")
+    expect(getTestStatusCopy("running")).toBe("Test running")
+    expect(getTestStatusCopy("complete")).toBe("Test complete")
+    expect(getTestStatusCopy("failed_system")).toBe(
+      "Test failed; review system status before retrying.",
+    )
+    expect(isTerminalTestStatus("pending")).toBe(false)
+    expect(isTerminalTestStatus("complete")).toBe(true)
+    expect("Launch test").toBe("Launch test")
   })
 })

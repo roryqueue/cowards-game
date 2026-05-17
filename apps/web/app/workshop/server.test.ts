@@ -67,7 +67,11 @@ describe("Workshop server facade", () => {
       getSource: async (_pool, revisionId) => `source:${revisionId}`,
       createTestMatchSet: async (_pool, input) => ({
         matchSetId: `match-set:${input.revisionId}`,
+        status: "pending",
         matchIds: ["match:1"],
+        matchCount: 1,
+        matches: [{ matchId: "match:1", status: "pending" }],
+        scoring: { complete: false, degraded: false, rankings: [] },
       }),
       getTestSummary: async (_pool, matchSetId) => ({
         matchSetId,
@@ -89,7 +93,11 @@ describe("Workshop server facade", () => {
       }),
     ).resolves.toEqual({
       matchSetId: "match-set:strategy-revision:1",
+      status: "pending",
       matchIds: ["match:1"],
+      matchCount: 1,
+      matches: [{ matchId: "match:1", status: "pending" }],
+      scoring: { complete: false, degraded: false, rankings: [] },
     })
     await expect(server.getTestSummary("match-set:1")).resolves.toMatchObject({
       status: "pending",
