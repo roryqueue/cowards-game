@@ -10,6 +10,7 @@ export default [
     ignores: [
       "node_modules/**",
       ".next/**",
+      "**/.next/**",
       ".turbo/**",
       "dist/**",
       "**/dist/**",
@@ -90,6 +91,12 @@ export default [
   },
   {
     files: ["apps/web/**/*.{ts,tsx}"],
+    languageOptions: {
+      globals: {
+        fetch: "readonly",
+        window: "readonly",
+      },
+    },
     rules: {
       "no-restricted-imports": [
         "error",
