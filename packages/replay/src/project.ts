@@ -7,6 +7,7 @@ import type {
   JsonValue,
   PlayerId,
 } from "@cowards/spec"
+import { ChronicleSchema } from "@cowards/spec"
 
 const PRIVATE_PAYLOAD_KEYS = new Set([
   "awarenessGrid",
@@ -78,22 +79,29 @@ const projectEvent = (event: ChronicleEvent): ChroniclePublicEvent => ({
       : sanitizeJson(event.payload),
 })
 
+const canonicalChronicle = (chronicle: Chronicle): Chronicle =>
+  ChronicleSchema.parse(chronicle) as Chronicle
+
 export const projectPublicChronicle = (
   chronicle: Chronicle,
-): ChronicleProjection => ({
-  schemaVersion: chronicle.schemaVersion,
-  viewer: { access: "public" },
-  reproducibility: cloneJson(chronicle.reproducibility),
-  events: chronicle.events.map(projectEvent),
-  snapshots: cloneJson(chronicle.snapshots),
-})
+): ChronicleProjection => {
+  const canonical = canonicalChronicle(chronicle)
+  return {
+    schemaVersion: canonical.schemaVersion,
+    viewer: { access: "public" },
+    reproducibility: cloneJson(canonical.reproducibility),
+    events: canonical.events.map(projectEvent),
+    snapshots: cloneJson(canonical.snapshots),
+  }
+}
 
 export const projectOwnerChronicle = (
   chronicle: Chronicle,
   playerId: PlayerId,
 ): ChronicleProjection => {
-  const publicProjection = projectPublicChronicle(chronicle)
-  const ownerData = chronicle.private?.byPlayerId[playerId]
+  const canonical = canonicalChronicle(chronicle)
+  const publicProjection = projectPublicChronicle(canonical)
+  const ownerData = canonical.private?.byPlayerId[playerId]
 
   return {
     ...publicProjection,

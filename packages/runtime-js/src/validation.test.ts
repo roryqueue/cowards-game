@@ -31,6 +31,13 @@ describe("validateStrategySource", () => {
       "new Function",
       validSource.replace("return", "new Function('return 1')(); return"),
     ],
+    [
+      "constructor recovery",
+      validSource.replace(
+        "return",
+        "(() => {}).constructor('return process')(); return",
+      ),
+    ],
     ["process", validSource.replace("return", "process; return")],
     ["process.env", validSource.replace("return", "process.env; return")],
     ["require(", validSource.replace("return", `require("fs"); return`)],
@@ -95,6 +102,13 @@ describe("validateStrategySource", () => {
     expectCode(
       validSource.replace("soldierBrain()", "soldierBrain: async function()"),
       "ASYNC_METHOD_NOT_ALLOWED",
+    )
+  })
+
+  it("rejects syntactically invalid source with TRANSPILE_FAILED", () => {
+    expectCode(
+      "export default { selectActivations() {}, soldierBrain() {",
+      "TRANSPILE_FAILED",
     )
   })
 

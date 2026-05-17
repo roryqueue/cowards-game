@@ -12,10 +12,10 @@ export default {
     return { action: { type: "TURN_TO_STONE" }, soldierMemory: { cycle: input.cycleIndex } }
   },
 }
-`)
+    `)
 
     expect(result.ok).toBe(true)
-    expect(result.ok && result.code).toContain("export default")
+    expect(result.ok && result.code).toContain("exports.default")
     expect(result.ok && result.code).not.toContain("input:")
   })
 

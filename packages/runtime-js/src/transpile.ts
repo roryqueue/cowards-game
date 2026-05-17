@@ -6,7 +6,7 @@ export const transpileStrategySource = (
   const output = ts.transpileModule(source, {
     compilerOptions: {
       isolatedModules: true,
-      module: ts.ModuleKind.ESNext,
+      module: ts.ModuleKind.CommonJS,
       target: ts.ScriptTarget.ES2022,
     },
     reportDiagnostics: true,

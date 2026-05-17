@@ -34,6 +34,10 @@ export interface BuildChronicleFromMatchResult {
   finalState: GameState
 }
 
+export type BuildChronicleFromResultResult =
+  | { ok: true; chronicle: Chronicle; finalState: GameState }
+  | { ok: false; errors: ChronicleValidationError[] }
+
 export interface BuildChronicleFromResultInput {
   input: InitialMatchInput
   result: TransitionResult
@@ -173,37 +177,12 @@ const missingIntermediateSnapshotWarnings = (): ChronicleValidationError[] => [
 ]
 
 export const buildChronicleFromResult = ({
-  input,
-  result,
-}: BuildChronicleFromResultInput): BuildChronicleFromMatchResult => {
-  const initialState = createInitialGameState(input)
-  const events: ChronicleEvent[] = []
-  const snapshots: ChronicleBoundarySnapshot[] = [
-    snapshot("MATCH_START", initialState, 0),
-  ]
-  const recorder = createPrivateRecorder()
-  const appendEvents = createEventAppender(events, recorder)
-  appendEvents(result.events)
-  snapshots.push(snapshot("MATCH_END", result.state, currentSequence(events)))
-  snapshots.push(snapshot("TERMINAL", result.state, currentSequence(events)))
-
+  input: _input,
+  result: _result,
+}: BuildChronicleFromResultInput): BuildChronicleFromResultResult => {
   return {
-    chronicle: {
-      ...createChronicle(
-        input,
-        result.state,
-        events,
-        snapshots,
-        recorder.sections({
-          warnings:
-            missingIntermediateSnapshotWarnings() as unknown as JsonValue,
-        }),
-      ),
-      storageMetadata: {
-        warnings: missingIntermediateSnapshotWarnings() as unknown as JsonValue,
-      },
-    },
-    finalState: result.state,
+    ok: false,
+    errors: missingIntermediateSnapshotWarnings(),
   }
 }
 

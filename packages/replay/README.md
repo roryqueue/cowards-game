@@ -13,8 +13,10 @@ records the reproducibility envelope, semantic event stream, boundary snapshots,
 and owner-only private sections without storing Chronicle state in `GameState`.
 
 Use `buildChronicleFromResult({ input, result })` only when adapting an existing
-engine result. It can preserve terminal replay content, but full intermediate
-boundary snapshots require `buildChronicleFromMatch`.
+engine result. Existing `runMatch` results do not carry the intermediate
+boundary snapshots required for replay, so this adapter returns a typed failure
+until a result shape can provide those snapshots. Use `buildChronicleFromMatch`
+for replayable Chronicles.
 
 ## Validation and Integrity
 

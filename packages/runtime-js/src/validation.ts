@@ -6,6 +6,7 @@ import {
   type StrategyRevisionValidationReport,
 } from "@cowards/spec"
 import { hashStrategySource } from "./hash.js"
+import { transpileStrategySource } from "./transpile.js"
 
 export const FORBIDDEN_SOURCE_PATTERNS = [
   {
@@ -23,6 +24,11 @@ export const FORBIDDEN_SOURCE_PATTERNS = [
     pattern: "Function constructor",
     code: "FORBIDDEN_PATTERN",
     regex: /\b(?:new\s+)?Function\s*\(/,
+  },
+  {
+    pattern: "constructor recovery",
+    code: "FORBIDDEN_PATTERN",
+    regex: /\.constructor\s*(?:\.|\[|\()/,
   },
   {
     pattern: "process.env",
@@ -172,6 +178,16 @@ export const validateStrategySource = (
       issue(
         "MISSING_SOLDIER_BRAIN",
         "Strategy source must define soldierBrain",
+      ),
+    )
+  }
+
+  const transpiled = transpileStrategySource(source)
+  if (!transpiled.ok) {
+    errors.push(
+      issue(
+        "TRANSPILE_FAILED",
+        `Strategy source failed to transpile: ${transpiled.message}`,
       ),
     )
   }

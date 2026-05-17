@@ -213,6 +213,23 @@ describe("Chronicle projections", () => {
     expect(serialized).not.toContain("PRIVATE_HASH_COMMITMENT")
   })
 
+  it("projects from canonical parsed Chronicle data and strips schema-unknown payload fields", () => {
+    const chronicle = createChronicle() as Chronicle & {
+      events: Array<
+        Chronicle["events"][number] & { payload: Record<string, unknown> }
+      >
+    }
+    chronicle.events[1]!.payload.debugLeak = {
+      unrecognizedPrivateMarker: PRIVATE_AWARENESS_GRID_MARKER,
+    }
+
+    const projection = projectPublicChronicle(chronicle)
+    const serialized = JSON.stringify(projection)
+
+    expect(serialized).not.toContain("debugLeak")
+    expect(serialized).not.toContain(PRIVATE_AWARENESS_GRID_MARKER)
+  })
+
   it("dispatches owner projection through projectChronicle", () => {
     const projection = projectChronicle(createChronicle(), {
       access: "owner",

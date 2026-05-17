@@ -156,6 +156,35 @@ describe("movement rules", () => {
     ])
   })
 
+  it("blocks same-direction active collision without push", () => {
+    const state = stateWith([
+      soldier({ id: "mover" }),
+      soldier({
+        id: "target",
+        ownerPlayerId: "top",
+        position: { x: 5, y: 4 },
+        facing: "UP",
+      }),
+    ])
+    const result = resolveAction(
+      state,
+      "mover",
+      { type: "MOVE", direction: "UP" },
+      { advanced: false },
+    )
+
+    expect(result.terminalReason).toBe("MOVE_BLOCKED")
+    expect(result.advanced).toBe(false)
+    expect(result.state.soldiers.map((entry) => entry.position)).toEqual([
+      { x: 5, y: 5 },
+      { x: 5, y: 4 },
+    ])
+    expect(result.events[0]?.payload).toMatchObject({
+      reason: "ACTIVE_SOLDIER",
+      targetSoldierId: "target",
+    })
+  })
+
   it("resolves side push and pushed Soldier does not update lastSuccessfulMoveDirection", () => {
     const state = stateWith([
       soldier({ id: "mover", position: { x: 4, y: 5 }, facing: "RIGHT" }),

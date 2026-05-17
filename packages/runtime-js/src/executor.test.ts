@@ -311,6 +311,43 @@ export default {
     expect(!result.ok && result.violation.type).toBe("FORBIDDEN_CAPABILITY")
   })
 
+  it("blocks Function constructor recovery inside the worker context", () => {
+    const runtime = createRuntimeFromRevision(
+      forgedValidRevision(`
+export default {
+  selectActivations() {
+    return (() => {}).constructor("return process")()
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`),
+    )
+
+    const result = runtime.selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("FORBIDDEN_CAPABILITY")
+  })
+
+  it("executes valid strategies with leading comments before export default", () => {
+    const result = runtimeForSource(`
+// leading author note should survive transpilation
+export default {
+  selectActivations() {
+    return { activationOrders: [], strategyMemory: { ok: true } }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`).selectActivations(strategyInput)
+
+    expect(result.ok).toBe(true)
+    expect(result.ok && result.value.strategyMemory).toEqual({ ok: true })
+  })
+
   it("async Promise return is rejected as INVALID_OUTPUT", () => {
     const result = runtimeForSource(`
 export default {

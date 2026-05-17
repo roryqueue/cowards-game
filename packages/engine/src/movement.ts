@@ -100,6 +100,21 @@ const resolveActiveCollision = (
     }
   }
 
+  if (target.facing === direction) {
+    return {
+      state,
+      events: [
+        event("MOVE_BLOCKED", {
+          soldierId: mover.id,
+          reason: "ACTIVE_SOLDIER",
+          targetSoldierId: target.id,
+        }),
+      ],
+      advanced: false,
+      terminalReason: "MOVE_BLOCKED",
+    }
+  }
+
   if (target.position === null || mover.position === null) {
     return noChange(state)
   }

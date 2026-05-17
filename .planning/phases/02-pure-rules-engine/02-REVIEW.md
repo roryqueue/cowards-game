@@ -1,8 +1,9 @@
 ---
 phase: "02-pure-rules-engine"
-status: issues_found
+status: fixed
 depth: standard
 reviewed_at: 2026-05-17T15:14:00-04:00
+fixed_at: 2026-05-17T19:20:24.000Z
 scope: "Phase 2 pure rules engine source/config changes through the current workspace"
 files_reviewed: 28
 files_reviewed_list:
@@ -35,6 +36,11 @@ files_reviewed_list:
   - packages/test-utils/src/engine-scenarios.ts
   - packages/test-utils/src/index.ts
 findings:
+  critical: 0
+  warning: 0
+  info: 0
+  total: 0
+fixed_findings:
   critical: 1
   warning: 0
   info: 0
@@ -46,7 +52,7 @@ findings:
 **Reviewed:** 2026-05-17T15:14:00-04:00
 **Depth:** standard
 **Files Reviewed:** 28
-**Status:** issues_found
+**Status:** fixed
 
 ## Summary
 
@@ -66,43 +72,10 @@ Result: 8 test files passed, 37 tests passed.
 
 **Severity:** BLOCKER
 **File:** `packages/engine/src/movement.ts:88`
+**Status:** fixed
 **Issue:** `resolveActiveCollision` only special-cases head-to-head collisions where `target.facing === oppositeDirection(direction)`. Every other ACTIVE target falls through to the push path at lines 103-155. The spec defines Side Push more narrowly: a push is attempted only when the target is approached from the side, meaning the target's facing is neither the MOVE direction nor the opposite direction. With the current code, a Soldier moving into an ACTIVE Soldier who is facing the same direction can push that Soldier forward. That is not a side approach and changes canonical game outcomes, especially for friendly same-direction stacks where activation-start Backstab does not remove the target.
 
-**Fix:** Add an explicit same-direction branch before the push logic, and add a regression test for `target.facing === direction`.
-
-```ts
-if (target.facing === oppositeDirection(direction)) {
-  return {
-    state,
-    events: [
-      event("MOVE_BLOCKED", {
-        soldierId: mover.id,
-        reason: "HEAD_TO_HEAD",
-        targetSoldierId: target.id,
-      }),
-    ],
-    advanced: false,
-    terminalReason: "MOVE_BLOCKED",
-  }
-}
-
-if (target.facing === direction) {
-  return {
-    state,
-    events: [
-      event("MOVE_BLOCKED", {
-        soldierId: mover.id,
-        reason: "ACTIVE_SOLDIER",
-        targetSoldierId: target.id,
-      }),
-    ],
-    advanced: false,
-    terminalReason: "MOVE_BLOCKED",
-  }
-}
-```
-
-Then leave the existing push path for the two perpendicular facings only.
+**Resolution:** Added an explicit same-direction active-collision block before Side Push resolution and covered it with a regression test in `packages/engine/src/movement.test.ts`.
 
 ---
 

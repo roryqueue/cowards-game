@@ -1,4 +1,5 @@
 export const WORKER_HARNESS_SOURCE = `
+import vm from "node:vm"
 import { workerData } from "node:worker_threads"
 
 const FORBIDDEN_CAPABILITY = "FORBIDDEN_CAPABILITY"
@@ -39,70 +40,76 @@ const sanitizedMath = new Proxy(Math, {
 
 const toViolation = (type, message) => ({ type, message })
 
-const compileStrategy = (source) => {
-  const body = source.trim().replace(/^export\\s+default\\s+/, "return ")
-  const blockedNames = [
-    "eval",
-    "Function",
-    "process",
-    "require",
-    "fetch",
-    "WebAssembly",
-    "Worker",
-    "Date",
-    "setTimeout",
-    "setInterval",
-    "setImmediate",
-    "Math",
-    "globalThis",
-  ]
-  const blockedValues = [
-    forbiddenFunction("eval"),
-    forbiddenFunction("Function"),
-    forbiddenFunction("process"),
-    forbiddenFunction("require"),
-    forbiddenFunction("fetch"),
-    forbiddenFunction("WebAssembly"),
-    forbiddenFunction("Worker"),
-    forbiddenFunction("Date"),
-    forbiddenFunction("setTimeout"),
-    forbiddenFunction("setInterval"),
-    forbiddenFunction("setImmediate"),
-    sanitizedMath,
-    sanitizedGlobalThis,
-  ]
-  return Function(...blockedNames, body)(...blockedValues)
+const isForbiddenCapabilityMessage = (message) =>
+  message.startsWith(FORBIDDEN_CAPABILITY) ||
+  /code generation from strings/i.test(message)
+
+const createSandbox = () => {
+  const module = { exports: {} }
+  const sandbox = {
+    module,
+    exports: module.exports,
+    eval: forbiddenFunction("eval"),
+    Function: forbiddenFunction("Function"),
+    process: forbiddenFunction("process"),
+    require: forbiddenFunction("require"),
+    fetch: forbiddenFunction("fetch"),
+    WebAssembly: forbiddenFunction("WebAssembly"),
+    Worker: forbiddenFunction("Worker"),
+    Date: forbiddenFunction("Date"),
+    setTimeout: forbiddenFunction("setTimeout"),
+    setInterval: forbiddenFunction("setInterval"),
+    setImmediate: forbiddenFunction("setImmediate"),
+    Math: sanitizedMath,
+    globalThis: sanitizedGlobalThis,
+    __methodName: workerData.methodName,
+    __inputJson: JSON.stringify(workerData.input),
+    __result: undefined,
+  }
+  return vm.createContext(sandbox, {
+    codeGeneration: { strings: false, wasm: false },
+  })
+}
+
+const runStrategy = (source) => {
+  const context = createSandbox()
+  new vm.Script(source).runInContext(context)
+  new vm.Script(\`
+    const strategy = module.exports && module.exports.default
+    const method = strategy && strategy[__methodName]
+    if (typeof method !== "function") {
+      __result = {
+        ok: false,
+        violation: { type: "INVALID_OUTPUT", message: "Strategy method is missing" },
+      }
+    } else {
+      const value = method.call(strategy, JSON.parse(__inputJson))
+      if (value && typeof value.then === "function") {
+        __result = {
+          ok: false,
+          violation: {
+            type: "INVALID_OUTPUT",
+            message: "Strategy methods must return synchronously",
+          },
+        }
+      } else {
+        __result = { ok: true, value }
+      }
+    }
+  \`).runInContext(context)
+  return context.__result
 }
 
 const port = workerData.port
 const signal = new Int32Array(workerData.signalBuffer)
 
 try {
-  const strategy = compileStrategy(workerData.source)
-  const method = strategy?.[workerData.methodName]
-
-  if (typeof method !== "function") {
-    port.postMessage({
-      ok: false,
-      violation: toViolation("INVALID_OUTPUT", "Strategy method is missing"),
-    })
-  } else {
-    const value = method.call(strategy, workerData.input)
-
-    if (value && typeof value.then === "function") {
-      port.postMessage({
-        ok: false,
-        violation: toViolation("INVALID_OUTPUT", "Strategy methods must return synchronously"),
-      })
-    } else {
-      port.postMessage({ ok: true, value })
-    }
-  }
+  port.postMessage(runStrategy(workerData.source))
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error)
   port.postMessage({
     ok: false,
-    violation: message.startsWith(FORBIDDEN_CAPABILITY)
+    violation: isForbiddenCapabilityMessage(message)
       ? toViolation("FORBIDDEN_CAPABILITY", message)
       : toViolation("THROWN_EXCEPTION", message),
   })

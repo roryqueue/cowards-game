@@ -10,7 +10,7 @@ import {
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
-import { buildChronicleFromMatch } from "./build.js"
+import { buildChronicleFromMatch, buildChronicleFromResult } from "./build.js"
 
 const createRecordingRuntime = (
   observedInputs: Map<string, SoldierBrainInput>,
@@ -149,5 +149,16 @@ describe("buildChronicleFromMatch", () => {
     )
 
     expect(built.finalState.outcome).toEqual(direct.state.outcome)
+  })
+
+  it("returns typed failure instead of a partial Chronicle for existing runMatch results", () => {
+    const result = runMatch(createMatchInput(createRecordingRuntime(new Map())))
+    const adapted = buildChronicleFromResult({
+      input: createMatchInput(createRecordingRuntime(new Map())),
+      result,
+    })
+
+    expect(adapted.ok).toBe(false)
+    expect(!adapted.ok && adapted.errors[0]?.code).toBe("SNAPSHOT_MISSING")
   })
 })
