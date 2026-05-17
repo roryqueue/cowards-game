@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-17T20:04:52.794Z"
+last_updated: "2026-05-17T20:49:00.000Z"
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 28
-  completed_plans: 23
-  percent: 82
+  completed_plans: 28
+  percent: 100
 ---
 
 # State: Coward's Game
@@ -22,9 +22,9 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 6 - Strategy Workshop UX
-**Resume file:** .planning/phases/06-strategy-workshop-ux/06-01-PLAN.md
-**Completed phase:** Phase 5 - Match Orchestration and Persistence
+**Current focus:** Phase 7 - Replay Viewer and End-to-End Verification
+**Resume file:** None
+**Completed phase:** Phase 6 - Strategy Workshop UX
 **Plan count:** 5
 
 ## Workflow Settings
@@ -47,7 +47,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 | 3 | Chronicle and Replay Core | Complete |
 | 4 | Strategy Runtime Sandbox | Complete |
 | 5 | Match Orchestration and Persistence | Complete |
-| 6 | Strategy Workshop UX | Pending |
+| 6 | Strategy Workshop UX | Complete |
 | 7 | Replay Viewer and End-to-End Verification | Pending |
 
 ## Completed Initialization Artifacts
@@ -137,11 +137,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-16)
 
 ## Next Command
 
-`$gsd-execute-phase 6`
+`$gsd-discuss-phase 7`
 
 Alternative:
 
 `$gsd-plan-phase 6 --research` if you want to refresh research and replan.
 
 ---
-*Last updated: 2026-05-17 after Phase 6 planning*
+*Last updated: 2026-05-17 after Phase 6 execution*

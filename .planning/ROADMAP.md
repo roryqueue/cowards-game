@@ -16,7 +16,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 | 3 | Chronicle and Replay Core | Make every Match reproducible, inspectable, and safe to project publicly. | 8 | Complete |
 | 4 | Strategy Runtime Sandbox | Validate and execute JS/TS Strategy Revisions behind a replaceable worker-only boundary. | 11 | Complete |
 | 5 | Match Orchestration and Persistence | Queue, execute, persist, and score Matches and MatchSets with correct failure semantics. | 13 | Complete |
-| 6 | Strategy Workshop UX | Let users create, validate, revise, and test doctrines in a Workshop loop. | 6 | Pending |
+| 6 | Strategy Workshop UX | Let users create, validate, revise, and test doctrines in a Workshop loop. | 6 | Complete |
 | 7 | Replay Viewer and End-to-End Verification | Deliver the visible replay experience and full edit-to-replay verification path. | 8 | Pending |
 
 **Coverage:** 80 v1 requirements mapped, 0 unmapped.
@@ -269,6 +269,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 
 **Goal:** Let users create, validate, revise, and test doctrines in a Workshop loop.
 **Mode:** mvp
+**Status:** Complete
 
 **Requirements:** UX-01, UX-02, UX-03, UX-04, UX-05, UX-06
 
@@ -281,6 +282,8 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 **Notes:**
 - This is the first strongly user-facing authoring phase.
 - Keep copy focused on the doctrine loop, not generic programming education.
+
+**Execution:** Completed in Phase 6 commits through `67b2aa2`; summaries are recorded in `06-01-SUMMARY.md` through `06-05-SUMMARY.md`, with validation in `06-VALIDATION.md`.
 
 ### Phase 7: Replay Viewer and End-to-End Verification
 

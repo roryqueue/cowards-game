@@ -90,12 +90,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Strategy Authoring UX
 
-- [ ] **UX-01**: User can create and edit a Strategy in a Monaco-based editor.
-- [ ] **UX-02**: User can start from sample doctrine templates.
-- [ ] **UX-03**: User can validate Strategy source and see actionable validation/runtime errors.
-- [ ] **UX-04**: User can submit a Strategy Revision from the editor.
-- [ ] **UX-05**: User can run a local or Workshop test Match before competitive use.
-- [ ] **UX-06**: User can view Strategy Revision history and select revisions for Matches.
+- [x] **UX-01**: User can create and edit a Strategy in a Monaco-based editor.
+- [x] **UX-02**: User can start from sample doctrine templates.
+- [x] **UX-03**: User can validate Strategy source and see actionable validation/runtime errors.
+- [x] **UX-04**: User can submit a Strategy Revision from the editor.
+- [x] **UX-05**: User can run a local or Workshop test Match before competitive use.
+- [x] **UX-06**: User can view Strategy Revision history and select revisions for Matches.
 
 ### Replay UX
 
@@ -230,12 +230,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-03 | Phase 5 | Complete |
 | DATA-04 | Phase 5 | Complete |
 | DATA-05 | Phase 5 | Complete |
-| UX-01 | Phase 6 | Pending |
-| UX-02 | Phase 6 | Pending |
-| UX-03 | Phase 6 | Pending |
-| UX-04 | Phase 6 | Pending |
-| UX-05 | Phase 6 | Pending |
-| UX-06 | Phase 6 | Pending |
+| UX-01 | Phase 6 | Complete |
+| UX-02 | Phase 6 | Complete |
+| UX-03 | Phase 6 | Complete |
+| UX-04 | Phase 6 | Complete |
+| UX-05 | Phase 6 | Complete |
+| UX-06 | Phase 6 | Complete |
 | VIEW-01 | Phase 7 | Pending |
 | VIEW-02 | Phase 7 | Pending |
 | VIEW-03 | Phase 7 | Pending |
