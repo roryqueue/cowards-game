@@ -6,7 +6,9 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./db": "./src/db.ts",
+    "./workshop": "./src/workshop.ts"
   },
   "scripts": {
     "build": "tsc -b",

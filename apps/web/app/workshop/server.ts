@@ -1,6 +1,8 @@
 import {
-  buildWorkshopRevision,
   createDatabasePool,
+} from "@cowards/persistence/db"
+import {
+  buildWorkshopRevision,
   createWorkshopTestMatchSet,
   getWorkshopRevisionSource,
   getWorkshopSnapshot,
@@ -8,7 +10,7 @@ import {
   insertWorkshopRevision,
   type WorkshopTestSummary,
   WORKSHOP_STRATEGY_ID,
-} from "@cowards/persistence"
+} from "@cowards/persistence/workshop"
 import type {
   MatchSetId,
   StrategyRevision,

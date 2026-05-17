@@ -9,7 +9,7 @@ import type {
   WorkshopRevisionSummary,
   WorkshopSnapshot,
   WorkshopTestSummary,
-} from "@cowards/persistence"
+} from "@cowards/persistence/workshop"
 
 export type {
   WorkshopOpponentSummary,
