@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 import type { Pool } from "pg"
+import type { StrategyRuntime } from "@cowards/engine"
 import type { WorkerRunnerDependencies } from "./runner.js"
-import { createClaimedMatchJobForTest, runWorkerOnce } from "./runner.js"
+import {
+  createClaimedMatchJobForTest,
+  createSideDispatchRuntime,
+  runWorkerOnce,
+} from "./runner.js"
 
 const pool = {} as Pool
 
@@ -23,6 +28,31 @@ const baseDependencies = (): WorkerRunnerDependencies => ({
 })
 
 describe("worker runner", () => {
+  it("routes strategy calls using persisted Match player IDs", () => {
+    const bottomRuntime: StrategyRuntime = {
+      selectActivations: vi.fn().mockReturnValue({ ok: true, value: {} }),
+      runSoldierBrain: vi.fn().mockReturnValue({ ok: true, value: {} }),
+    }
+    const topRuntime: StrategyRuntime = {
+      selectActivations: vi.fn().mockReturnValue({ ok: true, value: {} }),
+      runSoldierBrain: vi.fn().mockReturnValue({ ok: true, value: {} }),
+    }
+    const runtime = createSideDispatchRuntime(bottomRuntime, topRuntime, {
+      bottomPlayerId: "player:a",
+      topPlayerId: "player:b",
+    })
+
+    runtime.selectActivations({
+      mySoldiers: [{ ownerPlayerId: "player:a" }],
+    } as never)
+    runtime.runSoldierBrain({
+      self: { ownerPlayerId: "player:b" },
+    } as never)
+
+    expect(bottomRuntime.selectActivations).toHaveBeenCalledOnce()
+    expect(topRuntime.runSoldierBrain).toHaveBeenCalledOnce()
+  })
+
   it("completes Matches whose Chronicle includes RUNTIME_VIOLATION gameplay events", async () => {
     const dependencies = baseDependencies()
 

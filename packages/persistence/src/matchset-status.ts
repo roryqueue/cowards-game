@@ -67,7 +67,11 @@ export const refreshMatchSetStatus = async (
     bottom_player_id: string
     top_player_id: string
     surviving_soldiers: number | null
+    bottom_surviving_soldiers: number | null
+    top_surviving_soldiers: number | null
     survival_turns: number | null
+    bottom_survival_turns: number | null
+    top_survival_turns: number | null
   }>(
     `
       select
@@ -79,7 +83,11 @@ export const refreshMatchSetStatus = async (
         m.bottom_player_id,
         m.top_player_id,
         m.surviving_soldiers,
-        m.survival_turns
+        m.bottom_surviving_soldiers,
+        m.top_surviving_soldiers,
+        m.survival_turns,
+        m.bottom_survival_turns,
+        m.top_survival_turns
       from match_set_matches msm
       join matches m on m.id = msm.match_id
       where msm.match_set_id = $1
@@ -99,7 +107,13 @@ export const refreshMatchSetStatus = async (
           : undefined,
     status: row.status,
     survivingSoldiers: row.surviving_soldiers ?? 0,
+    bottomSurvivingSoldiers:
+      row.bottom_surviving_soldiers ?? row.surviving_soldiers ?? 0,
+    topSurvivingSoldiers:
+      row.top_surviving_soldiers ?? row.surviving_soldiers ?? 0,
     survivalTurns: row.survival_turns ?? 0,
+    bottomSurvivalTurns: row.bottom_survival_turns ?? row.survival_turns ?? 0,
+    topSurvivalTurns: row.top_survival_turns ?? row.survival_turns ?? 0,
   }))
   const scoring = scoreMatchSet(matches)
   const status = determineMatchSetStatus(

@@ -16,26 +16,52 @@ export interface MatchCompletionFields {
   outcome: GameState["outcome"]
   winnerPlayerId: string | null
   survivingSoldiers: number
+  bottomSurvivingSoldiers: number
+  topSurvivingSoldiers: number
   survivalTurns: number
+  bottomSurvivalTurns: number
+  topSurvivalTurns: number
 }
+
+const countSurvivingSoldiers = (
+  finalState: GameState,
+  ownerPlayerId?: string | undefined,
+): number =>
+  finalState.soldiers.filter(
+    (soldier) =>
+      soldier.status !== "FALLEN" &&
+      (ownerPlayerId === undefined || soldier.ownerPlayerId === ownerPlayerId),
+  ).length
 
 export const deriveMatchCompletionFields = (
   finalState: GameState,
-): MatchCompletionFields => ({
-  matchId: finalState.matchId,
-  outcome: finalState.outcome,
-  winnerPlayerId:
-    finalState.outcome?.type === "WIN"
-      ? finalState.outcome.winnerPlayerId
-      : null,
-  survivingSoldiers: finalState.soldiers.filter(
-    (soldier) => soldier.status !== "FALLEN",
-  ).length,
-  survivalTurns:
+): MatchCompletionFields => {
+  const bottomPlayerId = finalState.players.find(
+    (player) => player.side === "bottom",
+  )?.id
+  const topPlayerId = finalState.players.find(
+    (player) => player.side === "top",
+  )?.id
+  const survivalTurns =
     finalState.phaseNumber * 16 +
     finalState.roundNumber * 4 +
-    finalState.activationCount,
-})
+    finalState.activationCount
+
+  return {
+    matchId: finalState.matchId,
+    outcome: finalState.outcome,
+    winnerPlayerId:
+      finalState.outcome?.type === "WIN"
+        ? finalState.outcome.winnerPlayerId
+        : null,
+    survivingSoldiers: countSurvivingSoldiers(finalState),
+    bottomSurvivingSoldiers: countSurvivingSoldiers(finalState, bottomPlayerId),
+    topSurvivingSoldiers: countSurvivingSoldiers(finalState, topPlayerId),
+    survivalTurns,
+    bottomSurvivalTurns: survivalTurns,
+    topSurvivalTurns: survivalTurns,
+  }
+}
 
 export const completeMatch = async (
   pool: Pool,
@@ -79,15 +105,23 @@ export const completeMatch = async (
             outcome = $1,
             winner_player_id = $2,
             surviving_soldiers = $3,
-            survival_turns = $4,
+            bottom_surviving_soldiers = $4,
+            top_surviving_soldiers = $5,
+            survival_turns = $6,
+            bottom_survival_turns = $7,
+            top_survival_turns = $8,
             completed_at = now()
-        where id = $5
+        where id = $9
       `,
       [
         fields.outcome,
         fields.winnerPlayerId,
         fields.survivingSoldiers,
+        fields.bottomSurvivingSoldiers,
+        fields.topSurvivingSoldiers,
         fields.survivalTurns,
+        fields.bottomSurvivalTurns,
+        fields.topSurvivalTurns,
         fields.matchId,
       ],
     )

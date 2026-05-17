@@ -70,7 +70,11 @@ describe("Match completion fields", () => {
       outcome: { type: "WIN", winnerPlayerId: "player:bottom" },
       winnerPlayerId: "player:bottom",
       survivingSoldiers: 1,
+      bottomSurvivingSoldiers: 1,
+      topSurvivingSoldiers: 0,
       survivalTurns: 48,
+      bottomSurvivalTurns: 48,
+      topSurvivalTurns: 48,
     })
   })
 })

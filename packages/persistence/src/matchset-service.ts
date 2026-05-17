@@ -5,8 +5,13 @@ import type {
   StrategyRevisionId,
 } from "@cowards/spec"
 import type { Pool } from "pg"
+import { createRepositories } from "./repositories.js"
 import { withTransaction } from "./db.js"
-import { createMatchJobId, type CreateMatchInput } from "./match-service.js"
+import {
+  createMatchJobId,
+  validateCreateMatchInput,
+  type CreateMatchInput,
+} from "./match-service.js"
 import { getMatchSetPreset, type MatchSetPresetId } from "./presets.js"
 import type { MatchSetStatus } from "./schema.js"
 
@@ -68,7 +73,33 @@ const insertMatchSetWithMatrix = async (
     presetVersion?: "v1" | undefined
   },
 ): Promise<void> => {
+  for (const match of input.matches) {
+    validateCreateMatchInput(match)
+  }
+
   await withTransaction(pool, async (client) => {
+    const repositories = createRepositories(client)
+    const revisionIds = new Set<StrategyRevisionId>()
+
+    for (const match of input.matches) {
+      await repositories.assertStrategyRevisionCanBeUsed(
+        match.bottomStrategyRevisionId,
+      )
+      await repositories.assertStrategyRevisionCanBeUsed(
+        match.topStrategyRevisionId,
+      )
+      const arena = await repositories.getArenaVariant(match.arenaVariantId)
+      if (!arena) {
+        throw new Error(`ArenaVariant not found: ${match.arenaVariantId}`)
+      }
+      revisionIds.add(match.bottomStrategyRevisionId)
+      revisionIds.add(match.topStrategyRevisionId)
+    }
+
+    for (const revisionId of revisionIds) {
+      await repositories.lockStrategyRevision(revisionId)
+    }
+
     await client.query(
       `
         insert into match_sets (id, status, preset_id, preset_version, matrix)

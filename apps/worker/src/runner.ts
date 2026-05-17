@@ -13,6 +13,7 @@ import {
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
+import type { PlayerId } from "@cowards/spec"
 import type { Pool } from "pg"
 
 export interface WorkerRunnerOptions {
@@ -32,13 +33,14 @@ export interface WorkerRunnerDependencies {
 export const createSideDispatchRuntime = (
   bottomRuntime: StrategyRuntime,
   topRuntime: StrategyRuntime,
+  playerIds: { bottomPlayerId: PlayerId; topPlayerId: PlayerId },
 ): StrategyRuntime => ({
   selectActivations(input) {
     const playerId = input.mySoldiers[0]?.ownerPlayerId
-    if (playerId === "player:bottom") {
+    if (playerId === playerIds.bottomPlayerId) {
       return bottomRuntime.selectActivations(input)
     }
-    if (playerId === "player:top") {
+    if (playerId === playerIds.topPlayerId) {
       return topRuntime.selectActivations(input)
     }
     return violation("INVALID_OUTPUT", "Cannot resolve player runtime")
@@ -46,10 +48,10 @@ export const createSideDispatchRuntime = (
 
   runSoldierBrain(input) {
     const playerId = input.self.ownerPlayerId
-    if (playerId === "player:bottom") {
+    if (playerId === playerIds.bottomPlayerId) {
       return bottomRuntime.runSoldierBrain(input)
     }
-    if (playerId === "player:top") {
+    if (playerId === playerIds.topPlayerId) {
       return topRuntime.runSoldierBrain(input)
     }
     return violation("INVALID_OUTPUT", "Cannot resolve soldier runtime")
@@ -91,6 +93,10 @@ export const loadRunMatchInput = async (
     runtime: createSideDispatchRuntime(
       createRuntimeFromRevision(bottomRevision),
       createRuntimeFromRevision(topRevision),
+      {
+        bottomPlayerId: String(match.bottom_player_id),
+        topPlayerId: String(match.top_player_id),
+      },
     ),
   }
 }

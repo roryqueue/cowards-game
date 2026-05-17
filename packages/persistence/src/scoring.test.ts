@@ -10,7 +10,11 @@ const match = (input: Partial<MatchScoreInput>): MatchScoreInput => ({
   winnerStrategyRevisionId: input.winnerStrategyRevisionId,
   status: input.status ?? "complete",
   survivingSoldiers: input.survivingSoldiers ?? 0,
+  bottomSurvivingSoldiers: input.bottomSurvivingSoldiers ?? 0,
+  topSurvivingSoldiers: input.topSurvivingSoldiers ?? 0,
   survivalTurns: input.survivalTurns ?? 0,
+  bottomSurvivalTurns: input.bottomSurvivalTurns ?? 0,
+  topSurvivalTurns: input.topSurvivalTurns ?? 0,
 })
 
 describe("MatchSet scoring", () => {
@@ -20,7 +24,11 @@ describe("MatchSet scoring", () => {
         matchId: "match:1",
         winnerStrategyRevisionId: "strategy-revision:b",
         survivingSoldiers: 1,
+        bottomSurvivingSoldiers: 0,
+        topSurvivingSoldiers: 1,
         survivalTurns: 10,
+        bottomSurvivalTurns: 10,
+        topSurvivalTurns: 10,
       }),
       match({
         matchId: "match:2",
@@ -28,7 +36,11 @@ describe("MatchSet scoring", () => {
         topStrategyRevisionId: "strategy-revision:d",
         winnerStrategyRevisionId: "strategy-revision:c",
         survivingSoldiers: 2,
+        bottomSurvivingSoldiers: 2,
+        topSurvivingSoldiers: 0,
         survivalTurns: 8,
+        bottomSurvivalTurns: 8,
+        topSurvivalTurns: 8,
       }),
       match({
         matchId: "match:3",
@@ -36,7 +48,11 @@ describe("MatchSet scoring", () => {
         topStrategyRevisionId: "strategy-revision:f",
         winnerStrategyRevisionId: "strategy-revision:e",
         survivingSoldiers: 2,
+        bottomSurvivingSoldiers: 2,
+        topSurvivingSoldiers: 0,
         survivalTurns: 12,
+        bottomSurvivalTurns: 12,
+        topSurvivalTurns: 12,
       }),
     ])
 
@@ -45,8 +61,35 @@ describe("MatchSet scoring", () => {
       "strategy-revision:c",
       "strategy-revision:b",
       "strategy-revision:f",
-      "strategy-revision:d",
       "strategy-revision:a",
+      "strategy-revision:d",
+    ])
+  })
+
+  it("uses side-specific surviving soldiers for head-to-head tie-breakers", () => {
+    const score = scoreMatchSet([
+      match({
+        bottomStrategyRevisionId: "strategy-revision:a",
+        topStrategyRevisionId: "strategy-revision:b",
+        winnerStrategyRevisionId: "strategy-revision:a",
+        bottomSurvivingSoldiers: 1,
+        topSurvivingSoldiers: 0,
+      }),
+      match({
+        bottomStrategyRevisionId: "strategy-revision:b",
+        topStrategyRevisionId: "strategy-revision:a",
+        winnerStrategyRevisionId: "strategy-revision:b",
+        bottomSurvivingSoldiers: 3,
+        topSurvivingSoldiers: 0,
+      }),
+    ])
+
+    expect(score.rankings.map((entry) => entry.strategyRevisionId)).toEqual([
+      "strategy-revision:b",
+      "strategy-revision:a",
+    ])
+    expect(score.rankings.map((entry) => entry.survivingSoldiers)).toEqual([
+      3, 1,
     ])
   })
 

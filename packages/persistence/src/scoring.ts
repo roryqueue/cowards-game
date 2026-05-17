@@ -8,7 +8,11 @@ export interface MatchScoreInput {
   winnerStrategyRevisionId?: StrategyRevisionId | undefined
   status: MatchStatus
   survivingSoldiers: number
+  bottomSurvivingSoldiers: number
+  topSurvivingSoldiers: number
   survivalTurns: number
+  bottomSurvivalTurns: number
+  topSurvivalTurns: number
 }
 
 export interface MatchSetStrategyScore {
@@ -73,10 +77,10 @@ export const scoreMatchSet = (matches: MatchScoreInput[]): MatchSetScore => {
       continue
     }
 
-    bottom.survivingSoldiers += match.survivingSoldiers
-    bottom.survivalTurns += match.survivalTurns
-    top.survivingSoldiers += match.survivingSoldiers
-    top.survivalTurns += match.survivalTurns
+    bottom.survivingSoldiers += match.bottomSurvivingSoldiers
+    bottom.survivalTurns += match.bottomSurvivalTurns
+    top.survivingSoldiers += match.topSurvivingSoldiers
+    top.survivalTurns += match.topSurvivalTurns
 
     if (!match.winnerStrategyRevisionId) {
       bottom.draws += 1

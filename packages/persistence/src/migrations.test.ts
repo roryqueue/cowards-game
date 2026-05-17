@@ -22,6 +22,7 @@ describe("migrations", () => {
     const names = files.map((file) => file.name)
 
     expect(names).toContain("0001_initial.sql")
+    expect(names).toContain("0002_match_side_completion_stats.sql")
     expect(names).toEqual([...names].sort())
   })
 
