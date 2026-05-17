@@ -304,7 +304,7 @@ This roadmap builds Coward's Game simulation-first. Each phase leaves behind a w
 
 **Plans:**
 
-1/5 plans executed
+2/5 plans executed
 
 | Plan | Wave | Depends On | Objective | Requirements |
 |------|------|------------|-----------|--------------|
