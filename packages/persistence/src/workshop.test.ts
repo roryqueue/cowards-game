@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { validateStrategySource } from "@cowards/runtime-js"
 import {
+  GET_WORKSHOP_REVISION_SOURCE_SQL,
+  LIST_WORKSHOP_REVISIONS_SQL,
   listWorkshopOpponents,
   listWorkshopPresets,
   listWorkshopTemplates,
@@ -61,5 +63,17 @@ describe("Workshop service contracts", () => {
     expect(
       listWorkshopTemplates().every((template) => template.validation.valid),
     ).toBe(true)
+  })
+
+  it("keeps revision history limited to local Workshop revisions", () => {
+    expect(LIST_WORKSHOP_REVISIONS_SQL).toContain("strategy_id = $1")
+    expect(LIST_WORKSHOP_REVISIONS_SQL).toContain("created_at desc")
+    expect(LIST_WORKSHOP_REVISIONS_SQL).toContain(
+      "bottom_strategy_revision_id = sr.id",
+    )
+    expect(LIST_WORKSHOP_REVISIONS_SQL).toContain(
+      "top_strategy_revision_id = sr.id",
+    )
+    expect(GET_WORKSHOP_REVISION_SOURCE_SQL).toContain("strategy_id = $2")
   })
 })

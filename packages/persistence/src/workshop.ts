@@ -30,7 +30,7 @@ import {
 import type { MatchSetStatus, MatchStatus } from "./schema.js"
 
 export const WORKSHOP_USER_ID = "user:local"
-export const WORKSHOP_STRATEGY_ID = "strategy:workshop-local" as StrategyId
+export const WORKSHOP_STRATEGY_ID = "strategy:local-workshop" as StrategyId
 export const WORKSHOP_PLAYER_ID = "player:workshop-local" as PlayerId
 export const WORKSHOP_MATCH_SET_PREFIX = "match-set:workshop:"
 
@@ -108,8 +108,13 @@ export const WORKSHOP_OPPONENTS = [
 
 export interface WorkshopRevisionSummary {
   id: StrategyRevisionId
+  strategyId: StrategyId
+  label?: string | undefined
+  notes?: string | undefined
+  createdBy?: string | undefined
   sourceHash: string
   sourceBytes: number
+  valid: boolean
   validation: StrategyRevisionValidationReport
   metadata: StrategyRevision["metadata"]
   createdAt: string
@@ -160,6 +165,33 @@ const presetLabels: Record<MatchSetPresetId, string> = {
   "standard-v1": "Standard",
   "stress-v1": "Stress",
 }
+
+export const LIST_WORKSHOP_REVISIONS_SQL = `
+  select
+    sr.id,
+    sr.strategy_id,
+    sr.source_hash,
+    sr.source_bytes,
+    sr.validation,
+    sr.metadata,
+    sr.created_at,
+    (
+      select count(*)::integer
+      from matches m
+      where m.bottom_strategy_revision_id = sr.id
+         or m.top_strategy_revision_id = sr.id
+    ) as used_in_matches
+  from strategy_revisions sr
+  where sr.strategy_id = $1
+  order by sr.created_at desc, sr.id desc
+`
+
+export const GET_WORKSHOP_REVISION_SOURCE_SQL = `
+  select source
+  from strategy_revisions
+  where id = $1
+    and strategy_id = $2
+`
 
 export const listWorkshopPresets = (): WorkshopPresetSummary[] =>
   (["smoke-v1", "standard-v1", "stress-v1"] as const).map((presetId) => {
@@ -240,38 +272,24 @@ export const listWorkshopRevisions = async (
   await ensureWorkshopSeed(pool)
   const result = await pool.query<{
     id: StrategyRevisionId
+    strategy_id: StrategyId
     source_hash: string
     source_bytes: number
     validation: StrategyRevisionValidationReport
     metadata: StrategyRevision["metadata"]
     created_at: Date
     used_in_matches: number
-  }>(
-    `
-      select
-        sr.id,
-        sr.source_hash,
-        sr.source_bytes,
-        sr.validation,
-        sr.metadata,
-        sr.created_at,
-        (
-          select count(*)::integer
-          from matches m
-          where m.bottom_strategy_revision_id = sr.id
-             or m.top_strategy_revision_id = sr.id
-        ) as used_in_matches
-      from strategy_revisions sr
-      where sr.strategy_id = $1
-      order by sr.created_at desc, sr.id desc
-    `,
-    [WORKSHOP_STRATEGY_ID],
-  )
+  }>(LIST_WORKSHOP_REVISIONS_SQL, [WORKSHOP_STRATEGY_ID])
 
   return result.rows.map((row) => ({
     id: row.id,
+    strategyId: row.strategy_id,
+    label: row.metadata.label,
+    notes: row.metadata.notes,
+    createdBy: row.metadata.createdBy,
     sourceHash: row.source_hash,
     sourceBytes: row.source_bytes,
+    valid: row.validation.valid,
     validation: row.validation,
     metadata: row.metadata,
     createdAt: row.created_at.toISOString(),
@@ -296,12 +314,7 @@ export const getWorkshopRevisionSource = async (
   revisionId: StrategyRevisionId,
 ): Promise<string | null> => {
   const result = await pool.query<{ source: string }>(
-    `
-      select source
-      from strategy_revisions
-      where id = $1
-        and strategy_id = $2
-    `,
+    GET_WORKSHOP_REVISION_SOURCE_SQL,
     [revisionId, WORKSHOP_STRATEGY_ID],
   )
   return result.rows[0]?.source ?? null
