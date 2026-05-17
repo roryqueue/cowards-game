@@ -8,6 +8,7 @@
     "dev": "turbo dev --filter='./apps/*' --filter='./packages/*'",
     "dev:full": "docker compose up -d postgres redis && turbo dev --filter='./apps/*' --filter='./packages/*'",
     "build": "turbo build",
+    "e2e": "playwright test",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^24.10.1",
     "@typescript-eslint/eslint-plugin": "^8.48.1",
     "@typescript-eslint/parser": "^8.48.1",
