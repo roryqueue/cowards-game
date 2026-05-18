@@ -126,7 +126,7 @@ describe("StrategyExecutionAdapter contract", () => {
       default: true,
       runtimeControls: {
         timeout: true,
-        outputByteLimit: false,
+        outputByteLimit: true,
         environment: "empty",
         execArgv: "empty",
       },
@@ -250,8 +250,65 @@ export default {
     expect(!result.ok && result.violation.type).toBe("TIMEOUT")
   })
 
+  it("worker-thread adapter enforces output byte caps before host normalization", () => {
+    const adapter = createWorkerThreadStrategyExecutionAdapter()
+
+    const result = adapter.execute({
+      source: transpileOrThrow(`
+export default {
+  selectActivations() {
+    return { activationOrders: [], strategyMemory: "x".repeat(2048) }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`),
+      methodName: "selectActivations",
+      input: {},
+      timeoutMs: 1_000,
+      outputByteLimit: 128,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("OVERSIZED_OUTPUT")
+  })
+
   for (const adapterFactory of adapterFactories) {
     describe(`${adapterFactory.label} runtime contract`, () => {
+      it.each([
+        ["crypto.randomUUID()", "crypto.randomUUID()"],
+        ["performance.now()", "performance.now()"],
+        ["Buffer.from", 'Buffer.from("abc")'],
+      ])(
+        "blocks nondeterministic global %s at the adapter boundary",
+        (_label, expression) => {
+          const adapter = adapterFactory.createAdapter()
+
+          const result = adapter.execute({
+            source: transpileOrThrow(`
+export default {
+  selectActivations() {
+    ${expression}
+    return { activationOrders: [], strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`),
+            methodName: "selectActivations",
+            input: runtimeInput,
+            timeoutMs: 1_000,
+          })
+
+          expect(result.ok).toBe(false)
+          expect(!result.ok && result.violation.type).toBe(
+            "FORBIDDEN_CAPABILITY",
+          )
+        },
+      )
+
       it("returns schema-normalized valid Strategy output", () => {
         const runtime = createRuntimeFromRevision(
           buildStrategyRevision({ source: validStrategySource }),

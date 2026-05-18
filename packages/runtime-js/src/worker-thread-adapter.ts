@@ -11,6 +11,7 @@ export const createWorkerThreadStrategyExecutionAdapter =
         methodName: request.methodName,
         input: request.input,
         timeoutMs: request.timeoutMs,
+        outputByteLimit: request.outputByteLimit,
       })
     },
   })

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { Pool } from "pg"
 import type { StrategyRuntime } from "@cowards/engine"
 import { createRepositories } from "@cowards/persistence"
+import { buildStrategyRevision } from "@cowards/runtime-js"
 import {
   SubprocessSystemFailure,
   type StrategyExecutionRequest,
@@ -64,23 +65,8 @@ const strategyRevision = (
   id: string,
   source: string = executableStrategySource(id),
 ): StrategyRevision => ({
+  ...buildStrategyRevision({ source }),
   id,
-  source,
-  sourceHash: `${id}:hash`,
-  sourceBytes: source.length,
-  runtime: { name: "runtime-js", version: "test" },
-  engineCompatibility: { spec: "test", engine: "test" },
-  validation: {
-    valid: true,
-    errors: [],
-    warnings: [],
-    sourceBytes: source.length,
-    forbiddenPatterns: [],
-    sourceHash: `${id}:hash`,
-    runtimeVersion: "test",
-    engineCompatibility: { spec: "test", engine: "test" },
-  },
-  metadata: {},
 })
 
 const createCapturingRuntimeConfig = (): WorkerRuntimeConfig => {

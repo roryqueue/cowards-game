@@ -267,8 +267,45 @@ describe("StrategyRuntime execution adapter", () => {
     expect(result.ok).toBe(false)
     expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
     expect(!result.ok && result.violation.message).toBe(
-      "Strategy Revision is not valid",
+      "Strategy Revision failed runtime validation",
     )
+  })
+
+  it("revalidates actual source and rejects forged-valid revision metadata", () => {
+    const runtime = createRuntimeFromRevision(
+      forgedValidRevision(`
+export default {
+  selectActivations() {
+    import("node:fs")
+    return { activationOrders: [], strategyMemory: { forged: true } }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`),
+    )
+
+    const result = runtime.selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
+    expect(!result.ok && result.violation.message).toBe(
+      "Strategy Revision failed runtime validation",
+    )
+  })
+
+  it("rejects source hash drift even when the current source is valid", () => {
+    const revision = buildStrategyRevision({ source: validSource })
+    const runtime = createRuntimeFromRevision({
+      ...revision,
+      sourceHash: "forged-hash",
+    })
+
+    const result = runtime.selectActivations(strategyInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
   })
 
   it("invalid selectActivations output returns INVALID_OUTPUT", () => {
@@ -386,7 +423,7 @@ export default {
     expect(!result.ok && result.violation.type).toBe("TIMEOUT")
   })
 
-  it("forbidden access attempt returns FORBIDDEN_CAPABILITY", () => {
+  it("forged forbidden access attempt fails runtime validation", () => {
     const runtime = createRuntimeFromRevision(
       forgedValidRevision(`
 export default {
@@ -404,10 +441,10 @@ export default {
     const result = runtime.selectActivations(strategyInput)
 
     expect(result.ok).toBe(false)
-    expect(!result.ok && result.violation.type).toBe("FORBIDDEN_CAPABILITY")
+    expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
   })
 
-  it("blocks runtime-only forbidden globals inside the worker", () => {
+  it("forged runtime-only forbidden globals fail runtime validation", () => {
     const runtime = createRuntimeFromRevision(
       forgedValidRevision(`
 export default {
@@ -425,10 +462,10 @@ export default {
     const result = runtime.selectActivations(strategyInput)
 
     expect(result.ok).toBe(false)
-    expect(!result.ok && result.violation.type).toBe("FORBIDDEN_CAPABILITY")
+    expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
   })
 
-  it("blocks Function constructor recovery inside the worker context", () => {
+  it("forged Function constructor recovery fails runtime validation", () => {
     const runtime = createRuntimeFromRevision(
       forgedValidRevision(`
 export default {
@@ -445,7 +482,7 @@ export default {
     const result = runtime.selectActivations(strategyInput)
 
     expect(result.ok).toBe(false)
-    expect(!result.ok && result.violation.type).toBe("FORBIDDEN_CAPABILITY")
+    expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
   })
 
   it("executes valid strategies with leading comments before export default", () => {

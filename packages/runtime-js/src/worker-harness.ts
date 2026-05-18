@@ -61,6 +61,41 @@ const sanitizedMath = new Proxy(Math, {
 
 const toViolation = (type, message) => ({ type, message })
 
+const byteLength = (text) => new TextEncoder().encode(text).length
+
+const outputByteLimit = () =>
+  typeof workerData.outputByteLimit === "number" && workerData.outputByteLimit > 0
+    ? workerData.outputByteLimit
+    : 262144
+
+const capRuntimeResult = (result) => {
+  let serialized
+  try {
+    serialized = JSON.stringify(result)
+  } catch {
+    return {
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "Strategy method must return JSON-only data",
+      },
+    }
+  }
+
+  const capBytes = outputByteLimit()
+  if (byteLength(serialized) > capBytes) {
+    return {
+      ok: false,
+      violation: {
+        type: "OVERSIZED_OUTPUT",
+        message: "Strategy output exceeded " + capBytes + " bytes",
+      },
+    }
+  }
+
+  return result
+}
+
 const isForbiddenCapabilityMessage = (message) =>
   message.startsWith(FORBIDDEN_CAPABILITY) ||
   /code generation from strings/i.test(message)
@@ -87,6 +122,10 @@ const createStrategyModuleSource = (source) =>
     'const WebAssembly = forbiddenFunction("WebAssembly")',
     'const Worker = forbiddenFunction("Worker")',
     'const Date = forbiddenFunction("Date")',
+    'const crypto = forbiddenFunction("crypto")',
+    'const performance = forbiddenFunction("performance")',
+    'const Buffer = forbiddenFunction("Buffer")',
+    'const queueMicrotask = forbiddenFunction("queueMicrotask")',
     'const setTimeout = forbiddenFunction("setTimeout")',
     'const setInterval = forbiddenFunction("setInterval")',
     'const setImmediate = forbiddenFunction("setImmediate")',
@@ -132,7 +171,7 @@ const runStrategy = async (source) => {
 
 const main = async () => {
   try {
-    port.postMessage(await runStrategy(workerData.source))
+    port.postMessage(capRuntimeResult(await runStrategy(workerData.source)))
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     port.postMessage({

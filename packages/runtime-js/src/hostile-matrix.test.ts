@@ -162,7 +162,51 @@ return { activationOrders: [], strategyMemory: {} }
 `),
     method: "selectActivations",
     forgeValidRevision: true,
-    expectedViolations: ["FORBIDDEN_CAPABILITY"],
+    expectedViolations: ["INVALID_OUTPUT", "FORBIDDEN_CAPABILITY"],
+    subprocess: true,
+  },
+  {
+    label: "forbidden global crypto.randomUUID",
+    source: sourceWithSelectBody(`
+crypto.randomUUID()
+return { activationOrders: [], strategyMemory: {} }
+`),
+    method: "selectActivations",
+    forgeValidRevision: true,
+    expectedViolations: ["INVALID_OUTPUT", "FORBIDDEN_CAPABILITY"],
+    subprocess: true,
+  },
+  {
+    label: "forbidden global crypto.getRandomValues",
+    source: sourceWithSelectBody(`
+crypto.getRandomValues(new Uint8Array(1))
+return { activationOrders: [], strategyMemory: {} }
+`),
+    method: "selectActivations",
+    forgeValidRevision: true,
+    expectedViolations: ["INVALID_OUTPUT", "FORBIDDEN_CAPABILITY"],
+    subprocess: true,
+  },
+  {
+    label: "forbidden global performance.now",
+    source: sourceWithSelectBody(`
+performance.now()
+return { activationOrders: [], strategyMemory: {} }
+`),
+    method: "selectActivations",
+    forgeValidRevision: true,
+    expectedViolations: ["INVALID_OUTPUT", "FORBIDDEN_CAPABILITY"],
+    subprocess: true,
+  },
+  {
+    label: "forbidden global Buffer.from",
+    source: sourceWithSelectBody(`
+Buffer.from("abc")
+return { activationOrders: [], strategyMemory: {} }
+`),
+    method: "selectActivations",
+    forgeValidRevision: true,
+    expectedViolations: ["INVALID_OUTPUT", "FORBIDDEN_CAPABILITY"],
     subprocess: true,
   },
   {
@@ -184,7 +228,7 @@ return { activationOrders: [], strategyMemory: {} }
 `),
     method: "selectActivations",
     forgeValidRevision: true,
-    expectedViolations: ["FORBIDDEN_CAPABILITY"],
+    expectedViolations: ["INVALID_OUTPUT", "FORBIDDEN_CAPABILITY"],
     subprocess: true,
   },
   {
@@ -195,7 +239,7 @@ return { activationOrders: [], strategyMemory: {} }
 `),
     method: "selectActivations",
     forgeValidRevision: true,
-    expectedViolations: ["FORBIDDEN_CAPABILITY"],
+    expectedViolations: ["INVALID_OUTPUT", "FORBIDDEN_CAPABILITY"],
     subprocess: true,
   },
   {
@@ -206,7 +250,7 @@ return { activationOrders: [], strategyMemory: {} }
 `),
     method: "selectActivations",
     forgeValidRevision: true,
-    expectedViolations: ["FORBIDDEN_CAPABILITY"],
+    expectedViolations: ["INVALID_OUTPUT", "FORBIDDEN_CAPABILITY"],
     subprocess: true,
   },
   {
@@ -217,7 +261,7 @@ return { activationOrders: [], strategyMemory: {} }
 `),
     method: "selectActivations",
     forgeValidRevision: true,
-    expectedViolations: ["FORBIDDEN_CAPABILITY"],
+    expectedViolations: ["INVALID_OUTPUT", "FORBIDDEN_CAPABILITY"],
     subprocess: true,
   },
   {

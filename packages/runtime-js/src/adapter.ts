@@ -43,11 +43,11 @@ export const workerThreadStrategyExecutionAdapterMetadata: StrategyExecutionAdap
     notes: [
       "Keeps the v1 runtime behavior stable while stronger subprocess, container, or WASM adapters are proven.",
       "Worker threads share a host process, so this boundary must not be treated as production-grade hostile-code isolation.",
-      "The worker bridge starts with env {}, execArgv [], V8 resourceLimits, and a wall-clock timeout.",
+      "The worker bridge starts with env {}, execArgv [], V8 resourceLimits, a wall-clock timeout, and an output byte cap before posting results to the host.",
     ],
     runtimeControls: {
       timeout: true,
-      outputByteLimit: false,
+      outputByteLimit: true,
       environment: "empty",
       execArgv: "empty",
       resourceLimits: [

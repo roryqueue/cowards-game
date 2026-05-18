@@ -61,6 +61,18 @@ export const FORBIDDEN_SOURCE_PATTERNS = [
     code: "FORBIDDEN_PATTERN",
     regex: /\bMath\.random\s*\(/,
   },
+  { pattern: "crypto", code: "FORBIDDEN_PATTERN", regex: /\bcrypto\b/ },
+  {
+    pattern: "performance",
+    code: "FORBIDDEN_PATTERN",
+    regex: /\bperformance\b/,
+  },
+  { pattern: "Buffer", code: "FORBIDDEN_PATTERN", regex: /\bBuffer\b/ },
+  {
+    pattern: "queueMicrotask",
+    code: "FORBIDDEN_PATTERN",
+    regex: /\bqueueMicrotask\s*\(/,
+  },
   { pattern: "Worker", code: "FORBIDDEN_PATTERN", regex: /\bWorker\s*\(/ },
   {
     pattern: "worker_threads",

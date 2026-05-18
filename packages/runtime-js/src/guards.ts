@@ -1,6 +1,7 @@
 import type { RuntimeViolation, RuntimeViolationType } from "@cowards/spec"
 
 export const RUNTIME_TIMEOUT_MS = 50
+export const RUNTIME_OUTPUT_BYTES = 256 * 1024
 
 export const createRuntimeViolation = (
   type: RuntimeViolationType,

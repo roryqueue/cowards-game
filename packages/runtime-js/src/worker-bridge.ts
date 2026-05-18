@@ -5,7 +5,7 @@ import {
 } from "node:worker_threads"
 import type { RuntimeResult } from "@cowards/engine"
 import type { StrategyMethodName } from "./adapter.js"
-import { RUNTIME_TIMEOUT_MS } from "./guards.js"
+import { RUNTIME_OUTPUT_BYTES, RUNTIME_TIMEOUT_MS } from "./guards.js"
 import { WORKER_HARNESS_SOURCE } from "./worker-harness.js"
 
 type WorkerResult =
@@ -46,6 +46,7 @@ export const runStrategyMethodInWorker = (args: {
   methodName: StrategyMethodName
   input: unknown
   timeoutMs?: number | undefined
+  outputByteLimit?: number | undefined
 }): RuntimeResult<unknown> => {
   const signalBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)
   const signal = new Int32Array(signalBuffer)
@@ -55,6 +56,7 @@ export const runStrategyMethodInWorker = (args: {
       source: args.source,
       methodName: args.methodName,
       input: args.input,
+      outputByteLimit: args.outputByteLimit ?? RUNTIME_OUTPUT_BYTES,
       port: port2,
       signalBuffer,
     },

@@ -12,6 +12,7 @@ import {
   type StrategyRuntime,
 } from "@cowards/engine"
 import {
+  RUNTIME_OUTPUT_BYTES,
   RUNTIME_TIMEOUT_MS,
   toInvalidOutputViolation,
   toOversizedOutputViolation,
@@ -19,6 +20,7 @@ import {
 import { transpileStrategySource } from "./transpile.js"
 import type { StrategyExecutionAdapter } from "./adapter.js"
 import { workerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
+import { validateStrategySource } from "./validation.js"
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value !== null &&
@@ -88,13 +90,22 @@ const executableSource = (
 ):
   | { ok: true; source: string }
   | { ok: false; violation: RuntimeViolation } => {
-  if (!revision.validation.valid) {
+  const validation = validateStrategySource(revision.source, {
+    runtimeVersion: revision.runtime.version,
+    specVersion: revision.engineCompatibility.spec,
+    engineVersion: revision.engineCompatibility.engine,
+  })
+
+  if (
+    !validation.valid ||
+    validation.sourceHash !== revision.sourceHash ||
+    validation.sourceBytes !== revision.sourceBytes
+  ) {
     return {
       ok: false,
-      violation: {
-        type: "INVALID_OUTPUT",
-        message: "Strategy Revision is not valid",
-      },
+      violation: toInvalidOutputViolation(
+        "Strategy Revision failed runtime validation",
+      ),
     }
   }
 
@@ -114,6 +125,7 @@ const WORKER_STARTUP_TIMEOUT_MS = RUNTIME_TIMEOUT_MS * 10
 export interface CreateRuntimeFromRevisionOptions {
   adapter?: StrategyExecutionAdapter | undefined
   timeoutMs?: number | undefined
+  outputByteLimit?: number | undefined
 }
 
 export const createRuntimeFromRevision = (
@@ -122,6 +134,7 @@ export const createRuntimeFromRevision = (
 ): StrategyRuntime => {
   const adapter = options.adapter ?? workerThreadStrategyExecutionAdapter
   const timeoutMs = options.timeoutMs ?? WORKER_STARTUP_TIMEOUT_MS
+  const outputByteLimit = options.outputByteLimit ?? RUNTIME_OUTPUT_BYTES
 
   return {
     selectActivations(input) {
@@ -135,6 +148,7 @@ export const createRuntimeFromRevision = (
         methodName: "selectActivations",
         input,
         timeoutMs,
+        outputByteLimit,
       })
       if (!result.ok) {
         return result
@@ -154,6 +168,7 @@ export const createRuntimeFromRevision = (
         methodName: "soldierBrain",
         input,
         timeoutMs,
+        outputByteLimit,
       })
       if (!result.ok) {
         return result
