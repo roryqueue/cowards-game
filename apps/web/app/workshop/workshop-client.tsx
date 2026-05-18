@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import type { StrategyRevisionValidationReport } from "@cowards/spec"
 import { StrategySourceEditor } from "./monaco-editor.js"
 import type {
+  WorkshopSampleSummary,
   WorkshopSnapshot,
   WorkshopTemplateSummary,
   WorkshopTestSummary,
@@ -13,12 +14,16 @@ import {
   canOpenReplay,
   formatMatchOutcome,
   formatUsedInMatches,
+  formatValidationIssueGuidance,
   formatValidationIssueHeading,
   getReplayHref,
   getDraftStatusClass,
   getDraftStatusLabel,
+  getReplayAvailability,
+  getSampleKindLabel,
   getTestStatusCopy,
   getSubmitBlockedReason,
+  groupWorkshopSamples,
   isTerminalTestStatus,
   prependRevision,
   validationStateFromReport,
@@ -38,6 +43,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState(
     firstTemplate?.id ?? "",
   )
+  const [selectedSampleId, setSelectedSampleId] = useState("")
   const [source, setSource] = useState(
     firstTemplate?.source ?? initialData.templateSource,
   )
@@ -73,8 +79,12 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     () =>
       initialData.templates.find(
         (template) => template.id === selectedTemplateId,
-      ) ?? firstTemplate,
-    [firstTemplate, initialData.templates, selectedTemplateId],
+      ) ?? null,
+    [initialData.templates, selectedTemplateId],
+  )
+  const sampleGroups = useMemo(
+    () => groupWorkshopSamples(initialData.samples),
+    [initialData.samples],
   )
 
   const currentValidation = validationSource === source ? validation : null
@@ -130,9 +140,22 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       return
     }
     setSelectedTemplateId(template.id)
+    setSelectedSampleId("")
     setSource(template.source)
     setValidation(template.validation)
     setValidationSource(template.source)
+    setIsDirty(false)
+  }
+
+  const applySample = (sample: WorkshopSampleSummary) => {
+    if (isDirty && !window.confirm(replaceDraftCopy)) {
+      return
+    }
+    setSelectedTemplateId("")
+    setSelectedSampleId(sample.id)
+    setSource(sample.source)
+    setValidation(sample.validation)
+    setValidationSource(sample.source)
     setIsDirty(false)
   }
 
@@ -272,7 +295,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
           </section>
 
           <section className="workshop-panel workshop-template-panel">
-            <h2 className="workshop-heading">Templates</h2>
+            <h2 className="workshop-heading">Sample Strategies</h2>
             <div className="workshop-list">
               {initialData.templates.map((template) => (
                 <button
@@ -285,6 +308,47 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 </button>
               ))}
             </div>
+            {initialData.samples.length ? (
+              <div
+                className="workshop-list"
+                data-testid="workshop-sample-catalog"
+              >
+                <p className="workshop-label">Starter samples</p>
+                {sampleGroups.starters.map((sample) => (
+                  <button
+                    className={`workshop-list-row ${sample.id === selectedSampleId ? "active" : ""}`}
+                    data-sample-id={sample.id}
+                    data-testid="workshop-sample-row"
+                    key={sample.id}
+                    onClick={() => applySample(sample)}
+                    type="button"
+                  >
+                    <span>{sample.label}</span>
+                    <span className="workshop-muted">{sample.description}</span>
+                    <span className="workshop-chip valid">
+                      {getSampleKindLabel(sample)}
+                    </span>
+                  </button>
+                ))}
+                <p className="workshop-label">Failure-mode samples</p>
+                {sampleGroups.failureModes.map((sample) => (
+                  <button
+                    className={`workshop-list-row ${sample.id === selectedSampleId ? "active" : ""}`}
+                    data-sample-id={sample.id}
+                    data-testid="workshop-sample-row"
+                    key={sample.id}
+                    onClick={() => applySample(sample)}
+                    type="button"
+                  >
+                    <span>{sample.label}</span>
+                    <span className="workshop-muted">{sample.description}</span>
+                    <span className="workshop-chip">
+                      {getSampleKindLabel(sample)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <p className="workshop-muted">{replaceDraftCopy}</p>
           </section>
 
@@ -360,13 +424,34 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
               {getDraftStatusLabel(draftState)}
             </p>
             {validation?.errors.length ? (
-              <ul className="validation-list">
+              <ul
+                className="validation-list"
+                data-testid="workshop-validation-guidance-list"
+              >
                 {validation.errors.map((issue, index) => (
-                  <li className="validation-row" key={`${issue.code}-${index}`}>
+                  <li
+                    className="validation-row"
+                    data-testid="workshop-validation-guidance-row"
+                    data-validation-code={issue.code}
+                    key={`${issue.code}-${index}`}
+                  >
                     <span className="validation-code">
                       {formatValidationIssueHeading(issue)}
                     </span>
-                    {issue.message}
+                    {(() => {
+                      const guidance = formatValidationIssueGuidance(issue)
+                      return (
+                        <>
+                          <span>Constraint: {guidance.constraint}</span>
+                          {guidance.message === guidance.constraint ? null : (
+                            <span>{guidance.message}</span>
+                          )}
+                          {guidance.remediation ? (
+                            <span>Next: {guidance.remediation}</span>
+                          ) : null}
+                        </>
+                      )
+                    })()}
                   </li>
                 ))}
               </ul>
@@ -521,33 +606,40 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 ) : null}
                 {testResult.matches.length ? (
                   <div className="workshop-match-list" aria-label="Matches">
-                    {testResult.matches.map((match) => (
-                      <div className="workshop-match-row" key={match.matchId}>
-                        <div className="workshop-match-main">
+                    {testResult.matches.map((match) => {
+                      const replay = getReplayAvailability(match)
+                      return (
+                        <div className="workshop-match-row" key={match.matchId}>
+                          <div className="workshop-match-main">
+                            <span
+                              className="workshop-match-id"
+                              title={match.matchId}
+                            >
+                              {match.matchId}
+                            </span>
+                            <span className="workshop-muted">
+                              {match.status} · {formatMatchOutcome(match)}
+                            </span>
+                          </div>
                           <span
-                            className="workshop-match-id"
-                            title={match.matchId}
+                            className="workshop-muted"
+                            data-replay-state={replay.state}
+                            data-testid="workshop-replay-availability"
                           >
-                            {match.matchId}
-                          </span>
-                          <span className="workshop-muted">
-                            {match.status} · {formatMatchOutcome(match)}
+                            {canOpenReplay(match) ? (
+                              <a
+                                className="workshop-replay-link"
+                                href={getReplayHref(match.matchId)}
+                              >
+                                {replay.label}
+                              </a>
+                            ) : (
+                              replay.reason
+                            )}
                           </span>
                         </div>
-                        {canOpenReplay(match) ? (
-                          <a
-                            className="workshop-replay-link"
-                            href={getReplayHref(match.matchId)}
-                          >
-                            Open replay
-                          </a>
-                        ) : (
-                          <span className="workshop-muted">
-                            Replay unavailable
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : null}
               </div>

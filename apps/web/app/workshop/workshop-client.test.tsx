@@ -4,16 +4,49 @@ import {
   canOpenReplay,
   formatMatchOutcome,
   formatUsedInMatches,
+  formatValidationIssueGuidance,
   formatValidationIssueHeading,
+  getSampleKindLabel,
   getDraftStatusLabel,
+  getReplayAvailability,
   getReplayHref,
   getRevisionTitle,
   getSubmitBlockedReason,
   getTestStatusCopy,
+  groupWorkshopSamples,
   isTerminalTestStatus,
   prependRevision,
   validationStateFromReport,
 } from "./workshop-client-state.js"
+
+const validReport = {
+  valid: true,
+  errors: [],
+  warnings: [],
+  sourceBytes: 123,
+  forbiddenPatterns: [],
+  sourceHash: "abcdef123456",
+  runtimeVersion: "runtime-js-v1",
+  engineCompatibility: {
+    spec: "spec-v1",
+    engine: "engine-v1",
+  },
+}
+
+const invalidReport = {
+  ...validReport,
+  valid: false,
+  errors: [
+    {
+      code: "MISSING_DEFAULT_EXPORT" as const,
+      severity: "error" as const,
+      message: "Strategy source must contain export default",
+      constraint: "Strategy API requires an export default Strategy object.",
+      remediation: "Add export default with the Strategy methods.",
+      reference: "samples/minimal-strategy",
+    },
+  ],
+}
 
 describe("Strategy Workshop validation helpers", () => {
   it("formats the Strategy Workshop status labels", () => {
@@ -31,6 +64,38 @@ describe("Strategy Workshop validation helpers", () => {
         message: "Strategy source must contain export default",
       }),
     ).toBe("ERROR · MISSING_DEFAULT_EXPORT")
+  })
+
+  it("formats validation issue guidance from constraint and remediation fields", () => {
+    expect(
+      formatValidationIssueGuidance({
+        code: "MISSING_DEFAULT_EXPORT",
+        severity: "error",
+        message: "Strategy source must contain export default",
+        constraint: "Strategy API requires an export default Strategy object.",
+        remediation: "Add export default with the Strategy methods.",
+      }),
+    ).toEqual({
+      constraint: "Strategy API requires an export default Strategy object.",
+      message: "Strategy source must contain export default",
+      remediation: "Add export default with the Strategy methods.",
+      reference: null,
+    })
+  })
+
+  it("falls back to the validation issue message when guidance fields are absent", () => {
+    expect(
+      formatValidationIssueGuidance({
+        code: "MISSING_DEFAULT_EXPORT",
+        severity: "error",
+        message: "Strategy source must contain export default",
+      }),
+    ).toEqual({
+      constraint: "Strategy source must contain export default",
+      message: "Strategy source must contain export default",
+      remediation: null,
+      reference: null,
+    })
   })
 
   it("derives invalid state from a failed validation report", () => {
@@ -176,5 +241,88 @@ describe("Strategy Workshop validation helpers", () => {
       }),
     ).toBe("Replay unavailable")
     expect("Open replay").toBe("Open replay")
+  })
+
+  it("formats replay availability for every Workshop handoff state", () => {
+    expect(
+      getReplayAvailability({
+        matchId: "match:complete",
+        status: "complete",
+        hasReplay: true,
+      }),
+    ).toEqual({
+      state: "available",
+      label: "Open replay",
+      href: "/matches/match%3Acomplete/replay",
+      reason: null,
+    })
+    expect(
+      getReplayAvailability({
+        matchId: "match:pending",
+        status: "pending",
+        hasReplay: false,
+      }).reason,
+    ).toBe(
+      "Replay will appear after this Match leaves the queue and stores a Chronicle.",
+    )
+    expect(
+      getReplayAvailability({
+        matchId: "match:running",
+        status: "running",
+        hasReplay: false,
+      }).reason,
+    ).toBe(
+      "Replay will appear after the Match completes and its Chronicle is stored.",
+    )
+    expect(
+      getReplayAvailability({
+        matchId: "match:failed",
+        status: "failed_system",
+        hasReplay: false,
+      }).reason,
+    ).toBe(
+      "Replay unavailable because the Match failed before a Chronicle could be stored.",
+    )
+    expect(
+      getReplayAvailability({
+        matchId: "match:blocked",
+        status: "blocked",
+        hasReplay: false,
+      }).reason,
+    ).toBe("Replay unavailable because the Match was blocked before execution.")
+    expect(
+      getReplayAvailability({
+        matchId: "match:no-chronicle",
+        status: "complete",
+        hasReplay: false,
+      }).reason,
+    ).toBe("Replay unavailable: this completed Match has no stored Chronicle.")
+  })
+
+  it("groups starter samples separately from failure-mode samples", () => {
+    const starter = {
+      id: "sample:basic-advance" as const,
+      label: "Basic advance and turn",
+      description: "Advance when clear, otherwise turn.",
+      source: "export default {}",
+      validation: validReport,
+      sampleKind: "starter" as const,
+    }
+    const failureMode = {
+      id: "sample:invalid-output" as const,
+      label: "Invalid output",
+      description: "Returns an Action payload that fails schema validation.",
+      source: "export default {}",
+      validation: invalidReport,
+      sampleKind: "failure-mode" as const,
+      expectedValidationCode: "MISSING_DEFAULT_EXPORT" as const,
+    }
+
+    const groups = groupWorkshopSamples([failureMode, starter])
+
+    expect(groups.starters).toEqual([starter])
+    expect(groups.failureModes).toEqual([failureMode])
+    expect(getSampleKindLabel(starter)).toBe("Valid sample")
+    expect(getSampleKindLabel(failureMode)).toBe("Failure mode")
   })
 })

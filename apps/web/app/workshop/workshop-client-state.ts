@@ -1,5 +1,6 @@
 import type { StrategyRevisionValidationReport } from "@cowards/spec"
 import type { WorkshopRevisionSummary } from "./types.js"
+import type { WorkshopSampleSummary } from "./types.js"
 import type { WorkshopTestSummary } from "./types.js"
 
 export type DraftValidationState =
@@ -30,6 +31,32 @@ export const formatValidationIssueHeading = (
   issue: StrategyRevisionValidationReport["errors"][number],
 ): string => `${issue.severity.toUpperCase()} · ${issue.code}`
 
+export interface ValidationIssueGuidance {
+  constraint: string
+  message: string
+  remediation: string | null
+  reference: string | null
+}
+
+export const formatValidationIssueGuidance = (
+  issue: StrategyRevisionValidationReport["errors"][number],
+): ValidationIssueGuidance => {
+  if (issue.constraint && issue.remediation) {
+    return {
+      constraint: issue.constraint,
+      message: issue.message,
+      remediation: issue.remediation,
+      reference: issue.reference ?? null,
+    }
+  }
+  return {
+    constraint: issue.message,
+    message: issue.message,
+    remediation: null,
+    reference: issue.reference ?? null,
+  }
+}
+
 export const validationStateFromReport = (
   report: StrategyRevisionValidationReport | null,
   checking: boolean,
@@ -42,6 +69,25 @@ export const validationStateFromReport = (
   }
   return report.valid ? "valid" : "invalid"
 }
+
+export interface WorkshopSampleGroups {
+  starters: WorkshopSampleSummary[]
+  failureModes: WorkshopSampleSummary[]
+}
+
+export const groupWorkshopSamples = (
+  samples: WorkshopSampleSummary[],
+): WorkshopSampleGroups => ({
+  starters: samples.filter((sample) => sample.sampleKind === "starter"),
+  failureModes: samples.filter(
+    (sample) => sample.sampleKind === "failure-mode",
+  ),
+})
+
+export const getSampleKindLabel = (
+  sample: WorkshopSampleSummary,
+): "Valid sample" | "Failure mode" =>
+  sample.sampleKind === "starter" ? "Valid sample" : "Failure mode"
 
 export const canSubmitRevision = (input: {
   validation: StrategyRevisionValidationReport | null
@@ -115,6 +161,75 @@ export const getReplayHref = (matchId: string): string =>
 
 export const canOpenReplay = (match: WorkshopMatchSummary): boolean =>
   match.status === "complete" && match.hasReplay === true
+
+export type ReplayAvailability =
+  | {
+      state: "available"
+      label: "Open replay"
+      href: string
+      reason: null
+    }
+  | {
+      state: "unavailable"
+      label: "Replay unavailable"
+      href: null
+      reason: string
+    }
+
+export const getReplayAvailability = (
+  match: WorkshopMatchSummary,
+): ReplayAvailability => {
+  if (canOpenReplay(match)) {
+    return {
+      state: "available",
+      label: "Open replay",
+      href: getReplayHref(match.matchId),
+      reason: null,
+    }
+  }
+  switch (match.status) {
+    case "pending":
+      return {
+        state: "unavailable",
+        label: "Replay unavailable",
+        href: null,
+        reason:
+          "Replay will appear after this Match leaves the queue and stores a Chronicle.",
+      }
+    case "running":
+      return {
+        state: "unavailable",
+        label: "Replay unavailable",
+        href: null,
+        reason:
+          "Replay will appear after the Match completes and its Chronicle is stored.",
+      }
+    case "failed_system":
+      return {
+        state: "unavailable",
+        label: "Replay unavailable",
+        href: null,
+        reason:
+          "Replay unavailable because the Match failed before a Chronicle could be stored.",
+      }
+    case "blocked":
+      return {
+        state: "unavailable",
+        label: "Replay unavailable",
+        href: null,
+        reason:
+          "Replay unavailable because the Match was blocked before execution.",
+      }
+    case "complete":
+      return {
+        state: "unavailable",
+        label: "Replay unavailable",
+        href: null,
+        reason:
+          "Replay unavailable: this completed Match has no stored Chronicle.",
+      }
+  }
+}
 
 const outcomeRecord = (
   outcome: WorkshopMatchSummary["outcome"],
