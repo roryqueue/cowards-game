@@ -392,4 +392,21 @@ describe("validateChronicleGrammar", () => {
 
     expectErrorCode(chronicle, "EVENT_WINDOW_INVALID")
   })
+
+  it("rejects abandoning an open Cycle before ACTION_EMITTED", () => {
+    const chronicle = mutateFirstEvent(
+      cloneChronicle(createChronicle()),
+      "ACTION_EMITTED",
+      (event) => ({
+        ...event,
+        type: "MOVE_BLOCKED",
+        payload: {
+          soldierId: event.context.soldierId ?? "missing-soldier",
+          reason: "BLOCKED_BY_STONE",
+        },
+      }),
+    )
+
+    expectErrorCode(chronicle, "EVENT_WINDOW_INVALID")
+  })
 })

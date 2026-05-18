@@ -581,6 +581,21 @@ export const validateChronicleGrammar = (
       continue
     }
 
+    if (
+      state.activeCycleIndex !== undefined &&
+      event.type !== "ACTION_EMITTED" &&
+      event.type !== "RUNTIME_VIOLATION"
+    ) {
+      errors.push(
+        error(
+          "EVENT_WINDOW_INVALID",
+          `${event.type} cannot occur before ACTION_EMITTED closes the active Cycle.`,
+          event,
+          { expected: "ACTION_EMITTED before non-Cycle event" },
+        ),
+      )
+    }
+
     switch (event.type) {
       case "MATCH_STARTED":
         if (state.matchStarted) {
@@ -619,10 +634,33 @@ export const validateChronicleGrammar = (
         requireRoundOpen(errors, event, state)
         requireRoundContext(errors, event, state.activeRoundNumber)
         requireStringContext(errors, event, "actingPlayerId")
+        if (
+          state.activeCycleIndex !== undefined &&
+          readPayloadString(event, "soldierId") === undefined
+        ) {
+          errors.push(
+            error(
+              "EVENT_WINDOW_INVALID",
+              "RUNTIME_VIOLATION must identify the Soldier when closing an active Cycle.",
+              event,
+              { expected: "payload.soldierId" },
+            ),
+          )
+        }
         if (readPayloadString(event, "soldierId") !== undefined) {
           requireActivationOpen(errors, event, state)
           requireActivationContext(errors, event, state.activeActivation)
           validateSoldierPayload(errors, event)
+        }
+        if (
+          state.activeCycleIndex !== undefined &&
+          state.activeActivation !== undefined
+        ) {
+          state.activeActivation = {
+            ...state.activeActivation,
+            nextCycleIndex: state.activeActivation.nextCycleIndex + 1,
+          }
+          state.activeCycleIndex = undefined
         }
         validatePlayerPayload(errors, event)
         break
@@ -746,13 +784,6 @@ export const validateChronicleGrammar = (
       }
     }
 
-    if (
-      !CYCLE_EVENT_TYPES.has(event.type) &&
-      event.type !== "ACTION_EMITTED" &&
-      state.activeCycleIndex !== undefined
-    ) {
-      state.activeCycleIndex = undefined
-    }
     if (
       !ACTIVATION_EVENT_TYPES.has(event.type) &&
       event.type !== "MATCH_ENDED"

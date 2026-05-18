@@ -1,6 +1,6 @@
 ---
 phase: 09-strict-chronicle-grammar-and-compatibility
-reviewed: 2026-05-18T16:36:45Z
+reviewed: 2026-05-18T16:45:38Z
 depth: deep
 files_reviewed: 20
 files_reviewed_list:
@@ -25,12 +25,14 @@ files_reviewed_list:
   - packages/spec/src/types.ts
   - packages/test-utils/src/replay-scenarios.legality.test.ts
 findings:
-  critical: 3
+  critical: 1
   warning: 0
   info: 0
-  total: 3
-status: fixed
+  total: 1
+status: issues_found
 fixed: 2026-05-18T16:41:20Z
+re_reviewed: 2026-05-18T16:45:38Z
+re_review_scope_commit: a43844d0f7737e5cff41a04c562e03d7e47f8b9c
 ---
 
 # Phase 9: Code Review Report
@@ -148,3 +150,55 @@ pnpm --filter @cowards/web typecheck
 ```
 
 Result: pass.
+
+## Re-review: Issues Found
+
+**Re-reviewed:** 2026-05-18T16:45:38Z
+**Scope:** fix commit `a43844d0f7737e5cff41a04c562e03d7e47f8b9c`
+**Status:** issues_found
+
+Prior findings re-check:
+
+- CR-01: Closed. Per-instance Round and Activation boundary snapshots are required, and legal built Chronicle boundary fixtures pass.
+- CR-02: Still open. Activation index bounds and cycle index bounds are covered, but the Awareness -> Action cycle pair can still be broken.
+- CR-03: Closed. Mutating replay events now fail closed when they reference unknown Soldiers.
+
+Verification run during re-review:
+
+```bash
+pnpm --filter @cowards/replay test -- validate.test.ts grammar.test.ts snapshot-boundaries.test.ts replay-transition.test.ts reconstruct.test.ts project.test.ts
+pnpm --filter @cowards/test-utils test -- replay-scenarios.legality.test.ts
+```
+
+Result: pass. Additional direct probe mutated a legal built Chronicle's first `ACTION_EMITTED` into `MOVE_BLOCKED`; `validateChronicle(mutated)` returned `{ ok: true }`.
+
+### RR-01: BLOCKER - Open Cycles Can Be Abandoned Without ACTION_EMITTED
+
+**File:** `packages/replay/src/grammar.ts:749`
+**Issue:** `AWARENESS_GRID_OBSERVED` opens a Cycle by setting `state.activeCycleIndex`, but the cleanup block clears that open Cycle whenever the next event is not in `CYCLE_EVENT_TYPES`. That allows a non-cycle event such as `MOVE_BLOCKED`, `TURN_RESOLVED`, or `SOLDIER_STONED` to replace the required `ACTION_EMITTED`. I reproduced this by mutating a legal built Chronicle's first `ACTION_EMITTED` to `MOVE_BLOCKED` with a valid payload; integrated `validateChronicle` returned `{ ok: true }`. This leaves CR-02 partially unfixed because the validator still accepts impossible Cycle sequencing.
+**Fix:** Before handling any event other than `ACTION_EMITTED`, reject if `state.activeCycleIndex` is open. Do not silently clear the cycle in the generic cleanup path.
+
+```ts
+if (
+  state.activeCycleIndex !== undefined &&
+  event.type !== "ACTION_EMITTED" &&
+  event.type !== "AWARENESS_GRID_OBSERVED"
+) {
+  errors.push(
+    error(
+      "EVENT_WINDOW_INVALID",
+      `${event.type} cannot occur before ACTION_EMITTED closes the active Cycle.`,
+      event,
+      { expected: "ACTION_EMITTED before non-Cycle event" },
+    ),
+  )
+}
+```
+
+Then remove the cleanup branch that resets `state.activeCycleIndex` for arbitrary non-cycle events, and add an integrated regression test that mutates a legal built Chronicle's `ACTION_EMITTED` into a valid no-op event such as `MOVE_BLOCKED` and expects `EVENT_WINDOW_INVALID`.
+
+## Re-review Fix Verification
+
+**Fixed:** 2026-05-18T16:47:00Z
+
+RR-01 was fixed by rejecting any non-`ACTION_EMITTED` event while a Cycle is open, except Soldier-scoped `RUNTIME_VIOLATION`, which legally closes a Cycle when Strategy code fails before emitting an Action. The generic cleanup branch that silently cleared `activeCycleIndex` was removed. Added a regression that mutates `ACTION_EMITTED` into `MOVE_BLOCKED` and expects `EVENT_WINDOW_INVALID`.
