@@ -199,7 +199,7 @@ describe("Match replay server facade", () => {
     })
   })
 
-  it("returns [projection] invalid Chronicle diagnostics", async () => {
+  it("returns validation diagnostics for invalid Chronicles", async () => {
     const stored = createStoredChronicle()
     stored.artifact.events = stored.artifact.events
       .slice(1)
@@ -222,7 +222,41 @@ describe("Match replay server facade", () => {
     }
     expect(response.matchId).toBe("match:replay-test")
     expect(response.reason).toBe("invalid-chronicle")
-    expect(response.message).toContain("[projection]")
+    expect(response.message).toContain("[validation]")
+    expect(response.message).toContain("EVENT_ORDER_INVALID")
+  })
+
+  it("returns validation diagnostics before rendering incompatible Chronicles", async () => {
+    const stored = createStoredChronicle()
+    stored.artifact = {
+      ...stored.artifact,
+      reproducibility: {
+        ...stored.artifact.reproducibility,
+        versions: {
+          ...stored.artifact.reproducibility.versions,
+          engine: "999.0.0",
+        },
+      },
+    }
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+    })
+
+    const response = await server.getMatchReplay("match:replay-test")
+
+    expect(response.status).toBe("unavailable")
+    if (response.status !== "unavailable") {
+      return
+    }
+    expect(response.matchId).toBe("match:replay-test")
+    expect(response.reason).toBe("invalid-chronicle")
+    expect(response.message).toContain("[validation]")
+    expect(response.message).toContain("VERSION_INCOMPATIBLE")
+    expect(response.message).toContain("engine")
+    expect(JSON.stringify(response)).not.toContain("PRIVATE_STRATEGY_MEMORY")
   })
 
   it("decodes URL-encoded persisted Match ids before Chronicle lookup", async () => {

@@ -1,5 +1,13 @@
-import type { JsonValue, SoldierBrainInput, StrategyInput } from "@cowards/spec"
-import { COMPATIBILITY_VERSIONS } from "@cowards/spec"
+import type {
+  ChronicleValidationErrorCode,
+  JsonValue,
+  SoldierBrainInput,
+  StrategyInput,
+} from "@cowards/spec"
+import {
+  ChronicleValidationErrorCodeSchema,
+  COMPATIBILITY_VERSIONS,
+} from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import type { StrategyRuntime } from "@cowards/engine"
 import { buildChronicleFromMatch } from "./build.js"
@@ -53,6 +61,14 @@ const errorCodes = (value: unknown) => {
   return result.ok ? [] : result.errors.map((error) => error.code)
 }
 
+const grammarErrorCodes = [
+  "EVENT_WINDOW_INVALID",
+  "CONTEXT_MISSING",
+  "CONTEXT_MISMATCH",
+  "PAYLOAD_INCONSISTENT",
+  "SNAPSHOT_BOUNDARY_INVALID",
+] as const satisfies readonly ChronicleValidationErrorCode[]
+
 describe("validateChronicle", () => {
   it("accepts a valid Chronicle with matching integrity", () => {
     const chronicle = createChronicle()
@@ -62,6 +78,12 @@ describe("validateChronicle", () => {
     }
 
     expect(validateChronicle(withIntegrity)).toEqual({ ok: true })
+  })
+
+  it("accepts grammar-specific validation codes in the schema contract", () => {
+    for (const code of grammarErrorCodes) {
+      expect(ChronicleValidationErrorCodeSchema.parse(code)).toBe(code)
+    }
   })
 
   it("returns typed schema and version errors", () => {
@@ -80,6 +102,27 @@ describe("validateChronicle", () => {
         events: [],
       }),
     ).toMatchObject({ code: "UNSUPPORTED_MIGRATION" })
+  })
+
+  it("keeps malformed shape diagnostics under SCHEMA_INVALID issue details", () => {
+    const result = validateChronicle({ schemaVersion: "chronicle-v1" })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) {
+      return
+    }
+    expect(result.errors[0]).toMatchObject({
+      code: "SCHEMA_INVALID",
+      message: "Chronicle does not match the canonical schema.",
+    })
+    expect(result.errors[0]?.actual).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "reproducibility",
+          message: expect.any(String),
+        }),
+      ]),
+    )
   })
 
   it("returns semantic validation errors during current-version migration", () => {
@@ -113,6 +156,26 @@ describe("validateChronicle", () => {
         }),
       ),
     ).toMatchObject({ code: "HASH_MISMATCH" })
+  })
+
+  it("uses stable validation codes for current-version semantic failures", () => {
+    const chronicle = createChronicle()
+    const result = validateChronicle({
+      ...chronicle,
+      events: chronicle.events.map((event, index) =>
+        index === 1 ? { ...event, sequence: 3 } : event,
+      ),
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) {
+      return
+    }
+    expect(result.errors[0]).toMatchObject({
+      code: "EVENT_ORDER_INVALID",
+      message: expect.any(String),
+    })
+    expect(result.errors[0]?.code).not.toContain("Expected")
   })
 
   it("rejects corrupted replay-driving event payloads during validation", () => {
@@ -152,18 +215,46 @@ describe("validateChronicle", () => {
     }
   })
 
-  it("detects incompatible component versions", () => {
+  it.each(Object.keys(COMPATIBILITY_VERSIONS) as Array<
+    keyof typeof COMPATIBILITY_VERSIONS
+  >)("detects incompatible %s versions", (versionKey) => {
+    const chronicle = createChronicle()
+    const actual = `${COMPATIBILITY_VERSIONS[versionKey]}-unsupported`
+
+    const result = validateChronicle({
+      ...chronicle,
+      reproducibility: {
+        ...chronicle.reproducibility,
+        versions: { ...COMPATIBILITY_VERSIONS, [versionKey]: actual },
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) {
+      return
+    }
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        code: "VERSION_INCOMPATIBLE",
+        message: `Unsupported ${versionKey} version.`,
+        expected: COMPATIBILITY_VERSIONS[versionKey],
+        actual,
+      }),
+    )
+  })
+
+  it("keeps current compatibility versions accepted", () => {
     const chronicle = createChronicle()
 
     expect(
-      errorCodes({
+      validateChronicle({
         ...chronicle,
         reproducibility: {
           ...chronicle.reproducibility,
-          versions: { ...COMPATIBILITY_VERSIONS, engine: "999.0.0" },
+          versions: COMPATIBILITY_VERSIONS,
         },
       }),
-    ).toContain("VERSION_INCOMPATIBLE")
+    ).toEqual({ ok: true })
   })
 
   it("detects event order, required event, snapshot, and hash failures", () => {

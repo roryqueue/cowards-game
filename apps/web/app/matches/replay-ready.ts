@@ -72,11 +72,12 @@ const buildTimeline = (
 const projectionFailure = (
   matchId: ReplayMetadataDto["matchId"],
   message: string,
+  source: "projection" | "validation" = "projection",
 ): ReplayPageData => ({
   status: "unavailable",
   matchId,
   reason: "invalid-chronicle",
-  message: `[projection] ${message}`,
+  message: `[${source}] ${message}`,
 })
 
 export interface BuildReadyReplayFromChronicleInput {
@@ -99,9 +100,13 @@ export const buildReadyReplayFromChronicle = ({
   const replayResult = createReplay(chronicle)
 
   if (!replayResult.ok) {
+    const firstError = replayResult.errors[0]
     return projectionFailure(
       metadata.matchId,
-      replayResult.errors[0]?.message ?? "Chronicle could not be replayed.",
+      firstError === undefined
+        ? "Chronicle could not be replayed."
+        : `${firstError.code}: ${firstError.message}`,
+      "validation",
     )
   }
 
