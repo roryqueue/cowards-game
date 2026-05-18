@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "turbo dev --filter='./apps/*' --filter='./packages/*'",
     "dev:full": "docker compose up -d postgres redis && turbo dev --filter='./apps/*' --filter='./packages/*'",
+    "dev:local": "scripts/dev-local-postgres.sh",
     "build": "turbo build",
     "e2e": "playwright test",
     "e2e:smoke": "PLAYWRIGHT_TEST=1 pnpm e2e -- replay.fixture.spec.ts",

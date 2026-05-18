@@ -22,6 +22,14 @@ Start the full local topology with PostgreSQL, Redis, the skeletal web app, and 
 pnpm dev:full
 ```
 
+Start the local end-to-end loop without Docker, using a Homebrew-style local PostgreSQL binary:
+
+```sh
+pnpm dev:local
+```
+
+`pnpm dev:local` initializes or reuses `/tmp/cowards-game-postgres-data`, creates the `cowards` role and `cowards_game` database, runs migrations, then starts the web app and worker against `postgresql://cowards:cowards@localhost:5432/cowards_game`. Use `pnpm dev:local -- --setup-only` when you only want to prepare the local database.
+
 Manual check: run `pnpm dev` and confirm the web and worker development processes start. Run `pnpm dev:full` and confirm Docker Compose starts PostgreSQL and Redis before the web and worker processes.
 
 ## Commands
