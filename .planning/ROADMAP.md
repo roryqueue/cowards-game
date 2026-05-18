@@ -8,7 +8,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-7, shipped 2026-05-17. See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md).
-- 📋 **v1.1 Trustworthy Simulation Beta** — Phases 8-12, planning started 2026-05-18.
+- ✅ **v1.1 Trustworthy Simulation Beta** — Phases 8-12, completed 2026-05-18.
 
 ## Overview
 
@@ -22,7 +22,7 @@ Coward's Game v1.1 sharpens trust in the simulation loop shipped in v1.0. The mi
 | 9 | Strict Chronicle Grammar and Compatibility | Reject invalid, impossible, private-leaking, or incompatible Chronicles before replay rendering. | 8 | Complete |
 | 10 | Runtime Isolation Hardening | Make the Strategy runtime boundary explicit, test hostile code, and spike stronger process/container/WASM isolation. | 7 | Complete |
 | 11 | Doctrine Debugging UX | Help players understand validation failures, runtime violations, replay links, and why Soldiers did nothing without moving rules into React. | 6 | Complete |
-| 12 | Local and CI Reliability | Make Docker, no-Docker, and service-backed CI startup and E2E verification boring and diagnosable. | 6 | Active |
+| 12 | Local and CI Reliability | Make Docker, no-Docker, and service-backed CI startup and E2E verification boring and diagnosable. | 6 | Complete |
 
 **Coverage:** 34 v1.1 requirements mapped, 0 unmapped.
 
@@ -151,9 +151,17 @@ Plans:
 
 **Goal:** Make Docker, no-Docker, and service-backed CI startup and E2E verification boring and diagnosable.
 **Mode:** standard
-**Status:** Active
+**Status:** Complete
 
 **Requirements:** REL-01, REL-02, REL-03, REL-04, REL-05, REL-06
+**Plans:** 5 plans
+
+Plans:
+- [x] 12-01-PLAN.md - Docker Compose service readiness
+- [x] 12-02-PLAN.md - No-Docker local startup diagnostics
+- [x] 12-03-PLAN.md - Service-backed E2E diagnostics
+- [x] 12-04-PLAN.md - CI and command separation
+- [x] 12-05-PLAN.md - Reliability validation evidence
 
 **Success Criteria:**
 1. Docker Compose startup reports service health and readiness clearly.
@@ -172,8 +180,8 @@ Plans:
 | Milestone | Phases | Plans | Requirements | Status | Shipped |
 | --- | ---: | ---: | ---: | --- | --- |
 | v1.0 MVP | 7/7 | 33/33 | 80/80 | Complete | 2026-05-17 |
-| v1.1 Trustworthy Simulation Beta | 4/5 | 20/20 | 28/34 | In Progress | — |
+| v1.1 Trustworthy Simulation Beta | 5/5 | 25/25 | 34/34 | Complete | 2026-05-18 |
 
 ## Next
 
-Run Phase 12 research and planning for Local and CI Reliability.
+Run the v1.1 milestone audit and archive when ready.

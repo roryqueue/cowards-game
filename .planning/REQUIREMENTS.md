@@ -49,12 +49,12 @@ Requirements for Trustworthy Simulation Beta. Each maps to roadmap phases.
 
 ### Local and CI Reliability
 
-- [ ] **REL-01**: Developer can start required services through Docker Compose with health checks and clear readiness diagnostics.
-- [ ] **REL-02**: Developer can start required services without Docker through the local Postgres path with clear readiness diagnostics.
-- [ ] **REL-03**: Developer can run a shared preflight command that checks Postgres, Redis if required, migrations, seed state, worker readiness, and replay endpoint readiness.
-- [ ] **REL-04**: CI can run a service-backed edit -> submit revision -> execute Match -> open replay flow beyond fixture-only smoke coverage.
-- [ ] **REL-05**: Developer can run separate commands for fast unit/invariant tests, service-backed E2E, and replay visual regression checks.
-- [ ] **REL-06**: Local/CI failures identify whether the failing layer is service startup, migration, seeding, worker execution, Chronicle validation, replay projection, or UI rendering.
+- [x] **REL-01**: Developer can start required services through Docker Compose with health checks and clear readiness diagnostics.
+- [x] **REL-02**: Developer can start required services without Docker through the local Postgres path with clear readiness diagnostics.
+- [x] **REL-03**: Developer can run a shared preflight command that checks Postgres, Redis if required, migrations, seed state, worker readiness, and replay endpoint readiness.
+- [x] **REL-04**: CI can run a service-backed edit -> submit revision -> execute Match -> open replay flow beyond fixture-only smoke coverage.
+- [x] **REL-05**: Developer can run separate commands for fast unit/invariant tests, service-backed E2E, and replay visual regression checks.
+- [x] **REL-06**: Local/CI failures identify whether the failing layer is service startup, migration, seeding, worker execution, Chronicle validation, replay projection, or UI rendering.
 
 ## Future Requirements
 
@@ -123,12 +123,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEBUG-04 | Phase 11 | Complete |
 | DEBUG-05 | Phase 11 | Complete |
 | DEBUG-06 | Phase 11 | Complete |
-| REL-01 | Phase 12 | Pending |
-| REL-02 | Phase 12 | Pending |
-| REL-03 | Phase 12 | Pending |
-| REL-04 | Phase 12 | Pending |
-| REL-05 | Phase 12 | Pending |
-| REL-06 | Phase 12 | Pending |
+| REL-01 | Phase 12 | Complete |
+| REL-02 | Phase 12 | Complete |
+| REL-03 | Phase 12 | Complete |
+| REL-04 | Phase 12 | Complete |
+| REL-05 | Phase 12 | Complete |
+| REL-06 | Phase 12 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 34 total
@@ -137,4 +137,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-18*
-*Last updated: 2026-05-18 after Phase 11 completion*
+*Last updated: 2026-05-18 after Phase 12 completion*
