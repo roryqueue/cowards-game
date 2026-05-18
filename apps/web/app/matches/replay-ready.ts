@@ -87,6 +87,40 @@ export interface BuildReadyReplayFromChronicleInput {
   options?: GetMatchReplayOptions | undefined
 }
 
+export const trustedOwnerReplayOptions = (
+  metadata: ReplayMetadataDto,
+  options: GetMatchReplayOptions = {},
+  authorizedRequestedOwners: readonly string[] = [],
+): GetMatchReplayOptions => {
+  if (options.allowOwnerDebug !== true) {
+    return options
+  }
+
+  if (options.mode === "owner" && options.ownerPlayerId) {
+    return options
+  }
+
+  const requestedOwner = options.requestedOwnerPlayerId
+  if (
+    requestedOwner &&
+    authorizedRequestedOwners.includes(requestedOwner) &&
+    (requestedOwner === metadata.bottomPlayerId ||
+      requestedOwner === metadata.topPlayerId)
+  ) {
+    return {
+      ...options,
+      mode: "owner",
+      ownerPlayerId: requestedOwner,
+    }
+  }
+
+  return {
+    ...options,
+    mode: "public",
+    ownerPlayerId: undefined,
+  }
+}
+
 export const buildReadyReplayFromChronicle = ({
   chronicle,
   metadata,
@@ -157,20 +191,23 @@ export const buildReadyReplayFromChronicle = ({
 export const buildReadyReplayFromStoredChronicle = (
   stored: StoredChronicle,
   options: GetMatchReplayOptions,
-): ReplayPageData =>
-  buildReadyReplayFromChronicle({
+): ReplayPageData => {
+  const metadata = {
+    matchId: stored.metadata.matchId,
+    chronicleId: stored.metadata.id,
+    hash: stored.metadata.hash,
+    schemaVersion: stored.metadata.schemaVersion,
+    eventCount: stored.metadata.eventCount,
+    snapshotCount: stored.metadata.snapshotCount,
+    outcome: stored.metadata.outcome,
+    bottomPlayerId: stored.metadata.bottomPlayerId,
+    topPlayerId: stored.metadata.topPlayerId,
+    arenaVariantId: stored.metadata.arenaVariantId,
+  }
+
+  return buildReadyReplayFromChronicle({
     chronicle: stored.artifact,
-    metadata: {
-      matchId: stored.metadata.matchId,
-      chronicleId: stored.metadata.id,
-      hash: stored.metadata.hash,
-      schemaVersion: stored.metadata.schemaVersion,
-      eventCount: stored.metadata.eventCount,
-      snapshotCount: stored.metadata.snapshotCount,
-      outcome: stored.metadata.outcome,
-      bottomPlayerId: stored.metadata.bottomPlayerId,
-      topPlayerId: stored.metadata.topPlayerId,
-      arenaVariantId: stored.metadata.arenaVariantId,
-    },
-    options,
+    metadata,
+    options: trustedOwnerReplayOptions(metadata, options),
   })
+}

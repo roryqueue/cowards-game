@@ -157,6 +157,7 @@ interface WorkshopSampleBase {
   id: `sample:${string}`
   label: string
   description: string
+  categories: string[]
   source: string
   validation: StrategyRevisionValidationReport
 }
@@ -428,6 +429,37 @@ export default {
 }
 `.trim()
 
+const runtimeTimeoutSampleSource = `
+export default {
+  selectActivations(input) {
+    return {
+      activationOrders: input.mySoldiers.slice(0, input.activationCount).map((soldier) => ({ soldierId: soldier.id })),
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain() {
+    while (true) {}
+  }
+}
+`.trim()
+
+const doNothingSampleSource = `
+export default {
+  selectActivations(input) {
+    return {
+      activationOrders: [],
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain(input) {
+    return {
+      action: { type: "TURN_TO_STONE" },
+      soldierMemory: input.soldierMemory
+    }
+  }
+}
+`.trim()
+
 const sample = <T extends Omit<WorkshopSampleSummary, "validation">>(
   input: T,
 ): T & { validation: StrategyRevisionValidationReport } => ({
@@ -440,28 +472,33 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     id: "sample:basic-advance-turn",
     label: "Basic advance and turn",
     sampleKind: "starter",
-    description: "Selects active Soldiers, Advances once, then keeps facing.",
+    description:
+      "Advance when clear, otherwise turn to keep facing useful space.",
+    categories: ["Movement"],
     source: basicAdvanceTurnSampleSource,
   }),
   sample({
     id: "sample:push-setup",
     label: "Push setup",
     sampleKind: "starter",
-    description: "Turns toward a visible enemy before attempting an Advance.",
+    description: "Demonstrates positioning for Push resolution.",
+    categories: ["Push"],
     source: pushSetupSampleSource,
   }),
   sample({
     id: "sample:backstab-setup",
     label: "Backstab setup",
     sampleKind: "starter",
-    description: "Reuses last movement direction to demonstrate Backstab setup.",
+    description: "Shows facing and adjacency needed for Backstab.",
+    categories: ["Backstab"],
     source: backstabSetupSampleSource,
   }),
   sample({
     id: "sample:stoning-blocking",
-    label: "Stoning and blocking",
+    label: "Stone and blocking",
     sampleKind: "starter",
-    description: "Turns to STONE when an enemy is adjacent; otherwise holds facing.",
+    description: "Uses STONE to create blocking pressure.",
+    categories: ["Stone"],
     source: stoningBlockingSampleSource,
   }),
   sample({
@@ -469,14 +506,26 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     label: "Failure: forbidden clock",
     sampleKind: "failure-mode",
     description: "Demonstrates that Strategy source cannot read system time.",
+    categories: ["Runtime violation"],
     source: forbiddenClockSampleSource,
     expectedValidationCode: "FORBIDDEN_PATTERN",
+  }),
+  sample({
+    id: "sample:failure-runtime-timeout",
+    label: "Failure: runtime timeout",
+    sampleKind: "failure-mode",
+    description: "Demonstrates a Strategy that exceeds the runtime limit.",
+    categories: ["Runtime violation"],
+    source: runtimeTimeoutSampleSource,
+    expectedRuntimeViolationType: "TIMEOUT",
   }),
   sample({
     id: "sample:failure-invalid-output",
     label: "Failure: invalid output",
     sampleKind: "failure-mode",
-    description: "Demonstrates runtime rejection of invalid Strategy API output.",
+    description:
+      "Demonstrates runtime rejection of invalid Strategy API output.",
+    categories: ["Invalid output"],
     source: invalidOutputSampleSource,
     expectedRuntimeViolationType: "INVALID_OUTPUT",
   }),
@@ -484,9 +533,19 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     id: "sample:failure-thrown-exception",
     label: "Failure: thrown exception",
     sampleKind: "failure-mode",
-    description: "Demonstrates a SoldierBrain exception becoming a runtime violation.",
+    description:
+      "Demonstrates a SoldierBrain exception becoming a runtime violation.",
+    categories: ["Runtime violation"],
     source: thrownExceptionSampleSource,
     expectedRuntimeViolationType: "THROWN_EXCEPTION",
+  }),
+  sample({
+    id: "sample:failure-do-nothing",
+    label: "Failure: do nothing",
+    sampleKind: "failure-mode",
+    description: "Selects no useful Activations so Soldiers remain idle.",
+    categories: ["Do nothing"],
+    source: doNothingSampleSource,
   }),
 ]
 

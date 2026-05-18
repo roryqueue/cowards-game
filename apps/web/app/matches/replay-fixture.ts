@@ -10,7 +10,10 @@ import type {
   ReplayMetadataDto,
   ReplayPageData,
 } from "./types.js"
-import { buildReadyReplayFromChronicle } from "./replay-ready.js"
+import {
+  buildReadyReplayFromChronicle,
+  trustedOwnerReplayOptions,
+} from "./replay-ready.js"
 
 export const replayFixtureMatchId = "match:e2e-replay-fixture"
 export const defaultReplayFixtureScenarioId = "compound-tour"
@@ -104,9 +107,12 @@ export const createReplayFixtureData = (
   const scenarioId = options.scenarioId ?? defaultReplayFixtureScenarioId
   const scenario = getCanonicalReplayScenario(scenarioId)
 
+  const metadata = replayMetadataFromChronicle(scenarioId, scenario.chronicle)
   return buildReadyReplayFromChronicle({
     chronicle: scenario.chronicle,
-    metadata: replayMetadataFromChronicle(scenarioId, scenario.chronicle),
-    options,
+    metadata,
+    options: trustedOwnerReplayOptions(metadata, options, [
+      metadata.bottomPlayerId,
+    ]),
   })
 }

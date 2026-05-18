@@ -232,7 +232,7 @@ export const StrategyRevisionValidationReportSchema = z
     valid: z.boolean(),
     errors: z.array(StrategyRevisionValidationIssueSchema),
     warnings: z.array(StrategyRevisionValidationIssueSchema),
-    sourceBytes: z.number().int().min(0).max(STRATEGY_SOURCE_BYTES),
+    sourceBytes: z.number().int().min(0),
     forbiddenPatterns: z.array(z.string()),
     sourceHash: z.string().min(1),
     runtimeVersion: z.string().min(1),

@@ -186,9 +186,10 @@ describe("replay fixture projection", () => {
     expect(data.projection).toEqual(projection)
     expect(data.projection).not.toHaveProperty("ownerPrivate")
     for (const key of privateProjectionKeyNames) {
-      expect(serialized, `[privacy] public DTO leaked key ${key}`).not.toContain(
-        `"${key}"`,
-      )
+      expect(
+        serialized,
+        `[privacy] public DTO leaked key ${key}`,
+      ).not.toContain(`"${key}"`)
       expect(
         serializedProjection,
         `[privacy] shared projection leaked key ${key}`,
@@ -224,12 +225,27 @@ describe("replay fixture projection", () => {
         allowOwnerDebug: true,
       }),
     )
+    const untrustedRequestedOwner = expectReady(
+      createReplayFixtureData({
+        scenarioId: "push",
+        allowOwnerDebug: true,
+        requestedOwnerPlayerId: "top",
+      }),
+    )
     const scenario = getCanonicalReplayScenario("push")
 
     expect(requestedOwner.mode).toBe("public")
     expect(requestedOwner.projection.viewer).toEqual({ access: "public" })
     expect(requestedOwner).not.toHaveProperty("ownerPlayerId")
     expect(requestedOwner.projection).not.toHaveProperty("ownerPrivate")
+    expect(untrustedRequestedOwner.mode).toBe("public")
+    expect(untrustedRequestedOwner.projection.viewer).toEqual({
+      access: "public",
+    })
+    expect(untrustedRequestedOwner).not.toHaveProperty("ownerPlayerId")
+    expect(untrustedRequestedOwner.projection).not.toHaveProperty(
+      "ownerPrivate",
+    )
 
     expect(owner.mode).toBe("owner")
     expect(owner.ownerPlayerId).toBe("bottom")

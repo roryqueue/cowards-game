@@ -197,6 +197,11 @@ export function ReplayClient({ data }: ReplayClientProps) {
                           key={event.sequence}
                           type="button"
                           aria-label={`Timeline event ${event.sequence}: ${timelineEntry?.type ?? "UNKNOWN"}`}
+                          aria-current={
+                            event.sequence === selectedEntry.sequence
+                              ? "step"
+                              : undefined
+                          }
                           className="replay-event-row"
                           onClick={() =>
                             setSelectedIndex(
@@ -271,7 +276,7 @@ export function ReplayClient({ data }: ReplayClientProps) {
               {ownerDebugVisible ? (
                 <>
                   <div
-                    className="replay-debug-panel"
+                    className="replay-explanation-panel"
                     data-cause-code={
                       soldierInactivityExplanation?.causeCode ?? "NONE"
                     }
@@ -290,17 +295,6 @@ export function ReplayClient({ data }: ReplayClientProps) {
                         <dd>
                           #{soldierInactivityExplanation.sourceEventSequence}
                         </dd>
-                        {soldierInactivityExplanation.details ===
-                        undefined ? null : (
-                          <>
-                            <dt>Details</dt>
-                            <dd>
-                              {JSON.stringify(
-                                soldierInactivityExplanation.details,
-                              )}
-                            </dd>
-                          </>
-                        )}
                       </dl>
                     ) : (
                       <p className="replay-muted">
@@ -360,6 +354,7 @@ export function ReplayClient({ data }: ReplayClientProps) {
               <button
                 key={soldier.id}
                 type="button"
+                aria-pressed={soldier.id === selectedSoldierId}
                 onClick={() => setSelectedSoldierId(soldier.id)}
               >
                 Soldier {soldier.ownerPlayerId}:{soldier.id.split(":").at(-1)}

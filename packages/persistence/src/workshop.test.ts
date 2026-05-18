@@ -81,6 +81,7 @@ describe("Workshop service contracts", () => {
       expect(sample.label.length).toBeGreaterThan(0)
       expect(sample.description.length).toBeGreaterThan(0)
       expect(sample.description.length).toBeLessThanOrEqual(96)
+      expect(sample.categories.length).toBeGreaterThan(0)
       expect(sample.source.length).toBeGreaterThan(0)
       expect(["starter", "failure-mode"]).toContain(sample.sampleKind)
     }
@@ -101,11 +102,18 @@ describe("Workshop service contracts", () => {
       "Basic advance and turn",
       "Push setup",
       "Backstab setup",
-      "Stoning and blocking",
+      "Stone and blocking",
+    ])
+    expect(starters.map((sample) => sample.categories[0])).toEqual([
+      "Movement",
+      "Push",
+      "Backstab",
+      "Stone",
     ])
     expect(starters.every((sample) => sample.validation.valid)).toBe(true)
-    expect(starters.every((sample) => sample.validation.errors.length === 0))
-      .toBe(true)
+    expect(
+      starters.every((sample) => sample.validation.errors.length === 0),
+    ).toBe(true)
     expect(
       starters.every(
         (sample) =>
@@ -122,15 +130,13 @@ describe("Workshop service contracts", () => {
 
     expect(failureModes.map((sample) => sample.id)).toEqual([
       "sample:failure-forbidden-clock",
+      "sample:failure-runtime-timeout",
       "sample:failure-invalid-output",
       "sample:failure-thrown-exception",
+      "sample:failure-do-nothing",
     ])
 
     for (const sample of failureModes) {
-      expect(
-        sample.expectedValidationCode ?? sample.expectedRuntimeViolationType,
-      ).toBeDefined()
-
       if (sample.expectedValidationCode) {
         expect(sample.validation.valid).toBe(false)
         expect(sample.validation.errors.map((error) => error.code)).toContain(
@@ -142,6 +148,16 @@ describe("Workshop service contracts", () => {
         expect(sample.validation.valid).toBe(true)
       }
     }
+
+    expect(
+      failureModes.find((sample) => sample.id === "sample:failure-do-nothing")
+        ?.validation.valid,
+    ).toBe(true)
+    expect(
+      failureModes.find(
+        (sample) => sample.id === "sample:failure-runtime-timeout",
+      )?.expectedRuntimeViolationType,
+    ).toBe("TIMEOUT")
   })
 
   it("keeps revision history limited to local Workshop revisions", () => {

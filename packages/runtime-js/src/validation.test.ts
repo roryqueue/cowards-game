@@ -57,6 +57,37 @@ export default {
 }
 `
 
+const runtimeTimeoutSampleSource = `
+export default {
+  selectActivations(input) {
+    return {
+      activationOrders: input.mySoldiers.slice(0, input.activationCount).map((soldier) => ({ soldierId: soldier.id })),
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain() {
+    while (true) {}
+  }
+}
+`
+
+const doNothingSampleSource = `
+export default {
+  selectActivations(input) {
+    return {
+      activationOrders: [],
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain(input) {
+    return {
+      action: { type: "TURN_TO_STONE" },
+      soldierMemory: input.soldierMemory
+    }
+  }
+}
+`
+
 const expectCode = (source: string, code: string) => {
   const report = validateStrategySource(source)
 
@@ -253,6 +284,10 @@ describe("validateStrategySource", () => {
     const thrownExceptionReport = validateStrategySource(
       thrownExceptionSampleSource,
     )
+    const runtimeTimeoutReport = validateStrategySource(
+      runtimeTimeoutSampleSource,
+    )
+    const doNothingReport = validateStrategySource(doNothingSampleSource)
 
     expect(forbiddenClockReport.valid).toBe(false)
     expect(forbiddenClockReport.errors.map((error) => error.code)).toContain(
@@ -260,6 +295,8 @@ describe("validateStrategySource", () => {
     )
     expect(invalidOutputReport.valid).toBe(true)
     expect(thrownExceptionReport.valid).toBe(true)
+    expect(runtimeTimeoutReport.valid).toBe(true)
+    expect(doNothingReport.valid).toBe(true)
   })
 })
 

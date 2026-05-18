@@ -20,7 +20,7 @@ import {
   getDraftStatusClass,
   getDraftStatusLabel,
   getReplayAvailability,
-  getSampleKindLabel,
+  getSampleChipLabels,
   getTestStatusCopy,
   getSubmitBlockedReason,
   groupWorkshopSamples,
@@ -106,6 +106,10 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     (revision) => revision.id === selectedRevisionId,
   )
   const canLaunchTest = Boolean(selectedRevision?.valid) && !launchingTest
+  const validationIssues = [
+    ...(currentValidation?.errors ?? []),
+    ...(currentValidation?.warnings ?? []),
+  ]
 
   const validateSource = async (nextSource = source) => {
     setChecking(true)
@@ -300,6 +304,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
               {initialData.templates.map((template) => (
                 <button
                   className={`workshop-list-row ${template.id === selectedTemplate?.id ? "active" : ""}`}
+                  aria-pressed={template.id === selectedTemplate?.id}
                   key={template.id}
                   onClick={() => applyTemplate(template)}
                   type="button"
@@ -317,6 +322,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 {sampleGroups.starters.map((sample) => (
                   <button
                     className={`workshop-list-row ${sample.id === selectedSampleId ? "active" : ""}`}
+                    aria-pressed={sample.id === selectedSampleId}
                     data-sample-id={sample.id}
                     data-testid="workshop-sample-row"
                     key={sample.id}
@@ -325,8 +331,12 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                   >
                     <span>{sample.label}</span>
                     <span className="workshop-muted">{sample.description}</span>
-                    <span className="workshop-chip valid">
-                      {getSampleKindLabel(sample)}
+                    <span className="workshop-chip-row">
+                      {getSampleChipLabels(sample).map((label) => (
+                        <span className="workshop-chip valid" key={label}>
+                          {label}
+                        </span>
+                      ))}
                     </span>
                   </button>
                 ))}
@@ -334,6 +344,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 {sampleGroups.failureModes.map((sample) => (
                   <button
                     className={`workshop-list-row ${sample.id === selectedSampleId ? "active" : ""}`}
+                    aria-pressed={sample.id === selectedSampleId}
                     data-sample-id={sample.id}
                     data-testid="workshop-sample-row"
                     key={sample.id}
@@ -342,8 +353,12 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                   >
                     <span>{sample.label}</span>
                     <span className="workshop-muted">{sample.description}</span>
-                    <span className="workshop-chip">
-                      {getSampleKindLabel(sample)}
+                    <span className="workshop-chip-row">
+                      {getSampleChipLabels(sample).map((label) => (
+                        <span className="workshop-chip warning" key={label}>
+                          {label}
+                        </span>
+                      ))}
                     </span>
                   </button>
                 ))}
@@ -423,14 +438,23 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
             <p aria-live="polite" role="status">
               {getDraftStatusLabel(draftState)}
             </p>
-            {validation?.errors.length ? (
+            {currentValidation?.valid ? (
+              <div className="validation-empty">
+                <p>No validation issues</p>
+                <p className="workshop-muted">
+                  This draft passes the Strategy API checks. Submit a revision
+                  or launch a Workshop test to inspect runtime behavior.
+                </p>
+              </div>
+            ) : null}
+            {validationIssues.length ? (
               <ul
                 className="validation-list"
                 data-testid="workshop-validation-guidance-list"
               >
-                {validation.errors.map((issue, index) => (
+                {validationIssues.map((issue, index) => (
                   <li
-                    className="validation-row"
+                    className={`validation-row ${issue.severity === "warning" ? "warning" : ""}`}
                     data-testid="workshop-validation-guidance-row"
                     data-validation-code={issue.code}
                     key={`${issue.code}-${index}`}

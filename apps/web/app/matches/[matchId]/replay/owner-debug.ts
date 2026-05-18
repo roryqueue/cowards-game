@@ -35,8 +35,7 @@ export const resolveOwnerDebugReplayOptions = (
   }
 
   return {
-    mode: "owner",
     allowOwnerDebug: true,
-    ownerPlayerId: ownerPlayerId as PlayerId,
+    requestedOwnerPlayerId: ownerPlayerId as PlayerId,
   }
 }

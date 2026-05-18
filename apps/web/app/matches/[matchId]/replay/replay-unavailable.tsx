@@ -11,7 +11,11 @@ export function ReplayUnavailable({ data }: { data: ReplayUnavailableDto }) {
         <span className="replay-status-chip">Replay unavailable</span>
       </header>
 
-      <section className="replay-empty-state" aria-live="polite">
+      <section
+        className="replay-empty-state"
+        aria-live="polite"
+        data-testid="replay-unavailable-message"
+      >
         <p className="replay-muted">Match {data.matchId}</p>
         <p>{data.message}</p>
       </section>

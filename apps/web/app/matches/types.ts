@@ -15,6 +15,7 @@ export type ReplayViewMode = "public" | "owner"
 export interface GetMatchReplayOptions {
   mode?: ReplayViewMode | undefined
   ownerPlayerId?: PlayerId | undefined
+  requestedOwnerPlayerId?: PlayerId | undefined
   allowOwnerDebug?: boolean | undefined
 }
 

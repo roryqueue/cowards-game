@@ -7,6 +7,7 @@ import {
   SoldierInactivityExplanationDtoSchema,
   SoldierInactivityExplanationCauseSchema,
   SoldierSchema,
+  StrategyRevisionValidationReportSchema,
   StrategyRevisionValidationIssueSchema,
   StrategyRevisionSchema,
 } from "./schemas.js"
@@ -452,6 +453,33 @@ describe("Coward's Game spec contracts", () => {
         metadata: {},
       }).success,
     ).toBe(false)
+  })
+
+  it("StrategyRevisionValidationReportSchema accepts oversized-source reports", () => {
+    const report = {
+      valid: false,
+      errors: [
+        {
+          code: "SOURCE_TOO_LARGE",
+          severity: "error",
+          message: "Strategy source exceeds 65536 bytes",
+          constraint: "Strategy source must stay within the source byte limit.",
+          remediation:
+            "Remove unused helper code or comments before validating again.",
+        },
+      ],
+      warnings: [],
+      sourceBytes: STRATEGY_SOURCE_BYTES + 1,
+      forbiddenPatterns: [],
+      sourceHash: "oversized",
+      runtimeVersion: COMPATIBILITY_VERSIONS.runtimeJs,
+      engineCompatibility: {
+        spec: COMPATIBILITY_VERSIONS.spec,
+        engine: COMPATIBILITY_VERSIONS.engine,
+      },
+    }
+
+    expect(StrategyRevisionValidationReportSchema.parse(report)).toEqual(report)
   })
 
   it("StrategyRevisionSchema rejects reports where valid: true has errors", () => {

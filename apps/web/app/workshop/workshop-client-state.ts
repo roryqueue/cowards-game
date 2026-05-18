@@ -29,7 +29,7 @@ export const getDraftStatusClass = (state: DraftValidationState): string =>
 
 export const formatValidationIssueHeading = (
   issue: StrategyRevisionValidationReport["errors"][number],
-): string => `${issue.severity.toUpperCase()} · ${issue.code}`
+): string => `${issue.severity.toUpperCase()} / ${issue.code}`
 
 export interface ValidationIssueGuidance {
   constraint: string
@@ -88,6 +88,10 @@ export const getSampleKindLabel = (
   sample: WorkshopSampleSummary,
 ): "Valid sample" | "Failure mode" =>
   sample.sampleKind === "starter" ? "Valid sample" : "Failure mode"
+
+export const getSampleChipLabels = (
+  sample: WorkshopSampleSummary,
+): string[] => [...sample.categories, getSampleKindLabel(sample)]
 
 export const canSubmitRevision = (input: {
   validation: StrategyRevisionValidationReport | null

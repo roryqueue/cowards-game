@@ -194,6 +194,17 @@ textarea {
   color: var(--destructive);
 }
 
+.workshop-chip.warning {
+  color: var(--warning);
+}
+
+.workshop-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
 .workshop-list {
   display: flex;
   flex-direction: column;
@@ -239,11 +250,25 @@ textarea {
   background: var(--surface-secondary);
 }
 
+.validation-row.warning {
+  border-left-color: var(--warning);
+}
+
 .validation-code {
   display: block;
   color: var(--destructive);
   font-size: 12px;
   font-weight: 700;
+}
+
+.validation-row.warning .validation-code {
+  color: var(--warning);
+}
+
+.validation-empty {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--surface-secondary);
 }
 
 .details-grid {
@@ -528,6 +553,14 @@ textarea {
   font-size: 12px;
 }
 
+.replay-explanation-panel {
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface-secondary);
+}
+
 .replay-awareness-grid {
   margin-top: 10px;
 }
@@ -658,6 +691,7 @@ textarea {
   }
 
   button {
+    min-height: 44px;
     width: 100%;
     white-space: normal;
   }

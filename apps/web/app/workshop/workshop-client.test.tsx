@@ -6,6 +6,7 @@ import {
   formatUsedInMatches,
   formatValidationIssueGuidance,
   formatValidationIssueHeading,
+  getSampleChipLabels,
   getSampleKindLabel,
   getDraftStatusLabel,
   getReplayAvailability,
@@ -56,14 +57,14 @@ describe("Strategy Workshop validation helpers", () => {
     expect(getDraftStatusLabel("invalid")).toBe("Invalid draft")
   })
 
-  it("formats validation rows as ERROR · MISSING_DEFAULT_EXPORT", () => {
+  it("formats validation rows as ERROR / MISSING_DEFAULT_EXPORT", () => {
     expect(
       formatValidationIssueHeading({
         code: "MISSING_DEFAULT_EXPORT",
         severity: "error",
         message: "Strategy source must contain export default",
       }),
-    ).toBe("ERROR · MISSING_DEFAULT_EXPORT")
+    ).toBe("ERROR / MISSING_DEFAULT_EXPORT")
   })
 
   it("formats validation issue guidance from constraint and remediation fields", () => {
@@ -307,6 +308,7 @@ describe("Strategy Workshop validation helpers", () => {
       source: "export default {}",
       validation: validReport,
       sampleKind: "starter" as const,
+      categories: ["Movement"],
     }
     const failureMode = {
       id: "sample:invalid-output" as const,
@@ -315,6 +317,7 @@ describe("Strategy Workshop validation helpers", () => {
       source: "export default {}",
       validation: invalidReport,
       sampleKind: "failure-mode" as const,
+      categories: ["Invalid output"],
       expectedValidationCode: "MISSING_DEFAULT_EXPORT" as const,
     }
 
@@ -324,5 +327,10 @@ describe("Strategy Workshop validation helpers", () => {
     expect(groups.failureModes).toEqual([failureMode])
     expect(getSampleKindLabel(starter)).toBe("Valid sample")
     expect(getSampleKindLabel(failureMode)).toBe("Failure mode")
+    expect(getSampleChipLabels(starter)).toEqual(["Movement", "Valid sample"])
+    expect(getSampleChipLabels(failureMode)).toEqual([
+      "Invalid output",
+      "Failure mode",
+    ])
   })
 })

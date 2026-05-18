@@ -22,9 +22,8 @@ describe("owner debug replay route options", () => {
         { PLAYWRIGHT_TEST: "1" },
       ),
     ).toEqual({
-      mode: "owner",
       allowOwnerDebug: true,
-      ownerPlayerId: "player:bottom",
+      requestedOwnerPlayerId: "player:bottom",
     })
   })
 

@@ -357,6 +357,32 @@ describe("Match replay server facade", () => {
     )
   })
 
+  it("does not trust query-requested owner ids for persisted Match replay", async () => {
+    const stored = createStoredChronicle()
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+    })
+
+    const response = await server.getMatchReplay("match:replay-test", {
+      allowOwnerDebug: true,
+      requestedOwnerPlayerId: "player:top",
+    })
+
+    expect(response.status).toBe("ready")
+    if (response.status !== "ready") {
+      return
+    }
+    expect(response.mode).toBe("public")
+    expect(response.projection.viewer).toEqual({ access: "public" })
+    expect(response).not.toHaveProperty("ownerDebug")
+    expect(JSON.stringify(response)).not.toContain(
+      "PRIVATE_TOP_OWNER_DEBUG_EXPLANATION",
+    )
+  })
+
   it("returns explicit owner replay data only when trusted server code allows it", async () => {
     const stored = createStoredChronicle()
     const server = createMatchReplayServer({
