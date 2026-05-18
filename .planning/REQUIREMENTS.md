@@ -120,8 +120,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEBUG-01 | Phase 11 | Complete |
 | DEBUG-02 | Phase 11 | Complete |
 | DEBUG-03 | Phase 11 | Complete |
-| DEBUG-04 | Phase 11 | Partial - persisted replay owner debug gap |
-| DEBUG-05 | Phase 11 | Partial - persisted replay owner debug gap |
+| DEBUG-04 | Phase 11 + Phase 13 | Partial - persisted replay owner debug gap |
+| DEBUG-05 | Phase 11 + Phase 13 | Partial - persisted replay owner debug gap |
 | DEBUG-06 | Phase 11 | Complete |
 | REL-01 | Phase 12 | Complete |
 | REL-02 | Phase 12 | Complete |

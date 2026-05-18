@@ -5,11 +5,11 @@ milestone_name: Trustworthy Simulation Beta
 status: gaps_found
 last_updated: "2026-05-18T16:36:00.000-04:00"
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 5
   total_plans: 25
   completed_plans: 25
-  percent: 94
+  percent: 83
 ---
 
 # State: Coward's Game
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-05-18)
 
 ## Current Position
 
-Phase: 12 — Local and CI Reliability
+Phase: 13 — Close Gap: Persisted Owner Replay Debug Authorization
 Plan: —
-Status: v1.1 milestone audit found DEBUG-04/DEBUG-05 partial due persisted replay owner-debug routing gap
-Last activity: 2026-05-18 — Audited v1.1 and wrote `.planning/v1.1-MILESTONE-AUDIT.md` plus `.planning/v1.1-INTEGRATION-CHECK.md`
+Status: Phase 13 context gathered; ready for planning
+Last activity: 2026-05-18 — Captured Phase 13 context for persisted owner replay debug authorization
 
 ## Workflow Settings
 
@@ -59,7 +59,7 @@ Last activity: 2026-05-18 — Audited v1.1 and wrote `.planning/v1.1-MILESTONE-A
 - Active REQUIREMENTS.md and ROADMAP.md now track v1.1 until the milestone is audited and archived.
 - v1.1 is focused on trustworthy simulation: replay fidelity, strict Chronicle grammar and compatibility, stronger runtime isolation, doctrine debugging UX, and local/CI reliability.
 - Ranked ladders remain out of scope for v1.1 because they multiply replay dispute, sandbox abuse, deterministic compatibility, privacy leakage, stale Strategy Revision, and scoring fairness risks.
-- v1.1 roadmap continues phase numbering from v1.0 and spans Phase 8 through Phase 12.
+- v1.1 roadmap continues phase numbering from v1.0 and spans Phase 8 through Phase 13 after the milestone audit inserted a closure phase.
 - Phase context has been gathered and committed for all v1.1 phases: 8 replay fixture fidelity, 9 Chronicle grammar, 10 runtime isolation, 11 doctrine debugging UX, and 12 local/CI reliability.
 - Phase 12 explicitly requires verifying the Docker local development path end to end now that Docker is available locally.
 - Phase 8 added engine-generated replay scenario fixtures, legality diagnostics, projection-parity fixture rendering, stable replay timeline labels, focused visual regression baselines, and the `pnpm e2e:visual` gate.
@@ -71,6 +71,11 @@ Last activity: 2026-05-18 — Audited v1.1 and wrote `.planning/v1.1-MILESTONE-A
 - Phase 11 added actionable validation/runtime guidance, a richer sample Strategy catalog, Workshop replay links, owner-only replay inactivity explanations, debug overlay privacy gates, and public projection safeguards; Nyquist validation marks DEBUG-01 through DEBUG-06 covered.
 - Phase 12 added Docker Compose readiness checks, no-Docker local Postgres diagnostics, a shared preflight command, isolated service-backed E2E, CI command separation, replay-route preflight evidence, and REL-01 through REL-06 validation evidence.
 - v1.1 milestone audit found one product integration gap: persisted Match replay pages cannot reach trusted owner debug mode, so DEBUG-04 and DEBUG-05 remain partial for real persisted replay user flows.
+- Phase 13 was inserted to close that audit gap by wiring persisted Match replay pages to trusted owner debug authorization and proving owner-only inactivity explanations on real persisted replays.
+
+### Roadmap Evolution
+
+- Phase 13 added: Close gap: persisted owner replay debug authorization
 
 ## Post-Shipment Corrections
 
@@ -80,7 +85,7 @@ Last activity: 2026-05-18 — Audited v1.1 and wrote `.planning/v1.1-MILESTONE-A
 
 ## Next Command
 
-Insert and execute a closure phase for persisted owner replay debug authorization, then rerun `$gsd-audit-milestone 1.1`.
+Run `$gsd-plan-phase 13` for Close Gap: Persisted Owner Replay Debug Authorization.
 
 ---
-*Last updated: 2026-05-18 after v1.1 milestone audit*
+*Last updated: 2026-05-18 after Phase 13 context gathering*
