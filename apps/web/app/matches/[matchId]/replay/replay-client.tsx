@@ -55,6 +55,10 @@ export function ReplayClient({ data }: ReplayClientProps) {
     () => groupTimelineEntries(data.timeline),
     [data.timeline],
   )
+  const timelineEntryBySequence = useMemo(
+    () => new Map(data.timeline.map((entry) => [entry.sequence, entry])),
+    [data.timeline],
+  )
   const ownerDebugAvailable = canShowOwnerDebug(data)
   const statusLabel = data.mode === "owner" ? "Owner debug" : "Public view"
 
@@ -180,23 +184,29 @@ export function ReplayClient({ data }: ReplayClientProps) {
                 {round.activations.map((activation) => (
                   <div key={`${round.label}:${activation.label}`}>
                     <p className="replay-muted">{activation.label}</p>
-                    {activation.events.map((event) => (
-                      <button
-                        key={event.sequence}
-                        type="button"
-                        className="replay-event-row"
-                        onClick={() =>
-                          setSelectedIndex(
-                            data.timeline.findIndex(
-                              (entry) => entry.sequence === event.sequence,
-                            ),
-                          )
-                        }
-                      >
-                        <span>{event.label}</span>
-                        <span>#{event.sequence}</span>
-                      </button>
-                    ))}
+                    {activation.events.map((event) => {
+                      const timelineEntry = timelineEntryBySequence.get(
+                        event.sequence,
+                      )
+                      return (
+                        <button
+                          key={event.sequence}
+                          type="button"
+                          aria-label={`Timeline event ${event.sequence}: ${timelineEntry?.type ?? "UNKNOWN"}`}
+                          className="replay-event-row"
+                          onClick={() =>
+                            setSelectedIndex(
+                              data.timeline.findIndex(
+                                (entry) => entry.sequence === event.sequence,
+                              ),
+                            )
+                          }
+                        >
+                          <span>{event.label}</span>
+                          <span>#{event.sequence}</span>
+                        </button>
+                      )
+                    })}
                   </div>
                 ))}
               </div>
