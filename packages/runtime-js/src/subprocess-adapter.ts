@@ -93,7 +93,9 @@ export const createSubprocessStrategyExecutionAdapter = (
     metadata: subprocessStrategyExecutionAdapterMetadata,
     execute(request: StrategyExecutionRequest): RuntimeResult<unknown> {
       const stdoutBytes =
-        request.outputByteLimit ?? options.stdoutBytes ?? SUBPROCESS_STDOUT_BYTES
+        request.outputByteLimit ??
+        options.stdoutBytes ??
+        SUBPROCESS_STDOUT_BYTES
       const input = encodeSubprocessIpcRequest({
         source: request.source,
         methodName: request.methodName,

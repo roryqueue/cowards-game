@@ -7,10 +7,7 @@ import {
   type StrategyExecutionRequest,
 } from "@cowards/runtime-js/worker"
 import { fixtures } from "@cowards/spec"
-import type {
-  ArenaVariant,
-  StrategyRevision,
-} from "@cowards/spec"
+import type { ArenaVariant, StrategyRevision } from "@cowards/spec"
 import type { WorkerRunnerDependencies } from "./runner.js"
 import {
   createClaimedMatchJobForTest,
@@ -117,11 +114,13 @@ const createCapturingRuntimeConfig = (): WorkerRuntimeConfig => {
   }
 }
 
-const stubRepositories = (input: {
-  bottomRevision?: StrategyRevision
-  topRevision?: StrategyRevision
-  arenaVariant?: ArenaVariant
-} = {}) => {
+const stubRepositories = (
+  input: {
+    bottomRevision?: StrategyRevision
+    topRevision?: StrategyRevision
+    arenaVariant?: ArenaVariant
+  } = {},
+) => {
   const bottomRevision =
     input.bottomRevision ?? strategyRevision("strategy-revision:bottom")
   const topRevision =
@@ -232,18 +231,22 @@ describe("worker runner", () => {
 
     const input = await loadRunMatchInput(pool, "match:test", runtimeConfig)
 
-    expect(input.runtime.selectActivations({
-      mySoldiers: [{ ownerPlayerId: "player:bottom" }],
-    } as never)).toEqual({
+    expect(
+      input.runtime.selectActivations({
+        mySoldiers: [{ ownerPlayerId: "player:bottom" }],
+      } as never),
+    ).toEqual({
       ok: true,
       value: {
         activationOrders: [],
         strategyMemory: {},
       },
     })
-    expect(input.runtime.selectActivations({
-      mySoldiers: [{ ownerPlayerId: "player:top" }],
-    } as never)).toEqual({
+    expect(
+      input.runtime.selectActivations({
+        mySoldiers: [{ ownerPlayerId: "player:top" }],
+      } as never),
+    ).toEqual({
       ok: true,
       value: {
         activationOrders: [],

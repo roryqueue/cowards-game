@@ -150,9 +150,7 @@ export const isSubprocessIpcResponse = (
   return "violation" in value && isRuntimeViolation(value.violation)
 }
 
-export const encodeSubprocessIpcRequest = (
-  request: unknown,
-): string => {
+export const encodeSubprocessIpcRequest = (request: unknown): string => {
   if (!isSubprocessIpcRequest(request)) {
     throw new SubprocessSystemFailure(
       "MALFORMED_IPC",

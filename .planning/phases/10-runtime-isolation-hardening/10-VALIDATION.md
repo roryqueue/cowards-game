@@ -1,6 +1,6 @@
 ---
 phase: 10-runtime-isolation-hardening
-status: validated-with-formatting-blocker
+status: validated
 requirements: [ISO-01, ISO-02, ISO-03, ISO-04, ISO-05, ISO-06, ISO-07]
 ---
 
@@ -9,7 +9,7 @@ requirements: [ISO-01, ISO-02, ISO-03, ISO-04, ISO-05, ISO-06, ISO-07]
 **Updated:** 2026-05-18  
 **Scope:** Plan 10-05 final validation evidence for runtime isolation hardening.
 
-All Phase 10 behavioral tests, typechecks, and final boundary grep gates pass. The only failed command is the broad Prettier check, which reports four pre-existing Phase 10 files outside Plan 10-05 write scope after the new `isolation-boundary.test.ts` file was formatted.
+All Phase 10 behavioral tests, typechecks, formatting checks, and final boundary grep gates pass.
 
 ## Required Commands
 
@@ -24,7 +24,7 @@ All Phase 10 behavioral tests, typechecks, and final boundary grep gates pass. T
 | `pnpm --filter @cowards/spec typecheck` | Spec package type contract. | PASS - `tsc --noEmit` completed. |
 | `pnpm --filter @cowards/engine test` | Engine behavior remains unchanged and pure. | PASS - 8 files passed, 38 tests passed. |
 | `pnpm --filter @cowards/engine typecheck` | Engine package type contract remains unchanged. | PASS - `tsc -b` completed. |
-| `pnpm exec prettier --check packages/runtime-js/src apps/worker/src .planning/phases/10-runtime-isolation-hardening` | Formatting gate for changed source and planning artifacts. | FAIL - after formatting Plan 10-05's new test, Prettier still reports pre-existing files outside this wave's write scope: `packages/runtime-js/src/subprocess-adapter.test.ts`, `packages/runtime-js/src/subprocess-adapter.ts`, `packages/runtime-js/src/subprocess-ipc.ts`, `apps/worker/src/runner.test.ts`. |
+| `pnpm exec prettier --check packages/runtime-js/src apps/worker/src .planning/phases/10-runtime-isolation-hardening` | Formatting gate for changed source and planning artifacts. | PASS - previous Phase 10 formatting drift was corrected after Plan 10-05. |
 
 ## ISO Evidence Checklist
 
@@ -49,3 +49,15 @@ All Phase 10 behavioral tests, typechecks, and final boundary grep gates pass. T
 ## Docker Note
 
 Docker is not required for Phase 10 validation. Docker/container end-to-end runtime verification belongs to Phase 12; Phase 10 validates the adapter boundary, subprocess spike, hostile matrix, and source import gates without claiming container isolation evidence.
+
+## Post-Validation Formatting Closure
+
+After the first validation pass found formatting drift in four Phase 10 files, the following closure commands passed:
+
+| Command | Result |
+| --- | --- |
+| `pnpm exec prettier --write packages/runtime-js/src/subprocess-adapter.test.ts packages/runtime-js/src/subprocess-adapter.ts packages/runtime-js/src/subprocess-ipc.ts apps/worker/src/runner.test.ts` | PASS - files rewritten by Prettier. |
+| `pnpm --filter @cowards/runtime-js test -- subprocess-adapter.test.ts adapter-contract.test.ts hostile-matrix.test.ts isolation-boundary.test.ts` | PASS - 9 files passed, 129 tests passed. |
+| `pnpm --filter @cowards/worker test -- runner.test.ts` | PASS - 1 file passed, 14 tests passed. |
+| `pnpm --filter @cowards/runtime-js typecheck` | PASS - `tsc --noEmit` completed. |
+| `pnpm --filter @cowards/worker typecheck` | PASS - `tsc -b` completed. |

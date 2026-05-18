@@ -79,10 +79,7 @@ const fakeSpawnResult = (
     error: overrides.error,
   }) as SpawnSyncReturns<string>
 
-const createFakeSpawn = (
-  result: FakeSpawnResult,
-  calls: SpawnCall[] = [],
-) => {
+const createFakeSpawn = (result: FakeSpawnResult, calls: SpawnCall[] = []) => {
   const spawn = (
     command: string,
     args: readonly string[],
@@ -244,7 +241,9 @@ describe("createSubprocessStrategyExecutionAdapter", () => {
   })
 
   it("rejects stdout over cap before parsing it as trusted JSON", () => {
-    const { spawn } = createFakeSpawn({ stdout: '{"ok":true,"value":"' + "x".repeat(32) + '"}' })
+    const { spawn } = createFakeSpawn({
+      stdout: '{"ok":true,"value":"' + "x".repeat(32) + '"}',
+    })
     const adapter = createSubprocessStrategyExecutionAdapter({
       spawnSync: spawn,
       stdoutBytes: 12,
@@ -263,7 +262,9 @@ describe("createSubprocessStrategyExecutionAdapter", () => {
 
   it("classifies malformed stdout JSON as malformed IPC", () => {
     const { spawn } = createFakeSpawn({ stdout: "not json" })
-    const adapter = createSubprocessStrategyExecutionAdapter({ spawnSync: spawn })
+    const adapter = createSubprocessStrategyExecutionAdapter({
+      spawnSync: spawn,
+    })
 
     expectSubprocessFailure(
       () =>
@@ -281,7 +282,9 @@ describe("createSubprocessStrategyExecutionAdapter", () => {
       status: 42,
       stderr: "protocol failed",
     })
-    const adapter = createSubprocessStrategyExecutionAdapter({ spawnSync: spawn })
+    const adapter = createSubprocessStrategyExecutionAdapter({
+      spawnSync: spawn,
+    })
 
     expectSubprocessFailure(
       () =>
@@ -300,7 +303,9 @@ describe("createSubprocessStrategyExecutionAdapter", () => {
       signal: "SIGTERM",
       stderr: "terminated",
     })
-    const adapter = createSubprocessStrategyExecutionAdapter({ spawnSync: spawn })
+    const adapter = createSubprocessStrategyExecutionAdapter({
+      spawnSync: spawn,
+    })
 
     expectSubprocessFailure(
       () =>
@@ -317,7 +322,9 @@ describe("createSubprocessStrategyExecutionAdapter", () => {
     const error = new Error("spawn failed") as Error & { code: string }
     error.code = "ENOENT"
     const { spawn } = createFakeSpawn({ error })
-    const adapter = createSubprocessStrategyExecutionAdapter({ spawnSync: spawn })
+    const adapter = createSubprocessStrategyExecutionAdapter({
+      spawnSync: spawn,
+    })
 
     expectSubprocessFailure(
       () =>
