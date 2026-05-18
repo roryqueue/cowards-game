@@ -7,6 +7,7 @@ import {
   LIST_WORKSHOP_REVISIONS_SQL,
   listWorkshopOpponents,
   listWorkshopPresets,
+  listWorkshopSamples,
   listWorkshopTemplates,
   WORKSHOP_STRATEGY_ID,
   WORKSHOP_MATCH_SET_PREFIX,
@@ -72,6 +73,75 @@ describe("Workshop service contracts", () => {
     expect(
       listWorkshopTemplates().every((template) => template.validation.valid),
     ).toBe(true)
+  })
+
+  it("returns sample Strategy metadata for every catalog entry", () => {
+    for (const sample of listWorkshopSamples()) {
+      expect(sample.id).toMatch(/^sample:/)
+      expect(sample.label.length).toBeGreaterThan(0)
+      expect(sample.description.length).toBeGreaterThan(0)
+      expect(sample.description.length).toBeLessThanOrEqual(96)
+      expect(sample.source.length).toBeGreaterThan(0)
+      expect(["starter", "failure-mode"]).toContain(sample.sampleKind)
+    }
+  })
+
+  it("ships valid starter samples for common doctrine mechanics", () => {
+    const starters = listWorkshopSamples().filter(
+      (sample) => sample.sampleKind === "starter",
+    )
+
+    expect(starters.map((sample) => sample.id)).toEqual([
+      "sample:basic-advance-turn",
+      "sample:push-setup",
+      "sample:backstab-setup",
+      "sample:stoning-blocking",
+    ])
+    expect(starters.map((sample) => sample.label)).toEqual([
+      "Basic advance and turn",
+      "Push setup",
+      "Backstab setup",
+      "Stoning and blocking",
+    ])
+    expect(starters.every((sample) => sample.validation.valid)).toBe(true)
+    expect(starters.every((sample) => sample.validation.errors.length === 0))
+      .toBe(true)
+    expect(
+      starters.every(
+        (sample) =>
+          sample.expectedValidationCode === undefined &&
+          sample.expectedRuntimeViolationType === undefined,
+      ),
+    ).toBe(true)
+  })
+
+  it("ships intentional failure-mode samples with explicit expectations", () => {
+    const failureModes = listWorkshopSamples().filter(
+      (sample) => sample.sampleKind === "failure-mode",
+    )
+
+    expect(failureModes.map((sample) => sample.id)).toEqual([
+      "sample:failure-forbidden-clock",
+      "sample:failure-invalid-output",
+      "sample:failure-thrown-exception",
+    ])
+
+    for (const sample of failureModes) {
+      expect(
+        sample.expectedValidationCode ?? sample.expectedRuntimeViolationType,
+      ).toBeDefined()
+
+      if (sample.expectedValidationCode) {
+        expect(sample.validation.valid).toBe(false)
+        expect(sample.validation.errors.map((error) => error.code)).toContain(
+          sample.expectedValidationCode,
+        )
+      }
+
+      if (sample.expectedRuntimeViolationType) {
+        expect(sample.validation.valid).toBe(true)
+      }
+    }
   })
 
   it("keeps revision history limited to local Workshop revisions", () => {

@@ -8,8 +8,10 @@ import type {
   MatchId,
   MatchSetId,
   PlayerId,
+  RuntimeViolationType,
   StrategyId,
   StrategyRevision,
+  StrategyRevisionValidationCode,
   StrategyRevisionId,
 } from "@cowards/spec"
 import type { Pool } from "pg"
@@ -151,6 +153,26 @@ export interface WorkshopTemplateSummary {
   validation: StrategyRevisionValidationReport
 }
 
+interface WorkshopSampleBase {
+  id: `sample:${string}`
+  label: string
+  description: string
+  source: string
+  validation: StrategyRevisionValidationReport
+}
+
+export type WorkshopSampleSummary =
+  | (WorkshopSampleBase & {
+      sampleKind: "starter"
+      expectedValidationCode?: undefined
+      expectedRuntimeViolationType?: undefined
+    })
+  | (WorkshopSampleBase & {
+      sampleKind: "failure-mode"
+      expectedValidationCode?: StrategyRevisionValidationCode | undefined
+      expectedRuntimeViolationType?: RuntimeViolationType | undefined
+    })
+
 export interface WorkshopTestSummary {
   matchSetId: MatchSetId
   status: MatchSetStatus
@@ -167,6 +189,7 @@ export interface WorkshopSnapshot {
   presets: WorkshopPresetSummary[]
   opponents: WorkshopOpponentSummary[]
   templates: WorkshopTemplateSummary[]
+  samples: WorkshopSampleSummary[]
 }
 
 const presetLabels: Record<MatchSetPresetId, string> = {
@@ -244,6 +267,227 @@ export const listWorkshopTemplates = (): WorkshopTemplateSummary[] => [
     source: sentinelSource,
     validation: validateStrategySource(sentinelSource),
   },
+]
+
+const basicAdvanceTurnSampleSource = `
+export default {
+  selectActivations(input) {
+    return {
+      activationOrders: input.mySoldiers
+        .filter((soldier) => soldier.status === "ACTIVE")
+        .slice(0, input.activationCount)
+        .map((soldier) => ({ soldierId: soldier.id, objective: { drill: "advance-turn" } })),
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain(input) {
+    const forward = input.self.facing ?? "UP"
+    return {
+      action: input.cycleIndex === 0
+        ? { type: "MOVE", direction: forward }
+        : { type: "TURN", direction: forward },
+      soldierMemory: input.soldierMemory
+    }
+  }
+}
+`.trim()
+
+const pushSetupSampleSource = `
+const directionPriority = ["UP", "RIGHT", "DOWN", "LEFT"]
+
+const firstVisibleEnemyDirection = (grid) => {
+  const target = grid.cells.find((cell) => cell.contents === "ENEMY_ACTIVE")
+  if (!target) return "UP"
+  if (target.dy < 0) return "UP"
+  if (target.dx > 0) return "RIGHT"
+  if (target.dy > 0) return "DOWN"
+  if (target.dx < 0) return "LEFT"
+  return directionPriority[0]
+}
+
+export default {
+  selectActivations(input) {
+    return {
+      activationOrders: input.mySoldiers
+        .filter((soldier) => soldier.status === "ACTIVE")
+        .slice(0, input.activationCount)
+        .map((soldier) => ({ soldierId: soldier.id, objective: { drill: "push-setup" } })),
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain(input) {
+    const direction = firstVisibleEnemyDirection(input.awarenessGrid)
+    return {
+      action: input.cycleIndex === 0
+        ? { type: "TURN", direction }
+        : { type: "MOVE", direction },
+      soldierMemory: input.soldierMemory
+    }
+  }
+}
+`.trim()
+
+const backstabSetupSampleSource = `
+const behindDirection = (self) =>
+  self.lastSuccessfulMoveDirection ?? self.facing ?? "UP"
+
+export default {
+  selectActivations(input) {
+    return {
+      activationOrders: input.mySoldiers
+        .filter((soldier) => soldier.status === "ACTIVE")
+        .slice(0, input.activationCount)
+        .map((soldier) => ({
+          soldierId: soldier.id,
+          objective: { drill: "backstab-setup", lastMove: soldier.lastSuccessfulMoveDirection }
+        })),
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain(input) {
+    const direction = behindDirection(input.self)
+    return {
+      action: input.cycleIndex === 0
+        ? { type: "TURN", direction }
+        : { type: "MOVE", direction },
+      soldierMemory: input.soldierMemory
+    }
+  }
+}
+`.trim()
+
+const stoningBlockingSampleSource = `
+const hasAdjacentEnemy = (grid) =>
+  grid.cells.some((cell) =>
+    cell.contents === "ENEMY_ACTIVE" &&
+    ((cell.dx === 0 && (cell.dy === -1 || cell.dy === 1)) ||
+      (cell.dy === 0 && (cell.dx === -1 || cell.dx === 1)))
+  )
+
+export default {
+  selectActivations(input) {
+    return {
+      activationOrders: input.mySoldiers
+        .filter((soldier) => soldier.status === "ACTIVE")
+        .slice(0, input.activationCount)
+        .map((soldier) => ({ soldierId: soldier.id, objective: { drill: "stone-block" } })),
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain(input) {
+    return {
+      action: hasAdjacentEnemy(input.awarenessGrid)
+        ? { type: "TURN_TO_STONE" }
+        : { type: "TURN", direction: input.self.facing ?? "UP" },
+      soldierMemory: input.soldierMemory
+    }
+  }
+}
+`.trim()
+
+const forbiddenClockSampleSource = `
+export default {
+  selectActivations(input) {
+    Date.now()
+    return {
+      activationOrders: input.mySoldiers.slice(0, input.activationCount).map((soldier) => ({ soldierId: soldier.id })),
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain(input) {
+    return {
+      action: { type: "TURN_TO_STONE" },
+      soldierMemory: input.soldierMemory
+    }
+  }
+}
+`.trim()
+
+const invalidOutputSampleSource = `
+export default {
+  selectActivations() {
+    return { activationOrders: "everyone", strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "DANCE" }, soldierMemory: {} }
+  }
+}
+`.trim()
+
+const thrownExceptionSampleSource = `
+export default {
+  selectActivations(input) {
+    return {
+      activationOrders: input.mySoldiers.slice(0, input.activationCount).map((soldier) => ({ soldierId: soldier.id })),
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain() {
+    throw new Error("Intentional sample failure")
+  }
+}
+`.trim()
+
+const sample = <T extends Omit<WorkshopSampleSummary, "validation">>(
+  input: T,
+): T & { validation: StrategyRevisionValidationReport } => ({
+  ...input,
+  validation: validateStrategySource(input.source),
+})
+
+export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
+  sample({
+    id: "sample:basic-advance-turn",
+    label: "Basic advance and turn",
+    sampleKind: "starter",
+    description: "Selects active Soldiers, Advances once, then keeps facing.",
+    source: basicAdvanceTurnSampleSource,
+  }),
+  sample({
+    id: "sample:push-setup",
+    label: "Push setup",
+    sampleKind: "starter",
+    description: "Turns toward a visible enemy before attempting an Advance.",
+    source: pushSetupSampleSource,
+  }),
+  sample({
+    id: "sample:backstab-setup",
+    label: "Backstab setup",
+    sampleKind: "starter",
+    description: "Reuses last movement direction to demonstrate Backstab setup.",
+    source: backstabSetupSampleSource,
+  }),
+  sample({
+    id: "sample:stoning-blocking",
+    label: "Stoning and blocking",
+    sampleKind: "starter",
+    description: "Turns to STONE when an enemy is adjacent; otherwise holds facing.",
+    source: stoningBlockingSampleSource,
+  }),
+  sample({
+    id: "sample:failure-forbidden-clock",
+    label: "Failure: forbidden clock",
+    sampleKind: "failure-mode",
+    description: "Demonstrates that Strategy source cannot read system time.",
+    source: forbiddenClockSampleSource,
+    expectedValidationCode: "FORBIDDEN_PATTERN",
+  }),
+  sample({
+    id: "sample:failure-invalid-output",
+    label: "Failure: invalid output",
+    sampleKind: "failure-mode",
+    description: "Demonstrates runtime rejection of invalid Strategy API output.",
+    source: invalidOutputSampleSource,
+    expectedRuntimeViolationType: "INVALID_OUTPUT",
+  }),
+  sample({
+    id: "sample:failure-thrown-exception",
+    label: "Failure: thrown exception",
+    sampleKind: "failure-mode",
+    description: "Demonstrates a SoldierBrain exception becoming a runtime violation.",
+    source: thrownExceptionSampleSource,
+    expectedRuntimeViolationType: "THROWN_EXCEPTION",
+  }),
 ]
 
 export const validateWorkshopSource = (
@@ -447,6 +691,7 @@ export const getWorkshopSnapshot = async (
   presets: listWorkshopPresets(),
   opponents: listWorkshopOpponents(),
   templates: listWorkshopTemplates(),
+  samples: listWorkshopSamples(),
 })
 
 export const getWorkshopStaticSnapshot = (): WorkshopSnapshot => ({
@@ -456,4 +701,5 @@ export const getWorkshopStaticSnapshot = (): WorkshopSnapshot => ({
   presets: listWorkshopPresets(),
   opponents: listWorkshopOpponents(),
   templates: listWorkshopTemplates(),
+  samples: listWorkshopSamples(),
 })

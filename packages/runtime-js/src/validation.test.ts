@@ -13,6 +13,49 @@ export default {
 }
 `
 
+const forbiddenClockSampleSource = `
+export default {
+  selectActivations(input) {
+    Date.now()
+    return {
+      activationOrders: input.mySoldiers.slice(0, input.activationCount).map((soldier) => ({ soldierId: soldier.id })),
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain(input) {
+    return {
+      action: { type: "TURN_TO_STONE" },
+      soldierMemory: input.soldierMemory
+    }
+  }
+}
+`
+
+const invalidOutputSampleSource = `
+export default {
+  selectActivations() {
+    return { activationOrders: "everyone", strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "DANCE" }, soldierMemory: {} }
+  }
+}
+`
+
+const thrownExceptionSampleSource = `
+export default {
+  selectActivations(input) {
+    return {
+      activationOrders: input.mySoldiers.slice(0, input.activationCount).map((soldier) => ({ soldierId: soldier.id })),
+      strategyMemory: input.strategyMemory
+    }
+  },
+  soldierBrain() {
+    throw new Error("Intentional sample failure")
+  }
+}
+`
+
 const expectCode = (source: string, code: string) => {
   const report = validateStrategySource(source)
 
@@ -122,5 +165,22 @@ describe("validateStrategySource", () => {
     expect(report.sourceBytes).toBe(
       new TextEncoder().encode(validSource).length,
     )
+  })
+
+  it("covers Workshop failure-mode sample validation boundaries", () => {
+    const forbiddenClockReport = validateStrategySource(
+      forbiddenClockSampleSource,
+    )
+    const invalidOutputReport = validateStrategySource(invalidOutputSampleSource)
+    const thrownExceptionReport = validateStrategySource(
+      thrownExceptionSampleSource,
+    )
+
+    expect(forbiddenClockReport.valid).toBe(false)
+    expect(forbiddenClockReport.errors.map((error) => error.code)).toContain(
+      "FORBIDDEN_PATTERN",
+    )
+    expect(invalidOutputReport.valid).toBe(true)
+    expect(thrownExceptionReport.valid).toBe(true)
   })
 })
