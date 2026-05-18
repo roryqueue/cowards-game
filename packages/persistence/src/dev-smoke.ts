@@ -16,7 +16,10 @@ export interface DevelopmentMatchSetSmokeResult {
 
 export const runDevelopmentMatchSetSmoke = async (
   pool: Pool,
-  options: { runQueuedMatch?: () => Promise<unknown> } = {},
+  options: {
+    matchSetId?: MatchSetId | undefined
+    runQueuedMatch?: () => Promise<unknown>
+  } = {},
 ): Promise<DevelopmentMatchSetSmokeResult> => {
   await migrate(pool)
   const seed = createDevelopmentSeedData()
@@ -38,7 +41,8 @@ export const runDevelopmentMatchSetSmoke = async (
   if (!bottomRevision || !topRevision) {
     throw new Error("Development seed revisions missing")
   }
-  const matchSetId = "match-set:dev-smoke:v1" as MatchSetId
+  const matchSetId =
+    options.matchSetId ?? ("match-set:dev-smoke:v1" as MatchSetId)
   await createMatchSetService(pool).createFromPreset({
     id: matchSetId,
     presetId: "smoke-v1",

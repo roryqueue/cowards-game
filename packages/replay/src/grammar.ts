@@ -38,11 +38,6 @@ const ACTIVATION_EVENT_TYPES = new Set<ChronicleEventType>([
   "SOLDIER_STONED",
 ])
 
-const CYCLE_EVENT_TYPES = new Set<ChronicleEventType>([
-  "AWARENESS_GRID_OBSERVED",
-  "ACTION_EMITTED",
-])
-
 const SOLDIER_CONTEXT_EVENT_TYPES = new Set<ChronicleEventType>([
   "ACTIVATION_STARTED",
   "AWARENESS_GRID_OBSERVED",

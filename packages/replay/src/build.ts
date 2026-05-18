@@ -321,16 +321,14 @@ export const buildChronicleFromMatch = (
           .slice(contractionStartSequence)
           .find((event) => event.type === "CONTRACTION_RESOLVED")?.sequence ??
         currentSequence(events)
-      snapshots.push(
-        {
-          kind: "CONTRACTION",
-          sequence: contractionSequence,
-          context: {
-            phaseNumber: state.phaseNumber,
-          },
-          board: getFullBoardSnapshot(state),
+      snapshots.push({
+        kind: "CONTRACTION",
+        sequence: contractionSequence,
+        context: {
+          phaseNumber: state.phaseNumber,
         },
-      )
+        board: getFullBoardSnapshot(state),
+      })
       if (!state.outcome) {
         state = advanceRound(state)
         phasesRun += 1

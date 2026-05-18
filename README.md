@@ -16,11 +16,13 @@ Start the lightweight development loop:
 pnpm dev
 ```
 
-Start the full local topology with PostgreSQL, Redis, the skeletal web app, and the skeletal worker:
+Start the Docker-backed local topology with PostgreSQL, Redis, the web app, and the worker:
 
 ```sh
 pnpm dev:full
 ```
+
+`pnpm dev:full` starts Docker Compose services, waits for service health, runs preflight checks, then starts the host-run web and worker dev processes. The application processes are intentionally still run on the host in this milestone; Docker owns the service layer.
 
 Start the local end-to-end loop without Docker, using a Homebrew-style local PostgreSQL binary:
 
@@ -28,9 +30,23 @@ Start the local end-to-end loop without Docker, using a Homebrew-style local Pos
 pnpm dev:local
 ```
 
-`pnpm dev:local` initializes or reuses `/tmp/cowards-game-postgres-data`, creates the `cowards` role and `cowards_game` database, runs migrations, then starts the web app and worker against `postgresql://cowards:cowards@localhost:5432/cowards_game`. Use `pnpm dev:local -- --setup-only` when you only want to prepare the local database.
+`pnpm dev:local` initializes or reuses `/tmp/cowards-game-postgres-data`, creates the `cowards` role and `cowards_game` database, runs migrations, runs local preflight without Redis, then starts the web app and worker against `postgresql://cowards:cowards@localhost:5432/cowards_game`. Use `pnpm dev:local -- --setup-only` when you only want to prepare the local database.
 
-Manual check: run `pnpm dev` and confirm the web and worker development processes start. Run `pnpm dev:full` and confirm Docker Compose starts PostgreSQL and Redis before the web and worker processes.
+## Reliability Commands
+
+```sh
+pnpm services:up
+pnpm preflight:docker
+pnpm preflight:local
+pnpm e2e:service
+pnpm e2e:smoke
+pnpm e2e:visual
+pnpm test:fast
+```
+
+`pnpm preflight:docker` verifies Dockerized Postgres and Redis, migrations, seeded Match execution, Chronicle replay, and public replay projection. `pnpm preflight:local` runs the same checks without Redis for the no-Docker Postgres path.
+
+Failure output is prefixed by layer: `service_startup`, `migration`, `seeding`, `worker_execution`, `chronicle_validation`, `replay_projection`, or `ui_rendering`.
 
 ## Commands
 
@@ -39,10 +55,11 @@ pnpm build
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:fast
 pnpm verify
 ```
 
-`pnpm verify` is the local quality gate for Phase 1. Hosted CI is intentionally not included in Phase 1.
+`pnpm verify` runs fast checks plus fixture replay smoke and visual replay regression. Service-backed E2E is intentionally separate as `pnpm e2e:service` because it requires running services.
 
 ## Engine
 

@@ -23,19 +23,36 @@ test("Workshop edit-to-replay path opens a completed Match replay", async ({
   const workerResponse = await page.request.post(
     "/api/test-support/run-worker-once",
   )
-  expect(workerResponse.status()).toBe(200)
-  await expect(workerResponse.json()).resolves.toMatchObject({
+  const workerPayload = await workerResponse.json()
+  expect(
+    workerResponse.status(),
+    `[worker_execution] ${JSON.stringify(workerPayload)}`,
+  ).toBe(200)
+  expect(
+    workerPayload,
+    "[worker_execution] worker did not complete queued Match",
+  ).toMatchObject({
     status: "ok",
   })
 
   await expect(
     page.getByText(/Test complete|Some Matches failed/),
+    "[chronicle_validation] Match did not reach a replayable terminal state",
   ).toBeVisible()
   await page.getByRole("link", { name: "Open replay" }).first().click()
-  await expect(page).toHaveURL(/\/matches\/.*\/replay/)
-  await expect(page.getByRole("heading", { name: "Replay" })).toBeVisible()
+  await expect(page, "[replay_projection] Replay route did not open").toHaveURL(
+    /\/matches\/.*\/replay/,
+  )
+  await expect(
+    page.getByRole("heading", { name: "Replay" }),
+    "[ui_rendering] Replay heading did not render",
+  ).toBeVisible()
   await expect(
     page.getByRole("slider", { name: "Replay timeline" }),
+    "[ui_rendering] Replay timeline did not render",
   ).toBeVisible()
-  await expect(page.getByText("Inspector")).toBeVisible()
+  await expect(
+    page.getByText("Inspector"),
+    "[ui_rendering] Replay inspector did not render",
+  ).toBeVisible()
 })

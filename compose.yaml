@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: cowards
       POSTGRES_DB: cowards_game
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cowards -d cowards_game"]
       interval: 5s

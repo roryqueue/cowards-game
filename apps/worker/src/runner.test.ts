@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { Pool } from "pg"
 import type { StrategyRuntime } from "@cowards/engine"
+import type * as Persistence from "@cowards/persistence"
 import { createRepositories } from "@cowards/persistence"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import {
@@ -24,7 +25,7 @@ import {
 } from "./runtime-config.js"
 
 vi.mock("@cowards/persistence", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@cowards/persistence")>()
+  const actual = await importOriginal<typeof Persistence>()
   return {
     ...actual,
     createRepositories: vi.fn(),

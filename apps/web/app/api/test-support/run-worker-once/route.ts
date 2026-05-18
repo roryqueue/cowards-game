@@ -12,6 +12,7 @@ interface WorkerProcessResult {
 }
 
 type RouteEnv = Partial<Record<string, string | undefined>>
+type WorkerFailureLayer = "worker_execution"
 
 export interface RunWorkerOnceRouteDeps {
   env?: RouteEnv | undefined
@@ -109,6 +110,42 @@ const parseWorkerPayload = (
   return undefined
 }
 
+const trimDiagnostic = (value: unknown): string | undefined => {
+  if (typeof value !== "string") {
+    return undefined
+  }
+  const trimmed = value.trim()
+  if (trimmed.length === 0) {
+    return undefined
+  }
+  return trimmed.length > 2_000 ? `${trimmed.slice(0, 2_000)}...` : trimmed
+}
+
+const workerFailurePayload = (error: unknown): Record<string, unknown> => {
+  const diagnostic = error as {
+    stdout?: unknown
+    stderr?: unknown
+    code?: unknown
+    signal?: unknown
+  }
+  return {
+    error:
+      error instanceof Error
+        ? error.message
+        : "Worker test-support execution failed.",
+    layer: "worker_execution" satisfies WorkerFailureLayer,
+    status: "service_unavailable",
+    code:
+      typeof diagnostic.code === "string" || typeof diagnostic.code === "number"
+        ? diagnostic.code
+        : undefined,
+    signal:
+      typeof diagnostic.signal === "string" ? diagnostic.signal : undefined,
+    stdout: trimDiagnostic(diagnostic.stdout),
+    stderr: trimDiagnostic(diagnostic.stderr),
+  }
+}
+
 export const createRunWorkerOnceHandler =
   (deps: RunWorkerOnceRouteDeps = {}) =>
   async (): Promise<Response> => {
@@ -128,16 +165,7 @@ export const createRunWorkerOnceHandler =
         stderr: result.stderr.trim() || undefined,
       })
     } catch (error) {
-      return Response.json(
-        {
-          error:
-            error instanceof Error
-              ? error.message
-              : "Worker test-support execution failed.",
-          status: "service_unavailable",
-        },
-        { status: 503 },
-      )
+      return Response.json(workerFailurePayload(error), { status: 503 })
     }
   }
 

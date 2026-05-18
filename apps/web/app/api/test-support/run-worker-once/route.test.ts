@@ -48,7 +48,35 @@ describe("run-worker-once test-support route", () => {
     expect(response.status).toBe(503)
     await expect(response.json()).resolves.toMatchObject({
       status: "service_unavailable",
+      layer: "worker_execution",
       error: "connect ECONNREFUSED 127.0.0.1:5432",
     })
+  })
+
+  it("returns bounded worker diagnostics on process failure", async () => {
+    const error = new Error("worker exited")
+    Object.assign(error, {
+      code: 1,
+      stderr: "stack trace\n".repeat(400),
+      stdout: "worker booted",
+    })
+
+    const response = await createRunWorkerOnceHandler({
+      env: { PLAYWRIGHT_TEST: "1" },
+      runWorkerProcess: async () => {
+        throw error
+      },
+    })()
+
+    expect(response.status).toBe(503)
+    const body = await response.json()
+    expect(body).toMatchObject({
+      status: "service_unavailable",
+      layer: "worker_execution",
+      error: "worker exited",
+      code: 1,
+      stdout: "worker booted",
+    })
+    expect(body.stderr.length).toBeLessThanOrEqual(2_003)
   })
 })

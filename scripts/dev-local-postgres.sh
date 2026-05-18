@@ -83,6 +83,11 @@ migrate_database() {
   "
 }
 
+run_preflight() {
+  echo "Running local preflight checks."
+  DATABASE_URL="$DATABASE_URL" pnpm preflight -- --skip-redis --skip-web
+}
+
 main() {
   if [ "${1:-}" = "--" ]; then
     shift
@@ -96,8 +101,11 @@ main() {
 
   if [ "${1:-}" = "--setup-only" ]; then
     echo "Local database is ready at ${DATABASE_URL}."
+    echo "Run: DATABASE_URL=\"${DATABASE_URL}\" pnpm preflight -- --skip-redis --skip-web"
     return 0
   fi
+
+  run_preflight
 
   echo "Starting Coward's Game web app and worker."
   echo "Web: http://localhost:3000"
