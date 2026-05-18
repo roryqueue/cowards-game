@@ -10,6 +10,13 @@ import type {
 } from "@cowards/spec"
 
 export type ReplayViewMode = "public" | "owner"
+
+export interface GetMatchReplayOptions {
+  mode?: ReplayViewMode | undefined
+  ownerPlayerId?: PlayerId | undefined
+  allowOwnerDebug?: boolean | undefined
+}
+
 export type ReplayUnavailableReason = "missing-chronicle" | "invalid-chronicle"
 export type ReplayStatus = "ready" | "unavailable"
 

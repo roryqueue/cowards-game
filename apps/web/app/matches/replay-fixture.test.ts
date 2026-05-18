@@ -1,255 +1,209 @@
-import type {
-  Direction,
-  FullBoardSnapshot,
-  Position,
-  SoldierSnapshot,
-} from "@cowards/spec"
+import {
+  getCanonicalReplayScenario,
+  type CanonicalReplayScenarioId,
+} from "@cowards/test-utils"
+import {
+  createReplay,
+  projectOwnerChronicle,
+  projectPublicChronicle,
+} from "@cowards/replay"
 import { describe, expect, it } from "vitest"
-import { createReplayFixtureData } from "./replay-fixture.js"
+import { GET as getReplayFixture } from "../api/test-support/replay-fixture/route.js"
+import {
+  createReplayFixtureCatalog,
+  createReplayFixtureData,
+  defaultReplayFixtureScenarioId,
+  getReplayFixtureMatchId,
+  getReplayFixtureScenarioId,
+  isReplayFixtureMatch,
+  replayFixtureMatchId,
+} from "./replay-fixture.js"
+import type { ReplayReadyDto } from "./types.js"
 
-const samePosition = (left: Position | null, right: Position | null): boolean =>
-  left === right ||
-  (left !== null && right !== null && left.x === right.x && left.y === right.y)
+const projectionScenarioIds = [
+  "push",
+  "legal-backstab",
+  "contraction",
+  "runtime-failure",
+  defaultReplayFixtureScenarioId,
+] satisfies CanonicalReplayScenarioId[]
 
-const isInsideBounds = (
-  position: Position,
-  bounds: FullBoardSnapshot["bounds"],
-): boolean =>
-  position.x >= bounds.minX &&
-  position.x <= bounds.maxX &&
-  position.y >= bounds.minY &&
-  position.y <= bounds.maxY
-
-const movePosition = (position: Position, direction: Direction): Position => {
-  switch (direction) {
-    case "UP":
-      return { x: position.x, y: position.y - 1 }
-    case "DOWN":
-      return { x: position.x, y: position.y + 1 }
-    case "LEFT":
-      return { x: position.x - 1, y: position.y }
-    case "RIGHT":
-      return { x: position.x + 1, y: position.y }
-  }
+const expectReady = (data: ReturnType<typeof createReplayFixtureData>) => {
+  expect(data.status, "[projection] fixture data should be ready").toBe("ready")
+  return data as ReplayReadyDto
 }
 
-const oppositeDirection = (direction: Direction): Direction => {
-  switch (direction) {
-    case "UP":
-      return "DOWN"
-    case "DOWN":
-      return "UP"
-    case "LEFT":
-      return "RIGHT"
-    case "RIGHT":
-      return "LEFT"
-  }
-}
+describe("replay fixture projection", () => {
+  it("matches encoded default and scenario-specific fixture Match ids", () => {
+    expect(isReplayFixtureMatch("%E0%A4%A")).toBe(false)
+    expect(isReplayFixtureMatch(encodeURIComponent(replayFixtureMatchId))).toBe(
+      true,
+    )
+    expect(
+      isReplayFixtureMatch(
+        encodeURIComponent(getReplayFixtureMatchId("legal-backstab")),
+      ),
+    ).toBe(true)
+    expect(getReplayFixtureScenarioId(replayFixtureMatchId)).toBe(
+      defaultReplayFixtureScenarioId,
+    )
+    expect(
+      getReplayFixtureScenarioId(getReplayFixtureMatchId("runtime-failure")),
+    ).toBe("runtime-failure")
+    expect(getReplayFixtureScenarioId(`${replayFixtureMatchId}:unknown`)).toBe(
+      null,
+    )
+  })
 
-const directionBetween = (
-  from: Position,
-  to: Position,
-): Direction | undefined => {
-  if (to.x === from.x && to.y === from.y - 1) {
-    return "UP"
-  }
-  if (to.x === from.x && to.y === from.y + 1) {
-    return "DOWN"
-  }
-  if (to.x === from.x - 1 && to.y === from.y) {
-    return "LEFT"
-  }
-  if (to.x === from.x + 1 && to.y === from.y) {
-    return "RIGHT"
-  }
-  return undefined
-}
+  it("returns a route catalog with scenario-specific replay hrefs", async () => {
+    const response = await getReplayFixture(
+      new Request("http://cowards.test/api/test-support/replay-fixture"),
+    )
+    const body = await response.json()
 
-const behindSquare = (soldier: SoldierSnapshot): Position | null => {
-  if (soldier.position === null || soldier.facing === null) {
-    return null
-  }
-  switch (soldier.facing) {
-    case "UP":
-      return { x: soldier.position.x, y: soldier.position.y + 1 }
-    case "DOWN":
-      return { x: soldier.position.x, y: soldier.position.y - 1 }
-    case "LEFT":
-      return { x: soldier.position.x + 1, y: soldier.position.y }
-    case "RIGHT":
-      return { x: soldier.position.x - 1, y: soldier.position.y }
-  }
-}
+    expect(response.status).toBe(200)
+    expect(body).toMatchObject({
+      matchId: replayFixtureMatchId,
+      replayHref: `/matches/${encodeURIComponent(replayFixtureMatchId)}/replay`,
+      scenarioId: defaultReplayFixtureScenarioId,
+    })
+    expect(body.scenarios).toEqual(createReplayFixtureCatalog())
+    expect(
+      body.scenarios.map((scenario: { id: string }) => scenario.id),
+    ).toEqual(expect.arrayContaining(projectionScenarioIds))
+  })
 
-const payloadRecord = (payload: unknown): Record<string, unknown> =>
-  payload !== null && typeof payload === "object" && !Array.isArray(payload)
-    ? (payload as Record<string, unknown>)
-    : {}
+  it("returns scenario-specific route data when requested", async () => {
+    const response = await getReplayFixture(
+      new Request(
+        "http://cowards.test/api/test-support/replay-fixture?scenario=push",
+      ),
+    )
+    const body = await response.json()
 
-const boardAt = (sequence: number): FullBoardSnapshot => {
-  const data = createReplayFixtureData()
-  const state = data.states.find((candidate) => candidate.sequence === sequence)
-  expect(state).toBeDefined()
-  return state!.board
-}
+    expect(response.status).toBe(200)
+    expect(body).toMatchObject({
+      matchId: getReplayFixtureMatchId("push"),
+      replayHref: `/matches/${encodeURIComponent(
+        getReplayFixtureMatchId("push"),
+      )}/replay`,
+      scenarioId: "push",
+    })
+  })
 
-const soldier = (
-  board: FullBoardSnapshot,
-  soldierId: string,
-): SoldierSnapshot => {
-  const found = board.soldiers.find((candidate) => candidate.id === soldierId)
-  expect(found).toBeDefined()
-  return found!
-}
+  it("rejects unknown scenario-specific route data", async () => {
+    const response = await getReplayFixture(
+      new Request(
+        "http://cowards.test/api/test-support/replay-fixture?scenario=unknown",
+      ),
+    )
 
-const activeSoldierAt = (
-  board: FullBoardSnapshot,
-  position: Position,
-): SoldierSnapshot | undefined =>
-  board.soldiers.find(
-    (candidate) =>
-      candidate.status !== "FALLEN" &&
-      candidate.position !== null &&
-      samePosition(candidate.position, position),
+    expect(response.status).toBe(404)
+    await expect(response.json()).resolves.toEqual({
+      error: "Unknown replay fixture scenario",
+    })
+  })
+
+  it.each(projectionScenarioIds)(
+    "[projection] %s fixture uses populated public projection events and snapshots",
+    (scenarioId) => {
+      const data = expectReady(createReplayFixtureData({ scenarioId }))
+      const scenario = getCanonicalReplayScenario(scenarioId)
+      const projection = projectPublicChronicle(scenario.chronicle)
+
+      expect(data.metadata.matchId).toBe(getReplayFixtureMatchId(scenarioId))
+      expect(
+        data.projection.events.length,
+        "[projection] fixture projection events should be populated",
+      ).toBeGreaterThan(0)
+      expect(
+        data.projection.snapshots.length,
+        "[projection] fixture projection snapshots should be populated",
+      ).toBeGreaterThan(0)
+      expect(data.projection).toEqual(projection)
+    },
   )
 
-describe("replay fixture", () => {
-  it("starts with the canonical 12x12 board and both full armies", () => {
-    const board = boardAt(0)
+  it.each(projectionScenarioIds)(
+    "[projection] %s fixture timeline length matches projected event count",
+    (scenarioId) => {
+      const data = expectReady(createReplayFixtureData({ scenarioId }))
 
-    expect(board.bounds).toEqual({ minX: 0, maxX: 11, minY: 0, maxY: 11 })
-    expect(
-      board.soldiers
-        .filter((candidate) => candidate.ownerPlayerId === "player:bottom")
-        .map((candidate) => candidate.position),
-    ).toEqual([
-      { x: 2, y: 11 },
-      { x: 3, y: 11 },
-      { x: 4, y: 11 },
-      { x: 5, y: 11 },
-      { x: 6, y: 11 },
-      { x: 7, y: 11 },
-      { x: 8, y: 11 },
-      { x: 9, y: 11 },
-    ])
-    expect(
-      board.soldiers
-        .filter((candidate) => candidate.ownerPlayerId === "player:top")
-        .map((candidate) => candidate.position),
-    ).toEqual([
-      { x: 2, y: 0 },
-      { x: 3, y: 0 },
-      { x: 4, y: 0 },
-      { x: 5, y: 0 },
-      { x: 6, y: 0 },
-      { x: 7, y: 0 },
-      { x: 8, y: 0 },
-      { x: 9, y: 0 },
-    ])
-  })
+      expect(data.timeline).toHaveLength(data.projection.events.length)
+      expect(data.timeline.map((entry) => entry.sequence)).toEqual(
+        data.projection.events.map((event) => event.sequence),
+      )
+    },
+  )
 
-  it("uses a legal push with an empty destination square", () => {
-    const data = createReplayFixtureData()
-    const entry = data.timeline.find(
-      (candidate) => candidate.type === "PUSH_RESOLVED",
-    )
-    expect(entry).toBeDefined()
-    const payload = payloadRecord(entry!.payload)
-    const before = boardAt(entry!.sequence - 1)
-    const after = boardAt(entry!.sequence)
-    const mover = soldier(before, payload.soldierId as string)
-    const target = soldier(before, payload.targetSoldierId as string)
+  it.each(projectionScenarioIds)(
+    "[projection] %s fixture states length matches replay iteration count",
+    (scenarioId) => {
+      const data = expectReady(createReplayFixtureData({ scenarioId }))
+      const scenario = getCanonicalReplayScenario(scenarioId)
+      const replay = createReplay(scenario.chronicle)
 
-    expect(mover.status).toBe("ACTIVE")
-    expect(target.status).toBe("ACTIVE")
-    expect(mover.position).not.toBeNull()
-    expect(target.position).not.toBeNull()
-    const direction = directionBetween(mover.position!, target.position!)
-    expect(direction).toBe("RIGHT")
-    expect(target.facing).not.toBe(direction)
-    expect(target.facing).not.toBe(oppositeDirection(direction!))
-
-    const pushedDestination = movePosition(target.position!, direction!)
-    expect(activeSoldierAt(before, pushedDestination)).toBeUndefined()
-    expect(
-      before.terrainStones.some((stone) =>
-        samePosition(stone, pushedDestination),
-      ),
-    ).toBe(false)
-    expect(soldier(after, target.id).position).toEqual(pushedDestination)
-  })
-
-  it("uses a real terrain stone for the blocked move", () => {
-    const data = createReplayFixtureData()
-    const entry = data.timeline.find(
-      (candidate) => candidate.type === "MOVE_BLOCKED",
-    )
-    expect(entry).toBeDefined()
-    const payload = payloadRecord(entry!.payload)
-    const before = boardAt(entry!.sequence - 1)
-    const after = boardAt(entry!.sequence)
-    const mover = soldier(before, payload.soldierId as string)
-
-    expect(mover.position).not.toBeNull()
-    expect(mover.facing).toBe("UP")
-    const destination = movePosition(mover.position!, "UP")
-    expect(before.terrainStones).toContainEqual(destination)
-    expect(after).toEqual(before)
-  })
-
-  it("falls every soldier outside the contracted board", () => {
-    const data = createReplayFixtureData()
-    const entry = data.timeline.find(
-      (candidate) => candidate.type === "CONTRACTION_RESOLVED",
-    )
-    expect(entry).toBeDefined()
-    const before = boardAt(entry!.sequence - 1)
-    const after = boardAt(entry!.sequence)
-
-    expect(after.bounds).toEqual({ minX: 1, maxX: 10, minY: 1, maxY: 10 })
-    for (const previous of before.soldiers) {
-      const current = soldier(after, previous.id)
-      if (
-        previous.status !== "FALLEN" &&
-        previous.position !== null &&
-        !isInsideBounds(previous.position, after.bounds)
-      ) {
-        expect(current.status).toBe("FALLEN")
-        expect(current.position).toBeNull()
+      expect(replay.ok).toBe(true)
+      if (!replay.ok) {
+        return
       }
-    }
-    expect(
-      after.terrainStones.every((stone) => isInsideBounds(stone, after.bounds)),
-    ).toBe(true)
+      expect(data.states).toHaveLength(
+        [...replay.replay.iterateReplay()].length,
+      )
+    },
+  )
+
+  it("[projection] public fixture output excludes private replay markers", () => {
+    const data = expectReady(
+      createReplayFixtureData({ scenarioId: "runtime-failure" }),
+    )
+    const serialized = JSON.stringify(data)
+
+    expect(data.mode).toBe("public")
+    expect(data.projection.viewer).toEqual({ access: "public" })
+    expect(data.projection).not.toHaveProperty("ownerPrivate")
+    expect(serialized).not.toContain("Strategy source")
+    expect(serialized).not.toContain("strategySource")
+    expect(serialized).not.toContain("strategyMemory")
+    expect(serialized).not.toContain("soldierMemory")
+    expect(serialized).not.toContain("objectivePayload")
+    expect(serialized).not.toContain("actionPlanId")
+    expect(serialized).not.toContain("awarenessGrid")
+    expect(serialized).not.toContain("private:event")
+    expect(serialized).not.toContain("rawRuntimeDetails")
+    expect(serialized).not.toContain(
+      "Deterministic replay scenario runtime violation",
+    )
   })
 
-  it("only allows backstab callouts for directly-behind attackers", () => {
-    const data = createReplayFixtureData()
-    const illegalBackstabs = data.timeline
-      .filter((candidate) => candidate.type === "BACKSTAB_RESOLVED")
-      .flatMap((entry) => {
-        const previousBoard = boardAt(entry.sequence - 1)
-        const pairs = payloadRecord(entry.payload).pairs
-        if (!Array.isArray(pairs)) {
-          return [`sequence:${entry.sequence}:missing-pairs`]
-        }
-        return pairs.flatMap((pair) => {
-          const record = payloadRecord(pair)
-          const attacker = soldier(previousBoard, record.attackerId as string)
-          const victim = soldier(previousBoard, record.victimId as string)
-          const directlyBehind = samePosition(
-            attacker.position,
-            behindSquare(victim),
-          )
-          return attacker.ownerPlayerId !== victim.ownerPlayerId &&
-            attacker.status === "ACTIVE" &&
-            victim.status === "ACTIVE" &&
-            directlyBehind
-            ? []
-            : [`sequence:${entry.sequence}:illegal-pair`]
-        })
-      })
+  it("[projection] owner fixture output is gated by owner mode and trusted debug allowance", () => {
+    const requestedOwner = expectReady(
+      createReplayFixtureData({
+        scenarioId: "push",
+        mode: "owner",
+        ownerPlayerId: "bottom",
+      }),
+    )
+    const owner = expectReady(
+      createReplayFixtureData({
+        scenarioId: "push",
+        mode: "owner",
+        ownerPlayerId: "bottom",
+        allowOwnerDebug: true,
+      }),
+    )
+    const scenario = getCanonicalReplayScenario("push")
 
-    expect(illegalBackstabs).toEqual([])
+    expect(requestedOwner.mode).toBe("public")
+    expect(requestedOwner.projection.viewer).toEqual({ access: "public" })
+    expect(requestedOwner).not.toHaveProperty("ownerPlayerId")
+    expect(requestedOwner.projection).not.toHaveProperty("ownerPrivate")
+
+    expect(owner.mode).toBe("owner")
+    expect(owner.ownerPlayerId).toBe("bottom")
+    expect(owner.projection).toEqual(
+      projectOwnerChronicle(scenario.chronicle, "bottom"),
+    )
+    expect(owner.projection).toHaveProperty("ownerPrivate")
   })
 })

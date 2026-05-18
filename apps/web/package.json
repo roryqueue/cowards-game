@@ -15,6 +15,7 @@
     "@cowards/replay": "workspace:*",
     "@cowards/runtime-js": "workspace:*",
     "@cowards/spec": "workspace:*",
+    "@cowards/test-utils": "workspace:*",
     "@monaco-editor/react": "^4.7.0",
     "@pixi/react": "^8.0.5",
     "monaco-editor": "^0.55.1",

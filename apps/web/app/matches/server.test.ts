@@ -199,6 +199,32 @@ describe("Match replay server facade", () => {
     })
   })
 
+  it("returns [projection] invalid Chronicle diagnostics", async () => {
+    const stored = createStoredChronicle()
+    stored.artifact.events = stored.artifact.events
+      .slice(1)
+      .map((event, index) => ({
+        ...event,
+        sequence: index,
+      }))
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+    })
+
+    const response = await server.getMatchReplay("match:replay-test")
+
+    expect(response.status).toBe("unavailable")
+    if (response.status !== "unavailable") {
+      return
+    }
+    expect(response.matchId).toBe("match:replay-test")
+    expect(response.reason).toBe("invalid-chronicle")
+    expect(response.message).toContain("[projection]")
+  })
+
   it("decodes URL-encoded persisted Match ids before Chronicle lookup", async () => {
     const stored = createStoredChronicle()
     const seen: string[] = []
