@@ -4,10 +4,9 @@ import {
   Worker,
 } from "node:worker_threads"
 import type { RuntimeResult } from "@cowards/engine"
+import type { StrategyMethodName } from "./adapter.js"
 import { RUNTIME_TIMEOUT_MS } from "./guards.js"
 import { WORKER_HARNESS_SOURCE } from "./worker-harness.js"
-
-type StrategyMethodName = "selectActivations" | "soldierBrain"
 
 type WorkerResult =
   | { ok: true; value: unknown }

@@ -7,6 +7,7 @@ import type {
   StrategyInput,
   StrategyRevision,
 } from "@cowards/spec"
+import type { StrategyExecutionAdapter } from "./adapter.js"
 import { createRuntimeFromRevision } from "./executor.js"
 import {
   createRuntimeViolation,
@@ -138,6 +139,87 @@ describe("runtime guard helpers", () => {
 })
 
 describe("StrategyRuntime execution adapter", () => {
+  it("uses a supplied adapter and preserves executor output normalization", () => {
+    const calls: string[] = []
+    const adapter = {
+      metadata: {
+        id: "test-adapter",
+        label: "Test adapter",
+        default: false,
+        isolationBoundary: "Unit test double.",
+        notes: [],
+        runtimeControls: {
+          timeout: true,
+          outputByteLimit: false,
+          environment: "minimal",
+          execArgv: "empty",
+          resourceLimits: [],
+        },
+      },
+      execute(request) {
+        calls.push(request.methodName)
+        expect(request.source).toContain("selectActivations")
+        expect(request.timeoutMs).toBe(77)
+
+        if (request.methodName === "selectActivations") {
+          return {
+            ok: true,
+            value: {
+              activationOrders: [
+                { soldierId: "bottom-1", objective: { via: "adapter" } },
+              ],
+              strategyMemory: { injected: true },
+            },
+          }
+        }
+
+        return {
+          ok: true,
+          value: {
+            action: { type: "TURN_TO_STONE" },
+            soldierMemory: { injected: true },
+          },
+        }
+      },
+    } satisfies StrategyExecutionAdapter
+
+    const runtime = createRuntimeFromRevision(
+      buildStrategyRevision({ source: validSource }),
+      { adapter, timeoutMs: 77 },
+    )
+
+    expect(runtime.selectActivations(strategyInput)).toEqual({
+      ok: true,
+      value: {
+        activationOrders: [
+          { soldierId: "bottom-1", objective: { via: "adapter" } },
+        ],
+        strategyMemory: { injected: true },
+      },
+    })
+    expect(runtime.runSoldierBrain(soldierBrainInput)).toEqual({
+      ok: true,
+      value: {
+        action: { type: "TURN_TO_STONE" },
+        soldierMemory: { injected: true },
+      },
+    })
+    expect(calls).toEqual(["selectActivations", "soldierBrain"])
+  })
+
+  it("keeps executable runtime APIs out of the safe root entrypoint", async () => {
+    const rootEntrypoint = (await import("./index.js")) as Record<
+      string,
+      unknown
+    >
+
+    expect(rootEntrypoint.createRuntimeFromRevision).toBeUndefined()
+    expect(rootEntrypoint.activeStrategyExecutionAdapter).toBeUndefined()
+    expect(
+      rootEntrypoint.createWorkerThreadStrategyExecutionAdapter,
+    ).toBeUndefined()
+  })
+
   it("does not use Node vm in the production worker harness", () => {
     const harnessSource = readFileSync(
       new URL("./worker-harness.ts", import.meta.url),

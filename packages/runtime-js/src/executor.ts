@@ -17,7 +17,8 @@ import {
   toOversizedOutputViolation,
 } from "./guards.js"
 import { transpileStrategySource } from "./transpile.js"
-import { runStrategyMethodInWorker } from "./worker-bridge.js"
+import type { StrategyExecutionAdapter } from "./adapter.js"
+import { workerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value !== null &&
@@ -110,44 +111,55 @@ const executableSource = (
 
 const WORKER_STARTUP_TIMEOUT_MS = RUNTIME_TIMEOUT_MS * 10
 
+export interface CreateRuntimeFromRevisionOptions {
+  adapter?: StrategyExecutionAdapter | undefined
+  timeoutMs?: number | undefined
+}
+
 export const createRuntimeFromRevision = (
   revision: StrategyRevision,
-): StrategyRuntime => ({
-  selectActivations(input) {
-    const source = executableSource(revision)
-    if (!source.ok) {
-      return source
-    }
+  options: CreateRuntimeFromRevisionOptions = {},
+): StrategyRuntime => {
+  const adapter = options.adapter ?? workerThreadStrategyExecutionAdapter
+  const timeoutMs = options.timeoutMs ?? WORKER_STARTUP_TIMEOUT_MS
 
-    const result = runStrategyMethodInWorker({
-      source: source.source,
-      methodName: "selectActivations",
-      input,
-      timeoutMs: WORKER_STARTUP_TIMEOUT_MS,
-    })
-    if (!result.ok) {
-      return result
-    }
+  return {
+    selectActivations(input) {
+      const source = executableSource(revision)
+      if (!source.ok) {
+        return source
+      }
 
-    return normalizeStrategyOutput(result.value)
-  },
+      const result = adapter.execute({
+        source: source.source,
+        methodName: "selectActivations",
+        input,
+        timeoutMs,
+      })
+      if (!result.ok) {
+        return result
+      }
 
-  runSoldierBrain(input) {
-    const source = executableSource(revision)
-    if (!source.ok) {
-      return source
-    }
+      return normalizeStrategyOutput(result.value)
+    },
 
-    const result = runStrategyMethodInWorker({
-      source: source.source,
-      methodName: "soldierBrain",
-      input,
-      timeoutMs: WORKER_STARTUP_TIMEOUT_MS,
-    })
-    if (!result.ok) {
-      return result
-    }
+    runSoldierBrain(input) {
+      const source = executableSource(revision)
+      if (!source.ok) {
+        return source
+      }
 
-    return normalizeSoldierBrainOutput(result.value)
-  },
-})
+      const result = adapter.execute({
+        source: source.source,
+        methodName: "soldierBrain",
+        input,
+        timeoutMs,
+      })
+      if (!result.ok) {
+        return result
+      }
+
+      return normalizeSoldierBrainOutput(result.value)
+    },
+  }
+}
