@@ -598,9 +598,15 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
             ) : null}
             {testError ? <p role="alert">{testError}</p> : null}
             {testResult ? (
-              <div aria-live="polite" role="status">
-                <p>{getTestStatusCopy(testResult.status)}</p>
-                <p className="workshop-muted">
+              <div
+                aria-live="polite"
+                className="workshop-test-result"
+                role="status"
+              >
+                <p className="workshop-test-status">
+                  {getTestStatusCopy(testResult.status)}
+                </p>
+                <p className="workshop-muted workshop-test-meta">
                   MatchSet ID: {testResult.matchSetId} · Status:{" "}
                   {testResult.status} · Match count: {testResult.matchCount}
                 </p>
@@ -611,11 +617,19 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                   Refresh status
                 </button>
                 {testResult.scoring.rankings.length ? (
-                  <div className="details-grid">
+                  <div
+                    aria-label="Strategy rankings"
+                    className="workshop-score-list"
+                  >
                     {testResult.scoring.rankings.map((ranking) => (
-                      <div key={ranking.strategyRevisionId}>
-                        <strong>{ranking.strategyRevisionId}</strong>
-                        <span>
+                      <div
+                        className="workshop-score-row"
+                        key={ranking.strategyRevisionId}
+                      >
+                        <strong title={ranking.strategyRevisionId}>
+                          {ranking.strategyRevisionId}
+                        </strong>
+                        <span className="workshop-muted">
                           wins {ranking.wins}, losses {ranking.losses}, draws{" "}
                           {ranking.draws}, surviving soldiers{" "}
                           {ranking.survivingSoldiers}, survival turns{" "}

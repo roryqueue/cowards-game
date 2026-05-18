@@ -281,6 +281,52 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.workshop-test-result {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workshop-test-status {
+  margin: 0;
+  font-weight: 750;
+}
+
+.workshop-test-meta {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.workshop-score-list {
+  display: grid;
+  gap: 8px;
+}
+
+.workshop-score-row {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.workshop-score-row strong {
+  display: block;
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workshop-score-row span {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .workshop-match-list {
   display: flex;
   flex-direction: column;
