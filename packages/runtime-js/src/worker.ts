@@ -6,7 +6,16 @@ export {
   getStrategyExecutionAdapterMetadata,
   workerThreadStrategyExecutionAdapterMetadata,
 } from "./adapter.js"
+export {
+  createSubprocessStrategyExecutionAdapter,
+  subprocessStrategyExecutionAdapterMetadata,
+} from "./subprocess-adapter.js"
 export { createWorkerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
+export {
+  SUBPROCESS_STDERR_BYTES,
+  SUBPROCESS_STDOUT_BYTES,
+  SubprocessSystemFailure,
+} from "./subprocess-ipc.js"
 export type {
   StrategyExecutionAdapter,
   StrategyExecutionAdapterMetadata,
@@ -14,3 +23,8 @@ export type {
   StrategyExecutionRequest,
   StrategyMethodName,
 } from "./adapter.js"
+export type {
+  SubprocessSystemFailureCode,
+  SubprocessIpcRequest,
+  SubprocessIpcResponse,
+} from "./subprocess-ipc.js"
