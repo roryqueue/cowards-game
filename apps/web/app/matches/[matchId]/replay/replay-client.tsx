@@ -117,6 +117,9 @@ export function ReplayClient({ data }: ReplayClientProps) {
               scrubbing={scrubbing}
               onSelectSoldier={setSelectedSoldierId}
             />
+          </div>
+
+          <div className="replay-position-panel">
             <p className="replay-label">Current position</p>
             <p className="replay-position">
               {formatTimelinePosition(selectedEntry)}

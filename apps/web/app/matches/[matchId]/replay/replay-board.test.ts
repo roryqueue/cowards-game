@@ -8,14 +8,14 @@ import {
 } from "./replay-board-model.js"
 
 const board: FullBoardSnapshot = {
-  bounds: { minX: 1, maxX: 10, minY: 1, maxY: 10 },
-  terrainStones: [{ x: 4, y: 4 }],
+  bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+  terrainStones: [{ x: 4, y: 5 }],
   soldiers: [
     {
       id: "soldier:bottom:1",
       ownerPlayerId: "player:bottom",
       status: "ACTIVE",
-      position: { x: 2, y: 9 },
+      position: { x: 2, y: 11 },
       facing: "UP",
       lastSuccessfulMoveDirection: "UP",
     },
@@ -40,10 +40,19 @@ const board: FullBoardSnapshot = {
 
 const movedBoard: FullBoardSnapshot = {
   ...board,
-  bounds: { minX: 2, maxX: 9, minY: 2, maxY: 9 },
+  bounds: { minX: 1, maxX: 10, minY: 1, maxY: 10 },
   soldiers: board.soldiers.map((soldier) =>
     soldier.id === "soldier:bottom:1"
-      ? { ...soldier, position: { x: 2, y: 8 } }
+      ? { ...soldier, position: { x: 2, y: 10 } }
+      : soldier,
+  ),
+}
+
+const turnedBoard: FullBoardSnapshot = {
+  ...board,
+  soldiers: board.soldiers.map((soldier) =>
+    soldier.id === "soldier:bottom:1"
+      ? { ...soldier, facing: "RIGHT" as const }
       : soldier,
   ),
 }
@@ -134,6 +143,7 @@ describe("replay board model", () => {
       model.soldiers.find((soldier) => soldier.status === "STONE"),
     ).toMatchObject({
       fill: ReplayBoardColors.stone,
+      ownerFill: ReplayBoardColors.ownerTop,
       shape: "stone-diamond",
       texture: "cracked",
     })
@@ -182,20 +192,20 @@ describe("replay board model", () => {
     const model = buildReplayBoardModel(movingData, 1, null)
 
     expect(model.arenaBounds).toMatchObject({
+      minX: 0,
+      maxX: 11,
+      minY: 0,
+      maxY: 11,
+    })
+    expect(model.bounds).toMatchObject({
       minX: 1,
       maxX: 10,
       minY: 1,
       maxY: 10,
-    })
-    expect(model.bounds).toMatchObject({
-      minX: 2,
-      maxX: 9,
-      minY: 2,
-      maxY: 9,
-      previousMinX: 1,
-      previousMaxX: 10,
-      previousMinY: 1,
-      previousMaxY: 10,
+      previousMinX: 0,
+      previousMaxX: 11,
+      previousMinY: 0,
+      previousMaxY: 11,
       contractionActive: true,
     })
   })
@@ -207,9 +217,29 @@ describe("replay board model", () => {
     )
 
     expect(mover).toMatchObject({
-      previousPosition: { x: 2, y: 9 },
-      position: { x: 2, y: 8 },
+      previousPosition: { x: 2, y: 11 },
+      position: { x: 2, y: 10 },
       transition: "move",
+    })
+  })
+
+  it("derives turn motion from previous and current facing", () => {
+    const model = buildReplayBoardModel(
+      data([
+        { sequence: 0, board },
+        { sequence: 1, board: turnedBoard },
+      ]),
+      1,
+      "soldier:bottom:1",
+    )
+    const turned = model.soldiers.find(
+      (soldier) => soldier.id === "soldier:bottom:1",
+    )
+
+    expect(turned).toMatchObject({
+      previousFacing: "UP",
+      facing: "RIGHT",
+      motion: "turn",
     })
   })
 

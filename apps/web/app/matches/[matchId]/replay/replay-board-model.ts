@@ -43,11 +43,21 @@ export interface BoardSoldierDescriptor {
   previousPosition: Position | null
   previousStatus: SoldierStatus
   facing: Direction | null
+  previousFacing: Direction | null
   selected: boolean
   fill: string
+  ownerFill: string
   shape: BoardSoldierShape
   texture: BoardSoldierTexture
-  transition: "steady" | "move" | "pushed" | "stone" | "fall" | "backstab"
+  transition:
+    | "steady"
+    | "move"
+    | "pushed"
+    | "stone"
+    | "fall"
+    | "backstab"
+    | "turn"
+  motion: "steady" | "move" | "pushed" | "stone" | "fall" | "backstab" | "turn"
 }
 
 export interface BoardTerrainDescriptor {
@@ -401,6 +411,9 @@ const transitionFor = (
   if (!samePosition(previousSoldier.position, soldier.position)) {
     return entry.type === "PUSH_RESOLVED" ? "pushed" : "move"
   }
+  if (previousSoldier.facing !== soldier.facing) {
+    return "turn"
+  }
   return "steady"
 }
 
@@ -448,6 +461,8 @@ export const buildReplayBoardModel = (
     soldiers: state.board.soldiers.map((soldier) => {
       const badgeNumber = badges.get(soldier.id) ?? 0
       const previousSoldier = previousSoldiers.get(soldier.id)
+      const ownerFill = ownerColor(data, soldier.ownerPlayerId)
+      const transition = transitionFor(soldier, previousSoldier, entry)
       return {
         id: soldier.id,
         shortLabel: `${badgeNumber}`,
@@ -458,14 +473,14 @@ export const buildReplayBoardModel = (
         previousPosition: previousSoldier?.position ?? soldier.position,
         previousStatus: previousSoldier?.status ?? soldier.status,
         facing: soldier.facing,
+        previousFacing: previousSoldier?.facing ?? soldier.facing,
         selected: soldier.id === selectedSoldierId,
-        fill:
-          soldier.status === "STONE"
-            ? ReplayBoardColors.stone
-            : ownerColor(data, soldier.ownerPlayerId),
+        fill: soldier.status === "STONE" ? ReplayBoardColors.stone : ownerFill,
+        ownerFill,
         shape: soldierShape(soldier.status),
         texture: soldierTexture(soldier.status),
-        transition: transitionFor(soldier, previousSoldier, entry),
+        transition: transition === "turn" ? "steady" : transition,
+        motion: transition,
       }
     }),
     terrain: state.board.terrainStones.map((position) => ({

@@ -51,7 +51,7 @@ test("replay fixture renders board, timeline, inspector, callouts, and public pr
       input.dispatchEvent(new Event("change", { bubbles: true }))
     })
   await page
-    .getByRole("button", { name: /Backstab/ })
+    .getByRole("button", { name: /Turn/ })
     .evaluate((node) => (node as HTMLButtonElement).click())
   await expect(page.getByText(/Sequence 3/).first()).toBeVisible()
   await expect(page.getByText("Selected event")).toBeVisible()
@@ -62,7 +62,7 @@ test("replay fixture renders board, timeline, inspector, callouts, and public pr
   await expect(page.getByText("Owner").first()).toBeVisible()
   await expect(page.getByText("player:bottom").first()).toBeVisible()
   await expect(page.getByText("Facing").first()).toBeVisible()
-  await expect(page.getByText("UP").first()).toBeVisible()
+  await expect(page.getByText("RIGHT").first()).toBeVisible()
 
   for (const label of [
     "Backstab",

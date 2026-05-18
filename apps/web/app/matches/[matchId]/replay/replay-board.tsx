@@ -27,7 +27,7 @@ export interface ReplayBoardProps {
 }
 
 const animationDurationMs = 240
-const boardPadding = 24
+const boardPadding = 18
 
 const colorValue = (color: string): number =>
   Number.parseInt(color.slice(1), 16)
@@ -82,6 +82,11 @@ const createProjector = (
 const lerp = (from: number, to: number, progress: number): number =>
   from + (to - from) * progress
 
+const easeOut = (progress: number): number => 1 - (1 - progress) ** 3
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(Math.max(value, min), max)
+
 const interpolatePosition = (
   from: Position,
   to: Position,
@@ -130,9 +135,10 @@ const drawGrid = (
   progress: number,
 ) => {
   const projection = createProjector(model, width, height)
-  const playableBounds = interpolatePlayableBounds(model, progress)
+  const eased = easeOut(progress)
+  const playableBounds = interpolatePlayableBounds(model, eased)
   graphics.clear()
-  graphics.setFillStyle({ color: 0xe8ece6 })
+  graphics.setFillStyle({ color: 0xf2f5ef })
   graphics.roundRect(
     projection.originX,
     projection.originY,
@@ -141,10 +147,29 @@ const drawGrid = (
     8,
   )
   graphics.fill()
+
+  const topBandHeight = projection.cellSize
+  graphics.setFillStyle({ color: 0xb65a3a, alpha: 0.08 })
+  graphics.rect(
+    projection.originX,
+    projection.originY,
+    projection.boardWidth,
+    topBandHeight,
+  )
+  graphics.fill()
+  graphics.setFillStyle({ color: 0x256d85, alpha: 0.08 })
+  graphics.rect(
+    projection.originX,
+    projection.originY + projection.boardHeight - topBandHeight,
+    projection.boardWidth,
+    topBandHeight,
+  )
+  graphics.fill()
+
   graphics.setStrokeStyle({
-    width: 1,
+    width: 1.25,
     color: colorValue(model.bounds.stroke),
-    alpha: 0.72,
+    alpha: 0.9,
   })
 
   for (let column = 0; column <= boardDimensions(model).columns; column += 1) {
@@ -159,7 +184,7 @@ const drawGrid = (
   }
   graphics.stroke()
 
-  graphics.setFillStyle({ color: 0x17201a, alpha: 0.16 })
+  graphics.setFillStyle({ color: 0x17201a, alpha: 0.14 })
   const left =
     projection.originX +
     (playableBounds.minX - model.arenaBounds.minX) * projection.cellSize
@@ -242,21 +267,44 @@ const drawFacing = (
   soldier: BoardSoldierDescriptor,
   center: Position,
   radius: number,
+  progress: number,
 ) => {
   if (!soldier.facing) {
     return
   }
-  const offsets = {
-    UP: { x: 0, y: -radius },
-    DOWN: { x: 0, y: radius },
-    LEFT: { x: -radius, y: 0 },
-    RIGHT: { x: radius, y: 0 },
+  const angles = {
+    UP: -Math.PI / 2,
+    RIGHT: 0,
+    DOWN: Math.PI / 2,
+    LEFT: Math.PI,
   }
-  const target = offsets[soldier.facing]
-  graphics.setStrokeStyle({ width: 3, color: 0xffffff })
-  graphics.moveTo(center.x, center.y)
-  graphics.lineTo(center.x + target.x, center.y + target.y)
-  graphics.stroke()
+  const from = soldier.previousFacing
+    ? angles[soldier.previousFacing]
+    : angles[soldier.facing]
+  const to = angles[soldier.facing]
+  const rawDelta = to - from
+  const delta = Math.atan2(Math.sin(rawDelta), Math.cos(rawDelta))
+  const angle =
+    soldier.motion === "turn" ? from + delta * easeOut(progress) : to
+  const tip = {
+    x: center.x + Math.cos(angle) * radius * 0.96,
+    y: center.y + Math.sin(angle) * radius * 0.96,
+  }
+  const left = {
+    x: center.x + Math.cos(angle + 2.55) * radius * 0.42,
+    y: center.y + Math.sin(angle + 2.55) * radius * 0.42,
+  }
+  const right = {
+    x: center.x + Math.cos(angle - 2.55) * radius * 0.42,
+    y: center.y + Math.sin(angle - 2.55) * radius * 0.42,
+  }
+
+  graphics.setFillStyle({ color: 0xffffff, alpha: 0.96 })
+  graphics.moveTo(tip.x, tip.y)
+  graphics.lineTo(left.x, left.y)
+  graphics.lineTo(right.x, right.y)
+  graphics.closePath()
+  graphics.fill()
 }
 
 const fallTarget = (model: ReplayBoardModel, position: Position): Position => {
@@ -335,18 +383,19 @@ const drawSoldier = (
   }
 
   const projection = createProjector(model, width, height)
+  const eased = easeOut(progress)
   const point = projection.point(renderPosition)
   const radius =
     projection.cellSize *
     (soldier.transition === "stone"
-      ? lerp(0.32, 0.38, progress)
+      ? lerp(0.33, 0.38, eased)
       : soldier.transition === "fall"
-        ? lerp(0.32, 0.2, progress)
-        : 0.32)
+        ? lerp(0.33, 0.2, eased)
+        : 0.33)
   const graphics = new Graphics()
   const alpha =
     soldier.transition === "fall" && soldier.status === "FALLEN"
-      ? lerp(1, 0.18, progress)
+      ? lerp(1, 0.18, eased)
       : 1
   graphics.alpha = alpha
   graphics.eventMode = "static"
@@ -361,14 +410,35 @@ const drawSoldier = (
     graphics.lineTo(point.x - radius, point.y)
     graphics.closePath()
     graphics.fill()
+    graphics.setStrokeStyle({
+      width: Math.max(3, projection.cellSize * 0.08),
+      color: colorValue(soldier.ownerFill),
+      alpha: 0.9,
+    })
+    graphics.moveTo(point.x, point.y - radius)
+    graphics.lineTo(point.x + radius, point.y)
+    graphics.lineTo(point.x, point.y + radius)
+    graphics.lineTo(point.x - radius, point.y)
+    graphics.closePath()
+    graphics.stroke()
   } else {
+    graphics.setStrokeStyle({
+      width: Math.max(2, projection.cellSize * 0.045),
+      color: 0xffffff,
+      alpha: 0.9,
+    })
     graphics.circle(point.x, point.y, radius)
     graphics.fill()
+    graphics.stroke()
   }
 
   if (soldier.selected) {
-    graphics.setStrokeStyle({ width: 4, color: 0xffffff })
-    graphics.circle(point.x, point.y, radius + 5)
+    graphics.setStrokeStyle({
+      width: Math.max(3, projection.cellSize * 0.055),
+      color: 0x17201a,
+      alpha: 0.86,
+    })
+    graphics.circle(point.x, point.y, radius + projection.cellSize * 0.11)
     graphics.stroke()
   }
 
@@ -381,7 +451,7 @@ const drawSoldier = (
     graphics.stroke()
   }
 
-  drawFacing(graphics, soldier, point, radius)
+  drawFacing(graphics, soldier, point, radius, progress)
   layer.addChild(graphics)
 
   const badge = new Text({
@@ -389,7 +459,7 @@ const drawSoldier = (
     style: new TextStyle({
       fill: "#ffffff",
       fontFamily: "Arial",
-      fontSize: Math.max(11, projection.cellSize * 0.22),
+      fontSize: Math.max(12, projection.cellSize * 0.24),
       fontWeight: "700",
     }),
   })
@@ -432,19 +502,64 @@ const drawCallout = (
   const to = callout.to ? projection.point(callout.to) : center
   const color = colorValue(callout.color)
   const pulse = 1 + progress * 0.24
+  const isDirectional =
+    callout.variant === "backstab" || callout.variant === "push"
 
   graphics.setStrokeStyle({ width: 6, color, alpha: 0.78 })
-  if (callout.variant === "backstab" || callout.variant === "push") {
+  if (isDirectional) {
     graphics.moveTo(from.x, from.y)
     graphics.lineTo(to.x, to.y)
     graphics.stroke()
+
+    const angle = Math.atan2(to.y - from.y, to.x - from.x)
+    const arrowSize = projection.cellSize * 0.26
+    graphics.setFillStyle({ color, alpha: 0.86 })
+    graphics.moveTo(to.x, to.y)
+    graphics.lineTo(
+      to.x - Math.cos(angle - 0.55) * arrowSize,
+      to.y - Math.sin(angle - 0.55) * arrowSize,
+    )
+    graphics.lineTo(
+      to.x - Math.cos(angle + 0.55) * arrowSize,
+      to.y - Math.sin(angle + 0.55) * arrowSize,
+    )
+    graphics.closePath()
+    graphics.fill()
   } else {
     graphics.circle(to.x, to.y, projection.cellSize * pulse)
     graphics.stroke()
   }
 
+  const labelWidth = Math.max(78, callout.label.length * 8 + 26)
+  const midPoint = {
+    x: (from.x + to.x) / 2,
+    y: (from.y + to.y) / 2,
+  }
+  const labelY =
+    midPoint.y > projection.originY + projection.boardHeight / 2
+      ? midPoint.y - projection.cellSize * 0.78
+      : midPoint.y + projection.cellSize * 0.78
+  const labelPoint = {
+    x: clamp(
+      isDirectional ? midPoint.x : to.x,
+      projection.originX + labelWidth / 2 + 4,
+      projection.originX + projection.boardWidth - labelWidth / 2 - 4,
+    ),
+    y: clamp(
+      isDirectional ? labelY : to.y - projection.cellSize * 0.58,
+      projection.originY + 16,
+      projection.originY + projection.boardHeight - 16,
+    ),
+  }
+
   graphics.setFillStyle({ color, alpha: 0.9 })
-  graphics.roundRect(to.x - 52, to.y - 18, 104, 28, 6)
+  graphics.roundRect(
+    labelPoint.x - labelWidth / 2,
+    labelPoint.y - 14,
+    labelWidth,
+    28,
+    6,
+  )
   graphics.fill()
 
   const label = new Text({
@@ -457,7 +572,7 @@ const drawCallout = (
     }),
   })
   label.anchor.set(0.5)
-  label.position.set(to.x, to.y - 4)
+  label.position.set(labelPoint.x, labelPoint.y)
   layer.addChild(graphics)
   layer.addChild(label)
 }
@@ -574,7 +689,6 @@ export function ReplayBoard({
       }
       const elapsed = window.performance.now() - start
       const progress = duration === 0 ? 1 : Math.min(elapsed / duration, 1)
-      app.canvas.setAttribute("title", selectedEvent.label)
       renderBoard(app, model, onSelectSoldier, progress)
       if (progress < 1) {
         frameRef.current = window.requestAnimationFrame(draw)
@@ -586,14 +700,7 @@ export function ReplayBoard({
     draw()
 
     return () => window.cancelAnimationFrame(frameRef.current)
-  }, [
-    data,
-    onSelectSoldier,
-    scrubbing,
-    selectedEvent.label,
-    selectedSequence,
-    selectedSoldierId,
-  ])
+  }, [data, onSelectSoldier, scrubbing, selectedSequence, selectedSoldierId])
 
   return (
     <div
@@ -601,13 +708,8 @@ export function ReplayBoard({
       className="replay-board-host"
       ref={hostRef}
       role="img"
-      title={selectedEvent.label}
     >
-      <canvas
-        aria-label="Replay board canvas"
-        ref={canvasRef}
-        title={selectedEvent.label}
-      />
+      <canvas aria-label="Replay board canvas" ref={canvasRef} />
       <p aria-live="polite" className="replay-board-status">
         Sequence {selectedSequence} · {selectedEvent.type}
       </p>
