@@ -1,4 +1,10 @@
 import type {
+  FullBoardSnapshot,
+  PlayerId,
+  SoldierId,
+  SoldierSnapshot,
+} from "@cowards/spec"
+import type {
   ReplayReadyDto,
   ReplayTimelineEntryDto,
   ReplayViewMode,
@@ -31,26 +37,51 @@ const event = (
   label: string,
   payload: ReplayTimelineEntryDto["payload"] = {},
   privacy: ReplayTimelineEntryDto["privacy"] = "public",
-): ReplayTimelineEntryDto => ({
-  sequence,
-  type,
-  round: sequence === 0 ? undefined : 1,
-  activation: sequence <= 1 ? undefined : 0,
-  cycle: sequence >= 2 && sequence <= 4 ? sequence - 2 : undefined,
-  label,
-  privacy,
-  context: {
+  contextOverride: Partial<ReplayTimelineEntryDto["context"]> = {},
+): ReplayTimelineEntryDto => {
+  const payloadRecord =
+    payload !== null && typeof payload === "object" && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>)
+      : {}
+  const payloadSoldierId =
+    typeof payloadRecord.soldierId === "string"
+      ? payloadRecord.soldierId
+      : undefined
+  const actingPlayerId =
+    payloadSoldierId === undefined
+      ? undefined
+      : inferPlayerIdFromSoldier(payloadSoldierId)
+  const context: ReplayTimelineEntryDto["context"] = {
     ...(sequence === 0 ? {} : { roundNumber: 1 as const }),
-    ...(sequence <= 1 ? {} : { activationIndex: 0 }),
-    ...(sequence >= 2
-      ? {
-          soldierId: "soldier:bottom:1",
-          actingPlayerId: "player:bottom",
-        }
-      : {}),
-  },
-  payload,
-})
+    ...(payloadSoldierId === undefined ? {} : { soldierId: payloadSoldierId }),
+    ...(actingPlayerId === undefined ? {} : { actingPlayerId }),
+    ...contextOverride,
+  }
+
+  return {
+    sequence,
+    type,
+    round: context.roundNumber,
+    activation: context.activationIndex,
+    cycle: context.cycleIndex,
+    label,
+    privacy,
+    context,
+    payload,
+  }
+}
+
+const inferPlayerIdFromSoldier = (
+  soldierId: SoldierId,
+): PlayerId | undefined => {
+  if (soldierId.includes(":bottom:")) {
+    return "player:bottom"
+  }
+  if (soldierId.includes(":top:")) {
+    return "player:top"
+  }
+  return undefined
+}
 
 const awarenessGrid = {
   cells: Array.from({ length: 25 }, (_, index) => {
@@ -85,10 +116,10 @@ const createSideSoldiers = (
     lastSuccessfulMoveDirection: null,
   }))
 
-const board0 = {
+const board0: FullBoardSnapshot = {
   bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
   terrainStones: [
-    { x: 4, y: 5 },
+    { x: 5, y: 10 },
     { x: 7, y: 6 },
   ],
   soldiers: [
@@ -97,79 +128,83 @@ const board0 = {
   ],
 }
 
-const board1 = board0
-const board2 = board1
-const board3 = {
-  ...board2,
-  soldiers: board2.soldiers.map((soldier) =>
-    soldier.id === "soldier:bottom:1"
-      ? { ...soldier, facing: "RIGHT" as const }
-      : soldier,
+const updateSoldier = (
+  board: FullBoardSnapshot,
+  soldierId: SoldierId,
+  patch: Partial<SoldierSnapshot>,
+): FullBoardSnapshot => ({
+  ...board,
+  soldiers: board.soldiers.map((soldier) =>
+    soldier.id === soldierId ? { ...soldier, ...patch } : soldier,
   ),
-}
-const board4 = {
-  ...board3,
-  soldiers: board3.soldiers.map((soldier) =>
-    soldier.id === "soldier:bottom:1"
-      ? {
-          ...soldier,
-          position: { x: 3, y: 11 },
-          facing: "RIGHT" as const,
-          lastSuccessfulMoveDirection: "RIGHT" as const,
-        }
-      : soldier.id === "soldier:bottom:2"
-        ? { ...soldier, position: { x: 4, y: 11 } }
-        : soldier,
+})
+
+const isInsideBounds = (
+  position: NonNullable<SoldierSnapshot["position"]>,
+  bounds: FullBoardSnapshot["bounds"],
+): boolean =>
+  position.x >= bounds.minX &&
+  position.x <= bounds.maxX &&
+  position.y >= bounds.minY &&
+  position.y <= bounds.maxY
+
+const contractBoard = (
+  board: FullBoardSnapshot,
+  bounds: FullBoardSnapshot["bounds"],
+): FullBoardSnapshot => ({
+  ...board,
+  bounds,
+  terrainStones: board.terrainStones.filter((stone) =>
+    isInsideBounds(stone, bounds),
   ),
-}
-const board5 = {
-  ...board4,
-  soldiers: board4.soldiers.map((soldier) =>
-    soldier.id === "soldier:top:1"
-      ? {
-          ...soldier,
-          position: { x: 2, y: 1 },
-          lastSuccessfulMoveDirection: "DOWN" as const,
-        }
-      : soldier,
-  ),
-}
-const board6 = {
-  ...board5,
-  soldiers: board5.soldiers.map((soldier) =>
-    soldier.id === "soldier:bottom:8"
+  soldiers: board.soldiers.map((soldier) =>
+    soldier.status !== "FALLEN" &&
+    soldier.position !== null &&
+    !isInsideBounds(soldier.position, bounds)
       ? { ...soldier, status: "FALLEN" as const, position: null }
       : soldier,
   ),
-}
-const board7 = {
-  ...board6,
-  soldiers: board6.soldiers.map((soldier) =>
-    soldier.id === "soldier:top:2"
-      ? { ...soldier, status: "STONE" as const }
-      : soldier,
-  ),
-}
-const board8 = {
-  ...board7,
-}
-const board9 = {
-  ...board8,
-  bounds: { minX: 1, maxX: 10, minY: 1, maxY: 10 },
-  terrainStones: board8.terrainStones.filter(
-    (stone) => stone.x >= 1 && stone.x <= 10 && stone.y >= 1 && stone.y <= 10,
-  ),
-}
-const board10 = {
-  ...board9,
-  soldiers: board9.soldiers.map((soldier) =>
-    soldier.id === "soldier:top:3"
-      ? { ...soldier, status: "STONE" as const }
-      : soldier,
-  ),
-}
-const board11 = board10
+})
+
+const board1 = board0
+const board2 = board1
+const board3 = updateSoldier(board2, "soldier:bottom:3", {
+  position: { x: 4, y: 10 },
+  facing: "UP",
+  lastSuccessfulMoveDirection: "UP",
+})
+const board4 = updateSoldier(board3, "soldier:bottom:1", {
+  facing: "RIGHT",
+})
+const board5 = updateSoldier(board4, "soldier:bottom:2", {
+  position: { x: 4, y: 11 },
+})
+const board6 = updateSoldier(board5, "soldier:bottom:1", {
+  position: { x: 3, y: 11 },
+  facing: "RIGHT",
+  lastSuccessfulMoveDirection: "RIGHT",
+})
+const board7 = updateSoldier(board6, "soldier:top:1", {
+  position: { x: 2, y: 1 },
+  facing: "DOWN",
+  lastSuccessfulMoveDirection: "DOWN",
+})
+const board8 = updateSoldier(board7, "soldier:top:8", {
+  status: "FALLEN",
+  position: null,
+})
+const board9 = updateSoldier(board8, "soldier:top:2", {
+  status: "STONE",
+})
+const board10 = board9
+const board11 = contractBoard(board10, {
+  minX: 1,
+  maxX: 10,
+  minY: 1,
+  maxY: 10,
+})
 const board12 = board11
+const board13 = board12
 const boards = [
   board0,
   board1,
@@ -184,7 +219,120 @@ const boards = [
   board10,
   board11,
   board12,
+  board13,
 ]
+
+const timeline = [
+  event(0, "MATCH_STARTED", "Match start"),
+  event(1, "ROUND_STARTED", "Round start"),
+  event(
+    2,
+    "AWARENESS_GRID_OBSERVED",
+    "Awareness",
+    { soldierId: "soldier:bottom:3", cycleIndex: 0 },
+    "owner",
+    { activationIndex: 0, cycleIndex: 0 },
+  ),
+  event(
+    3,
+    "MOVE_ADVANCED",
+    "Move",
+    { soldierId: "soldier:bottom:3", direction: "UP" },
+    "public",
+    { activationIndex: 0, cycleIndex: 0 },
+  ),
+  event(
+    4,
+    "TURN_RESOLVED",
+    "Turn",
+    { soldierId: "soldier:bottom:1", direction: "RIGHT" },
+    "public",
+    { activationIndex: 1, cycleIndex: 0 },
+  ),
+  event(
+    5,
+    "PUSH_RESOLVED",
+    "Push",
+    {
+      soldierId: "soldier:bottom:1",
+      targetSoldierId: "soldier:bottom:2",
+      pushedOffBoard: false,
+    },
+    "public",
+    { activationIndex: 1, cycleIndex: 1 },
+  ),
+  event(
+    6,
+    "MOVE_ADVANCED",
+    "Move",
+    { soldierId: "soldier:bottom:1", direction: "RIGHT" },
+    "public",
+    { activationIndex: 1, cycleIndex: 1 },
+  ),
+  event(
+    7,
+    "MOVE_ADVANCED",
+    "Move",
+    { soldierId: "soldier:top:1", direction: "DOWN" },
+    "public",
+    {
+      activationIndex: 2,
+      cycleIndex: 0,
+    },
+  ),
+  event(
+    8,
+    "SOLDIER_FELL",
+    "Fall",
+    { soldierId: "soldier:top:8", reason: "MOVED_OFF_BOARD" },
+    "public",
+    {
+      activationIndex: 3,
+      cycleIndex: 0,
+    },
+  ),
+  event(
+    9,
+    "SOLDIER_STONED",
+    "Stone",
+    { soldierId: "soldier:top:2", reason: "TURN_TO_STONE" },
+    "public",
+    {
+      activationIndex: 4,
+      cycleIndex: 0,
+    },
+  ),
+  event(
+    10,
+    "MOVE_BLOCKED",
+    "Blocked",
+    { soldierId: "soldier:bottom:4", reason: "TERRAIN_STONE" },
+    "public",
+    { activationIndex: 5, cycleIndex: 0 },
+  ),
+  event(11, "CONTRACTION_RESOLVED", "Contraction", {
+    bounds: board11.bounds,
+  }),
+  event(
+    12,
+    "RUNTIME_VIOLATION",
+    "Runtime violation",
+    {
+      soldierId: "soldier:bottom:3",
+    },
+    "public",
+    { activationIndex: 6 },
+  ),
+  event(13, "MATCH_ENDED", "Outcome"),
+]
+
+const states = boards.map((board, sequence) => ({
+  sequence,
+  board,
+  ...(sequence === boards.length - 1
+    ? { outcome: { type: "DRAW" as const } }
+    : {}),
+}))
 
 export const createReplayFixtureData = (
   options: GetMatchReplayOptions = {},
@@ -204,8 +352,8 @@ export const createReplayFixtureData = (
       chronicleId: "chronicle:e2e-replay-fixture",
       hash: "fixture-hash",
       schemaVersion: "chronicle-v1",
-      eventCount: 13,
-      snapshotCount: 13,
+      eventCount: timeline.length,
+      snapshotCount: states.length,
       outcome: { type: "DRAW" },
       bottomPlayerId: "player:bottom",
       topPlayerId: "player:top",
@@ -247,58 +395,8 @@ export const createReplayFixtureData = (
           }
         : {}),
     },
-    timeline: [
-      event(0, "MATCH_STARTED", "Match start"),
-      event(1, "ROUND_STARTED", "Round start"),
-      event(
-        2,
-        "AWARENESS_GRID_OBSERVED",
-        "Awareness",
-        { soldierId: "soldier:bottom:1", cycleIndex: 0 },
-        "owner",
-      ),
-      event(3, "TURN_RESOLVED", "Turn", {
-        soldierId: "soldier:bottom:1",
-        direction: "RIGHT",
-      }),
-      event(4, "PUSH_RESOLVED", "Push", {
-        soldierId: "soldier:bottom:1",
-        targetSoldierId: "soldier:bottom:2",
-        pushedOffBoard: false,
-      }),
-      event(5, "MOVE_ADVANCED", "Move", {
-        soldierId: "soldier:top:1",
-        direction: "DOWN",
-      }),
-      event(6, "SOLDIER_FELL", "Fall", {
-        soldierId: "soldier:bottom:8",
-        reason: "PUSHED_OFF_BOARD",
-      }),
-      event(7, "SOLDIER_STONED", "Stone", {
-        soldierId: "soldier:top:2",
-        reason: "TURN_TO_STONE",
-      }),
-      event(8, "MOVE_BLOCKED", "Blocked", {
-        soldierId: "soldier:bottom:1",
-        reason: "TERRAIN_STONE",
-      }),
-      event(9, "CONTRACTION_RESOLVED", "Contraction", {
-        bounds: board9.bounds,
-      }),
-      event(10, "BACKSTAB_RESOLVED", "Backstab", {
-        boundary: "activation-end",
-        pairs: [{ attackerId: "soldier:bottom:1", victimId: "soldier:top:3" }],
-      }),
-      event(11, "RUNTIME_VIOLATION", "Runtime violation", {
-        soldierId: "soldier:bottom:1",
-      }),
-      event(12, "MATCH_ENDED", "Outcome"),
-    ],
-    states: Array.from({ length: 13 }, (_, sequence) => ({
-      sequence,
-      board: boards[sequence] ?? board0,
-      ...(sequence === 12 ? { outcome: { type: "DRAW" as const } } : {}),
-    })),
+    timeline,
+    states,
     initialSequence: 0,
     ...(mode === "owner" && options.ownerPlayerId
       ? { ownerPlayerId: options.ownerPlayerId }

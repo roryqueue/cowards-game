@@ -53,7 +53,7 @@ test("replay fixture renders board, timeline, inspector, callouts, and public pr
   await page
     .getByRole("button", { name: /Turn/ })
     .evaluate((node) => (node as HTMLButtonElement).click())
-  await expect(page.getByText(/Sequence 3/).first()).toBeVisible()
+  await expect(page.getByText(/Sequence 4/).first()).toBeVisible()
   await expect(page.getByText("Selected event")).toBeVisible()
 
   await page
@@ -65,7 +65,8 @@ test("replay fixture renders board, timeline, inspector, callouts, and public pr
   await expect(page.getByText("RIGHT").first()).toBeVisible()
 
   for (const label of [
-    "Backstab",
+    "Move",
+    "Turn",
     "Push",
     "Fall",
     "Stone",

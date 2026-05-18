@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: MVP
 status: shipped
-last_updated: "2026-05-17T23:59:00.000Z"
+last_updated: "2026-05-18T08:45:00.000-04:00"
 progress:
   total_phases: 7
   completed_phases: 7
@@ -51,9 +51,15 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 - Phase directories were archived under .planning/milestones/v1.0-phases/.
 - Active REQUIREMENTS.md is removed after archival; run `$gsd-new-milestone` to define the next requirement set.
 
+## Post-Shipment Corrections
+
+- 2026-05-18: Tightened the replay demo fixture outside the phase workflow after manual review found visually useful but rule-inaccurate beats. The fixture now starts from the canonical 12x12 two-army board and uses legal move, push, fall, stone, blocked-move, and contraction states.
+- Added web fixture guard tests covering starting formation, push destination legality, terrain-blocked movement, contraction fallout, and future Backstab direct-behind legality.
+- Verification run for the correction: `pnpm --filter @cowards/web test -- replay-fixture.test.ts`, `pnpm --filter @cowards/web typecheck`, `pnpm --filter @cowards/web lint`, and `PLAYWRIGHT_TEST=1 pnpm e2e -- replay.fixture.spec.ts`.
+
 ## Next Command
 
 `$gsd-new-milestone`
 
 ---
-*Last updated: 2026-05-17 after v1.0 milestone completion*
+*Last updated: 2026-05-18 after post-shipment replay fixture legality correction*

@@ -29,6 +29,7 @@
 
 - Every phase should end with a passed VERIFICATION.md and complete requirements frontmatter in summaries.
 - Replay privacy should be tested both at projection level and browser level.
+- Replay demo fixtures should be held to engine-rule legality, not just visual plausibility.
 - Test-support routes must fail loudly and remain gated to test environments.
 
 ### Key Lessons
