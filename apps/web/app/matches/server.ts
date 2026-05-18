@@ -47,10 +47,36 @@ const decodeMatchId = (matchId: MatchId): MatchId => {
   }
 }
 
+const resolvePersistedMatchOwners: ResolveAuthorizedReplayOwners = async ({
+  pool,
+  matchId,
+  requestedOwnerPlayerId,
+}) => {
+  const result = await pool.query<{
+    bottom_player_id: PlayerId
+    top_player_id: PlayerId
+  }>(
+    `
+      select bottom_player_id, top_player_id
+      from matches
+      where id = $1
+        and $2 in (bottom_player_id, top_player_id)
+      limit 1
+    `,
+    [matchId, requestedOwnerPlayerId],
+  )
+  const row = result.rows[0]
+  if (!row) {
+    return []
+  }
+  return [requestedOwnerPlayerId]
+}
+
 export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
   const withPool = deps.withPool ?? withDatabasePool
   const createStore = deps.createChronicleStore ?? createPostgresChronicleStore
-  const resolveAuthorizedReplayOwners = deps.resolveAuthorizedReplayOwners
+  const resolveAuthorizedReplayOwners =
+    deps.resolveAuthorizedReplayOwners ?? resolvePersistedMatchOwners
 
   return {
     async getMatchReplay(

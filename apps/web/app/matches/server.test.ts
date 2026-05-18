@@ -188,6 +188,13 @@ const createStoredChronicle = (): StoredChronicle => {
   return { artifact, metadata: createChronicleMetadata(artifact) }
 }
 
+const createMatchOwnerPool = (
+  rows: Array<{ bottom_player_id: string; top_player_id: string }>,
+) =>
+  ({
+    query: vi.fn(async () => ({ rows })),
+  }) as never
+
 describe("Match replay server facade", () => {
   it("ignores malformed encoded fixture ids instead of throwing", () => {
     expect(isReplayFixtureMatch("%E0%A4%A")).toBe(false)
@@ -357,10 +364,11 @@ describe("Match replay server facade", () => {
     )
   })
 
-  it("keeps query-requested owner ids public when no resolver is configured", async () => {
+  it("keeps query-requested owner ids public when persisted Match ownership rejects them", async () => {
     const stored = createStoredChronicle()
+    const pool = createMatchOwnerPool([])
     const server = createMatchReplayServer({
-      withPool: async (fn) => fn({} as never),
+      withPool: async (fn) => fn(pool),
       createChronicleStore: () => ({
         getByMatchId: async () => stored,
       }),
@@ -382,6 +390,38 @@ describe("Match replay server facade", () => {
     expect(JSON.stringify(response)).not.toContain(
       "PRIVATE_TOP_OWNER_DEBUG_EXPLANATION",
     )
+  })
+
+  it("uses persisted Match participant data to authorize requested owner replay", async () => {
+    const stored = createStoredChronicle()
+    const pool = createMatchOwnerPool([
+      { bottom_player_id: "player:bottom", top_player_id: "player:top" },
+    ])
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn(pool),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+    })
+
+    const response = await server.getMatchReplay("match:replay-test", {
+      allowOwnerDebug: true,
+      requestedOwnerPlayerId: "player:bottom",
+    })
+
+    expect(response.status).toBe("ready")
+    if (response.status !== "ready") {
+      return
+    }
+    expect(response.mode).toBe("owner")
+    expect(response.ownerPlayerId).toBe("player:bottom")
+    expect(response.projection.viewer).toEqual({
+      access: "owner",
+      playerId: "player:bottom",
+    })
+    expect(
+      response.ownerDebug?.soldierInactivityExplanations.length,
+    ).toBeGreaterThan(0)
   })
 
   it("upgrades an authorized requested owner through the server resolver", async () => {
