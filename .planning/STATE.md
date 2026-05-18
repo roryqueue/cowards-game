@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Trustworthy Simulation Beta
 status: planning
-last_updated: "2026-05-18T09:20:00.000-04:00"
+last_updated: "2026-05-18T09:45:00.000-04:00"
 progress:
   total_phases: 5
   completed_phases: 0
@@ -31,8 +31,8 @@ See: .planning/PROJECT.md (updated 2026-05-18)
 
 Phase: 8 — Replay Fixture Fidelity and Visual Regression
 Plan: —
-Status: Ready to discuss or plan Phase 8
-Last activity: 2026-05-18 — Milestone v1.1 roadmap created
+Status: Context gathered for Phases 8-12; ready to research, plan, and execute Phase 8
+Last activity: 2026-05-18 — Phase context gathered for v1.1 Phases 8-12
 
 ## Workflow Settings
 
@@ -60,6 +60,8 @@ Last activity: 2026-05-18 — Milestone v1.1 roadmap created
 - v1.1 is focused on trustworthy simulation: replay fidelity, strict Chronicle grammar and compatibility, stronger runtime isolation, doctrine debugging UX, and local/CI reliability.
 - Ranked ladders remain out of scope for v1.1 because they multiply replay dispute, sandbox abuse, deterministic compatibility, privacy leakage, stale Strategy Revision, and scoring fairness risks.
 - v1.1 roadmap continues phase numbering from v1.0 and spans Phase 8 through Phase 12.
+- Phase context has been gathered and committed for all v1.1 phases: 8 replay fixture fidelity, 9 Chronicle grammar, 10 runtime isolation, 11 doctrine debugging UX, and 12 local/CI reliability.
+- Phase 12 explicitly requires verifying the Docker local development path end to end now that Docker is available locally.
 
 ## Post-Shipment Corrections
 
@@ -69,7 +71,7 @@ Last activity: 2026-05-18 — Milestone v1.1 roadmap created
 
 ## Next Command
 
-`$gsd-discuss-phase 8`
+`$gsd-plan-phase 8`
 
 ---
-*Last updated: 2026-05-18 after v1.1 roadmap creation*
+*Last updated: 2026-05-18 after v1.1 phase context gathering*
