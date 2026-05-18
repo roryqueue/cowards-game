@@ -63,12 +63,55 @@ const toViolation = (type, message) => ({ type, message })
 
 const byteLength = (text) => new TextEncoder().encode(text).length
 
+const isPlainJsonObject = (value) => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false
+  }
+
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
+}
+
+const isJsonValue = (value) => {
+  if (value === null) {
+    return true
+  }
+
+  switch (typeof value) {
+    case "string":
+    case "boolean":
+      return true
+    case "number":
+      return Number.isFinite(value)
+    case "object":
+      if (Array.isArray(value)) {
+        return value.every(isJsonValue)
+      }
+      if (!isPlainJsonObject(value)) {
+        return false
+      }
+      return Object.values(value).every(isJsonValue)
+    default:
+      return false
+  }
+}
+
 const outputByteLimit = () =>
   typeof workerData.outputByteLimit === "number" && workerData.outputByteLimit > 0
     ? workerData.outputByteLimit
     : 262144
 
 const capRuntimeResult = (result) => {
+  if (result.ok && !isJsonValue(result.value)) {
+    return {
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "Strategy method must return JSON-only data",
+      },
+    }
+  }
+
   let serialized
   try {
     serialized = JSON.stringify(result)
@@ -93,7 +136,7 @@ const capRuntimeResult = (result) => {
     }
   }
 
-  return result
+  return JSON.parse(serialized)
 }
 
 const isForbiddenCapabilityMessage = (message) =>

@@ -143,3 +143,79 @@ Passing tests should not be treated as closure for Phase 10 because the current 
 _Reviewed: 2026-05-18T17:59:12Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
+
+## Re-Review - 2026-05-18T18:09:13Z
+
+**Status:** issues_found
+**Scope:** Phase 10 runtime isolation review fixes only.
+
+### Prior Blocker Closure
+
+- CR-01 nondeterministic globals: closed for the prior named globals. `crypto`, `performance`, `Buffer`, and `queueMicrotask` are now blocked by source validation and shadowed in both worker-thread and subprocess harness wrappers.
+- CR-02 forged/stale validation metadata: closed. `createRuntimeFromRevision` now revalidates the actual source and checks source hash and byte count before adapter execution.
+- CR-03 worker-thread output byte cap: not fully closed. The new cap catches large JSON string output, but it does not prevent large non-JSON structured-clone payloads from crossing from the worker into the host.
+
+### Commands / Evidence
+
+- `pnpm --filter @cowards/runtime-js test -- adapter-contract.test.ts executor.test.ts hostile-matrix.test.ts` - PASS, 9 files / 150 tests.
+- `pnpm --filter @cowards/runtime-js typecheck` - PASS.
+- `pnpm --filter @cowards/worker test -- runner.test.ts` - PASS, 1 file / 14 tests.
+- `pnpm --filter @cowards/worker typecheck` - PASS.
+- Targeted worker-thread adapter probe with `outputByteLimit: 128` and `strategyMemory: new ArrayBuffer(1024 * 1024)` returned `{"ok":true,"type":"[object ArrayBuffer]","byteLength":1048576}`. This proves the payload crossed into the host despite the cap.
+
+## Re-Review Critical Issues
+
+### RR-CR-01: BLOCKER - Worker output cap is bypassed by non-JSON structured-clone payloads
+
+**File:** `packages/runtime-js/src/worker-harness.ts:71`
+**Issue:** `capRuntimeResult` uses `JSON.stringify(result)` to measure output size, but then returns the original `result` at `packages/runtime-js/src/worker-harness.ts:96` and posts it to the parent at `packages/runtime-js/src/worker-harness.ts:174`. Cloneable non-JSON objects such as `ArrayBuffer`, `Map`, and `Set` can serialize as tiny JSON (`{}`) while carrying large backing data through the worker message channel. I verified the worker-thread adapter returns `ok: true` with a 1 MiB `ArrayBuffer` result under a 128-byte `outputByteLimit`, so the host receives hostile output before executor normalization can reject it. This leaves the prior default-adapter byte-cap blocker partially open.
+**Fix:** Enforce JSON-only output inside the worker before `postMessage`, reject non-plain/non-JSON values, and only post the capped sanitized payload. Mirror the subprocess harness' `isJsonValue` validation before byte measurement, then post the parsed JSON form or a runtime violation:
+
+```ts
+if (result.ok && !isJsonValue(result.value)) {
+  return {
+    ok: false,
+    violation: {
+      type: "INVALID_OUTPUT",
+      message: "Strategy method must return JSON-only data",
+    },
+  }
+}
+
+const serialized = JSON.stringify(result)
+if (byteLength(serialized) > outputByteLimit()) {
+  return {
+    ok: false,
+    violation: {
+      type: "OVERSIZED_OUTPUT",
+      message: `Strategy output exceeded ${outputByteLimit()} bytes`,
+    },
+  }
+}
+
+return JSON.parse(serialized)
+```
+
+Add an adapter-contract regression test that returns `new ArrayBuffer(1024 * 1024)` or a large `Map` under a small `outputByteLimit` and asserts the worker-thread adapter returns a failure before the parent receives cloneable backing data.
+
+### Residual Risk
+
+The current tests cover oversized strings and the prior forbidden globals, but they do not exercise cloneable non-JSON payloads whose JSON representation is small. Until the worker harness rejects those before `postMessage`, the default adapter still has a host-memory exposure at the runtime boundary.
+
+## Re-Review Fix Closure - 2026-05-18T18:14:00Z
+
+**Status:** resolved
+
+RR-CR-01 was fixed by making the worker-thread harness validate JSON-only success payloads before byte measurement and by posting only the serialized-and-parsed JSON result after the cap check. Cloneable non-JSON objects such as `ArrayBuffer` now fail inside the worker with `INVALID_OUTPUT` instead of crossing into the host process.
+
+Regression coverage added:
+
+- `packages/runtime-js/src/adapter-contract.test.ts` now exercises `new ArrayBuffer(1024 * 1024)` under `outputByteLimit: 128` and expects `INVALID_OUTPUT`.
+
+Verification after the fix:
+
+- `pnpm --filter @cowards/runtime-js test -- adapter-contract.test.ts executor.test.ts hostile-matrix.test.ts subprocess-adapter.test.ts isolation-boundary.test.ts` - PASS, 9 files / 151 tests.
+- `pnpm --filter @cowards/runtime-js typecheck` - PASS.
+- `pnpm --filter @cowards/worker test -- runner.test.ts` - PASS, 1 file / 14 tests.
+- `pnpm --filter @cowards/worker typecheck` - PASS.
+- `pnpm exec prettier --check packages/runtime-js/src apps/worker/src .planning/phases/10-runtime-isolation-hardening` - PASS.

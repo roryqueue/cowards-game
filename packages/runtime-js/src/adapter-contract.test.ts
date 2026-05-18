@@ -274,6 +274,30 @@ export default {
     expect(!result.ok && result.violation.type).toBe("OVERSIZED_OUTPUT")
   })
 
+  it("worker-thread adapter rejects cloneable non-JSON output before posting to host", () => {
+    const adapter = createWorkerThreadStrategyExecutionAdapter()
+
+    const result = adapter.execute({
+      source: transpileOrThrow(`
+export default {
+  selectActivations() {
+    return { activationOrders: [], strategyMemory: new ArrayBuffer(1024 * 1024) }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`),
+      methodName: "selectActivations",
+      input: {},
+      timeoutMs: 1_000,
+      outputByteLimit: 128,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
+  })
+
   for (const adapterFactory of adapterFactories) {
     describe(`${adapterFactory.label} runtime contract`, () => {
       it.each([
