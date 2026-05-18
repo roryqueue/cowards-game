@@ -95,46 +95,46 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| FID-01 | TBD | Pending |
-| FID-02 | TBD | Pending |
-| FID-03 | TBD | Pending |
-| FID-04 | TBD | Pending |
-| FID-05 | TBD | Pending |
-| FID-06 | TBD | Pending |
-| FID-07 | TBD | Pending |
-| GRAM-01 | TBD | Pending |
-| GRAM-02 | TBD | Pending |
-| GRAM-03 | TBD | Pending |
-| GRAM-04 | TBD | Pending |
-| GRAM-05 | TBD | Pending |
-| GRAM-06 | TBD | Pending |
-| GRAM-07 | TBD | Pending |
-| GRAM-08 | TBD | Pending |
-| ISO-01 | TBD | Pending |
-| ISO-02 | TBD | Pending |
-| ISO-03 | TBD | Pending |
-| ISO-04 | TBD | Pending |
-| ISO-05 | TBD | Pending |
-| ISO-06 | TBD | Pending |
-| ISO-07 | TBD | Pending |
-| DEBUG-01 | TBD | Pending |
-| DEBUG-02 | TBD | Pending |
-| DEBUG-03 | TBD | Pending |
-| DEBUG-04 | TBD | Pending |
-| DEBUG-05 | TBD | Pending |
-| DEBUG-06 | TBD | Pending |
-| REL-01 | TBD | Pending |
-| REL-02 | TBD | Pending |
-| REL-03 | TBD | Pending |
-| REL-04 | TBD | Pending |
-| REL-05 | TBD | Pending |
-| REL-06 | TBD | Pending |
+| FID-01 | Phase 8 | Pending |
+| FID-02 | Phase 8 | Pending |
+| FID-03 | Phase 8 | Pending |
+| FID-04 | Phase 8 | Pending |
+| FID-05 | Phase 8 | Pending |
+| FID-06 | Phase 8 | Pending |
+| FID-07 | Phase 8 | Pending |
+| GRAM-01 | Phase 9 | Pending |
+| GRAM-02 | Phase 9 | Pending |
+| GRAM-03 | Phase 9 | Pending |
+| GRAM-04 | Phase 9 | Pending |
+| GRAM-05 | Phase 9 | Pending |
+| GRAM-06 | Phase 9 | Pending |
+| GRAM-07 | Phase 9 | Pending |
+| GRAM-08 | Phase 9 | Pending |
+| ISO-01 | Phase 10 | Pending |
+| ISO-02 | Phase 10 | Pending |
+| ISO-03 | Phase 10 | Pending |
+| ISO-04 | Phase 10 | Pending |
+| ISO-05 | Phase 10 | Pending |
+| ISO-06 | Phase 10 | Pending |
+| ISO-07 | Phase 10 | Pending |
+| DEBUG-01 | Phase 11 | Pending |
+| DEBUG-02 | Phase 11 | Pending |
+| DEBUG-03 | Phase 11 | Pending |
+| DEBUG-04 | Phase 11 | Pending |
+| DEBUG-05 | Phase 11 | Pending |
+| DEBUG-06 | Phase 11 | Pending |
+| REL-01 | Phase 12 | Pending |
+| REL-02 | Phase 12 | Pending |
+| REL-03 | Phase 12 | Pending |
+| REL-04 | Phase 12 | Pending |
+| REL-05 | Phase 12 | Pending |
+| REL-06 | Phase 12 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 34 total
-- Mapped to phases: 0
-- Unmapped: 34
+- Mapped to phases: 34
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-18*
-*Last updated: 2026-05-18 after v1.1 requirement definition*
+*Last updated: 2026-05-18 after v1.1 roadmap creation*

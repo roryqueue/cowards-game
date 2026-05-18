@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Trustworthy Simulation Beta
 status: planning
-last_updated: "2026-05-18T09:00:00.000-04:00"
+last_updated: "2026-05-18T09:20:00.000-04:00"
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,24 +15,24 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** v1.0 shipped
+**Status:** v1.1 planning
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-18)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Defining requirements for v1.1 Trustworthy Simulation Beta
+**Current focus:** Phase 8: Replay Fixture Fidelity and Visual Regression
 **Completed milestone:** v1.0 MVP
 **Archived roadmap:** .planning/milestones/v1.0-ROADMAP.md
 **Archived requirements:** .planning/milestones/v1.0-REQUIREMENTS.md
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 8 — Replay Fixture Fidelity and Visual Regression
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-18 — Milestone v1.1 started
+Status: Ready to discuss or plan Phase 8
+Last activity: 2026-05-18 — Milestone v1.1 roadmap created
 
 ## Workflow Settings
 
@@ -59,6 +59,7 @@ Last activity: 2026-05-18 — Milestone v1.1 started
 - Active REQUIREMENTS.md is removed after archival; run `$gsd-new-milestone` to define the next requirement set.
 - v1.1 is focused on trustworthy simulation: replay fidelity, strict Chronicle grammar and compatibility, stronger runtime isolation, doctrine debugging UX, and local/CI reliability.
 - Ranked ladders remain out of scope for v1.1 because they multiply replay dispute, sandbox abuse, deterministic compatibility, privacy leakage, stale Strategy Revision, and scoring fairness risks.
+- v1.1 roadmap continues phase numbering from v1.0 and spans Phase 8 through Phase 12.
 
 ## Post-Shipment Corrections
 
@@ -68,7 +69,7 @@ Last activity: 2026-05-18 — Milestone v1.1 started
 
 ## Next Command
 
-`$gsd-plan-phase 8`
+`$gsd-discuss-phase 8`
 
 ---
-*Last updated: 2026-05-18 after v1.1 milestone start*
+*Last updated: 2026-05-18 after v1.1 roadmap creation*
