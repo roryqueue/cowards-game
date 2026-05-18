@@ -9,6 +9,7 @@ import {
   getEventInspector,
   getInitialReplaySequence,
   getOwnerAwarenessGridInspection,
+  getSoldierInactivityExplanation,
   getSoldierInspector,
   getTimelineEntryAt,
   groupTimelineEntries,
@@ -38,14 +39,17 @@ export function ReplayClient({ data }: ReplayClientProps) {
     firstSoldierId(data),
   )
   const [scrubbing, setScrubbing] = useState(false)
-  const [ownerDebugVisible, setOwnerDebugVisible] = useState(
-    canShowOwnerDebug(data),
-  )
+  const [ownerDebugVisible, setOwnerDebugVisible] = useState(false)
 
   const selectedEntry = getTimelineEntryAt(data, selectedIndex)
   const summary = getCurrentPositionSummary(data, selectedEntry)
   const eventInspector = getEventInspector(selectedEntry)
   const soldierInspector = getSoldierInspector(
+    data,
+    selectedSoldierId,
+    selectedEntry.sequence,
+  )
+  const soldierInactivityExplanation = getSoldierInactivityExplanation(
     data,
     selectedSoldierId,
     selectedEntry.sequence,
@@ -251,24 +255,11 @@ export function ReplayClient({ data }: ReplayClientProps) {
             </section>
           ) : null}
 
-          <section>
-            <p className="replay-label">Selected event</p>
-            <dl className="replay-details-grid">
-              <dt>Type</dt>
-              <dd>{eventInspector.type}</dd>
-              <dt>Sequence</dt>
-              <dd>{eventInspector.sequence}</dd>
-              <dt>Context</dt>
-              <dd>{eventInspector.context}</dd>
-              <dt>Privacy</dt>
-              <dd>{eventInspector.privacyLabel}</dd>
-            </dl>
-          </section>
-
           {ownerDebugAvailable ? (
             <section>
               <label className="replay-debug-toggle">
                 <input
+                  data-testid="replay-owner-debug-toggle"
                   type="checkbox"
                   checked={ownerDebugVisible}
                   onChange={(event) =>
@@ -279,6 +270,45 @@ export function ReplayClient({ data }: ReplayClientProps) {
               </label>
               {ownerDebugVisible ? (
                 <>
+                  <div
+                    className="replay-debug-panel"
+                    data-cause-code={
+                      soldierInactivityExplanation?.causeCode ?? "NONE"
+                    }
+                    data-testid="replay-soldier-inactivity-explanation"
+                  >
+                    <p className="replay-label">Why this Soldier did nothing</p>
+                    {soldierInactivityExplanation ? (
+                      <dl className="replay-details-grid">
+                        <dt>Cause</dt>
+                        <dd>{soldierInactivityExplanation.label}</dd>
+                        <dt>Code</dt>
+                        <dd>{soldierInactivityExplanation.causeCode}</dd>
+                        <dt>Next</dt>
+                        <dd>{soldierInactivityExplanation.remediation}</dd>
+                        <dt>Source event</dt>
+                        <dd>
+                          #{soldierInactivityExplanation.sourceEventSequence}
+                        </dd>
+                        {soldierInactivityExplanation.details ===
+                        undefined ? null : (
+                          <>
+                            <dt>Details</dt>
+                            <dd>
+                              {JSON.stringify(
+                                soldierInactivityExplanation.details,
+                              )}
+                            </dd>
+                          </>
+                        )}
+                      </dl>
+                    ) : (
+                      <p className="replay-muted">
+                        No inactivity explanation for this Soldier at this
+                        position.
+                      </p>
+                    )}
+                  </div>
                   {awarenessGrid ? (
                     <div
                       className="replay-awareness-grid"
@@ -310,6 +340,20 @@ export function ReplayClient({ data }: ReplayClientProps) {
               ) : null}
             </section>
           ) : null}
+
+          <section>
+            <p className="replay-label">Selected event</p>
+            <dl className="replay-details-grid">
+              <dt>Type</dt>
+              <dd>{eventInspector.type}</dd>
+              <dt>Sequence</dt>
+              <dd>{eventInspector.sequence}</dd>
+              <dt>Context</dt>
+              <dd>{eventInspector.context}</dd>
+              <dt>Privacy</dt>
+              <dd>{eventInspector.privacyLabel}</dd>
+            </dl>
+          </section>
 
           <div className="replay-soldier-buttons" aria-label="Soldiers">
             {data.states[0]?.board.soldiers.map((soldier) => (

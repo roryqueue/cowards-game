@@ -1,4 +1,10 @@
-import type { JsonValue, MatchOutcome, SoldierSnapshot } from "@cowards/spec"
+import type {
+  JsonValue,
+  MatchOutcome,
+  SoldierInactivityExplanationCause,
+  SoldierInactivityExplanationDto,
+  SoldierSnapshot,
+} from "@cowards/spec"
 import type {
   ReplayPageData,
   ReplayReadyDto,
@@ -69,6 +75,16 @@ export interface OwnerAwarenessGridInspection {
   soldierId: string
   cycle: number | null
   cells: OwnerAwarenessCell[]
+}
+
+export interface SoldierInactivityExplanationViewModel {
+  soldierId: string
+  cause: SoldierInactivityExplanationCause
+  causeCode: string
+  label: string
+  remediation: string
+  sourceEventSequence: number
+  details?: JsonValue | undefined
 }
 
 export const getInitialReplaySequence = (data: ReplayPageData): number =>
@@ -287,6 +303,45 @@ export const canShowOwnerDebug = (data: ReplayPageData): boolean =>
   data.status === "ready" &&
   data.projection.viewer.access === "owner" &&
   data.projection.ownerPrivate !== undefined
+
+export const formatSoldierInactivityCause = (
+  cause: SoldierInactivityExplanationCause,
+): string => cause.toUpperCase()
+
+const explanationViewModel = (
+  explanation: SoldierInactivityExplanationDto,
+): SoldierInactivityExplanationViewModel => ({
+  soldierId: explanation.soldierId,
+  cause: explanation.cause,
+  causeCode: formatSoldierInactivityCause(explanation.cause),
+  label: explanation.label,
+  remediation: explanation.remediation,
+  sourceEventSequence: explanation.sequence,
+  ...(explanation.details === undefined
+    ? {}
+    : { details: explanation.details }),
+})
+
+export const getSoldierInactivityExplanation = (
+  data: ReplayReadyDto,
+  soldierId: string | null,
+  sequence: number,
+): SoldierInactivityExplanationViewModel | null => {
+  if (!canShowOwnerDebug(data) || !soldierId) {
+    return null
+  }
+
+  const explanations =
+    data.ownerDebug?.soldierInactivityExplanations.filter(
+      (candidate) =>
+        candidate.soldierId === soldierId && candidate.sequence <= sequence,
+    ) ?? []
+  const nearest = explanations.sort(
+    (left, right) => right.sequence - left.sequence,
+  )[0]
+
+  return nearest === undefined ? null : explanationViewModel(nearest)
+}
 
 const isRecord = (
   value: JsonValue | undefined,

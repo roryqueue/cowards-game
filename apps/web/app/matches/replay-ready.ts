@@ -1,4 +1,5 @@
 import {
+  buildSoldierInactivityExplanations,
   createReplay,
   projectOwnerChronicle,
   projectPublicChronicle,
@@ -122,6 +123,15 @@ export const buildReadyReplayFromChronicle = ({
         ? {}
         : { outcome: entry.state.outcome }),
     }))
+    const ownerDebug =
+      mode === "owner" && options.ownerPlayerId
+        ? {
+            soldierInactivityExplanations: buildSoldierInactivityExplanations({
+              chronicle,
+              ownerPlayerId: options.ownerPlayerId,
+            }),
+          }
+        : undefined
 
     return {
       status: "ready",
@@ -134,6 +144,7 @@ export const buildReadyReplayFromChronicle = ({
       ...(mode === "owner" && options.ownerPlayerId
         ? { ownerPlayerId: options.ownerPlayerId }
         : {}),
+      ...(ownerDebug === undefined ? {} : { ownerDebug }),
     } satisfies ReplayReadyDto
   } catch (error) {
     return projectionFailure(

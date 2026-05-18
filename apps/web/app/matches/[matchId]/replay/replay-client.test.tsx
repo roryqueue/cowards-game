@@ -1,5 +1,8 @@
 import { readFileSync } from "node:fs"
+import { buildSoldierInactivityExplanations } from "@cowards/replay"
+import { getCanonicalReplayScenario } from "@cowards/test-utils"
 import { describe, expect, it } from "vitest"
+import { createReplayFixtureData } from "../../replay-fixture.js"
 
 const source = readFileSync(new URL("./replay-client.tsx", import.meta.url), {
   encoding: "utf8",
@@ -35,5 +38,88 @@ describe("ReplayClient", () => {
     expect(source).toContain("Awareness Grid")
     expect(source).toContain("getOwnerAwarenessGridInspection")
     expect(source).toContain("data.projection.ownerPrivate")
+  })
+
+  it("omits owner Soldier inactivity explanations from public replay DTOs", () => {
+    const data = createReplayFixtureData({ scenarioId: "runtime-failure" })
+
+    expect(data.status).toBe("ready")
+    if (data.status !== "ready") {
+      return
+    }
+    expect(data.mode).toBe("public")
+    expect(data).not.toHaveProperty("ownerDebug")
+  })
+
+  it("adds owner Soldier inactivity explanation DTOs only when owner debug is allowed", () => {
+    const requestedOwner = createReplayFixtureData({
+      scenarioId: "runtime-failure",
+      mode: "owner",
+      ownerPlayerId: "bottom",
+    })
+    const owner = createReplayFixtureData({
+      scenarioId: "runtime-failure",
+      mode: "owner",
+      ownerPlayerId: "bottom",
+      allowOwnerDebug: true,
+    })
+
+    expect(requestedOwner.status).toBe("ready")
+    expect(requestedOwner).not.toHaveProperty("ownerDebug")
+    expect(owner.status).toBe("ready")
+    if (owner.status !== "ready") {
+      return
+    }
+    expect(
+      owner.ownerDebug?.soldierInactivityExplanations.length,
+    ).toBeGreaterThan(0)
+  })
+
+  it("builds owner Soldier inactivity explanations from the same Chronicle helper", () => {
+    const scenario = getCanonicalReplayScenario("runtime-failure")
+    const owner = createReplayFixtureData({
+      scenarioId: "runtime-failure",
+      mode: "owner",
+      ownerPlayerId: "bottom",
+      allowOwnerDebug: true,
+    })
+
+    expect(owner.status).toBe("ready")
+    if (owner.status !== "ready") {
+      return
+    }
+    expect(owner.ownerDebug?.soldierInactivityExplanations).toEqual(
+      buildSoldierInactivityExplanations({
+        chronicle: scenario.chronicle,
+        ownerPlayerId: "bottom",
+      }),
+    )
+  })
+
+  it("keeps owner explanations hidden until the owner debug checkbox is enabled", () => {
+    const owner = createReplayFixtureData({
+      scenarioId: "runtime-failure",
+      mode: "owner",
+      ownerPlayerId: "bottom",
+      allowOwnerDebug: true,
+    })
+
+    expect(owner.status).toBe("ready")
+    if (owner.status !== "ready") {
+      return
+    }
+    expect(source).toContain("useState(false)")
+    expect(source).toContain("ownerDebugVisible ?")
+    expect(source).toContain('data-testid="replay-owner-debug-toggle"')
+  })
+
+  it("renders selected-Soldier explanation fields from replay-state helpers", () => {
+    expect(source).toContain("getSoldierInactivityExplanation")
+    expect(source).toContain("Why this Soldier did nothing")
+    expect(source).toContain("soldierInactivityExplanation.label")
+    expect(source).toContain("soldierInactivityExplanation.remediation")
+    expect(source).toContain(
+      'data-testid="replay-soldier-inactivity-explanation"',
+    )
   })
 })

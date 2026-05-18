@@ -7,6 +7,7 @@ import type {
   MatchId,
   MatchOutcome,
   PlayerId,
+  SoldierInactivityExplanationDto,
 } from "@cowards/spec"
 
 export type ReplayViewMode = "public" | "owner"
@@ -60,6 +61,11 @@ export interface ReplayReadyDto {
   states: ReplayStateDto[]
   initialSequence: 0
   ownerPlayerId?: PlayerId | undefined
+  ownerDebug?:
+    | {
+        soldierInactivityExplanations: SoldierInactivityExplanationDto[]
+      }
+    | undefined
 }
 
 export interface ReplayUnavailableDto {

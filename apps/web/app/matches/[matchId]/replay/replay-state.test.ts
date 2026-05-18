@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest"
 import {
   canShowOwnerDebug,
   clampTimelineIndex,
+  formatSoldierInactivityCause,
   formatTimelinePosition,
   getEventInspector,
   getInitialReplaySequence,
   getOwnerAwarenessGridInspection,
+  getSoldierInactivityExplanation,
   getSoldierInspector,
   getTimelineEntryAt,
   groupTimelineEntries,
@@ -155,7 +157,33 @@ const createReplayData = (owner = false): ReplayReadyDto => ({
     },
   ],
   initialSequence: 0,
-  ...(owner ? { ownerPlayerId: "player:bottom" } : {}),
+  ...(owner
+    ? {
+        ownerPlayerId: "player:bottom",
+        ownerDebug: {
+          soldierInactivityExplanations: [
+            {
+              soldierId: "soldier:bottom:1",
+              playerId: "player:bottom",
+              sequence: 1,
+              cause: "not_selected",
+              label: "Soldier was not selected",
+              remediation: "Select this Soldier for a future Activation.",
+              details: { roundNumber: 1 },
+            },
+            {
+              soldierId: "soldier:bottom:1",
+              playerId: "player:bottom",
+              sequence: 2,
+              cause: "blocked_movement",
+              label: "Movement was blocked",
+              remediation: "Choose a different Advance direction.",
+              details: { reason: "WALL" },
+            },
+          ],
+        },
+      }
+    : {}),
 })
 
 describe("replay state helpers", () => {
@@ -244,5 +272,43 @@ describe("replay state helpers", () => {
     expect(
       getOwnerAwarenessGridInspection(createReplayData(), data.timeline[2]!),
     ).toBeNull()
+  })
+
+  it("returns no Soldier inactivity explanation for public replay data", () => {
+    expect(
+      getSoldierInactivityExplanation(
+        createReplayData(),
+        "soldier:bottom:1",
+        2,
+      ),
+    ).toBeNull()
+  })
+
+  it("returns the selected Soldier explanation nearest to the current sequence", () => {
+    const explanation = getSoldierInactivityExplanation(
+      createReplayData(true),
+      "soldier:bottom:1",
+      2,
+    )
+
+    expect(explanation).toEqual({
+      soldierId: "soldier:bottom:1",
+      cause: "blocked_movement",
+      causeCode: "BLOCKED_MOVEMENT",
+      label: "Movement was blocked",
+      remediation: "Choose a different Advance direction.",
+      sourceEventSequence: 2,
+      details: { reason: "WALL" },
+    })
+    expect(formatSoldierInactivityCause("not_selected")).toBe("NOT_SELECTED")
+  })
+
+  it("keeps Soldier inactivity selectors limited to DTO fields", () => {
+    const selectorSource = getSoldierInactivityExplanation.toString()
+
+    expect(selectorSource).not.toContain(".board")
+    expect(selectorSource).not.toContain(".bounds")
+    expect(selectorSource).not.toContain(".position")
+    expect(selectorSource).not.toContain(".facing")
   })
 })
