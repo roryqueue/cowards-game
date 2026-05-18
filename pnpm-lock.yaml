@@ -189,6 +189,12 @@ importers:
 
   packages/test-utils:
     dependencies:
+      '@cowards/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@cowards/replay':
+        specifier: workspace:*
+        version: link:../replay
       '@cowards/spec':
         specifier: workspace:*
         version: link:../spec

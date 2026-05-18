@@ -15,6 +15,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@cowards/engine": "workspace:*",
+    "@cowards/replay": "workspace:*",
     "@cowards/spec": "workspace:*"
   }
 }
