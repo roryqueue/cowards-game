@@ -16,6 +16,8 @@ import type { MatchSetStatus, MatchStatus } from "./schema.js"
 export interface MatchSetMatchSummary {
   matchId: MatchId
   status: MatchStatus
+  bottomPlayerId: PlayerId
+  topPlayerId: PlayerId
   outcome?: JsonValue | undefined
   winnerPlayerId?: PlayerId | undefined
   hasReplay: boolean
@@ -25,6 +27,8 @@ export const LIST_MATCH_STATUSES_FOR_SET_SQL = `
   select
     m.id as match_id,
     m.status,
+    m.bottom_player_id,
+    m.top_player_id,
     m.outcome,
     m.winner_player_id,
     c.match_id as chronicle_match_id
@@ -38,12 +42,16 @@ export const LIST_MATCH_STATUSES_FOR_SET_SQL = `
 export const mapMatchSetMatchSummaryRow = (row: {
   match_id: MatchId
   status: MatchStatus
+  bottom_player_id: PlayerId
+  top_player_id: PlayerId
   outcome: JsonValue | null
   winner_player_id: PlayerId | null
   chronicle_match_id: MatchId | null
 }): MatchSetMatchSummary => ({
   matchId: row.match_id,
   status: row.status,
+  bottomPlayerId: row.bottom_player_id,
+  topPlayerId: row.top_player_id,
   ...(row.outcome === null ? {} : { outcome: row.outcome }),
   ...(row.winner_player_id === null
     ? {}
@@ -58,6 +66,8 @@ export const listMatchStatusesForSet = async (
   const result = await pool.query<{
     match_id: MatchId
     status: MatchStatus
+    bottom_player_id: PlayerId
+    top_player_id: PlayerId
     outcome: JsonValue | null
     winner_player_id: PlayerId | null
     chronicle_match_id: MatchId | null

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   canSubmitRevision,
   canOpenReplay,
+  canOpenOwnerReplay,
   formatMatchOutcome,
   formatUsedInMatches,
   formatValidationIssueGuidance,
@@ -11,6 +12,8 @@ import {
   getDraftStatusLabel,
   getReplayAvailability,
   getReplayHref,
+  getOwnerReplayHref,
+  getWorkshopOwnerPlayerId,
   getRevisionTitle,
   getSubmitBlockedReason,
   getTestStatusCopy,
@@ -215,6 +218,8 @@ describe("Strategy Workshop validation helpers", () => {
       canOpenReplay({
         matchId: "match:complete",
         status: "complete",
+        bottomPlayerId: "player:workshop-local",
+        topPlayerId: "player:opponent",
         hasReplay: true,
       }),
     ).toBe(true)
@@ -222,6 +227,8 @@ describe("Strategy Workshop validation helpers", () => {
       canOpenReplay({
         matchId: "match:failed",
         status: "failed_system",
+        bottomPlayerId: "player:workshop-local",
+        topPlayerId: "player:opponent",
         hasReplay: true,
       }),
     ).toBe(false)
@@ -229,6 +236,8 @@ describe("Strategy Workshop validation helpers", () => {
       formatMatchOutcome({
         matchId: "match:win",
         status: "complete",
+        bottomPlayerId: "player:workshop-local",
+        topPlayerId: "player:opponent",
         hasReplay: true,
         outcome: { type: "WIN", winnerPlayerId: "player:bottom" },
         winnerPlayerId: "player:bottom",
@@ -238,6 +247,8 @@ describe("Strategy Workshop validation helpers", () => {
       formatMatchOutcome({
         matchId: "match:missing",
         status: "complete",
+        bottomPlayerId: "player:workshop-local",
+        topPlayerId: "player:opponent",
         hasReplay: false,
       }),
     ).toBe("Replay unavailable")
@@ -249,18 +260,24 @@ describe("Strategy Workshop validation helpers", () => {
       getReplayAvailability({
         matchId: "match:complete",
         status: "complete",
+        bottomPlayerId: "player:workshop-local",
+        topPlayerId: "player:opponent",
         hasReplay: true,
       }),
     ).toEqual({
       state: "available",
       label: "Open replay",
       href: "/matches/match%3Acomplete/replay",
+      ownerHref:
+        "/matches/match%3Acomplete/replay?ownerDebug=1&ownerPlayerId=player%3Aworkshop-local",
       reason: null,
     })
     expect(
       getReplayAvailability({
         matchId: "match:pending",
         status: "pending",
+        bottomPlayerId: "player:workshop-local",
+        topPlayerId: "player:opponent",
         hasReplay: false,
       }).reason,
     ).toBe(
@@ -270,6 +287,8 @@ describe("Strategy Workshop validation helpers", () => {
       getReplayAvailability({
         matchId: "match:running",
         status: "running",
+        bottomPlayerId: "player:workshop-local",
+        topPlayerId: "player:opponent",
         hasReplay: false,
       }).reason,
     ).toBe(
@@ -279,6 +298,8 @@ describe("Strategy Workshop validation helpers", () => {
       getReplayAvailability({
         matchId: "match:failed",
         status: "failed_system",
+        bottomPlayerId: "player:workshop-local",
+        topPlayerId: "player:opponent",
         hasReplay: false,
       }).reason,
     ).toBe(
@@ -288,6 +309,8 @@ describe("Strategy Workshop validation helpers", () => {
       getReplayAvailability({
         matchId: "match:blocked",
         status: "blocked",
+        bottomPlayerId: "player:workshop-local",
+        topPlayerId: "player:opponent",
         hasReplay: false,
       }).reason,
     ).toBe("Replay unavailable because the Match was blocked before execution.")
@@ -295,9 +318,40 @@ describe("Strategy Workshop validation helpers", () => {
       getReplayAvailability({
         matchId: "match:no-chronicle",
         status: "complete",
+        bottomPlayerId: "player:workshop-local",
+        topPlayerId: "player:opponent",
         hasReplay: false,
       }).reason,
     ).toBe("Replay unavailable: this completed Match has no stored Chronicle.")
+  })
+
+  it("builds owner replay links only for local Workshop participant Matches", () => {
+    const mirroredMatch = {
+      matchId: "match:mirrored",
+      status: "complete" as const,
+      bottomPlayerId: "player:opponent",
+      topPlayerId: "player:workshop-local",
+      hasReplay: true,
+    }
+    const nonParticipantMatch = {
+      ...mirroredMatch,
+      matchId: "match:other",
+      topPlayerId: "player:other",
+    }
+
+    expect(getOwnerReplayHref("match:mirrored/slash")).toBe(
+      "/matches/match%3Amirrored%2Fslash/replay?ownerDebug=1&ownerPlayerId=player%3Aworkshop-local",
+    )
+    expect(getWorkshopOwnerPlayerId(mirroredMatch)).toBe(
+      "player:workshop-local",
+    )
+    expect(canOpenOwnerReplay(mirroredMatch)).toBe(true)
+    expect(getReplayAvailability(mirroredMatch).ownerHref).toBe(
+      "/matches/match%3Amirrored/replay?ownerDebug=1&ownerPlayerId=player%3Aworkshop-local",
+    )
+    expect(getWorkshopOwnerPlayerId(nonParticipantMatch)).toBeNull()
+    expect(canOpenOwnerReplay(nonParticipantMatch)).toBe(false)
+    expect(getReplayAvailability(nonParticipantMatch).ownerHref).toBeNull()
   })
 
   it("groups starter samples separately from failure-mode samples", () => {

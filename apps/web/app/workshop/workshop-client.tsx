@@ -12,11 +12,13 @@ import type {
 import {
   canSubmitRevision,
   canOpenReplay,
+  canOpenOwnerReplay,
   formatMatchOutcome,
   formatUsedInMatches,
   formatValidationIssueGuidance,
   formatValidationIssueHeading,
   getReplayHref,
+  getOwnerReplayHref,
   getDraftStatusClass,
   getDraftStatusLabel,
   getReplayAvailability,
@@ -651,12 +653,25 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                             data-testid="workshop-replay-availability"
                           >
                             {canOpenReplay(match) ? (
-                              <a
-                                className="workshop-replay-link"
-                                href={getReplayHref(match.matchId)}
-                              >
-                                {replay.label}
-                              </a>
+                              <>
+                                <a
+                                  className="workshop-replay-link"
+                                  href={getReplayHref(match.matchId)}
+                                >
+                                  {replay.label}
+                                </a>
+                                {canOpenOwnerReplay(match) ? (
+                                  <>
+                                    {" · "}
+                                    <a
+                                      className="workshop-replay-link"
+                                      href={getOwnerReplayHref(match.matchId)}
+                                    >
+                                      Open owner debug
+                                    </a>
+                                  </>
+                                ) : null}
+                              </>
                             ) : (
                               replay.reason
                             )}

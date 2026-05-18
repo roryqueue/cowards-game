@@ -160,23 +160,46 @@ export const isTerminalTestStatus = (
 
 export type WorkshopMatchSummary = WorkshopTestSummary["matches"][number]
 
+export const LOCAL_WORKSHOP_PLAYER_ID = "player:workshop-local"
+
 export const getReplayHref = (matchId: string): string =>
   `/matches/${encodeURIComponent(matchId)}/replay`
 
+export const getOwnerReplayHref = (
+  matchId: string,
+  ownerPlayerId = LOCAL_WORKSHOP_PLAYER_ID,
+): string =>
+  `${getReplayHref(matchId)}?ownerDebug=1&ownerPlayerId=${encodeURIComponent(ownerPlayerId)}`
+
 export const canOpenReplay = (match: WorkshopMatchSummary): boolean =>
   match.status === "complete" && match.hasReplay === true
+
+export const getWorkshopOwnerPlayerId = (
+  match: WorkshopMatchSummary,
+  localPlayerId = LOCAL_WORKSHOP_PLAYER_ID,
+): string | null =>
+  match.bottomPlayerId === localPlayerId || match.topPlayerId === localPlayerId
+    ? localPlayerId
+    : null
+
+export const canOpenOwnerReplay = (
+  match: WorkshopMatchSummary,
+  localPlayerId = LOCAL_WORKSHOP_PLAYER_ID,
+): boolean => canOpenReplay(match) && getWorkshopOwnerPlayerId(match, localPlayerId) !== null
 
 export type ReplayAvailability =
   | {
       state: "available"
       label: "Open replay"
       href: string
+      ownerHref: string | null
       reason: null
     }
   | {
       state: "unavailable"
       label: "Replay unavailable"
       href: null
+      ownerHref: null
       reason: string
     }
 
@@ -188,6 +211,10 @@ export const getReplayAvailability = (
       state: "available",
       label: "Open replay",
       href: getReplayHref(match.matchId),
+      ownerHref:
+        getWorkshopOwnerPlayerId(match) === null
+          ? null
+          : getOwnerReplayHref(match.matchId, LOCAL_WORKSHOP_PLAYER_ID),
       reason: null,
     }
   }
@@ -197,6 +224,7 @@ export const getReplayAvailability = (
         state: "unavailable",
         label: "Replay unavailable",
         href: null,
+        ownerHref: null,
         reason:
           "Replay will appear after this Match leaves the queue and stores a Chronicle.",
       }
@@ -205,6 +233,7 @@ export const getReplayAvailability = (
         state: "unavailable",
         label: "Replay unavailable",
         href: null,
+        ownerHref: null,
         reason:
           "Replay will appear after the Match completes and its Chronicle is stored.",
       }
@@ -213,6 +242,7 @@ export const getReplayAvailability = (
         state: "unavailable",
         label: "Replay unavailable",
         href: null,
+        ownerHref: null,
         reason:
           "Replay unavailable because the Match failed before a Chronicle could be stored.",
       }
@@ -221,6 +251,7 @@ export const getReplayAvailability = (
         state: "unavailable",
         label: "Replay unavailable",
         href: null,
+        ownerHref: null,
         reason:
           "Replay unavailable because the Match was blocked before execution.",
       }
@@ -229,6 +260,7 @@ export const getReplayAvailability = (
         state: "unavailable",
         label: "Replay unavailable",
         href: null,
+        ownerHref: null,
         reason:
           "Replay unavailable: this completed Match has no stored Chronicle.",
       }

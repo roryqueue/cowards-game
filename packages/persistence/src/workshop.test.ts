@@ -195,6 +195,8 @@ describe("Workshop service contracts", () => {
       mapMatchSetMatchSummaryRow({
         match_id: "match:complete",
         status: "complete",
+        bottom_player_id: "player:bottom",
+        top_player_id: "player:top",
         outcome: { type: "WIN", winnerPlayerId: "player:bottom" },
         winner_player_id: "player:bottom",
         chronicle_match_id: "match:complete",
@@ -202,6 +204,8 @@ describe("Workshop service contracts", () => {
     ).toEqual({
       matchId: "match:complete",
       status: "complete",
+      bottomPlayerId: "player:bottom",
+      topPlayerId: "player:top",
       outcome: { type: "WIN", winnerPlayerId: "player:bottom" },
       winnerPlayerId: "player:bottom",
       hasReplay: true,
@@ -210,6 +214,8 @@ describe("Workshop service contracts", () => {
       mapMatchSetMatchSummaryRow({
         match_id: "match:missing-chronicle",
         status: "complete",
+        bottom_player_id: "player:bottom",
+        top_player_id: "player:top",
         outcome: { type: "DRAW" },
         winner_player_id: null,
         chronicle_match_id: null,
@@ -219,6 +225,8 @@ describe("Workshop service contracts", () => {
       mapMatchSetMatchSummaryRow({
         match_id: "match:failed",
         status: "failed_system",
+        bottom_player_id: "player:bottom",
+        top_player_id: "player:top",
         outcome: null,
         winner_player_id: null,
         chronicle_match_id: "match:failed",
@@ -226,6 +234,8 @@ describe("Workshop service contracts", () => {
     ).toEqual({
       matchId: "match:failed",
       status: "failed_system",
+      bottomPlayerId: "player:bottom",
+      topPlayerId: "player:top",
       hasReplay: false,
     })
   })

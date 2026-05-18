@@ -70,14 +70,30 @@ describe("Workshop server facade", () => {
         status: "pending",
         matchIds: ["match:1"],
         matchCount: 1,
-        matches: [{ matchId: "match:1", status: "pending", hasReplay: false }],
+        matches: [
+          {
+            matchId: "match:1",
+            status: "pending",
+            bottomPlayerId: "player:workshop-local",
+            topPlayerId: "player:opponent",
+            hasReplay: false,
+          },
+        ],
         scoring: { complete: false, degraded: false, rankings: [] },
       }),
       getTestSummary: async (_pool, matchSetId) => ({
         matchSetId,
         status: "pending",
         matchCount: 1,
-        matches: [{ matchId: "match:1", status: "pending", hasReplay: false }],
+        matches: [
+          {
+            matchId: "match:1",
+            status: "pending",
+            bottomPlayerId: "player:workshop-local",
+            topPlayerId: "player:opponent",
+            hasReplay: false,
+          },
+        ],
         scoring: { complete: false, degraded: false, rankings: [] },
       }),
     })
@@ -96,7 +112,15 @@ describe("Workshop server facade", () => {
       status: "pending",
       matchIds: ["match:1"],
       matchCount: 1,
-      matches: [{ matchId: "match:1", status: "pending", hasReplay: false }],
+      matches: [
+        {
+          matchId: "match:1",
+          status: "pending",
+          bottomPlayerId: "player:workshop-local",
+          topPlayerId: "player:opponent",
+          hasReplay: false,
+        },
+      ],
       scoring: { complete: false, degraded: false, rankings: [] },
     })
     await expect(server.getTestSummary("match-set:1")).resolves.toMatchObject({

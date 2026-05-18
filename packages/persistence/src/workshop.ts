@@ -17,6 +17,7 @@ import type {
 import type { Pool } from "pg"
 import { withTransaction } from "./db.js"
 import { createMatchSetService } from "./matchset-service.js"
+import { generatePresetMatrix } from "./matchset-service.js"
 import {
   listMatchStatusesForSet,
   type MatchSetMatchSummary,
@@ -698,8 +699,17 @@ export const createWorkshopTestMatchSet = async (
     input.revisionId,
   )
   const opponent = findWorkshopOpponent(input.opponentId)
+  const matchSetId = input.matchSetId ?? createWorkshopMatchSetId()
+  const matrix = generatePresetMatrix({
+    id: matchSetId,
+    presetId: input.presetId,
+    bottomStrategyRevisionId: input.revisionId,
+    topStrategyRevisionId: opponent.revisionId,
+    bottomPlayerId: WORKSHOP_PLAYER_ID,
+    topPlayerId: opponent.playerId,
+  })
   const created = await createMatchSetService(pool).createFromPreset({
-    id: input.matchSetId ?? createWorkshopMatchSetId(),
+    id: matchSetId,
     presetId: input.presetId,
     bottomStrategyRevisionId: input.revisionId,
     topStrategyRevisionId: opponent.revisionId,
@@ -711,9 +721,11 @@ export const createWorkshopTestMatchSet = async (
     status: "pending",
     matchIds: created.matchIds,
     matchCount: created.matchIds.length,
-    matches: created.matchIds.map((matchId) => ({
-      matchId,
+    matches: matrix.map((match) => ({
+      matchId: match.id,
       status: "pending",
+      bottomPlayerId: match.bottomPlayerId,
+      topPlayerId: match.topPlayerId,
       hasReplay: false,
     })),
     scoring: { complete: false, degraded: false, rankings: [] },
