@@ -345,16 +345,18 @@ expect(errors.map((error) => error.code)).toEqual(
 |---|-------|---------|---------------|
 | — | No `[ASSUMED]` claims were used. | All sections | — |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should new validation error codes be added to `ChronicleValidationErrorCodeSchema` or should existing broad codes be reused?** [VERIFIED: packages/spec/src/schemas.ts]
    - What we know: Context D-10 requires stable codes and current codes are broad. [VERIFIED: 09-CONTEXT.md; VERIFIED: packages/spec/src/schemas.ts]
    - What's unclear: The exact code names are discretionary. [VERIFIED: 09-CONTEXT.md]
    - Recommendation: Add grammar-specific codes rather than overloading `EVENT_ORDER_INVALID` and `SNAPSHOT_MISMATCH`. [VERIFIED: packages/spec/src/schemas.ts; VERIFIED: packages/replay/src/validate.ts]
+   - **Resolution:** Phase 9 plans add grammar-specific stable codes to `ChronicleValidationErrorCodeSchema` and the matching TypeScript union while preserving existing codes for compatibility. [VERIFIED: .planning/phases/09-strict-chronicle-grammar-and-compatibility/09-01-PLAN.md]
 2. **Should grammar internals stay in `validate.ts` or move to `grammar.ts`?** [VERIFIED: packages/replay/src/validate.ts]
    - What we know: `validate.ts` is already the public validation entrypoint. [VERIFIED: packages/replay/src/validate.ts]
    - What's unclear: The final implementation size. [VERIFIED: 09-CONTEXT.md]
    - Recommendation: Keep orchestration in `validate.ts`; extract `grammar.ts` if semantic checks exceed a small helper set. [VERIFIED: packages/replay/src/validate.ts]
+   - **Resolution:** Phase 9 plans extract event-window/context semantics into `packages/replay/src/grammar.ts`, extract snapshot boundary semantics into `packages/replay/src/snapshot-boundaries.ts`, and keep `packages/replay/src/validate.ts` as the orchestrating public gate. [VERIFIED: .planning/phases/09-strict-chronicle-grammar-and-compatibility/09-03-PLAN.md; VERIFIED: .planning/phases/09-strict-chronicle-grammar-and-compatibility/09-04-PLAN.md; VERIFIED: .planning/phases/09-strict-chronicle-grammar-and-compatibility/09-05-PLAN.md]
 
 ## Environment Availability
 
