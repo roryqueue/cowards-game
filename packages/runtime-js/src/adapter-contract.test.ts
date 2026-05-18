@@ -1,5 +1,7 @@
+import type { SpawnSyncReturns } from "node:child_process"
 import { describe, expect, it } from "vitest"
 import type { RuntimeResult } from "@cowards/engine"
+import type { StrategyInput } from "@cowards/spec"
 import type { StrategyExecutionAdapter } from "./adapter.js"
 import {
   activeStrategyExecutionAdapter,
@@ -8,6 +10,10 @@ import {
 } from "./adapter.js"
 import { createWorkerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
 import { transpileStrategySource } from "./transpile.js"
+import { createRuntimeFromRevision } from "./executor.js"
+import { buildStrategyRevision } from "./revision.js"
+import { createSubprocessStrategyExecutionAdapter } from "./subprocess-adapter.js"
+import { SubprocessSystemFailure } from "./subprocess-ipc.js"
 
 const validStrategySource = `
 export default {
@@ -44,6 +50,74 @@ const transpileOrThrow = (source: string): string => {
   }
   return transpiled.code
 }
+
+const runtimeInput: StrategyInput = {
+  phaseNumber: 1,
+  roundNumber: 1,
+  activationCount: 1,
+  board: {
+    bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+    soldiers: [
+      {
+        id: "bottom-1",
+        ownerPlayerId: "bottom",
+        status: "ACTIVE",
+        position: { x: 5, y: 10 },
+        facing: "UP",
+        lastSuccessfulMoveDirection: null,
+      },
+    ],
+    terrainStones: [],
+  },
+  mySoldiers: [
+    {
+      id: "bottom-1",
+      ownerPlayerId: "bottom",
+      status: "ACTIVE",
+      position: { x: 5, y: 10 },
+      facing: "UP",
+      lastSuccessfulMoveDirection: null,
+    },
+  ],
+  enemySoldiers: [],
+  strategyMemory: {},
+}
+
+const invalidOutputStrategySource = `
+export default {
+  selectActivations() {
+    return { activationOrders: "bad", strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`
+
+const timeoutStrategySource = `
+export default {
+  selectActivations() {
+    while (true) {}
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`
+
+const adapterFactories: readonly {
+  label: string
+  createAdapter: () => StrategyExecutionAdapter
+}[] = [
+  {
+    label: "worker-thread",
+    createAdapter: createWorkerThreadStrategyExecutionAdapter,
+  },
+  {
+    label: "subprocess",
+    createAdapter: createSubprocessStrategyExecutionAdapter,
+  },
+]
 
 describe("StrategyExecutionAdapter contract", () => {
   it("exposes worker-thread default metadata and active adapter helpers", () => {
@@ -174,5 +248,79 @@ export default {
 
     expect(result.ok).toBe(false)
     expect(!result.ok && result.violation.type).toBe("TIMEOUT")
+  })
+
+  for (const adapterFactory of adapterFactories) {
+    describe(`${adapterFactory.label} runtime contract`, () => {
+      it("returns schema-normalized valid Strategy output", () => {
+        const runtime = createRuntimeFromRevision(
+          buildStrategyRevision({ source: validStrategySource }),
+          { adapter: adapterFactory.createAdapter(), timeoutMs: 1_000 },
+        )
+
+        const result = runtime.selectActivations(runtimeInput)
+
+        expect(result).toEqual({
+          ok: true,
+          value: {
+            activationOrders: [
+              { soldierId: "bottom-1", objective: { target: "bottom-1" } },
+            ],
+            strategyMemory: { adapter: "worker-thread" },
+          },
+        })
+      })
+
+      it("returns player-caused invalid output as a RuntimeResult failure", () => {
+        const runtime = createRuntimeFromRevision(
+          buildStrategyRevision({ source: invalidOutputStrategySource }),
+          { adapter: adapterFactory.createAdapter(), timeoutMs: 1_000 },
+        )
+
+        const result = runtime.selectActivations(runtimeInput)
+
+        expect(result.ok).toBe(false)
+        expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
+      })
+
+      it("returns player-caused timeout as a RuntimeResult failure", () => {
+        const runtime = createRuntimeFromRevision(
+          buildStrategyRevision({ source: timeoutStrategySource }),
+          { adapter: adapterFactory.createAdapter(), timeoutMs: 10 },
+        )
+
+        const result = runtime.selectActivations(runtimeInput)
+
+        expect(result.ok).toBe(false)
+        expect(!result.ok && result.violation.type).toBe("TIMEOUT")
+      })
+    })
+  }
+
+  it("keeps subprocess infrastructure failures in the system-failure channel", () => {
+    const adapter = createSubprocessStrategyExecutionAdapter({
+      spawnSync: () =>
+        ({
+          pid: 123,
+          output: ["", "not json", ""],
+          stdout: "not json",
+          stderr: "",
+          status: 0,
+          signal: null,
+        }) as SpawnSyncReturns<string>,
+    })
+    const runtime = createRuntimeFromRevision(
+      buildStrategyRevision({ source: validStrategySource }),
+      { adapter, timeoutMs: 1_000 },
+    )
+
+    expect(() => runtime.selectActivations(runtimeInput)).toThrow(
+      SubprocessSystemFailure,
+    )
+    try {
+      runtime.selectActivations(runtimeInput)
+    } catch (error) {
+      expect((error as SubprocessSystemFailure).code).toBe("MALFORMED_IPC")
+    }
   })
 })

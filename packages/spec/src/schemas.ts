@@ -5,7 +5,7 @@ import {
   STRATEGY_MEMORY_BYTES,
   STRATEGY_SOURCE_BYTES,
 } from "./constants.js"
-import type { JsonValue } from "./types.js"
+import { RUNTIME_VIOLATION_TYPES, type JsonValue } from "./types.js"
 
 export const jsonByteLength = (value: unknown): number =>
   new TextEncoder().encode(JSON.stringify(value)).length
@@ -172,13 +172,7 @@ export const SoldierBrainResultSchema = z.object({
   ),
 })
 
-export const RuntimeViolationTypeSchema = z.enum([
-  "INVALID_OUTPUT",
-  "TIMEOUT",
-  "THROWN_EXCEPTION",
-  "FORBIDDEN_CAPABILITY",
-  "OVERSIZED_OUTPUT",
-])
+export const RuntimeViolationTypeSchema = z.enum(RUNTIME_VIOLATION_TYPES)
 
 export const StrategyRuntimeNameSchema = z.literal("runtime-js")
 

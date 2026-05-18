@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest"
 import {
   ActionSchema,
   ChronicleSchema,
+  RuntimeViolationTypeSchema,
   SoldierSchema,
   StrategyRevisionSchema,
 } from "./schemas.js"
 import { fixtures } from "./fixtures/index.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 import { STRATEGY_SOURCE_BYTES } from "./constants.js"
+import { RUNTIME_VIOLATION_TYPES } from "./types.js"
 
 describe("Coward's Game spec contracts", () => {
   it("compatibility versions have exactly the core six keys", () => {
@@ -45,6 +47,58 @@ describe("Coward's Game spec contracts", () => {
       ActionSchema.safeParse({ type: "TURN", direction: "LEFT" }).success,
     ).toBe(true)
     expect(ActionSchema.safeParse({ type: "TURN_TO_STONE" }).success).toBe(true)
+  })
+
+  it("RuntimeViolationTypeSchema accepts only player-caused public violations", () => {
+    expect(
+      RUNTIME_VIOLATION_TYPES.map((type) =>
+        RuntimeViolationTypeSchema.parse(type),
+      ),
+    ).toEqual([
+      "INVALID_OUTPUT",
+      "TIMEOUT",
+      "THROWN_EXCEPTION",
+      "FORBIDDEN_CAPABILITY",
+      "OVERSIZED_OUTPUT",
+    ])
+
+    for (const infrastructureLabel of [
+      "MALFORMED_IPC",
+      "SUBPROCESS_EXIT",
+      "SUBPROCESS_SIGNAL",
+      "SPAWN_FAILED",
+      "SYSTEM_FAILURE",
+    ]) {
+      expect(
+        RuntimeViolationTypeSchema.safeParse(infrastructureLabel).success,
+      ).toBe(false)
+    }
+  })
+
+  it("ChronicleSchema rejects infrastructure labels in public runtime violation payloads", () => {
+    const baseEvent = {
+      type: "RUNTIME_VIOLATION",
+      sequence: 0,
+      context: { phaseNumber: 1 },
+      privacy: "public",
+      payload: { type: "SYSTEM_FAILURE", playerId: "bottom" },
+    }
+
+    expect(
+      ChronicleSchema.safeParse({
+        schemaVersion: "chronicle-v1",
+        reproducibility: {
+          matchId: "match-runtime-failure",
+          seed: "seed-1",
+          arenaVariantId: "arena-standard",
+          arenaVariantVersion: "arena-v1",
+          strategyRevisionIds: ["strategy-bottom-v1", "strategy-top-v1"],
+          versions: COMPATIBILITY_VERSIONS,
+        },
+        events: [baseEvent],
+        snapshots: [],
+      }).success,
+    ).toBe(false)
   })
 
   it("at least one invalid fixture fails schema validation", () => {

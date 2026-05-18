@@ -139,12 +139,15 @@ export interface SoldierBrainResult {
   soldierMemory: SoldierMemory
 }
 
-export type RuntimeViolationType =
-  | "INVALID_OUTPUT"
-  | "TIMEOUT"
-  | "THROWN_EXCEPTION"
-  | "FORBIDDEN_CAPABILITY"
-  | "OVERSIZED_OUTPUT"
+export const RUNTIME_VIOLATION_TYPES = [
+  "INVALID_OUTPUT",
+  "TIMEOUT",
+  "THROWN_EXCEPTION",
+  "FORBIDDEN_CAPABILITY",
+  "OVERSIZED_OUTPUT",
+] as const
+
+export type RuntimeViolationType = (typeof RUNTIME_VIOLATION_TYPES)[number]
 
 export interface RuntimeViolation {
   type: RuntimeViolationType
