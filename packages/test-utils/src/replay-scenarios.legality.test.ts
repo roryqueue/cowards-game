@@ -33,6 +33,9 @@ const firstError = (errors: readonly ChronicleValidationError[]): string => {
   return error ? `${error.code}: ${error.message}` : "unknown error"
 }
 
+const cloneChronicle = (chronicle: Chronicle): Chronicle =>
+  JSON.parse(JSON.stringify(chronicle)) as Chronicle
+
 const chronicleError = (
   scenarioId: string,
   errors: readonly ChronicleValidationError[],
@@ -473,7 +476,7 @@ describe("[engine legality] canonical replay scenario mechanics", () => {
 describe("[Chronicle validation] impossible canonical replay beats", () => {
   it("[Chronicle validation] rejects a push event whose Soldiers are not adjacent", () => {
     const scenario = getCanonicalReplayScenario("push")
-    const chronicle = structuredClone(scenario.chronicle)
+    const chronicle = cloneChronicle(scenario.chronicle)
     const pushEvent = chronicle.events.find(
       (event) => event.type === "PUSH_RESOLVED",
     )
@@ -493,7 +496,7 @@ describe("[Chronicle validation] impossible canonical replay beats", () => {
 
   it("[Chronicle validation] rejects contraction snapshots that cannot attach to events", () => {
     const scenario = getCanonicalReplayScenario("contraction")
-    const chronicle = structuredClone(scenario.chronicle)
+    const chronicle = cloneChronicle(scenario.chronicle)
     const contractionSnapshot = chronicle.snapshots.find(
       (snapshot) => snapshot.kind === "CONTRACTION",
     )
