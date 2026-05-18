@@ -95,6 +95,14 @@ Plans:
 **Status:** Active
 
 **Requirements:** ISO-01, ISO-02, ISO-03, ISO-04, ISO-05, ISO-06, ISO-07
+**Plans:** 5 plans
+
+Plans:
+- [ ] 10-01-PLAN.md - Strategy execution adapter contract and worker-thread default
+- [ ] 10-02-PLAN.md - Opt-in subprocess JSON IPC adapter
+- [ ] 10-03-PLAN.md - Hostile Strategy matrix and failure taxonomy
+- [ ] 10-04-PLAN.md - Worker adapter selection and propagation
+- [ ] 10-05-PLAN.md - Isolation boundary audit and validation evidence
 
 **Success Criteria:**
 1. Runtime execution exposes a replaceable adapter boundary without changing engine rules.
