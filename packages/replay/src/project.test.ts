@@ -11,22 +11,82 @@ const PRIVATE_SOLDIER_MEMORY_MARKER = "PRIVATE_SOLDIER_MEMORY_MARKER"
 const PRIVATE_OBJECTIVE_PAYLOAD_MARKER = "PRIVATE_OBJECTIVE_PAYLOAD_MARKER"
 const PRIVATE_AWARENESS_GRID_MARKER = "PRIVATE_AWARENESS_GRID_MARKER"
 const PRIVATE_RUNTIME_DETAIL_MARKER = "PRIVATE_RUNTIME_DETAIL_MARKER"
+const PRIVATE_STRATEGY_SOURCE_MARKER = "PRIVATE_STRATEGY_SOURCE_MARKER"
+const PRIVATE_REF_MARKER = "PRIVATE_REF_MARKER"
+const PRIVATE_DEBUG_MARKER = "PRIVATE_DEBUG_MARKER"
+const PRIVATE_STORAGE_MARKER = "PRIVATE_STORAGE_MARKER"
+
+const privateMarkerValues = [
+  PRIVATE_STRATEGY_MEMORY_MARKER,
+  PRIVATE_SOLDIER_MEMORY_MARKER,
+  PRIVATE_OBJECTIVE_PAYLOAD_MARKER,
+  PRIVATE_AWARENESS_GRID_MARKER,
+  PRIVATE_RUNTIME_DETAIL_MARKER,
+  PRIVATE_STRATEGY_SOURCE_MARKER,
+  PRIVATE_REF_MARKER,
+  PRIVATE_DEBUG_MARKER,
+  PRIVATE_STORAGE_MARKER,
+] as const
+
+const privateKeyNames = [
+  "source",
+  "strategySource",
+  "strategyMemory",
+  "soldierMemory",
+  "objective",
+  "objectivePayload",
+  "awarenessGrid",
+  "exactAwarenessGrid",
+  "runtimeDetails",
+  "rawRuntimeDetails",
+  "violation",
+  "privateRef",
+  "private",
+  "byPlayerId",
+  "debug",
+  "storageMetadata",
+] as const
 
 const playerMarker = (marker: string, playerId: string): string =>
   `${marker}:${playerId}`
 
 const privatePayloadsFor = (playerId: "bottom" | "top") => ({
   "private:strategy": {
-    strategyMemory: playerMarker(PRIVATE_STRATEGY_MEMORY_MARKER, playerId),
+    source: playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, playerId),
+    strategySource: playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, playerId),
+    strategyMemory: {
+      marker: playerMarker(PRIVATE_STRATEGY_MEMORY_MARKER, playerId),
+      nested: [
+        {
+          soldierMemory: playerMarker(
+            PRIVATE_SOLDIER_MEMORY_MARKER,
+            playerId,
+          ),
+        },
+      ],
+    },
   },
   "private:event:1": {
-    awarenessGrid: playerMarker(PRIVATE_AWARENESS_GRID_MARKER, playerId),
+    awarenessGrid: {
+      marker: playerMarker(PRIVATE_AWARENESS_GRID_MARKER, playerId),
+    },
+    exactAwarenessGrid: playerMarker(
+      PRIVATE_AWARENESS_GRID_MARKER,
+      playerId,
+    ),
+    objective: playerMarker(PRIVATE_OBJECTIVE_PAYLOAD_MARKER, playerId),
     objectivePayload: playerMarker(PRIVATE_OBJECTIVE_PAYLOAD_MARKER, playerId),
   },
   "private:event:2": {
     soldierMemory: playerMarker(PRIVATE_SOLDIER_MEMORY_MARKER, playerId),
+    runtimeDetails: {
+      marker: playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, playerId),
+    },
     rawRuntimeDetails: playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, playerId),
-    strategySource: `export default ${playerId}`,
+    strategySource: playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, playerId),
+    violation: {
+      payload: playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, playerId),
+    },
   },
 })
 
@@ -64,15 +124,48 @@ const createChronicle = (): Chronicle => ({
       payload: {
         soldierId: "bottom-1",
         cycleIndex: 0,
+        source: playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, "bottom"),
+        strategySource: playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, "bottom"),
+        strategyMemory: [
+          {
+            marker: playerMarker(PRIVATE_STRATEGY_MEMORY_MARKER, "bottom"),
+          },
+        ],
+        soldierMemory: playerMarker(
+          PRIVATE_SOLDIER_MEMORY_MARKER,
+          "bottom",
+        ),
         awarenessGrid: {
           marker: playerMarker(PRIVATE_AWARENESS_GRID_MARKER, "bottom"),
+          nested: [
+            {
+              exactAwarenessGrid: playerMarker(
+                PRIVATE_AWARENESS_GRID_MARKER,
+                "bottom",
+              ),
+            },
+          ],
+        },
+        exactAwarenessGrid: playerMarker(
+          PRIVATE_AWARENESS_GRID_MARKER,
+          "bottom",
+        ),
+        objective: {
+          marker: playerMarker(PRIVATE_OBJECTIVE_PAYLOAD_MARKER, "bottom"),
         },
         objectivePayload: playerMarker(
           PRIVATE_OBJECTIVE_PAYLOAD_MARKER,
           "bottom",
         ),
+        private: {
+          byPlayerId: {
+            bottom: playerMarker(PRIVATE_STRATEGY_MEMORY_MARKER, "bottom"),
+          },
+          debug: playerMarker(PRIVATE_DEBUG_MARKER, "bottom"),
+        },
+        storageMetadata: playerMarker(PRIVATE_STORAGE_MARKER, "bottom"),
       },
-      privateRef: "private:event:1",
+      privateRef: playerMarker(PRIVATE_REF_MARKER, "bottom"),
     },
     {
       type: "RUNTIME_VIOLATION",
@@ -91,15 +184,30 @@ const createChronicle = (): Chronicle => ({
         category: "strategy",
         ownerPlayerId: "bottom",
         soldierId: "bottom-1",
+        runtimeDetails: {
+          nested: [
+            playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, "bottom"),
+            {
+              source: playerMarker(
+                PRIVATE_STRATEGY_SOURCE_MARKER,
+                "bottom",
+              ),
+            },
+          ],
+        },
         violation: {
           message: playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, "bottom"),
+          objectivePayload: playerMarker(
+            PRIVATE_OBJECTIVE_PAYLOAD_MARKER,
+            "bottom",
+          ),
         },
         rawRuntimeDetails: playerMarker(
           PRIVATE_RUNTIME_DETAIL_MARKER,
           "bottom",
         ),
       },
-      privateRef: "private:event:2",
+      privateRef: playerMarker(PRIVATE_REF_MARKER, "top"),
     },
     {
       type: "MATCH_ENDED",
@@ -155,6 +263,22 @@ const createChronicle = (): Chronicle => ({
       bottom: privatePayloadsFor("bottom"),
       top: privatePayloadsFor("top"),
     },
+    debug: {
+      marker: PRIVATE_DEBUG_MARKER,
+      nested: [
+        {
+          storageMetadata: PRIVATE_STORAGE_MARKER,
+        },
+      ],
+    },
+  },
+  storageMetadata: {
+    private: {
+      debug: PRIVATE_DEBUG_MARKER,
+      byPlayerId: {
+        bottom: PRIVATE_STORAGE_MARKER,
+      },
+    },
   },
 })
 
@@ -174,19 +298,12 @@ describe("Chronicle projections", () => {
       type: "WIN",
       winnerPlayerId: "bottom",
     })
-    expect(serialized).not.toContain("private:event:1")
-    expect(serialized).not.toContain("private:event:2")
-    expect(serialized).not.toContain("awarenessGrid")
-    expect(serialized).not.toContain("objectivePayload")
-    expect(serialized).not.toContain("strategyMemory")
-    expect(serialized).not.toContain("soldierMemory")
-    expect(serialized).not.toContain("strategySource")
-    expect(serialized).not.toContain("rawRuntimeDetails")
-    expect(serialized).not.toContain(PRIVATE_STRATEGY_MEMORY_MARKER)
-    expect(serialized).not.toContain(PRIVATE_SOLDIER_MEMORY_MARKER)
-    expect(serialized).not.toContain(PRIVATE_OBJECTIVE_PAYLOAD_MARKER)
-    expect(serialized).not.toContain(PRIVATE_AWARENESS_GRID_MARKER)
-    expect(serialized).not.toContain(PRIVATE_RUNTIME_DETAIL_MARKER)
+    for (const key of privateKeyNames) {
+      expect(serialized).not.toContain(`"${key}"`)
+    }
+    for (const marker of privateMarkerValues) {
+      expect(serialized).not.toContain(marker)
+    }
 
     expect(
       projection.events.find((event) => event.type === "RUNTIME_VIOLATION")
@@ -198,6 +315,24 @@ describe("Chronicle projections", () => {
       soldierId: "bottom-1",
     })
   })
+
+  it.each(privateMarkerValues)(
+    "omits hostile nested private marker %s from public serialization",
+    (marker) => {
+      const projection = projectPublicChronicle(createChronicle())
+
+      expect(JSON.stringify(projection)).not.toContain(marker)
+    },
+  )
+
+  it.each(privateKeyNames)(
+    "omits hostile private key %s from public serialization",
+    (key) => {
+      const projection = projectPublicChronicle(createChronicle())
+
+      expect(JSON.stringify(projection)).not.toContain(`"${key}"`)
+    },
+  )
 
   it("omits full Chronicle integrity from public projection", () => {
     const projection = projectPublicChronicle({
@@ -248,6 +383,9 @@ describe("Chronicle projections", () => {
     const topSerialized = JSON.stringify(topProjection.ownerPrivate)
 
     expect(bottomSerialized).toContain(
+      playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, "bottom"),
+    )
+    expect(bottomSerialized).toContain(
       playerMarker(PRIVATE_STRATEGY_MEMORY_MARKER, "bottom"),
     )
     expect(bottomSerialized).toContain(
@@ -261,6 +399,9 @@ describe("Chronicle projections", () => {
     )
     expect(bottomSerialized).toContain(
       playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, "bottom"),
+    )
+    expect(bottomSerialized).not.toContain(
+      playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, "top"),
     )
     expect(bottomSerialized).not.toContain(
       playerMarker(PRIVATE_STRATEGY_MEMORY_MARKER, "top"),
@@ -279,6 +420,9 @@ describe("Chronicle projections", () => {
     )
 
     expect(topSerialized).toContain(
+      playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, "top"),
+    )
+    expect(topSerialized).toContain(
       playerMarker(PRIVATE_STRATEGY_MEMORY_MARKER, "top"),
     )
     expect(topSerialized).toContain(
@@ -292,6 +436,9 @@ describe("Chronicle projections", () => {
     )
     expect(topSerialized).toContain(
       playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, "top"),
+    )
+    expect(topSerialized).not.toContain(
+      playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, "bottom"),
     )
     expect(topSerialized).not.toContain(
       playerMarker(PRIVATE_STRATEGY_MEMORY_MARKER, "bottom"),

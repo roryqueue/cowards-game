@@ -11,13 +11,18 @@ import { ChronicleSchema } from "@cowards/spec"
 
 const PRIVATE_PAYLOAD_KEYS = new Set([
   "awarenessGrid",
+  "byPlayerId",
+  "debug",
   "exactAwarenessGrid",
   "objective",
   "objectivePayload",
+  "private",
+  "privateRef",
   "rawRuntimeDetails",
   "runtimeDetails",
   "soldierMemory",
   "source",
+  "storageMetadata",
   "strategyMemory",
   "strategySource",
   "violation",
