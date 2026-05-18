@@ -1,5 +1,9 @@
 import { buildStrategyRevision } from "@cowards/runtime-js"
-import type { ArenaVariant, StrategyRevision } from "@cowards/spec"
+import {
+  INITIAL_BOUNDS,
+  type ArenaVariant,
+  type StrategyRevision,
+} from "@cowards/spec"
 
 export const cautiousSource = `
 export default {
@@ -93,13 +97,13 @@ export const createDevelopmentSeedData = (): DevelopmentSeedData => {
       {
         id: "arena:smoke:v1",
         name: "Smoke",
-        initialBounds: { minX: 0, maxX: 4, minY: 0, maxY: 4 },
+        initialBounds: INITIAL_BOUNDS,
         terrainStones: [],
       },
       {
         id: "arena:standard-cross:v1",
         name: "Standard Cross",
-        initialBounds: { minX: 0, maxX: 6, minY: 0, maxY: 6 },
+        initialBounds: INITIAL_BOUNDS,
         terrainStones: [
           { x: 3, y: 2 },
           { x: 2, y: 3 },
@@ -110,7 +114,7 @@ export const createDevelopmentSeedData = (): DevelopmentSeedData => {
       {
         id: "arena:open-field:v1",
         name: "Open Field",
-        initialBounds: { minX: 0, maxX: 8, minY: 0, maxY: 8 },
+        initialBounds: INITIAL_BOUNDS,
         terrainStones: [],
       },
     ],

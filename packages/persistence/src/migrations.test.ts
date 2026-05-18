@@ -1,3 +1,9 @@
+import {
+  BOTTOM_STARTING_POSITIONS,
+  TOP_STARTING_POSITIONS,
+  type BoardBounds,
+  type Position,
+} from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import { readFile } from "node:fs/promises"
 import { createDevelopmentSeedData } from "./seed.js"
@@ -15,6 +21,12 @@ const requiredTables = [
   "match_jobs",
   "match_job_attempts",
 ]
+
+const containsPosition = (bounds: BoardBounds, position: Position): boolean =>
+  position.x >= bounds.minX &&
+  position.x <= bounds.maxX &&
+  position.y >= bounds.minY &&
+  position.y <= bounds.maxY
 
 describe("migrations", () => {
   it("reads migration files in lexical order", async () => {
@@ -50,5 +62,22 @@ describe("development seed data", () => {
     expect(seed.revisions).toHaveLength(2)
     expect(seed.arenas.map((arena) => arena.id)).toContain("arena:smoke:v1")
     expect(seed.matchSets[0]?.matrix[0]?.seed).toBe("seed:smoke:001")
+  })
+
+  it("keeps every seeded arena compatible with canonical starting positions", () => {
+    const seed = createDevelopmentSeedData()
+    const startingPositions = [
+      ...BOTTOM_STARTING_POSITIONS,
+      ...TOP_STARTING_POSITIONS,
+    ]
+
+    for (const arena of seed.arenas) {
+      for (const position of startingPositions) {
+        expect(
+          containsPosition(arena.initialBounds, position),
+          `${arena.id} initial bounds must contain (${position.x}, ${position.y})`,
+        ).toBe(true)
+      }
+    }
   })
 })
