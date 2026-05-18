@@ -22,6 +22,14 @@ const board = {
   terrainStones: [],
 } satisfies Chronicle["snapshots"][number]["board"]
 
+const activationContext = {
+  roundNumber: 1,
+  activationIndex: 0,
+  activationId: "activation:1",
+  actingPlayerId: "player:bottom",
+  soldierId: "soldier:bottom:1",
+} satisfies Chronicle["events"][number]["context"]
+
 const createChronicle = (): Chronicle => ({
   schemaVersion: "chronicle-v1",
   reproducibility: {
@@ -60,13 +68,7 @@ const createChronicle = (): Chronicle => ({
     {
       type: "ACTIVATION_STARTED",
       sequence: 3,
-      context: {
-        roundNumber: 1,
-        activationIndex: 0,
-        activationId: "activation:1",
-        actingPlayerId: "player:bottom",
-        soldierId: "soldier:bottom:1",
-      },
+      context: activationContext,
       privacy: "public",
       payload: { soldierId: "soldier:bottom:1" },
     },
@@ -74,11 +76,7 @@ const createChronicle = (): Chronicle => ({
       type: "AWARENESS_GRID_OBSERVED",
       sequence: 4,
       context: {
-        roundNumber: 1,
-        activationIndex: 0,
-        activationId: "activation:1",
-        actingPlayerId: "player:bottom",
-        soldierId: "soldier:bottom:1",
+        ...activationContext,
         cycleIndex: 0,
       },
       privacy: "owner",
@@ -93,11 +91,7 @@ const createChronicle = (): Chronicle => ({
       type: "ACTION_EMITTED",
       sequence: 5,
       context: {
-        roundNumber: 1,
-        activationIndex: 0,
-        activationId: "activation:1",
-        actingPlayerId: "player:bottom",
-        soldierId: "soldier:bottom:1",
+        ...activationContext,
         cycleIndex: 0,
       },
       privacy: "owner",
@@ -126,13 +120,13 @@ const createChronicle = (): Chronicle => ({
     {
       kind: "ACTIVATION_START",
       sequence: 3,
-      context: { roundNumber: 1, activationIndex: 0 },
+      context: activationContext,
       board,
     },
     {
       kind: "ACTIVATION_END",
       sequence: 5,
-      context: { roundNumber: 1, activationIndex: 0 },
+      context: activationContext,
       board,
     },
     {
