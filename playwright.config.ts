@@ -2,6 +2,8 @@ import { defineConfig } from "@playwright/test"
 
 export default defineConfig({
   testDir: "./apps/web/e2e",
+  snapshotPathTemplate:
+    "{testDir}/{testFilePath}-snapshots/{arg}-{projectName}{ext}",
   use: {
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",

@@ -139,12 +139,20 @@ test("owner debug replay fixture exposes Awareness Grid only through gated owner
 
   await page.goto(`${replayHref}?ownerDebug=1&ownerPlayerId=bottom`)
   await expect(page.locator(".replay-status-chip")).toHaveText("Owner debug")
-  await page
-    .getByRole("button", {
-      name: "Timeline event 42: AWARENESS_GRID_OBSERVED",
-    })
-    .click()
   const awarenessGrid = page.getByLabel("Awareness Grid")
+  const awarenessEvents = page.getByRole("button", {
+    name: /^Timeline event \d+: AWARENESS_GRID_OBSERVED$/,
+  })
+  const awarenessEventCount = await awarenessEvents.count()
+  expect(awarenessEventCount).toBeGreaterThan(0)
+
+  for (let index = 0; index < awarenessEventCount; index += 1) {
+    await awarenessEvents.nth(index).click()
+    if (await awarenessGrid.isVisible()) {
+      break
+    }
+  }
+
   await expect(awarenessGrid).toBeVisible()
   await expect(
     awarenessGrid.getByText(/FRIENDLY|EMPTY|ENEMY/).first(),

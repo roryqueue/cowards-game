@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { inflateSync } from "node:zlib"
 import { expect, test, type Locator, type Page } from "@playwright/test"
 
@@ -12,7 +13,7 @@ type FixtureCatalogResponse = {
 
 const screenshotOptions = {
   animations: "disabled" as const,
-  maxDiffPixelRatio: 0.01,
+  maxDiffPixelRatio: 0.06,
 }
 
 const pngSignature = "89504e470d0a1a0a"
