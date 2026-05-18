@@ -296,7 +296,18 @@ const createContractionScenario = (): CanonicalReplayScenario =>
   buildScenario(
     "contraction",
     "Contraction Demo Match",
-    createMatchInput("contraction", "b", createScriptedRuntime({})),
+    createMatchInput(
+      "contraction",
+      "b",
+      createScriptedRuntime({
+        [activationKey(1, 1, bottomPlayerId)]: [
+          {
+            soldierId: "bottom-soldier-1",
+            actions: [turn("UP")],
+          },
+        ],
+      }),
+    ),
     ["CONTRACTION_RESOLVED", "MATCH_ENDED"],
     [
       {
@@ -359,6 +370,12 @@ const createRuntimeFailureScenario = (): CanonicalReplayScenario =>
           [activationKey(1, 1, bottomPlayerId)]: [
             {
               soldierId: "bottom-soldier-1",
+              actions: [turn("UP")],
+            },
+          ],
+          [activationKey(1, 2, bottomPlayerId)]: [
+            {
+              soldierId: "bottom-soldier-2",
               actions: [turn("UP")],
             },
           ],
