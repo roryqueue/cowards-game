@@ -160,6 +160,30 @@ export interface RuntimeViolationUserGuidance {
   remediation: string
 }
 
+export const SOLDIER_INACTIVITY_EXPLANATION_CAUSES = [
+  "not_selected",
+  "invalid_action",
+  "blocked_movement",
+  "timeout",
+  "thrown_exception",
+  "stone",
+  "fallen",
+  "match_ended",
+] as const
+
+export type SoldierInactivityExplanationCause =
+  (typeof SOLDIER_INACTIVITY_EXPLANATION_CAUSES)[number]
+
+export interface SoldierInactivityExplanationDto {
+  soldierId: SoldierId
+  playerId?: PlayerId | undefined
+  sequence: number
+  cause: SoldierInactivityExplanationCause
+  label: string
+  remediation: string
+  details?: JsonValue | undefined
+}
+
 export type StrategyRuntimeName = "runtime-js"
 
 export type StrategyRevisionValidationSeverity = "error" | "warning"

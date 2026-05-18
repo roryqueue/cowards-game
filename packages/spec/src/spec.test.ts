@@ -4,6 +4,8 @@ import {
   ChronicleSchema,
   RuntimeViolationUserGuidanceSchema,
   RuntimeViolationTypeSchema,
+  SoldierInactivityExplanationDtoSchema,
+  SoldierInactivityExplanationCauseSchema,
   SoldierSchema,
   StrategyRevisionValidationIssueSchema,
   StrategyRevisionSchema,
@@ -11,7 +13,10 @@ import {
 import { fixtures } from "./fixtures/index.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 import { STRATEGY_SOURCE_BYTES } from "./constants.js"
-import { RUNTIME_VIOLATION_TYPES } from "./types.js"
+import {
+  RUNTIME_VIOLATION_TYPES,
+  SOLDIER_INACTIVITY_EXPLANATION_CAUSES,
+} from "./types.js"
 
 describe("Coward's Game spec contracts", () => {
   it("compatibility versions have exactly the core six keys", () => {
@@ -85,6 +90,86 @@ describe("Coward's Game spec contracts", () => {
     }
 
     expect(RuntimeViolationUserGuidanceSchema.parse(guidance)).toEqual(guidance)
+  })
+
+  it("SoldierInactivityExplanationCauseSchema accepts every required cause", () => {
+    expect(
+      SOLDIER_INACTIVITY_EXPLANATION_CAUSES.map((cause) =>
+        SoldierInactivityExplanationCauseSchema.parse(cause),
+      ),
+    ).toEqual([
+      "not_selected",
+      "invalid_action",
+      "blocked_movement",
+      "timeout",
+      "thrown_exception",
+      "stone",
+      "fallen",
+      "match_ended",
+    ])
+  })
+
+  it("SoldierInactivityExplanationDtoSchema requires core explanation fields", () => {
+    const explanation = {
+      soldierId: "bottom-1",
+      playerId: "bottom",
+      sequence: 7,
+      cause: "blocked_movement",
+      label: "Move was blocked",
+      remediation: "Choose a path that is not occupied or blocked.",
+    }
+
+    expect(SoldierInactivityExplanationDtoSchema.parse(explanation)).toEqual(
+      explanation,
+    )
+
+    for (const field of [
+      "soldierId",
+      "sequence",
+      "cause",
+      "label",
+      "remediation",
+    ] as const) {
+      const withoutField = { ...explanation }
+      delete withoutField[field]
+
+      expect(
+        SoldierInactivityExplanationDtoSchema.safeParse(withoutField).success,
+      ).toBe(false)
+    }
+  })
+
+  it("SoldierInactivityExplanationDtoSchema rejects empty copy and non-JSON details", () => {
+    const explanation = {
+      soldierId: "bottom-1",
+      sequence: 7,
+      cause: "invalid_action",
+      label: "Invalid action",
+      remediation: "Return a valid Action for the active Soldier.",
+      details: { reason: "IMMEDIATE_REVERSAL" },
+    }
+
+    expect(SoldierInactivityExplanationDtoSchema.parse(explanation)).toEqual(
+      explanation,
+    )
+    expect(
+      SoldierInactivityExplanationDtoSchema.safeParse({
+        ...explanation,
+        label: "",
+      }).success,
+    ).toBe(false)
+    expect(
+      SoldierInactivityExplanationDtoSchema.safeParse({
+        ...explanation,
+        remediation: "",
+      }).success,
+    ).toBe(false)
+    expect(
+      SoldierInactivityExplanationDtoSchema.safeParse({
+        ...explanation,
+        details: { callback: () => "not-json" },
+      }).success,
+    ).toBe(false)
   })
 
   it("StrategyRevisionValidationIssueSchema accepts optional guidance fields", () => {

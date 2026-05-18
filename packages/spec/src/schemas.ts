@@ -5,7 +5,11 @@ import {
   STRATEGY_MEMORY_BYTES,
   STRATEGY_SOURCE_BYTES,
 } from "./constants.js"
-import { RUNTIME_VIOLATION_TYPES, type JsonValue } from "./types.js"
+import {
+  RUNTIME_VIOLATION_TYPES,
+  SOLDIER_INACTIVITY_EXPLANATION_CAUSES,
+  type JsonValue,
+} from "./types.js"
 
 export const jsonByteLength = (value: unknown): number =>
   new TextEncoder().encode(JSON.stringify(value)).length
@@ -178,6 +182,20 @@ export const RuntimeViolationUserGuidanceSchema = z.object({
   label: z.string().min(1),
   constraint: z.string().min(1),
   remediation: z.string().min(1),
+})
+
+export const SoldierInactivityExplanationCauseSchema = z.enum(
+  SOLDIER_INACTIVITY_EXPLANATION_CAUSES,
+)
+
+export const SoldierInactivityExplanationDtoSchema = z.object({
+  soldierId: z.string().min(1),
+  playerId: z.string().min(1).optional(),
+  sequence: z.number().int().nonnegative(),
+  cause: SoldierInactivityExplanationCauseSchema,
+  label: z.string().min(1),
+  remediation: z.string().min(1),
+  details: JsonValueSchema.optional(),
 })
 
 export const StrategyRuntimeNameSchema = z.literal("runtime-js")
