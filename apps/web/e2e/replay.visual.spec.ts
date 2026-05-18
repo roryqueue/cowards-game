@@ -239,7 +239,6 @@ const selectEvent = async (
   const board = replayBoard(page, sequence, eventType)
   await expect(board).toBeVisible()
   await expectNonblankCanvasPixels(page)
-  await page.waitForTimeout(350)
   return { board, sequence }
 }
 
