@@ -408,17 +408,19 @@ Playwright locator screenshot assertions are available in the test runner and su
 | A3 | Screenshot flakiness will mainly come from animation and broad targets. | Common Pitfalls | Planner may need additional stabilization for Pixi/font/canvas rendering. |
 | A4 | Runtime-failure fixture generation should happen outside the web request path. | Common Pitfalls | If fixtures are generated lazily in web, the plan must prove no Strategy source executes in web/API. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should generated fixture Chronicles be computed at import time or precomputed during tests?**  
    - What we know: Test-support fixture data is currently created in process from `createReplayFixtureData`. [VERIFIED: apps/web/app/matches/replay-fixture.ts]  
    - What's unclear: Whether planners prefer import-time generation, lazy memoized generation, or checked-in JSON artifacts. [ASSUMED]  
    - Recommendation: Generate in TypeScript at test/runtime startup and memoize; avoid checked-in Chronicle JSON unless a later compatibility-fixture phase needs frozen artifacts. [ASSUMED]
+   - RESOLVED: Phase 8 will generate canonical fixture Chronicles in TypeScript at test/runtime startup and may memoize them in process; it will not check in canonical Chronicle JSON artifacts in this phase.
 
 2. **Should screenshot baselines live in `apps/web/e2e` or a dedicated visual spec directory?**  
    - What we know: Playwright currently uses `testDir: "./apps/web/e2e"`. [VERIFIED: playwright.config.ts]  
    - What's unclear: Whether the team wants to split smoke E2E and visual regression scripts now or in Phase 12. [ASSUMED]  
    - Recommendation: Add `apps/web/e2e/replay.visual.spec.ts` now and add a root script such as `e2e:visual` if CI needs separate gating. [ASSUMED]
+   - RESOLVED: Visual screenshot tests and baselines will live under `apps/web/e2e` using `replay.visual.spec.ts` and Playwright's colocated snapshot directory; add a root `e2e:visual` script for dedicated gating.
 
 ## Environment Availability
 
