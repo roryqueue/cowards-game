@@ -9,12 +9,12 @@ Requirements for Trustworthy Simulation Beta. Each maps to roadmap phases.
 
 ### Replay Fidelity
 
-- [ ] **FID-01**: Developer can generate canonical replay fixtures from legal engine scenarios instead of relying on hand-authored replay data.
-- [ ] **FID-02**: Developer can run canonical demo Matches covering push, fall, contraction, legal Backstab, runtime failure, and endgame.
-- [ ] **FID-03**: Developer can run fixture legality tests that reject impossible replay beats before they reach the replay viewer.
-- [ ] **FID-04**: Replay viewer can render engine-generated fixtures through the same projection path used by persisted Match Chronicles.
+- [x] **FID-01**: Developer can generate canonical replay fixtures from legal engine scenarios instead of relying on hand-authored replay data.
+- [x] **FID-02**: Developer can run canonical demo Matches covering push, fall, contraction, legal Backstab, runtime failure, and endgame.
+- [x] **FID-03**: Developer can run fixture legality tests that reject impossible replay beats before they reach the replay viewer.
+- [x] **FID-04**: Replay viewer can render engine-generated fixtures through the same projection path used by persisted Match Chronicles.
 - [x] **FID-05**: CI can run visual regression checks for board scale, Soldier positions, contraction bounds, and event callouts at stable desktop and mobile viewports.
-- [ ] **FID-06**: Developer can inspect expected event sequences and visual checkpoints for each canonical demo Match.
+- [x] **FID-06**: Developer can inspect expected event sequences and visual checkpoints for each canonical demo Match.
 - [x] **FID-07**: Replay fixture failures identify whether the failure is engine legality, Chronicle validation, projection, or UI rendering.
 
 ### Chronicle Grammar
@@ -95,12 +95,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| FID-01 | Phase 8 | Pending |
-| FID-02 | Phase 8 | Pending |
-| FID-03 | Phase 8 | Pending |
-| FID-04 | Phase 8 | Pending |
+| FID-01 | Phase 8 | Complete |
+| FID-02 | Phase 8 | Complete |
+| FID-03 | Phase 8 | Complete |
+| FID-04 | Phase 8 | Complete |
 | FID-05 | Phase 8 | Complete |
-| FID-06 | Phase 8 | Pending |
+| FID-06 | Phase 8 | Complete |
 | FID-07 | Phase 8 | Complete |
 | GRAM-01 | Phase 9 | Pending |
 | GRAM-02 | Phase 9 | Pending |

@@ -18,8 +18,8 @@ Coward's Game v1.1 sharpens trust in the simulation loop shipped in v1.0. The mi
 
 | Phase | Name | Goal | Requirements | Status |
 | --- | --- | --- | ---: | --- |
-| 8 | Replay Fixture Fidelity and Visual Regression | Replace fragile hand-authored replay demos with legal engine-generated scenarios and focused visual checks. | 7 | Pending |
-| 9 | Strict Chronicle Grammar and Compatibility | Reject invalid, impossible, private-leaking, or incompatible Chronicles before replay rendering. | 8 | Pending |
+| 8 | Replay Fixture Fidelity and Visual Regression | Replace fragile hand-authored replay demos with legal engine-generated scenarios and focused visual checks. | 7 | Complete |
+| 9 | Strict Chronicle Grammar and Compatibility | Reject invalid, impossible, private-leaking, or incompatible Chronicles before replay rendering. | 8 | Active |
 | 10 | Runtime Isolation Hardening | Make the Strategy runtime boundary explicit, test hostile code, and spike stronger process/container/WASM isolation. | 7 | Pending |
 | 11 | Doctrine Debugging UX | Help players understand validation failures, runtime violations, replay links, and why Soldiers did nothing without moving rules into React. | 6 | Pending |
 | 12 | Local and CI Reliability | Make Docker, no-Docker, and service-backed CI startup and E2E verification boring and diagnosable. | 6 | Pending |
@@ -45,7 +45,7 @@ Coward's Game v1.1 sharpens trust in the simulation loop shipped in v1.0. The mi
 
 **Goal:** Replace fragile hand-authored replay demos with legal engine-generated scenarios and focused visual checks.
 **Mode:** standard
-**Status:** Pending
+**Status:** Complete
 
 **Requirements:** FID-01, FID-02, FID-03, FID-04, FID-05, FID-06, FID-07
 
@@ -65,7 +65,7 @@ Coward's Game v1.1 sharpens trust in the simulation loop shipped in v1.0. The mi
 
 **Goal:** Reject invalid, impossible, private-leaking, or incompatible Chronicles before replay rendering.
 **Mode:** standard
-**Status:** Pending
+**Status:** Active
 
 **Requirements:** GRAM-01, GRAM-02, GRAM-03, GRAM-04, GRAM-05, GRAM-06, GRAM-07, GRAM-08
 
@@ -146,8 +146,8 @@ Coward's Game v1.1 sharpens trust in the simulation loop shipped in v1.0. The mi
 | Milestone | Phases | Plans | Requirements | Status | Shipped |
 | --- | ---: | ---: | ---: | --- | --- |
 | v1.0 MVP | 7/7 | 33/33 | 80/80 | Complete | 2026-05-17 |
-| v1.1 Trustworthy Simulation Beta | 0/5 | 0/0 | 0/34 | Planning | — |
+| v1.1 Trustworthy Simulation Beta | 1/5 | 4/4 | 7/34 | In Progress | — |
 
 ## Next
 
-Run `$gsd-discuss-phase 8` to clarify Phase 8 before planning, or `$gsd-plan-phase 8` to create an executable plan directly.
+Run `$gsd-plan-phase 9` to create an executable plan for strict Chronicle grammar and compatibility.
