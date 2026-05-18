@@ -13,10 +13,20 @@ type FixtureCatalogResponse = {
 
 const screenshotOptions = {
   animations: "disabled" as const,
-  maxDiffPixelRatio: 0.06,
+  maxDiffPixelRatio: 0.02,
 }
 
 const pngSignature = "89504e470d0a1a0a"
+
+type PngPixelStats = {
+  width: number
+  height: number
+  nonblankPixels: number
+  leftNonblankPixels: number
+  rightNonblankPixels: number
+  leftInkPixels: number
+  rightInkPixels: number
+}
 
 const paeth = (left: number, up: number, upLeft: number): number => {
   const prediction = left + up - upLeft
@@ -29,7 +39,7 @@ const paeth = (left: number, up: number, upLeft: number): number => {
   return upDistance <= upLeftDistance ? up : upLeft
 }
 
-const countNonblankPngPixels = (png: Buffer): number => {
+const readPngPixelStats = (png: Buffer): PngPixelStats => {
   if (png.subarray(0, 8).toString("hex") !== pngSignature) {
     throw new Error("[ui rendering] Replay board screenshot is not a PNG")
   }
@@ -76,6 +86,10 @@ const countNonblankPngPixels = (png: Buffer): number => {
   const current = Buffer.alloc(rowBytes)
   let sourceOffset = 0
   let nonblankPixels = 0
+  let leftNonblankPixels = 0
+  let rightNonblankPixels = 0
+  let leftInkPixels = 0
+  let rightInkPixels = 0
 
   for (let y = 0; y < height; y += 1) {
     const filter = inflated[sourceOffset]
@@ -106,14 +120,35 @@ const countNonblankPngPixels = (png: Buffer): number => {
       const blue = current[x + 2] ?? 0
       const alpha = bytesPerPixel === 4 ? (current[x + 3] ?? 0) : 255
       if (alpha > 0 && (red < 250 || green < 250 || blue < 250)) {
+        const pixelColumn = x / bytesPerPixel
         nonblankPixels += 1
+        if (pixelColumn < width / 2) {
+          leftNonblankPixels += 1
+        } else {
+          rightNonblankPixels += 1
+        }
+      }
+      if (alpha > 0 && (red < 235 || green < 235 || blue < 235)) {
+        if (x / bytesPerPixel < width / 2) {
+          leftInkPixels += 1
+        } else {
+          rightInkPixels += 1
+        }
       }
     }
 
     current.copy(previous)
   }
 
-  return nonblankPixels
+  return {
+    width,
+    height,
+    nonblankPixels,
+    leftNonblankPixels,
+    rightNonblankPixels,
+    leftInkPixels,
+    rightInkPixels,
+  }
 }
 
 const calloutScenarios = [
@@ -171,11 +206,27 @@ const expectNonblankCanvasPixels = async (page: Page): Promise<void> => {
   await expect(canvas).toHaveCount(1)
   await expect(canvas).toBeVisible()
   const screenshot = await canvas.screenshot({ animations: "disabled" })
-  const nonblankPixels = countNonblankPngPixels(screenshot)
+  const stats = readPngPixelStats(screenshot)
 
-  if (nonblankPixels <= 0) {
+  if (stats.nonblankPixels <= 0) {
     throw new Error(
       "[ui rendering] Replay board canvas screenshot has no nonblank pixels",
+    )
+  }
+  if (
+    stats.leftNonblankPixels <= stats.height ||
+    stats.rightNonblankPixels <= stats.height
+  ) {
+    throw new Error(
+      `[ui rendering] Replay board canvas is clipped or under-rendered (${stats.leftNonblankPixels}/${stats.rightNonblankPixels} nonblank pixels by half)`,
+    )
+  }
+  if (
+    stats.leftInkPixels <= stats.height * 3 ||
+    stats.rightInkPixels <= stats.height * 3
+  ) {
+    throw new Error(
+      `[ui rendering] Replay board grid or pieces are missing from one half (${stats.leftInkPixels}/${stats.rightInkPixels} ink pixels by half)`,
     )
   }
 }

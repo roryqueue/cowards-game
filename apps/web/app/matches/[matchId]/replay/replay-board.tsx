@@ -644,9 +644,10 @@ export function ReplayBoard({
     const boot = async () => {
       await app.init({
         antialias: true,
-        autoDensity: true,
+        autoDensity: false,
         backgroundAlpha: 0,
         canvas,
+        resolution: 1,
         resizeTo: host,
       })
       if (destroyed) {
