@@ -68,6 +68,14 @@ Coward's Game v1.1 sharpens trust in the simulation loop shipped in v1.0. The mi
 **Status:** Active
 
 **Requirements:** GRAM-01, GRAM-02, GRAM-03, GRAM-04, GRAM-05, GRAM-06, GRAM-07, GRAM-08
+**Plans:** 5 plans
+
+Plans:
+- [ ] 09-01-PLAN.md - Validation error contract and compatibility gate
+- [ ] 09-02-PLAN.md - Public projection privacy hard gate
+- [ ] 09-03-PLAN.md - Semantic event grammar state machine
+- [ ] 09-04-PLAN.md - Snapshot boundary grammar
+- [ ] 09-05-PLAN.md - Integrated validation gate and provable board contradictions
 
 **Success Criteria:**
 1. `packages/replay` validates Chronicle semantic grammar after Zod shape parsing and before replay rendering.
