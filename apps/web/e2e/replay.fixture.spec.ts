@@ -29,7 +29,9 @@ const expectNonblankCanvasPixels = async (canvas: Locator) => {
   expect(dataUrl.length).toBeGreaterThan(500)
 }
 
-const loadFixtureCatalog = async (page: Page): Promise<FixtureCatalogResponse> => {
+const loadFixtureCatalog = async (
+  page: Page,
+): Promise<FixtureCatalogResponse> => {
   const response = await page.request.get("/api/test-support/replay-fixture")
   expect(response.ok()).toBe(true)
   return (await response.json()) as FixtureCatalogResponse
@@ -108,13 +110,7 @@ test("replay fixture renders board, timeline, inspector, callouts, and public pr
   await expect(page.getByText("Facing").first()).toBeVisible()
   await expect(page.getByText("UP").first()).toBeVisible()
 
-  for (const label of [
-    "Move",
-    "Turn",
-    "Stone",
-    "Contraction",
-    "Outcome",
-  ]) {
+  for (const label of ["Move", "Turn", "Stone", "Contraction", "Outcome"]) {
     await expect(page.getByText(label).first()).toBeVisible()
   }
 

@@ -11,10 +11,11 @@
     "build": "turbo build",
     "e2e": "playwright test",
     "e2e:smoke": "PLAYWRIGHT_TEST=1 pnpm e2e -- replay.fixture.spec.ts",
+    "e2e:visual": "PLAYWRIGHT_TEST=1 pnpm e2e -- replay.visual.spec.ts",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm e2e:smoke",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm e2e:smoke && pnpm e2e:visual",
     "format:check": "prettier --check ."
   },
   "devDependencies": {

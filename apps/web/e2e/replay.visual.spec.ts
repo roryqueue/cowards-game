@@ -204,6 +204,21 @@ const replayBoard = (
     name: `Replay board at sequence ${sequence}, ${eventType}`,
   })
 
+const forceScrubbedSequence = async (
+  page: Page,
+  sequence: number,
+): Promise<void> => {
+  await page
+    .getByRole("slider", { name: "Replay timeline" })
+    .evaluate((node, value) => {
+      const input = node as HTMLInputElement
+      input.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }))
+      input.value = String(value)
+      input.dispatchEvent(new Event("input", { bubbles: true }))
+      input.dispatchEvent(new Event("change", { bubbles: true }))
+    }, sequence)
+}
+
 const selectEvent = async (
   page: Page,
   eventType: string,
@@ -219,6 +234,7 @@ const selectEvent = async (
   )
 
   await button.click()
+  await forceScrubbedSequence(page, sequence)
   const board = replayBoard(page, sequence, eventType)
   await expect(board).toBeVisible()
   await expectNonblankCanvasPixels(page)
