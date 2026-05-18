@@ -12,6 +12,20 @@ Coward's Game is now a deterministic two-player programmable strategy game MVP. 
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
+## Current Milestone: v1.1 Trustworthy Simulation Beta
+
+**Goal:** A developer/player can run, replay, inspect, and debug legal Matches with high confidence that the replay reflects the real engine, invalid Chronicles are rejected, and hostile Strategy code stays contained.
+
+**Target features:**
+- Replace hand-authored replay fixtures with engine-generated legal scenario fixtures where possible.
+- Add richer canonical demo Matches for push, fall, contraction, legal Backstab, runtime failure, and endgame scenarios.
+- Add visual regression or screenshot checks for board scale, piece positions, contraction, and event callouts.
+- Define strict Chronicle grammar, required payloads, privacy constraints, snapshot boundaries, and version compatibility behavior.
+- Reject invalid or impossible Chronicles clearly instead of rendering ambiguous replay states.
+- Harden runtime isolation beyond prototype worker-only JS execution, with a documented subprocess/container/WASM/WASI direction, resource limits, failure modes, and tests.
+- Improve Workshop and replay debugging with clearer validation messages, sample strategies, replay links, runtime violation explanations, and owner-only debug overlays.
+- Make local and CI startup repeatable for both Docker and non-Docker development, with broader service-backed E2E coverage for edit -> submit -> execute -> replay.
+
 ## Validated in v1.0
 
 - ✓ TypeScript monorepo, local workflow, canonical contracts, and versioning spine.
@@ -21,15 +35,6 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - ✓ PostgreSQL-backed Match/MatchSet persistence, migrations, worker jobs, retries, Chronicle storage, and deterministic scoring.
 - ✓ Strategy Workshop authoring UX with Monaco, templates, validation, submission, revision history, and test launch/status.
 - ✓ Replay viewer with Pixi board, timeline scrubber, inspector, event callouts, owner Awareness Grid, and full service-backed Workshop-to-replay E2E coverage.
-
-## Next Milestone Goals
-
-Fresh requirements should be defined with `$gsd-new-milestone`. Good candidates from the v1.0 archive include:
-
-- Runtime hardening beyond prototype JS worker isolation, likely subprocess/container/WASM/WASI-style.
-- Strict exhaustive Chronicle grammar and replay compatibility hardening.
-- Competitive surfaces such as ladders, tournaments, public Chronicle sharing, or strategy publishing.
-- Advanced authoring and debugging tools for doctrine iteration.
 
 ## Context
 
@@ -69,5 +74,22 @@ Planning archives live under `.planning/milestones/`:
 
 The v1.0 constraints remain active for future milestones: determinism, engine purity, Strategy Revision immutability, runtime isolation, memory/source limits, package boundaries, replay privacy, and competitive integrity.
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `$gsd-transition`):
+1. Requirements invalidated? -> Move to Out of Scope with reason
+2. Requirements validated? -> Move to Validated with phase reference
+3. New requirements emerged? -> Add to Active
+4. Decisions to log? -> Add to Key Decisions
+5. "What This Is" still accurate? -> Update if drifted
+
+**After each milestone** (via `$gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check -> still the right priority?
+3. Audit Out of Scope -> reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-05-17 after v1.0 milestone completion*
+*Last updated: 2026-05-18 after v1.1 milestone start*

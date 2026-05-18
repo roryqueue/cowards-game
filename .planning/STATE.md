@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: MVP
-status: shipped
-last_updated: "2026-05-18T08:45:00.000-04:00"
+milestone: v1.1
+milestone_name: Trustworthy Simulation Beta
+status: planning
+last_updated: "2026-05-18T09:00:00.000-04:00"
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 33
-  completed_plans: 33
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
@@ -19,13 +19,20 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-17)
+See: .planning/PROJECT.md (updated 2026-05-18)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v1.1 Trustworthy Simulation Beta
 **Completed milestone:** v1.0 MVP
 **Archived roadmap:** .planning/milestones/v1.0-ROADMAP.md
 **Archived requirements:** .planning/milestones/v1.0-REQUIREMENTS.md
+
+## Current Position
+
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-18 — Milestone v1.1 started
 
 ## Workflow Settings
 
@@ -50,6 +57,8 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 - All phase verification reports passed and the milestone audit passed.
 - Phase directories were archived under .planning/milestones/v1.0-phases/.
 - Active REQUIREMENTS.md is removed after archival; run `$gsd-new-milestone` to define the next requirement set.
+- v1.1 is focused on trustworthy simulation: replay fidelity, strict Chronicle grammar and compatibility, stronger runtime isolation, doctrine debugging UX, and local/CI reliability.
+- Ranked ladders remain out of scope for v1.1 because they multiply replay dispute, sandbox abuse, deterministic compatibility, privacy leakage, stale Strategy Revision, and scoring fairness risks.
 
 ## Post-Shipment Corrections
 
@@ -59,7 +68,7 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 
 ## Next Command
 
-`$gsd-new-milestone`
+`$gsd-plan-phase 8`
 
 ---
-*Last updated: 2026-05-18 after post-shipment replay fixture legality correction*
+*Last updated: 2026-05-18 after v1.1 milestone start*
