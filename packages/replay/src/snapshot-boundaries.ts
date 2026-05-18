@@ -377,6 +377,151 @@ const validateTerminalOutcome = (
       ]
 }
 
+const matchingSnapshotCount = (
+  snapshots: readonly ChronicleBoundarySnapshot[],
+  kind: ChronicleBoundarySnapshot["kind"],
+  sequence: number,
+  context: ChronicleEventContext,
+  keys: readonly ContextKey[],
+): number =>
+  snapshots.filter(
+    (snapshot) =>
+      snapshot.kind === kind &&
+      snapshot.sequence === sequence &&
+      contextMatches(snapshot.context, context, keys),
+  ).length
+
+const requireSingleBoundarySnapshot = (
+  chronicle: Chronicle,
+  kind: ChronicleBoundarySnapshot["kind"],
+  sequence: number | undefined,
+  context: ChronicleEventContext,
+  keys: readonly ContextKey[],
+): ChronicleValidationError[] => {
+  if (sequence === undefined) {
+    return [
+      error("SNAPSHOT_MISSING", `Chronicle is missing ${kind} snapshot.`, {
+        expected: kind,
+      }),
+    ]
+  }
+  const matches = matchingSnapshotCount(
+    chronicle.snapshots,
+    kind,
+    sequence,
+    context,
+    keys,
+  )
+  if (matches === 1) {
+    return []
+  }
+  return [
+    error(
+      matches === 0 ? "SNAPSHOT_MISSING" : "SNAPSHOT_BOUNDARY_INVALID",
+      matches === 0
+        ? `Chronicle is missing ${kind} snapshot.`
+        : `Chronicle has duplicate ${kind} snapshots for one boundary.`,
+      {
+        sequence,
+        expected: { kind, sequence, context } as unknown as JsonValue,
+        actual: matches,
+      },
+    ),
+  ]
+}
+
+const validateRequiredBoundaryInstances = (
+  chronicle: Chronicle,
+): ChronicleValidationError[] => {
+  const events = orderedEvents(chronicle)
+  const errors: ChronicleValidationError[] = []
+
+  for (const event of events) {
+    switch (event.type) {
+      case "MATCH_STARTED":
+        errors.push(
+          ...requireSingleBoundarySnapshot(
+            chronicle,
+            "MATCH_START",
+            event.sequence,
+            event.context,
+            [],
+          ),
+        )
+        break
+      case "ROUND_STARTED":
+        errors.push(
+          ...requireSingleBoundarySnapshot(
+            chronicle,
+            "ROUND_START",
+            event.sequence,
+            event.context,
+            ROUND_CONTEXT_KEYS,
+          ),
+          ...requireSingleBoundarySnapshot(
+            chronicle,
+            "ROUND_END",
+            expectedRoundEndSequence(events, event.context),
+            event.context,
+            ROUND_CONTEXT_KEYS,
+          ),
+        )
+        break
+      case "ACTIVATION_STARTED":
+        errors.push(
+          ...requireSingleBoundarySnapshot(
+            chronicle,
+            "ACTIVATION_START",
+            event.sequence,
+            event.context,
+            ACTIVATION_CONTEXT_KEYS,
+          ),
+          ...requireSingleBoundarySnapshot(
+            chronicle,
+            "ACTIVATION_END",
+            expectedActivationEndSequence(events, event.context),
+            event.context,
+            ACTIVATION_CONTEXT_KEYS,
+          ),
+        )
+        break
+      case "CONTRACTION_RESOLVED":
+        errors.push(
+          ...requireSingleBoundarySnapshot(
+            chronicle,
+            "CONTRACTION",
+            event.sequence,
+            event.context,
+            CONTRACTION_CONTEXT_KEYS,
+          ),
+        )
+        break
+      case "MATCH_ENDED":
+        errors.push(
+          ...requireSingleBoundarySnapshot(
+            chronicle,
+            "MATCH_END",
+            event.sequence,
+            event.context,
+            [],
+          ),
+          ...requireSingleBoundarySnapshot(
+            chronicle,
+            "TERMINAL",
+            event.sequence,
+            event.context,
+            [],
+          ),
+        )
+        break
+      default:
+        break
+    }
+  }
+
+  return errors
+}
+
 export const validateSnapshotBoundaries = (
   chronicle: Chronicle,
 ): ChronicleValidationError[] => {
@@ -401,6 +546,8 @@ export const validateSnapshotBoundaries = (
     errors.push(...validateBoundaryContext(snapshot, event))
     errors.push(...validateTerminalOutcome(snapshot, event))
   }
+
+  errors.push(...validateRequiredBoundaryInstances(chronicle))
 
   return errors
 }

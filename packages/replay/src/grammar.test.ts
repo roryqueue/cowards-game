@@ -351,4 +351,45 @@ describe("validateChronicleGrammar", () => {
       ]),
     )
   })
+
+  it("rejects activation indices outside the Round Activation window", () => {
+    const chronicle = mutateFirstEvent(
+      cloneChronicle(createChronicle()),
+      "ACTIVATION_STARTED",
+      (event) => ({
+        ...event,
+        context: { ...event.context, activationIndex: 99 },
+      }),
+    )
+
+    expectErrorCode(chronicle, "EVENT_WINDOW_INVALID")
+  })
+
+  it("rejects cycle indices outside the Activation Cycle window", () => {
+    const chronicle = mutateFirstEvent(
+      cloneChronicle(createChronicle()),
+      "AWARENESS_GRID_OBSERVED",
+      (event) => ({
+        ...event,
+        context: { ...event.context, cycleIndex: 99 },
+        payload: { ...payloadObject(event), cycleIndex: 99 },
+      }),
+    )
+
+    expectErrorCode(chronicle, "EVENT_WINDOW_INVALID")
+  })
+
+  it("rejects skipped Activation cycles", () => {
+    const chronicle = mutateFirstEvent(
+      cloneChronicle(createChronicle()),
+      "AWARENESS_GRID_OBSERVED",
+      (event) => ({
+        ...event,
+        context: { ...event.context, cycleIndex: 1 },
+        payload: { ...payloadObject(event), cycleIndex: 1 },
+      }),
+    )
+
+    expectErrorCode(chronicle, "EVENT_WINDOW_INVALID")
+  })
 })

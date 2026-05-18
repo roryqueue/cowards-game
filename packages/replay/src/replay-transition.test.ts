@@ -196,4 +196,55 @@ describe("validateChronicleTransitions", () => {
       }),
     ).toEqual([])
   })
+
+  it.each([
+    {
+      name: "TURN_RESOLVED",
+      event: {
+        type: "TURN_RESOLVED",
+        sequence: 1,
+        context: {},
+        privacy: "public",
+        payload: { soldierId: "ghost", direction: "LEFT" },
+      } satisfies ChronicleEvent,
+    },
+    {
+      name: "SOLDIER_STONED",
+      event: {
+        type: "SOLDIER_STONED",
+        sequence: 1,
+        context: {},
+        privacy: "public",
+        payload: { soldierId: "ghost", reason: "TURN_TO_STONE" },
+      } satisfies ChronicleEvent,
+    },
+    {
+      name: "SOLDIER_FELL",
+      event: {
+        type: "SOLDIER_FELL",
+        sequence: 1,
+        context: {},
+        privacy: "public",
+        payload: { soldierId: "ghost", reason: "MOVED_OFF_BOARD" },
+      } satisfies ChronicleEvent,
+    },
+    {
+      name: "BACKSTAB_RESOLVED",
+      event: {
+        type: "BACKSTAB_RESOLVED",
+        sequence: 1,
+        context: {},
+        privacy: "public",
+        payload: { pairs: [{ attackerId: "mover", victimId: "ghost" }] },
+      } satisfies ChronicleEvent,
+    },
+  ])("rejects $name references to unknown Soldiers", ({ event }) => {
+    expectSnapshotMismatch(
+      transitionChronicle(
+        event,
+        board([soldier("mover")]),
+        board([soldier("mover")]),
+      ),
+    )
+  })
 })

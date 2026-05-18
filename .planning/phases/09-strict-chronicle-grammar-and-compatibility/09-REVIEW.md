@@ -29,7 +29,8 @@ findings:
   warning: 0
   info: 0
   total: 3
-status: issues_found
+status: fixed
+fixed: 2026-05-18T16:41:20Z
 ---
 
 # Phase 9: Code Review Report
@@ -37,7 +38,7 @@ status: issues_found
 **Reviewed:** 2026-05-18T16:36:45Z
 **Depth:** deep
 **Files Reviewed:** 20
-**Status:** issues_found
+**Status:** fixed
 
 ## Summary
 
@@ -124,3 +125,26 @@ Apply equivalent checks for `SOLDIER_STONED`, `SOLDIER_FELL`, and every `attacke
 _Reviewed: 2026-05-18T16:36:45Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
+
+## Fix Verification
+
+**Fixed:** 2026-05-18T16:41:20Z
+
+All three Critical findings were fixed:
+
+- CR-01: Snapshot boundary validation now requires per-instance Round, Activation, Contraction, Match end, and terminal snapshots instead of checking kind presence only.
+- CR-02: Chronicle grammar now rejects Activation indices outside the Round activation window, Cycle indices outside `0..11`, and skipped/reordered Cycle starts.
+- CR-03: Replay transition validation now fails closed when mutating Soldier events reference unknown Soldiers.
+
+Verification run after fixes:
+
+```bash
+pnpm --filter @cowards/replay test -- validate.test.ts grammar.test.ts snapshot-boundaries.test.ts replay-transition.test.ts reconstruct.test.ts project.test.ts
+pnpm --filter @cowards/test-utils test -- replay-scenarios.legality.test.ts
+pnpm --filter @cowards/web test -- server.test.ts replay-fixture.test.ts
+pnpm --filter @cowards/replay typecheck
+pnpm --filter @cowards/test-utils typecheck
+pnpm --filter @cowards/web typecheck
+```
+
+Result: pass.

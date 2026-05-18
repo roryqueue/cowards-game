@@ -257,9 +257,11 @@ describe("validateChronicle", () => {
     }
   })
 
-  it.each(Object.keys(COMPATIBILITY_VERSIONS) as Array<
-    keyof typeof COMPATIBILITY_VERSIONS
-  >)("detects incompatible %s versions", (versionKey) => {
+  it.each(
+    Object.keys(COMPATIBILITY_VERSIONS) as Array<
+      keyof typeof COMPATIBILITY_VERSIONS
+    >,
+  )("detects incompatible %s versions", (versionKey) => {
     const chronicle = createChronicle()
     const actual = `${COMPATIBILITY_VERSIONS[versionKey]}-unsupported`
 
@@ -347,6 +349,37 @@ describe("validateChronicle", () => {
     ).toContain("HASH_MISMATCH")
   })
 
+  it("requires every Round and Activation boundary snapshot instance", () => {
+    const chronicle = createChronicle()
+    const firstRoundEnd = chronicle.snapshots.findIndex(
+      (snapshot) => snapshot.kind === "ROUND_END",
+    )
+    const firstActivationEnd = chronicle.snapshots.findIndex(
+      (snapshot) => snapshot.kind === "ACTIVATION_END",
+    )
+
+    expect(firstRoundEnd).toBeGreaterThanOrEqual(0)
+    expect(firstActivationEnd).toBeGreaterThanOrEqual(0)
+    expect(
+      errorCodes({
+        ...chronicle,
+        snapshots: chronicle.snapshots.filter(
+          (snapshot, index) =>
+            snapshot.kind !== "ROUND_END" || index === firstRoundEnd,
+        ),
+      }),
+    ).toContain("SNAPSHOT_MISSING")
+    expect(
+      errorCodes({
+        ...chronicle,
+        snapshots: chronicle.snapshots.filter(
+          (snapshot, index) =>
+            snapshot.kind !== "ACTIVATION_END" || index === firstActivationEnd,
+        ),
+      }),
+    ).toContain("SNAPSHOT_MISSING")
+  })
+
   it.each([
     {
       name: "corrupted event order",
@@ -420,7 +453,10 @@ describe("validateChronicle", () => {
       },
       code: "VERSION_INCOMPATIBLE",
     },
-  ] as const)("rejects $name through the integrated gate", ({ mutate, code }) => {
-    expect(errorCodes(mutate(createChronicle()))).toContain(code)
-  })
+  ] as const)(
+    "rejects $name through the integrated gate",
+    ({ mutate, code }) => {
+      expect(errorCodes(mutate(createChronicle()))).toContain(code)
+    },
+  )
 })

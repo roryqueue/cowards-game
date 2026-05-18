@@ -5,6 +5,7 @@ import type {
   ChronicleValidationError,
   JsonValue,
 } from "@cowards/spec"
+import { MAX_ACTIVATION_CYCLES, ROUND_ACTIVATION_COUNTS } from "@cowards/spec"
 
 type GrammarState = {
   matchStarted: boolean
@@ -16,6 +17,7 @@ type GrammarState = {
         activationIndex: number
         actingPlayerId: string
         soldierId: string
+        nextCycleIndex: number
       }
     | undefined
   activeCycleIndex: number | undefined
@@ -287,8 +289,39 @@ const requireActivationContext = (
     activationIndex !== undefined &&
     actingPlayerId !== undefined &&
     soldierId !== undefined
-    ? { activationId, activationIndex, actingPlayerId, soldierId }
+    ? {
+        activationId,
+        activationIndex,
+        actingPlayerId,
+        soldierId,
+        nextCycleIndex: activeActivation?.nextCycleIndex ?? 0,
+      }
     : undefined
+}
+
+const validateActivationIndexWindow = (
+  errors: ChronicleValidationError[],
+  event: ChronicleEvent,
+): void => {
+  const roundNumber = event.context.roundNumber
+  const activationIndex = event.context.activationIndex
+  if (roundNumber === undefined || activationIndex === undefined) {
+    return
+  }
+  const maxActivationIndex = ROUND_ACTIVATION_COUNTS[roundNumber] * 2 - 1
+  if (activationIndex < 0 || activationIndex > maxActivationIndex) {
+    errors.push(
+      error(
+        "EVENT_WINDOW_INVALID",
+        `${event.type} context.activationIndex is outside the Round Activation window.`,
+        event,
+        {
+          expected: `0..${maxActivationIndex}`,
+          actual: activationIndex,
+        },
+      ),
+    )
+  }
 }
 
 const requireCycleContext = (
@@ -297,6 +330,22 @@ const requireCycleContext = (
   activeCycleIndex: number | undefined,
 ): number | undefined => {
   const cycleIndex = requireNumberContext(errors, event, "cycleIndex")
+  if (
+    cycleIndex !== undefined &&
+    (cycleIndex < 0 || cycleIndex >= MAX_ACTIVATION_CYCLES)
+  ) {
+    errors.push(
+      error(
+        "EVENT_WINDOW_INVALID",
+        `${event.type} context.cycleIndex is outside the Activation Cycle window.`,
+        event,
+        {
+          expected: `0..${MAX_ACTIVATION_CYCLES - 1}`,
+          actual: cycleIndex,
+        },
+      ),
+    )
+  }
   if (
     event.type === "ACTION_EMITTED" &&
     activeCycleIndex === undefined &&
@@ -581,6 +630,7 @@ export const validateChronicleGrammar = (
         requireRoundOpen(errors, event, state)
         requireRoundContext(errors, event, state.activeRoundNumber)
         const activation = requireActivationContext(errors, event, undefined)
+        validateActivationIndexWindow(errors, event)
         validateSoldierPayload(errors, event)
         state.activeActivation = activation
         state.activeCycleIndex = undefined
@@ -592,7 +642,38 @@ export const validateChronicleGrammar = (
         requireActivationOpen(errors, event, state)
         requireRoundContext(errors, event, state.activeRoundNumber)
         requireActivationContext(errors, event, state.activeActivation)
+        validateActivationIndexWindow(errors, event)
         const cycleIndex = requireCycleContext(errors, event, undefined)
+        if (state.activeCycleIndex !== undefined && cycleIndex !== undefined) {
+          errors.push(
+            error(
+              "EVENT_WINDOW_INVALID",
+              "AWARENESS_GRID_OBSERVED cannot start a new Cycle before ACTION_EMITTED closes the current Cycle.",
+              event,
+              { expected: "closed Cycle" },
+            ),
+          )
+        }
+        if (
+          state.activeActivation !== undefined &&
+          cycleIndex !== undefined &&
+          cycleIndex !== state.activeActivation.nextCycleIndex
+        ) {
+          errors.push(
+            error(
+              "EVENT_WINDOW_INVALID",
+              "AWARENESS_GRID_OBSERVED context.cycleIndex must be the next Cycle in the active Activation.",
+              event,
+              {
+                expected: expectedField(
+                  "cycleIndex",
+                  state.activeActivation.nextCycleIndex,
+                ),
+                actual: actualField("cycleIndex", cycleIndex),
+              },
+            ),
+          )
+        }
         validateSoldierPayload(errors, event)
         validateCyclePayload(errors, event)
         state.activeCycleIndex = cycleIndex
@@ -603,8 +684,15 @@ export const validateChronicleGrammar = (
         requireActivationOpen(errors, event, state)
         requireRoundContext(errors, event, state.activeRoundNumber)
         requireActivationContext(errors, event, state.activeActivation)
+        validateActivationIndexWindow(errors, event)
         requireCycleContext(errors, event, state.activeCycleIndex)
         validateSoldierPayload(errors, event)
+        if (state.activeActivation !== undefined) {
+          state.activeActivation = {
+            ...state.activeActivation,
+            nextCycleIndex: state.activeActivation.nextCycleIndex + 1,
+          }
+        }
         state.activeCycleIndex = undefined
         break
       case "MOVE_ADVANCED":
@@ -619,6 +707,7 @@ export const validateChronicleGrammar = (
         requireActivationOpen(errors, event, state)
         requireRoundContext(errors, event, state.activeRoundNumber)
         requireActivationContext(errors, event, state.activeActivation)
+        validateActivationIndexWindow(errors, event)
         validateSoldierPayload(errors, event)
         break
       case "SOLDIER_FELL":

@@ -160,6 +160,19 @@ const updateSoldier = (
   },
 })
 
+const unknownSoldierError = (
+  event: ChronicleEvent,
+  soldierId: string | undefined,
+): ReplayStateResult => ({
+  ok: false,
+  errors: [
+    error("SNAPSHOT_MISMATCH", `${event.type} references an unknown Soldier.`, {
+      sequence: event.sequence,
+      actual: soldierId ?? "missing",
+    }),
+  ],
+})
+
 export const applyReplayEvent = (
   state: ReplayState,
   event: ChronicleEvent,
@@ -210,6 +223,8 @@ export const applyReplayEvent = (
     case "TURN_RESOLVED": {
       const soldierId = readString(event.payload, "soldierId")
       const direction = readDirection(event.payload, "direction")
+      const soldier =
+        soldierId === undefined ? undefined : findSoldier(state, soldierId)
       if (!soldierId || !direction) {
         return {
           ok: false,
@@ -221,6 +236,9 @@ export const applyReplayEvent = (
             ),
           ],
         }
+      }
+      if (soldier === undefined) {
+        return unknownSoldierError(event, soldierId)
       }
       return {
         ok: true,
@@ -292,6 +310,26 @@ export const applyReplayEvent = (
       if (!isRecord(event.payload) || !Array.isArray(event.payload.pairs)) {
         return { ok: true, state }
       }
+      const invalidPair = event.payload.pairs.find(
+        (pair) =>
+          !isRecord(pair) ||
+          typeof pair.attackerId !== "string" ||
+          typeof pair.victimId !== "string" ||
+          findSoldier(state, pair.attackerId) === undefined ||
+          findSoldier(state, pair.victimId) === undefined,
+      )
+      if (invalidPair !== undefined) {
+        return {
+          ok: false,
+          errors: [
+            error(
+              "SNAPSHOT_MISMATCH",
+              "BACKSTAB_RESOLVED references an unknown Soldier.",
+              { sequence: event.sequence },
+            ),
+          ],
+        }
+      }
       const victimIds = event.payload.pairs.flatMap((pair) =>
         isRecord(pair) && typeof pair.victimId === "string"
           ? [pair.victimId]
@@ -311,6 +349,8 @@ export const applyReplayEvent = (
     }
     case "SOLDIER_STONED": {
       const soldierId = readString(event.payload, "soldierId")
+      const soldier =
+        soldierId === undefined ? undefined : findSoldier(state, soldierId)
       if (!soldierId) {
         return {
           ok: false,
@@ -323,6 +363,9 @@ export const applyReplayEvent = (
           ],
         }
       }
+      if (soldier === undefined) {
+        return unknownSoldierError(event, soldierId)
+      }
       return {
         ok: true,
         state: updateSoldier(state, soldierId, (soldier) => ({
@@ -333,6 +376,8 @@ export const applyReplayEvent = (
     }
     case "SOLDIER_FELL": {
       const soldierId = readString(event.payload, "soldierId")
+      const soldier =
+        soldierId === undefined ? undefined : findSoldier(state, soldierId)
       if (!soldierId) {
         return {
           ok: false,
@@ -344,6 +389,9 @@ export const applyReplayEvent = (
             ),
           ],
         }
+      }
+      if (soldier === undefined) {
+        return unknownSoldierError(event, soldierId)
       }
       return {
         ok: true,
@@ -470,9 +518,13 @@ export const validateChronicleTransitions = (
       const event = chronicle.events[eventIndex]
       if (event === undefined) {
         errors.push(
-          error("EVENT_ORDER_INVALID", "Replay event sequence does not exist.", {
-            actual: eventIndex,
-          }),
+          error(
+            "EVENT_ORDER_INVALID",
+            "Replay event sequence does not exist.",
+            {
+              actual: eventIndex,
+            },
+          ),
         )
         segmentFailed = true
         continue
