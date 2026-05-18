@@ -15,6 +15,8 @@ const PRIVATE_STRATEGY_SOURCE_MARKER = "PRIVATE_STRATEGY_SOURCE_MARKER"
 const PRIVATE_REF_MARKER = "PRIVATE_REF_MARKER"
 const PRIVATE_DEBUG_MARKER = "PRIVATE_DEBUG_MARKER"
 const PRIVATE_STORAGE_MARKER = "PRIVATE_STORAGE_MARKER"
+const PRIVATE_OWNER_DEBUG_MARKER = "PRIVATE_OWNER_DEBUG_MARKER"
+const PRIVATE_SOLDIER_INACTIVITY_MARKER = "PRIVATE_SOLDIER_INACTIVITY_MARKER"
 
 const privateMarkerValues = [
   PRIVATE_STRATEGY_MEMORY_MARKER,
@@ -26,6 +28,8 @@ const privateMarkerValues = [
   PRIVATE_REF_MARKER,
   PRIVATE_DEBUG_MARKER,
   PRIVATE_STORAGE_MARKER,
+  PRIVATE_OWNER_DEBUG_MARKER,
+  PRIVATE_SOLDIER_INACTIVITY_MARKER,
 ] as const
 
 const privateKeyNames = [
@@ -35,11 +39,14 @@ const privateKeyNames = [
   "soldierMemory",
   "objective",
   "objectivePayload",
+  "ownerDebug",
   "awarenessGrid",
   "exactAwarenessGrid",
   "runtimeDetails",
   "rawRuntimeDetails",
   "violation",
+  "soldierInactivity",
+  "soldierInactivityExplanations",
   "privateRef",
   "private",
   "byPlayerId",
@@ -58,10 +65,7 @@ const privatePayloadsFor = (playerId: "bottom" | "top") => ({
       marker: playerMarker(PRIVATE_STRATEGY_MEMORY_MARKER, playerId),
       nested: [
         {
-          soldierMemory: playerMarker(
-            PRIVATE_SOLDIER_MEMORY_MARKER,
-            playerId,
-          ),
+          soldierMemory: playerMarker(PRIVATE_SOLDIER_MEMORY_MARKER, playerId),
         },
       ],
     },
@@ -70,10 +74,7 @@ const privatePayloadsFor = (playerId: "bottom" | "top") => ({
     awarenessGrid: {
       marker: playerMarker(PRIVATE_AWARENESS_GRID_MARKER, playerId),
     },
-    exactAwarenessGrid: playerMarker(
-      PRIVATE_AWARENESS_GRID_MARKER,
-      playerId,
-    ),
+    exactAwarenessGrid: playerMarker(PRIVATE_AWARENESS_GRID_MARKER, playerId),
     objective: playerMarker(PRIVATE_OBJECTIVE_PAYLOAD_MARKER, playerId),
     objectivePayload: playerMarker(PRIVATE_OBJECTIVE_PAYLOAD_MARKER, playerId),
   },
@@ -86,6 +87,22 @@ const privatePayloadsFor = (playerId: "bottom" | "top") => ({
     strategySource: playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, playerId),
     violation: {
       payload: playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, playerId),
+    },
+  },
+  "owner-debug:soldier-inactivity": {
+    ownerDebug: {
+      marker: playerMarker(PRIVATE_OWNER_DEBUG_MARKER, playerId),
+      soldierInactivity: playerMarker(
+        PRIVATE_SOLDIER_INACTIVITY_MARKER,
+        playerId,
+      ),
+      soldierInactivityExplanations: [
+        {
+          soldierId: `${playerId}-1`,
+          cause: "timeout",
+          label: playerMarker(PRIVATE_SOLDIER_INACTIVITY_MARKER, playerId),
+        },
+      ],
     },
   },
 })
@@ -131,10 +148,7 @@ const createChronicle = (): Chronicle => ({
             marker: playerMarker(PRIVATE_STRATEGY_MEMORY_MARKER, "bottom"),
           },
         ],
-        soldierMemory: playerMarker(
-          PRIVATE_SOLDIER_MEMORY_MARKER,
-          "bottom",
-        ),
+        soldierMemory: playerMarker(PRIVATE_SOLDIER_MEMORY_MARKER, "bottom"),
         awarenessGrid: {
           marker: playerMarker(PRIVATE_AWARENESS_GRID_MARKER, "bottom"),
           nested: [
@@ -164,6 +178,14 @@ const createChronicle = (): Chronicle => ({
           debug: playerMarker(PRIVATE_DEBUG_MARKER, "bottom"),
         },
         storageMetadata: playerMarker(PRIVATE_STORAGE_MARKER, "bottom"),
+        ownerDebug: {
+          marker: playerMarker(PRIVATE_OWNER_DEBUG_MARKER, "bottom"),
+          soldierInactivityExplanations: [
+            {
+              marker: playerMarker(PRIVATE_SOLDIER_INACTIVITY_MARKER, "bottom"),
+            },
+          ],
+        },
       },
       privateRef: playerMarker(PRIVATE_REF_MARKER, "bottom"),
     },
@@ -188,10 +210,7 @@ const createChronicle = (): Chronicle => ({
           nested: [
             playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, "bottom"),
             {
-              source: playerMarker(
-                PRIVATE_STRATEGY_SOURCE_MARKER,
-                "bottom",
-              ),
+              source: playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, "bottom"),
             },
           ],
         },
@@ -206,6 +225,9 @@ const createChronicle = (): Chronicle => ({
           PRIVATE_RUNTIME_DETAIL_MARKER,
           "bottom",
         ),
+        soldierInactivity: {
+          marker: playerMarker(PRIVATE_SOLDIER_INACTIVITY_MARKER, "bottom"),
+        },
       },
       privateRef: playerMarker(PRIVATE_REF_MARKER, "top"),
     },
@@ -400,6 +422,12 @@ describe("Chronicle projections", () => {
     expect(bottomSerialized).toContain(
       playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, "bottom"),
     )
+    expect(bottomSerialized).toContain(
+      playerMarker(PRIVATE_OWNER_DEBUG_MARKER, "bottom"),
+    )
+    expect(bottomSerialized).toContain(
+      playerMarker(PRIVATE_SOLDIER_INACTIVITY_MARKER, "bottom"),
+    )
     expect(bottomSerialized).not.toContain(
       playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, "top"),
     )
@@ -417,6 +445,12 @@ describe("Chronicle projections", () => {
     )
     expect(bottomSerialized).not.toContain(
       playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, "top"),
+    )
+    expect(bottomSerialized).not.toContain(
+      playerMarker(PRIVATE_OWNER_DEBUG_MARKER, "top"),
+    )
+    expect(bottomSerialized).not.toContain(
+      playerMarker(PRIVATE_SOLDIER_INACTIVITY_MARKER, "top"),
     )
 
     expect(topSerialized).toContain(
@@ -437,6 +471,12 @@ describe("Chronicle projections", () => {
     expect(topSerialized).toContain(
       playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, "top"),
     )
+    expect(topSerialized).toContain(
+      playerMarker(PRIVATE_OWNER_DEBUG_MARKER, "top"),
+    )
+    expect(topSerialized).toContain(
+      playerMarker(PRIVATE_SOLDIER_INACTIVITY_MARKER, "top"),
+    )
     expect(topSerialized).not.toContain(
       playerMarker(PRIVATE_STRATEGY_SOURCE_MARKER, "bottom"),
     )
@@ -454,6 +494,12 @@ describe("Chronicle projections", () => {
     )
     expect(topSerialized).not.toContain(
       playerMarker(PRIVATE_RUNTIME_DETAIL_MARKER, "bottom"),
+    )
+    expect(topSerialized).not.toContain(
+      playerMarker(PRIVATE_OWNER_DEBUG_MARKER, "bottom"),
+    )
+    expect(topSerialized).not.toContain(
+      playerMarker(PRIVATE_SOLDIER_INACTIVITY_MARKER, "bottom"),
     )
   })
 })

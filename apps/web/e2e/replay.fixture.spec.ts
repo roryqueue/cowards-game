@@ -13,6 +13,9 @@ type FixtureCatalogResponse = {
 }
 
 const privateMarkers = [
+  "ownerDebug",
+  "soldierInactivity",
+  "soldierInactivityExplanations",
   "strategyMemory",
   "soldierMemory",
   "objectivePayload",
@@ -124,6 +127,11 @@ test("replay fixture renders board, timeline, inspector, callouts, and public pr
   for (const marker of privateMarkers) {
     expect(body).not.toContain(marker)
   }
+  expect(body).not.toContain("Owner debug")
+  expect(body).not.toContain("Why this Soldier did nothing")
+  expect(body).not.toContain("Strategy timed out")
+  expect(body).not.toContain("Reduce per-call work")
+  expect(body).not.toContain("TIMEOUT")
 })
 
 test("owner debug replay fixture exposes Awareness Grid only through gated owner mode", async ({
@@ -139,6 +147,10 @@ test("owner debug replay fixture exposes Awareness Grid only through gated owner
 
   await page.goto(`${replayHref}?ownerDebug=1&ownerPlayerId=bottom`)
   await expect(page.locator(".replay-status-chip")).toHaveText("Owner debug")
+  const ownerToggle = page.getByTestId("replay-owner-debug-toggle")
+  await expect(ownerToggle).toBeVisible()
+  await expect(ownerToggle).not.toBeChecked()
+  await ownerToggle.check()
   const awarenessGrid = page.getByLabel("Awareness Grid")
   const awarenessEvents = page.getByRole("button", {
     name: /^Timeline event \d+: AWARENESS_GRID_OBSERVED$/,
@@ -157,4 +169,37 @@ test("owner debug replay fixture exposes Awareness Grid only through gated owner
   await expect(
     awarenessGrid.getByText(/FRIENDLY|EMPTY|ENEMY/).first(),
   ).toBeVisible()
+})
+
+test("owner debug replay fixture shows Soldier inactivity explanations only after explicit owner opt-in", async ({
+  page,
+}) => {
+  const fixture = await loadFixtureCatalog(page)
+  const replayHref = scenarioHref(fixture, "runtime-failure")
+
+  await page.goto(`${replayHref}?ownerDebug=1`)
+  await expect(page.getByText("Public view")).toBeVisible()
+  await expect(page.getByText("Owner debug")).toHaveCount(0)
+  await expect(page.getByText("Why this Soldier did nothing")).toHaveCount(0)
+
+  await page.goto(`${replayHref}?ownerDebug=1&ownerPlayerId=bottom`)
+  await expect(page.locator(".replay-status-chip")).toHaveText("Owner debug")
+  const ownerToggle = page.getByTestId("replay-owner-debug-toggle")
+  await expect(ownerToggle).toBeVisible()
+  await expect(ownerToggle).not.toBeChecked()
+  await expect(page.getByText("Why this Soldier did nothing")).toHaveCount(0)
+
+  await page
+    .getByRole("button", { name: /Timeline event \d+: RUNTIME_VIOLATION/ })
+    .click()
+  await ownerToggle.check()
+
+  const explanation = page.getByTestId("replay-soldier-inactivity-explanation")
+  await expect(explanation).toBeVisible()
+  await expect(explanation).toHaveAttribute("data-cause-code", "TIMEOUT")
+  await expect(
+    explanation.getByText("Why this Soldier did nothing"),
+  ).toBeVisible()
+  await expect(explanation.getByText("Strategy timed out")).toBeVisible()
+  await expect(explanation.getByText("Reduce per-call work")).toBeVisible()
 })

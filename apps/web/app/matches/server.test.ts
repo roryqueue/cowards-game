@@ -159,6 +159,25 @@ const createChronicle = (): Chronicle => ({
         awarenessGrid: "PRIVATE_AWARENESS_GRID",
         strategySource: "PRIVATE_STRATEGY_SOURCE",
         rawRuntimeDetails: "PRIVATE_RUNTIME_DETAILS",
+        ownerDebug: {
+          soldierInactivityExplanations: [
+            {
+              soldierId: "soldier:bottom:1",
+              label: "PRIVATE_OWNER_DEBUG_EXPLANATION",
+              remediation: "PRIVATE_OWNER_DEBUG_REMEDIATION",
+            },
+          ],
+        },
+      },
+      "player:top": {
+        ownerDebug: {
+          soldierInactivityExplanations: [
+            {
+              soldierId: "soldier:top:1",
+              label: "PRIVATE_TOP_OWNER_DEBUG_EXPLANATION",
+            },
+          ],
+        },
       },
     },
   },
@@ -303,8 +322,11 @@ describe("Match replay server facade", () => {
     expect(serialized).not.toContain("awarenessGrid")
     expect(serialized).not.toContain("strategySource")
     expect(serialized).not.toContain("rawRuntimeDetails")
+    expect(serialized).not.toContain("ownerDebug")
+    expect(serialized).not.toContain("soldierInactivity")
     expect(serialized).not.toContain("PRIVATE_STRATEGY_MEMORY")
     expect(serialized).not.toContain("PRIVATE_AWARENESS_GRID")
+    expect(serialized).not.toContain("PRIVATE_OWNER_DEBUG_EXPLANATION")
   })
 
   it("keeps owner replay data unavailable unless trusted server code allows it", async () => {
@@ -328,7 +350,11 @@ describe("Match replay server facade", () => {
     expect(response.mode).toBe("public")
     expect(response.projection.viewer).toEqual({ access: "public" })
     expect(response).not.toHaveProperty("ownerPlayerId")
+    expect(response).not.toHaveProperty("ownerDebug")
     expect(JSON.stringify(response)).not.toContain("PRIVATE_AWARENESS_GRID")
+    expect(JSON.stringify(response)).not.toContain(
+      "PRIVATE_OWNER_DEBUG_EXPLANATION",
+    )
   })
 
   it("returns explicit owner replay data only when trusted server code allows it", async () => {
@@ -356,5 +382,14 @@ describe("Match replay server facade", () => {
     })
     expect(response.ownerPlayerId).toBe("player:bottom")
     expect(JSON.stringify(response)).toContain("PRIVATE_AWARENESS_GRID")
+    expect(JSON.stringify(response.projection.ownerPrivate)).toContain(
+      "PRIVATE_OWNER_DEBUG_EXPLANATION",
+    )
+    expect(JSON.stringify(response.projection.ownerPrivate)).not.toContain(
+      "PRIVATE_TOP_OWNER_DEBUG_EXPLANATION",
+    )
+    expect(
+      response.ownerDebug?.soldierInactivityExplanations.length,
+    ).toBeGreaterThan(0)
   })
 })

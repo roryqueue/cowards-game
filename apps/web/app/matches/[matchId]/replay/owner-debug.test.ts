@@ -35,5 +35,26 @@ describe("owner debug replay route options", () => {
         { PLAYWRIGHT_TEST: "1" },
       ),
     ).toBeUndefined()
+    expect(
+      resolveOwnerDebugReplayOptions(
+        { ownerDebug: "1", ownerPlayerId: "" },
+        { PLAYWRIGHT_TEST: "1" },
+      ),
+    ).toBeUndefined()
+  })
+
+  it("keeps owner debug opt-in even in gated environments", () => {
+    expect(
+      resolveOwnerDebugReplayOptions(
+        { ownerPlayerId: "player:bottom" },
+        { PLAYWRIGHT_TEST: "1" },
+      ),
+    ).toBeUndefined()
+    expect(
+      resolveOwnerDebugReplayOptions(
+        { ownerDebug: "0", ownerPlayerId: "player:bottom" },
+        { PLAYWRIGHT_TEST: "1" },
+      ),
+    ).toBeUndefined()
   })
 })
