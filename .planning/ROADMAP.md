@@ -20,9 +20,9 @@ Coward's Game v1.1 sharpens trust in the simulation loop shipped in v1.0. The mi
 | --- | --- | --- | ---: | --- |
 | 8 | Replay Fixture Fidelity and Visual Regression | Replace fragile hand-authored replay demos with legal engine-generated scenarios and focused visual checks. | 7 | Complete |
 | 9 | Strict Chronicle Grammar and Compatibility | Reject invalid, impossible, private-leaking, or incompatible Chronicles before replay rendering. | 8 | Complete |
-| 10 | Runtime Isolation Hardening | Make the Strategy runtime boundary explicit, test hostile code, and spike stronger process/container/WASM isolation. | 7 | Active |
-| 11 | Doctrine Debugging UX | Help players understand validation failures, runtime violations, replay links, and why Soldiers did nothing without moving rules into React. | 6 | Pending |
-| 12 | Local and CI Reliability | Make Docker, no-Docker, and service-backed CI startup and E2E verification boring and diagnosable. | 6 | Pending |
+| 10 | Runtime Isolation Hardening | Make the Strategy runtime boundary explicit, test hostile code, and spike stronger process/container/WASM isolation. | 7 | Complete |
+| 11 | Doctrine Debugging UX | Help players understand validation failures, runtime violations, replay links, and why Soldiers did nothing without moving rules into React. | 6 | Complete |
+| 12 | Local and CI Reliability | Make Docker, no-Docker, and service-backed CI startup and E2E verification boring and diagnosable. | 6 | Active |
 
 **Coverage:** 34 v1.1 requirements mapped, 0 unmapped.
 
@@ -121,7 +121,17 @@ Plans:
 
 **Goal:** Help players understand validation failures, runtime violations, replay links, and why Soldiers did nothing without moving rules into React.
 **Mode:** standard
-**Status:** Active
+**Status:** Complete
+
+**Plans:** 6 plans
+
+Plans:
+- [x] 11-01-PLAN.md - Validation and runtime actionable message contracts
+- [x] 11-02-PLAN.md - Sample Strategy catalog
+- [x] 11-03-PLAN.md - Workshop debugging guidance
+- [x] 11-04-PLAN.md - Replay inactivity explanation DTOs
+- [x] 11-05-PLAN.md - Owner-only replay debug overlays
+- [x] 11-06-PLAN.md - Public privacy gates for debugging UX
 
 **Requirements:** DEBUG-01, DEBUG-02, DEBUG-03, DEBUG-04, DEBUG-05, DEBUG-06
 
@@ -141,7 +151,7 @@ Plans:
 
 **Goal:** Make Docker, no-Docker, and service-backed CI startup and E2E verification boring and diagnosable.
 **Mode:** standard
-**Status:** Pending
+**Status:** Active
 
 **Requirements:** REL-01, REL-02, REL-03, REL-04, REL-05, REL-06
 
@@ -162,8 +172,8 @@ Plans:
 | Milestone | Phases | Plans | Requirements | Status | Shipped |
 | --- | ---: | ---: | ---: | --- | --- |
 | v1.0 MVP | 7/7 | 33/33 | 80/80 | Complete | 2026-05-17 |
-| v1.1 Trustworthy Simulation Beta | 3/5 | 14/14 | 22/34 | In Progress | — |
+| v1.1 Trustworthy Simulation Beta | 4/5 | 20/20 | 28/34 | In Progress | — |
 
 ## Next
 
-Run Phase 11 research and planning for Doctrine Debugging UX.
+Run Phase 12 research and planning for Local and CI Reliability.

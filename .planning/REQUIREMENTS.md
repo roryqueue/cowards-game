@@ -40,12 +40,12 @@ Requirements for Trustworthy Simulation Beta. Each maps to roadmap phases.
 
 ### Doctrine Debugging
 
-- [ ] **DEBUG-01**: User sees validation and runtime violation messages that name the relevant Strategy API constraint and remediation path.
-- [ ] **DEBUG-02**: User can start from sample Strategies that demonstrate common doctrine patterns and common failure modes.
-- [ ] **DEBUG-03**: User can open replay links directly from Workshop Match results when a replay exists.
-- [ ] **DEBUG-04**: Owner can inspect replay explanations for why a Soldier did nothing, including not selected, invalid action, blocked movement, timeout, thrown exception, STONE, FALLEN, or Match ended.
-- [ ] **DEBUG-05**: Owner-only debug overlays are generated from replay/engine-derived DTOs rather than React rule inference.
-- [ ] **DEBUG-06**: Public replay views remain privacy-safe when owner-only debugging features are enabled.
+- [x] **DEBUG-01**: User sees validation and runtime violation messages that name the relevant Strategy API constraint and remediation path.
+- [x] **DEBUG-02**: User can start from sample Strategies that demonstrate common doctrine patterns and common failure modes.
+- [x] **DEBUG-03**: User can open replay links directly from Workshop Match results when a replay exists.
+- [x] **DEBUG-04**: Owner can inspect replay explanations for why a Soldier did nothing, including not selected, invalid action, blocked movement, timeout, thrown exception, STONE, FALLEN, or Match ended.
+- [x] **DEBUG-05**: Owner-only debug overlays are generated from replay/engine-derived DTOs rather than React rule inference.
+- [x] **DEBUG-06**: Public replay views remain privacy-safe when owner-only debugging features are enabled.
 
 ### Local and CI Reliability
 
@@ -117,12 +117,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ISO-05 | Phase 10 | Complete |
 | ISO-06 | Phase 10 | Complete |
 | ISO-07 | Phase 10 | Complete |
-| DEBUG-01 | Phase 11 | Pending |
-| DEBUG-02 | Phase 11 | Pending |
-| DEBUG-03 | Phase 11 | Pending |
-| DEBUG-04 | Phase 11 | Pending |
-| DEBUG-05 | Phase 11 | Pending |
-| DEBUG-06 | Phase 11 | Pending |
+| DEBUG-01 | Phase 11 | Complete |
+| DEBUG-02 | Phase 11 | Complete |
+| DEBUG-03 | Phase 11 | Complete |
+| DEBUG-04 | Phase 11 | Complete |
+| DEBUG-05 | Phase 11 | Complete |
+| DEBUG-06 | Phase 11 | Complete |
 | REL-01 | Phase 12 | Pending |
 | REL-02 | Phase 12 | Pending |
 | REL-03 | Phase 12 | Pending |
@@ -137,4 +137,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-18*
-*Last updated: 2026-05-18 after Phase 10 completion*
+*Last updated: 2026-05-18 after Phase 11 completion*
