@@ -65,10 +65,7 @@ const readBoolean = (
   return payload[key]
 }
 
-const readBounds = (
-  payload: JsonValue,
-  scenarioId: string,
-): BoardBounds => {
+const readBounds = (payload: JsonValue, scenarioId: string): BoardBounds => {
   const bounds = isRecord(payload) ? payload.bounds : undefined
   if (
     !isRecord(bounds) ||
@@ -126,10 +123,7 @@ const moveByDelta = (from: Position, delta: Position): Position => ({
   y: from.y + delta.y,
 })
 
-const pushDelta = (
-  mover: Position,
-  target: Position,
-): Position | undefined => {
+const pushDelta = (mover: Position, target: Position): Position | undefined => {
   const delta = { x: target.x - mover.x, y: target.y - mover.y }
   return Math.abs(delta.x) + Math.abs(delta.y) === 1 ? delta : undefined
 }
@@ -234,7 +228,9 @@ const stateBefore = (
   event: ChronicleEvent,
   scenarioId: string,
 ): ReconstructedEntry => {
-  const entry = entries.find((candidate) => candidate.sequence === event.sequence - 1)
+  const entry = entries.find(
+    (candidate) => candidate.sequence === event.sequence - 1,
+  )
   if (!entry) {
     throw new Error(
       `[engine legality] ${scenarioId}: missing reconstructed state before sequence ${event.sequence}`,
@@ -248,7 +244,9 @@ const stateAt = (
   event: ChronicleEvent,
   scenarioId: string,
 ): ReconstructedEntry => {
-  const entry = entries.find((candidate) => candidate.sequence === event.sequence)
+  const entry = entries.find(
+    (candidate) => candidate.sequence === event.sequence,
+  )
   if (!entry) {
     throw new Error(
       `[engine legality] ${scenarioId}: missing reconstructed state at sequence ${event.sequence}`,
@@ -480,7 +478,9 @@ describe("[Chronicle validation] impossible canonical replay beats", () => {
       (event) => event.type === "PUSH_RESOLVED",
     )
     if (!pushEvent || !isRecord(pushEvent.payload)) {
-      throw new Error(`[Chronicle validation] ${scenario.id}: missing push event`)
+      throw new Error(
+        `[Chronicle validation] ${scenario.id}: missing push event`,
+      )
     }
 
     pushEvent.payload = {
