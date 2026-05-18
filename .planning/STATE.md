@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Trustworthy Simulation Beta
 status: in_progress
-last_updated: "2026-05-18T11:36:00.000-04:00"
+last_updated: "2026-05-18T12:49:00.000-04:00"
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
-  percent: 20
+  completed_phases: 2
+  total_plans: 9
+  completed_plans: 9
+  percent: 40
 ---
 
 # State: Coward's Game
@@ -22,17 +22,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-18)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 9: Strict Chronicle Grammar and Compatibility
+**Current focus:** Phase 10: Runtime Isolation Hardening
 **Completed milestone:** v1.0 MVP
 **Archived roadmap:** .planning/milestones/v1.0-ROADMAP.md
 **Archived requirements:** .planning/milestones/v1.0-REQUIREMENTS.md
 
 ## Current Position
 
-Phase: 9 — Strict Chronicle Grammar and Compatibility
+Phase: 10 — Runtime Isolation Hardening
 Plan: —
-Status: Phase 8 complete and verified; Phase 9 ready for research and planning
-Last activity: 2026-05-18 — Completed Phase 8 execution, code review, UI review, Nyquist validation, and final `pnpm verify`
+Status: Phase 9 complete and verified; Phase 10 ready for research and planning
+Last activity: 2026-05-18 — Completed Phase 9 execution, code review, review fixes, re-review, and Nyquist validation
 
 ## Workflow Settings
 
@@ -64,6 +64,8 @@ Last activity: 2026-05-18 — Completed Phase 8 execution, code review, UI revie
 - Phase 12 explicitly requires verifying the Docker local development path end to end now that Docker is available locally.
 - Phase 8 added engine-generated replay scenario fixtures, legality diagnostics, projection-parity fixture rendering, stable replay timeline labels, focused visual regression baselines, and the `pnpm e2e:visual` gate.
 - Phase 8 code review and UI review pass; Nyquist validation marks FID-01 through FID-07 covered.
+- Phase 9 added strict Chronicle grammar, compatibility gates, per-boundary snapshot validation, public projection privacy hard gates, bounded replay transition contradiction checks, negative fixtures, and replay unavailable diagnostics.
+- Phase 9 code review found and fixed validator false negatives for per-instance snapshots, impossible activation/cycle indices, unknown Soldier mutations, and abandoned Cycle windows; Nyquist validation marks GRAM-01 through GRAM-08 covered.
 
 ## Post-Shipment Corrections
 
@@ -73,7 +75,7 @@ Last activity: 2026-05-18 — Completed Phase 8 execution, code review, UI revie
 
 ## Next Command
 
-`$gsd-plan-phase 9`
+`$gsd-plan-phase 10`
 
 ---
-*Last updated: 2026-05-18 after Phase 8 completion*
+*Last updated: 2026-05-18 after Phase 9 completion*

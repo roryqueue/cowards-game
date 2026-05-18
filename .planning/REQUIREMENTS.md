@@ -19,14 +19,14 @@ Requirements for Trustworthy Simulation Beta. Each maps to roadmap phases.
 
 ### Chronicle Grammar
 
-- [ ] **GRAM-01**: Developer can validate Chronicle event payload shape and semantic grammar before replay rendering accepts a Chronicle.
-- [ ] **GRAM-02**: Invalid event order, missing required events, duplicate terminal events, and events outside legal Match/Round/Activation/Cycle windows fail with clear validation errors.
-- [ ] **GRAM-03**: Chronicle validation enforces required context fields and payload consistency for each event type.
-- [ ] **GRAM-04**: Chronicle validation enforces snapshot boundary rules for Match start/end, Round start/end, Activation start/end, Contraction, and terminal states.
-- [ ] **GRAM-05**: Chronicle validation rejects snapshots that reference missing event sequences or impossible board transitions where enough snapshot data exists to prove impossibility.
-- [ ] **GRAM-06**: Replay loading rejects unsupported Chronicle schema, engine, runtime, Strategy Revision, and Arena Variant compatibility versions with explicit failure messages.
-- [ ] **GRAM-07**: Public replay projection excludes Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid details, and private runtime details by default.
-- [ ] **GRAM-08**: Developer can run negative Chronicle grammar fixtures for corrupted, impossible, private-leaking, and version-incompatible Chronicles.
+- [x] **GRAM-01**: Developer can validate Chronicle event payload shape and semantic grammar before replay rendering accepts a Chronicle.
+- [x] **GRAM-02**: Invalid event order, missing required events, duplicate terminal events, and events outside legal Match/Round/Activation/Cycle windows fail with clear validation errors.
+- [x] **GRAM-03**: Chronicle validation enforces required context fields and payload consistency for each event type.
+- [x] **GRAM-04**: Chronicle validation enforces snapshot boundary rules for Match start/end, Round start/end, Activation start/end, Contraction, and terminal states.
+- [x] **GRAM-05**: Chronicle validation rejects snapshots that reference missing event sequences or impossible board transitions where enough snapshot data exists to prove impossibility.
+- [x] **GRAM-06**: Replay loading rejects unsupported Chronicle schema, engine, runtime, Strategy Revision, and Arena Variant compatibility versions with explicit failure messages.
+- [x] **GRAM-07**: Public replay projection excludes Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid details, and private runtime details by default.
+- [x] **GRAM-08**: Developer can run negative Chronicle grammar fixtures for corrupted, impossible, private-leaking, and version-incompatible Chronicles.
 
 ### Runtime Isolation
 
@@ -102,14 +102,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FID-05 | Phase 8 | Complete |
 | FID-06 | Phase 8 | Complete |
 | FID-07 | Phase 8 | Complete |
-| GRAM-01 | Phase 9 | Pending |
-| GRAM-02 | Phase 9 | Pending |
-| GRAM-03 | Phase 9 | Pending |
-| GRAM-04 | Phase 9 | Pending |
-| GRAM-05 | Phase 9 | Pending |
-| GRAM-06 | Phase 9 | Pending |
-| GRAM-07 | Phase 9 | Pending |
-| GRAM-08 | Phase 9 | Pending |
+| GRAM-01 | Phase 9 | Complete |
+| GRAM-02 | Phase 9 | Complete |
+| GRAM-03 | Phase 9 | Complete |
+| GRAM-04 | Phase 9 | Complete |
+| GRAM-05 | Phase 9 | Complete |
+| GRAM-06 | Phase 9 | Complete |
+| GRAM-07 | Phase 9 | Complete |
+| GRAM-08 | Phase 9 | Complete |
 | ISO-01 | Phase 10 | Pending |
 | ISO-02 | Phase 10 | Pending |
 | ISO-03 | Phase 10 | Pending |

@@ -19,8 +19,8 @@ Coward's Game v1.1 sharpens trust in the simulation loop shipped in v1.0. The mi
 | Phase | Name | Goal | Requirements | Status |
 | --- | --- | --- | ---: | --- |
 | 8 | Replay Fixture Fidelity and Visual Regression | Replace fragile hand-authored replay demos with legal engine-generated scenarios and focused visual checks. | 7 | Complete |
-| 9 | Strict Chronicle Grammar and Compatibility | Reject invalid, impossible, private-leaking, or incompatible Chronicles before replay rendering. | 8 | Active |
-| 10 | Runtime Isolation Hardening | Make the Strategy runtime boundary explicit, test hostile code, and spike stronger process/container/WASM isolation. | 7 | Pending |
+| 9 | Strict Chronicle Grammar and Compatibility | Reject invalid, impossible, private-leaking, or incompatible Chronicles before replay rendering. | 8 | Complete |
+| 10 | Runtime Isolation Hardening | Make the Strategy runtime boundary explicit, test hostile code, and spike stronger process/container/WASM isolation. | 7 | Active |
 | 11 | Doctrine Debugging UX | Help players understand validation failures, runtime violations, replay links, and why Soldiers did nothing without moving rules into React. | 6 | Pending |
 | 12 | Local and CI Reliability | Make Docker, no-Docker, and service-backed CI startup and E2E verification boring and diagnosable. | 6 | Pending |
 
@@ -65,17 +65,17 @@ Coward's Game v1.1 sharpens trust in the simulation loop shipped in v1.0. The mi
 
 **Goal:** Reject invalid, impossible, private-leaking, or incompatible Chronicles before replay rendering.
 **Mode:** standard
-**Status:** Active
+**Status:** Complete
 
 **Requirements:** GRAM-01, GRAM-02, GRAM-03, GRAM-04, GRAM-05, GRAM-06, GRAM-07, GRAM-08
 **Plans:** 5 plans
 
 Plans:
-- [ ] 09-01-PLAN.md - Validation error contract and compatibility gate
-- [ ] 09-02-PLAN.md - Public projection privacy hard gate
-- [ ] 09-03-PLAN.md - Semantic event grammar state machine
-- [ ] 09-04-PLAN.md - Snapshot boundary grammar
-- [ ] 09-05-PLAN.md - Integrated validation gate and provable board contradictions
+- [x] 09-01-PLAN.md - Validation error contract and compatibility gate
+- [x] 09-02-PLAN.md - Public projection privacy hard gate
+- [x] 09-03-PLAN.md - Semantic event grammar state machine
+- [x] 09-04-PLAN.md - Snapshot boundary grammar
+- [x] 09-05-PLAN.md - Integrated validation gate and provable board contradictions
 
 **Success Criteria:**
 1. `packages/replay` validates Chronicle semantic grammar after Zod shape parsing and before replay rendering.
@@ -92,7 +92,7 @@ Plans:
 
 **Goal:** Make the Strategy runtime boundary explicit, test hostile code, and spike stronger process/container/WASM isolation.
 **Mode:** standard
-**Status:** Pending
+**Status:** Active
 
 **Requirements:** ISO-01, ISO-02, ISO-03, ISO-04, ISO-05, ISO-06, ISO-07
 
@@ -154,7 +154,7 @@ Plans:
 | Milestone | Phases | Plans | Requirements | Status | Shipped |
 | --- | ---: | ---: | ---: | --- | --- |
 | v1.0 MVP | 7/7 | 33/33 | 80/80 | Complete | 2026-05-17 |
-| v1.1 Trustworthy Simulation Beta | 1/5 | 4/4 | 7/34 | In Progress | — |
+| v1.1 Trustworthy Simulation Beta | 2/5 | 9/9 | 15/34 | In Progress | — |
 
 ## Next
 
