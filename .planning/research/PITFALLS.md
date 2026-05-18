@@ -1,85 +1,87 @@
 # Research: Pitfalls
 
-**Project:** Coward's Game  
-**Date:** 2026-05-16  
-**Milestone context:** Greenfield
+**Project:** Coward's Game
+**Date:** 2026-05-18
+**Milestone context:** v1.1 Trustworthy Simulation Beta
 
 ## Critical Pitfalls
 
-### 1. Treating sandboxing as solved by a library
+### 1. Confusing valid schema with valid Chronicle
 
-**Risk:** Host compromise or data leakage from malicious Strategy code.  
-**Warning signs:** User code runs in API routes, Node `vm` is used as a security boundary, host objects cross into sandbox, outputs are trusted without validation.  
-**Prevention:** Run strategy code only in worker isolation; never use Node `vm` for untrusted code; avoid `vm2`; validate all outputs; apply process/container isolation; design runtime as replaceable.  
-**Phase mapping:** Runtime sandbox and worker phases.
+**Risk:** A Chronicle can parse but still describe impossible gameplay.
+**Warning signs:** Replay renders after only Zod parsing; event order checks remain shallow; snapshots are accepted without semantic relation to events.
+**Prevention:** Add strict grammar validation and fixture tests for impossible sequences, impossible snapshots, missing required contexts, and unsupported versions.
+**Phase mapping:** Strict Chronicle grammar phase.
 
-### 2. Building UI before the engine is trustworthy
+### 2. Replacing hand-authored fixtures with different hand-authored fixtures
 
-**Risk:** Beautiful replay of incorrect rules, expensive rework, unclear bugs.  
-**Warning signs:** React components contain movement/contraction logic; UI tests define rules; engine lacks invariant tests.  
-**Prevention:** Build `packages/spec` and `packages/engine` first; make UI consume projected replay state only.  
-**Phase mapping:** Foundation and engine phases.
+**Risk:** The replay gallery looks better but is still not anchored to legal engine output.
+**Warning signs:** Demo data is edited directly in web fixtures; legality tests assert visual properties only; Backstab/push/fall beats do not come from the engine.
+**Prevention:** Generate canonical scenarios through engine/test-utils and make UI consume projected legal Chronicles.
+**Phase mapping:** Replay fixture fidelity phase.
 
-### 3. Chronicle as an afterthought
+### 3. Over-trusting worker threads
 
-**Risk:** Matches cannot be debugged, replay cannot explain intent, determinism bugs are hard to diagnose.  
-**Warning signs:** Only final board states are stored; Awareness Grids are not recorded; runtime violations are log-only; no replay integrity check.  
-**Prevention:** Define Chronicle event schema early; record enough to reconstruct and inspect every Round, Activation, Cycle, Action, Advance, Push, Backstab, Stoning, Fall, Contraction, and violation.  
-**Phase mapping:** Replay/Chronicle phase immediately after or alongside engine.
+**Risk:** Hostile Strategy code is treated as contained because it runs in a Worker.
+**Warning signs:** Worker-thread `resourceLimits` are described as the sandbox; no process boundary exists; hostile tests only check friendly forbidden patterns.
+**Prevention:** Document worker threads as prototype isolation, add subprocess/container/WASM direction, and implement or spike a subprocess adapter with explicit failure modes.
+**Phase mapping:** Runtime isolation phase.
 
-### 4. Ambiguous Strategy API
+### 4. Treating Node Permission Model as a sandbox
 
-**Risk:** Players cannot reason about what their code can see or control; strategies become brittle.  
-**Warning signs:** Full-board data leaks into SoldierBrain; memory mutation is implicit; objective payload schemas are unclear.  
-**Prevention:** Lock StrategyInput and SoldierBrainInput contracts in `packages/spec`; provide starter doctrines and validation errors; keep StrategyMemory/SoldierMemory/objective limits explicit.  
-**Phase mapping:** Spec, runtime, editor phases.
+**Risk:** A subprocess with `--permission` gives a false sense of security against malicious code.
+**Warning signs:** Permission flags replace OS/container isolation; subprocesses run under same user with broad filesystem access; debug/inspector edge cases are ignored.
+**Prevention:** Use permissions only as defense-in-depth, with separate process/container/user boundaries and no sensitive env/file descriptors.
+**Phase mapping:** Runtime isolation phase.
 
-### 5. Nondeterminism creeping in through convenience
+### 5. Letting debug UX infer rules in React
 
-**Risk:** Same match inputs produce different outcomes across machines or reruns.  
-**Warning signs:** `Math.random`, `Date.now`, unordered object iteration assumptions, concurrency races, DB-generated values in simulation, system clock in runtime.  
-**Prevention:** Seeded RNG only; pure engine; serialized deterministic inputs; deterministic ordering; replay determinism tests in CI.  
-**Phase mapping:** Engine and testing phases.
+**Risk:** "Why did this Soldier do nothing?" logic diverges from engine truth.
+**Warning signs:** Replay components infer legal moves or activation consequences from board position; UI contains Backstab/push/contraction rule code.
+**Prevention:** Produce explanation DTOs from replay/engine-derived data and keep React as renderer.
+**Phase mapping:** Doctrine debugging UX phase.
 
-### 6. Over-scoping competitive infrastructure
+### 6. Privacy regression through helpful debugging
 
-**Risk:** Ladders, tournaments, moderation, and ranking consume time before the game loop is proven.  
-**Warning signs:** Ranked ladder tables before MatchSet correctness; cosmetics before readability; spectator tools before replay basics.  
-**Prevention:** Scope v1 around Workshop Mode, deterministic MatchSets, and replay analysis.  
-**Phase mapping:** Roadmap/product sequencing.
+**Risk:** Owner debug improvements leak Strategy source, StrategyMemory, SoldierMemory, objective payloads, or raw runtime details into public replay.
+**Warning signs:** Public DTO grows new debug fields; projection tests only inspect top-level keys; private refs are dereferenced without viewer checks.
+**Prevention:** Add projection-level and browser-level privacy tests for every new debug field.
+**Phase mapping:** Chronicle grammar and debugging UX phases.
 
-### 7. Replay leaks private strategy data
+### 7. Screenshot tests becoming flaky or ornamental
 
-**Risk:** Competitive integrity failure and user trust loss.  
-**Warning signs:** Public Chronicle includes source, StrategyMemory, SoldierMemory, or objective payloads by default.  
-**Prevention:** Separate public replay events from private owner-only debug data; enforce projection-level privacy tests.  
-**Phase mapping:** Chronicle, API, replay viewer phases.
+**Risk:** Visual regression tests add CI noise without catching board correctness issues.
+**Warning signs:** Full-page screenshots include dynamic text/timers; snapshots depend on local fonts or running animation; tests assert marketing page pixels instead of board state.
+**Prevention:** Use deterministic fixture data, fixed viewports, stable selectors, disabled animations, and focused board/callout screenshots.
+**Phase mapping:** Replay fixture fidelity phase.
 
-### 8. Rule terminology drift
+### 8. Docker path and no-Docker path drifting apart
 
-**Risk:** Bugs caused by confusing Round, Activation, Cycle, Action, MOVE, Advance, STONE, FALLEN, and Turn semantics.  
-**Warning signs:** Code uses "turn" for multiple concepts; tests say "dead"; event names differ from spec language.  
-**Prevention:** Put ubiquitous language in `packages/spec`; enforce naming in types and event names; mirror canonical terms in UI.  
-**Phase mapping:** Spec and engine phases.
+**Risk:** One local setup works and the other rots, causing E2E failures and onboarding pain.
+**Warning signs:** `dev:full` assumes Docker Compose but no app container health; `dev:local` only handles Postgres; CI uses a third undocumented setup.
+**Prevention:** Add shared preflight checks and document parity expectations. Test both startup modes where feasible.
+**Phase mapping:** Local/CI reliability phase.
 
-### 9. Match failure policy conflates strategy failures and system failures
+### 9. Runtime failures classified too coarsely
 
-**Risk:** Players lose ranked outcomes because infrastructure failed, or malicious code hides as system failure.  
-**Warning signs:** All worker errors are "loss"; all timeouts retry forever; violations are not Chronicle events.  
-**Prevention:** Encode failure categories: invalid action/no-op, timeout/no-op turn, repeated timeout/forfeit, worker crash/retry, exhausted retries/match failed.  
-**Phase mapping:** Runtime and worker phases.
+**Risk:** Strategy violations, system failures, and compatibility failures become indistinguishable in replay and Match status.
+**Warning signs:** All failures become `THROWN_EXCEPTION`; timeouts, malformed IPC, subprocess exit, and validation failures share one message.
+**Prevention:** Expand failure taxonomy while preserving public/private privacy boundaries.
+**Phase mapping:** Runtime isolation and debugging UX phases.
 
-### 10. Package boundaries decay
+### 10. Pulling ranked ladder into the trust milestone
 
-**Risk:** The monorepo becomes coupled and hard to verify.  
-**Warning signs:** `apps/web` imports engine internals; runtime imports DB models; shared package contains everything.  
-**Prevention:** Use package-level lint/build boundaries, dependency rules, and focused public exports.  
-**Phase mapping:** Scaffold/foundation phase.
+**Risk:** Competitive surface area appears before replay/runtime foundations can defend it.
+**Warning signs:** Ranking/scoring requirements appear before strict Chronicle and runtime isolation completion.
+**Prevention:** Keep ladders explicitly out of scope for v1.1.
+**Phase mapping:** Milestone scope guard.
 
 ## Sources
 
-- Coward's Game canonical spec: `/Users/roryquinlan/Downloads/CowardsGameSpec_Full_Consolidated_v1.md`
-- Coward's Game technical architecture spec: `/Users/roryquinlan/Downloads/CowardsGame_Technical_Architecture_Spec_V1.md`
 - Node `vm` docs: https://nodejs.org/api/vm.html
-- isolated-vm npm docs: https://www.npmjs.com/package/isolated-vm
-- vm2 npm/security references: https://www.npmjs.com/package/vm2
+- Node `worker_threads` docs: https://nodejs.org/api/worker_threads.html
+- Node Permission Model docs: https://nodejs.org/api/permissions.html
+- Docker resource constraints: https://docs.docker.com/engine/containers/resource_constraints/
+- Playwright screenshot assertions: https://playwright.dev/docs/api/class-pageassertions
+- `.planning/RETROSPECTIVE.md`
+- `.planning/STATE.md`

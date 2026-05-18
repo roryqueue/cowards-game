@@ -1,49 +1,62 @@
 # Research Summary
 
-**Project:** Coward's Game  
-**Date:** 2026-05-16  
-**Milestone context:** Greenfield
+**Project:** Coward's Game
+**Date:** 2026-05-18
+**Milestone context:** v1.1 Trustworthy Simulation Beta
 
 ## Key Findings
 
-**Stack:** Keep the architecture spec's TypeScript/Next.js/Node/PostgreSQL/pnpm/Turborepo stack, updated to current package lines. Use Node 24 LTS, Next 16, React 19, TypeScript 6, Zod 4, Vitest 4, Playwright 1.60, PixiJS 8, and PostgreSQL 18 as current-version anchors.
+**Stack:** Keep the TypeScript monorepo and current package boundaries. Add strict Chronicle grammar, engine-generated replay fixtures, targeted Playwright screenshot checks, runtime adapter hardening, and shared local/CI preflight tooling. Do not introduce a new app framework or ranked infrastructure.
 
-**Feature scope:** v1 should prove the programmable strategy loop: author Strategy, submit immutable revision, run deterministic Match/MatchSet, generate Chronicle, inspect replay, and iterate in Workshop Mode.
+**Runtime:** The current `worker_threads` runtime is useful prototype isolation, especially with V8 `resourceLimits`, but it is not the final hostile-code boundary. Node docs explicitly reject `node:vm` for untrusted code, and Node's Permission Model is defense-in-depth rather than a malicious-code sandbox. v1.1 should add an adapter boundary and subprocess/container/WASM direction with concrete tests.
 
-**Architecture:** Build in this order: spec contracts, pure engine, Chronicle/replay validation, runtime boundary, worker execution, persistence, minimal replay viewer, strategy editor, then broader web product.
+**Replay:** Zod event schemas validate shape, not truth. v1.1 should add semantic Chronicle grammar: allowed event sequences, required event context and payloads, snapshot boundaries, privacy constraints, and version compatibility behavior. Invalid Chronicles should fail before rendering.
 
-**Watch out for:** Sandbox complacency, UI-before-engine sequencing, Chronicle underdesign, nondeterminism, terminology drift, private data leakage, and over-scoped ranked infrastructure.
+**UX:** Debugging should explain doctrine outcomes without moving rules into React. Owner-only replay overlays can answer "why did this Soldier do nothing?" if the explanation is generated from replay/engine data and privacy projection is tested.
+
+**Reliability:** Docker and no-Docker local development both exist but need shared preflight and clearer service-backed E2E. CI should verify edit -> submit -> execute -> replay and focused visual replay regressions.
 
 ## Prescriptive Direction
 
-1. Start with `packages/spec` and `packages/engine`.
-2. Treat every rule from the canonical spec as a testable engine requirement.
-3. Make Chronicle generation part of the simulation contract, not a UI feature.
-4. Keep `apps/web` free of rule logic and strategy execution.
-5. Use a worker-only strategy runtime boundary and assume strategy code is hostile.
-6. Build Workshop Mode before ranked ladders.
-7. Use hand-authored Arena Variants for v1.
-8. Keep future multi-language runtime support architectural, but implement only JS/TS first.
+1. Start v1.1 with engine-generated replay scenarios and visual regression checks, because they create the legal demo corpus used by later grammar and UX work.
+2. Build strict Chronicle grammar in `packages/replay`, layered after Zod schema parsing and before replay rendering.
+3. Add runtime execution adapter hardening in `packages/runtime-js`; treat Worker execution as a compatibility adapter and add subprocess/container/WASM guidance plus hostile-code tests.
+4. Improve Workshop/replay debugging only after replay data has stronger legal/grammar guarantees.
+5. End with local/CI reliability so the whole trust loop is repeatable in Docker, no-Docker, and service-backed CI paths.
 
 ## Requirements Implications
 
-The requirements should be grouped around:
+Recommended v1.1 requirement categories:
 
-- Project foundation
-- Spec contracts
-- Engine rules
-- Determinism and replay
-- Strategy API and memory model
-- Runtime sandbox
-- Worker and MatchSet orchestration
-- Persistence
-- Strategy authoring
-- Replay UX
-- Local development and testing
+- Replay Fidelity
+- Chronicle Grammar
+- Runtime Isolation
+- Doctrine Debugging
+- Local/CI Reliability
 
 ## Roadmap Implications
 
-Recommended roadmap style: Vertical MVP with early technical slices that still produce verifiable artifacts. A pure vertical user-facing slice is premature until the engine exists, but each phase should leave something demonstrable: testable rule engine, replayable Chronicle, sandboxed strategy run, local MatchSet, minimal replay UI, strategy editor loop.
+Recommended phase continuation after v1.0 Phase 7:
+
+1. **Phase 8: Replay Fixture Fidelity and Visual Regression**
+   Engine-generated legal scenario fixtures plus screenshot checks.
+2. **Phase 9: Strict Chronicle Grammar and Compatibility**
+   Exhaustive event grammar, snapshot validation, privacy checks, and explicit failure states.
+3. **Phase 10: Runtime Isolation Hardening**
+   Runtime adapter boundary, subprocess/container/WASM spike or implementation, hostile-code tests, failure taxonomy.
+4. **Phase 11: Doctrine Debugging UX**
+   Better validation messages, sample strategies, replay links, runtime explanations, owner-only debug overlays.
+5. **Phase 12: Local and CI Reliability**
+   Docker/no-Docker parity, service preflight, broader service-backed edit -> submit -> execute -> replay E2E.
+
+## Watch Out For
+
+- Rendering parsed-but-impossible Chronicles.
+- Calling Worker threads or Node permissions a sandbox.
+- Letting helpful debug overlays leak private Strategy data.
+- Writing rule explanations in React instead of replay/engine-derived DTOs.
+- Letting screenshot tests become broad and flaky.
+- Pulling ranked ladders into v1.1 before trust foundations are sharp.
 
 ## Sources
 

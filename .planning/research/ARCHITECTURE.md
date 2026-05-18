@@ -1,188 +1,162 @@
 # Research: Architecture
 
-**Project:** Coward's Game  
-**Date:** 2026-05-16  
-**Milestone context:** Greenfield
+**Project:** Coward's Game
+**Date:** 2026-05-18
+**Milestone context:** v1.1 Trustworthy Simulation Beta
 
-## Recommended Architecture
-
-```txt
-Web UI / API
-  -> persistence and MatchSet creation
-  -> job queue
-  -> worker runtime
-  -> strategy runtime sandbox
-  -> pure deterministic engine
-  -> Chronicle/replay storage
-  -> replay viewer
-```
-
-The architecture should optimize for deterministic simulation and replay correctness before product polish.
-
-## Component Boundaries
-
-### `packages/spec`
-
-Owns canonical types, constants, Zod schemas, versioned contracts, and rules vocabulary.
-
-Contains:
-
-- Directions, positions, bounds
-- Soldier, Player, Strategy, Match, Arena, Chronicle schemas
-- Action and runtime input/output schemas
-- Error/violation codes
-- Version metadata
-
-Does not contain:
-
-- Engine transition implementation
-- UI helpers
-- Database queries
-
-### `packages/engine`
-
-Owns pure deterministic game rules.
-
-Contains:
-
-- Initial state creation
-- Round/Phase progression
-- Activation execution against a `StrategyRuntime` interface
-- Movement/collision/push/backstab/contraction resolution
-- Match end checks
-- Event emission hooks for Chronicle
-- Deterministic RNG abstraction
-
-Does not contain:
-
-- User code execution
-- Database access
-- Network/filesystem/clock access
-- React/UI code
-
-### `packages/replay`
-
-Owns Chronicle schema, serialization, checkpoints, replay validation, and replay projection.
-
-Contains:
-
-- Event log types
-- Checkpoint format
-- Chronicle integrity checks
-- Replay reconstruction
-- Projection helpers for UI
-
-### `packages/runtime-js`
-
-Owns JS/TS Strategy Revision validation and execution.
-
-Contains:
-
-- Strategy API wrapper
-- Source validation
-- Compilation/transpilation if needed
-- Sandbox orchestration
-- Timeouts and output validation
-- Runtime violation mapping
-
-Must not leak host capabilities into user code.
-
-### `packages/map-configs`
-
-Owns hand-authored Arena Variants and validation.
-
-### `apps/worker`
-
-Owns queued Match execution.
-
-Responsibilities:
-
-- Claim Match jobs
-- Load Strategy Revisions and Arena Variant
-- Execute via runtime sandbox
-- Run engine
-- Persist outcome and Chronicle
-- Retry system failures
-- Record structured logs and metrics
-
-### `apps/web`
-
-Owns product surface.
-
-Responsibilities:
-
-- Auth/account shell
-- Strategy editor
-- Strategy Revision submission
-- Match/MatchSet creation
-- Match history
-- Replay viewer
-- API routes/server actions
-
-Must not execute strategy code or own game rule logic.
-
-## Data Flow
+## Existing Architecture Snapshot
 
 ```txt
-Player edits Strategy
-  -> web validates source shape
-  -> StrategyRevision is created immutably
-  -> player creates MatchSet
-  -> Match jobs enqueued
-  -> worker loads revisions + map + seed
-  -> runtime-js evaluates strategies through sandbox
-  -> engine resolves deterministic state transitions
-  -> replay package records Chronicle
-  -> worker persists Match outcome + Chronicle reference
-  -> web renders replay and timeline
+apps/web
+  -> Workshop APIs and replay UI
+  -> persistence package
+  -> replay projection
+
+apps/worker
+  -> queued Match runner
+  -> runtime-js
+  -> pure engine
+  -> Chronicle builder
+  -> persistence package
+
+packages/spec
+  -> canonical types, Zod schemas, versions
+
+packages/engine
+  -> pure rules and runtime interface
+
+packages/replay
+  -> Chronicle build, validate, reconstruct, project, hash
+
+packages/runtime-js
+  -> Strategy Revision validation, transpile, worker-thread execution
+
+packages/test-utils
+  -> engine scenarios
 ```
 
-## Persistence Model
+This is the right shape. v1.1 should deepen the replay/runtime contracts inside these packages instead of moving rule logic into UI or persistence.
 
-Use PostgreSQL as canonical relational store.
+## Proposed v1.1 Build Path
 
-Core tables/entities:
+### 1. Engine-Generated Replay Fixtures
 
-- User
-- Strategy
-- StrategyRevision
-- ArenaVariant/MapConfig
-- MatchSet
-- Match
-- Chronicle metadata
-- Job/run metadata
+Move replay demo inputs toward `packages/test-utils` scenario builders that call the engine and Chronicle builder. Each scenario should produce:
 
-Chronicle bodies can start in PostgreSQL for simplicity if sizes are manageable. Keep an abstraction so large Chronicle blobs can move to S3/R2/Supabase Storage later.
+- legal Match input
+- Chronicle
+- final state
+- expected event types
+- expected visual checkpoints
 
-## Build Order
+`apps/web` can still own UI-specific fixture projection, but the legality source should be engine/replay packages.
 
-1. Package and workspace scaffold.
-2. `packages/spec` contracts and fixtures.
-3. `packages/engine` pure rules with exhaustive tests.
-4. Chronicle event model and replay reconstruction.
-5. Determinism harness: same inputs produce byte-identical or semantically identical Chronicle.
-6. Minimal local strategy runtime with safe fake strategies for engine integration.
-7. JS runtime sandbox prototype in worker-only context.
-8. MatchSet orchestration and persistence.
-9. Minimal replay viewer.
-10. Strategy editor and revision flow.
-11. Seed data and one-command local dev.
-12. E2E tests for edit -> submit -> run -> replay.
+### 2. Chronicle Grammar Validator
 
-This differs slightly from the architecture doc's product-facing order by pulling replay validation earlier, because Chronicles are the trust anchor for both debugging and user comprehension.
+Add grammar validation in `packages/replay`, layered after `ChronicleSchema.safeParse`.
 
-## Integration Risks
+Suggested structure:
 
-- The engine/runtime interface must be designed early enough to avoid coupling engine rules to JS-specific strategy execution.
-- Chronicle event schema should be stable before UI builds too much on top of it.
-- Persistence should store version metadata everywhere: engine, runtime, spec, Strategy Revision, Arena Variant, and Chronicle schema.
-- Worker retry logic must distinguish strategy failures from system failures.
-- Public replay views must not leak private strategy memory/objective/source.
+```txt
+validateChronicle
+  -> parse schema
+  -> validate versions
+  -> validate sequence numbers
+  -> validate grammar windows
+  -> validate context/payload consistency
+  -> validate snapshot boundaries and references
+  -> validate privacy projection constraints
+  -> validate optional integrity hash
+```
+
+Represent grammar as explicit state transitions rather than scattered ad hoc checks. A small finite-state validator is easier to test exhaustively:
+
+- `pre-match`
+- `in-match`
+- `in-round`
+- `in-activation`
+- `in-cycle`
+- `post-match`
+
+This does not need to re-run Strategy source. For impossible board transitions, compare snapshots and event effects where snapshots exist. Full replay reconstruction can remain in `reconstruct.ts`, but invalid Chronicles should fail before UI render.
+
+### 3. Runtime Adapter Boundary
+
+Add a runtime execution adapter boundary in `packages/runtime-js`:
+
+```txt
+StrategyRuntime
+  -> createRuntimeFromRevision
+    -> StrategyExecutionAdapter
+      -> workerThreadAdapter (existing)
+      -> subprocessAdapter (v1.1 spike/implementation)
+```
+
+The adapter interface should accept only method name, source hash/source, and schema-valid input. It should return only `RuntimeResult<unknown>`. Validation into `StrategyResultSchema` or `SoldierBrainResultSchema` should remain outside the raw adapter.
+
+Subprocess adapter requirements:
+
+- `spawn` a child process with no shell.
+- Provide minimal env.
+- Use JSON lines or one-shot JSON over stdin/stdout.
+- Cap stdout/stderr bytes.
+- Kill on timeout.
+- Treat nonzero exit, malformed response, timeout, and signal exit as distinct failure modes.
+- Do not inherit database URL, app env, file descriptors, or web/API context.
+
+### 4. Replay Debugging DTOs
+
+Keep public replay DTOs privacy-safe. Add owner-only explanation fields generated from public event context plus owner private refs:
+
+- soldier did nothing because it was not selected
+- activation order missing or invalid
+- Soldier was STONE/FALLEN
+- action invalid or blocked
+- runtime violation occurred
+- Match/round/activation already ended
+
+The UI should consume explanation DTOs, not infer rules in React.
+
+### 5. Local/CI Reliability Layer
+
+Add a preflight command or package script that checks:
+
+- Postgres reachable
+- Redis reachable if still expected by compose/dev path
+- migrations applied
+- seed data present or seed command available
+- worker can claim/run one test job
+- replay endpoint can return a valid replay
+
+This can be used by both Docker and no-Docker local paths.
+
+## Suggested Phase Order
+
+1. Replay fixture legality and visual regression corpus
+2. Strict Chronicle grammar and compatibility failure handling
+3. Runtime isolation adapter and hostile-code test matrix
+4. Doctrine debugging UX
+5. Local/CI service reliability and end-to-end confidence
+
+## Integration Rules
+
+- Do not put game rules in React components.
+- Do not execute Strategy source in `apps/web` or API routes.
+- Keep grammar validation in `packages/replay`, not persistence.
+- Keep engine deterministic and side-effect free.
+- Keep runtime adapter replaceable.
+- Keep public replay projection separate from owner debug projection.
 
 ## Sources
 
-- Coward's Game canonical spec: `/Users/roryquinlan/Downloads/CowardsGameSpec_Full_Consolidated_v1.md`
-- Coward's Game technical architecture spec: `/Users/roryquinlan/Downloads/CowardsGame_Technical_Architecture_Spec_V1.md`
-- Turborepo docs: https://turborepo.com/repo/docs
-- Docker Compose docs: https://docs.docker.com/compose/
-- PostgreSQL docs: https://www.postgresql.org/docs/
+- `packages/spec/src/schemas.ts`
+- `packages/replay/src/validate.ts`
+- `packages/replay/src/build.ts`
+- `packages/replay/src/project.ts`
+- `packages/runtime-js/src/worker-bridge.ts`
+- `packages/runtime-js/src/worker-harness.ts`
+- `apps/worker/src/runner.ts`
+- `compose.yaml`
+- `scripts/dev-local-postgres.sh`
+- Node `child_process` docs: https://nodejs.org/api/child_process.html
+- Node Permission Model docs: https://nodejs.org/api/permissions.html
