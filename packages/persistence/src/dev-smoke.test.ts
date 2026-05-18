@@ -20,6 +20,7 @@ describe("development smoke helper", () => {
           runQueuedMatch: async () => undefined,
         })
         expect(result.matchSetId).toBe("match-set:dev-smoke:v1")
+        expect(result.matchIds.length).toBe(result.matchCount)
         expect(["complete", "degraded", "pending", "running"]).toContain(
           result.status,
         )

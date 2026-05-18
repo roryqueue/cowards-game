@@ -10,5 +10,4 @@
 ## Verification
 
 - `pnpm --filter @cowards/web test -- run-worker-once/route.test.ts` passed.
-- `pnpm e2e:service` passed on desktop and mobile.
-
+- `pnpm e2e:service` passed with the isolated desktop service-backed project.

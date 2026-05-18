@@ -16,7 +16,7 @@
     "build": "turbo build",
     "e2e": "playwright test",
     "e2e:smoke": "PLAYWRIGHT_TEST=1 pnpm e2e -- replay.fixture.spec.ts",
-    "e2e:service": "RUN_SERVICE_E2E=1 PLAYWRIGHT_TEST=1 pnpm e2e -- workshop-to-replay.spec.ts",
+    "e2e:service": "RUN_SERVICE_E2E=1 PLAYWRIGHT_TEST=1 playwright test --project=desktop --workers=1 workshop-to-replay.spec.ts",
     "e2e:visual": "PLAYWRIGHT_TEST=1 pnpm e2e -- replay.visual.spec.ts",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",

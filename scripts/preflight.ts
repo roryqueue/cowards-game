@@ -5,13 +5,14 @@ import {
   createDatabasePool,
   migrate,
   runDevelopmentMatchSetSmoke,
+  type DevelopmentMatchSetSmokeResult,
 } from "../packages/persistence/src/index.ts"
 import {
   createReplay,
   projectPublicChronicle,
 } from "../packages/replay/src/index.ts"
 import { runWorkerOnce } from "../apps/worker/src/runner.ts"
-import type { Chronicle, MatchSetId } from "@cowards/spec"
+import type { Chronicle, MatchId, MatchSetId } from "@cowards/spec"
 
 type Layer =
   | "service_startup"
@@ -33,15 +34,13 @@ interface CheckResult {
 interface Options {
   requireRedis: boolean
   requireWeb: boolean
-  skipSmoke: boolean
   webUrl: string | undefined
 }
 
 const parseOptions = (argv: string[]): Options => {
   const options: Options = {
     requireRedis: true,
-    requireWeb: false,
-    skipSmoke: false,
+    requireWeb: process.env.COWARDS_WEB_URL !== undefined,
     webUrl: process.env.COWARDS_WEB_URL,
   }
 
@@ -56,9 +55,6 @@ const parseOptions = (argv: string[]): Options => {
       case "--require-redis":
         options.requireRedis = true
         break
-      case "--skip-smoke":
-        options.skipSmoke = true
-        break
       case "--require-web":
         options.requireWeb = true
         options.webUrl ??= "http://localhost:3000"
@@ -67,14 +63,23 @@ const parseOptions = (argv: string[]): Options => {
         options.requireWeb = false
         options.webUrl = undefined
         break
-      case "--web-url":
-        options.webUrl = argv[index + 1]
+      case "--web-url": {
+        const value = argv[index + 1]
+        if (!value || value.startsWith("--")) {
+          throw new Error("--web-url requires a URL value")
+        }
+        options.webUrl = value
         options.requireWeb = true
         index += 1
         break
+      }
       default:
         throw new Error(`Unknown preflight option: ${arg}`)
     }
+  }
+
+  if (options.requireWeb && !options.webUrl?.trim()) {
+    throw new Error("Web preflight requires a non-empty web URL")
   }
 
   return options
@@ -121,21 +126,31 @@ const checkTcp = (
 
 const latestChronicle = async (
   pool: ReturnType<typeof createDatabasePool>,
-): Promise<Chronicle> => {
-  const result = await pool.query<{ artifact: Chronicle }>(
-    "select artifact from chronicles order by id desc limit 1",
+  matchSetId: MatchSetId,
+): Promise<{ matchId: MatchId; chronicle: Chronicle }> => {
+  const result = await pool.query<{ match_id: MatchId; artifact: Chronicle }>(
+    `
+      select c.match_id, c.artifact
+      from match_set_matches msm
+      join chronicles c on c.match_id = msm.match_id
+      where msm.match_set_id = $1
+      order by msm.matrix_index asc
+      limit 1
+    `,
+    [matchSetId],
   )
-  const chronicle = result.rows[0]?.artifact
-  if (!chronicle) {
-    throw new Error("No persisted Chronicle found after smoke execution.")
+  const row = result.rows[0]
+  if (!row) {
+    throw new Error(`No persisted Chronicle found for ${matchSetId}.`)
   }
-  return chronicle
+  return { matchId: row.match_id, chronicle: row.artifact }
 }
 
 const run = async (): Promise<number> => {
   const options = parseOptions(process.argv.slice(2))
   const pool = createDatabasePool()
   const results: CheckResult[] = []
+  let smokeResult: DevelopmentMatchSetSmokeResult | undefined
 
   results.push(
     await check("service_startup", "Postgres", true, async () => {
@@ -167,16 +182,18 @@ const run = async (): Promise<number> => {
     }),
   )
 
-  if (!options.skipSmoke) {
-    results.push(
-      await check(
-        "seeding",
-        "Development seed and MatchSet smoke",
-        true,
-        async () => {
-          const result = await runDevelopmentMatchSetSmoke(pool, {
-            matchSetId: `match-set:preflight:${randomUUID()}` as MatchSetId,
-            runQueuedMatch: async () => {
+  results.push(
+    await check(
+      "seeding",
+      "Development seed and MatchSet smoke",
+      true,
+      async () => {
+        smokeResult = await runDevelopmentMatchSetSmoke(pool, {
+          matchSetId: `match-set:preflight:${randomUUID()}` as MatchSetId,
+          runQueuedMatch: async (matchIds) => {
+            const remaining = new Set(matchIds)
+            const maxAttempts = matchIds.length + 8
+            for (let index = 0; index < maxAttempts; index += 1) {
               const status = await runWorkerOnce(pool, {
                 workerId: "worker:preflight",
                 once: true,
@@ -184,28 +201,57 @@ const run = async (): Promise<number> => {
               if (status !== "completed") {
                 throw new Error(`worker returned ${status}`)
               }
-            },
-          })
-          return `${result.matchSetId} ${result.status}; chronicles=${result.chronicleCount}`
-        },
-      ),
-    )
-  }
+              const completed = await pool.query<{ id: string }>(
+                "select id from matches where id = any($1) and status = 'complete'",
+                [matchIds],
+              )
+              for (const row of completed.rows) {
+                remaining.delete(row.id)
+              }
+              if (remaining.size === 0) {
+                break
+              }
+            }
+            if (remaining.size > 0) {
+              throw new Error(
+                `worker did not complete preflight matches after ${maxAttempts} attempts: ${[...remaining].join(", ")}`,
+              )
+            }
+          },
+        })
+        if (
+          smokeResult.status !== "complete" ||
+          smokeResult.chronicleCount < smokeResult.matchCount
+        ) {
+          throw new Error(
+            `${smokeResult.matchSetId} ${smokeResult.status}; chronicles=${smokeResult.chronicleCount}/${smokeResult.matchCount}`,
+          )
+        }
+        return `${smokeResult.matchSetId} complete; chronicles=${smokeResult.chronicleCount}/${smokeResult.matchCount}`
+      },
+    ),
+  )
 
   results.push(
     await check(
       "chronicle_validation",
-      "Latest Chronicle replay parse",
+      "Preflight MatchSet Chronicle replay parse",
       true,
       async () => {
-        const chronicle = await latestChronicle(pool)
+        if (!smokeResult) {
+          throw new Error("Smoke MatchSet did not complete.")
+        }
+        const { chronicle } = await latestChronicle(
+          pool,
+          smokeResult.matchSetId,
+        )
         const replay = createReplay(chronicle)
         if (!replay.ok) {
           throw new Error(
             replay.errors[0]?.message ?? "Chronicle could not be replayed.",
           )
         }
-        return `${chronicle.events.length} events accepted`
+        return `${smokeResult.matchSetId} ${chronicle.events.length} events accepted`
       },
     ),
   )
@@ -213,24 +259,45 @@ const run = async (): Promise<number> => {
   results.push(
     await check(
       "replay_projection",
-      "Latest Chronicle public projection",
+      "Preflight MatchSet public projection",
       true,
       async () => {
-        const chronicle = await latestChronicle(pool)
+        if (!smokeResult) {
+          throw new Error("Smoke MatchSet did not complete.")
+        }
+        const { chronicle } = await latestChronicle(
+          pool,
+          smokeResult.matchSetId,
+        )
         const projection = projectPublicChronicle(chronicle)
-        return `${projection.events.length} public events projected`
+        return `${smokeResult.matchSetId} ${projection.events.length} public events projected`
       },
     ),
   )
 
-  if (options.requireWeb && options.webUrl) {
+  if (options.requireWeb) {
     results.push(
       await check("ui_rendering", "Web replay route", true, async () => {
-        const response = await fetch(options.webUrl)
-        if (!response.ok) {
-          throw new Error(`${options.webUrl} returned HTTP ${response.status}`)
+        if (!smokeResult) {
+          throw new Error("Smoke MatchSet did not complete.")
         }
-        return `${options.webUrl} returned HTTP ${response.status}`
+        if (!options.webUrl) {
+          throw new Error("Web preflight requires a non-empty web URL")
+        }
+        const { matchId } = await latestChronicle(pool, smokeResult.matchSetId)
+        const replayUrl = new URL(
+          `/matches/${encodeURIComponent(matchId)}/replay`,
+          options.webUrl,
+        )
+        const response = await fetch(replayUrl)
+        if (!response.ok) {
+          throw new Error(`${replayUrl.href} returned HTTP ${response.status}`)
+        }
+        const html = await response.text()
+        if (!html.includes("Replay")) {
+          throw new Error(`${replayUrl.href} did not render replay content`)
+        }
+        return `${replayUrl.href} returned replay content`
       }),
     )
   }

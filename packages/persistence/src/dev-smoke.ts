@@ -9,6 +9,8 @@ import type { MatchSetStatus } from "./schema.js"
 
 export interface DevelopmentMatchSetSmokeResult {
   matchSetId: MatchSetId
+  matchIds: string[]
+  matchCount: number
   status: MatchSetStatus
   chronicleCount: number
   degraded: boolean
@@ -18,7 +20,7 @@ export const runDevelopmentMatchSetSmoke = async (
   pool: Pool,
   options: {
     matchSetId?: MatchSetId | undefined
-    runQueuedMatch?: () => Promise<unknown>
+    runQueuedMatch?: (matchIds: readonly string[]) => Promise<unknown>
   } = {},
 ): Promise<DevelopmentMatchSetSmokeResult> => {
   await migrate(pool)
@@ -43,7 +45,7 @@ export const runDevelopmentMatchSetSmoke = async (
   }
   const matchSetId =
     options.matchSetId ?? ("match-set:dev-smoke:v1" as MatchSetId)
-  await createMatchSetService(pool).createFromPreset({
+  const created = await createMatchSetService(pool).createFromPreset({
     id: matchSetId,
     presetId: "smoke-v1",
     bottomStrategyRevisionId: bottomRevision.id,
@@ -52,13 +54,21 @@ export const runDevelopmentMatchSetSmoke = async (
     topPlayerId: "player:top",
   })
 
-  await options.runQueuedMatch?.()
+  await options.runQueuedMatch?.(created.matchIds)
   const refreshed = await refreshMatchSetStatus(pool, matchSetId)
   const chronicles = await pool.query<{ count: string }>(
-    "select count(*)::text as count from chronicles",
+    `
+      select count(*)::text as count
+      from match_set_matches msm
+      join chronicles c on c.match_id = msm.match_id
+      where msm.match_set_id = $1
+    `,
+    [matchSetId],
   )
   return {
     matchSetId,
+    matchIds: created.matchIds,
+    matchCount: created.matchIds.length,
     status: refreshed.status,
     chronicleCount: Number(chronicles.rows[0]?.count ?? 0),
     degraded: refreshed.scoring.degraded,
