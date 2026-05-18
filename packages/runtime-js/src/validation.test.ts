@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { STRATEGY_SOURCE_BYTES } from "@cowards/spec"
+import { STRATEGY_SOURCE_BYTES, type RuntimeViolationType } from "@cowards/spec"
+import { describeRuntimeViolationForUser } from "./guards.js"
 import { validateStrategySource } from "./validation.js"
 
 const validSource = `
@@ -61,6 +62,19 @@ const expectCode = (source: string, code: string) => {
 
   expect(report.valid).toBe(false)
   expect(report.errors.map((error) => error.code)).toContain(code)
+}
+
+const expectIssueGuidance = (source: string, code: string) => {
+  const report = validateStrategySource(source)
+  const issue = report.errors.find((error) => error.code === code)
+
+  expect(issue).toBeDefined()
+  expect(issue?.constraint).toEqual(expect.any(String))
+  expect(issue?.constraint).not.toHaveLength(0)
+  expect(issue?.remediation).toEqual(expect.any(String))
+  expect(issue?.remediation).not.toHaveLength(0)
+
+  return issue
 }
 
 describe("validateStrategySource", () => {
@@ -137,6 +151,37 @@ describe("validateStrategySource", () => {
     )
   })
 
+  it("explains the missing default export Strategy API constraint", () => {
+    const issue = expectIssueGuidance(
+      "const strategy = {}",
+      "MISSING_DEFAULT_EXPORT",
+    )
+
+    expect(issue?.constraint).toContain("export default")
+    expect(issue?.remediation).toContain("Add export default")
+    expect(issue?.remediation).toContain("Strategy")
+  })
+
+  it("explains missing selectActivations and soldierBrain methods", () => {
+    const missingSelectActivations = expectIssueGuidance(
+      "export default { soldierBrain() {} }",
+      "MISSING_SELECT_ACTIVATIONS",
+    )
+    const missingSoldierBrain = expectIssueGuidance(
+      "export default { selectActivations() {} }",
+      "MISSING_SOLDIER_BRAIN",
+    )
+
+    expect(missingSelectActivations?.constraint).toContain(
+      "selectActivations(input)",
+    )
+    expect(missingSelectActivations?.remediation).toContain(
+      "Implement selectActivations",
+    )
+    expect(missingSoldierBrain?.constraint).toContain("soldierBrain(input)")
+    expect(missingSoldierBrain?.remediation).toContain("Implement soldierBrain")
+  })
+
   it("rejects async strategy methods with ASYNC_METHOD_NOT_ALLOWED", () => {
     expectCode(
       validSource.replace("selectActivations()", "async selectActivations()"),
@@ -155,6 +200,37 @@ describe("validateStrategySource", () => {
     )
   })
 
+  it("adds guidance for source size, import, async, transpile, and compatibility failures", () => {
+    const oversizedSource = `export default { selectActivations() {}, soldierBrain() {} }\n${"x".repeat(
+      STRATEGY_SOURCE_BYTES,
+    )}`
+
+    expectIssueGuidance(oversizedSource, "SOURCE_TOO_LARGE")
+    expectIssueGuidance(
+      `import { x } from "module"\n${validSource}`,
+      "IMPORT_NOT_ALLOWED",
+    )
+    expectIssueGuidance(
+      validSource.replace("selectActivations()", "async selectActivations()"),
+      "ASYNC_METHOD_NOT_ALLOWED",
+    )
+    expectIssueGuidance(
+      "export default { selectActivations() {}, soldierBrain() {",
+      "TRANSPILE_FAILED",
+    )
+
+    const incompatible = validateStrategySource(validSource, {
+      engineVersion: "engine-v0",
+    })
+    const issue = incompatible.errors.find(
+      (error) => error.code === "ENGINE_INCOMPATIBLE",
+    )
+
+    expect(incompatible.valid).toBe(false)
+    expect(issue?.constraint).toContain("compatibility")
+    expect(issue?.remediation).toContain("fresh Strategy Revision")
+  })
+
   it("accepts a valid minimal strategy", () => {
     const report = validateStrategySource(validSource)
 
@@ -171,7 +247,9 @@ describe("validateStrategySource", () => {
     const forbiddenClockReport = validateStrategySource(
       forbiddenClockSampleSource,
     )
-    const invalidOutputReport = validateStrategySource(invalidOutputSampleSource)
+    const invalidOutputReport = validateStrategySource(
+      invalidOutputSampleSource,
+    )
     const thrownExceptionReport = validateStrategySource(
       thrownExceptionSampleSource,
     )
@@ -182,5 +260,73 @@ describe("validateStrategySource", () => {
     )
     expect(invalidOutputReport.valid).toBe(true)
     expect(thrownExceptionReport.valid).toBe(true)
+  })
+})
+
+describe("describeRuntimeViolationForUser", () => {
+  it("maps TIMEOUT to bounded synchronous execution guidance", () => {
+    const guidance = describeRuntimeViolationForUser({
+      type: "TIMEOUT",
+      message: "raw timeout detail",
+    })
+
+    expect(guidance.label).toContain("timed out")
+    expect(guidance.constraint).toContain("bounded synchronous")
+    expect(guidance.remediation).toContain("Simplify")
+  })
+
+  it("maps INVALID_OUTPUT to schema-valid Strategy API return values", () => {
+    const guidance = describeRuntimeViolationForUser({
+      type: "INVALID_OUTPUT",
+      message: "raw invalid output detail",
+    })
+
+    expect(guidance.constraint).toContain("schema-valid")
+    expect(guidance.constraint).toContain("selectActivations")
+    expect(guidance.constraint).toContain("soldierBrain")
+    expect(guidance.remediation).toContain("Action")
+  })
+
+  it.each([
+    "THROWN_EXCEPTION",
+    "FORBIDDEN_CAPABILITY",
+    "OVERSIZED_OUTPUT",
+  ] as const)("maps %s without exposing raw runtime details", (type) => {
+    const guidance = describeRuntimeViolationForUser({
+      type,
+      message:
+        "raw stack with secret Strategy source, StrategyMemory, SoldierMemory, and objective payload",
+    })
+
+    expect(guidance.label).not.toContain("raw stack")
+    expect(guidance.constraint).not.toContain("StrategyMemory")
+    expect(guidance.remediation).not.toContain("objective payload")
+    expect(guidance.label).not.toContain("secret")
+    expect(guidance.constraint).toEqual(expect.any(String))
+    expect(guidance.remediation).toEqual(expect.any(String))
+  })
+
+  it("covers every runtime violation type with concise guidance", () => {
+    const types: RuntimeViolationType[] = [
+      "INVALID_OUTPUT",
+      "TIMEOUT",
+      "THROWN_EXCEPTION",
+      "FORBIDDEN_CAPABILITY",
+      "OVERSIZED_OUTPUT",
+    ]
+
+    for (const type of types) {
+      const guidance = describeRuntimeViolationForUser({
+        type,
+        message: `private raw ${type}`,
+      })
+
+      expect(guidance.label.length).toBeGreaterThan(0)
+      expect(guidance.constraint.length).toBeGreaterThan(0)
+      expect(guidance.remediation.length).toBeGreaterThan(0)
+      expect(guidance.label.length).toBeLessThanOrEqual(80)
+      expect(guidance.constraint).not.toContain(`private raw ${type}`)
+      expect(guidance.remediation).not.toContain(`private raw ${type}`)
+    }
   })
 })

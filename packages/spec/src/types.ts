@@ -154,6 +154,12 @@ export interface RuntimeViolation {
   message: string
 }
 
+export interface RuntimeViolationUserGuidance {
+  label: string
+  constraint: string
+  remediation: string
+}
+
 export type StrategyRuntimeName = "runtime-js"
 
 export type StrategyRevisionValidationSeverity = "error" | "warning"
@@ -174,6 +180,9 @@ export interface StrategyRevisionValidationIssue {
   severity: StrategyRevisionValidationSeverity
   message: string
   pattern?: string | undefined
+  constraint?: string | undefined
+  remediation?: string | undefined
+  reference?: string | undefined
 }
 
 export interface StrategyRevisionValidationReport {

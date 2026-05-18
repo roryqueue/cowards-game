@@ -174,6 +174,12 @@ export const SoldierBrainResultSchema = z.object({
 
 export const RuntimeViolationTypeSchema = z.enum(RUNTIME_VIOLATION_TYPES)
 
+export const RuntimeViolationUserGuidanceSchema = z.object({
+  label: z.string().min(1),
+  constraint: z.string().min(1),
+  remediation: z.string().min(1),
+})
+
 export const StrategyRuntimeNameSchema = z.literal("runtime-js")
 
 export const StrategyRevisionValidationSeveritySchema = z.enum([
@@ -198,6 +204,9 @@ export const StrategyRevisionValidationIssueSchema = z.object({
   severity: StrategyRevisionValidationSeveritySchema,
   message: z.string().min(1),
   pattern: z.string().min(1).optional(),
+  constraint: z.string().min(1).optional(),
+  remediation: z.string().min(1).optional(),
+  reference: z.string().min(1).optional(),
 })
 
 export const StrategyRevisionValidationReportSchema = z

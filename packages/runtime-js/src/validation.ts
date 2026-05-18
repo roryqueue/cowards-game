@@ -105,16 +105,83 @@ export const FORBIDDEN_SOURCE_PATTERNS = [
 const sourceByteLength = (source: string): number =>
   new TextEncoder().encode(source).length
 
+type ValidationGuidance = Pick<
+  StrategyRevisionValidationIssue,
+  "constraint" | "remediation" | "reference"
+>
+
 const issue = (
   code: StrategyRevisionValidationCode,
   message: string,
+  guidance: ValidationGuidance,
   pattern?: string,
 ): StrategyRevisionValidationIssue => ({
   code,
   severity: "error",
   message,
   ...(pattern === undefined ? {} : { pattern }),
+  ...guidance,
 })
+
+const strategyApiReference = "Strategy API"
+
+const sourceSizeGuidance: ValidationGuidance = {
+  constraint: `Strategy source must be ${STRATEGY_SOURCE_BYTES} bytes or less.`,
+  remediation:
+    "Remove unused code or split helper data out of the Strategy source.",
+}
+
+const forbiddenPatternGuidance = (pattern: string): ValidationGuidance => ({
+  constraint:
+    "Strategy source cannot use host capabilities or nondeterministic APIs.",
+  remediation: `Remove ${pattern} and use only the Strategy input data.`,
+  reference: "sandbox-capabilities",
+})
+
+const importGuidance = (pattern: string): ValidationGuidance => ({
+  constraint:
+    "Strategy source must be self-contained and cannot import modules.",
+  remediation: `Inline the needed logic and remove the ${pattern} statement.`,
+  reference: "sandbox-capabilities",
+})
+
+const asyncMethodGuidance: ValidationGuidance = {
+  constraint: "Strategy API methods must return synchronously.",
+  remediation: "Remove async/await and return the Strategy result directly.",
+  reference: strategyApiReference,
+}
+
+const defaultExportGuidance: ValidationGuidance = {
+  constraint: "Strategy API requires an export default Strategy object.",
+  remediation:
+    "Add export default with a Strategy object that defines selectActivations and soldierBrain.",
+  reference: "samples/minimal-strategy",
+}
+
+const selectActivationsGuidance: ValidationGuidance = {
+  constraint: "Strategy API requires selectActivations(input).",
+  remediation:
+    "Implement selectActivations to return activationOrders and StrategyMemory.",
+  reference: strategyApiReference,
+}
+
+const soldierBrainGuidance: ValidationGuidance = {
+  constraint: "Strategy API requires soldierBrain(input).",
+  remediation: "Implement soldierBrain to return one Action and SoldierMemory.",
+  reference: strategyApiReference,
+}
+
+const transpileGuidance: ValidationGuidance = {
+  constraint: "Strategy source must be valid JavaScript or TypeScript.",
+  remediation: "Fix the syntax or unsupported TypeScript before submitting.",
+}
+
+const engineCompatibilityGuidance: ValidationGuidance = {
+  constraint:
+    "Strategy Revision compatibility must match the active runtime, spec, and engine versions.",
+  remediation:
+    "Revalidate and submit a fresh Strategy Revision for this engine version.",
+}
 
 const ASYNC_METHOD_PATTERNS = [
   /\basync\s+selectActivations\s*\(/,
@@ -140,6 +207,7 @@ export const validateStrategySource = (
       issue(
         "SOURCE_TOO_LARGE",
         `Strategy source exceeds ${STRATEGY_SOURCE_BYTES} bytes`,
+        sourceSizeGuidance,
       ),
     )
   }
@@ -151,6 +219,9 @@ export const validateStrategySource = (
         issue(
           forbidden.code,
           `Strategy source contains forbidden capability: ${forbidden.pattern}`,
+          forbidden.code === "IMPORT_NOT_ALLOWED"
+            ? importGuidance(forbidden.pattern)
+            : forbiddenPatternGuidance(forbidden.pattern),
           forbidden.pattern,
         ),
       )
@@ -162,6 +233,7 @@ export const validateStrategySource = (
       issue(
         "ASYNC_METHOD_NOT_ALLOWED",
         "Strategy methods must return synchronously",
+        asyncMethodGuidance,
         "async strategy method",
       ),
     )
@@ -172,6 +244,7 @@ export const validateStrategySource = (
       issue(
         "MISSING_DEFAULT_EXPORT",
         "Strategy source must contain export default",
+        defaultExportGuidance,
       ),
     )
   }
@@ -181,6 +254,7 @@ export const validateStrategySource = (
       issue(
         "MISSING_SELECT_ACTIVATIONS",
         "Strategy source must define selectActivations",
+        selectActivationsGuidance,
       ),
     )
   }
@@ -190,6 +264,7 @@ export const validateStrategySource = (
       issue(
         "MISSING_SOLDIER_BRAIN",
         "Strategy source must define soldierBrain",
+        soldierBrainGuidance,
       ),
     )
   }
@@ -200,6 +275,26 @@ export const validateStrategySource = (
       issue(
         "TRANSPILE_FAILED",
         `Strategy source failed to transpile: ${transpiled.message}`,
+        transpileGuidance,
+      ),
+    )
+  }
+
+  const runtimeVersion =
+    options?.runtimeVersion ?? COMPATIBILITY_VERSIONS.runtimeJs
+  const specVersion = options?.specVersion ?? COMPATIBILITY_VERSIONS.spec
+  const engineVersion = options?.engineVersion ?? COMPATIBILITY_VERSIONS.engine
+
+  if (
+    runtimeVersion !== COMPATIBILITY_VERSIONS.runtimeJs ||
+    specVersion !== COMPATIBILITY_VERSIONS.spec ||
+    engineVersion !== COMPATIBILITY_VERSIONS.engine
+  ) {
+    errors.push(
+      issue(
+        "ENGINE_INCOMPATIBLE",
+        "Strategy Revision compatibility does not match the active engine",
+        engineCompatibilityGuidance,
       ),
     )
   }
@@ -211,10 +306,10 @@ export const validateStrategySource = (
     sourceBytes,
     forbiddenPatterns,
     sourceHash: hashStrategySource(source),
-    runtimeVersion: options?.runtimeVersion ?? COMPATIBILITY_VERSIONS.runtimeJs,
+    runtimeVersion,
     engineCompatibility: {
-      spec: options?.specVersion ?? COMPATIBILITY_VERSIONS.spec,
-      engine: options?.engineVersion ?? COMPATIBILITY_VERSIONS.engine,
+      spec: specVersion,
+      engine: engineVersion,
     },
   }
 }

@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest"
 import {
   ActionSchema,
   ChronicleSchema,
+  RuntimeViolationUserGuidanceSchema,
   RuntimeViolationTypeSchema,
   SoldierSchema,
+  StrategyRevisionValidationIssueSchema,
   StrategyRevisionSchema,
 } from "./schemas.js"
 import { fixtures } from "./fixtures/index.js"
@@ -73,6 +75,63 @@ describe("Coward's Game spec contracts", () => {
         RuntimeViolationTypeSchema.safeParse(infrastructureLabel).success,
       ).toBe(false)
     }
+  })
+
+  it("RuntimeViolationUserGuidanceSchema accepts concise public guidance", () => {
+    const guidance = {
+      label: "Strategy timed out",
+      constraint: "Strategy methods must finish within the runtime timeout.",
+      remediation: "Simplify the loop or reduce per-Cycle work.",
+    }
+
+    expect(RuntimeViolationUserGuidanceSchema.parse(guidance)).toEqual(guidance)
+  })
+
+  it("StrategyRevisionValidationIssueSchema accepts optional guidance fields", () => {
+    const issue = {
+      code: "MISSING_DEFAULT_EXPORT",
+      severity: "error",
+      message: "Strategy source must contain export default",
+      constraint: "Strategy API requires an export default Strategy object.",
+      remediation:
+        "Add export default with selectActivations and soldierBrain.",
+      reference: "samples/minimal-strategy",
+    }
+
+    expect(StrategyRevisionValidationIssueSchema.parse(issue)).toEqual(issue)
+  })
+
+  it("StrategyRevisionValidationIssueSchema rejects empty guidance fields", () => {
+    const baseIssue = {
+      code: "MISSING_DEFAULT_EXPORT",
+      severity: "error",
+      message: "Strategy source must contain export default",
+    }
+
+    expect(
+      StrategyRevisionValidationIssueSchema.safeParse({
+        ...baseIssue,
+        constraint: "",
+        remediation: "Add export default.",
+      }).success,
+    ).toBe(false)
+    expect(
+      StrategyRevisionValidationIssueSchema.safeParse({
+        ...baseIssue,
+        constraint: "Strategy API requires export default.",
+        remediation: "",
+      }).success,
+    ).toBe(false)
+  })
+
+  it("StrategyRevisionValidationIssueSchema keeps legacy issues valid", () => {
+    const issue = {
+      code: "MISSING_DEFAULT_EXPORT",
+      severity: "error",
+      message: "Strategy source must contain export default",
+    }
+
+    expect(StrategyRevisionValidationIssueSchema.parse(issue)).toEqual(issue)
   })
 
   it("ChronicleSchema rejects infrastructure labels in public runtime violation payloads", () => {
