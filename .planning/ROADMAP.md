@@ -92,17 +92,17 @@ Plans:
 
 **Goal:** Make the Strategy runtime boundary explicit, test hostile code, and spike stronger process/container/WASM isolation.
 **Mode:** standard
-**Status:** Active
+**Status:** Complete
 
 **Requirements:** ISO-01, ISO-02, ISO-03, ISO-04, ISO-05, ISO-06, ISO-07
 **Plans:** 5 plans
 
 Plans:
-- [ ] 10-01-PLAN.md - Strategy execution adapter contract and worker-thread default
-- [ ] 10-02-PLAN.md - Opt-in subprocess JSON IPC adapter
-- [ ] 10-03-PLAN.md - Hostile Strategy matrix and failure taxonomy
-- [ ] 10-04-PLAN.md - Worker adapter selection and propagation
-- [ ] 10-05-PLAN.md - Isolation boundary audit and validation evidence
+- [x] 10-01-PLAN.md - Strategy execution adapter contract and worker-thread default
+- [x] 10-02-PLAN.md - Opt-in subprocess JSON IPC adapter
+- [x] 10-03-PLAN.md - Hostile Strategy matrix and failure taxonomy
+- [x] 10-04-PLAN.md - Worker adapter selection and propagation
+- [x] 10-05-PLAN.md - Isolation boundary audit and validation evidence
 
 **Success Criteria:**
 1. Runtime execution exposes a replaceable adapter boundary without changing engine rules.
@@ -121,7 +121,7 @@ Plans:
 
 **Goal:** Help players understand validation failures, runtime violations, replay links, and why Soldiers did nothing without moving rules into React.
 **Mode:** standard
-**Status:** Pending
+**Status:** Active
 
 **Requirements:** DEBUG-01, DEBUG-02, DEBUG-03, DEBUG-04, DEBUG-05, DEBUG-06
 
@@ -162,8 +162,8 @@ Plans:
 | Milestone | Phases | Plans | Requirements | Status | Shipped |
 | --- | ---: | ---: | ---: | --- | --- |
 | v1.0 MVP | 7/7 | 33/33 | 80/80 | Complete | 2026-05-17 |
-| v1.1 Trustworthy Simulation Beta | 2/5 | 9/9 | 15/34 | In Progress | — |
+| v1.1 Trustworthy Simulation Beta | 3/5 | 14/14 | 22/34 | In Progress | — |
 
 ## Next
 
-Run `$gsd-plan-phase 9` to create an executable plan for strict Chronicle grammar and compatibility.
+Run Phase 11 research and planning for Doctrine Debugging UX.

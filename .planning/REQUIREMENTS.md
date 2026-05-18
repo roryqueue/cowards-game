@@ -30,13 +30,13 @@ Requirements for Trustworthy Simulation Beta. Each maps to roadmap phases.
 
 ### Runtime Isolation
 
-- [ ] **ISO-01**: Developer can identify which Strategy execution adapter is active and what isolation boundary it provides.
-- [ ] **ISO-02**: Runtime execution keeps Strategy source out of web/API processes and runs only through worker/runtime execution boundaries.
-- [ ] **ISO-03**: Runtime code exposes a replaceable execution adapter boundary that can support worker-thread, subprocess, container, or WASM/WASI execution without changing engine rules.
-- [ ] **ISO-04**: Developer can run a subprocess/container/WASM/WASI spike or implementation that accepts only schema-valid JSON input and returns only schema-validated JSON output.
-- [ ] **ISO-05**: Runtime execution enforces wall-clock timeout, output byte caps, memory/resource bounds where available, empty or minimal environment, and no inherited host capabilities.
-- [ ] **ISO-06**: Hostile Strategy tests cover forbidden globals, dynamic import attempts, worker/process access, filesystem/network attempts, infinite loops, memory pressure, oversized output, invalid output, and thrown exceptions.
-- [ ] **ISO-07**: Worker and runtime tests distinguish strategy violations from system failures, including timeout, malformed IPC, subprocess exit, signal termination, and validation failure.
+- [x] **ISO-01**: Developer can identify which Strategy execution adapter is active and what isolation boundary it provides.
+- [x] **ISO-02**: Runtime execution keeps Strategy source out of web/API processes and runs only through worker/runtime execution boundaries.
+- [x] **ISO-03**: Runtime code exposes a replaceable execution adapter boundary that can support worker-thread, subprocess, container, or WASM/WASI execution without changing engine rules.
+- [x] **ISO-04**: Developer can run a subprocess/container/WASM/WASI spike or implementation that accepts only schema-valid JSON input and returns only schema-validated JSON output.
+- [x] **ISO-05**: Runtime execution enforces wall-clock timeout, output byte caps, memory/resource bounds where available, empty or minimal environment, and no inherited host capabilities.
+- [x] **ISO-06**: Hostile Strategy tests cover forbidden globals, dynamic import attempts, worker/process access, filesystem/network attempts, infinite loops, memory pressure, oversized output, invalid output, and thrown exceptions.
+- [x] **ISO-07**: Worker and runtime tests distinguish strategy violations from system failures, including timeout, malformed IPC, subprocess exit, signal termination, and validation failure.
 
 ### Doctrine Debugging
 
@@ -110,13 +110,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GRAM-06 | Phase 9 | Complete |
 | GRAM-07 | Phase 9 | Complete |
 | GRAM-08 | Phase 9 | Complete |
-| ISO-01 | Phase 10 | Pending |
-| ISO-02 | Phase 10 | Pending |
-| ISO-03 | Phase 10 | Pending |
-| ISO-04 | Phase 10 | Pending |
-| ISO-05 | Phase 10 | Pending |
-| ISO-06 | Phase 10 | Pending |
-| ISO-07 | Phase 10 | Pending |
+| ISO-01 | Phase 10 | Complete |
+| ISO-02 | Phase 10 | Complete |
+| ISO-03 | Phase 10 | Complete |
+| ISO-04 | Phase 10 | Complete |
+| ISO-05 | Phase 10 | Complete |
+| ISO-06 | Phase 10 | Complete |
+| ISO-07 | Phase 10 | Complete |
 | DEBUG-01 | Phase 11 | Pending |
 | DEBUG-02 | Phase 11 | Pending |
 | DEBUG-03 | Phase 11 | Pending |
@@ -137,4 +137,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-18*
-*Last updated: 2026-05-18 after v1.1 roadmap creation*
+*Last updated: 2026-05-18 after Phase 10 completion*
