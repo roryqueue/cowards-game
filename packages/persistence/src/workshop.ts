@@ -736,6 +736,9 @@ export const getWorkshopTestSummary = async (
   pool: Pool,
   matchSetId: MatchSetId,
 ): Promise<WorkshopTestSummary | null> => {
+  if (!matchSetId.startsWith(WORKSHOP_MATCH_SET_PREFIX)) {
+    return null
+  }
   const matchSet = await createRepositories(pool).getMatchSet(matchSetId)
   if (!matchSet) {
     return null

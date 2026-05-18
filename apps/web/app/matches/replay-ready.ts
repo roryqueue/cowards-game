@@ -96,7 +96,13 @@ export const trustedOwnerReplayOptions = (
     return options
   }
 
-  if (options.mode === "owner" && options.ownerPlayerId) {
+  if (
+    options.mode === "owner" &&
+    options.ownerPlayerId &&
+    authorizedRequestedOwners.includes(options.ownerPlayerId) &&
+    (options.ownerPlayerId === metadata.bottomPlayerId ||
+      options.ownerPlayerId === metadata.topPlayerId)
+  ) {
     return options
   }
 

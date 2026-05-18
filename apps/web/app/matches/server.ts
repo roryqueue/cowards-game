@@ -18,7 +18,11 @@ type ResolveAuthorizedReplayOwners = (input: {
   pool: Queryable
   matchId: MatchId
   requestedOwnerPlayerId: PlayerId
+  currentPlayerId: PlayerId
 }) => Promise<readonly PlayerId[]>
+
+const WORKSHOP_PLAYER_ID = "player:workshop-local" as PlayerId
+const WORKSHOP_MATCH_SET_PREFIX = "match-set:workshop:"
 
 export type { GetMatchReplayOptions } from "./types.js"
 
@@ -51,19 +55,26 @@ const resolvePersistedMatchOwners: ResolveAuthorizedReplayOwners = async ({
   pool,
   matchId,
   requestedOwnerPlayerId,
+  currentPlayerId,
 }) => {
-  const result = await pool.query<{
-    bottom_player_id: PlayerId
-    top_player_id: PlayerId
-  }>(
+  if (
+    currentPlayerId !== WORKSHOP_PLAYER_ID ||
+    requestedOwnerPlayerId !== currentPlayerId
+  ) {
+    return []
+  }
+
+  const result = await pool.query<{ authorized: true }>(
     `
-      select bottom_player_id, top_player_id
-      from matches
-      where id = $1
-        and $2 in (bottom_player_id, top_player_id)
+      select true as authorized
+      from matches m
+      join match_set_matches msm on msm.match_id = m.id
+      where m.id = $1
+        and msm.match_set_id like $2
+        and $3 in (m.bottom_player_id, m.top_player_id)
       limit 1
     `,
-    [matchId, requestedOwnerPlayerId],
+    [matchId, `${WORKSHOP_MATCH_SET_PREFIX}%`, currentPlayerId],
   )
   const row = result.rows[0]
   if (!row) {
@@ -112,6 +123,7 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
                 pool,
                 matchId: resolvedMatchId,
                 requestedOwnerPlayerId: options.requestedOwnerPlayerId,
+                currentPlayerId: WORKSHOP_PLAYER_ID,
               })
             : []
 

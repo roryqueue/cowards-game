@@ -188,9 +188,16 @@ const createStoredChronicle = (): StoredChronicle => {
   return { artifact, metadata: createChronicleMetadata(artifact) }
 }
 
-const createMatchOwnerPool = (
-  rows: Array<{ bottom_player_id: string; top_player_id: string }>,
-) =>
+const createStoredChronicleForBottomOwner = (
+  ownerPlayerId: string,
+): StoredChronicle => {
+  const artifact = JSON.parse(
+    JSON.stringify(createChronicle()).replaceAll("player:bottom", ownerPlayerId),
+  ) as Chronicle
+  return { artifact, metadata: createChronicleMetadata(artifact) }
+}
+
+const createMatchOwnerPool = (rows: Array<{ authorized: true }>) =>
   ({
     query: vi.fn(async () => ({ rows })),
   }) as never
@@ -393,10 +400,8 @@ describe("Match replay server facade", () => {
   })
 
   it("uses persisted Match participant data to authorize requested owner replay", async () => {
-    const stored = createStoredChronicle()
-    const pool = createMatchOwnerPool([
-      { bottom_player_id: "player:bottom", top_player_id: "player:top" },
-    ])
+    const stored = createStoredChronicleForBottomOwner("player:workshop-local")
+    const pool = createMatchOwnerPool([{ authorized: true }])
     const server = createMatchReplayServer({
       withPool: async (fn) => fn(pool),
       createChronicleStore: () => ({
@@ -406,7 +411,7 @@ describe("Match replay server facade", () => {
 
     const response = await server.getMatchReplay("match:replay-test", {
       allowOwnerDebug: true,
-      requestedOwnerPlayerId: "player:bottom",
+      requestedOwnerPlayerId: "player:workshop-local",
     })
 
     expect(response.status).toBe("ready")
@@ -414,10 +419,10 @@ describe("Match replay server facade", () => {
       return
     }
     expect(response.mode).toBe("owner")
-    expect(response.ownerPlayerId).toBe("player:bottom")
+    expect(response.ownerPlayerId).toBe("player:workshop-local")
     expect(response.projection.viewer).toEqual({
       access: "owner",
-      playerId: "player:bottom",
+      playerId: "player:workshop-local",
     })
     expect(
       response.ownerDebug?.soldierInactivityExplanations.length,
@@ -444,6 +449,7 @@ describe("Match replay server facade", () => {
       pool: {},
       matchId: "match:replay-test",
       requestedOwnerPlayerId: "player:bottom",
+      currentPlayerId: "player:workshop-local",
     })
     expect(response.status).toBe("ready")
     if (response.status !== "ready") {
@@ -522,7 +528,7 @@ describe("Match replay server facade", () => {
     expect(response).not.toHaveProperty("ownerDebug")
   })
 
-  it("returns explicit owner replay data only when trusted server code allows it", async () => {
+  it("keeps explicit owner mode public unless authorization supplied that owner", async () => {
     const stored = createStoredChronicle()
     const server = createMatchReplayServer({
       withPool: async (fn) => fn({} as never),
@@ -541,20 +547,9 @@ describe("Match replay server facade", () => {
     if (response.status !== "ready") {
       return
     }
-    expect(response.projection.viewer).toEqual({
-      access: "owner",
-      playerId: "player:bottom",
-    })
-    expect(response.ownerPlayerId).toBe("player:bottom")
-    expect(JSON.stringify(response)).toContain("PRIVATE_AWARENESS_GRID")
-    expect(JSON.stringify(response.projection.ownerPrivate)).toContain(
-      "PRIVATE_OWNER_DEBUG_EXPLANATION",
-    )
-    expect(JSON.stringify(response.projection.ownerPrivate)).not.toContain(
-      "PRIVATE_TOP_OWNER_DEBUG_EXPLANATION",
-    )
-    expect(
-      response.ownerDebug?.soldierInactivityExplanations.length,
-    ).toBeGreaterThan(0)
+    expect(response.mode).toBe("public")
+    expect(response.projection.viewer).toEqual({ access: "public" })
+    expect(response).not.toHaveProperty("ownerPlayerId")
+    expect(response).not.toHaveProperty("ownerDebug")
   })
 })
