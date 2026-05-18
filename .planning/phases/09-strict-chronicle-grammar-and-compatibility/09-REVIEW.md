@@ -25,12 +25,12 @@ files_reviewed_list:
   - packages/spec/src/types.ts
   - packages/test-utils/src/replay-scenarios.legality.test.ts
 findings:
-  critical: 1
+  critical: 0
   warning: 0
   info: 0
-  total: 1
-status: issues_found
-fixed: 2026-05-18T16:41:20Z
+  total: 0
+status: fixed
+fixed: 2026-05-18T16:48:15Z
 re_reviewed: 2026-05-18T16:45:38Z
 re_review_scope_commit: a43844d0f7737e5cff41a04c562e03d7e47f8b9c
 ---
