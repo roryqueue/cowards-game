@@ -8,7 +8,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-7, shipped 2026-05-17. See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md).
-- ⚠️ **v1.1 Trustworthy Simulation Beta** — Phases 8-13, audit found closure gap 2026-05-18.
+- ✅ **v1.1 Trustworthy Simulation Beta** — Phases 8-13, verified 2026-05-18; ready for archive.
 
 ## Overview
 
@@ -23,7 +23,7 @@ Coward's Game v1.1 sharpens trust in the simulation loop shipped in v1.0. The mi
 | 10 | Runtime Isolation Hardening | Make the Strategy runtime boundary explicit, test hostile code, and spike stronger process/container/WASM isolation. | 7 | Complete |
 | 11 | Doctrine Debugging UX | Help players understand validation failures, runtime violations, replay links, and why Soldiers did nothing without moving rules into React. | 6 | Complete |
 | 12 | Local and CI Reliability | Make Docker, no-Docker, and service-backed CI startup and E2E verification boring and diagnosable. | 6 | Complete |
-| 13 | Close Gap: Persisted Owner Replay Debug Authorization | Connect persisted Match replay pages to a trusted owner-debug authorization path and prove owner-only inactivity explanations on real persisted replays. | 2 | Not Planned |
+| 13 | Close Gap: Persisted Owner Replay Debug Authorization | Connect persisted Match replay pages to a trusted owner-debug authorization path and prove owner-only inactivity explanations on real persisted replays. | 2 | Complete |
 
 **Coverage:** 34 v1.1 requirements mapped, 0 unmapped.
 
@@ -180,7 +180,7 @@ Plans:
 
 **Goal:** Connect persisted Match replay pages to trusted owner debug authorization so real owner replay flows can inspect Soldier inactivity explanations without exposing private data publicly.
 **Mode:** standard
-**Status:** Not Planned
+**Status:** Complete
 
 **Requirements:** DEBUG-04, DEBUG-05
 
@@ -200,8 +200,8 @@ Plans:
 | Milestone | Phases | Plans | Requirements | Status | Shipped |
 | --- | ---: | ---: | ---: | --- | --- |
 | v1.0 MVP | 7/7 | 33/33 | 80/80 | Complete | 2026-05-17 |
-| v1.1 Trustworthy Simulation Beta | 5/6 | 25/25 | 32/34 | Gaps Found | — |
+| v1.1 Trustworthy Simulation Beta | 6/6 | 29/29 | 34/34 | Verified | — |
 
 ## Next
 
-Plan Phase 13 to close the persisted owner replay debug gap before archiving v1.1.
+Run milestone archive flow for v1.1 when ready.

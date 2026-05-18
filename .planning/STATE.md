@@ -2,27 +2,27 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Trustworthy Simulation Beta
-status: gaps_found
-last_updated: "2026-05-18T16:36:00.000-04:00"
+status: verified
+last_updated: "2026-05-18T17:28:00.000-04:00"
 progress:
   total_phases: 6
-  completed_phases: 5
-  total_plans: 25
-  completed_plans: 25
-  percent: 83
+  completed_phases: 6
+  total_plans: 29
+  completed_plans: 29
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** v1.1 audit found closure gap
+**Status:** v1.1 verified after closure phase
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-18)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Close persisted owner replay debug authorization gap
+**Current focus:** Ready to archive v1.1 Trustworthy Simulation Beta
 **Completed milestone:** v1.0 MVP
 **Archived roadmap:** .planning/milestones/v1.0-ROADMAP.md
 **Archived requirements:** .planning/milestones/v1.0-REQUIREMENTS.md
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-05-18)
 ## Current Position
 
 Phase: 13 — Close Gap: Persisted Owner Replay Debug Authorization
-Plan: —
-Status: Phase 13 context gathered; ready for planning
-Last activity: 2026-05-18 — Captured Phase 13 context for persisted owner replay debug authorization
+Plan: complete
+Status: Phase 13 implemented, reviewed, validated, UAT-verified, and milestone audit-ready
+Last activity: 2026-05-18 — Closed persisted owner replay debug authorization gap and generated verification/UAT artifacts for phases 8-13
 
 ## Workflow Settings
 
@@ -72,6 +72,8 @@ Last activity: 2026-05-18 — Captured Phase 13 context for persisted owner repl
 - Phase 12 added Docker Compose readiness checks, no-Docker local Postgres diagnostics, a shared preflight command, isolated service-backed E2E, CI command separation, replay-route preflight evidence, and REL-01 through REL-06 validation evidence.
 - v1.1 milestone audit found one product integration gap: persisted Match replay pages cannot reach trusted owner debug mode, so DEBUG-04 and DEBUG-05 remain partial for real persisted replay user flows.
 - Phase 13 was inserted to close that audit gap by wiring persisted Match replay pages to trusted owner debug authorization and proving owner-only inactivity explanations on real persisted replays.
+- Phase 13 closed the gap: persisted owner-debug replay is scoped to local Workshop MatchSets and `player:workshop-local`, public replay privacy remains default, `pnpm e2e:service` proves the failing Strategy owner-debug flow, and `pnpm preflight:docker -- --skip-web` passed after implementation.
+- Formal `*-VERIFICATION.md` and `*-UAT.md` artifacts now exist for phases 8-13.
 
 ### Roadmap Evolution
 
@@ -85,7 +87,7 @@ Last activity: 2026-05-18 — Captured Phase 13 context for persisted owner repl
 
 ## Next Command
 
-Run `$gsd-plan-phase 13` for Close Gap: Persisted Owner Replay Debug Authorization.
+Run `$gsd-complete-milestone 1.1` when ready to archive v1.1.
 
 ---
-*Last updated: 2026-05-18 after Phase 13 context gathering*
+*Last updated: 2026-05-18 after Phase 13 closure*
