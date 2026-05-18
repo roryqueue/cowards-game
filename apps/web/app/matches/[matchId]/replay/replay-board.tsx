@@ -33,7 +33,7 @@ const colorValue = (color: string): number =>
   Number.parseInt(color.slice(1), 16)
 
 const boardDimensions = (model: ReplayBoardModel) => {
-  const { bounds } = model
+  const { arenaBounds: bounds } = model
   return {
     columns: bounds.maxX - bounds.minX + 1,
     rows: bounds.maxY - bounds.minY + 1,
@@ -66,11 +66,60 @@ const createProjector = (
     boardHeight,
     point(position: Position) {
       return {
-        x: originX + (position.x - model.bounds.minX) * cellSize + cellSize / 2,
-        y: originY + (position.y - model.bounds.minY) * cellSize + cellSize / 2,
+        x:
+          originX +
+          (position.x - model.arenaBounds.minX) * cellSize +
+          cellSize / 2,
+        y:
+          originY +
+          (position.y - model.arenaBounds.minY) * cellSize +
+          cellSize / 2,
       }
     },
   }
+}
+
+const lerp = (from: number, to: number, progress: number): number =>
+  from + (to - from) * progress
+
+const interpolatePosition = (
+  from: Position,
+  to: Position,
+  progress: number,
+): Position => ({
+  x: lerp(from.x, to.x, progress),
+  y: lerp(from.y, to.y, progress),
+})
+
+const interpolatePlayableBounds = (
+  model: ReplayBoardModel,
+  progress: number,
+) => ({
+  minX: lerp(model.bounds.previousMinX, model.bounds.minX, progress),
+  maxX: lerp(model.bounds.previousMaxX, model.bounds.maxX, progress),
+  minY: lerp(model.bounds.previousMinY, model.bounds.minY, progress),
+  maxY: lerp(model.bounds.previousMaxY, model.bounds.maxY, progress),
+})
+
+const drawBoundsRect = (
+  graphics: Graphics,
+  model: ReplayBoardModel,
+  bounds: { minX: number; maxX: number; minY: number; maxY: number },
+  width: number,
+  height: number,
+  radius = 8,
+) => {
+  const projection = createProjector(model, width, height)
+  const left =
+    projection.originX +
+    (bounds.minX - model.arenaBounds.minX) * projection.cellSize
+  const top =
+    projection.originY +
+    (bounds.minY - model.arenaBounds.minY) * projection.cellSize
+  const rectWidth = (bounds.maxX - bounds.minX + 1) * projection.cellSize
+  const rectHeight = (bounds.maxY - bounds.minY + 1) * projection.cellSize
+
+  graphics.roundRect(left, top, rectWidth, rectHeight, radius)
 }
 
 const drawGrid = (
@@ -78,8 +127,10 @@ const drawGrid = (
   model: ReplayBoardModel,
   width: number,
   height: number,
+  progress: number,
 ) => {
   const projection = createProjector(model, width, height)
+  const playableBounds = interpolatePlayableBounds(model, progress)
   graphics.clear()
   graphics.setFillStyle({ color: 0xe8ece6 })
   graphics.roundRect(
@@ -90,7 +141,11 @@ const drawGrid = (
     8,
   )
   graphics.fill()
-  graphics.setStrokeStyle({ width: 1, color: colorValue(model.bounds.stroke) })
+  graphics.setStrokeStyle({
+    width: 1,
+    color: colorValue(model.bounds.stroke),
+    alpha: 0.72,
+  })
 
   for (let column = 0; column <= boardDimensions(model).columns; column += 1) {
     const x = projection.originX + column * projection.cellSize
@@ -104,10 +159,54 @@ const drawGrid = (
   }
   graphics.stroke()
 
+  graphics.setFillStyle({ color: 0x17201a, alpha: 0.16 })
+  const left =
+    projection.originX +
+    (playableBounds.minX - model.arenaBounds.minX) * projection.cellSize
+  const right =
+    projection.originX +
+    (playableBounds.maxX - model.arenaBounds.minX + 1) * projection.cellSize
+  const top =
+    projection.originY +
+    (playableBounds.minY - model.arenaBounds.minY) * projection.cellSize
+  const bottom =
+    projection.originY +
+    (playableBounds.maxY - model.arenaBounds.minY + 1) * projection.cellSize
+
+  graphics.rect(
+    projection.originX,
+    projection.originY,
+    projection.boardWidth,
+    Math.max(0, top - projection.originY),
+  )
+  graphics.rect(
+    projection.originX,
+    bottom,
+    projection.boardWidth,
+    Math.max(0, projection.originY + projection.boardHeight - bottom),
+  )
+  graphics.rect(
+    projection.originX,
+    top,
+    Math.max(0, left - projection.originX),
+    Math.max(0, bottom - top),
+  )
+  graphics.rect(
+    right,
+    top,
+    Math.max(0, projection.originX + projection.boardWidth - right),
+    Math.max(0, bottom - top),
+  )
+  graphics.fill()
+
   graphics.setStrokeStyle({
     width: model.bounds.contractionActive ? 5 : 2,
     color: colorValue(model.bounds.contractionStroke),
   })
+  drawBoundsRect(graphics, model, playableBounds, width, height)
+  graphics.stroke()
+
+  graphics.setStrokeStyle({ width: 2, color: 0xffffff, alpha: 0.66 })
   graphics.roundRect(
     projection.originX,
     projection.originY,
@@ -160,6 +259,67 @@ const drawFacing = (
   graphics.stroke()
 }
 
+const fallTarget = (model: ReplayBoardModel, position: Position): Position => {
+  const centerX = (model.arenaBounds.minX + model.arenaBounds.maxX) / 2
+  const centerY = (model.arenaBounds.minY + model.arenaBounds.maxY) / 2
+  const dx = Math.abs(position.x - centerX)
+  const dy = Math.abs(position.y - centerY)
+
+  if (dx > dy) {
+    return {
+      x:
+        position.x < centerX
+          ? model.arenaBounds.minX - 0.8
+          : model.arenaBounds.maxX + 0.8,
+      y: position.y,
+    }
+  }
+
+  return {
+    x: position.x,
+    y:
+      position.y < centerY
+        ? model.arenaBounds.minY - 0.8
+        : model.arenaBounds.maxY + 0.8,
+  }
+}
+
+const renderSoldierPosition = (
+  soldier: BoardSoldierDescriptor,
+  model: ReplayBoardModel,
+  progress: number,
+): Position | null => {
+  if (soldier.position && soldier.previousPosition) {
+    if (
+      soldier.transition === "move" ||
+      soldier.transition === "pushed" ||
+      soldier.transition === "stone" ||
+      soldier.transition === "backstab"
+    ) {
+      return interpolatePosition(
+        soldier.previousPosition,
+        soldier.position,
+        progress,
+      )
+    }
+    return soldier.position
+  }
+
+  if (
+    soldier.transition === "fall" &&
+    soldier.previousPosition &&
+    !soldier.position
+  ) {
+    return interpolatePosition(
+      soldier.previousPosition,
+      fallTarget(model, soldier.previousPosition),
+      progress,
+    )
+  }
+
+  return soldier.position
+}
+
 const drawSoldier = (
   layer: PixiContainer,
   soldier: BoardSoldierDescriptor,
@@ -167,15 +327,28 @@ const drawSoldier = (
   width: number,
   height: number,
   onSelectSoldier: (soldierId: string) => void,
+  progress: number,
 ) => {
-  if (!soldier.position) {
+  const renderPosition = renderSoldierPosition(soldier, model, progress)
+  if (!renderPosition) {
     return
   }
 
   const projection = createProjector(model, width, height)
-  const point = projection.point(soldier.position)
-  const radius = projection.cellSize * 0.32
+  const point = projection.point(renderPosition)
+  const radius =
+    projection.cellSize *
+    (soldier.transition === "stone"
+      ? lerp(0.32, 0.38, progress)
+      : soldier.transition === "fall"
+        ? lerp(0.32, 0.2, progress)
+        : 0.32)
   const graphics = new Graphics()
+  const alpha =
+    soldier.transition === "fall" && soldier.status === "FALLEN"
+      ? lerp(1, 0.18, progress)
+      : 1
+  graphics.alpha = alpha
   graphics.eventMode = "static"
   graphics.cursor = "pointer"
   graphics.on("pointertap", () => onSelectSoldier(soldier.id))
@@ -220,13 +393,25 @@ const drawSoldier = (
       fontWeight: "700",
     }),
   })
+  badge.alpha = alpha
   badge.anchor.set(0.5)
   badge.position.set(point.x, point.y)
   layer.addChild(badge)
+
+  if (soldier.transition === "fall" && progress > 0.72) {
+    const marker = new Graphics()
+    marker.setStrokeStyle({ width: 3, color: 0x6e5acb, alpha: 0.8 })
+    marker.moveTo(point.x - radius, point.y - radius)
+    marker.lineTo(point.x + radius, point.y + radius)
+    marker.moveTo(point.x + radius, point.y - radius)
+    marker.lineTo(point.x - radius, point.y + radius)
+    marker.stroke()
+    layer.addChild(marker)
+  }
 }
 
 const drawCallout = (
-  graphics: Graphics,
+  layer: PixiContainer,
   callout: BoardEventCalloutDescriptor | null,
   model: ReplayBoardModel,
   width: number,
@@ -238,6 +423,7 @@ const drawCallout = (
   }
 
   const projection = createProjector(model, width, height)
+  const graphics = new Graphics()
   const center = {
     x: projection.originX + projection.boardWidth / 2,
     y: projection.originY + projection.boardHeight / 2,
@@ -260,6 +446,20 @@ const drawCallout = (
   graphics.setFillStyle({ color, alpha: 0.9 })
   graphics.roundRect(to.x - 52, to.y - 18, 104, 28, 6)
   graphics.fill()
+
+  const label = new Text({
+    text: callout.label,
+    style: new TextStyle({
+      fill: "#ffffff",
+      fontFamily: "Arial",
+      fontSize: Math.max(12, projection.cellSize * 0.22),
+      fontWeight: "700",
+    }),
+  })
+  label.anchor.set(0.5)
+  label.position.set(to.x, to.y - 4)
+  layer.addChild(graphics)
+  layer.addChild(label)
 }
 
 const renderBoard = (
@@ -273,17 +473,25 @@ const renderBoard = (
   const root = new PixiContainer()
   const graphics = new Graphics()
 
-  drawGrid(graphics, model, width, height)
+  drawGrid(graphics, model, width, height, progress)
   drawTerrain(graphics, model, width, height)
   root.addChild(graphics)
 
   const soldierLayer = new PixiContainer()
   for (const soldier of model.soldiers) {
-    drawSoldier(soldierLayer, soldier, model, width, height, onSelectSoldier)
+    drawSoldier(
+      soldierLayer,
+      soldier,
+      model,
+      width,
+      height,
+      onSelectSoldier,
+      progress,
+    )
   }
   root.addChild(soldierLayer)
 
-  const callout = new Graphics()
+  const callout = new PixiContainer()
   drawCallout(callout, model.callout, model, width, height, progress)
   root.addChild(callout)
 

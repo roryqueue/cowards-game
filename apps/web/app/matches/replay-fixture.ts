@@ -68,7 +68,7 @@ const awarenessGrid = {
   }),
 }
 
-const board = {
+const board0 = {
   bounds: { minX: 1, maxX: 10, minY: 1, maxY: 10 },
   terrainStones: [
     { x: 4, y: 4 },
@@ -79,28 +79,101 @@ const board = {
       id: "soldier:bottom:1",
       ownerPlayerId: "player:bottom",
       status: "ACTIVE" as const,
-      position: { x: 2, y: 8 },
+      position: { x: 2, y: 9 },
       facing: "UP" as const,
       lastSuccessfulMoveDirection: "UP" as const,
     },
     {
       id: "soldier:bottom:2",
       ownerPlayerId: "player:bottom",
-      status: "FALLEN" as const,
-      position: null,
-      facing: null,
+      status: "ACTIVE" as const,
+      position: { x: 1, y: 10 },
+      facing: "LEFT" as const,
       lastSuccessfulMoveDirection: "LEFT" as const,
     },
     {
       id: "soldier:top:1",
       ownerPlayerId: "player:top",
-      status: "STONE" as const,
+      status: "ACTIVE" as const,
+      position: { x: 2, y: 8 },
+      facing: "DOWN" as const,
+      lastSuccessfulMoveDirection: "DOWN" as const,
+    },
+    {
+      id: "soldier:top:2",
+      ownerPlayerId: "player:top",
+      status: "ACTIVE" as const,
       position: { x: 6, y: 3 },
       facing: "DOWN" as const,
       lastSuccessfulMoveDirection: "DOWN" as const,
     },
   ],
 }
+
+const board1 = board0
+const board2 = board1
+const board3 = {
+  ...board2,
+  soldiers: board2.soldiers.map((soldier) =>
+    soldier.id === "soldier:top:1"
+      ? { ...soldier, status: "STONE" as const }
+      : soldier,
+  ),
+}
+const board4 = {
+  ...board3,
+  soldiers: board3.soldiers.map((soldier) =>
+    soldier.id === "soldier:bottom:1"
+      ? {
+          ...soldier,
+          position: { x: 2, y: 8 },
+          facing: "UP" as const,
+          lastSuccessfulMoveDirection: "UP" as const,
+        }
+      : soldier.id === "soldier:top:1"
+        ? { ...soldier, position: { x: 2, y: 7 } }
+        : soldier,
+  ),
+}
+const board5 = {
+  ...board4,
+  soldiers: board4.soldiers.map((soldier) =>
+    soldier.id === "soldier:bottom:2"
+      ? { ...soldier, status: "FALLEN" as const, position: null }
+      : soldier,
+  ),
+}
+const board6 = {
+  ...board5,
+  soldiers: board5.soldiers.map((soldier) =>
+    soldier.id === "soldier:top:2"
+      ? { ...soldier, status: "STONE" as const }
+      : soldier,
+  ),
+}
+const board7 = board6
+const board8 = {
+  ...board7,
+  bounds: { minX: 2, maxX: 9, minY: 2, maxY: 9 },
+  terrainStones: board7.terrainStones.filter(
+    (stone) => stone.x >= 2 && stone.x <= 9 && stone.y >= 2 && stone.y <= 9,
+  ),
+}
+const board9 = board8
+const board10 = board9
+const boards = [
+  board0,
+  board1,
+  board2,
+  board3,
+  board4,
+  board5,
+  board6,
+  board7,
+  board8,
+  board9,
+  board10,
+]
 
 export const createReplayFixtureData = (
   options: GetMatchReplayOptions = {},
@@ -174,23 +247,37 @@ export const createReplayFixtureData = (
         "owner",
       ),
       event(3, "BACKSTAB_RESOLVED", "Backstab", {
-        from: { x: 2, y: 8 },
-        to: { x: 2, y: 7 },
+        boundary: "activation-start",
+        pairs: [{ attackerId: "soldier:bottom:1", victimId: "soldier:top:1" }],
       }),
       event(4, "PUSH_RESOLVED", "Push", {
-        from: { x: 2, y: 7 },
-        to: { x: 2, y: 6 },
+        soldierId: "soldier:bottom:1",
+        targetSoldierId: "soldier:top:1",
+        pushedOffBoard: false,
       }),
-      event(5, "SOLDIER_FELL", "Fall", { position: { x: 1, y: 10 } }),
-      event(6, "SOLDIER_STONED", "Stone", { position: { x: 6, y: 3 } }),
-      event(7, "MOVE_BLOCKED", "Blocked", { position: { x: 4, y: 4 } }),
-      event(8, "CONTRACTION_RESOLVED", "Contraction"),
-      event(9, "RUNTIME_VIOLATION", "Runtime violation"),
+      event(5, "SOLDIER_FELL", "Fall", {
+        soldierId: "soldier:bottom:2",
+        reason: "MOVED_OFF_BOARD",
+      }),
+      event(6, "SOLDIER_STONED", "Stone", {
+        soldierId: "soldier:top:2",
+        reason: "TURN_TO_STONE",
+      }),
+      event(7, "MOVE_BLOCKED", "Blocked", {
+        soldierId: "soldier:bottom:1",
+        reason: "TERRAIN_STONE",
+      }),
+      event(8, "CONTRACTION_RESOLVED", "Contraction", {
+        bounds: board8.bounds,
+      }),
+      event(9, "RUNTIME_VIOLATION", "Runtime violation", {
+        soldierId: "soldier:bottom:1",
+      }),
       event(10, "MATCH_ENDED", "Outcome"),
     ],
     states: Array.from({ length: 11 }, (_, sequence) => ({
       sequence,
-      board,
+      board: boards[sequence] ?? board0,
       ...(sequence === 10 ? { outcome: { type: "DRAW" as const } } : {}),
     })),
     initialSequence: 0,

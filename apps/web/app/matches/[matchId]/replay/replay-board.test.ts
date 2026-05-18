@@ -38,6 +38,16 @@ const board: FullBoardSnapshot = {
   ],
 }
 
+const movedBoard: FullBoardSnapshot = {
+  ...board,
+  bounds: { minX: 2, maxX: 9, minY: 2, maxY: 9 },
+  soldiers: board.soldiers.map((soldier) =>
+    soldier.id === "soldier:bottom:1"
+      ? { ...soldier, position: { x: 2, y: 8 } }
+      : soldier,
+  ),
+}
+
 const entry = (
   type: ReplayTimelineEntryDto["type"],
   sequence = 1,
@@ -50,7 +60,7 @@ const entry = (
   payload: {},
 })
 
-const data: ReplayReadyDto = {
+const data = (states: ReplayReadyDto["states"]): ReplayReadyDto => ({
   status: "ready",
   mode: "public",
   metadata: {
@@ -87,16 +97,23 @@ const data: ReplayReadyDto = {
     snapshots: [],
   },
   timeline: [entry("MATCH_STARTED", 0), entry("CONTRACTION_RESOLVED", 1)],
-  states: [
-    { sequence: 0, board },
-    { sequence: 1, board },
-  ],
+  states,
   initialSequence: 0,
-}
+})
+
+const staticData = data([
+  { sequence: 0, board },
+  { sequence: 1, board },
+])
+
+const movingData = data([
+  { sequence: 0, board },
+  { sequence: 1, board: movedBoard },
+])
 
 describe("replay board model", () => {
   it("describes active, stone, fallen, terrain, bounds, and contraction distinctly", () => {
-    const model = buildReplayBoardModel(data, 1, "soldier:bottom:1")
+    const model = buildReplayBoardModel(staticData, 1, "soldier:bottom:1")
 
     expect(model.bounds.contractionActive).toBe(true)
     expect(model.bounds.contractionStroke).toBe(ReplayBoardColors.terrain)
@@ -130,7 +147,7 @@ describe("replay board model", () => {
   })
 
   it("keeps owner badge numbers stable within each owner", () => {
-    const model = buildReplayBoardModel(data, 0, null)
+    const model = buildReplayBoardModel(staticData, 0, null)
 
     expect(
       model.soldiers
@@ -159,5 +176,61 @@ describe("replay board model", () => {
     expect(getEventCalloutDescriptor(entry("RUNTIME_VIOLATION"))).toMatchObject(
       { variant: "runtime-violation", color: "#b42318" },
     )
+  })
+
+  it("keeps the original arena while shrinking playable contraction bounds", () => {
+    const model = buildReplayBoardModel(movingData, 1, null)
+
+    expect(model.arenaBounds).toMatchObject({
+      minX: 1,
+      maxX: 10,
+      minY: 1,
+      maxY: 10,
+    })
+    expect(model.bounds).toMatchObject({
+      minX: 2,
+      maxX: 9,
+      minY: 2,
+      maxY: 9,
+      previousMinX: 1,
+      previousMaxX: 10,
+      previousMinY: 1,
+      previousMaxY: 10,
+      contractionActive: true,
+    })
+  })
+
+  it("derives soldier movement from previous and current board states", () => {
+    const model = buildReplayBoardModel(movingData, 1, "soldier:bottom:1")
+    const mover = model.soldiers.find(
+      (soldier) => soldier.id === "soldier:bottom:1",
+    )
+
+    expect(mover).toMatchObject({
+      previousPosition: { x: 2, y: 9 },
+      position: { x: 2, y: 8 },
+      transition: "move",
+    })
+  })
+
+  it("infers spatial callouts from event payload ids and board states", () => {
+    const pushed = getEventCalloutDescriptor(
+      {
+        ...entry("PUSH_RESOLVED"),
+        payload: {
+          soldierId: "soldier:bottom:1",
+          targetSoldierId: "soldier:top:1",
+          pushedOffBoard: false,
+        },
+      },
+      board,
+      movedBoard,
+    )
+
+    expect(pushed).toMatchObject({
+      variant: "push",
+      from: { x: 6, y: 3 },
+      to: { x: 6, y: 3 },
+    })
   })
 })
