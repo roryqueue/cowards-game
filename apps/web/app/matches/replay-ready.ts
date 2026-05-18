@@ -191,6 +191,7 @@ export const buildReadyReplayFromChronicle = ({
 export const buildReadyReplayFromStoredChronicle = (
   stored: StoredChronicle,
   options: GetMatchReplayOptions,
+  authorizedRequestedOwners: readonly string[] = [],
 ): ReplayPageData => {
   const metadata = {
     matchId: stored.metadata.matchId,
@@ -208,6 +209,10 @@ export const buildReadyReplayFromStoredChronicle = (
   return buildReadyReplayFromChronicle({
     chronicle: stored.artifact,
     metadata,
-    options: trustedOwnerReplayOptions(metadata, options),
+    options: trustedOwnerReplayOptions(
+      metadata,
+      options,
+      authorizedRequestedOwners,
+    ),
   })
 }

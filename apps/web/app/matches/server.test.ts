@@ -3,7 +3,7 @@ import {
   createChronicleMetadata,
   type StoredChronicle,
 } from "@cowards/persistence"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { isReplayFixtureMatch, replayFixtureMatchId } from "./replay-fixture.js"
 import { createMatchReplayServer } from "./server.js"
 
@@ -357,7 +357,7 @@ describe("Match replay server facade", () => {
     )
   })
 
-  it("does not trust query-requested owner ids for persisted Match replay", async () => {
+  it("keeps query-requested owner ids public when no resolver is configured", async () => {
     const stored = createStoredChronicle()
     const server = createMatchReplayServer({
       withPool: async (fn) => fn({} as never),
@@ -377,10 +377,109 @@ describe("Match replay server facade", () => {
     }
     expect(response.mode).toBe("public")
     expect(response.projection.viewer).toEqual({ access: "public" })
+    expect(response).not.toHaveProperty("ownerPlayerId")
     expect(response).not.toHaveProperty("ownerDebug")
     expect(JSON.stringify(response)).not.toContain(
       "PRIVATE_TOP_OWNER_DEBUG_EXPLANATION",
     )
+  })
+
+  it("upgrades an authorized requested owner through the server resolver", async () => {
+    const stored = createStoredChronicle()
+    const resolver = vi.fn(async () => ["player:bottom"] as const)
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+      resolveAuthorizedReplayOwners: resolver,
+    })
+
+    const response = await server.getMatchReplay("match:replay-test", {
+      allowOwnerDebug: true,
+      requestedOwnerPlayerId: "player:bottom",
+    })
+
+    expect(resolver).toHaveBeenCalledWith({
+      pool: {},
+      matchId: "match:replay-test",
+      requestedOwnerPlayerId: "player:bottom",
+    })
+    expect(response.status).toBe("ready")
+    if (response.status !== "ready") {
+      return
+    }
+    expect(response.mode).toBe("owner")
+    expect(response.ownerPlayerId).toBe("player:bottom")
+    expect(response.projection.viewer).toEqual({
+      access: "owner",
+      playerId: "player:bottom",
+    })
+    expect(
+      response.ownerDebug?.soldierInactivityExplanations.length,
+    ).toBeGreaterThan(0)
+    expect(JSON.stringify(response)).toContain("PRIVATE_AWARENESS_GRID")
+    expect(JSON.stringify(response.projection.ownerPrivate)).toContain(
+      "PRIVATE_OWNER_DEBUG_EXPLANATION",
+    )
+    expect(JSON.stringify(response.projection.ownerPrivate)).not.toContain(
+      "PRIVATE_TOP_OWNER_DEBUG_EXPLANATION",
+    )
+  })
+
+  it("keeps an authorized nonparticipant request public", async () => {
+    const stored = createStoredChronicle()
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+      resolveAuthorizedReplayOwners: async () => ["player:intruder"],
+    })
+
+    const response = await server.getMatchReplay("match:replay-test", {
+      allowOwnerDebug: true,
+      requestedOwnerPlayerId: "player:intruder",
+    })
+
+    expect(response.status).toBe("ready")
+    if (response.status !== "ready") {
+      return
+    }
+    expect(response.mode).toBe("public")
+    expect(response.projection.viewer).toEqual({ access: "public" })
+    expect(response).not.toHaveProperty("ownerPlayerId")
+    expect(response).not.toHaveProperty("ownerDebug")
+    expect(JSON.stringify(response)).not.toContain("PRIVATE_AWARENESS_GRID")
+    expect(JSON.stringify(response)).not.toContain(
+      "PRIVATE_OWNER_DEBUG_EXPLANATION",
+    )
+  })
+
+  it("keeps owner debug requests without a requested owner public", async () => {
+    const stored = createStoredChronicle()
+    const resolver = vi.fn(async () => ["player:bottom"] as const)
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+      resolveAuthorizedReplayOwners: resolver,
+    })
+
+    const response = await server.getMatchReplay("match:replay-test", {
+      allowOwnerDebug: true,
+    })
+
+    expect(resolver).not.toHaveBeenCalled()
+    expect(response.status).toBe("ready")
+    if (response.status !== "ready") {
+      return
+    }
+    expect(response.mode).toBe("public")
+    expect(response.projection.viewer).toEqual({ access: "public" })
+    expect(response).not.toHaveProperty("ownerPlayerId")
+    expect(response).not.toHaveProperty("ownerDebug")
   })
 
   it("returns explicit owner replay data only when trusted server code allows it", async () => {
