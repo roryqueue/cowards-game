@@ -8,7 +8,10 @@ import {
   type ChronicleValidationResult,
   type JsonValue,
 } from "@cowards/spec"
+import { validateChronicleGrammar } from "./grammar.js"
 import { createChronicleContentHash } from "./hash.js"
+import { validateChronicleTransitions } from "./replay-transition.js"
+import { validateSnapshotBoundaries } from "./snapshot-boundaries.js"
 
 const SUPPORTED_SCHEMA_VERSION = "chronicle-v1"
 
@@ -317,6 +320,9 @@ const validateParsedChronicle = (
     ...validateEventOrder(chronicle),
     ...validateRequiredEvents(chronicle),
     ...validateSnapshots(chronicle),
+    ...validateChronicleGrammar(chronicle),
+    ...validateSnapshotBoundaries(chronicle),
+    ...validateChronicleTransitions(chronicle),
     ...validateHash(chronicle),
   ]
 

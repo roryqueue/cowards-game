@@ -1,4 +1,7 @@
 import type {
+  Chronicle,
+  ChronicleBoundarySnapshot,
+  ChronicleEvent,
   ChronicleValidationErrorCode,
   JsonValue,
   SoldierBrainInput,
@@ -59,6 +62,45 @@ const createChronicle = () =>
 const errorCodes = (value: unknown) => {
   const result = validateChronicle(value)
   return result.ok ? [] : result.errors.map((error) => error.code)
+}
+
+const cloneChronicle = (chronicle: Chronicle): Chronicle =>
+  JSON.parse(JSON.stringify(chronicle)) as Chronicle
+
+const mutateFirstEvent = (
+  chronicle: Chronicle,
+  predicate: (event: ChronicleEvent) => boolean,
+  mutate: (event: ChronicleEvent) => ChronicleEvent,
+): Chronicle => {
+  let mutated = false
+  return {
+    ...chronicle,
+    events: chronicle.events.map((event) => {
+      if (mutated || !predicate(event)) {
+        return event
+      }
+      mutated = true
+      return mutate(event)
+    }),
+  }
+}
+
+const mutateFirstSnapshot = (
+  chronicle: Chronicle,
+  predicate: (snapshot: ChronicleBoundarySnapshot) => boolean,
+  mutate: (snapshot: ChronicleBoundarySnapshot) => ChronicleBoundarySnapshot,
+): Chronicle => {
+  let mutated = false
+  return {
+    ...chronicle,
+    snapshots: chronicle.snapshots.map((snapshot) => {
+      if (mutated || !predicate(snapshot)) {
+        return snapshot
+      }
+      mutated = true
+      return mutate(snapshot)
+    }),
+  }
 }
 
 const grammarErrorCodes = [
@@ -303,5 +345,82 @@ describe("validateChronicle", () => {
         ],
       }),
     ).toContain("HASH_MISMATCH")
+  })
+
+  it.each([
+    {
+      name: "corrupted event order",
+      mutate(chronicle: Chronicle): Chronicle {
+        return {
+          ...chronicle,
+          events: chronicle.events.map((event, index) =>
+            index === 1 ? { ...event, sequence: 3 } : event,
+          ),
+        }
+      },
+      code: "EVENT_ORDER_INVALID",
+    },
+    {
+      name: "event grammar failure",
+      mutate(chronicle: Chronicle): Chronicle {
+        return mutateFirstEvent(
+          cloneChronicle(chronicle),
+          (event) => event.type === "ACTION_EMITTED",
+          (event) => ({
+            ...event,
+            context: { ...event.context, cycleIndex: 1 },
+          }),
+        )
+      },
+      code: "CONTEXT_MISMATCH",
+    },
+    {
+      name: "snapshot boundary failure",
+      mutate(chronicle: Chronicle): Chronicle {
+        return mutateFirstSnapshot(
+          cloneChronicle(chronicle),
+          (snapshot) => snapshot.kind === "ROUND_START",
+          (snapshot) => ({ ...snapshot, sequence: 0 }),
+        )
+      },
+      code: "SNAPSHOT_BOUNDARY_INVALID",
+    },
+    {
+      name: "impossible snapshot transition",
+      mutate(chronicle: Chronicle): Chronicle {
+        return mutateFirstSnapshot(
+          cloneChronicle(chronicle),
+          (snapshot) => snapshot.kind === "TERMINAL",
+          (snapshot) => ({
+            ...snapshot,
+            board: {
+              ...snapshot.board,
+              soldiers: snapshot.board.soldiers.map((soldier, index) =>
+                index === 0 ? { ...soldier, status: "ACTIVE" } : soldier,
+              ),
+            },
+          }),
+        )
+      },
+      code: "SNAPSHOT_MISMATCH",
+    },
+    {
+      name: "version-incompatible Chronicle",
+      mutate(chronicle: Chronicle): Chronicle {
+        return {
+          ...chronicle,
+          reproducibility: {
+            ...chronicle.reproducibility,
+            versions: {
+              ...chronicle.reproducibility.versions,
+              engine: `${chronicle.reproducibility.versions.engine}-future`,
+            },
+          },
+        }
+      },
+      code: "VERSION_INCOMPATIBLE",
+    },
+  ] as const)("rejects $name through the integrated gate", ({ mutate, code }) => {
+    expect(errorCodes(mutate(createChronicle()))).toContain(code)
   })
 })

@@ -88,6 +88,14 @@ const movementChronicle = (): Chronicle => {
       { ...startBoard.soldiers[2]!, status: "STONE" as const },
     ],
   }
+  const roundContext = { phaseNumber: 1, roundNumber: 1 as const }
+  const activationContext = {
+    ...roundContext,
+    activationId: "1:1:0",
+    activationIndex: 0,
+    actingPlayerId: "bottom",
+    soldierId: "mover",
+  }
 
   return {
     schemaVersion: "chronicle-v1",
@@ -117,35 +125,35 @@ const movementChronicle = (): Chronicle => {
       {
         type: "ROUND_STARTED",
         sequence: 1,
-        context: { phaseNumber: 1, roundNumber: 1 },
+        context: roundContext,
         privacy: "public",
         payload: { roundNumber: 1 },
       },
       {
         type: "STRATEGY_EVALUATED",
         sequence: 2,
-        context: { actingPlayerId: "bottom" },
+        context: { ...roundContext, actingPlayerId: "bottom" },
         privacy: "owner",
         payload: { playerId: "bottom" },
       },
       {
         type: "ACTIVATION_STARTED",
         sequence: 3,
-        context: { soldierId: "mover" },
+        context: activationContext,
         privacy: "public",
         payload: { soldierId: "mover" },
       },
       {
         type: "AWARENESS_GRID_OBSERVED",
         sequence: 4,
-        context: { soldierId: "mover", cycleIndex: 0 },
+        context: { ...activationContext, cycleIndex: 0 },
         privacy: "owner",
         payload: { soldierId: "mover", cycleIndex: 0 },
       },
       {
         type: "ACTION_EMITTED",
         sequence: 5,
-        context: { soldierId: "mover", cycleIndex: 0 },
+        context: { ...activationContext, cycleIndex: 0 },
         privacy: "owner",
         payload: {
           soldierId: "mover",
@@ -155,7 +163,7 @@ const movementChronicle = (): Chronicle => {
       {
         type: "PUSH_RESOLVED",
         sequence: 6,
-        context: { soldierId: "mover" },
+        context: activationContext,
         privacy: "public",
         payload: {
           soldierId: "mover",
@@ -166,14 +174,14 @@ const movementChronicle = (): Chronicle => {
       {
         type: "MOVE_ADVANCED",
         sequence: 7,
-        context: { soldierId: "mover" },
+        context: activationContext,
         privacy: "public",
         payload: { soldierId: "mover", direction: "RIGHT" },
       },
       {
         type: "BACKSTAB_RESOLVED",
         sequence: 8,
-        context: {},
+        context: activationContext,
         privacy: "public",
         payload: {
           boundary: "post-advance",
@@ -183,7 +191,7 @@ const movementChronicle = (): Chronicle => {
       {
         type: "SOLDIER_STONED",
         sequence: 9,
-        context: { soldierId: "victim" },
+        context: activationContext,
         privacy: "public",
         payload: { soldierId: "victim", reason: "BACKSTAB" },
       },
@@ -200,25 +208,25 @@ const movementChronicle = (): Chronicle => {
       {
         kind: "ROUND_START",
         sequence: 1,
-        context: { phaseNumber: 1, roundNumber: 1 },
+        context: roundContext,
         board: startBoard,
       },
       {
         kind: "ACTIVATION_START",
         sequence: 3,
-        context: { soldierId: "mover" },
+        context: activationContext,
         board: startBoard,
       },
       {
         kind: "ACTIVATION_END",
         sequence: 9,
-        context: { soldierId: "mover" },
+        context: activationContext,
         board: finalBoard,
       },
       {
         kind: "ROUND_END",
         sequence: 9,
-        context: { phaseNumber: 1, roundNumber: 1 },
+        context: roundContext,
         board: finalBoard,
       },
       {

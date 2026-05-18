@@ -42,6 +42,12 @@ const chronicleError = (
 ): Error =>
   new Error(`[Chronicle validation] ${scenarioId}: ${firstError(errors)}`)
 
+const replayError = (
+  scenarioId: string,
+  errors: readonly ChronicleValidationError[],
+): Error =>
+  new Error(`[replay reconstruction] ${scenarioId}: ${firstError(errors)}`)
+
 const readString = (
   payload: JsonValue,
   key: string,
@@ -200,14 +206,14 @@ const reconstructScenario = (
 
   const replayResult = createReplay(scenario.chronicle)
   if (!replayResult.ok) {
-    throw chronicleError(scenario.id, replayResult.errors)
+    throw replayError(scenario.id, replayResult.errors)
   }
 
   const entries: ReconstructedEntry[] = []
   for (const event of scenario.chronicle.events) {
     const stateResult = replayResult.replay.stateAt(event.sequence)
     if (!stateResult.ok) {
-      throw chronicleError(scenario.id, stateResult.errors)
+      throw replayError(scenario.id, stateResult.errors)
     }
     entries.push({
       sequence: event.sequence,
@@ -219,7 +225,7 @@ const reconstructScenario = (
   const iteratedEntries = [...replayResult.replay.iterateReplay()]
   if (iteratedEntries.length !== scenario.chronicle.events.length) {
     throw new Error(
-      `[Chronicle validation] ${scenario.id}: replay iteration stopped at ${iteratedEntries.length} of ${scenario.chronicle.events.length} events`,
+      `[replay reconstruction] ${scenario.id}: replay iteration stopped at ${iteratedEntries.length} of ${scenario.chronicle.events.length} events`,
     )
   }
 
