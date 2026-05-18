@@ -351,22 +351,25 @@ it.each([
 - Inheriting parent environment for Strategy execution: incompatible with Phase 10 subprocess contract and Node default-env behavior. [VERIFIED: 10-CONTEXT.md] [CITED: https://nodejs.org/api/child_process.html]
 - Public replay exposure of private runtime details: forbidden by project constraints and existing projection tests. [VERIFIED: AGENTS.md + packages/runtime-js/src/integration.test.ts]
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should the opt-in subprocess adapter be exposed by env var, package API, or worker CLI option?**
+1. **RESOLVED: Should the opt-in subprocess adapter be exposed by env var, package API, or worker CLI option?**
    - What we know: Phase 10 requires configurability and visibility while preserving worker-thread default. [VERIFIED: 10-CONTEXT.md]
    - What's unclear: The repo has no existing runtime adapter config convention. [VERIFIED: rg runtime adapter config]
    - Recommendation: Use a small runtime-js config parser plus worker env var such as `COWARDS_RUNTIME_ADAPTER=worker-thread|subprocess`, and expose adapter metadata in logs/tests. [VERIFIED: apps/worker/src/index.ts uses env for worker ID]
+   - **Resolution:** Expose the adapter through both runtime package API and worker configuration: runtime-js exports adapter factories/metadata, while `apps/worker` selects `worker-thread` or `subprocess` through explicit worker config/env. Worker-thread remains the default. [VERIFIED: .planning/phases/10-runtime-isolation-hardening/10-01-PLAN.md; VERIFIED: .planning/phases/10-runtime-isolation-hardening/10-04-PLAN.md]
 
-2. **Can the subprocess harness run with Node `--permission` without creating brittle local/CI friction?**
+2. **RESOLVED: Can the subprocess harness run with Node `--permission` without creating brittle local/CI friction?**
    - What we know: Permission Model is stable in current Node docs but not a malicious-code sandbox. [CITED: https://nodejs.org/api/permissions.html]
    - What's unclear: The harness may need file read permission to load its compiled entrypoint in local TypeScript/test mode. [VERIFIED: Node permissions docs]
    - Recommendation: Implement subprocess without relying on permissions first; add permission flags only if tests can prove they work across local and CI. [VERIFIED: 10-CONTEXT.md]
+   - **Resolution:** Phase 10 does not require Node Permission Model for subprocess acceptance. The subprocess adapter must enforce no shell, minimal env, timeout kill, byte caps, and schema-validated JSON IPC; permission flags are optional defense-in-depth only if they prove stable in local/CI tests. [VERIFIED: .planning/phases/10-runtime-isolation-hardening/10-02-PLAN.md; VERIFIED: .planning/phases/10-runtime-isolation-hardening/10-05-PLAN.md]
 
-3. **Should malformed IPC be retryable system failure or adapter system failure that fails the Match immediately?**
+3. **RESOLVED: Should malformed IPC be retryable system failure or adapter system failure that fails the Match immediately?**
    - What we know: Phase 10 says infrastructure failures remain system failures, and current worker retries system failures. [VERIFIED: 10-CONTEXT.md + apps/worker/src/runner.ts]
    - What's unclear: Persistence currently stores error class/message but not a richer runtime-system-failure enum. [VERIFIED: apps/worker/src/runner.ts]
    - Recommendation: Add typed system failure details in runtime-js and map to existing worker retry path first; defer persistence schema changes unless current tables cannot store diagnostics. [VERIFIED: local code]
+   - **Resolution:** Malformed IPC, nonzero subprocess exit, signal termination, spawn failure, and stdio cap failures are typed runtime system failures that map into the existing worker retry/system-failure path. They must not become gameplay `RuntimeViolation` Chronicle events. [VERIFIED: .planning/phases/10-runtime-isolation-hardening/10-02-PLAN.md; VERIFIED: .planning/phases/10-runtime-isolation-hardening/10-04-PLAN.md]
 
 ## Environment Availability
 
