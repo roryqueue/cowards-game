@@ -2,27 +2,27 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Trustworthy Simulation Beta
-status: complete
-last_updated: "2026-05-18T16:10:06.000-04:00"
+status: gaps_found
+last_updated: "2026-05-18T16:36:00.000-04:00"
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 25
   completed_plans: 25
-  percent: 100
+  percent: 94
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** v1.1 complete, pending milestone audit/archive
+**Status:** v1.1 audit found closure gap
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-18)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.1 milestone audit
+**Current focus:** Close persisted owner replay debug authorization gap
 **Completed milestone:** v1.0 MVP
 **Archived roadmap:** .planning/milestones/v1.0-ROADMAP.md
 **Archived requirements:** .planning/milestones/v1.0-REQUIREMENTS.md
@@ -31,8 +31,8 @@ See: .planning/PROJECT.md (updated 2026-05-18)
 
 Phase: 12 — Local and CI Reliability
 Plan: —
-Status: Phase 12 complete and verified; v1.1 ready for milestone audit
-Last activity: 2026-05-18 — Completed Phase 12 execution, Docker/no-Docker proof, service-backed E2E, code review fixes, re-review, and validation evidence
+Status: v1.1 milestone audit found DEBUG-04/DEBUG-05 partial due persisted replay owner-debug routing gap
+Last activity: 2026-05-18 — Audited v1.1 and wrote `.planning/v1.1-MILESTONE-AUDIT.md` plus `.planning/v1.1-INTEGRATION-CHECK.md`
 
 ## Workflow Settings
 
@@ -70,6 +70,7 @@ Last activity: 2026-05-18 — Completed Phase 12 execution, Docker/no-Docker pro
 - Phase 10 code review found and fixed nondeterministic global exposure, stale/forged validation metadata trust, worker-thread output caps, and cloneable non-JSON worker payload leakage; Nyquist validation marks ISO-01 through ISO-07 covered.
 - Phase 11 added actionable validation/runtime guidance, a richer sample Strategy catalog, Workshop replay links, owner-only replay inactivity explanations, debug overlay privacy gates, and public projection safeguards; Nyquist validation marks DEBUG-01 through DEBUG-06 covered.
 - Phase 12 added Docker Compose readiness checks, no-Docker local Postgres diagnostics, a shared preflight command, isolated service-backed E2E, CI command separation, replay-route preflight evidence, and REL-01 through REL-06 validation evidence.
+- v1.1 milestone audit found one product integration gap: persisted Match replay pages cannot reach trusted owner debug mode, so DEBUG-04 and DEBUG-05 remain partial for real persisted replay user flows.
 
 ## Post-Shipment Corrections
 
@@ -79,7 +80,7 @@ Last activity: 2026-05-18 — Completed Phase 12 execution, Docker/no-Docker pro
 
 ## Next Command
 
-Run `$gsd-audit-milestone` for v1.1, then archive/complete the milestone if the audit passes.
+Insert and execute a closure phase for persisted owner replay debug authorization, then rerun `$gsd-audit-milestone 1.1`.
 
 ---
-*Last updated: 2026-05-18 after Phase 12 completion*
+*Last updated: 2026-05-18 after v1.1 milestone audit*

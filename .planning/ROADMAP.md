@@ -8,7 +8,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-7, shipped 2026-05-17. See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md).
-- ✅ **v1.1 Trustworthy Simulation Beta** — Phases 8-12, completed 2026-05-18.
+- ⚠️ **v1.1 Trustworthy Simulation Beta** — Phases 8-12, audit found closure gap 2026-05-18.
 
 ## Overview
 
@@ -180,8 +180,8 @@ Plans:
 | Milestone | Phases | Plans | Requirements | Status | Shipped |
 | --- | ---: | ---: | ---: | --- | --- |
 | v1.0 MVP | 7/7 | 33/33 | 80/80 | Complete | 2026-05-17 |
-| v1.1 Trustworthy Simulation Beta | 5/5 | 25/25 | 34/34 | Complete | 2026-05-18 |
+| v1.1 Trustworthy Simulation Beta | 5/5 | 25/25 | 32/34 | Gaps Found | — |
 
 ## Next
 
-Run the v1.1 milestone audit and archive when ready.
+Close the persisted owner replay debug gap before archiving v1.1.
