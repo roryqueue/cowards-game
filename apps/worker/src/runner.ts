@@ -7,24 +7,36 @@ import {
   recordAttemptFailure,
   type ClaimedMatchJob,
 } from "@cowards/persistence"
-import { createRuntimeFromRevision } from "@cowards/runtime-js/worker"
+import {
+  createRuntimeFromRevision,
+  SubprocessSystemFailure,
+} from "@cowards/runtime-js/worker"
 import {
   violation,
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
-import type { PlayerId } from "@cowards/spec"
+import type { JsonValue, PlayerId } from "@cowards/spec"
 import type { Pool } from "pg"
+import {
+  createWorkerRuntimeConfig,
+  type WorkerRuntimeConfig,
+} from "./runtime-config.js"
 
 export interface WorkerRunnerOptions {
   workerId: string
   once?: boolean
   pollMs?: number
+  runtimeConfig?: WorkerRuntimeConfig | undefined
 }
 
 export interface WorkerRunnerDependencies {
   claimNextMatchJob: typeof claimNextMatchJob
-  loadRunMatchInput: (pool: Pool, matchId: string) => Promise<RunMatchInput>
+  loadRunMatchInput: (
+    pool: Pool,
+    matchId: string,
+    runtimeConfig?: WorkerRuntimeConfig | undefined,
+  ) => Promise<RunMatchInput>
   buildChronicleFromMatch: typeof buildChronicleFromMatch
   completeMatch: typeof completeMatch
   recordAttemptFailure: typeof recordAttemptFailure
@@ -61,6 +73,7 @@ export const createSideDispatchRuntime = (
 export const loadRunMatchInput = async (
   pool: Pool,
   matchId: string,
+  runtimeConfig: WorkerRuntimeConfig = createWorkerRuntimeConfig(),
 ): Promise<RunMatchInput> => {
   const repositories = createRepositories(pool)
   const match = await repositories.getMatch(matchId)
@@ -91,8 +104,12 @@ export const loadRunMatchInput = async (
     bottomStrategyRevisionId,
     topStrategyRevisionId,
     runtime: createSideDispatchRuntime(
-      createRuntimeFromRevision(bottomRevision),
-      createRuntimeFromRevision(topRevision),
+      createRuntimeFromRevision(bottomRevision, {
+        adapter: runtimeConfig.adapter,
+      }),
+      createRuntimeFromRevision(topRevision, {
+        adapter: runtimeConfig.adapter,
+      }),
       {
         bottomPlayerId: String(match.bottom_player_id),
         topPlayerId: String(match.top_player_id),
@@ -109,11 +126,69 @@ const defaultDependencies: WorkerRunnerDependencies = {
   recordAttemptFailure,
 }
 
+const isJsonScalar = (value: unknown): value is JsonValue =>
+  value === null ||
+  typeof value === "string" ||
+  typeof value === "number" ||
+  typeof value === "boolean"
+
+const sanitizedSubprocessDetails = (
+  details: Readonly<Record<string, unknown>> | undefined,
+): JsonValue | undefined => {
+  if (!details) {
+    return undefined
+  }
+
+  const allowedKeys = [
+    "cause",
+    "signal",
+    "status",
+    "streamName",
+    "actualBytes",
+    "capBytes",
+  ] as const
+  const safeDetails: Record<string, JsonValue> = {}
+  for (const key of allowedKeys) {
+    const value = details[key]
+    if (isJsonScalar(value)) {
+      safeDetails[key] = value
+    }
+  }
+
+  return Object.keys(safeDetails).length > 0 ? safeDetails : undefined
+}
+
+const attemptFailureDetails = (input: {
+  workerId: string
+  matchId: string
+  runtimeConfig: WorkerRuntimeConfig
+  error: unknown
+}): JsonValue => {
+  const details: Record<string, JsonValue> = {
+    workerId: input.workerId,
+    matchId: input.matchId,
+    strategyExecutionAdapterId: input.runtimeConfig.metadata.id,
+    strategyExecutionAdapterBoundary:
+      input.runtimeConfig.metadata.isolationBoundary,
+  }
+
+  if (input.error instanceof SubprocessSystemFailure) {
+    details.strategyExecutionSystemFailureCode = input.error.code
+    const safeDetails = sanitizedSubprocessDetails(input.error.details)
+    if (safeDetails) {
+      details.strategyExecutionSystemFailureDetails = safeDetails
+    }
+  }
+
+  return details
+}
+
 export const runWorkerOnce = async (
   pool: Pool,
   options: WorkerRunnerOptions,
   dependencies: WorkerRunnerDependencies = defaultDependencies,
 ): Promise<"completed" | "failed_system" | "idle"> => {
+  const runtimeConfig = options.runtimeConfig ?? createWorkerRuntimeConfig()
   const claimed = await dependencies.claimNextMatchJob(pool, {
     workerId: options.workerId,
   })
@@ -122,7 +197,11 @@ export const runWorkerOnce = async (
   }
 
   try {
-    const input = await dependencies.loadRunMatchInput(pool, claimed.matchId)
+    const input = await dependencies.loadRunMatchInput(
+      pool,
+      claimed.matchId,
+      runtimeConfig,
+    )
     const result = dependencies.buildChronicleFromMatch(input)
     await dependencies.completeMatch(pool, {
       jobId: claimed.jobId,
@@ -138,10 +217,12 @@ export const runWorkerOnce = async (
       errorClass: error instanceof Error ? error.name : "UnknownError",
       errorMessage: error instanceof Error ? error.message : String(error),
       retryable: true,
-      details: {
+      details: attemptFailureDetails({
         workerId: options.workerId,
         matchId: claimed.matchId,
-      },
+        runtimeConfig,
+        error,
+      }),
     })
     return failureStatus === "failed_system" ? "failed_system" : "idle"
   }
