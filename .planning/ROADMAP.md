@@ -10,7 +10,7 @@
 - ✅ **v1.0 MVP** — Phases 1-7, shipped 2026-05-17. See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md).
 - ✅ **v1.1 Trustworthy Simulation Beta** — Phases 8-13, shipped 2026-05-18. See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md).
 - ✅ **v1.2 Competitive Alpha** — Phases 14-18, shipped 2026-05-19. See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md).
-- ◆ **v1.3 Competition Trust Beta** — Phases 19-24, planning.
+- ✅ **v1.3 Competition Trust Beta** — Phases 19-24, completed 2026-05-19. See [v1.3-MILESTONE-AUDIT.md](milestones/v1.3-MILESTONE-AUDIT.md).
 
 ## Overview
 
@@ -20,12 +20,12 @@ Coward's Game v1.3 turns the alpha competitive surface into a trustable beta loo
 
 | Phase | Name | Goal | Requirements | Status |
 | --- | --- | --- | ---: | --- |
-| 19 | Starter Strategy Library | Seed a credible, forkable library of playable starter doctrines and make them normal account-owned Strategy Revisions when forked. | 7 | Pending |
-| 20 | Trial Ladder Season Model | Define resettable season, entry, eligibility, snapshot, next-season replacement, stale revision, and publication contracts. | 14 | Pending |
-| 21 | Ladder Scheduling and Standings | Generate deterministic ladder MatchSets, aggregate counted standings, and exclude invalid/degraded/system-failed results from rankings. | 9 | Pending |
-| 22 | Public Profiles and Strategy Cards | Publish privacy-safe player handle pages and Strategy cards with lineage, history, standings, results, and replay links. | 6 | Pending |
-| 23 | Disputes and Competition Governance | Add result flagging, admin review, invalid/non-competitive marking, standings exclusion, and audit logs. | 8 | Pending |
-| 24 | Production Runtime Boundary Spike | Choose and prototype the production Strategy runtime boundary behind the existing adapter with hostile regression coverage. | 7 | Pending |
+| 19 | Starter Strategy Library | Seed a credible, forkable library of playable starter doctrines and make them normal account-owned Strategy Revisions when forked. | 7 | Complete |
+| 20 | Trial Ladder Season Model | Define resettable season, entry, eligibility, snapshot, next-season replacement, stale revision, and publication contracts. | 14 | Complete |
+| 21 | Ladder Scheduling and Standings | Generate deterministic ladder MatchSets, aggregate counted standings, and exclude invalid/degraded/system-failed results from rankings. | 9 | Complete |
+| 22 | Public Profiles and Strategy Cards | Publish privacy-safe player handle pages and Strategy cards with lineage, history, standings, results, and replay links. | 6 | Complete |
+| 23 | Disputes and Competition Governance | Add result flagging, admin review, invalid/non-competitive marking, standings exclusion, and audit logs. | 8 | Complete |
+| 24 | Production Runtime Boundary Spike | Choose and prototype the production Strategy runtime boundary behind the existing adapter with hostile regression coverage. | 7 | Complete |
 
 **Coverage:** 51 v1.3 requirements mapped, 0 unmapped.
 
@@ -71,7 +71,7 @@ Coward's Game v1.3 turns the alpha competitive surface into a trustable beta loo
 
 **Goal:** Seed a credible, forkable library of playable starter doctrines and make them normal account-owned Strategy Revisions when forked.
 **Mode:** standard
-**Status:** Pending
+**Status:** Complete
 
 **Requirements:** START-01, START-02, START-03, START-04, START-05, START-06, START-07
 
@@ -91,7 +91,7 @@ Coward's Game v1.3 turns the alpha competitive surface into a trustable beta loo
 
 **Goal:** Define resettable season, entry, eligibility, snapshot, next-season replacement, stale revision, and publication contracts.
 **Mode:** standard
-**Status:** Pending
+**Status:** Complete
 
 **Requirements:** SEASON-01, SEASON-02, SEASON-03, SEASON-04, SEASON-05, SEASON-06, ENTRY-01, ENTRY-02, ENTRY-03, ENTRY-04, ENTRY-05, ENTRY-06, ENTRY-07, ENTRY-08
 
@@ -111,7 +111,7 @@ Coward's Game v1.3 turns the alpha competitive surface into a trustable beta loo
 
 **Goal:** Generate deterministic ladder MatchSets, aggregate counted standings, and exclude invalid/degraded/system-failed results from rankings.
 **Mode:** standard
-**Status:** Pending
+**Status:** Complete
 
 **Requirements:** SCHED-01, SCHED-02, SCHED-03, SCHED-04, SCHED-05, SCHED-06, SCHED-07, SCHED-08, SCHED-09
 
@@ -131,7 +131,7 @@ Coward's Game v1.3 turns the alpha competitive surface into a trustable beta loo
 
 **Goal:** Publish privacy-safe player handle pages and Strategy cards with lineage, history, standings, results, and replay links.
 **Mode:** standard
-**Status:** Pending
+**Status:** Complete
 
 **Requirements:** PROF-01, PROF-02, PROF-03, PROF-04, PROF-05, PROF-06
 
@@ -150,7 +150,7 @@ Coward's Game v1.3 turns the alpha competitive surface into a trustable beta loo
 
 **Goal:** Add result flagging, admin review, invalid/non-competitive marking, standings exclusion, and audit logs.
 **Mode:** standard
-**Status:** Pending
+**Status:** Complete
 
 **Requirements:** GOV-01, GOV-02, GOV-03, GOV-04, GOV-05, GOV-06, GOV-07, GOV-08
 
@@ -170,7 +170,7 @@ Coward's Game v1.3 turns the alpha competitive surface into a trustable beta loo
 
 **Goal:** Choose and prototype the production Strategy runtime boundary behind the existing adapter with hostile regression coverage.
 **Mode:** standard
-**Status:** Pending
+**Status:** Complete
 
 **Requirements:** RUNTIME-01, RUNTIME-02, RUNTIME-03, RUNTIME-04, RUNTIME-05, RUNTIME-06, RUNTIME-07
 
@@ -193,8 +193,8 @@ Coward's Game v1.3 turns the alpha competitive surface into a trustable beta loo
 | v1.0 MVP | 7/7 | 33/33 | 80/80 | Complete | 2026-05-17 |
 | v1.1 Trustworthy Simulation Beta | 6/6 | 29/29 | 34/34 | Complete | 2026-05-18 |
 | v1.2 Competitive Alpha | 5/5 | 10/10 | 33/33 | Complete | 2026-05-19 |
-| v1.3 Competition Trust Beta | 0/6 | 0/TBD | 0/51 | Planning | — |
+| v1.3 Competition Trust Beta | 6/6 | 6/6 | 51/51 | Complete | 2026-05-19 |
 
 ## Next
 
-Run `$gsd-discuss-phase 19` to clarify Phase 19: Starter Strategy Library.
+Use the completed v1.3 demo ladder at `/ladder/v13-demo` to review player-facing trust flow and tune Starter Strategy balance in a future milestone.

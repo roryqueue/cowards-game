@@ -1,5 +1,6 @@
 import {
   createSubprocessStrategyExecutionAdapter,
+  createContainerSubprocessStrategyExecutionAdapter,
   createWorkerThreadStrategyExecutionAdapter,
   type StrategyExecutionAdapter,
   type StrategyExecutionAdapterMetadata,
@@ -39,6 +40,10 @@ export const createWorkerRuntimeConfig = (
     }
     case "subprocess": {
       const adapter = createSubprocessStrategyExecutionAdapter()
+      return { adapter, metadata: adapter.metadata }
+    }
+    case "container-subprocess": {
+      const adapter = createContainerSubprocessStrategyExecutionAdapter()
       return { adapter, metadata: adapter.metadata }
     }
     default:

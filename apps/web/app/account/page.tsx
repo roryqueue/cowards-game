@@ -22,6 +22,9 @@ export default async function AccountPage() {
           <div className="app-actions">
             <a href="/">Workshop</a>
             {user ? (
+              <a href={`/players/${user.handle}`}>Public profile</a>
+            ) : null}
+            {user ? (
               <form action="/api/auth/sign-out" method="post">
                 <button type="submit">Sign out</button>
               </form>
@@ -63,6 +66,11 @@ export default async function AccountPage() {
                       )}/source`}
                     >
                       Owner source
+                    </a>
+                    <a
+                      href={`/strategies/${encodeURIComponent(revision.strategyId)}`}
+                    >
+                      Public card
                     </a>
                   </div>
                 ))}

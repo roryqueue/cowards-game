@@ -40,6 +40,7 @@ export const subprocessStrategyExecutionAdapterMetadata: StrategyExecutionAdapte
     id: "subprocess",
     label: "Node subprocess",
     default: false,
+    productionReadiness: "prototype",
     isolationBoundary:
       "Opt-in process boundary for Strategy execution with one-shot JSON IPC.",
     notes: [
@@ -50,10 +51,22 @@ export const subprocessStrategyExecutionAdapterMetadata: StrategyExecutionAdapte
     ],
     runtimeControls: {
       timeout: true,
+      timeoutMs: RUNTIME_TIMEOUT_MS,
       outputByteLimit: true,
+      stdoutBytes: SUBPROCESS_STDOUT_BYTES,
+      stderrBytes: SUBPROCESS_STDERR_BYTES,
       environment: "minimal",
       execArgv: "empty",
       resourceLimits: [],
+      filesystem: "host",
+      network: "inherited",
+      shell: "disabled",
+    },
+    diagnostics: {
+      fallback: false,
+      dockerRequired: false,
+      preflight:
+        "Host subprocess prototype is useful for IPC and failure taxonomy, but not the selected production hostile-code boundary.",
     },
   }
 

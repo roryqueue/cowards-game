@@ -44,6 +44,16 @@ export default async function MatchSetResultPage({
       </main>
     )
   }
+  const governance =
+    result.metadata &&
+    typeof result.metadata === "object" &&
+    !Array.isArray(result.metadata)
+      ? (result.metadata as {
+          countedStatus?: string
+          publicExplanation?: string
+          reviewStatus?: string
+        })
+      : {}
 
   return (
     <main className="app-page">
@@ -63,9 +73,15 @@ export default async function MatchSetResultPage({
         <div className="status-strip">
           <span className="workshop-chip valid">{result.status}</span>
           <span>{resultCopy(result.status)}</span>
+          {governance.countedStatus ? (
+            <span>{governance.countedStatus}</span>
+          ) : null}
           <span>{result.scoringPolicy.id}</span>
           <span>{result.visibility}</span>
         </div>
+        {governance.publicExplanation ? (
+          <p className="workshop-muted">{governance.publicExplanation}</p>
+        ) : null}
 
         <div className="app-section-header compact">
           <h2>Standings</h2>

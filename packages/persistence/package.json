@@ -12,7 +12,11 @@
     "./chronicle-store": "./src/chronicle-store.ts",
     "./competition": "./src/competition.ts",
     "./db": "./src/db.ts",
+    "./governance": "./src/governance.ts",
+    "./ladder": "./src/ladder.ts",
+    "./profiles": "./src/profiles.ts",
     "./repositories": "./src/repositories.ts",
+    "./starter-strategies": "./src/starter-strategies.ts",
     "./workshop": "./src/workshop.ts"
   },
   "scripts": {

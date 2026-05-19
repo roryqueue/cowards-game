@@ -10,11 +10,13 @@ import {
   listWorkshopPresets,
   listWorkshopSamples,
   listWorkshopTemplates,
+  getWorkshopStaticSnapshot,
   WORKSHOP_STRATEGY_ID,
   WORKSHOP_MATCH_SET_PREFIX,
   WORKSHOP_OPPONENTS,
   workshopTemplateSource,
 } from "./workshop.js"
+import { listStarterStrategies } from "./starter-strategies.js"
 import { MATCH_SET_STATUSES } from "./schema.js"
 import {
   LIST_MATCH_STATUSES_FOR_SET_SQL,
@@ -74,6 +76,36 @@ describe("Workshop service contracts", () => {
     expect(
       listWorkshopTemplates().every((template) => template.validation.valid),
     ).toBe(true)
+  })
+
+  it("ships the full v1.3 Starter Strategy Library as distinct playable doctrines", () => {
+    const starters = listStarterStrategies()
+
+    expect(starters.map((starter) => starter.name)).toEqual([
+      "Centerline Bully",
+      "Corner Lurker",
+      "Backstab Hunter",
+      "Wall Press",
+      "Ring Runner",
+      "Mirror Breaker",
+      "Center Turtle",
+      "Aggro Chaser",
+      "Escape Artist",
+      "Trap Setter",
+    ])
+    expect(starters).toHaveLength(10)
+    expect(starters.every((starter) => starter.validation.valid)).toBe(true)
+    expect(starters.filter((starter) => starter.usesMemory)).toHaveLength(5)
+    expect(new Set(starters.map((starter) => starter.sourceHash)).size).toBe(10)
+  })
+
+  it("keeps the serious Starter Library separate from generic samples", () => {
+    const snapshot = getWorkshopStaticSnapshot()
+
+    expect(snapshot.starters).toHaveLength(10)
+    expect(snapshot.samples.map((sample) => sample.id)).not.toContain(
+      "starter:centerline-bully",
+    )
   })
 
   it("returns sample Strategy metadata for every catalog entry", () => {

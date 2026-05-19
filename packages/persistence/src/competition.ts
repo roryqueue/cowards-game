@@ -456,6 +456,10 @@ export const buildPublicMatchSetResultDto = async (
     scoring_policy_version: string | null
     visibility: "public" | null
     scoring: MatchSetScore | null
+    counted_status: string
+    public_counted_reason: string | null
+    public_counted_explanation: string | null
+    review_status: string
   }>(
     `
       select
@@ -465,7 +469,11 @@ export const buildPublicMatchSetResultDto = async (
         competition_preset_version,
         scoring_policy_version,
         visibility,
-        scoring
+        scoring,
+        counted_status,
+        public_counted_reason,
+        public_counted_explanation,
+        review_status
       from match_sets
       where id = $1
     `,
@@ -561,6 +569,16 @@ export const buildPublicMatchSetResultDto = async (
       : {}),
     arenaVariantId: row.arena_variant_id,
   }))
+  const hasCompleteEvidence =
+    matchSet.status === "complete" &&
+    matches.length > 0 &&
+    matches.every(
+      (match) => match.status === "complete" && match.replayAvailable,
+    )
+  const derivedCountedStatus =
+    matchSet.counted_status === "pending" && hasCompleteEvidence
+      ? "counted"
+      : matchSet.counted_status
   const dto: PublicMatchSetResultDto = {
     matchSetId,
     preset: {
@@ -595,6 +613,12 @@ export const buildPublicMatchSetResultDto = async (
         "owner debug",
         "private runtime internals",
       ],
+    },
+    metadata: {
+      countedStatus: derivedCountedStatus,
+      publicReason: matchSet.public_counted_reason,
+      publicExplanation: matchSet.public_counted_explanation,
+      reviewStatus: matchSet.review_status,
     },
   }
   assertPublicMatchSetResultLeakSafe(dto)

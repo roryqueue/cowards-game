@@ -4,10 +4,15 @@ import type {
   StrategyId,
   StrategyRevision,
   StrategyRevisionId,
+  StrategyRevisionMetadata,
   UserId,
 } from "@cowards/spec"
 import type { Pool } from "pg"
 import { createRepositories } from "./repositories.js"
+import {
+  findStarterStrategy,
+  type StarterStrategyId,
+} from "./starter-strategies.js"
 
 export class AccountRevisionError extends Error {
   constructor(message: string) {
@@ -21,6 +26,8 @@ export interface AccountStrategyRevisionSummary {
   strategyId: StrategyId
   label?: string | undefined
   notes?: string | undefined
+  tags?: string[] | undefined
+  starterLineage?: StrategyRevisionMetadata["starterLineage"] | undefined
   sourceHash: string
   sourceBytes: number
   valid: boolean
@@ -40,6 +47,8 @@ export const buildAccountStrategyRevision = (input: {
   source: string
   label?: string | undefined
   notes?: string | undefined
+  tags?: string[] | undefined
+  starterLineage?: StrategyRevisionMetadata["starterLineage"] | undefined
   strategyId?: StrategyId | undefined
 }): StrategyRevision => {
   const strategyId = input.strategyId ?? createAccountStrategyId(input.userId)
@@ -50,6 +59,8 @@ export const buildAccountStrategyRevision = (input: {
       createdBy: input.userId,
       ...(input.label ? { label: input.label } : {}),
       ...(input.notes ? { notes: input.notes } : {}),
+      ...(input.tags ? { tags: input.tags } : {}),
+      ...(input.starterLineage ? { starterLineage: input.starterLineage } : {}),
     },
   })
 }
@@ -61,6 +72,8 @@ export const createAccountStrategyRevision = async (
     source: string
     label?: string | undefined
     notes?: string | undefined
+    tags?: string[] | undefined
+    starterLineage?: StrategyRevisionMetadata["starterLineage"] | undefined
     strategyName?: string | undefined
     strategyId?: StrategyId | undefined
   },
@@ -71,7 +84,10 @@ export const createAccountStrategyRevision = async (
     id: revision.strategyId!,
     ownerUserId: input.userId,
     name: input.strategyName ?? input.label ?? "Account Strategy",
-    metadata: { accountOwned: true },
+    metadata: {
+      accountOwned: true,
+      ...(input.starterLineage ? { starterLineage: input.starterLineage } : {}),
+    },
   })
   await repositories.insertStrategyRevision(revision)
   return revision
@@ -120,6 +136,8 @@ export const listAccountStrategyRevisions = async (
     strategyId: row.strategy_id,
     label: row.metadata.label,
     notes: row.metadata.notes,
+    tags: row.metadata.tags,
+    starterLineage: row.metadata.starterLineage,
     sourceHash: row.source_hash,
     sourceBytes: row.source_bytes,
     valid: row.validation.valid,
@@ -128,6 +146,40 @@ export const listAccountStrategyRevisions = async (
     createdAt: row.created_at.toISOString(),
     ...(row.locked_at ? { lockedAt: row.locked_at.toISOString() } : {}),
   }))
+}
+
+export const forkStarterStrategyToAccount = async (
+  pool: Pool,
+  input: {
+    userId: UserId
+    starterId: StarterStrategyId | string
+  },
+): Promise<StrategyRevision> => {
+  const starter = findStarterStrategy(input.starterId)
+  if (!starter) {
+    throw new AccountRevisionError(
+      `Starter Strategy not found: ${input.starterId}`,
+    )
+  }
+  if (!starter.validation.valid) {
+    throw new AccountRevisionError(
+      `Starter Strategy is not valid: ${starter.name}`,
+    )
+  }
+  return createAccountStrategyRevision(pool, {
+    userId: input.userId,
+    source: starter.source,
+    label: starter.name,
+    notes: starter.description,
+    tags: starter.tags,
+    strategyName: starter.name,
+    starterLineage: {
+      starterId: starter.id,
+      starterName: starter.name,
+      starterVersion: starter.version,
+      sourceHash: starter.sourceHash,
+    },
+  })
 }
 
 export const getAccountStrategyRevisionSource = async (

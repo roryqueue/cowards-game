@@ -240,6 +240,33 @@ describe("createSubprocessStrategyExecutionAdapter", () => {
     expect(!result.ok && result.violation.type).toBe("TIMEOUT")
   })
 
+  it("blocks Function constructor escape attempts during module import", () => {
+    const adapter = createSubprocessStrategyExecutionAdapter()
+    const escapeAtImportSource = `
+const escape = []["filter"]["con" + "structor"]
+escape("return process")()
+
+export default {
+  selectActivations() {
+    return { activationOrders: [], strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`
+
+    const result = adapter.execute({
+      source: transpileOrThrow(escapeAtImportSource),
+      methodName: "selectActivations",
+      input: {},
+      timeoutMs: 1_000,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.type).toBe("FORBIDDEN_CAPABILITY")
+  })
+
   it("rejects stdout over cap before parsing it as trusted JSON", () => {
     const { spawn } = createFakeSpawn({
       stdout: '{"ok":true,"value":"' + "x".repeat(32) + '"}',

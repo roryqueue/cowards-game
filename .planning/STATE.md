@@ -2,37 +2,37 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: v1.3 Competition Trust Beta
-status: planning
-last_updated: "2026-05-19T00:00:00.000-04:00"
+status: complete
+last_updated: "2026-05-19T09:50:00.000-04:00"
 progress:
   total_phases: 6
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 6
+  total_plans: 6
+  completed_plans: 6
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** v1.3 Competition Trust Beta roadmap ready
+**Status:** v1.3 Competition Trust Beta complete
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 19: Starter Strategy Library
-**Completed milestone:** v1.2 Competitive Alpha
+**Current focus:** Completed v1.3 demo ladder review and future starter balance tuning
+**Completed milestone:** v1.3 Competition Trust Beta
 **Archived roadmap:** .planning/milestones/v1.2-ROADMAP.md
 **Archived requirements:** .planning/milestones/v1.2-REQUIREMENTS.md
 
 ## Current Position
 
-Phase: 19 - Starter Strategy Library
-Plan: —
-Status: v1.3 phase contexts gathered; ready to plan Phase 19
-Last activity: 2026-05-19 — Captured Phase 24 context in .planning/phases/24-production-runtime-boundary-spike/24-CONTEXT.md
+Phase: 24 - Production Runtime Boundary Spike
+Plan: 24-01
+Status: v1.3 phases 19-24 implemented, reviewed, validated, verified, and audited
+Last activity: 2026-05-19 — Completed v1.3 demo tournament and milestone audit.
 
 ## Workflow Settings
 
@@ -52,6 +52,7 @@ Last activity: 2026-05-19 — Captured Phase 24 context in .planning/phases/24-p
 | v1.0 MVP | 7 | 33 | 80/80 | Shipped |
 | v1.1 Trustworthy Simulation Beta | 6 | 29 | 34/34 | Shipped |
 | v1.2 Competitive Alpha | 5 | 10 | 33/33 | Shipped |
+| v1.3 Competition Trust Beta | 6 | 6 | 51/51 | Complete |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Last activity: 2026-05-19 — Captured Phase 24 context in .planning/phases/24-p
 - v1.2 starts competition as unranked exhibition MatchSets with public scoring, replay evidence, provenance, and privacy-safe publication.
 - v1.2 intentionally allows one user to enter multiple distinct Strategy Revisions into the same exhibition MatchSet for self-play testing; one Strategy per user is deferred to ranked or more formal competition.
 - Phase 14-18 artifacts are archived under `.planning/milestones/v1.2-phases/`.
+- v1.3 added Starter Library, resettable trial ladder seasons, deterministic scheduling, public profiles/cards, focused governance, and a containerized subprocess runtime boundary spike.
+- The v1.3 local demo ladder is available at `/ladder/v13-demo` while the web dev server is running.
 
 ## Deferred Items
 
@@ -76,7 +79,7 @@ Items acknowledged and deferred after v1.2 milestone completion on 2026-05-19:
 
 ## Next Command
 
-Run `$gsd-plan-phase 19` to plan the Starter Strategy Library phase.
+Review the completed v1.3 demo ladder and decide whether the next milestone should prioritize starter balance, richer tournament operations, or broader community identity.
 
 ---
-*Last updated: 2026-05-19 after completing v1.3 phase discussions*
+*Last updated: 2026-05-19 after completing v1.3 implementation and audit*

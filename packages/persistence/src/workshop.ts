@@ -25,6 +25,10 @@ import {
 } from "./matchset-status.js"
 import { getMatchSetPreset, type MatchSetPresetId } from "./presets.js"
 import { createRepositories } from "./repositories.js"
+import {
+  listStarterStrategies,
+  type StarterStrategySummary,
+} from "./starter-strategies.js"
 import type { MatchSetScore } from "./scoring.js"
 import {
   cautiousSource,
@@ -191,6 +195,7 @@ export interface WorkshopSnapshot {
   presets: WorkshopPresetSummary[]
   opponents: WorkshopOpponentSummary[]
   templates: WorkshopTemplateSummary[]
+  starters: StarterStrategySummary[]
   samples: WorkshopSampleSummary[]
 }
 
@@ -765,6 +770,7 @@ export const getWorkshopSnapshot = async (
   presets: listWorkshopPresets(),
   opponents: listWorkshopOpponents(),
   templates: listWorkshopTemplates(),
+  starters: listStarterStrategies(),
   samples: listWorkshopSamples(),
 })
 
@@ -775,5 +781,6 @@ export const getWorkshopStaticSnapshot = (): WorkshopSnapshot => ({
   presets: listWorkshopPresets(),
   opponents: listWorkshopOpponents(),
   templates: listWorkshopTemplates(),
+  starters: listStarterStrategies(),
   samples: listWorkshopSamples(),
 })

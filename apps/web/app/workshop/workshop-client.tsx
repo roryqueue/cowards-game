@@ -45,6 +45,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState(
     firstTemplate?.id ?? "",
   )
+  const [selectedStarterId, setSelectedStarterId] = useState("")
   const [selectedSampleId, setSelectedSampleId] = useState("")
   const [source, setSource] = useState(
     firstTemplate?.source ?? initialData.templateSource,
@@ -70,6 +71,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const [accountSaving, setAccountSaving] = useState(false)
   const [accountMessage, setAccountMessage] = useState("")
   const [accountError, setAccountError] = useState("")
+  const [forkingStarter, setForkingStarter] = useState(false)
   const [selectedOpponentId, setSelectedOpponentId] = useState(
     initialData.opponents[0]?.id ?? "",
   )
@@ -86,6 +88,13 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
         (template) => template.id === selectedTemplateId,
       ) ?? null,
     [initialData.templates, selectedTemplateId],
+  )
+  const selectedStarter = useMemo(
+    () =>
+      initialData.starters.find(
+        (starter) => starter.id === selectedStarterId,
+      ) ?? null,
+    [initialData.starters, selectedStarterId],
   )
   const sampleGroups = useMemo(
     () => groupWorkshopSamples(initialData.samples),
@@ -115,6 +124,10 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     ...(currentValidation?.errors ?? []),
     ...(currentValidation?.warnings ?? []),
   ]
+  const selectedStarterMatchesDraft =
+    Boolean(selectedStarter) &&
+    source === selectedStarter?.source &&
+    currentValidation?.sourceHash === selectedStarter?.sourceHash
 
   const validateSource = async (nextSource = source) => {
     setChecking(true)
@@ -149,10 +162,26 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       return
     }
     setSelectedTemplateId(template.id)
+    setSelectedStarterId("")
     setSelectedSampleId("")
     setSource(template.source)
     setValidation(template.validation)
     setValidationSource(template.source)
+    setIsDirty(false)
+  }
+
+  const applyStarter = (starter: WorkshopSnapshot["starters"][number]) => {
+    if (isDirty && !window.confirm(replaceDraftCopy)) {
+      return
+    }
+    setSelectedTemplateId("")
+    setSelectedStarterId(starter.id)
+    setSelectedSampleId("")
+    setSource(starter.source)
+    setValidation(starter.validation)
+    setValidationSource(starter.source)
+    setLabel(starter.name)
+    setNotes(starter.description)
     setIsDirty(false)
   }
 
@@ -161,6 +190,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       return
     }
     setSelectedTemplateId("")
+    setSelectedStarterId("")
     setSelectedSampleId(sample.id)
     setSource(sample.source)
     setValidation(sample.validation)
@@ -170,6 +200,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
 
   const onSourceChange = (nextSource: string) => {
     setSource(nextSource)
+    setSelectedStarterId("")
     setValidation(null)
     setValidationSource("")
     setIsDirty(true)
@@ -220,7 +251,14 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       const response = await fetch("/api/account/revisions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ source, label, notes }),
+        body: JSON.stringify({
+          source,
+          label,
+          notes,
+          ...(selectedStarterMatchesDraft && selectedStarter
+            ? { starterId: selectedStarter.id }
+            : {}),
+        }),
       })
       const body = (await response.json()) as { error?: string }
       if (!response.ok) {
@@ -230,6 +268,33 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       setAccountMessage("Saved to competitive account")
     } finally {
       setAccountSaving(false)
+    }
+  }
+
+  const forkStarter = async () => {
+    if (!selectedStarter) {
+      return
+    }
+    setForkingStarter(true)
+    setAccountError("")
+    setAccountMessage("")
+    try {
+      const response = await fetch("/api/account/starter-forks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ starterId: selectedStarter.id }),
+      })
+      const body = (await response.json()) as {
+        error?: string
+        revision?: { label?: string | undefined }
+      }
+      if (!response.ok || !body.revision) {
+        setAccountError(body.error ?? "Starter fork failed.")
+        return
+      }
+      setAccountMessage(`Forked ${body.revision.label ?? selectedStarter.name}`)
+    } finally {
+      setForkingStarter(false)
     }
   }
 
@@ -325,6 +390,64 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
               </span>
             </div>
             <p className="workshop-muted">Local Player</p>
+          </section>
+
+          <section className="workshop-panel workshop-template-panel">
+            <h2 className="workshop-heading">Starter Library</h2>
+            <div className="workshop-list" data-testid="starter-library">
+              {initialData.starters.map((starter) => (
+                <button
+                  className={`workshop-list-row ${starter.id === selectedStarter?.id ? "active" : ""}`}
+                  aria-pressed={starter.id === selectedStarter?.id}
+                  data-starter-id={starter.id}
+                  key={starter.id}
+                  onClick={() => applyStarter(starter)}
+                  type="button"
+                >
+                  <span className="workshop-sample-title">{starter.name}</span>
+                  <span className="workshop-muted">{starter.description}</span>
+                  <span className="workshop-chip-row">
+                    {starter.tags.map((tag) => (
+                      <span className="workshop-chip valid" key={tag}>
+                        {tag}
+                      </span>
+                    ))}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {selectedStarter ? (
+              <div className="starter-detail" data-testid="starter-detail">
+                <p className="workshop-label">Doctrine notes</p>
+                <ul>
+                  {selectedStarter.doctrineNotes.map((note) => (
+                    <li key={note}>{note}</li>
+                  ))}
+                </ul>
+                <dl className="details-grid">
+                  <dt>hash</dt>
+                  <dd>{selectedStarter.sourceHash.slice(0, 16)}</dd>
+                  <dt>bytes</dt>
+                  <dd>{selectedStarter.sourceBytes}</dd>
+                  <dt>validation</dt>
+                  <dd>
+                    {selectedStarter.validation.valid ? "valid" : "invalid"}
+                  </dd>
+                  <dt>memory</dt>
+                  <dd>
+                    {selectedStarter.usesMemory ? "uses memory" : "stateless"}
+                  </dd>
+                </dl>
+                <button
+                  className="primary"
+                  disabled={forkingStarter}
+                  type="button"
+                  onClick={() => void forkStarter()}
+                >
+                  {forkingStarter ? "Forking..." : "Fork to my account"}
+                </button>
+              </div>
+            ) : null}
           </section>
 
           <section className="workshop-panel workshop-template-panel">

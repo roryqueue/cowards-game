@@ -7,6 +7,10 @@ export {
   workerThreadStrategyExecutionAdapterMetadata,
 } from "./adapter.js"
 export {
+  containerSubprocessStrategyExecutionAdapterMetadata,
+  createContainerSubprocessStrategyExecutionAdapter,
+} from "./container-subprocess-adapter.js"
+export {
   createSubprocessStrategyExecutionAdapter,
   subprocessStrategyExecutionAdapterMetadata,
 } from "./subprocess-adapter.js"

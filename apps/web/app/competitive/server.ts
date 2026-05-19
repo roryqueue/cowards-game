@@ -12,6 +12,7 @@ import {
 import {
   AccountRevisionError,
   createAccountStrategyRevision,
+  forkStarterStrategyToAccount,
   getAccountStrategyRevisionSource,
   listAccountStrategyRevisions,
   type AccountStrategyRevisionSummary,
@@ -24,13 +25,37 @@ import {
   createManualExhibitionMatchSet,
 } from "@cowards/persistence/competition"
 import {
+  buildTrialLadderSeasonDto,
+  createTrialLadderSeason,
+  enterTrialLadderSeason,
+  LadderInputError,
+  scheduleTrialLadderSeason,
+  setTrialLadderSeasonStatus,
+  withdrawTrialLadderEntry,
+} from "@cowards/persistence/ladder"
+import {
+  assertAdminUser,
+  flagMatchSetResult,
+  GovernanceInputError,
+  markMatchSetGovernanceStatus,
+} from "@cowards/persistence/governance"
+import {
+  buildPublicPlayerProfileDto,
+  buildPublicStrategyCardDto,
+} from "@cowards/persistence/profiles"
+import { findStarterStrategy } from "@cowards/persistence/starter-strategies"
+import {
   COMPETITION_PRESET_IDS,
   COMPETITION_PRESETS,
   type CompetitionPresetId,
   type MatchId,
   type MatchSetId,
   type PublicMatchSetResultDto,
+  type PublicPlayerProfileDto,
+  type PublicStrategyCardDto,
+  type PublicTrialLadderSeasonDto,
   type StrategyRevisionId,
+  type TrialLadderSeasonStatus,
 } from "@cowards/spec"
 
 export const SESSION_COOKIE_NAME = "cowards_session"
@@ -101,6 +126,10 @@ export interface MatchSetResultDto extends Omit<
   matches: CompetitiveMatchLedgerRow[]
 }
 
+export type TrialLadderSeasonDto = PublicTrialLadderSeasonDto
+export type PlayerProfileDto = PublicPlayerProfileDto
+export type StrategyCardDto = PublicStrategyCardDto
+
 type PersistencePool = Parameters<typeof createAccount>[0]
 type WithPool = <T>(fn: (pool: PersistencePool) => Promise<T>) => Promise<T>
 
@@ -159,7 +188,9 @@ const mapPersistenceError = (error: unknown): never => {
   if (
     error instanceof AuthInputError ||
     error instanceof AccountRevisionError ||
-    error instanceof CompetitionInputError
+    error instanceof CompetitionInputError ||
+    error instanceof LadderInputError ||
+    error instanceof GovernanceInputError
   ) {
     throw new CompetitiveInputError(error.message, { status: 400 })
   }
@@ -331,15 +362,61 @@ export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
 
     async saveAccountRevision(
       user: CompetitiveUser,
-      input: { source: unknown; label: unknown; notes: unknown },
+      input: {
+        source: unknown
+        label: unknown
+        notes: unknown
+        starterId?: unknown
+      },
     ): Promise<CompetitiveRevisionSummary> {
       try {
         return await withPool(async (pool) => {
+          const source = normalizeText(input.source)
+          const starter =
+            typeof input.starterId === "string"
+              ? findStarterStrategy(input.starterId)
+              : null
+          const starterMatchesSource =
+            starter !== null && starter.source === source
           const revision = await createAccountStrategyRevision(pool, {
             userId: user.id,
-            source: normalizeText(input.source),
+            source,
             label: normalizeOptionalText(input.label),
             notes: normalizeOptionalText(input.notes),
+            ...(starterMatchesSource
+              ? {
+                  tags: starter.tags,
+                  strategyName: starter.name,
+                  starterLineage: {
+                    starterId: starter.id,
+                    starterName: starter.name,
+                    starterVersion: starter.version,
+                    sourceHash: starter.sourceHash,
+                  },
+                }
+              : {}),
+          })
+          const revisions = await listAccountStrategyRevisions(pool, user.id)
+          return (
+            revisions.find((candidate) => candidate.id === revision.id) ??
+            revisions[0]!
+          )
+        })
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async forkStarterStrategy(
+      user: CompetitiveUser,
+      input: { starterId: unknown },
+    ): Promise<CompetitiveRevisionSummary> {
+      try {
+        return await withPool(async (pool) => {
+          const starterId = normalizeText(input.starterId)
+          const revision = await forkStarterStrategyToAccount(pool, {
+            userId: user.id,
+            starterId,
           })
           const revisions = await listAccountStrategyRevisions(pool, user.id)
           return (
@@ -385,6 +462,175 @@ export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
             matchCount: result.matchIds.length,
           }
         })
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async createTrialLadderSeason(
+      user: CompetitiveUser,
+      input: {
+        name: unknown
+        slug: unknown
+        description: unknown
+        seasonSeed?: unknown
+      },
+    ): Promise<{ seasonId: string }> {
+      try {
+        return await withPool(async (pool) => ({
+          seasonId: await (async () => {
+            await assertAdminUser(pool, user.id)
+            return createTrialLadderSeason(pool, {
+              name: normalizeText(input.name),
+              slug: normalizeText(input.slug),
+              description: normalizeOptionalText(input.description),
+              seasonSeed: normalizeOptionalText(input.seasonSeed),
+            })
+          })(),
+        }))
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async setTrialLadderSeasonStatus(input: {
+      seasonId: unknown
+      status: unknown
+      actorUserId?: string | undefined
+      reason: unknown
+    }): Promise<void> {
+      try {
+        return await withPool(async (pool) => {
+          if (input.actorUserId) {
+            await assertAdminUser(pool, input.actorUserId)
+          }
+          return setTrialLadderSeasonStatus(pool, {
+            seasonId: normalizeText(input.seasonId),
+            status: normalizeText(input.status) as TrialLadderSeasonStatus,
+            actorUserId: input.actorUserId,
+            reason: normalizeText(input.reason),
+          })
+        })
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async enterTrialLadderSeason(
+      user: CompetitiveUser,
+      input: { seasonId: unknown; revisionId: unknown },
+    ): Promise<{ entryId: string }> {
+      try {
+        return await withPool(async (pool) => ({
+          entryId: await enterTrialLadderSeason(pool, {
+            seasonId: normalizeText(input.seasonId),
+            userId: user.id,
+            revisionId: normalizeText(input.revisionId) as StrategyRevisionId,
+          }),
+        }))
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async withdrawTrialLadderEntry(
+      user: CompetitiveUser,
+      seasonId: string,
+    ): Promise<void> {
+      try {
+        return await withPool((pool) =>
+          withdrawTrialLadderEntry(pool, { seasonId, userId: user.id }),
+        )
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async scheduleTrialLadderSeason(
+      user: CompetitiveUser,
+      seasonId: string,
+    ): Promise<{
+      scheduleRunId: string
+      createdMatchSetIds: string[]
+      leftoverEntryIds: string[]
+    }> {
+      try {
+        return await withPool(async (pool) => {
+          await assertAdminUser(pool, user.id)
+          return scheduleTrialLadderSeason(pool, {
+            seasonId,
+            actorUserId: user.id,
+          })
+        })
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async getTrialLadderSeason(
+      seasonIdOrSlug: string,
+    ): Promise<TrialLadderSeasonDto | null> {
+      try {
+        return await withPool((pool) =>
+          buildTrialLadderSeasonDto(pool, seasonIdOrSlug),
+        )
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async flagMatchSetResult(
+      user: CompetitiveUser,
+      input: { matchSetId: unknown; note: unknown },
+    ): Promise<{ flagId: string }> {
+      try {
+        return await withPool(async (pool) => ({
+          flagId: await flagMatchSetResult(pool, {
+            matchSetId: normalizeText(input.matchSetId),
+            userId: user.id,
+            note: normalizeText(input.note),
+          }),
+        }))
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async markMatchSetGovernanceStatus(
+      user: CompetitiveUser,
+      input: Parameters<typeof markMatchSetGovernanceStatus>[1],
+    ): Promise<void> {
+      try {
+        return await withPool((pool) =>
+          markMatchSetGovernanceStatus(pool, {
+            ...input,
+            adminUserId: user.id,
+          }),
+        )
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async getPublicPlayerProfile(
+      handle: string,
+    ): Promise<PlayerProfileDto | null> {
+      try {
+        return await withPool((pool) =>
+          buildPublicPlayerProfileDto(pool, handle),
+        )
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async getPublicStrategyCard(
+      strategyId: string,
+    ): Promise<StrategyCardDto | null> {
+      try {
+        return await withPool((pool) =>
+          buildPublicStrategyCardDto(pool, strategyId),
+        )
       } catch (error) {
         return mapPersistenceError(error)
       }

@@ -6,15 +6,32 @@ export interface StrategyExecutionAdapterMetadata {
   id: string
   label: string
   default: boolean
+  productionReadiness?:
+    | "production-candidate"
+    | "prototype"
+    | "local-dev-fallback"
   isolationBoundary: string
   notes: readonly string[]
   runtimeControls: {
     timeout: boolean
+    timeoutMs?: number | undefined
     outputByteLimit: boolean
+    stdoutBytes?: number | undefined
+    stderrBytes?: number | undefined
     environment: "empty" | "minimal" | "inherited"
     execArgv: "empty" | "inherited"
     resourceLimits: readonly string[]
+    filesystem?: "none" | "read-only-root" | "host" | undefined
+    network?: "disabled" | "inherited" | undefined
+    shell?: "disabled" | "inherited" | undefined
   }
+  diagnostics?:
+    | {
+        fallback: boolean
+        dockerRequired: boolean
+        preflight: string
+      }
+    | undefined
 }
 
 export interface StrategyExecutionAdapterOptions {
@@ -38,6 +55,7 @@ export const workerThreadStrategyExecutionAdapterMetadata: StrategyExecutionAdap
     id: "worker-thread",
     label: "Node worker thread",
     default: true,
+    productionReadiness: "local-dev-fallback",
     isolationBoundary:
       "Default compatibility containment and prototype boundary for Strategy execution; not a final sandbox for hostile Strategy code.",
     notes: [
@@ -55,6 +73,15 @@ export const workerThreadStrategyExecutionAdapterMetadata: StrategyExecutionAdap
         "maxYoungGenerationSizeMb: 8",
         "stackSizeMb: 4",
       ],
+      filesystem: "host",
+      network: "inherited",
+      shell: "disabled",
+    },
+    diagnostics: {
+      fallback: true,
+      dockerRequired: false,
+      preflight:
+        "Available anywhere Node worker_threads are available; not approved as production hostile-code isolation.",
     },
   }
 

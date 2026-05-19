@@ -251,6 +251,14 @@ export const StrategyRevisionMetadataSchema = z.object({
   label: z.string().min(1).optional(),
   notes: z.string().min(1).optional(),
   tags: z.array(z.string().min(1)).optional(),
+  starterLineage: z
+    .object({
+      starterId: z.string().min(1),
+      starterName: z.string().min(1),
+      starterVersion: z.string().min(1),
+      sourceHash: z.string().min(1),
+    })
+    .optional(),
 })
 
 export const StrategyRevisionSchema = z.object({

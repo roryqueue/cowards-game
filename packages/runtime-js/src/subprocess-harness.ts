@@ -187,8 +187,8 @@ const strategyModuleUrl = (source) =>
 
 const runStrategy = async (request) => {
   installGlobalBlocks()
-  const imported = await import(strategyModuleUrl(request.source).href)
   installFunctionConstructorBlock()
+  const imported = await import(strategyModuleUrl(request.source).href)
   const strategy = imported.default
   const method = strategy && strategy[request.methodName]
   if (typeof method !== "function") {

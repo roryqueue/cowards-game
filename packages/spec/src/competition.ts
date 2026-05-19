@@ -24,6 +24,145 @@ export type CompetitionStatus =
   | "degraded"
   | "failed"
 
+export const TRIAL_LADDER_SEASON_STATUSES = [
+  "draft",
+  "open",
+  "scheduling",
+  "active",
+  "completed",
+  "archived",
+] as const
+
+export type TrialLadderSeasonStatus =
+  (typeof TRIAL_LADDER_SEASON_STATUSES)[number]
+
+export const TRIAL_LADDER_ENTRY_STATUSES = [
+  "active",
+  "withdrawn",
+  "suspended",
+  "invalidated",
+  "stale",
+] as const
+
+export type TrialLadderEntryStatus =
+  (typeof TRIAL_LADDER_ENTRY_STATUSES)[number]
+
+export type LadderMatchSetCountedStatus =
+  | "pending"
+  | "counted"
+  | "retrying"
+  | "under_review"
+  | "invalid"
+  | "non_competitive"
+  | "non_counted"
+
+export type LadderNonCountedReason =
+  | "system_failure"
+  | "incomplete_evidence"
+  | "invalid_result"
+  | "governance_hold"
+  | "non_counted"
+
+export interface TrialLadderPolicyDto {
+  oneEntryPerUser: true
+  replacementPolicy: "next-season-only"
+  staleRevisionPolicy: string
+  standingsReset: true
+  noPermanentRatings: true
+  minimumEntries: number
+  targetPodSize: number
+}
+
+export interface TrialLadderEntrySnapshot extends CompetitionEntrantSnapshot {
+  seasonId: string
+  entryId: string
+  status: TrialLadderEntryStatus
+  strategyName: string
+  strategyDescription?: string | undefined
+  tags: string[]
+}
+
+export interface PublicTrialLadderSeasonDto {
+  seasonId: string
+  slug: string
+  name: string
+  status: TrialLadderSeasonStatus
+  statusLabel: string
+  description?: string | undefined
+  seasonSeed: string
+  openedAt?: string | undefined
+  closedAt?: string | undefined
+  scheduledAt?: string | undefined
+  completedAt?: string | undefined
+  archivedAt?: string | undefined
+  policy: TrialLadderPolicyDto
+  entries: TrialLadderEntrySnapshot[]
+  standings: PublicStandingDto[]
+  matchSets: PublicLadderMatchSetSummaryDto[]
+  publication: {
+    publicEntries: true
+    publicStandings: true
+    publicReplayEvidence: true
+    privateFieldsExcluded: string[]
+  }
+}
+
+export interface PublicLadderMatchSetSummaryDto {
+  matchSetId: MatchSetId
+  seasonId: string
+  scheduleRunId?: string | undefined
+  podIndex?: number | undefined
+  status: CompetitionStatus
+  countedStatus: LadderMatchSetCountedStatus
+  publicReason?: LadderNonCountedReason | undefined
+  publicExplanation?: string | undefined
+  entrantIds: string[]
+  replayHref?: string | undefined
+  resultHref: string
+}
+
+export interface PublicPlayerProfileDto {
+  handle: string
+  displayName: string
+  strategies: PublicStrategyCardDto[]
+  ladderHistory: Array<{
+    seasonId: string
+    seasonName: string
+    entryStatus: TrialLadderEntryStatus
+    points: number
+    rank?: number | undefined
+  }>
+  results: PublicLadderMatchSetSummaryDto[]
+}
+
+export interface PublicStrategyCardDto {
+  strategyId: string
+  strategyRevisionId: StrategyRevisionId
+  name: string
+  description?: string | undefined
+  tags: string[]
+  authorHandle: string
+  sourceHash: string
+  sourceBytes: number
+  runtime: CompetitionEntrantSnapshot["runtime"]
+  engineCompatibility: CompetitionEntrantSnapshot["engineCompatibility"]
+  validationStatus: "valid" | "invalid"
+  starterLineage?: {
+    starterId: string
+    starterName: string
+    starterVersion: string
+    sourceHash: string
+  }
+  record: {
+    wins: number
+    losses: number
+    draws: number
+    points: number
+  }
+  resultLinks: string[]
+  replayLinks: string[]
+}
+
 export interface CompetitionScoringPolicy {
   id: "exhibition-points-v1"
   version: "v1"
@@ -199,6 +338,10 @@ const forbiddenPublicResultKeys = new Set([
   "privateRuntime",
   "privateError",
   "awarenessGrid",
+  "session",
+  "password",
+  "passwordHash",
+  "token",
 ])
 
 export const assertPublicMatchSetResultLeakSafe = (value: unknown): void => {

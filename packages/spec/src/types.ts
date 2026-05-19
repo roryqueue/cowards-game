@@ -229,6 +229,14 @@ export interface StrategyRevisionMetadata {
   label?: string | undefined
   notes?: string | undefined
   tags?: string[] | undefined
+  starterLineage?:
+    | {
+        starterId: string
+        starterName: string
+        starterVersion: string
+        sourceHash: string
+      }
+    | undefined
 }
 
 export interface StrategyRevision {

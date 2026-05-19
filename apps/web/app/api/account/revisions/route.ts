@@ -38,6 +38,7 @@ export async function POST(request: Request): Promise<Response> {
       source: body.source,
       label: body.label,
       notes: body.notes,
+      starterId: body.starterId,
     })
     return Response.json({ revision }, { status: 201 })
   } catch (error) {
