@@ -1,87 +1,39 @@
-# Research: Pitfalls
+# Pitfalls Research: v1.2 Competitive Alpha
 
-**Project:** Coward's Game
-**Date:** 2026-05-18
-**Milestone context:** v1.1 Trustworthy Simulation Beta
+**Date:** 2026-05-19
 
-## Critical Pitfalls
+## Competition Scope Creep
 
-### 1. Confusing valid schema with valid Chronicle
+**Risk:** Unranked exhibition quietly turns into ranked ladder infrastructure.
 
-**Risk:** A Chronicle can parse but still describe impossible gameplay.
-**Warning signs:** Replay renders after only Zod parsing; event order checks remain shallow; snapshots are accepted without semantic relation to events.
-**Prevention:** Add strict grammar validation and fixture tests for impossible sequences, impossible snapshots, missing required contexts, and unsupported versions.
-**Phase mapping:** Strict Chronicle grammar phase.
+**Prevention:** Keep durable ratings, ranking history, tournaments, and one Strategy per user limits out of v1.2. Model publication and scoring carefully, but avoid permanent competitive standing.
 
-### 2. Replacing hand-authored fixtures with different hand-authored fixtures
+## Ownership Shortcut Leakage
 
-**Risk:** The replay gallery looks better but is still not anchored to legal engine output.
-**Warning signs:** Demo data is edited directly in web fixtures; legality tests assert visual properties only; Backstab/push/fall beats do not come from the engine.
-**Prevention:** Generate canonical scenarios through engine/test-utils and make UI consume projected legal Chronicles.
-**Phase mapping:** Replay fixture fidelity phase.
+**Risk:** Existing `player:workshop-local` ownership appears in persisted competitive flows.
 
-### 3. Over-trusting worker threads
+**Prevention:** Make stable User identity a Phase 14 gate for competitive submission and entry. Keep local Workshop ownership either migrated or explicitly non-competitive.
 
-**Risk:** Hostile Strategy code is treated as contained because it runs in a Worker.
-**Warning signs:** Worker-thread `resourceLimits` are described as the sandbox; no process boundary exists; hostile tests only check friendly forbidden patterns.
-**Prevention:** Document worker threads as prototype isolation, add subprocess/container/WASM direction, and implement or spike a subprocess adapter with explicit failure modes.
-**Phase mapping:** Runtime isolation phase.
+## Self-Play Blocked Too Early
 
-### 4. Treating Node Permission Model as a sandbox
+**Risk:** Duplicate policy accidentally prevents one user from testing multiple Strategy Revisions against each other.
 
-**Risk:** A subprocess with `--permission` gives a false sense of security against malicious code.
-**Warning signs:** Permission flags replace OS/container isolation; subprocesses run under same user with broad filesystem access; debug/inspector edge cases are ignored.
-**Prevention:** Use permissions only as defense-in-depth, with separate process/container/user boundaries and no sensitive env/file descriptors.
-**Phase mapping:** Runtime isolation phase.
+**Prevention:** Reject exact duplicate snapshots, not same-owner distinct revisions. Defer one Strategy per user rules to ranked or more formal competition.
 
-### 5. Letting debug UX infer rules in React
+## Public Privacy Regression
 
-**Risk:** "Why did this Soldier do nothing?" logic diverges from engine truth.
-**Warning signs:** Replay components infer legal moves or activation consequences from board position; UI contains Backstab/push/contraction rule code.
-**Prevention:** Produce explanation DTOs from replay/engine-derived data and keep React as renderer.
-**Phase mapping:** Doctrine debugging UX phase.
+**Risk:** Result pages expose Strategy source, memory, objectives, raw Awareness Grid details, owner debug, or runtime internals.
 
-### 6. Privacy regression through helpful debugging
+**Prevention:** Route public evidence through v1.1 public projection gates and add competitive result privacy tests.
 
-**Risk:** Owner debug improvements leak Strategy source, StrategyMemory, SoldierMemory, objective payloads, or raw runtime details into public replay.
-**Warning signs:** Public DTO grows new debug fields; projection tests only inspect top-level keys; private refs are dereferenced without viewer checks.
-**Prevention:** Add projection-level and browser-level privacy tests for every new debug field.
-**Phase mapping:** Chronicle grammar and debugging UX phases.
+## Non-Deterministic Scoring
 
-### 7. Screenshot tests becoming flaky or ornamental
+**Risk:** Tie-breakers depend on timestamps, database order, worker timing, or incidental execution details.
 
-**Risk:** Visual regression tests add CI noise without catching board correctness issues.
-**Warning signs:** Full-page screenshots include dynamic text/timers; snapshots depend on local fonts or running animation; tests assert marketing page pixels instead of board state.
-**Prevention:** Use deterministic fixture data, fixed viewports, stable selectors, disabled animations, and focused board/callout screenshots.
-**Phase mapping:** Replay fixture fidelity phase.
+**Prevention:** Define scoring and tie-breakers as explicit versioned contracts with deterministic inputs only.
 
-### 8. Docker path and no-Docker path drifting apart
+## Misclassified Failures
 
-**Risk:** One local setup works and the other rots, causing E2E failures and onboarding pain.
-**Warning signs:** `dev:full` assumes Docker Compose but no app container health; `dev:local` only handles Postgres; CI uses a third undocumented setup.
-**Prevention:** Add shared preflight checks and document parity expectations. Test both startup modes where feasible.
-**Phase mapping:** Local/CI reliability phase.
+**Risk:** System failures become player penalties or strategy failures become hidden degraded results.
 
-### 9. Runtime failures classified too coarsely
-
-**Risk:** Strategy violations, system failures, and compatibility failures become indistinguishable in replay and Match status.
-**Warning signs:** All failures become `THROWN_EXCEPTION`; timeouts, malformed IPC, subprocess exit, and validation failures share one message.
-**Prevention:** Expand failure taxonomy while preserving public/private privacy boundaries.
-**Phase mapping:** Runtime isolation and debugging UX phases.
-
-### 10. Pulling ranked ladder into the trust milestone
-
-**Risk:** Competitive surface area appears before replay/runtime foundations can defend it.
-**Warning signs:** Ranking/scoring requirements appear before strict Chronicle and runtime isolation completion.
-**Prevention:** Keep ladders explicitly out of scope for v1.1.
-**Phase mapping:** Milestone scope guard.
-
-## Sources
-
-- Node `vm` docs: https://nodejs.org/api/vm.html
-- Node `worker_threads` docs: https://nodejs.org/api/worker_threads.html
-- Node Permission Model docs: https://nodejs.org/api/permissions.html
-- Docker resource constraints: https://docs.docker.com/engine/containers/resource_constraints/
-- Playwright screenshot assertions: https://playwright.dev/docs/api/class-pageassertions
-- `.planning/RETROSPECTIVE.md`
-- `.planning/STATE.md`
+**Prevention:** Carry forward runtime failure taxonomy and require valid-result criteria before publication.

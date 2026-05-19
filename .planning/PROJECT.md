@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.1 Trustworthy Simulation Beta on 2026-05-18
-**Status:** Trustworthy simulation beta complete; ready to define the next milestone.
-**Audit:** Passed, 34/34 v1.1 requirements satisfied.
+**Status:** v1.2 Competitive Alpha is active and ready for Phase 14 planning.
+**Audit:** v1.1 passed, 34/34 requirements satisfied.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, run service-backed MatchSets, persist strict Chronicles, replay legal engine-generated scenarios, and inspect public or authorized owner-debug replays with high confidence that the replay reflects the engine and that private Strategy data remains contained.
 
@@ -12,14 +12,16 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Next Milestone Goals
+## Current Milestone: v1.2 Competitive Alpha
 
-Fresh requirements should be defined with `$gsd-new-milestone`. Good candidates now that v1.1 is shipped:
+**Goal:** A developer/player can submit immutable Strategy Revisions into a small unranked or seeded competitive MatchSet, inspect fair scoring and replay evidence, and trust that public results do not leak private Strategy data.
 
-- Competitive surfaces such as ladders, tournaments, scoring policy, or public Match history.
-- Production-grade ownership/session authorization beyond the local Workshop owner trust source.
-- Runtime sandbox expansion toward container, microVM, or WASM/WASI execution.
-- Arena expansion only after replay compatibility and privacy policy remain stable.
+**Target features:**
+- Username/password sign in and session-backed stable User identity for competitive submissions.
+- Immutable Strategy Revision ownership and private-source authorization checks beyond `player:workshop-local`.
+- Small unranked or seeded exhibition MatchSets with presets, entrants, immutable snapshots, scoring policy, tie-breakers, stale revision behavior, result publication rules, and alpha self-play that allows one user to enter multiple distinct Strategy Revisions.
+- Public MatchSet result pages with per-Match replay evidence, scoring breakdowns, degraded/failed Match handling, and provenance suitable for disputes.
+- Competitive abuse and fairness guardrails for rate limits, duplicate submissions, runtime failure penalties, sandbox failure policy, visibility, and valid-result criteria.
 
 ## Validated in v1.0
 
@@ -62,10 +64,11 @@ Planning archives live under `.planning/milestones/`:
 
 ## Out of Scope Until Replanned
 
-- Ranked ladders, public tournaments, and spectator surfaces.
+- Ranked ladders, durable ratings, public tournaments, and spectator surfaces beyond public MatchSet result pages.
+- One Strategy per user competition limits until ranked or more formal competition is introduced.
 - Randomized arena generation and custom user-created maps.
 - Multi-language runtimes beyond the hardened JS/TS runtime boundary.
-- Production-grade account/session ownership and authorization.
+- Enterprise-grade authentication features such as email verification, password reset, OAuth, organizations, admin moderation, and account recovery.
 - Live model inference or live human control during Matches.
 - Monetization, cosmetics, strategy marketplace, and reinforcement-learning harnesses.
 
@@ -83,6 +86,8 @@ Planning archives live under `.planning/milestones/`:
 | Preserve JS/TS runtime while hardening boundary | Worker-thread execution remains prototype containment; subprocess adapter and hostile matrix clarify next sandbox direction. | ✓ Revisit for production sandbox |
 | Keep owner debug server-authorized | Query params may request owner debug, but server-side participant checks decide whether owner DTOs are returned. | ✓ Good |
 | Defer ladders until trust base is sharp | Avoids replay disputes, sandbox abuse, stale revisions, compatibility confusion, and privacy leaks before the platform is ready. | ✓ Good |
+| Start competition with exhibition MatchSets | Unranked or seeded MatchSets provide real competitive evidence without committing to durable ratings too early. | Active in v1.2 |
+| Add only minimal production ownership first | Competitive submissions need stable User identity and private-source authorization, but email/OAuth/recovery can wait. | Active in v1.2 |
 
 ## Constraints
 
@@ -99,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-18 after v1.1 milestone completion*
+*Last updated: 2026-05-19 after v1.2 milestone definition*

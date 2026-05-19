@@ -1,162 +1,40 @@
-# Research: Architecture
+# Architecture Research: v1.2 Competitive Alpha
 
-**Project:** Coward's Game
-**Date:** 2026-05-18
-**Milestone context:** v1.1 Trustworthy Simulation Beta
+**Date:** 2026-05-19
 
-## Existing Architecture Snapshot
+## Integration Points
 
-```txt
-apps/web
-  -> Workshop APIs and replay UI
-  -> persistence package
-  -> replay projection
+- `apps/web`: sign-in/sign-out UI, session-aware Workshop ownership, competitive entry screens, public result pages.
+- `apps/web/app/workshop`: migrate persisted competitive submission ownership away from `player:workshop-local`.
+- `apps/web/app/matches`: extend MatchSet server DTOs and result projection paths.
+- `apps/worker`: continue executing Match jobs through existing runtime boundaries and classify strategy/system failures for competition policy.
+- `packages/spec`: add shared schemas for User, session-visible owner identity, competitive presets, entries, scoring policy, publication policy, and result DTOs.
+- `packages/replay`: reuse strict Chronicle validation, public projection, provenance, and privacy gates for public result evidence.
+- `packages/runtime-js`: preserve adapter metadata and failure taxonomy; do not move Strategy execution into web/API processes.
 
-apps/worker
-  -> queued Match runner
-  -> runtime-js
-  -> pure engine
-  -> Chronicle builder
-  -> persistence package
+## Data Flow
 
-packages/spec
-  -> canonical types, Zod schemas, versions
+1. User signs in and receives a session.
+2. User submits or selects an owned immutable Strategy Revision.
+3. Competitive entry validates session, ownership, revision compatibility, preset, visibility, and duplicate snapshot policy.
+4. MatchSet locks entrants as immutable snapshots.
+5. Worker executes Matches through existing runtime boundaries.
+6. Scoring policy consumes Match outcomes and failure classifications.
+7. Public result DTO projects standings, evidence, provenance, and replay links without private Strategy data.
+8. Authorized owner views can request private source or owner debug through server-side checks.
 
-packages/engine
-  -> pure rules and runtime interface
+## Build Order
 
-packages/replay
-  -> Chronicle build, validate, reconstruct, project, hash
+1. Ownership/session foundation.
+2. MatchSet competition contracts and scoring policy.
+3. Exhibition queue and seeding flows.
+4. Public result pages and replay evidence.
+5. Guardrail enforcement and tests.
 
-packages/runtime-js
-  -> Strategy Revision validation, transpile, worker-thread execution
+## Constraints
 
-packages/test-utils
-  -> engine scenarios
-```
-
-This is the right shape. v1.1 should deepen the replay/runtime contracts inside these packages instead of moving rule logic into UI or persistence.
-
-## Proposed v1.1 Build Path
-
-### 1. Engine-Generated Replay Fixtures
-
-Move replay demo inputs toward `packages/test-utils` scenario builders that call the engine and Chronicle builder. Each scenario should produce:
-
-- legal Match input
-- Chronicle
-- final state
-- expected event types
-- expected visual checkpoints
-
-`apps/web` can still own UI-specific fixture projection, but the legality source should be engine/replay packages.
-
-### 2. Chronicle Grammar Validator
-
-Add grammar validation in `packages/replay`, layered after `ChronicleSchema.safeParse`.
-
-Suggested structure:
-
-```txt
-validateChronicle
-  -> parse schema
-  -> validate versions
-  -> validate sequence numbers
-  -> validate grammar windows
-  -> validate context/payload consistency
-  -> validate snapshot boundaries and references
-  -> validate privacy projection constraints
-  -> validate optional integrity hash
-```
-
-Represent grammar as explicit state transitions rather than scattered ad hoc checks. A small finite-state validator is easier to test exhaustively:
-
-- `pre-match`
-- `in-match`
-- `in-round`
-- `in-activation`
-- `in-cycle`
-- `post-match`
-
-This does not need to re-run Strategy source. For impossible board transitions, compare snapshots and event effects where snapshots exist. Full replay reconstruction can remain in `reconstruct.ts`, but invalid Chronicles should fail before UI render.
-
-### 3. Runtime Adapter Boundary
-
-Add a runtime execution adapter boundary in `packages/runtime-js`:
-
-```txt
-StrategyRuntime
-  -> createRuntimeFromRevision
-    -> StrategyExecutionAdapter
-      -> workerThreadAdapter (existing)
-      -> subprocessAdapter (v1.1 spike/implementation)
-```
-
-The adapter interface should accept only method name, source hash/source, and schema-valid input. It should return only `RuntimeResult<unknown>`. Validation into `StrategyResultSchema` or `SoldierBrainResultSchema` should remain outside the raw adapter.
-
-Subprocess adapter requirements:
-
-- `spawn` a child process with no shell.
-- Provide minimal env.
-- Use JSON lines or one-shot JSON over stdin/stdout.
-- Cap stdout/stderr bytes.
-- Kill on timeout.
-- Treat nonzero exit, malformed response, timeout, and signal exit as distinct failure modes.
-- Do not inherit database URL, app env, file descriptors, or web/API context.
-
-### 4. Replay Debugging DTOs
-
-Keep public replay DTOs privacy-safe. Add owner-only explanation fields generated from public event context plus owner private refs:
-
-- soldier did nothing because it was not selected
-- activation order missing or invalid
-- Soldier was STONE/FALLEN
-- action invalid or blocked
-- runtime violation occurred
-- Match/round/activation already ended
-
-The UI should consume explanation DTOs, not infer rules in React.
-
-### 5. Local/CI Reliability Layer
-
-Add a preflight command or package script that checks:
-
-- Postgres reachable
-- Redis reachable if still expected by compose/dev path
-- migrations applied
-- seed data present or seed command available
-- worker can claim/run one test job
-- replay endpoint can return a valid replay
-
-This can be used by both Docker and no-Docker local paths.
-
-## Suggested Phase Order
-
-1. Replay fixture legality and visual regression corpus
-2. Strict Chronicle grammar and compatibility failure handling
-3. Runtime isolation adapter and hostile-code test matrix
-4. Doctrine debugging UX
-5. Local/CI service reliability and end-to-end confidence
-
-## Integration Rules
-
-- Do not put game rules in React components.
-- Do not execute Strategy source in `apps/web` or API routes.
-- Keep grammar validation in `packages/replay`, not persistence.
-- Keep engine deterministic and side-effect free.
-- Keep runtime adapter replaceable.
-- Keep public replay projection separate from owner debug projection.
-
-## Sources
-
-- `packages/spec/src/schemas.ts`
-- `packages/replay/src/validate.ts`
-- `packages/replay/src/build.ts`
-- `packages/replay/src/project.ts`
-- `packages/runtime-js/src/worker-bridge.ts`
-- `packages/runtime-js/src/worker-harness.ts`
-- `apps/worker/src/runner.ts`
-- `compose.yaml`
-- `scripts/dev-local-postgres.sh`
-- Node `child_process` docs: https://nodejs.org/api/child_process.html
-- Node Permission Model docs: https://nodejs.org/api/permissions.html
+- Keep engine logic pure and side-effect free.
+- Do not put game rules or scoring rules in React components.
+- Do not execute Strategy code in the web/API process.
+- Do not use wall-clock time, database row order, worker scheduling, or random values for deterministic scoring or tie-breakers.
+- Keep public result projection privacy-safe by default.

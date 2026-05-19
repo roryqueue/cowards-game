@@ -58,3 +58,27 @@ None from the open-artifact audit.
 - Production authentication/session ownership remains deferred.
 - Ranked ladders and public competitive surfaces remain deferred.
 - Production-grade container, microVM, or WASM/WASI sandboxing remains future runtime work.
+
+## v1.2 Competitive Alpha
+
+**Status:** Planning started 2026-05-19
+**Phases:** 5 planned, Phases 14-18
+**Plans:** 0/TBD
+**Requirements:** 0/33 planned
+**Success criterion:** A developer/player can submit immutable Strategy Revisions into a small unranked or seeded competitive MatchSet, inspect fair scoring and replay evidence, and trust that public results do not leak private Strategy data.
+
+### Planned Scope
+
+- Add minimal username/password sign in, sign out, stable User identity, display name/handle, and session-backed authorization for competitive submissions.
+- Replace `player:workshop-local` for persisted competitive ownership while keeping private Strategy source and owner debug access server-authorized.
+- Define MatchSet competition presets, entrants, immutable Strategy Revision snapshots, scoring policy, tie-breakers, stale revision behavior, and result publication rules.
+- Ship unranked or seeded exhibition MatchSets before ranked ladders, including alpha self-play where one user can enter multiple distinct owned Strategy Revisions into the same competition.
+- Publish public MatchSet result pages with scoring breakdowns, per-Match replay evidence, degraded/failed handling, and dispute-friendly provenance.
+- Add abuse and fairness guardrails for rate limits, exact duplicate snapshots, runtime failure penalties, sandbox/system failure policy, visibility, and valid competitive result criteria.
+
+### Deferred Items
+
+- One Strategy per user competition limits are deferred until ranked or more formal competition.
+- Ranked ladders, durable ratings, and public tournaments remain future work.
+- Email verification, password reset, OAuth, passkeys, organizations, account recovery, and admin moderation remain future account work.
+- Production-grade container, microVM, or WASM/WASI sandboxing remains future runtime work.

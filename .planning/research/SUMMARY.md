@@ -1,66 +1,68 @@
 # Research Summary
 
 **Project:** Coward's Game
-**Date:** 2026-05-18
-**Milestone context:** v1.1 Trustworthy Simulation Beta
+**Date:** 2026-05-19
+**Milestone context:** v1.2 Competitive Alpha
 
 ## Key Findings
 
-**Stack:** Keep the TypeScript monorepo and current package boundaries. Add strict Chronicle grammar, engine-generated replay fixtures, targeted Playwright screenshot checks, runtime adapter hardening, and shared local/CI preflight tooling. Do not introduce a new app framework or ranked infrastructure.
+**Stack:** Keep the current TypeScript monorepo, Next.js web app, shared packages, PostgreSQL persistence, worker execution, Chronicle validation, and Playwright/Vitest verification spine. v1.2 should add minimal account/session persistence and competitive MatchSet data contracts without changing the engine's purity boundary.
 
-**Runtime:** The current `worker_threads` runtime is useful prototype isolation, especially with V8 `resourceLimits`, but it is not the final hostile-code boundary. Node docs explicitly reject `node:vm` for untrusted code, and Node's Permission Model is defense-in-depth rather than a malicious-code sandbox. v1.1 should add an adapter boundary and subprocess/container/WASM direction with concrete tests.
+**Ownership:** Competitive submissions need stable User identity, password-backed sign in, session persistence, display names/handles, and server-side ownership checks. Email verification, password reset, OAuth, account recovery, organizations, and admin moderation are not required for this alpha.
 
-**Replay:** Zod event schemas validate shape, not truth. v1.1 should add semantic Chronicle grammar: allowed event sequences, required event context and payloads, snapshot boundaries, privacy constraints, and version compatibility behavior. Invalid Chronicles should fail before rendering.
+**Competition:** Start with small unranked or seeded exhibition MatchSets rather than ranked ladders. The model must lock immutable Strategy Revision snapshots, define stale revision behavior, scoring policy, tie-breakers, publication rules, and failure policy before UX surfaces make results public.
 
-**UX:** Debugging should explain doctrine outcomes without moving rules into React. Owner-only replay overlays can answer "why did this Soldier do nothing?" if the explanation is generated from replay/engine data and privacy projection is tested.
+**Self-play:** v1.2 should allow one user to enter multiple distinct owned Strategy Revisions into the same exhibition MatchSet so developers/players can test strategies against each other. Exact duplicate snapshots can be rejected; one Strategy per user belongs with ranked or more formal competition.
 
-**Reliability:** Docker and no-Docker local development both exist but need shared preflight and clearer service-backed E2E. CI should verify edit -> submit -> execute -> replay and focused visual replay regressions.
+**Replay Evidence:** Public result pages should show standings, score breakdowns, per-Match replay links, degraded/failed handling, and provenance. Public projections must preserve v1.1 privacy gates for Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid details, and runtime internals.
+
+**Fairness:** Competitive Alpha needs basic abuse and fairness guardrails: rate limits, duplicate snapshot handling, deterministic runtime failure penalties, system-vs-strategy failure classification, valid-result criteria, and tests proving public output stays privacy-safe.
 
 ## Prescriptive Direction
 
-1. Start v1.1 with engine-generated replay scenarios and visual regression checks, because they create the legal demo corpus used by later grammar and UX work.
-2. Build strict Chronicle grammar in `packages/replay`, layered after Zod schema parsing and before replay rendering.
-3. Add runtime execution adapter hardening in `packages/runtime-js`; treat Worker execution as a compatibility adapter and add subprocess/container/WASM guidance plus hostile-code tests.
-4. Improve Workshop/replay debugging only after replay data has stronger legal/grammar guarantees.
-5. End with local/CI reliability so the whole trust loop is repeatable in Docker, no-Docker, and service-backed CI paths.
+1. Start with competitive ownership/session work so Strategy Revisions and entries have stable owners before public competition flows rely on them.
+2. Define MatchSet competition contracts before building queue or result UI; scoring and publication rules are trust contracts, not decoration.
+3. Build exhibition/seeding flows as unranked alpha competition and explicitly allow same-owner self-play with distinct Strategy Revisions.
+4. Publish result/replay evidence only through strict Chronicle validation and public privacy projection.
+5. Close the milestone with guardrail tests that prove invalid, duplicate, failed, degraded, and private-leaking competitive outputs are handled correctly.
 
 ## Requirements Implications
 
-Recommended v1.1 requirement categories:
+Recommended v1.2 requirement categories:
 
-- Replay Fidelity
-- Chronicle Grammar
-- Runtime Isolation
-- Doctrine Debugging
-- Local/CI Reliability
+- Competitive Ownership
+- MatchSet Competition Model
+- Exhibition Queue
+- Results and Replay Evidence
+- Abuse and Fairness Guardrails
 
 ## Roadmap Implications
 
-Recommended phase continuation after v1.0 Phase 7:
+Recommended phase continuation after v1.1 Phase 13:
 
-1. **Phase 8: Replay Fixture Fidelity and Visual Regression**
-   Engine-generated legal scenario fixtures plus screenshot checks.
-2. **Phase 9: Strict Chronicle Grammar and Compatibility**
-   Exhaustive event grammar, snapshot validation, privacy checks, and explicit failure states.
-3. **Phase 10: Runtime Isolation Hardening**
-   Runtime adapter boundary, subprocess/container/WASM spike or implementation, hostile-code tests, failure taxonomy.
-4. **Phase 11: Doctrine Debugging UX**
-   Better validation messages, sample strategies, replay links, runtime explanations, owner-only debug overlays.
-5. **Phase 12: Local and CI Reliability**
-   Docker/no-Docker parity, service preflight, broader service-backed edit -> submit -> execute -> replay E2E.
+1. **Phase 14: Competitive Ownership and Sessions**
+   Minimal username/password ownership, sessions, Strategy ownership, and competitive authorization.
+2. **Phase 15: MatchSet Competition Model**
+   Presets, immutable snapshots, scoring, tie-breakers, stale revision behavior, and publication contracts.
+3. **Phase 16: Exhibition Queue and Entry**
+   Unranked or seeded MatchSets, alpha self-play, queue status, compatibility checks, and exact duplicate handling.
+4. **Phase 17: Result Pages and Replay Evidence**
+   Public MatchSet pages, scoring breakdowns, replay links, provenance, degraded/failed Match visibility, and privacy-safe output.
+5. **Phase 18: Abuse and Fairness Guardrails**
+   Rate limits, duplicate policy, failure penalties, valid-result criteria, and privacy/fairness tests.
 
 ## Watch Out For
 
-- Rendering parsed-but-impossible Chronicles.
-- Calling Worker threads or Node permissions a sandbox.
-- Letting helpful debug overlays leak private Strategy data.
-- Writing rule explanations in React instead of replay/engine-derived DTOs.
-- Letting screenshot tests become broad and flaky.
-- Pulling ranked ladders into v1.1 before trust foundations are sharp.
+- Accidentally turning exhibition MatchSets into ranked ladder infrastructure.
+- Treating `player:workshop-local` as a competitive owner.
+- Enforcing one Strategy per user too early and losing useful self-play testing.
+- Publishing Strategy source, StrategyMemory, SoldierMemory, objectives, owner debug, raw Awareness Grid details, or runtime internals on public result pages.
+- Letting tie-breakers depend on wall-clock time, database row order, worker scheduling, or any other non-deterministic source.
+- Penalizing players for system failures instead of classifying degraded or invalid competitive results.
 
 ## Sources
 
-- `.planning/research/STACK.md`
-- `.planning/research/FEATURES.md`
-- `.planning/research/ARCHITECTURE.md`
-- `.planning/research/PITFALLS.md`
+- User milestone brief for v1.2 Competitive Alpha.
+- `.planning/PROJECT.md`
+- `.planning/milestones/v1.1-REQUIREMENTS.md`
+- `.planning/milestones/v1.1-ROADMAP.md`
