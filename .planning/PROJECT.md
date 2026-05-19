@@ -2,26 +2,24 @@
 
 ## Current State
 
-**Shipped version:** v1.1 Trustworthy Simulation Beta on 2026-05-18
-**Status:** v1.2 Competitive Alpha is active and ready for Phase 14 planning.
-**Audit:** v1.1 passed, 34/34 requirements satisfied.
+**Shipped version:** v1.2 Competitive Alpha on 2026-05-19
+**Status:** Ready to define the next milestone.
+**Audit:** v1.2 passed, 33/33 requirements satisfied.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, run service-backed MatchSets, persist strict Chronicles, replay legal engine-generated scenarios, and inspect public or authorized owner-debug replays with high confidence that the replay reflects the engine and that private Strategy data remains contained.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, enter them into public unranked exhibition MatchSets, inspect fair scoring and replay evidence, and trust that public outputs do not expose private Strategy data.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.2 Competitive Alpha
+## Next Milestone Goals
 
-**Goal:** A developer/player can submit immutable Strategy Revisions into a small unranked or seeded competitive MatchSet, inspect fair scoring and replay evidence, and trust that public results do not leak private Strategy data.
+The next milestone should be defined with `$gsd-new-milestone`. Strong candidates:
 
-**Target features:**
-- Username/password sign in and session-backed stable User identity for competitive submissions.
-- Immutable Strategy Revision ownership and private-source authorization checks beyond `player:workshop-local`.
-- Small unranked or seeded exhibition MatchSets with presets, entrants, immutable snapshots, scoring policy, tie-breakers, stale revision behavior, result publication rules, and alpha self-play that allows one user to enter multiple distinct Strategy Revisions.
-- Public MatchSet result pages with per-Match replay evidence, scoring breakdowns, degraded/failed Match handling, and provenance suitable for disputes.
-- Competitive abuse and fairness guardrails for rate limits, duplicate submissions, runtime failure penalties, sandbox failure policy, visibility, and valid-result criteria.
+- Ranked or semi-ranked competitive progression now that exhibition MatchSets, scoring evidence, and privacy gates exist.
+- Competition moderation/dispute tooling, including richer result provenance review and admin workflows.
+- Production account hardening: email verification, password reset, OAuth/passkeys, and account recovery.
+- Stronger runtime isolation using container, microVM, or WASM/WASI execution behind the existing StrategyRuntime adapter boundary.
 
 ## Validated in v1.0
 
@@ -43,6 +41,16 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - ✓ Persisted owner replay debug authorization for local Workshop Matches, proven through service-backed failing Strategy E2E.
 - ✓ Docker and no-Docker local preflight paths plus service-backed, smoke, visual, and fast CI command slices.
 
+## Validated in v1.2
+
+- ✓ Username/password account creation, sign-in, sign-out, session persistence, display name, and public handle for competitive ownership.
+- ✓ Stable User identity attached to account-owned immutable Strategy Revisions.
+- ✓ Session-backed authorization for saving account revisions, entering owned revisions into exhibitions, and retrieving owner-only Strategy source.
+- ✓ Competition presets, immutable entrant snapshots, MatchSet publication policy, deterministic scoring, tie-breakers, and public result DTO privacy checks.
+- ✓ Unranked public exhibition MatchSets supporting 2-8 distinct owned revisions, including multiple revisions from the same user for alpha self-play.
+- ✓ Public MatchSet result pages with status, standings, scoring policy, replay links, provenance, owner-only source affordances, and privacy-safe output.
+- ✓ Abuse and fairness guardrails for rate limits, active duplicate submissions, valid entry criteria, public leak rejection, and runtime/web isolation boundaries.
+
 ## Context
 
 Source specifications are archived in the repository root:
@@ -61,6 +69,10 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.1-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.1-INTEGRATION-CHECK.md`
 - `.planning/milestones/v1.1-phases/`
+- `.planning/milestones/v1.2-ROADMAP.md`
+- `.planning/milestones/v1.2-REQUIREMENTS.md`
+- `.planning/milestones/v1.2-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.2-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -86,8 +98,10 @@ Planning archives live under `.planning/milestones/`:
 | Preserve JS/TS runtime while hardening boundary | Worker-thread execution remains prototype containment; subprocess adapter and hostile matrix clarify next sandbox direction. | ✓ Revisit for production sandbox |
 | Keep owner debug server-authorized | Query params may request owner debug, but server-side participant checks decide whether owner DTOs are returned. | ✓ Good |
 | Defer ladders until trust base is sharp | Avoids replay disputes, sandbox abuse, stale revisions, compatibility confusion, and privacy leaks before the platform is ready. | ✓ Good |
-| Start competition with exhibition MatchSets | Unranked or seeded MatchSets provide real competitive evidence without committing to durable ratings too early. | Active in v1.2 |
-| Add only minimal production ownership first | Competitive submissions need stable User identity and private-source authorization, but email/OAuth/recovery can wait. | Active in v1.2 |
+| Start competition with exhibition MatchSets | Unranked or seeded MatchSets provide real competitive evidence without committing to durable ratings too early. | ✓ Good |
+| Add only minimal production ownership first | Competitive submissions need stable User identity and private-source authorization, but email/OAuth/recovery can wait. | ✓ Good |
+| Allow same-user multi-revision exhibition entry in alpha | Self-play is valuable for doctrine testing; one-strategy-per-user belongs with ranked or more formal competition. | ✓ Good |
+| Publish result evidence without Strategy internals | Public standings, replay links, hashes, and provenance are enough for alpha disputes while source/memory/objective data stays private. | ✓ Good |
 
 ## Constraints
 
@@ -104,4 +118,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-19 after v1.2 milestone definition*
+*Last updated: 2026-05-19 after v1.2 milestone completion*

@@ -61,24 +61,32 @@ None from the open-artifact audit.
 
 ## v1.2 Competitive Alpha
 
-**Status:** Planning started 2026-05-19
-**Phases:** 5 planned, Phases 14-18
-**Plans:** 0/TBD
-**Requirements:** 0/33 planned
-**Success criterion:** A developer/player can submit immutable Strategy Revisions into a small unranked or seeded competitive MatchSet, inspect fair scoring and replay evidence, and trust that public results do not leak private Strategy data.
+**Status:** Shipped 2026-05-19
+**Phases:** 5
+**Plans:** 10
+**Requirements:** 33/33 satisfied
+**Audit:** .planning/milestones/v1.2-MILESTONE-AUDIT.md
 
-### Planned Scope
+### Delivered
 
-- Add minimal username/password sign in, sign out, stable User identity, display name/handle, and session-backed authorization for competitive submissions.
-- Replace `player:workshop-local` for persisted competitive ownership while keeping private Strategy source and owner debug access server-authorized.
-- Define MatchSet competition presets, entrants, immutable Strategy Revision snapshots, scoring policy, tie-breakers, stale revision behavior, and result publication rules.
-- Ship unranked or seeded exhibition MatchSets before ranked ladders, including alpha self-play where one user can enter multiple distinct owned Strategy Revisions into the same competition.
-- Publish public MatchSet result pages with scoring breakdowns, per-Match replay evidence, degraded/failed handling, and dispute-friendly provenance.
-- Add abuse and fairness guardrails for rate limits, exact duplicate snapshots, runtime failure penalties, sandbox/system failure policy, visibility, and valid competitive result criteria.
+- Added minimal username/password accounts, session-backed stable User identity, display names/handles, and sign-in/sign-out for competitive submissions.
+- Added account-owned immutable Strategy Revision saves, owner-only source access, and server-side authorization for competitive entry.
+- Defined public exhibition competition presets, entrant snapshots, MatchSet publication policy, deterministic scoring, tie-breakers, and public result DTO leak guards.
+- Shipped unranked public exhibition MatchSets that allow 2-8 distinct owned revisions, including multiple revisions from the same user for alpha self-play.
+- Published MatchSet result pages with standings, scoring evidence, per-Match replay links, provenance, degraded/failed vocabulary, and private-data exclusions.
+- Added abuse/fairness guardrails for rate limits, active duplicate submissions, entry validity, runtime failure penalties, and runtime/web isolation boundaries.
 
-### Deferred Items
+### Archives
 
-- One Strategy per user competition limits are deferred until ranked or more formal competition.
+- .planning/milestones/v1.2-ROADMAP.md
+- .planning/milestones/v1.2-REQUIREMENTS.md
+- .planning/milestones/v1.2-MILESTONE-AUDIT.md
+- .planning/milestones/v1.2-phases/
+
+### Known Deferred Items
+
 - Ranked ladders, durable ratings, and public tournaments remain future work.
+- One Strategy per user competition limits remain deferred until ranked or more formal competition.
 - Email verification, password reset, OAuth, passkeys, organizations, account recovery, and admin moderation remain future account work.
+- Rich dispute workflow beyond provenance and replay evidence remains future moderation/product work.
 - Production-grade container, microVM, or WASM/WASI sandboxing remains future runtime work.

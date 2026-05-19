@@ -1,7 +1,7 @@
 # Roadmap: Coward's Game
 
 **Last updated:** 2026-05-19
-**Current milestone:** v1.2 Competitive Alpha
+**Current milestone:** Next milestone not started
 **Granularity:** Standard
 **Execution:** Parallel where phase plans are independent
 
@@ -9,158 +9,45 @@
 
 - ✅ **v1.0 MVP** — Phases 1-7, shipped 2026-05-17. See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md).
 - ✅ **v1.1 Trustworthy Simulation Beta** — Phases 8-13, shipped 2026-05-18. See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md).
-- ◇ **v1.2 Competitive Alpha** — Phases 14-18, active.
-
-## Overview
-
-Coward's Game v1.2 opens the first real competitive surface while preserving the trust base earned in v1.1. The milestone starts with minimal production ownership, then builds unranked or seeded exhibition MatchSets, public scoring and replay evidence, and fairness guardrails that make competitive results trustworthy without committing to ranked ladders yet.
-
-## Phase Summary
-
-| Phase | Name | Goal | Requirements | Status |
-| --- | --- | --- | ---: | --- |
-| 14 | Competitive Ownership and Sessions | Replace the local Workshop owner shortcut for competitive submissions with stable username/password User ownership and session-backed authorization. | 7 | Pending |
-| 15 | MatchSet Competition Model | Define deterministic competition presets, immutable entrants, scoring, tie-breakers, stale revision behavior, and publication policy. | 8 | Pending |
-| 16 | Exhibition Queue and Entry | Let users or developers submit owned immutable Strategy Revisions, including multiple revisions from the same owner, into small unranked or seeded public MatchSets. | 6 | Pending |
-| 17 | Result Pages and Replay Evidence | Publish dispute-friendly MatchSet results with scoring breakdowns, per-Match replays, provenance, degraded/failed handling, and privacy-safe projections. | 6 | Pending |
-| 18 | Abuse and Fairness Guardrails | Enforce rate limits, duplicate policies, runtime failure penalties, sandbox failure policy, visibility rules, and valid-result criteria. | 6 | Pending |
-
-**Coverage:** 33 v1.2 requirements mapped, 0 unmapped.
+- ✅ **v1.2 Competitive Alpha** — Phases 14-18, shipped 2026-05-19. See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md).
 
 ## Phases
 
 <details>
 <summary>✅ v1.0 MVP (Phases 1-7) — SHIPPED 2026-05-17</summary>
 
-- [x] Phase 1: Foundation And Spec Contracts (4/4 plans)
-- [x] Phase 2: Pure Rules Engine (5/5 plans)
-- [x] Phase 3: Chronicle And Replay Core (5/5 plans)
-- [x] Phase 4: Strategy Runtime Sandbox (4/4 plans)
-- [x] Phase 5: Match Orchestration And Persistence (5/5 plans)
-- [x] Phase 6: Strategy Workshop Ux (5/5 plans)
-- [x] Phase 7: Replay Viewer And End To End Verification (5/5 plans)
-
-Archived phase details: [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) and [v1.0-phases/](milestones/v1.0-phases/).
+- [x] Phase 1: Foundation And Spec Contracts (4/4 plans) — archived in `.planning/milestones/v1.0-phases/01-foundation-and-spec-contracts/`
+- [x] Phase 2: Pure Rules Engine (5/5 plans) — archived in `.planning/milestones/v1.0-phases/02-pure-rules-engine/`
+- [x] Phase 3: Chronicle And Replay Core (5/5 plans) — archived in `.planning/milestones/v1.0-phases/03-chronicle-and-replay-core/`
+- [x] Phase 4: Strategy Runtime Sandbox (4/4 plans) — archived in `.planning/milestones/v1.0-phases/04-strategy-runtime-sandbox/`
+- [x] Phase 5: Match Orchestration And Persistence (5/5 plans) — archived in `.planning/milestones/v1.0-phases/05-match-orchestration-and-persistence/`
+- [x] Phase 6: Strategy Workshop Ux (5/5 plans) — archived in `.planning/milestones/v1.0-phases/06-strategy-workshop-ux/`
+- [x] Phase 7: Replay Viewer And End To End Verification (5/5 plans) — archived in `.planning/milestones/v1.0-phases/07-replay-viewer-and-end-to-end-verification/`
 
 </details>
 
 <details>
 <summary>✅ v1.1 Trustworthy Simulation Beta (Phases 8-13) — SHIPPED 2026-05-18</summary>
 
-- [x] Phase 8: Replay Fixture Fidelity and Visual Regression (4/4 plans)
-- [x] Phase 9: Strict Chronicle Grammar and Compatibility (5/5 plans)
-- [x] Phase 10: Runtime Isolation Hardening (5/5 plans)
-- [x] Phase 11: Doctrine Debugging UX (6/6 plans)
-- [x] Phase 12: Local and CI Reliability (5/5 plans)
-- [x] Phase 13: Close Gap: Persisted Owner Replay Debug Authorization (4/4 plans)
-
-Archived phase details: [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) and [v1.1-phases/](milestones/v1.1-phases/).
+- [x] Phase 8: Replay Fixture Fidelity and Visual Regression (4/4 plans) — archived in `.planning/milestones/v1.1-phases/08-replay-fixture-fidelity-and-visual-regression/`
+- [x] Phase 9: Strict Chronicle Grammar and Compatibility (5/5 plans) — archived in `.planning/milestones/v1.1-phases/09-strict-chronicle-grammar-and-compatibility/`
+- [x] Phase 10: Runtime Isolation Hardening (5/5 plans) — archived in `.planning/milestones/v1.1-phases/10-runtime-isolation-hardening/`
+- [x] Phase 11: Doctrine Debugging UX (6/6 plans) — archived in `.planning/milestones/v1.1-phases/11-doctrine-debugging-ux/`
+- [x] Phase 12: Local and CI Reliability (5/5 plans) — archived in `.planning/milestones/v1.1-phases/12-local-and-ci-reliability/`
+- [x] Phase 13: Close Gap: Persisted Owner Replay Debug Authorization (4/4 plans) — archived in `.planning/milestones/v1.1-phases/13-close-gap-persisted-owner-replay-debug-authorization/`
 
 </details>
 
-### Phase 14: Competitive Ownership and Sessions
+<details>
+<summary>✅ v1.2 Competitive Alpha (Phases 14-18) — SHIPPED 2026-05-19</summary>
 
-**Goal:** Replace the local Workshop owner shortcut for competitive submissions with stable username/password User ownership and session-backed authorization.
-**Mode:** standard
-**Status:** Pending
+- [x] Phase 14: Competitive Ownership and Sessions (2/2 plans) — archived in `.planning/milestones/v1.2-phases/14-competitive-ownership-and-sessions/`
+- [x] Phase 15: MatchSet Competition Model (2/2 plans) — archived in `.planning/milestones/v1.2-phases/15-matchset-competition-model/`
+- [x] Phase 16: Exhibition Queue and Entry (2/2 plans) — archived in `.planning/milestones/v1.2-phases/16-exhibition-queue-and-entry/`
+- [x] Phase 17: Result Pages and Replay Evidence (2/2 plans) — archived in `.planning/milestones/v1.2-phases/17-result-pages-and-replay-evidence/`
+- [x] Phase 18: Abuse and Fairness Guardrails (2/2 plans) — archived in `.planning/milestones/v1.2-phases/18-abuse-and-fairness-guardrails/`
 
-**Requirements:** OWN-01, OWN-02, OWN-03, OWN-04, OWN-05, OWN-06, OWN-07
-
-**Success Criteria:**
-1. A user can create an account with username, password, display name, and handle, then sign in, refresh, and sign out.
-2. Persisted Strategy Revisions are owned by stable User identities rather than `player:workshop-local`.
-3. Strategy Revision submission and competitive entry endpoints require session-backed authorization.
-4. Private Strategy source and owner replay debug data remain accessible only through server-side ownership checks.
-5. Existing local Workshop flows either migrate cleanly or remain explicitly non-competitive.
-
-**Notes:**
-- Keep this intentionally small: no email integration, password reset, OAuth, passkeys, organizations, or admin tooling.
-- Password and session code should be conventional, boring, and testable; the interesting work is ownership boundaries.
-- Do not weaken public replay privacy while adding owner-aware competitive flows.
-
-### Phase 15: MatchSet Competition Model
-
-**Goal:** Define deterministic competition presets, immutable entrants, scoring, tie-breakers, stale revision behavior, and publication policy.
-**Mode:** standard
-**Status:** Pending
-
-**Requirements:** COMP-01, COMP-02, COMP-03, COMP-04, COMP-05, COMP-06, COMP-07, COMP-08
-
-**Success Criteria:**
-1. Competition presets describe unranked exhibition and seeded MatchSet behavior without embedding rules in React components.
-2. MatchSet entry captures immutable Strategy Revision snapshots with revision identifiers, content hashes, runtime compatibility, owner references, and no public Strategy source leakage.
-3. Scoring and tie-breakers deterministically handle wins, losses, draws, STONE, FALLEN, runtime strategy failures, degraded Matches, and no-result Matches.
-4. Stale, deleted, superseded, incompatible, or withdrawn revisions have explicit behavior before and after MatchSet lock.
-5. Result publication contracts separate public evidence from private Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, and runtime internals.
-
-**Notes:**
-- Keep the model serializable and deterministic.
-- Tie-breakers must not depend on system time, database row order, or incidental worker scheduling.
-- Treat this phase as the rules contract for later UX and endpoints.
-
-### Phase 16: Exhibition Queue and Entry
-
-**Goal:** Let users or developers submit owned immutable Strategy Revisions, including multiple revisions from the same owner, into small unranked or seeded public MatchSets.
-**Mode:** standard
-**Status:** Pending
-
-**Requirements:** EXH-01, EXH-02, EXH-03, EXH-04, EXH-05, EXH-06
-
-**Success Criteria:**
-1. A signed-in user can submit an owned immutable Strategy Revision into a public unranked exhibition MatchSet.
-2. A developer can seed a MatchSet from selected owned or fixture Strategy Revisions for deterministic alpha testing.
-3. Queue formation validates preset entrant count, revision compatibility, ownership, visibility, and duplicate-entry policy before execution begins.
-4. Users can inspect submission status through accepted, queued, running, complete, degraded, and failed states.
-5. One signed-in user can submit multiple distinct owned Strategy Revisions to the same exhibition MatchSet for self-play testing.
-6. Exact duplicate snapshots or incompatible entries fail early with messages that explain the competitive rule being enforced.
-
-**Notes:**
-- This is an exhibition queue, not a ranked ladder.
-- Do not enforce one Strategy per user in v1.2; reserve that for ranked or more formal competition.
-- Small, observable MatchSets beat high-throughput scheduling for this milestone.
-- Reuse existing Match/MatchSet persistence and worker execution boundaries where possible.
-
-### Phase 17: Result Pages and Replay Evidence
-
-**Goal:** Publish dispute-friendly MatchSet results with scoring breakdowns, per-Match replays, provenance, degraded/failed handling, and privacy-safe projections.
-**Mode:** standard
-**Status:** Pending
-
-**Requirements:** RES-01, RES-02, RES-03, RES-04, RES-05, RES-06
-
-**Success Criteria:**
-1. Public MatchSet result pages show preset, entrants, status, standings, scores, scoring policy, and publication metadata.
-2. Result pages explain scoring breakdowns, penalties, degraded Matches, failed Matches, and tie-breakers.
-3. Each completed Match links to replay evidence generated from the persisted Chronicle.
-4. Public provenance includes MatchSet id, Match id, preset id, scoring policy version, engine version, Chronicle hash, and Strategy Revision snapshot identifiers.
-5. Public result and replay pages keep Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid details, owner debug, and private runtime internals hidden by default.
-6. Authorized owners can still inspect their private Strategy source and owner debug data without changing the public output.
-
-**Notes:**
-- The result page should be useful for disputes even before moderation tools exist.
-- Replay evidence should flow through the strict Chronicle validation and public projection gates from v1.1.
-- Do not introduce result-only rule inference in the UI.
-
-### Phase 18: Abuse and Fairness Guardrails
-
-**Goal:** Enforce rate limits, duplicate policies, runtime failure penalties, sandbox failure policy, visibility rules, and valid-result criteria.
-**Mode:** standard
-**Status:** Pending
-
-**Requirements:** FAIR-01, FAIR-02, FAIR-03, FAIR-04, FAIR-05, FAIR-06
-
-**Success Criteria:**
-1. Competitive submission endpoints enforce basic per-user rate limits with clear retry guidance.
-2. Duplicate submission policy rejects exact duplicate Strategy Revision snapshots while allowing multiple distinct revisions from the same owner in alpha exhibition play.
-3. Strategy runtime failures receive deterministic competitive penalties while system failures do not become player losses.
-4. Sandbox, worker, orchestration, and Chronicle failures are classified before publication as strategy failure, system failure, degraded result, or invalid result.
-5. Valid competitive result criteria require compatible presets, immutable entrants, complete scoring evidence, privacy-safe public projection, and no unresolved system failures.
-6. Tests prove rate limits, duplicate prevention, failure penalties, valid-result checks, and public privacy gates.
-
-**Notes:**
-- This phase closes the loop before v1.2 ships; earlier phases should leave obvious extension points for these policies.
-- Keep penalties and invalidation rules visible in public result evidence.
-- Guardrails should be enforceable server-side and testable without relying on UI text.
+</details>
 
 ## Progress
 
@@ -168,8 +55,8 @@ Archived phase details: [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) and [v1.1-
 | --- | ---: | ---: | ---: | --- | --- |
 | v1.0 MVP | 7/7 | 33/33 | 80/80 | Complete | 2026-05-17 |
 | v1.1 Trustworthy Simulation Beta | 6/6 | 29/29 | 34/34 | Complete | 2026-05-18 |
-| v1.2 Competitive Alpha | 0/5 | 0/TBD | 0/33 | Planning | — |
+| v1.2 Competitive Alpha | 5/5 | 10/10 | 33/33 | Complete | 2026-05-19 |
 
 ## Next
 
-Run `$gsd-discuss-phase 14` to clarify competitive ownership and session boundaries, or `$gsd-plan-phase 14` to create the first executable v1.2 plan.
+Run `$gsd-new-milestone` to define the next milestone.

@@ -2,37 +2,37 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: v1.2 Competitive Alpha
-status: planning
+status: shipped
 last_updated: "2026-05-19T00:00:00.000-04:00"
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 5
+  total_plans: 10
+  completed_plans: 10
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** v1.2 Competitive Alpha planning started
+**Status:** v1.2 Competitive Alpha shipped
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.2 Competitive Alpha
-**Completed milestone:** v1.1 Trustworthy Simulation Beta
-**Archived roadmap:** .planning/milestones/v1.1-ROADMAP.md
-**Archived requirements:** .planning/milestones/v1.1-REQUIREMENTS.md
+**Current focus:** Planning next milestone
+**Completed milestone:** v1.2 Competitive Alpha
+**Archived roadmap:** .planning/milestones/v1.2-ROADMAP.md
+**Archived requirements:** .planning/milestones/v1.2-REQUIREMENTS.md
 
 ## Current Position
 
-Phase: Phase 14 - Competitive Ownership and Sessions
-Plan: Not started
-Status: Phase 14-18 context gathered; ready for `$gsd-plan-phase 14`
-Last activity: 2026-05-19 — Gathered full discussion context for all v1.2 phases.
+Phase: None active
+Plan: None active
+Status: v1.2 milestone completed and archived.
+Last activity: 2026-05-19 — Archived v1.2 Competitive Alpha and prepared for next milestone definition.
 
 ## Workflow Settings
 
@@ -51,7 +51,7 @@ Last activity: 2026-05-19 — Gathered full discussion context for all v1.2 phas
 | --- | ---: | ---: | ---: | --- |
 | v1.0 MVP | 7 | 33 | 80/80 | Shipped |
 | v1.1 Trustworthy Simulation Beta | 6 | 29 | 34/34 | Shipped |
-| v1.2 Competitive Alpha | 5 | 0 | 0/33 planned | Planning |
+| v1.2 Competitive Alpha | 5 | 10 | 33/33 | Shipped |
 
 ## Accumulated Context
 
@@ -59,14 +59,14 @@ Last activity: 2026-05-19 — Gathered full discussion context for all v1.2 phas
 - v1.1 hardened trust in that loop: engine-generated legal replay fixtures, strict Chronicle grammar, runtime isolation boundaries, doctrine debugging UX, and reliable Docker/no-Docker/service-backed verification.
 - Phase 13 closed the v1.1 audit gap by authorizing persisted owner-debug replay requests against local Workshop Match participants.
 - Public replay output remains privacy-safe by default and does not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid details, or private runtime details.
-- v1.2 brings minimal username/password ownership into scope so competitive submissions no longer depend on `player:workshop-local`.
-- v1.2 starts competition as unranked or seeded exhibition MatchSets; ranked ladders remain out of scope until scoring, abuse, replay evidence, and privacy rules have been proven.
+- v1.2 added minimal username/password ownership so competitive submissions no longer depend on `player:workshop-local`.
+- v1.2 starts competition as unranked exhibition MatchSets with public scoring, replay evidence, provenance, and privacy-safe publication.
 - v1.2 intentionally allows one user to enter multiple distinct Strategy Revisions into the same exhibition MatchSet for self-play testing; one Strategy per user is deferred to ranked or more formal competition.
-- Phase 14-18 discussion contexts are captured under `.planning/phases/`; downstream planning should start at Phase 14 and read the prior phase context before each subsequent phase.
+- Phase 14-18 artifacts are archived under `.planning/milestones/v1.2-phases/`.
 
 ## Deferred Items
 
-Items acknowledged and deferred after v1.2 milestone definition on 2026-05-19:
+Items acknowledged and deferred after v1.2 milestone completion on 2026-05-19:
 
 | Category | Item | Status |
 | --- | --- | --- |
@@ -76,7 +76,7 @@ Items acknowledged and deferred after v1.2 milestone definition on 2026-05-19:
 
 ## Next Command
 
-Run `$gsd-plan-phase 14` to plan Competitive Ownership and Sessions.
+Run `$gsd-new-milestone` to define the next milestone.
 
 ---
-*Last updated: 2026-05-19 after v1.2 phase discussions*
+*Last updated: 2026-05-19 after v1.2 milestone completion*

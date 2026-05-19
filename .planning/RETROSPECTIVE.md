@@ -89,10 +89,56 @@
 - Sessions: one extended milestone thread with audit, closure phase, manual browser review, and archive pass.
 - Notable: subagent-style review and validation paid off, but the final polish loop benefited from direct user inspection.
 
+## Milestone: v1.2 — Competitive Alpha
+
+**Shipped:** 2026-05-19
+**Phases:** 5 | **Plans:** 10
+
+### What Was Built
+
+- Minimal username/password accounts, sessions, handles, and account-owned Strategy Revision saves.
+- Session-backed owner authorization for competitive entry and owner-only Strategy source access.
+- Competition presets, immutable entrant snapshots, public publication policy, scoring, tie-breakers, and leak-safe public DTOs.
+- Unranked exhibition MatchSets with 2-8 distinct owned Strategy Revisions, including same-user multi-revision self-play.
+- Public MatchSet result pages with standings, scoring evidence, replay links, provenance, degraded/failed vocabulary, and owner-only source affordances.
+- Rate limits, active duplicate detection, valid entry checks, public privacy guards, and runtime isolation boundary preservation.
+
+### What Worked
+
+- The v1.1 trust foundation paid off: result pages could reuse persisted Chronicles, public replay projection, and replay links instead of inventing a new evidence path.
+- Letting same-user multi-revision exhibitions be explicit in the model kept alpha testing ergonomic without overfitting early ranked rules.
+- Browser verification caught two live integration issues after compile/test success: encoded MatchSet ids and stale MatchSet scoring refresh.
+
+### What Was Inefficient
+
+- The documented `gsd-sdk query` commands were unavailable in the installed SDK, so milestone readiness and archive work required direct file inspection.
+- Two parallel implementation slices initially diverged on auth table names and competition preset ids; reconciling around persistence helpers avoided duplicating service logic.
+- Next.js generated file churn (`next-env.d.ts`, test results) needed cleanup during final verification.
+
+### Patterns Established
+
+- Web competitive routes should import narrow persistence subpaths, not the package root, to avoid bundling migration filesystem code.
+- Public result builders should refresh scoring/status from Match rows before publishing evidence.
+- Competitive public DTOs need explicit leak-safety assertions against field names, not just UI discipline.
+- Account ownership and public replay privacy can coexist when owner affordances are links to server-authorized routes, not embedded private data.
+
+### Key Lessons
+
+- Run a local browser pass on newly routable pages even when unit, typecheck, and build are green.
+- Treat encoded domain ids as first-class route inputs; decode at the boundary before persistence lookup.
+- Keep alpha competition unranked until abuse, dispute, and account recovery surfaces have their own milestone-level treatment.
+
+### Cost Observations
+
+- Model mix: not recorded.
+- Sessions: one extended milestone implementation and closure thread.
+- Notable: the fastest path was a single integration pass after parallel planning; the final fixes came from live UAT rather than additional planning.
+
 ## Cross-Milestone Trends
 
 | Trend | Observation |
 | --- | --- |
-| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed that persisted service-backed flows need explicit proof beyond fixtures. |
-| Metadata hygiene | Summary frontmatter and validation status should be maintained during execution, not repaired at close. |
-| UI polish | Narrow viewport browser review caught issues after automated checks; responsive screenshots should move earlier in UI phases. |
+| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, and v1.2 showed local browser UAT catches route/scoring issues after build success. |
+| Metadata hygiene | Summary, validation, UAT, and audit artifacts should be maintained during execution, not repaired at close. |
+| UI polish | Narrow viewport/browser review caught issues after automated checks; responsive screenshots and local page checks should move earlier in UI phases. |
+| Package boundaries | Keeping runtime execution out of web/API and importing narrow server modules prevents trust and bundling regressions. |
