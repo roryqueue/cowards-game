@@ -124,12 +124,63 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
+| START-01 | Phase 19 | Pending |
+| START-02 | Phase 19 | Pending |
+| START-03 | Phase 19 | Pending |
+| START-04 | Phase 19 | Pending |
+| START-05 | Phase 19 | Pending |
+| START-06 | Phase 19 | Pending |
+| START-07 | Phase 19 | Pending |
+| SEASON-01 | Phase 20 | Pending |
+| SEASON-02 | Phase 20 | Pending |
+| SEASON-03 | Phase 20 | Pending |
+| SEASON-04 | Phase 20 | Pending |
+| SEASON-05 | Phase 20 | Pending |
+| SEASON-06 | Phase 20 | Pending |
+| ENTRY-01 | Phase 20 | Pending |
+| ENTRY-02 | Phase 20 | Pending |
+| ENTRY-03 | Phase 20 | Pending |
+| ENTRY-04 | Phase 20 | Pending |
+| ENTRY-05 | Phase 20 | Pending |
+| ENTRY-06 | Phase 20 | Pending |
+| ENTRY-07 | Phase 20 | Pending |
+| ENTRY-08 | Phase 20 | Pending |
+| SCHED-01 | Phase 21 | Pending |
+| SCHED-02 | Phase 21 | Pending |
+| SCHED-03 | Phase 21 | Pending |
+| SCHED-04 | Phase 21 | Pending |
+| SCHED-05 | Phase 21 | Pending |
+| SCHED-06 | Phase 21 | Pending |
+| SCHED-07 | Phase 21 | Pending |
+| SCHED-08 | Phase 21 | Pending |
+| SCHED-09 | Phase 21 | Pending |
+| PROF-01 | Phase 22 | Pending |
+| PROF-02 | Phase 22 | Pending |
+| PROF-03 | Phase 22 | Pending |
+| PROF-04 | Phase 22 | Pending |
+| PROF-05 | Phase 22 | Pending |
+| PROF-06 | Phase 22 | Pending |
+| GOV-01 | Phase 23 | Pending |
+| GOV-02 | Phase 23 | Pending |
+| GOV-03 | Phase 23 | Pending |
+| GOV-04 | Phase 23 | Pending |
+| GOV-05 | Phase 23 | Pending |
+| GOV-06 | Phase 23 | Pending |
+| GOV-07 | Phase 23 | Pending |
+| GOV-08 | Phase 23 | Pending |
+| RUNTIME-01 | Phase 24 | Pending |
+| RUNTIME-02 | Phase 24 | Pending |
+| RUNTIME-03 | Phase 24 | Pending |
+| RUNTIME-04 | Phase 24 | Pending |
+| RUNTIME-05 | Phase 24 | Pending |
+| RUNTIME-06 | Phase 24 | Pending |
+| RUNTIME-07 | Phase 24 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 51 total
-- Mapped to phases: 0
-- Unmapped: 51
+- Mapped to phases: 51
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-19*
-*Last updated: 2026-05-19 after v1.3 requirement definition*
+*Last updated: 2026-05-19 after v1.3 roadmap creation*
