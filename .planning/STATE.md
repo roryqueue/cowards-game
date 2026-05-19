@@ -1,38 +1,38 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: v1.2 Competitive Alpha
-status: shipped
+milestone: v1.3
+milestone_name: v1.3 Competition Trust Beta
+status: planning
 last_updated: "2026-05-19T00:00:00.000-04:00"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** v1.2 Competitive Alpha shipped
+**Status:** Defining v1.3 Competition Trust Beta requirements
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Planning next milestone
+**Current focus:** v1.3 Competition Trust Beta
 **Completed milestone:** v1.2 Competitive Alpha
 **Archived roadmap:** .planning/milestones/v1.2-ROADMAP.md
 **Archived requirements:** .planning/milestones/v1.2-REQUIREMENTS.md
 
 ## Current Position
 
-Phase: None active
-Plan: None active
-Status: v1.2 milestone completed and archived.
-Last activity: 2026-05-19 — Archived v1.2 Competitive Alpha and prepared for next milestone definition.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-19 — Milestone v1.3 Competition Trust Beta started
 
 ## Workflow Settings
 
@@ -71,12 +71,12 @@ Items acknowledged and deferred after v1.2 milestone completion on 2026-05-19:
 | Category | Item | Status |
 | --- | --- | --- |
 | product | Email verification, password reset, OAuth, organizations, and account recovery | Deferred |
-| product | Ranked ladders, durable ratings, and public tournaments | Deferred |
+| product | Durable all-time ratings, ranked prize ladders, and public tournaments | Deferred |
 | runtime | Production-grade container, microVM, or WASM/WASI sandbox | Deferred |
 
 ## Next Command
 
-Run `$gsd-new-milestone` to define the next milestone.
+Finish v1.3 requirements and roadmap, then run `$gsd-discuss-phase 19`.
 
 ---
-*Last updated: 2026-05-19 after v1.2 milestone completion*
+*Last updated: 2026-05-19 after starting v1.3 Competition Trust Beta*
