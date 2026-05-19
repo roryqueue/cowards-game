@@ -22,17 +22,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 21: Ladder Scheduling and Standings
+**Current focus:** Phase 22: Public Profiles and Strategy Cards
 **Completed milestone:** v1.2 Competitive Alpha
 **Archived roadmap:** .planning/milestones/v1.2-ROADMAP.md
 **Archived requirements:** .planning/milestones/v1.2-REQUIREMENTS.md
 
 ## Current Position
 
-Phase: 21 - Ladder Scheduling and Standings
+Phase: 22 - Public Profiles and Strategy Cards
 Plan: —
-Status: Phase 20 context gathered; ready for Phase 21 discussion
-Last activity: 2026-05-19 — Captured Phase 20 context in .planning/phases/20-trial-ladder-season-model/20-CONTEXT.md
+Status: Phase 21 context gathered; ready for Phase 22 discussion
+Last activity: 2026-05-19 — Captured Phase 21 context in .planning/phases/21-ladder-scheduling-and-standings/21-CONTEXT.md
 
 ## Workflow Settings
 
@@ -76,7 +76,7 @@ Items acknowledged and deferred after v1.2 milestone completion on 2026-05-19:
 
 ## Next Command
 
-Run `$gsd-discuss-phase 21` to clarify the Ladder Scheduling and Standings phase.
+Run `$gsd-discuss-phase 22` to clarify the Public Profiles and Strategy Cards phase.
 
 ---
-*Last updated: 2026-05-19 after Phase 20 context session*
+*Last updated: 2026-05-19 after Phase 21 context session*
