@@ -98,12 +98,15 @@ export const canSubmitRevision = (input: {
   checking: boolean
   submitting: boolean
 }): boolean =>
-  Boolean(input.validation?.valid) && !input.checking && !input.submitting
+  Boolean(input.validation?.valid) && !input.submitting
 
 export const getSubmitBlockedReason = (input: {
   validation: StrategyRevisionValidationReport | null
   checking: boolean
 }): string | null => {
+  if (input.validation?.valid) {
+    return null
+  }
   if (input.checking) {
     return "Checking draft before submitting."
   }

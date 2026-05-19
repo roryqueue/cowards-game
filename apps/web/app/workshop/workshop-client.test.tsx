@@ -156,6 +156,22 @@ describe("Strategy Workshop validation helpers", () => {
     ).toBe("Resolve validation errors before submitting.")
   })
 
+  it("keeps Submit revision stable while revalidating an already-valid source", () => {
+    expect(
+      canSubmitRevision({
+        validation: validReport,
+        checking: true,
+        submitting: false,
+      }),
+    ).toBe(true)
+    expect(
+      getSubmitBlockedReason({
+        validation: validReport,
+        checking: true,
+      }),
+    ).toBeNull()
+  })
+
   it("formats Revision submitted history rows and Load source metadata", () => {
     const revision = {
       id: "strategy-revision:1",
