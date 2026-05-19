@@ -331,7 +331,9 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                     onClick={() => applySample(sample)}
                     type="button"
                   >
-                    <span>{sample.label}</span>
+                    <span className="workshop-sample-title">
+                      {sample.label}
+                    </span>
                     <span className="workshop-muted">{sample.description}</span>
                     <span className="workshop-chip-row">
                       {getSampleChipLabels(sample).map((label) => (
@@ -353,7 +355,9 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                     onClick={() => applySample(sample)}
                     type="button"
                   >
-                    <span>{sample.label}</span>
+                    <span className="workshop-sample-title">
+                      {sample.label}
+                    </span>
                     <span className="workshop-muted">{sample.description}</span>
                     <span className="workshop-chip-row">
                       {getSampleChipLabels(sample).map((label) => (

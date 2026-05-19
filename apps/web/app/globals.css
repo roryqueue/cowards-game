@@ -212,12 +212,21 @@ textarea {
 }
 
 .workshop-list-row {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
   width: 100%;
   text-align: left;
 }
 
 .workshop-list-row.active {
   border-color: var(--accent);
+}
+
+.workshop-sample-title {
+  display: block;
+  line-height: 1.25;
 }
 
 .editor-frame,
