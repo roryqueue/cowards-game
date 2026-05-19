@@ -22,17 +22,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 23: Disputes and Competition Governance
+**Current focus:** Phase 24: Production Runtime Boundary Spike
 **Completed milestone:** v1.2 Competitive Alpha
 **Archived roadmap:** .planning/milestones/v1.2-ROADMAP.md
 **Archived requirements:** .planning/milestones/v1.2-REQUIREMENTS.md
 
 ## Current Position
 
-Phase: 23 - Disputes and Competition Governance
+Phase: 24 - Production Runtime Boundary Spike
 Plan: —
-Status: Phase 22 context gathered; ready for Phase 23 discussion
-Last activity: 2026-05-19 — Captured Phase 22 context in .planning/phases/22-public-profiles-and-strategy-cards/22-CONTEXT.md
+Status: Phase 23 context gathered; ready for Phase 24 discussion
+Last activity: 2026-05-19 — Captured Phase 23 context in .planning/phases/23-disputes-and-competition-governance/23-CONTEXT.md
 
 ## Workflow Settings
 
@@ -76,7 +76,7 @@ Items acknowledged and deferred after v1.2 milestone completion on 2026-05-19:
 
 ## Next Command
 
-Run `$gsd-discuss-phase 23` to clarify the Disputes and Competition Governance phase.
+Run `$gsd-discuss-phase 24` to clarify the Production Runtime Boundary Spike phase.
 
 ---
-*Last updated: 2026-05-19 after Phase 22 context session*
+*Last updated: 2026-05-19 after Phase 23 context session*
