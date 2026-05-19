@@ -31,8 +31,8 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 
 Phase: Phase 14 - Competitive Ownership and Sessions
 Plan: Not started
-Status: Ready for `$gsd-discuss-phase 14` or `$gsd-plan-phase 14`
-Last activity: 2026-05-19 — Defined v1.2 Competitive Alpha requirements and roadmap.
+Status: Phase 14-18 context gathered; ready for `$gsd-plan-phase 14`
+Last activity: 2026-05-19 — Gathered full discussion context for all v1.2 phases.
 
 ## Workflow Settings
 
@@ -62,6 +62,7 @@ Last activity: 2026-05-19 — Defined v1.2 Competitive Alpha requirements and ro
 - v1.2 brings minimal username/password ownership into scope so competitive submissions no longer depend on `player:workshop-local`.
 - v1.2 starts competition as unranked or seeded exhibition MatchSets; ranked ladders remain out of scope until scoring, abuse, replay evidence, and privacy rules have been proven.
 - v1.2 intentionally allows one user to enter multiple distinct Strategy Revisions into the same exhibition MatchSet for self-play testing; one Strategy per user is deferred to ranked or more formal competition.
+- Phase 14-18 discussion contexts are captured under `.planning/phases/`; downstream planning should start at Phase 14 and read the prior phase context before each subsequent phase.
 
 ## Deferred Items
 
@@ -75,7 +76,7 @@ Items acknowledged and deferred after v1.2 milestone definition on 2026-05-19:
 
 ## Next Command
 
-Run `$gsd-discuss-phase 14` to clarify the competitive ownership/session approach, or `$gsd-plan-phase 14` to plan directly.
+Run `$gsd-plan-phase 14` to plan Competitive Ownership and Sessions.
 
 ---
-*Last updated: 2026-05-19 after v1.2 milestone definition*
+*Last updated: 2026-05-19 after v1.2 phase discussions*
