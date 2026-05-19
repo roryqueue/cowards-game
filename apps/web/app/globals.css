@@ -342,6 +342,13 @@ textarea {
   padding: 8px 0;
 }
 
+.workshop-match-row > .workshop-muted {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  text-align: right;
+}
+
 .workshop-match-main {
   display: flex;
   min-width: 0;
@@ -734,6 +741,15 @@ textarea {
   .workshop-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .workshop-match-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .workshop-match-row > .workshop-muted {
+    text-align: left;
   }
 
   button {
