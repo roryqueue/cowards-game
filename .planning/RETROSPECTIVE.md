@@ -2,7 +2,7 @@
 
 ## Milestone: v1.0 — MVP
 
-**Shipped:** 2026-05-17  
+**Shipped:** 2026-05-17
 **Phases:** 7 | **Plans:** 33
 
 ### What Was Built
@@ -44,9 +44,55 @@
 - Sessions: single milestone thread with phase, review, audit, and closure passes.
 - Notable: parallel phase verification was valuable, but final integration still needed one coherent service-backed run.
 
+## Milestone: v1.1 — Trustworthy Simulation Beta
+
+**Shipped:** 2026-05-18
+**Phases:** 6 | **Plans:** 29
+
+### What Was Built
+
+- Engine-generated replay fixtures replaced fragile hand-authored demos and now drive visual checks for important mechanics.
+- Chronicle validation became strict enough to reject malformed, impossible, private-leaking, and incompatible replay data before rendering.
+- Runtime execution gained explicit adapter metadata, subprocess JSON IPC, hostile Strategy coverage, and stronger output/failure boundaries.
+- Workshop and replay debugging gained sample Strategies, actionable validation/runtime messages, replay links, and owner-only Soldier inactivity explanations.
+- Docker, no-Docker, service-backed E2E, fixture smoke, visual, and fast-test commands became clearer and more repeatable.
+- Persisted owner replay debug authorization was closed through Phase 13 and proven with service-backed failing Strategy replay.
+
+### What Worked
+
+- The milestone audit found a real integration gap, and adding Phase 13 was the right way to close it without pretending fixture coverage was enough.
+- Layered privacy tests across projection, server DTOs, browser replay, and persisted Workshop flows gave high confidence.
+- Focused Playwright screenshots on the replay board caught board-scale and fixture fidelity issues without making full-page snapshots brittle.
+
+### What Was Inefficient
+
+- The available `gsd-sdk` binary did not expose the documented `query` commands, so several workflow updates had to be maintained manually.
+- Some Phase 8 summary coverage was plan-level rather than fully normalized across all plans, which made readiness checks less automatic than ideal.
+- Manual browser review after the audit still found small but real UI polish issues, so responsive Workshop layout deserves earlier visual scrutiny.
+
+### Patterns Established
+
+- Treat Chronicle grammar as a trust contract between engine, persistence, replay, and UI.
+- Keep owner debug data DTO-derived and server-authorized; React should render facts, not infer rules.
+- Use service-backed E2E for any feature that claims to work on persisted Matches.
+- Preserve Docker and no-Docker local paths as parallel first-class workflows.
+
+### Key Lessons
+
+- Fixture coverage and persisted replay coverage are different assurances; both matter.
+- Public privacy should be asserted against field names as well as marker values.
+- Layout regressions are part of trust when they affect replay/workshop inspection; narrow viewport screenshots should be part of UI review.
+
+### Cost Observations
+
+- Model mix: not recorded.
+- Sessions: one extended milestone thread with audit, closure phase, manual browser review, and archive pass.
+- Notable: subagent-style review and validation paid off, but the final polish loop benefited from direct user inspection.
+
 ## Cross-Milestone Trends
 
 | Trend | Observation |
 | --- | --- |
-| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared. |
+| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed that persisted service-backed flows need explicit proof beyond fixtures. |
 | Metadata hygiene | Summary frontmatter and validation status should be maintained during execution, not repaired at close. |
+| UI polish | Narrow viewport browser review caught issues after automated checks; responsive screenshots should move earlier in UI phases. |

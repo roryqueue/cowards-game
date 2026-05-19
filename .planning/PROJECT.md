@@ -2,29 +2,24 @@
 
 ## Current State
 
-**Shipped version:** v1.0 MVP on 2026-05-17
-**Status:** Initial MVP complete; planning is ready for the next milestone.
-**Audit:** Passed, 80/80 v1 requirements satisfied.
+**Shipped version:** v1.1 Trustworthy Simulation Beta on 2026-05-18
+**Status:** Trustworthy simulation beta complete; ready to define the next milestone.
+**Audit:** Passed, 34/34 v1.1 requirements satisfied.
 
-Coward's Game is now a deterministic two-player programmable strategy game MVP. Players can author JS/TS autonomous Strategy Revisions in the Workshop, validate and submit immutable revisions, launch test MatchSets, execute simulations through the worker pipeline, persist Chronicles, and inspect completed Matches in a replay viewer with public privacy and owner/debug Awareness Grid support.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, run service-backed MatchSets, persist strict Chronicles, replay legal engine-generated scenarios, and inspect public or authorized owner-debug replays with high confidence that the replay reflects the engine and that private Strategy data remains contained.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.1 Trustworthy Simulation Beta
+## Next Milestone Goals
 
-**Goal:** A developer/player can run, replay, inspect, and debug legal Matches with high confidence that the replay reflects the real engine, invalid Chronicles are rejected, and hostile Strategy code stays contained.
+Fresh requirements should be defined with `$gsd-new-milestone`. Good candidates now that v1.1 is shipped:
 
-**Target features:**
-- Replace hand-authored replay fixtures with engine-generated legal scenario fixtures where possible.
-- Add richer canonical demo Matches for push, fall, contraction, legal Backstab, runtime failure, and endgame scenarios.
-- Add visual regression or screenshot checks for board scale, piece positions, contraction, and event callouts.
-- Define strict Chronicle grammar, required payloads, privacy constraints, snapshot boundaries, and version compatibility behavior.
-- Reject invalid or impossible Chronicles clearly instead of rendering ambiguous replay states.
-- Harden runtime isolation beyond prototype worker-only JS execution, with a documented subprocess/container/WASM/WASI direction, resource limits, failure modes, and tests.
-- Improve Workshop and replay debugging with clearer validation messages, sample strategies, replay links, runtime violation explanations, and owner-only debug overlays.
-- Make local and CI startup repeatable for both Docker and non-Docker development, with broader service-backed E2E coverage for edit -> submit -> execute -> replay.
+- Competitive surfaces such as ladders, tournaments, scoring policy, or public Match history.
+- Production-grade ownership/session authorization beyond the local Workshop owner trust source.
+- Runtime sandbox expansion toward container, microVM, or WASM/WASI execution.
+- Arena expansion only after replay compatibility and privacy policy remain stable.
 
 ## Validated in v1.0
 
@@ -35,6 +30,16 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - ✓ PostgreSQL-backed Match/MatchSet persistence, migrations, worker jobs, retries, Chronicle storage, and deterministic scoring.
 - ✓ Strategy Workshop authoring UX with Monaco, templates, validation, submission, revision history, and test launch/status.
 - ✓ Replay viewer with Pixi board, timeline scrubber, inspector, event callouts, owner Awareness Grid, and full service-backed Workshop-to-replay E2E coverage.
+
+## Validated in v1.1
+
+- ✓ Engine-generated canonical replay fixtures for push, fall, contraction, legal Backstab, runtime failure, and endgame paths.
+- ✓ Strict Chronicle grammar, compatibility checks, snapshot boundary validation, and impossible-state rejection before replay rendering.
+- ✓ Public replay projection privacy gates for Strategy source, StrategyMemory, SoldierMemory, objectives, Awareness Grid details, and runtime internals.
+- ✓ Replaceable Strategy execution adapter boundary with worker-thread metadata, subprocess JSON IPC spike, hostile Strategy matrix, timeouts, output caps, and failure taxonomy.
+- ✓ Workshop debugging UX with actionable validation/runtime messages, sample Strategies, replay handoff links, and owner-only Soldier inactivity explanations.
+- ✓ Persisted owner replay debug authorization for local Workshop Matches, proven through service-backed failing Strategy E2E.
+- ✓ Docker and no-Docker local preflight paths plus service-backed, smoke, visual, and fast CI command slices.
 
 ## Context
 
@@ -49,12 +54,18 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.0-REQUIREMENTS.md`
 - `.planning/milestones/v1.0-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.0-phases/`
+- `.planning/milestones/v1.1-ROADMAP.md`
+- `.planning/milestones/v1.1-REQUIREMENTS.md`
+- `.planning/milestones/v1.1-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.1-INTEGRATION-CHECK.md`
+- `.planning/milestones/v1.1-phases/`
 
 ## Out of Scope Until Replanned
 
 - Ranked ladders, public tournaments, and spectator surfaces.
 - Randomized arena generation and custom user-created maps.
-- Multi-language runtimes beyond the v1.0 JS/TS runtime.
+- Multi-language runtimes beyond the hardened JS/TS runtime boundary.
+- Production-grade account/session ownership and authorization.
 - Live model inference or live human control during Matches.
 - Monetization, cosmetics, strategy marketplace, and reinforcement-learning harnesses.
 
@@ -64,26 +75,22 @@ Planning archives live under `.planning/milestones/`:
 | --- | --- | --- |
 | Build simulation-first | Deterministic engine, replay correctness, sandboxed execution, and Strategy API clarity were foundational. | ✓ Good |
 | Use a TypeScript monorepo | Shared contracts and package boundaries kept engine, runtime, replay, worker, and web code separated. | ✓ Good |
-| Keep engine pure and runtime-agnostic | The engine now consumes a StrategyRuntime interface without database/network/clock dependencies. | ✓ Good |
-| Start with one JS/TS runtime | Enough to prove the authoring/execution loop while preserving a replaceable runtime boundary. | ✓ Good, harden next |
-| Make Chronicle the canonical replay artifact | Enabled deterministic replay, privacy projection, persistence, and the visible replay viewer. | ✓ Good |
-| Use hand-authored Arena Variants in v1 | Avoided map-generation complexity while proving the core loop. | ✓ Good |
-| Prioritize Workshop iteration before ranked infrastructure | The MVP now supports doctrine authoring, validation, local testing, and replay analysis. | ✓ Good |
+| Keep engine pure and runtime-agnostic | The engine consumes a StrategyRuntime interface without database/network/clock dependencies. | ✓ Good |
+| Make Chronicle the canonical replay artifact | Enabled deterministic replay, strict validation, privacy projection, persistence, and visual replay. | ✓ Good |
+| Replace hand-authored replay demos with engine-generated fixtures | Legal scenario fixtures caught mismatch between visual demos and actual rules. | ✓ Good |
+| Treat Chronicle grammar as a trust contract | Invalid order, payload, snapshot, privacy, and version failures are rejected before rendering. | ✓ Good |
+| Keep Strategy code out of web/API processes | Runtime execution stays behind worker/runtime boundaries with explicit adapter metadata and tests. | ✓ Good |
+| Preserve JS/TS runtime while hardening boundary | Worker-thread execution remains prototype containment; subprocess adapter and hostile matrix clarify next sandbox direction. | ✓ Revisit for production sandbox |
+| Keep owner debug server-authorized | Query params may request owner debug, but server-side participant checks decide whether owner DTOs are returned. | ✓ Good |
+| Defer ladders until trust base is sharp | Avoids replay disputes, sandbox abuse, stale revisions, compatibility confusion, and privacy leaks before the platform is ready. | ✓ Good |
 
 ## Constraints
 
-The v1.0 constraints remain active for future milestones: determinism, engine purity, Strategy Revision immutability, runtime isolation, memory/source limits, package boundaries, replay privacy, and competitive integrity.
+The active constraints remain: deterministic engine behavior, engine purity, Strategy Revision immutability, hostile Strategy treatment, runtime isolation, memory/source/output limits, package boundaries, replay privacy, Chronicle compatibility, and competitive integrity.
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
-
-**After each phase transition** (via `$gsd-transition`):
-1. Requirements invalidated? -> Move to Out of Scope with reason
-2. Requirements validated? -> Move to Validated with phase reference
-3. New requirements emerged? -> Add to Active
-4. Decisions to log? -> Add to Key Decisions
-5. "What This Is" still accurate? -> Update if drifted
 
 **After each milestone** (via `$gsd-complete-milestone`):
 1. Full review of all sections
@@ -92,4 +99,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-18 after v1.1 milestone start*
+*Last updated: 2026-05-18 after v1.1 milestone completion*
