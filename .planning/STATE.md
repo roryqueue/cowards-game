@@ -22,17 +22,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 24: Production Runtime Boundary Spike
+**Current focus:** Phase 19: Starter Strategy Library
 **Completed milestone:** v1.2 Competitive Alpha
 **Archived roadmap:** .planning/milestones/v1.2-ROADMAP.md
 **Archived requirements:** .planning/milestones/v1.2-REQUIREMENTS.md
 
 ## Current Position
 
-Phase: 24 - Production Runtime Boundary Spike
+Phase: 19 - Starter Strategy Library
 Plan: —
-Status: Phase 23 context gathered; ready for Phase 24 discussion
-Last activity: 2026-05-19 — Captured Phase 23 context in .planning/phases/23-disputes-and-competition-governance/23-CONTEXT.md
+Status: v1.3 phase contexts gathered; ready to plan Phase 19
+Last activity: 2026-05-19 — Captured Phase 24 context in .planning/phases/24-production-runtime-boundary-spike/24-CONTEXT.md
 
 ## Workflow Settings
 
@@ -76,7 +76,7 @@ Items acknowledged and deferred after v1.2 milestone completion on 2026-05-19:
 
 ## Next Command
 
-Run `$gsd-discuss-phase 24` to clarify the Production Runtime Boundary Spike phase.
+Run `$gsd-plan-phase 19` to plan the Starter Strategy Library phase.
 
 ---
-*Last updated: 2026-05-19 after Phase 23 context session*
+*Last updated: 2026-05-19 after completing v1.3 phase discussions*
