@@ -22,17 +22,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 19: Starter Strategy Library
+**Current focus:** Phase 20: Trial Ladder Season Model
 **Completed milestone:** v1.2 Competitive Alpha
 **Archived roadmap:** .planning/milestones/v1.2-ROADMAP.md
 **Archived requirements:** .planning/milestones/v1.2-REQUIREMENTS.md
 
 ## Current Position
 
-Phase: 19 - Starter Strategy Library
+Phase: 20 - Trial Ladder Season Model
 Plan: —
-Status: Ready for phase discussion
-Last activity: 2026-05-19 — Created v1.3 roadmap with phases 19-24 and mapped 51 requirements
+Status: Phase 19 context gathered; ready for Phase 20 discussion
+Last activity: 2026-05-19 — Captured Phase 19 context in .planning/phases/19-starter-strategy-library/19-CONTEXT.md
 
 ## Workflow Settings
 
@@ -76,7 +76,7 @@ Items acknowledged and deferred after v1.2 milestone completion on 2026-05-19:
 
 ## Next Command
 
-Run `$gsd-discuss-phase 19` to clarify the Starter Strategy Library phase.
+Run `$gsd-discuss-phase 20` to clarify the Trial Ladder Season Model phase.
 
 ---
-*Last updated: 2026-05-19 after creating v1.3 roadmap*
+*Last updated: 2026-05-19 after Phase 19 context session*
