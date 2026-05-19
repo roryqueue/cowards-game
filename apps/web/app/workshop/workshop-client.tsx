@@ -67,6 +67,9 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const [submitting, setSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState("")
   const [submitError, setSubmitError] = useState("")
+  const [accountSaving, setAccountSaving] = useState(false)
+  const [accountMessage, setAccountMessage] = useState("")
+  const [accountError, setAccountError] = useState("")
   const [selectedOpponentId, setSelectedOpponentId] = useState(
     initialData.opponents[0]?.id ?? "",
   )
@@ -203,6 +206,30 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       setSubmitMessage("Revision submitted")
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const saveAccountRevision = async () => {
+    if (!submitEnabled) {
+      return
+    }
+    setAccountSaving(true)
+    setAccountError("")
+    setAccountMessage("")
+    try {
+      const response = await fetch("/api/account/revisions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ source, label, notes }),
+      })
+      const body = (await response.json()) as { error?: string }
+      if (!response.ok) {
+        setAccountError(body.error ?? "Account revision save failed.")
+        return
+      }
+      setAccountMessage("Saved to competitive account")
+    } finally {
+      setAccountSaving(false)
     }
   }
 
@@ -530,6 +557,8 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
             ) : null}
             {submitMessage ? <p>{submitMessage}</p> : null}
             {submitError ? <p role="alert">{submitError}</p> : null}
+            {accountMessage ? <p>{accountMessage}</p> : null}
+            {accountError ? <p role="alert">{accountError}</p> : null}
             <button
               className="primary"
               disabled={!submitEnabled}
@@ -538,6 +567,16 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
             >
               Submit revision
             </button>
+            <button
+              disabled={!submitEnabled || accountSaving}
+              type="button"
+              onClick={() => void saveAccountRevision()}
+            >
+              {accountSaving ? "Saving..." : "Save to account"}
+            </button>
+            <a className="workshop-replay-link" href="/account">
+              Competitive account
+            </a>
           </section>
 
           <section className="workshop-panel workshop-stack workshop-test-panel">

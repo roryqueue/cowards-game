@@ -192,7 +192,10 @@ const createStoredChronicleForBottomOwner = (
   ownerPlayerId: string,
 ): StoredChronicle => {
   const artifact = JSON.parse(
-    JSON.stringify(createChronicle()).replaceAll("player:bottom", ownerPlayerId),
+    JSON.stringify(createChronicle()).replaceAll(
+      "player:bottom",
+      ownerPlayerId,
+    ),
   ) as Chronicle
   return { artifact, metadata: createChronicleMetadata(artifact) }
 }

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
 import {
+  assertPublicMatchSetResultLeakSafe,
+  COMPETITION_PRESET_IDS,
+  getCompetitionPreset,
+} from "./competition.js"
+import {
   ActionSchema,
   ChronicleSchema,
   RuntimeViolationUserGuidanceSchema,
@@ -522,5 +527,34 @@ describe("Coward's Game spec contracts", () => {
         metadata: {},
       }).success,
     ).toBe(false)
+  })
+
+  it("defines exhibition presets with public leak-safe result contracts", () => {
+    expect(COMPETITION_PRESET_IDS).toEqual([
+      "smoke-exhibition-v1",
+      "standard-exhibition-v1",
+    ])
+    expect(getCompetitionPreset("smoke-exhibition-v1")).toMatchObject({
+      entrantCount: { min: 2, max: 8 },
+      mirroredPairwise: true,
+      visibility: "public",
+      scoringPolicy: {
+        winPoints: 3,
+        drawPoints: 1,
+        lossPoints: 0,
+        strategyFailurePenaltyPoints: -1,
+      },
+    })
+    expect(() =>
+      assertPublicMatchSetResultLeakSafe({
+        matchSetId: "match-set:public",
+        sourceHash: "public-hash",
+      }),
+    ).not.toThrow()
+    expect(() =>
+      assertPublicMatchSetResultLeakSafe({
+        entrants: [{ source: "private strategy code" }],
+      }),
+    ).toThrow(/private field/)
   })
 })

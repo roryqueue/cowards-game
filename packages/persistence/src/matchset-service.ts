@@ -18,6 +18,32 @@ import type { MatchSetStatus } from "./schema.js"
 export interface CreateMatchSetFromMatrixInput {
   id: MatchSetId
   matches: CreateMatchInput[]
+  matchSet?: {
+    presetId?: MatchSetPresetId | undefined
+    presetVersion?: "v1" | undefined
+    creatorUserId?: string | undefined
+    competitionPresetId?: string | undefined
+    competitionPresetVersion?: string | undefined
+    scoringPolicyVersion?: string | undefined
+    visibility?: string | undefined
+    entrantSnapshotSet?: unknown
+    publicationPolicy?: unknown
+    duplicateKey?: string | undefined
+    lockedAt?: Date | undefined
+  }
+  competitionEntrants?: Array<{
+    id: string
+    entrantIndex: number
+    strategyRevisionId: StrategyRevisionId
+    ownerUserId: string
+    ownerHandle: string
+    displayLabel: string
+    sourceHash: string
+    sourceBytes: number
+    runtime: unknown
+    engineCompatibility: unknown
+    snapshot: unknown
+  }>
 }
 
 export interface CreateMatchSetFromPresetInput {
@@ -68,10 +94,7 @@ export const generatePresetMatrix = (
 
 const insertMatchSetWithMatrix = async (
   pool: Pool,
-  input: CreateMatchSetFromMatrixInput & {
-    presetId?: MatchSetPresetId | undefined
-    presetVersion?: "v1" | undefined
-  },
+  input: CreateMatchSetFromMatrixInput,
 ): Promise<void> => {
   for (const match of input.matches) {
     validateCreateMatchInput(match)
@@ -100,18 +123,94 @@ const insertMatchSetWithMatrix = async (
       await repositories.lockStrategyRevision(revisionId)
     }
 
+    const matchSet = input.matchSet ?? {}
     await client.query(
       `
-        insert into match_sets (id, status, preset_id, preset_version, matrix)
-        values ($1, 'pending', $2, $3, $4)
+        insert into match_sets (
+          id,
+          status,
+          preset_id,
+          preset_version,
+          matrix,
+          creator_user_id,
+          competition_preset_id,
+          competition_preset_version,
+          scoring_policy_version,
+          visibility,
+          entrant_snapshot_set,
+          publication_policy,
+          duplicate_key,
+          locked_at
+        )
+        values (
+          $1,
+          'pending',
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          $8,
+          $9,
+          $10,
+          $11,
+          $12,
+          $13
+        )
       `,
       [
         input.id,
-        input.presetId ?? null,
-        input.presetVersion ?? null,
+        matchSet.presetId ?? null,
+        matchSet.presetVersion ?? null,
         JSON.stringify(input.matches),
+        matchSet.creatorUserId ?? null,
+        matchSet.competitionPresetId ?? null,
+        matchSet.competitionPresetVersion ?? null,
+        matchSet.scoringPolicyVersion ?? null,
+        matchSet.visibility ?? null,
+        JSON.stringify(matchSet.entrantSnapshotSet ?? []),
+        JSON.stringify(matchSet.publicationPolicy ?? {}),
+        matchSet.duplicateKey ?? null,
+        matchSet.lockedAt ?? null,
       ],
     )
+
+    for (const entrant of input.competitionEntrants ?? []) {
+      await client.query(
+        `
+          insert into competition_entrants (
+            id,
+            match_set_id,
+            entrant_index,
+            strategy_revision_id,
+            owner_user_id,
+            owner_handle,
+            display_label,
+            source_hash,
+            source_bytes,
+            runtime,
+            engine_compatibility,
+            snapshot
+          )
+          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        `,
+        [
+          entrant.id,
+          input.id,
+          entrant.entrantIndex,
+          entrant.strategyRevisionId,
+          entrant.ownerUserId,
+          entrant.ownerHandle,
+          entrant.displayLabel,
+          entrant.sourceHash,
+          entrant.sourceBytes,
+          entrant.runtime,
+          entrant.engineCompatibility,
+          entrant.snapshot,
+        ],
+      )
+    }
 
     for (const [matrixIndex, match] of input.matches.entries()) {
       await client.query(
@@ -169,8 +268,10 @@ export const createMatchSetService = (pool: Pool) => ({
     await insertMatchSetWithMatrix(pool, {
       id: input.id,
       matches,
-      presetId: preset.id,
-      presetVersion: preset.version,
+      matchSet: {
+        presetId: preset.id,
+        presetVersion: preset.version,
+      },
     })
     return { matchSetId: input.id, matchIds: matches.map((match) => match.id) }
   },

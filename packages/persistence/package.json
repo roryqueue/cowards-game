@@ -7,7 +7,10 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./account-revisions": "./src/account-revisions.ts",
+    "./auth": "./src/auth.ts",
     "./chronicle-store": "./src/chronicle-store.ts",
+    "./competition": "./src/competition.ts",
     "./db": "./src/db.ts",
     "./repositories": "./src/repositories.ts",
     "./workshop": "./src/workshop.ts"

@@ -97,8 +97,7 @@ export const canSubmitRevision = (input: {
   validation: StrategyRevisionValidationReport | null
   checking: boolean
   submitting: boolean
-}): boolean =>
-  Boolean(input.validation?.valid) && !input.submitting
+}): boolean => Boolean(input.validation?.valid) && !input.submitting
 
 export const getSubmitBlockedReason = (input: {
   validation: StrategyRevisionValidationReport | null
@@ -188,7 +187,9 @@ export const getWorkshopOwnerPlayerId = (
 export const canOpenOwnerReplay = (
   match: WorkshopMatchSummary,
   localPlayerId = LOCAL_WORKSHOP_PLAYER_ID,
-): boolean => canOpenReplay(match) && getWorkshopOwnerPlayerId(match, localPlayerId) !== null
+): boolean =>
+  canOpenReplay(match) &&
+  getWorkshopOwnerPlayerId(match, localPlayerId) !== null
 
 export type ReplayAvailability =
   | {

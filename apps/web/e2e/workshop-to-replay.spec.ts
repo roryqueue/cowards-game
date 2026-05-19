@@ -80,7 +80,9 @@ test("Workshop failure sample opens owner debug replay without leaking public re
     page.getByRole("heading", { name: "Strategy Workshop" }),
   ).toBeVisible()
 
-  await page.locator('[data-sample-id="sample:failure-thrown-exception"]').click()
+  await page
+    .locator('[data-sample-id="sample:failure-thrown-exception"]')
+    .click()
   await expect(page.getByText("Valid draft").first()).toBeVisible()
 
   await page.getByRole("button", { name: "Submit revision" }).click()
@@ -134,9 +136,17 @@ test("Workshop failure sample opens owner debug replay without leaking public re
   const ownerSoldierCount = await ownerSoldiers.count()
   expect(runtimeViolationCount).toBeGreaterThan(0)
   expect(ownerSoldierCount).toBeGreaterThan(0)
-  for (let soldierIndex = 0; soldierIndex < ownerSoldierCount; soldierIndex += 1) {
+  for (
+    let soldierIndex = 0;
+    soldierIndex < ownerSoldierCount;
+    soldierIndex += 1
+  ) {
     await ownerSoldiers.nth(soldierIndex).click()
-    for (let eventIndex = 0; eventIndex < runtimeViolationCount; eventIndex += 1) {
+    for (
+      let eventIndex = 0;
+      eventIndex < runtimeViolationCount;
+      eventIndex += 1
+    ) {
       await runtimeViolationEvents.nth(eventIndex).click()
       await ownerToggle.check()
       if ((await explanation.count()) === 0) {

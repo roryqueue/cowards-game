@@ -1,0 +1,226 @@
+import type {
+  ArenaVariantId,
+  JsonValue,
+  MatchId,
+  MatchSetId,
+  StrategyRevisionId,
+  UserId,
+} from "./types.js"
+
+export const COMPETITION_PRESET_IDS = [
+  "smoke-exhibition-v1",
+  "standard-exhibition-v1",
+] as const
+
+export type CompetitionPresetId = (typeof COMPETITION_PRESET_IDS)[number]
+
+export type CompetitionVisibility = "public"
+
+export type CompetitionStatus =
+  | "accepted"
+  | "queued"
+  | "running"
+  | "complete"
+  | "degraded"
+  | "failed"
+
+export interface CompetitionScoringPolicy {
+  id: "exhibition-points-v1"
+  version: "v1"
+  winPoints: 3
+  drawPoints: 1
+  lossPoints: 0
+  strategyFailurePenaltyPoints: -1
+}
+
+export const EXHIBITION_SCORING_POLICY_V1 = {
+  id: "exhibition-points-v1",
+  version: "v1",
+  winPoints: 3,
+  drawPoints: 1,
+  lossPoints: 0,
+  strategyFailurePenaltyPoints: -1,
+} as const satisfies CompetitionScoringPolicy
+
+export interface CompetitionPreset {
+  id: CompetitionPresetId
+  version: "v1"
+  label: string
+  matchSetPresetId: "smoke-v1" | "standard-v1"
+  entrantCount: {
+    min: 2
+    max: 8
+  }
+  visibility: CompetitionVisibility
+  mirroredPairwise: boolean
+  scoringPolicy: CompetitionScoringPolicy
+}
+
+export const COMPETITION_PRESETS = [
+  {
+    id: "smoke-exhibition-v1",
+    version: "v1",
+    label: "Smoke Exhibition",
+    matchSetPresetId: "smoke-v1",
+    entrantCount: { min: 2, max: 8 },
+    visibility: "public",
+    mirroredPairwise: true,
+    scoringPolicy: EXHIBITION_SCORING_POLICY_V1,
+  },
+  {
+    id: "standard-exhibition-v1",
+    version: "v1",
+    label: "Standard Exhibition",
+    matchSetPresetId: "standard-v1",
+    entrantCount: { min: 2, max: 8 },
+    visibility: "public",
+    mirroredPairwise: true,
+    scoringPolicy: EXHIBITION_SCORING_POLICY_V1,
+  },
+] as const satisfies readonly CompetitionPreset[]
+
+export const getCompetitionPreset = (
+  presetId: CompetitionPresetId,
+): CompetitionPreset => {
+  const preset = COMPETITION_PRESETS.find(
+    (candidate) => candidate.id === presetId,
+  )
+  if (!preset) {
+    throw new Error(`Unknown Competition preset: ${presetId}`)
+  }
+  return {
+    id: preset.id,
+    version: preset.version,
+    label: preset.label,
+    matchSetPresetId: preset.matchSetPresetId,
+    entrantCount: { ...preset.entrantCount },
+    visibility: preset.visibility,
+    mirroredPairwise: preset.mirroredPairwise,
+    scoringPolicy: { ...preset.scoringPolicy },
+  }
+}
+
+export interface CompetitionEntrantSnapshot {
+  entrantId: string
+  entrantIndex: number
+  strategyRevisionId: StrategyRevisionId
+  ownerUserId: UserId
+  ownerHandle: string
+  displayLabel: string
+  sourceHash: string
+  sourceBytes: number
+  runtime: {
+    name: "runtime-js"
+    version: string
+  }
+  engineCompatibility: {
+    spec: string
+    engine: string
+  }
+  lockedAt: string
+}
+
+export type PublicPenaltyReason =
+  | "strategy_failure"
+  | "system_failure"
+  | "invalid_result"
+  | "no_result"
+
+export interface PublicScorePenaltyDto {
+  matchId?: MatchId | undefined
+  reason: PublicPenaltyReason
+  points: number
+}
+
+export interface PublicStandingDto {
+  rank: number
+  entrantId: string
+  strategyRevisionId: StrategyRevisionId
+  ownerHandle: string
+  displayLabel: string
+  sourceHash: string
+  points: number
+  wins: number
+  draws: number
+  losses: number
+  penalties: PublicScorePenaltyDto[]
+  survivingSoldiers: number
+  survivalTurns: number
+  tieBreakerPath: string[]
+}
+
+export interface PublicMatchEvidenceDto {
+  matchId: MatchId
+  entrants: {
+    bottom: string
+    top: string
+  }
+  status: "pending" | "running" | "complete" | "failed_system" | "blocked"
+  replayAvailable: boolean
+  chronicleHash?: string | undefined
+  publicReason?: PublicPenaltyReason | undefined
+  arenaVariantId?: ArenaVariantId | undefined
+}
+
+export interface PublicMatchSetResultDto {
+  matchSetId: MatchSetId
+  preset: {
+    id: CompetitionPresetId
+    version: "v1"
+    label: string
+  }
+  status: CompetitionStatus
+  visibility: CompetitionVisibility
+  scoringPolicy: CompetitionScoringPolicy
+  entrants: CompetitionEntrantSnapshot[]
+  standings: PublicStandingDto[]
+  matches: PublicMatchEvidenceDto[]
+  provenance: {
+    matchSetId: MatchSetId
+    presetId: CompetitionPresetId
+    scoringPolicyVersion: string
+    entrantSnapshotIds: string[]
+    chronicleHashes: string[]
+  }
+  publication: {
+    publicResults: true
+    publicReplayEvidence: true
+    privateFieldsExcluded: string[]
+  }
+  metadata?: JsonValue | undefined
+}
+
+const forbiddenPublicResultKeys = new Set([
+  "source",
+  "strategyMemory",
+  "soldierMemory",
+  "objective",
+  "ownerDebug",
+  "privateRuntime",
+  "privateError",
+  "awarenessGrid",
+])
+
+export const assertPublicMatchSetResultLeakSafe = (value: unknown): void => {
+  const visit = (node: unknown, path: string): void => {
+    if (Array.isArray(node)) {
+      node.forEach((item, index) => visit(item, `${path}[${index}]`))
+      return
+    }
+    if (node === null || typeof node !== "object") {
+      return
+    }
+    for (const [key, entryValue] of Object.entries(
+      node as Record<string, unknown>,
+    )) {
+      if (forbiddenPublicResultKeys.has(key)) {
+        throw new Error(
+          `Public MatchSet result leaks private field: ${path}.${key}`,
+        )
+      }
+      visit(entryValue, `${path}.${key}`)
+    }
+  }
+
+  visit(value, "$")
+}

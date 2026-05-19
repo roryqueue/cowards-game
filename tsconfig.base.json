@@ -15,6 +15,13 @@
     "baseUrl": ".",
     "paths": {
       "@cowards/persistence": ["packages/persistence/src/index.ts"],
+      "@cowards/persistence/account-revisions": [
+        "packages/persistence/src/account-revisions.ts"
+      ],
+      "@cowards/persistence/auth": ["packages/persistence/src/auth.ts"],
+      "@cowards/persistence/competition": [
+        "packages/persistence/src/competition.ts"
+      ],
       "@cowards/persistence/db": ["packages/persistence/src/db.ts"],
       "@cowards/persistence/workshop": ["packages/persistence/src/workshop.ts"],
       "@cowards/runtime-js": ["packages/runtime-js/src/index.ts"],

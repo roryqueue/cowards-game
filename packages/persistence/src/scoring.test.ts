@@ -8,6 +8,7 @@ const match = (input: Partial<MatchScoreInput>): MatchScoreInput => ({
     input.bottomStrategyRevisionId ?? "strategy-revision:a",
   topStrategyRevisionId: input.topStrategyRevisionId ?? "strategy-revision:b",
   winnerStrategyRevisionId: input.winnerStrategyRevisionId,
+  strategyFailureRevisionId: input.strategyFailureRevisionId,
   status: input.status ?? "complete",
   survivingSoldiers: input.survivingSoldiers ?? 0,
   bottomSurvivingSoldiers: input.bottomSurvivingSoldiers ?? 0,
@@ -90,6 +91,36 @@ describe("MatchSet scoring", () => {
     ])
     expect(score.rankings.map((entry) => entry.survivingSoldiers)).toEqual([
       3, 1,
+    ])
+  })
+
+  it("applies strategy failure penalties to competitive points", () => {
+    const score = scoreMatchSet([
+      match({
+        matchId: "match:penalty",
+        winnerStrategyRevisionId: "strategy-revision:a",
+        strategyFailureRevisionId: "strategy-revision:b",
+      }),
+    ])
+
+    expect(score.rankings).toEqual([
+      expect.objectContaining({
+        strategyRevisionId: "strategy-revision:a",
+        points: 3,
+        penalties: [],
+      }),
+      expect.objectContaining({
+        strategyRevisionId: "strategy-revision:b",
+        points: -1,
+        penaltyPoints: -1,
+        penalties: [
+          {
+            matchId: "match:penalty",
+            reason: "strategy_failure",
+            points: -1,
+          },
+        ],
+      }),
     ])
   })
 

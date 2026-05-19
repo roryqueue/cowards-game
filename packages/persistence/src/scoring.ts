@@ -1,11 +1,25 @@
 import type { MatchId, StrategyRevisionId } from "@cowards/spec"
 import type { MatchStatus } from "./schema.js"
 
+export const SCORING_POINTS = {
+  win: 3,
+  draw: 1,
+  loss: 0,
+  strategyFailurePenalty: -1,
+} as const
+
+export interface ScorePenalty {
+  matchId: MatchId
+  reason: "strategy_failure"
+  points: number
+}
+
 export interface MatchScoreInput {
   matchId: MatchId
   bottomStrategyRevisionId: StrategyRevisionId
   topStrategyRevisionId: StrategyRevisionId
   winnerStrategyRevisionId?: StrategyRevisionId | undefined
+  strategyFailureRevisionId?: StrategyRevisionId | undefined
   status: MatchStatus
   survivingSoldiers: number
   bottomSurvivingSoldiers: number
@@ -20,6 +34,9 @@ export interface MatchSetStrategyScore {
   wins: number
   losses: number
   draws: number
+  points: number
+  penaltyPoints: number
+  penalties: ScorePenalty[]
   failedSystemMatches: number
   survivingSoldiers: number
   survivalTurns: number
@@ -38,6 +55,9 @@ const emptyScore = (
   wins: 0,
   losses: 0,
   draws: 0,
+  points: 0,
+  penaltyPoints: 0,
+  penalties: [],
   failedSystemMatches: 0,
   survivingSoldiers: 0,
   survivalTurns: 0,
@@ -85,15 +105,35 @@ export const scoreMatchSet = (matches: MatchScoreInput[]): MatchSetScore => {
     if (!match.winnerStrategyRevisionId) {
       bottom.draws += 1
       top.draws += 1
+      bottom.points += SCORING_POINTS.draw
+      top.points += SCORING_POINTS.draw
     } else if (match.winnerStrategyRevisionId === bottom.strategyRevisionId) {
       bottom.wins += 1
       top.losses += 1
+      bottom.points += SCORING_POINTS.win
+      top.points += SCORING_POINTS.loss
     } else if (match.winnerStrategyRevisionId === top.strategyRevisionId) {
       top.wins += 1
       bottom.losses += 1
+      top.points += SCORING_POINTS.win
+      bottom.points += SCORING_POINTS.loss
     } else {
       bottom.draws += 1
       top.draws += 1
+      bottom.points += SCORING_POINTS.draw
+      top.points += SCORING_POINTS.draw
+    }
+
+    if (match.strategyFailureRevisionId) {
+      const failed = getScore(scores, match.strategyFailureRevisionId)
+      const penalty = {
+        matchId: match.matchId,
+        reason: "strategy_failure" as const,
+        points: SCORING_POINTS.strategyFailurePenalty,
+      }
+      failed.penalties.push(penalty)
+      failed.penaltyPoints += penalty.points
+      failed.points += penalty.points
     }
   }
 
@@ -102,6 +142,7 @@ export const scoreMatchSet = (matches: MatchScoreInput[]): MatchSetScore => {
     complete,
     rankings: [...scores.values()].sort(
       (left, right) =>
+        right.points - left.points ||
         right.wins - left.wins ||
         right.survivingSoldiers - left.survivingSoldiers ||
         right.survivalTurns - left.survivalTurns ||

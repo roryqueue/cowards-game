@@ -653,6 +653,186 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.app-page {
+  min-height: 100dvh;
+  padding: 16px;
+}
+
+.app-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1180px;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 16px;
+}
+
+.app-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-section-header.compact {
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.app-section-header h1,
+.app-section-header h2,
+.app-section-header p {
+  margin: 0;
+}
+
+.app-section-header h1 {
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.app-section-header h2 {
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.app-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.app-actions form {
+  margin: 0;
+}
+
+.app-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-panel {
+  max-width: 520px;
+}
+
+.app-table {
+  display: grid;
+  gap: 1px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--border);
+}
+
+.app-table-row {
+  display: grid;
+  min-width: 720px;
+  grid-template-columns:
+    minmax(120px, 1fr) minmax(160px, 1.4fr) minmax(88px, 0.5fr)
+    minmax(120px, 0.7fr);
+  gap: 12px;
+  align-items: center;
+  background: var(--surface);
+  padding: 10px 12px;
+}
+
+.app-table-row.heading {
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.app-table-row span,
+.app-table-row a {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.standings-table .app-table-row {
+  grid-template-columns:
+    64px minmax(220px, 1.5fr) 88px minmax(120px, 0.6fr)
+    minmax(180px, 1fr);
+}
+
+.match-ledger-table .app-table-row {
+  grid-template-columns:
+    minmax(220px, 1.2fr) minmax(180px, 1fr) minmax(180px, 1fr)
+    minmax(96px, 0.5fr) minmax(110px, 0.5fr);
+}
+
+.selectable-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.selectable-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.selectable-row.active {
+  border-color: var(--accent);
+  background: rgba(37, 109, 133, 0.08);
+}
+
+.selectable-row input {
+  width: auto;
+  margin-top: 2px;
+}
+
+.selectable-row strong,
+.selectable-row small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-secondary);
+  padding: 10px;
+}
+
+.entrant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.entrant-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.entrant-card strong,
+.entrant-card a {
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 1179px) {
   .workshop-grid {
     grid-template-columns: 1fr 1fr;
@@ -704,6 +884,18 @@ textarea {
 }
 
 @media (max-width: 759px) {
+  .app-page {
+    padding: 12px;
+  }
+
+  .app-panel {
+    padding: 12px;
+  }
+
+  .app-section-header {
+    flex-direction: column;
+  }
+
   .workshop-shell {
     padding: 12px;
   }

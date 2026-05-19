@@ -11,6 +11,7 @@ export type StrategyRevisionId = string
 export type MatchId = string
 export type MatchSetId = string
 export type ArenaVariantId = string
+export type UserId = string
 
 export type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT"
 
