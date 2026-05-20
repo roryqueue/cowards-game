@@ -31,8 +31,8 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 Phase: Milestone v1.4 complete
 Plan: Complete
-Status: All v1.4 phases completed, validated, verified, browser-checked, demo-regenerated, and audit-fix clean.
-Last activity: 2026-05-20 — Completed audit-fix F-01/F-02/F-03 by aligning PROJECT, ROADMAP, REQUIREMENTS, and STATE with the implemented v1.4 evidence.
+Status: All v1.4 phases completed, validated, verified, browser-checked, demo-regenerated, audit-fix clean, and replay speed polish documented.
+Last activity: 2026-05-20 — Added configurable replay playback speeds with 2x default, verified the replay UI locally, and documented the milestone polish.
 
 ## Workflow Settings
 
@@ -91,4 +91,4 @@ Items acknowledged and deferred after v1.3 milestone completion on 2026-05-20:
 Archive or ship Milestone v1.4.
 
 ---
-*Last updated: 2026-05-20 after v1.4 audit-fix completed cleanly*
+*Last updated: 2026-05-20 after v1.4 replay speed polish*

@@ -27,6 +27,26 @@ const shortId = (id: string): string =>
 const firstSoldierId = (data: ReplayReadyDto): string | null =>
   data.states[0]?.board.soldiers[0]?.id ?? null
 
+const basePlaybackIntervalMs = 700
+
+const replaySpeedOptions = [
+  { value: "0.5", label: "0.5x", intervalMs: basePlaybackIntervalMs * 2 },
+  { value: "1", label: "1x", intervalMs: basePlaybackIntervalMs },
+  { value: "2", label: "2x", intervalMs: basePlaybackIntervalMs / 2 },
+  { value: "4", label: "4x", intervalMs: basePlaybackIntervalMs / 4 },
+  {
+    value: "8",
+    label: "8x",
+    intervalMs: Math.round(basePlaybackIntervalMs / 8),
+  },
+] as const
+
+type ReplaySpeedValue = (typeof replaySpeedOptions)[number]["value"]
+
+const getPlaybackIntervalMs = (speed: ReplaySpeedValue): number =>
+  replaySpeedOptions.find((option) => option.value === speed)?.intervalMs ??
+  basePlaybackIntervalMs
+
 export function ReplayClient({ data }: ReplayClientProps) {
   const initialIndex = data.timeline.findIndex(
     (entry) => entry.sequence === getInitialReplaySequence(data),
@@ -40,6 +60,7 @@ export function ReplayClient({ data }: ReplayClientProps) {
   )
   const [scrubbing, setScrubbing] = useState(false)
   const [ownerDebugVisible, setOwnerDebugVisible] = useState(false)
+  const [playbackSpeed, setPlaybackSpeed] = useState<ReplaySpeedValue>("2")
 
   const selectedEntry = getTimelineEntryAt(data, selectedIndex)
   const summary = getCurrentPositionSummary(data, selectedEntry)
@@ -63,6 +84,7 @@ export function ReplayClient({ data }: ReplayClientProps) {
     () => new Map(data.timeline.map((entry) => [entry.sequence, entry])),
     [data.timeline],
   )
+  const playbackIntervalMs = getPlaybackIntervalMs(playbackSpeed)
   const ownerDebugAvailable = canShowOwnerDebug(data)
   const statusLabel = data.mode === "owner" ? "Owner debug" : "Public view"
 
@@ -79,9 +101,9 @@ export function ReplayClient({ data }: ReplayClientProps) {
         }
         return next
       })
-    }, 700)
+    }, playbackIntervalMs)
     return () => window.clearInterval(interval)
-  }, [data.timeline.length, playing])
+  }, [data.timeline.length, playbackIntervalMs, playing])
 
   const step = (direction: -1 | 1) => {
     setPlaying(false)
@@ -178,6 +200,28 @@ export function ReplayClient({ data }: ReplayClientProps) {
               >
                 Step forward
               </button>
+              <label
+                className="replay-speed-control"
+                htmlFor="replay-playback-speed"
+              >
+                <span className="replay-label">Speed</span>
+                <select
+                  id="replay-playback-speed"
+                  aria-label="Replay speed"
+                  value={playbackSpeed}
+                  onChange={(event) =>
+                    setPlaybackSpeed(
+                      event.currentTarget.value as ReplaySpeedValue,
+                    )
+                  }
+                >
+                  {replaySpeedOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
           </div>
 

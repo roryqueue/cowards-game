@@ -549,10 +549,22 @@ textarea {
 }
 
 .replay-playback-controls button,
+.replay-speed-control,
 .replay-soldier-buttons button {
   flex: 1 1 120px;
   min-width: 0;
   white-space: normal;
+}
+
+.replay-speed-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.replay-speed-control select {
+  flex: 1;
+  min-width: 72px;
 }
 
 .replay-event-list {

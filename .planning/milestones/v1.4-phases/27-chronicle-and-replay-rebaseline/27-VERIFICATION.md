@@ -11,5 +11,7 @@ PASS.
   duplicating the old full-Activation loop.
 - Current validators reject `chronicle-v1` by default.
 - Web replay DTO fixtures and labels understand the new lifecycle events.
+- Replay playback has five selectable speeds and defaults to 2x the original
+  700ms event cadence, making dense interleaved Cycle timelines easier to
+  review.
 - Green verification command: `pnpm test:fast`.
-
