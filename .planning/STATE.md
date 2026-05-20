@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: v1.4 Cycle-Interleaved Rules Correction
-status: executing
-last_updated: "2026-05-20T15:00:00.000-04:00"
+status: validating
+last_updated: "2026-05-20T15:35:00.000-04:00"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 5
-  completed_plans: 4
-  percent: 80
+  completed_plans: 5
+  percent: 100
 ---
 
 # State: Coward's Game
@@ -22,17 +22,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 29 demo competition rebuild
+**Current focus:** v1.4 milestone audit-fix
 **Current milestone:** v1.4 Cycle-Interleaved Rules Correction
 **Requirements:** .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 29 - Demo Competition Rebuild
+Phase: Milestone v1.4 audit
 Plan: Next
-Status: Phase 25 source-of-truth, Phase 26 engine scheduler, Phase 27 Chronicle/replay rebaseline, and Phase 28 starter rebaseline completed; preparing v1.4 demo evidence.
-Last activity: 2026-05-20 — Rebased the Starter Strategy Library to `v1.4`, replaced stale Cycle 4 source heuristics, added a real interleaved starter gauntlet, and reran the full fast-suite validation.
+Status: All v1.4 phases completed and validated; preparing final audit-fix sweep.
+Last activity: 2026-05-20 — Rebuilt `/ladder/v1-4-demo`, generated the eight-entrant demo tournament, validated v1.4 Chronicle metrics, browser-checked public pages, and reran the full fast-suite validation.
 
 ## Workflow Settings
 
@@ -58,7 +58,7 @@ Last activity: 2026-05-20 — Rebased the Starter Strategy Library to `v1.4`, re
 
 | Milestone | Phases | Plans | Requirements | Status |
 | --- | ---: | ---: | ---: | --- |
-| v1.4 Cycle-Interleaved Rules Correction | 5 | 5 | 33/33 mapped | Executing |
+| v1.4 Cycle-Interleaved Rules Correction | 5 | 5 | 33/33 mapped | Validating |
 
 ## Accumulated Context
 
@@ -88,7 +88,7 @@ Items acknowledged and deferred after v1.3 milestone completion on 2026-05-20:
 
 ## Next Command
 
-Continue with Phase 29 demo competition rebuild.
+Run `$gsd-audit-fix` for Milestone v1.4.
 
 ---
-*Last updated: 2026-05-20 after completing v1.4 Phases 25-28 implementation and validation*
+*Last updated: 2026-05-20 after completing all v1.4 phase implementation and validation*
