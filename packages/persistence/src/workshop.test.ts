@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest"
-import { validateStrategySource } from "@cowards/runtime-js"
+import { runMatch, violation, type StrategyRuntime } from "@cowards/engine"
+import {
+  transpileStrategySource,
+  validateStrategySource,
+} from "@cowards/runtime-js"
+import {
+  createRuntimeFromRevision,
+  type StrategyExecutionAdapter,
+} from "@cowards/runtime-js/worker"
+import { INITIAL_BOUNDS } from "@cowards/spec"
 import {
   assertWorkshopRevisionCanBeTested,
   buildWorkshopRevision,
@@ -16,12 +25,70 @@ import {
   WORKSHOP_OPPONENTS,
   workshopTemplateSource,
 } from "./workshop.js"
-import { listStarterStrategies } from "./starter-strategies.js"
+import {
+  buildStarterStrategyRevision,
+  listStarterStrategies,
+  type StarterStrategySummary,
+} from "./starter-strategies.js"
 import { MATCH_SET_STATUSES } from "./schema.js"
 import {
   LIST_MATCH_STATUSES_FOR_SET_SQL,
   mapMatchSetMatchSummaryRow,
 } from "./matchset-status.js"
+
+const createStarterSmokeAdapter = (): StrategyExecutionAdapter => {
+  const cache = new Map<string, Record<string, unknown>>()
+
+  return {
+    metadata: {
+      id: "starter-smoke",
+      label: "Starter smoke adapter",
+      default: false,
+      isolationBoundary:
+        "Test-only execution path for built-in Starter Strategy sources.",
+      notes: [
+        "Only used by the Starter Strategy gauntlet to avoid worker startup per Cycle.",
+      ],
+      runtimeControls: {
+        timeout: false,
+        outputByteLimit: false,
+        environment: "minimal",
+        execArgv: "empty",
+        resourceLimits: [],
+      },
+    },
+    execute(request) {
+      const cached = cache.get(request.source)
+      const strategy =
+        cached ??
+        (() => {
+          const transpiled = transpileStrategySource(request.source)
+          if (!transpiled.ok) {
+            throw new Error(transpiled.message)
+          }
+          const exports = {} as Record<string, unknown>
+          const load = new Function(
+            "exports",
+            `${transpiled.code}; return exports.default`,
+          )
+          const loaded = load(exports) as Record<string, unknown>
+          cache.set(request.source, loaded)
+          return loaded
+        })()
+      const method = strategy[request.methodName]
+      if (typeof method !== "function") {
+        return {
+          ok: false,
+          violation: {
+            type: "INVALID_OUTPUT",
+            message: `Missing ${request.methodName}`,
+          },
+        }
+      }
+      return { ok: true, value: method(request.input) }
+    },
+  }
+}
 
 describe("Workshop service contracts", () => {
   it("ships valid built-in template and opponent sources", () => {
@@ -78,7 +145,7 @@ describe("Workshop service contracts", () => {
     ).toBe(true)
   })
 
-  it("ships the full v1.3 Starter Strategy Library as distinct playable doctrines", () => {
+  it("ships the full v1.4 Starter Strategy Library as distinct playable doctrines", () => {
     const starters = listStarterStrategies()
 
     expect(starters.map((starter) => starter.name)).toEqual([
@@ -95,9 +162,89 @@ describe("Workshop service contracts", () => {
     ])
     expect(starters).toHaveLength(10)
     expect(starters.every((starter) => starter.validation.valid)).toBe(true)
+    expect(starters.every((starter) => starter.version === "v1.4")).toBe(true)
     expect(starters.filter((starter) => starter.usesMemory)).toHaveLength(5)
     expect(new Set(starters.map((starter) => starter.sourceHash)).size).toBe(10)
   })
+
+  it("runs every v1.4 Starter Strategy through an interleaved smoke gauntlet", () => {
+    const starters = listStarterStrategies()
+    const pairs = [
+      [starters[0]!, starters[5]!],
+      [starters[1]!, starters[6]!],
+      [starters[2]!, starters[7]!],
+      [starters[3]!, starters[8]!],
+      [starters[4]!, starters[9]!],
+    ] as const satisfies readonly (readonly [
+      StarterStrategySummary,
+      StarterStrategySummary,
+    ])[]
+    const playedStarterIds = new Set<string>()
+    const eventTypes = new Set<string>()
+    const adapter = createStarterSmokeAdapter()
+
+    for (const [bottom, top] of pairs) {
+      playedStarterIds.add(bottom.id)
+      playedStarterIds.add(top.id)
+      const bottomRuntime = createRuntimeFromRevision(
+        buildStarterStrategyRevision(bottom),
+        { adapter },
+      )
+      const topRuntime = createRuntimeFromRevision(
+        buildStarterStrategyRevision(top),
+        { adapter },
+      )
+      const runtime: StrategyRuntime = {
+        selectActivations(input) {
+          const playerId = input.mySoldiers[0]?.ownerPlayerId
+          if (playerId === "player:bottom") {
+            return bottomRuntime.selectActivations(input)
+          }
+          if (playerId === "player:top") {
+            return topRuntime.selectActivations(input)
+          }
+          return violation("INVALID_OUTPUT", "Cannot resolve starter runtime")
+        },
+        runSoldierBrain(input) {
+          return input.self.ownerPlayerId === "player:bottom"
+            ? bottomRuntime.runSoldierBrain(input)
+            : topRuntime.runSoldierBrain(input)
+        },
+      }
+
+      const result = runMatch({
+        matchId: `match:starter-gauntlet:${bottom.id}:${top.id}`,
+        seed: `seed:starter-gauntlet:${bottom.id}:${top.id}`,
+        arenaVariant: {
+          id: "arena:starter-gauntlet:v1.4",
+          name: "Starter Gauntlet",
+          initialBounds: INITIAL_BOUNDS,
+          terrainStones: [],
+        },
+        bottomPlayerId: "player:bottom",
+        topPlayerId: "player:top",
+        bottomStrategyRevisionId: `revision:${bottom.id}`,
+        topStrategyRevisionId: `revision:${top.id}`,
+        runtime,
+        maxPhases: 100,
+      })
+
+      expect(result.state.outcome?.type).not.toBe("FAILED")
+      expect(result.events.map((event) => event.type)).toContain(
+        "CYCLE_STARTED",
+      )
+      expect(result.events.map((event) => event.type)).toContain(
+        "ACTION_EMITTED",
+      )
+      for (const event of result.events) {
+        eventTypes.add(event.type)
+      }
+    }
+
+    expect(playedStarterIds.size).toBe(starters.length)
+    expect(eventTypes.has("MOVE_ADVANCED")).toBe(true)
+    expect(eventTypes.has("CONTRACTION_RESOLVED")).toBe(true)
+  }, 30_000)
 
   it("keeps the serious Starter Library separate from generic samples", () => {
     const snapshot = getWorkshopStaticSnapshot()

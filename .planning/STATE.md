@@ -6,10 +6,10 @@ status: executing
 last_updated: "2026-05-20T15:00:00.000-04:00"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 5
-  completed_plans: 3
-  percent: 60
+  completed_plans: 4
+  percent: 80
 ---
 
 # State: Coward's Game
@@ -22,17 +22,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 28 starter strategy and input rebaseline
+**Current focus:** Phase 29 demo competition rebuild
 **Current milestone:** v1.4 Cycle-Interleaved Rules Correction
 **Requirements:** .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 28 - Starter Strategy and Input Rebaseline
+Phase: 29 - Demo Competition Rebuild
 Plan: Next
-Status: Phase 25 source-of-truth, Phase 26 engine scheduler, and Phase 27 Chronicle/replay rebaseline completed; preparing starter retune.
-Last activity: 2026-05-20 — Implemented Cycle-interleaved Round scheduling, Cycle-boundary Backstab summaries, non-terminal blocked movement, `chronicle-v1.4` replay generation, active fixture rebaseline, and full fast-suite validation.
+Status: Phase 25 source-of-truth, Phase 26 engine scheduler, Phase 27 Chronicle/replay rebaseline, and Phase 28 starter rebaseline completed; preparing v1.4 demo evidence.
+Last activity: 2026-05-20 — Rebased the Starter Strategy Library to `v1.4`, replaced stale Cycle 4 source heuristics, added a real interleaved starter gauntlet, and reran the full fast-suite validation.
 
 ## Workflow Settings
 
@@ -88,7 +88,7 @@ Items acknowledged and deferred after v1.3 milestone completion on 2026-05-20:
 
 ## Next Command
 
-Continue with Phase 28 starter strategy and input rebaseline.
+Continue with Phase 29 demo competition rebuild.
 
 ---
-*Last updated: 2026-05-20 after completing v1.4 Phases 25-27 implementation and validation*
+*Last updated: 2026-05-20 after completing v1.4 Phases 25-28 implementation and validation*

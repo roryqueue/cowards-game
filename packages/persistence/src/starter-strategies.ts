@@ -20,7 +20,7 @@ export type StarterStrategyId =
 export interface StarterStrategyDefinition {
   id: StarterStrategyId
   name: string
-  version: "v1"
+  version: "v1.4"
   description: string
   tags: string[]
   doctrineNotes: string[]
@@ -130,7 +130,7 @@ export default {
     return { activationOrders: ordered, strategyMemory: input.strategyMemory }
   },
   soldierBrain(input) {
-    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {
       return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const desired = input.objective?.target ?? bestCenterDirection(input.self, { bounds: { minX: -4, maxX: 4, minY: -4, maxY: 4 } })
@@ -210,7 +210,7 @@ export default {
     }
   },
   soldierBrain(input) {
-    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {
       return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const facing = input.self.facing ?? cornerDirections[input.cycleIndex % cornerDirections.length]
@@ -279,7 +279,7 @@ export default {
   },
   soldierBrain(input) {
     const memory = input.soldierMemory && typeof input.soldierMemory === "object" ? input.soldierMemory : {}
-    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {
       return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: memory }
     }
     const target = rearTarget(input.awarenessGrid)
@@ -356,7 +356,7 @@ export default {
     }
   },
   soldierBrain(input) {
-    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {
       return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const enemy = nearestEnemy(input.awarenessGrid)
@@ -413,7 +413,7 @@ export default {
     }
   },
   soldierBrain(input) {
-    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {
       return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const turn = input.objective?.turn === "counter" ? "counter" : "clockwise"
@@ -487,7 +487,7 @@ export default {
     }
   },
   soldierBrain(input) {
-    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {
       return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const lane = input.objective?.lane ?? input.self.facing ?? "UP"
@@ -548,7 +548,7 @@ export default {
     }
   },
   soldierBrain(input) {
-    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {
       return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const enemies = countAdjacent(input.awarenessGrid, "ENEMY_ACTIVE")
@@ -607,7 +607,7 @@ export default {
     }
   },
   soldierBrain(input) {
-    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {
       return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const lane = input.objective?.lane ?? input.self.facing ?? "UP"
@@ -656,7 +656,7 @@ export default {
   },
   soldierBrain(input) {
     const memory = input.soldierMemory && typeof input.soldierMemory === "object" ? input.soldierMemory : {}
-    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {
       return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: memory }
     }
     const ranked = directions.map((direction) => [
@@ -721,7 +721,7 @@ export default {
   },
   soldierBrain(input) {
     const memory = input.soldierMemory && typeof input.soldierMemory === "object" ? input.soldierMemory : {}
-    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {
       return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: memory }
     }
     const enemy = nearestEnemy(input.awarenessGrid)
@@ -741,7 +741,7 @@ export const STARTER_STRATEGY_DEFINITIONS: readonly StarterStrategyDefinition[] 
     {
       id: "starter:centerline-bully",
       name: "Centerline Bully",
-      version: "v1",
+      version: "v1.4",
       description:
         "Claims central lanes early, faces pressure, and tries to keep enemies moving toward shrinking danger.",
       tags: ["Center control", "Pressure", "Readable"],
@@ -758,7 +758,7 @@ export const STARTER_STRATEGY_DEFINITIONS: readonly StarterStrategyDefinition[] 
     {
       id: "starter:corner-lurker",
       name: "Corner Lurker",
-      version: "v1",
+      version: "v1.4",
       description:
         "Defends near safer corners and punishes reckless contact with STONE.",
       tags: ["Defense", "Corners", "STONE"],
@@ -774,7 +774,7 @@ export const STARTER_STRATEGY_DEFINITIONS: readonly StarterStrategyDefinition[] 
     {
       id: "starter:backstab-hunter",
       name: "Backstab Hunter",
-      version: "v1",
+      version: "v1.4",
       description:
         "Tracks rear-facing opportunities and remembers the most promising chase lane.",
       tags: ["Backstab", "Memory", "Tactics"],
@@ -791,7 +791,7 @@ export const STARTER_STRATEGY_DEFINITIONS: readonly StarterStrategyDefinition[] 
     {
       id: "starter:wall-press",
       name: "Wall Press",
-      version: "v1",
+      version: "v1.4",
       description:
         "Uses the edge of the board as a pressure tool and advances when enemies are near constrained lanes.",
       tags: ["Edges", "Push", "Pressure"],
@@ -807,7 +807,7 @@ export const STARTER_STRATEGY_DEFINITIONS: readonly StarterStrategyDefinition[] 
     {
       id: "starter:ring-runner",
       name: "Ring Runner",
-      version: "v1",
+      version: "v1.4",
       description:
         "Orbits the shrinking ring and remembers its turn direction between decisions.",
       tags: ["Mobility", "Memory", "Contraction"],
@@ -823,7 +823,7 @@ export const STARTER_STRATEGY_DEFINITIONS: readonly StarterStrategyDefinition[] 
     {
       id: "starter:mirror-breaker",
       name: "Mirror Breaker",
-      version: "v1",
+      version: "v1.4",
       description:
         "Mirrors enemy pressure early, then breaks symmetry once the board tightens.",
       tags: ["Symmetry", "Memory", "Timing"],
@@ -840,7 +840,7 @@ export const STARTER_STRATEGY_DEFINITIONS: readonly StarterStrategyDefinition[] 
     {
       id: "starter:center-turtle",
       name: "Center Turtle",
-      version: "v1",
+      version: "v1.4",
       description:
         "Holds a stable central posture, avoids unnecessary adjacency, and stones when boxed.",
       tags: ["Defense", "Center", "Stable"],
@@ -857,7 +857,7 @@ export const STARTER_STRATEGY_DEFINITIONS: readonly StarterStrategyDefinition[] 
     {
       id: "starter:aggro-chaser",
       name: "Aggro Chaser",
-      version: "v1",
+      version: "v1.4",
       description:
         "Pursues the closest active enemy and forces contact quickly.",
       tags: ["Aggro", "Chase", "Contact"],
@@ -874,7 +874,7 @@ export const STARTER_STRATEGY_DEFINITIONS: readonly StarterStrategyDefinition[] 
     {
       id: "starter:escape-artist",
       name: "Escape Artist",
-      version: "v1",
+      version: "v1.4",
       description:
         "Optimizes legal exits from threat zones and remembers bad lanes.",
       tags: ["Mobility", "Memory", "Survival"],
@@ -891,7 +891,7 @@ export const STARTER_STRATEGY_DEFINITIONS: readonly StarterStrategyDefinition[] 
     {
       id: "starter:trap-setter",
       name: "Trap Setter",
-      version: "v1",
+      version: "v1.4",
       description:
         "Baits pursuit along a remembered lane and turns to STONE when contact arrives.",
       tags: ["Trap", "Memory", "STONE"],
