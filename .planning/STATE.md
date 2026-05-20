@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: Planning next milestone
-status: planning_next
-last_updated: "2026-05-20T11:10:00.000-04:00"
+milestone: v1.4
+milestone_name: v1.4 Cycle-Interleaved Rules Correction
+status: planning
+last_updated: "2026-05-20T11:30:00.000-04:00"
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
-  total_plans: 0
+  total_plans: 5
   completed_plans: 0
   percent: 0
 ---
@@ -15,32 +15,32 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** v1.3 Competition Trust Beta shipped; no active milestone
+**Status:** v1.4 Cycle-Interleaved Rules Correction planned
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Start the next milestone with fresh requirements
-**Completed milestone:** v1.3 Competition Trust Beta
-**Archived roadmap:** .planning/milestones/v1.3-ROADMAP.md
-**Archived requirements:** .planning/milestones/v1.3-REQUIREMENTS.md
+**Current focus:** Phase 25 source-of-truth rule version for Cycle-interleaved scheduling and Cycle-boundary Backstab
+**Current milestone:** v1.4 Cycle-Interleaved Rules Correction
+**Requirements:** .planning/REQUIREMENTS.md
+**Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: none active
-Plan: none active
-Status: v1.3 phases 19-24 implemented, reviewed, validated, verified, audited, archived, and tagged
-Last activity: 2026-05-20 — Archived v1.3 roadmap, requirements, audit, and phase directories; prepared for the next milestone.
+Phase: 25 - Rule Source-of-Truth Version
+Plan: Not started
+Status: Defining source-of-truth rule correction
+Last activity: 2026-05-20 — Started v1.4 milestone to correct Activation scheduling from full-Activation sequencing to Cycle-interleaved selected Soldier slots, with Backstab checks at the start and end of every Cycle.
 
 ## Workflow Settings
 
 - Mode: YOLO
 - Granularity: Standard
-- Execution: Parallel
+- Execution: Sequential core contract first, then parallel where safe
 - Git tracking: Yes
-- Research before planning: Yes
+- Research before planning: Skipped for v1.4 because this is a correction to an internal source-of-truth rule, not a new domain feature
 - Plan check: Yes
 - Verifier: Yes
 - Model profile: Balanced
@@ -54,6 +54,12 @@ Last activity: 2026-05-20 — Archived v1.3 roadmap, requirements, audit, and ph
 | v1.2 Competitive Alpha | 5 | 10 | 33/33 | Shipped |
 | v1.3 Competition Trust Beta | 6 | 6 | 51/51 | Shipped |
 
+## Active Milestone
+
+| Milestone | Phases | Plans | Requirements | Status |
+| --- | ---: | ---: | ---: | --- |
+| v1.4 Cycle-Interleaved Rules Correction | 5 | 5 | 33/33 mapped | Planned |
+
 ## Accumulated Context
 
 - v1.0 established the complete author -> execute -> replay loop.
@@ -65,9 +71,9 @@ Last activity: 2026-05-20 — Archived v1.3 roadmap, requirements, audit, and ph
 - v1.2 intentionally allows one user to enter multiple distinct Strategy Revisions into the same exhibition MatchSet for self-play testing; one Strategy per user is deferred to ranked or more formal competition.
 - Phase 14-18 artifacts are archived under `.planning/milestones/v1.2-phases/`.
 - v1.3 added Starter Library, resettable trial ladder seasons, deterministic scheduling, public profiles/cards, focused governance, and a containerized subprocess runtime boundary spike.
-- The v1.3 local demo ladder is available at `/ladder/v13-demo` while the web dev server is running.
-- Final v1.3 demo rerun completed 96/96 jobs with 13,162 MOVE events, 0 immediate-reversal blocks, and the sample replay `match:match-set:trial:trial-season:v13-demo:0:0:10` lasting into contraction.
 - Phase 19-24 artifacts are archived under `.planning/milestones/v1.3-phases/`.
+- v1.4 exists because the intended core rule was miscommunicated: selected Soldiers should alternate by Cycle, not by whole Activation.
+- v1.4 Backstab intent: check Backstab at the start and end of every Cycle using simultaneous all-board resolution.
 
 ## Deferred Items
 
@@ -82,7 +88,7 @@ Items acknowledged and deferred after v1.3 milestone completion on 2026-05-20:
 
 ## Next Command
 
-Run `$gsd-new-milestone` to define fresh requirements and roadmap for the next milestone.
+Run `$gsd-discuss-phase 25` to clarify the source-of-truth rule version and implementation contract.
 
 ---
-*Last updated: 2026-05-20 after v1.3 milestone completion*
+*Last updated: 2026-05-20 after starting v1.4 Cycle-Interleaved Rules Correction*

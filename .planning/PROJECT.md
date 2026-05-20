@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.3 Competition Trust Beta on 2026-05-20
-**Current milestone:** None active
-**Status:** Planning next milestone.
+**Current milestone:** v1.4 Cycle-Interleaved Rules Correction
+**Status:** Defining requirements and roadmap for v1.4.
 **Last audit:** v1.3 passed, 51/51 requirements satisfied.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible starter Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, and trust that public outputs do not expose private Strategy data.
@@ -25,6 +25,17 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - Dispute and moderation surfaces for flagging results, admin review, invalid/non-competitive marking, and audit logs.
 - Runtime/sandbox production decision spike behind the existing StrategyRuntime adapter with hostile Strategy regression coverage.
 - Forkable Starter Strategy Library of about 10 genuinely playable baseline doctrines for new players.
+
+## Current Milestone: v1.4 Cycle-Interleaved Rules Correction
+
+**Goal:** Correct the core gameplay contract so selected Soldiers swap turns between Cycles rather than resolving whole Activations at once, with Backstab checked at the start and end of every Cycle, then rebaseline engine, replay, docs, starter Strategies, and demo competition data around the corrected rule.
+
+**Target features:**
+- New upstream rules source-of-truth version that explicitly defines Cycle-interleaved Activation scheduling and Cycle-boundary Backstab.
+- Engine scheduler rewrite that runs selected Soldier slots one Cycle layer at a time, skipping ended Activations.
+- Chronicle, replay grammar, reconstruction, fixtures, and visual/debug assumptions updated for interleaved Cycle ordering.
+- Starter Strategies, templates, fixtures, and preconfigured Strategy inputs tuned for the new tactical timing.
+- Demo ladder and sample MatchSets regenerated and validated under the corrected rules.
 
 ## Validated in v1.0
 
@@ -122,12 +133,16 @@ Planning archives live under `.planning/milestones/`:
 | Use resettable trial ladders before durable ratings | Ranking pressure is useful, but permanent ratings should wait until abuse, moderation, and sandbox behavior are better understood. | ✓ Good |
 | Seed starter Strategies as forkable templates | Players should begin with readable, credible doctrines they choose to fork, not opaque auto-submissions. | ✓ Good |
 | Treat containerized subprocess as the production-candidate runtime path | It preserves the JS/TS Strategy API while adding a clearer process and container boundary than worker threads. | ✓ Revisit before real hostile public scale |
+| Interleave selected Soldiers by Cycle, not full Activation | The intended game is simultaneous-feeling tactical pressure where selected Soldiers respond between Cycles instead of one Soldier consuming its whole Cycle budget before the next slot acts. | — Pending v1.4 correction |
+| Check Backstab at every Cycle boundary | Backstab should be a tactical contact rule checked before and after each SoldierBrain Cycle, not only at Activation boundaries. | — Pending v1.4 correction |
 
 ## Constraints
 
 The active constraints remain: deterministic engine behavior, engine purity, Strategy Revision immutability, hostile Strategy treatment, runtime isolation, memory/source/output limits, package boundaries, replay privacy, Chronicle compatibility, and competitive integrity.
 
 Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, and private runtime internals by default.
+
+v1.4 rule-correction work must treat the rules docs, engine, Chronicle/replay grammar, fixtures, starter Strategies, and demo competition data as one contract. It should not leave old full-Activation assumptions in samples, tests, or public explanatory text.
 
 ## Evolution
 
@@ -140,4 +155,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-20 after v1.3 milestone completion*
+*Last updated: 2026-05-20 after starting v1.4 Cycle-Interleaved Rules Correction*
