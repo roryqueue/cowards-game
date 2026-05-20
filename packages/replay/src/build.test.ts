@@ -104,8 +104,6 @@ describe("buildChronicleFromMatch", () => {
     const snapshotKinds = chronicle.snapshots.map((snapshot) => snapshot.kind)
     expect(snapshotKinds).toContain("MATCH_START")
     expect(snapshotKinds).toContain("ROUND_START")
-    expect(snapshotKinds).toContain("ACTIVATION_START")
-    expect(snapshotKinds).toContain("ACTIVATION_END")
     expect(snapshotKinds).toContain("MATCH_END")
     expect(snapshotKinds).toContain("TERMINAL")
   })

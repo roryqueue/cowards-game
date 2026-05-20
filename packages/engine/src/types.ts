@@ -30,6 +30,8 @@ export type BackstabBoundary =
   | "activation-start"
   | "activation-end"
   | "post-advance"
+  | "cycle-start"
+  | "cycle-end"
 
 export interface EnginePlayer {
   id: PlayerId
@@ -117,6 +119,18 @@ export interface RunMatchInput extends CreateInitialGameStateInput {
 export interface ActivationSelectionResult {
   state: GameState
   orders: ActivationOrder[]
+}
+
+export interface ActivationSlotState {
+  activationId: string
+  activationIndex: number
+  actingPlayerId: PlayerId
+  soldierId: SoldierId
+  objective?: JsonValue | undefined
+  cycleIndex: number
+  advanced: boolean
+  ended: boolean
+  terminalReason?: ActivationTerminalReason | undefined
 }
 
 export interface BackstabPair {

@@ -13,7 +13,7 @@ import { createChronicleContentHash } from "./hash.js"
 import { validateChronicleTransitions } from "./replay-transition.js"
 import { validateSnapshotBoundaries } from "./snapshot-boundaries.js"
 
-const SUPPORTED_SCHEMA_VERSION = "chronicle-v1"
+const SUPPORTED_SCHEMA_VERSION = "chronicle-v1.4"
 
 const REQUIRED_COMPLETED_EVENT_TYPES = [
   "MATCH_STARTED",
@@ -243,18 +243,6 @@ const validateSnapshots = (
         "SNAPSHOT_MISSING",
         "Chronicle with rounds requires ROUND_START and ROUND_END snapshots.",
         { expected: "ROUND_START and ROUND_END" },
-      ),
-    )
-  }
-  if (
-    chronicle.events.some((event) => event.type === "ACTIVATION_STARTED") &&
-    (!present.has("ACTIVATION_START") || !present.has("ACTIVATION_END"))
-  ) {
-    errors.push(
-      error(
-        "SNAPSHOT_MISSING",
-        "Chronicle with activations requires ACTIVATION_START and ACTIVATION_END snapshots.",
-        { expected: "ACTIVATION_START and ACTIVATION_END" },
       ),
     )
   }

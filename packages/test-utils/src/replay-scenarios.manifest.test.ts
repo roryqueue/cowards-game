@@ -40,7 +40,7 @@ describe("[engine legality] canonical replay scenarios", () => {
       const eventTypes = scenario.chronicle.events.map((event) => event.type)
 
       expect(scenario.title).not.toHaveLength(0)
-      expect(scenario.chronicle.schemaVersion).toBe("chronicle-v1")
+      expect(scenario.chronicle.schemaVersion).toBe("chronicle-v1.4")
       expect(scenario.chronicle.events.length).toBeGreaterThan(0)
       expect(scenario.expectedEventTypes.length).toBeGreaterThan(0)
       expect(scenario.visualCheckpoints.length).toBeGreaterThan(0)

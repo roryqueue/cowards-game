@@ -321,6 +321,10 @@ export const ChronicleEventTypeSchema = z.enum([
   "ROUND_STARTED",
   "STRATEGY_EVALUATED",
   "ACTIVATION_STARTED",
+  "ACTIVATION_SKIPPED",
+  "ACTIVATION_ENDED",
+  "CYCLE_STARTED",
+  "CYCLE_ENDED",
   "AWARENESS_GRID_OBSERVED",
   "ACTION_EMITTED",
   "MOVE_ADVANCED",
@@ -337,7 +341,10 @@ export const ChronicleEventTypeSchema = z.enum([
   "RUNTIME_VIOLATION",
 ])
 
-export const ChronicleSchemaVersionSchema = z.literal("chronicle-v1")
+export const ChronicleSchemaVersionSchema = z.union([
+  z.literal("chronicle-v1"),
+  z.literal("chronicle-v1.4"),
+])
 
 export const ChronicleSnapshotKindSchema = z.enum([
   "MATCH_START",
@@ -410,6 +417,31 @@ export const ChronicleEventSchema = z.discriminatedUnion("type", [
     payload: SoldierIdPayloadSchema,
   }),
   ChronicleEventBaseSchema.extend({
+    type: z.literal("ACTIVATION_SKIPPED"),
+    payload: SoldierIdPayloadSchema.extend({
+      cycleIndex: z.number().int().nonnegative(),
+      reason: z.string().min(1),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("ACTIVATION_ENDED"),
+    payload: SoldierIdPayloadSchema.extend({
+      reason: z.string().min(1),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("CYCLE_STARTED"),
+    payload: SoldierIdPayloadSchema.extend({
+      cycleIndex: z.number().int().nonnegative(),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
+    type: z.literal("CYCLE_ENDED"),
+    payload: SoldierIdPayloadSchema.extend({
+      cycleIndex: z.number().int().nonnegative(),
+    }),
+  }),
+  ChronicleEventBaseSchema.extend({
     type: z.literal("AWARENESS_GRID_OBSERVED"),
     payload: SoldierIdPayloadSchema.extend({
       cycleIndex: z.number().int().nonnegative(),
@@ -462,7 +494,13 @@ export const ChronicleEventSchema = z.discriminatedUnion("type", [
   ChronicleEventBaseSchema.extend({
     type: z.literal("BACKSTAB_RESOLVED"),
     payload: z.object({
-      boundary: z.enum(["activation-start", "activation-end", "post-advance"]),
+      boundary: z.enum([
+        "activation-start",
+        "activation-end",
+        "post-advance",
+        "cycle-start",
+        "cycle-end",
+      ]),
       pairs: z.array(
         z.object({
           attackerId: z.string().min(1),

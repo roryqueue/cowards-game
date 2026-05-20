@@ -1,4 +1,9 @@
-import type { Chronicle, SoldierBrainInput, StrategyInput } from "@cowards/spec"
+import {
+  COMPATIBILITY_VERSIONS,
+  type Chronicle,
+  type SoldierBrainInput,
+  type StrategyInput,
+} from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import type { StrategyRuntime } from "@cowards/engine"
 import { buildChronicleFromMatch } from "./build.js"
@@ -98,21 +103,14 @@ const movementChronicle = (): Chronicle => {
   }
 
   return {
-    schemaVersion: "chronicle-v1",
+    schemaVersion: "chronicle-v1.4",
     reproducibility: {
       matchId: "movement-reconstruct",
       seed: "movement-seed",
       arenaVariantId: "arena",
       arenaVariantVersion: "0.1.0",
       strategyRevisionIds: ["bottom-rev", "top-rev"],
-      versions: {
-        spec: "1.0.0",
-        engine: "0.1.0",
-        runtimeJs: "0.1.0",
-        chronicle: "0.1.0",
-        strategyRevision: "0.1.0",
-        arenaVariant: "0.1.0",
-      },
+      versions: COMPATIBILITY_VERSIONS,
     },
     events: [
       {
@@ -144,15 +142,22 @@ const movementChronicle = (): Chronicle => {
         payload: { soldierId: "mover" },
       },
       {
-        type: "AWARENESS_GRID_OBSERVED",
+        type: "CYCLE_STARTED",
         sequence: 4,
+        context: { ...activationContext, cycleIndex: 0 },
+        privacy: "public",
+        payload: { soldierId: "mover", cycleIndex: 0 },
+      },
+      {
+        type: "AWARENESS_GRID_OBSERVED",
+        sequence: 5,
         context: { ...activationContext, cycleIndex: 0 },
         privacy: "owner",
         payload: { soldierId: "mover", cycleIndex: 0 },
       },
       {
         type: "ACTION_EMITTED",
-        sequence: 5,
+        sequence: 6,
         context: { ...activationContext, cycleIndex: 0 },
         privacy: "owner",
         payload: {
@@ -162,8 +167,8 @@ const movementChronicle = (): Chronicle => {
       },
       {
         type: "PUSH_RESOLVED",
-        sequence: 6,
-        context: activationContext,
+        sequence: 7,
+        context: { ...activationContext, cycleIndex: 0 },
         privacy: "public",
         payload: {
           soldierId: "mover",
@@ -173,31 +178,38 @@ const movementChronicle = (): Chronicle => {
       },
       {
         type: "MOVE_ADVANCED",
-        sequence: 7,
-        context: activationContext,
+        sequence: 8,
+        context: { ...activationContext, cycleIndex: 0 },
         privacy: "public",
         payload: { soldierId: "mover", direction: "RIGHT" },
       },
       {
         type: "BACKSTAB_RESOLVED",
-        sequence: 8,
-        context: activationContext,
+        sequence: 9,
+        context: { ...activationContext, cycleIndex: 0 },
         privacy: "public",
         payload: {
-          boundary: "post-advance",
+          boundary: "cycle-end",
           pairs: [{ attackerId: "mover", victimId: "victim" }],
         },
       },
       {
         type: "SOLDIER_STONED",
-        sequence: 9,
-        context: activationContext,
+        sequence: 10,
+        context: { ...activationContext, cycleIndex: 0 },
         privacy: "public",
         payload: { soldierId: "victim", reason: "BACKSTAB" },
       },
       {
+        type: "CYCLE_ENDED",
+        sequence: 11,
+        context: { ...activationContext, cycleIndex: 0 },
+        privacy: "public",
+        payload: { soldierId: "mover", cycleIndex: 0 },
+      },
+      {
         type: "MATCH_ENDED",
-        sequence: 10,
+        sequence: 12,
         context: {},
         privacy: "public",
         payload: { type: "DRAW" },
@@ -219,26 +231,26 @@ const movementChronicle = (): Chronicle => {
       },
       {
         kind: "ACTIVATION_END",
-        sequence: 9,
+        sequence: 11,
         context: activationContext,
         board: finalBoard,
       },
       {
         kind: "ROUND_END",
-        sequence: 9,
+        sequence: 11,
         context: roundContext,
         board: finalBoard,
       },
       {
         kind: "MATCH_END",
-        sequence: 10,
+        sequence: 12,
         context: {},
         board: finalBoard,
         outcome: { type: "DRAW" },
       },
       {
         kind: "TERMINAL",
-        sequence: 10,
+        sequence: 12,
         context: {},
         board: finalBoard,
         outcome: { type: "DRAW" },
@@ -274,7 +286,7 @@ describe("createReplay", () => {
       return
     }
 
-    const afterPush = replay.replay.stateAt(6)
+    const afterPush = replay.replay.stateAt(7)
     expect(afterPush.ok).toBe(true)
     expect(
       afterPush.ok
@@ -284,7 +296,7 @@ describe("createReplay", () => {
         : undefined,
     ).toEqual({ x: 3, y: 1 })
 
-    const afterMove = replay.replay.stateAt(7)
+    const afterMove = replay.replay.stateAt(8)
     expect(afterMove.ok).toBe(true)
     expect(
       afterMove.ok
@@ -298,7 +310,7 @@ describe("createReplay", () => {
       lastSuccessfulMoveDirection: "RIGHT",
     })
 
-    const final = replay.replay.stateAt(10)
+    const final = replay.replay.stateAt(12)
     expect(final.ok).toBe(true)
     expect(
       final.ok

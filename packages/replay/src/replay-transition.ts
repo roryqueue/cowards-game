@@ -215,6 +215,10 @@ export const applyReplayEvent = (
     case "ACTION_EMITTED":
     case "STRATEGY_EVALUATED":
     case "ACTIVATION_STARTED":
+    case "ACTIVATION_SKIPPED":
+    case "ACTIVATION_ENDED":
+    case "CYCLE_STARTED":
+    case "CYCLE_ENDED":
     case "ROUND_STARTED":
     case "MATCH_STARTED":
     case "RUNTIME_VIOLATION":

@@ -117,7 +117,7 @@ describe("movement rules", () => {
         { type: "MOVE", direction: "UP" },
         { advanced: false },
       ).terminalReason,
-    ).toBe("MOVE_BLOCKED")
+    ).toBeUndefined()
 
     const stone = stateWith([
       soldier({ id: "mover" }),
@@ -130,7 +130,7 @@ describe("movement rules", () => {
         { type: "MOVE", direction: "UP" },
         { advanced: false },
       ).terminalReason,
-    ).toBe("MOVE_BLOCKED")
+    ).toBeUndefined()
   })
 
   it("resolves head-to-head collision without push", () => {
@@ -149,7 +149,7 @@ describe("movement rules", () => {
       { type: "MOVE", direction: "UP" },
       { advanced: false },
     )
-    expect(result.terminalReason).toBe("MOVE_BLOCKED")
+    expect(result.terminalReason).toBeUndefined()
     expect(result.state.soldiers.map((entry) => entry.position)).toEqual([
       { x: 5, y: 5 },
       { x: 5, y: 4 },
@@ -173,7 +173,7 @@ describe("movement rules", () => {
       { advanced: false },
     )
 
-    expect(result.terminalReason).toBe("MOVE_BLOCKED")
+    expect(result.terminalReason).toBeUndefined()
     expect(result.advanced).toBe(false)
     expect(result.state.soldiers.map((entry) => entry.position)).toEqual([
       { x: 5, y: 5 },
@@ -225,7 +225,7 @@ describe("movement rules", () => {
         { type: "MOVE", direction: "RIGHT" },
         { advanced: false },
       ).terminalReason,
-    ).toBe("MOVE_BLOCKED")
+    ).toBeUndefined()
 
     const offBoard = stateWith([
       soldier({ id: "mover", position: { x: 9, y: 5 }, facing: "RIGHT" }),

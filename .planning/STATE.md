@@ -2,37 +2,37 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: v1.4 Cycle-Interleaved Rules Correction
-status: planning
-last_updated: "2026-05-20T11:30:00.000-04:00"
+status: executing
+last_updated: "2026-05-20T15:00:00.000-04:00"
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 3
   total_plans: 5
-  completed_plans: 0
-  percent: 0
+  completed_plans: 3
+  percent: 60
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** v1.4 Cycle-Interleaved Rules Correction planned
+**Status:** v1.4 Cycle-Interleaved Rules Correction executing
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 25 source-of-truth rule version for Cycle-interleaved scheduling and Cycle-boundary Backstab
+**Current focus:** Phase 28 starter strategy and input rebaseline
 **Current milestone:** v1.4 Cycle-Interleaved Rules Correction
 **Requirements:** .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 25 - Rule Source-of-Truth Version
-Plan: Not started
-Status: Defining source-of-truth rule correction
-Last activity: 2026-05-20 — Started v1.4 milestone to correct Activation scheduling from full-Activation sequencing to Cycle-interleaved selected Soldier slots, with Backstab checks at the start and end of every Cycle.
+Phase: 28 - Starter Strategy and Input Rebaseline
+Plan: Next
+Status: Phase 25 source-of-truth, Phase 26 engine scheduler, and Phase 27 Chronicle/replay rebaseline completed; preparing starter retune.
+Last activity: 2026-05-20 — Implemented Cycle-interleaved Round scheduling, Cycle-boundary Backstab summaries, non-terminal blocked movement, `chronicle-v1.4` replay generation, active fixture rebaseline, and full fast-suite validation.
 
 ## Workflow Settings
 
@@ -58,7 +58,7 @@ Last activity: 2026-05-20 — Started v1.4 milestone to correct Activation sched
 
 | Milestone | Phases | Plans | Requirements | Status |
 | --- | ---: | ---: | ---: | --- |
-| v1.4 Cycle-Interleaved Rules Correction | 5 | 5 | 33/33 mapped | Planned |
+| v1.4 Cycle-Interleaved Rules Correction | 5 | 5 | 33/33 mapped | Executing |
 
 ## Accumulated Context
 
@@ -88,7 +88,7 @@ Items acknowledged and deferred after v1.3 milestone completion on 2026-05-20:
 
 ## Next Command
 
-Run `$gsd-discuss-phase 25` to clarify the source-of-truth rule version and implementation contract.
+Continue with Phase 28 starter strategy and input rebaseline.
 
 ---
-*Last updated: 2026-05-20 after starting v1.4 Cycle-Interleaved Rules Correction*
+*Last updated: 2026-05-20 after completing v1.4 Phases 25-27 implementation and validation*

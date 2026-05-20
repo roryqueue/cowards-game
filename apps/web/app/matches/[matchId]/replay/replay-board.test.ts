@@ -76,7 +76,7 @@ const data = (states: ReplayReadyDto["states"]): ReplayReadyDto => ({
     matchId: "match:board",
     chronicleId: "chronicle:board",
     hash: "hash",
-    schemaVersion: "chronicle-v1",
+    schemaVersion: "chronicle-v1.4",
     eventCount: 2,
     snapshotCount: 1,
     outcome: { type: "DRAW" },
@@ -85,7 +85,7 @@ const data = (states: ReplayReadyDto["states"]): ReplayReadyDto => ({
     arenaVariantId: "arena:board",
   },
   projection: {
-    schemaVersion: "chronicle-v1",
+    schemaVersion: "chronicle-v1.4",
     viewer: { access: "public" },
     reproducibility: {
       matchId: "match:board",
@@ -97,7 +97,7 @@ const data = (states: ReplayReadyDto["states"]): ReplayReadyDto => ({
         spec: "spec-v1",
         engine: "engine-v1",
         runtimeJs: "runtime-js-v1",
-        chronicle: "chronicle-v1",
+        chronicle: "chronicle-v1.4",
         strategyRevision: "strategy-revision-v1",
         arenaVariant: "arena-variant-v1",
       },

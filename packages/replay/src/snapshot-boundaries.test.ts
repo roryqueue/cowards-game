@@ -140,7 +140,6 @@ describe("validateSnapshotBoundaries", () => {
   it.each([
     ["MATCH_START", "ROUND_STARTED"],
     ["ROUND_START", "MATCH_STARTED"],
-    ["ACTIVATION_START", "ROUND_STARTED"],
     ["MATCH_END", "ROUND_STARTED"],
     ["TERMINAL", "ROUND_STARTED"],
   ] as const)(
@@ -199,32 +198,6 @@ describe("validateSnapshotBoundaries", () => {
     ).toContain("SNAPSHOT_BOUNDARY_INVALID")
   })
 
-  it("rejects ACTIVATION_END snapshots moved to a mid-Activation event with matching Activation context", () => {
-    const chronicle = createChronicle()
-    const activationEnd = snapshotOf(chronicle, "ACTIVATION_END")
-    const midActivationSequence = chronicle.events.find(
-      (event) =>
-        event.sequence < activationEnd.sequence &&
-        event.context.activationId === activationEnd.context.activationId &&
-        event.context.activationIndex ===
-          activationEnd.context.activationIndex &&
-        event.context.roundNumber === activationEnd.context.roundNumber &&
-        event.context.actingPlayerId === activationEnd.context.actingPlayerId &&
-        event.context.soldierId === activationEnd.context.soldierId &&
-        event.type === "AWARENESS_GRID_OBSERVED",
-    )?.sequence
-
-    expect(midActivationSequence).toBeDefined()
-    expect(
-      errorCodes(
-        mutateFirstSnapshot(chronicle, "ACTIVATION_END", (snapshot) => ({
-          ...snapshot,
-          sequence: midActivationSequence ?? snapshot.sequence,
-        })),
-      ),
-    ).toContain("SNAPSHOT_BOUNDARY_INVALID")
-  })
-
   it.each(["ROUND_START", "ROUND_END"] as const)(
     "rejects %s snapshots whose Round context contradicts the boundary event",
     (kind) => {
@@ -237,25 +210,6 @@ describe("validateSnapshotBoundaries", () => {
             context: {
               ...snapshot.context,
               roundNumber: snapshot.context.roundNumber === 1 ? 2 : 1,
-            },
-          })),
-        ),
-      ).toContain("CONTEXT_MISMATCH")
-    },
-  )
-
-  it.each(["ACTIVATION_START", "ACTIVATION_END"] as const)(
-    "rejects %s snapshots whose Activation context contradicts the boundary event",
-    (kind) => {
-      const chronicle = createChronicle()
-
-      expect(
-        errorCodes(
-          mutateFirstSnapshot(chronicle, kind, (snapshot) => ({
-            ...snapshot,
-            context: {
-              ...snapshot.context,
-              actingPlayerId: `${snapshot.context.actingPlayerId}-tampered`,
             },
           })),
         ),

@@ -130,10 +130,10 @@ describe("validateChronicle", () => {
 
   it("returns typed schema and version errors", () => {
     expect(errorCodes({ schemaVersion: "chronicle-v1" })).toContain(
-      "SCHEMA_INVALID",
+      "VERSION_INCOMPATIBLE",
     )
     expect(migrateChronicle({ schemaVersion: "chronicle-v1" })).toMatchObject({
-      code: "SCHEMA_INVALID",
+      code: "UNSUPPORTED_MIGRATION",
     })
     expect(
       errorCodes({ ...createChronicle(), schemaVersion: "chronicle-v0" }),
@@ -147,7 +147,7 @@ describe("validateChronicle", () => {
   })
 
   it("keeps malformed shape diagnostics under SCHEMA_INVALID issue details", () => {
-    const result = validateChronicle({ schemaVersion: "chronicle-v1" })
+    const result = validateChronicle({ schemaVersion: "chronicle-v1.4" })
 
     expect(result.ok).toBe(false)
     if (result.ok) {
@@ -349,32 +349,19 @@ describe("validateChronicle", () => {
     ).toContain("HASH_MISMATCH")
   })
 
-  it("requires every Round and Activation boundary snapshot instance", () => {
+  it("requires every Round boundary snapshot instance", () => {
     const chronicle = createChronicle()
     const firstRoundEnd = chronicle.snapshots.findIndex(
       (snapshot) => snapshot.kind === "ROUND_END",
     )
-    const firstActivationEnd = chronicle.snapshots.findIndex(
-      (snapshot) => snapshot.kind === "ACTIVATION_END",
-    )
 
     expect(firstRoundEnd).toBeGreaterThanOrEqual(0)
-    expect(firstActivationEnd).toBeGreaterThanOrEqual(0)
     expect(
       errorCodes({
         ...chronicle,
         snapshots: chronicle.snapshots.filter(
           (snapshot, index) =>
             snapshot.kind !== "ROUND_END" || index === firstRoundEnd,
-        ),
-      }),
-    ).toContain("SNAPSHOT_MISSING")
-    expect(
-      errorCodes({
-        ...chronicle,
-        snapshots: chronicle.snapshots.filter(
-          (snapshot, index) =>
-            snapshot.kind !== "ACTIVATION_END" || index === firstActivationEnd,
         ),
       }),
     ).toContain("SNAPSHOT_MISSING")

@@ -119,6 +119,45 @@ describe("activation selection and runtime inputs", () => {
     expect(result.state.soldiers[0]!.status).toBe("ACTIVE")
   })
 
+  it("keeps blocked movement non-terminal and allows a later Cycle", () => {
+    const [mover, , , , , , , , opponent] =
+      createInitialGameState(baseInput).soldiers
+    const state = stateWithSoldiers([
+      {
+        ...mover!,
+        id: "mover",
+        position: { x: 5, y: 5 },
+        facing: "UP",
+      },
+      {
+        ...opponent!,
+        id: "opponent",
+        ownerPlayerId: "top-player",
+        position: { x: 9, y: 9 },
+      },
+    ])
+    let calls = 0
+    const runtime = createFakeRuntime({
+      action: () => {
+        calls += 1
+        return calls === 1
+          ? { type: "MOVE", direction: "UP" }
+          : { type: "TURN_TO_STONE" }
+      },
+    })
+
+    const result = resolveActivation(
+      { ...state, terrainStones: [{ x: 5, y: 4 }] },
+      runtime,
+      "mover",
+    )
+
+    expect(calls).toBe(2)
+    expect(result.events.map((summary) => summary.type)).toEqual(
+      expect.arrayContaining(["MOVE_BLOCKED", "CYCLE_ENDED"]),
+    )
+  })
+
   it("ends immediately when a push off-board eliminates a player", () => {
     const state = {
       ...stateWithSoldiers([

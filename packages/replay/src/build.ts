@@ -3,12 +3,8 @@ import {
   checkAndApplyMatchEnd,
   createInitialGameState,
   getFullBoardSnapshot,
-  getInitiativeForRound,
-  getOpponentPlayer,
-  getRoundPlayerOrder,
-  resolveActivation,
-  resolveActivationSelection,
   resolveContraction,
+  resolveRound,
   type GameState,
   type RunMatchInput,
   type TransitionEventSummary,
@@ -161,7 +157,7 @@ const createChronicle = (
   snapshots: ChronicleBoundarySnapshot[],
   privateSections: ChroniclePrivateSections | undefined,
 ): Chronicle => ({
-  schemaVersion: "chronicle-v1",
+  schemaVersion: "chronicle-v1.4",
   reproducibility: createReproducibility(input, finalState),
   events,
   snapshots,
@@ -224,81 +220,10 @@ export const buildChronicleFromMatch = (
       snapshots.push(
         snapshot("ROUND_START", state, events.length, roundContext),
       )
-      appendEvents(
-        [
-          {
-            type: "ROUND_STARTED",
-            sequence: 0,
-            payload: { roundNumber },
-          },
-        ],
-        roundContext,
-      )
 
-      const firstPlayerId = getInitiativeForRound(state)
-      const secondPlayerId = getOpponentPlayer(state, firstPlayerId).id
-      const bottomSelection = resolveActivationSelection(
-        state,
-        input.runtime,
-        state.players[0].id,
-      )
-      state = bottomSelection.state.state
-      appendEvents(bottomSelection.events, roundContext)
-      const topSelection = resolveActivationSelection(
-        state,
-        input.runtime,
-        state.players[1].id,
-      )
-      state = topSelection.state.state
-      appendEvents(topSelection.events, roundContext)
-
-      const queues = new Map<string, typeof bottomSelection.state.orders>([
-        [state.players[0].id, [...bottomSelection.state.orders]],
-        [state.players[1].id, [...topSelection.state.orders]],
-      ])
-      const order = getRoundPlayerOrder(
-        firstPlayerId,
-        secondPlayerId,
-        state.activationCount,
-      )
-
-      let activationIndex = 0
-      for (const playerId of order) {
-        if (state.outcome) {
-          break
-        }
-        const activationOrder = queues.get(playerId)?.shift()
-        if (!activationOrder) {
-          continue
-        }
-        const activationContext: ChronicleEventContext = {
-          ...roundContext,
-          activationId: `${state.phaseNumber}:${roundNumber}:${activationIndex}`,
-          activationIndex,
-          actingPlayerId: playerId,
-          soldierId: activationOrder.soldierId,
-        }
-        snapshots.push(
-          snapshot("ACTIVATION_START", state, events.length, activationContext),
-        )
-        const resolved = resolveActivation(
-          state,
-          input.runtime,
-          activationOrder.soldierId,
-          activationOrder.objective,
-        )
-        state = resolved.state
-        appendEvents(resolved.events, activationContext)
-        snapshots.push(
-          snapshot(
-            "ACTIVATION_END",
-            state,
-            currentSequence(events),
-            activationContext,
-          ),
-        )
-        activationIndex += 1
-      }
+      const round = resolveRound(state, input.runtime)
+      state = round.state
+      appendEvents(round.events, roundContext)
 
       const ended = checkAndApplyMatchEnd(state)
       state = ended.state

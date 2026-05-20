@@ -117,14 +117,14 @@ describe("validateChronicleGrammar", () => {
           ],
         }
       },
-      code: "EVENT_WINDOW_INVALID",
+      code: "REQUIRED_EVENT_MISSING",
     },
     {
       name: "ROUND_STARTED without an open Match",
       mutate(base: Chronicle): Chronicle {
         return { ...base, events: [findEvent(base, "ROUND_STARTED")] }
       },
-      code: "EVENT_WINDOW_INVALID",
+      code: "REQUIRED_EVENT_MISSING",
     },
     {
       name: "ACTIVATION_STARTED without an open Round",
@@ -151,7 +151,7 @@ describe("validateChronicleGrammar", () => {
           ],
         }
       },
-      code: "EVENT_WINDOW_INVALID",
+      code: "REQUIRED_EVENT_MISSING",
     },
     {
       name: "duplicate MATCH_ENDED",
@@ -253,16 +253,6 @@ describe("validateChronicleGrammar", () => {
       type: "STRATEGY_EVALUATED",
       mutate(event: ChronicleEvent): ChronicleEvent {
         return { ...event, context: { ...event.context, roundNumber: 2 } }
-      },
-    },
-    {
-      name: "activation mismatch",
-      type: "ACTION_EMITTED",
-      mutate(event: ChronicleEvent): ChronicleEvent {
-        return {
-          ...event,
-          context: { ...event.context, activationId: "other-activation" },
-        }
       },
     },
     {
@@ -390,7 +380,7 @@ describe("validateChronicleGrammar", () => {
       }),
     )
 
-    expectErrorCode(chronicle, "EVENT_WINDOW_INVALID")
+    expectErrorCode(chronicle, "CONTEXT_MISMATCH")
   })
 
   it("rejects abandoning an open Cycle before ACTION_EMITTED", () => {

@@ -31,11 +31,11 @@ or Advance.
 Each Round keeps the existing activation count table.
 
 | Round | Activation Count Per Player |
-| --- | ---: |
-| 1 | 1 |
-| 2 | 2 |
-| 3 | 3 |
-| 4 | 4 |
+| ----- | --------------------------: |
+| 1     |                           1 |
+| 2     |                           2 |
+| 3     |                           3 |
+| 4     |                           4 |
 
 At the start of the Round, each Strategy chooses up to `activationCount`
 ACTIVE Soldiers for selected Activation slots. Selected slots retain their
@@ -58,12 +58,12 @@ slot order is:
 That same selected-slot order repeats for every Cycle layer while slots remain
 open:
 
-| Cycle Layer | Selected-Slot Opportunities |
-| ---: | --- |
-| 1 | P1S1, P2S1, P2S2, P1S2, P1S3, P2S3 |
-| 2 | P1S1, P2S1, P2S2, P1S2, P1S3, P2S3 |
-| 3 | P1S1, P2S1, P2S2, P1S2, P1S3, P2S3 |
-| ... | Same order through Cycle layer 12 |
+| Cycle Layer | Selected-Slot Opportunities        |
+| ----------: | ---------------------------------- |
+|           1 | P1S1, P2S1, P2S2, P1S2, P1S3, P2S3 |
+|           2 | P1S1, P2S1, P2S2, P1S2, P1S3, P2S3 |
+|           3 | P1S1, P2S1, P2S2, P1S2, P1S3, P2S3 |
+|         ... | Same order through Cycle layer 12  |
 
 An ended selected slot is skipped on all later Cycle layers for that Round.
 Skipping an ended slot must not invoke SoldierBrain and must not write
@@ -122,4 +122,3 @@ required to be contiguous with that slot's earlier Cycle events.
 Public replay output must remain privacy-safe by default and must not expose
 Strategy source, StrategyMemory, SoldierMemory, objective payloads, Awareness
 Grid details, raw runtime internals, or private errors.
-

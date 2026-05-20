@@ -262,6 +262,10 @@ export type ChronicleEventType =
   | "ROUND_STARTED"
   | "STRATEGY_EVALUATED"
   | "ACTIVATION_STARTED"
+  | "ACTIVATION_SKIPPED"
+  | "ACTIVATION_ENDED"
+  | "CYCLE_STARTED"
+  | "CYCLE_ENDED"
   | "AWARENESS_GRID_OBSERVED"
   | "ACTION_EMITTED"
   | "MOVE_ADVANCED"
@@ -277,7 +281,7 @@ export type ChronicleEventType =
   | "MATCH_ENDED"
   | "RUNTIME_VIOLATION"
 
-export type ChronicleSchemaVersion = "chronicle-v1"
+export type ChronicleSchemaVersion = "chronicle-v1" | "chronicle-v1.4"
 
 export type ChronicleSnapshotKind =
   | "MATCH_START"

@@ -31,7 +31,7 @@ const activationContext = {
 } satisfies Chronicle["events"][number]["context"]
 
 const createChronicle = (): Chronicle => ({
-  schemaVersion: "chronicle-v1",
+  schemaVersion: "chronicle-v1.4",
   reproducibility: {
     matchId: "match:replay-test",
     seed: "seed:replay-test",

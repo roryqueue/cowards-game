@@ -1,5 +1,4 @@
 import type { Action, Direction, Soldier } from "@cowards/spec"
-import { resolveBackstabBoundary } from "./backstab.js"
 import {
   getOccupyingSoldier,
   getSoldier,
@@ -24,20 +23,6 @@ const noChange = (state: GameState): ActionResolution => ({
   events: [],
   advanced: false,
 })
-
-const withPostAdvanceBackstab = (
-  resolution: ActionResolution,
-): ActionResolution => {
-  if (!resolution.advanced) {
-    return resolution
-  }
-  const backstab = resolveBackstabBoundary(resolution.state, "post-advance")
-  return {
-    ...resolution,
-    state: backstab.state,
-    events: [...resolution.events, ...backstab.events],
-  }
-}
 
 const getActiveMover = (
   state: GameState,
@@ -96,7 +81,6 @@ const resolveActiveCollision = (
         }),
       ],
       advanced: false,
-      terminalReason: "MOVE_BLOCKED",
     }
   }
 
@@ -111,7 +95,6 @@ const resolveActiveCollision = (
         }),
       ],
       advanced: false,
-      terminalReason: "MOVE_BLOCKED",
     }
   }
 
@@ -131,7 +114,6 @@ const resolveActiveCollision = (
         }),
       ],
       advanced: false,
-      terminalReason: "MOVE_BLOCKED",
     }
   }
 
@@ -148,7 +130,7 @@ const resolveActiveCollision = (
     facing: direction,
     lastSuccessfulMoveDirection: direction,
   }
-  return withPostAdvanceBackstab({
+  return {
     state: replaceSoldiers(state, [pushedSoldier, advancedMover]),
     events: [
       event("PUSH_RESOLVED", {
@@ -167,7 +149,7 @@ const resolveActiveCollision = (
       event("MOVE_ADVANCED", { soldierId: mover.id, direction }),
     ],
     advanced: true,
-  })
+  }
 }
 
 export const resolveMove = (
@@ -211,12 +193,11 @@ export const resolveMove = (
       state,
       events: [event("MOVE_BLOCKED", { soldierId, reason: "TERRAIN_STONE" })],
       advanced: false,
-      terminalReason: "MOVE_BLOCKED",
     }
   }
   const occupant = getOccupyingSoldier(state, destination)
   if (!occupant) {
-    return withPostAdvanceBackstab({
+    return {
       state: replaceSoldier(state, {
         ...mover,
         position: destination,
@@ -225,14 +206,13 @@ export const resolveMove = (
       }),
       events: [event("MOVE_ADVANCED", { soldierId, direction })],
       advanced: true,
-    })
+    }
   }
   if (occupant.status === "STONE") {
     return {
       state,
       events: [event("MOVE_BLOCKED", { soldierId, reason: "STONE_SOLDIER" })],
       advanced: false,
-      terminalReason: "MOVE_BLOCKED",
     }
   }
   return resolveActiveCollision(state, mover, occupant, direction)

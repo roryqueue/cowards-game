@@ -1,7 +1,12 @@
-import { ROUND_ACTIVATION_COUNTS, type PlayerId } from "@cowards/spec"
 import {
-  getRoundPlayerOrder,
-  resolveActivation,
+  MAX_ACTIVATION_CYCLES,
+  ROUND_ACTIVATION_COUNTS,
+  type PlayerId,
+} from "@cowards/spec"
+import {
+  activationStartedEvent,
+  createActivationSlots,
+  resolveActivationCycle,
   resolveActivationSelection,
 } from "./activation.js"
 import { resolveContraction } from "./contraction.js"
@@ -57,32 +62,36 @@ export const resolveRound = (
   current = topSelection.state.state
   events.push(...topSelection.events)
 
-  const queues = new Map<string, typeof bottomSelection.state.orders>([
-    [current.players[0].id, [...bottomSelection.state.orders]],
-    [current.players[1].id, [...topSelection.state.orders]],
-  ])
-  const order = getRoundPlayerOrder(
+  const slots = createActivationSlots(
+    current,
+    new Map([
+      [current.players[0].id, bottomSelection.state.orders],
+      [current.players[1].id, topSelection.state.orders],
+    ]),
     firstPlayerId,
     secondPlayerId,
-    current.activationCount,
   )
+  events.push(...slots.map(activationStartedEvent))
 
-  for (const playerId of order) {
-    if (current.outcome) {
-      break
+  for (
+    let cycleLayer = 0;
+    cycleLayer < MAX_ACTIVATION_CYCLES && !current.outcome;
+    cycleLayer += 1
+  ) {
+    for (const [slotIndex, slot] of slots.entries()) {
+      if (current.outcome) {
+        break
+      }
+      const resolved = resolveActivationCycle(
+        current,
+        runtime,
+        slot,
+        cycleLayer,
+      )
+      current = resolved.state
+      slots[slotIndex] = resolved.slot
+      events.push(...resolved.events)
     }
-    const activationOrder = queues.get(playerId)?.shift()
-    if (!activationOrder) {
-      continue
-    }
-    const resolved = resolveActivation(
-      current,
-      runtime,
-      activationOrder.soldierId,
-      activationOrder.objective,
-    )
-    current = resolved.state
-    events.push(...resolved.events)
   }
 
   return { state: current, events }

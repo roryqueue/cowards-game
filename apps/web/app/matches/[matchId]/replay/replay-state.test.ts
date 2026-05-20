@@ -22,7 +22,7 @@ const createReplayData = (owner = false): ReplayReadyDto => ({
     matchId: "match:fixture",
     chronicleId: "chronicle:fixture",
     hash: "hash",
-    schemaVersion: "chronicle-v1",
+    schemaVersion: "chronicle-v1.4",
     eventCount: 3,
     snapshotCount: 1,
     outcome: { type: "DRAW" },
@@ -31,7 +31,7 @@ const createReplayData = (owner = false): ReplayReadyDto => ({
     arenaVariantId: "arena:fixture",
   },
   projection: {
-    schemaVersion: "chronicle-v1",
+    schemaVersion: "chronicle-v1.4",
     viewer: owner
       ? { access: "owner", playerId: "player:bottom" }
       : { access: "public" },
@@ -45,7 +45,7 @@ const createReplayData = (owner = false): ReplayReadyDto => ({
         spec: "spec-v1",
         engine: "engine-v1",
         runtimeJs: "runtime-js-v1",
-        chronicle: "chronicle-v1",
+        chronicle: "chronicle-v1.4",
         strategyRevision: "strategy-revision-v1",
         arenaVariant: "arena-variant-v1",
       },

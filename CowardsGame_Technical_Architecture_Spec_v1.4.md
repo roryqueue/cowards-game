@@ -9,20 +9,20 @@ that assumed full-Activation sequencing in
 
 Every v1.4 implementation must align these surfaces:
 
-| Surface | Required v1.4 Alignment |
-| --- | --- |
-| Rules docs | Root v1.4 rule contract defines Cycle-interleaved selected slots. |
-| Engine | Round scheduler owns selected-slot state and loops Cycle layers 0-11. |
-| Movement | Advance no longer triggers an extra `post-advance` Backstab boundary. |
-| Backstab | Cycle-start and Cycle-end boundaries use simultaneous all-board snapshots. |
-| Runtime input | SoldierBrain sees fresh board-derived input on each interleaved Cycle. |
-| Chronicle schema | Event context supports open selected slots and interleaved Cycle events. |
-| Replay grammar | Validates per-slot Cycle progression without requiring contiguous events. |
-| Replay reconstruction | Rebuilds board state through interleaved Cycle events. |
-| Public projection | Preserves privacy guarantees while exposing safe lifecycle timing. |
-| Fixtures | Active fixtures are regenerated under `cowards-rules-v1.4`. |
-| Starters/templates | Starter Strategies account for board changes between own Cycles. |
-| Demo ladder | Public evidence uses `/ladder/v1-4-demo`, not `v13-demo` or `v14-demo`. |
+| Surface               | Required v1.4 Alignment                                                    |
+| --------------------- | -------------------------------------------------------------------------- |
+| Rules docs            | Root v1.4 rule contract defines Cycle-interleaved selected slots.          |
+| Engine                | Round scheduler owns selected-slot state and loops Cycle layers 0-11.      |
+| Movement              | Advance no longer triggers an extra `post-advance` Backstab boundary.      |
+| Backstab              | Cycle-start and Cycle-end boundaries use simultaneous all-board snapshots. |
+| Runtime input         | SoldierBrain sees fresh board-derived input on each interleaved Cycle.     |
+| Chronicle schema      | Event context supports open selected slots and interleaved Cycle events.   |
+| Replay grammar        | Validates per-slot Cycle progression without requiring contiguous events.  |
+| Replay reconstruction | Rebuilds board state through interleaved Cycle events.                     |
+| Public projection     | Preserves privacy guarantees while exposing safe lifecycle timing.         |
+| Fixtures              | Active fixtures are regenerated under `cowards-rules-v1.4`.                |
+| Starters/templates    | Starter Strategies account for board changes between own Cycles.           |
+| Demo ladder           | Public evidence uses `/ladder/v1-4-demo`, not `v13-demo` or `v14-demo`.    |
 
 ## Engine Scheduler
 
@@ -87,4 +87,3 @@ Starter revisions for v1.4 should identify:
 Old v1.3 demo data is historical only. Active demo generation must clean old
 `v13-demo` demo users, Strategies, revisions, MatchSets, jobs, and Chronicles
 before generating `/ladder/v1-4-demo` evidence.
-

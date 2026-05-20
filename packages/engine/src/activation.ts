@@ -26,11 +26,19 @@ import {
   event,
   type ActivationCount,
   type ActivationSelectionResult,
+  type ActivationSlotState,
+  type ActivationTerminalReason,
   type GameState,
   type RoundNumber,
   type StrategyRuntime,
   type TransitionResult,
 } from "./types.js"
+
+interface ActivationCycleResult {
+  state: GameState
+  slot: ActivationSlotState
+  events: TransitionResult["events"]
+}
 
 export const getActivationCountForRound = (
   roundNumber: RoundNumber,
@@ -204,142 +212,381 @@ export const resolveActivationSelection = (
   }
 }
 
+const activationEventContext = (slot: ActivationSlotState) => ({
+  activationId: slot.activationId,
+  activationIndex: slot.activationIndex,
+  actingPlayerId: slot.actingPlayerId,
+  soldierId: slot.soldierId,
+})
+
+const cycleEventContext = (slot: ActivationSlotState, cycleIndex: number) => ({
+  ...activationEventContext(slot),
+  cycleIndex,
+})
+
+const closeSlot = (
+  state: GameState,
+  slot: ActivationSlotState,
+  terminalReason: ActivationTerminalReason,
+): ActivationCycleResult => {
+  let current = state
+  const events: TransitionResult["events"] = []
+  const soldier = getSoldier(current, slot.soldierId)
+  if (soldier?.status === "ACTIVE" && !slot.advanced) {
+    current = replaceSoldier(current, { ...soldier, status: "STONE" })
+    events.push(
+      event(
+        "SOLDIER_STONED",
+        { soldierId: slot.soldierId, reason: "NO_ADVANCE" },
+        { context: activationEventContext(slot) },
+      ),
+    )
+  }
+  events.push(
+    event(
+      "ACTIVATION_ENDED",
+      { soldierId: slot.soldierId, reason: terminalReason },
+      { context: activationEventContext(slot) },
+    ),
+  )
+  return {
+    state: current,
+    slot: {
+      ...slot,
+      ended: true,
+      terminalReason,
+    },
+    events,
+  }
+}
+
+export const createActivationSlots = (
+  state: GameState,
+  selections: ReadonlyMap<PlayerId, ActivationOrder[]>,
+  firstPlayerId: PlayerId,
+  secondPlayerId: PlayerId,
+): ActivationSlotState[] => {
+  const queues = new Map<PlayerId, ActivationOrder[]>(
+    [...selections.entries()].map(([playerId, orders]) => [
+      playerId,
+      [...orders],
+    ]),
+  )
+  const order = getRoundPlayerOrder(
+    firstPlayerId,
+    secondPlayerId,
+    state.activationCount,
+  )
+  const slots: ActivationSlotState[] = []
+
+  for (const playerId of order) {
+    const activationOrder = queues.get(playerId)?.shift()
+    if (!activationOrder) {
+      continue
+    }
+    const activationIndex = slots.length
+    slots.push({
+      activationId: `${state.phaseNumber}:${state.roundNumber}:${activationIndex}`,
+      activationIndex,
+      actingPlayerId: playerId,
+      soldierId: activationOrder.soldierId,
+      objective: activationOrder.objective,
+      cycleIndex: 0,
+      advanced: false,
+      ended: false,
+    })
+  }
+
+  return slots
+}
+
+export const activationStartedEvent = (slot: ActivationSlotState) =>
+  event(
+    "ACTIVATION_STARTED",
+    { soldierId: slot.soldierId },
+    { context: activationEventContext(slot) },
+  )
+
+export const resolveActivationCycle = (
+  state: GameState,
+  runtime: StrategyRuntime,
+  slot: ActivationSlotState,
+  cycleLayer: number,
+): ActivationCycleResult => {
+  let current = state
+  const events: TransitionResult["events"] = []
+
+  if (slot.ended) {
+    return {
+      state: current,
+      slot,
+      events: [
+        event(
+          "ACTIVATION_SKIPPED",
+          {
+            soldierId: slot.soldierId,
+            cycleIndex: cycleLayer,
+            reason: slot.terminalReason ?? "ENDED",
+          },
+          { context: cycleEventContext(slot, cycleLayer) },
+        ),
+      ],
+    }
+  }
+
+  let soldier = getSoldier(current, slot.soldierId)
+  if (!soldier || soldier.status !== "ACTIVE") {
+    const terminalReason =
+      soldier?.status === "FALLEN" ? "SOLDIER_FELL" : "SOLDIER_STONED"
+    return closeSlot(current, slot, terminalReason)
+  }
+
+  events.push(
+    event(
+      "CYCLE_STARTED",
+      { soldierId: slot.soldierId, cycleIndex: cycleLayer },
+      { context: cycleEventContext(slot, cycleLayer) },
+    ),
+  )
+
+  const startBackstab = resolveBackstabBoundary(current, "cycle-start")
+  current = startBackstab.state
+  events.push(
+    ...startBackstab.events.map((summary) => ({
+      ...summary,
+      context: { ...cycleEventContext(slot, cycleLayer), ...summary.context },
+    })),
+  )
+  const startEnd = checkAndApplyMatchEnd(current)
+  current = startEnd.state
+  events.push(...startEnd.events)
+  if (current.outcome) {
+    return {
+      state: current,
+      slot: {
+        ...slot,
+        ended: true,
+        terminalReason: "MATCH_ENDED",
+      },
+      events,
+    }
+  }
+
+  soldier = getSoldier(current, slot.soldierId)
+  if (!soldier || soldier.status !== "ACTIVE") {
+    const terminalReason =
+      soldier?.status === "FALLEN" ? "SOLDIER_FELL" : "SOLDIER_STONED"
+    const closed = closeSlot(current, slot, terminalReason)
+    return {
+      state: closed.state,
+      slot: closed.slot,
+      events: [...events, ...closed.events],
+    }
+  }
+
+  const input = createSoldierBrainInput(
+    current,
+    slot.soldierId,
+    cycleLayer,
+    slot.objective,
+  )
+  events.push(
+    event(
+      "AWARENESS_GRID_OBSERVED",
+      { soldierId: slot.soldierId, cycleIndex: cycleLayer },
+      {
+        context: cycleEventContext(slot, cycleLayer),
+        privacy: "owner",
+        privatePayload: privateJson({
+          soldierId: slot.soldierId,
+          ownerPlayerId: soldier.ownerPlayerId,
+          cycleIndex: cycleLayer,
+          awarenessGrid: input.awarenessGrid,
+          objectiveRef: { hasObjective: slot.objective !== undefined },
+          objectivePayload: slot.objective,
+        }),
+      },
+    ),
+  )
+
+  const runtimeResult = runtime.runSoldierBrain(input)
+  if (!runtimeResult.ok) {
+    const violationResult = applyRuntimeViolation(
+      current,
+      soldier,
+      runtimeResult.violation,
+      slot.advanced,
+    )
+    current = violationResult.state
+    events.push(
+      ...violationResult.events.map((summary) => ({
+        ...summary,
+        context: { ...cycleEventContext(slot, cycleLayer), ...summary.context },
+      })),
+    )
+    const closed = closeSlot(current, slot, "RUNTIME_VIOLATION")
+    return {
+      state: closed.state,
+      slot: closed.slot,
+      events: [...events, ...closed.events],
+    }
+  }
+
+  const parsed = SoldierBrainResultSchema.safeParse(runtimeResult.value)
+  if (!parsed.success) {
+    const violationResult = applyRuntimeViolation(
+      current,
+      soldier,
+      { type: "INVALID_OUTPUT", message: parsed.error.message },
+      slot.advanced,
+    )
+    current = violationResult.state
+    events.push(
+      ...violationResult.events.map((summary) => ({
+        ...summary,
+        context: { ...cycleEventContext(slot, cycleLayer), ...summary.context },
+      })),
+    )
+    const closed = closeSlot(current, slot, "RUNTIME_VIOLATION")
+    return {
+      state: closed.state,
+      slot: closed.slot,
+      events: [...events, ...closed.events],
+    }
+  }
+
+  current = replaceSoldier(current, {
+    ...soldier,
+    soldierMemory: parsed.data.soldierMemory,
+  })
+  events.push(
+    event(
+      "ACTION_EMITTED",
+      { soldierId: slot.soldierId, action: parsed.data.action },
+      {
+        context: cycleEventContext(slot, cycleLayer),
+        privacy: "owner",
+        privatePayload: {
+          soldierId: slot.soldierId,
+          ownerPlayerId: soldier.ownerPlayerId,
+          soldierMemory: parsed.data.soldierMemory,
+        },
+      },
+    ),
+  )
+
+  const actionResult = resolveAction(
+    current,
+    slot.soldierId,
+    parsed.data.action,
+    {
+      advanced: slot.advanced,
+    },
+  )
+  current = actionResult.state
+  events.push(
+    ...actionResult.events.map((summary) => ({
+      ...summary,
+      context: { ...cycleEventContext(slot, cycleLayer), ...summary.context },
+    })),
+  )
+  const advanced = slot.advanced || actionResult.advanced
+
+  const endBackstab = resolveBackstabBoundary(current, "cycle-end")
+  current = endBackstab.state
+  events.push(
+    ...endBackstab.events.map((summary) => ({
+      ...summary,
+      context: { ...cycleEventContext(slot, cycleLayer), ...summary.context },
+    })),
+  )
+  events.push(
+    event(
+      "CYCLE_ENDED",
+      { soldierId: slot.soldierId, cycleIndex: cycleLayer },
+      { context: cycleEventContext(slot, cycleLayer) },
+    ),
+  )
+
+  const end = checkAndApplyMatchEnd(current)
+  current = end.state
+  events.push(...end.events)
+  if (current.outcome) {
+    return {
+      state: current,
+      slot: {
+        ...slot,
+        advanced,
+        cycleIndex: cycleLayer + 1,
+        ended: true,
+        terminalReason: "MATCH_ENDED",
+      },
+      events,
+    }
+  }
+
+  const nextSlot = {
+    ...slot,
+    advanced,
+    cycleIndex: cycleLayer + 1,
+  }
+  const terminalReason =
+    actionResult.terminalReason ??
+    (nextSlot.cycleIndex >= MAX_ACTIVATION_CYCLES
+      ? "CYCLE_EXHAUSTED"
+      : undefined)
+
+  if (terminalReason) {
+    const closed = closeSlot(current, nextSlot, terminalReason)
+    return {
+      state: closed.state,
+      slot: closed.slot,
+      events: [...events, ...closed.events],
+    }
+  }
+
+  return { state: current, slot: nextSlot, events }
+}
+
 export const resolveActivation = (
   state: GameState,
   runtime: StrategyRuntime,
   soldierId: string,
   objective?: JsonValue,
 ): TransitionResult => {
+  const soldier = getSoldier(state, soldierId)
+  const slot: ActivationSlotState = {
+    activationId: `${state.phaseNumber}:${state.roundNumber}:0`,
+    activationIndex: 0,
+    actingPlayerId: soldier?.ownerPlayerId ?? state.players[0].id,
+    soldierId,
+    objective,
+    cycleIndex: 0,
+    advanced: false,
+    ended: false,
+  }
   let current = state
-  const events = [event("ACTIVATION_STARTED", { soldierId })]
-  const startBackstab = resolveBackstabBoundary(current, "activation-start")
-  current = startBackstab.state
-  events.push(...startBackstab.events)
-  const startEnd = checkAndApplyMatchEnd(current)
-  current = startEnd.state
-  events.push(...startEnd.events)
-  if (current.outcome) {
-    return { state: current, events }
-  }
+  let currentSlot = slot
+  const events = [activationStartedEvent(slot)]
 
-  let soldier = getSoldier(current, soldierId)
-  if (!soldier || soldier.status !== "ACTIVE") {
-    return { state: current, events }
-  }
-
-  let advanced = false
   for (
-    let cycleIndex = 0;
-    cycleIndex < MAX_ACTIVATION_CYCLES;
-    cycleIndex += 1
+    let cycleLayer = 0;
+    cycleLayer < MAX_ACTIVATION_CYCLES;
+    cycleLayer += 1
   ) {
-    soldier = getSoldier(current, soldierId)
-    if (!soldier || soldier.status !== "ACTIVE") {
-      break
-    }
-    const input = createSoldierBrainInput(
+    const resolved = resolveActivationCycle(
       current,
-      soldierId,
-      cycleIndex,
-      objective,
+      runtime,
+      currentSlot,
+      cycleLayer,
     )
-    events.push(
-      event(
-        "AWARENESS_GRID_OBSERVED",
-        { soldierId, cycleIndex },
-        {
-          context: {
-            soldierId,
-            cycleIndex,
-            actingPlayerId: soldier.ownerPlayerId,
-          },
-          privacy: "owner",
-          privatePayload: privateJson({
-            soldierId,
-            ownerPlayerId: soldier.ownerPlayerId,
-            cycleIndex,
-            awarenessGrid: input.awarenessGrid,
-            objectiveRef: { hasObjective: objective !== undefined },
-            objectivePayload: objective,
-          }),
-        },
-      ),
-    )
-    const runtimeResult = runtime.runSoldierBrain(input)
-    if (!runtimeResult.ok) {
-      const violationResult = applyRuntimeViolation(
-        current,
-        soldier,
-        runtimeResult.violation,
-        advanced,
-      )
-      current = violationResult.state
-      events.push(...violationResult.events)
-      break
-    }
-    const parsed = SoldierBrainResultSchema.safeParse(runtimeResult.value)
-    if (!parsed.success) {
-      const violationResult = applyRuntimeViolation(
-        current,
-        soldier,
-        { type: "INVALID_OUTPUT", message: parsed.error.message },
-        advanced,
-      )
-      current = violationResult.state
-      events.push(...violationResult.events)
-      break
-    }
-    current = replaceSoldier(current, {
-      ...soldier,
-      soldierMemory: parsed.data.soldierMemory,
-    })
-    events.push(
-      event(
-        "ACTION_EMITTED",
-        { soldierId, action: parsed.data.action },
-        {
-          context: {
-            soldierId,
-            cycleIndex,
-            actingPlayerId: soldier.ownerPlayerId,
-          },
-          privacy: "owner",
-          privatePayload: {
-            soldierId,
-            ownerPlayerId: soldier.ownerPlayerId,
-            soldierMemory: parsed.data.soldierMemory,
-          },
-        },
-      ),
-    )
-    const actionResult = resolveAction(current, soldierId, parsed.data.action, {
-      advanced,
-    })
-    current = actionResult.state
-    events.push(...actionResult.events)
-    advanced = advanced || actionResult.advanced
-    const actionEnd = checkAndApplyMatchEnd(current)
-    current = actionEnd.state
-    events.push(...actionEnd.events)
-    if (current.outcome) {
-      return { state: current, events }
-    }
-    if (actionResult.terminalReason) {
+    current = resolved.state
+    currentSlot = resolved.slot
+    events.push(...resolved.events)
+    if (current.outcome || currentSlot.ended) {
       break
     }
   }
 
-  soldier = getSoldier(current, soldierId)
-  if (soldier?.status === "ACTIVE" && !advanced) {
-    current = replaceSoldier(current, { ...soldier, status: "STONE" })
-    events.push(event("SOLDIER_STONED", { soldierId }))
-  }
-
-  const endBackstab = resolveBackstabBoundary(current, "activation-end")
-  current = endBackstab.state
-  events.push(...endBackstab.events)
-  const end = checkAndApplyMatchEnd(current)
-  current = end.state
-  events.push(...end.events)
   return { state: current, events }
 }

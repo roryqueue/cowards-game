@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { runMatch } from "./match.js"
+import { resolveRound, runMatch } from "./match.js"
+import { createInitialGameState } from "./state.js"
 import { createFakeRuntime } from "./test/fake-runtime.js"
 
 const input = {
@@ -52,5 +53,38 @@ describe("runMatch golden behavior", () => {
     expect(
       result.events.filter((summary) => summary.type === "MATCH_ENDED"),
     ).toHaveLength(1)
+  })
+
+  it("interleaves selected Soldier slots by Cycle layer", () => {
+    const calls: string[] = []
+    const state = {
+      ...createInitialGameState(input),
+      roundNumber: 3 as const,
+      activationCount: 3 as const,
+      initiativePlayerId: "bottom",
+    }
+    const runtime = createFakeRuntime({
+      action: (brainInput) => {
+        calls.push(`${brainInput.self.id}:${brainInput.cycleIndex}`)
+        return { type: "TURN", direction: brainInput.self.facing ?? "UP" }
+      },
+    })
+
+    resolveRound(state, runtime)
+
+    expect(calls.slice(0, 12)).toEqual([
+      "bottom-soldier-1:0",
+      "top-soldier-1:0",
+      "top-soldier-2:0",
+      "bottom-soldier-2:0",
+      "bottom-soldier-3:0",
+      "top-soldier-3:0",
+      "bottom-soldier-1:1",
+      "top-soldier-1:1",
+      "top-soldier-2:1",
+      "bottom-soldier-2:1",
+      "bottom-soldier-3:1",
+      "top-soldier-3:1",
+    ])
   })
 })

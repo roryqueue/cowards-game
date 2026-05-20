@@ -26,6 +26,10 @@ type GrammarState = {
 
 const ACTIVATION_EVENT_TYPES = new Set<ChronicleEventType>([
   "ACTIVATION_STARTED",
+  "ACTIVATION_SKIPPED",
+  "ACTIVATION_ENDED",
+  "CYCLE_STARTED",
+  "CYCLE_ENDED",
   "AWARENESS_GRID_OBSERVED",
   "ACTION_EMITTED",
   "MOVE_ADVANCED",
@@ -40,6 +44,10 @@ const ACTIVATION_EVENT_TYPES = new Set<ChronicleEventType>([
 
 const SOLDIER_CONTEXT_EVENT_TYPES = new Set<ChronicleEventType>([
   "ACTIVATION_STARTED",
+  "ACTIVATION_SKIPPED",
+  "ACTIVATION_ENDED",
+  "CYCLE_STARTED",
+  "CYCLE_ENDED",
   "AWARENESS_GRID_OBSERVED",
   "ACTION_EMITTED",
   "MOVE_ADVANCED",
@@ -54,6 +62,10 @@ const SOLDIER_CONTEXT_EVENT_TYPES = new Set<ChronicleEventType>([
 
 const SELF_SOLDIER_PAYLOAD_EVENT_TYPES = new Set<ChronicleEventType>([
   "ACTIVATION_STARTED",
+  "ACTIVATION_SKIPPED",
+  "ACTIVATION_ENDED",
+  "CYCLE_STARTED",
+  "CYCLE_ENDED",
   "AWARENESS_GRID_OBSERVED",
   "ACTION_EMITTED",
   "MOVE_ADVANCED",
@@ -527,7 +539,10 @@ const requireActivationOpen = (
   event: ChronicleEvent,
   state: GrammarState,
 ): boolean => {
-  if (state.activeActivation === undefined) {
+  if (
+    state.activeActivation === undefined &&
+    event.context.activationId === undefined
+  ) {
     errors.push(
       error(
         "EVENT_WINDOW_INVALID",
@@ -644,17 +659,17 @@ export const validateChronicleGrammar = (
         }
         if (readPayloadString(event, "soldierId") !== undefined) {
           requireActivationOpen(errors, event, state)
-          requireActivationContext(errors, event, state.activeActivation)
+          requireActivationContext(errors, event, undefined)
           validateSoldierPayload(errors, event)
         }
-        if (
-          state.activeCycleIndex !== undefined &&
-          state.activeActivation !== undefined
-        ) {
-          state.activeActivation = {
-            ...state.activeActivation,
-            nextCycleIndex: state.activeActivation.nextCycleIndex + 1,
-          }
+        if (state.activeCycleIndex !== undefined) {
+          state.activeActivation =
+            state.activeActivation === undefined
+              ? undefined
+              : {
+                  ...state.activeActivation,
+                  nextCycleIndex: state.activeActivation.nextCycleIndex + 1,
+                }
           state.activeCycleIndex = undefined
         }
         validatePlayerPayload(errors, event)
@@ -662,19 +677,38 @@ export const validateChronicleGrammar = (
       case "ACTIVATION_STARTED": {
         requireRoundOpen(errors, event, state)
         requireRoundContext(errors, event, state.activeRoundNumber)
-        const activation = requireActivationContext(errors, event, undefined)
+        requireActivationContext(errors, event, undefined)
         validateActivationIndexWindow(errors, event)
         validateSoldierPayload(errors, event)
-        state.activeActivation = activation
+        state.activeActivation = undefined
         state.activeCycleIndex = undefined
         state.contractionOpen = false
         break
       }
+      case "CYCLE_STARTED":
+      case "CYCLE_ENDED":
+      case "ACTIVATION_SKIPPED":
+      case "ACTIVATION_ENDED":
+        requireRoundOpen(errors, event, state)
+        requireActivationOpen(errors, event, state)
+        requireRoundContext(errors, event, state.activeRoundNumber)
+        requireActivationContext(errors, event, undefined)
+        validateActivationIndexWindow(errors, event)
+        if (
+          event.type === "CYCLE_STARTED" ||
+          event.type === "CYCLE_ENDED" ||
+          event.type === "ACTIVATION_SKIPPED"
+        ) {
+          requireCycleContext(errors, event, undefined)
+          validateCyclePayload(errors, event)
+        }
+        validateSoldierPayload(errors, event)
+        break
       case "AWARENESS_GRID_OBSERVED": {
         requireRoundOpen(errors, event, state)
         requireActivationOpen(errors, event, state)
         requireRoundContext(errors, event, state.activeRoundNumber)
-        requireActivationContext(errors, event, state.activeActivation)
+        requireActivationContext(errors, event, undefined)
         validateActivationIndexWindow(errors, event)
         const cycleIndex = requireCycleContext(errors, event, undefined)
         if (state.activeCycleIndex !== undefined && cycleIndex !== undefined) {
@@ -716,7 +750,7 @@ export const validateChronicleGrammar = (
         requireRoundOpen(errors, event, state)
         requireActivationOpen(errors, event, state)
         requireRoundContext(errors, event, state.activeRoundNumber)
-        requireActivationContext(errors, event, state.activeActivation)
+        requireActivationContext(errors, event, undefined)
         validateActivationIndexWindow(errors, event)
         requireCycleContext(errors, event, state.activeCycleIndex)
         validateSoldierPayload(errors, event)
@@ -739,15 +773,18 @@ export const validateChronicleGrammar = (
         requireRoundOpen(errors, event, state)
         requireActivationOpen(errors, event, state)
         requireRoundContext(errors, event, state.activeRoundNumber)
-        requireActivationContext(errors, event, state.activeActivation)
+        requireActivationContext(errors, event, undefined)
         validateActivationIndexWindow(errors, event)
         validateSoldierPayload(errors, event)
         break
       case "SOLDIER_FELL":
-        if (state.activeActivation !== undefined) {
+        if (
+          state.activeActivation !== undefined ||
+          event.context.activationId !== undefined
+        ) {
           requireRoundOpen(errors, event, state)
           requireRoundContext(errors, event, state.activeRoundNumber)
-          requireActivationContext(errors, event, state.activeActivation)
+          requireActivationContext(errors, event, undefined)
         } else if (!state.contractionOpen) {
           errors.push(
             error(

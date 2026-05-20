@@ -468,22 +468,6 @@ const validateRequiredBoundaryInstances = (
         )
         break
       case "ACTIVATION_STARTED":
-        errors.push(
-          ...requireSingleBoundarySnapshot(
-            chronicle,
-            "ACTIVATION_START",
-            event.sequence,
-            event.context,
-            ACTIVATION_CONTEXT_KEYS,
-          ),
-          ...requireSingleBoundarySnapshot(
-            chronicle,
-            "ACTIVATION_END",
-            expectedActivationEndSequence(events, event.context),
-            event.context,
-            ACTIVATION_CONTEXT_KEYS,
-          ),
-        )
         break
       case "CONTRACTION_RESOLVED":
         errors.push(

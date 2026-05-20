@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Chronicle } from "@cowards/spec"
+import { COMPATIBILITY_VERSIONS, type Chronicle } from "@cowards/spec"
 import {
   ChronicleValidationSystemFailure,
   createMemoryChronicleStoreForTests,
@@ -12,21 +12,14 @@ const board = {
 }
 
 const validChronicle = (): Chronicle => ({
-  schemaVersion: "chronicle-v1",
+  schemaVersion: "chronicle-v1.4",
   reproducibility: {
     matchId: "match:chronicle:001",
     seed: "seed:chronicle:001",
     arenaVariantId: "arena:smoke:v1",
     arenaVariantVersion: "arena-v1",
     strategyRevisionIds: ["strategy-revision:bottom", "strategy-revision:top"],
-    versions: {
-      spec: "1.0.0",
-      engine: "0.1.0",
-      runtimeJs: "0.1.0",
-      chronicle: "0.1.0",
-      strategyRevision: "0.1.0",
-      arenaVariant: "0.1.0",
-    },
+    versions: COMPATIBILITY_VERSIONS,
   },
   events: [
     {
@@ -168,7 +161,7 @@ describe("Chronicle storage", () => {
     const store = createMemoryChronicleStoreForTests()
     const stored = await store.put(validChronicle())
 
-    expect(stored.metadata.schemaVersion).toBe("chronicle-v1")
+    expect(stored.metadata.schemaVersion).toBe("chronicle-v1.4")
     expect(stored.metadata.hash).toMatch(/^[a-f0-9]{64}$/)
     expect(stored.metadata.eventCount).toBe(8)
     expect(stored.metadata.snapshotCount).toBe(7)
