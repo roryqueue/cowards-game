@@ -69,7 +69,11 @@ pnpm --filter @cowards/engine typecheck
 pnpm verify
 ```
 
-Backstab uses the Phase 2 activation-boundary clarification recorded in `.planning/spec-amendments/02-backstab-rule.md`.
+The current source of truth is `CowardsGameSpec_CycleInterleaved_v1.4.md`
+and `CowardsGame_Technical_Architecture_Spec_v1.4.md`. The original v1
+specs remain historical. v1.4 replaces full-Activation sequencing with
+Cycle-interleaved selected Soldier slots and uses Cycle-start/Cycle-end
+Backstab boundaries.
 
 ## Package Boundaries
 
