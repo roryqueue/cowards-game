@@ -38,19 +38,24 @@ This phase does not rewrite the engine, Chronicle grammar, replay reconstruction
 - **D-16:** Cycle-end Backstab uses an all-board ACTIVE Soldier snapshot before match-end checks and before the next selected slot's Cycle-start boundary.
 - **D-17:** Every Cycle-start and Cycle-end boundary section must repeat that Backstab uses simultaneous all-board ACTIVE snapshot resolution, then all unique victims become STONE together.
 
+### v1.4 Action Failure Rule Amendment
+- **D-18:** Blocked MOVE/PUSH becomes non-terminal in v1.4: it consumes the acting slot's current Cycle, does not count as a successful Advance, runs the normal Cycle-end boundary, and leaves the selected slot alive for later Cycle layers.
+- **D-19:** Schema-invalid output, runtime violations, and schema-valid but impossible Actions remain terminal according to their failure class.
+- **D-20:** The v1.4 source specs must explicitly call out this change because it supersedes older wording and current engine behavior where blocked movement ends an Activation.
+
 ### Architecture Impact Map
-- **D-18:** The v1.4 technical architecture spec must include a strict must-update checklist of impacted surfaces rather than a loose narrative.
-- **D-19:** The checklist must name docs, spec/version constants, engine scheduler, Chronicle grammar, replay reconstruction, runtime input assumptions, generated fixtures, starter Strategies/templates, preconfigured demo entrants, demo MatchSets/results, persistence/provenance, UI/debug copy, and tests.
-- **D-20:** Phase 25 should define the observable ordering contract precisely, including selected slots, Cycle layers, skip behavior, Backstab boundaries, no-extra-`post-advance` behavior, and termination effects.
-- **D-21:** Phase 25 should not prescribe the exact engine data structures or algorithm; Phase 26 owns implementation shape.
-- **D-22:** The architecture note must require an explicit policy for old v1/v1.3 Chronicles, fixtures, and demo results: either preserve compatibility behind version gates or mark old artifacts stale/historical with clear provenance. Silent reinterpretation is forbidden.
-- **D-23:** The architecture note must include non-negotiable test obligations per impacted surface, especially engine ordering, Backstab boundaries, Chronicle grammar/replay reconstruction, starter smoke, public privacy, and demo provenance.
+- **D-21:** The v1.4 technical architecture spec must include a strict must-update checklist of impacted surfaces rather than a loose narrative.
+- **D-22:** The checklist must name docs, spec/version constants, engine scheduler, Chronicle grammar, replay reconstruction, runtime input assumptions, generated fixtures, starter Strategies/templates, preconfigured demo entrants, demo MatchSets/results, persistence/provenance, UI/debug copy, and tests.
+- **D-23:** Phase 25 should define the observable ordering contract precisely, including selected slots, Cycle layers, skip behavior, Backstab boundaries, no-extra-`post-advance` behavior, blocked MOVE/PUSH non-terminal behavior, and termination effects.
+- **D-24:** Phase 25 should not prescribe the exact engine data structures or algorithm; Phase 26 owns implementation shape.
+- **D-25:** The architecture note must require an explicit policy for old v1/v1.3 Chronicles, fixtures, and demo results: either preserve compatibility behind version gates or mark old artifacts stale/historical with clear provenance. Silent reinterpretation is forbidden.
+- **D-26:** The architecture note must include non-negotiable test obligations per impacted surface, especially engine ordering, Backstab boundaries, Chronicle grammar/replay reconstruction, starter smoke, public privacy, and demo provenance.
 
 ### Compatibility and Provenance Labels
-- **D-24:** Introduce a dedicated rule/spec label such as `cowards-rules-v1.4`. Do not rely only on package engine version or Chronicle schema version to describe corrected rules.
-- **D-25:** Show or store the rule-version label at every evidence boundary: docs, compatibility constants, Chronicle metadata, generated fixtures, demo MatchSets/results, replay/public result provenance, and developer validation summaries.
-- **D-26:** Old v1.3 demo/replay evidence should be labeled historical and not directly comparable to v1.4 corrected-rule results.
-- **D-27:** Existing Strategy source may be reused, but counted/demo v1.4 entries must be regenerated or revalidated under `cowards-rules-v1.4` so provenance is clean.
+- **D-27:** Introduce a dedicated rule/spec label such as `cowards-rules-v1.4`. Do not rely only on package engine version or Chronicle schema version to describe corrected rules.
+- **D-28:** Show or store the rule-version label at every evidence boundary: docs, compatibility constants, Chronicle metadata, generated fixtures, demo MatchSets/results, replay/public result provenance, and developer validation summaries.
+- **D-29:** Old v1.3 demo/replay evidence should be labeled historical and not directly comparable to v1.4 corrected-rule results.
+- **D-30:** Existing Strategy source may be reused, but counted/demo v1.4 entries must be regenerated or revalidated under `cowards-rules-v1.4` so provenance is clean.
 
 ### the agent's Discretion
 - The planner may choose exact v1.4 root file names if they are visibly canonical and follow the existing repository naming style.
@@ -123,6 +128,7 @@ This phase does not rewrite the engine, Chronicle grammar, replay reconstruction
 - Make old v1.3 demo evidence visibly historical and not directly comparable to corrected v1.4 results.
 - Write examples so "turn" never substitutes for Round, Activation, Cycle, Action, or slot.
 - The v1.4 Backstab wording should make it impossible to accidentally implement Cycle-start, Cycle-end, and a third post-Advance boundary.
+- The v1.4 movement wording should make blocked MOVE/PUSH visibly different from invalid output, runtime violation, or impossible Action failure.
 
 </specifics>
 
