@@ -1,6 +1,6 @@
 # Roadmap: Coward's Game
 
-**Last updated:** 2026-05-19
+**Last updated:** 2026-05-20
 **Current milestone:** v1.3 Competition Trust Beta
 **Granularity:** Standard
 **Execution:** Parallel where phase plans are independent
@@ -197,4 +197,4 @@ Coward's Game v1.3 turns the alpha competitive surface into a trustable beta loo
 
 ## Next
 
-Use the completed v1.3 demo ladder at `/ladder/v13-demo` to review player-facing trust flow and tune Starter Strategy balance in a future milestone.
+Use the regenerated v1.3 demo ladder at `/ladder/v13-demo` to review player-facing trust flow. Starter Strategy balance is good enough to close v1.3, with future tuning most useful for weaker mobility/outlast doctrines.

@@ -4,10 +4,10 @@
 
 **Shipped version:** v1.2 Competitive Alpha on 2026-05-19
 **Current milestone:** v1.3 Competition Trust Beta
-**Status:** Defining requirements and roadmap for v1.3.
-**Last audit:** v1.2 passed, 33/33 requirements satisfied.
+**Status:** v1.3 implemented, audited, demo-tuned, and ready for milestone completion.
+**Last audit:** v1.3 passed, 51/51 requirements satisfied.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, enter them into public unranked exhibition MatchSets, inspect fair scoring and replay evidence, and trust that public outputs do not expose private Strategy data.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible starter Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, and trust that public outputs do not expose private Strategy data.
 
 ## Core Value
 
@@ -106,8 +106,9 @@ Planning archives live under `.planning/milestones/`:
 | Add only minimal production ownership first | Competitive submissions need stable User identity and private-source authorization, but email/OAuth/recovery can wait. | ✓ Good |
 | Allow same-user multi-revision exhibition entry in alpha | Self-play is valuable for doctrine testing; one-strategy-per-user belongs with ranked or more formal competition. | ✓ Good |
 | Publish result evidence without Strategy internals | Public standings, replay links, hashes, and provenance are enough for alpha disputes while source/memory/objective data stays private. | ✓ Good |
-| Use resettable trial ladders before durable ratings | Ranking pressure is useful, but permanent ratings should wait until abuse, moderation, and sandbox behavior are better understood. | — Pending |
-| Seed starter Strategies as forkable templates | Players should begin with readable, credible doctrines they choose to fork, not opaque auto-submissions. | — Pending |
+| Use resettable trial ladders before durable ratings | Ranking pressure is useful, but permanent ratings should wait until abuse, moderation, and sandbox behavior are better understood. | ✓ Good |
+| Seed starter Strategies as forkable templates | Players should begin with readable, credible doctrines they choose to fork, not opaque auto-submissions. | ✓ Good |
+| Treat containerized subprocess as the production-candidate runtime path | It preserves the JS/TS Strategy API while adding a clearer process and container boundary than worker threads. | ✓ Revisit before real hostile public scale |
 
 ## Constraints
 
@@ -126,4 +127,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-19 after starting v1.3 Competition Trust Beta*
+*Last updated: 2026-05-20 after v1.3 implementation, demo tuning, and audit preflight*

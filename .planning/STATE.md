@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: v1.3 Competition Trust Beta
 status: complete
-last_updated: "2026-05-19T09:50:00.000-04:00"
+last_updated: "2026-05-20T08:30:00.000-04:00"
 progress:
   total_phases: 6
   completed_phases: 6
@@ -19,10 +19,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-19)
+See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Completed v1.3 demo ladder review and future starter balance tuning
+**Current focus:** Ready for v1.3 milestone completion; future starter balance tuning remains a product-learning item
 **Completed milestone:** v1.3 Competition Trust Beta
 **Archived roadmap:** .planning/milestones/v1.2-ROADMAP.md
 **Archived requirements:** .planning/milestones/v1.2-REQUIREMENTS.md
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 Phase: 24 - Production Runtime Boundary Spike
 Plan: 24-01
 Status: v1.3 phases 19-24 implemented, reviewed, validated, verified, and audited
-Last activity: 2026-05-19 — Completed v1.3 demo tournament and milestone audit.
+Last activity: 2026-05-20 — Tuned starter demo behavior, regenerated the v1.3 demo ladder, fixed replay labeling for immediate reversal, and confirmed completion preflight.
 
 ## Workflow Settings
 
@@ -66,6 +66,7 @@ Last activity: 2026-05-19 — Completed v1.3 demo tournament and milestone audit
 - Phase 14-18 artifacts are archived under `.planning/milestones/v1.2-phases/`.
 - v1.3 added Starter Library, resettable trial ladder seasons, deterministic scheduling, public profiles/cards, focused governance, and a containerized subprocess runtime boundary spike.
 - The v1.3 local demo ladder is available at `/ladder/v13-demo` while the web dev server is running.
+- Final v1.3 demo rerun completed 96/96 jobs with 13,162 MOVE events, 0 immediate-reversal blocks, and the sample replay `match:match-set:trial:trial-season:v13-demo:0:0:10` lasting into contraction.
 
 ## Deferred Items
 
@@ -79,7 +80,7 @@ Items acknowledged and deferred after v1.2 milestone completion on 2026-05-19:
 
 ## Next Command
 
-Review the completed v1.3 demo ladder and decide whether the next milestone should prioritize starter balance, richer tournament operations, or broader community identity.
+Run `$gsd-complete-milestone v1.3`, then decide whether the next milestone should prioritize starter balance, richer tournament operations, or broader community identity.
 
 ---
-*Last updated: 2026-05-19 after completing v1.3 implementation and audit*
+*Last updated: 2026-05-20 after v1.3 demo tuning and completion preflight*
