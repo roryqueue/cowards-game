@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Shipped version:** v1.2 Competitive Alpha on 2026-05-19
-**Current milestone:** v1.3 Competition Trust Beta
-**Status:** v1.3 implemented, audited, demo-tuned, and ready for milestone completion.
+**Shipped version:** v1.3 Competition Trust Beta on 2026-05-20
+**Current milestone:** None active
+**Status:** Planning next milestone.
 **Last audit:** v1.3 passed, 51/51 requirements satisfied.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible starter Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, and trust that public outputs do not expose private Strategy data.
@@ -13,7 +13,7 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.3 Competition Trust Beta
+## Latest Shipped Milestone: v1.3 Competition Trust Beta
 
 **Goal:** A new player can fork a credible starter Strategy, test it in exhibition, enter one eligible revision into a resettable trial ladder, inspect standings and replay evidence, and trust that counted results are private-data-safe and governable.
 
@@ -56,6 +56,15 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - ✓ Public MatchSet result pages with status, standings, scoring policy, replay links, provenance, owner-only source affordances, and privacy-safe output.
 - ✓ Abuse and fairness guardrails for rate limits, active duplicate submissions, valid entry criteria, public leak rejection, and runtime/web isolation boundaries.
 
+## Validated in v1.3
+
+- ✓ Forkable 10-strategy Starter Library with readable doctrine notes, source hashes, validation, memory-using starters, and Workshop apply/fork flows.
+- ✓ Resettable trial ladder seasons with no permanent Elo/Glicko promise, explicit lifecycle states, one active Strategy Revision per user per season, immutable snapshots, next-season replacement, and stale revision policy.
+- ✓ Deterministic ladder scheduling, pod MatchSet generation, counted standings, retry/degraded/non-counted handling, replay-backed evidence, and a completed local demo ladder at `/ladder/v13-demo`.
+- ✓ Public player handle pages and public Strategy cards with lineage, records, tags, runtime compatibility, result links, and private-source/memory/debug exclusions.
+- ✓ Focused competition governance with result flags, admin status marking, standings exclusion, public counted-state explanations, and audit logs.
+- ✓ Containerized subprocess production-candidate Strategy runtime boundary behind `StrategyExecutionAdapter`, with worker-thread retained as local/dev fallback and hostile regression coverage.
+
 ## Context
 
 Source specifications are archived in the repository root:
@@ -78,6 +87,10 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.2-REQUIREMENTS.md`
 - `.planning/milestones/v1.2-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.2-phases/`
+- `.planning/milestones/v1.3-ROADMAP.md`
+- `.planning/milestones/v1.3-REQUIREMENTS.md`
+- `.planning/milestones/v1.3-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.3-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -114,7 +127,7 @@ Planning archives live under `.planning/milestones/`:
 
 The active constraints remain: deterministic engine behavior, engine purity, Strategy Revision immutability, hostile Strategy treatment, runtime isolation, memory/source/output limits, package boundaries, replay privacy, Chronicle compatibility, and competitive integrity.
 
-v1.3 ladder and governance work must preserve exhibition self-play, avoid permanent rating promises, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, and private runtime internals by default.
+Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, and private runtime internals by default.
 
 ## Evolution
 
@@ -127,4 +140,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-20 after v1.3 implementation, demo tuning, and audit preflight*
+*Last updated: 2026-05-20 after v1.3 milestone completion*

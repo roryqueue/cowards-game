@@ -134,11 +134,57 @@
 - Sessions: one extended milestone implementation and closure thread.
 - Notable: the fastest path was a single integration pass after parallel planning; the final fixes came from live UAT rather than additional planning.
 
+## Milestone: v1.3 — Competition Trust Beta
+
+**Shipped:** 2026-05-20
+**Phases:** 6 | **Plans:** 6
+
+### What Was Built
+
+- A 10-strategy Starter Library with readable doctrines, Workshop apply/fork flows, source hashes, validation, lineage metadata, and several memory-using examples.
+- Resettable trial ladder seasons with one active Strategy Revision per user, immutable snapshots, explicit lifecycle states, next-season replacement, and no durable rating promise.
+- Deterministic ladder scheduling, pod MatchSets, counted standings, non-counted/degraded exclusion, public ladder pages, and a completed local v1.3 demo tournament.
+- Public player profiles and Strategy cards with privacy-safe lineage, records, tags, runtime compatibility, result links, and replay links.
+- Result governance with flags, admin status marking, audit events, public counted-state explanations, and standings exclusion.
+- A containerized subprocess production-candidate runtime boundary behind the existing adapter with hostile regression coverage and worker-thread local/dev fallback.
+
+### What Worked
+
+- The resettable trial ladder gave real competitive pressure without prematurely committing to permanent ratings.
+- Reusing MatchSet, Chronicle, replay, and scoring infrastructure kept the ladder trustable instead of inventing a separate competition path.
+- Live demo replay review after the audit caught product-quality strategy issues that tests would not have judged as failures.
+
+### What Was Inefficient
+
+- The documented `gsd-sdk query` commands remained unavailable, so completion checks and archives needed direct file inspection and manual edits.
+- Starter behavior needed a second tuning pass after the first demo because some doctrines technically worked but produced poor-looking early turns.
+- Replay event language initially hid the difference between real blocked movement and illegal immediate reversal attempts.
+
+### Patterns Established
+
+- Formal competition should start with resettable seasons and recomputable standings before durable ratings.
+- Starter Strategies should be treated as product surface area, not just sample code; replay quality matters.
+- Public competition identity can show pride and evidence without exposing source, memory, objectives, or owner debug data.
+- Runtime adapter metadata should make production-readiness and fallback boundaries visible to developers.
+
+### Key Lessons
+
+- Include live ladder/replay realism checks in future competition milestones, not just deterministic correctness checks.
+- Avoid starter tactics that terminate movement by asking for illegal actions; "legal but boring" beats noisy false pressure.
+- Keep governance and standings coupled through recomputable counted/non-counted state.
+
+### Cost Observations
+
+- Model mix: not recorded.
+- Sessions: one extended milestone thread with discussion, implementation, audit, demo tournament, live replay tuning, and archive pass.
+- Notable: user-guided replay inspection was the highest-signal final validation step.
+
 ## Cross-Milestone Trends
 
 | Trend | Observation |
 | --- | --- |
-| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, and v1.2 showed local browser UAT catches route/scoring issues after build success. |
+| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, v1.2 showed local browser UAT catches route/scoring issues after build success, and v1.3 showed live replay realism checks catch product-quality strategy issues after correctness passes. |
 | Metadata hygiene | Summary, validation, UAT, and audit artifacts should be maintained during execution, not repaired at close. |
 | UI polish | Narrow viewport/browser review caught issues after automated checks; responsive screenshots and local page checks should move earlier in UI phases. |
 | Package boundaries | Keeping runtime execution out of web/API and importing narrow server modules prevents trust and bundling regressions. |
+| Competitive trust | Each competition milestone works best when it keeps the promise modest: exhibition before ladder, resettable ladder before durable ratings, governance before official tournaments. |

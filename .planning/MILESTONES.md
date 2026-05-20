@@ -90,3 +90,35 @@ None from the open-artifact audit.
 - Email verification, password reset, OAuth, passkeys, organizations, account recovery, and admin moderation remain future account work.
 - Rich dispute workflow beyond provenance and replay evidence remains future moderation/product work.
 - Production-grade container, microVM, or WASM/WASI sandboxing remains future runtime work.
+
+## v1.3 Competition Trust Beta
+
+**Status:** Shipped 2026-05-20
+**Phases:** 6
+**Plans:** 6
+**Requirements:** 51/51 satisfied
+**Audit:** .planning/milestones/v1.3-MILESTONE-AUDIT.md
+
+### Delivered
+
+- Shipped a 10-strategy Starter Library with readable tactical doctrines, Workshop apply/fork flows, source hashes, lineage metadata, validation, and memory-using examples.
+- Added resettable trial ladder seasons with one active Strategy Revision per user, immutable entry snapshots, next-season replacement, explicit lifecycle states, and no durable rating contract.
+- Built deterministic ladder scheduling, MatchSet generation, counted standings, retry/degraded/non-counted handling, public ladder pages, and a completed local demo tournament.
+- Published privacy-safe player handle pages and Strategy cards with lineage, records, tags, runtime compatibility, competition history, result links, and replay links.
+- Added focused governance with result flags, admin status marking, audit events, public counted-state explanations, and standings exclusion for invalid/non-competitive results.
+- Selected and prototyped a containerized subprocess production-candidate Strategy runtime boundary behind `StrategyExecutionAdapter`, with worker-thread retained as local/dev fallback and hostile regression coverage.
+- Tuned the demo starter set after live replay review so seeded matches show more movement, avoid immediate-reversal artifacts, and commonly last into board contraction.
+
+### Archives
+
+- .planning/milestones/v1.3-ROADMAP.md
+- .planning/milestones/v1.3-REQUIREMENTS.md
+- .planning/milestones/v1.3-MILESTONE-AUDIT.md
+- .planning/milestones/v1.3-phases/
+
+### Known Deferred Items
+
+- Durable all-time ratings, ranked prize ladders, official public tournaments, and prize/tier operations remain future work.
+- Email verification, password reset, OAuth, passkeys, organizations, and account recovery remain future account work.
+- Production-grade container hardening, microVM isolation, or WASM/WASI runtime replacement remains future runtime work.
+- Starter Strategy balance can be tuned further, especially weaker mobility/outlast doctrines such as Escape Artist and Ring Runner.
