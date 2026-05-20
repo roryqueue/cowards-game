@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Strategy Workshop Power Tools and Advanced Strategy Library
 status: planning
-last_updated: "2026-05-20T21:50:00.000Z"
-last_activity: 2026-05-20 — Phase 34 context gathered; continue discuss-phase at Phase 35 Completed Demo Tournament
+last_updated: "2026-05-20T21:56:00.000Z"
+last_activity: 2026-05-20 — Phase 35 context gathered; continue discuss-phase at Phase 36 Replay Review and Tuning
 progress:
   total_phases: 8
   completed_phases: 0
@@ -33,7 +33,7 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 Phase: 30 — Workshop Power Tools (not started)
 Plan: Needs `$gsd-plan-phase 30`
 Status: Requirements and roadmap defined
-Last activity: 2026-05-20 — Phase 34 context gathered; continue discuss-phase at Phase 35 Completed Demo Tournament
+Last activity: 2026-05-20 — Phase 35 context gathered; continue discuss-phase at Phase 36 Replay Review and Tuning
 
 ## Workflow Settings
 
@@ -93,4 +93,4 @@ Items acknowledged and deferred after v1.3 milestone completion on 2026-05-20:
 Run `$gsd-plan-phase 30` to plan Workshop Power Tools.
 
 ---
-*Last updated: 2026-05-20 after Phase 34 context gathering*
+*Last updated: 2026-05-20 after Phase 35 context gathering*
