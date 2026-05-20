@@ -1,9 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: planning-next
-milestone_name: Planning next milestone
-status: planning_next
-last_updated: "2026-05-20T16:10:00.000-04:00"
+milestone: v1.5
+milestone_name: Strategy Workshop Power Tools and Advanced Strategy Library
+status: planning
+last_updated: "2026-05-20T20:21:48.417Z"
+last_activity: 2026-05-20
 progress:
   total_phases: 0
   completed_phases: 0
@@ -22,17 +23,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Planning next milestone
-**Current milestone:** None active
-**Requirements:** Create fresh requirements with `$gsd-new-milestone`
+**Current focus:** Defining v1.5 requirements and roadmap
+**Current milestone:** v1.5 Strategy Workshop Power Tools and Advanced Strategy Library
+**Requirements:** Defining fresh v1.5 requirements with `$gsd-new-milestone`
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: Between milestones
-Plan: Next milestone definition
-Status: v1.4 archived with roadmap, requirements, audit, audit-fix, phase artifacts, retrospective, and git tag.
-Last activity: 2026-05-20 — Completed `$gsd-complete-milestone v1.4` archival and prepared for fresh next-milestone requirements.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-20 — Milestone v1.5 started
 
 ## Workflow Settings
 
@@ -59,7 +60,7 @@ Last activity: 2026-05-20 — Completed `$gsd-complete-milestone v1.4` archival 
 
 | Milestone | Phases | Plans | Requirements | Status |
 | --- | ---: | ---: | ---: | --- |
-| None | 0 | 0 | Fresh requirements needed | Planning next |
+| v1.5 Strategy Workshop Power Tools and Advanced Strategy Library | 0 | 0 | Defining | Planning |
 
 ## Accumulated Context
 
@@ -89,7 +90,7 @@ Items acknowledged and deferred after v1.3 milestone completion on 2026-05-20:
 
 ## Next Command
 
-Run `$gsd-new-milestone` to define the next milestone.
+Continue `$gsd-new-milestone` to define requirements and roadmap, then run `$gsd-plan-phase 30`.
 
 ---
-*Last updated: 2026-05-20 after v1.4 milestone completion*
+*Last updated: 2026-05-20 after v1.5 milestone start*

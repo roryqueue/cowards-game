@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.4 Cycle-Interleaved Rules Correction on 2026-05-20
-**Current milestone:** Planning next milestone
-**Status:** v1.4 shipped and archived; ready for next milestone definition.
+**Current milestone:** v1.5 Strategy Workshop Power Tools and Advanced Strategy Library
+**Status:** v1.5 requirements and roadmap definition in progress.
 **Last audit:** v1.4 audit-fix passed, 33/33 requirements satisfied.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible starter Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, and trust that public outputs do not expose private Strategy data.
@@ -23,6 +23,20 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - Chronicle, replay grammar, reconstruction, fixtures, and visual/debug assumptions updated for interleaved Cycle ordering.
 - Starter Strategies, templates, fixtures, and preconfigured Strategy inputs tuned for the new tactical timing.
 - Demo ladder and sample MatchSets regenerated and validated under the corrected rules.
+
+## Current Milestone: v1.5 Strategy Workshop Power Tools and Advanced Strategy Library
+
+**Goal:** Improve the Strategy Workshop into a stronger authoring and testing lab, then use it plus v1.4 evidence to create and validate a diverse advanced Strategy library, example MatchSets, and a completed realistic tournament.
+
+**Target features:**
+- Workshop gauntlet/test matrix for selected Strategy Revisions against starter and seed Strategies.
+- Strategy comparison with metadata, source diff, validation state, lineage, and deterministic result deltas.
+- Better validation/runtime diagnostics with failure category, Soldier/Activation context where available, and replay handoff links.
+- Clear performance summaries from deterministic Match and MatchSet results.
+- Distinct Advanced Strategy library tier targeting 10 Strategies, with 8-9 acceptable only when quality and diversity evidence is stronger.
+- Fresh deterministic evidence comparing advanced Strategies against v1.4 starters and against each other.
+- Representative example MatchSets and one completed 8+ entrant advanced-only tournament if the set is strong enough.
+- Browser verification for tournament pages, MatchSet result pages, Strategy cards, player/profile pages if applicable, and representative replays.
 
 ## Validated in v1.4
 
@@ -141,7 +155,7 @@ Planning archives live under `.planning/milestones/`:
 
 The active constraints remain: deterministic engine behavior, engine purity, Strategy Revision immutability, hostile Strategy treatment, runtime isolation, memory/source/output limits, package boundaries, replay privacy, Chronicle compatibility, and competitive integrity.
 
-Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, and private runtime internals by default.
+Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, and private runtime internals by default. v1.5 may create local example MatchSets and a completed example tournament for demonstration, but does not establish official public tournament operations or durable ratings.
 
 Future rule-correction work must treat the rules docs, engine, Chronicle/replay grammar, fixtures, starter Strategies, and demo competition data as one contract. It should not leave stale timing assumptions in samples, tests, or public explanatory text.
 
@@ -156,4 +170,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-20 after v1.4 milestone completion*
+*Last updated: 2026-05-20 after v1.5 milestone start*
