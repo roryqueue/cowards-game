@@ -11,7 +11,7 @@
 - ✅ **v1.1 Trustworthy Simulation Beta** — Phases 8-13, shipped 2026-05-18. See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md).
 - ✅ **v1.2 Competitive Alpha** — Phases 14-18, shipped 2026-05-19. See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md).
 - ✅ **v1.3 Competition Trust Beta** — Phases 19-24, shipped 2026-05-20. See [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md).
-- 🚧 **v1.4 Cycle-Interleaved Rules Correction** — Phases 25-29, planned 2026-05-20.
+- ✅ **v1.4 Cycle-Interleaved Rules Correction** — Phases 25-29, implemented and audit-fix clean on 2026-05-20.
 
 ## Overview
 
@@ -21,13 +21,13 @@ Coward's Game v1.4 corrects a core gameplay requirement: selected Soldiers shoul
 
 | Phase | Name | Goal | Requirements | Status |
 | --- | --- | --- | ---: | --- |
-| 25 | Rule Source-of-Truth Version | Publish a corrected canonical rules version and technical architecture note for Cycle-interleaved scheduling and Cycle-boundary Backstab. | 7 | Not Started |
-| 26 | Engine Cycle Scheduler Rewrite | Replace full-Activation sequencing with deterministic Cycle-layer scheduling while preserving Activation state, no-Advance stoning, and match outcomes. | 8 | Not Started |
-| 27 | Chronicle and Replay Rebaseline | Update Chronicle grammar, replay reconstruction, fixtures, and UI/debug assumptions for interleaved Activation Cycles. | 6 | Not Started |
-| 28 | Starter Strategy and Input Rebaseline | Update starter Strategies, templates, fixture Strategies, and preconfigured inputs for the corrected tactical timing. | 7 | Not Started |
-| 29 | Demo Competition Rebuild | Regenerate and validate sample MatchSets, ladder standings, public pages, and replay evidence under the corrected rule version. | 5 | Not Started |
+| 25 | Rule Source-of-Truth Version | Publish a corrected canonical rules version and technical architecture note for Cycle-interleaved scheduling and Cycle-boundary Backstab. | 7 | Complete |
+| 26 | Engine Cycle Scheduler Rewrite | Replace full-Activation sequencing with deterministic Cycle-layer scheduling while preserving Activation state, no-Advance stoning, and match outcomes. | 8 | Complete |
+| 27 | Chronicle and Replay Rebaseline | Update Chronicle grammar, replay reconstruction, fixtures, and UI/debug assumptions for interleaved Activation Cycles. | 6 | Complete |
+| 28 | Starter Strategy and Input Rebaseline | Update starter Strategies, templates, fixture Strategies, and preconfigured inputs for the corrected tactical timing. | 7 | Complete |
+| 29 | Demo Competition Rebuild | Regenerate and validate sample MatchSets, ladder standings, public pages, and replay evidence under the corrected rule version. | 5 | Complete |
 
-**Coverage:** 33 v1.4 requirements mapped, 0 unmapped.
+**Coverage:** 33 v1.4 requirements mapped and completed, 0 unmapped.
 
 ## Phases
 
@@ -91,7 +91,7 @@ Archived phase details: [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) and [v1.3-
 
 **Goal:** Publish a corrected canonical rules version and technical architecture note for Cycle-interleaved scheduling and Cycle-boundary Backstab.
 **Mode:** standard
-**Status:** Not Started
+**Status:** Complete
 
 **Requirements:** RULE-01, RULE-02, RULE-03, RULE-04, RULE-05, RULE-06, RULE-07
 
@@ -111,7 +111,7 @@ Archived phase details: [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) and [v1.3-
 
 **Goal:** Replace full-Activation sequencing with deterministic Cycle-layer scheduling while preserving Activation state, no-Advance stoning, and match outcomes.
 **Mode:** standard
-**Status:** Not Started
+**Status:** Complete
 
 **Requirements:** ENGINE-01, ENGINE-02, ENGINE-03, ENGINE-04, ENGINE-05, ENGINE-06, ENGINE-07, ENGINE-08
 
@@ -131,7 +131,7 @@ Archived phase details: [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) and [v1.3-
 
 **Goal:** Update Chronicle grammar, replay reconstruction, fixtures, and UI/debug assumptions for interleaved Activation Cycles.
 **Mode:** standard
-**Status:** Not Started
+**Status:** Complete
 
 **Requirements:** REPLAY-01, REPLAY-02, REPLAY-03, REPLAY-04, REPLAY-05, REPLAY-06
 
@@ -150,7 +150,7 @@ Archived phase details: [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) and [v1.3-
 
 **Goal:** Update starter Strategies, templates, fixture Strategies, and preconfigured inputs for the corrected tactical timing.
 **Mode:** standard
-**Status:** Not Started
+**Status:** Complete
 
 **Requirements:** STRAT-01, STRAT-02, STRAT-03, STRAT-04, STRAT-05, STRAT-06, STRAT-07
 
@@ -169,7 +169,7 @@ Archived phase details: [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) and [v1.3-
 
 **Goal:** Regenerate and validate sample MatchSets, ladder standings, public pages, and replay evidence under the corrected rule version.
 **Mode:** standard
-**Status:** Not Started
+**Status:** Complete
 
 **Requirements:** DEMO-01, DEMO-02, DEMO-03, DEMO-04, DEMO-05
 
@@ -192,8 +192,8 @@ Archived phase details: [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) and [v1.3-
 | v1.1 Trustworthy Simulation Beta | 6/6 | 29/29 | 34/34 | Complete | 2026-05-18 |
 | v1.2 Competitive Alpha | 5/5 | 10/10 | 33/33 | Complete | 2026-05-19 |
 | v1.3 Competition Trust Beta | 6/6 | 6/6 | 51/51 | Complete | 2026-05-20 |
-| v1.4 Cycle-Interleaved Rules Correction | 0/5 | 0/5 | 0/33 | Planned | - |
+| v1.4 Cycle-Interleaved Rules Correction | 5/5 | 5/5 | 33/33 | Complete | 2026-05-20 |
 
 ## Next
 
-Start with `$gsd-discuss-phase 25` to refine the source-of-truth rule version before implementation.
+Archive or ship v1.4, then choose the next milestone.

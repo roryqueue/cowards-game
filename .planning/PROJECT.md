@@ -4,8 +4,8 @@
 
 **Shipped version:** v1.3 Competition Trust Beta on 2026-05-20
 **Current milestone:** v1.4 Cycle-Interleaved Rules Correction
-**Status:** Defining requirements and roadmap for v1.4.
-**Last audit:** v1.3 passed, 51/51 requirements satisfied.
+**Status:** v1.4 implemented and audit-fix clean.
+**Last audit:** v1.4 audit-fix passed, 33/33 requirements satisfied.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible starter Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, and trust that public outputs do not expose private Strategy data.
 
@@ -36,6 +36,14 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - Chronicle, replay grammar, reconstruction, fixtures, and visual/debug assumptions updated for interleaved Cycle ordering.
 - Starter Strategies, templates, fixtures, and preconfigured Strategy inputs tuned for the new tactical timing.
 - Demo ladder and sample MatchSets regenerated and validated under the corrected rules.
+
+## Validated in v1.4
+
+- ✓ Canonical `cowards-rules-v1.4` rule and architecture docs for Cycle-interleaved selected slots and Cycle-boundary Backstab.
+- ✓ Pure engine scheduler now resolves selected Soldier slots by Cycle layer, skips ended slots, treats blocked movement as a non-terminal Cycle cost, and emits Cycle lifecycle summaries.
+- ✓ Chronicle and replay stack rebaseline to `chronicle-v1.4`, current compatibility versions, v1.4 lifecycle events, and active replay fixtures.
+- ✓ Starter Strategy Library keeps stable IDs while publishing v1.4 lineage, refreshed source hashes, and a real interleaved starter gauntlet.
+- ✓ Completed local demo ladder at `/ladder/v1-4-demo` with 8 v1.4 starter entrants, 96 replay-backed Chronicles, counted MatchSets, and browser-verified public pages.
 
 ## Validated in v1.0
 
@@ -133,8 +141,8 @@ Planning archives live under `.planning/milestones/`:
 | Use resettable trial ladders before durable ratings | Ranking pressure is useful, but permanent ratings should wait until abuse, moderation, and sandbox behavior are better understood. | ✓ Good |
 | Seed starter Strategies as forkable templates | Players should begin with readable, credible doctrines they choose to fork, not opaque auto-submissions. | ✓ Good |
 | Treat containerized subprocess as the production-candidate runtime path | It preserves the JS/TS Strategy API while adding a clearer process and container boundary than worker threads. | ✓ Revisit before real hostile public scale |
-| Interleave selected Soldiers by Cycle, not full Activation | The intended game is simultaneous-feeling tactical pressure where selected Soldiers respond between Cycles instead of one Soldier consuming its whole Cycle budget before the next slot acts. | — Pending v1.4 correction |
-| Check Backstab at every Cycle boundary | Backstab should be a tactical contact rule checked before and after each SoldierBrain Cycle, not only at Activation boundaries. | — Pending v1.4 correction |
+| Interleave selected Soldiers by Cycle, not full Activation | The intended game is simultaneous-feeling tactical pressure where selected Soldiers respond between Cycles instead of one Soldier consuming its whole Cycle budget before the next slot acts. | ✓ Implemented in v1.4 |
+| Check Backstab at every Cycle boundary | Backstab should be a tactical contact rule checked before and after each SoldierBrain Cycle, not only at Activation boundaries. | ✓ Implemented in v1.4 |
 
 ## Constraints
 
@@ -155,4 +163,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-20 after starting v1.4 Cycle-Interleaved Rules Correction*
+*Last updated: 2026-05-20 after completing v1.4 Cycle-Interleaved Rules Correction*

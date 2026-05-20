@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: v1.4 Cycle-Interleaved Rules Correction
-status: validating
-last_updated: "2026-05-20T15:35:00.000-04:00"
+status: complete
+last_updated: "2026-05-20T15:45:00.000-04:00"
 progress:
   total_phases: 5
   completed_phases: 5
@@ -15,24 +15,24 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** v1.4 Cycle-Interleaved Rules Correction executing
+**Status:** v1.4 Cycle-Interleaved Rules Correction complete
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.4 milestone audit-fix
+**Current focus:** v1.4 complete; ready to archive or ship
 **Current milestone:** v1.4 Cycle-Interleaved Rules Correction
 **Requirements:** .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: Milestone v1.4 audit
-Plan: Next
-Status: All v1.4 phases completed and validated; preparing final audit-fix sweep.
-Last activity: 2026-05-20 — Rebuilt `/ladder/v1-4-demo`, generated the eight-entrant demo tournament, validated v1.4 Chronicle metrics, browser-checked public pages, and reran the full fast-suite validation.
+Phase: Milestone v1.4 complete
+Plan: Complete
+Status: All v1.4 phases completed, validated, verified, browser-checked, demo-regenerated, and audit-fix clean.
+Last activity: 2026-05-20 — Completed audit-fix F-01/F-02/F-03 by aligning PROJECT, ROADMAP, REQUIREMENTS, and STATE with the implemented v1.4 evidence.
 
 ## Workflow Settings
 
@@ -58,7 +58,7 @@ Last activity: 2026-05-20 — Rebuilt `/ladder/v1-4-demo`, generated the eight-e
 
 | Milestone | Phases | Plans | Requirements | Status |
 | --- | ---: | ---: | ---: | --- |
-| v1.4 Cycle-Interleaved Rules Correction | 5 | 5 | 33/33 mapped | Validating |
+| v1.4 Cycle-Interleaved Rules Correction | 5 | 5 | 33/33 complete | Complete |
 
 ## Accumulated Context
 
@@ -88,7 +88,7 @@ Items acknowledged and deferred after v1.3 milestone completion on 2026-05-20:
 
 ## Next Command
 
-Run `$gsd-audit-fix` for Milestone v1.4.
+Archive or ship Milestone v1.4.
 
 ---
-*Last updated: 2026-05-20 after completing all v1.4 phase implementation and validation*
+*Last updated: 2026-05-20 after v1.4 audit-fix completed cleanly*
