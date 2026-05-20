@@ -81,6 +81,30 @@ const cellFor = (grid, direction) => {
   return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)
 }
 
+const reverse = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" }
+
+const wallEscapeScore = (grid, direction) =>
+  grid.cells.reduce((score, cell) => {
+    if (cell.contents !== "WALL") return score
+    if (cell.dx < 0 && direction === "RIGHT") return score + 4
+    if (cell.dx > 0 && direction === "LEFT") return score + 4
+    if (cell.dy < 0 && direction === "DOWN") return score + 4
+    if (cell.dy > 0 && direction === "UP") return score + 4
+    return score
+  }, 0)
+
+const openMoveDirection = (input, preferred) => {
+  const ranked = directions
+    .map((direction) => {
+      const cell = cellFor(input.awarenessGrid, direction)
+      if (cell?.contents !== "EMPTY") return [direction, -999]
+      if (input.self.lastSuccessfulMoveDirection === reverse[direction]) return [direction, -998]
+      return [direction, (direction === preferred ? 6 : 0) + wallEscapeScore(input.awarenessGrid, direction)]
+    })
+    .sort((left, right) => right[1] - left[1])
+  return ranked[0]?.[1] > -900 ? ranked[0][0] : null
+}
+
 const bestCenterDirection = (self, board) => {
   let best = self.facing ?? "UP"
   let bestScore = 999
@@ -106,11 +130,17 @@ export default {
     return { activationOrders: ordered, strategyMemory: input.strategyMemory }
   },
   soldierBrain(input) {
+    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+    }
     const desired = input.objective?.target ?? bestCenterDirection(input.self, { bounds: { minX: -4, maxX: 4, minY: -4, maxY: 4 } })
+    const direction = openMoveDirection(input, desired)
     const front = cellFor(input.awarenessGrid, desired)
-    const action = front?.contents === "EMPTY" || front?.contents === "ENEMY_ACTIVE"
-      ? { type: "MOVE", direction: desired }
-      : { type: "TURN", direction: desired }
+    const action = direction
+      ? { type: "MOVE", direction }
+      : front?.contents === "ENEMY_ACTIVE"
+        ? { type: "MOVE", direction: desired }
+        : { type: "TURN", direction: desired }
     return { action, soldierMemory: input.soldierMemory }
   }
 }
@@ -140,6 +170,33 @@ const openDirection = (grid, fallback) => {
   return open?.[0] ?? fallback
 }
 
+const reverse = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" }
+
+const mobileDirection = (input, fallback) => {
+  const candidates = ["UP", "RIGHT", "DOWN", "LEFT"]
+    .map((direction) => {
+      const cell = input.awarenessGrid.cells.find((candidate) =>
+        direction === "UP" ? candidate.dx === 0 && candidate.dy === -1 :
+        direction === "RIGHT" ? candidate.dx === 1 && candidate.dy === 0 :
+        direction === "DOWN" ? candidate.dx === 0 && candidate.dy === 1 :
+        candidate.dx === -1 && candidate.dy === 0
+      )
+      if (cell?.contents !== "EMPTY") return [direction, -999]
+      if (input.self.lastSuccessfulMoveDirection === reverse[direction]) return [direction, -998]
+      const wallEscape = input.awarenessGrid.cells.reduce((score, nearby) => {
+        if (nearby.contents !== "WALL") return score
+        if (nearby.dx < 0 && direction === "RIGHT") return score + 4
+        if (nearby.dx > 0 && direction === "LEFT") return score + 4
+        if (nearby.dy < 0 && direction === "DOWN") return score + 4
+        if (nearby.dy > 0 && direction === "UP") return score + 4
+        return score
+      }, 0)
+      return [direction, wallEscape + (direction === fallback ? 2 : 0)]
+    })
+    .sort((left, right) => right[1] - left[1])
+  return candidates[0]?.[1] > -900 ? candidates[0][0] : null
+}
+
 export default {
   selectActivations(input) {
     return {
@@ -153,13 +210,16 @@ export default {
     }
   },
   soldierBrain(input) {
-    if (adjacentEnemy(input.awarenessGrid) && wallCount(input.awarenessGrid) >= 1) {
-      return { action: { type: "TURN_TO_STONE" }, soldierMemory: input.soldierMemory }
+    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
     }
     const facing = input.self.facing ?? cornerDirections[input.cycleIndex % cornerDirections.length]
-    const direction = openDirection(input.awarenessGrid, facing)
+    const direction = mobileDirection(input, openDirection(input.awarenessGrid, facing))
+    if (!direction && adjacentEnemy(input.awarenessGrid) && wallCount(input.awarenessGrid) >= 1) {
+      return { action: { type: "TURN_TO_STONE" }, soldierMemory: input.soldierMemory }
+    }
     return {
-      action: input.cycleIndex % 3 === 0 ? { type: "MOVE", direction } : { type: "TURN", direction },
+      action: direction ? { type: "MOVE", direction } : { type: "TURN", direction: facing },
       soldierMemory: input.soldierMemory
     }
   }
@@ -189,6 +249,25 @@ const directionTo = (cell, fallback) => {
   return fallback
 }
 
+const cellFor = (grid, direction) => {
+  if (direction === "UP") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)
+  if (direction === "RIGHT") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)
+  if (direction === "DOWN") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)
+  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)
+}
+
+const openLane = (input, preferred) => {
+  const ranked = directions
+    .map((direction) => {
+      const cell = cellFor(input.awarenessGrid, direction)
+      if (cell?.contents !== "EMPTY") return [direction, -999]
+      if (input.self.lastSuccessfulMoveDirection === opposite[direction]) return [direction, -998]
+      return [direction, direction === preferred ? 5 : 1]
+    })
+    .sort((left, right) => right[1] - left[1])
+  return ranked[0]?.[1] > -900 ? ranked[0][0] : null
+}
+
 export default {
   selectActivations(input) {
     const memory = input.strategyMemory && typeof input.strategyMemory === "object" ? input.strategyMemory : {}
@@ -200,11 +279,15 @@ export default {
   },
   soldierBrain(input) {
     const memory = input.soldierMemory && typeof input.soldierMemory === "object" ? input.soldierMemory : {}
+    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+      return { action: { type: "MOVE", direction: opposite[input.self.lastSuccessfulMoveDirection] }, soldierMemory: memory }
+    }
     const target = rearTarget(input.awarenessGrid)
     const lane = directionTo(target, memory.lastLane ?? input.self.facing ?? "UP")
     const close = target && Math.abs(target.dx) + Math.abs(target.dy) === 1
+    const open = openLane(input, lane)
     return {
-      action: close ? { type: "MOVE", direction: lane } : { type: input.cycleIndex % 2 === 0 ? "TURN" : "MOVE", direction: lane },
+      action: close || open ? { type: "MOVE", direction: close ? lane : open } : { type: "TURN", direction: lane },
       soldierMemory: { ...memory, lastLane: lane, rearSeen: Boolean(target?.facing) }
     }
   }
@@ -238,6 +321,30 @@ const wallSide = (grid) => {
   return scores[0][0]
 }
 
+const cellFor = (grid, direction) => {
+  if (direction === "UP") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)
+  if (direction === "RIGHT") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)
+  if (direction === "DOWN") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)
+  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)
+}
+
+const oppositeWallEscape = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" }
+const reverse = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" }
+
+const bestMove = (input, preferred) => {
+  const wall = wallSide(input.awarenessGrid)
+  const away = oppositeWallEscape[wall] ?? preferred
+  const ranked = directions
+    .map((direction) => {
+      const cell = cellFor(input.awarenessGrid, direction)
+      if (cell?.contents !== "EMPTY") return [direction, -999]
+      if (input.self.lastSuccessfulMoveDirection === reverse[direction]) return [direction, -998]
+      return [direction, (direction === preferred ? 4 : 0) + (direction === away ? 5 : 0)]
+    })
+    .sort((left, right) => right[1] - left[1])
+  return ranked[0]?.[1] > -900 ? ranked[0][0] : null
+}
+
 export default {
   selectActivations(input) {
     return {
@@ -249,12 +356,13 @@ export default {
     }
   },
   soldierBrain(input) {
+    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+    }
     const enemy = nearestEnemy(input.awarenessGrid)
     const pressure = toward(enemy, input.self.facing ?? "UP")
-    const besideWall = input.awarenessGrid.cells.some((cell) => cell.contents === "WALL" && Math.abs(cell.dx) + Math.abs(cell.dy) === 1)
-    if (besideWall && enemy && Math.abs(enemy.dx) + Math.abs(enemy.dy) <= 2) {
-      return { action: { type: "MOVE", direction: pressure }, soldierMemory: input.soldierMemory }
-    }
+    const move = bestMove(input, pressure)
+    if (move) return { action: { type: "MOVE", direction: move }, soldierMemory: input.soldierMemory }
     return { action: { type: "TURN", direction: enemy ? pressure : wallSide(input.awarenessGrid) }, soldierMemory: input.soldierMemory }
   }
 }
@@ -278,6 +386,20 @@ const cellFor = (grid, direction) => {
   return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)
 }
 
+const reverse = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" }
+
+const openDirection = (input, preferred) => {
+  const ranked = clockwise
+    .map((direction) => {
+      const cell = cellFor(input.awarenessGrid, direction)
+      if (cell?.contents !== "EMPTY") return [direction, -999]
+      if (input.self.lastSuccessfulMoveDirection === reverse[direction]) return [direction, -998]
+      return [direction, direction === preferred ? 4 : 1]
+    })
+    .sort((left, right) => right[1] - left[1])
+  return ranked[0]?.[1] > -900 ? ranked[0][0] : null
+}
+
 export default {
   selectActivations(input) {
     const memory = input.strategyMemory && typeof input.strategyMemory === "object" ? input.strategyMemory : {}
@@ -291,14 +413,18 @@ export default {
     }
   },
   soldierBrain(input) {
+    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+    }
     const turn = input.objective?.turn === "counter" ? "counter" : "clockwise"
     const facing = input.self.facing ?? "UP"
     const forward = cellFor(input.awarenessGrid, facing)
-    if (forward?.contents === "EMPTY" && input.cycleIndex % 3 !== 2) {
+    if (forward?.contents === "EMPTY" && input.self.lastSuccessfulMoveDirection !== reverse[facing]) {
       return { action: { type: "MOVE", direction: facing }, soldierMemory: { turn, last: facing } }
     }
     const direction = nextDirection(facing, turn)
-    return { action: { type: "TURN", direction }, soldierMemory: { turn, last: direction } }
+    const open = openDirection(input, direction)
+    return { action: open ? { type: "MOVE", direction: open } : { type: "TURN", direction }, soldierMemory: { turn, last: open ?? direction } }
   }
 }
 `.trim()
@@ -326,6 +452,25 @@ const directionFromVector = (vector, fallback) => {
   return fallback
 }
 
+const cellFor = (grid, direction) => {
+  if (direction === "UP") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)
+  if (direction === "RIGHT") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)
+  if (direction === "DOWN") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)
+  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)
+}
+
+const reverseDirection = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" }
+
+const openMove = (input, preferred) => {
+  const ranked = directions.map((direction) => {
+    const cell = cellFor(input.awarenessGrid, direction)
+    if (cell?.contents !== "EMPTY") return [direction, -999]
+    if (input.self.lastSuccessfulMoveDirection === reverseDirection[direction]) return [direction, -998]
+    return [direction, direction === preferred ? 5 : 1]
+  }).sort((left, right) => right[1] - left[1])
+  return ranked[0]?.[1] > -900 ? ranked[0][0] : null
+}
+
 export default {
   selectActivations(input) {
     const memory = input.strategyMemory && typeof input.strategyMemory === "object" ? input.strategyMemory : {}
@@ -342,13 +487,17 @@ export default {
     }
   },
   soldierBrain(input) {
+    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+      return { action: { type: "MOVE", direction: reverseDirection[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+    }
     const lane = input.objective?.lane ?? input.self.facing ?? "UP"
     const closeEnemy = input.awarenessGrid.cells.some((cell) => cell.contents === "ENEMY_ACTIVE" && Math.abs(cell.dx) + Math.abs(cell.dy) === 1)
     const phase = input.objective?.phase ?? "mirror"
+    const open = openMove(input, lane)
     if (phase === "break" && closeEnemy) {
       return { action: { type: "MOVE", direction: lane }, soldierMemory: { phase, lane } }
     }
-    return { action: input.cycleIndex % 2 === 0 ? { type: "TURN", direction: lane } : { type: "MOVE", direction: lane }, soldierMemory: { phase, lane } }
+    return { action: open ? { type: "MOVE", direction: open } : { type: "TURN", direction: lane }, soldierMemory: { phase, lane } }
   }
 }
 `.trim()
@@ -356,21 +505,37 @@ export default {
 const centerTurtleSource = `
 // Doctrine: hold central shape, avoid needless contact, and turn to stone when boxed in.
 const directions = ["UP", "RIGHT", "DOWN", "LEFT"]
+const reverse = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" }
 
 const countAdjacent = (grid, contents) =>
   grid.cells.filter((cell) => cell.contents === contents && Math.abs(cell.dx) + Math.abs(cell.dy) === 1).length
 
-const openDirections = (grid) =>
-  directions.filter((direction) => {
+const wallEscapeScore = (grid, direction) =>
+  grid.cells.reduce((score, cell) => {
+    if (cell.contents !== "WALL") return score
+    if (cell.dx < 0 && direction === "RIGHT") return score + 4
+    if (cell.dx > 0 && direction === "LEFT") return score + 4
+    if (cell.dy < 0 && direction === "DOWN") return score + 4
+    if (cell.dy > 0 && direction === "UP") return score + 4
+    return score
+  }, 0)
+
+const rankedDirections = (input) =>
+  directions
+    .map((direction) => {
     const cell = direction === "UP"
-      ? grid.cells.find((candidate) => candidate.dx === 0 && candidate.dy === -1)
+      ? input.awarenessGrid.cells.find((candidate) => candidate.dx === 0 && candidate.dy === -1)
       : direction === "RIGHT"
-        ? grid.cells.find((candidate) => candidate.dx === 1 && candidate.dy === 0)
+        ? input.awarenessGrid.cells.find((candidate) => candidate.dx === 1 && candidate.dy === 0)
         : direction === "DOWN"
-          ? grid.cells.find((candidate) => candidate.dx === 0 && candidate.dy === 1)
-          : grid.cells.find((candidate) => candidate.dx === -1 && candidate.dy === 0)
-    return cell?.contents === "EMPTY"
-  })
+          ? input.awarenessGrid.cells.find((candidate) => candidate.dx === 0 && candidate.dy === 1)
+          : input.awarenessGrid.cells.find((candidate) => candidate.dx === -1 && candidate.dy === 0)
+      if (cell?.contents !== "EMPTY") return [direction, -999]
+      if (input.self.lastSuccessfulMoveDirection === reverse[direction]) return [direction, -998]
+      const facingBonus = direction === input.self.facing ? 2 : 0
+      return [direction, wallEscapeScore(input.awarenessGrid, direction) + facingBonus]
+    })
+    .sort((left, right) => right[1] - left[1])
 
 export default {
   selectActivations(input) {
@@ -383,12 +548,15 @@ export default {
     }
   },
   soldierBrain(input) {
+    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+    }
     const enemies = countAdjacent(input.awarenessGrid, "ENEMY_ACTIVE")
     const walls = countAdjacent(input.awarenessGrid, "WALL")
-    if (enemies >= 1 && walls >= 1) return { action: { type: "TURN_TO_STONE" }, soldierMemory: input.soldierMemory }
-    const open = openDirections(input.awarenessGrid)
-    const direction = open[0] ?? input.self.facing ?? "UP"
-    return { action: open.length >= 2 ? { type: "TURN", direction } : { type: "MOVE", direction }, soldierMemory: input.soldierMemory }
+    const ranked = rankedDirections(input)
+    const direction = ranked[0]?.[0] ?? input.self.facing ?? "UP"
+    if (ranked[0]?.[1] <= -900 && enemies >= 1 && walls >= 1) return { action: { type: "TURN_TO_STONE" }, soldierMemory: input.soldierMemory }
+    return { action: ranked[0]?.[1] > -900 ? { type: "MOVE", direction } : { type: "TURN", direction }, soldierMemory: input.soldierMemory }
   }
 }
 `.trim()
@@ -408,6 +576,26 @@ const directionToEnemy = (self, enemies) => {
   return Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? "RIGHT" : "LEFT") : (dy >= 0 ? "DOWN" : "UP")
 }
 
+const reverse = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" }
+
+const cellFor = (grid, direction) => {
+  if (direction === "UP") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)
+  if (direction === "RIGHT") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)
+  if (direction === "DOWN") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)
+  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)
+}
+
+const safeAggroMove = (input, lane) => {
+  const target = cellFor(input.awarenessGrid, lane)
+  if ((target?.contents === "EMPTY" || target?.contents === "ENEMY_ACTIVE") && input.self.lastSuccessfulMoveDirection !== reverse[lane]) {
+    return lane
+  }
+  return ["UP", "RIGHT", "DOWN", "LEFT"].find((direction) => {
+    const cell = cellFor(input.awarenessGrid, direction)
+    return cell?.contents === "EMPTY" && input.self.lastSuccessfulMoveDirection !== reverse[direction]
+  }) ?? null
+}
+
 export default {
   selectActivations(input) {
     return {
@@ -419,9 +607,13 @@ export default {
     }
   },
   soldierBrain(input) {
+    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+    }
     const lane = input.objective?.lane ?? input.self.facing ?? "UP"
     const adjacent = input.awarenessGrid.cells.some((cell) => cell.contents === "ENEMY_ACTIVE" && Math.abs(cell.dx) + Math.abs(cell.dy) === 1)
-    return { action: adjacent || input.cycleIndex % 2 === 1 ? { type: "MOVE", direction: lane } : { type: "TURN", direction: lane }, soldierMemory: input.soldierMemory }
+    const move = safeAggroMove(input, lane)
+    return { action: adjacent || move ? { type: "MOVE", direction: adjacent ? lane : move } : { type: "TURN", direction: lane }, soldierMemory: input.soldierMemory }
   }
 }
 `.trim()
@@ -448,6 +640,8 @@ const scoreDirection = (grid, direction, badLane) => {
   return score
 }
 
+const reverse = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" }
+
 export default {
   selectActivations(input) {
     const memory = input.strategyMemory && typeof input.strategyMemory === "object" ? input.strategyMemory : {}
@@ -461,7 +655,13 @@ export default {
   },
   soldierBrain(input) {
     const memory = input.soldierMemory && typeof input.soldierMemory === "object" ? input.soldierMemory : {}
-    const ranked = directions.map((direction) => [direction, scoreDirection(input.awarenessGrid, direction, memory.badLane)]).sort((left, right) => right[1] - left[1])
+    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: memory }
+    }
+    const ranked = directions.map((direction) => [
+      direction,
+      input.self.lastSuccessfulMoveDirection === reverse[direction] ? -998 : scoreDirection(input.awarenessGrid, direction, memory.badLane)
+    ]).sort((left, right) => right[1] - left[1])
     const best = ranked[0][0]
     return {
       action: ranked[0][1] > 0 ? { type: "MOVE", direction: best } : { type: "TURN", direction: best },
@@ -487,6 +687,25 @@ const directionTo = (cell, fallback) => {
   return fallback
 }
 
+const cellFor = (grid, direction) => {
+  if (direction === "UP") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)
+  if (direction === "RIGHT") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)
+  if (direction === "DOWN") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)
+  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)
+}
+
+const reverse = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" }
+
+const openMove = (input, preferred) => {
+  const ranked = directions.map((direction) => {
+    const cell = cellFor(input.awarenessGrid, direction)
+    if (cell?.contents !== "EMPTY") return [direction, -999]
+    if (input.self.lastSuccessfulMoveDirection === reverse[direction]) return [direction, -998]
+    return [direction, direction === preferred ? 4 : 1]
+  }).sort((left, right) => right[1] - left[1])
+  return ranked[0]?.[1] > -900 ? ranked[0][0] : null
+}
+
 export default {
   selectActivations(input) {
     const memory = input.strategyMemory && typeof input.strategyMemory === "object" ? input.strategyMemory : {}
@@ -501,13 +720,17 @@ export default {
   },
   soldierBrain(input) {
     const memory = input.soldierMemory && typeof input.soldierMemory === "object" ? input.soldierMemory : {}
+    if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
+      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: memory }
+    }
     const enemy = nearestEnemy(input.awarenessGrid)
     const lane = directionTo(enemy, input.objective?.baitLane ?? memory.baitLane ?? input.self.facing ?? "UP")
     const close = enemy && Math.abs(enemy.dx) + Math.abs(enemy.dy) === 1
-    if (close && input.cycleIndex > 0) {
+    const move = openMove(input, lane)
+    if (close && !move && input.cycleIndex > 0) {
       return { action: { type: "TURN_TO_STONE" }, soldierMemory: { baitLane: lane, sprung: true } }
     }
-    return { action: input.cycleIndex % 2 === 0 ? { type: "TURN", direction: lane } : { type: "MOVE", direction: lane }, soldierMemory: { baitLane: lane, sprung: false } }
+    return { action: move ? { type: "MOVE", direction: move } : { type: "TURN", direction: lane }, soldierMemory: { baitLane: lane, sprung: false } }
   }
 }
 `.trim()

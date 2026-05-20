@@ -690,7 +690,10 @@ export const buildTrialLadderSeasonDto = async (
         ? { publicReason: classification.publicReason }
         : {}),
       publicExplanation:
-        row.public_counted_explanation ?? classification.publicExplanation,
+        classification.countedStatus === "counted"
+          ? classification.publicExplanation
+          : (row.public_counted_explanation ??
+            classification.publicExplanation),
       entrantIds: entrantRows.rows.map((entrant) => entrant.snapshot.entryId),
       resultHref: `/matchsets/${encodeURIComponent(row.id)}`,
     })
