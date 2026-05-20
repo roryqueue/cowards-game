@@ -10,6 +10,16 @@ export const replaySpeedOptions = [
     label: "8x",
     intervalMs: Math.round(basePlaybackIntervalMs / 8),
   },
+  {
+    value: "16",
+    label: "16x",
+    intervalMs: Math.round(basePlaybackIntervalMs / 16),
+  },
+  {
+    value: "32",
+    label: "32x",
+    intervalMs: Math.round(basePlaybackIntervalMs / 32),
+  },
 ] as const
 
 export type ReplaySpeedValue = (typeof replaySpeedOptions)[number]["value"]

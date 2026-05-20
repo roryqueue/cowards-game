@@ -7,13 +7,15 @@ import {
 } from "./replay-playback.js"
 
 describe("replay playback speeds", () => {
-  it("offers five speed options and defaults to twice the previous pace", () => {
+  it("offers seven speed options and defaults to twice the previous pace", () => {
     expect(replaySpeedOptions.map((option) => option.label)).toEqual([
       "0.5x",
       "1x",
       "2x",
       "4x",
       "8x",
+      "16x",
+      "32x",
     ])
     expect(defaultReplaySpeed).toBe("2")
     expect(getPlaybackIntervalMs(defaultReplaySpeed)).toBe(
@@ -27,5 +29,7 @@ describe("replay playback speeds", () => {
     expect(getPlaybackIntervalMs("2")).toBe(350)
     expect(getPlaybackIntervalMs("4")).toBe(175)
     expect(getPlaybackIntervalMs("8")).toBe(88)
+    expect(getPlaybackIntervalMs("16")).toBe(44)
+    expect(getPlaybackIntervalMs("32")).toBe(22)
   })
 })
