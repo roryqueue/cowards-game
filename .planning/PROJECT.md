@@ -4,7 +4,7 @@
 
 **Shipped version:** v1.4 Cycle-Interleaved Rules Correction on 2026-05-20
 **Current milestone:** v1.5 Strategy Workshop Power Tools and Advanced Strategy Library
-**Status:** v1.5 requirements and roadmap definition in progress.
+**Status:** v1.5 requirements and roadmap defined; ready to plan Phase 30.
 **Last audit:** v1.4 audit-fix passed, 33/33 requirements satisfied.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible starter Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, and trust that public outputs do not expose private Strategy data.
@@ -170,4 +170,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-20 after v1.5 milestone start*
+*Last updated: 2026-05-20 after v1.5 requirements and roadmap definition*

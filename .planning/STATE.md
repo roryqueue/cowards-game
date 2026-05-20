@@ -6,16 +6,16 @@ status: planning
 last_updated: "2026-05-20T20:21:48.417Z"
 last_activity: 2026-05-20
 progress:
-  total_phases: 0
+  total_phases: 8
   completed_phases: 0
-  total_plans: 0
+  total_plans: 8
   completed_plans: 0
   percent: 0
 ---
 
 # State: Coward's Game
 
-**Initialized:** 2026-05-16  
+**Initialized:** 2026-05-16
 **Status:** v1.4 Cycle-Interleaved Rules Correction shipped and archived
 
 ## Project Reference
@@ -23,17 +23,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Defining v1.5 requirements and roadmap
+**Current focus:** Ready to plan Phase 30
 **Current milestone:** v1.5 Strategy Workshop Power Tools and Advanced Strategy Library
-**Requirements:** Defining fresh v1.5 requirements with `$gsd-new-milestone`
+**Requirements:** .planning/REQUIREMENTS.md (53 active requirements)
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-05-20 — Milestone v1.5 started
+Phase: 30 — Workshop Power Tools (not started)
+Plan: Needs `$gsd-plan-phase 30`
+Status: Requirements and roadmap defined
+Last activity: 2026-05-20 — Milestone v1.5 requirements and roadmap created
 
 ## Workflow Settings
 
@@ -60,7 +60,7 @@ Last activity: 2026-05-20 — Milestone v1.5 started
 
 | Milestone | Phases | Plans | Requirements | Status |
 | --- | ---: | ---: | ---: | --- |
-| v1.5 Strategy Workshop Power Tools and Advanced Strategy Library | 0 | 0 | Defining | Planning |
+| v1.5 Strategy Workshop Power Tools and Advanced Strategy Library | 0/8 | 0/8 | 0/53 | Ready to plan Phase 30 |
 
 ## Accumulated Context
 
@@ -90,7 +90,7 @@ Items acknowledged and deferred after v1.3 milestone completion on 2026-05-20:
 
 ## Next Command
 
-Continue `$gsd-new-milestone` to define requirements and roadmap, then run `$gsd-plan-phase 30`.
+Run `$gsd-plan-phase 30` to plan Workshop Power Tools.
 
 ---
-*Last updated: 2026-05-20 after v1.5 milestone start*
+*Last updated: 2026-05-20 after v1.5 requirements and roadmap definition*
