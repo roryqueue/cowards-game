@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./account-revisions": "./src/account-revisions.ts",
+    "./advanced-strategies": "./src/advanced-strategies.ts",
     "./auth": "./src/auth.ts",
     "./chronicle-store": "./src/chronicle-store.ts",
     "./competition": "./src/competition.ts",

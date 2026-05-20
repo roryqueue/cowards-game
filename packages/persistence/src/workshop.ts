@@ -26,6 +26,10 @@ import {
 import { getMatchSetPreset, type MatchSetPresetId } from "./presets.js"
 import { createRepositories } from "./repositories.js"
 import {
+  listAdvancedStrategies,
+  type AdvancedStrategySummary,
+} from "./advanced-strategies.js"
+import {
   listStarterStrategies,
   type StarterStrategySummary,
 } from "./starter-strategies.js"
@@ -196,6 +200,7 @@ export interface WorkshopSnapshot {
   opponents: WorkshopOpponentSummary[]
   templates: WorkshopTemplateSummary[]
   starters: StarterStrategySummary[]
+  advancedStrategies: AdvancedStrategySummary[]
   samples: WorkshopSampleSummary[]
 }
 
@@ -771,6 +776,7 @@ export const getWorkshopSnapshot = async (
   opponents: listWorkshopOpponents(),
   templates: listWorkshopTemplates(),
   starters: listStarterStrategies(),
+  advancedStrategies: listAdvancedStrategies(),
   samples: listWorkshopSamples(),
 })
 
@@ -782,5 +788,6 @@ export const getWorkshopStaticSnapshot = (): WorkshopSnapshot => ({
   opponents: listWorkshopOpponents(),
   templates: listWorkshopTemplates(),
   starters: listStarterStrategies(),
+  advancedStrategies: listAdvancedStrategies(),
   samples: listWorkshopSamples(),
 })

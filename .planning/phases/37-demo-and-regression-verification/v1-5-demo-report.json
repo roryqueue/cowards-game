@@ -1,0 +1,245 @@
+{
+  "generatedAt": "2026-05-20T22:21:48.415Z",
+  "seasonId": "trial-season:v1-5-demo",
+  "seasonUrl": "/ladder/v1-5-demo",
+  "scheduled": {
+    "createdMatchSetIds": [
+      "match-set:v1-5:tournament:advanced-eight"
+    ],
+    "note": "v1.5 uses one deterministic 8-entrant smoke round robin MatchSet for the local demo tournament."
+  },
+  "tournamentEntrants": [
+    {
+      "advancedId": "advanced:vanguard-pressure",
+      "name": "Vanguard Pressure",
+      "archetype": "pressure / contact",
+      "sourceHash": "63592a18a6bcdc0c18caea8fe9c31df6d0998416bf9f0cc0967a059ae09afd47",
+      "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Avanguard-pressure",
+      "playerHref": "/players/v15-vanguard-pressure"
+    },
+    {
+      "advancedId": "advanced:recall-hunter",
+      "name": "Recall Hunter",
+      "archetype": "memory-based opponent response",
+      "sourceHash": "d6114839d01eb55f8cb8c9d3ad4404b6358999b2c8b7f9ec302e8e2e737a44b2",
+      "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Arecall-hunter",
+      "playerHref": "/players/v15-recall-hunter"
+    },
+    {
+      "advancedId": "advanced:stonewall-shear",
+      "name": "Stonewall Shear",
+      "archetype": "wall control",
+      "sourceHash": "65a87d55dc6afe94db33bb8167e36908cf09854af2a87a1ca3a3325b04f319af",
+      "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Astonewall-shear",
+      "playerHref": "/players/v15-stonewall-shear"
+    },
+    {
+      "advancedId": "advanced:rear-guard-sentinel",
+      "name": "Rear Guard Sentinel",
+      "archetype": "anti-backstab positioning",
+      "sourceHash": "6858dd8a5085137843f1ccb1de290792745067af0e3b230036c2233ac4c30fb5",
+      "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Arear-guard-sentinel",
+      "playerHref": "/players/v15-rear-guard-sentinel"
+    },
+    {
+      "advancedId": "advanced:center-gravity",
+      "name": "Center Gravity",
+      "archetype": "center control",
+      "sourceHash": "f0b31a6c2874b61a30de5470437c370d0575c16b128f075c9f28306136c83987",
+      "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Acenter-gravity",
+      "playerHref": "/players/v15-center-gravity"
+    },
+    {
+      "advancedId": "advanced:snare-weaver",
+      "name": "Snare Weaver",
+      "archetype": "trap/control",
+      "sourceHash": "ffe6ad1a1656808bee59b549521593f9afaed8117875db552023686daaaa4afa",
+      "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Asnare-weaver",
+      "playerHref": "/players/v15-snare-weaver"
+    },
+    {
+      "advancedId": "advanced:mirror-key",
+      "name": "Mirror Key",
+      "archetype": "mirror-breaking/adaptive play",
+      "sourceHash": "93dfa9064631b5b42a168118e666d39628f07807f6032e2ae9a15217b6a3443c",
+      "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Amirror-key",
+      "playerHref": "/players/v15-mirror-key"
+    },
+    {
+      "advancedId": "advanced:ghost-orbit",
+      "name": "Ghost Orbit",
+      "archetype": "evasive mobility",
+      "sourceHash": "c16eb1dd298a7c1b133bfc5e2688168c6c84ce07b659df362d1ad2c9963f1bc1",
+      "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Aghost-orbit",
+      "playerHref": "/players/v15-ghost-orbit"
+    }
+  ],
+  "standings": [
+    {
+      "rank": 1,
+      "entrant": "@v15-stonewall-shear / \"Stonewall Shear\" / 65a87d55dc",
+      "points": 18,
+      "record": "6-1-0"
+    },
+    {
+      "rank": 2,
+      "entrant": "@v15-center-gravity / \"Center Gravity\" / f0b31a6c28",
+      "points": 15,
+      "record": "5-2-0"
+    },
+    {
+      "rank": 3,
+      "entrant": "@v15-recall-hunter / \"Recall Hunter\" / d6114839d0",
+      "points": 15,
+      "record": "5-2-0"
+    },
+    {
+      "rank": 4,
+      "entrant": "@v15-vanguard-pressure / \"Vanguard Pressure\" / 63592a18a6",
+      "points": 11,
+      "record": "3-2-2"
+    },
+    {
+      "rank": 5,
+      "entrant": "@v15-rear-guard-sentinel / \"Rear Guard Sentinel\" / 6858dd8a50",
+      "points": 10,
+      "record": "3-3-1"
+    },
+    {
+      "rank": 6,
+      "entrant": "@v15-mirror-key / \"Mirror Key\" / 93dfa90646",
+      "points": 9,
+      "record": "3-4-0"
+    },
+    {
+      "rank": 7,
+      "entrant": "@v15-snare-weaver / \"Snare Weaver\" / ffe6ad1a16",
+      "points": 3,
+      "record": "1-6-0"
+    },
+    {
+      "rank": 8,
+      "entrant": "@v15-ghost-orbit / \"Ghost Orbit\" / c16eb1dd29",
+      "points": 1,
+      "record": "0-6-1"
+    }
+  ],
+  "exampleMatchSets": [
+    {
+      "id": "match-set:v1-5:example:anti-backstab-stress",
+      "label": "Anti-Backstab Stress Test",
+      "resultHref": "/matchsets/match-set%3Av1-5%3Aexample%3Aanti-backstab-stress"
+    },
+    {
+      "id": "match-set:v1-5:example:wall-under-pressure",
+      "label": "Wall Control Under Pressure",
+      "resultHref": "/matchsets/match-set%3Av1-5%3Aexample%3Awall-under-pressure"
+    },
+    {
+      "id": "match-set:v1-5:example:center-vs-mobility",
+      "label": "Center Control vs Mobility",
+      "resultHref": "/matchsets/match-set%3Av1-5%3Aexample%3Acenter-vs-mobility"
+    },
+    {
+      "id": "match-set:v1-5:example:trap-breakpoint",
+      "label": "Trap Breakpoint",
+      "resultHref": "/matchsets/match-set%3Av1-5%3Aexample%3Atrap-breakpoint"
+    },
+    {
+      "id": "match-set:v1-5:example:memory-mirror",
+      "label": "Memory Adaptation Mirror",
+      "resultHref": "/matchsets/match-set%3Av1-5%3Aexample%3Amemory-mirror"
+    }
+  ],
+  "tournamentMatchSets": [
+    {
+      "matchSetId": "match-set:v1-5:tournament:advanced-eight",
+      "countedStatus": "counted",
+      "resultHref": "/matchsets/match-set%3Av1-5%3Atournament%3Aadvanced-eight"
+    }
+  ],
+  "replaySamples": [
+    {
+      "matchId": "match:match-set:v1-5:example:anti-backstab-stress:0",
+      "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Aexample%3Aanti-backstab-stress%3A0/replay"
+    },
+    {
+      "matchId": "match:match-set:v1-5:example:center-vs-mobility:0",
+      "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Aexample%3Acenter-vs-mobility%3A0/replay"
+    },
+    {
+      "matchId": "match:match-set:v1-5:example:memory-mirror:0",
+      "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Aexample%3Amemory-mirror%3A0/replay"
+    },
+    {
+      "matchId": "match:match-set:v1-5:example:trap-breakpoint:0",
+      "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Aexample%3Atrap-breakpoint%3A0/replay"
+    },
+    {
+      "matchId": "match:match-set:v1-5:example:wall-under-pressure:0",
+      "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Aexample%3Awall-under-pressure%3A0/replay"
+    },
+    {
+      "matchId": "match:match-set:v1-5:tournament:advanced-eight:0",
+      "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Atournament%3Aadvanced-eight%3A0/replay"
+    },
+    {
+      "matchId": "match:match-set:v1-5:tournament:advanced-eight:1",
+      "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Atournament%3Aadvanced-eight%3A1/replay"
+    },
+    {
+      "matchId": "match:match-set:v1-5:tournament:advanced-eight:10",
+      "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Atournament%3Aadvanced-eight%3A10/replay"
+    }
+  ],
+  "metrics": {
+    "chronicleCount": 33,
+    "schemaVersions": [
+      "chronicle-v1.4"
+    ],
+    "ruleVersions": [
+      "cowards-rules-v1.4"
+    ],
+    "cycleStarted": 7952,
+    "activationSkipped": 949,
+    "moveAdvanced": 5893,
+    "moveBlocked": 53,
+    "backstabResolved": 137,
+    "contractionResolved": 36,
+    "matchEnded": 33,
+    "replaySamples": [
+      {
+        "matchId": "match:match-set:v1-5:example:anti-backstab-stress:0",
+        "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Aexample%3Aanti-backstab-stress%3A0/replay"
+      },
+      {
+        "matchId": "match:match-set:v1-5:example:center-vs-mobility:0",
+        "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Aexample%3Acenter-vs-mobility%3A0/replay"
+      },
+      {
+        "matchId": "match:match-set:v1-5:example:memory-mirror:0",
+        "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Aexample%3Amemory-mirror%3A0/replay"
+      },
+      {
+        "matchId": "match:match-set:v1-5:example:trap-breakpoint:0",
+        "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Aexample%3Atrap-breakpoint%3A0/replay"
+      },
+      {
+        "matchId": "match:match-set:v1-5:example:wall-under-pressure:0",
+        "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Aexample%3Awall-under-pressure%3A0/replay"
+      },
+      {
+        "matchId": "match:match-set:v1-5:tournament:advanced-eight:0",
+        "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Atournament%3Aadvanced-eight%3A0/replay"
+      },
+      {
+        "matchId": "match:match-set:v1-5:tournament:advanced-eight:1",
+        "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Atournament%3Aadvanced-eight%3A1/replay"
+      },
+      {
+        "matchId": "match:match-set:v1-5:tournament:advanced-eight:10",
+        "replayHref": "/matches/match%3Amatch-set%3Av1-5%3Atournament%3Aadvanced-eight%3A10/replay"
+      }
+    ]
+  }
+}

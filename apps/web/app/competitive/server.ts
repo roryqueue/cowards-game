@@ -12,6 +12,7 @@ import {
 import {
   AccountRevisionError,
   createAccountStrategyRevision,
+  forkAdvancedStrategyToAccount,
   forkStarterStrategyToAccount,
   getAccountStrategyRevisionSource,
   listAccountStrategyRevisions,
@@ -43,6 +44,7 @@ import {
   buildPublicPlayerProfileDto,
   buildPublicStrategyCardDto,
 } from "@cowards/persistence/profiles"
+import { findAdvancedStrategy } from "@cowards/persistence/advanced-strategies"
 import { findStarterStrategy } from "@cowards/persistence/starter-strategies"
 import {
   COMPETITION_PRESET_IDS,
@@ -367,6 +369,7 @@ export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
         label: unknown
         notes: unknown
         starterId?: unknown
+        advancedId?: unknown
       },
     ): Promise<CompetitiveRevisionSummary> {
       try {
@@ -376,8 +379,14 @@ export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
             typeof input.starterId === "string"
               ? findStarterStrategy(input.starterId)
               : null
+          const advanced =
+            typeof input.advancedId === "string"
+              ? findAdvancedStrategy(input.advancedId)
+              : null
           const starterMatchesSource =
             starter !== null && starter.source === source
+          const advancedMatchesSource =
+            advanced !== null && advanced.source === source
           const revision = await createAccountStrategyRevision(pool, {
             userId: user.id,
             source,
@@ -392,6 +401,19 @@ export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
                     starterName: starter.name,
                     starterVersion: starter.version,
                     sourceHash: starter.sourceHash,
+                  },
+                }
+              : {}),
+            ...(advancedMatchesSource
+              ? {
+                  tags: advanced.tags,
+                  strategyName: advanced.name,
+                  advancedLineage: {
+                    advancedId: advanced.id,
+                    advancedName: advanced.name,
+                    advancedVersion: advanced.version,
+                    archetype: advanced.primaryArchetype,
+                    sourceHash: advanced.sourceHash,
                   },
                 }
               : {}),
@@ -417,6 +439,28 @@ export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
           const revision = await forkStarterStrategyToAccount(pool, {
             userId: user.id,
             starterId,
+          })
+          const revisions = await listAccountStrategyRevisions(pool, user.id)
+          return (
+            revisions.find((candidate) => candidate.id === revision.id) ??
+            revisions[0]!
+          )
+        })
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async forkAdvancedStrategy(
+      user: CompetitiveUser,
+      input: { advancedId: unknown },
+    ): Promise<CompetitiveRevisionSummary> {
+      try {
+        return await withPool(async (pool) => {
+          const advancedId = normalizeText(input.advancedId)
+          const revision = await forkAdvancedStrategyToAccount(pool, {
+            userId: user.id,
+            advancedId,
           })
           const revisions = await listAccountStrategyRevisions(pool, user.id)
           return (

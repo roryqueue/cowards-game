@@ -61,6 +61,22 @@ pnpm verify
 
 `pnpm verify` runs fast checks plus fixture replay smoke and visual replay regression. Service-backed E2E is intentionally separate as `pnpm e2e:service` because it requires running services.
 
+## v1.5 Advanced Strategy Demo
+
+Generate the local v1.5 Advanced seed evidence, example MatchSets, and demo tournament:
+
+```sh
+pnpm services:up
+STRATEGY_EXECUTION_ADAPTER=worker-thread pnpm exec tsx scripts/run-v1-5-advanced-demo.ts
+```
+
+The script seeds the Advanced Strategy library into local demo accounts, runs five representative example MatchSets, completes an 8-entrant Advanced-only demo tournament, validates replay-backed `chronicle-v1.4` / `cowards-rules-v1.4` evidence, and writes:
+
+- `.planning/phases/37-demo-and-regression-verification/v1-5-demo-report.json`
+- `.planning/phases/37-demo-and-regression-verification/v1-5-demo-report.md`
+
+The standings are deterministic local evidence for the current demo profile, not durable ratings or official public tournament results.
+
 ## Engine
 
 ```sh

@@ -237,6 +237,15 @@ export interface StrategyRevisionMetadata {
         sourceHash: string
       }
     | undefined
+  advancedLineage?:
+    | {
+        advancedId: string
+        advancedName: string
+        advancedVersion: string
+        archetype: string
+        sourceHash: string
+      }
+    | undefined
 }
 
 export interface StrategyRevision {

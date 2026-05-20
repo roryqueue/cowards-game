@@ -48,6 +48,11 @@ export default async function PlayerProfilePage({
                   {strategy.starterLineage.starterVersion}
                 </span>
               ) : null}
+              {strategy.advancedLineage ? (
+                <span className="workshop-muted">
+                  Advanced seed: {strategy.advancedLineage.archetype}
+                </span>
+              ) : null}
               <a
                 href={`/strategies/${encodeURIComponent(strategy.strategyId)}`}
               >

@@ -259,6 +259,15 @@ export const StrategyRevisionMetadataSchema = z.object({
       sourceHash: z.string().min(1),
     })
     .optional(),
+  advancedLineage: z
+    .object({
+      advancedId: z.string().min(1),
+      advancedName: z.string().min(1),
+      advancedVersion: z.string().min(1),
+      archetype: z.string().min(1),
+      sourceHash: z.string().min(1),
+    })
+    .optional(),
 })
 
 export const StrategyRevisionSchema = z.object({

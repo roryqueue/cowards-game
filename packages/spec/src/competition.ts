@@ -153,6 +153,13 @@ export interface PublicStrategyCardDto {
     starterVersion: string
     sourceHash: string
   }
+  advancedLineage?: {
+    advancedId: string
+    advancedName: string
+    advancedVersion: string
+    archetype: string
+    sourceHash: string
+  }
   record: {
     wins: number
     losses: number

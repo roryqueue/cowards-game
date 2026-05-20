@@ -64,7 +64,37 @@ export default async function StrategyCardPage({
               </dd>
             </>
           ) : null}
+          {strategy.advancedLineage ? (
+            <>
+              <dt>tier</dt>
+              <dd>Advanced seed</dd>
+              <dt>archetype</dt>
+              <dd>{strategy.advancedLineage.archetype}</dd>
+              <dt>lineage</dt>
+              <dd>
+                Forked from {strategy.advancedLineage.advancedName}{" "}
+                {strategy.advancedLineage.advancedVersion}
+              </dd>
+            </>
+          ) : null}
         </dl>
+        {strategy.resultLinks.length || strategy.replayLinks.length ? (
+          <div className="workshop-stack">
+            <h2 className="workshop-heading">Evidence links</h2>
+            <div className="workshop-chip-row">
+              {strategy.resultLinks.slice(0, 4).map((href) => (
+                <a className="workshop-replay-link" href={href} key={href}>
+                  MatchSet result
+                </a>
+              ))}
+              {strategy.replayLinks.slice(0, 4).map((href) => (
+                <a className="workshop-replay-link" href={href} key={href}>
+                  Replay
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </section>
     </main>
   )

@@ -219,6 +219,7 @@ export const listPublicStrategyCardsForUser = async (
       notes?: string
       tags?: string[]
       starterLineage?: PublicStrategyCardDto["starterLineage"]
+      advancedLineage?: PublicStrategyCardDto["advancedLineage"]
     }
     handle: string
   }>(
@@ -263,6 +264,9 @@ export const listPublicStrategyCardsForUser = async (
     validationStatus: row.validation.valid ? "valid" : "invalid",
     ...(row.metadata.starterLineage
       ? { starterLineage: row.metadata.starterLineage }
+      : {}),
+    ...(row.metadata.advancedLineage
+      ? { advancedLineage: row.metadata.advancedLineage }
       : {}),
     record: recordsByRevision.get(row.revision_id) ?? {
       wins: 0,

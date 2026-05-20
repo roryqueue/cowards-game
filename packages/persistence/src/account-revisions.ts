@@ -8,6 +8,10 @@ import type {
   UserId,
 } from "@cowards/spec"
 import type { Pool } from "pg"
+import {
+  findAdvancedStrategy,
+  type AdvancedStrategyId,
+} from "./advanced-strategies.js"
 import { createRepositories } from "./repositories.js"
 import {
   findStarterStrategy,
@@ -28,6 +32,7 @@ export interface AccountStrategyRevisionSummary {
   notes?: string | undefined
   tags?: string[] | undefined
   starterLineage?: StrategyRevisionMetadata["starterLineage"] | undefined
+  advancedLineage?: StrategyRevisionMetadata["advancedLineage"] | undefined
   sourceHash: string
   sourceBytes: number
   valid: boolean
@@ -49,6 +54,7 @@ export const buildAccountStrategyRevision = (input: {
   notes?: string | undefined
   tags?: string[] | undefined
   starterLineage?: StrategyRevisionMetadata["starterLineage"] | undefined
+  advancedLineage?: StrategyRevisionMetadata["advancedLineage"] | undefined
   strategyId?: StrategyId | undefined
 }): StrategyRevision => {
   const strategyId = input.strategyId ?? createAccountStrategyId(input.userId)
@@ -61,6 +67,9 @@ export const buildAccountStrategyRevision = (input: {
       ...(input.notes ? { notes: input.notes } : {}),
       ...(input.tags ? { tags: input.tags } : {}),
       ...(input.starterLineage ? { starterLineage: input.starterLineage } : {}),
+      ...(input.advancedLineage
+        ? { advancedLineage: input.advancedLineage }
+        : {}),
     },
   })
 }
@@ -74,6 +83,7 @@ export const createAccountStrategyRevision = async (
     notes?: string | undefined
     tags?: string[] | undefined
     starterLineage?: StrategyRevisionMetadata["starterLineage"] | undefined
+    advancedLineage?: StrategyRevisionMetadata["advancedLineage"] | undefined
     strategyName?: string | undefined
     strategyId?: StrategyId | undefined
   },
@@ -87,6 +97,9 @@ export const createAccountStrategyRevision = async (
     metadata: {
       accountOwned: true,
       ...(input.starterLineage ? { starterLineage: input.starterLineage } : {}),
+      ...(input.advancedLineage
+        ? { advancedLineage: input.advancedLineage }
+        : {}),
     },
   })
   await repositories.insertStrategyRevision(revision)
@@ -138,6 +151,7 @@ export const listAccountStrategyRevisions = async (
     notes: row.metadata.notes,
     tags: row.metadata.tags,
     starterLineage: row.metadata.starterLineage,
+    advancedLineage: row.metadata.advancedLineage,
     sourceHash: row.source_hash,
     sourceBytes: row.source_bytes,
     valid: row.validation.valid,
@@ -178,6 +192,41 @@ export const forkStarterStrategyToAccount = async (
       starterName: starter.name,
       starterVersion: starter.version,
       sourceHash: starter.sourceHash,
+    },
+  })
+}
+
+export const forkAdvancedStrategyToAccount = async (
+  pool: Pool,
+  input: {
+    userId: UserId
+    advancedId: AdvancedStrategyId | string
+  },
+): Promise<StrategyRevision> => {
+  const advanced = findAdvancedStrategy(input.advancedId)
+  if (!advanced) {
+    throw new AccountRevisionError(
+      `Advanced Strategy not found: ${input.advancedId}`,
+    )
+  }
+  if (!advanced.validation.valid) {
+    throw new AccountRevisionError(
+      `Advanced Strategy is not valid: ${advanced.name}`,
+    )
+  }
+  return createAccountStrategyRevision(pool, {
+    userId: input.userId,
+    source: advanced.source,
+    label: advanced.name,
+    notes: advanced.description,
+    tags: advanced.tags,
+    strategyName: advanced.name,
+    advancedLineage: {
+      advancedId: advanced.id,
+      advancedName: advanced.name,
+      advancedVersion: advanced.version,
+      archetype: advanced.primaryArchetype,
+      sourceHash: advanced.sourceHash,
     },
   })
 }

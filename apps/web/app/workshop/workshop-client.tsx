@@ -46,6 +46,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     firstTemplate?.id ?? "",
   )
   const [selectedStarterId, setSelectedStarterId] = useState("")
+  const [selectedAdvancedId, setSelectedAdvancedId] = useState("")
   const [selectedSampleId, setSelectedSampleId] = useState("")
   const [source, setSource] = useState(
     firstTemplate?.source ?? initialData.templateSource,
@@ -72,6 +73,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const [accountMessage, setAccountMessage] = useState("")
   const [accountError, setAccountError] = useState("")
   const [forkingStarter, setForkingStarter] = useState(false)
+  const [forkingAdvanced, setForkingAdvanced] = useState(false)
   const [selectedOpponentId, setSelectedOpponentId] = useState(
     initialData.opponents[0]?.id ?? "",
   )
@@ -95,6 +97,13 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
         (starter) => starter.id === selectedStarterId,
       ) ?? null,
     [initialData.starters, selectedStarterId],
+  )
+  const selectedAdvanced = useMemo(
+    () =>
+      initialData.advancedStrategies.find(
+        (advanced) => advanced.id === selectedAdvancedId,
+      ) ?? null,
+    [initialData.advancedStrategies, selectedAdvancedId],
   )
   const sampleGroups = useMemo(
     () => groupWorkshopSamples(initialData.samples),
@@ -128,6 +137,17 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     Boolean(selectedStarter) &&
     source === selectedStarter?.source &&
     currentValidation?.sourceHash === selectedStarter?.sourceHash
+  const selectedAdvancedMatchesDraft =
+    Boolean(selectedAdvanced) &&
+    source === selectedAdvanced?.source &&
+    currentValidation?.sourceHash === selectedAdvanced?.sourceHash
+  const previousRevision = useMemo(() => {
+    if (!selectedRevision) return null
+    const index = revisions.findIndex(
+      (revision) => revision.id === selectedRevision.id,
+    )
+    return index >= 0 ? (revisions[index + 1] ?? null) : null
+  }, [revisions, selectedRevision])
 
   const validateSource = async (nextSource = source) => {
     setChecking(true)
@@ -176,6 +196,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     }
     setSelectedTemplateId("")
     setSelectedStarterId(starter.id)
+    setSelectedAdvancedId("")
     setSelectedSampleId("")
     setSource(starter.source)
     setValidation(starter.validation)
@@ -185,12 +206,31 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setIsDirty(false)
   }
 
+  const applyAdvanced = (
+    advanced: WorkshopSnapshot["advancedStrategies"][number],
+  ) => {
+    if (isDirty && !window.confirm(replaceDraftCopy)) {
+      return
+    }
+    setSelectedTemplateId("")
+    setSelectedStarterId("")
+    setSelectedAdvancedId(advanced.id)
+    setSelectedSampleId("")
+    setSource(advanced.source)
+    setValidation(advanced.validation)
+    setValidationSource(advanced.source)
+    setLabel(advanced.name)
+    setNotes(advanced.description)
+    setIsDirty(false)
+  }
+
   const applySample = (sample: WorkshopSampleSummary) => {
     if (isDirty && !window.confirm(replaceDraftCopy)) {
       return
     }
     setSelectedTemplateId("")
     setSelectedStarterId("")
+    setSelectedAdvancedId("")
     setSelectedSampleId(sample.id)
     setSource(sample.source)
     setValidation(sample.validation)
@@ -201,6 +241,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const onSourceChange = (nextSource: string) => {
     setSource(nextSource)
     setSelectedStarterId("")
+    setSelectedAdvancedId("")
     setValidation(null)
     setValidationSource("")
     setIsDirty(true)
@@ -258,6 +299,9 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
           ...(selectedStarterMatchesDraft && selectedStarter
             ? { starterId: selectedStarter.id }
             : {}),
+          ...(selectedAdvancedMatchesDraft && selectedAdvanced
+            ? { advancedId: selectedAdvanced.id }
+            : {}),
         }),
       })
       const body = (await response.json()) as { error?: string }
@@ -295,6 +339,35 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       setAccountMessage(`Forked ${body.revision.label ?? selectedStarter.name}`)
     } finally {
       setForkingStarter(false)
+    }
+  }
+
+  const forkAdvanced = async () => {
+    if (!selectedAdvanced) {
+      return
+    }
+    setForkingAdvanced(true)
+    setAccountError("")
+    setAccountMessage("")
+    try {
+      const response = await fetch("/api/account/advanced-forks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ advancedId: selectedAdvanced.id }),
+      })
+      const body = (await response.json()) as {
+        error?: string
+        revision?: { label?: string | undefined }
+      }
+      if (!response.ok || !body.revision) {
+        setAccountError(body.error ?? "Advanced seed fork failed.")
+        return
+      }
+      setAccountMessage(
+        `Forked ${body.revision.label ?? selectedAdvanced.name}`,
+      )
+    } finally {
+      setForkingAdvanced(false)
     }
   }
 
@@ -390,6 +463,78 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
               </span>
             </div>
             <p className="workshop-muted">Local Player</p>
+          </section>
+
+          <section className="workshop-panel workshop-template-panel">
+            <div className="workshop-row">
+              <div>
+                <h2 className="workshop-heading">Advanced Library</h2>
+                <p className="workshop-muted">
+                  Advanced seeds are stronger benchmark templates with
+                  profile-scoped evidence.
+                </p>
+              </div>
+              <span className="workshop-chip">Advanced seed</span>
+            </div>
+            <div className="workshop-list" data-testid="advanced-library">
+              {initialData.advancedStrategies.map((advanced) => (
+                <button
+                  className={`workshop-list-row ${advanced.id === selectedAdvanced?.id ? "active" : ""}`}
+                  aria-pressed={advanced.id === selectedAdvanced?.id}
+                  data-advanced-id={advanced.id}
+                  key={advanced.id}
+                  onClick={() => applyAdvanced(advanced)}
+                  type="button"
+                >
+                  <span className="workshop-sample-title">{advanced.name}</span>
+                  <span className="workshop-muted">
+                    {advanced.primaryArchetype}
+                  </span>
+                  <span className="workshop-muted">{advanced.description}</span>
+                  <span className="workshop-chip-row">
+                    {advanced.tags.map((tag) => (
+                      <span className="workshop-chip valid" key={tag}>
+                        {tag}
+                      </span>
+                    ))}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {selectedAdvanced ? (
+              <div className="starter-detail" data-testid="advanced-detail">
+                <p className="workshop-label">Doctrine notes</p>
+                <ul>
+                  {selectedAdvanced.doctrineNotes.map((note) => (
+                    <li key={note}>{note}</li>
+                  ))}
+                </ul>
+                <dl className="details-grid">
+                  <dt>archetype</dt>
+                  <dd>{selectedAdvanced.primaryArchetype}</dd>
+                  <dt>hash</dt>
+                  <dd>{selectedAdvanced.sourceHash.slice(0, 16)}</dd>
+                  <dt>bytes</dt>
+                  <dd>{selectedAdvanced.sourceBytes}</dd>
+                  <dt>validation</dt>
+                  <dd>
+                    {selectedAdvanced.validation.valid ? "valid" : "invalid"}
+                  </dd>
+                  <dt>memory</dt>
+                  <dd>
+                    {selectedAdvanced.usesMemory ? "uses memory" : "stateless"}
+                  </dd>
+                </dl>
+                <button
+                  className="primary"
+                  disabled={forkingAdvanced}
+                  type="button"
+                  onClick={() => void forkAdvanced()}
+                >
+                  {forkingAdvanced ? "Forking..." : "Fork advanced seed"}
+                </button>
+              </div>
+            ) : null}
           </section>
 
           <section className="workshop-panel workshop-template-panel">
@@ -524,7 +669,10 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
           </section>
 
           <section className="workshop-panel workshop-revision-panel">
-            <h2 className="workshop-heading">Revision history</h2>
+            <div className="workshop-row">
+              <h2 className="workshop-heading">Revision history</h2>
+              <span className="workshop-chip">Compare</span>
+            </div>
             {revisions.length === 0 ? (
               <>
                 <p>No revisions yet</p>
@@ -563,6 +711,30 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 ))}
               </div>
             )}
+            {selectedRevision && previousRevision ? (
+              <div className="starter-detail" data-testid="revision-compare">
+                <p className="workshop-label">Revision comparison</p>
+                <dl className="details-grid">
+                  <dt>current</dt>
+                  <dd>{selectedRevision.sourceHash.slice(0, 12)}</dd>
+                  <dt>previous</dt>
+                  <dd>{previousRevision.sourceHash.slice(0, 12)}</dd>
+                  <dt>byte delta</dt>
+                  <dd>
+                    {selectedRevision.sourceBytes -
+                      previousRevision.sourceBytes}
+                  </dd>
+                  <dt>validation delta</dt>
+                  <dd>
+                    {selectedRevision.valid === previousRevision.valid
+                      ? "unchanged"
+                      : `${previousRevision.valid ? "valid" : "invalid"} -> ${
+                          selectedRevision.valid ? "valid" : "invalid"
+                        }`}
+                  </dd>
+                </dl>
+              </div>
+            ) : null}
           </section>
         </aside>
 
@@ -703,7 +875,16 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
           </section>
 
           <section className="workshop-panel workshop-stack workshop-test-panel">
-            <h2 className="workshop-heading">Workshop test</h2>
+            <div className="workshop-row">
+              <div>
+                <h2 className="workshop-heading">Gauntlet results</h2>
+                <p className="workshop-muted">
+                  Test matrices use immutable revisions and profile-scoped
+                  summaries.
+                </p>
+              </div>
+              <span className="workshop-chip">Smoke first</span>
+            </div>
             <label>
               <span className="workshop-label">Revision</span>
               <select
@@ -775,6 +956,10 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 <p className="workshop-muted workshop-test-meta">
                   MatchSet ID: {testResult.matchSetId} · Status:{" "}
                   {testResult.status} · Match count: {testResult.matchCount}
+                </p>
+                <p className="workshop-muted">
+                  Profile summary: W-L-D and reliability are scoped to this
+                  exact preset/opponent profile.
                 </p>
                 <button
                   type="button"

@@ -26,6 +26,11 @@ import {
   workshopTemplateSource,
 } from "./workshop.js"
 import {
+  buildAdvancedStrategyRevision,
+  listAdvancedStrategies,
+  type AdvancedStrategySummary,
+} from "./advanced-strategies.js"
+import {
   buildStarterStrategyRevision,
   listStarterStrategies,
   type StarterStrategySummary,
@@ -250,10 +255,122 @@ describe("Workshop service contracts", () => {
     const snapshot = getWorkshopStaticSnapshot()
 
     expect(snapshot.starters).toHaveLength(10)
+    expect(snapshot.advancedStrategies).toHaveLength(10)
     expect(snapshot.samples.map((sample) => sample.id)).not.toContain(
       "starter:centerline-bully",
     )
   })
+
+  it("ships a distinct v1.5 Advanced Strategy Library with archetype coverage", () => {
+    const advanced = listAdvancedStrategies()
+    const requiredArchetypes = [
+      "pressure / contact",
+      "anti-backstab positioning",
+      "wall control",
+      "center control",
+      "contraction survival",
+      "evasive mobility",
+      "trap/control",
+      "mirror-breaking/adaptive play",
+      "late-cycle stabilization",
+      "memory-based opponent response",
+    ]
+
+    expect(advanced).toHaveLength(10)
+    expect(advanced.every((strategy) => strategy.version === "v1.5")).toBe(true)
+    expect(advanced.every((strategy) => strategy.validation.valid)).toBe(true)
+    expect(
+      advanced.filter((strategy) => strategy.usesMemory).length,
+    ).toBeGreaterThanOrEqual(5)
+    expect(new Set(advanced.map((strategy) => strategy.sourceHash)).size).toBe(
+      advanced.length,
+    )
+    expect(advanced.map((strategy) => strategy.primaryArchetype)).toEqual(
+      requiredArchetypes,
+    )
+  })
+
+  it("builds Advanced seed revisions with public-safe lineage metadata", () => {
+    const advanced = listAdvancedStrategies()[0] as AdvancedStrategySummary
+    const revision = buildAdvancedStrategyRevision(advanced)
+
+    expect(revision.metadata.advancedLineage).toEqual({
+      advancedId: advanced.id,
+      advancedName: advanced.name,
+      advancedVersion: "v1.5",
+      archetype: advanced.primaryArchetype,
+      sourceHash: advanced.sourceHash,
+    })
+    expect(revision.sourceHash).toBe(advanced.sourceHash)
+    expect(revision.metadata).not.toHaveProperty("source")
+  })
+
+  it("runs every v1.5 Advanced Strategy against a v1.4 Starter smoke opponent", () => {
+    const advancedStrategies = listAdvancedStrategies()
+    const starters = listStarterStrategies()
+    const adapter = createStarterSmokeAdapter()
+    const eventTypes = new Set<string>()
+
+    advancedStrategies.forEach((advanced, index) => {
+      const starter = starters[index % starters.length]!
+      const bottomRuntime = createRuntimeFromRevision(
+        buildAdvancedStrategyRevision(advanced),
+        { adapter },
+      )
+      const topRuntime = createRuntimeFromRevision(
+        buildStarterStrategyRevision(starter),
+        { adapter },
+      )
+      const runtime: StrategyRuntime = {
+        selectActivations(input) {
+          const playerId = input.mySoldiers[0]?.ownerPlayerId
+          if (playerId === "player:advanced") {
+            return bottomRuntime.selectActivations(input)
+          }
+          if (playerId === "player:starter") {
+            return topRuntime.selectActivations(input)
+          }
+          return violation("INVALID_OUTPUT", "Cannot resolve gauntlet runtime")
+        },
+        runSoldierBrain(input) {
+          return input.self.ownerPlayerId === "player:advanced"
+            ? bottomRuntime.runSoldierBrain(input)
+            : topRuntime.runSoldierBrain(input)
+        },
+      }
+
+      const result = runMatch({
+        matchId: `match:advanced-gauntlet:${advanced.id}:${starter.id}`,
+        seed: `seed:advanced-gauntlet:${advanced.id}:${starter.id}`,
+        arenaVariant: {
+          id: "arena:advanced-gauntlet:v1.5",
+          name: "Advanced Gauntlet",
+          initialBounds: INITIAL_BOUNDS,
+          terrainStones: [],
+        },
+        bottomPlayerId: "player:advanced",
+        topPlayerId: "player:starter",
+        bottomStrategyRevisionId: `revision:${advanced.id}`,
+        topStrategyRevisionId: `revision:${starter.id}`,
+        runtime,
+        maxPhases: 100,
+      })
+
+      expect(result.state.outcome?.type).not.toBe("FAILED")
+      expect(result.events.map((event) => event.type)).toContain(
+        "CYCLE_STARTED",
+      )
+      expect(result.events.map((event) => event.type)).toContain(
+        "ACTION_EMITTED",
+      )
+      for (const event of result.events) {
+        eventTypes.add(event.type)
+      }
+    })
+
+    expect(eventTypes.has("MOVE_ADVANCED")).toBe(true)
+    expect(eventTypes.has("CONTRACTION_RESOLVED")).toBe(true)
+  }, 60_000)
 
   it("returns sample Strategy metadata for every catalog entry", () => {
     for (const sample of listWorkshopSamples()) {
