@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Shipped version:** v1.3 Competition Trust Beta on 2026-05-20
-**Current milestone:** v1.4 Cycle-Interleaved Rules Correction
-**Status:** v1.4 implemented and audit-fix clean.
+**Shipped version:** v1.4 Cycle-Interleaved Rules Correction on 2026-05-20
+**Current milestone:** Planning next milestone
+**Status:** v1.4 shipped and archived; ready for next milestone definition.
 **Last audit:** v1.4 audit-fix passed, 33/33 requirements satisfied.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible starter Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, and trust that public outputs do not expose private Strategy data.
@@ -13,20 +13,7 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Latest Shipped Milestone: v1.3 Competition Trust Beta
-
-**Goal:** A new player can fork a credible starter Strategy, test it in exhibition, enter one eligible revision into a resettable trial ladder, inspect standings and replay evidence, and trust that counted results are private-data-safe and governable.
-
-**Target features:**
-- Resettable trial ladder seasons with standings that avoid permanent all-time Elo/Glicko commitments.
-- Competition eligibility rules that keep exhibition flexible while enforcing one active Strategy Revision per user per ladder season.
-- Automated ladder entry, scheduled MatchSet generation, pending/active/completed states, and invalid/degraded result handling that does not distort standings.
-- Public player profiles and public Strategy cards that show metadata, lineage, competition history, and replay/result links without exposing private Strategy data.
-- Dispute and moderation surfaces for flagging results, admin review, invalid/non-competitive marking, and audit logs.
-- Runtime/sandbox production decision spike behind the existing StrategyRuntime adapter with hostile Strategy regression coverage.
-- Forkable Starter Strategy Library of about 10 genuinely playable baseline doctrines for new players.
-
-## Current Milestone: v1.4 Cycle-Interleaved Rules Correction
+## Latest Shipped Milestone: v1.4 Cycle-Interleaved Rules Correction
 
 **Goal:** Correct the core gameplay contract so selected Soldiers swap turns between Cycles rather than resolving whole Activations at once, with Backstab checked at the start and end of every Cycle, then rebaseline engine, replay, docs, starter Strategies, and demo competition data around the corrected rule.
 
@@ -111,6 +98,11 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.3-REQUIREMENTS.md`
 - `.planning/milestones/v1.3-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.3-phases/`
+- `.planning/milestones/v1.4-ROADMAP.md`
+- `.planning/milestones/v1.4-REQUIREMENTS.md`
+- `.planning/milestones/v1.4-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.4-AUDIT-FIX.md`
+- `.planning/milestones/v1.4-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -151,7 +143,7 @@ The active constraints remain: deterministic engine behavior, engine purity, Str
 
 Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, and private runtime internals by default.
 
-v1.4 rule-correction work must treat the rules docs, engine, Chronicle/replay grammar, fixtures, starter Strategies, and demo competition data as one contract. It should not leave old full-Activation assumptions in samples, tests, or public explanatory text.
+Future rule-correction work must treat the rules docs, engine, Chronicle/replay grammar, fixtures, starter Strategies, and demo competition data as one contract. It should not leave stale timing assumptions in samples, tests, or public explanatory text.
 
 ## Evolution
 
@@ -164,4 +156,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-20 after completing v1.4 Cycle-Interleaved Rules Correction*
+*Last updated: 2026-05-20 after v1.4 milestone completion*

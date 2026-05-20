@@ -1,38 +1,38 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: v1.4 Cycle-Interleaved Rules Correction
-status: complete
-last_updated: "2026-05-20T15:45:00.000-04:00"
+milestone: planning-next
+milestone_name: Planning next milestone
+status: planning_next
+last_updated: "2026-05-20T16:10:00.000-04:00"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16  
-**Status:** v1.4 Cycle-Interleaved Rules Correction complete
+**Status:** v1.4 Cycle-Interleaved Rules Correction shipped and archived
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.4 complete; ready to archive or ship
-**Current milestone:** v1.4 Cycle-Interleaved Rules Correction
-**Requirements:** .planning/REQUIREMENTS.md
+**Current focus:** Planning next milestone
+**Current milestone:** None active
+**Requirements:** Create fresh requirements with `$gsd-new-milestone`
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: Milestone v1.4 complete
-Plan: Complete
-Status: All v1.4 phases completed, validated, verified, browser-checked, demo-regenerated, audit-fix clean, and replay speed polish documented.
-Last activity: 2026-05-20 — Added configurable replay playback speeds with 2x default, verified the replay UI locally, and documented the milestone polish.
+Phase: Between milestones
+Plan: Next milestone definition
+Status: v1.4 archived with roadmap, requirements, audit, audit-fix, phase artifacts, retrospective, and git tag.
+Last activity: 2026-05-20 — Completed `$gsd-complete-milestone v1.4` archival and prepared for fresh next-milestone requirements.
 
 ## Workflow Settings
 
@@ -53,12 +53,13 @@ Last activity: 2026-05-20 — Added configurable replay playback speeds with 2x 
 | v1.1 Trustworthy Simulation Beta | 6 | 29 | 34/34 | Shipped |
 | v1.2 Competitive Alpha | 5 | 10 | 33/33 | Shipped |
 | v1.3 Competition Trust Beta | 6 | 6 | 51/51 | Shipped |
+| v1.4 Cycle-Interleaved Rules Correction | 5 | 5 | 33/33 | Shipped |
 
 ## Active Milestone
 
 | Milestone | Phases | Plans | Requirements | Status |
 | --- | ---: | ---: | ---: | --- |
-| v1.4 Cycle-Interleaved Rules Correction | 5 | 5 | 33/33 complete | Complete |
+| None | 0 | 0 | Fresh requirements needed | Planning next |
 
 ## Accumulated Context
 
@@ -73,7 +74,7 @@ Last activity: 2026-05-20 — Added configurable replay playback speeds with 2x 
 - v1.3 added Starter Library, resettable trial ladder seasons, deterministic scheduling, public profiles/cards, focused governance, and a containerized subprocess runtime boundary spike.
 - Phase 19-24 artifacts are archived under `.planning/milestones/v1.3-phases/`.
 - v1.4 exists because the intended core rule was miscommunicated: selected Soldiers should alternate by Cycle, not by whole Activation.
-- v1.4 Backstab intent: check Backstab at the start and end of every Cycle using simultaneous all-board resolution.
+- v1.4 shipped the corrected Cycle-interleaved scheduler, Cycle-boundary Backstab, `chronicle-v1.4`, refreshed starters, a completed `/ladder/v1-4-demo`, and replay speeds up to 32x.
 
 ## Deferred Items
 
@@ -88,7 +89,7 @@ Items acknowledged and deferred after v1.3 milestone completion on 2026-05-20:
 
 ## Next Command
 
-Archive or ship Milestone v1.4.
+Run `$gsd-new-milestone` to define the next milestone.
 
 ---
-*Last updated: 2026-05-20 after v1.4 replay speed polish*
+*Last updated: 2026-05-20 after v1.4 milestone completion*

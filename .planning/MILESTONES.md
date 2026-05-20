@@ -122,3 +122,32 @@ None from the open-artifact audit.
 - Email verification, password reset, OAuth, passkeys, organizations, and account recovery remain future account work.
 - Production-grade container hardening, microVM isolation, or WASM/WASI runtime replacement remains future runtime work.
 - Starter Strategy balance can be tuned further, especially weaker mobility/outlast doctrines such as Escape Artist and Ring Runner.
+
+## v1.4 Cycle-Interleaved Rules Correction
+
+**Status:** Shipped 2026-05-20
+**Phases:** 5
+**Plans:** 5
+**Requirements:** 33/33 satisfied
+**Audit:** .planning/milestones/v1.4-MILESTONE-AUDIT.md
+
+### Delivered
+
+- Published canonical `cowards-rules-v1.4` rules and architecture docs that explicitly supersede full-Activation scheduling with Cycle-interleaved selected slots.
+- Rewrote the pure engine Round scheduler so selected Soldiers act by Cycle layer, ended slots are skipped, blocked movement remains non-terminal, and Backstab resolves at Cycle start and Cycle end.
+- Rebased Chronicle, replay grammar, validation, reconstruction, fixtures, and public replay labels on `chronicle-v1.4` and the corrected lifecycle events.
+- Refreshed all ten Starter Strategies to v1.4 lineage and added an interleaved starter gauntlet covering real Cycle, Action, movement, contraction, and non-failed outcomes.
+- Generated `/ladder/v1-4-demo` with eight likely-winning starter entrants, two counted MatchSets, 96 replay-backed Chronicles, realistic standings, and browser-verified public pages.
+- Added configurable replay playback speeds from `0.5x` through `32x`, defaulting to `2x` for dense v1.4 Cycle timelines.
+
+### Archives
+
+- .planning/milestones/v1.4-ROADMAP.md
+- .planning/milestones/v1.4-REQUIREMENTS.md
+- .planning/milestones/v1.4-MILESTONE-AUDIT.md
+- .planning/milestones/v1.4-AUDIT-FIX.md
+- .planning/milestones/v1.4-phases/
+
+### Known Deferred Items
+
+- Durable ratings, official public tournaments, production-grade hostile-code sandboxing, non-JS runtimes, and custom arenas remain future milestone work.

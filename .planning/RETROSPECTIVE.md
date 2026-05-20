@@ -179,12 +179,56 @@
 - Sessions: one extended milestone thread with discussion, implementation, audit, demo tournament, live replay tuning, and archive pass.
 - Notable: user-guided replay inspection was the highest-signal final validation step.
 
+## Milestone: v1.4 — Cycle-Interleaved Rules Correction
+
+**Shipped:** 2026-05-20
+**Phases:** 5 | **Plans:** 5
+
+### What Was Built
+
+- Canonical v1.4 rules and architecture docs for Cycle-interleaved selected Soldier scheduling and Cycle-boundary Backstab.
+- A pure engine Round scheduler that opens selected slots once, resolves them by Cycle layer, skips ended slots, and keeps blocked movement non-terminal.
+- Chronicle and replay compatibility rebaselined to `chronicle-v1.4`, including selected-slot lifecycle events and stricter validation.
+- Starter Strategies refreshed to v1.4 lineage, with an interleaved starter gauntlet proving real Match execution.
+- A completed `/ladder/v1-4-demo` tournament with eight seeded starters, 96 replay-backed Chronicles, browser-verified pages, and realistic standings.
+- Replay playback speed controls with seven options through `32x`, defaulting to `2x`.
+
+### What Worked
+
+- Writing the rule source of truth first made the engine/replay rewrite less ambiguous.
+- Keeping the replay builder dependent on engine `resolveRound` avoided duplicating the scheduler in replay code.
+- Demo-tournament validation caught whether the corrected rules produced plausible play, not just passing mechanics.
+
+### What Was Inefficient
+
+- The installed `gsd-sdk` still lacked documented `query` commands, so completion, audit, and archive steps required manual file inspection.
+- Replay speed polish emerged only after live replay viewing; dense v1.4 timelines should have playback ergonomics considered during replay-facing phases.
+- Planning docs needed an audit-fix pass after implementation because status fields lagged behind completed code.
+
+### Patterns Established
+
+- Rules docs, engine scheduler, Chronicle grammar, replay fixtures, starters, and demo data should be treated as one versioned contract.
+- Rule-version corrections should include fresh demo evidence so old standings cannot be mistaken for current proof.
+- Replay UX controls should scale with event density, especially when rules create longer event streams.
+
+### Key Lessons
+
+- Do source-of-truth rule correction before touching the engine, then keep all compatibility labels explicit.
+- Validate strategy balance/realism with generated tournament evidence whenever scheduler semantics change.
+- Keep milestone status docs synchronized during execution, not only at final audit.
+
+### Cost Observations
+
+- Model mix: not recorded.
+- Sessions: one extended milestone thread with discussion, implementation, demo generation, audit-fix, replay polish, and archive pass.
+- Notable: live replay inspection quickly exposed ergonomic needs that automated correctness tests could not judge.
+
 ## Cross-Milestone Trends
 
 | Trend | Observation |
 | --- | --- |
-| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, v1.2 showed local browser UAT catches route/scoring issues after build success, and v1.3 showed live replay realism checks catch product-quality strategy issues after correctness passes. |
+| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, v1.2 showed local browser UAT catches route/scoring issues after build success, v1.3 showed live replay realism checks catch product-quality strategy issues after correctness passes, and v1.4 showed generated tournament evidence is essential after scheduler changes. |
 | Metadata hygiene | Summary, validation, UAT, and audit artifacts should be maintained during execution, not repaired at close. |
-| UI polish | Narrow viewport/browser review caught issues after automated checks; responsive screenshots and local page checks should move earlier in UI phases. |
+| UI polish | Narrow viewport/browser review caught issues after automated checks; responsive screenshots, local page checks, and playback ergonomics should move earlier in UI phases. |
 | Package boundaries | Keeping runtime execution out of web/API and importing narrow server modules prevents trust and bundling regressions. |
 | Competitive trust | Each competition milestone works best when it keeps the promise modest: exhibition before ladder, resettable ladder before durable ratings, governance before official tournaments. |
