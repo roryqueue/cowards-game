@@ -19,17 +19,13 @@ describe("ReplayClient", () => {
     expect(source).toContain("Pause replay")
     expect(source).toContain("Step forward")
     expect(source).toContain('aria-label="Replay speed"')
-    expect(source).toContain('useState<ReplaySpeedValue>("2")')
-    expect(source).toContain("basePlaybackIntervalMs / 2")
+    expect(source).toContain("defaultReplaySpeed")
+    expect(source).toContain("getPlaybackIntervalMs")
     expect(source).toContain("<ReplayBoard")
   })
 
-  it("offers five playback speeds with 2x as the default", () => {
-    expect(source).toContain('label: "0.5x"')
-    expect(source).toContain('label: "1x"')
-    expect(source).toContain('label: "2x"')
-    expect(source).toContain('label: "4x"')
-    expect(source).toContain('label: "8x"')
+  it("renders selectable playback speeds from the playback contract", () => {
+    expect(source).toContain("replaySpeedOptions.map")
     expect(source).toContain("playbackIntervalMs")
   })
 

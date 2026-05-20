@@ -16,6 +16,12 @@ import {
   stepReplayIndex,
 } from "./replay-state.js"
 import { ReplayBoard } from "./replay-board.js"
+import {
+  defaultReplaySpeed,
+  getPlaybackIntervalMs,
+  replaySpeedOptions,
+  type ReplaySpeedValue,
+} from "./replay-playback.js"
 
 export interface ReplayClientProps {
   data: ReplayReadyDto
@@ -26,26 +32,6 @@ const shortId = (id: string): string =>
 
 const firstSoldierId = (data: ReplayReadyDto): string | null =>
   data.states[0]?.board.soldiers[0]?.id ?? null
-
-const basePlaybackIntervalMs = 700
-
-const replaySpeedOptions = [
-  { value: "0.5", label: "0.5x", intervalMs: basePlaybackIntervalMs * 2 },
-  { value: "1", label: "1x", intervalMs: basePlaybackIntervalMs },
-  { value: "2", label: "2x", intervalMs: basePlaybackIntervalMs / 2 },
-  { value: "4", label: "4x", intervalMs: basePlaybackIntervalMs / 4 },
-  {
-    value: "8",
-    label: "8x",
-    intervalMs: Math.round(basePlaybackIntervalMs / 8),
-  },
-] as const
-
-type ReplaySpeedValue = (typeof replaySpeedOptions)[number]["value"]
-
-const getPlaybackIntervalMs = (speed: ReplaySpeedValue): number =>
-  replaySpeedOptions.find((option) => option.value === speed)?.intervalMs ??
-  basePlaybackIntervalMs
 
 export function ReplayClient({ data }: ReplayClientProps) {
   const initialIndex = data.timeline.findIndex(
@@ -60,7 +46,8 @@ export function ReplayClient({ data }: ReplayClientProps) {
   )
   const [scrubbing, setScrubbing] = useState(false)
   const [ownerDebugVisible, setOwnerDebugVisible] = useState(false)
-  const [playbackSpeed, setPlaybackSpeed] = useState<ReplaySpeedValue>("2")
+  const [playbackSpeed, setPlaybackSpeed] =
+    useState<ReplaySpeedValue>(defaultReplaySpeed)
 
   const selectedEntry = getTimelineEntryAt(data, selectedIndex)
   const summary = getCurrentPositionSummary(data, selectedEntry)
