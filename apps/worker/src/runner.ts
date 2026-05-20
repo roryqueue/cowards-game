@@ -27,6 +27,7 @@ export interface WorkerRunnerOptions {
   workerId: string
   once?: boolean
   pollMs?: number
+  leaseMs?: number | undefined
   runtimeConfig?: WorkerRuntimeConfig | undefined
 }
 
@@ -191,6 +192,7 @@ export const runWorkerOnce = async (
   const runtimeConfig = options.runtimeConfig ?? createWorkerRuntimeConfig()
   const claimed = await dependencies.claimNextMatchJob(pool, {
     workerId: options.workerId,
+    ...(options.leaseMs === undefined ? {} : { leaseMs: options.leaseMs }),
   })
   if (!claimed) {
     return "idle"

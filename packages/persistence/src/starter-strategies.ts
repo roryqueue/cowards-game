@@ -131,7 +131,7 @@ export default {
   },
   soldierBrain(input) {
     if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
-      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+      return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const desired = input.objective?.target ?? bestCenterDirection(input.self, { bounds: { minX: -4, maxX: 4, minY: -4, maxY: 4 } })
     const direction = openMoveDirection(input, desired)
@@ -211,7 +211,7 @@ export default {
   },
   soldierBrain(input) {
     if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
-      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+      return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const facing = input.self.facing ?? cornerDirections[input.cycleIndex % cornerDirections.length]
     const direction = mobileDirection(input, openDirection(input.awarenessGrid, facing))
@@ -280,7 +280,7 @@ export default {
   soldierBrain(input) {
     const memory = input.soldierMemory && typeof input.soldierMemory === "object" ? input.soldierMemory : {}
     if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
-      return { action: { type: "MOVE", direction: opposite[input.self.lastSuccessfulMoveDirection] }, soldierMemory: memory }
+      return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: memory }
     }
     const target = rearTarget(input.awarenessGrid)
     const lane = directionTo(target, memory.lastLane ?? input.self.facing ?? "UP")
@@ -357,7 +357,7 @@ export default {
   },
   soldierBrain(input) {
     if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
-      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+      return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const enemy = nearestEnemy(input.awarenessGrid)
     const pressure = toward(enemy, input.self.facing ?? "UP")
@@ -414,7 +414,7 @@ export default {
   },
   soldierBrain(input) {
     if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
-      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+      return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const turn = input.objective?.turn === "counter" ? "counter" : "clockwise"
     const facing = input.self.facing ?? "UP"
@@ -488,7 +488,7 @@ export default {
   },
   soldierBrain(input) {
     if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
-      return { action: { type: "MOVE", direction: reverseDirection[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+      return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const lane = input.objective?.lane ?? input.self.facing ?? "UP"
     const closeEnemy = input.awarenessGrid.cells.some((cell) => cell.contents === "ENEMY_ACTIVE" && Math.abs(cell.dx) + Math.abs(cell.dy) === 1)
@@ -549,7 +549,7 @@ export default {
   },
   soldierBrain(input) {
     if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
-      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+      return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const enemies = countAdjacent(input.awarenessGrid, "ENEMY_ACTIVE")
     const walls = countAdjacent(input.awarenessGrid, "WALL")
@@ -608,12 +608,13 @@ export default {
   },
   soldierBrain(input) {
     if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
-      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: input.soldierMemory }
+      return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }
     }
     const lane = input.objective?.lane ?? input.self.facing ?? "UP"
     const adjacent = input.awarenessGrid.cells.some((cell) => cell.contents === "ENEMY_ACTIVE" && Math.abs(cell.dx) + Math.abs(cell.dy) === 1)
     const move = safeAggroMove(input, lane)
-    return { action: adjacent || move ? { type: "MOVE", direction: adjacent ? lane : move } : { type: "TURN", direction: lane }, soldierMemory: input.soldierMemory }
+    const attackLane = adjacent && input.self.lastSuccessfulMoveDirection !== reverse[lane] ? lane : move
+    return { action: attackLane ? { type: "MOVE", direction: attackLane } : { type: "TURN", direction: lane }, soldierMemory: input.soldierMemory }
   }
 }
 `.trim()
@@ -656,7 +657,7 @@ export default {
   soldierBrain(input) {
     const memory = input.soldierMemory && typeof input.soldierMemory === "object" ? input.soldierMemory : {}
     if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
-      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: memory }
+      return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: memory }
     }
     const ranked = directions.map((direction) => [
       direction,
@@ -721,7 +722,7 @@ export default {
   soldierBrain(input) {
     const memory = input.soldierMemory && typeof input.soldierMemory === "object" ? input.soldierMemory : {}
     if (input.cycleIndex >= 4 && input.self.lastSuccessfulMoveDirection) {
-      return { action: { type: "MOVE", direction: reverse[input.self.lastSuccessfulMoveDirection] }, soldierMemory: memory }
+      return { action: { type: "TURN", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: memory }
     }
     const enemy = nearestEnemy(input.awarenessGrid)
     const lane = directionTo(enemy, input.objective?.baitLane ?? memory.baitLane ?? input.self.facing ?? "UP")

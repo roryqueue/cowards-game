@@ -41,12 +41,25 @@ const eventLabels = {
   RUNTIME_VIOLATION: "Runtime violation",
 } satisfies Record<ChronicleEventType, string>
 
+const payloadReason = (event: ChroniclePublicEvent): string | undefined =>
+  event.payload !== null &&
+  typeof event.payload === "object" &&
+  !Array.isArray(event.payload) &&
+  typeof event.payload.reason === "string"
+    ? event.payload.reason
+    : undefined
+
 const eventLabel = (event: ChroniclePublicEvent): string => {
   if (
     event.type === "ROUND_STARTED" &&
     typeof event.context.roundNumber === "number"
   ) {
     return `Round ${event.context.roundNumber}`
+  }
+  if (event.type === "MOVE_BLOCKED") {
+    return payloadReason(event) === "IMMEDIATE_REVERSAL"
+      ? "No reverse"
+      : "Blocked"
   }
   return eventLabels[event.type]
 }

@@ -175,6 +175,11 @@ const getPayloadRecord = (
     ? entry.payload
     : {}
 
+const eventReason = (entry: ReplayTimelineEntryDto): string | undefined => {
+  const reason = getPayloadRecord(entry).reason
+  return typeof reason === "string" ? reason : undefined
+}
+
 const getPositionField = (
   entry: ReplayTimelineEntryDto,
   keys: string[],
@@ -365,7 +370,11 @@ export const getEventCalloutDescriptor = (
       return {
         ...base,
         variant: "blocked",
-        label: "Blocked",
+        label:
+          entry.type === "MOVE_BLOCKED" &&
+          eventReason(entry) === "IMMEDIATE_REVERSAL"
+            ? "No reverse"
+            : "Blocked",
         color: ReplayBoardColors.warning,
       }
     case "CONTRACTION_RESOLVED":

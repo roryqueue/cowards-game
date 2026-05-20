@@ -31,6 +31,8 @@ const seedStarters: StarterStrategyId[] = [
   "starter:escape-artist",
 ]
 
+const DEMO_MATCH_LEASE_MS = 10 * 60 * 1000
+
 const slugify = (value: string): string =>
   value
     .toLowerCase()
@@ -216,6 +218,7 @@ const main = async (): Promise<void> => {
       const status = await runWorkerOnce(pool, {
         workerId: "worker:v13-demo",
         once: true,
+        leaseMs: DEMO_MATCH_LEASE_MS,
         runtimeConfig,
       })
       if (status === "idle") break
