@@ -15,11 +15,15 @@ Conversational UAT was completed against generated local v1.5 demo data.
 4. Representative example MatchSet opens.
    - Result: PASS at `/matchsets/match-set%3Av1-5%3Aexample%3Aanti-backstab-stress`.
 5. Advanced Strategy card opens without private source.
-   - Result: PASS at `/strategies/strategy%3Ademo%3Av1-5%3Astonewall-shear`.
+   - Result: PASS at `/strategies/strategy%3Ademo%3Av1-5%3Acenter-gravity`.
 6. Player profile opens and links to Strategy card.
-   - Result: PASS at `/players/v15-stonewall-shear`.
+   - Result: PASS at `/players/v15-center-gravity`.
 7. Representative replay opens without private data terms.
    - Result: PASS at `/matches/match%3Amatch-set%3Av1-5%3Atournament%3Aadvanced-eight%3A0/replay`.
+8. Retuned Advanced Strategies apply the common tactical baseline.
+   - Result: PASS. Regenerated evidence contains `0` blocked moves, `0` direct `TURN_TO_STONE`, `0` `MOVED_OFF_BOARD`, and `412` Backstab resolutions across 33 Chronicles.
+9. Retuned tournament remains realistic and non-degenerate.
+   - Result: PASS. Center Gravity finished 6-1-0; Stonewall Shear and Rear Guard Sentinel finished 5-2-0; no entrant swept the field.
 
 ## Outcome
 
