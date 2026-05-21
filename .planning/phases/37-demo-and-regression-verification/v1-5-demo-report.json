@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-20T22:21:48.415Z",
+  "generatedAt": "2026-05-21T01:06:24.147Z",
   "seasonId": "trial-season:v1-5-demo",
   "seasonUrl": "/ladder/v1-5-demo",
   "scheduled": {
@@ -13,7 +13,7 @@
       "advancedId": "advanced:vanguard-pressure",
       "name": "Vanguard Pressure",
       "archetype": "pressure / contact",
-      "sourceHash": "63592a18a6bcdc0c18caea8fe9c31df6d0998416bf9f0cc0967a059ae09afd47",
+      "sourceHash": "02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37",
       "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Avanguard-pressure",
       "playerHref": "/players/v15-vanguard-pressure"
     },
@@ -21,7 +21,7 @@
       "advancedId": "advanced:recall-hunter",
       "name": "Recall Hunter",
       "archetype": "memory-based opponent response",
-      "sourceHash": "d6114839d01eb55f8cb8c9d3ad4404b6358999b2c8b7f9ec302e8e2e737a44b2",
+      "sourceHash": "b0e6878325f869c56b1444905cb86051e5b8c65974294717bb41def92aa0e3e0",
       "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Arecall-hunter",
       "playerHref": "/players/v15-recall-hunter"
     },
@@ -29,7 +29,7 @@
       "advancedId": "advanced:stonewall-shear",
       "name": "Stonewall Shear",
       "archetype": "wall control",
-      "sourceHash": "65a87d55dc6afe94db33bb8167e36908cf09854af2a87a1ca3a3325b04f319af",
+      "sourceHash": "27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1",
       "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Astonewall-shear",
       "playerHref": "/players/v15-stonewall-shear"
     },
@@ -37,7 +37,7 @@
       "advancedId": "advanced:rear-guard-sentinel",
       "name": "Rear Guard Sentinel",
       "archetype": "anti-backstab positioning",
-      "sourceHash": "6858dd8a5085137843f1ccb1de290792745067af0e3b230036c2233ac4c30fb5",
+      "sourceHash": "4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224",
       "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Arear-guard-sentinel",
       "playerHref": "/players/v15-rear-guard-sentinel"
     },
@@ -45,7 +45,7 @@
       "advancedId": "advanced:center-gravity",
       "name": "Center Gravity",
       "archetype": "center control",
-      "sourceHash": "f0b31a6c2874b61a30de5470437c370d0575c16b128f075c9f28306136c83987",
+      "sourceHash": "c0462afc35863ae47e3cff9d4b2878a8aff1a282981f6c25ee4fb30afd02bece",
       "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Acenter-gravity",
       "playerHref": "/players/v15-center-gravity"
     },
@@ -53,7 +53,7 @@
       "advancedId": "advanced:snare-weaver",
       "name": "Snare Weaver",
       "archetype": "trap/control",
-      "sourceHash": "ffe6ad1a1656808bee59b549521593f9afaed8117875db552023686daaaa4afa",
+      "sourceHash": "eff43a1b44f254a22726c5337608d7c64d25cc5e30800f00c2c63117789964ad",
       "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Asnare-weaver",
       "playerHref": "/players/v15-snare-weaver"
     },
@@ -61,7 +61,7 @@
       "advancedId": "advanced:mirror-key",
       "name": "Mirror Key",
       "archetype": "mirror-breaking/adaptive play",
-      "sourceHash": "93dfa9064631b5b42a168118e666d39628f07807f6032e2ae9a15217b6a3443c",
+      "sourceHash": "13ca40eee8c359879ced75e99cec8135cfa8e8693ef759aa3c0948c07863b03d",
       "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Amirror-key",
       "playerHref": "/players/v15-mirror-key"
     },
@@ -69,7 +69,7 @@
       "advancedId": "advanced:ghost-orbit",
       "name": "Ghost Orbit",
       "archetype": "evasive mobility",
-      "sourceHash": "c16eb1dd298a7c1b133bfc5e2688168c6c84ce07b659df362d1ad2c9963f1bc1",
+      "sourceHash": "0fa96cb53ab429e1599feb0cdae182e7b1cb2981be4b49a60ae6b7a9b4db2455",
       "strategyHref": "/strategies/strategy%3Ademo%3Av1-5%3Aghost-orbit",
       "playerHref": "/players/v15-ghost-orbit"
     }
@@ -77,51 +77,51 @@
   "standings": [
     {
       "rank": 1,
-      "entrant": "@v15-stonewall-shear / \"Stonewall Shear\" / 65a87d55dc",
+      "entrant": "@v15-center-gravity / \"Center Gravity\" / c0462afc35",
       "points": 18,
       "record": "6-1-0"
     },
     {
       "rank": 2,
-      "entrant": "@v15-center-gravity / \"Center Gravity\" / f0b31a6c28",
+      "entrant": "@v15-stonewall-shear / \"Stonewall Shear\" / 27ebb4b1bd",
       "points": 15,
       "record": "5-2-0"
     },
     {
       "rank": 3,
-      "entrant": "@v15-recall-hunter / \"Recall Hunter\" / d6114839d0",
+      "entrant": "@v15-rear-guard-sentinel / \"Rear Guard Sentinel\" / 4acfb66834",
       "points": 15,
       "record": "5-2-0"
     },
     {
       "rank": 4,
-      "entrant": "@v15-vanguard-pressure / \"Vanguard Pressure\" / 63592a18a6",
-      "points": 11,
-      "record": "3-2-2"
+      "entrant": "@v15-vanguard-pressure / \"Vanguard Pressure\" / 02959d4cbe",
+      "points": 12,
+      "record": "4-3-0"
     },
     {
       "rank": 5,
-      "entrant": "@v15-rear-guard-sentinel / \"Rear Guard Sentinel\" / 6858dd8a50",
-      "points": 10,
-      "record": "3-3-1"
+      "entrant": "@v15-mirror-key / \"Mirror Key\" / 13ca40eee8",
+      "points": 9,
+      "record": "3-4-0"
     },
     {
       "rank": 6,
-      "entrant": "@v15-mirror-key / \"Mirror Key\" / 93dfa90646",
+      "entrant": "@v15-snare-weaver / \"Snare Weaver\" / eff43a1b44",
       "points": 9,
       "record": "3-4-0"
     },
     {
       "rank": 7,
-      "entrant": "@v15-snare-weaver / \"Snare Weaver\" / ffe6ad1a16",
+      "entrant": "@v15-ghost-orbit / \"Ghost Orbit\" / 0fa96cb53a",
       "points": 3,
       "record": "1-6-0"
     },
     {
       "rank": 8,
-      "entrant": "@v15-ghost-orbit / \"Ghost Orbit\" / c16eb1dd29",
-      "points": 1,
-      "record": "0-6-1"
+      "entrant": "@v15-recall-hunter / \"Recall Hunter\" / b0e6878325",
+      "points": 3,
+      "record": "1-6-0"
     }
   ],
   "exampleMatchSets": [
@@ -200,12 +200,12 @@
     "ruleVersions": [
       "cowards-rules-v1.4"
     ],
-    "cycleStarted": 7952,
-    "activationSkipped": 949,
-    "moveAdvanced": 5893,
-    "moveBlocked": 53,
-    "backstabResolved": 137,
-    "contractionResolved": 36,
+    "cycleStarted": 7662,
+    "activationSkipped": 1146,
+    "moveAdvanced": 7103,
+    "moveBlocked": 0,
+    "backstabResolved": 412,
+    "contractionResolved": 31,
     "matchEnded": 33,
     "replaySamples": [
       {

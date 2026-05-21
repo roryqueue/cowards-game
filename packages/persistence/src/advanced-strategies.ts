@@ -41,19 +41,175 @@ export interface AdvancedStrategySummary extends AdvancedStrategyDefinition {
   sourceBytes: number
 }
 
-const sourceFromStarter = (
-  starterId: StarterStrategyId,
-  banner: string,
-): string => {
-  const starter = findStarterStrategy(starterId)
-  if (!starter) {
-    throw new Error(`Advanced seed base Starter not found: ${starterId}`)
+interface AdvancedDoctrineProfile {
+  banner: string
+  doctrine: string
+  contactBias: number
+  centerBias: number
+  wallBias: number
+  mobilityBias: number
+  trapBias: number
+  memoryBias: number
+  lateBias: number
+}
+
+const assertStarterBenchmarkExists = (starterId: StarterStrategyId): void => {
+  if (!findStarterStrategy(starterId)) {
+    throw new Error(`Advanced seed benchmark Starter not found: ${starterId}`)
   }
-  return [
-    `// Advanced seed v1.5: ${banner}`,
-    `// Benchmark ancestry: ${starter.name} (${starter.id}).`,
-    starter.source,
-  ].join("\n")
+}
+
+const makeAdvancedSource = (
+  benchmarkStarterId: StarterStrategyId,
+  profile: AdvancedDoctrineProfile,
+): string => {
+  assertStarterBenchmarkExists(benchmarkStarterId)
+  return `// Advanced seed v1.5: ${profile.banner}
+// Benchmark reference: ${benchmarkStarterId}.
+// Shared baseline: leave starting edge early, take rear-square chances, avoid outer-ring contraction risk,
+// avoid self-stoning, avoid off-board moves, and keep archetype flavor as a secondary priority.
+const profile = ${JSON.stringify(profile, null, 2)}
+const directions = ["UP", "RIGHT", "DOWN", "LEFT"]
+const reverse = { UP: "DOWN", RIGHT: "LEFT", DOWN: "UP", LEFT: "RIGHT" }
+const dx = { UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1 }
+const dy = { UP: -1, RIGHT: 0, DOWN: 1, LEFT: 0 }
+const step = (p, d) => p ? { x: p.x + dx[d], y: p.y + dy[d] } : null
+const inside = (p, b) => p && p.x >= b.minX && p.x <= b.maxX && p.y >= b.minY && p.y <= b.maxY
+const dist = (a, b) => a && b ? Math.abs(a.x - b.x) + Math.abs(a.y - b.y) : 99
+const centerDist = (p, b) => p ? Math.abs(p.x - (b.minX + b.maxX) / 2) + Math.abs(p.y - (b.minY + b.maxY) / 2) : 99
+const toward = (a, b, f) => !a || !b ? f : Math.abs(b.x - a.x) > Math.abs(b.y - a.y) ? (b.x > a.x ? "RIGHT" : "LEFT") : b.y !== a.y ? (b.y > a.y ? "DOWN" : "UP") : f
+const edge = (p, b) => p && (p.x === b.minX || p.x === b.maxX || p.y === b.minY || p.y === b.maxY)
+const nearEnemy = (s, es) => es.filter((e) => e.status === "ACTIVE" && e.position).sort((a, b) => dist(s.position, a.position) - dist(s.position, b.position))[0] ?? null
+const c = (g, d) => g.cells.find((x) => x.dx === dx[d] && x.dy === dy[d])
+const rc = (g, x, y) => g.cells.find((cell) => cell.dx === x && cell.dy === y)
+const relDir = (x, y, f) => Math.abs(x) > Math.abs(y) ? (x > 0 ? "RIGHT" : "LEFT") : y ? (y > 0 ? "DOWN" : "UP") : f
+const behind = (f) => f === "UP" ? [0, 1] : f === "DOWN" ? [0, -1] : f === "LEFT" ? [1, 0] : [-1, 0]
+const safeBoard = (s, input) =>
+  directions.filter((d) => inside(step(s.position, d), input.board.bounds))
+const backstabBoard = (s, input) => {
+  for (const e of input.enemySoldiers) {
+    if (e.status !== "ACTIVE" || !e.position || !e.facing) continue
+    const b = behind(e.facing)
+    const target = { x: e.position.x + b[0], y: e.position.y + b[1] }
+    if (inside(target, input.board.bounds) && dist(s.position, target) === 1) return toward(s.position, target, s.facing ?? "UP")
+  }
+  return null
+}
+const prefer = (s, input) => {
+  const e = nearEnemy(s, input.enemySoldiers)
+  const toEnemy = toward(s.position, e?.position, s.facing ?? "UP")
+  const toCenter = directions.filter((d) => inside(step(s.position, d), input.board.bounds)).sort((a, b) => centerDist(step(s.position, a), input.board.bounds) - centerDist(step(s.position, b), input.board.bounds))[0] ?? toEnemy
+  if (profile.centerBias + profile.lateBias + profile.mobilityBias > profile.contactBias + profile.wallBias) return toCenter
+  return backstabBoard(s, input) ?? toEnemy
+}
+const rearMove = (g) => {
+  for (const e of g.cells) {
+    if (e.contents !== "ENEMY_ACTIVE" || !e.facing) continue
+    const b = behind(e.facing)
+    const tx = e.dx + b[0]
+    const ty = e.dy + b[1]
+    if (Math.abs(tx) + Math.abs(ty) === 1 && rc(g, tx, ty)?.contents === "EMPTY") return relDir(tx, ty, "UP")
+    if (tx === 0 && ty === 0 && Math.abs(e.dx) + Math.abs(e.dy) === 1) return relDir(e.dx, e.dy, "UP")
+  }
+  return null
+}
+const wallAway = (g, d) => g.cells.reduce((n, x) => n + (x.contents !== "WALL" ? 0 : x.dx < 0 && d === "RIGHT" ? 8 : x.dx > 0 && d === "LEFT" ? 8 : x.dy < 0 && d === "DOWN" ? 8 : x.dy > 0 && d === "UP" ? 8 : 0), 0)
+const score = (input, d, o, m) => {
+  const cell = c(input.awarenessGrid, d)
+  if (!cell || cell.contents === "WALL" || cell.contents === "TERRAIN_STONE" || cell.contents.endsWith("STONE")) return -999
+  if (input.self.lastSuccessfulMoveDirection === reverse[d]) return -998
+  const activeContact = cell.contents === "ENEMY_ACTIVE" || cell.contents === "FRIENDLY_ACTIVE"
+  if (activeContact && (cell.facing === d || cell.facing === reverse[d])) return -997
+  if (cell.contents === "FRIENDLY_ACTIVE" && rc(input.awarenessGrid, dx[d] * 2, dy[d] * 2)?.contents === "WALL") return -997
+  let s = cell.contents === "ENEMY_ACTIVE" ? 6 + profile.contactBias : cell.contents === "FRIENDLY_ACTIVE" ? -3 : 1
+  if (d === o.preferred) s += 12
+  if ((o.safeDirs ?? []).includes(d)) s += 5
+  if (d === m.last) s += profile.memoryBias
+  s += wallAway(input.awarenessGrid, d) * (o.contractionSoon ? 3 : 1)
+  if (profile.mobilityBias && d !== m.tried) s += profile.mobilityBias
+  if (o.contractionSoon && cell.contents === "EMPTY") s += profile.lateBias
+  if (cell.contents === "ENEMY_ACTIVE") s += profile.trapBias
+  return s
+}
+
+export default {
+  selectActivations(input) {
+    const memory = input.strategyMemory && typeof input.strategyMemory === "object" ? input.strategyMemory : {}
+    const contractionSoon = input.roundNumber === 4
+    const active = input.mySoldiers.filter((soldier) => soldier.status === "ACTIVE" && soldier.position)
+    const ranked = active
+      .map((soldier, index) => {
+        const unmoved = soldier.lastSuccessfulMoveDirection ? 0 : 1
+        const enemy = nearEnemy(soldier, input.enemySoldiers)
+        const edgeRisk = edge(soldier.position, input.board.bounds) ? 1 : 0
+        const backstabReady = backstabBoard(soldier, input) ? 1 : 0
+        const pressure = 20 - dist(soldier.position, enemy?.position)
+        const center = 20 - centerDist(soldier.position, input.board.bounds)
+        const score =
+          unmoved * 1000 +
+          backstabReady * 700 +
+          (contractionSoon ? edgeRisk * 600 : edgeRisk * 80) +
+          pressure * profile.contactBias +
+          center * (profile.centerBias + profile.lateBias) +
+          (profile.mobilityBias * (soldier.id === memory.lastSelected ? -3 : 1)) +
+          index * -0.01
+        return { soldier, score }
+      })
+      .sort((left, right) => right.score - left.score)
+    const selected = ranked.slice(0, input.activationCount).map(({ soldier }) => {
+      const preferred = prefer(soldier, input)
+      return {
+        soldierId: soldier.id,
+        objective: {
+          doctrine: profile.doctrine,
+          preferred,
+          safeDirs: safeBoard(soldier, input),
+          contractionSoon,
+          seekBackstab: true,
+        },
+      }
+    })
+    return {
+      activationOrders: selected,
+      strategyMemory: {
+        ...memory,
+        lastSelected: selected[0]?.soldierId ?? memory.lastSelected ?? null,
+        selectedThisRound: selected.map((entry) => entry.soldierId),
+      },
+    }
+  },
+  soldierBrain(input) {
+    const memory = input.soldierMemory && typeof input.soldierMemory === "object" ? input.soldierMemory : {}
+    const objective = input.objective && typeof input.objective === "object" ? input.objective : {}
+    const backstab = rearMove(input.awarenessGrid)
+    const best = directions
+      .map((direction) => [direction, score(input, direction, objective, memory)])
+      .sort((left, right) => right[1] - left[1])
+    const chosen = backstab && score(input, backstab, objective, memory) > -900 ? backstab : (best[0]?.[1] > -900 ? best[0][0] : null)
+    if (chosen) {
+      return {
+        action: { type: "MOVE", direction: chosen },
+        soldierMemory: {
+          ...memory,
+          last: chosen,
+          tried: chosen,
+          doctrine: profile.doctrine,
+        },
+      }
+    }
+    const seen = input.awarenessGrid.cells.filter((cell) => cell.contents === "ENEMY_ACTIVE").sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - (Math.abs(b.dx) + Math.abs(b.dy)))[0]
+    const turn = objective.preferred ?? (seen ? relDir(seen.dx, seen.dy, input.self.facing ?? "UP") : input.self.facing ?? "UP")
+    return {
+      action: { type: "TURN", direction: turn },
+      soldierMemory: {
+        ...memory,
+        tried: turn,
+        doctrine: profile.doctrine,
+      },
+    }
+  }
+}
+`.trim()
 }
 
 export const ADVANCED_STRATEGY_DEFINITIONS: readonly AdvancedStrategyDefinition[] =
@@ -75,10 +231,17 @@ export const ADVANCED_STRATEGY_DEFINITIONS: readonly AdvancedStrategyDefinition[
         "Forces early decisions and exposes whether opponents can survive contact pressure.",
       usesMemory: false,
       benchmarkStarterId: "starter:aggro-chaser",
-      source: sourceFromStarter(
-        "starter:aggro-chaser",
-        "pressure/contact escalation",
-      ),
+      source: makeAdvancedSource("starter:aggro-chaser", {
+        banner: "pressure/contact escalation",
+        doctrine: "vanguard-pressure",
+        contactBias: 5,
+        centerBias: 1,
+        wallBias: 1,
+        mobilityBias: 1,
+        trapBias: 0,
+        memoryBias: 0,
+        lateBias: 1,
+      }),
     },
     {
       id: "advanced:rear-guard-sentinel",
@@ -97,10 +260,17 @@ export const ADVANCED_STRATEGY_DEFINITIONS: readonly AdvancedStrategyDefinition[
         "Stabilizes against rear-arc pressure and creates close games against backstab specialists.",
       usesMemory: true,
       benchmarkStarterId: "starter:escape-artist",
-      source: sourceFromStarter(
-        "starter:escape-artist",
-        "anti-backstab lane memory",
-      ),
+      source: makeAdvancedSource("starter:escape-artist", {
+        banner: "anti-backstab lane memory",
+        doctrine: "rear-guard-sentinel",
+        contactBias: 2,
+        centerBias: 2,
+        wallBias: 0,
+        mobilityBias: 4,
+        trapBias: 1,
+        memoryBias: 5,
+        lateBias: 2,
+      }),
     },
     {
       id: "advanced:stonewall-shear",
@@ -119,7 +289,17 @@ export const ADVANCED_STRATEGY_DEFINITIONS: readonly AdvancedStrategyDefinition[
         "Pins opponents against walls while leaving enough movement to avoid degenerate idling.",
       usesMemory: false,
       benchmarkStarterId: "starter:wall-press",
-      source: sourceFromStarter("starter:wall-press", "wall-control shear"),
+      source: makeAdvancedSource("starter:wall-press", {
+        banner: "wall-control shear",
+        doctrine: "stonewall-shear",
+        contactBias: 4,
+        centerBias: 0,
+        wallBias: 5,
+        mobilityBias: 1,
+        trapBias: 1,
+        memoryBias: 0,
+        lateBias: 1,
+      }),
     },
     {
       id: "advanced:center-gravity",
@@ -138,7 +318,17 @@ export const ADVANCED_STRATEGY_DEFINITIONS: readonly AdvancedStrategyDefinition[
         "Controls central lanes and makes evasive Strategies pay for conceding space.",
       usesMemory: false,
       benchmarkStarterId: "starter:centerline-bully",
-      source: sourceFromStarter("starter:centerline-bully", "center gravity"),
+      source: makeAdvancedSource("starter:centerline-bully", {
+        banner: "center gravity",
+        doctrine: "center-gravity",
+        contactBias: 3,
+        centerBias: 5,
+        wallBias: 0,
+        mobilityBias: 1,
+        trapBias: 0,
+        memoryBias: 0,
+        lateBias: 2,
+      }),
     },
     {
       id: "advanced:ring-shelter",
@@ -157,7 +347,17 @@ export const ADVANCED_STRATEGY_DEFINITIONS: readonly AdvancedStrategyDefinition[
         "Survives shrinking-board pressure long enough to create close late-cycle finishes.",
       usesMemory: true,
       benchmarkStarterId: "starter:center-turtle",
-      source: sourceFromStarter("starter:center-turtle", "contraction shelter"),
+      source: makeAdvancedSource("starter:center-turtle", {
+        banner: "contraction shelter",
+        doctrine: "ring-shelter",
+        contactBias: 1,
+        centerBias: 4,
+        wallBias: 0,
+        mobilityBias: 3,
+        trapBias: 1,
+        memoryBias: 4,
+        lateBias: 5,
+      }),
     },
     {
       id: "advanced:ghost-orbit",
@@ -176,7 +376,17 @@ export const ADVANCED_STRATEGY_DEFINITIONS: readonly AdvancedStrategyDefinition[
         "Creates space, survives pins, and forces aggressive opponents to overcommit.",
       usesMemory: true,
       benchmarkStarterId: "starter:escape-artist",
-      source: sourceFromStarter("starter:escape-artist", "evasive orbit"),
+      source: makeAdvancedSource("starter:escape-artist", {
+        banner: "evasive orbit",
+        doctrine: "ghost-orbit",
+        contactBias: 1,
+        centerBias: 2,
+        wallBias: 0,
+        mobilityBias: 5,
+        trapBias: 0,
+        memoryBias: 4,
+        lateBias: 3,
+      }),
     },
     {
       id: "advanced:snare-weaver",
@@ -195,7 +405,17 @@ export const ADVANCED_STRATEGY_DEFINITIONS: readonly AdvancedStrategyDefinition[
         "Punishes direct pursuit and creates STONE/blocking texture under pressure.",
       usesMemory: true,
       benchmarkStarterId: "starter:trap-setter",
-      source: sourceFromStarter("starter:trap-setter", "trap-control snare"),
+      source: makeAdvancedSource("starter:trap-setter", {
+        banner: "trap-control snare",
+        doctrine: "snare-weaver",
+        contactBias: 2,
+        centerBias: 1,
+        wallBias: 2,
+        mobilityBias: 2,
+        trapBias: 5,
+        memoryBias: 4,
+        lateBias: 2,
+      }),
     },
     {
       id: "advanced:mirror-key",
@@ -214,7 +434,17 @@ export const ADVANCED_STRATEGY_DEFINITIONS: readonly AdvancedStrategyDefinition[
         "Breaks repeated patterns and creates non-identical matchup texture across a MatchSet.",
       usesMemory: true,
       benchmarkStarterId: "starter:mirror-breaker",
-      source: sourceFromStarter("starter:mirror-breaker", "mirror-key memory"),
+      source: makeAdvancedSource("starter:mirror-breaker", {
+        banner: "mirror-key memory",
+        doctrine: "mirror-key",
+        contactBias: 3,
+        centerBias: 2,
+        wallBias: 1,
+        mobilityBias: 3,
+        trapBias: 1,
+        memoryBias: 5,
+        lateBias: 2,
+      }),
     },
     {
       id: "advanced:last-light",
@@ -233,7 +463,17 @@ export const ADVANCED_STRATEGY_DEFINITIONS: readonly AdvancedStrategyDefinition[
         "Stays coherent late in Matches and prevents collapse during contraction pressure.",
       usesMemory: true,
       benchmarkStarterId: "starter:corner-lurker",
-      source: sourceFromStarter("starter:corner-lurker", "late-cycle light"),
+      source: makeAdvancedSource("starter:corner-lurker", {
+        banner: "late-cycle light",
+        doctrine: "last-light",
+        contactBias: 1,
+        centerBias: 3,
+        wallBias: 0,
+        mobilityBias: 3,
+        trapBias: 1,
+        memoryBias: 4,
+        lateBias: 6,
+      }),
     },
     {
       id: "advanced:recall-hunter",
@@ -252,7 +492,17 @@ export const ADVANCED_STRATEGY_DEFINITIONS: readonly AdvancedStrategyDefinition[
         "Remembers productive pursuit lanes and tests whether opponents adapt.",
       usesMemory: true,
       benchmarkStarterId: "starter:mirror-breaker",
-      source: sourceFromStarter("starter:mirror-breaker", "recall hunter"),
+      source: makeAdvancedSource("starter:mirror-breaker", {
+        banner: "recall hunter",
+        doctrine: "recall-hunter",
+        contactBias: 4,
+        centerBias: 1,
+        wallBias: 1,
+        mobilityBias: 2,
+        trapBias: 1,
+        memoryBias: 6,
+        lateBias: 1,
+      }),
     },
   ] as const
 

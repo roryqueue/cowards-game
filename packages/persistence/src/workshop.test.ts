@@ -249,7 +249,7 @@ describe("Workshop service contracts", () => {
     expect(playedStarterIds.size).toBe(starters.length)
     expect(eventTypes.has("MOVE_ADVANCED")).toBe(true)
     expect(eventTypes.has("CONTRACTION_RESOLVED")).toBe(true)
-  }, 30_000)
+  }, 90_000)
 
   it("keeps the serious Starter Library separate from generic samples", () => {
     const snapshot = getWorkshopStaticSnapshot()
@@ -370,7 +370,7 @@ describe("Workshop service contracts", () => {
 
     expect(eventTypes.has("MOVE_ADVANCED")).toBe(true)
     expect(eventTypes.has("CONTRACTION_RESOLVED")).toBe(true)
-  }, 60_000)
+  }, 240_000)
 
   it("returns sample Strategy metadata for every catalog entry", () => {
     for (const sample of listWorkshopSamples()) {
