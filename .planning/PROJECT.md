@@ -2,10 +2,10 @@
 
 ## Current State
 
-**Shipped version:** v1.4 Cycle-Interleaved Rules Correction on 2026-05-20
-**Current milestone:** v1.5 Strategy Workshop Power Tools and Advanced Strategy Library
-**Status:** v1.5 requirements and roadmap defined; ready to plan Phase 30.
-**Last audit:** v1.4 audit-fix passed, 33/33 requirements satisfied.
+**Shipped version:** v1.5 Strategy Workshop Power Tools and Advanced Strategy Library on 2026-05-21
+**Current milestone:** None active; ready to define v1.6.
+**Status:** v1.5 shipped and archived; fresh requirements should be created with `$gsd-new-milestone`.
+**Last audit:** v1.5 milestone audit passed, 53/53 requirements satisfied.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible starter Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, and trust that public outputs do not expose private Strategy data.
 
@@ -13,30 +13,27 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Latest Shipped Milestone: v1.4 Cycle-Interleaved Rules Correction
+## Latest Shipped Milestone: v1.5 Strategy Workshop Power Tools and Advanced Strategy Library
 
-**Goal:** Correct the core gameplay contract so selected Soldiers swap turns between Cycles rather than resolving whole Activations at once, with Backstab checked at the start and end of every Cycle, then rebaseline engine, replay, docs, starter Strategies, and demo competition data around the corrected rule.
+**Goal:** Improve the Strategy Workshop into a stronger authoring and testing lab, then use it plus v1.4 evidence to create and validate a diverse Advanced Strategy Library, example MatchSets, and a completed realistic tournament.
 
-**Target features:**
-- New upstream rules source-of-truth version that explicitly defines Cycle-interleaved Activation scheduling and Cycle-boundary Backstab.
-- Engine scheduler rewrite that runs selected Soldier slots one Cycle layer at a time, skipping ended Activations.
-- Chronicle, replay grammar, reconstruction, fixtures, and visual/debug assumptions updated for interleaved Cycle ordering.
-- Starter Strategies, templates, fixtures, and preconfigured Strategy inputs tuned for the new tactical timing.
-- Demo ladder and sample MatchSets regenerated and validated under the corrected rules.
+**Delivered:**
+- Advanced Strategy Library with 10 validated v1.5 seeds across pressure, anti-backstab, wall control, center control, contraction survival, evasive mobility, trap/control, mirror/adaptive play, late-cycle stabilization, and memory response.
+- Workshop Advanced Library entry point, apply/fork flows, comparison support, gauntlet/result framing, diagnostics, replay handoff, and performance summaries.
+- Public-safe `advancedLineage` metadata across immutable revisions, Strategy cards, player/profile pages, and Workshop surfaces.
+- Deterministic local evidence from five example MatchSets and one completed 8-entrant Advanced-only demo tournament at `/ladder/v1-5-demo`.
+- Replay-reviewed second-take Strategy retune with shared tactical fundamentals: leave starting edge early, seek Backstab opportunities, avoid contraction-edge risk, avoid direct self-stoning, and avoid off-board/wall/stone/terrain/immediate-reversal moves.
+- Browser-verified public pages and representative replays with no default exposure of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid details, or private runtime internals.
 
-## Current Milestone: v1.5 Strategy Workshop Power Tools and Advanced Strategy Library
+## Next Milestone Goals
 
-**Goal:** Improve the Strategy Workshop into a stronger authoring and testing lab, then use it plus v1.4 evidence to create and validate a diverse advanced Strategy library, example MatchSets, and a completed realistic tournament.
+The next milestone should start with `$gsd-new-milestone` and fresh requirements. Strong candidate directions are:
 
-**Target features:**
-- Workshop gauntlet/test matrix for selected Strategy Revisions against starter and seed Strategies.
-- Strategy comparison with metadata, source diff, validation state, lineage, and deterministic result deltas.
-- Better validation/runtime diagnostics with failure category, Soldier/Activation context where available, and replay handoff links.
-- Clear performance summaries from deterministic Match and MatchSet results.
-- Distinct Advanced Strategy library tier targeting 10 Strategies, with 8-9 acceptable only when quality and diversity evidence is stronger.
-- Fresh deterministic evidence comparing advanced Strategies against v1.4 starters and against each other.
-- Representative example MatchSets and one completed 8+ entrant advanced-only tournament if the set is strong enough.
-- Browser verification for tournament pages, MatchSet result pages, Strategy cards, player/profile pages if applicable, and representative replays.
+- Richer Workshop analytics: saved gauntlet profiles, matchup heatmaps, evidence bands, and owner-only exportable summaries.
+- Replay analysis UX: better timeline search, event filters, threat/backstab overlays, contraction risk markers, and side-by-side replay comparison.
+- Public competition operations: official scheduled tournament formats, governance/moderation flows, and clearer public tournament pages without durable ratings yet.
+- Production runtime hardening: promote containerized subprocess isolation toward a production-grade hostile-code boundary.
+- Strategy authoring ergonomics: snippets, lint rules, local tactical helpers, and stronger diagnostics for common no-advance/trapped-Soldier mistakes.
 
 ## Validated in v1.4
 
@@ -46,6 +43,16 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - ✓ Replay viewer playback now offers seven speed options up to 32x and defaults to 2x the original playback pace for denser v1.4 Cycle timelines.
 - ✓ Starter Strategy Library keeps stable IDs while publishing v1.4 lineage, refreshed source hashes, and a real interleaved starter gauntlet.
 - ✓ Completed local demo ladder at `/ladder/v1-4-demo` with 8 v1.4 starter entrants, 96 replay-backed Chronicles, counted MatchSets, and browser-verified public pages.
+
+## Validated in v1.5
+
+- ✓ Workshop Advanced Library entry point, apply/fork flows, revision comparison support, gauntlet/result framing, diagnostics, replay handoff, and performance summaries.
+- ✓ Distinct 10-strategy Advanced Library with v1.5 lineage, public-safe archetype metadata, memory/stateless diversity, source hashes, and validation.
+- ✓ Deterministic evidence model and report artifacts covering standings, W-L-D, counted status, rule/Chronicle versions, runtime adapter, behavior metrics, representative links, and non-durable framing.
+- ✓ Five example MatchSets covering anti-backstab stress, wall control under pressure, center control vs mobility, trap breakpoint, and memory adaptation mirror.
+- ✓ Completed 8-entrant Advanced-only local demo tournament at `/ladder/v1-5-demo`, with Center Gravity finishing 6-1-0 and no sweep.
+- ✓ Second-take Advanced Strategy retune validated across 33 Chronicles: 7103 Moves, 412 Backstab resolutions, 0 blocked moves, 0 direct self-stoning, and 0 self off-board moves.
+- ✓ Browser checks for Workshop, tournament, MatchSet, Strategy card, player/profile, and replay pages with public privacy boundaries intact.
 
 ## Validated in v1.0
 
@@ -117,6 +124,11 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.4-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.4-AUDIT-FIX.md`
 - `.planning/milestones/v1.4-phases/`
+- `.planning/milestones/v1.5-ROADMAP.md`
+- `.planning/milestones/v1.5-REQUIREMENTS.md`
+- `.planning/milestones/v1.5-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.5-AUDIT-FIX.md`
+- `.planning/milestones/v1.5-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -150,12 +162,14 @@ Planning archives live under `.planning/milestones/`:
 | Treat containerized subprocess as the production-candidate runtime path | It preserves the JS/TS Strategy API while adding a clearer process and container boundary than worker threads. | ✓ Revisit before real hostile public scale |
 | Interleave selected Soldiers by Cycle, not full Activation | The intended game is simultaneous-feeling tactical pressure where selected Soldiers respond between Cycles instead of one Soldier consuming its whole Cycle budget before the next slot acts. | ✓ Implemented in v1.4 |
 | Check Backstab at every Cycle boundary | Backstab should be a tactical contact rule checked before and after each SoldierBrain Cycle, not only at Activation boundaries. | ✓ Implemented in v1.4 |
+| Treat advanced seed quality as product evidence | Advanced Strategies should have shared tactical fundamentals and replay-backed archetype roles, not merely stronger source comments around Starters. | ✓ Implemented in v1.5 |
+| Keep demo tournaments non-durable | v1.5 tournament evidence is useful for validation and onboarding, but does not create official public operations or permanent rankings. | ✓ Good |
 
 ## Constraints
 
 The active constraints remain: deterministic engine behavior, engine purity, Strategy Revision immutability, hostile Strategy treatment, runtime isolation, memory/source/output limits, package boundaries, replay privacy, Chronicle compatibility, and competitive integrity.
 
-Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, and private runtime internals by default. v1.5 may create local example MatchSets and a completed example tournament for demonstration, but does not establish official public tournament operations or durable ratings.
+Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, and private runtime internals by default. v1.5 created local example MatchSets and a completed example tournament for demonstration, but did not establish official public tournament operations or durable ratings.
 
 Future rule-correction work must treat the rules docs, engine, Chronicle/replay grammar, fixtures, starter Strategies, and demo competition data as one contract. It should not leave stale timing assumptions in samples, tests, or public explanatory text.
 
@@ -170,4 +184,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-20 after v1.5 requirements and roadmap definition*
+*Last updated: 2026-05-21 after v1.5 milestone completion*

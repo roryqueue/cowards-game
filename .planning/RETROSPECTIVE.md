@@ -223,11 +223,57 @@
 - Sessions: one extended milestone thread with discussion, implementation, demo generation, audit-fix, replay polish, and archive pass.
 - Notable: live replay inspection quickly exposed ergonomic needs that automated correctness tests could not judge.
 
+## Milestone: v1.5 — Strategy Workshop Power Tools and Advanced Strategy Library
+
+**Shipped:** 2026-05-21
+**Phases:** 8 | **Plans:** 8
+
+### What Was Built
+
+- Workshop Advanced Library entry point, apply/fork flows, revision comparison, gauntlet/result framing, diagnostics, replay handoff, and performance summaries.
+- A distinct 10-strategy Advanced Library with v1.5 lineage, public-safe archetype metadata, memory/stateless diversity, source hashes, and validation.
+- Deterministic local evidence model and report artifacts for standings, W-L-D, counted status, rule/Chronicle versions, behavior metrics, representative links, and non-durable framing.
+- Five replay-backed example MatchSets and one completed 8-entrant Advanced-only demo tournament.
+- Replay-reviewed second-take Strategy retune that added shared tactical fundamentals before archetype-specific bias.
+- Formal v1.5 audit, UAT, verification, and archive artifacts.
+
+### What Worked
+
+- Reusing MatchSet, worker, Chronicle, scoring, and replay infrastructure kept the evidence path deterministic and privacy-safe.
+- The second-take review produced more credible Strategies than annotated Starter wrappers.
+- Evidence metrics made the retune concrete: final reports showed movement, Backstab, contraction, no blocked moves, no direct self-stoning, and no self off-board moves.
+- Browser checks on tournament, MatchSet, Strategy card, profile, and replay pages caught local-server/runtime behavior that static docs would not reveal.
+
+### What Was Inefficient
+
+- v1.5 was implemented as one autonomous cross-phase sweep, so phase `SUMMARY.md` and `VERIFICATION.md` files needed retroactive reconciliation for formal audit compatibility.
+- The installed `gsd-sdk` still lacked documented `query` commands, so audit and completion had to be performed through direct file inspection.
+- In-process deterministic gauntlet tests are long-running and may need lighter fixtures or split coverage later.
+
+### Patterns Established
+
+- Advanced seed libraries should be validated as product evidence, not just code samples.
+- Demo tournaments are useful local proof, but their copy and archive must keep non-durable framing explicit.
+- Strategy tuning should record source-hash changes, replay evidence, and behavior metrics together.
+- Public Strategy/player/evidence pages can show useful doctrine and provenance while preserving replay privacy boundaries.
+
+### Key Lessons
+
+- Strategy libraries benefit from shared tactical fundamentals before archetype specialization.
+- Non-degenerate evidence needs both standings review and replay/metric review.
+- Keep phase summaries and requirement statuses synchronized during execution, especially for autonomous multi-phase work.
+
+### Cost Observations
+
+- Model mix: not recorded.
+- Sessions: one extended milestone thread plus follow-up retune, documentation, and archive pass.
+- Notable: user-guided replay/tournament inspection was the highest-signal input for Strategy quality.
+
 ## Cross-Milestone Trends
 
 | Trend | Observation |
 | --- | --- |
-| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, v1.2 showed local browser UAT catches route/scoring issues after build success, v1.3 showed live replay realism checks catch product-quality strategy issues after correctness passes, and v1.4 showed generated tournament evidence is essential after scheduler changes. |
+| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, v1.2 showed local browser UAT catches route/scoring issues after build success, v1.3 showed live replay realism checks catch product-quality strategy issues after correctness passes, v1.4 showed generated tournament evidence is essential after scheduler changes, and v1.5 showed Strategy library quality needs replay/metric review beyond validation. |
 | Metadata hygiene | Summary, validation, UAT, and audit artifacts should be maintained during execution, not repaired at close. |
 | UI polish | Narrow viewport/browser review caught issues after automated checks; responsive screenshots, local page checks, and playback ergonomics should move earlier in UI phases. |
 | Package boundaries | Keeping runtime execution out of web/API and importing narrow server modules prevents trust and bundling regressions. |

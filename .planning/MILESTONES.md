@@ -1,5 +1,36 @@
 # Milestones
 
+## v1.5 Strategy Workshop Power Tools and Advanced Strategy Library
+
+**Status:** Shipped 2026-05-21
+**Phases:** 8
+**Plans:** 8
+**Requirements:** 53/53 satisfied
+**Audit:** .planning/milestones/v1.5-MILESTONE-AUDIT.md
+
+### Delivered
+
+- Added Strategy Workshop power-tool surfaces: Advanced Library browsing/apply/fork flows, revision comparison, gauntlet/result framing, diagnostics, replay handoff, and performance summaries.
+- Created a distinct 10-strategy v1.5 Advanced Strategy Library with public-safe lineage, archetype metadata, memory/stateless diversity, validation, and unique source hashes.
+- Generated deterministic local evidence with five example MatchSets and one completed 8-entrant Advanced-only demo tournament.
+- Tuned the Advanced set after replay/browser review so the final tournament was non-degenerate and the strategies shared basic tactical fundamentals.
+- Browser-verified Workshop, tournament, MatchSet, Strategy card, player/profile, and replay pages without public private-data leaks.
+- Produced formal audit, UAT, verification, local report, and regeneration docs for the v1.5 demo evidence.
+
+### Archives
+
+- .planning/milestones/v1.5-ROADMAP.md
+- .planning/milestones/v1.5-REQUIREMENTS.md
+- .planning/milestones/v1.5-MILESTONE-AUDIT.md
+- .planning/milestones/v1.5-AUDIT-FIX.md
+- .planning/milestones/v1.5-phases/
+
+### Known Deferred Items
+
+- Named saved gauntlet profiles and owner-only gauntlet JSON export remain future Workshop work.
+- Rich matchup heatmaps, evidence bands, and replay deep links remain future analytics work.
+- Durable ratings, official public tournament operations, production-grade hostile-code sandboxing, custom arenas, and non-JS runtimes remain future milestone work.
+
 ## v1.0 MVP
 
 **Status:** Shipped 2026-05-17
