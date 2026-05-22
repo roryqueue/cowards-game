@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-05-22T00:00:00.000Z"
 last_activity: 2026-05-22 — Milestone v1.7 started
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -23,17 +23,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Defining v1.7 requirements for runtime and backend boundary stabilization
+**Current focus:** Phase 45 Service Boundary Contract context discussion
 **Current milestone:** v1.7 Runtime and Backend Boundary Stabilization
-**Requirements:** not yet defined; `.planning/REQUIREMENTS.md` will be created for v1.7
+**Requirements:** 32/32 mapped in .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 45 - Service Boundary Contract
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-22 — Milestone v1.7 started
+Status: Ready for phase context discussion
+Last activity: 2026-05-22 — v1.7 requirements and roadmap created
 
 ## Workflow Settings
 
@@ -101,7 +101,7 @@ Items acknowledged and deferred after v1.6 milestone completion on 2026-05-22:
 
 ## Next Command
 
-Continue `$gsd-new-milestone` to define v1.7 requirements and roadmap.
+Run `$gsd-discuss-phase 45` to clarify Service Boundary Contract decisions.
 
 ---
-*Last updated: 2026-05-22 after starting v1.7 milestone*
+*Last updated: 2026-05-22 after v1.7 roadmap creation*
