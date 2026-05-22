@@ -7,7 +7,10 @@ import type {
   StrategyRevisionId,
   UserId,
 } from "./types.js"
-import type { PublicMatchSetResultDto } from "./competition.js"
+import type {
+  PublicMatchSetResultDto,
+  PublicStrategyCardDto,
+} from "./competition.js"
 import type { StrategyRuntimeMetadata } from "./runtime.js"
 import {
   AuthSessionServiceDtoSchema,
@@ -698,6 +701,14 @@ export interface PublicPageServiceDto {
   page: "player" | "strategy" | "matchSet" | "replay" | "ladder"
   canonicalHref: string
   payload: JsonValue
+}
+
+export interface PublicStrategyPageServiceDto
+  extends Omit<PublicPageServiceDto, "page" | "payload"> {
+  page: "strategy"
+  payload: {
+    strategy: PublicStrategyCardDto
+  }
 }
 
 export const assertPublicServiceDtoLeakSafe = (value: unknown): void => {

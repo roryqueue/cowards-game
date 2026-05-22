@@ -106,7 +106,7 @@ const storedChronicle = {
     events: [{}, {}],
     snapshots: [{}],
   },
-} as StoredChronicle
+} as unknown as StoredChronicle
 
 describe("createCowardsLocalService", () => {
   it("returns stable health metadata", () => {

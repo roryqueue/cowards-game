@@ -5,15 +5,20 @@ import type {
   StoredChronicle,
 } from "@cowards/persistence/chronicle-store"
 import { buildPublicMatchSetResultDto } from "@cowards/persistence/competition"
+import { buildPublicStrategyCardDto } from "@cowards/persistence/profiles"
 import {
   assertPublicServiceDtoLeakSafe,
   SERVICE_API_VERSION,
+  PublicReplayMetadataServiceDtoSchema,
+  PublicStrategyPageServiceDtoSchema,
   type MatchId,
   type MatchSetId,
   type PublicMatchSetSummaryServiceDto,
   type PublicReplayMetadataServiceDto,
+  type PublicStrategyPageServiceDto,
   type ServiceErrorDto,
   type ServiceHealthDto,
+  type StrategyId,
 } from "@cowards/spec"
 
 export type ServicePool = Pool
@@ -37,12 +42,16 @@ export interface CowardsService {
   getPublicReplayMetadata(
     matchId: MatchId,
   ): Promise<PublicReplayMetadataServiceDto | null>
+  getPublicStrategyPage(
+    strategyId: StrategyId,
+  ): Promise<PublicStrategyPageServiceDto | null>
 }
 
 export interface CreateCowardsLocalServiceOptions {
   withPool: WithPool
   createChronicleStore?: ((pool: ServicePool) => ChronicleStore) | undefined
   buildPublicMatchSetResult?: typeof buildPublicMatchSetResultDto | undefined
+  buildPublicStrategyCard?: typeof buildPublicStrategyCardDto | undefined
 }
 
 const healthDto: ServiceHealthDto = {
@@ -77,6 +86,8 @@ export const createCowardsLocalService = (
     options.createChronicleStore ?? createPostgresChronicleStore
   const buildPublicMatchSetResult =
     options.buildPublicMatchSetResult ?? buildPublicMatchSetResultDto
+  const buildPublicStrategyCard =
+    options.buildPublicStrategyCard ?? buildPublicStrategyCardDto
 
   return {
     health: () => healthDto,
@@ -106,7 +117,29 @@ export const createCowardsLocalService = (
         }
         const dto = toReplayMetadataDto(stored)
         assertPublicServiceDtoLeakSafe(dto)
-        return dto
+        return PublicReplayMetadataServiceDtoSchema.parse(dto)
+      })
+    },
+
+    async getPublicStrategyPage(strategyId) {
+      return options.withPool(async (pool) => {
+        const card = await buildPublicStrategyCard(pool, strategyId)
+        if (!card) {
+          return null
+        }
+        const dto: PublicStrategyPageServiceDto = {
+          apiVersion: SERVICE_API_VERSION,
+          kind: "publicPage",
+          page: "strategy",
+          canonicalHref: `/strategies/${encodeURIComponent(strategyId)}`,
+          payload: {
+            strategy: card,
+          },
+        }
+        assertPublicServiceDtoLeakSafe(dto)
+        return PublicStrategyPageServiceDtoSchema.parse(
+          dto,
+        ) as PublicStrategyPageServiceDto
       })
     },
   }
