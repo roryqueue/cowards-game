@@ -4,7 +4,7 @@ milestone: v1.6
 milestone_name: Workshop Analytics and Evidence Explorer
 status: planning
 last_updated: "2026-05-22T00:00:00.000Z"
-last_activity: 2026-05-22 — Phase 39 context gathered
+last_activity: 2026-05-22 — Phase 40 context gathered
 progress:
   total_phases: 7
   completed_phases: 0
@@ -23,17 +23,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-21)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Ready to plan Phase 39 or discuss Phase 40
+**Current focus:** Ready to plan Phase 40 or discuss Phase 41
 **Current milestone:** v1.6 Workshop Analytics and Evidence Explorer
 **Requirements:** .planning/REQUIREMENTS.md (54/54 mapped)
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 39 — Saved Gauntlet Profiles
+Phase: 40 — Matchup Heatmaps
 Plan: —
-Status: Phase 39 context gathered
-Last activity: 2026-05-22 — Phase 39 context captured in `.planning/phases/39-saved-gauntlet-profiles/39-CONTEXT.md`
+Status: Phase 40 context gathered
+Last activity: 2026-05-22 — Phase 40 context captured in `.planning/phases/40-matchup-heatmaps/40-CONTEXT.md`
 
 ## Workflow Settings
 
@@ -90,7 +90,7 @@ Items acknowledged and deferred after v1.5 milestone completion on 2026-05-21:
 
 ## Next Command
 
-Run `$gsd-plan-phase 39` to plan Saved Gauntlet Profiles, or continue sequential discussion with `$gsd-discuss-phase 40`.
+Run `$gsd-plan-phase 40` to plan Matchup Heatmaps, or continue sequential discussion with `$gsd-discuss-phase 41`.
 
 ---
-*Last updated: 2026-05-22 after Phase 39 context gathering*
+*Last updated: 2026-05-22 after Phase 40 context gathering*
