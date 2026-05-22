@@ -9,6 +9,7 @@ import type {
 } from "./types.js"
 import type {
   PublicMatchSetResultDto,
+  PublicPlayerProfileDto,
   PublicStrategyCardDto,
 } from "./competition.js"
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
@@ -768,6 +769,14 @@ export interface PublicPageServiceDto {
   page: "player" | "strategy" | "matchSet" | "replay" | "ladder"
   canonicalHref: string
   payload: JsonValue
+}
+
+export interface PublicPlayerPageServiceDto extends Omit<
+  PublicPageServiceDto,
+  "page" | "payload"
+> {
+  page: "player"
+  payload: PublicPlayerProfileDto
 }
 
 export interface PublicStrategyPageServiceDto extends Omit<

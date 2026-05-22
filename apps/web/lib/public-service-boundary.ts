@@ -2,6 +2,7 @@ import type {
   MatchId,
   MatchSetId,
   PublicMatchSetResultDto,
+  PublicPlayerProfileDto,
   PublicReplayMetadataServiceDto,
   PublicStrategyCardDto,
   StrategyId,
@@ -110,4 +111,11 @@ export const getPublicStrategyCard = async (
     decodePathId(strategyId),
   )
   return page ? page.payload.strategy : null
+}
+
+export const getPublicPlayerProfile = async (
+  handle: string,
+): Promise<PublicPlayerProfileDto | null> => {
+  const page = await publicReadService.getPublicPlayerPage(decodePathId(handle))
+  return page ? page.payload : null
 }

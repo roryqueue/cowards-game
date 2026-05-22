@@ -27,7 +27,7 @@ v1.9 makes one production ownership move: service-backed web read/user surfaces 
 ## Phases
 
 - [x] **Phase 57: Ownership Matrix and Baseline Evidence** - Developers can see the v1.9 ownership split, non-goals, and starting boundary evidence before migration begins.
-- [ ] **Phase 58: Public Player Profile Service Read** - Users can view public player profiles through `@cowards/service` with unchanged behavior, privacy, and stricter imports.
+- [x] **Phase 58: Public Player Profile Service Read** - Users can view public player profiles through `@cowards/service` with unchanged behavior, privacy, and stricter imports.
 - [ ] **Phase 59: Owner Account Read Service Slice** - Signed-in users can load account session and revision-list reads through service-owned DTOs without moving mutations or source retrieval.
 - [ ] **Phase 60: Public Ladder Service Read Follow-Up** - Users can view the selected public ladder season through `@cowards/service` while Go writes and Go route expansion stay out of scope.
 - [ ] **Phase 61: Runtime Isolation Readiness Guardrails** - Developers can inspect production runtime-isolation readiness criteria and verify no candidate is promoted by default.
@@ -59,7 +59,9 @@ Plans:
   3. Developer can verify public player profile DTOs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, and private runtime internals by default.
   4. Developer can verify the migrated public player profile page and its dependency closure are covered by strict import enforcement against persistence roots, migrations, workers, runtime adapters, and Strategy execution modules.
   5. Developer can verify the broad web import-boundary baseline decreases after migration instead of masking migrated direct-import fingerprints.
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [x] 58-01-PLAN.md — Move public player profile reads through `@cowards/service` and widen strict import enforcement.
 **UI hint**: yes
 
 ### Phase 59: Owner Account Read Service Slice
@@ -127,7 +129,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 57. Ownership Matrix and Baseline Evidence | 1/1 | Complete | 2026-05-22 |
-| 58. Public Player Profile Service Read | 0/TBD | Not started | - |
+| 58. Public Player Profile Service Read | 1/1 | Complete | 2026-05-22 |
 | 59. Owner Account Read Service Slice | 0/TBD | Not started | - |
 | 60. Public Ladder Service Read Follow-Up | 0/TBD | Not started | - |
 | 61. Runtime Isolation Readiness Guardrails | 0/TBD | Not started | - |
@@ -147,17 +149,17 @@ Plans:
 | VER-01 through VER-03 | Phase 63 | 3 |
 
 **Coverage:** 28/28 v1.9 requirements mapped.
-**Completed:** 4/28 v1.9 requirements.
+**Completed:** 9/28 v1.9 requirements.
 **Unmapped requirements:** 0.
 **Branch note:** The approved v1.9 direction selects the public ladder service read branch. Future Go read-model expansion is tracked in BACKX-03 and BACKX-04, outside the active 28-requirement roadmap.
 
 ## Next Up
 
-**Phase 58: Public Player Profile Service Read**
+**Phase 59: Owner Account Read Service Slice**
 
 Recommended next command:
 
-`$gsd-discuss-phase 58`
+`$gsd-discuss-phase 59`
 
 ---
-*Last updated: 2026-05-22 after Phase 57 completion*
+*Last updated: 2026-05-22 after Phase 58 completion*

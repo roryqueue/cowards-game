@@ -1,4 +1,4 @@
-import { competitiveServer } from "../../competitive/server.js"
+import { getPublicPlayerProfile } from "../../../lib/public-service-boundary.js"
 
 export const dynamic = "force-dynamic"
 
@@ -8,9 +8,7 @@ export default async function PlayerProfilePage({
   params: Promise<{ handle: string }> | { handle: string }
 }) {
   const { handle } = await params
-  const profile = await competitiveServer.getPublicPlayerProfile(
-    decodeURIComponent(handle),
-  )
+  const profile = await getPublicPlayerProfile(decodeURIComponent(handle))
   if (!profile) {
     return (
       <main className="app-page">

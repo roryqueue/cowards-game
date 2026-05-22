@@ -5,8 +5,8 @@
 **Status:** In progress 2026-05-22
 **Phases:** 7
 **Phase range:** 57-63
-**Plans:** 1/1 complete so far
-**Requirements:** 4/28 complete; 28/28 mapped
+**Plans:** 2/2 complete so far
+**Requirements:** 9/28 complete; 28/28 mapped
 **Audit:** TBD
 
 ### Goal
@@ -26,7 +26,7 @@ Use the v1.8 service contracts, Go parity fixtures, runtime semantics, local top
 | Phase | Name |
 | --- | --- |
 | 57 | Ownership Matrix and Baseline Evidence — Complete |
-| 58 | Public Player Profile Service Read |
+| 58 | Public Player Profile Service Read — Complete |
 | 59 | Owner Account Read Service Slice |
 | 60 | Public Ladder Service Read Follow-Up |
 | 61 | Runtime Isolation Readiness Guardrails |

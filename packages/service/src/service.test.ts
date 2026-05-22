@@ -4,6 +4,7 @@ import {
   SERVICE_API_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION,
   type PublicMatchSetResultDto,
+  type PublicPlayerProfileDto,
   type PublicStrategyCardDto,
 } from "@cowards/spec"
 import type { StoredChronicle } from "@cowards/persistence/chronicle-store"
@@ -72,6 +73,22 @@ const publicStrategyCard = {
   resultLinks: ["/matchsets/match-set:demo"],
   replayLinks: ["/matches/match:demo/replay"],
 } satisfies PublicStrategyCardDto
+
+const publicPlayerProfile = {
+  handle: "demo-player",
+  displayName: "Demo Player",
+  strategies: [publicStrategyCard],
+  ladderHistory: [
+    {
+      seasonId: "ladder-season:demo",
+      seasonName: "Demo Ladder",
+      entryStatus: "active",
+      points: 9,
+      rank: 1,
+    },
+  ],
+  results: [],
+} satisfies PublicPlayerProfileDto
 
 const storedChronicle = {
   metadata: {
@@ -192,6 +209,52 @@ describe("createCowardsLocalService", () => {
     await expect(
       service.getPublicStrategyPage("strategy:missing"),
     ).resolves.toBe(null)
+  })
+
+  it("wraps public player profiles in a public page service envelope", async () => {
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      buildPublicPlayerProfile: async (_pool, _handle) => publicPlayerProfile,
+    })
+
+    await expect(service.getPublicPlayerPage("demo-player")).resolves.toEqual({
+      apiVersion: SERVICE_API_VERSION,
+      kind: "publicPage",
+      page: "player",
+      canonicalHref: "/players/demo-player",
+      payload: publicPlayerProfile,
+    })
+  })
+
+  it("returns null for missing public player profiles", async () => {
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      buildPublicPlayerProfile: async () => null,
+    })
+
+    await expect(service.getPublicPlayerPage("missing-player")).resolves.toBe(
+      null,
+    )
+  })
+
+  it("rejects public player profile DTOs with private fields", async () => {
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      buildPublicPlayerProfile: async () =>
+        ({
+          ...publicPlayerProfile,
+          strategies: [
+            {
+              ...publicStrategyCard,
+              strategyMemory: { hidden: true },
+            },
+          ],
+        }) as unknown as PublicPlayerProfileDto,
+    })
+
+    await expect(service.getPublicPlayerPage("demo-player")).rejects.toThrow(
+      "Public service DTO leaks private field",
+    )
   })
 
   it("rejects public Strategy page DTOs with private fields", async () => {

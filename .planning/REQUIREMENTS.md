@@ -16,11 +16,11 @@ Requirements for making one deliberate ownership move: migrate more web read/use
 
 ### Public Player Profile Service Migration
 
-- [ ] **SVC-01**: User can view the public player profile page with the same found, not-found, Strategy card, ladder history, and privacy behavior after the page reads through `@cowards/service`.
-- [ ] **SVC-02**: Developer can call a canonical `@cowards/service` public player profile read that validates input and output with `@cowards/spec` schemas before returning data.
-- [ ] **SVC-03**: Developer can verify public player profile DTOs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, and private runtime internals by default.
-- [ ] **SVC-04**: Developer can verify the migrated public player profile page and its chosen dependency closure are covered by strict import enforcement against persistence roots, migrations, workers, runtime adapters, and Strategy execution modules.
-- [ ] **SVC-05**: Developer can verify the broad web import-boundary baseline decreases after the player profile migration instead of masking migrated direct-import fingerprints.
+- [x] **SVC-01**: User can view the public player profile page with the same found, not-found, Strategy card, ladder history, and privacy behavior after the page reads through `@cowards/service`.
+- [x] **SVC-02**: Developer can call a canonical `@cowards/service` public player profile read that validates input and output with `@cowards/spec` schemas before returning data.
+- [x] **SVC-03**: Developer can verify public player profile DTOs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, and private runtime internals by default.
+- [x] **SVC-04**: Developer can verify the migrated public player profile page and its chosen dependency closure are covered by strict import enforcement against persistence roots, migrations, workers, runtime adapters, and Strategy execution modules.
+- [x] **SVC-05**: Developer can verify the broad web import-boundary baseline decreases after the player profile migration instead of masking migrated direct-import fingerprints.
 
 ### Owner Account Read Migration
 
@@ -105,11 +105,11 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 | OWN-02 | Phase 57 | Complete |
 | OWN-03 | Phase 57 | Complete |
 | OWN-04 | Phase 57 | Complete |
-| SVC-01 | Phase 58 | Pending |
-| SVC-02 | Phase 58 | Pending |
-| SVC-03 | Phase 58 | Pending |
-| SVC-04 | Phase 58 | Pending |
-| SVC-05 | Phase 58 | Pending |
+| SVC-01 | Phase 58 | Complete |
+| SVC-02 | Phase 58 | Complete |
+| SVC-03 | Phase 58 | Complete |
+| SVC-04 | Phase 58 | Complete |
+| SVC-05 | Phase 58 | Complete |
 | ACCT-01 | Phase 59 | Pending |
 | ACCT-02 | Phase 59 | Pending |
 | ACCT-03 | Phase 59 | Pending |
@@ -139,4 +139,4 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after Phase 57 completion*
+*Last updated: 2026-05-22 after Phase 58 completion*

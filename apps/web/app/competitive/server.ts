@@ -40,7 +40,6 @@ import {
   GovernanceInputError,
   markMatchSetGovernanceStatus,
 } from "@cowards/persistence/governance"
-import { buildPublicPlayerProfileDto } from "@cowards/persistence/profiles"
 import { findAdvancedStrategy } from "@cowards/persistence/advanced-strategies"
 import { findStarterStrategy } from "@cowards/persistence/starter-strategies"
 import {
@@ -50,7 +49,6 @@ import {
   type MatchId,
   type MatchSetId,
   type PublicMatchSetResultDto,
-  type PublicPlayerProfileDto,
   type PublicStrategyCardDto,
   type PublicTrialLadderSeasonDto,
   type StrategyRevisionId,
@@ -110,7 +108,6 @@ export interface MatchSetResultDto extends Omit<
 }
 
 export type TrialLadderSeasonDto = PublicTrialLadderSeasonDto
-export type PlayerProfileDto = PublicPlayerProfileDto
 export type StrategyCardDto = PublicStrategyCardDto
 
 type PersistencePool = Parameters<typeof createAccount>[0]
@@ -632,18 +629,6 @@ export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
             ...input,
             adminUserId: user.id,
           }),
-        )
-      } catch (error) {
-        return mapPersistenceError(error)
-      }
-    },
-
-    async getPublicPlayerProfile(
-      handle: string,
-    ): Promise<PlayerProfileDto | null> {
-      try {
-        return await withPool((pool) =>
-          buildPublicPlayerProfileDto(pool, handle),
         )
       } catch (error) {
         return mapPersistenceError(error)

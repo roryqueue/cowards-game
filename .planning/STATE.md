@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Backend and Runtime Ownership Split
 status: in_progress
-stopped_at: Phase 57 complete; Phase 58 ready for discussion/planning
-last_updated: "2026-05-22T23:18:00.000Z"
+stopped_at: Phase 58 complete; Phase 59 ready for discussion/planning
+last_updated: "2026-05-22T23:23:00.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 7
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 14
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
+  percent: 29
 ---
 
 # State: Coward's Game
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** v1.9 Backend and Runtime Ownership Split
 **Latest shipped milestone:** v1.8 Production Boundary Hardening
-**Requirements:** 4/28 active v1.9 requirements complete; 28/28 mapped; v1.8 requirements archived in .planning/milestones/v1.8-REQUIREMENTS.md
+**Requirements:** 9/28 active v1.9 requirements complete; 28/28 mapped; v1.8 requirements archived in .planning/milestones/v1.8-REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 58 of 63 (Public Player Profile Service Read)
+Phase: 59 of 63 (Owner Account Read Service Slice)
 Plan: —
-Status: Phase 57 complete; ready to discuss Phase 58
-Last activity: 2026-05-22 — Completed Phase 57 ownership matrix and baseline evidence
+Status: Phase 58 complete; ready to discuss Phase 59
+Last activity: 2026-05-22 — Completed Phase 58 public player profile service read migration
 
-Progress: [█---------] 14%
+Progress: [███-------] 29%
 
 ## Workflow Settings
 
@@ -94,13 +94,14 @@ Progress: [█---------] 14%
 - [Phase 56]: Broad web direct persistence/runtime debt is baseline-gated with normalized import fingerprints. — Known debt stays visible, but new forbidden imports fail even on existing lines.
 - [Phase 56]: Runtime adapter/product semantics and Go route manifests now drift-check against canonical spec metadata without executing Strategy code or expanding Go ownership. — Keeps monitors useful without moving the production boundary prematurely.
 - [v1.9 roadmap]: Selected service-backed web read/user surfaces as the production ownership move. — Public player profile, owner account reads, and public ladder service read are active; Go read-model expansion remains future follow-up.
-- [v1.9 roadmap]: Created Phases 57-63 with 28/28 active requirements mapped. — Conditional Go read-model requirements READ-03 and READ-04 are not active because the public ladder service read branch was selected.
+- [v1.9 roadmap]: Created Phases 57-63 with 28/28 active requirements mapped. — Future Go read-model requirements are tracked as BACKX items because the public ladder service read branch was selected.
 - [Phase 57]: Captured v1.9 ownership matrix and baseline boundary evidence. — `pnpm boundary:imports` passed with strict_offenses=0/report_only_offenses=41, and `pnpm boundary:monitors` passed.
+- [Phase 58]: Public player profile reads now flow through `@cowards/service` and the player page is strict import-gated. — Report-only broad web offenses dropped from 41 to 39.
 
 ### Next Todos
 
-- Run `$gsd-discuss-phase 58` to clarify the public player profile service-read migration.
-- Run `$gsd-plan-phase 58` after discussion to create the next executable v1.9 plan.
+- Run `$gsd-discuss-phase 59` to clarify owner account session and revision-list read migration.
+- Run `$gsd-plan-phase 59` after discussion to create the next executable v1.9 plan.
 - Keep Go writes, production runtime promotion, and counted non-JS play out of v1.9 unless the milestone is explicitly replanned.
 
 ### Blockers/Concerns
@@ -119,6 +120,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-22T23:18:00.000Z
-Stopped at: Phase 57 complete; Phase 58 ready for discussion/planning
+Last session: 2026-05-22T23:23:00.000Z
+Stopped at: Phase 58 complete; Phase 59 ready for discussion/planning
 Resume file: None

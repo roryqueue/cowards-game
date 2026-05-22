@@ -5,13 +5,17 @@ import type {
   StoredChronicle,
 } from "@cowards/persistence/chronicle-store"
 import { buildPublicMatchSetResultDto } from "@cowards/persistence/competition"
-import { buildPublicStrategyCardDto } from "@cowards/persistence/profiles"
+import {
+  buildPublicPlayerProfileDto,
+  buildPublicStrategyCardDto,
+} from "@cowards/persistence/profiles"
 import { getWorkshopAnalyticsSnapshot } from "@cowards/persistence/workshop-analytics"
 import {
   assertPublicServiceDtoLeakSafe,
   SERVICE_API_VERSION,
   AnalyticsRunSummaryServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
+  PublicPlayerPageServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
   assertAnalyticsPublicSummaryLeakSafe,
@@ -20,6 +24,7 @@ import {
   type AnalyticsRunSummaryServiceDto,
   type UserId,
   type PublicMatchSetSummaryServiceDto,
+  type PublicPlayerPageServiceDto,
   type PublicReplayMetadataServiceDto,
   type PublicStrategyPageServiceDto,
   type ServiceErrorDto,
@@ -51,6 +56,9 @@ export interface CowardsService {
   getPublicStrategyPage(
     strategyId: StrategyId,
   ): Promise<PublicStrategyPageServiceDto | null>
+  getPublicPlayerPage(
+    handle: string,
+  ): Promise<PublicPlayerPageServiceDto | null>
   getAnalyticsRunSummary(
     viewerUserId: UserId,
     runId: string,
@@ -62,6 +70,7 @@ export interface CreateCowardsLocalServiceOptions {
   createChronicleStore?: ((pool: ServicePool) => ChronicleStore) | undefined
   buildPublicMatchSetResult?: typeof buildPublicMatchSetResultDto | undefined
   buildPublicStrategyCard?: typeof buildPublicStrategyCardDto | undefined
+  buildPublicPlayerProfile?: typeof buildPublicPlayerProfileDto | undefined
   getAnalyticsSnapshot?: typeof getWorkshopAnalyticsSnapshot | undefined
 }
 
@@ -99,6 +108,8 @@ export const createCowardsLocalService = (
     options.buildPublicMatchSetResult ?? buildPublicMatchSetResultDto
   const buildPublicStrategyCard =
     options.buildPublicStrategyCard ?? buildPublicStrategyCardDto
+  const buildPublicPlayerProfile =
+    options.buildPublicPlayerProfile ?? buildPublicPlayerProfileDto
   const getAnalyticsSnapshot =
     options.getAnalyticsSnapshot ?? getWorkshopAnalyticsSnapshot
 
@@ -154,6 +165,26 @@ export const createCowardsLocalService = (
         return PublicStrategyPageServiceDtoSchema.parse(
           dto,
         ) as PublicStrategyPageServiceDto
+      })
+    },
+
+    async getPublicPlayerPage(handle) {
+      return options.withPool(async (pool) => {
+        const profile = await buildPublicPlayerProfile(pool, handle)
+        if (!profile) {
+          return null
+        }
+        const dto: PublicPlayerPageServiceDto = {
+          apiVersion: SERVICE_API_VERSION,
+          kind: "publicPage",
+          page: "player",
+          canonicalHref: `/players/${encodeURIComponent(handle)}`,
+          payload: profile,
+        }
+        assertPublicServiceDtoLeakSafe(dto)
+        return PublicPlayerPageServiceDtoSchema.parse(
+          dto,
+        ) as PublicPlayerPageServiceDto
       })
     },
 

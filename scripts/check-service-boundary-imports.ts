@@ -10,6 +10,7 @@ export const strictMigratedFiles = [
   "apps/web/app/matchsets/[matchSetId]/page.tsx",
   "apps/web/app/api/replays/[matchId]/metadata/route.ts",
   "apps/web/app/strategies/[strategyId]/page.tsx",
+  "apps/web/app/players/[handle]/page.tsx",
   "apps/web/lib/public-service-boundary.ts",
 ] as const
 
