@@ -44,7 +44,11 @@ v1.8 turns the v1.7 service, runtime, and backend contracts into harder operatin
   3. Public, owner-authorized, and internal DTO schemas remain separated so public contract output excludes private persistence and runtime records by default.
   4. A named low-risk set of Next route handlers or server loaders uses `@cowards/service` while preserving existing DTO behavior, ordering, compatibility fields, errors, and privacy redaction.
   5. Contract linting, stale-output checks, and import-boundary checks fail on schema drift or direct migrated-route imports of persistence, migrations, workers, runtime adapters, or Strategy execution modules.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 51-01-PLAN.md — Generate canonical v1.8 service contract metadata, schemas, fixtures, OpenAPI artifact, and lint/stale checks.
+- [ ] 51-02-PLAN.md — Migrate the named public read slice through `@cowards/service` while preserving public behavior and privacy.
+- [ ] 51-03-PLAN.md — Enforce strict named-slice import guards and report-only broad app boundary scanning.
 
 ### Phase 52: Go Read-Only Backend Parity Against Real Fixtures
 **Goal**: Developers can run the Go read-only service against real golden fixtures or safe local data and prove it matches the TypeScript service for its allowlisted read surface.
