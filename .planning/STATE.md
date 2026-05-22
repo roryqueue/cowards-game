@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Backend and Runtime Ownership Split
 status: in_progress
-stopped_at: Phase 59 complete; Phase 60 ready for discussion/planning
-last_updated: "2026-05-22T23:36:00.000Z"
+stopped_at: Phase 60 complete; Phase 61 ready for discussion/planning
+last_updated: "2026-05-22T23:45:00.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 7
-  completed_phases: 3
-  total_plans: 3
-  completed_plans: 3
-  percent: 43
+  completed_phases: 4
+  total_plans: 4
+  completed_plans: 4
+  percent: 57
 ---
 
 # State: Coward's Game
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** v1.9 Backend and Runtime Ownership Split
 **Latest shipped milestone:** v1.8 Production Boundary Hardening
-**Requirements:** 14/28 active v1.9 requirements complete; 28/28 mapped; v1.8 requirements archived in .planning/milestones/v1.8-REQUIREMENTS.md
+**Requirements:** 17/28 active v1.9 requirements complete; 28/28 mapped; v1.8 requirements archived in .planning/milestones/v1.8-REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 60 of 63 (Public Ladder Service Read Follow-Up)
+Phase: 61 of 63 (Runtime Isolation Readiness Guardrails)
 Plan: —
-Status: Phase 59 complete; ready to discuss Phase 60
-Last activity: 2026-05-22 — Completed Phase 59 owner account read service slice
+Status: Phase 60 complete; ready to discuss Phase 61
+Last activity: 2026-05-22 — Completed Phase 60 public ladder service read follow-up
 
-Progress: [████------] 43%
+Progress: [██████----] 57%
 
 ## Workflow Settings
 
@@ -98,11 +98,12 @@ Progress: [████------] 43%
 - [Phase 57]: Captured v1.9 ownership matrix and baseline boundary evidence. — `pnpm boundary:imports` passed with strict_offenses=0/report_only_offenses=41, and `pnpm boundary:monitors` passed.
 - [Phase 58]: Public player profile reads now flow through `@cowards/service` and the player page is strict import-gated. — Report-only broad web offenses dropped from 41 to 39.
 - [Phase 59]: Account session snapshot and account Strategy Revision list reads now flow through `@cowards/service`. — Session-derived owner reads omit Strategy source and report-only broad web offenses dropped from 39 to 35.
+- [Phase 60]: Public ladder season page reads now flow through `@cowards/service` and the ladder page is strict import-gated. — The public OpenAPI artifact now includes `/public/ladders/{seasonId}`, Go route manifest remains unchanged at 4 read-only routes, and report-only broad web offenses dropped from 35 to 34.
 
 ### Next Todos
 
-- Run `$gsd-discuss-phase 60` to clarify the public ladder service read follow-up.
-- Run `$gsd-plan-phase 60` after discussion to create the next executable v1.9 plan.
+- Run `$gsd-discuss-phase 61` to clarify runtime isolation readiness guardrails.
+- Run `$gsd-plan-phase 61` after discussion to create the next executable v1.9 plan.
 - Keep Go writes, production runtime promotion, and counted non-JS play out of v1.9 unless the milestone is explicitly replanned.
 
 ### Blockers/Concerns
@@ -121,6 +122,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-22T23:36:00.000Z
-Stopped at: Phase 59 complete; Phase 60 ready for discussion/planning
+Last session: 2026-05-22T23:45:00.000Z
+Stopped at: Phase 60 complete; Phase 61 ready for discussion/planning
 Resume file: None

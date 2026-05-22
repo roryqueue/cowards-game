@@ -681,6 +681,7 @@ const SERVICE_SCHEMA_ROUTE_IDS = [
   "listLadderSeasons",
   "enterLadderSeason",
   "getPublicPlayerPage",
+  "getPublicLadderSeason",
   "getPublicStrategyPage",
 ] as const
 
@@ -1074,6 +1075,64 @@ export const PublicLadderMatchSetSummaryDtoSchema = z.object({
   resultHref: z.string().min(1),
 })
 
+export const TrialLadderPolicyDtoSchema = z.object({
+  oneEntryPerUser: z.literal(true),
+  replacementPolicy: z.literal("next-season-only"),
+  staleRevisionPolicy: z.string().min(1),
+  standingsReset: z.literal(true),
+  noPermanentRatings: z.literal(true),
+  minimumEntries: z.number().int().nonnegative(),
+  targetPodSize: z.number().int().positive(),
+})
+
+export const TrialLadderEntrySnapshotSchema =
+  CompetitionEntrantSnapshotServiceDtoSchema.extend({
+    seasonId: z.string().min(1),
+    entryId: z.string().min(1),
+    status: z.enum([
+      "active",
+      "withdrawn",
+      "suspended",
+      "invalidated",
+      "stale",
+    ]),
+    strategyName: z.string().min(1),
+    strategyDescription: z.string().min(1).optional(),
+    tags: z.array(z.string().min(1)),
+  })
+
+export const PublicTrialLadderSeasonDtoSchema = z.object({
+  seasonId: z.string().min(1),
+  slug: z.string().min(1),
+  name: z.string().min(1),
+  status: z.enum([
+    "draft",
+    "open",
+    "scheduling",
+    "active",
+    "completed",
+    "archived",
+  ]),
+  statusLabel: z.string().min(1),
+  description: z.string().min(1).optional(),
+  seasonSeed: z.string().min(1),
+  openedAt: z.string().min(1).optional(),
+  closedAt: z.string().min(1).optional(),
+  scheduledAt: z.string().min(1).optional(),
+  completedAt: z.string().min(1).optional(),
+  archivedAt: z.string().min(1).optional(),
+  policy: TrialLadderPolicyDtoSchema,
+  entries: z.array(TrialLadderEntrySnapshotSchema),
+  standings: z.array(PublicStandingServiceDtoSchema),
+  matchSets: z.array(PublicLadderMatchSetSummaryDtoSchema),
+  publication: z.object({
+    publicEntries: z.literal(true),
+    publicStandings: z.literal(true),
+    publicReplayEvidence: z.literal(true),
+    privateFieldsExcluded: z.array(z.string().min(1)),
+  }),
+})
+
 export const PublicStrategyCardDtoSchema = z.object({
   strategyId: z.string().min(1),
   strategyRevisionId: z.string().min(1),
@@ -1150,6 +1209,12 @@ export const PublicPlayerPageServiceDtoSchema =
   PublicPageServiceDtoSchema.extend({
     page: z.literal("player"),
     payload: PublicPlayerProfileDtoSchema,
+  })
+
+export const PublicLadderPageServiceDtoSchema =
+  PublicPageServiceDtoSchema.extend({
+    page: z.literal("ladder"),
+    payload: PublicTrialLadderSeasonDtoSchema,
   })
 
 export const PublicStrategyPageServiceDtoSchema =

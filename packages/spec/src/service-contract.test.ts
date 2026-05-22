@@ -6,6 +6,7 @@ import {
   SERVICE_API_ROUTES,
 } from "./service.js"
 import {
+  PublicLadderPageServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
   PublicPlayerPageServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
@@ -138,6 +139,7 @@ describe("service contract metadata", () => {
 
     for (const schema of [
       PublicMatchSetSummaryServiceDtoSchema,
+      PublicLadderPageServiceDtoSchema,
       PublicPlayerPageServiceDtoSchema,
       PublicReplayMetadataServiceDtoSchema,
       PublicStrategyPageServiceDtoSchema,

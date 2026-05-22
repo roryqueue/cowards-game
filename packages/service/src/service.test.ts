@@ -6,6 +6,7 @@ import {
   type PublicMatchSetResultDto,
   type PublicPlayerProfileDto,
   type PublicStrategyCardDto,
+  type PublicTrialLadderSeasonDto,
 } from "@cowards/spec"
 import type { StoredChronicle } from "@cowards/persistence/chronicle-store"
 import { createWorkshopAnalyticsDemoSnapshot } from "@cowards/persistence/workshop-analytics"
@@ -89,6 +90,51 @@ const publicPlayerProfile = {
   ],
   results: [],
 } satisfies PublicPlayerProfileDto
+
+const publicTrialLadderSeason = {
+  seasonId: "ladder-season:demo",
+  slug: "demo-season",
+  name: "Demo Trial Ladder",
+  status: "open",
+  statusLabel: "Open",
+  seasonSeed: "trial-ladder-demo-seed",
+  policy: {
+    oneEntryPerUser: true,
+    replacementPolicy: "next-season-only",
+    staleRevisionPolicy:
+      "Immutable revisions stay eligible for the current season.",
+    standingsReset: true,
+    noPermanentRatings: true,
+    minimumEntries: 2,
+    targetPodSize: 4,
+  },
+  entries: [],
+  standings: [],
+  matchSets: [
+    {
+      matchSetId: "match-set:ladder:demo",
+      seasonId: "ladder-season:demo",
+      status: "complete",
+      countedStatus: "counted",
+      publicExplanation: "Complete replay-backed ladder evidence.",
+      entrantIds: [],
+      resultHref: "/matchsets/match-set%3Aladder%3Ademo",
+    },
+  ],
+  publication: {
+    publicEntries: true,
+    publicStandings: true,
+    publicReplayEvidence: true,
+    privateFieldsExcluded: [
+      "Strategy source",
+      "StrategyMemory",
+      "SoldierMemory",
+      "objective payloads",
+      "owner debug",
+      "private runtime internals",
+    ],
+  },
+} satisfies PublicTrialLadderSeasonDto
 
 const accountUser = {
   id: "user:demo",
@@ -365,6 +411,50 @@ describe("createCowardsLocalService", () => {
       canonicalHref: "/players/demo-player",
       payload: publicPlayerProfile,
     })
+  })
+
+  it("wraps public ladder seasons in a public page service envelope", async () => {
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      buildPublicLadderSeason: async (_pool, _seasonId) =>
+        publicTrialLadderSeason,
+    })
+
+    await expect(
+      service.getPublicLadderSeason("ladder-season:demo"),
+    ).resolves.toEqual({
+      apiVersion: SERVICE_API_VERSION,
+      kind: "publicPage",
+      page: "ladder",
+      canonicalHref: "/ladder/demo-season",
+      payload: publicTrialLadderSeason,
+    })
+  })
+
+  it("returns null for missing public ladder seasons", async () => {
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      buildPublicLadderSeason: async () => null,
+    })
+
+    await expect(
+      service.getPublicLadderSeason("ladder-season:missing"),
+    ).resolves.toBe(null)
+  })
+
+  it("rejects public ladder DTOs with private fields", async () => {
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      buildPublicLadderSeason: async () =>
+        ({
+          ...publicTrialLadderSeason,
+          ownerDebug: { hidden: true },
+        }) as unknown as PublicTrialLadderSeasonDto,
+    })
+
+    await expect(
+      service.getPublicLadderSeason("ladder-season:demo"),
+    ).rejects.toThrow("Public service DTO leaks private field")
   })
 
   it("returns null for missing public player profiles", async () => {

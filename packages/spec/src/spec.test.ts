@@ -20,6 +20,7 @@ import {
   ActionSchema,
   AnalyticsGauntletRunSummarySchema,
   ChronicleSchema,
+  PublicLadderPageServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
@@ -76,6 +77,7 @@ describe("Coward's Game spec contracts", () => {
 
     const publicSchemas = [
       PublicMatchSetSummaryServiceDtoSchema,
+      PublicLadderPageServiceDtoSchema,
       PublicReplayMetadataServiceDtoSchema,
       PublicStrategyPageServiceDtoSchema,
     ]

@@ -5,6 +5,7 @@ import type {
   PublicPlayerProfileDto,
   PublicReplayMetadataServiceDto,
   PublicStrategyCardDto,
+  PublicTrialLadderSeasonDto,
   StrategyId,
 } from "@cowards/spec"
 import {
@@ -117,5 +118,14 @@ export const getPublicPlayerProfile = async (
   handle: string,
 ): Promise<PublicPlayerProfileDto | null> => {
   const page = await publicReadService.getPublicPlayerPage(decodePathId(handle))
+  return page ? page.payload : null
+}
+
+export const getPublicLadderSeason = async (
+  seasonId: string,
+): Promise<PublicTrialLadderSeasonDto | null> => {
+  const page = await publicReadService.getPublicLadderSeason(
+    decodePathId(seasonId),
+  )
   return page ? page.payload : null
 }

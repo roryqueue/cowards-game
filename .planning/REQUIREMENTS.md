@@ -32,9 +32,9 @@ Requirements for making one deliberate ownership move: migrate more web read/use
 
 ### Public Ladder Read Follow-Up Boundary
 
-- [ ] **READ-01**: Developer can verify the selected v1.9 follow-up read boundary is a public ladder season service read, not Go route expansion.
-- [ ] **READ-02**: User can view the selected ladder season through `@cowards/service` while preserving not-found behavior, standings, entry metadata, MatchSet links, counted-state explanations, and no-permanent-ratings copy.
-- [ ] **READ-05**: Developer can verify Go mutation endpoints, auth/session mutation, ladder entry/schedule/status writes, Match orchestration, job claiming, migrations, persistence writes, and Strategy execution remain out of scope.
+- [x] **READ-01**: Developer can verify the selected v1.9 follow-up read boundary is a public ladder season service read, not Go route expansion.
+- [x] **READ-02**: User can view the selected ladder season through `@cowards/service` while preserving not-found behavior, standings, entry metadata, MatchSet links, counted-state explanations, and no-permanent-ratings copy.
+- [x] **READ-05**: Developer can verify Go mutation endpoints, auth/session mutation, ladder entry/schedule/status writes, Match orchestration, job claiming, migrations, persistence writes, and Strategy execution remain out of scope.
 
 ### Runtime Isolation Guardrails
 
@@ -115,9 +115,9 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 | ACCT-03 | Phase 59 | Complete |
 | ACCT-04 | Phase 59 | Complete |
 | ACCT-05 | Phase 59 | Complete |
-| READ-01 | Phase 60 | Pending |
-| READ-02 | Phase 60 | Pending |
-| READ-05 | Phase 60 | Pending |
+| READ-01 | Phase 60 | Complete |
+| READ-02 | Phase 60 | Complete |
+| READ-05 | Phase 60 | Complete |
 | RUN-01 | Phase 61 | Pending |
 | RUN-02 | Phase 61 | Pending |
 | RUN-03 | Phase 61 | Pending |
@@ -139,4 +139,4 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after Phase 59 completion*
+*Last updated: 2026-05-22 after Phase 60 completion*

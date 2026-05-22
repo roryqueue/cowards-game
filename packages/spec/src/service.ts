@@ -12,6 +12,7 @@ import type {
   PublicMatchSetResultDto,
   PublicPlayerProfileDto,
   PublicStrategyCardDto,
+  PublicTrialLadderSeasonDto,
 } from "./competition.js"
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
 import type { StrategyRuntimeProductSemantics } from "./runtime.js"
@@ -38,6 +39,7 @@ import {
   MatchSetIdParamsSchema,
   ProfileIdParamsSchema,
   PublicMatchSetSummaryServiceDtoSchema,
+  PublicLadderPageServiceDtoSchema,
   PublicPlayerPageServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
@@ -592,6 +594,61 @@ export const SERVICE_API_ROUTES = {
     ],
     fixtureRefs: ["publicPlayerPageExample"],
   },
+  getPublicLadderSeason: {
+    id: "getPublicLadderSeason",
+    operationId: "getPublicLadderSeason",
+    method: "GET",
+    path: "/public/ladders/{seasonId}",
+    signature: "GET /public/ladders/{seasonId}",
+    authScope: "public",
+    privacyClass: "public",
+    request: request(SeasonIdParamsSchema),
+    response: PublicLadderPageServiceDtoSchema,
+    error: ServiceErrorDtoSchema,
+    examples: [
+      {
+        apiVersion: SERVICE_API_VERSION,
+        kind: "publicPage",
+        page: "ladder",
+        canonicalHref: "/ladder/demo-season",
+        payload: {
+          seasonId: "ladder-season:demo",
+          slug: "demo-season",
+          name: "Demo Trial Ladder",
+          status: "open",
+          statusLabel: "Open",
+          seasonSeed: "trial-ladder-demo-seed",
+          policy: {
+            oneEntryPerUser: true,
+            replacementPolicy: "next-season-only",
+            staleRevisionPolicy:
+              "Immutable revisions stay eligible for the current season.",
+            standingsReset: true,
+            noPermanentRatings: true,
+            minimumEntries: 2,
+            targetPodSize: 4,
+          },
+          entries: [],
+          standings: [],
+          matchSets: [],
+          publication: {
+            publicEntries: true,
+            publicStandings: true,
+            publicReplayEvidence: true,
+            privateFieldsExcluded: [
+              "Strategy source",
+              "StrategyMemory",
+              "SoldierMemory",
+              "objective payloads",
+              "owner debug",
+              "private runtime internals",
+            ],
+          },
+        },
+      },
+    ],
+    fixtureRefs: ["publicLadderPageExample"],
+  },
   getPublicStrategyPage: {
     id: "getPublicStrategyPage",
     operationId: "getPublicStrategyPage",
@@ -797,6 +854,14 @@ export interface PublicPlayerPageServiceDto extends Omit<
 > {
   page: "player"
   payload: PublicPlayerProfileDto
+}
+
+export interface PublicLadderPageServiceDto extends Omit<
+  PublicPageServiceDto,
+  "page" | "payload"
+> {
+  page: "ladder"
+  payload: PublicTrialLadderSeasonDto
 }
 
 export interface PublicStrategyPageServiceDto extends Omit<

@@ -41,6 +41,7 @@ export const exportAnalyticsRunExample = firstExampleFor("exportAnalyticsRun")
 export const listLadderSeasonsExample = firstExampleFor("listLadderSeasons")
 export const enterLadderSeasonExample = firstExampleFor("enterLadderSeason")
 export const publicPlayerPageExample = firstExampleFor("getPublicPlayerPage")
+export const publicLadderPageExample = firstExampleFor("getPublicLadderSeason")
 export const publicStrategyPageExample = firstExampleFor(
   "getPublicStrategyPage",
 )
@@ -63,5 +64,6 @@ export const SERVICE_API_FIXTURES = {
   listLadderSeasonsExample,
   enterLadderSeasonExample,
   publicPlayerPageExample,
+  publicLadderPageExample,
   publicStrategyPageExample,
 } as const

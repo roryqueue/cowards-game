@@ -7,6 +7,7 @@ import type {
 import { buildPublicMatchSetResultDto } from "@cowards/persistence/competition"
 import { getSession } from "@cowards/persistence/auth"
 import { listAccountStrategyRevisions } from "@cowards/persistence/account-revisions"
+import { buildTrialLadderSeasonDto } from "@cowards/persistence/ladder"
 import {
   buildPublicPlayerProfileDto,
   buildPublicStrategyCardDto,
@@ -18,6 +19,7 @@ import {
   AuthSessionServiceDtoSchema,
   AnalyticsRunSummaryServiceDtoSchema,
   ListStrategyRevisionsServiceDtoSchema,
+  PublicLadderPageServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
   PublicPlayerPageServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
@@ -30,6 +32,7 @@ import {
   type ListStrategyRevisionsServiceDto,
   type StrategyRevisionSummaryServiceDto,
   type UserId,
+  type PublicLadderPageServiceDto,
   type PublicMatchSetSummaryServiceDto,
   type PublicPlayerPageServiceDto,
   type PublicReplayMetadataServiceDto,
@@ -66,6 +69,9 @@ export interface CowardsService {
   getPublicPlayerPage(
     handle: string,
   ): Promise<PublicPlayerPageServiceDto | null>
+  getPublicLadderSeason(
+    seasonId: string,
+  ): Promise<PublicLadderPageServiceDto | null>
   getAuthSession(
     sessionId: string | null | undefined,
   ): Promise<AuthSessionServiceDto>
@@ -84,6 +90,7 @@ export interface CreateCowardsLocalServiceOptions {
   buildPublicMatchSetResult?: typeof buildPublicMatchSetResultDto | undefined
   buildPublicStrategyCard?: typeof buildPublicStrategyCardDto | undefined
   buildPublicPlayerProfile?: typeof buildPublicPlayerProfileDto | undefined
+  buildPublicLadderSeason?: typeof buildTrialLadderSeasonDto | undefined
   getSession?: typeof getSession | undefined
   listAccountRevisions?: typeof listAccountStrategyRevisions | undefined
   getAnalyticsSnapshot?: typeof getWorkshopAnalyticsSnapshot | undefined
@@ -125,6 +132,8 @@ export const createCowardsLocalService = (
     options.buildPublicStrategyCard ?? buildPublicStrategyCardDto
   const buildPublicPlayerProfile =
     options.buildPublicPlayerProfile ?? buildPublicPlayerProfileDto
+  const buildPublicLadderSeason =
+    options.buildPublicLadderSeason ?? buildTrialLadderSeasonDto
   const getSessionForToken = options.getSession ?? getSession
   const listAccountRevisions =
     options.listAccountRevisions ?? listAccountStrategyRevisions
@@ -203,6 +212,26 @@ export const createCowardsLocalService = (
         return PublicPlayerPageServiceDtoSchema.parse(
           dto,
         ) as PublicPlayerPageServiceDto
+      })
+    },
+
+    async getPublicLadderSeason(seasonId) {
+      return options.withPool(async (pool) => {
+        const season = await buildPublicLadderSeason(pool, seasonId)
+        if (!season) {
+          return null
+        }
+        const dto: PublicLadderPageServiceDto = {
+          apiVersion: SERVICE_API_VERSION,
+          kind: "publicPage",
+          page: "ladder",
+          canonicalHref: `/ladder/${encodeURIComponent(season.slug)}`,
+          payload: season,
+        }
+        assertPublicServiceDtoLeakSafe(dto)
+        return PublicLadderPageServiceDtoSchema.parse(
+          dto,
+        ) as PublicLadderPageServiceDto
       })
     },
 

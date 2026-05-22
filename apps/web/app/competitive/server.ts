@@ -26,7 +26,6 @@ import {
 } from "@cowards/persistence/competition"
 import { createCowardsLocalService } from "@cowards/service"
 import {
-  buildTrialLadderSeasonDto,
   createTrialLadderSeason,
   enterTrialLadderSeason,
   LadderInputError,
@@ -50,7 +49,6 @@ import {
   type MatchSetId,
   type PublicMatchSetResultDto,
   type PublicStrategyCardDto,
-  type PublicTrialLadderSeasonDto,
   type StrategyRevisionId,
   type TrialLadderSeasonStatus,
 } from "@cowards/spec"
@@ -107,7 +105,6 @@ export interface MatchSetResultDto extends Omit<
   matches: CompetitiveMatchLedgerRow[]
 }
 
-export type TrialLadderSeasonDto = PublicTrialLadderSeasonDto
 export type StrategyCardDto = PublicStrategyCardDto
 
 type PersistencePool = Parameters<typeof createAccount>[0]
@@ -585,18 +582,6 @@ export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
             actorUserId: user.id,
           })
         })
-      } catch (error) {
-        return mapPersistenceError(error)
-      }
-    },
-
-    async getTrialLadderSeason(
-      seasonIdOrSlug: string,
-    ): Promise<TrialLadderSeasonDto | null> {
-      try {
-        return await withPool((pool) =>
-          buildTrialLadderSeasonDto(pool, seasonIdOrSlug),
-        )
       } catch (error) {
         return mapPersistenceError(error)
       }

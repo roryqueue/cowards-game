@@ -1,6 +1,613 @@
 {
   "components": {
     "schemas": {
+      "getPublicLadderSeasonResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "canonicalHref": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "kind": {
+            "const": "publicPage",
+            "type": "string"
+          },
+          "page": {
+            "const": "ladder",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "archivedAt": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "closedAt": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "completedAt": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "description": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "entries": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "displayLabel": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "engineCompatibility": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "engine": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "spec": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "spec",
+                        "engine"
+                      ],
+                      "type": "object"
+                    },
+                    "entrantId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "entrantIndex": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "entryId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "lockedAt": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "ownerHandle": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "ownerUserId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "runtime": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "abiVersion": {
+                          "const": "strategy-runtime-abi-v1.7",
+                          "type": "string"
+                        },
+                        "adapter": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "enum": [
+                                "runtime-js-worker-thread",
+                                "runtime-js-subprocess",
+                                "runtime-js-container-subprocess",
+                                "runtime-python-subprocess-experimental"
+                              ],
+                              "type": "string"
+                            },
+                            "version": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "version"
+                          ],
+                          "type": "object"
+                        },
+                        "language": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "enum": [
+                                "javascript",
+                                "typescript",
+                                "python"
+                              ],
+                              "type": "string"
+                            },
+                            "version": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "version"
+                          ],
+                          "type": "object"
+                        },
+                        "package": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "declaredDependencies": {
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "type": "object"
+                            },
+                            "entrypoint": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "lockfileHash": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "manifestHash": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "mode": {
+                              "enum": [
+                                "none",
+                                "declared"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "mode",
+                            "entrypoint"
+                          ],
+                          "type": "object"
+                        },
+                        "requiredCapabilities": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "abiVersion",
+                        "language",
+                        "adapter",
+                        "package",
+                        "requiredCapabilities"
+                      ],
+                      "type": "object"
+                    },
+                    "seasonId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "sourceBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "sourceHash": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "active",
+                        "withdrawn",
+                        "suspended",
+                        "invalidated",
+                        "stale"
+                      ],
+                      "type": "string"
+                    },
+                    "strategyDescription": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "strategyName": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "strategyRevisionId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "tags": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "entrantId",
+                    "entrantIndex",
+                    "strategyRevisionId",
+                    "ownerUserId",
+                    "ownerHandle",
+                    "displayLabel",
+                    "sourceHash",
+                    "sourceBytes",
+                    "runtime",
+                    "engineCompatibility",
+                    "lockedAt",
+                    "seasonId",
+                    "entryId",
+                    "status",
+                    "strategyName",
+                    "tags"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "matchSets": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "countedStatus": {
+                      "enum": [
+                        "pending",
+                        "counted",
+                        "retrying",
+                        "under_review",
+                        "invalid",
+                        "non_competitive",
+                        "non_counted"
+                      ],
+                      "type": "string"
+                    },
+                    "entrantIds": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "matchSetId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "podIndex": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "publicExplanation": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "publicReason": {
+                      "enum": [
+                        "system_failure",
+                        "incomplete_evidence",
+                        "invalid_result",
+                        "governance_hold",
+                        "non_counted"
+                      ],
+                      "type": "string"
+                    },
+                    "replayHref": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "resultHref": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "scheduleRunId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "seasonId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "accepted",
+                        "queued",
+                        "running",
+                        "complete",
+                        "degraded",
+                        "failed"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "matchSetId",
+                    "seasonId",
+                    "status",
+                    "countedStatus",
+                    "entrantIds",
+                    "resultHref"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "openedAt": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "policy": {
+                "additionalProperties": false,
+                "properties": {
+                  "minimumEntries": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "noPermanentRatings": {
+                    "const": true,
+                    "type": "boolean"
+                  },
+                  "oneEntryPerUser": {
+                    "const": true,
+                    "type": "boolean"
+                  },
+                  "replacementPolicy": {
+                    "const": "next-season-only",
+                    "type": "string"
+                  },
+                  "staleRevisionPolicy": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "standingsReset": {
+                    "const": true,
+                    "type": "boolean"
+                  },
+                  "targetPodSize": {
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "oneEntryPerUser",
+                  "replacementPolicy",
+                  "staleRevisionPolicy",
+                  "standingsReset",
+                  "noPermanentRatings",
+                  "minimumEntries",
+                  "targetPodSize"
+                ],
+                "type": "object"
+              },
+              "publication": {
+                "additionalProperties": false,
+                "properties": {
+                  "privateFieldsExcluded": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "publicEntries": {
+                    "const": true,
+                    "type": "boolean"
+                  },
+                  "publicReplayEvidence": {
+                    "const": true,
+                    "type": "boolean"
+                  },
+                  "publicStandings": {
+                    "const": true,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "publicEntries",
+                  "publicStandings",
+                  "publicReplayEvidence",
+                  "privateFieldsExcluded"
+                ],
+                "type": "object"
+              },
+              "scheduledAt": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "seasonId": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "seasonSeed": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "slug": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "standings": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "displayLabel": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "draws": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "entrantId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "losses": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "ownerHandle": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "penalties": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "matchId": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "points": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "reason": {
+                            "enum": [
+                              "strategy_failure",
+                              "system_failure",
+                              "invalid_result",
+                              "no_result"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "reason",
+                          "points"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "points": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "rank": {
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991,
+                      "type": "integer"
+                    },
+                    "sourceHash": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "strategyRevisionId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "survivalTurns": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "survivingSoldiers": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "tieBreakerPath": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "wins": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "rank",
+                    "entrantId",
+                    "strategyRevisionId",
+                    "ownerHandle",
+                    "displayLabel",
+                    "sourceHash",
+                    "points",
+                    "wins",
+                    "draws",
+                    "losses",
+                    "penalties",
+                    "survivingSoldiers",
+                    "survivalTurns",
+                    "tieBreakerPath"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "draft",
+                  "open",
+                  "scheduling",
+                  "active",
+                  "completed",
+                  "archived"
+                ],
+                "type": "string"
+              },
+              "statusLabel": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "seasonId",
+              "slug",
+              "name",
+              "status",
+              "statusLabel",
+              "seasonSeed",
+              "policy",
+              "entries",
+              "standings",
+              "matchSets",
+              "publication"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "page",
+          "canonicalHref",
+          "payload"
+        ],
+        "type": "object"
+      },
       "getPublicMatchSetSummaryResponse": {
         "$defs": {
           "__schema0": {
@@ -1805,6 +2412,110 @@
         "x-privacy-class": "public",
         "x-route-id": "listLadderSeasons",
         "x-route-signature": "GET /ladders/seasons"
+      }
+    },
+    "/public/ladders/{seasonId}": {
+      "get": {
+        "operationId": "getPublicLadderSeason",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "seasonId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "publicLadderPageExample": {
+                    "summary": "publicLadderPageExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "canonicalHref": "/ladder/demo-season",
+                      "kind": "publicPage",
+                      "page": "ladder",
+                      "payload": {
+                        "entries": [],
+                        "matchSets": [],
+                        "name": "Demo Trial Ladder",
+                        "policy": {
+                          "minimumEntries": 2,
+                          "noPermanentRatings": true,
+                          "oneEntryPerUser": true,
+                          "replacementPolicy": "next-season-only",
+                          "staleRevisionPolicy": "Immutable revisions stay eligible for the current season.",
+                          "standingsReset": true,
+                          "targetPodSize": 4
+                        },
+                        "publication": {
+                          "privateFieldsExcluded": [
+                            "Strategy source",
+                            "StrategyMemory",
+                            "SoldierMemory",
+                            "objective payloads",
+                            "owner debug",
+                            "private runtime internals"
+                          ],
+                          "publicEntries": true,
+                          "publicReplayEvidence": true,
+                          "publicStandings": true
+                        },
+                        "seasonId": "ladder-season:demo",
+                        "seasonSeed": "trial-ladder-demo-seed",
+                        "slug": "demo-season",
+                        "standings": [],
+                        "status": "open",
+                        "statusLabel": "Open"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/getPublicLadderSeasonResponse"
+                }
+              }
+            },
+            "description": "getPublicLadderSeason success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [],
+        "summary": "getPublicLadderSeason",
+        "tags": [
+          "public"
+        ],
+        "x-auth-scope": "public",
+        "x-fixture-refs": [
+          "publicLadderPageExample"
+        ],
+        "x-privacy-class": "public",
+        "x-route-id": "getPublicLadderSeason",
+        "x-route-signature": "GET /public/ladders/{seasonId}"
       }
     },
     "/public/matchsets/{matchSetId}/summary": {

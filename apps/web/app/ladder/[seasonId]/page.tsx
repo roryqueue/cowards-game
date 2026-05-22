@@ -1,7 +1,5 @@
-import {
-  competitiveServer,
-  getCurrentCompetitiveUser,
-} from "../../competitive/server.js"
+import { getCurrentAccountReadUser } from "../../../lib/account-service-boundary.js"
+import { getPublicLadderSeason } from "../../../lib/public-service-boundary.js"
 
 export const dynamic = "force-dynamic"
 
@@ -13,8 +11,8 @@ export default async function TrialLadderSeasonPage({
   const resolvedParams = await params
   const seasonId = decodeURIComponent(resolvedParams.seasonId)
   const [season, user] = await Promise.all([
-    competitiveServer.getTrialLadderSeason(seasonId),
-    getCurrentCompetitiveUser(),
+    getPublicLadderSeason(seasonId),
+    getCurrentAccountReadUser(),
   ])
 
   if (!season) {
