@@ -4,7 +4,7 @@ milestone: v1.6
 milestone_name: Workshop Analytics and Evidence Explorer
 status: planning
 last_updated: "2026-05-22T00:00:00.000Z"
-last_activity: 2026-05-22 — Phase 41 context gathered
+last_activity: 2026-05-22 — Phase 42 context gathered
 progress:
   total_phases: 7
   completed_phases: 0
@@ -23,17 +23,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-21)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Ready to plan Phase 41 or discuss Phase 42
+**Current focus:** Ready to plan Phase 42 or discuss Phase 43
 **Current milestone:** v1.6 Workshop Analytics and Evidence Explorer
 **Requirements:** .planning/REQUIREMENTS.md (54/54 mapped)
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 41 — Evidence Explorer UX
+Phase: 42 — Replay Deep Links
 Plan: —
-Status: Phase 41 context gathered
-Last activity: 2026-05-22 — Phase 41 context captured in `.planning/phases/41-evidence-explorer-ux/41-CONTEXT.md`
+Status: Phase 42 context gathered
+Last activity: 2026-05-22 — Phase 42 context captured in `.planning/phases/42-replay-deep-links/42-CONTEXT.md`
 
 ## Workflow Settings
 
@@ -90,7 +90,7 @@ Items acknowledged and deferred after v1.5 milestone completion on 2026-05-21:
 
 ## Next Command
 
-Run `$gsd-plan-phase 41` to plan Evidence Explorer UX, or continue sequential discussion with `$gsd-discuss-phase 42`.
+Run `$gsd-plan-phase 42` to plan Replay Deep Links, or continue sequential discussion with `$gsd-discuss-phase 43`.
 
 ---
-*Last updated: 2026-05-22 after Phase 41 context gathering*
+*Last updated: 2026-05-22 after Phase 42 context gathering*
