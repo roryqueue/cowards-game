@@ -1,117 +1,129 @@
-# Roadmap: Coward's Game
+# Milestone v1.6: Workshop Analytics and Evidence Explorer
 
-**Last updated:** 2026-05-21
-**Current milestone:** None active; ready for v1.6 planning
-**Granularity:** Standard
-**Execution:** Milestone-scoped GSD cycles with archived requirements and phase history
+**Status:** Planned
+**Phases:** 38-44
+**Total Plans:** 7
+**Requirements:** 54/54 mapped
 
-## Milestones
+## Overview
 
-- ✅ **v1.0 MVP** — Phases 1-7, shipped 2026-05-17. See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md).
-- ✅ **v1.1 Trustworthy Simulation Beta** — Phases 8-13, shipped 2026-05-18. See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md).
-- ✅ **v1.2 Competitive Alpha** — Phases 14-18, shipped 2026-05-19. See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md).
-- ✅ **v1.3 Competition Trust Beta** — Phases 19-24, shipped 2026-05-20. See [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md).
-- ✅ **v1.4 Cycle-Interleaved Rules Correction** — Phases 25-29, shipped 2026-05-20. See [v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md).
-- ✅ **v1.5 Strategy Workshop Power Tools and Advanced Strategy Library** — Phases 30-37, shipped 2026-05-21. See [v1.5-ROADMAP.md](milestones/v1.5-ROADMAP.md).
+v1.6 turns the deterministic evidence created in v1.5 into something players can study inside the Strategy Workshop. The milestone adds saved gauntlet profiles, compatibility-aware reruns and comparisons, matchup heatmaps, evidence drilldowns, meaningful replay deep links, owner-safe exports, and a local demo proving the full study loop while preserving runtime isolation and public privacy boundaries.
 
 ## Phases
 
-<details>
-<summary>✅ v1.0 MVP (Phases 1-7) — SHIPPED 2026-05-17</summary>
+### Phase 38: Analytics Evidence Model
 
-- [x] Phase 1: Foundation And Spec Contracts (4/4 plans)
-- [x] Phase 2: Pure Rules Engine (5/5 plans)
-- [x] Phase 3: Chronicle And Replay Core (5/5 plans)
-- [x] Phase 4: Strategy Runtime Sandbox (4/4 plans)
-- [x] Phase 5: Match Orchestration And Persistence (5/5 plans)
-- [x] Phase 6: Strategy Workshop Ux (5/5 plans)
-- [x] Phase 7: Replay Viewer And End To End Verification (5/5 plans)
+**Goal:** Define stable summary data for gauntlets, MatchSets, matchup records, archetype tags, evidence bands, and replay references.
+**Requirements:** AEM-01 through AEM-08
+**Status:** Pending
 
-Archived phase details: [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) and [v1.0-phases/](milestones/v1.0-phases/).
+Success criteria:
 
-</details>
+1. Analytics DTOs and schemas cover profiles, runs, MatchSet summaries, matchup records, evidence bands, archetype tags, replay references, compatibility metadata, and export-safe fields.
+2. Evidence-band classification is deterministic and distinguishes strong, thin, degraded/non-counted, and system-failed evidence.
+3. Summary ordering and compatibility metadata are deterministic for identical inputs.
+4. Public analytics schema/DTO tests reject private Strategy/runtime/replay fields by default.
 
-<details>
-<summary>✅ v1.1 Trustworthy Simulation Beta (Phases 8-13) — SHIPPED 2026-05-18</summary>
+### Phase 39: Saved Gauntlet Profiles
 
-- [x] Phase 8: Replay Fixture Fidelity and Visual Regression (4/4 plans)
-- [x] Phase 9: Strict Chronicle Grammar and Compatibility (5/5 plans)
-- [x] Phase 10: Runtime Isolation Hardening (5/5 plans)
-- [x] Phase 11: Doctrine Debugging UX (6/6 plans)
-- [x] Phase 12: Local and CI Reliability (5/5 plans)
-- [x] Phase 13: Close Gap: Persisted Owner Replay Debug Authorization (4/4 plans)
+**Goal:** Let users save, rerun, compare, and name deterministic gauntlet profiles without rerunning Strategy code in web/API.
+**Requirements:** SGP-01 through SGP-08
+**Status:** Pending
 
-Archived phase details: [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) and [v1.1-phases/](milestones/v1.1-phases/).
+Success criteria:
 
-</details>
+1. Users can save, list, view, rename, annotate, and rerun named profiles with exact deterministic inputs and immutable Strategy Revision ids.
+2. Reruns use existing MatchSet/job infrastructure and reject missing, invalid, unauthorized, or incompatible revisions before job creation.
+3. Comparison succeeds only for compatibility-equivalent runs and reports concrete mismatch reasons otherwise.
+4. Profile hash, compatibility key, matrix expansion order, and summary ordering are stable under repeated identical inputs.
 
-<details>
-<summary>✅ v1.2 Competitive Alpha (Phases 14-18) — SHIPPED 2026-05-19</summary>
+### Phase 40: Matchup Heatmaps
 
-- [x] Phase 14: Competitive Ownership and Sessions (2/2 plans)
-- [x] Phase 15: MatchSet Competition Model (2/2 plans)
-- [x] Phase 16: Exhibition Queue and Entry (2/2 plans)
-- [x] Phase 17: Result Pages and Replay Evidence (2/2 plans)
-- [x] Phase 18: Abuse and Fairness Guardrails (2/2 plans)
+**Goal:** Add Workshop heatmaps showing per-opponent W-L-D, points, failures, side bias, and confidence/evidence count.
+**Requirements:** HEAT-01 through HEAT-08
+**Status:** Pending
 
-Archived phase details: [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) and [v1.2-phases/](milestones/v1.2-phases/).
+Success criteria:
 
-</details>
+1. Workshop renders a deterministic Strategy-by-opponent heatmap for selected profile runs and selected opponents.
+2. Heatmap cells show W-L-D, points, evidence band, evidence count, replay availability, failure/degraded/system-failed counts, side split, and scoring impact.
+3. Heatmap controls support compatible run comparison without triggering Strategy execution in web/API.
+4. Desktop and mobile browser checks confirm readable, non-overlapping cells and useful links to evidence drilldowns.
 
-<details>
-<summary>✅ v1.3 Competition Trust Beta (Phases 19-24) — SHIPPED 2026-05-20</summary>
+### Phase 41: Evidence Explorer UX
 
-- [x] Phase 19: Starter Strategy Library (1/1 plan)
-- [x] Phase 20: Trial Ladder Season Model (1/1 plan)
-- [x] Phase 21: Ladder Scheduling and Standings (1/1 plan)
-- [x] Phase 22: Public Profiles and Strategy Cards (1/1 plan)
-- [x] Phase 23: Disputes and Competition Governance (1/1 plan)
-- [x] Phase 24: Production Runtime Boundary Spike (1/1 plan)
+**Goal:** Build sortable/filterable evidence views with drilldowns from Strategy to opponent to MatchSet to replay.
+**Requirements:** EXP-01 through EXP-08
+**Status:** Pending
 
-Archived phase details: [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) and [v1.3-phases/](milestones/v1.3-phases/).
+Success criteria:
 
-</details>
+1. Users can inspect evidence grouped by Strategy, opponent, archetype, profile run, MatchSet, and replay reference.
+2. Sort and filter controls cover points, W-L-D, evidence band, evidence count, failure category, side bias, opponent archetype, counted status, and replay availability.
+3. Drilldowns move cleanly from Strategy summary to opponent record to MatchSet summary to individual replay links.
+4. Empty, pending, degraded, replay-unavailable, and system-failed states remain legible and are not framed as Strategy weakness.
 
-<details>
-<summary>✅ v1.4 Cycle-Interleaved Rules Correction (Phases 25-29) — SHIPPED 2026-05-20</summary>
+### Phase 42: Replay Deep Links
 
-- [x] Phase 25: Rule Source-of-Truth Version (1/1 plan)
-- [x] Phase 26: Engine Cycle Scheduler Rewrite (1/1 plan)
-- [x] Phase 27: Chronicle and Replay Rebaseline (1/1 plan)
-- [x] Phase 28: Starter Strategy and Input Rebaseline (1/1 plan)
-- [x] Phase 29: Demo Competition Rebuild (1/1 plan)
+**Goal:** Add replay links targeted to key moments: Backstab, contraction, no-advance cleanup, fall, decisive push, and late-cycle stabilization.
+**Requirements:** LINK-01 through LINK-07
+**Status:** Pending
 
-Archived phase details: [v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md), [v1.4-REQUIREMENTS.md](milestones/v1.4-REQUIREMENTS.md), and [v1.4-phases/](milestones/v1.4-phases/).
+Success criteria:
 
-</details>
+1. Analytics summaries include public-safe replay references for meaningful moment types when those moments exist.
+2. Replay moment detection is deterministic and uses public projection data by default.
+3. Replay URLs encode Match id, public sequence or moment id, and moment type with stable URL state.
+4. Replay viewer opens at or near the target timeline entry, highlights/focuses it, and gracefully degrades when the target is unavailable.
 
-<details>
-<summary>✅ v1.5 Strategy Workshop Power Tools and Advanced Strategy Library (Phases 30-37) — SHIPPED 2026-05-21</summary>
+### Phase 43: Owner Export and Privacy
 
-- [x] Phase 30: Workshop Power Tools (1/1 plan)
-- [x] Phase 31: Result Data Analysis and Evidence Model (1/1 plan)
-- [x] Phase 32: Advanced Strategy Library Design (1/1 plan)
-- [x] Phase 33: Deterministic Gauntlet Validation (1/1 plan)
-- [x] Phase 34: Example MatchSet Generation (1/1 plan)
-- [x] Phase 35: Completed Demo Tournament (1/1 plan)
-- [x] Phase 36: Replay Review and Tuning (1/1 plan)
-- [x] Phase 37: Demo and Regression Verification (1/1 plan)
+**Goal:** Add owner-only JSON/CSV export for gauntlet summaries while preserving public privacy boundaries.
+**Requirements:** EXPOR-01 through EXPOR-08
+**Status:** Pending
 
-Archived phase details: [v1.5-ROADMAP.md](milestones/v1.5-ROADMAP.md), [v1.5-REQUIREMENTS.md](milestones/v1.5-REQUIREMENTS.md), and [v1.5-phases/](milestones/v1.5-phases/).
+Success criteria:
 
-</details>
+1. Owners can export JSON summaries and CSV matchup records for their own saved gauntlet profile runs.
+2. Exported data includes profile metadata, compatibility key, matchup records, evidence bands, MatchSet references, replay references, and deterministic provenance.
+3. Export authorization prevents public users or other owners from retrieving private exports.
+4. Export privacy and CSV tests prevent private field leakage, row corruption, and formula-style surprises from user-controlled text.
 
-## Progress
+### Phase 44: Demo, Docs, Verification
 
-| Milestone | Phases | Plans | Requirements | Status |
-| --- | ---: | ---: | ---: | --- |
-| v1.0 MVP | 7 | 33 | 80/80 | Shipped |
-| v1.1 Trustworthy Simulation Beta | 6 | 29 | 34/34 | Shipped |
-| v1.2 Competitive Alpha | 5 | 10 | 33/33 | Shipped |
-| v1.3 Competition Trust Beta | 6 | 6 | 51/51 | Shipped |
-| v1.4 Cycle-Interleaved Rules Correction | 5 | 5 | 33/33 | Shipped |
-| v1.5 Strategy Workshop Power Tools and Advanced Strategy Library | 8 | 8 | 53/53 | Shipped |
+**Goal:** Generate v1.6 example analytics data, browser-verify pages, update docs, and audit privacy/runtime isolation.
+**Requirements:** VER-01 through VER-07
+**Status:** Pending
 
-## Next
+Success criteria:
 
-Start the next milestone with `$gsd-new-milestone` so it creates fresh `.planning/REQUIREMENTS.md` and appends new phases after Phase 37.
+1. Local demo data lets a user open a Strategy, view matchup heatmaps against Starter and Advanced opponents, identify weak archetypes, drill into representative replays, and export an owner-safe summary.
+2. Browser verification covers saved profiles, rerun state, heatmap, explorer drilldowns, replay deep links, and owner export controls.
+3. Runtime isolation tests prove analytics/profile/export routes do not execute Strategy code.
+4. Documentation and milestone audit cover evidence bands, compatibility comparisons, replay deep links, export privacy, local demo regeneration, privacy boundaries, and deterministic summary behavior.
+
+## Requirement Coverage
+
+| Requirement Group | Phase | Count |
+| --- | --- | ---: |
+| AEM-01 through AEM-08 | Phase 38 | 8 |
+| SGP-01 through SGP-08 | Phase 39 | 8 |
+| HEAT-01 through HEAT-08 | Phase 40 | 8 |
+| EXP-01 through EXP-08 | Phase 41 | 8 |
+| LINK-01 through LINK-07 | Phase 42 | 7 |
+| EXPOR-01 through EXPOR-08 | Phase 43 | 8 |
+| VER-01 through VER-07 | Phase 44 | 7 |
+
+**Coverage:** 54/54 requirements mapped.
+
+## Next Up
+
+**Phase 38: Analytics Evidence Model** — Define the stable data contracts and evidence-band rules that every later v1.6 phase consumes.
+
+Recommended next command:
+
+`$gsd-discuss-phase 38`
+
+---
+*Roadmap created: 2026-05-21*
+*Last updated: 2026-05-21 after v1.6 milestone roadmap creation*

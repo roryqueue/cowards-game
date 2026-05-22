@@ -6,9 +6,9 @@ status: planning
 last_updated: "2026-05-21T00:00:00.000Z"
 last_activity: 2026-05-21 — Milestone v1.6 started
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
-  total_plans: 0
+  total_plans: 7
   completed_plans: 0
   percent: 0
 ---
@@ -23,17 +23,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-21)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Defining v1.6 requirements and roadmap
+**Current focus:** Ready to discuss Phase 38
 **Current milestone:** v1.6 Workshop Analytics and Evidence Explorer
-**Requirements:** Fresh `.planning/REQUIREMENTS.md` is being created for v1.6
+**Requirements:** .planning/REQUIREMENTS.md (54/54 mapped)
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 38 — Analytics Evidence Model
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-21 — Milestone v1.6 started
+Status: Roadmap created; ready for phase discussion
+Last activity: 2026-05-21 — Milestone v1.6 roadmap created
 
 ## Workflow Settings
 
@@ -90,7 +90,7 @@ Items acknowledged and deferred after v1.5 milestone completion on 2026-05-21:
 
 ## Next Command
 
-Complete v1.6 requirements and roadmap, then run `$gsd-discuss-phase 38`.
+Run `$gsd-discuss-phase 38` to gather implementation decisions for the Analytics Evidence Model phase.
 
 ---
-*Last updated: 2026-05-21 after v1.6 milestone start*
+*Last updated: 2026-05-21 after v1.6 roadmap creation*

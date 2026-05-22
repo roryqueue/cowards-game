@@ -123,66 +123,66 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| AEM-01 | — | Pending |
-| AEM-02 | — | Pending |
-| AEM-03 | — | Pending |
-| AEM-04 | — | Pending |
-| AEM-05 | — | Pending |
-| AEM-06 | — | Pending |
-| AEM-07 | — | Pending |
-| AEM-08 | — | Pending |
-| SGP-01 | — | Pending |
-| SGP-02 | — | Pending |
-| SGP-03 | — | Pending |
-| SGP-04 | — | Pending |
-| SGP-05 | — | Pending |
-| SGP-06 | — | Pending |
-| SGP-07 | — | Pending |
-| SGP-08 | — | Pending |
-| HEAT-01 | — | Pending |
-| HEAT-02 | — | Pending |
-| HEAT-03 | — | Pending |
-| HEAT-04 | — | Pending |
-| HEAT-05 | — | Pending |
-| HEAT-06 | — | Pending |
-| HEAT-07 | — | Pending |
-| HEAT-08 | — | Pending |
-| EXP-01 | — | Pending |
-| EXP-02 | — | Pending |
-| EXP-03 | — | Pending |
-| EXP-04 | — | Pending |
-| EXP-05 | — | Pending |
-| EXP-06 | — | Pending |
-| EXP-07 | — | Pending |
-| EXP-08 | — | Pending |
-| LINK-01 | — | Pending |
-| LINK-02 | — | Pending |
-| LINK-03 | — | Pending |
-| LINK-04 | — | Pending |
-| LINK-05 | — | Pending |
-| LINK-06 | — | Pending |
-| LINK-07 | — | Pending |
-| EXPOR-01 | — | Pending |
-| EXPOR-02 | — | Pending |
-| EXPOR-03 | — | Pending |
-| EXPOR-04 | — | Pending |
-| EXPOR-05 | — | Pending |
-| EXPOR-06 | — | Pending |
-| EXPOR-07 | — | Pending |
-| EXPOR-08 | — | Pending |
-| VER-01 | — | Pending |
-| VER-02 | — | Pending |
-| VER-03 | — | Pending |
-| VER-04 | — | Pending |
-| VER-05 | — | Pending |
-| VER-06 | — | Pending |
-| VER-07 | — | Pending |
+| AEM-01 | Phase 38 | Pending |
+| AEM-02 | Phase 38 | Pending |
+| AEM-03 | Phase 38 | Pending |
+| AEM-04 | Phase 38 | Pending |
+| AEM-05 | Phase 38 | Pending |
+| AEM-06 | Phase 38 | Pending |
+| AEM-07 | Phase 38 | Pending |
+| AEM-08 | Phase 38 | Pending |
+| SGP-01 | Phase 39 | Pending |
+| SGP-02 | Phase 39 | Pending |
+| SGP-03 | Phase 39 | Pending |
+| SGP-04 | Phase 39 | Pending |
+| SGP-05 | Phase 39 | Pending |
+| SGP-06 | Phase 39 | Pending |
+| SGP-07 | Phase 39 | Pending |
+| SGP-08 | Phase 39 | Pending |
+| HEAT-01 | Phase 40 | Pending |
+| HEAT-02 | Phase 40 | Pending |
+| HEAT-03 | Phase 40 | Pending |
+| HEAT-04 | Phase 40 | Pending |
+| HEAT-05 | Phase 40 | Pending |
+| HEAT-06 | Phase 40 | Pending |
+| HEAT-07 | Phase 40 | Pending |
+| HEAT-08 | Phase 40 | Pending |
+| EXP-01 | Phase 41 | Pending |
+| EXP-02 | Phase 41 | Pending |
+| EXP-03 | Phase 41 | Pending |
+| EXP-04 | Phase 41 | Pending |
+| EXP-05 | Phase 41 | Pending |
+| EXP-06 | Phase 41 | Pending |
+| EXP-07 | Phase 41 | Pending |
+| EXP-08 | Phase 41 | Pending |
+| LINK-01 | Phase 42 | Pending |
+| LINK-02 | Phase 42 | Pending |
+| LINK-03 | Phase 42 | Pending |
+| LINK-04 | Phase 42 | Pending |
+| LINK-05 | Phase 42 | Pending |
+| LINK-06 | Phase 42 | Pending |
+| LINK-07 | Phase 42 | Pending |
+| EXPOR-01 | Phase 43 | Pending |
+| EXPOR-02 | Phase 43 | Pending |
+| EXPOR-03 | Phase 43 | Pending |
+| EXPOR-04 | Phase 43 | Pending |
+| EXPOR-05 | Phase 43 | Pending |
+| EXPOR-06 | Phase 43 | Pending |
+| EXPOR-07 | Phase 43 | Pending |
+| EXPOR-08 | Phase 43 | Pending |
+| VER-01 | Phase 44 | Pending |
+| VER-02 | Phase 44 | Pending |
+| VER-03 | Phase 44 | Pending |
+| VER-04 | Phase 44 | Pending |
+| VER-05 | Phase 44 | Pending |
+| VER-06 | Phase 44 | Pending |
+| VER-07 | Phase 44 | Pending |
 
 **Coverage:**
 - v1.6 requirements: 54 total
-- Mapped to phases: 0
-- Unmapped: 55
+- Mapped to phases: 54
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-21*
-*Last updated: 2026-05-21 after v1.6 milestone definition*
+*Last updated: 2026-05-21 after v1.6 roadmap creation*
