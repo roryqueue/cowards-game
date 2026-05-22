@@ -12,9 +12,17 @@ import {
   getCompetitionPreset,
 } from "./competition.js"
 import {
+  assertPublicServiceDtoLeakSafe,
+  SERVICE_API_ROUTES,
+  SERVICE_API_VERSION,
+} from "./service.js"
+import {
   ActionSchema,
   AnalyticsGauntletRunSummarySchema,
   ChronicleSchema,
+  PublicMatchSetSummaryServiceDtoSchema,
+  PublicReplayMetadataServiceDtoSchema,
+  PublicStrategyPageServiceDtoSchema,
   RuntimeViolationUserGuidanceSchema,
   RuntimeViolationTypeSchema,
   SoldierInactivityExplanationDtoSchema,
@@ -35,6 +43,48 @@ import {
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
 
 describe("Coward's Game spec contracts", () => {
+  it("exposes generation-ready v1.8 service route metadata and public DTO schemas", () => {
+    expect(SERVICE_API_VERSION).toBe("service-api-v1.8")
+    expect(SERVICE_API_ROUTES.getPublicStrategyPage).toMatchObject({
+      id: "getPublicStrategyPage",
+      operationId: "getPublicStrategyPage",
+      method: "GET",
+      path: "/public/strategies/{strategyId}",
+      authScope: "public",
+      privacyClass: "public",
+    })
+
+    for (const [routeId, route] of Object.entries(SERVICE_API_ROUTES)) {
+      expect(route.id).toBe(routeId)
+      expect(route.operationId).toBeTruthy()
+      expect(route.method).toMatch(/^(GET|POST|DELETE)$/)
+      expect(route.path).toMatch(/^\//)
+      expect(route.authScope).toBeTruthy()
+      expect(route.privacyClass).toBeTruthy()
+      expect(route.request).toBeTruthy()
+      expect(route.response).toBeTruthy()
+      expect(route.error).toBeTruthy()
+      expect(route.examples.length).toBeGreaterThan(0)
+      expect(route.fixtureRefs.length).toBeGreaterThan(0)
+    }
+
+    const publicSchemas = [
+      PublicMatchSetSummaryServiceDtoSchema,
+      PublicReplayMetadataServiceDtoSchema,
+      PublicStrategyPageServiceDtoSchema,
+    ]
+    for (const schema of publicSchemas) {
+      expect(typeof schema.parse).toBe("function")
+    }
+    for (const route of Object.values(SERVICE_API_ROUTES)) {
+      if (route.privacyClass === "public") {
+        for (const example of route.examples) {
+          assertPublicServiceDtoLeakSafe(example)
+        }
+      }
+    }
+  })
+
   it("compatibility versions have exactly the core six keys", () => {
     expect(Object.keys(COMPATIBILITY_VERSIONS)).toEqual([
       "spec",
