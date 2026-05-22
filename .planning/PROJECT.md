@@ -2,44 +2,33 @@
 
 ## Current State
 
-**Shipped version:** v1.5 Strategy Workshop Power Tools and Advanced Strategy Library on 2026-05-21
-**Current milestone:** v1.6 Workshop Analytics and Evidence Explorer.
-**Status:** v1.6 milestone definition in progress.
-**Last audit:** v1.5 milestone audit passed, 53/53 requirements satisfied.
+**Shipped version:** v1.6 Workshop Analytics and Evidence Explorer on 2026-05-22
+**Current milestone:** Planning next milestone.
+**Status:** v1.6 shipped, archived, and locally demoable.
+**Last audit:** v1.6 milestone audit passed, 54/54 requirements satisfied, no open findings.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible starter Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, and trust that public outputs do not expose private Strategy data.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.6 Workshop Analytics and Evidence Explorer
+## Latest Shipped Milestone: v1.6 Workshop Analytics and Evidence Explorer
 
 **Goal:** Turn v1.5's deterministic evidence into studyable Workshop analytics through saved gauntlet profiles, matchup heatmaps, evidence bands, replay deep links, and owner-safe exportable summaries.
 
-**Target features:**
-- Saved named gauntlet profiles with exact opponents, presets, seeds, rule versions, scoring policy, and revision ids.
-- Compatibility-aware profile reruns and comparisons that never execute Strategy code in the web/API process.
-- Workshop matchup heatmaps across selected Strategies and opponents, including W-L-D, points, failures, side bias, evidence confidence, and evidence counts.
-- Evidence explorer drilldowns from Strategy to opponent to MatchSet to replay.
-- Replay deep links to meaningful public moments such as Backstab, contraction, no-advance cleanup, fall, decisive push, and late-cycle stabilization.
-- Owner-only JSON/CSV exports for deterministic gauntlet summaries that preserve public privacy boundaries.
-
-## Latest Shipped Milestone: v1.5 Strategy Workshop Power Tools and Advanced Strategy Library
-
-**Goal:** Improve the Strategy Workshop into a stronger authoring and testing lab, then use it plus v1.4 evidence to create and validate a diverse Advanced Strategy Library, example MatchSets, and a completed realistic tournament.
-
 **Delivered:**
-- Advanced Strategy Library with 10 validated v1.5 seeds across pressure, anti-backstab, wall control, center control, contraction survival, evasive mobility, trap/control, mirror/adaptive play, late-cycle stabilization, and memory response.
-- Workshop Advanced Library entry point, apply/fork flows, comparison support, gauntlet/result framing, diagnostics, replay handoff, and performance summaries.
-- Public-safe `advancedLineage` metadata across immutable revisions, Strategy cards, player/profile pages, and Workshop surfaces.
-- Deterministic local evidence from five example MatchSets and one completed 8-entrant Advanced-only demo tournament at `/ladder/v1-5-demo`.
-- Replay-reviewed second-take Strategy retune with shared tactical fundamentals: leave starting edge early, seek Backstab opportunities, avoid contraction-edge risk, avoid direct self-stoning, and avoid off-board/wall/stone/terrain/immediate-reversal moves.
-- Browser-verified public pages and representative replays with no default exposure of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid details, or private runtime internals.
+- Stable analytics evidence contracts for saved gauntlet profiles, gauntlet runs, MatchSet summaries, matchup records, evidence bands, archetype tags, replay references, compatibility metadata, and export-safe DTOs.
+- Saved named gauntlet profiles with exact deterministic inputs, immutable Strategy Revision ids, compatibility-aware reruns, and compare-only-when-equivalent behavior.
+- Workshop matchup heatmaps across Starter and Advanced opponents showing W-L-D, points, failures, side bias, evidence confidence, evidence counts, and replay availability.
+- Evidence Explorer drilldowns from Strategy evidence to opponent records, MatchSet ids, Match ids, compatibility metadata, representative replay links, and owner-safe exports.
+- Replay deep links to meaningful public moments such as Backstab, contraction, no-advance cleanup, fall, decisive push, and late-cycle stabilization.
+- Owner-only JSON/CSV exports for deterministic gauntlet summaries, with schema and browser checks preventing Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, or private runtime internals from leaking by default.
+- Local demo data and browser-verified pages at `http://localhost:3000/` and `http://localhost:3000/workshop/evidence`.
 
 ## Next Milestone Goals
 
-v1.6 is now active. Candidate directions not included in this milestone remain:
+Candidate directions for the next milestone:
 
 - Replay analysis UX beyond targeted deep links, such as full timeline search, event filters, threat/backstab overlays, contraction risk markers, and side-by-side replay comparison.
 - Public competition operations: official scheduled tournament formats, governance/moderation flows, and clearer public tournament pages without durable ratings yet.
@@ -64,6 +53,16 @@ v1.6 is now active. Candidate directions not included in this milestone remain:
 - ✓ Completed 8-entrant Advanced-only local demo tournament at `/ladder/v1-5-demo`, with Center Gravity finishing 6-1-0 and no sweep.
 - ✓ Second-take Advanced Strategy retune validated across 33 Chronicles: 7103 Moves, 412 Backstab resolutions, 0 blocked moves, 0 direct self-stoning, and 0 self off-board moves.
 - ✓ Browser checks for Workshop, tournament, MatchSet, Strategy card, player/profile, and replay pages with public privacy boundaries intact.
+
+## Validated in v1.6
+
+- ✓ Stable analytics contracts for gauntlet profiles, gauntlet runs, MatchSet summaries, matchup records, evidence bands, archetype tags, replay references, compatibility metadata, and owner-safe export DTOs.
+- ✓ Saved gauntlet profiles can be named, rerun, compared only when compatibility-equivalent, and stored without executing Strategy code in the web/API process.
+- ✓ Workshop heatmaps show W-L-D, points, evidence bands, evidence counts, failures, side bias, and replay availability across Starter and Advanced opponents.
+- ✓ Evidence Explorer supports sorting/filtering/drilldown from Strategy evidence to opponent records, MatchSet ids, Match ids, representative replays, compatibility metadata, and owner-safe exports.
+- ✓ Replay deep links target meaningful public moments and focus the replay timeline at or near the selected event.
+- ✓ Owner JSON/CSV exports preserve deterministic provenance while omitting Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid, stack traces, owner debug, and private runtime internals by default.
+- ✓ Local v1.6 analytics demo and milestone audit pass with realistic mixed outcomes, degraded/system-failed evidence states, runtime isolation checks, browser checks, and no open findings.
 
 ## Validated in v1.0
 
@@ -140,6 +139,10 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.5-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.5-AUDIT-FIX.md`
 - `.planning/milestones/v1.5-phases/`
+- `.planning/milestones/v1.6-ROADMAP.md`
+- `.planning/milestones/v1.6-REQUIREMENTS.md`
+- `.planning/milestones/v1.6-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.6-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -175,12 +178,14 @@ Planning archives live under `.planning/milestones/`:
 | Check Backstab at every Cycle boundary | Backstab should be a tactical contact rule checked before and after each SoldierBrain Cycle, not only at Activation boundaries. | ✓ Implemented in v1.4 |
 | Treat advanced seed quality as product evidence | Advanced Strategies should have shared tactical fundamentals and replay-backed archetype roles, not merely stronger source comments around Starters. | ✓ Implemented in v1.5 |
 | Keep demo tournaments non-durable | v1.5 tournament evidence is useful for validation and onboarding, but does not create official public operations or permanent rankings. | ✓ Good |
+| Treat Workshop analytics as study evidence, not rating truth | Saved gauntlet profiles, heatmaps, evidence bands, and exports should help players inspect deterministic MatchSet evidence without creating durable balance or ranking claims. | ✓ Implemented in v1.6 |
+| Keep analytics summary-oriented and public-safe | Evidence Explorer, replay references, and owner exports should expose deterministic summaries and provenance while omitting Strategy source, memories, objectives, raw Awareness Grid, stack traces, owner debug, and private runtime internals by default. | ✓ Good |
 
 ## Constraints
 
 The active constraints remain: deterministic engine behavior, engine purity, Strategy Revision immutability, hostile Strategy treatment, runtime isolation, memory/source/output limits, package boundaries, replay privacy, Chronicle compatibility, and competitive integrity.
 
-Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, and private runtime internals by default. v1.5 created local example MatchSets and a completed example tournament for demonstration, but did not establish official public tournament operations or durable ratings.
+Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy/analytics surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, and private runtime internals by default. v1.5 created local example MatchSets and a completed example tournament for demonstration, and v1.6 created saved gauntlet analytics for study; neither establishes official public tournament operations or durable ratings.
 
 Future rule-correction work must treat the rules docs, engine, Chronicle/replay grammar, fixtures, starter Strategies, and demo competition data as one contract. It should not leave stale timing assumptions in samples, tests, or public explanatory text.
 
@@ -195,4 +200,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-21 after v1.6 milestone start*
+*Last updated: 2026-05-22 after v1.6 milestone completion*

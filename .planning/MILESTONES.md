@@ -1,5 +1,37 @@
 # Milestones
 
+## v1.6 Workshop Analytics and Evidence Explorer
+
+**Status:** Shipped 2026-05-22
+**Phases:** 7
+**Plans:** 7
+**Requirements:** 54/54 satisfied
+**Audit:** .planning/milestones/v1.6-MILESTONE-AUDIT.md
+
+### Delivered
+
+- Added stable analytics evidence contracts for saved gauntlet profiles, gauntlet runs, MatchSet summaries, matchup records, evidence bands, archetype tags, replay references, compatibility metadata, and owner-safe export DTOs.
+- Shipped saved named gauntlet profiles with exact deterministic inputs, immutable Strategy Revision ids, compatibility-aware reruns, and compare-only-when-equivalent behavior.
+- Added Workshop matchup heatmaps across Starter and Advanced opponents showing W-L-D, points, failures, side bias, evidence confidence, evidence counts, and replay availability.
+- Built the Evidence Explorer with sortable/filterable matchup rows, MatchSet/Match id details, compatibility metadata, replay drilldowns, and owner-safe export controls.
+- Added deterministic replay deep links to meaningful public moments including Backstab, contraction, no-advance cleanup, fall, decisive push, and late-cycle stabilization.
+- Added owner-only JSON/CSV gauntlet summary exports with schema and browser privacy checks against private Strategy/runtime/replay data leakage.
+- Generated and browser-verified local v1.6 analytics data with realistic mixed outcomes, degraded/system-failed states, representative replay links, and no open milestone audit findings.
+
+### Archives
+
+- .planning/milestones/v1.6-ROADMAP.md
+- .planning/milestones/v1.6-REQUIREMENTS.md
+- .planning/milestones/v1.6-MILESTONE-AUDIT.md
+- .planning/milestones/v1.6-phases/
+
+### Known Deferred Items
+
+- Full replay timeline search, event filters, tactical overlays, and side-by-side replay comparison remain future replay-analysis work.
+- Official public tournament operations, governance/moderation flows, and durable ratings remain future competition work.
+- Production-grade hostile-code isolation beyond the current worker/subprocess adapter boundary remains future runtime work.
+- Strategy snippets, lint rules, tactical helpers, and deeper no-advance/trapped-Soldier diagnostics remain future authoring work.
+
 ## v1.5 Strategy Workshop Power Tools and Advanced Strategy Library
 
 **Status:** Shipped 2026-05-21

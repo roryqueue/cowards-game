@@ -269,12 +269,57 @@
 - Sessions: one extended milestone thread plus follow-up retune, documentation, and archive pass.
 - Notable: user-guided replay/tournament inspection was the highest-signal input for Strategy quality.
 
+## Milestone: v1.6 — Workshop Analytics and Evidence Explorer
+
+**Shipped:** 2026-05-22
+**Phases:** 7 | **Plans:** 7
+
+### What Was Built
+
+- Stable analytics contracts for gauntlet profiles, gauntlet runs, MatchSet summaries, matchup records, evidence bands, archetype tags, replay references, compatibility metadata, and owner-safe export DTOs.
+- Saved gauntlet profiles with deterministic inputs, immutable Strategy Revision ids, compatibility-aware reruns, and compare-only-when-equivalent behavior.
+- Workshop heatmaps showing W-L-D, points, evidence bands, evidence counts, failures, side bias, and replay availability across Starter and Advanced opponents.
+- Evidence Explorer drilldowns from Strategy evidence to opponent records, MatchSet ids, Match ids, representative replays, compatibility metadata, and owner-safe exports.
+- Replay deep links that target meaningful public moments and focus the replay timeline at or near the selected event.
+- Owner JSON/CSV exports with deterministic provenance and explicit privacy guards against Strategy/runtime/replay internals.
+
+### What Worked
+
+- The v1.5 deterministic evidence model gave v1.6 realistic data to study instead of inventing analytics in isolation.
+- Subagent review found concrete privacy, persistence, compare/rerun, and export issues before closure.
+- Browser checks across heatmap, Evidence Explorer, replay deep links, export endpoints, and awkward responsive widths caught product-quality gaps that tests alone would not judge.
+
+### What Was Inefficient
+
+- Phase artifacts did not include `SUMMARY.md` files even though the completion workflow expects them, so closure had to use UAT, validation, review, and audit artifacts directly.
+- The installed `gsd-sdk` still lacks documented `query` subcommands, requiring manual archive and status updates.
+- Evidence Explorer desktop spacing needed post-audit live-user polish around intermediate viewport widths.
+
+### Patterns Established
+
+- Analytics should be summary-first, compatibility-aware, and explicit about evidence strength rather than pretending deterministic demos are durable ratings.
+- Owner exports need privacy guards at schema, endpoint, CSV, and browser-verification levels.
+- Replay deep links are more useful when they target named public moments and validate the expected moment type at the sequence.
+- Responsive UI verification should include awkward intermediate widths, not only mobile and wide desktop.
+
+### Key Lessons
+
+- Study surfaces need evidence vocabulary for thin, degraded, non-counted, and system-failed cases so players do not mistake system state for Strategy weakness.
+- Profile compatibility must be a first-class data contract, not a UI convention.
+- Keep generated analytics deterministic and public-safe by default; owner authorization can add export access without adding raw runtime artifacts.
+
+### Cost Observations
+
+- Model mix: not recorded.
+- Sessions: one extended autonomous milestone implementation plus live responsive-polish and archive pass.
+- Notable: the final user-visible quality came from combining automated privacy/runtime checks with manual browser inspection at real window sizes.
+
 ## Cross-Milestone Trends
 
 | Trend | Observation |
 | --- | --- |
-| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, v1.2 showed local browser UAT catches route/scoring issues after build success, v1.3 showed live replay realism checks catch product-quality strategy issues after correctness passes, v1.4 showed generated tournament evidence is essential after scheduler changes, and v1.5 showed Strategy library quality needs replay/metric review beyond validation. |
+| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, v1.2 showed local browser UAT catches route/scoring issues after build success, v1.3 showed live replay realism checks catch product-quality strategy issues after correctness passes, v1.4 showed generated tournament evidence is essential after scheduler changes, v1.5 showed Strategy library quality needs replay/metric review beyond validation, and v1.6 showed analytics needs privacy/runtime/export/browser verification together. |
 | Metadata hygiene | Summary, validation, UAT, and audit artifacts should be maintained during execution, not repaired at close. |
-| UI polish | Narrow viewport/browser review caught issues after automated checks; responsive screenshots, local page checks, and playback ergonomics should move earlier in UI phases. |
+| UI polish | Narrow viewport/browser review caught issues after automated checks; responsive screenshots, local page checks, awkward intermediate widths, and playback ergonomics should move earlier in UI phases. |
 | Package boundaries | Keeping runtime execution out of web/API and importing narrow server modules prevents trust and bundling regressions. |
 | Competitive trust | Each competition milestone works best when it keeps the promise modest: exhibition before ladder, resettable ladder before durable ratings, governance before official tournaments. |
