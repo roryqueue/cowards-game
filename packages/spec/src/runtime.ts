@@ -1,4 +1,4 @@
-import type { JsonValue } from "./types.js"
+import type { JsonValue, StrategyRevisionValidationIssue } from "./types.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 
 export const STRATEGY_RUNTIME_ABI_VERSION = "strategy-runtime-abi-v1.7"
@@ -148,6 +148,52 @@ export const STRATEGY_RUNTIME_SYSTEM_FAILURE_CODES = [
 export type StrategyRuntimeSystemFailureCode =
   (typeof STRATEGY_RUNTIME_SYSTEM_FAILURE_CODES)[number]
 
+export const STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES = [
+  "UNSUPPORTED_LANGUAGE",
+  "UNSUPPORTED_PACKAGE_METADATA",
+  "INCOMPATIBLE_ADAPTER",
+  "ABI_MISMATCH",
+  "SOURCE_TOO_LARGE",
+  "MEMORY_LIMIT_EXCEEDED",
+  "TIMEOUT",
+  "FORBIDDEN_CAPABILITY",
+  "NON_COUNTED_RUNTIME",
+] as const
+
+export type StrategyRuntimeProductValidationCode =
+  (typeof STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES)[number]
+
+export interface StrategyRuntimeProductValidationMessage {
+  code: StrategyRuntimeProductValidationCode
+  message: string
+  constraint: string
+  remediation: string
+  reference: string
+}
+
+export interface StrategyRuntimeCountedEligibility {
+  ok: boolean
+  code: StrategyRuntimeProductValidationCode | null
+  publicMessage: string | null
+}
+
+export interface StrategyRuntimeProductSemantics {
+  languageLabel: string
+  adapterLabel: string
+  readiness: StrategyRuntimeReadiness | "unknown"
+  readinessLabel: string
+  experimental: boolean
+  countedPlayEligible: boolean
+  countedPlayLabel: "Counted eligible" | "Not counted"
+  countedPlayReason: string | null
+  sourcePolicyLabel: string
+  packagePolicyLabel: string
+  docsReference: string
+  examplesReference: string
+  warnings: string[]
+  validationIssueCodes: StrategyRuntimeProductValidationCode[]
+}
+
 export interface StrategyRuntimeFailureDiagnostics {
   stderr?: string | undefined
   stack?: string | undefined
@@ -294,6 +340,338 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
   },
 ] as const satisfies readonly StrategyRuntimeAdapterRecord[]
 
+export const STRATEGY_RUNTIME_PRODUCT_VALIDATION_MESSAGES = {
+  UNSUPPORTED_LANGUAGE: {
+    code: "UNSUPPORTED_LANGUAGE",
+    message: "Strategy language is not supported by this runtime.",
+    constraint:
+      "Strategy language metadata must name a registered language enabled for the selected adapter.",
+    remediation:
+      "Select a supported JS/TS runtime or keep the revision experimental.",
+    reference: "runtime/languages",
+  },
+  UNSUPPORTED_PACKAGE_METADATA: {
+    code: "UNSUPPORTED_PACKAGE_METADATA",
+    message: "Strategy package metadata is not supported for counted play.",
+    constraint:
+      "v1.8 counted play accepts self-contained Strategy source with no package manifest.",
+    remediation:
+      "Remove package metadata or keep this revision outside counted play.",
+    reference: "runtime/package-policy",
+  },
+  INCOMPATIBLE_ADAPTER: {
+    code: "INCOMPATIBLE_ADAPTER",
+    message: "Strategy runtime adapter is not compatible with this language.",
+    constraint:
+      "Runtime adapter metadata must be registered and support the selected language.",
+    remediation: "Revalidate with a compatible JS/TS adapter.",
+    reference: "runtime/adapters",
+  },
+  ABI_MISMATCH: {
+    code: "ABI_MISMATCH",
+    message: "Strategy runtime ABI does not match this service.",
+    constraint: `Runtime metadata must use ${STRATEGY_RUNTIME_ABI_VERSION}.`,
+    remediation: "Revalidate and submit a fresh Strategy Revision.",
+    reference: "runtime/abi",
+  },
+  SOURCE_TOO_LARGE: {
+    code: "SOURCE_TOO_LARGE",
+    message: "Strategy source exceeds the source byte limit.",
+    constraint: "Strategy source must fit inside the configured source limit.",
+    remediation: "Remove unused source or helper data.",
+    reference: "runtime/limits",
+  },
+  MEMORY_LIMIT_EXCEEDED: {
+    code: "MEMORY_LIMIT_EXCEEDED",
+    message: "Strategy returned memory exceeds the memory limit.",
+    constraint:
+      "Strategy returned memory values must fit within runtime limits.",
+    remediation: "Store smaller JSON-only memory values.",
+    reference: "runtime/limits",
+  },
+  TIMEOUT: {
+    code: "TIMEOUT",
+    message: "Strategy execution timed out.",
+    constraint: "Strategy methods must finish within the runtime timeout.",
+    remediation: "Simplify loops and per-Activation work.",
+    reference: "runtime/limits",
+  },
+  FORBIDDEN_CAPABILITY: {
+    code: "FORBIDDEN_CAPABILITY",
+    message: "Strategy source uses a forbidden host capability.",
+    constraint:
+      "Strategies must be deterministic and cannot use host, network, filesystem, time, or random APIs.",
+    remediation: "Use only Strategy input data and deterministic local logic.",
+    reference: "runtime/capabilities",
+  },
+  NON_COUNTED_RUNTIME: {
+    code: "NON_COUNTED_RUNTIME",
+    message: "Strategy runtime is experimental and not counted-play eligible.",
+    constraint:
+      "Counted MatchSets, ladders, and gauntlets require a registered counted runtime.",
+    remediation:
+      "Use the JS/TS runtime for counted play or keep this revision experimental.",
+    reference: "runtime/counting",
+  },
+} as const satisfies Record<
+  StrategyRuntimeProductValidationCode,
+  StrategyRuntimeProductValidationMessage
+>
+
+const readinessLabels = {
+  "local-dev-fallback": "Local fallback",
+  prototype: "Prototype",
+  "production-candidate": "Production candidate",
+  experimental: "Experimental",
+  unknown: "Unknown",
+} as const satisfies Record<StrategyRuntimeReadiness | "unknown", string>
+
+const countedMessage = (
+  code: StrategyRuntimeProductValidationCode,
+): StrategyRuntimeProductValidationMessage =>
+  STRATEGY_RUNTIME_PRODUCT_VALIDATION_MESSAGES[code]
+
+const productIssue = (
+  code: StrategyRuntimeProductValidationCode,
+  severity: StrategyRevisionValidationIssue["severity"] = "error",
+): StrategyRevisionValidationIssue => {
+  const message = countedMessage(code)
+  return {
+    code,
+    severity,
+    message: message.message,
+    constraint: message.constraint,
+    remediation: message.remediation,
+    reference: message.reference,
+  }
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+
+export const getStrategyLanguageRecord = (
+  id: unknown,
+): StrategyLanguageRecord | null =>
+  STRATEGY_LANGUAGE_REGISTRY.find((candidate) => candidate.id === id) ?? null
+
+export const getStrategyRuntimeAdapterRecord = (
+  id: unknown,
+): StrategyRuntimeAdapterRecord | null =>
+  STRATEGY_RUNTIME_ADAPTER_REGISTRY.find((candidate) => candidate.id === id) ??
+  null
+
+const normalizePackageMetadata = (
+  value: unknown,
+): StrategyPackageMetadata | null => {
+  if (!isRecord(value)) {
+    return null
+  }
+  const mode = value.mode === "declared" ? "declared" : "none"
+  const entrypoint =
+    typeof value.entrypoint === "string" && value.entrypoint.length > 0
+      ? value.entrypoint
+      : "default"
+  return {
+    mode,
+    entrypoint,
+    ...(typeof value.manifestHash === "string"
+      ? { manifestHash: value.manifestHash }
+      : {}),
+    ...(typeof value.lockfileHash === "string"
+      ? { lockfileHash: value.lockfileHash }
+      : {}),
+    ...(isRecord(value.declaredDependencies)
+      ? {
+          declaredDependencies: Object.fromEntries(
+            Object.entries(value.declaredDependencies).filter(
+              (entry): entry is [string, string] =>
+                typeof entry[1] === "string",
+            ),
+          ),
+        }
+      : {}),
+  }
+}
+
+const coerceStrategyRuntimeMetadata = (
+  value: unknown,
+): StrategyRuntimeMetadata | null => {
+  const maybeRuntime = value as Record<string, unknown> | null
+  if (
+    maybeRuntime &&
+    typeof maybeRuntime === "object" &&
+    (maybeRuntime as LegacyRuntimeMetadata).name === "runtime-js" &&
+    typeof (maybeRuntime as LegacyRuntimeMetadata).version === "string"
+  ) {
+    return defaultRuntimeMetadata("typescript")
+  }
+  if (!isRecord(maybeRuntime)) {
+    return null
+  }
+  const languageValue = isRecord(maybeRuntime.language)
+    ? maybeRuntime.language
+    : null
+  const adapterValue = isRecord(maybeRuntime.adapter)
+    ? maybeRuntime.adapter
+    : null
+  const language = getStrategyLanguageRecord(languageValue?.id)
+  const adapter = getStrategyRuntimeAdapterRecord(adapterValue?.id)
+  const packageMetadata = normalizePackageMetadata(maybeRuntime.package)
+
+  if (!language || !adapter || !packageMetadata) {
+    return null
+  }
+
+  return {
+    abiVersion:
+      maybeRuntime.abiVersion === STRATEGY_RUNTIME_ABI_VERSION
+        ? STRATEGY_RUNTIME_ABI_VERSION
+        : STRATEGY_RUNTIME_ABI_VERSION,
+    language: {
+      id: language.id,
+      version:
+        typeof languageValue?.version === "string"
+          ? languageValue.version
+          : language.version,
+    },
+    adapter: {
+      id: adapter.id,
+      version:
+        typeof adapterValue?.version === "string"
+          ? adapterValue.version
+          : adapter.version,
+    },
+    package: packageMetadata,
+    requiredCapabilities: Array.isArray(maybeRuntime.requiredCapabilities)
+      ? maybeRuntime.requiredCapabilities.filter(
+          (capability): capability is string =>
+            typeof capability === "string" && capability.length > 0,
+        )
+      : [],
+    limits: isRecord(maybeRuntime.limits)
+      ? ({ ...adapter.limits, ...maybeRuntime.limits } as StrategyRuntimeLimits)
+      : adapter.limits,
+  }
+}
+
+export const validateStrategyRuntimeMetadataPolicy = (
+  value: unknown,
+): StrategyRevisionValidationIssue[] => {
+  const raw = isRecord(value) ? value : null
+  const languageValue = isRecord(raw?.language) ? raw.language : null
+  const adapterValue = isRecord(raw?.adapter) ? raw.adapter : null
+  const language = getStrategyLanguageRecord(languageValue?.id)
+  const adapter = getStrategyRuntimeAdapterRecord(adapterValue?.id)
+  const runtime = coerceStrategyRuntimeMetadata(value)
+  const issues: StrategyRevisionValidationIssue[] = []
+
+  if (raw?.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION) {
+    issues.push(productIssue("ABI_MISMATCH"))
+  }
+  if (!language) {
+    issues.push(productIssue("UNSUPPORTED_LANGUAGE"))
+  }
+  if (!adapter) {
+    issues.push(productIssue("INCOMPATIBLE_ADAPTER"))
+  }
+  if (
+    language &&
+    adapter &&
+    !adapter.supportedLanguageIds.includes(language.id)
+  ) {
+    issues.push(productIssue("INCOMPATIBLE_ADAPTER"))
+  }
+  if (runtime?.package.mode === "declared") {
+    issues.push(productIssue("UNSUPPORTED_PACKAGE_METADATA"))
+  }
+  if ((runtime?.requiredCapabilities.length ?? 0) > 0) {
+    issues.push(productIssue("UNSUPPORTED_PACKAGE_METADATA"))
+  }
+  if (
+    language &&
+    adapter &&
+    (!language.enabledForNormalPlay ||
+      !adapter.enabledForNormalPlay ||
+      !adapter.countedResultsAllowed)
+  ) {
+    issues.push(productIssue("NON_COUNTED_RUNTIME", "warning"))
+  }
+
+  return issues
+}
+
+export const evaluateStrategyRuntimeCountedEligibility = (
+  value: unknown,
+): StrategyRuntimeCountedEligibility => {
+  const issue =
+    validateStrategyRuntimeMetadataPolicy(value).find((candidate) =>
+      [
+        "ABI_MISMATCH",
+        "UNSUPPORTED_LANGUAGE",
+        "INCOMPATIBLE_ADAPTER",
+        "UNSUPPORTED_PACKAGE_METADATA",
+        "NON_COUNTED_RUNTIME",
+      ].includes(candidate.code),
+    ) ?? null
+
+  return issue
+    ? {
+        ok: false,
+        code: issue.code as StrategyRuntimeProductValidationCode,
+        publicMessage: issue.message,
+      }
+    : { ok: true, code: null, publicMessage: null }
+}
+
+export const describeStrategyRuntimeProductSemantics = (
+  value: unknown,
+): StrategyRuntimeProductSemantics => {
+  const runtime = normalizeStrategyRuntimeMetadata(value)
+  const language = getStrategyLanguageRecord(runtime.language.id)
+  const adapter = getStrategyRuntimeAdapterRecord(runtime.adapter.id)
+  const eligibility = evaluateStrategyRuntimeCountedEligibility(value)
+  const issues = validateStrategyRuntimeMetadataPolicy(value)
+  const readiness = adapter?.readiness ?? "unknown"
+  const experimental =
+    readiness === "experimental" ||
+    language?.enabledForNormalPlay === false ||
+    adapter?.enabledForNormalPlay === false
+  const warnings = [
+    ...(experimental
+      ? ["Experimental runtime; not eligible for counted play by default."]
+      : []),
+    ...(runtime.package.mode === "declared"
+      ? ["Declared package metadata is not supported for counted play in v1.8."]
+      : []),
+    ...(eligibility.publicMessage ? [eligibility.publicMessage] : []),
+  ]
+
+  return {
+    languageLabel: language?.label ?? runtime.language.id,
+    adapterLabel: adapter?.label ?? runtime.adapter.id,
+    readiness,
+    readinessLabel: readinessLabels[readiness],
+    experimental,
+    countedPlayEligible: eligibility.ok,
+    countedPlayLabel: eligibility.ok ? "Counted eligible" : "Not counted",
+    countedPlayReason: eligibility.publicMessage,
+    sourcePolicyLabel: "Self-contained Strategy source",
+    packagePolicyLabel:
+      runtime.package.mode === "none"
+        ? "No packages"
+        : "Declared packages experimental",
+    docsReference: "runtime/languages",
+    examplesReference:
+      runtime.language.id === "python"
+        ? "examples/python-experimental"
+        : "samples/minimal-strategy",
+    warnings,
+    validationIssueCodes: issues.map(
+      (issue) => issue.code as StrategyRuntimeProductValidationCode,
+    ),
+  }
+}
+
 export const defaultRuntimeMetadata = (
   languageId: Extract<
     StrategyLanguageId,
@@ -351,25 +729,7 @@ type LegacyRuntimeMetadata = {
 export const normalizeStrategyRuntimeMetadata = (
   value: unknown,
 ): StrategyRuntimeMetadata => {
-  const maybeRuntime = value as Record<string, unknown> | null
-  if (
-    maybeRuntime &&
-    typeof maybeRuntime === "object" &&
-    (maybeRuntime as LegacyRuntimeMetadata).name === "runtime-js" &&
-    typeof (maybeRuntime as LegacyRuntimeMetadata).version === "string"
-  ) {
-    return defaultRuntimeMetadata("typescript")
-  }
-  if (
-    maybeRuntime &&
-    typeof maybeRuntime === "object" &&
-    maybeRuntime.abiVersion === STRATEGY_RUNTIME_ABI_VERSION &&
-    maybeRuntime.language &&
-    maybeRuntime.adapter &&
-    maybeRuntime.package &&
-    maybeRuntime.limits
-  ) {
-    return maybeRuntime as unknown as StrategyRuntimeMetadata
-  }
-  return defaultRuntimeMetadata("typescript")
+  return (
+    coerceStrategyRuntimeMetadata(value) ?? defaultRuntimeMetadata("typescript")
+  )
 }

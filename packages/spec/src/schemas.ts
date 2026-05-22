@@ -557,7 +557,15 @@ export const StrategyRevisionValidationSeveritySchema = z.enum([
 ])
 
 export const StrategyRevisionValidationCodeSchema = z.enum([
+  "UNSUPPORTED_LANGUAGE",
+  "UNSUPPORTED_PACKAGE_METADATA",
+  "INCOMPATIBLE_ADAPTER",
+  "ABI_MISMATCH",
   "SOURCE_TOO_LARGE",
+  "MEMORY_LIMIT_EXCEEDED",
+  "TIMEOUT",
+  "FORBIDDEN_CAPABILITY",
+  "NON_COUNTED_RUNTIME",
   "FORBIDDEN_PATTERN",
   "MISSING_DEFAULT_EXPORT",
   "MISSING_SELECT_ACTIVATIONS",

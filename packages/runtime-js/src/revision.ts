@@ -28,9 +28,9 @@ export const buildStrategyRevision = (input: {
   metadata?: StrategyRevisionMetadata | undefined
   runtime?: StrategyRuntimeMetadata | undefined
 }): StrategyRevision => {
-  const validation = validateStrategySource(input.source)
   const sourceHash = hashStrategySource(input.source)
   const runtime = input.runtime ?? defaultRuntimeMetadata("typescript")
+  const validation = validateStrategySource(input.source, { runtime })
   const compatibilityKey = runtimeCompatibilityKey({
     runtime,
     sourceHash,

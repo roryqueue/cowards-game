@@ -3,40 +3,40 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Production Boundary Hardening
 status: executing
-stopped_at: Completed Phase 53
-last_updated: "2026-05-22T21:54:00.000Z"
+stopped_at: Completed Phase 54
+last_updated: "2026-05-22T22:14:00.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
-  percent: 50
+  completed_phases: 4
+  total_plans: 6
+  completed_plans: 6
+  percent: 67
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** Phase 53 complete; ready for Phase 54 planning/execution
+**Status:** Phase 54 complete; ready for Phase 55 planning/execution
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 54 - Non-JS Strategy Product Semantics
+**Current focus:** Phase 55 - Cross-Process Local Deployment Harness
 **Latest shipped milestone:** v1.7 Runtime and Backend Boundary Stabilization
 **Requirements:** v1.8 requirements mapped 38/38 in .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 54 of 56 (Non-JS Strategy Product Semantics)
-Plan: Phase 53 complete; next is Phase 54
+Phase: 55 of 56 (Cross-Process Local Deployment Harness)
+Plan: Phase 54 complete; next is Phase 55
 Status: Executing
 Last activity: 2026-05-22
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 67%
 
 ## Workflow Settings
 
@@ -83,10 +83,13 @@ Progress: [█████░░░░░] 50%
 - [Phase 53]: Sandbox work remains evaluation-only; worker-thread and host subprocess can be probed through `StrategyExecutionAdapter`, container subprocess is optional behind `COWARDS_RUN_CONTAINER_SANDBOX=1`, and Deno/WASI/gVisor/microVM stay tradeoff-only in v1.8. — No runtime candidate is promoted to production hostile-code isolation or counted eligibility.
 - [Phase 53]: Hostile sandbox probes now require exact runtime-violation versus system-failure taxonomy and normalize successful adapter outputs through public Strategy/Soldier result schemas. — Prevents invalid Strategy outputs and system failures from being counted as equivalent evidence.
 - [Phase 53]: Worker Strategy execution now blocks `console` in the injected Strategy scope and subprocess IPC carries output byte caps into the child harness. — Closes host-output and oversized-output drift found during the sandbox review.
+- [Phase 54]: Runtime product semantics are now spec-owned: language/adapter labels, readiness, package policy, validation issue codes, docs/examples references, warnings, and counted eligibility come from `@cowards/spec`. — Prevents UI, persistence, and validation copy from drifting.
+- [Phase 54]: Python remains experimental and not counted-play eligible; non-counted runtime metadata is a validation warning but a hard failure at exhibition and ladder counted-entry gates. — Preserves JS/TS defaults while making non-JS semantics visible.
+- [Phase 54]: Account, exhibition, public Strategy card, and Workshop validation surfaces show compact runtime/eligibility labels or references without adding a public language picker. — Avoids implying support parity.
 
 ### Pending Todos
 
-Phase 54 needs product semantics planning for experimental non-JS authoring, validation messages, compatibility warnings, and fail-closed counted-play eligibility.
+Phase 55 needs topology planning for web, TypeScript service path, worker/runtime adapter, Go read-only service, fixtures, health checks, smoke requests, and privacy-safe diagnostics.
 
 ### Blockers/Concerns
 
@@ -104,6 +107,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-22T21:54:00.000Z
-Stopped at: Completed Phase 53
+Last session: 2026-05-22T22:14:00.000Z
+Stopped at: Completed Phase 54
 Resume file: None

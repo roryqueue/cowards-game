@@ -4,6 +4,7 @@ import {
   buildExhibitionDuplicateKey,
   evaluateRateLimit,
   generateCompetitionPairwiseMatrix,
+  runtimeAllowsCountedPlay,
   validateManualExhibitionRevisionIds,
 } from "./competition.js"
 
@@ -124,5 +125,18 @@ describe("competition helpers", () => {
         policy: { limit: 5, windowSeconds: 600 },
       }),
     ).toEqual({ allowed: false, retryAfterSeconds: 300 })
+  })
+
+  it("rejects experimental runtimes for counted exhibition play", () => {
+    expect(() =>
+      runtimeAllowsCountedPlay({
+        ...defaultRuntimeMetadata(),
+        language: { id: "python", version: "3.9" },
+        adapter: {
+          id: "runtime-python-subprocess-experimental",
+          version: "0.1.0-experimental",
+        },
+      }),
+    ).toThrow("experimental and not counted-play eligible")
   })
 })

@@ -802,6 +802,9 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                           {guidance.remediation ? (
                             <span>Next: {guidance.remediation}</span>
                           ) : null}
+                          {guidance.reference ? (
+                            <span>Reference: {guidance.reference}</span>
+                          ) : null}
                         </>
                       )
                     })()}

@@ -33,7 +33,13 @@ import {
   StrategyRevisionSchema,
 } from "./schemas.js"
 import { fixtures } from "./fixtures/index.js"
-import { defaultRuntimeMetadata } from "./runtime.js"
+import {
+  defaultRuntimeMetadata,
+  describeStrategyRuntimeProductSemantics,
+  evaluateStrategyRuntimeCountedEligibility,
+  STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
+  validateStrategyRuntimeMetadataPolicy,
+} from "./runtime.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 import { STRATEGY_SOURCE_BYTES } from "./constants.js"
 import {
@@ -156,6 +162,69 @@ describe("Coward's Game spec contracts", () => {
     }
 
     expect(RuntimeViolationUserGuidanceSchema.parse(guidance)).toEqual(guidance)
+  })
+
+  it("runtime product semantics keep JS counted and Python experimental", () => {
+    const jsRuntime = defaultRuntimeMetadata()
+    const pythonRuntime = {
+      abiVersion: "strategy-runtime-abi-v1.7",
+      language: { id: "python", version: "3.9" },
+      adapter: {
+        id: "runtime-python-subprocess-experimental",
+        version: "0.1.0-experimental",
+      },
+      package: { mode: "none", entrypoint: "default" },
+      requiredCapabilities: [],
+      limits: jsRuntime.limits,
+    }
+
+    expect(evaluateStrategyRuntimeCountedEligibility(jsRuntime)).toEqual({
+      ok: true,
+      code: null,
+      publicMessage: null,
+    })
+    expect(evaluateStrategyRuntimeCountedEligibility(pythonRuntime)).toEqual({
+      ok: false,
+      code: "NON_COUNTED_RUNTIME",
+      publicMessage:
+        "Strategy runtime is experimental and not counted-play eligible.",
+    })
+    expect(
+      describeStrategyRuntimeProductSemantics(pythonRuntime),
+    ).toMatchObject({
+      languageLabel: "Python",
+      readinessLabel: "Experimental",
+      countedPlayLabel: "Not counted",
+      experimental: true,
+    })
+  })
+
+  it("runtime policy validation exposes Phase 54 stable issue codes", () => {
+    expect(STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES).toEqual([
+      "UNSUPPORTED_LANGUAGE",
+      "UNSUPPORTED_PACKAGE_METADATA",
+      "INCOMPATIBLE_ADAPTER",
+      "ABI_MISMATCH",
+      "SOURCE_TOO_LARGE",
+      "MEMORY_LIMIT_EXCEEDED",
+      "TIMEOUT",
+      "FORBIDDEN_CAPABILITY",
+      "NON_COUNTED_RUNTIME",
+    ])
+
+    const declaredPackageRuntime = {
+      ...defaultRuntimeMetadata(),
+      package: {
+        mode: "declared",
+        entrypoint: "default",
+        manifestHash: "manifest-hash",
+      },
+    }
+    const issues = validateStrategyRuntimeMetadataPolicy(declaredPackageRuntime)
+
+    expect(issues.map((issue) => issue.code)).toContain(
+      "UNSUPPORTED_PACKAGE_METADATA",
+    )
   })
 
   it("SoldierInactivityExplanationCauseSchema accepts every required cause", () => {

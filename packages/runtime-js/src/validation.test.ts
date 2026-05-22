@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { STRATEGY_SOURCE_BYTES, type RuntimeViolationType } from "@cowards/spec"
+import {
+  defaultRuntimeMetadata,
+  STRATEGY_SOURCE_BYTES,
+  type RuntimeViolationType,
+} from "@cowards/spec"
 import { describeRuntimeViolationForUser } from "./guards.js"
 import { validateStrategySource } from "./validation.js"
 
@@ -260,6 +264,43 @@ describe("validateStrategySource", () => {
     expect(incompatible.valid).toBe(false)
     expect(issue?.constraint).toContain("compatibility")
     expect(issue?.remediation).toContain("fresh Strategy Revision")
+  })
+
+  it("adds runtime semantic warnings without breaking default JS validation", () => {
+    const pythonRuntime = {
+      ...defaultRuntimeMetadata(),
+      language: { id: "python" as const, version: "3.9" },
+      adapter: {
+        id: "runtime-python-subprocess-experimental" as const,
+        version: "0.1.0-experimental",
+      },
+    }
+    const report = validateStrategySource(validSource, {
+      runtime: pythonRuntime,
+    })
+
+    expect(report.valid).toBe(true)
+    expect(report.warnings.map((warning) => warning.code)).toContain(
+      "NON_COUNTED_RUNTIME",
+    )
+  })
+
+  it("reports unsupported package metadata as a validation error", () => {
+    const report = validateStrategySource(validSource, {
+      runtime: {
+        ...defaultRuntimeMetadata(),
+        package: {
+          mode: "declared",
+          entrypoint: "default",
+          manifestHash: "manifest-hash",
+        },
+      },
+    })
+
+    expect(report.valid).toBe(false)
+    expect(report.errors.map((error) => error.code)).toContain(
+      "UNSUPPORTED_PACKAGE_METADATA",
+    )
   })
 
   it("accepts a valid minimal strategy", () => {

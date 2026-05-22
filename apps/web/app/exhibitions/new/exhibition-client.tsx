@@ -25,13 +25,24 @@ export function ExhibitionClient({
     [presetId, presets],
   )
   const validRevisions = revisions.filter((revision) => revision.valid)
+  const selectableRevisionIds = new Set(
+    validRevisions
+      .filter((revision) => revision.runtimeSemantics.countedPlayEligible)
+      .map((revision) => revision.id),
+  )
   const canSubmit =
     selectedRevisionIds.length >= 2 &&
     selectedRevisionIds.length <= 8 &&
+    selectedRevisionIds.every((revisionId) =>
+      selectableRevisionIds.has(revisionId),
+    ) &&
     Boolean(selectedPreset) &&
     !submitting
 
   const toggleRevision = (revisionId: string) => {
+    if (!selectableRevisionIds.has(revisionId)) {
+      return
+    }
     setSelectedRevisionIds((current) =>
       current.includes(revisionId)
         ? current.filter((candidate) => candidate !== revisionId)
@@ -105,6 +116,7 @@ export function ExhibitionClient({
           <div className="selectable-list">
             {validRevisions.map((revision) => {
               const checked = selectedRevisionIds.includes(revision.id)
+              const selectable = selectableRevisionIds.has(revision.id)
               return (
                 <label
                   className={`selectable-row ${checked ? "active" : ""}`}
@@ -112,6 +124,7 @@ export function ExhibitionClient({
                 >
                   <input
                     checked={checked}
+                    disabled={!selectable}
                     type="checkbox"
                     onChange={() => toggleRevision(revision.id)}
                   />
@@ -120,8 +133,16 @@ export function ExhibitionClient({
                     <small>
                       {revision.sourceHash.slice(0, 10)} ·{" "}
                       {revision.sourceBytes} bytes ·{" "}
+                      {revision.runtimeSemantics.languageLabel} ·{" "}
+                      {revision.runtimeSemantics.countedPlayLabel} ·{" "}
                       {new Date(revision.createdAt).toLocaleString()}
                     </small>
+                    {!selectable &&
+                    revision.runtimeSemantics.countedPlayReason ? (
+                      <small>
+                        {revision.runtimeSemantics.countedPlayReason}
+                      </small>
+                    ) : null}
                   </span>
                 </label>
               )

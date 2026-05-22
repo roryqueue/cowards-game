@@ -1,6 +1,7 @@
 import {
   COMPATIBILITY_VERSIONS,
   STRATEGY_SOURCE_BYTES,
+  validateStrategyRuntimeMetadataPolicy,
   type StrategyRevisionValidationCode,
   type StrategyRevisionValidationIssue,
   type StrategyRevisionValidationReport,
@@ -196,11 +197,16 @@ export const validateStrategySource = (
     runtimeVersion?: string
     specVersion?: string
     engineVersion?: string
+    runtime?: unknown
   },
 ): StrategyRevisionValidationReport => {
   const sourceBytes = sourceByteLength(source)
   const errors: StrategyRevisionValidationIssue[] = []
   const forbiddenPatterns: string[] = []
+  const runtimeIssues =
+    options?.runtime === undefined
+      ? []
+      : validateStrategyRuntimeMetadataPolicy(options.runtime)
 
   if (sourceBytes > STRATEGY_SOURCE_BYTES) {
     errors.push(
@@ -299,10 +305,18 @@ export const validateStrategySource = (
     )
   }
 
+  for (const runtimeIssue of runtimeIssues) {
+    if (runtimeIssue.severity === "error") {
+      errors.push(runtimeIssue)
+    }
+  }
+
   return {
     valid: errors.length === 0,
     errors,
-    warnings: [],
+    warnings: runtimeIssues.filter(
+      (runtimeIssue) => runtimeIssue.severity === "warning",
+    ),
     sourceBytes,
     forbiddenPatterns,
     sourceHash: hashStrategySource(source),

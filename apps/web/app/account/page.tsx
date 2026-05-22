@@ -53,6 +53,7 @@ export default async function AccountPage() {
                   <span>Revision</span>
                   <span>Hash</span>
                   <span>Status</span>
+                  <span>Runtime</span>
                   <span>Source</span>
                 </div>
                 {revisions.map((revision) => (
@@ -60,6 +61,10 @@ export default async function AccountPage() {
                     <span title={revision.id}>{revision.label}</span>
                     <span>{revision.sourceHash.slice(0, 10)}</span>
                     <span>{revision.valid ? "valid" : "invalid"}</span>
+                    <span>
+                      {revision.runtimeSemantics.languageLabel} ·{" "}
+                      {revision.runtimeSemantics.countedPlayLabel}
+                    </span>
                     <a
                       href={`/api/account/revisions/${encodeURIComponent(
                         revision.id,

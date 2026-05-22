@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest"
+import { defaultRuntimeMetadata } from "@cowards/spec"
 import {
+  assertLadderEligibleRuntime,
   DEFAULT_LADDER_MINIMUM_ENTRIES,
   DEFAULT_LADDER_TARGET_POD_SIZE,
   trialLadderStatusLabel,
@@ -18,5 +20,18 @@ describe("trial ladder contracts", () => {
   it("defaults to four-entry deterministic pods", () => {
     expect(DEFAULT_LADDER_MINIMUM_ENTRIES).toBe(4)
     expect(DEFAULT_LADDER_TARGET_POD_SIZE).toBe(4)
+  })
+
+  it("rejects experimental runtimes for counted trial ladder entry", () => {
+    expect(() =>
+      assertLadderEligibleRuntime({
+        ...defaultRuntimeMetadata(),
+        language: { id: "python", version: "3.9" },
+        adapter: {
+          id: "runtime-python-subprocess-experimental",
+          version: "0.1.0-experimental",
+        },
+      }),
+    ).toThrow("experimental and not counted-play eligible")
   })
 })

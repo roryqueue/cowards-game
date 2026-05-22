@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto"
 import {
   assertPublicMatchSetResultLeakSafe,
+  evaluateStrategyRuntimeCountedEligibility,
   getCompetitionPreset,
   normalizeStrategyRuntimeMetadata,
-  STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   type CompetitionEntrantSnapshot,
   type CompetitionPresetId,
   type PublicMatchSetResultDto,
@@ -28,19 +28,17 @@ export class CompetitionInputError extends Error {
   }
 }
 
-const runtimeAllowsCountedPlay = (
+export const runtimeAllowsCountedPlay = (
   runtime: unknown,
 ): CompetitionEntrantSnapshot["runtime"] => {
-  const normalized = normalizeStrategyRuntimeMetadata(runtime)
-  const adapter = STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
-    (candidate) => candidate.id === normalized.adapter.id,
-  )
-  if (!adapter?.enabledForNormalPlay || !adapter.countedResultsAllowed) {
+  const eligibility = evaluateStrategyRuntimeCountedEligibility(runtime)
+  if (!eligibility.ok) {
     throw new CompetitionInputError(
-      `StrategyRevision runtime adapter is not compatible: ${normalized.adapter.id}`,
+      eligibility.publicMessage ??
+        "StrategyRevision runtime is not eligible for counted exhibition entry.",
     )
   }
-  return normalized
+  return normalizeStrategyRuntimeMetadata(runtime)
 }
 
 export class ExhibitionRateLimitError extends Error {

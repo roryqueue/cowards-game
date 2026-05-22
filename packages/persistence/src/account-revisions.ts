@@ -1,10 +1,14 @@
 import { randomUUID } from "node:crypto"
 import { buildStrategyRevision } from "@cowards/runtime-js"
-import { normalizeStrategyRuntimeMetadata } from "@cowards/spec"
+import {
+  describeStrategyRuntimeProductSemantics,
+  normalizeStrategyRuntimeMetadata,
+} from "@cowards/spec"
 import type {
   StrategyId,
   StrategyRevision,
   StrategyRevisionId,
+  StrategyRuntimeProductSemantics,
   StrategyRevisionMetadata,
   UserId,
 } from "@cowards/spec"
@@ -38,6 +42,7 @@ export interface AccountStrategyRevisionSummary {
   sourceBytes: number
   valid: boolean
   runtime: StrategyRevision["runtime"]
+  runtimeSemantics: StrategyRuntimeProductSemantics
   engineCompatibility: StrategyRevision["engineCompatibility"]
   createdAt: string
   lockedAt?: string | undefined
@@ -145,22 +150,26 @@ export const listAccountStrategyRevisions = async (
     [userId],
   )
 
-  return result.rows.map((row) => ({
-    id: row.id,
-    strategyId: row.strategy_id,
-    label: row.metadata.label,
-    notes: row.metadata.notes,
-    tags: row.metadata.tags,
-    starterLineage: row.metadata.starterLineage,
-    advancedLineage: row.metadata.advancedLineage,
-    sourceHash: row.source_hash,
-    sourceBytes: row.source_bytes,
-    valid: row.validation.valid,
-    runtime: normalizeStrategyRuntimeMetadata(row.runtime),
-    engineCompatibility: row.engine_compatibility,
-    createdAt: row.created_at.toISOString(),
-    ...(row.locked_at ? { lockedAt: row.locked_at.toISOString() } : {}),
-  }))
+  return result.rows.map((row) => {
+    const runtime = normalizeStrategyRuntimeMetadata(row.runtime)
+    return {
+      id: row.id,
+      strategyId: row.strategy_id,
+      label: row.metadata.label,
+      notes: row.metadata.notes,
+      tags: row.metadata.tags,
+      starterLineage: row.metadata.starterLineage,
+      advancedLineage: row.metadata.advancedLineage,
+      sourceHash: row.source_hash,
+      sourceBytes: row.source_bytes,
+      valid: row.validation.valid,
+      runtime,
+      runtimeSemantics: describeStrategyRuntimeProductSemantics(row.runtime),
+      engineCompatibility: row.engine_compatibility,
+      createdAt: row.created_at.toISOString(),
+      ...(row.locked_at ? { lockedAt: row.locked_at.toISOString() } : {}),
+    }
+  })
 }
 
 export const forkStarterStrategyToAccount = async (

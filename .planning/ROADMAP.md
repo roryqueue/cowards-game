@@ -28,7 +28,7 @@ v1.8 turns the v1.7 service, runtime, and backend contracts into harder operatin
 - [x] **Phase 51: Service Contract Generation and Route Migration** - Developers can regenerate service artifacts and route selected low-risk web reads through the typed service layer.
 - [x] **Phase 52: Go Read-Only Backend Parity Against Real Fixtures** - Developers can run the Go read-only service against real evidence and prove parity with TypeScript service DTOs.
 - [x] **Phase 53: Runtime Sandbox Hardening Prototype** - Developers can evaluate sandbox candidates through the runtime ABI without changing counted Match defaults.
-- [ ] **Phase 54: Non-JS Strategy Product Semantics** - Users and developers see clear experimental language semantics, validation messages, and fail-closed counted-play eligibility.
+- [x] **Phase 54: Non-JS Strategy Product Semantics** - Users and developers see clear experimental language semantics, validation messages, and fail-closed counted-play eligibility.
 - [ ] **Phase 55: Cross-Process Local Deployment Harness** - Developers can run and diagnose the local web, service, runtime, Go, and fixture topology as separate boundaries.
 - [ ] **Phase 56: Observability, Privacy, and Boundary Drift Monitors** - Boundary, privacy, parity, and compatibility checks fail on drift or bypasses before milestone release.
 
@@ -88,7 +88,9 @@ Plans:
   3. Validation reports stable reasons for unsupported language, unsupported package metadata, incompatible adapter, ABI mismatch, source size limit, memory limit, timeout, forbidden capability, and non-counted eligibility.
   4. Counted MatchSet, ladder, and gauntlet eligibility checks fail closed for experimental non-JS adapters with stable user-facing reasons.
   5. Existing JS/TS Strategy Revision behavior, metadata normalization, Workshop save/test flow, and counted-play eligibility remain unchanged, and Python or other non-JS runtimes remain experimental until a future promotion gate proves otherwise.
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [x] 54-01-PLAN.md — Add spec-owned runtime product semantics, validation issue codes, fail-closed counted eligibility, and compact UI labels.
 **UI hint**: yes
 
 ### Phase 55: Cross-Process Local Deployment Harness
@@ -124,7 +126,7 @@ Plans:
 | 51. Service Contract Generation and Route Migration | 3/3 | Complete | 2026-05-22 |
 | 52. Go Read-Only Backend Parity Against Real Fixtures | 1/1 | Complete | 2026-05-22 |
 | 53. Runtime Sandbox Hardening Prototype | 1/1 | Complete | 2026-05-22 |
-| 54. Non-JS Strategy Product Semantics | 0/TBD | Not started | - |
+| 54. Non-JS Strategy Product Semantics | 1/1 | Complete | 2026-05-22 |
 | 55. Cross-Process Local Deployment Harness | 0/TBD | Not started | - |
 | 56. Observability, Privacy, and Boundary Drift Monitors | 0/TBD | Not started | - |
 
@@ -143,11 +145,11 @@ Plans:
 
 ## Next Up
 
-**Phase 54: Non-JS Strategy Product Semantics** - Define experimental language semantics, validation messages, compatibility warnings, and fail-closed counted-play eligibility.
+**Phase 55: Cross-Process Local Deployment Harness** - Build a repeatable local topology for web, service, worker/runtime adapter, Go read-only service, fixtures, health checks, and diagnostics.
 
 Recommended next command:
 
-`$gsd-discuss-phase 54`
+`$gsd-discuss-phase 55`
 
 ## Recent Shipped Scope
 
@@ -165,4 +167,4 @@ Recommended next command:
 
 ---
 *Roadmap created: 2026-05-22 for v1.8 Production Boundary Hardening*
-*Last updated: 2026-05-22 after Phase 53 completion*
+*Last updated: 2026-05-22 after Phase 54 completion*

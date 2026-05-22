@@ -37,12 +37,12 @@ Requirements for turning the v1.7 service/runtime/backend contracts into sturdie
 
 ### Non-JS Strategy Product Semantics
 
-- [ ] **NJS-01**: Strategy language and runtime registry metadata defines language id/version, ABI version, runtime adapter id/version, readiness, isolation notes, capability limits, source/package metadata policy, and counted-play eligibility.
-- [ ] **NJS-02**: Non-JS Strategy surfaces expose experimental labels, compatibility warnings, validation codes, docs/examples hooks, and clear non-counted eligibility wording wherever they are surfaced.
-- [ ] **NJS-03**: Validation messages cover unsupported language, unsupported package metadata, incompatible adapter, ABI mismatch, source size limit, memory limit, timeout, forbidden capability, and non-counted eligibility.
-- [ ] **NJS-04**: Counted MatchSet, ladder, and gauntlet eligibility checks fail closed for experimental non-JS adapters with stable user-facing reasons.
-- [ ] **NJS-05**: Existing JS/TS Strategy Revision behavior, metadata normalization, Workshop save/test flow, and counted-play eligibility remain unchanged unless explicitly covered by compatibility tests.
-- [ ] **NJS-06**: Python and any other non-JS runtime remain experimental unless a future milestone defines and satisfies promotion criteria.
+- [x] **NJS-01**: Strategy language and runtime registry metadata defines language id/version, ABI version, runtime adapter id/version, readiness, isolation notes, capability limits, source/package metadata policy, and counted-play eligibility.
+- [x] **NJS-02**: Non-JS Strategy surfaces expose experimental labels, compatibility warnings, validation codes, docs/examples hooks, and clear non-counted eligibility wording wherever they are surfaced.
+- [x] **NJS-03**: Validation messages cover unsupported language, unsupported package metadata, incompatible adapter, ABI mismatch, source size limit, memory limit, timeout, forbidden capability, and non-counted eligibility.
+- [x] **NJS-04**: Counted MatchSet, ladder, and gauntlet eligibility checks fail closed for experimental non-JS adapters with stable user-facing reasons.
+- [x] **NJS-05**: Existing JS/TS Strategy Revision behavior, metadata normalization, Workshop save/test flow, and counted-play eligibility remain unchanged unless explicitly covered by compatibility tests.
+- [x] **NJS-06**: Python and any other non-JS runtime remain experimental unless a future milestone defines and satisfies promotion criteria.
 
 ### Cross-Process Local Deployment Harness
 
@@ -126,12 +126,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SBX-04 | Phase 53 | Complete |
 | SBX-05 | Phase 53 | Complete |
 | SBX-06 | Phase 53 | Complete |
-| NJS-01 | Phase 54 | Pending |
-| NJS-02 | Phase 54 | Pending |
-| NJS-03 | Phase 54 | Pending |
-| NJS-04 | Phase 54 | Pending |
-| NJS-05 | Phase 54 | Pending |
-| NJS-06 | Phase 54 | Pending |
+| NJS-01 | Phase 54 | Complete |
+| NJS-02 | Phase 54 | Complete |
+| NJS-03 | Phase 54 | Complete |
+| NJS-04 | Phase 54 | Complete |
+| NJS-05 | Phase 54 | Complete |
+| NJS-06 | Phase 54 | Complete |
 | TOPO-01 | Phase 55 | Pending |
 | TOPO-02 | Phase 55 | Pending |
 | TOPO-03 | Phase 55 | Pending |

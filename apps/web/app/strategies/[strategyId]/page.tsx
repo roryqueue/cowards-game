@@ -1,4 +1,5 @@
 import type { StrategyId } from "@cowards/spec"
+import { describeStrategyRuntimeProductSemantics } from "@cowards/spec"
 import { getPublicStrategyCard } from "../../../lib/public-service-boundary.js"
 
 export const dynamic = "force-dynamic"
@@ -19,6 +20,9 @@ export default async function StrategyCardPage({
       </main>
     )
   }
+  const runtimeSemantics = describeStrategyRuntimeProductSemantics(
+    strategy.runtime,
+  )
   return (
     <main className="app-page">
       <section className="app-panel">
@@ -30,7 +34,15 @@ export default async function StrategyCardPage({
               @{strategy.authorHandle}
             </a>
           </div>
-          <span className="workshop-chip">{strategy.validationStatus}</span>
+          <div className="workshop-chip-row">
+            <span className="workshop-chip">{strategy.validationStatus}</span>
+            <span className="workshop-chip">
+              {runtimeSemantics.readinessLabel}
+            </span>
+            <span className="workshop-chip">
+              {runtimeSemantics.countedPlayLabel}
+            </span>
+          </div>
         </div>
         {strategy.description ? <p>{strategy.description}</p> : null}
         <div className="workshop-chip-row">
@@ -47,9 +59,17 @@ export default async function StrategyCardPage({
           <dd>{strategy.sourceHash}</dd>
           <dt>runtime</dt>
           <dd>
-            {strategy.runtime.language.id} / {strategy.runtime.adapter.id}{" "}
+            {runtimeSemantics.languageLabel} / {runtimeSemantics.adapterLabel}{" "}
             {strategy.runtime.adapter.version}
           </dd>
+          <dt>packages</dt>
+          <dd>{runtimeSemantics.packagePolicyLabel}</dd>
+          {runtimeSemantics.countedPlayReason ? (
+            <>
+              <dt>eligibility</dt>
+              <dd>{runtimeSemantics.countedPlayReason}</dd>
+            </>
+          ) : null}
           <dt>record</dt>
           <dd>
             {strategy.record.wins}-{strategy.record.losses}-

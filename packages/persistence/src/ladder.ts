@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto"
 import {
   assertPublicMatchSetResultLeakSafe,
   EXHIBITION_SCORING_POLICY_V1,
+  evaluateStrategyRuntimeCountedEligibility,
   normalizeStrategyRuntimeMetadata,
-  STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   type CompetitionEntrantSnapshot,
   type LadderMatchSetCountedStatus,
   type LadderNonCountedReason,
@@ -32,19 +32,17 @@ export class LadderInputError extends Error {
   }
 }
 
-const assertLadderEligibleRuntime = (
+export const assertLadderEligibleRuntime = (
   runtime: unknown,
 ): CompetitionEntrantSnapshot["runtime"] => {
-  const normalized = normalizeStrategyRuntimeMetadata(runtime)
-  const adapter = STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
-    (candidate) => candidate.id === normalized.adapter.id,
-  )
-  if (!adapter?.enabledForNormalPlay || !adapter.countedResultsAllowed) {
+  const eligibility = evaluateStrategyRuntimeCountedEligibility(runtime)
+  if (!eligibility.ok) {
     throw new LadderInputError(
-      `Strategy Revision runtime adapter is not eligible for trial ladder entry: ${normalized.adapter.id}`,
+      eligibility.publicMessage ??
+        "Strategy Revision runtime is not eligible for trial ladder entry.",
     )
   }
-  return normalized
+  return normalizeStrategyRuntimeMetadata(runtime)
 }
 
 export const TRIAL_LADDER_PRESET_ID = "standard-exhibition-v1" as const
