@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime and Backend Boundary Stabilization
-status: implemented
-last_updated: "2026-05-22T12:20:00.000-04:00"
-last_activity: 2026-05-22 — Milestone v1.7 implemented, audited, and verified
+status: complete
+last_updated: "2026-05-22T12:55:00.000-04:00"
+last_activity: 2026-05-22 — Milestone v1.7 completed, archived, audited, and verified
 progress:
   total_phases: 6
   completed_phases: 6
@@ -16,24 +16,24 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.7 Runtime and Backend Boundary Stabilization implemented and verified
+**Status:** v1.7 Runtime and Backend Boundary Stabilization shipped and archived
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.7 audit complete; ready for milestone completion or next-cycle review
-**Current milestone:** v1.7 Runtime and Backend Boundary Stabilization
-**Requirements:** 32/32 mapped in .planning/REQUIREMENTS.md
+**Current focus:** Ready for v1.8 milestone definition
+**Latest shipped milestone:** v1.7 Runtime and Backend Boundary Stabilization
+**Requirements:** v1.7 archived with 32/32 complete in .planning/milestones/v1.7-REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
 Phase: 45-50 - v1.7 Runtime and Backend Boundary Stabilization
 Plan: 6/6 implemented
-Status: Verified
-Last activity: 2026-05-22 — v1.7 implementation, validation, and audit completed
+Status: Complete and archived
+Last activity: 2026-05-22 — v1.7 implementation, validation, audit, and archive completed
 
 ## Workflow Settings
 
@@ -57,6 +57,7 @@ Last activity: 2026-05-22 — v1.7 implementation, validation, and audit complet
 | v1.4 Cycle-Interleaved Rules Correction | 5 | 5 | 33/33 | Shipped |
 | v1.5 Strategy Workshop Power Tools and Advanced Strategy Library | 8 | 8 | 53/53 | Shipped |
 | v1.6 Workshop Analytics and Evidence Explorer | 7 | 7 | 54/54 | Shipped |
+| v1.7 Runtime and Backend Boundary Stabilization | 6 | 6 | 32/32 | Shipped |
 
 ## Accumulated Context
 
@@ -67,9 +68,9 @@ Last activity: 2026-05-22 — v1.7 implementation, validation, and audit complet
 - v1.4 shipped the corrected Cycle-interleaved scheduler, Cycle-boundary Backstab, `chronicle-v1.4`, refreshed starters, a completed `/ladder/v1-4-demo`, and replay speeds up to 32x.
 - v1.5 shipped Workshop power tools, a distinct Advanced Strategy Library, five example MatchSets, a completed `/ladder/v1-5-demo`, replay-reviewed Strategy retuning, and public-safe evidence pages.
 - v1.6 shipped saved gauntlet analytics, compatibility-aware reruns/comparisons, Workshop heatmaps, Evidence Explorer drilldowns, replay deep links, owner-safe JSON/CSV exports, and a local analytics demo.
+- v1.7 shipped frozen TypeScript service/runtime boundary contracts, Next service-client migration, golden parity fixtures, runtime adapter metadata, an experimental Python ABI spike, and a minimal read-only Go backend spike.
 - Public replay output remains privacy-safe by default and does not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid details, owner debug, or private runtime details.
 - Strategy code must continue to run only behind worker/runtime adapter boundaries, never in web/API processes.
-- v1.7 adds `service-api-v1.7` and `strategy-runtime-abi-v1.7` contracts, a typed service layer, a runtime adapter registry, golden parity fixtures, an experimental Python ABI spike, and a minimal Go backend spike.
 
 ## Deferred Items
 
@@ -100,9 +101,19 @@ Items acknowledged and deferred after v1.6 milestone completion on 2026-05-22:
 | runtime | Production-grade hostile-code isolation beyond the current worker/subprocess adapter boundary | Deferred |
 | authoring | Strategy snippets, lint rules, tactical helpers, and deeper no-advance/trapped-Soldier diagnostics | Deferred |
 
+Items acknowledged and deferred after v1.7 milestone completion on 2026-05-22:
+
+| Category | Item | Status |
+| --- | --- | --- |
+| backend | Full Go orchestration, mutation endpoints, job claiming, and persistent service ownership transfer | Deferred |
+| runtime | Production-grade hostile-code isolation and resource enforcement beyond the prototype subprocess ABI | Deferred |
+| runtime | Production UX, docs, and support policy for non-JS Strategy languages | Deferred |
+| contracts | OpenAPI/client generation and broader Next route migration through the typed service layer | Deferred |
+| deployment | Multi-process local topology and deployment checks for web, worker, service, runtime, and Go spike together | Deferred |
+
 ## Next Command
 
-Run `$gsd-complete-milestone v1.7` to archive this milestone, or review `.planning/milestones/v1.7-execution-audit.md` first.
+Run `$gsd-new-milestone v1.8` to define the next milestone from the archived v1.7 boundary foundation.
 
 ---
-*Last updated: 2026-05-22 after v1.7 implementation and verification*
+*Last updated: 2026-05-22 after v1.7 milestone completion and archive*

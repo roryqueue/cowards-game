@@ -1,5 +1,37 @@
 # Milestones
 
+## v1.7 Runtime and Backend Boundary Stabilization
+
+**Status:** Shipped 2026-05-22
+**Phases:** 6
+**Plans:** 6
+**Requirements:** 32/32 satisfied
+**Audit:** .planning/milestones/v1.7-MILESTONE-AUDIT.md
+
+### Delivered
+
+- Added `service-api-v1.7` contracts and `@cowards/service` for health, auth/session, Strategy revisions, MatchSets, replay metadata, analytics, exports, ladders, and public pages.
+- Added `strategy-runtime-abi-v1.7` request/response envelopes covering source/package metadata, limits, deterministic restrictions, versioning, runtime violations, and system failures.
+- Added `@cowards/golden` parity fixtures for deterministic engine outcomes, Chronicle/replay behavior, public DTO privacy, runtime failure taxonomy, and ordering.
+- Made Strategy Revision runtime metadata first-class through language/adapter registries, compatibility keys, legacy normalization, and counted-play eligibility checks.
+- Added an experimental Python subprocess runtime through the ABI while keeping JS/TS as the only counted runtime path.
+- Added a minimal read-only Go backend spike with health, public MatchSet summary, and replay metadata endpoints.
+- Fixed audit findings around runtime worker imports, persistence-root service imports, and Workshop schema-drift fallback behavior.
+
+### Archives
+
+- .planning/milestones/v1.7-ROADMAP.md
+- .planning/milestones/v1.7-REQUIREMENTS.md
+- .planning/milestones/v1.7-MILESTONE-AUDIT.md
+- .planning/milestones/v1.7-phases/
+
+### Known Deferred Items
+
+- Production hostile-code isolation beyond current worker/subprocess/container candidates remains future runtime work.
+- Python remains an experimental ABI proof and is not enabled for counted MatchSets.
+- Go remains read-only/static for the spike; orchestration, writes, jobs, and Strategy execution remain TypeScript-owned.
+- Full OpenAPI generation and production non-JS Strategy authoring UX remain future milestone work.
+
 ## v1.6 Workshop Analytics and Evidence Explorer
 
 **Status:** Shipped 2026-05-22

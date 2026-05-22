@@ -314,12 +314,59 @@
 - Sessions: one extended autonomous milestone implementation plus live responsive-polish and archive pass.
 - Notable: the final user-visible quality came from combining automated privacy/runtime checks with manual browser inspection at real window sizes.
 
+## Milestone: v1.7 — Runtime and Backend Boundary Stabilization
+
+**Shipped:** 2026-05-22
+**Phases:** 6 | **Plans:** 6
+
+### What Was Built
+
+- Frozen `service-api-v1.7` backend-facing DTO contracts for auth/session, Strategy Revisions, MatchSets, replays, analytics, exports, ladders, and public pages.
+- A typed web service-client layer that began moving Next routes away from direct persistence package roots.
+- `strategy-runtime-abi-v1.7`, covering language-neutral request/response schemas, metadata, limits, timeout/failure taxonomy, version negotiation, and deterministic capability restrictions.
+- Golden parity fixtures for engine outcomes, Chronicle projection, scoring, MatchSet and analytics summaries, replay deep links, exports, privacy redaction, runtime failures, and deterministic ordering.
+- Runtime adapter registry metadata on Strategy Revisions and MatchSet compatibility checks, with JS/TS as stable and Python marked experimental.
+- A tiny Python subprocess ABI spike and a minimal read-only Go backend spike proving DTO parity and deployment shape without moving orchestration prematurely.
+
+### What Worked
+
+- Contract-first implementation let TypeScript, Python, and Go touch the same boundaries without forcing a rewrite.
+- Golden parity fixtures caught behavioral drift across service DTOs, replay projections, exports, and runtime failures.
+- Narrow package imports kept Next builds from pulling persistence migrations and filesystem code into web bundles.
+- The Go spike proved useful quickly once called through its explicit path at `/usr/local/go/bin/go`.
+
+### What Was Inefficient
+
+- The installed `gsd-sdk` still lacks documented `query` subcommands, so readiness checks, audit, and archive status had to be inspected manually.
+- Some service imports initially used persistence package roots and only failed at build time, after unit tests had passed.
+- The second-language spike is intentionally tiny; it proves the ABI shape, not production user-facing multi-language support.
+
+### Patterns Established
+
+- Treat backend and runtime boundaries as versioned product contracts before replacing the implementation behind them.
+- Keep experimental adapters first-class in metadata but opt-in through compatibility gates and honest labels.
+- Use golden fixtures as the shared truth between engine, Chronicle, service DTOs, exports, runtime failure handling, and backend spikes.
+- Go backend work should remain read-only until DTO parity, schema access, deployment topology, and client integration are proven.
+
+### Key Lessons
+
+- Boundary rewrites get safer when the old implementation and the spike both answer the same fixture set.
+- Runtime isolation tests should forbid accidental web/API process execution paths, including through test helpers.
+- Storage-fallback behavior must distinguish real outage cases from schema drift; treating missing tables as "available" helped avoid hiding setup defects.
+
+### Cost Observations
+
+- Model mix: not recorded.
+- Sessions: one extended research, discussion, planning, execution, review, validation, audit-fix, and archive loop.
+- Notable: the highest-leverage fixes were build and boundary hygiene issues rather than feature surface changes.
+
 ## Cross-Milestone Trends
 
 | Trend | Observation |
 | --- | --- |
-| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, v1.2 showed local browser UAT catches route/scoring issues after build success, v1.3 showed live replay realism checks catch product-quality strategy issues after correctness passes, v1.4 showed generated tournament evidence is essential after scheduler changes, v1.5 showed Strategy library quality needs replay/metric review beyond validation, and v1.6 showed analytics needs privacy/runtime/export/browser verification together. |
+| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, v1.2 showed local browser UAT catches route/scoring issues after build success, v1.3 showed live replay realism checks catch product-quality strategy issues after correctness passes, v1.4 showed generated tournament evidence is essential after scheduler changes, v1.5 showed Strategy library quality needs replay/metric review beyond validation, v1.6 showed analytics needs privacy/runtime/export/browser verification together, and v1.7 showed contract parity fixtures are the right bridge before backend/runtime rewrites. |
 | Metadata hygiene | Summary, validation, UAT, and audit artifacts should be maintained during execution, not repaired at close. |
 | UI polish | Narrow viewport/browser review caught issues after automated checks; responsive screenshots, local page checks, awkward intermediate widths, and playback ergonomics should move earlier in UI phases. |
 | Package boundaries | Keeping runtime execution out of web/API and importing narrow server modules prevents trust and bundling regressions. |
 | Competitive trust | Each competition milestone works best when it keeps the promise modest: exhibition before ladder, resettable ladder before durable ratings, governance before official tournaments. |
+| Boundary evolution | Freeze contracts and prove parity before changing implementation ownership; this keeps Go backend and multi-language runtime work incremental instead of cliff-shaped. |

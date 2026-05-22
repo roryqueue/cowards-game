@@ -2,30 +2,31 @@
 
 ## Current State
 
-**Shipped version:** v1.6 Workshop Analytics and Evidence Explorer on 2026-05-22
-**Current milestone:** v1.7 Runtime and Backend Boundary Stabilization.
-**Status:** v1.7 planning started; requirements and roadmap are being defined.
-**Last audit:** v1.6 milestone audit passed, 54/54 requirements satisfied, no open findings.
+**Shipped version:** v1.7 Runtime and Backend Boundary Stabilization on 2026-05-22
+**Current milestone:** Ready for v1.8 planning.
+**Status:** v1.7 shipped; requirements and roadmap archived.
+**Last audit:** v1.7 milestone audit passed, 32/32 requirements satisfied, no open findings.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has frozen TypeScript service/runtime boundary contracts plus small Python and Go spikes proving future multi-language runtime and backend migration paths.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.7 Runtime and Backend Boundary Stabilization
+## Latest Shipped Milestone: v1.7 Runtime and Backend Boundary Stabilization
 
 **Goal:** Make Coward's Game ready for a future Go backend and multi-language Strategy runtimes by freezing typed boundaries and proving parity before any major rewrite.
 
-**Target features:**
-- Service Boundary Contract for auth/session, Strategy revisions, MatchSets, replay DTOs, analytics profiles/runs, exports, ladders, and public pages.
-- Strategy Runtime ABI for language-neutral execution inputs/outputs, memory/source/package metadata, timeout and failure handling, version negotiation, and deterministic capability restrictions.
-- Golden Parity Harness proving unchanged behavior across engine outcomes, Chronicle projection, scoring, summaries, replay deep links, exports, runtime failures, privacy redaction, and deterministic ordering.
-- Runtime Adapter Registry with first-class Strategy Revision language/runtime metadata and MatchSet compatibility checks for adapter versions.
-- One deliberately small experimental non-JS runtime spike through the same subprocess/container-style ABI.
-- Minimal Go backend spike against the frozen API shape, starting read-only to prove deployment, schema access, DTO parity, and client integration.
+**Delivered:**
+- `service-api-v1.7` contracts and `@cowards/service` for health, auth/session, Strategy revisions, MatchSets, replay metadata, analytics, exports, ladders, and public pages.
+- `strategy-runtime-abi-v1.7` contracts for language-neutral Strategy execution envelopes, package/source metadata, limits, timeouts, runtime violations, system failures, and deterministic restrictions.
+- Golden parity fixtures proving deterministic engine outcomes, Chronicle projection, replay reconstruction, public DTO privacy, runtime failure taxonomy, and ordering.
+- Runtime language/adapter registries with first-class Strategy Revision metadata, compatibility keys, counted-play eligibility, and legacy runtime normalization.
+- Experimental Python subprocess runtime through the same ABI, clearly disabled for counted play.
+- Minimal read-only Go backend spike for health, public MatchSet summary, and replay metadata DTO envelopes.
+- Local validation through `pnpm test:fast`, `pnpm build`, Go tests, and HTTP smoke checks for web and Go endpoints.
 
-## Latest Shipped Milestone: v1.6 Workshop Analytics and Evidence Explorer
+## Previous Shipped Milestone: v1.6 Workshop Analytics and Evidence Explorer
 
 **Goal:** Turn v1.5's deterministic evidence into studyable Workshop analytics through saved gauntlet profiles, matchup heatmaps, evidence bands, replay deep links, and owner-safe exportable summaries.
 
@@ -66,6 +67,18 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - ✓ Replay deep links target meaningful public moments and focus the replay timeline at or near the selected event.
 - ✓ Owner JSON/CSV exports preserve deterministic provenance while omitting Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid, stack traces, owner debug, and private runtime internals by default.
 - ✓ Local v1.6 analytics demo and milestone audit pass with realistic mixed outcomes, degraded/system-failed evidence states, runtime isolation checks, browser checks, and no open findings.
+
+## Validated in v1.7
+
+- ✓ `service-api-v1.7` service contracts cover auth/session, Strategy revisions, MatchSets, replay metadata, analytics, exports, ladders, public pages, and health.
+- ✓ `@cowards/service` provides a typed service boundary and web MatchSet result reads now pass through it without importing persistence roots.
+- ✓ Public service DTO privacy guards reject Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, stack traces, stderr, sessions, and runtime internals.
+- ✓ `strategy-runtime-abi-v1.7` defines language-neutral execution envelopes, source/package metadata, limits, deterministic restrictions, versioning, runtime violations, and system failures.
+- ✓ Strategy Revisions carry first-class language/runtime adapter metadata, with legacy `runtime-js` normalization and counted-play eligibility checks.
+- ✓ Golden parity fixtures cover deterministic Match outcomes, Chronicle/replay behavior, public DTO privacy, runtime failure taxonomy, and deterministic ordering.
+- ✓ Experimental Python runtime spike executes through the ABI but remains disabled for normal counted play.
+- ✓ Minimal Go backend spike returns v1.7-shaped health, public MatchSet summary, and replay metadata DTOs.
+- ✓ Milestone audit fixed boundary issues around runtime worker imports, persistence-root service imports, and schema-drift fallback behavior.
 
 ## Validated in v1.0
 
@@ -146,6 +159,10 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.6-REQUIREMENTS.md`
 - `.planning/milestones/v1.6-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.6-phases/`
+- `.planning/milestones/v1.7-ROADMAP.md`
+- `.planning/milestones/v1.7-REQUIREMENTS.md`
+- `.planning/milestones/v1.7-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.7-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -184,6 +201,9 @@ Planning archives live under `.planning/milestones/`:
 | Keep demo tournaments non-durable | v1.5 tournament evidence is useful for validation and onboarding, but does not create official public operations or permanent rankings. | ✓ Good |
 | Treat Workshop analytics as study evidence, not rating truth | Saved gauntlet profiles, heatmaps, evidence bands, and exports should help players inspect deterministic MatchSet evidence without creating durable balance or ranking claims. | ✓ Implemented in v1.6 |
 | Keep analytics summary-oriented and public-safe | Evidence Explorer, replay references, and owner exports should expose deterministic summaries and provenance while omitting Strategy source, memories, objectives, raw Awareness Grid, stack traces, owner debug, and private runtime internals by default. | ✓ Good |
+| Freeze contracts before rewrites | Service and runtime boundaries should be specified, tested, and proven with small spikes before moving orchestration or production language support. | ✓ Implemented in v1.7 |
+| Keep non-JS runtimes experimental until sandbox/product semantics are real | Python can prove ABI shape, but counted play should remain JS/TS until isolation, package policy, Workshop UX, and compatibility are designed. | ✓ Good |
+| Keep Go backend migration read-only first | A static/read-only Go spike proves DTO/deployment shape without prematurely moving writes, jobs, or Strategy execution. | ✓ Good |
 
 ## Constraints
 
@@ -204,4 +224,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-22 after starting v1.7 milestone*
+*Last updated: 2026-05-22 after completing v1.7 milestone*
