@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.6 Workshop Analytics and Evidence Explorer on 2026-05-22
-**Current milestone:** Planning next milestone.
-**Status:** v1.6 shipped, archived, and locally demoable.
+**Current milestone:** v1.7 Runtime and Backend Boundary Stabilization.
+**Status:** v1.7 planning started; requirements and roadmap are being defined.
 **Last audit:** v1.6 milestone audit passed, 54/54 requirements satisfied, no open findings.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data.
@@ -12,6 +12,18 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.7 Runtime and Backend Boundary Stabilization
+
+**Goal:** Make Coward's Game ready for a future Go backend and multi-language Strategy runtimes by freezing typed boundaries and proving parity before any major rewrite.
+
+**Target features:**
+- Service Boundary Contract for auth/session, Strategy revisions, MatchSets, replay DTOs, analytics profiles/runs, exports, ladders, and public pages.
+- Strategy Runtime ABI for language-neutral execution inputs/outputs, memory/source/package metadata, timeout and failure handling, version negotiation, and deterministic capability restrictions.
+- Golden Parity Harness proving unchanged behavior across engine outcomes, Chronicle projection, scoring, summaries, replay deep links, exports, runtime failures, privacy redaction, and deterministic ordering.
+- Runtime Adapter Registry with first-class Strategy Revision language/runtime metadata and MatchSet compatibility checks for adapter versions.
+- One deliberately small experimental non-JS runtime spike through the same subprocess/container-style ABI.
+- Minimal Go backend spike against the frozen API shape, starting read-only to prove deployment, schema access, DTO parity, and client integration.
 
 ## Latest Shipped Milestone: v1.6 Workshop Analytics and Evidence Explorer
 
@@ -25,15 +37,6 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - Replay deep links to meaningful public moments such as Backstab, contraction, no-advance cleanup, fall, decisive push, and late-cycle stabilization.
 - Owner-only JSON/CSV exports for deterministic gauntlet summaries, with schema and browser checks preventing Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, or private runtime internals from leaking by default.
 - Local demo data and browser-verified pages at `http://localhost:3000/` and `http://localhost:3000/workshop/evidence`.
-
-## Next Milestone Goals
-
-Candidate directions for the next milestone:
-
-- Replay analysis UX beyond targeted deep links, such as full timeline search, event filters, threat/backstab overlays, contraction risk markers, and side-by-side replay comparison.
-- Public competition operations: official scheduled tournament formats, governance/moderation flows, and clearer public tournament pages without durable ratings yet.
-- Production runtime hardening: promote containerized subprocess isolation toward a production-grade hostile-code boundary.
-- Strategy authoring ergonomics: snippets, lint rules, local tactical helpers, and stronger diagnostics for common no-advance/trapped-Soldier mistakes.
 
 ## Validated in v1.4
 
@@ -148,7 +151,8 @@ Planning archives live under `.planning/milestones/`:
 
 - Durable all-time ratings, permanent Elo/Glicko contracts, ranked prize ladders, public tournaments, and broad spectator/community surfaces beyond profiles, public Strategy cards, standings, results, and replay links.
 - Randomized arena generation and custom user-created maps.
-- Multi-language runtimes beyond the hardened JS/TS runtime boundary.
+- Full production multi-language runtime support beyond the v1.7 contract and one experimental spike.
+- Wholesale backend rewrite or migration of orchestration before the service boundary is proven.
 - Enterprise-grade authentication features such as email verification, password reset, OAuth, organizations, and account recovery.
 - Live model inference or live human control during Matches.
 - Monetization, cosmetics, strategy marketplace, and reinforcement-learning harnesses.
@@ -200,4 +204,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-22 after v1.6 milestone completion*
+*Last updated: 2026-05-22 after starting v1.7 milestone*

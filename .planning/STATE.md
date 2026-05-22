@@ -1,39 +1,39 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: Workshop Analytics and Evidence Explorer
-status: shipped
+milestone: v1.7
+milestone_name: Runtime and Backend Boundary Stabilization
+status: planning
 last_updated: "2026-05-22T00:00:00.000Z"
-last_activity: 2026-05-22 — v1.6 analytics milestone shipped and archived
+last_activity: 2026-05-22 — Milestone v1.7 started
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.6 Workshop Analytics and Evidence Explorer shipped and archived
+**Status:** v1.7 Runtime and Backend Boundary Stabilization planning started
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Planning next milestone
-**Current milestone:** None active
-**Requirements:** archived in .planning/milestones/v1.6-REQUIREMENTS.md; fresh requirements should be created by the next `$gsd-new-milestone`
+**Current focus:** Defining v1.7 requirements for runtime and backend boundary stabilization
+**Current milestone:** v1.7 Runtime and Backend Boundary Stabilization
+**Requirements:** not yet defined; `.planning/REQUIREMENTS.md` will be created for v1.7
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: none active
-Plan: none active
-Status: v1.6 phases 38-44 shipped, archived, reviewed, validated, and audited
-Last activity: 2026-05-22 — Archived v1.6 roadmap, requirements, audit, and phase directories
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-22 — Milestone v1.7 started
 
 ## Workflow Settings
 
@@ -101,7 +101,7 @@ Items acknowledged and deferred after v1.6 milestone completion on 2026-05-22:
 
 ## Next Command
 
-Start the next milestone with `$gsd-new-milestone`.
+Continue `$gsd-new-milestone` to define v1.7 requirements and roadmap.
 
 ---
-*Last updated: 2026-05-22 after v1.6 milestone completion*
+*Last updated: 2026-05-22 after starting v1.7 milestone*
