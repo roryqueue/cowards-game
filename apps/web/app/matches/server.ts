@@ -4,7 +4,12 @@ import {
   type ChronicleStore,
 } from "@cowards/persistence/chronicle-store"
 import type { Queryable } from "@cowards/persistence/repositories"
-import type { MatchId, PlayerId } from "@cowards/spec"
+import { createCowardsLocalService } from "@cowards/service"
+import type {
+  MatchId,
+  PlayerId,
+  PublicReplayMetadataServiceDto,
+} from "@cowards/spec"
 import type { GetMatchReplayOptions, ReplayPageData } from "./types.js"
 import { buildReadyReplayFromStoredChronicle } from "./replay-ready.js"
 import {
@@ -88,8 +93,20 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
   const createStore = deps.createChronicleStore ?? createPostgresChronicleStore
   const resolveAuthorizedReplayOwners =
     deps.resolveAuthorizedReplayOwners ?? resolvePersistedMatchOwners
+  const cowardsService = createCowardsLocalService({
+    withPool: withPool as never,
+    createChronicleStore: ((pool: unknown) =>
+      createStore(pool as Queryable)) as never,
+  })
 
   return {
+    async getPublicReplayMetadata(
+      matchId: MatchId,
+    ): Promise<PublicReplayMetadataServiceDto | null> {
+      const resolvedMatchId = decodeMatchId(matchId)
+      return cowardsService.getPublicReplayMetadata(resolvedMatchId)
+    },
+
     async getMatchReplay(
       matchId: MatchId,
       options: GetMatchReplayOptions = {},

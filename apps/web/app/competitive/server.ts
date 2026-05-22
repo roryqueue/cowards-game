@@ -42,7 +42,6 @@ import {
 } from "@cowards/persistence/governance"
 import {
   buildPublicPlayerProfileDto,
-  buildPublicStrategyCardDto,
 } from "@cowards/persistence/profiles"
 import { findAdvancedStrategy } from "@cowards/persistence/advanced-strategies"
 import { findStarterStrategy } from "@cowards/persistence/starter-strategies"
@@ -673,9 +672,8 @@ export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
       strategyId: string,
     ): Promise<StrategyCardDto | null> {
       try {
-        return await withPool((pool) =>
-          buildPublicStrategyCardDto(pool, strategyId),
-        )
+        const page = await cowardsService.getPublicStrategyPage(strategyId)
+        return page ? page.payload.strategy : null
       } catch (error) {
         return mapPersistenceError(error)
       }
