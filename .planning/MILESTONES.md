@@ -1,5 +1,37 @@
 # Milestones
 
+## v1.8 Production Boundary Hardening
+
+**Status:** Shipped 2026-05-22
+**Phases:** 6
+**Plans:** 8
+**Requirements:** 38/38 satisfied
+**Audit:** .planning/milestones/v1.8-MILESTONE-AUDIT.md
+
+### Delivered
+
+- Generated and linted `service-api-v1.8` OpenAPI artifacts from canonical `@cowards/spec` service route and DTO metadata.
+- Migrated selected public web reads through `@cowards/service` while preserving public DTO behavior and privacy constraints.
+- Promoted the Go backend spike to read-only parity against TypeScript-service-generated fixtures for health, public MatchSet summary, replay metadata, and owner-scoped analytics summary.
+- Added an evaluation-only sandbox candidate matrix and hostile probe harness without promoting any boundary to production hostile-code isolation.
+- Made non-JS Strategy product semantics spec-owned, with Python remaining experimental and non-counted.
+- Added `pnpm topology:check` for repeatable local web/service/runtime/Go fixture diagnostics.
+- Added `pnpm boundary:monitors` for service contract, privacy, import-boundary, runtime adapter, Go parity, sandbox, and topology drift checks.
+
+### Archives
+
+- .planning/milestones/v1.8-ROADMAP.md
+- .planning/milestones/v1.8-REQUIREMENTS.md
+- .planning/milestones/v1.8-MILESTONE-AUDIT.md
+- .planning/milestones/v1.8-phases/
+
+### Known Deferred Items
+
+- Go mutation endpoints, persistence writes, job claiming, migrations, Match orchestration, and Strategy execution remain TypeScript-owned.
+- Production hostile-code sandbox certification remains future runtime work.
+- Python and other non-JS runtimes remain experimental and are not enabled for counted MatchSets, ladders, or gauntlets.
+- Public language picker, package dependency ecosystem, cloud deployment, and production observability stack remain future milestone work.
+
 ## v1.7 Runtime and Backend Boundary Stabilization
 
 **Status:** Shipped 2026-05-22

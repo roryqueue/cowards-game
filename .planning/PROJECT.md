@@ -2,30 +2,41 @@
 
 ## Current State
 
-**Shipped version:** v1.7 Runtime and Backend Boundary Stabilization on 2026-05-22
-**Current milestone:** v1.8 Production Boundary Hardening.
-**Status:** v1.8 planning started; requirements and roadmap in progress.
-**Last audit:** v1.7 milestone audit passed, 32/32 requirements satisfied, no open findings.
+**Shipped version:** v1.8 Production Boundary Hardening on 2026-05-22
+**Current milestone:** None active; ready for v1.9 planning.
+**Status:** v1.8 archived with 38/38 requirements satisfied and no open audit findings.
+**Last audit:** v1.8 milestone audit passed.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has frozen TypeScript service/runtime boundary contracts plus small Python and Go spikes proving future multi-language runtime and backend migration paths.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated v1.8 TypeScript service contracts, read-only Go parity fixtures, sandbox evaluation evidence, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors proving future multi-language runtime and backend migration paths.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.8 Production Boundary Hardening
+## Recommended Next Milestone: v1.9 Backend and Runtime Ownership Split
+
+**Goal:** Use the v1.8 contracts, parity fixtures, local topology, and monitors to make one deliberate ownership move without blending backend rewrite, production sandbox promotion, and non-JS counted play into one risky change.
+
+**Recommended shape:**
+- Reduce direct web persistence debt by migrating more read/user surfaces behind `@cowards/service` and widening strict import enforcement.
+- Decide whether Go expands as a read-model service, remains fixture-only, or gets a carefully specified mutation boundary later.
+- Choose the production runtime isolation candidate only after resource, filesystem, network, deployment, and failure-taxonomy evidence is stronger.
+- Keep Python and other non-JS runtimes experimental until promotion criteria are explicit and satisfied.
+
+## Latest Shipped Milestone: v1.8 Production Boundary Hardening
 
 **Goal:** Turn the v1.7 service/runtime/backend contracts into sturdier operating boundaries that are boring, observable, repeatable, and hard to accidentally bypass without prematurely rewriting orchestration, backend ownership, or production multi-language runtime support.
 
-**Target features:**
-- Generate or prepare generation-ready service API artifacts, likely OpenAPI or equivalent typed schema output, and continue moving Next/web routes away from direct persistence imports toward the typed service layer.
-- Promote the Go backend spike to read-only parity against real golden fixtures or safe persisted local data for health, public MatchSet summary, replay metadata, and selected analytics summaries.
-- Prototype and evaluate the next credible hostile Strategy sandbox boundary across container, microVM, WASM/WASI, subprocess, and worker tradeoffs without declaring it production-ready.
-- Define non-JS Strategy product semantics for language selection, source/package metadata, validation messages, compatibility warnings, counted-play eligibility, docs/examples, and experimental labels.
-- Build a repeatable cross-process local topology for the web app, worker/runtime adapter, TypeScript service boundary, and Go read-only service with health checks, fixture loading, smoke requests, and diagnostics.
-- Add lightweight but real monitors for private DTO leaks, runtime/web execution bypasses, service contract drift, adapter compatibility drift, and Go/TypeScript parity drift.
+**Delivered:**
+- Generated `service-api-v1.8` OpenAPI artifacts from canonical `@cowards/spec` service routes and DTO schemas, with stale-output and lint checks.
+- Migrated selected public web reads through `@cowards/service` while preserving existing DTO behavior and privacy constraints.
+- Promoted the Go backend spike to read-only parity against TypeScript-service-generated fixtures for health, public MatchSet summary, replay metadata, and owner-scoped analytics summary.
+- Added an evaluation-only sandbox matrix and hostile probe harness for worker, subprocess, container, WASM/WASI, Deno-style, gVisor, and microVM tradeoffs without promoting a production sandbox.
+- Made non-JS Strategy semantics spec-owned: language/adapter labels, readiness, package policy, validation codes, docs/examples references, warnings, and counted eligibility.
+- Added `pnpm topology:check` for repeatable local web/service/runtime/Go fixture diagnostics and `pnpm boundary:monitors` for service contract, privacy, import-boundary, runtime adapter, Go parity, sandbox, and topology drift checks.
+- Archived audit: `.planning/milestones/v1.8-MILESTONE-AUDIT.md`.
 
-## Latest Shipped Milestone: v1.7 Runtime and Backend Boundary Stabilization
+## Previous Shipped Milestone: v1.7 Runtime and Backend Boundary Stabilization
 
 **Goal:** Make Coward's Game ready for a future Go backend and multi-language Strategy runtimes by freezing typed boundaries and proving parity before any major rewrite.
 
@@ -91,6 +102,16 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - ✓ Experimental Python runtime spike executes through the ABI but remains disabled for normal counted play.
 - ✓ Minimal Go backend spike returns v1.7-shaped health, public MatchSet summary, and replay metadata DTOs.
 - ✓ Milestone audit fixed boundary issues around runtime worker imports, persistence-root service imports, and schema-drift fallback behavior.
+
+## Validated in v1.8
+
+- ✓ `service-api-v1.8` OpenAPI artifacts are generated from canonical service metadata, linted, and stale-output checked.
+- ✓ Selected public web reads use `@cowards/service` and preserve public DTO shape, ordering, errors, and privacy redaction.
+- ✓ Go read-only backend parity is generated from TypeScript service outputs for health, public MatchSet summary, replay metadata, owner-scoped analytics summary, and degraded/system-failed evidence.
+- ✓ Sandbox hardening is evaluation-only, with hostile probes and candidate tradeoffs recorded without promoting any boundary to production hostile-code isolation.
+- ✓ Non-JS Strategy product semantics are spec-owned, with Python and other non-JS runtimes remaining experimental and non-counted.
+- ✓ `pnpm topology:check` validates local topology setup, fixtures, TypeScript service health, runtime adapter metadata, optional live web/Go smoke, and privacy-safe diagnostics.
+- ✓ `pnpm boundary:monitors` composes contract, privacy, import-boundary, runtime adapter, Go parity, sandbox, and topology drift checks.
 
 ## Validated in v1.0
 
@@ -175,6 +196,10 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.7-REQUIREMENTS.md`
 - `.planning/milestones/v1.7-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.7-phases/`
+- `.planning/milestones/v1.8-ROADMAP.md`
+- `.planning/milestones/v1.8-REQUIREMENTS.md`
+- `.planning/milestones/v1.8-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.8-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -236,4 +261,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-22 after starting v1.8 milestone*
+*Last updated: 2026-05-22 after archiving v1.8 milestone*

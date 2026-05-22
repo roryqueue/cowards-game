@@ -2,38 +2,38 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Production Boundary Hardening
-status: milestone_complete
-stopped_at: Completed v1.8
-last_updated: "2026-05-22T22:40:00.000Z"
+status: archived
+stopped_at: Archived v1.8
+last_updated: "2026-05-22T22:50:00.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 6
   completed_phases: 6
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 8
+  completed_plans: 8
   percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.8 complete; ready for milestone audit/next milestone selection
+**Status:** v1.8 archived; ready for next milestone planning
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.8 completion audit and v1.9 milestone shape
-**Latest shipped milestone:** v1.7 Runtime and Backend Boundary Stabilization
-**Requirements:** v1.8 requirements mapped 38/38 in .planning/REQUIREMENTS.md
+**Current focus:** v1.9 milestone definition
+**Latest shipped milestone:** v1.8 Production Boundary Hardening
+**Requirements:** v1.8 requirements archived in .planning/milestones/v1.8-REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
 Phase: 56 of 56 (Observability, Privacy, and Boundary Drift Monitors)
 Plan: v1.8 phases complete
-Status: Milestone complete
+Status: Archived
 Last activity: 2026-05-22
 
 Progress: [██████████] 100%
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | v1.5 Strategy Workshop Power Tools and Advanced Strategy Library | 8 | 8 | 53/53 | Shipped |
 | v1.6 Workshop Analytics and Evidence Explorer | 7 | 7 | 54/54 | Shipped |
 | v1.7 Runtime and Backend Boundary Stabilization | 6 | 6 | 32/32 | Shipped |
+| v1.8 Production Boundary Hardening | 6 | 8 | 38/38 | Shipped |
 
 ## Accumulated Context
 
@@ -95,7 +96,7 @@ Progress: [██████████] 100%
 
 ### Next Todos
 
-All v1.8 phases are complete. Next work should audit the milestone and choose whether v1.9 starts with backend read-model expansion, production runtime isolation, or mutation boundary design.
+All v1.8 phases are archived. Next work should start v1.9 and choose whether the first ownership move is backend read-model expansion, production runtime isolation, or mutation boundary design.
 
 ### Blockers/Concerns
 
@@ -113,6 +114,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-22T22:40:00.000Z
-Stopped at: Completed v1.8
+Last session: 2026-05-22T22:50:00.000Z
+Stopped at: Archived v1.8
 Resume file: None
