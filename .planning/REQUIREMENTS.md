@@ -46,12 +46,12 @@ Requirements for turning the v1.7 service/runtime/backend contracts into sturdie
 
 ### Cross-Process Local Deployment Harness
 
-- [ ] **TOPO-01**: Developer can run a repeatable local boundary topology for the web app, TypeScript service path, worker/runtime adapter, Go read-only backend, and fixture loading.
-- [ ] **TOPO-02**: Local topology health checks identify each component, process/base URL, contract version, fixture id, endpoint, and readiness state.
-- [ ] **TOPO-03**: Smoke requests cover web service health, TypeScript service DTOs, Go health, Go public MatchSet summary, Go replay metadata, selected analytics summary, and runtime adapter diagnostics.
-- [ ] **TOPO-04**: Local topology fails loudly when a required boundary process is unavailable instead of silently falling back to in-process or stale fixture behavior.
-- [ ] **TOPO-05**: Local diagnostics are privacy-safe and omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, and private runtime internals by default.
-- [ ] **TOPO-06**: Setup documentation lists required commands, ports, environment variables, fixture-loading steps, smoke checks, and common failure diagnostics.
+- [x] **TOPO-01**: Developer can run a repeatable local boundary topology for the web app, TypeScript service path, worker/runtime adapter, Go read-only backend, and fixture loading.
+- [x] **TOPO-02**: Local topology health checks identify each component, process/base URL, contract version, fixture id, endpoint, and readiness state.
+- [x] **TOPO-03**: Smoke requests cover web service health, TypeScript service DTOs, Go health, Go public MatchSet summary, Go replay metadata, selected analytics summary, and runtime adapter diagnostics.
+- [x] **TOPO-04**: Local topology fails loudly when a required boundary process is unavailable instead of silently falling back to in-process or stale fixture behavior.
+- [x] **TOPO-05**: Local diagnostics are privacy-safe and omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, and private runtime internals by default.
+- [x] **TOPO-06**: Setup documentation lists required commands, ports, environment variables, fixture-loading steps, smoke checks, and common failure diagnostics.
 
 ### Observability, Privacy, and Boundary Drift Monitors
 
@@ -132,12 +132,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NJS-04 | Phase 54 | Complete |
 | NJS-05 | Phase 54 | Complete |
 | NJS-06 | Phase 54 | Complete |
-| TOPO-01 | Phase 55 | Pending |
-| TOPO-02 | Phase 55 | Pending |
-| TOPO-03 | Phase 55 | Pending |
-| TOPO-04 | Phase 55 | Pending |
-| TOPO-05 | Phase 55 | Pending |
-| TOPO-06 | Phase 55 | Pending |
+| TOPO-01 | Phase 55 | Complete |
+| TOPO-02 | Phase 55 | Complete |
+| TOPO-03 | Phase 55 | Complete |
+| TOPO-04 | Phase 55 | Complete |
+| TOPO-05 | Phase 55 | Complete |
+| TOPO-06 | Phase 55 | Complete |
 | MON-01 | Phase 56 | Pending |
 | MON-02 | Phase 56 | Pending |
 | MON-03 | Phase 56 | Pending |
@@ -153,4 +153,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after v1.8 roadmap creation*
+*Last updated: 2026-05-22 after Phase 55 completion*

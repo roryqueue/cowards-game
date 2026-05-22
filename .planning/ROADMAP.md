@@ -14,7 +14,7 @@
 
 ## Current Milestone: v1.8 Production Boundary Hardening
 
-**Status:** Planned
+**Status:** Executing
 **Phases:** 51-56
 **Granularity:** Standard
 **Requirements:** 38/38 mapped
@@ -29,7 +29,7 @@ v1.8 turns the v1.7 service, runtime, and backend contracts into harder operatin
 - [x] **Phase 52: Go Read-Only Backend Parity Against Real Fixtures** - Developers can run the Go read-only service against real evidence and prove parity with TypeScript service DTOs.
 - [x] **Phase 53: Runtime Sandbox Hardening Prototype** - Developers can evaluate sandbox candidates through the runtime ABI without changing counted Match defaults.
 - [x] **Phase 54: Non-JS Strategy Product Semantics** - Users and developers see clear experimental language semantics, validation messages, and fail-closed counted-play eligibility.
-- [ ] **Phase 55: Cross-Process Local Deployment Harness** - Developers can run and diagnose the local web, service, runtime, Go, and fixture topology as separate boundaries.
+- [x] **Phase 55: Cross-Process Local Deployment Harness** - Developers can run and diagnose the local web, service, runtime, Go, and fixture topology as separate boundaries.
 - [ ] **Phase 56: Observability, Privacy, and Boundary Drift Monitors** - Boundary, privacy, parity, and compatibility checks fail on drift or bypasses before milestone release.
 
 ## Phase Details
@@ -103,7 +103,9 @@ Plans:
   3. Smoke requests cover web service health, TypeScript service DTOs, Go health, Go public MatchSet summary, Go replay metadata, selected analytics summary, and runtime adapter diagnostics.
   4. The topology fails loudly when a required boundary process is unavailable instead of silently falling back to in-process or stale fixture behavior.
   5. Local diagnostics and setup documentation are privacy-safe while listing required commands, ports, environment variables, fixture-loading steps, smoke checks, and common failure diagnostics.
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [x] 55-01-PLAN.md — Add a local topology checker with static fixture/service/runtime checks, optional live web/Go smoke, required-boundary failure semantics, and privacy-safe diagnostics.
 
 ### Phase 56: Observability, Privacy, and Boundary Drift Monitors
 **Goal**: Developers can rely on local or CI checks to catch contract drift, private DTO leaks, runtime/web bypasses, persistence import regressions, adapter drift, Go parity drift, and v1.8 regressions.
@@ -127,7 +129,7 @@ Plans:
 | 52. Go Read-Only Backend Parity Against Real Fixtures | 1/1 | Complete | 2026-05-22 |
 | 53. Runtime Sandbox Hardening Prototype | 1/1 | Complete | 2026-05-22 |
 | 54. Non-JS Strategy Product Semantics | 1/1 | Complete | 2026-05-22 |
-| 55. Cross-Process Local Deployment Harness | 0/TBD | Not started | - |
+| 55. Cross-Process Local Deployment Harness | 1/1 | Complete | 2026-05-22 |
 | 56. Observability, Privacy, and Boundary Drift Monitors | 0/TBD | Not started | - |
 
 ## Requirement Coverage
@@ -145,11 +147,11 @@ Plans:
 
 ## Next Up
 
-**Phase 55: Cross-Process Local Deployment Harness** - Build a repeatable local topology for web, service, worker/runtime adapter, Go read-only service, fixtures, health checks, and diagnostics.
+**Phase 56: Observability, Privacy, and Boundary Drift Monitors** - Compose lightweight checks that catch service contract drift, private DTO leaks, runtime/web execution bypasses, adapter drift, and Go/TypeScript parity drift before milestone release.
 
 Recommended next command:
 
-`$gsd-discuss-phase 55`
+`$gsd-discuss-phase 56`
 
 ## Recent Shipped Scope
 
@@ -167,4 +169,4 @@ Recommended next command:
 
 ---
 *Roadmap created: 2026-05-22 for v1.8 Production Boundary Hardening*
-*Last updated: 2026-05-22 after Phase 54 completion*
+*Last updated: 2026-05-22 after Phase 55 completion*

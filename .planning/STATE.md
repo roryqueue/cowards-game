@@ -3,40 +3,40 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Production Boundary Hardening
 status: executing
-stopped_at: Completed Phase 54
-last_updated: "2026-05-22T22:14:00.000Z"
+stopped_at: Completed Phase 55
+last_updated: "2026-05-22T22:25:00.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 6
   completed_plans: 6
-  percent: 67
+  percent: 83
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** Phase 54 complete; ready for Phase 55 planning/execution
+**Status:** Phase 55 complete; ready for Phase 56 planning/execution
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 55 - Cross-Process Local Deployment Harness
+**Current focus:** Phase 56 - Observability, Privacy, and Boundary Drift Monitors
 **Latest shipped milestone:** v1.7 Runtime and Backend Boundary Stabilization
 **Requirements:** v1.8 requirements mapped 38/38 in .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 55 of 56 (Cross-Process Local Deployment Harness)
-Plan: Phase 54 complete; next is Phase 55
+Phase: 56 of 56 (Observability, Privacy, and Boundary Drift Monitors)
+Plan: Phase 55 complete; next is Phase 56
 Status: Executing
 Last activity: 2026-05-22
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 83%
 
 ## Workflow Settings
 
@@ -86,10 +86,13 @@ Progress: [███████░░░] 67%
 - [Phase 54]: Runtime product semantics are now spec-owned: language/adapter labels, readiness, package policy, validation issue codes, docs/examples references, warnings, and counted eligibility come from `@cowards/spec`. — Prevents UI, persistence, and validation copy from drifting.
 - [Phase 54]: Python remains experimental and not counted-play eligible; non-counted runtime metadata is a validation warning but a hard failure at exhibition and ladder counted-entry gates. — Preserves JS/TS defaults while making non-JS semantics visible.
 - [Phase 54]: Account, exhibition, public Strategy card, and Workshop validation surfaces show compact runtime/eligibility labels or references without adding a public language picker. — Avoids implying support parity.
+- [Phase 55]: Local topology is now a diagnostic harness, not a process supervisor: `pnpm topology:check` validates static scripts, fixtures, TypeScript service health, runtime adapter metadata, optional live web/Go smoke, required-boundary failures, and public-safe diagnostics. — Keeps ownership boundaries loud without rewriting orchestration.
+- [Phase 55]: Env-provided topology URLs are optional smoke targets unless `--require-web` or `--require-go` is passed. — Plain static checks stay repeatable on developer machines with leftover environment variables.
+- [Phase 55]: Topology diagnostics redact token-like URL data and require owner analytics to reject unauthenticated requests with HTTP 401/403. — Prevents local failure output from becoming a private-data channel.
 
 ### Pending Todos
 
-Phase 55 needs topology planning for web, TypeScript service path, worker/runtime adapter, Go read-only service, fixtures, health checks, smoke requests, and privacy-safe diagnostics.
+Phase 56 needs monitor planning for service contract drift, private DTO leaks, runtime/web execution bypasses, persistence import regressions, adapter drift, Go/TypeScript parity drift, and v1.8 regression coverage.
 
 ### Blockers/Concerns
 
@@ -107,6 +110,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-22T22:14:00.000Z
-Stopped at: Completed Phase 54
+Last session: 2026-05-22T22:25:00.000Z
+Stopped at: Completed Phase 55
 Resume file: None
