@@ -45,6 +45,7 @@ created: 2026-05-22
 | 51-02-02 | 02 | 2 | GEN-05, GEN-06 | T-51-02-02 | Migrated reads preserve DTO behavior and public errors | web/unit | `pnpm --filter @cowards/web test` | ✅ | ⬜ pending |
 | 51-03-01 | 03 | 3 | GEN-03, GEN-07 | T-51-03-01 | Named migrated routes fail on direct forbidden imports | script/test | `pnpm boundary:imports` | ❌ W0 | ⬜ pending |
 | 51-03-02 | 03 | 3 | GEN-07 | T-51-03-02 | Broad app scan reports debt without blocking | script/test | `pnpm boundary:imports -- --report-only` | ❌ W0 | ⬜ pending |
+| 51-03-03 | 03 | 3 | GEN-03, GEN-04, GEN-07 | T-51-03-01 / T-51-03-04 | Integrated Phase 51 gate proves contract freshness, lint validity, import safety, and artifact privacy | integration/script | `pnpm --filter @cowards/spec contract:check && pnpm contract:lint && pnpm boundary:imports && pnpm --filter @cowards/spec test && pnpm --filter @cowards/service test && pnpm --filter @cowards/web test` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
