@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Production Boundary Hardening
 status: executing
-stopped_at: Completed 51-01-PLAN.md
-last_updated: "2026-05-22T19:45:41.696Z"
+stopped_at: Completed 51-02-PLAN.md
+last_updated: "2026-05-22T19:53:53.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 33
+  completed_plans: 2
+  percent: 66
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** Phase 51 in progress; Plan 51-01 complete
+**Status:** Phase 51 in progress; Plan 51-02 complete
 
 ## Project Reference
 
@@ -32,11 +32,11 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 ## Current Position
 
 Phase: 51 of 56 (Service Contract Generation and Route Migration)
-Plan: 1 of 3 complete; next is 51-02
+Plan: 2 of 3 complete; next is 51-03
 Status: Executing
 Last activity: 2026-05-22
 
-Progress: [███░░░░░░░] 33%
+Progress: [██████░░░░] 66%
 
 ## Workflow Settings
 
@@ -73,6 +73,7 @@ Progress: [███░░░░░░░] 33%
 - Public replay, service, Go, topology, diagnostics, analytics, exports, and monitor outputs must omit private Strategy/runtime data by default.
 - [Phase 51]: Kept SERVICE_API_ROUTES as the single route registry and enriched each entry with schema-backed metadata. — Phase 51 D-07/D-09 require @cowards/spec to remain authoritative.
 - [Phase 51]: Generated service-api-v1.8 OpenAPI 3.1 JSON from Zod 4 schemas with deterministic key sorting. — Satisfies GEN-01 and GEN-03 without making generated artifacts canonical.
+- [Phase 51]: Migrated public Strategy page and replay metadata reads through @cowards/service using canonical public DTO schemas. — Satisfies GEN-05/GEN-06 while keeping writes, orchestration, and Strategy execution TypeScript-owned.
 
 ### Pending Todos
 
@@ -94,6 +95,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-22T19:45:05.328Z
-Stopped at: Completed 51-01-PLAN.md
+Last session: 2026-05-22T19:53:53.000Z
+Stopped at: Completed 51-02-PLAN.md
 Resume file: None

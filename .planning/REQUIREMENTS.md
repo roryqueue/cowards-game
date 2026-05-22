@@ -13,8 +13,8 @@ Requirements for turning the v1.7 service/runtime/backend contracts into sturdie
 - [x] **GEN-02**: Generated or generation-ready service artifacts include stable route ids, operation ids, methods, paths, auth scopes, privacy classes, request/response schemas, shared error schemas, examples, and fixture references for the v1.8 route surface.
 - [x] **GEN-03**: Contract linting and stale-output checks fail when generated service artifacts drift from canonical schemas.
 - [x] **GEN-04**: Public, owner-authorized, and internal DTO schemas remain separated so public contract output excludes private persistence/runtime records by default.
-- [ ] **GEN-05**: A named set of low-risk Next route handlers or server loaders moves from direct persistence workflow imports to the typed `@cowards/service` boundary.
-- [ ] **GEN-06**: Migrated routes preserve existing DTO behavior, deterministic ordering, compatibility fields, public error shapes, and privacy redaction.
+- [x] **GEN-05**: A named set of low-risk Next route handlers or server loaders moves from direct persistence workflow imports to the typed `@cowards/service` boundary.
+- [x] **GEN-06**: Migrated routes preserve existing DTO behavior, deterministic ordering, compatibility fields, public error shapes, and privacy redaction.
 - [ ] **GEN-07**: Import-boundary checks fail if migrated web/API routes import persistence roots, migration code, worker entrypoints, runtime adapters, or Strategy execution modules directly.
 
 ### Go Read-Only Backend Parity
@@ -111,8 +111,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GEN-02 | Phase 51 | Complete |
 | GEN-03 | Phase 51 | Complete |
 | GEN-04 | Phase 51 | Complete |
-| GEN-05 | Phase 51 | Pending |
-| GEN-06 | Phase 51 | Pending |
+| GEN-05 | Phase 51 | Complete |
+| GEN-06 | Phase 51 | Complete |
 | GEN-07 | Phase 51 | Pending |
 | GO-01 | Phase 52 | Pending |
 | GO-02 | Phase 52 | Pending |

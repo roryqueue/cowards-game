@@ -47,7 +47,7 @@ v1.8 turns the v1.7 service, runtime, and backend contracts into harder operatin
 **Plans**: 3 plans
 Plans:
 - [x] 51-01-PLAN.md — Generate canonical v1.8 service contract metadata, schemas, fixtures, OpenAPI artifact, and lint/stale checks.
-- [ ] 51-02-PLAN.md — Migrate the named public read slice through `@cowards/service` while preserving public behavior and privacy.
+- [x] 51-02-PLAN.md — Migrate the named public read slice through `@cowards/service` while preserving public behavior and privacy.
 - [ ] 51-03-PLAN.md — Enforce strict named-slice import guards and report-only broad app boundary scanning.
 
 ### Phase 52: Go Read-Only Backend Parity Against Real Fixtures
@@ -117,7 +117,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 51. Service Contract Generation and Route Migration | 1/3 | In Progress|  |
+| 51. Service Contract Generation and Route Migration | 2/3 | In Progress|  |
 | 52. Go Read-Only Backend Parity Against Real Fixtures | 0/TBD | Not started | - |
 | 53. Runtime Sandbox Hardening Prototype | 0/TBD | Not started | - |
 | 54. Non-JS Strategy Product Semantics | 0/TBD | Not started | - |
