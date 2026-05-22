@@ -26,10 +26,15 @@ describe("local topology harness", () => {
       json: true,
     })
     expect(
-      parseTopologyOptions(["--require-web", "--require-go"]),
+      parseTopologyOptions([
+        "--require-web",
+        "--require-go",
+        "--require-runtime-container",
+      ]),
     ).toMatchObject({
       requireWeb: true,
       requireGo: true,
+      requireRuntimeContainer: true,
       webUrl: "http://localhost:3000",
       goUrl: "http://127.0.0.1:8087",
     })
@@ -84,6 +89,7 @@ describe("local topology harness", () => {
       goUrl: null,
       requireWeb: false,
       requireGo: false,
+      requireRuntimeContainer: false,
       json: false,
     })
 
@@ -94,6 +100,7 @@ describe("local topology harness", () => {
         "fixture_loading",
         "typescript_service",
         "worker_runtime",
+        "runtime_isolation",
         "web_process",
         "go_readonly",
         "privacy",
@@ -107,6 +114,7 @@ describe("local topology harness", () => {
       goUrl: "http://127.0.0.1:1",
       requireWeb: false,
       requireGo: true,
+      requireRuntimeContainer: false,
       json: false,
     })
     const goChecks = checks.filter((check) => check.layer === "go_readonly")
@@ -145,6 +153,7 @@ describe("local topology harness", () => {
       goUrl: "http://127.0.0.1:8087",
       requireWeb: false,
       requireGo: true,
+      requireRuntimeContainer: false,
       json: false,
     })
     const authGate = checks.find(
@@ -153,5 +162,28 @@ describe("local topology harness", () => {
 
     expect(authGate).toMatchObject({ ok: false, required: true })
     expect(authGate?.detail).toContain("expected HTTP 401/403")
+  })
+
+  it("fails loudly when required runtime container evidence is skipped", async () => {
+    const checks = await evaluateLocalTopology({
+      webUrl: null,
+      goUrl: null,
+      requireWeb: false,
+      requireGo: false,
+      requireRuntimeContainer: true,
+      json: false,
+    })
+    const runtimeIsolation = checks.find(
+      (check) => check.name === "runtime isolation readiness",
+    )
+
+    expect(runtimeIsolation).toMatchObject({
+      layer: "runtime_isolation",
+      ok: false,
+      required: true,
+    })
+    expect(runtimeIsolation?.detail).toContain(
+      "Required sandbox candidate container-subprocess did not pass",
+    )
   })
 })

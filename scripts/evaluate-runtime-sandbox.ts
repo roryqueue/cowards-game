@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
+  assertRequiredSandboxCandidatesPassed,
   assertSandboxEvaluationPublicSafe,
   evaluateRuntimeSandboxes,
 } from "../packages/runtime-js/src/sandbox-evaluation.ts"
@@ -37,7 +38,12 @@ const report = evaluateRuntimeSandboxes()
 assertSandboxEvaluationPublicSafe(report)
 
 const checkMode = process.argv.includes("--check")
+const requireContainer = process.argv.includes("--require-container")
 const next = serialize(report)
+
+if (requireContainer) {
+  assertRequiredSandboxCandidatesPassed(report, ["container-subprocess"])
+}
 
 if (checkMode) {
   const current = readFileSync(artifactPath, "utf8")

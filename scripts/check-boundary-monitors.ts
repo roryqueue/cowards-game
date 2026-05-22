@@ -4,6 +4,11 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { createWorkerRuntimeConfig } from "../apps/worker/src/runtime-config.ts"
 import {
+  assertRuntimeIsolationReadinessGuardrails,
+  assertSandboxEvaluationPublicSafe,
+  type SandboxEvaluationReport,
+} from "../packages/runtime-js/src/sandbox-evaluation.ts"
+import {
   analyzeServiceBoundaryImports,
   type ServiceBoundaryOffense,
 } from "./check-service-boundary-imports.ts"
@@ -25,6 +30,7 @@ type MonitorLayer =
   | "privacy"
   | "web_boundary"
   | "runtime_adapter"
+  | "runtime_isolation"
   | "go_parity"
   | "topology"
 
@@ -63,6 +69,8 @@ const repoRoot = path.resolve(
 const openApiArtifactPath =
   "packages/spec/artifacts/service-api-v1.8.openapi.json"
 const goFixtureDir = "apps/go-backend/testdata/service-fixtures"
+const sandboxEvaluationArtifactPath =
+  ".planning/artifacts/runtime-sandbox-evaluation.json"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/account/advanced-forks/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
@@ -371,6 +379,15 @@ export const checkRuntimeAdapterBridge = (
   ) {
     throw new Error(`${bridge.specAdapterId} unexpectedly disabled for JS/TS`)
   }
+  if (spec.isolationPromotionState !== "evidence-only") {
+    throw new Error(`${bridge.specAdapterId} isolation promotion state drifted`)
+  }
+  if (
+    bridge.specAdapterId === "runtime-js-container-subprocess" &&
+    !spec.isolationPromotionCriteria.includes("required-container-probes")
+  ) {
+    throw new Error("container runtime missing required probe criteria")
+  }
   if (!runtime.metadata.runtimeControls.timeout) {
     throw new Error(`${bridge.selector} must expose timeout controls`)
   }
@@ -400,6 +417,11 @@ const checkRuntimeAdapters = (): string => {
   if (!python || python.countedResultsAllowed || python.enabledForNormalPlay) {
     throw new Error("Python runtime must remain experimental and non-counted")
   }
+  if (python.isolationPromotionState !== "evidence-only") {
+    throw new Error(
+      "Python runtime isolation promotion state must stay blocked",
+    )
+  }
   const pythonMetadata = {
     abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
     language: { id: "python", version: "3.9" },
@@ -419,6 +441,31 @@ const checkRuntimeAdapters = (): string => {
     throw new Error(`runtime ABI drifted to ${STRATEGY_RUNTIME_ABI_VERSION}`)
   }
   return `${runtimeAdapterBridges.length} JS/TS adapters and Python experimental gate checked`
+}
+
+const checkRuntimeIsolationReadiness = (): string => {
+  const report = readJson<SandboxEvaluationReport>(
+    sandboxEvaluationArtifactPath,
+  )
+  assertSandboxEvaluationPublicSafe(report)
+  assertRuntimeIsolationReadinessGuardrails(report)
+  const container = report.candidates.find(
+    (candidate) => candidate.id === "container-subprocess",
+  )
+  if (!container) {
+    throw new Error(
+      "container subprocess candidate missing from sandbox report",
+    )
+  }
+  if (container.status === "passed") {
+    return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked with live container evidence`
+  }
+  if (container.status !== "skipped") {
+    throw new Error(
+      `container subprocess candidate has unexpected status ${container.status}`,
+    )
+  }
+  return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked; container evidence remains required before promotion`
 }
 
 const checkWebBoundary = (): string => {
@@ -443,6 +490,7 @@ const checkTopologyDiagnostics = async (): Promise<string> => {
     goUrl: null,
     requireWeb: false,
     requireGo: false,
+    requireRuntimeContainer: false,
     json: false,
   })
   assertMonitorPublicPayload(checks)
@@ -470,6 +518,11 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("runtime_adapter", "runtime registry and adapter metadata", () =>
     checkRuntimeAdapters(),
+  ),
+  await check(
+    "runtime_isolation",
+    "runtime isolation readiness guardrails",
+    () => checkRuntimeIsolationReadiness(),
   ),
   await check("go_parity", "Go route manifest metadata", () =>
     checkGoRouteManifest(),

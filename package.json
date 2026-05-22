@@ -16,6 +16,7 @@
     "go:parity:generate": "pnpm exec tsx scripts/generate-go-parity-fixtures.ts",
     "go:parity": "pnpm exec tsx scripts/generate-go-parity-fixtures.ts --check && cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./...",
     "sandbox:evaluate": "pnpm exec tsx scripts/evaluate-runtime-sandbox.ts",
+    "sandbox:evaluate:container": "COWARDS_RUN_CONTAINER_SANDBOX=1 pnpm exec tsx scripts/evaluate-runtime-sandbox.ts --require-container",
     "sandbox:evaluate:check": "pnpm exec tsx scripts/evaluate-runtime-sandbox.ts --check",
     "topology:check": "pnpm exec tsx scripts/check-local-topology.ts",
     "boundary:monitors": "pnpm contract:check && pnpm contract:lint && pnpm boundary:imports && pnpm go:parity && pnpm sandbox:evaluate:check && pnpm topology:check && pnpm exec tsx scripts/check-boundary-monitors.ts",

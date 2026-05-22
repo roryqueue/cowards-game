@@ -3,6 +3,11 @@ import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { createWorkerRuntimeConfig } from "../apps/worker/src/runtime-config.ts"
+import {
+  assertRequiredSandboxCandidatesPassed,
+  assertRuntimeIsolationReadinessGuardrails,
+  evaluateRuntimeSandboxes,
+} from "../packages/runtime-js/src/sandbox-evaluation.ts"
 import { createCowardsLocalService } from "../packages/service/src/index.ts"
 import {
   SERVICE_API_VERSION,
@@ -15,6 +20,7 @@ type Layer =
   | "fixture_loading"
   | "typescript_service"
   | "worker_runtime"
+  | "runtime_isolation"
   | "web_process"
   | "go_readonly"
   | "privacy"
@@ -32,6 +38,7 @@ interface TopologyOptions {
   goUrl: string | null
   requireWeb: boolean
   requireGo: boolean
+  requireRuntimeContainer: boolean
   json: boolean
 }
 
@@ -67,6 +74,7 @@ const localCommands = [
   "pnpm dev",
   "pnpm --filter @cowards/worker dev",
   "cd apps/go-backend && COWARDS_GO_BACKEND_OWNER_TOKENS=<secret>=user:local go run .",
+  "pnpm sandbox:evaluate:container",
   "pnpm topology:check -- --web-url http://localhost:3000 --go-url http://127.0.0.1:8087",
 ] as const
 
@@ -89,6 +97,7 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
     goUrl: process.env.COWARDS_GO_BACKEND_URL ?? null,
     requireWeb: false,
     requireGo: false,
+    requireRuntimeContainer: false,
     json: false,
   }
   for (let index = 0; index < argv.length; index += 1) {
@@ -106,6 +115,9 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
       case "--require-go":
         options.requireGo = true
         options.goUrl ??= "http://127.0.0.1:8087"
+        break
+      case "--require-runtime-container":
+        options.requireRuntimeContainer = true
         break
       case "--web-url":
         options.webUrl = requireOptionValue(argv, index, arg)
@@ -238,7 +250,13 @@ export const evaluateLocalTopology = async (
 
   checks.push(
     await check("env_setup", "topology commands", true, () => {
-      for (const script of ["services:up", "dev", "preflight", "go:parity"]) {
+      for (const script of [
+        "services:up",
+        "dev",
+        "preflight",
+        "go:parity",
+        "sandbox:evaluate:container",
+      ]) {
         if (!packageJson.scripts[script]) {
           throw new Error(`package.json missing ${script}`)
         }
@@ -358,6 +376,33 @@ export const evaluateLocalTopology = async (
       const runtime = createWorkerRuntimeConfig()
       return `${runtime.metadata.id}; abi=${STRATEGY_RUNTIME_ABI_VERSION}; boundary=${runtime.metadata.isolationBoundary}`
     }),
+  )
+
+  checks.push(
+    await check(
+      "runtime_isolation",
+      "runtime isolation readiness",
+      true,
+      () => {
+        const report = evaluateRuntimeSandboxes()
+        assertRuntimeIsolationReadinessGuardrails(report)
+        if (options.requireRuntimeContainer) {
+          assertRequiredSandboxCandidatesPassed(report, [
+            "container-subprocess",
+          ])
+        }
+        const container = report.candidates.find(
+          (candidate) => candidate.id === "container-subprocess",
+        )
+        return [
+          `status=${report.runtimeIsolationReadiness.status}`,
+          `selected=${report.runtimeIsolationReadiness.selectedCandidate}`,
+          `container=${container?.status ?? "missing"}`,
+          `criteria=${report.runtimeIsolationReadiness.criteria.length}`,
+          `noFallback=${report.runtimeIsolationReadiness.noSilentFallback}`,
+        ].join("; ")
+      },
+    ),
   )
 
   if (options.webUrl || options.requireWeb) {

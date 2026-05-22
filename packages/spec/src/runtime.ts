@@ -27,6 +27,11 @@ export type StrategyRuntimeReadiness =
   | "local-dev-fallback"
   | "experimental"
 
+export type StrategyRuntimeIsolationPromotionState =
+  | "evidence-only"
+  | "shadow-only"
+  | "production-counted"
+
 export interface StrategyLanguageRecord {
   id: StrategyLanguageId
   label: string
@@ -58,6 +63,8 @@ export interface StrategyRuntimeAdapterRecord {
   supportedLanguageIds: StrategyLanguageId[]
   enabledForNormalPlay: boolean
   countedResultsAllowed: boolean
+  isolationPromotionState: StrategyRuntimeIsolationPromotionState
+  isolationPromotionCriteria: string[]
   isolationBoundary: string
   limits: StrategyRuntimeLimits
   requiredCapabilities: string[]
@@ -279,6 +286,11 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     supportedLanguageIds: ["javascript", "typescript"],
     enabledForNormalPlay: true,
     countedResultsAllowed: true,
+    isolationPromotionState: "evidence-only",
+    isolationPromotionCriteria: [
+      "not-final-hostile-code-boundary",
+      "host-filesystem-network-exposure",
+    ],
     isolationBoundary:
       "Worker-thread containment for local/dev compatibility; not production hostile-code isolation.",
     limits: { ...DEFAULT_RUNTIME_LIMITS, environment: "empty" },
@@ -293,6 +305,11 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     supportedLanguageIds: ["javascript", "typescript"],
     enabledForNormalPlay: true,
     countedResultsAllowed: true,
+    isolationPromotionState: "evidence-only",
+    isolationPromotionCriteria: [
+      "host-filesystem-network-exposure",
+      "requires-os-container-sandboxing",
+    ],
     isolationBoundary: "Host subprocess with one-shot JSON IPC.",
     limits: DEFAULT_RUNTIME_LIMITS,
     requiredCapabilities: [],
@@ -308,6 +325,18 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     supportedLanguageIds: ["javascript", "typescript"],
     enabledForNormalPlay: true,
     countedResultsAllowed: true,
+    isolationPromotionState: "evidence-only",
+    isolationPromotionCriteria: [
+      "required-container-probes",
+      "resource-limits",
+      "filesystem-denial",
+      "network-denial",
+      "image-provenance",
+      "deployment-preflight",
+      "failure-taxonomy",
+      "redacted-diagnostics",
+      "local-ergonomics",
+    ],
     isolationBoundary:
       "Containerized subprocess production-candidate boundary.",
     limits: {
@@ -326,6 +355,12 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     supportedLanguageIds: ["python"],
     enabledForNormalPlay: false,
     countedResultsAllowed: false,
+    isolationPromotionState: "evidence-only",
+    isolationPromotionCriteria: [
+      "non-js-promotion-criteria",
+      "production-sandbox-required",
+      "package-policy-required",
+    ],
     isolationBoundary: "Local subprocess spike for ABI parity only.",
     limits: {
       ...DEFAULT_RUNTIME_LIMITS,

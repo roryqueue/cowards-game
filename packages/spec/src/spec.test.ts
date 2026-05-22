@@ -38,6 +38,7 @@ import {
   defaultRuntimeMetadata,
   describeStrategyRuntimeProductSemantics,
   evaluateStrategyRuntimeCountedEligibility,
+  STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
   validateStrategyRuntimeMetadataPolicy,
 } from "./runtime.js"
@@ -199,6 +200,28 @@ describe("Coward's Game spec contracts", () => {
       countedPlayLabel: "Not counted",
       experimental: true,
     })
+    expect(
+      STRATEGY_RUNTIME_ADAPTER_REGISTRY.every(
+        (adapter) => adapter.isolationPromotionState === "evidence-only",
+      ),
+    ).toBe(true)
+    expect(
+      STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
+        (adapter) => adapter.id === "runtime-js-container-subprocess",
+      )?.isolationPromotionCriteria,
+    ).toEqual(
+      expect.arrayContaining([
+        "required-container-probes",
+        "resource-limits",
+        "filesystem-denial",
+        "network-denial",
+        "image-provenance",
+        "deployment-preflight",
+        "failure-taxonomy",
+        "redacted-diagnostics",
+        "local-ergonomics",
+      ]),
+    )
   })
 
   it("runtime policy validation exposes Phase 54 stable issue codes", () => {

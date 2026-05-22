@@ -30,7 +30,7 @@ v1.9 makes one production ownership move: service-backed web read/user surfaces 
 - [x] **Phase 58: Public Player Profile Service Read** - Users can view public player profiles through `@cowards/service` with unchanged behavior, privacy, and stricter imports.
 - [x] **Phase 59: Owner Account Read Service Slice** - Signed-in users can load account session and revision-list reads through service-owned DTOs without moving mutations or source retrieval.
 - [x] **Phase 60: Public Ladder Service Read Follow-Up** - Users can view the selected public ladder season through `@cowards/service` while Go writes and Go route expansion stay out of scope.
-- [ ] **Phase 61: Runtime Isolation Readiness Guardrails** - Developers can inspect production runtime-isolation readiness criteria and verify no candidate is promoted by default.
+- [x] **Phase 61: Runtime Isolation Readiness Guardrails** - Developers can inspect production runtime-isolation readiness criteria and verify no candidate is promoted by default.
 - [ ] **Phase 62: Experimental Non-JS Runtime Guardrails** - Users and developers see experimental non-JS semantics while counted eligibility remains fail-closed.
 - [ ] **Phase 63: Milestone Verification and Regression Gate** - Developers can run the v1.9 verification set and prove existing JS/TS, replay, analytics, and privacy behavior remain unchanged.
 
@@ -102,7 +102,9 @@ Plans:
   2. Developer can verify worker-thread, host subprocess, container subprocess, Deno-style, WASM/WASI, gVisor, microVM, and other candidates are not promoted to production counted Match execution by default.
   3. Developer can verify required runtime checks fail loudly rather than silently falling back to worker-thread, host subprocess, JS/TS, stale fixtures, or in-process execution.
   4. Developer can verify runtime diagnostics distinguish Strategy runtime violations from system failures without exposing Strategy source, StrategyMemory, SoldierMemory, objective payloads, stderr, stack traces, host paths, sessions, tokens, or private runtime internals.
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [x] 61-01-PLAN.md — Add runtime isolation promotion-readiness criteria, fail-loud container checks, topology diagnostics, and monitor guardrails without promoting any runtime candidate.
 
 ### Phase 62: Experimental Non-JS Runtime Guardrails
 **Goal**: Users and developers can understand non-JS promotion criteria and experimental labels while Python and other non-JS runtimes remain disabled for counted play.
@@ -136,7 +138,7 @@ Plans:
 | 58. Public Player Profile Service Read | 1/1 | Complete | 2026-05-22 |
 | 59. Owner Account Read Service Slice | 1/1 | Complete | 2026-05-22 |
 | 60. Public Ladder Service Read Follow-Up | 1/1 | Complete | 2026-05-22 |
-| 61. Runtime Isolation Readiness Guardrails | 0/TBD | Not started | - |
+| 61. Runtime Isolation Readiness Guardrails | 1/1 | Complete | 2026-05-22 |
 | 62. Experimental Non-JS Runtime Guardrails | 0/TBD | Not started | - |
 | 63. Milestone Verification and Regression Gate | 0/TBD | Not started | - |
 
@@ -153,17 +155,17 @@ Plans:
 | VER-01 through VER-03 | Phase 63 | 3 |
 
 **Coverage:** 28/28 v1.9 requirements mapped.
-**Completed:** 17/28 v1.9 requirements.
+**Completed:** 21/28 v1.9 requirements.
 **Unmapped requirements:** 0.
 **Branch note:** The approved v1.9 direction selects the public ladder service read branch. Future Go read-model expansion is tracked in BACKX-03 and BACKX-04, outside the active 28-requirement roadmap.
 
 ## Next Up
 
-**Phase 61: Runtime Isolation Readiness Guardrails**
+**Phase 62: Experimental Non-JS Runtime Guardrails**
 
 Recommended next command:
 
-`$gsd-discuss-phase 61`
+`$gsd-discuss-phase 62`
 
 ---
-*Last updated: 2026-05-22 after Phase 60 completion*
+*Last updated: 2026-05-22 after Phase 61 completion*

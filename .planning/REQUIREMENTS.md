@@ -38,10 +38,10 @@ Requirements for making one deliberate ownership move: migrate more web read/use
 
 ### Runtime Isolation Guardrails
 
-- [ ] **RUN-01**: Developer can inspect runtime isolation promotion-readiness criteria covering required container probes, resource limits, filesystem denial, network denial, output caps, timeouts, image provenance, deployment prerequisites, failure taxonomy, and redacted diagnostics.
-- [ ] **RUN-02**: Developer can verify v1.9 does not promote worker-thread, host subprocess, container subprocess, Deno-style, WASM/WASI, gVisor, microVM, or any other candidate to production counted Match execution by default.
-- [ ] **RUN-03**: Developer can verify required runtime checks fail loudly rather than silently falling back to worker-thread, host subprocess, JS/TS, stale fixtures, or in-process execution.
-- [ ] **RUN-04**: Developer can verify runtime diagnostics distinguish Strategy runtime violations from system failures without exposing Strategy source, StrategyMemory, SoldierMemory, objective payloads, stderr, stack traces, host paths, sessions, tokens, or private runtime internals.
+- [x] **RUN-01**: Developer can inspect runtime isolation promotion-readiness criteria covering required container probes, resource limits, filesystem denial, network denial, output caps, timeouts, image provenance, deployment prerequisites, failure taxonomy, and redacted diagnostics.
+- [x] **RUN-02**: Developer can verify v1.9 does not promote worker-thread, host subprocess, container subprocess, Deno-style, WASM/WASI, gVisor, microVM, or any other candidate to production counted Match execution by default.
+- [x] **RUN-03**: Developer can verify required runtime checks fail loudly rather than silently falling back to worker-thread, host subprocess, JS/TS, stale fixtures, or in-process execution.
+- [x] **RUN-04**: Developer can verify runtime diagnostics distinguish Strategy runtime violations from system failures without exposing Strategy source, StrategyMemory, SoldierMemory, objective payloads, stderr, stack traces, host paths, sessions, tokens, or private runtime internals.
 
 ### Non-JS Runtime Guardrails
 
@@ -118,10 +118,10 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 | READ-01 | Phase 60 | Complete |
 | READ-02 | Phase 60 | Complete |
 | READ-05 | Phase 60 | Complete |
-| RUN-01 | Phase 61 | Pending |
-| RUN-02 | Phase 61 | Pending |
-| RUN-03 | Phase 61 | Pending |
-| RUN-04 | Phase 61 | Pending |
+| RUN-01 | Phase 61 | Complete |
+| RUN-02 | Phase 61 | Complete |
+| RUN-03 | Phase 61 | Complete |
+| RUN-04 | Phase 61 | Complete |
 | NJS-01 | Phase 62 | Pending |
 | NJS-02 | Phase 62 | Pending |
 | NJS-03 | Phase 62 | Pending |
@@ -139,4 +139,4 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after Phase 60 completion*
+*Last updated: 2026-05-22 after Phase 61 completion*

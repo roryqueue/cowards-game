@@ -1820,5 +1820,143 @@
   "generatedAt": "2026-05-22T00:00:00.000Z",
   "noCandidatePromoted": true,
   "publicSafe": true,
+  "runtimeIsolationReadiness": {
+    "criteria": [
+      {
+        "category": "container_probe",
+        "currentEvidence": "The container candidate is optional and may be skipped in the committed artifact.",
+        "id": "required-container-probes",
+        "promotionGate": "Skipped container probes block promotion; required checks must fail instead of falling back.",
+        "requirement": "Run the full hostile probe matrix against the container subprocess candidate in a required lane."
+      },
+      {
+        "category": "resource_limit",
+        "currentEvidence": "Adapter metadata declares requested Docker limits and hostile probes cover logical limits.",
+        "id": "resource-limits",
+        "promotionGate": "Production promotion requires live resource-limit evidence under normal and adversarial load.",
+        "requirement": "Prove wall timeout, CPU, memory, PID, output, source, private memory, and private objective limits."
+      },
+      {
+        "category": "filesystem",
+        "currentEvidence": "Container adapter requests read-only root and tmpfs scratch; live proof is optional.",
+        "id": "filesystem-denial",
+        "promotionGate": "Filesystem denial must be live-proven before counted runtime promotion.",
+        "requirement": "Prove read-only root, constrained scratch space, no host path access, and safe write-attempt classification."
+      },
+      {
+        "category": "network",
+        "currentEvidence": "Container adapter requests Docker network none; live proof is optional.",
+        "id": "network-denial",
+        "promotionGate": "Network-denial probes must pass in a required lane before promotion.",
+        "requirement": "Prove no outbound network, DNS, localhost, metadata IP, proxy, or inherited token access."
+      },
+      {
+        "category": "image_provenance",
+        "currentEvidence": "Default image is a mutable Node image reference.",
+        "id": "image-provenance",
+        "promotionGate": "Mutable or unreviewed images block production counted execution.",
+        "requirement": "Pin or otherwise control image provenance, update policy, and vulnerability review."
+      },
+      {
+        "category": "deployment",
+        "currentEvidence": "Current topology is local diagnostics and current counted execution remains worker-owned.",
+        "id": "deployment-preflight",
+        "promotionGate": "Promotion requires explicit deployment ownership and rollback semantics.",
+        "requirement": "Define runtime process ownership, preflight, health/readiness, concurrency, rollback, and no web/API execution path."
+      },
+      {
+        "category": "failure_taxonomy",
+        "currentEvidence": "Runtime violation and system failure taxonomy exists for current adapters.",
+        "id": "failure-taxonomy",
+        "promotionGate": "Ambiguous runtime failures block counted promotion.",
+        "requirement": "Classify Strategy violations separately from adapter, daemon, image, cgroup, OOM, IPC, and crash failures."
+      },
+      {
+        "category": "diagnostics",
+        "currentEvidence": "Sandbox artifacts are public-safe and topology diagnostics are redacted.",
+        "id": "redacted-diagnostics",
+        "promotionGate": "Any public diagnostic leak blocks promotion.",
+        "requirement": "Keep public and monitor diagnostics free of Strategy source, memory, objectives, streams, stack traces, tokens, sessions, host paths, and private runtime internals."
+      },
+      {
+        "category": "local_ergonomics",
+        "currentEvidence": "Default evaluation can skip Docker; required container commands are explicit.",
+        "id": "local-ergonomics",
+        "promotionGate": "Silent fallback from container to worker, host subprocess, JS/TS, stale fixtures, or in-process execution blocks promotion.",
+        "requirement": "Keep normal local development available while making required runtime checks fail loudly when container evidence is requested."
+      }
+    ],
+    "failureTaxonomy": [
+      {
+        "classification": "strategy_runtime_violation",
+        "failure": "Invalid Strategy output",
+        "id": "invalid-strategy-output",
+        "publicBehavior": "Public runtime code only; no source excerpt, stream content, or stack trace."
+      },
+      {
+        "classification": "strategy_runtime_violation",
+        "failure": "Forbidden capability attempt",
+        "id": "forbidden-capability",
+        "publicBehavior": "Player-caused runtime violation when caught by validator or harness."
+      },
+      {
+        "classification": "strategy_runtime_violation",
+        "failure": "Timeout under a healthy adapter",
+        "id": "healthy-timeout",
+        "publicBehavior": "Existing timeout code with no private diagnostics."
+      },
+      {
+        "classification": "system_failure",
+        "failure": "Container image missing or Docker/runtime unavailable",
+        "id": "image-or-daemon-unavailable",
+        "publicBehavior": "Degraded or non-counted evidence; retryable/operator-visible."
+      },
+      {
+        "classification": "preflight_failure",
+        "failure": "Required cgroup or container resource feature unsupported",
+        "id": "resource-feature-unsupported",
+        "publicBehavior": "Required checks fail before counted runtime starts."
+      },
+      {
+        "classification": "policy_required",
+        "failure": "OOM kill or host pressure termination",
+        "id": "oom-kill",
+        "publicBehavior": "Must be explicitly attributed before it can count against a Strategy."
+      },
+      {
+        "classification": "system_failure",
+        "failure": "Malformed IPC, adapter crash, or unclassified subprocess exit",
+        "id": "malformed-ipc-or-adapter-crash",
+        "publicBehavior": "Degraded/non-counted without private stream or host detail."
+      }
+    ],
+    "noSilentFallback": true,
+    "promotionAllowed": false,
+    "redactedDiagnostics": {
+      "publicDiagnosticRule": "Runtime readiness diagnostics expose only stable ids, public codes, readiness, limit categories, and redacted failure summaries.",
+      "publicOutputsMustOmit": [
+        "submitted source text",
+        "private strategy memory data",
+        "private soldier memory data",
+        "private objective data",
+        "raw board-observation data",
+        "stream content",
+        "stack traces",
+        "sessions",
+        "tokens",
+        "host paths",
+        "private runtime internals"
+      ]
+    },
+    "requiredLiveCandidate": "container-subprocess",
+    "requiredVerificationCommands": [
+      "pnpm sandbox:evaluate:container",
+      "pnpm sandbox:evaluate:check",
+      "pnpm topology:check -- --require-runtime-container",
+      "pnpm boundary:monitors"
+    ],
+    "selectedCandidate": "container-subprocess",
+    "status": "evidence_only_not_promoted"
+  },
   "schemaVersion": "runtime-sandbox-evaluation-v1.8"
 }

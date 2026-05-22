@@ -125,6 +125,49 @@ export interface SandboxCandidateEvaluation {
   }
 }
 
+export interface RuntimeIsolationPromotionCriterion {
+  id: string
+  category:
+    | "container_probe"
+    | "resource_limit"
+    | "filesystem"
+    | "network"
+    | "image_provenance"
+    | "deployment"
+    | "failure_taxonomy"
+    | "diagnostics"
+    | "local_ergonomics"
+  requirement: string
+  currentEvidence: string
+  promotionGate: string
+}
+
+export interface RuntimeIsolationFailureTaxonomyEntry {
+  id: string
+  failure: string
+  classification:
+    | "strategy_runtime_violation"
+    | "system_failure"
+    | "preflight_failure"
+    | "policy_required"
+  publicBehavior: string
+}
+
+export interface RuntimeIsolationReadiness {
+  status: "evidence_only_not_promoted"
+  selectedCandidate: "container-subprocess"
+  promotionAllowed: false
+  noSilentFallback: true
+  requiredLiveCandidate: "container-subprocess"
+  requiredVerificationCommands: readonly string[]
+  criteria: readonly RuntimeIsolationPromotionCriterion[]
+  failureTaxonomy: readonly RuntimeIsolationFailureTaxonomyEntry[]
+  redactedDiagnostics: {
+    publicOutputsMustOmit: readonly string[]
+    publicDiagnosticRule: string
+  }
+}
+
 export interface SandboxEvaluationReport {
   schemaVersion: typeof SANDBOX_EVALUATION_VERSION
   abiVersion: typeof STRATEGY_RUNTIME_ABI_VERSION
@@ -132,6 +175,7 @@ export interface SandboxEvaluationReport {
   countedMatchDefaultsUnchanged: true
   noCandidatePromoted: true
   publicSafe: true
+  runtimeIsolationReadiness: RuntimeIsolationReadiness
   candidates: readonly SandboxCandidateEvaluation[]
 }
 
@@ -471,6 +515,175 @@ const specAdapter = (id: StrategyRuntimeAdapterId) =>
 
 const noPromotion =
   "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility."
+
+export const RUNTIME_ISOLATION_READINESS: RuntimeIsolationReadiness = {
+  status: "evidence_only_not_promoted",
+  selectedCandidate: "container-subprocess",
+  promotionAllowed: false,
+  noSilentFallback: true,
+  requiredLiveCandidate: "container-subprocess",
+  requiredVerificationCommands: [
+    "pnpm sandbox:evaluate:container",
+    "pnpm sandbox:evaluate:check",
+    "pnpm topology:check -- --require-runtime-container",
+    "pnpm boundary:monitors",
+  ],
+  criteria: [
+    {
+      id: "required-container-probes",
+      category: "container_probe",
+      requirement:
+        "Run the full hostile probe matrix against the container subprocess candidate in a required lane.",
+      currentEvidence:
+        "The container candidate is optional and may be skipped in the committed artifact.",
+      promotionGate:
+        "Skipped container probes block promotion; required checks must fail instead of falling back.",
+    },
+    {
+      id: "resource-limits",
+      category: "resource_limit",
+      requirement:
+        "Prove wall timeout, CPU, memory, PID, output, source, private memory, and private objective limits.",
+      currentEvidence:
+        "Adapter metadata declares requested Docker limits and hostile probes cover logical limits.",
+      promotionGate:
+        "Production promotion requires live resource-limit evidence under normal and adversarial load.",
+    },
+    {
+      id: "filesystem-denial",
+      category: "filesystem",
+      requirement:
+        "Prove read-only root, constrained scratch space, no host path access, and safe write-attempt classification.",
+      currentEvidence:
+        "Container adapter requests read-only root and tmpfs scratch; live proof is optional.",
+      promotionGate:
+        "Filesystem denial must be live-proven before counted runtime promotion.",
+    },
+    {
+      id: "network-denial",
+      category: "network",
+      requirement:
+        "Prove no outbound network, DNS, localhost, metadata IP, proxy, or inherited token access.",
+      currentEvidence:
+        "Container adapter requests Docker network none; live proof is optional.",
+      promotionGate:
+        "Network-denial probes must pass in a required lane before promotion.",
+    },
+    {
+      id: "image-provenance",
+      category: "image_provenance",
+      requirement:
+        "Pin or otherwise control image provenance, update policy, and vulnerability review.",
+      currentEvidence: "Default image is a mutable Node image reference.",
+      promotionGate:
+        "Mutable or unreviewed images block production counted execution.",
+    },
+    {
+      id: "deployment-preflight",
+      category: "deployment",
+      requirement:
+        "Define runtime process ownership, preflight, health/readiness, concurrency, rollback, and no web/API execution path.",
+      currentEvidence:
+        "Current topology is local diagnostics and current counted execution remains worker-owned.",
+      promotionGate:
+        "Promotion requires explicit deployment ownership and rollback semantics.",
+    },
+    {
+      id: "failure-taxonomy",
+      category: "failure_taxonomy",
+      requirement:
+        "Classify Strategy violations separately from adapter, daemon, image, cgroup, OOM, IPC, and crash failures.",
+      currentEvidence:
+        "Runtime violation and system failure taxonomy exists for current adapters.",
+      promotionGate: "Ambiguous runtime failures block counted promotion.",
+    },
+    {
+      id: "redacted-diagnostics",
+      category: "diagnostics",
+      requirement:
+        "Keep public and monitor diagnostics free of Strategy source, memory, objectives, streams, stack traces, tokens, sessions, host paths, and private runtime internals.",
+      currentEvidence:
+        "Sandbox artifacts are public-safe and topology diagnostics are redacted.",
+      promotionGate: "Any public diagnostic leak blocks promotion.",
+    },
+    {
+      id: "local-ergonomics",
+      category: "local_ergonomics",
+      requirement:
+        "Keep normal local development available while making required runtime checks fail loudly when container evidence is requested.",
+      currentEvidence:
+        "Default evaluation can skip Docker; required container commands are explicit.",
+      promotionGate:
+        "Silent fallback from container to worker, host subprocess, JS/TS, stale fixtures, or in-process execution blocks promotion.",
+    },
+  ],
+  failureTaxonomy: [
+    {
+      id: "invalid-strategy-output",
+      failure: "Invalid Strategy output",
+      classification: "strategy_runtime_violation",
+      publicBehavior:
+        "Public runtime code only; no source excerpt, stream content, or stack trace.",
+    },
+    {
+      id: "forbidden-capability",
+      failure: "Forbidden capability attempt",
+      classification: "strategy_runtime_violation",
+      publicBehavior:
+        "Player-caused runtime violation when caught by validator or harness.",
+    },
+    {
+      id: "healthy-timeout",
+      failure: "Timeout under a healthy adapter",
+      classification: "strategy_runtime_violation",
+      publicBehavior: "Existing timeout code with no private diagnostics.",
+    },
+    {
+      id: "image-or-daemon-unavailable",
+      failure: "Container image missing or Docker/runtime unavailable",
+      classification: "system_failure",
+      publicBehavior:
+        "Degraded or non-counted evidence; retryable/operator-visible.",
+    },
+    {
+      id: "resource-feature-unsupported",
+      failure: "Required cgroup or container resource feature unsupported",
+      classification: "preflight_failure",
+      publicBehavior: "Required checks fail before counted runtime starts.",
+    },
+    {
+      id: "oom-kill",
+      failure: "OOM kill or host pressure termination",
+      classification: "policy_required",
+      publicBehavior:
+        "Must be explicitly attributed before it can count against a Strategy.",
+    },
+    {
+      id: "malformed-ipc-or-adapter-crash",
+      failure: "Malformed IPC, adapter crash, or unclassified subprocess exit",
+      classification: "system_failure",
+      publicBehavior:
+        "Degraded/non-counted without private stream or host detail.",
+    },
+  ],
+  redactedDiagnostics: {
+    publicOutputsMustOmit: [
+      "submitted source text",
+      "private strategy memory data",
+      "private soldier memory data",
+      "private objective data",
+      "raw board-observation data",
+      "stream content",
+      "stack traces",
+      "sessions",
+      "tokens",
+      "host paths",
+      "private runtime internals",
+    ],
+    publicDiagnosticRule:
+      "Runtime readiness diagnostics expose only stable ids, public codes, readiness, limit categories, and redacted failure summaries.",
+  },
+}
 
 export const SANDBOX_CANDIDATES: readonly SandboxCandidateDefinition[] = [
   {
@@ -871,12 +1084,67 @@ export const evaluateRuntimeSandboxes = (): SandboxEvaluationReport => ({
   countedMatchDefaultsUnchanged: true,
   noCandidatePromoted: true,
   publicSafe: true,
+  runtimeIsolationReadiness: RUNTIME_ISOLATION_READINESS,
   candidates: SANDBOX_CANDIDATES.map(evaluateSandboxCandidate),
 })
+
+export const assertRequiredSandboxCandidatesPassed = (
+  report: SandboxEvaluationReport,
+  requiredCandidateIds: readonly string[],
+): void => {
+  for (const candidateId of requiredCandidateIds) {
+    const candidate = report.candidates.find(
+      (entry) => entry.id === candidateId,
+    )
+    if (!candidate) {
+      throw new Error(`Required sandbox candidate missing: ${candidateId}`)
+    }
+    if (candidate.status !== "passed") {
+      throw new Error(
+        `Required sandbox candidate ${candidateId} did not pass; status=${candidate.status}. Run pnpm sandbox:evaluate:container with the required runtime available.`,
+      )
+    }
+  }
+}
+
+export const assertRuntimeIsolationReadinessGuardrails = (
+  report: SandboxEvaluationReport,
+): void => {
+  const readiness = report.runtimeIsolationReadiness
+  if (
+    readiness.status !== "evidence_only_not_promoted" ||
+    readiness.promotionAllowed !== false ||
+    readiness.noSilentFallback !== true ||
+    report.noCandidatePromoted !== true ||
+    report.countedMatchDefaultsUnchanged !== true
+  ) {
+    throw new Error("Runtime isolation readiness guardrails drifted")
+  }
+  const requiredCriteria = new Set([
+    "required-container-probes",
+    "resource-limits",
+    "filesystem-denial",
+    "network-denial",
+    "image-provenance",
+    "deployment-preflight",
+    "failure-taxonomy",
+    "redacted-diagnostics",
+    "local-ergonomics",
+  ])
+  for (const criterion of readiness.criteria) {
+    requiredCriteria.delete(criterion.id)
+  }
+  if (requiredCriteria.size > 0) {
+    throw new Error(
+      `Runtime isolation readiness missing criteria: ${[...requiredCriteria].join(", ")}`,
+    )
+  }
+}
 
 export const assertSandboxEvaluationPublicSafe = (
   report: SandboxEvaluationReport,
 ): void => {
+  assertRuntimeIsolationReadinessGuardrails(report)
   const serialized = JSON.stringify(report)
   for (const marker of sandboxEvaluationPublicForbiddenMarkers) {
     if (serialized.includes(marker)) {

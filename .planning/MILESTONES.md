@@ -5,8 +5,8 @@
 **Status:** In progress 2026-05-22
 **Phases:** 7
 **Phase range:** 57-63
-**Plans:** 4/4 complete so far
-**Requirements:** 17/28 complete; 28/28 mapped
+**Plans:** 5/5 complete so far
+**Requirements:** 21/28 complete; 28/28 mapped
 **Audit:** TBD
 
 ### Goal
@@ -29,7 +29,7 @@ Use the v1.8 service contracts, Go parity fixtures, runtime semantics, local top
 | 58 | Public Player Profile Service Read — Complete |
 | 59 | Owner Account Read Service Slice — Complete |
 | 60 | Public Ladder Service Read Follow-Up — Complete |
-| 61 | Runtime Isolation Readiness Guardrails |
+| 61 | Runtime Isolation Readiness Guardrails — Complete |
 | 62 | Experimental Non-JS Runtime Guardrails |
 | 63 | Milestone Verification and Regression Gate |
 

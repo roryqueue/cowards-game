@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import {
+  assertRequiredSandboxCandidatesPassed,
+  assertRuntimeIsolationReadinessGuardrails,
   assertSandboxEvaluationPublicSafe,
   evaluateSandboxCandidate,
   evaluateRuntimeSandboxes,
@@ -242,6 +244,53 @@ describe("runtime sandbox evaluation harness", () => {
     expect(() => assertSandboxEvaluationPublicSafe(report)).not.toThrow()
     expect(JSON.stringify(report)).not.toContain("export default")
     expect(JSON.stringify(report)).not.toContain("privateDiagnostics")
+  })
+
+  it("defines runtime isolation promotion-readiness without promoting candidates", () => {
+    const report = evaluateRuntimeSandboxes()
+    const readiness = report.runtimeIsolationReadiness
+
+    expect(() =>
+      assertRuntimeIsolationReadinessGuardrails(report),
+    ).not.toThrow()
+    expect(readiness).toMatchObject({
+      status: "evidence_only_not_promoted",
+      selectedCandidate: "container-subprocess",
+      promotionAllowed: false,
+      noSilentFallback: true,
+      requiredLiveCandidate: "container-subprocess",
+    })
+    expect(readiness.criteria.map((criterion) => criterion.id)).toEqual(
+      expect.arrayContaining([
+        "required-container-probes",
+        "resource-limits",
+        "filesystem-denial",
+        "network-denial",
+        "image-provenance",
+        "deployment-preflight",
+        "failure-taxonomy",
+        "redacted-diagnostics",
+        "local-ergonomics",
+      ]),
+    )
+    expect(
+      readiness.failureTaxonomy.map((entry) => entry.classification),
+    ).toEqual(
+      expect.arrayContaining([
+        "strategy_runtime_violation",
+        "system_failure",
+        "preflight_failure",
+        "policy_required",
+      ]),
+    )
+  })
+
+  it("fails loud when required container evidence is skipped", () => {
+    const report = evaluateRuntimeSandboxes()
+
+    expect(() =>
+      assertRequiredSandboxCandidatesPassed(report, ["container-subprocess"]),
+    ).toThrow(/Required sandbox candidate container-subprocess did not pass/)
   })
 
   it("does not change the worker runtime default", () => {
