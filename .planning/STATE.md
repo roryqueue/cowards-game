@@ -93,7 +93,7 @@ Progress: [██████████] 100%
 - [Phase 56]: Broad web direct persistence/runtime debt is baseline-gated with normalized import fingerprints. — Known debt stays visible, but new forbidden imports fail even on existing lines.
 - [Phase 56]: Runtime adapter/product semantics and Go route manifests now drift-check against canonical spec metadata without executing Strategy code or expanding Go ownership. — Keeps monitors useful without moving the production boundary prematurely.
 
-### Pending Todos
+### Next Todos
 
 All v1.8 phases are complete. Next work should audit the milestone and choose whether v1.9 starts with backend read-model expansion, production runtime isolation, or mutation boundary design.
 
