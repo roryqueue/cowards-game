@@ -1,5 +1,32 @@
 # Milestones
 
+## v1.9 Backend and Runtime Ownership Split
+
+**Status:** Planning started 2026-05-22
+**Phases:** TBD
+**Plans:** TBD
+**Requirements:** TBD
+**Audit:** TBD
+
+### Goal
+
+Use the v1.8 service contracts, Go parity fixtures, runtime semantics, local topology, and boundary monitors to make one deliberate ownership move without blending backend rewrite, production sandbox promotion, and non-JS counted play into one risky change.
+
+### Decision Candidates
+
+- Migrate more read/user web surfaces behind `@cowards/service` and widen strict import enforcement.
+- Expand Go only as a read-model service unless route ownership, auth, jobs, migrations, rollback, and write semantics are explicitly specified.
+- Advance production runtime isolation only after stronger resource, filesystem, network, deployment, failure-taxonomy, and local ergonomics evidence.
+- Keep Python and other non-JS runtimes experimental and non-counted unless promotion criteria are defined and satisfied.
+
+### Active Constraints
+
+- Engine logic remains pure, deterministic, serializable, and side-effect free.
+- Strategy code does not execute in the web/API process, and Node `vm` is not used as a hostile-code security boundary.
+- Public replay, service, Go, topology, monitor, and runtime outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, and private runtime internals by default.
+- Go backend work remains read-only unless v1.9 explicitly scopes a write boundary.
+- Non-JS runtimes remain experimental unless v1.9 explicitly proves promotion criteria.
+
 ## v1.8 Production Boundary Hardening
 
 **Status:** Shipped 2026-05-22

@@ -1,42 +1,42 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.8
-milestone_name: Production Boundary Hardening
-status: archived
-stopped_at: Archived v1.8
-last_updated: "2026-05-22T22:50:00.000Z"
+milestone: v1.9
+milestone_name: Backend and Runtime Ownership Split
+status: planning
+stopped_at: Starting v1.9 planning
+last_updated: "2026-05-22T22:53:48.000Z"
 last_activity: 2026-05-22
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.8 archived; ready for next milestone planning
+**Status:** v1.9 planning started
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.9 milestone definition
+**Current focus:** v1.9 Backend and Runtime Ownership Split
 **Latest shipped milestone:** v1.8 Production Boundary Hardening
-**Requirements:** v1.8 requirements archived in .planning/milestones/v1.8-REQUIREMENTS.md
+**Requirements:** v1.9 requirements not yet defined; v1.8 requirements archived in .planning/milestones/v1.8-REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 56 of 56 (Observability, Privacy, and Boundary Drift Monitors)
-Plan: v1.8 phases complete
-Status: Archived
-Last activity: 2026-05-22
+Phase: Not started (researching milestone direction)
+Plan: —
+Status: Defining v1.9 requirements
+Last activity: 2026-05-22 — Milestone v1.9 started
 
-Progress: [██████████] 100%
+Progress: [----------] 0%
 
 ## Workflow Settings
 
@@ -96,7 +96,9 @@ Progress: [██████████] 100%
 
 ### Next Todos
 
-All v1.8 phases are archived. Next work should start v1.9 and choose whether the first ownership move is backend read-model expansion, production runtime isolation, or mutation boundary design.
+- Research v1.9 ownership-boundary tradeoffs before locking requirements.
+- Decide whether the first v1.9 ownership move should be service-backed web read/user surface migration, Go read-model expansion, production runtime isolation evidence, or non-JS promotion criteria.
+- Define v1.9 requirements and roadmap after the boundary decision is confirmed.
 
 ### Blockers/Concerns
 
@@ -114,6 +116,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-22T22:50:00.000Z
-Stopped at: Archived v1.8
+Last session: 2026-05-22T22:53:48.000Z
+Stopped at: Started v1.9 planning
 Resume file: None

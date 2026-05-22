@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.8 Production Boundary Hardening on 2026-05-22
-**Current milestone:** None active; ready for v1.9 planning.
-**Status:** v1.8 archived with 38/38 requirements satisfied and no open audit findings.
+**Current milestone:** v1.9 Backend and Runtime Ownership Split.
+**Status:** v1.9 planning started; researching which ownership boundary should move first.
 **Last audit:** v1.8 milestone audit passed.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated v1.8 TypeScript service contracts, read-only Go parity fixtures, sandbox evaluation evidence, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors proving future multi-language runtime and backend migration paths.
@@ -13,15 +13,16 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Recommended Next Milestone: v1.9 Backend and Runtime Ownership Split
+## Current Milestone: v1.9 Backend and Runtime Ownership Split
 
 **Goal:** Use the v1.8 contracts, parity fixtures, local topology, and monitors to make one deliberate ownership move without blending backend rewrite, production sandbox promotion, and non-JS counted play into one risky change.
 
-**Recommended shape:**
+**Target features:**
+- Research and decide which ownership boundary moves first: service-backed web reads, Go read-model expansion, runtime isolation, or non-JS runtime promotion criteria.
 - Reduce direct web persistence debt by migrating more read/user surfaces behind `@cowards/service` and widening strict import enforcement.
-- Decide whether Go expands as a read-model service, remains fixture-only, or gets a carefully specified mutation boundary later.
-- Choose the production runtime isolation candidate only after resource, filesystem, network, deployment, and failure-taxonomy evidence is stronger.
-- Keep Python and other non-JS runtimes experimental until promotion criteria are explicit and satisfied.
+- Keep Go backend work read-only unless route ownership, auth, jobs, migrations, rollback, and write semantics are explicitly specified.
+- Keep production runtime isolation behind evidence gates for resource limits, filesystem/network denial, deployment ergonomics, and failure taxonomy.
+- Keep Python and other non-JS runtimes experimental and non-counted unless explicit promotion criteria are defined and satisfied.
 
 ## Latest Shipped Milestone: v1.8 Production Boundary Hardening
 
@@ -261,4 +262,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-22 after archiving v1.8 milestone*
+*Last updated: 2026-05-22 after starting v1.9 milestone planning*
