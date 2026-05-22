@@ -1,4 +1,5 @@
 import type { StrategyRevisionId } from "@cowards/spec"
+import { listAccountReadRevisions } from "../../../../lib/account-service-boundary.js"
 import {
   competitiveServer,
   getCurrentCompetitiveUser,
@@ -20,7 +21,7 @@ export async function GET(): Promise<Response> {
       return user
     }
     return Response.json({
-      revisions: await competitiveServer.listAccountRevisions(user),
+      revisions: await listAccountReadRevisions(),
     })
   } catch (error) {
     return competitiveErrorResponse(error)

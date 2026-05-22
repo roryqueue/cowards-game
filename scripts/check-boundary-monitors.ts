@@ -65,13 +65,11 @@ const openApiArtifactPath =
 const goFixtureDir = "apps/go-backend/testdata/service-fixtures"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
-  'apps/web/app/account/page.tsx:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../competitive/server.js"',
   'apps/web/app/api/account/advanced-forks/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
   'apps/web/app/api/account/revisions/[revisionId]/source/route.ts:2:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
-  'apps/web/app/api/account/revisions/route.ts:2:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
+  'apps/web/app/api/account/revisions/route.ts:3:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
   'apps/web/app/api/account/starter-forks/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
   'apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
-  'apps/web/app/api/auth/session/route.ts:1:competitive/server:import { competitiveServer, getSessionIdFromCookies, } from "../../../competitive/server.js"',
   'apps/web/app/api/auth/sign-in/route.ts:1:competitive/server:import { competitiveServer } from "../../../competitive/server.js"',
   'apps/web/app/api/auth/sign-out/route.ts:1:competitive/server:import { competitiveServer, getSessionIdFromCookies, } from "../../../competitive/server.js"',
   'apps/web/app/api/auth/sign-up/route.ts:1:competitive/server:import { competitiveServer } from "../../../competitive/server.js"',
@@ -88,8 +86,6 @@ export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/competitive/server.ts:37:@cowards/persistence:import { assertAdminUser, flagMatchSetResult, GovernanceInputError, markMatchSetGovernanceStatus, } from "@cowards/persistence/governance"',
   'apps/web/app/competitive/server.ts:43:@cowards/persistence:import { findAdvancedStrategy } from "@cowards/persistence/advanced-strategies"',
   'apps/web/app/competitive/server.ts:44:@cowards/persistence:import { findStarterStrategy } from "@cowards/persistence/starter-strategies"',
-  'apps/web/app/exhibitions/new/exhibition-client.tsx:4:competitive/server:import type { CompetitivePresetSummary, CompetitiveRevisionSummary, } from "../../competitive/server.js"',
-  'apps/web/app/exhibitions/new/page.tsx:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../competitive/server.js"',
   'apps/web/app/ladder/[seasonId]/page.tsx:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../competitive/server.js"',
   'apps/web/app/matches/replay-fixture.ts:6:@cowards/persistence:import { createChronicleMetadata } from "@cowards/persistence/chronicle-store"',
   'apps/web/app/matches/replay-ready.ts:7:@cowards/persistence:import type { StoredChronicle } from "@cowards/persistence/chronicle-store"',

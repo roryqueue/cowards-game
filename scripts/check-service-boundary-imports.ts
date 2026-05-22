@@ -11,11 +11,19 @@ export const strictMigratedFiles = [
   "apps/web/app/api/replays/[matchId]/metadata/route.ts",
   "apps/web/app/strategies/[strategyId]/page.tsx",
   "apps/web/app/players/[handle]/page.tsx",
+  "apps/web/app/account/page.tsx",
+  "apps/web/app/api/auth/session/route.ts",
+  "apps/web/app/exhibitions/new/page.tsx",
   "apps/web/lib/public-service-boundary.ts",
+  "apps/web/lib/account-service-boundary.ts",
 ] as const
 
 const strictAllowedForbiddenImports = new Map<string, ReadonlySet<string>>([
   ["apps/web/lib/public-service-adapter.ts", new Set(["@cowards/persistence"])],
+  [
+    "apps/web/lib/account-service-adapter.ts",
+    new Set(["@cowards/persistence"]),
+  ],
 ])
 
 const forbiddenPatterns = [

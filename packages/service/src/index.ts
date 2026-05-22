@@ -5,6 +5,8 @@ import type {
   StoredChronicle,
 } from "@cowards/persistence/chronicle-store"
 import { buildPublicMatchSetResultDto } from "@cowards/persistence/competition"
+import { getSession } from "@cowards/persistence/auth"
+import { listAccountStrategyRevisions } from "@cowards/persistence/account-revisions"
 import {
   buildPublicPlayerProfileDto,
   buildPublicStrategyCardDto,
@@ -13,7 +15,9 @@ import { getWorkshopAnalyticsSnapshot } from "@cowards/persistence/workshop-anal
 import {
   assertPublicServiceDtoLeakSafe,
   SERVICE_API_VERSION,
+  AuthSessionServiceDtoSchema,
   AnalyticsRunSummaryServiceDtoSchema,
+  ListStrategyRevisionsServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
   PublicPlayerPageServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
@@ -22,6 +26,9 @@ import {
   type MatchId,
   type MatchSetId,
   type AnalyticsRunSummaryServiceDto,
+  type AuthSessionServiceDto,
+  type ListStrategyRevisionsServiceDto,
+  type StrategyRevisionSummaryServiceDto,
   type UserId,
   type PublicMatchSetSummaryServiceDto,
   type PublicPlayerPageServiceDto,
@@ -59,6 +66,12 @@ export interface CowardsService {
   getPublicPlayerPage(
     handle: string,
   ): Promise<PublicPlayerPageServiceDto | null>
+  getAuthSession(
+    sessionId: string | null | undefined,
+  ): Promise<AuthSessionServiceDto>
+  listStrategyRevisions(
+    sessionId: string | null | undefined,
+  ): Promise<ListStrategyRevisionsServiceDto | null>
   getAnalyticsRunSummary(
     viewerUserId: UserId,
     runId: string,
@@ -71,6 +84,8 @@ export interface CreateCowardsLocalServiceOptions {
   buildPublicMatchSetResult?: typeof buildPublicMatchSetResultDto | undefined
   buildPublicStrategyCard?: typeof buildPublicStrategyCardDto | undefined
   buildPublicPlayerProfile?: typeof buildPublicPlayerProfileDto | undefined
+  getSession?: typeof getSession | undefined
+  listAccountRevisions?: typeof listAccountStrategyRevisions | undefined
   getAnalyticsSnapshot?: typeof getWorkshopAnalyticsSnapshot | undefined
 }
 
@@ -110,6 +125,9 @@ export const createCowardsLocalService = (
     options.buildPublicStrategyCard ?? buildPublicStrategyCardDto
   const buildPublicPlayerProfile =
     options.buildPublicPlayerProfile ?? buildPublicPlayerProfileDto
+  const getSessionForToken = options.getSession ?? getSession
+  const listAccountRevisions =
+    options.listAccountRevisions ?? listAccountStrategyRevisions
   const getAnalyticsSnapshot =
     options.getAnalyticsSnapshot ?? getWorkshopAnalyticsSnapshot
 
@@ -185,6 +203,78 @@ export const createCowardsLocalService = (
         return PublicPlayerPageServiceDtoSchema.parse(
           dto,
         ) as PublicPlayerPageServiceDto
+      })
+    },
+
+    async getAuthSession(sessionId) {
+      if (!sessionId) {
+        return {
+          apiVersion: SERVICE_API_VERSION,
+          kind: "authSession",
+          user: null,
+        }
+      }
+      return options.withPool(async (pool) => {
+        const session = await getSessionForToken(pool, sessionId)
+        const dto: AuthSessionServiceDto = {
+          apiVersion: SERVICE_API_VERSION,
+          kind: "authSession",
+          user: session
+            ? {
+                id: session.user.id,
+                username: session.user.username,
+                handle: session.user.handle,
+                displayName: session.user.displayName,
+              }
+            : null,
+        }
+        assertPublicServiceDtoLeakSafe(dto)
+        return AuthSessionServiceDtoSchema.parse(dto) as AuthSessionServiceDto
+      })
+    },
+
+    async listStrategyRevisions(sessionId) {
+      if (!sessionId) {
+        return null
+      }
+      return options.withPool(async (pool) => {
+        const session = await getSessionForToken(pool, sessionId)
+        if (!session) {
+          return null
+        }
+        const revisions = await listAccountRevisions(pool, session.user.id)
+        const dto: ListStrategyRevisionsServiceDto = {
+          apiVersion: SERVICE_API_VERSION,
+          kind: "strategyRevisionList",
+          revisions: revisions.map(
+            (revision): StrategyRevisionSummaryServiceDto => ({
+              apiVersion: SERVICE_API_VERSION,
+              kind: "strategyRevisionSummary",
+              strategyId: revision.strategyId,
+              strategyRevisionId: revision.id,
+              ...(revision.label ? { label: revision.label } : {}),
+              ...(revision.notes ? { notes: revision.notes } : {}),
+              ...(revision.tags ? { tags: revision.tags } : {}),
+              ...(revision.starterLineage
+                ? { starterLineage: revision.starterLineage }
+                : {}),
+              ...(revision.advancedLineage
+                ? { advancedLineage: revision.advancedLineage }
+                : {}),
+              sourceHash: revision.sourceHash,
+              sourceBytes: revision.sourceBytes,
+              runtimeSemantics: revision.runtimeSemantics,
+              engineCompatibility: revision.engineCompatibility,
+              validationStatus: revision.valid ? "valid" : "invalid",
+              createdAt: revision.createdAt,
+              ...(revision.lockedAt ? { lockedAt: revision.lockedAt } : {}),
+            }),
+          ),
+        }
+        assertPublicServiceDtoLeakSafe(dto)
+        return ListStrategyRevisionsServiceDtoSchema.parse(
+          dto,
+        ) as ListStrategyRevisionsServiceDto
       })
     },
 

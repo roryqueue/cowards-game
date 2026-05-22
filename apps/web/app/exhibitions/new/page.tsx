@@ -1,17 +1,25 @@
+import { COMPETITION_PRESETS } from "@cowards/spec"
 import {
-  competitiveServer,
-  getCurrentCompetitiveUser,
-} from "../../competitive/server.js"
+  getCurrentAccountReadUser,
+  listAccountReadRevisions,
+} from "../../../lib/account-service-boundary.js"
 import { ExhibitionClient } from "./exhibition-client.js"
 
 export const dynamic = "force-dynamic"
 
 export default async function NewExhibitionPage() {
-  const user = await getCurrentCompetitiveUser()
-  const revisions = user
-    ? await competitiveServer.listAccountRevisions(user)
-    : []
-  const presets = competitiveServer.listPresets()
+  const user = await getCurrentAccountReadUser()
+  const revisions = user ? await listAccountReadRevisions() : []
+  const presets = COMPETITION_PRESETS.map((preset) => ({
+    id: preset.id,
+    label: preset.label,
+    description:
+      preset.id === "smoke-exhibition-v1"
+        ? "Fast mirrored pairwise exhibition for quick checks."
+        : "Broader mirrored pairwise exhibition for stronger evidence.",
+    minEntrants: preset.entrantCount.min,
+    maxEntrants: preset.entrantCount.max,
+  }))
 
   return (
     <main className="app-page">

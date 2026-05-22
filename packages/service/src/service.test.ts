@@ -90,6 +90,45 @@ const publicPlayerProfile = {
   results: [],
 } satisfies PublicPlayerProfileDto
 
+const accountUser = {
+  id: "user:demo",
+  username: "demo-player",
+  handle: "demo-player",
+  displayName: "Demo Player",
+  createdAt: "2026-05-22T00:00:00.000Z",
+}
+
+const accountRevision = {
+  id: "strategy-revision:demo",
+  strategyId: "strategy:account:user:demo:one",
+  label: "Demo Revision",
+  sourceHash: "sourcehash-demo",
+  sourceBytes: 256,
+  valid: true,
+  runtime,
+  runtimeSemantics: {
+    languageLabel: "TypeScript",
+    adapterLabel: "Worker thread",
+    readiness: "production",
+    readinessLabel: "Production",
+    experimental: false,
+    countedPlayEligible: true,
+    countedPlayLabel: "Counted eligible",
+    countedPlayReason: null,
+    sourcePolicyLabel: "Inline source",
+    packagePolicyLabel: "No packages",
+    docsReference: "docs/runtime-js",
+    examplesReference: "examples/runtime-js",
+    warnings: [],
+    validationIssueCodes: [],
+  },
+  engineCompatibility: {
+    spec: "cowards-rules-v1.4",
+    engine: "engine-v1",
+  },
+  createdAt: "2026-05-22T00:00:00.000Z",
+}
+
 const storedChronicle = {
   metadata: {
     id: "chronicle:demo",
@@ -139,6 +178,108 @@ describe("createCowardsLocalService", () => {
       matchSetId: "match-set:demo",
       result: publicResult,
     })
+  })
+
+  it("returns owner-safe auth sessions from session tokens", async () => {
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      getSession: async (_pool, sessionId) =>
+        sessionId === "session:demo"
+          ? ({
+              session: {
+                id: "stored-session-id",
+                userId: accountUser.id,
+                expiresAt: "2026-06-22T00:00:00.000Z",
+                createdAt: "2026-05-22T00:00:00.000Z",
+              },
+              user: accountUser,
+            } as never)
+          : null,
+    })
+
+    await expect(service.getAuthSession("session:demo")).resolves.toEqual({
+      apiVersion: SERVICE_API_VERSION,
+      kind: "authSession",
+      user: {
+        id: "user:demo",
+        username: "demo-player",
+        handle: "demo-player",
+        displayName: "Demo Player",
+      },
+    })
+    await expect(service.getAuthSession("")).resolves.toEqual({
+      apiVersion: SERVICE_API_VERSION,
+      kind: "authSession",
+      user: null,
+    })
+  })
+
+  it("lists only session-owned Strategy Revision metadata without source", async () => {
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      getSession: async () =>
+        ({
+          session: {
+            id: "stored-session-id",
+            userId: accountUser.id,
+            expiresAt: "2026-06-22T00:00:00.000Z",
+            createdAt: "2026-05-22T00:00:00.000Z",
+          },
+          user: accountUser,
+        }) as never,
+      listAccountRevisions: async (_pool, userId) => {
+        expect(userId).toBe("user:demo")
+        return [
+          {
+            ...accountRevision,
+            source: "export default hidden",
+          },
+        ] as never
+      },
+    })
+
+    const list = await service.listStrategyRevisions("session:demo")
+
+    expect(list).toMatchObject({
+      apiVersion: SERVICE_API_VERSION,
+      kind: "strategyRevisionList",
+      revisions: [
+        {
+          apiVersion: SERVICE_API_VERSION,
+          kind: "strategyRevisionSummary",
+          strategyId: "strategy:account:user:demo:one",
+          strategyRevisionId: "strategy-revision:demo",
+          label: "Demo Revision",
+          sourceHash: "sourcehash-demo",
+          sourceBytes: 256,
+          validationStatus: "valid",
+          runtimeSemantics: {
+            languageLabel: "TypeScript",
+            countedPlayEligible: true,
+          },
+          engineCompatibility: {
+            spec: "cowards-rules-v1.4",
+            engine: "engine-v1",
+          },
+          createdAt: "2026-05-22T00:00:00.000Z",
+        },
+      ],
+    })
+    expect(JSON.stringify(list)).not.toContain("export default hidden")
+    expect(JSON.stringify(list)).not.toContain("stored-session-id")
+  })
+
+  it("returns null for revision lists without a valid session", async () => {
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      getSession: async () => null,
+      listAccountRevisions: async () => {
+        throw new Error("should not list revisions without a session")
+      },
+    })
+
+    await expect(service.listStrategyRevisions("missing")).resolves.toBe(null)
+    await expect(service.listStrategyRevisions("")).resolves.toBe(null)
   })
 
   it("parses public MatchSet summaries through the public service schema", async () => {

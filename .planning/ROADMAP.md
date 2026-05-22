@@ -28,7 +28,7 @@ v1.9 makes one production ownership move: service-backed web read/user surfaces 
 
 - [x] **Phase 57: Ownership Matrix and Baseline Evidence** - Developers can see the v1.9 ownership split, non-goals, and starting boundary evidence before migration begins.
 - [x] **Phase 58: Public Player Profile Service Read** - Users can view public player profiles through `@cowards/service` with unchanged behavior, privacy, and stricter imports.
-- [ ] **Phase 59: Owner Account Read Service Slice** - Signed-in users can load account session and revision-list reads through service-owned DTOs without moving mutations or source retrieval.
+- [x] **Phase 59: Owner Account Read Service Slice** - Signed-in users can load account session and revision-list reads through service-owned DTOs without moving mutations or source retrieval.
 - [ ] **Phase 60: Public Ladder Service Read Follow-Up** - Users can view the selected public ladder season through `@cowards/service` while Go writes and Go route expansion stay out of scope.
 - [ ] **Phase 61: Runtime Isolation Readiness Guardrails** - Developers can inspect production runtime-isolation readiness criteria and verify no candidate is promoted by default.
 - [ ] **Phase 62: Experimental Non-JS Runtime Guardrails** - Users and developers see experimental non-JS semantics while counted eligibility remains fail-closed.
@@ -74,7 +74,9 @@ Plans:
   3. Developer can verify owner account reads authorize before resource-specific disclosure and do not expose session ids, bearer tokens, private handles, existence oracles, stack traces, stderr, host paths, or private runtime internals.
   4. Developer can verify Strategy saves, source retrieval, validation/test execution, submissions, MatchSet creation, analytics reruns, exports, and other mutation flows are not moved behind the new read slice.
   5. Developer can verify migrated account read files and their dependency closure are covered by strict import enforcement.
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [x] 59-01-PLAN.md — Move account session and Strategy Revision list reads through service-owned DTOs.
 **UI hint**: yes
 
 ### Phase 60: Public Ladder Service Read Follow-Up
@@ -130,7 +132,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 57. Ownership Matrix and Baseline Evidence | 1/1 | Complete | 2026-05-22 |
 | 58. Public Player Profile Service Read | 1/1 | Complete | 2026-05-22 |
-| 59. Owner Account Read Service Slice | 0/TBD | Not started | - |
+| 59. Owner Account Read Service Slice | 1/1 | Complete | 2026-05-22 |
 | 60. Public Ladder Service Read Follow-Up | 0/TBD | Not started | - |
 | 61. Runtime Isolation Readiness Guardrails | 0/TBD | Not started | - |
 | 62. Experimental Non-JS Runtime Guardrails | 0/TBD | Not started | - |
@@ -149,17 +151,17 @@ Plans:
 | VER-01 through VER-03 | Phase 63 | 3 |
 
 **Coverage:** 28/28 v1.9 requirements mapped.
-**Completed:** 9/28 v1.9 requirements.
+**Completed:** 14/28 v1.9 requirements.
 **Unmapped requirements:** 0.
 **Branch note:** The approved v1.9 direction selects the public ladder service read branch. Future Go read-model expansion is tracked in BACKX-03 and BACKX-04, outside the active 28-requirement roadmap.
 
 ## Next Up
 
-**Phase 59: Owner Account Read Service Slice**
+**Phase 60: Public Ladder Service Read Follow-Up**
 
 Recommended next command:
 
-`$gsd-discuss-phase 59`
+`$gsd-discuss-phase 60`
 
 ---
-*Last updated: 2026-05-22 after Phase 58 completion*
+*Last updated: 2026-05-22 after Phase 59 completion*

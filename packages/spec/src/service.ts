@@ -4,6 +4,7 @@ import type {
   MatchId,
   MatchSetId,
   StrategyId,
+  StrategyRevisionMetadata,
   StrategyRevisionId,
   UserId,
 } from "./types.js"
@@ -13,7 +14,7 @@ import type {
   PublicStrategyCardDto,
 } from "./competition.js"
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
-import type { StrategyRuntimeMetadata } from "./runtime.js"
+import type { StrategyRuntimeProductSemantics } from "./runtime.js"
 import {
   AuthSessionServiceDtoSchema,
   CreateAnalyticsRunRequestBodySchema,
@@ -121,6 +122,7 @@ export const SERVICE_API_ROUTES = {
         kind: "authSession",
         user: {
           id: "user:demo",
+          username: "demo-player",
           handle: "demo-player",
           displayName: "Demo Player",
         },
@@ -149,6 +151,7 @@ export const SERVICE_API_ROUTES = {
         kind: "authSession",
         user: {
           id: "user:demo",
+          username: "demo-player",
           handle: "demo-player",
           displayName: "Demo Player",
         },
@@ -679,6 +682,7 @@ export interface AuthSessionServiceDto {
   kind: "authSession"
   user: {
     id: UserId
+    username: string
     handle: string
     displayName: string
   } | null
@@ -689,11 +693,27 @@ export interface StrategyRevisionSummaryServiceDto {
   kind: "strategyRevisionSummary"
   strategyId: StrategyId
   strategyRevisionId: StrategyRevisionId
+  label?: string | undefined
+  notes?: string | undefined
+  tags?: string[] | undefined
+  starterLineage?: StrategyRevisionMetadata["starterLineage"] | undefined
+  advancedLineage?: StrategyRevisionMetadata["advancedLineage"] | undefined
   sourceHash: string
   sourceBytes: number
-  runtime: StrategyRuntimeMetadata
+  runtimeSemantics: StrategyRuntimeProductSemantics
+  engineCompatibility: {
+    spec: string
+    engine: string
+  }
   validationStatus: "valid" | "invalid"
+  createdAt: string
   lockedAt?: string | undefined
+}
+
+export interface ListStrategyRevisionsServiceDto {
+  apiVersion: typeof SERVICE_API_VERSION
+  kind: "strategyRevisionList"
+  revisions: StrategyRevisionSummaryServiceDto[]
 }
 
 export interface PublicMatchSetSummaryServiceDto {

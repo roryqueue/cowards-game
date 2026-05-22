@@ -24,11 +24,11 @@ Requirements for making one deliberate ownership move: migrate more web read/use
 
 ### Owner Account Read Migration
 
-- [ ] **ACCT-01**: Signed-in user can load the account session snapshot through a service-owned read while preserving existing authenticated and unauthenticated behavior.
-- [ ] **ACCT-02**: Signed-in user can view their account Strategy Revision list through a service-owned read that returns metadata, hashes, status, language/runtime labels, counted eligibility, and compatibility data without returning Strategy source.
-- [ ] **ACCT-03**: Developer can verify owner account reads authorize before resource-specific disclosure and do not expose session ids, bearer tokens, private handles, existence oracles, stack traces, stderr, host paths, or private runtime internals in DTOs or diagnostics.
-- [ ] **ACCT-04**: Developer can verify account read migration does not move Strategy saves, source retrieval, validation/test execution, submissions, MatchSet creation, analytics reruns, exports, or other mutation flows behind the new read slice.
-- [ ] **ACCT-05**: Developer can verify migrated account read files and their chosen dependency closure are covered by strict import enforcement.
+- [x] **ACCT-01**: Signed-in user can load the account session snapshot through a service-owned read while preserving existing authenticated and unauthenticated behavior.
+- [x] **ACCT-02**: Signed-in user can view their account Strategy Revision list through a service-owned read that returns metadata, hashes, status, language/runtime labels, counted eligibility, and compatibility data without returning Strategy source.
+- [x] **ACCT-03**: Developer can verify owner account reads authorize before resource-specific disclosure and do not expose session ids, bearer tokens, private handles, existence oracles, stack traces, stderr, host paths, or private runtime internals in DTOs or diagnostics.
+- [x] **ACCT-04**: Developer can verify account read migration does not move Strategy saves, source retrieval, validation/test execution, submissions, MatchSet creation, analytics reruns, exports, or other mutation flows behind the new read slice.
+- [x] **ACCT-05**: Developer can verify migrated account read files and their chosen dependency closure are covered by strict import enforcement.
 
 ### Public Ladder Read Follow-Up Boundary
 
@@ -110,11 +110,11 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 | SVC-03 | Phase 58 | Complete |
 | SVC-04 | Phase 58 | Complete |
 | SVC-05 | Phase 58 | Complete |
-| ACCT-01 | Phase 59 | Pending |
-| ACCT-02 | Phase 59 | Pending |
-| ACCT-03 | Phase 59 | Pending |
-| ACCT-04 | Phase 59 | Pending |
-| ACCT-05 | Phase 59 | Pending |
+| ACCT-01 | Phase 59 | Complete |
+| ACCT-02 | Phase 59 | Complete |
+| ACCT-03 | Phase 59 | Complete |
+| ACCT-04 | Phase 59 | Complete |
+| ACCT-05 | Phase 59 | Complete |
 | READ-01 | Phase 60 | Pending |
 | READ-02 | Phase 60 | Pending |
 | READ-05 | Phase 60 | Pending |
@@ -139,4 +139,4 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after Phase 58 completion*
+*Last updated: 2026-05-22 after Phase 59 completion*

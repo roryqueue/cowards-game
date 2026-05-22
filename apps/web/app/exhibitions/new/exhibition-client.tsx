@@ -1,14 +1,19 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import type {
-  CompetitivePresetSummary,
-  CompetitiveRevisionSummary,
-} from "../../competitive/server.js"
+import type { AccountReadRevisionSummary } from "../../../lib/account-service-boundary.js"
+
+interface ExhibitionPresetSummary {
+  id: string
+  label: string
+  description: string
+  minEntrants: number
+  maxEntrants: number
+}
 
 interface ExhibitionClientProps {
-  presets: CompetitivePresetSummary[]
-  revisions: CompetitiveRevisionSummary[]
+  presets: ExhibitionPresetSummary[]
+  revisions: AccountReadRevisionSummary[]
 }
 
 export function ExhibitionClient({

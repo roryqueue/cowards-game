@@ -11,7 +11,11 @@ const strictFiles = [
   "apps/web/app/api/replays/[matchId]/metadata/route.ts",
   "apps/web/app/strategies/[strategyId]/page.tsx",
   "apps/web/app/players/[handle]/page.tsx",
+  "apps/web/app/account/page.tsx",
+  "apps/web/app/api/auth/session/route.ts",
+  "apps/web/app/exhibitions/new/page.tsx",
   "apps/web/lib/public-service-boundary.ts",
+  "apps/web/lib/account-service-boundary.ts",
 ] as const
 
 const writeRepoFile = (

@@ -735,6 +735,7 @@ export const AuthSessionServiceDtoSchema = z.object({
   user: z
     .object({
       id: z.string().min(1),
+      username: z.string().min(1),
       handle: z.string().min(1),
       displayName: z.string().min(1),
     })
@@ -759,10 +760,35 @@ export const StrategyRevisionSummaryServiceDtoSchema = z.object({
   kind: z.literal("strategyRevisionSummary"),
   strategyId: z.string().min(1),
   strategyRevisionId: z.string().min(1),
+  label: z.string().min(1).optional(),
+  notes: z.string().min(1).optional(),
+  tags: z.array(z.string().min(1)).optional(),
+  starterLineage: StrategyRevisionMetadataSchema.shape.starterLineage,
+  advancedLineage: StrategyRevisionMetadataSchema.shape.advancedLineage,
   sourceHash: z.string().min(1),
   sourceBytes: z.number().int().min(0),
-  runtime: StrategyRuntimeMetadataSchema,
+  runtimeSemantics: z.object({
+    languageLabel: z.string().min(1),
+    adapterLabel: z.string().min(1),
+    readiness: z.string().min(1),
+    readinessLabel: z.string().min(1),
+    experimental: z.boolean(),
+    countedPlayEligible: z.boolean(),
+    countedPlayLabel: z.enum(["Counted eligible", "Not counted"]),
+    countedPlayReason: z.string().min(1).nullable(),
+    sourcePolicyLabel: z.string().min(1),
+    packagePolicyLabel: z.string().min(1),
+    docsReference: z.string().min(1),
+    examplesReference: z.string().min(1),
+    warnings: z.array(z.string().min(1)),
+    validationIssueCodes: z.array(z.string().min(1)),
+  }),
+  engineCompatibility: z.object({
+    spec: z.string().min(1),
+    engine: z.string().min(1),
+  }),
   validationStatus: z.enum(["valid", "invalid"]),
+  createdAt: z.string().min(1),
   lockedAt: z.string().min(1).optional(),
 })
 

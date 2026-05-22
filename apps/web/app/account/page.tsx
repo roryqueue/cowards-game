@@ -1,15 +1,13 @@
 import {
-  competitiveServer,
-  getCurrentCompetitiveUser,
-} from "../competitive/server.js"
+  getCurrentAccountReadUser,
+  listAccountReadRevisions,
+} from "../../lib/account-service-boundary.js"
 
 export const dynamic = "force-dynamic"
 
 export default async function AccountPage() {
-  const user = await getCurrentCompetitiveUser()
-  const revisions = user
-    ? await competitiveServer.listAccountRevisions(user)
-    : []
+  const user = await getCurrentAccountReadUser()
+  const revisions = user ? await listAccountReadRevisions() : []
 
   return (
     <main className="app-page">
