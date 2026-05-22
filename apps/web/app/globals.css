@@ -481,15 +481,32 @@ textarea {
 
 .evidence-page {
   display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-areas:
+    "header header"
+    "filters evidence";
   gap: 16px;
-  padding: 16px;
+  align-content: start;
+  align-items: start;
+  width: min(100%, 1280px);
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.evidence-page > .app-panel,
+.evidence-layout > .app-panel {
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .evidence-header {
+  grid-area: header;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  padding: 20px 24px;
 }
 
 .evidence-header h1,
@@ -498,16 +515,21 @@ textarea {
 }
 
 .evidence-controls {
+  grid-area: filters;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  position: sticky;
+  top: 16px;
 }
 
 .evidence-layout {
+  grid-area: evidence;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(460px, 1fr) minmax(300px, 340px);
   gap: 16px;
   align-items: start;
+  width: 100%;
 }
 
 .evidence-table {
@@ -864,6 +886,27 @@ textarea {
   padding: 16px;
 }
 
+.evidence-page .evidence-header {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+
+.evidence-page .evidence-controls {
+  display: grid;
+  gap: 14px;
+}
+
+.evidence-page .evidence-table {
+  display: grid;
+  gap: 8px;
+}
+
+.evidence-page .evidence-detail {
+  display: grid;
+  gap: 12px;
+}
+
 .app-section-header {
   display: flex;
   align-items: flex-start;
@@ -1067,8 +1110,44 @@ textarea {
   }
 }
 
+@media (max-width: 1220px) {
+  .evidence-page {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "filters"
+      "evidence";
+    padding: 16px;
+  }
+
+  .evidence-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  }
+
+  .evidence-page .evidence-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    position: static;
+  }
+}
+
 @media (max-width: 900px) {
-  .evidence-controls,
+  .evidence-page {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "filters"
+      "evidence";
+  }
+
+  .evidence-page .evidence-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .evidence-page .evidence-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .evidence-layout {
     grid-template-columns: 1fr;
   }
