@@ -2,10 +2,11 @@
 
 ## v1.9 Backend and Runtime Ownership Split
 
-**Status:** Planning started 2026-05-22
-**Phases:** TBD
+**Status:** Roadmap created 2026-05-22
+**Phases:** 7
+**Phase range:** 57-63
 **Plans:** TBD
-**Requirements:** TBD
+**Requirements:** 28/28 mapped
 **Audit:** TBD
 
 ### Goal
@@ -14,10 +15,23 @@ Use the v1.8 service contracts, Go parity fixtures, runtime semantics, local top
 
 ### Decision Candidates
 
-- Migrate more read/user web surfaces behind `@cowards/service` and widen strict import enforcement.
-- Expand Go only as a read-model service unless route ownership, auth, jobs, migrations, rollback, and write semantics are explicitly specified.
-- Advance production runtime isolation only after stronger resource, filesystem, network, deployment, failure-taxonomy, and local ergonomics evidence.
-- Keep Python and other non-JS runtimes experimental and non-counted unless promotion criteria are defined and satisfied.
+- Selected v1.9 production ownership move: migrate more read/user web surfaces behind `@cowards/service` and widen strict import enforcement.
+- Selected read-model follow-up branch: public ladder season service read.
+- Go read-model expansion remains follow-up-only after TypeScript service ownership and parity fixture scope; Go writes remain out of scope.
+- Runtime isolation remains evidence/guardrail-only; no candidate is promoted to counted Match execution by default.
+- Python and other non-JS runtimes remain experimental and non-counted unless promotion criteria are defined and satisfied in a future milestone.
+
+### Planned Phases
+
+| Phase | Name |
+| --- | --- |
+| 57 | Ownership Matrix and Baseline Evidence |
+| 58 | Public Player Profile Service Read |
+| 59 | Owner Account Read Service Slice |
+| 60 | Public Ladder Service Read Follow-Up |
+| 61 | Runtime Isolation Readiness Guardrails |
+| 62 | Experimental Non-JS Runtime Guardrails |
+| 63 | Milestone Verification and Regression Gate |
 
 ### Active Constraints
 

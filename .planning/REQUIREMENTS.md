@@ -30,12 +30,10 @@ Requirements for making one deliberate ownership move: migrate more web read/use
 - [ ] **ACCT-04**: Developer can verify account read migration does not move Strategy saves, source retrieval, validation/test execution, submissions, MatchSet creation, analytics reruns, exports, or other mutation flows behind the new read slice.
 - [ ] **ACCT-05**: Developer can verify migrated account read files and their chosen dependency closure are covered by strict import enforcement.
 
-### Read-Model Follow-Up Boundary
+### Public Ladder Read Follow-Up Boundary
 
-- [ ] **READ-01**: Developer can choose exactly one follow-up read boundary after the service migrations land: either a public ladder season service read or a read-only Go route for a service-owned public DTO.
-- [ ] **READ-02**: If public ladder read is chosen, user can view the selected ladder season through `@cowards/service` while preserving not-found behavior, standings, entry metadata, MatchSet links, counted-state explanations, and no-permanent-ratings copy.
-- [ ] **READ-03**: If Go read-model follow-up is chosen, developer can generate TypeScript-service-backed parity fixtures for exactly one service-owned public route before adding any Go handler.
-- [ ] **READ-04**: If Go read-model follow-up is chosen, developer can verify the Go route is GET-only, allowlisted, privacy-scanned, parity-checked, topology-diagnosed, and behind an explicit rollback path with no silent fallback in required-boundary checks.
+- [ ] **READ-01**: Developer can verify the selected v1.9 follow-up read boundary is a public ladder season service read, not Go route expansion.
+- [ ] **READ-02**: User can view the selected ladder season through `@cowards/service` while preserving not-found behavior, standings, entry metadata, MatchSet links, counted-state explanations, and no-permanent-ratings copy.
 - [ ] **READ-05**: Developer can verify Go mutation endpoints, auth/session mutation, ladder entry/schedule/status writes, Match orchestration, job claiming, migrations, persistence writes, and Strategy execution remain out of scope.
 
 ### Runtime Isolation Guardrails
@@ -66,6 +64,8 @@ Deferred to later milestones.
 
 - **BACKX-01**: Developer can move Go mutation endpoints only after route ownership, auth/session, job claiming, persistence writes, migrations, rollback, transactional semantics, and write behavior are specified.
 - **BACKX-02**: Developer can route production web reads to Go only after service ownership, generated parity fixtures, topology checks, rollback, and operational failure behavior are proven.
+- **BACKX-03**: Developer can generate TypeScript-service-backed parity fixtures for exactly one service-owned public route before adding any future Go read-model handler.
+- **BACKX-04**: Developer can verify any future Go read-model route is GET-only, allowlisted, privacy-scanned, parity-checked, topology-diagnosed, and behind an explicit rollback path with no silent fallback in required-boundary checks.
 
 ### Runtime Expansion
 
@@ -97,16 +97,46 @@ Explicitly excluded from v1.9. Documented to prevent scope creep.
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
+Which phases cover active v1.9 requirements. The selected read-model follow-up branch is the public ladder service read; Go read-model expansion requirements are deferred to future backend migration.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
+| OWN-01 | Phase 57 | Pending |
+| OWN-02 | Phase 57 | Pending |
+| OWN-03 | Phase 57 | Pending |
+| OWN-04 | Phase 57 | Pending |
+| SVC-01 | Phase 58 | Pending |
+| SVC-02 | Phase 58 | Pending |
+| SVC-03 | Phase 58 | Pending |
+| SVC-04 | Phase 58 | Pending |
+| SVC-05 | Phase 58 | Pending |
+| ACCT-01 | Phase 59 | Pending |
+| ACCT-02 | Phase 59 | Pending |
+| ACCT-03 | Phase 59 | Pending |
+| ACCT-04 | Phase 59 | Pending |
+| ACCT-05 | Phase 59 | Pending |
+| READ-01 | Phase 60 | Pending |
+| READ-02 | Phase 60 | Pending |
+| READ-05 | Phase 60 | Pending |
+| RUN-01 | Phase 61 | Pending |
+| RUN-02 | Phase 61 | Pending |
+| RUN-03 | Phase 61 | Pending |
+| RUN-04 | Phase 61 | Pending |
+| NJS-01 | Phase 62 | Pending |
+| NJS-02 | Phase 62 | Pending |
+| NJS-03 | Phase 62 | Pending |
+| NJS-04 | Phase 62 | Pending |
+| VER-01 | Phase 63 | Pending |
+| VER-02 | Phase 63 | Pending |
+| VER-03 | Phase 63 | Pending |
 
 **Coverage:**
 - v1.9 requirements: 28 total
-- Mapped to phases: 0
-- Unmapped: 28
+- Mapped to phases: 28
+- Unmapped: 0
+- Active branch: public ladder service read
+- Deferred Go read-model branch: BACKX-03, BACKX-04
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after v1.9 ownership decision*
+*Last updated: 2026-05-22 after v1.9 roadmap creation*
