@@ -12,6 +12,7 @@
     "services:down": "docker compose down",
     "contract:check": "pnpm --filter @cowards/spec contract:check",
     "contract:lint": "redocly lint --extends recommended packages/spec/artifacts/service-api-v1.8.openapi.json",
+    "boundary:imports": "pnpm exec tsx scripts/check-service-boundary-imports.ts",
     "preflight": "pnpm exec tsx scripts/preflight.ts",
     "preflight:docker": "pnpm services:up && pnpm preflight",
     "preflight:local": "pnpm preflight -- --skip-redis",
