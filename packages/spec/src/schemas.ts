@@ -21,11 +21,6 @@ import {
   type JsonValue,
 } from "./types.js"
 import {
-  SERVICE_API_ROUTES,
-  SERVICE_API_VERSION,
-  SERVICE_ERROR_CODES,
-} from "./service.js"
-import {
   STRATEGY_LANGUAGE_IDS,
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_ADAPTER_IDS,
@@ -643,8 +638,69 @@ export const StrategyRevisionSchema = z.object({
   metadata: StrategyRevisionMetadataSchema,
 })
 
+const SERVICE_SCHEMA_API_VERSION = "service-api-v1.8"
+
+const SERVICE_SCHEMA_ERROR_CODES = [
+  "NOT_FOUND",
+  "UNAUTHORIZED",
+  "FORBIDDEN",
+  "VALIDATION_FAILED",
+  "STORAGE_UNAVAILABLE",
+  "UPSTREAM_UNAVAILABLE",
+  "INTERNAL",
+] as const
+
+const SERVICE_SCHEMA_ROUTE_IDS = [
+  "health",
+  "authSession",
+  "createSession",
+  "revokeSession",
+  "listStrategyRevisions",
+  "createStrategyRevision",
+  "getStrategyRevisionSource",
+  "createMatchSet",
+  "getPublicMatchSetSummary",
+  "getPublicReplayMetadata",
+  "listAnalyticsProfiles",
+  "createAnalyticsRun",
+  "exportAnalyticsRun",
+  "listLadderSeasons",
+  "enterLadderSeason",
+  "getPublicPlayerPage",
+  "getPublicStrategyPage",
+] as const
+
+export const EmptyParamsSchema = z.object({})
+export const EmptyQuerySchema = z.object({})
+export const EmptyBodySchema = z.object({})
+
+export const MatchSetIdParamsSchema = z.object({
+  matchSetId: z.string().min(1),
+})
+export const MatchIdParamsSchema = z.object({
+  matchId: z.string().min(1),
+})
+export const StrategyIdParamsSchema = z.object({
+  strategyId: z.string().min(1),
+})
+export const StrategyRevisionIdParamsSchema = z.object({
+  strategyRevisionId: z.string().min(1),
+})
+export const ProfileIdParamsSchema = z.object({
+  profileId: z.string().min(1),
+})
+export const RunIdParamsSchema = z.object({
+  runId: z.string().min(1),
+})
+export const SeasonIdParamsSchema = z.object({
+  seasonId: z.string().min(1),
+})
+export const HandleParamsSchema = z.object({
+  handle: z.string().min(1),
+})
+
 export const ServiceErrorDtoSchema = z.object({
-  code: z.enum(SERVICE_ERROR_CODES),
+  code: z.enum(SERVICE_SCHEMA_ERROR_CODES),
   message: z.string().min(1),
   status: z.number().int().min(400).max(599),
   publicSafe: z.literal(true),
@@ -654,18 +710,13 @@ export const ServiceErrorDtoSchema = z.object({
 export const ServiceHealthDtoSchema = z.object({
   ok: z.literal(true),
   service: z.literal("cowards-service"),
-  version: z.literal(SERVICE_API_VERSION),
+  version: z.literal(SERVICE_SCHEMA_API_VERSION),
 })
 
-export const ServiceApiRouteIdSchema = z.enum(
-  Object.keys(SERVICE_API_ROUTES) as [
-    keyof typeof SERVICE_API_ROUTES,
-    ...(keyof typeof SERVICE_API_ROUTES)[],
-  ],
-)
+export const ServiceApiRouteIdSchema = z.enum(SERVICE_SCHEMA_ROUTE_IDS)
 
 export const AuthSessionServiceDtoSchema = z.object({
-  apiVersion: z.literal(SERVICE_API_VERSION),
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
   kind: z.literal("authSession"),
   user: z
     .object({
@@ -676,8 +727,21 @@ export const AuthSessionServiceDtoSchema = z.object({
     .nullable(),
 })
 
+export const CreateSessionRequestBodySchema = z.object({
+  handle: z.string().min(1).optional(),
+  password: z.string().min(1).optional(),
+})
+
+export const CreateSessionServiceDtoSchema = AuthSessionServiceDtoSchema
+
+export const RevokeSessionServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("sessionRevoked"),
+  revoked: z.literal(true),
+})
+
 export const StrategyRevisionSummaryServiceDtoSchema = z.object({
-  apiVersion: z.literal(SERVICE_API_VERSION),
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
   kind: z.literal("strategyRevisionSummary"),
   strategyId: z.string().min(1),
   strategyRevisionId: z.string().min(1),
@@ -687,6 +751,346 @@ export const StrategyRevisionSummaryServiceDtoSchema = z.object({
   validationStatus: z.enum(["valid", "invalid"]),
   lockedAt: z.string().min(1).optional(),
 })
+
+export const ListStrategyRevisionsServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("strategyRevisionList"),
+  revisions: z.array(StrategyRevisionSummaryServiceDtoSchema),
+})
+
+export const StrategyRevisionSubmissionBodySchema = z.object({
+  strategyId: z.string().min(1).optional(),
+  source: z.string().min(1),
+  label: z.string().min(1).optional(),
+})
+
+export const StrategyRevisionSubmissionServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("strategyRevisionCreated"),
+  strategyId: z.string().min(1),
+  strategyRevisionId: z.string().min(1),
+  validationStatus: z.enum(["valid", "invalid"]),
+})
+
+export const StrategyRevisionSourceServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("strategyRevisionSource"),
+  strategyRevisionId: z.string().min(1),
+  source: z.string().min(1),
+  sourceHash: z.string().min(1),
+})
+
+export const CreateMatchSetRequestBodySchema = z.object({
+  presetId: z.string().min(1),
+  entrantRevisionIds: z.array(z.string().min(1)).min(2),
+})
+
+export const CreateMatchSetServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("matchSetCreated"),
+  matchSetId: z.string().min(1),
+  publicHref: z.string().min(1),
+})
+
+const CompetitionScoringPolicyServiceDtoSchema = z.object({
+  id: z.literal("exhibition-points-v1"),
+  version: z.literal("v1"),
+  winPoints: z.literal(3),
+  drawPoints: z.literal(1),
+  lossPoints: z.literal(0),
+  strategyFailurePenaltyPoints: z.literal(-1),
+})
+
+const CompetitionEntrantSnapshotServiceDtoSchema = z.object({
+  entrantId: z.string().min(1),
+  entrantIndex: z.number().int().nonnegative(),
+  strategyRevisionId: z.string().min(1),
+  ownerUserId: z.string().min(1),
+  ownerHandle: z.string().min(1),
+  displayLabel: z.string().min(1),
+  sourceHash: z.string().min(1),
+  sourceBytes: z.number().int().min(0),
+  runtime: StrategyRuntimeMetadataSchema,
+  engineCompatibility: z.object({
+    spec: z.string().min(1),
+    engine: z.string().min(1),
+  }),
+  lockedAt: z.string().min(1),
+})
+
+const PublicScorePenaltyServiceDtoSchema = z.object({
+  matchId: z.string().min(1).optional(),
+  reason: z.enum([
+    "strategy_failure",
+    "system_failure",
+    "invalid_result",
+    "no_result",
+  ]),
+  points: z.number().int(),
+})
+
+const PublicStandingServiceDtoSchema = z.object({
+  rank: z.number().int().positive(),
+  entrantId: z.string().min(1),
+  strategyRevisionId: z.string().min(1),
+  ownerHandle: z.string().min(1),
+  displayLabel: z.string().min(1),
+  sourceHash: z.string().min(1),
+  points: z.number().int(),
+  wins: z.number().int().nonnegative(),
+  draws: z.number().int().nonnegative(),
+  losses: z.number().int().nonnegative(),
+  penalties: z.array(PublicScorePenaltyServiceDtoSchema),
+  survivingSoldiers: z.number().int().nonnegative(),
+  survivalTurns: z.number().int().nonnegative(),
+  tieBreakerPath: z.array(z.string().min(1)),
+})
+
+const PublicMatchEvidenceServiceDtoSchema = z.object({
+  matchId: z.string().min(1),
+  entrants: z.object({
+    bottom: z.string().min(1),
+    top: z.string().min(1),
+  }),
+  status: z.enum(["pending", "running", "complete", "failed_system", "blocked"]),
+  replayAvailable: z.boolean(),
+  chronicleHash: z.string().min(1).optional(),
+  publicReason: z
+    .enum(["strategy_failure", "system_failure", "invalid_result", "no_result"])
+    .optional(),
+  arenaVariantId: z.string().min(1).optional(),
+})
+
+export const PublicMatchSetResultServiceDtoSchema = z.object({
+  matchSetId: z.string().min(1),
+  preset: z.object({
+    id: z.enum(["smoke-exhibition-v1", "standard-exhibition-v1"]),
+    version: z.literal("v1"),
+    label: z.string().min(1),
+  }),
+  status: z.enum(["accepted", "queued", "running", "complete", "degraded", "failed"]),
+  visibility: z.literal("public"),
+  scoringPolicy: CompetitionScoringPolicyServiceDtoSchema,
+  entrants: z.array(CompetitionEntrantSnapshotServiceDtoSchema),
+  standings: z.array(PublicStandingServiceDtoSchema),
+  matches: z.array(PublicMatchEvidenceServiceDtoSchema),
+  provenance: z.object({
+    matchSetId: z.string().min(1),
+    presetId: z.enum(["smoke-exhibition-v1", "standard-exhibition-v1"]),
+    scoringPolicyVersion: z.string().min(1),
+    entrantSnapshotIds: z.array(z.string().min(1)),
+    chronicleHashes: z.array(z.string().min(1)),
+  }),
+  publication: z.object({
+    publicResults: z.literal(true),
+    publicReplayEvidence: z.literal(true),
+    privateFieldsExcluded: z.array(z.string().min(1)),
+  }),
+  metadata: JsonValueSchema.optional(),
+})
+
+export const PublicMatchSetSummaryServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("publicMatchSetSummary"),
+  matchSetId: z.string().min(1),
+  result: PublicMatchSetResultServiceDtoSchema,
+})
+
+export const PublicReplayMetadataServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("publicReplayMetadata"),
+  matchId: z.string().min(1),
+  metadata: z.object({
+    matchId: z.string().min(1),
+    chronicleId: z.string().min(1),
+    hash: z.string().min(1),
+    schemaVersion: z.string().min(1),
+    eventCount: z.number().int().nonnegative(),
+    snapshotCount: z.number().int().nonnegative(),
+    bottomPlayerId: z.string().min(1),
+    topPlayerId: z.string().min(1),
+    arenaVariantId: z.string().min(1),
+  }),
+})
+
+export const AnalyticsProfileServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("analyticsProfile"),
+  profileId: z.string().min(1),
+  ownerUserId: z.string().min(1),
+  label: z.string().min(1),
+  revisionIds: z.array(z.string().min(1)),
+})
+
+export const ListAnalyticsProfilesServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("analyticsProfileList"),
+  profiles: z.array(AnalyticsProfileServiceDtoSchema),
+})
+
+export const CreateAnalyticsRunRequestBodySchema = z.object({
+  notes: z.string().min(1).optional(),
+})
+
+export const CreateAnalyticsRunServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("analyticsRun"),
+  runId: z.string().min(1),
+  profileId: z.string().min(1),
+  status: z.enum(["queued", "running", "complete", "failed"]),
+  summary: JsonValueSchema.optional(),
+})
+
+export const ExportAnalyticsRunServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("exportManifest"),
+  exportId: z.string().min(1),
+  format: z.enum(["json", "csv"]),
+  href: z.string().min(1),
+  contentHash: z.string().min(1),
+})
+
+export const LadderSeasonServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("ladderSeason"),
+  seasonId: z.string().min(1),
+  status: z.string().min(1),
+  publicHref: z.string().min(1),
+})
+
+export const ListLadderSeasonsServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("ladderSeasonList"),
+  seasons: z.array(LadderSeasonServiceDtoSchema),
+})
+
+export const EnterLadderSeasonRequestBodySchema = z.object({
+  strategyRevisionId: z.string().min(1),
+})
+
+export const EnterLadderSeasonServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("ladderEntryCreated"),
+  seasonId: z.string().min(1),
+  entryId: z.string().min(1),
+  status: z.enum(["active", "withdrawn", "suspended", "invalidated", "stale"]),
+})
+
+export const PublicLadderMatchSetSummaryDtoSchema = z.object({
+  matchSetId: z.string().min(1),
+  seasonId: z.string().min(1),
+  scheduleRunId: z.string().min(1).optional(),
+  podIndex: z.number().int().nonnegative().optional(),
+  status: z.enum(["accepted", "queued", "running", "complete", "degraded", "failed"]),
+  countedStatus: z.enum([
+    "pending",
+    "counted",
+    "retrying",
+    "under_review",
+    "invalid",
+    "non_competitive",
+    "non_counted",
+  ]),
+  publicReason: z
+    .enum([
+      "system_failure",
+      "incomplete_evidence",
+      "invalid_result",
+      "governance_hold",
+      "non_counted",
+    ])
+    .optional(),
+  publicExplanation: z.string().min(1).optional(),
+  entrantIds: z.array(z.string().min(1)),
+  replayHref: z.string().min(1).optional(),
+  resultHref: z.string().min(1),
+})
+
+export const PublicStrategyCardDtoSchema = z.object({
+  strategyId: z.string().min(1),
+  strategyRevisionId: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().min(1).optional(),
+  tags: z.array(z.string().min(1)),
+  authorHandle: z.string().min(1),
+  sourceHash: z.string().min(1),
+  sourceBytes: z.number().int().min(0),
+  runtime: StrategyRuntimeMetadataSchema,
+  engineCompatibility: z.object({
+    spec: z.string().min(1),
+    engine: z.string().min(1),
+  }),
+  validationStatus: z.enum(["valid", "invalid"]),
+  starterLineage: z
+    .object({
+      starterId: z.string().min(1),
+      starterName: z.string().min(1),
+      starterVersion: z.string().min(1),
+      sourceHash: z.string().min(1),
+    })
+    .optional(),
+  advancedLineage: z
+    .object({
+      advancedId: z.string().min(1),
+      advancedName: z.string().min(1),
+      advancedVersion: z.string().min(1),
+      archetype: z.string().min(1),
+      sourceHash: z.string().min(1),
+    })
+    .optional(),
+  record: z.object({
+    wins: z.number().int().nonnegative(),
+    losses: z.number().int().nonnegative(),
+    draws: z.number().int().nonnegative(),
+    points: z.number().int(),
+  }),
+  resultLinks: z.array(z.string().min(1)),
+  replayLinks: z.array(z.string().min(1)),
+})
+
+export const PublicPlayerProfileDtoSchema = z.object({
+  handle: z.string().min(1),
+  displayName: z.string().min(1),
+  strategies: z.array(PublicStrategyCardDtoSchema),
+  ladderHistory: z.array(
+    z.object({
+      seasonId: z.string().min(1),
+      seasonName: z.string().min(1),
+      entryStatus: z.enum([
+        "active",
+        "withdrawn",
+        "suspended",
+        "invalidated",
+        "stale",
+      ]),
+      points: z.number().int(),
+      rank: z.number().int().positive().optional(),
+    }),
+  ),
+  results: z.array(PublicLadderMatchSetSummaryDtoSchema),
+})
+
+export const PublicPageServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("publicPage"),
+  page: z.enum(["player", "strategy", "matchSet", "replay", "ladder"]),
+  canonicalHref: z.string().min(1),
+  payload: JsonValueSchema,
+})
+
+export const PublicPlayerPageServiceDtoSchema =
+  PublicPageServiceDtoSchema.extend({
+    page: z.literal("player"),
+    payload: PublicPlayerProfileDtoSchema,
+  })
+
+export const PublicStrategyPageServiceDtoSchema =
+  PublicPageServiceDtoSchema.extend({
+    page: z.literal("strategy"),
+    payload: z.object({
+      strategy: PublicStrategyCardDtoSchema,
+    }),
+  })
 
 export const ArenaVariantSchema = z.object({
   id: z.string().min(1),
