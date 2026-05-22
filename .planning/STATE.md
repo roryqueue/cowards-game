@@ -1,39 +1,39 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.7
-milestone_name: Runtime and Backend Boundary Stabilization
-status: complete
-last_updated: "2026-05-22T12:55:00.000-04:00"
-last_activity: 2026-05-22 — Milestone v1.7 completed, archived, audited, and verified
+milestone: v1.8
+milestone_name: Production Boundary Hardening
+status: planning
+last_updated: "2026-05-22T12:55:25.000-04:00"
+last_activity: 2026-05-22 — Milestone v1.8 started
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.7 Runtime and Backend Boundary Stabilization shipped and archived
+**Status:** v1.8 Production Boundary Hardening planning started
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Ready for v1.8 milestone definition
+**Current focus:** v1.8 Production Boundary Hardening requirements and roadmap
 **Latest shipped milestone:** v1.7 Runtime and Backend Boundary Stabilization
-**Requirements:** v1.7 archived with 32/32 complete in .planning/milestones/v1.7-REQUIREMENTS.md
+**Requirements:** v1.8 requirements in definition; v1.7 archived with 32/32 complete in .planning/milestones/v1.7-REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 45-50 - v1.7 Runtime and Backend Boundary Stabilization
-Plan: 6/6 implemented
-Status: Complete and archived
-Last activity: 2026-05-22 — v1.7 implementation, validation, audit, and archive completed
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-22 — Milestone v1.8 started
 
 ## Workflow Settings
 
@@ -113,7 +113,7 @@ Items acknowledged and deferred after v1.7 milestone completion on 2026-05-22:
 
 ## Next Command
 
-Run `$gsd-new-milestone v1.8` to define the next milestone from the archived v1.7 boundary foundation.
+Run `$gsd-plan-phase 51` after the v1.8 roadmap is approved.
 
 ---
-*Last updated: 2026-05-22 after v1.7 milestone completion and archive*
+*Last updated: 2026-05-22 after starting v1.8 milestone*

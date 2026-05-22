@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.7 Runtime and Backend Boundary Stabilization on 2026-05-22
-**Current milestone:** Ready for v1.8 planning.
-**Status:** v1.7 shipped; requirements and roadmap archived.
+**Current milestone:** v1.8 Production Boundary Hardening.
+**Status:** v1.8 planning started; requirements and roadmap in progress.
 **Last audit:** v1.7 milestone audit passed, 32/32 requirements satisfied, no open findings.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has frozen TypeScript service/runtime boundary contracts plus small Python and Go spikes proving future multi-language runtime and backend migration paths.
@@ -12,6 +12,18 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.8 Production Boundary Hardening
+
+**Goal:** Turn the v1.7 service/runtime/backend contracts into sturdier operating boundaries that are boring, observable, repeatable, and hard to accidentally bypass without prematurely rewriting orchestration, backend ownership, or production multi-language runtime support.
+
+**Target features:**
+- Generate or prepare generation-ready service API artifacts, likely OpenAPI or equivalent typed schema output, and continue moving Next/web routes away from direct persistence imports toward the typed service layer.
+- Promote the Go backend spike to read-only parity against real golden fixtures or safe persisted local data for health, public MatchSet summary, replay metadata, and selected analytics summaries.
+- Prototype and evaluate the next credible hostile Strategy sandbox boundary across container, microVM, WASM/WASI, subprocess, and worker tradeoffs without declaring it production-ready.
+- Define non-JS Strategy product semantics for language selection, source/package metadata, validation messages, compatibility warnings, counted-play eligibility, docs/examples, and experimental labels.
+- Build a repeatable cross-process local topology for the web app, worker/runtime adapter, TypeScript service boundary, and Go read-only service with health checks, fixture loading, smoke requests, and diagnostics.
+- Add lightweight but real monitors for private DTO leaks, runtime/web execution bypasses, service contract drift, adapter compatibility drift, and Go/TypeScript parity drift.
 
 ## Latest Shipped Milestone: v1.7 Runtime and Backend Boundary Stabilization
 
@@ -168,8 +180,8 @@ Planning archives live under `.planning/milestones/`:
 
 - Durable all-time ratings, permanent Elo/Glicko contracts, ranked prize ladders, public tournaments, and broad spectator/community surfaces beyond profiles, public Strategy cards, standings, results, and replay links.
 - Randomized arena generation and custom user-created maps.
-- Full production multi-language runtime support beyond the v1.7 contract and one experimental spike.
-- Wholesale backend rewrite or migration of orchestration before the service boundary is proven.
+- Full production multi-language runtime support beyond experimental non-JS semantics and runtime boundary prototypes.
+- Wholesale backend rewrite, mutation endpoints, job claiming, or migration of orchestration before read-only service and parity boundaries are proven.
 - Enterprise-grade authentication features such as email verification, password reset, OAuth, organizations, and account recovery.
 - Live model inference or live human control during Matches.
 - Monetization, cosmetics, strategy marketplace, and reinforcement-learning harnesses.
@@ -224,4 +236,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-22 after completing v1.7 milestone*
+*Last updated: 2026-05-22 after starting v1.8 milestone*
