@@ -1,7 +1,6 @@
-import { readFileSync } from "node:fs"
-import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
+import serviceApiArtifact from "../artifacts/service-api-v1.8.openapi.json" with { type: "json" }
 import {
   assertPublicServiceDtoLeakSafe,
   SERVICE_API_ROUTES,
@@ -80,17 +79,8 @@ const findForbiddenSchemaProperty = (
 
 describe("service contract metadata", () => {
   it("commits the generated OpenAPI 3.1 service artifact", () => {
-    const artifactPath = resolve(
-      "artifacts",
-      "service-api-v1.8.openapi.json",
-    )
-    const artifact = JSON.parse(readFileSync(artifactPath, "utf8")) as {
-      openapi?: string
-      info?: { version?: string }
-    }
-
-    expect(artifact.openapi).toBe("3.1.0")
-    expect(artifact.info?.version).toBe("service-api-v1.8")
+    expect(serviceApiArtifact.openapi).toBe("3.1.0")
+    expect(serviceApiArtifact.info.version).toBe("service-api-v1.8")
   })
 
   it("declares complete route metadata and resolvable fixture refs", () => {

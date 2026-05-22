@@ -10,6 +10,8 @@
     "dev:local": "scripts/dev-local-postgres.sh",
     "services:up": "scripts/wait-for-compose-services.sh",
     "services:down": "docker compose down",
+    "contract:check": "pnpm --filter @cowards/spec contract:check",
+    "contract:lint": "redocly lint --extends recommended packages/spec/artifacts/service-api-v1.8.openapi.json",
     "preflight": "pnpm exec tsx scripts/preflight.ts",
     "preflight:docker": "pnpm services:up && pnpm preflight",
     "preflight:local": "pnpm preflight -- --skip-redis",
@@ -28,6 +30,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@playwright/test": "^1.60.0",
+    "@redocly/cli": "2.31.4",
     "@types/node": "^24.10.1",
     "@typescript-eslint/eslint-plugin": "^8.48.1",
     "@typescript-eslint/parser": "^8.48.1",

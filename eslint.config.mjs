@@ -28,7 +28,9 @@ export default [
         process: "readonly",
       },
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ["packages/spec/scripts/*.ts"],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },

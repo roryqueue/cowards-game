@@ -130,7 +130,11 @@ export const SERVICE_API_ROUTES = {
     signature: "POST /auth/session",
     authScope: "public",
     privacyClass: "owner",
-    request: request(EmptyParamsSchema, EmptyQuerySchema, CreateSessionRequestBodySchema),
+    request: request(
+      EmptyParamsSchema,
+      EmptyQuerySchema,
+      CreateSessionRequestBodySchema,
+    ),
     response: CreateSessionServiceDtoSchema,
     error: ServiceErrorDtoSchema,
     examples: [
@@ -242,7 +246,11 @@ export const SERVICE_API_ROUTES = {
     signature: "POST /matchsets",
     authScope: "owner",
     privacyClass: "owner",
-    request: request(EmptyParamsSchema, EmptyQuerySchema, CreateMatchSetRequestBodySchema),
+    request: request(
+      EmptyParamsSchema,
+      EmptyQuerySchema,
+      CreateMatchSetRequestBodySchema,
+    ),
     response: CreateMatchSetServiceDtoSchema,
     error: ServiceErrorDtoSchema,
     examples: [
@@ -381,7 +389,11 @@ export const SERVICE_API_ROUTES = {
     signature: "POST /analytics/profiles/{profileId}/runs",
     authScope: "owner",
     privacyClass: "owner",
-    request: request(ProfileIdParamsSchema, EmptyQuerySchema, CreateAnalyticsRunRequestBodySchema),
+    request: request(
+      ProfileIdParamsSchema,
+      EmptyQuerySchema,
+      CreateAnalyticsRunRequestBodySchema,
+    ),
     response: CreateAnalyticsRunServiceDtoSchema,
     error: ServiceErrorDtoSchema,
     examples: [
@@ -454,7 +466,11 @@ export const SERVICE_API_ROUTES = {
     signature: "POST /ladders/seasons/{seasonId}/entries",
     authScope: "owner",
     privacyClass: "owner",
-    request: request(SeasonIdParamsSchema, EmptyQuerySchema, EnterLadderSeasonRequestBodySchema),
+    request: request(
+      SeasonIdParamsSchema,
+      EmptyQuerySchema,
+      EnterLadderSeasonRequestBodySchema,
+    ),
     response: EnterLadderSeasonServiceDtoSchema,
     error: ServiceErrorDtoSchema,
     examples: [

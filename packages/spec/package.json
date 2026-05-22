@@ -10,6 +10,8 @@
   },
   "scripts": {
     "build": "tsc -b",
+    "contract:check": "pnpm exec tsx scripts/generate-service-openapi.ts --check",
+    "contract:generate": "pnpm exec tsx scripts/generate-service-openapi.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run spec.test.ts service-contract.test.ts"

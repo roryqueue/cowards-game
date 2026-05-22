@@ -1,0 +1,4112 @@
+{
+  "components": {
+    "schemas": {
+      "authSessionResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "kind": {
+            "const": "authSession",
+            "type": "string"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "displayName": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "handle": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "handle",
+                  "displayName"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "user"
+        ],
+        "type": "object"
+      },
+      "createAnalyticsRunResponse": {
+        "$defs": {
+          "__schema0": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              },
+              {
+                "items": {
+                  "$ref": "#/components/schemas/createAnalyticsRunResponse/$defs/__schema0"
+                },
+                "type": "array"
+              },
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/createAnalyticsRunResponse/$defs/__schema0"
+                },
+                "propertyNames": {
+                  "type": "string"
+                },
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "kind": {
+            "const": "analyticsRun",
+            "type": "string"
+          },
+          "profileId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "runId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "complete",
+              "failed"
+            ],
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/createAnalyticsRunResponse/$defs/__schema0"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "runId",
+          "profileId",
+          "status"
+        ],
+        "type": "object"
+      },
+      "createMatchSetResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "kind": {
+            "const": "matchSetCreated",
+            "type": "string"
+          },
+          "matchSetId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "publicHref": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "matchSetId",
+          "publicHref"
+        ],
+        "type": "object"
+      },
+      "createSessionResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "kind": {
+            "const": "authSession",
+            "type": "string"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "displayName": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "handle": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "handle",
+                  "displayName"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "user"
+        ],
+        "type": "object"
+      },
+      "createStrategyRevisionResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "kind": {
+            "const": "strategyRevisionCreated",
+            "type": "string"
+          },
+          "strategyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "strategyRevisionId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "validationStatus": {
+            "enum": [
+              "valid",
+              "invalid"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "strategyId",
+          "strategyRevisionId",
+          "validationStatus"
+        ],
+        "type": "object"
+      },
+      "enterLadderSeasonResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "entryId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "kind": {
+            "const": "ladderEntryCreated",
+            "type": "string"
+          },
+          "seasonId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "withdrawn",
+              "suspended",
+              "invalidated",
+              "stale"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "seasonId",
+          "entryId",
+          "status"
+        ],
+        "type": "object"
+      },
+      "exportAnalyticsRunResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "contentHash": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "exportId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "json",
+              "csv"
+            ],
+            "type": "string"
+          },
+          "href": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "kind": {
+            "const": "exportManifest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "exportId",
+          "format",
+          "href",
+          "contentHash"
+        ],
+        "type": "object"
+      },
+      "getPublicMatchSetSummaryResponse": {
+        "$defs": {
+          "__schema0": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              },
+              {
+                "items": {
+                  "$ref": "#/components/schemas/getPublicMatchSetSummaryResponse/$defs/__schema0"
+                },
+                "type": "array"
+              },
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/getPublicMatchSetSummaryResponse/$defs/__schema0"
+                },
+                "propertyNames": {
+                  "type": "string"
+                },
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "kind": {
+            "const": "publicMatchSetSummary",
+            "type": "string"
+          },
+          "matchSetId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "result": {
+            "additionalProperties": false,
+            "properties": {
+              "entrants": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "displayLabel": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "engineCompatibility": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "engine": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "spec": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "spec",
+                        "engine"
+                      ],
+                      "type": "object"
+                    },
+                    "entrantId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "entrantIndex": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "lockedAt": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "ownerHandle": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "ownerUserId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "runtime": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "abiVersion": {
+                          "const": "strategy-runtime-abi-v1.7",
+                          "type": "string"
+                        },
+                        "adapter": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "enum": [
+                                "runtime-js-worker-thread",
+                                "runtime-js-subprocess",
+                                "runtime-js-container-subprocess",
+                                "runtime-python-subprocess-experimental"
+                              ],
+                              "type": "string"
+                            },
+                            "version": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "version"
+                          ],
+                          "type": "object"
+                        },
+                        "language": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "enum": [
+                                "javascript",
+                                "typescript",
+                                "python"
+                              ],
+                              "type": "string"
+                            },
+                            "version": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "version"
+                          ],
+                          "type": "object"
+                        },
+                        "limits": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "environment": {
+                              "enum": [
+                                "empty",
+                                "minimal",
+                                "inherited"
+                              ],
+                              "type": "string"
+                            },
+                            "filesystem": {
+                              "enum": [
+                                "none",
+                                "read-only-root",
+                                "host"
+                              ],
+                              "type": "string"
+                            },
+                            "network": {
+                              "enum": [
+                                "disabled",
+                                "inherited"
+                              ],
+                              "type": "string"
+                            },
+                            "objectivePayloadBytes": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            },
+                            "packagePolicy": {
+                              "enum": [
+                                "none",
+                                "experimental"
+                              ],
+                              "type": "string"
+                            },
+                            "shell": {
+                              "enum": [
+                                "disabled",
+                                "inherited"
+                              ],
+                              "type": "string"
+                            },
+                            "soldierMemoryBytes": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            },
+                            "sourceBytes": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            },
+                            "stderrBytes": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            },
+                            "stdoutBytes": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            },
+                            "strategyMemoryBytes": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            },
+                            "timeoutMs": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "timeoutMs",
+                            "stdoutBytes",
+                            "stderrBytes",
+                            "sourceBytes",
+                            "strategyMemoryBytes",
+                            "soldierMemoryBytes",
+                            "objectivePayloadBytes",
+                            "environment",
+                            "filesystem",
+                            "network",
+                            "shell",
+                            "packagePolicy"
+                          ],
+                          "type": "object"
+                        },
+                        "package": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "declaredDependencies": {
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "type": "object"
+                            },
+                            "entrypoint": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "lockfileHash": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "manifestHash": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "mode": {
+                              "enum": [
+                                "none",
+                                "declared"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "mode",
+                            "entrypoint"
+                          ],
+                          "type": "object"
+                        },
+                        "requiredCapabilities": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "abiVersion",
+                        "language",
+                        "adapter",
+                        "package",
+                        "requiredCapabilities",
+                        "limits"
+                      ],
+                      "type": "object"
+                    },
+                    "sourceBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "sourceHash": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "strategyRevisionId": {
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "entrantId",
+                    "entrantIndex",
+                    "strategyRevisionId",
+                    "ownerUserId",
+                    "ownerHandle",
+                    "displayLabel",
+                    "sourceHash",
+                    "sourceBytes",
+                    "runtime",
+                    "engineCompatibility",
+                    "lockedAt"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "matches": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "arenaVariantId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "chronicleHash": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "entrants": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "bottom": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "top": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "bottom",
+                        "top"
+                      ],
+                      "type": "object"
+                    },
+                    "matchId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "publicReason": {
+                      "enum": [
+                        "strategy_failure",
+                        "system_failure",
+                        "invalid_result",
+                        "no_result"
+                      ],
+                      "type": "string"
+                    },
+                    "replayAvailable": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "running",
+                        "complete",
+                        "failed_system",
+                        "blocked"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "matchId",
+                    "entrants",
+                    "status",
+                    "replayAvailable"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "matchSetId": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "metadata": {
+                "$ref": "#/components/schemas/getPublicMatchSetSummaryResponse/$defs/__schema0"
+              },
+              "preset": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "enum": [
+                      "smoke-exhibition-v1",
+                      "standard-exhibition-v1"
+                    ],
+                    "type": "string"
+                  },
+                  "label": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "version": {
+                    "const": "v1",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version",
+                  "label"
+                ],
+                "type": "object"
+              },
+              "provenance": {
+                "additionalProperties": false,
+                "properties": {
+                  "chronicleHashes": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "entrantSnapshotIds": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "matchSetId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "presetId": {
+                    "enum": [
+                      "smoke-exhibition-v1",
+                      "standard-exhibition-v1"
+                    ],
+                    "type": "string"
+                  },
+                  "scoringPolicyVersion": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "matchSetId",
+                  "presetId",
+                  "scoringPolicyVersion",
+                  "entrantSnapshotIds",
+                  "chronicleHashes"
+                ],
+                "type": "object"
+              },
+              "publication": {
+                "additionalProperties": false,
+                "properties": {
+                  "privateFieldsExcluded": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "publicReplayEvidence": {
+                    "const": true,
+                    "type": "boolean"
+                  },
+                  "publicResults": {
+                    "const": true,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "publicResults",
+                  "publicReplayEvidence",
+                  "privateFieldsExcluded"
+                ],
+                "type": "object"
+              },
+              "scoringPolicy": {
+                "additionalProperties": false,
+                "properties": {
+                  "drawPoints": {
+                    "const": 1,
+                    "type": "number"
+                  },
+                  "id": {
+                    "const": "exhibition-points-v1",
+                    "type": "string"
+                  },
+                  "lossPoints": {
+                    "const": 0,
+                    "type": "number"
+                  },
+                  "strategyFailurePenaltyPoints": {
+                    "const": -1,
+                    "type": "number"
+                  },
+                  "version": {
+                    "const": "v1",
+                    "type": "string"
+                  },
+                  "winPoints": {
+                    "const": 3,
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version",
+                  "winPoints",
+                  "drawPoints",
+                  "lossPoints",
+                  "strategyFailurePenaltyPoints"
+                ],
+                "type": "object"
+              },
+              "standings": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "displayLabel": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "draws": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "entrantId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "losses": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "ownerHandle": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "penalties": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "matchId": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "points": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "reason": {
+                            "enum": [
+                              "strategy_failure",
+                              "system_failure",
+                              "invalid_result",
+                              "no_result"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "reason",
+                          "points"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "points": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "rank": {
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991,
+                      "type": "integer"
+                    },
+                    "sourceHash": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "strategyRevisionId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "survivalTurns": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "survivingSoldiers": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "tieBreakerPath": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "wins": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "rank",
+                    "entrantId",
+                    "strategyRevisionId",
+                    "ownerHandle",
+                    "displayLabel",
+                    "sourceHash",
+                    "points",
+                    "wins",
+                    "draws",
+                    "losses",
+                    "penalties",
+                    "survivingSoldiers",
+                    "survivalTurns",
+                    "tieBreakerPath"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "accepted",
+                  "queued",
+                  "running",
+                  "complete",
+                  "degraded",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              "visibility": {
+                "const": "public",
+                "type": "string"
+              }
+            },
+            "required": [
+              "matchSetId",
+              "preset",
+              "status",
+              "visibility",
+              "scoringPolicy",
+              "entrants",
+              "standings",
+              "matches",
+              "provenance",
+              "publication"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "matchSetId",
+          "result"
+        ],
+        "type": "object"
+      },
+      "getPublicPlayerPageResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "canonicalHref": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "kind": {
+            "const": "publicPage",
+            "type": "string"
+          },
+          "page": {
+            "const": "player",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "displayName": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "handle": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "ladderHistory": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "entryStatus": {
+                      "enum": [
+                        "active",
+                        "withdrawn",
+                        "suspended",
+                        "invalidated",
+                        "stale"
+                      ],
+                      "type": "string"
+                    },
+                    "points": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "rank": {
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991,
+                      "type": "integer"
+                    },
+                    "seasonId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "seasonName": {
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "seasonId",
+                    "seasonName",
+                    "entryStatus",
+                    "points"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "results": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "countedStatus": {
+                      "enum": [
+                        "pending",
+                        "counted",
+                        "retrying",
+                        "under_review",
+                        "invalid",
+                        "non_competitive",
+                        "non_counted"
+                      ],
+                      "type": "string"
+                    },
+                    "entrantIds": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "matchSetId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "podIndex": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "publicExplanation": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "publicReason": {
+                      "enum": [
+                        "system_failure",
+                        "incomplete_evidence",
+                        "invalid_result",
+                        "governance_hold",
+                        "non_counted"
+                      ],
+                      "type": "string"
+                    },
+                    "replayHref": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "resultHref": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "scheduleRunId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "seasonId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "accepted",
+                        "queued",
+                        "running",
+                        "complete",
+                        "degraded",
+                        "failed"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "matchSetId",
+                    "seasonId",
+                    "status",
+                    "countedStatus",
+                    "entrantIds",
+                    "resultHref"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "strategies": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "advancedLineage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "advancedId": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "advancedName": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "advancedVersion": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "archetype": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "sourceHash": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "advancedId",
+                        "advancedName",
+                        "advancedVersion",
+                        "archetype",
+                        "sourceHash"
+                      ],
+                      "type": "object"
+                    },
+                    "authorHandle": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "description": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "engineCompatibility": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "engine": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "spec": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "spec",
+                        "engine"
+                      ],
+                      "type": "object"
+                    },
+                    "name": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "record": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "draws": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "losses": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "points": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "wins": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "wins",
+                        "losses",
+                        "draws",
+                        "points"
+                      ],
+                      "type": "object"
+                    },
+                    "replayLinks": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "resultLinks": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "runtime": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "abiVersion": {
+                          "const": "strategy-runtime-abi-v1.7",
+                          "type": "string"
+                        },
+                        "adapter": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "enum": [
+                                "runtime-js-worker-thread",
+                                "runtime-js-subprocess",
+                                "runtime-js-container-subprocess",
+                                "runtime-python-subprocess-experimental"
+                              ],
+                              "type": "string"
+                            },
+                            "version": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "version"
+                          ],
+                          "type": "object"
+                        },
+                        "language": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "enum": [
+                                "javascript",
+                                "typescript",
+                                "python"
+                              ],
+                              "type": "string"
+                            },
+                            "version": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "version"
+                          ],
+                          "type": "object"
+                        },
+                        "limits": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "environment": {
+                              "enum": [
+                                "empty",
+                                "minimal",
+                                "inherited"
+                              ],
+                              "type": "string"
+                            },
+                            "filesystem": {
+                              "enum": [
+                                "none",
+                                "read-only-root",
+                                "host"
+                              ],
+                              "type": "string"
+                            },
+                            "network": {
+                              "enum": [
+                                "disabled",
+                                "inherited"
+                              ],
+                              "type": "string"
+                            },
+                            "objectivePayloadBytes": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            },
+                            "packagePolicy": {
+                              "enum": [
+                                "none",
+                                "experimental"
+                              ],
+                              "type": "string"
+                            },
+                            "shell": {
+                              "enum": [
+                                "disabled",
+                                "inherited"
+                              ],
+                              "type": "string"
+                            },
+                            "soldierMemoryBytes": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            },
+                            "sourceBytes": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            },
+                            "stderrBytes": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            },
+                            "stdoutBytes": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            },
+                            "strategyMemoryBytes": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            },
+                            "timeoutMs": {
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "timeoutMs",
+                            "stdoutBytes",
+                            "stderrBytes",
+                            "sourceBytes",
+                            "strategyMemoryBytes",
+                            "soldierMemoryBytes",
+                            "objectivePayloadBytes",
+                            "environment",
+                            "filesystem",
+                            "network",
+                            "shell",
+                            "packagePolicy"
+                          ],
+                          "type": "object"
+                        },
+                        "package": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "declaredDependencies": {
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "type": "object"
+                            },
+                            "entrypoint": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "lockfileHash": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "manifestHash": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "mode": {
+                              "enum": [
+                                "none",
+                                "declared"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "mode",
+                            "entrypoint"
+                          ],
+                          "type": "object"
+                        },
+                        "requiredCapabilities": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "abiVersion",
+                        "language",
+                        "adapter",
+                        "package",
+                        "requiredCapabilities",
+                        "limits"
+                      ],
+                      "type": "object"
+                    },
+                    "sourceBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "sourceHash": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "starterLineage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "sourceHash": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "starterId": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "starterName": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "starterVersion": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "starterId",
+                        "starterName",
+                        "starterVersion",
+                        "sourceHash"
+                      ],
+                      "type": "object"
+                    },
+                    "strategyId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "strategyRevisionId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "tags": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "validationStatus": {
+                      "enum": [
+                        "valid",
+                        "invalid"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "strategyId",
+                    "strategyRevisionId",
+                    "name",
+                    "tags",
+                    "authorHandle",
+                    "sourceHash",
+                    "sourceBytes",
+                    "runtime",
+                    "engineCompatibility",
+                    "validationStatus",
+                    "record",
+                    "resultLinks",
+                    "replayLinks"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "handle",
+              "displayName",
+              "strategies",
+              "ladderHistory",
+              "results"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "page",
+          "canonicalHref",
+          "payload"
+        ],
+        "type": "object"
+      },
+      "getPublicReplayMetadataResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "kind": {
+            "const": "publicReplayMetadata",
+            "type": "string"
+          },
+          "matchId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": false,
+            "properties": {
+              "arenaVariantId": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "bottomPlayerId": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "chronicleId": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "eventCount": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "hash": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "matchId": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "schemaVersion": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "snapshotCount": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "topPlayerId": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "matchId",
+              "chronicleId",
+              "hash",
+              "schemaVersion",
+              "eventCount",
+              "snapshotCount",
+              "bottomPlayerId",
+              "topPlayerId",
+              "arenaVariantId"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "matchId",
+          "metadata"
+        ],
+        "type": "object"
+      },
+      "getPublicStrategyPageResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "canonicalHref": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "kind": {
+            "const": "publicPage",
+            "type": "string"
+          },
+          "page": {
+            "const": "strategy",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "strategy": {
+                "additionalProperties": false,
+                "properties": {
+                  "advancedLineage": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "advancedId": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "advancedName": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "advancedVersion": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "archetype": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "sourceHash": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "advancedId",
+                      "advancedName",
+                      "advancedVersion",
+                      "archetype",
+                      "sourceHash"
+                    ],
+                    "type": "object"
+                  },
+                  "authorHandle": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "description": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "engineCompatibility": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "engine": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "spec": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "spec",
+                      "engine"
+                    ],
+                    "type": "object"
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "record": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "draws": {
+                        "maximum": 9007199254740991,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "losses": {
+                        "maximum": 9007199254740991,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "points": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                      },
+                      "wins": {
+                        "maximum": 9007199254740991,
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "wins",
+                      "losses",
+                      "draws",
+                      "points"
+                    ],
+                    "type": "object"
+                  },
+                  "replayLinks": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "resultLinks": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "runtime": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "abiVersion": {
+                        "const": "strategy-runtime-abi-v1.7",
+                        "type": "string"
+                      },
+                      "adapter": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "enum": [
+                              "runtime-js-worker-thread",
+                              "runtime-js-subprocess",
+                              "runtime-js-container-subprocess",
+                              "runtime-python-subprocess-experimental"
+                            ],
+                            "type": "string"
+                          },
+                          "version": {
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version"
+                        ],
+                        "type": "object"
+                      },
+                      "language": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "enum": [
+                              "javascript",
+                              "typescript",
+                              "python"
+                            ],
+                            "type": "string"
+                          },
+                          "version": {
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version"
+                        ],
+                        "type": "object"
+                      },
+                      "limits": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "environment": {
+                            "enum": [
+                              "empty",
+                              "minimal",
+                              "inherited"
+                            ],
+                            "type": "string"
+                          },
+                          "filesystem": {
+                            "enum": [
+                              "none",
+                              "read-only-root",
+                              "host"
+                            ],
+                            "type": "string"
+                          },
+                          "network": {
+                            "enum": [
+                              "disabled",
+                              "inherited"
+                            ],
+                            "type": "string"
+                          },
+                          "objectivePayloadBytes": {
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991,
+                            "type": "integer"
+                          },
+                          "packagePolicy": {
+                            "enum": [
+                              "none",
+                              "experimental"
+                            ],
+                            "type": "string"
+                          },
+                          "shell": {
+                            "enum": [
+                              "disabled",
+                              "inherited"
+                            ],
+                            "type": "string"
+                          },
+                          "soldierMemoryBytes": {
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991,
+                            "type": "integer"
+                          },
+                          "sourceBytes": {
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991,
+                            "type": "integer"
+                          },
+                          "stderrBytes": {
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991,
+                            "type": "integer"
+                          },
+                          "stdoutBytes": {
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991,
+                            "type": "integer"
+                          },
+                          "strategyMemoryBytes": {
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991,
+                            "type": "integer"
+                          },
+                          "timeoutMs": {
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "timeoutMs",
+                          "stdoutBytes",
+                          "stderrBytes",
+                          "sourceBytes",
+                          "strategyMemoryBytes",
+                          "soldierMemoryBytes",
+                          "objectivePayloadBytes",
+                          "environment",
+                          "filesystem",
+                          "network",
+                          "shell",
+                          "packagePolicy"
+                        ],
+                        "type": "object"
+                      },
+                      "package": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "declaredDependencies": {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "type": "object"
+                          },
+                          "entrypoint": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "lockfileHash": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "manifestHash": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "mode": {
+                            "enum": [
+                              "none",
+                              "declared"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode",
+                          "entrypoint"
+                        ],
+                        "type": "object"
+                      },
+                      "requiredCapabilities": {
+                        "items": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "abiVersion",
+                      "language",
+                      "adapter",
+                      "package",
+                      "requiredCapabilities",
+                      "limits"
+                    ],
+                    "type": "object"
+                  },
+                  "sourceBytes": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "sourceHash": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "starterLineage": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "sourceHash": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "starterId": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "starterName": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "starterVersion": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "starterId",
+                      "starterName",
+                      "starterVersion",
+                      "sourceHash"
+                    ],
+                    "type": "object"
+                  },
+                  "strategyId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "strategyRevisionId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "tags": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "validationStatus": {
+                    "enum": [
+                      "valid",
+                      "invalid"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "strategyId",
+                  "strategyRevisionId",
+                  "name",
+                  "tags",
+                  "authorHandle",
+                  "sourceHash",
+                  "sourceBytes",
+                  "runtime",
+                  "engineCompatibility",
+                  "validationStatus",
+                  "record",
+                  "resultLinks",
+                  "replayLinks"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "strategy"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "page",
+          "canonicalHref",
+          "payload"
+        ],
+        "type": "object"
+      },
+      "getStrategyRevisionSourceResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "kind": {
+            "const": "strategyRevisionSource",
+            "type": "string"
+          },
+          "source": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "sourceHash": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "strategyRevisionId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "strategyRevisionId",
+          "source",
+          "sourceHash"
+        ],
+        "type": "object"
+      },
+      "healthResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "const": true,
+            "type": "boolean"
+          },
+          "service": {
+            "const": "cowards-service",
+            "type": "string"
+          },
+          "version": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "service",
+          "version"
+        ],
+        "type": "object"
+      },
+      "listAnalyticsProfilesResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "kind": {
+            "const": "analyticsProfileList",
+            "type": "string"
+          },
+          "profiles": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "apiVersion": {
+                  "const": "service-api-v1.8",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "analyticsProfile",
+                  "type": "string"
+                },
+                "label": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "ownerUserId": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "profileId": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "revisionIds": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "apiVersion",
+                "kind",
+                "profileId",
+                "ownerUserId",
+                "label",
+                "revisionIds"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "profiles"
+        ],
+        "type": "object"
+      },
+      "listLadderSeasonsResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "kind": {
+            "const": "ladderSeasonList",
+            "type": "string"
+          },
+          "seasons": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "apiVersion": {
+                  "const": "service-api-v1.8",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "ladderSeason",
+                  "type": "string"
+                },
+                "publicHref": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "seasonId": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "status": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "apiVersion",
+                "kind",
+                "seasonId",
+                "status",
+                "publicHref"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "seasons"
+        ],
+        "type": "object"
+      },
+      "listStrategyRevisionsResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "kind": {
+            "const": "strategyRevisionList",
+            "type": "string"
+          },
+          "revisions": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "apiVersion": {
+                  "const": "service-api-v1.8",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "strategyRevisionSummary",
+                  "type": "string"
+                },
+                "lockedAt": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "runtime": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "abiVersion": {
+                      "const": "strategy-runtime-abi-v1.7",
+                      "type": "string"
+                    },
+                    "adapter": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "enum": [
+                            "runtime-js-worker-thread",
+                            "runtime-js-subprocess",
+                            "runtime-js-container-subprocess",
+                            "runtime-python-subprocess-experimental"
+                          ],
+                          "type": "string"
+                        },
+                        "version": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "version"
+                      ],
+                      "type": "object"
+                    },
+                    "language": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "enum": [
+                            "javascript",
+                            "typescript",
+                            "python"
+                          ],
+                          "type": "string"
+                        },
+                        "version": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "version"
+                      ],
+                      "type": "object"
+                    },
+                    "limits": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "environment": {
+                          "enum": [
+                            "empty",
+                            "minimal",
+                            "inherited"
+                          ],
+                          "type": "string"
+                        },
+                        "filesystem": {
+                          "enum": [
+                            "none",
+                            "read-only-root",
+                            "host"
+                          ],
+                          "type": "string"
+                        },
+                        "network": {
+                          "enum": [
+                            "disabled",
+                            "inherited"
+                          ],
+                          "type": "string"
+                        },
+                        "objectivePayloadBytes": {
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991,
+                          "type": "integer"
+                        },
+                        "packagePolicy": {
+                          "enum": [
+                            "none",
+                            "experimental"
+                          ],
+                          "type": "string"
+                        },
+                        "shell": {
+                          "enum": [
+                            "disabled",
+                            "inherited"
+                          ],
+                          "type": "string"
+                        },
+                        "soldierMemoryBytes": {
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991,
+                          "type": "integer"
+                        },
+                        "sourceBytes": {
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991,
+                          "type": "integer"
+                        },
+                        "stderrBytes": {
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991,
+                          "type": "integer"
+                        },
+                        "stdoutBytes": {
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991,
+                          "type": "integer"
+                        },
+                        "strategyMemoryBytes": {
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991,
+                          "type": "integer"
+                        },
+                        "timeoutMs": {
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "timeoutMs",
+                        "stdoutBytes",
+                        "stderrBytes",
+                        "sourceBytes",
+                        "strategyMemoryBytes",
+                        "soldierMemoryBytes",
+                        "objectivePayloadBytes",
+                        "environment",
+                        "filesystem",
+                        "network",
+                        "shell",
+                        "packagePolicy"
+                      ],
+                      "type": "object"
+                    },
+                    "package": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "declaredDependencies": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "type": "object"
+                        },
+                        "entrypoint": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "lockfileHash": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "manifestHash": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "mode": {
+                          "enum": [
+                            "none",
+                            "declared"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "mode",
+                        "entrypoint"
+                      ],
+                      "type": "object"
+                    },
+                    "requiredCapabilities": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "abiVersion",
+                    "language",
+                    "adapter",
+                    "package",
+                    "requiredCapabilities",
+                    "limits"
+                  ],
+                  "type": "object"
+                },
+                "sourceBytes": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "sourceHash": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "strategyId": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "strategyRevisionId": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "validationStatus": {
+                  "enum": [
+                    "valid",
+                    "invalid"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "apiVersion",
+                "kind",
+                "strategyId",
+                "strategyRevisionId",
+                "sourceHash",
+                "sourceBytes",
+                "runtime",
+                "validationStatus"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "revisions"
+        ],
+        "type": "object"
+      },
+      "revokeSessionResponse": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "service-api-v1.8",
+            "type": "string"
+          },
+          "kind": {
+            "const": "sessionRevoked",
+            "type": "string"
+          },
+          "revoked": {
+            "const": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "kind",
+          "revoked"
+        ],
+        "type": "object"
+      },
+      "ServiceErrorDto": {
+        "$defs": {
+          "__schema0": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              },
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ServiceErrorDto/$defs/__schema0"
+                },
+                "type": "array"
+              },
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/ServiceErrorDto/$defs/__schema0"
+                },
+                "propertyNames": {
+                  "type": "string"
+                },
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "NOT_FOUND",
+              "UNAUTHORIZED",
+              "FORBIDDEN",
+              "VALIDATION_FAILED",
+              "STORAGE_UNAVAILABLE",
+              "UPSTREAM_UNAVAILABLE",
+              "INTERNAL"
+            ],
+            "type": "string"
+          },
+          "details": {
+            "$ref": "#/components/schemas/ServiceErrorDto/$defs/__schema0"
+          },
+          "message": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "publicSafe": {
+            "const": true,
+            "type": "boolean"
+          },
+          "status": {
+            "maximum": 599,
+            "minimum": 400,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "status",
+          "publicSafe"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "adminSession": {
+        "in": "cookie",
+        "name": "cowards_session",
+        "type": "apiKey"
+      },
+      "ownerSession": {
+        "in": "cookie",
+        "name": "cowards_session",
+        "type": "apiKey"
+      },
+      "sessionSession": {
+        "in": "cookie",
+        "name": "cowards_session",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "license": {
+      "identifier": "UNLICENSED",
+      "name": "UNLICENSED"
+    },
+    "title": "Coward's Game Service API",
+    "version": "service-api-v1.8"
+  },
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.0",
+  "paths": {
+    "/account/strategy-revisions": {
+      "get": {
+        "operationId": "listStrategyRevisions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "listStrategyRevisionsExample": {
+                    "summary": "listStrategyRevisionsExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "kind": "strategyRevisionList",
+                      "revisions": []
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/listStrategyRevisionsResponse"
+                }
+              }
+            },
+            "description": "listStrategyRevisions success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [
+          {
+            "ownerSession": []
+          }
+        ],
+        "summary": "listStrategyRevisions",
+        "tags": [
+          "owner"
+        ],
+        "x-auth-scope": "owner",
+        "x-fixture-refs": [
+          "listStrategyRevisionsExample"
+        ],
+        "x-privacy-class": "owner",
+        "x-route-id": "listStrategyRevisions",
+        "x-route-signature": "GET /account/strategy-revisions"
+      },
+      "post": {
+        "operationId": "createStrategyRevision",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "source": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "strategyId": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "createStrategyRevisionExample": {
+                    "summary": "createStrategyRevisionExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "kind": "strategyRevisionCreated",
+                      "strategyId": "strategy:demo",
+                      "strategyRevisionId": "strategy-revision:demo",
+                      "validationStatus": "valid"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/createStrategyRevisionResponse"
+                }
+              }
+            },
+            "description": "createStrategyRevision success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [
+          {
+            "ownerSession": []
+          }
+        ],
+        "summary": "createStrategyRevision",
+        "tags": [
+          "owner"
+        ],
+        "x-auth-scope": "owner",
+        "x-fixture-refs": [
+          "createStrategyRevisionExample"
+        ],
+        "x-privacy-class": "owner",
+        "x-route-id": "createStrategyRevision",
+        "x-route-signature": "POST /account/strategy-revisions"
+      }
+    },
+    "/account/strategy-revisions/{strategyRevisionId}/source": {
+      "get": {
+        "operationId": "getStrategyRevisionSource",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategyRevisionId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "getStrategyRevisionSourceExample": {
+                    "summary": "getStrategyRevisionSourceExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "kind": "strategyRevisionSource",
+                      "source": "export default strategy",
+                      "sourceHash": "sourcehash-demo",
+                      "strategyRevisionId": "strategy-revision:demo"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/getStrategyRevisionSourceResponse"
+                }
+              }
+            },
+            "description": "getStrategyRevisionSource success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [
+          {
+            "ownerSession": []
+          }
+        ],
+        "summary": "getStrategyRevisionSource",
+        "tags": [
+          "owner"
+        ],
+        "x-auth-scope": "owner",
+        "x-fixture-refs": [
+          "getStrategyRevisionSourceExample"
+        ],
+        "x-privacy-class": "owner",
+        "x-route-id": "getStrategyRevisionSource",
+        "x-route-signature": "GET /account/strategy-revisions/{strategyRevisionId}/source"
+      }
+    },
+    "/analytics/profiles": {
+      "get": {
+        "operationId": "listAnalyticsProfiles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "listAnalyticsProfilesExample": {
+                    "summary": "listAnalyticsProfilesExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "kind": "analyticsProfileList",
+                      "profiles": [
+                        {
+                          "apiVersion": "service-api-v1.8",
+                          "kind": "analyticsProfile",
+                          "label": "Demo gauntlet",
+                          "ownerUserId": "user:demo",
+                          "profileId": "analytics-profile:demo",
+                          "revisionIds": [
+                            "strategy-revision:demo"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/listAnalyticsProfilesResponse"
+                }
+              }
+            },
+            "description": "listAnalyticsProfiles success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [
+          {
+            "ownerSession": []
+          }
+        ],
+        "summary": "listAnalyticsProfiles",
+        "tags": [
+          "owner"
+        ],
+        "x-auth-scope": "owner",
+        "x-fixture-refs": [
+          "listAnalyticsProfilesExample"
+        ],
+        "x-privacy-class": "owner",
+        "x-route-id": "listAnalyticsProfiles",
+        "x-route-signature": "GET /analytics/profiles"
+      }
+    },
+    "/analytics/profiles/{profileId}/runs": {
+      "post": {
+        "operationId": "createAnalyticsRun",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profileId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "additionalProperties": false,
+                "properties": {
+                  "notes": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "createAnalyticsRunExample": {
+                    "summary": "createAnalyticsRunExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "kind": "analyticsRun",
+                      "profileId": "analytics-profile:demo",
+                      "runId": "analytics-run:demo",
+                      "status": "queued"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/createAnalyticsRunResponse"
+                }
+              }
+            },
+            "description": "createAnalyticsRun success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [
+          {
+            "ownerSession": []
+          }
+        ],
+        "summary": "createAnalyticsRun",
+        "tags": [
+          "owner"
+        ],
+        "x-auth-scope": "owner",
+        "x-fixture-refs": [
+          "createAnalyticsRunExample"
+        ],
+        "x-privacy-class": "owner",
+        "x-route-id": "createAnalyticsRun",
+        "x-route-signature": "POST /analytics/profiles/{profileId}/runs"
+      }
+    },
+    "/analytics/runs/{runId}/export": {
+      "get": {
+        "operationId": "exportAnalyticsRun",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "exportAnalyticsRunExample": {
+                    "summary": "exportAnalyticsRunExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "contentHash": "exporthash-demo",
+                      "exportId": "export:demo",
+                      "format": "json",
+                      "href": "/analytics/runs/analytics-run:demo/export",
+                      "kind": "exportManifest"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/exportAnalyticsRunResponse"
+                }
+              }
+            },
+            "description": "exportAnalyticsRun success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [
+          {
+            "ownerSession": []
+          }
+        ],
+        "summary": "exportAnalyticsRun",
+        "tags": [
+          "owner"
+        ],
+        "x-auth-scope": "owner",
+        "x-fixture-refs": [
+          "exportAnalyticsRunExample"
+        ],
+        "x-privacy-class": "owner",
+        "x-route-id": "exportAnalyticsRun",
+        "x-route-signature": "GET /analytics/runs/{runId}/export"
+      }
+    },
+    "/auth/session": {
+      "delete": {
+        "operationId": "revokeSession",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "revokeSessionExample": {
+                    "summary": "revokeSessionExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "kind": "sessionRevoked",
+                      "revoked": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/revokeSessionResponse"
+                }
+              }
+            },
+            "description": "revokeSession success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [
+          {
+            "sessionSession": []
+          }
+        ],
+        "summary": "revokeSession",
+        "tags": [
+          "owner"
+        ],
+        "x-auth-scope": "session",
+        "x-fixture-refs": [
+          "revokeSessionExample"
+        ],
+        "x-privacy-class": "owner",
+        "x-route-id": "revokeSession",
+        "x-route-signature": "DELETE /auth/session"
+      },
+      "get": {
+        "operationId": "getAuthSession",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "authSessionExample": {
+                    "summary": "authSessionExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "kind": "authSession",
+                      "user": {
+                        "displayName": "Demo Player",
+                        "handle": "demo-player",
+                        "id": "user:demo"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/authSessionResponse"
+                }
+              }
+            },
+            "description": "authSession success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [
+          {
+            "sessionSession": []
+          }
+        ],
+        "summary": "authSession",
+        "tags": [
+          "owner"
+        ],
+        "x-auth-scope": "session",
+        "x-fixture-refs": [
+          "authSessionExample"
+        ],
+        "x-privacy-class": "owner",
+        "x-route-id": "authSession",
+        "x-route-signature": "GET /auth/session"
+      },
+      "post": {
+        "operationId": "createSession",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "additionalProperties": false,
+                "properties": {
+                  "handle": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "password": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "createSessionExample": {
+                    "summary": "createSessionExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "kind": "authSession",
+                      "user": {
+                        "displayName": "Demo Player",
+                        "handle": "demo-player",
+                        "id": "user:demo"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/createSessionResponse"
+                }
+              }
+            },
+            "description": "createSession success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [],
+        "summary": "createSession",
+        "tags": [
+          "owner"
+        ],
+        "x-auth-scope": "public",
+        "x-fixture-refs": [
+          "createSessionExample"
+        ],
+        "x-privacy-class": "owner",
+        "x-route-id": "createSession",
+        "x-route-signature": "POST /auth/session"
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "getServiceHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "serviceHealthExample": {
+                    "summary": "serviceHealthExample",
+                    "value": {
+                      "ok": true,
+                      "service": "cowards-service",
+                      "version": "service-api-v1.8"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/healthResponse"
+                }
+              }
+            },
+            "description": "health success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [],
+        "summary": "health",
+        "tags": [
+          "public"
+        ],
+        "x-auth-scope": "public",
+        "x-fixture-refs": [
+          "serviceHealthExample"
+        ],
+        "x-privacy-class": "public",
+        "x-route-id": "health",
+        "x-route-signature": "GET /health"
+      }
+    },
+    "/ladders/seasons": {
+      "get": {
+        "operationId": "listLadderSeasons",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "listLadderSeasonsExample": {
+                    "summary": "listLadderSeasonsExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "kind": "ladderSeasonList",
+                      "seasons": [
+                        {
+                          "apiVersion": "service-api-v1.8",
+                          "kind": "ladderSeason",
+                          "publicHref": "/ladder/demo",
+                          "seasonId": "ladder-season:demo",
+                          "status": "open"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/listLadderSeasonsResponse"
+                }
+              }
+            },
+            "description": "listLadderSeasons success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [],
+        "summary": "listLadderSeasons",
+        "tags": [
+          "public"
+        ],
+        "x-auth-scope": "public",
+        "x-fixture-refs": [
+          "listLadderSeasonsExample"
+        ],
+        "x-privacy-class": "public",
+        "x-route-id": "listLadderSeasons",
+        "x-route-signature": "GET /ladders/seasons"
+      }
+    },
+    "/ladders/seasons/{seasonId}/entries": {
+      "post": {
+        "operationId": "enterLadderSeason",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "seasonId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "additionalProperties": false,
+                "properties": {
+                  "strategyRevisionId": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "strategyRevisionId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "enterLadderSeasonExample": {
+                    "summary": "enterLadderSeasonExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "entryId": "ladder-entry:demo",
+                      "kind": "ladderEntryCreated",
+                      "seasonId": "ladder-season:demo",
+                      "status": "active"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/enterLadderSeasonResponse"
+                }
+              }
+            },
+            "description": "enterLadderSeason success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [
+          {
+            "ownerSession": []
+          }
+        ],
+        "summary": "enterLadderSeason",
+        "tags": [
+          "owner"
+        ],
+        "x-auth-scope": "owner",
+        "x-fixture-refs": [
+          "enterLadderSeasonExample"
+        ],
+        "x-privacy-class": "owner",
+        "x-route-id": "enterLadderSeason",
+        "x-route-signature": "POST /ladders/seasons/{seasonId}/entries"
+      }
+    },
+    "/matchsets": {
+      "post": {
+        "operationId": "createMatchSet",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "additionalProperties": false,
+                "properties": {
+                  "entrantRevisionIds": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "minItems": 2,
+                    "type": "array"
+                  },
+                  "presetId": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "presetId",
+                  "entrantRevisionIds"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "createMatchSetExample": {
+                    "summary": "createMatchSetExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "kind": "matchSetCreated",
+                      "matchSetId": "match-set:demo",
+                      "publicHref": "/matchsets/match-set:demo"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/createMatchSetResponse"
+                }
+              }
+            },
+            "description": "createMatchSet success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [
+          {
+            "ownerSession": []
+          }
+        ],
+        "summary": "createMatchSet",
+        "tags": [
+          "owner"
+        ],
+        "x-auth-scope": "owner",
+        "x-fixture-refs": [
+          "createMatchSetExample"
+        ],
+        "x-privacy-class": "owner",
+        "x-route-id": "createMatchSet",
+        "x-route-signature": "POST /matchsets"
+      }
+    },
+    "/public/matchsets/{matchSetId}/summary": {
+      "get": {
+        "operationId": "getPublicMatchSetSummary",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "matchSetId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "publicMatchSetSummaryExample": {
+                    "summary": "publicMatchSetSummaryExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "kind": "publicMatchSetSummary",
+                      "matchSetId": "match-set:demo",
+                      "result": {
+                        "entrants": [],
+                        "matches": [],
+                        "matchSetId": "match-set:demo",
+                        "preset": {
+                          "id": "smoke-exhibition-v1",
+                          "label": "Smoke Exhibition",
+                          "version": "v1"
+                        },
+                        "provenance": {
+                          "chronicleHashes": [],
+                          "entrantSnapshotIds": [],
+                          "matchSetId": "match-set:demo",
+                          "presetId": "smoke-exhibition-v1",
+                          "scoringPolicyVersion": "v1"
+                        },
+                        "publication": {
+                          "privateFieldsExcluded": [
+                            "Strategy source",
+                            "StrategyMemory",
+                            "SoldierMemory",
+                            "objective payloads"
+                          ],
+                          "publicReplayEvidence": true,
+                          "publicResults": true
+                        },
+                        "scoringPolicy": {
+                          "drawPoints": 1,
+                          "id": "exhibition-points-v1",
+                          "lossPoints": 0,
+                          "strategyFailurePenaltyPoints": -1,
+                          "version": "v1",
+                          "winPoints": 3
+                        },
+                        "standings": [],
+                        "status": "complete",
+                        "visibility": "public"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/getPublicMatchSetSummaryResponse"
+                }
+              }
+            },
+            "description": "getPublicMatchSetSummary success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [],
+        "summary": "getPublicMatchSetSummary",
+        "tags": [
+          "public"
+        ],
+        "x-auth-scope": "public",
+        "x-fixture-refs": [
+          "publicMatchSetSummaryExample"
+        ],
+        "x-privacy-class": "public",
+        "x-route-id": "getPublicMatchSetSummary",
+        "x-route-signature": "GET /public/matchsets/{matchSetId}/summary"
+      }
+    },
+    "/public/players/{handle}": {
+      "get": {
+        "operationId": "getPublicPlayerPage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "handle",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "publicPlayerPageExample": {
+                    "summary": "publicPlayerPageExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "canonicalHref": "/players/demo-player",
+                      "kind": "publicPage",
+                      "page": "player",
+                      "payload": {
+                        "displayName": "Demo Player",
+                        "handle": "demo-player",
+                        "ladderHistory": [],
+                        "results": [],
+                        "strategies": []
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/getPublicPlayerPageResponse"
+                }
+              }
+            },
+            "description": "getPublicPlayerPage success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [],
+        "summary": "getPublicPlayerPage",
+        "tags": [
+          "public"
+        ],
+        "x-auth-scope": "public",
+        "x-fixture-refs": [
+          "publicPlayerPageExample"
+        ],
+        "x-privacy-class": "public",
+        "x-route-id": "getPublicPlayerPage",
+        "x-route-signature": "GET /public/players/{handle}"
+      }
+    },
+    "/public/replays/{matchId}/metadata": {
+      "get": {
+        "operationId": "getPublicReplayMetadata",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "matchId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "publicReplayMetadataExample": {
+                    "summary": "publicReplayMetadataExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "kind": "publicReplayMetadata",
+                      "matchId": "match:demo",
+                      "metadata": {
+                        "arenaVariantId": "arena:standard",
+                        "bottomPlayerId": "player:bottom",
+                        "chronicleId": "chronicle:demo",
+                        "eventCount": 42,
+                        "hash": "chroniclehash-demo",
+                        "matchId": "match:demo",
+                        "schemaVersion": "chronicle-v1.4",
+                        "snapshotCount": 5,
+                        "topPlayerId": "player:top"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/getPublicReplayMetadataResponse"
+                }
+              }
+            },
+            "description": "getPublicReplayMetadata success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [],
+        "summary": "getPublicReplayMetadata",
+        "tags": [
+          "public"
+        ],
+        "x-auth-scope": "public",
+        "x-fixture-refs": [
+          "publicReplayMetadataExample"
+        ],
+        "x-privacy-class": "public",
+        "x-route-id": "getPublicReplayMetadata",
+        "x-route-signature": "GET /public/replays/{matchId}/metadata"
+      }
+    },
+    "/public/strategies/{strategyId}": {
+      "get": {
+        "operationId": "getPublicStrategyPage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategyId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "publicStrategyPageExample": {
+                    "summary": "publicStrategyPageExample",
+                    "value": {
+                      "apiVersion": "service-api-v1.8",
+                      "canonicalHref": "/strategies/strategy:demo",
+                      "kind": "publicPage",
+                      "page": "strategy",
+                      "payload": {
+                        "strategy": {
+                          "authorHandle": "demo-player",
+                          "engineCompatibility": {
+                            "engine": "engine-v1",
+                            "spec": "cowards-rules-v1.4"
+                          },
+                          "name": "Demo Strategy",
+                          "record": {
+                            "draws": 0,
+                            "losses": 1,
+                            "points": 9,
+                            "wins": 3
+                          },
+                          "replayLinks": [
+                            "/replays/match:demo"
+                          ],
+                          "resultLinks": [
+                            "/matchsets/match-set:demo"
+                          ],
+                          "runtime": {
+                            "abiVersion": "strategy-runtime-abi-v1.7",
+                            "adapter": {
+                              "id": "runtime-js-worker-thread",
+                              "version": "runtime-js-v1"
+                            },
+                            "language": {
+                              "id": "typescript",
+                              "version": "runtime-js-v1"
+                            },
+                            "limits": {
+                              "environment": "empty",
+                              "filesystem": "host",
+                              "network": "inherited",
+                              "objectivePayloadBytes": 1024,
+                              "packagePolicy": "none",
+                              "shell": "disabled",
+                              "soldierMemoryBytes": 2048,
+                              "sourceBytes": 65536,
+                              "stderrBytes": 65536,
+                              "stdoutBytes": 262144,
+                              "strategyMemoryBytes": 32768,
+                              "timeoutMs": 1000
+                            },
+                            "package": {
+                              "entrypoint": "default",
+                              "mode": "none"
+                            },
+                            "requiredCapabilities": []
+                          },
+                          "sourceBytes": 256,
+                          "sourceHash": "sourcehash-demo",
+                          "strategyId": "strategy:demo",
+                          "strategyRevisionId": "strategy-revision:demo",
+                          "tags": [
+                            "starter"
+                          ],
+                          "validationStatus": "valid"
+                        }
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/getPublicStrategyPageResponse"
+                }
+              }
+            },
+            "description": "getPublicStrategyPage success response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceErrorDto"
+                }
+              }
+            },
+            "description": "Public-safe service error"
+          }
+        },
+        "security": [],
+        "summary": "getPublicStrategyPage",
+        "tags": [
+          "public"
+        ],
+        "x-auth-scope": "public",
+        "x-fixture-refs": [
+          "publicStrategyPageExample"
+        ],
+        "x-privacy-class": "public",
+        "x-route-id": "getPublicStrategyPage",
+        "x-route-signature": "GET /public/strategies/{strategyId}"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Public-safe service routes.",
+      "name": "public"
+    },
+    {
+      "description": "Owner-authorized service routes.",
+      "name": "owner"
+    },
+    {
+      "description": "Internal service routes.",
+      "name": "internal"
+    }
+  ]
+}
