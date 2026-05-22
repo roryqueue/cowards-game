@@ -45,20 +45,6 @@ const runtime = {
   },
   package: { mode: "none", entrypoint: "default" },
   requiredCapabilities: [],
-  limits: {
-    timeoutMs: 1000,
-    stdoutBytes: 262144,
-    stderrBytes: 65536,
-    sourceBytes: 65536,
-    strategyMemoryBytes: 32768,
-    soldierMemoryBytes: 2048,
-    objectivePayloadBytes: 1024,
-    environment: "empty",
-    filesystem: "host",
-    network: "inherited",
-    shell: "disabled",
-    packagePolicy: "none",
-  },
 } satisfies PublicStrategyCardDto["runtime"]
 
 const publicStrategyCard = {
@@ -140,8 +126,7 @@ describe("createCowardsLocalService", () => {
   it("wraps public Strategy cards in a public page service envelope", async () => {
     const service = createCowardsLocalService({
       withPool: async (fn) => fn({} as never),
-      buildPublicStrategyCard: async (_pool, _strategyId) =>
-        publicStrategyCard,
+      buildPublicStrategyCard: async (_pool, _strategyId) => publicStrategyCard,
     })
 
     await expect(
@@ -163,9 +148,9 @@ describe("createCowardsLocalService", () => {
       buildPublicStrategyCard: async () => null,
     })
 
-    await expect(service.getPublicStrategyPage("strategy:missing")).resolves.toBe(
-      null,
-    )
+    await expect(
+      service.getPublicStrategyPage("strategy:missing"),
+    ).resolves.toBe(null)
   })
 
   it("rejects public Strategy page DTOs with private fields", async () => {
@@ -178,9 +163,9 @@ describe("createCowardsLocalService", () => {
         }) as unknown as PublicStrategyCardDto,
     })
 
-    await expect(service.getPublicStrategyPage("strategy:demo")).rejects.toThrow(
-      "Public service DTO leaks private field",
-    )
+    await expect(
+      service.getPublicStrategyPage("strategy:demo"),
+    ).rejects.toThrow("Public service DTO leaks private field")
   })
 
   it("returns parsed public replay metadata and null for missing Chronicles", async () => {
@@ -193,26 +178,26 @@ describe("createCowardsLocalService", () => {
       }),
     })
 
-    await expect(service.getPublicReplayMetadata("match:demo")).resolves.toEqual(
-      {
-        apiVersion: SERVICE_API_VERSION,
-        kind: "publicReplayMetadata",
+    await expect(
+      service.getPublicReplayMetadata("match:demo"),
+    ).resolves.toEqual({
+      apiVersion: SERVICE_API_VERSION,
+      kind: "publicReplayMetadata",
+      matchId: "match:demo",
+      metadata: {
         matchId: "match:demo",
-        metadata: {
-          matchId: "match:demo",
-          chronicleId: "match:demo",
-          hash: "chroniclehash-demo",
-          schemaVersion: "chronicle-v1.4",
-          eventCount: 2,
-          snapshotCount: 1,
-          bottomPlayerId: "player:bottom",
-          topPlayerId: "player:top",
-          arenaVariantId: "arena:standard",
-        },
+        chronicleId: "match:demo",
+        hash: "chroniclehash-demo",
+        schemaVersion: "chronicle-v1.4",
+        eventCount: 2,
+        snapshotCount: 1,
+        bottomPlayerId: "player:bottom",
+        topPlayerId: "player:top",
+        arenaVariantId: "arena:standard",
       },
-    )
-    await expect(service.getPublicReplayMetadata("match:missing")).resolves.toBe(
-      null,
-    )
+    })
+    await expect(
+      service.getPublicReplayMetadata("match:missing"),
+    ).resolves.toBe(null)
   })
 })

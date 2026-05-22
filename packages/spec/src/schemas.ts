@@ -480,6 +480,11 @@ export const StrategyRuntimeMetadataSchema = z.object({
   limits: StrategyRuntimeLimitsSchema,
 })
 
+export const PublicStrategyRuntimeMetadataSchema =
+  StrategyRuntimeMetadataSchema.omit({
+    limits: true,
+  })
+
 export const StrategyRuntimeViolationEnvelopeSchema = z.object({
   ok: z.literal(false),
   abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
@@ -810,7 +815,7 @@ const CompetitionEntrantSnapshotServiceDtoSchema = z.object({
   displayLabel: z.string().min(1),
   sourceHash: z.string().min(1),
   sourceBytes: z.number().int().min(0),
-  runtime: StrategyRuntimeMetadataSchema,
+  runtime: PublicStrategyRuntimeMetadataSchema,
   engineCompatibility: z.object({
     spec: z.string().min(1),
     engine: z.string().min(1),
@@ -1035,7 +1040,7 @@ export const PublicStrategyCardDtoSchema = z.object({
   authorHandle: z.string().min(1),
   sourceHash: z.string().min(1),
   sourceBytes: z.number().int().min(0),
-  runtime: StrategyRuntimeMetadataSchema,
+  runtime: PublicStrategyRuntimeMetadataSchema,
   engineCompatibility: z.object({
     spec: z.string().min(1),
     engine: z.string().min(1),

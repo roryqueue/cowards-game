@@ -147,6 +147,10 @@ const buildOpenApi = (): JsonObject => {
   const paths: Record<string, Record<string, JsonObject>> = {}
 
   for (const route of Object.values(SERVICE_API_ROUTES)) {
+    if (route.privacyClass !== "public") {
+      continue
+    }
+
     const responseSchemaName = `${route.id}Response`
     components[responseSchemaName] = jsonSchemaFor(
       route.response as z.ZodType,

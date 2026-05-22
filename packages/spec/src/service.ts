@@ -550,20 +550,6 @@ export const SERVICE_API_ROUTES = {
               },
               package: { mode: "none", entrypoint: "default" },
               requiredCapabilities: [],
-              limits: {
-                timeoutMs: 1000,
-                stdoutBytes: 262144,
-                stderrBytes: 65536,
-                sourceBytes: 65536,
-                strategyMemoryBytes: 32768,
-                soldierMemoryBytes: 2048,
-                objectivePayloadBytes: 1024,
-                environment: "empty",
-                filesystem: "host",
-                network: "inherited",
-                shell: "disabled",
-                packagePolicy: "none",
-              },
             },
             engineCompatibility: {
               spec: "cowards-rules-v1.4",
@@ -703,8 +689,10 @@ export interface PublicPageServiceDto {
   payload: JsonValue
 }
 
-export interface PublicStrategyPageServiceDto
-  extends Omit<PublicPageServiceDto, "page" | "payload"> {
+export interface PublicStrategyPageServiceDto extends Omit<
+  PublicPageServiceDto,
+  "page" | "payload"
+> {
   page: "strategy"
   payload: {
     strategy: PublicStrategyCardDto

@@ -41,6 +41,19 @@ const forbiddenPublicPropertyNames = new Set([
   "privateRuntimeInternals",
 ])
 
+const forbiddenPublicArtifactStrings = [
+  "strategyMemory",
+  "soldierMemory",
+  "objectivePayload",
+  "ownerDebug",
+  "awarenessGrid",
+  "stackTrace",
+  "stderr",
+  "tokens",
+  "hostPath",
+  "privateRuntimeInternals",
+] as const
+
 const findForbiddenSchemaProperty = (
   value: unknown,
   path = "$",
@@ -131,6 +144,13 @@ describe("service contract metadata", () => {
     ]) {
       const jsonSchema = z.toJSONSchema(schema)
       expect(findForbiddenSchemaProperty(jsonSchema)).toBeNull()
+    }
+  })
+
+  it("keeps the public OpenAPI artifact free of private field strings", () => {
+    const artifact = JSON.stringify(serviceApiArtifact)
+    for (const propertyName of forbiddenPublicArtifactStrings) {
+      expect(artifact.includes(propertyName), propertyName).toBe(false)
     }
   })
 

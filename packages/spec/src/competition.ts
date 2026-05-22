@@ -145,7 +145,7 @@ export interface PublicStrategyCardDto {
   authorHandle: string
   sourceHash: string
   sourceBytes: number
-  runtime: CompetitionEntrantSnapshot["runtime"]
+  runtime: PublicStrategyRuntimeMetadata
   engineCompatibility: CompetitionEntrantSnapshot["engineCompatibility"]
   validationStatus: "valid" | "invalid"
   starterLineage?: {
@@ -170,6 +170,11 @@ export interface PublicStrategyCardDto {
   resultLinks: string[]
   replayLinks: string[]
 }
+
+export type PublicStrategyRuntimeMetadata = Omit<
+  StrategyRuntimeMetadata,
+  "limits"
+>
 
 export interface CompetitionScoringPolicy {
   id: "exhibition-points-v1"
@@ -264,6 +269,13 @@ export interface CompetitionEntrantSnapshot {
   lockedAt: string
 }
 
+export interface PublicCompetitionEntrantSnapshot extends Omit<
+  CompetitionEntrantSnapshot,
+  "runtime"
+> {
+  runtime: PublicStrategyRuntimeMetadata
+}
+
 export type PublicPenaltyReason =
   | "strategy_failure"
   | "system_failure"
@@ -316,7 +328,7 @@ export interface PublicMatchSetResultDto {
   status: CompetitionStatus
   visibility: CompetitionVisibility
   scoringPolicy: CompetitionScoringPolicy
-  entrants: CompetitionEntrantSnapshot[]
+  entrants: PublicCompetitionEntrantSnapshot[]
   standings: PublicStandingDto[]
   matches: PublicMatchEvidenceDto[]
   provenance: {
