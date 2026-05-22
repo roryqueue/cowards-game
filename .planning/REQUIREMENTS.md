@@ -107,50 +107,50 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| GEN-01 | TBD | Pending |
-| GEN-02 | TBD | Pending |
-| GEN-03 | TBD | Pending |
-| GEN-04 | TBD | Pending |
-| GEN-05 | TBD | Pending |
-| GEN-06 | TBD | Pending |
-| GEN-07 | TBD | Pending |
-| GO-01 | TBD | Pending |
-| GO-02 | TBD | Pending |
-| GO-03 | TBD | Pending |
-| GO-04 | TBD | Pending |
-| GO-05 | TBD | Pending |
-| GO-06 | TBD | Pending |
-| SBX-01 | TBD | Pending |
-| SBX-02 | TBD | Pending |
-| SBX-03 | TBD | Pending |
-| SBX-04 | TBD | Pending |
-| SBX-05 | TBD | Pending |
-| SBX-06 | TBD | Pending |
-| NJS-01 | TBD | Pending |
-| NJS-02 | TBD | Pending |
-| NJS-03 | TBD | Pending |
-| NJS-04 | TBD | Pending |
-| NJS-05 | TBD | Pending |
-| NJS-06 | TBD | Pending |
-| TOPO-01 | TBD | Pending |
-| TOPO-02 | TBD | Pending |
-| TOPO-03 | TBD | Pending |
-| TOPO-04 | TBD | Pending |
-| TOPO-05 | TBD | Pending |
-| TOPO-06 | TBD | Pending |
-| MON-01 | TBD | Pending |
-| MON-02 | TBD | Pending |
-| MON-03 | TBD | Pending |
-| MON-04 | TBD | Pending |
-| MON-05 | TBD | Pending |
-| MON-06 | TBD | Pending |
-| MON-07 | TBD | Pending |
+| GEN-01 | Phase 51 | Pending |
+| GEN-02 | Phase 51 | Pending |
+| GEN-03 | Phase 51 | Pending |
+| GEN-04 | Phase 51 | Pending |
+| GEN-05 | Phase 51 | Pending |
+| GEN-06 | Phase 51 | Pending |
+| GEN-07 | Phase 51 | Pending |
+| GO-01 | Phase 52 | Pending |
+| GO-02 | Phase 52 | Pending |
+| GO-03 | Phase 52 | Pending |
+| GO-04 | Phase 52 | Pending |
+| GO-05 | Phase 52 | Pending |
+| GO-06 | Phase 52 | Pending |
+| SBX-01 | Phase 53 | Pending |
+| SBX-02 | Phase 53 | Pending |
+| SBX-03 | Phase 53 | Pending |
+| SBX-04 | Phase 53 | Pending |
+| SBX-05 | Phase 53 | Pending |
+| SBX-06 | Phase 53 | Pending |
+| NJS-01 | Phase 54 | Pending |
+| NJS-02 | Phase 54 | Pending |
+| NJS-03 | Phase 54 | Pending |
+| NJS-04 | Phase 54 | Pending |
+| NJS-05 | Phase 54 | Pending |
+| NJS-06 | Phase 54 | Pending |
+| TOPO-01 | Phase 55 | Pending |
+| TOPO-02 | Phase 55 | Pending |
+| TOPO-03 | Phase 55 | Pending |
+| TOPO-04 | Phase 55 | Pending |
+| TOPO-05 | Phase 55 | Pending |
+| TOPO-06 | Phase 55 | Pending |
+| MON-01 | Phase 56 | Pending |
+| MON-02 | Phase 56 | Pending |
+| MON-03 | Phase 56 | Pending |
+| MON-04 | Phase 56 | Pending |
+| MON-05 | Phase 56 | Pending |
+| MON-06 | Phase 56 | Pending |
+| MON-07 | Phase 56 | Pending |
 
 **Coverage:**
 - v1.8 requirements: 38 total
-- Mapped to phases: 0
-- Unmapped: 38
+- Mapped to phases: 38
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after v1.8 requirements definition*
+*Last updated: 2026-05-22 after v1.8 roadmap creation*

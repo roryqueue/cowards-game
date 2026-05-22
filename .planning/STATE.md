@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Production Boundary Hardening
-status: planning
-last_updated: "2026-05-22T12:55:25.000-04:00"
-last_activity: 2026-05-22 — Milestone v1.8 started
+status: ready_to_plan
+last_updated: "2026-05-22T13:06:33.000-04:00"
+last_activity: 2026-05-22 - v1.8 roadmap created
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -16,32 +16,34 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.8 Production Boundary Hardening planning started
+**Status:** v1.8 Production Boundary Hardening ready to plan
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.8 Production Boundary Hardening requirements and roadmap
+**Current focus:** Phase 51 - Service Contract Generation and Route Migration
 **Latest shipped milestone:** v1.7 Runtime and Backend Boundary Stabilization
-**Requirements:** v1.8 requirements in definition; v1.7 archived with 32/32 complete in .planning/milestones/v1.7-REQUIREMENTS.md
+**Requirements:** v1.8 requirements mapped 38/38 in .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-05-22 — Milestone v1.8 started
+Phase: 51 of 56 (Service Contract Generation and Route Migration)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-05-22 - v1.8 roadmap created
+
+Progress: [----------] 0%
 
 ## Workflow Settings
 
 - Mode: YOLO
 - Granularity: Standard
-- Execution: Sequential core contract first, then parallel where safe
+- Execution: Sequential boundary foundation first, then parallel where safe
 - Git tracking: Yes
-- Research before planning: Prefer current codebase/replay evidence first, then focused research when new product or runtime territory appears
+- Research before planning: Yes
 - Plan check: Yes
 - Verifier: Yes
 - Model profile: Balanced
@@ -61,59 +63,34 @@ Last activity: 2026-05-22 — Milestone v1.8 started
 
 ## Accumulated Context
 
-- v1.0 established the complete author -> execute -> replay loop.
-- v1.1 hardened trust in that loop: engine-generated legal replay fixtures, strict Chronicle grammar, runtime isolation boundaries, doctrine debugging UX, and reliable Docker/no-Docker/service-backed verification.
-- v1.2 added minimal username/password ownership and unranked public exhibition MatchSets with public scoring, replay evidence, provenance, and privacy-safe publication.
-- v1.3 added Starter Library, resettable trial ladder seasons, deterministic scheduling, public profiles/cards, focused governance, and a containerized subprocess runtime boundary spike.
-- v1.4 shipped the corrected Cycle-interleaved scheduler, Cycle-boundary Backstab, `chronicle-v1.4`, refreshed starters, a completed `/ladder/v1-4-demo`, and replay speeds up to 32x.
-- v1.5 shipped Workshop power tools, a distinct Advanced Strategy Library, five example MatchSets, a completed `/ladder/v1-5-demo`, replay-reviewed Strategy retuning, and public-safe evidence pages.
-- v1.6 shipped saved gauntlet analytics, compatibility-aware reruns/comparisons, Workshop heatmaps, Evidence Explorer drilldowns, replay deep links, owner-safe JSON/CSV exports, and a local analytics demo.
-- v1.7 shipped frozen TypeScript service/runtime boundary contracts, Next service-client migration, golden parity fixtures, runtime adapter metadata, an experimental Python ABI spike, and a minimal read-only Go backend spike.
-- Public replay output remains privacy-safe by default and does not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid details, owner debug, or private runtime details.
-- Strategy code must continue to run only behind worker/runtime adapter boundaries, never in web/API processes.
+### Decisions
+
+- v1.8 hardens operating boundaries without moving orchestration, backend writes, jobs, migrations, or Strategy execution out of the TypeScript-owned path.
+- Go remains read-only and parity-focused against real fixtures or safe local data.
+- Sandbox work is evaluative only; no candidate is promoted to production hostile-code isolation or counted-play eligibility by default.
+- Non-JS Strategy support remains experimental and fail-closed for counted MatchSets, ladders, and gauntlets.
+- Public replay, service, Go, topology, diagnostics, analytics, exports, and monitor outputs must omit private Strategy/runtime data by default.
+
+### Pending Todos
+
+None yet.
+
+### Blockers/Concerns
+
+None active.
 
 ## Deferred Items
 
-Items acknowledged and deferred after v1.3 milestone completion on 2026-05-20:
+| Category | Item | Status | Deferred At |
+| --- | --- | --- | --- |
+| backend | Go mutation endpoints, orchestration, persistence writes, job claiming, migrations, and Match execution | Deferred | v1.8 requirements |
+| runtime | Production hostile-code sandbox promotion | Deferred | v1.8 requirements |
+| runtime | Counted non-JS MatchSets, ladders, or gauntlets by default | Deferred | v1.8 requirements |
+| product | Public language picker implying support parity | Deferred | v1.8 requirements |
+| ops | Kubernetes, service mesh, cloud deployment, or production observability stack | Deferred | v1.8 requirements |
 
-| Category | Item | Status |
-| --- | --- | --- |
-| product | Email verification, password reset, OAuth, organizations, and account recovery | Deferred |
-| product | Durable all-time ratings, ranked prize ladders, and public tournaments | Deferred |
-| runtime | Production-grade container, microVM, or WASM/WASI sandbox | Deferred |
-| product-learning | Continued Starter Strategy balance tuning for weaker mobility/outlast doctrines | Deferred |
+## Session Continuity
 
-Items acknowledged and deferred after v1.5 milestone completion on 2026-05-21:
-
-| Category | Item | Status |
-| --- | --- | --- |
-| workshop | Named saved gauntlet profiles and exportable owner-only gauntlet JSON | Deferred |
-| analytics | Rich public matchup heatmaps, evidence bands, and replay deep links | Deferred |
-| runtime | Production-grade hostile-code isolation beyond the current worker/subprocess adapter boundary | Deferred |
-| competition | Official public tournament operations and durable ratings | Deferred |
-
-Items acknowledged and deferred after v1.6 milestone completion on 2026-05-22:
-
-| Category | Item | Status |
-| --- | --- | --- |
-| replay-analysis | Full replay timeline search, event filters, overlays, and side-by-side replay comparison | Deferred |
-| competition | Official scheduled tournament operations, governance/moderation flows, and durable ratings | Deferred |
-| runtime | Production-grade hostile-code isolation beyond the current worker/subprocess adapter boundary | Deferred |
-| authoring | Strategy snippets, lint rules, tactical helpers, and deeper no-advance/trapped-Soldier diagnostics | Deferred |
-
-Items acknowledged and deferred after v1.7 milestone completion on 2026-05-22:
-
-| Category | Item | Status |
-| --- | --- | --- |
-| backend | Full Go orchestration, mutation endpoints, job claiming, and persistent service ownership transfer | Deferred |
-| runtime | Production-grade hostile-code isolation and resource enforcement beyond the prototype subprocess ABI | Deferred |
-| runtime | Production UX, docs, and support policy for non-JS Strategy languages | Deferred |
-| contracts | OpenAPI/client generation and broader Next route migration through the typed service layer | Deferred |
-| deployment | Multi-process local topology and deployment checks for web, worker, service, runtime, and Go spike together | Deferred |
-
-## Next Command
-
-Run `$gsd-plan-phase 51` after the v1.8 roadmap is approved.
-
----
-*Last updated: 2026-05-22 after starting v1.8 milestone*
+Last session: 2026-05-22 13:06
+Stopped at: v1.8 roadmap created; next step is Phase 51 discussion/planning.
+Resume file: None
