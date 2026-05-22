@@ -113,6 +113,7 @@ export const createSubprocessStrategyExecutionAdapter = (
         source: request.source,
         methodName: request.methodName,
         input: request.input,
+        outputByteLimit: request.outputByteLimit,
       })
 
       const result = spawn(nodePath, harnessArgs(harnessSource), {

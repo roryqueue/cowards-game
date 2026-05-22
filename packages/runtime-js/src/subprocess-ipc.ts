@@ -36,6 +36,7 @@ export interface SubprocessIpcRequest {
   source: string
   methodName: StrategyMethodName
   input: JsonValue
+  outputByteLimit?: number | undefined
 }
 
 export type SubprocessIpcResponse = RuntimeResult<JsonValue>
@@ -108,6 +109,10 @@ export const isJsonValue = (value: unknown): value is JsonValue => {
 const isStrategyMethodName = (value: unknown): value is StrategyMethodName =>
   value === "selectActivations" || value === "soldierBrain"
 
+const isOptionalPositiveInteger = (value: unknown): value is number =>
+  value === undefined ||
+  (typeof value === "number" && Number.isInteger(value) && value > 0)
+
 const isRuntimeViolation = (value: unknown): value is RuntimeViolation => {
   if (!isPlainJsonObject(value)) {
     return false
@@ -131,6 +136,7 @@ export const isSubprocessIpcRequest = (
     typeof value.source === "string" &&
     value.source.length > 0 &&
     isStrategyMethodName(value.methodName) &&
+    isOptionalPositiveInteger(value.outputByteLimit) &&
     "input" in value &&
     isJsonValue(value.input)
   )

@@ -3,40 +3,40 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Production Boundary Hardening
 status: executing
-stopped_at: Completed 51-03-PLAN.md
-last_updated: "2026-05-22T21:27:00.000Z"
+stopped_at: Completed Phase 53
+last_updated: "2026-05-22T21:54:00.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 5
+  percent: 50
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** Phase 52 complete; ready for Phase 53 planning/execution
+**Status:** Phase 53 complete; ready for Phase 54 planning/execution
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 53 - Runtime Sandbox Hardening Prototype
+**Current focus:** Phase 54 - Non-JS Strategy Product Semantics
 **Latest shipped milestone:** v1.7 Runtime and Backend Boundary Stabilization
 **Requirements:** v1.8 requirements mapped 38/38 in .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 53 of 56 (Runtime Sandbox Hardening Prototype)
-Plan: Phase 52 complete; next is Phase 53
+Phase: 54 of 56 (Non-JS Strategy Product Semantics)
+Plan: Phase 53 complete; next is Phase 54
 Status: Executing
 Last activity: 2026-05-22
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50%
 
 ## Workflow Settings
 
@@ -80,10 +80,13 @@ Progress: [██████████] 100%
 - [Phase 52]: Kept Go read-only while serving health, public MatchSet summaries, public replay metadata, and an owner-scoped analytics summary from validated fixtures. — TypeScript still owns writes, auth mutation, jobs, orchestration, persistence migrations, source retrieval, and Strategy execution.
 - [Phase 52]: Owner analytics reads require a configured bearer token identity and check authorization before resource lookup. — Prevents caller-supplied owner ids and unauthenticated run-existence oracles.
 - [Phase 52]: The Go fixture loader validates route allowlist, top-level DTO shape, canonical private-field denylist, generated fixture hashes, and embedded TypeScript reference hashes before serving override fixtures. — Makes fixture drift and self-blessed invalid overrides fail at startup.
+- [Phase 53]: Sandbox work remains evaluation-only; worker-thread and host subprocess can be probed through `StrategyExecutionAdapter`, container subprocess is optional behind `COWARDS_RUN_CONTAINER_SANDBOX=1`, and Deno/WASI/gVisor/microVM stay tradeoff-only in v1.8. — No runtime candidate is promoted to production hostile-code isolation or counted eligibility.
+- [Phase 53]: Hostile sandbox probes now require exact runtime-violation versus system-failure taxonomy and normalize successful adapter outputs through public Strategy/Soldier result schemas. — Prevents invalid Strategy outputs and system failures from being counted as equivalent evidence.
+- [Phase 53]: Worker Strategy execution now blocks `console` in the injected Strategy scope and subprocess IPC carries output byte caps into the child harness. — Closes host-output and oversized-output drift found during the sandbox review.
 
 ### Pending Todos
 
-Phase 53 needs sandbox evaluation research before selecting which candidates are local prototypes versus documented tradeoff analysis.
+Phase 54 needs product semantics planning for experimental non-JS authoring, validation messages, compatibility warnings, and fail-closed counted-play eligibility.
 
 ### Blockers/Concerns
 
@@ -101,6 +104,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-22T20:09:44.000Z
-Stopped at: Completed 51-03-PLAN.md
+Last session: 2026-05-22T21:54:00.000Z
+Stopped at: Completed Phase 53
 Resume file: None

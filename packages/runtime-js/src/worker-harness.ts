@@ -172,6 +172,7 @@ const createStrategyModuleSource = (source) =>
     'const setTimeout = forbiddenFunction("setTimeout")',
     'const setInterval = forbiddenFunction("setInterval")',
     'const setImmediate = forbiddenFunction("setImmediate")',
+    'const console = forbiddenFunction("console")',
     'const global = sanitizedGlobalThis',
     'const globalThis = sanitizedGlobalThis',
     source,

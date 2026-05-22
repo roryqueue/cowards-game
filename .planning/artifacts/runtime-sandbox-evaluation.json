@@ -1,0 +1,1824 @@
+{
+  "abiVersion": "strategy-runtime-abi-v1.7",
+  "candidates": [
+    {
+      "countedResultsAllowed": true,
+      "executableAdapterId": "worker-thread",
+      "id": "worker-thread-baseline",
+      "label": "Worker-thread baseline",
+      "metadata": {
+        "isolationBoundary": "Default compatibility containment and prototype boundary for Strategy execution; not a final sandbox for hostile Strategy code.",
+        "runtimeControls": {
+          "environment": "empty",
+          "execArgv": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "outputByteLimit": true,
+          "resourceLimits": [
+            "maxOldGenerationSizeMb: 16",
+            "maxYoungGenerationSizeMb: 8",
+            "stackSizeMb: 4"
+          ],
+          "shell": "disabled",
+          "timeout": true
+        }
+      },
+      "mode": "executable",
+      "probes": [
+        {
+          "category": "determinism",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "system time access",
+          "passed": true,
+          "probeId": "time-date-now",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "determinism",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "Math.random access",
+          "passed": true,
+          "probeId": "random-math",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "filesystem module access",
+          "passed": true,
+          "probeId": "filesystem-require",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "network fetch access",
+          "passed": true,
+          "probeId": "network-fetch",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "environment access",
+          "passed": true,
+          "probeId": "process-env",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "shell/process access",
+          "passed": true,
+          "probeId": "shell-child-process",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "dynamic code execution",
+          "passed": true,
+          "probeId": "dynamic-code",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "TIMEOUT",
+          "label": "timeout",
+          "passed": true,
+          "probeId": "timeout-loop",
+          "publicMessage": "Runtime violation: TIMEOUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "OVERSIZED_OUTPUT",
+          "label": "oversized output",
+          "passed": true,
+          "probeId": "oversized-output",
+          "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "output stream cap",
+          "passed": true,
+          "probeId": "stdout-cap",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "diagnostic stream cap",
+          "passed": true,
+          "probeId": "stderr-cap",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "TIMEOUT",
+          "label": "memory pressure",
+          "passed": true,
+          "probeId": "memory-pressure",
+          "publicMessage": "Runtime violation: TIMEOUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "OVERSIZED_OUTPUT",
+          "label": "strategy returned memory size limit",
+          "passed": true,
+          "probeId": "strategy-memory-limit",
+          "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "OVERSIZED_OUTPUT",
+          "label": "soldier returned memory size limit",
+          "passed": true,
+          "probeId": "soldier-memory-limit",
+          "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "OVERSIZED_OUTPUT",
+          "label": "activation objective size limit",
+          "passed": true,
+          "probeId": "objective-size-limit",
+          "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "SOURCE_TOO_LARGE",
+          "label": "source byte limit",
+          "passed": true,
+          "probeId": "source-byte-limit",
+          "publicMessage": "Runtime violation: SOURCE_TOO_LARGE",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "ipc",
+          "code": "MALFORMED_IPC",
+          "label": "malformed IPC request",
+          "passed": true,
+          "probeId": "malformed-ipc-request",
+          "publicMessage": "System failure: MALFORMED_IPC",
+          "resultKind": "systemFailure"
+        },
+        {
+          "category": "ipc",
+          "code": "MALFORMED_IPC",
+          "label": "malformed IPC response",
+          "passed": true,
+          "probeId": "malformed-ipc-response",
+          "publicMessage": "System failure: MALFORMED_IPC",
+          "resultKind": "systemFailure"
+        },
+        {
+          "category": "ipc",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "subprocess crash behavior",
+          "passed": true,
+          "probeId": "subprocess-crash",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "schema",
+          "code": "INVALID_OUTPUT",
+          "label": "schema-invalid output",
+          "passed": true,
+          "probeId": "invalid-output",
+          "publicMessage": "Runtime violation: INVALID_OUTPUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "exception",
+          "code": "THROWN_EXCEPTION",
+          "label": "thrown Strategy exception",
+          "passed": true,
+          "probeId": "thrown-exception",
+          "publicMessage": "Runtime violation: THROWN_EXCEPTION",
+          "resultKind": "runtimeViolation"
+        }
+      ],
+      "specAdapterId": "runtime-js-worker-thread",
+      "specReadiness": "local-dev-fallback",
+      "status": "passed",
+      "summary": {
+        "failed": 0,
+        "passed": 21,
+        "skipped": 0
+      },
+      "tradeoffs": {
+        "adapterMetadataImplications": "Remains the default counted JS/TS adapter and local-dev fallback.",
+        "containmentGaps": [
+          "Shares host process address space class with Node worker isolation.",
+          "Filesystem and network remain host/inherited in registry metadata."
+        ],
+        "deterministicExecutionRisk": "Harness blocks common nondeterministic APIs, but this is not a security boundary.",
+        "developerErgonomics": "Always available in local Node development.",
+        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "resourceLimitNotes": "Uses worker timeout, V8 resourceLimits, and output byte caps.",
+        "unresolvedProductionRisks": [
+          "Not acceptable as final public hostile Strategy isolation."
+        ]
+      }
+    },
+    {
+      "countedResultsAllowed": true,
+      "executableAdapterId": "subprocess",
+      "id": "host-subprocess",
+      "label": "Host subprocess",
+      "metadata": {
+        "isolationBoundary": "Opt-in process boundary for Strategy execution with one-shot JSON IPC.",
+        "runtimeControls": {
+          "environment": "minimal",
+          "execArgv": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "outputByteLimit": true,
+          "resourceLimits": [],
+          "shell": "disabled",
+          "stderrBytes": 65536,
+          "stdoutBytes": 262144,
+          "timeout": true,
+          "timeoutMs": 50
+        }
+      },
+      "mode": "executable",
+      "probes": [
+        {
+          "category": "determinism",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "system time access",
+          "passed": true,
+          "probeId": "time-date-now",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "determinism",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "Math.random access",
+          "passed": true,
+          "probeId": "random-math",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "filesystem module access",
+          "passed": true,
+          "probeId": "filesystem-require",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "network fetch access",
+          "passed": true,
+          "probeId": "network-fetch",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "environment access",
+          "passed": true,
+          "probeId": "process-env",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "shell/process access",
+          "passed": true,
+          "probeId": "shell-child-process",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "dynamic code execution",
+          "passed": true,
+          "probeId": "dynamic-code",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "TIMEOUT",
+          "label": "timeout",
+          "passed": true,
+          "probeId": "timeout-loop",
+          "publicMessage": "Runtime violation: TIMEOUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "OVERSIZED_OUTPUT",
+          "label": "oversized output",
+          "passed": true,
+          "probeId": "oversized-output",
+          "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "output stream cap",
+          "passed": true,
+          "probeId": "stdout-cap",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "diagnostic stream cap",
+          "passed": true,
+          "probeId": "stderr-cap",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "TIMEOUT",
+          "label": "memory pressure",
+          "passed": true,
+          "probeId": "memory-pressure",
+          "publicMessage": "Runtime violation: TIMEOUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "OVERSIZED_OUTPUT",
+          "label": "strategy returned memory size limit",
+          "passed": true,
+          "probeId": "strategy-memory-limit",
+          "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "OVERSIZED_OUTPUT",
+          "label": "soldier returned memory size limit",
+          "passed": true,
+          "probeId": "soldier-memory-limit",
+          "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "OVERSIZED_OUTPUT",
+          "label": "activation objective size limit",
+          "passed": true,
+          "probeId": "objective-size-limit",
+          "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "resource",
+          "code": "SOURCE_TOO_LARGE",
+          "label": "source byte limit",
+          "passed": true,
+          "probeId": "source-byte-limit",
+          "publicMessage": "Runtime violation: SOURCE_TOO_LARGE",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "ipc",
+          "code": "MALFORMED_IPC",
+          "label": "malformed IPC request",
+          "passed": true,
+          "probeId": "malformed-ipc-request",
+          "publicMessage": "System failure: MALFORMED_IPC",
+          "resultKind": "systemFailure"
+        },
+        {
+          "category": "ipc",
+          "code": "MALFORMED_IPC",
+          "label": "malformed IPC response",
+          "passed": true,
+          "probeId": "malformed-ipc-response",
+          "publicMessage": "System failure: MALFORMED_IPC",
+          "resultKind": "systemFailure"
+        },
+        {
+          "category": "ipc",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "subprocess crash behavior",
+          "passed": true,
+          "probeId": "subprocess-crash",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "schema",
+          "code": "INVALID_OUTPUT",
+          "label": "schema-invalid output",
+          "passed": true,
+          "probeId": "invalid-output",
+          "publicMessage": "Runtime violation: INVALID_OUTPUT",
+          "resultKind": "runtimeViolation"
+        },
+        {
+          "category": "exception",
+          "code": "THROWN_EXCEPTION",
+          "label": "thrown Strategy exception",
+          "passed": true,
+          "probeId": "thrown-exception",
+          "publicMessage": "Runtime violation: THROWN_EXCEPTION",
+          "resultKind": "runtimeViolation"
+        }
+      ],
+      "specAdapterId": "runtime-js-subprocess",
+      "specReadiness": "prototype",
+      "status": "passed",
+      "summary": {
+        "failed": 0,
+        "passed": 21,
+        "skipped": 0
+      },
+      "tradeoffs": {
+        "adapterMetadataImplications": "Prototype adapter remains opt-in and should not become default.",
+        "containmentGaps": [
+          "Process boundary only; host filesystem and network policy rely on harness-level blocks."
+        ],
+        "deterministicExecutionRisk": "Same JS harness restrictions as worker-thread, with stronger process failure taxonomy.",
+        "developerErgonomics": "Runs anywhere Node subprocess spawning works.",
+        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "resourceLimitNotes": "Uses spawn timeout plus stdout/stderr byte caps.",
+        "unresolvedProductionRisks": [
+          "Needs OS/container sandboxing before hostile public use."
+        ]
+      }
+    },
+    {
+      "countedResultsAllowed": true,
+      "executableAdapterId": "container-subprocess",
+      "id": "container-subprocess",
+      "label": "Container subprocess",
+      "metadata": {
+        "isolationBoundary": "Production-candidate Strategy execution boundary using a short-lived container plus strict JSON IPC.",
+        "runtimeControls": {
+          "environment": "minimal",
+          "execArgv": "empty",
+          "filesystem": "read-only-root",
+          "network": "disabled",
+          "outputByteLimit": true,
+          "resourceLimits": [
+            "docker --network none",
+            "docker --read-only",
+            "docker --tmpfs /tmp:rw,noexec,nosuid,size=16m",
+            "docker --memory 64m",
+            "docker --cpus 0.5",
+            "docker --pids-limit 64",
+            "docker --cap-drop ALL"
+          ],
+          "shell": "disabled",
+          "stderrBytes": 65536,
+          "stdoutBytes": 262144,
+          "timeout": true,
+          "timeoutMs": 50
+        }
+      },
+      "mode": "optional-executable",
+      "probes": [
+        {
+          "category": "determinism",
+          "code": "SKIPPED",
+          "label": "system time access",
+          "passed": true,
+          "probeId": "time-date-now",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "determinism",
+          "code": "SKIPPED",
+          "label": "Math.random access",
+          "passed": true,
+          "probeId": "random-math",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "filesystem module access",
+          "passed": true,
+          "probeId": "filesystem-require",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "network fetch access",
+          "passed": true,
+          "probeId": "network-fetch",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "environment access",
+          "passed": true,
+          "probeId": "process-env",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "shell/process access",
+          "passed": true,
+          "probeId": "shell-child-process",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "dynamic code execution",
+          "passed": true,
+          "probeId": "dynamic-code",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "timeout",
+          "passed": true,
+          "probeId": "timeout-loop",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "oversized output",
+          "passed": true,
+          "probeId": "oversized-output",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "output stream cap",
+          "passed": true,
+          "probeId": "stdout-cap",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "diagnostic stream cap",
+          "passed": true,
+          "probeId": "stderr-cap",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "memory pressure",
+          "passed": true,
+          "probeId": "memory-pressure",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "strategy returned memory size limit",
+          "passed": true,
+          "probeId": "strategy-memory-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "soldier returned memory size limit",
+          "passed": true,
+          "probeId": "soldier-memory-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "activation objective size limit",
+          "passed": true,
+          "probeId": "objective-size-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "source byte limit",
+          "passed": true,
+          "probeId": "source-byte-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "malformed IPC request",
+          "passed": true,
+          "probeId": "malformed-ipc-request",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "malformed IPC response",
+          "passed": true,
+          "probeId": "malformed-ipc-response",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "subprocess crash behavior",
+          "passed": true,
+          "probeId": "subprocess-crash",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "schema",
+          "code": "SKIPPED",
+          "label": "schema-invalid output",
+          "passed": true,
+          "probeId": "invalid-output",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "exception",
+          "code": "SKIPPED",
+          "label": "thrown Strategy exception",
+          "passed": true,
+          "probeId": "thrown-exception",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        }
+      ],
+      "skipReason": "Optional executable candidate unavailable locally.",
+      "specAdapterId": "runtime-js-container-subprocess",
+      "specReadiness": "production-candidate",
+      "status": "skipped",
+      "summary": {
+        "failed": 0,
+        "passed": 0,
+        "skipped": 21
+      },
+      "tradeoffs": {
+        "adapterMetadataImplications": "Production-candidate label stays candidate-only in v1.8.",
+        "containmentGaps": [
+          "Depends on Docker daemon, runtime configuration, image provenance, and host kernel controls."
+        ],
+        "deterministicExecutionRisk": "Reuses the JS harness and adds network/filesystem/container controls.",
+        "developerErgonomics": "Repeatable when Docker and node image are available; otherwise skipped.",
+        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "resourceLimitNotes": "Docker args request no network, read-only root, tmpfs, memory, CPU, PID cap, dropped capabilities, and no-new-privileges.",
+        "unresolvedProductionRisks": [
+          "Needs image pinning, deployment hardening, abuse review, and kernel/runtime validation."
+        ]
+      }
+    },
+    {
+      "countedResultsAllowed": false,
+      "id": "python-subprocess-experimental",
+      "label": "Python subprocess experimental",
+      "metadata": {
+        "isolationBoundary": "No executable adapter in v1.8.",
+        "runtimeControls": null
+      },
+      "mode": "experimental-evidence",
+      "probes": [
+        {
+          "category": "determinism",
+          "code": "SKIPPED",
+          "label": "system time access",
+          "passed": true,
+          "probeId": "time-date-now",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "determinism",
+          "code": "SKIPPED",
+          "label": "Math.random access",
+          "passed": true,
+          "probeId": "random-math",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "filesystem module access",
+          "passed": true,
+          "probeId": "filesystem-require",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "network fetch access",
+          "passed": true,
+          "probeId": "network-fetch",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "environment access",
+          "passed": true,
+          "probeId": "process-env",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "shell/process access",
+          "passed": true,
+          "probeId": "shell-child-process",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "dynamic code execution",
+          "passed": true,
+          "probeId": "dynamic-code",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "timeout",
+          "passed": true,
+          "probeId": "timeout-loop",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "oversized output",
+          "passed": true,
+          "probeId": "oversized-output",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "output stream cap",
+          "passed": true,
+          "probeId": "stdout-cap",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "diagnostic stream cap",
+          "passed": true,
+          "probeId": "stderr-cap",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "memory pressure",
+          "passed": true,
+          "probeId": "memory-pressure",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "strategy returned memory size limit",
+          "passed": true,
+          "probeId": "strategy-memory-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "soldier returned memory size limit",
+          "passed": true,
+          "probeId": "soldier-memory-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "activation objective size limit",
+          "passed": true,
+          "probeId": "objective-size-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "source byte limit",
+          "passed": true,
+          "probeId": "source-byte-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "malformed IPC request",
+          "passed": true,
+          "probeId": "malformed-ipc-request",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "malformed IPC response",
+          "passed": true,
+          "probeId": "malformed-ipc-response",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "subprocess crash behavior",
+          "passed": true,
+          "probeId": "subprocess-crash",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "schema",
+          "code": "SKIPPED",
+          "label": "schema-invalid output",
+          "passed": true,
+          "probeId": "invalid-output",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "exception",
+          "code": "SKIPPED",
+          "label": "thrown Strategy exception",
+          "passed": true,
+          "probeId": "thrown-exception",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        }
+      ],
+      "specAdapterId": "runtime-python-subprocess-experimental",
+      "specReadiness": "experimental",
+      "status": "skipped",
+      "summary": {
+        "failed": 0,
+        "passed": 0,
+        "skipped": 21
+      },
+      "tradeoffs": {
+        "adapterMetadataImplications": "Registry remains disabled for normal play and counted results.",
+        "containmentGaps": [
+          "Non-JS product/package semantics are not defined and Python remains experimental."
+        ],
+        "deterministicExecutionRisk": "Requires separate Python capability and package policy hardening.",
+        "developerErgonomics": "Requires local python3.",
+        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "resourceLimitNotes": "Existing adapter has timeout and empty env but no production sandbox certification.",
+        "unresolvedProductionRisks": [
+          "Needs Phase 54 semantics and future sandbox proof before any promotion."
+        ]
+      }
+    },
+    {
+      "id": "deno-permissions",
+      "label": "Deno-style permissions",
+      "metadata": {
+        "isolationBoundary": "No executable adapter in v1.8.",
+        "runtimeControls": null
+      },
+      "mode": "tradeoff-only",
+      "probes": [
+        {
+          "category": "determinism",
+          "code": "SKIPPED",
+          "label": "system time access",
+          "passed": true,
+          "probeId": "time-date-now",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "determinism",
+          "code": "SKIPPED",
+          "label": "Math.random access",
+          "passed": true,
+          "probeId": "random-math",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "filesystem module access",
+          "passed": true,
+          "probeId": "filesystem-require",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "network fetch access",
+          "passed": true,
+          "probeId": "network-fetch",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "environment access",
+          "passed": true,
+          "probeId": "process-env",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "shell/process access",
+          "passed": true,
+          "probeId": "shell-child-process",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "dynamic code execution",
+          "passed": true,
+          "probeId": "dynamic-code",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "timeout",
+          "passed": true,
+          "probeId": "timeout-loop",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "oversized output",
+          "passed": true,
+          "probeId": "oversized-output",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "output stream cap",
+          "passed": true,
+          "probeId": "stdout-cap",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "diagnostic stream cap",
+          "passed": true,
+          "probeId": "stderr-cap",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "memory pressure",
+          "passed": true,
+          "probeId": "memory-pressure",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "strategy returned memory size limit",
+          "passed": true,
+          "probeId": "strategy-memory-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "soldier returned memory size limit",
+          "passed": true,
+          "probeId": "soldier-memory-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "activation objective size limit",
+          "passed": true,
+          "probeId": "objective-size-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "source byte limit",
+          "passed": true,
+          "probeId": "source-byte-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "malformed IPC request",
+          "passed": true,
+          "probeId": "malformed-ipc-request",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "malformed IPC response",
+          "passed": true,
+          "probeId": "malformed-ipc-response",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "subprocess crash behavior",
+          "passed": true,
+          "probeId": "subprocess-crash",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "schema",
+          "code": "SKIPPED",
+          "label": "schema-invalid output",
+          "passed": true,
+          "probeId": "invalid-output",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "exception",
+          "code": "SKIPPED",
+          "label": "thrown Strategy exception",
+          "passed": true,
+          "probeId": "thrown-exception",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        }
+      ],
+      "status": "skipped",
+      "summary": {
+        "failed": 0,
+        "passed": 0,
+        "skipped": 21
+      },
+      "tradeoffs": {
+        "adapterMetadataImplications": "Would require new registry id and product semantics.",
+        "containmentGaps": [
+          "No repo adapter or local binary; official docs still recommend layered OS or VM isolation for untrusted code."
+        ],
+        "deterministicExecutionRisk": "Permissions help deny host APIs but do not replace deterministic runtime design.",
+        "developerErgonomics": "Would add a new runtime dependency and adapter.",
+        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "resourceLimitNotes": "Needs separate CPU/memory/startup controls.",
+        "unresolvedProductionRisks": [
+          "Permission bypass and dependency policy review."
+        ]
+      }
+    },
+    {
+      "id": "wasm-wasi",
+      "label": "WASM/WASI",
+      "metadata": {
+        "isolationBoundary": "No executable adapter in v1.8.",
+        "runtimeControls": null
+      },
+      "mode": "tradeoff-only",
+      "probes": [
+        {
+          "category": "determinism",
+          "code": "SKIPPED",
+          "label": "system time access",
+          "passed": true,
+          "probeId": "time-date-now",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "determinism",
+          "code": "SKIPPED",
+          "label": "Math.random access",
+          "passed": true,
+          "probeId": "random-math",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "filesystem module access",
+          "passed": true,
+          "probeId": "filesystem-require",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "network fetch access",
+          "passed": true,
+          "probeId": "network-fetch",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "environment access",
+          "passed": true,
+          "probeId": "process-env",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "shell/process access",
+          "passed": true,
+          "probeId": "shell-child-process",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "dynamic code execution",
+          "passed": true,
+          "probeId": "dynamic-code",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "timeout",
+          "passed": true,
+          "probeId": "timeout-loop",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "oversized output",
+          "passed": true,
+          "probeId": "oversized-output",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "output stream cap",
+          "passed": true,
+          "probeId": "stdout-cap",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "diagnostic stream cap",
+          "passed": true,
+          "probeId": "stderr-cap",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "memory pressure",
+          "passed": true,
+          "probeId": "memory-pressure",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "strategy returned memory size limit",
+          "passed": true,
+          "probeId": "strategy-memory-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "soldier returned memory size limit",
+          "passed": true,
+          "probeId": "soldier-memory-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "activation objective size limit",
+          "passed": true,
+          "probeId": "objective-size-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "source byte limit",
+          "passed": true,
+          "probeId": "source-byte-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "malformed IPC request",
+          "passed": true,
+          "probeId": "malformed-ipc-request",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "malformed IPC response",
+          "passed": true,
+          "probeId": "malformed-ipc-response",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "subprocess crash behavior",
+          "passed": true,
+          "probeId": "subprocess-crash",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "schema",
+          "code": "SKIPPED",
+          "label": "schema-invalid output",
+          "passed": true,
+          "probeId": "invalid-output",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "exception",
+          "code": "SKIPPED",
+          "label": "thrown Strategy exception",
+          "passed": true,
+          "probeId": "thrown-exception",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        }
+      ],
+      "status": "skipped",
+      "summary": {
+        "failed": 0,
+        "passed": 0,
+        "skipped": 21
+      },
+      "tradeoffs": {
+        "adapterMetadataImplications": "Would require ABI/package model changes.",
+        "containmentGaps": [
+          "No adapter/toolchain; host must define every capability."
+        ],
+        "deterministicExecutionRisk": "Can improve capability shape but needs fuel/epoch/time/memory policy.",
+        "developerErgonomics": "Higher authoring and compilation burden.",
+        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "resourceLimitNotes": "Wasmtime-style limiting requires host integration.",
+        "unresolvedProductionRisks": [
+          "Language support, package, and determinism gaps."
+        ]
+      }
+    },
+    {
+      "id": "gvisor-runsc",
+      "label": "gVisor/runsc",
+      "metadata": {
+        "isolationBoundary": "No executable adapter in v1.8.",
+        "runtimeControls": null
+      },
+      "mode": "tradeoff-only",
+      "probes": [
+        {
+          "category": "determinism",
+          "code": "SKIPPED",
+          "label": "system time access",
+          "passed": true,
+          "probeId": "time-date-now",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "determinism",
+          "code": "SKIPPED",
+          "label": "Math.random access",
+          "passed": true,
+          "probeId": "random-math",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "filesystem module access",
+          "passed": true,
+          "probeId": "filesystem-require",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "network fetch access",
+          "passed": true,
+          "probeId": "network-fetch",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "environment access",
+          "passed": true,
+          "probeId": "process-env",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "shell/process access",
+          "passed": true,
+          "probeId": "shell-child-process",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "dynamic code execution",
+          "passed": true,
+          "probeId": "dynamic-code",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "timeout",
+          "passed": true,
+          "probeId": "timeout-loop",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "oversized output",
+          "passed": true,
+          "probeId": "oversized-output",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "output stream cap",
+          "passed": true,
+          "probeId": "stdout-cap",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "diagnostic stream cap",
+          "passed": true,
+          "probeId": "stderr-cap",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "memory pressure",
+          "passed": true,
+          "probeId": "memory-pressure",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "strategy returned memory size limit",
+          "passed": true,
+          "probeId": "strategy-memory-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "soldier returned memory size limit",
+          "passed": true,
+          "probeId": "soldier-memory-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "activation objective size limit",
+          "passed": true,
+          "probeId": "objective-size-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "source byte limit",
+          "passed": true,
+          "probeId": "source-byte-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "malformed IPC request",
+          "passed": true,
+          "probeId": "malformed-ipc-request",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "malformed IPC response",
+          "passed": true,
+          "probeId": "malformed-ipc-response",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "subprocess crash behavior",
+          "passed": true,
+          "probeId": "subprocess-crash",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "schema",
+          "code": "SKIPPED",
+          "label": "schema-invalid output",
+          "passed": true,
+          "probeId": "invalid-output",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "exception",
+          "code": "SKIPPED",
+          "label": "thrown Strategy exception",
+          "passed": true,
+          "probeId": "thrown-exception",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        }
+      ],
+      "status": "skipped",
+      "summary": {
+        "failed": 0,
+        "passed": 0,
+        "skipped": 21
+      },
+      "tradeoffs": {
+        "adapterMetadataImplications": "Could harden container-subprocess in a future milestone.",
+        "containmentGaps": [
+          "No local runsc; requires container runtime integration."
+        ],
+        "deterministicExecutionRisk": "Improves syscall isolation but does not define Strategy determinism.",
+        "developerErgonomics": "Operational dependency beyond local repo scripts.",
+        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "resourceLimitNotes": "Would inherit container resource policy plus runsc overhead.",
+        "unresolvedProductionRisks": [
+          "Deployment, performance, and compatibility review."
+        ]
+      }
+    },
+    {
+      "id": "microvm-firecracker",
+      "label": "MicroVM",
+      "metadata": {
+        "isolationBoundary": "No executable adapter in v1.8.",
+        "runtimeControls": null
+      },
+      "mode": "tradeoff-only",
+      "probes": [
+        {
+          "category": "determinism",
+          "code": "SKIPPED",
+          "label": "system time access",
+          "passed": true,
+          "probeId": "time-date-now",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "determinism",
+          "code": "SKIPPED",
+          "label": "Math.random access",
+          "passed": true,
+          "probeId": "random-math",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "filesystem module access",
+          "passed": true,
+          "probeId": "filesystem-require",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "network fetch access",
+          "passed": true,
+          "probeId": "network-fetch",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "environment access",
+          "passed": true,
+          "probeId": "process-env",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "shell/process access",
+          "passed": true,
+          "probeId": "shell-child-process",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "dynamic code execution",
+          "passed": true,
+          "probeId": "dynamic-code",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "timeout",
+          "passed": true,
+          "probeId": "timeout-loop",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "oversized output",
+          "passed": true,
+          "probeId": "oversized-output",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "output stream cap",
+          "passed": true,
+          "probeId": "stdout-cap",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "diagnostic stream cap",
+          "passed": true,
+          "probeId": "stderr-cap",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "memory pressure",
+          "passed": true,
+          "probeId": "memory-pressure",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "strategy returned memory size limit",
+          "passed": true,
+          "probeId": "strategy-memory-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "soldier returned memory size limit",
+          "passed": true,
+          "probeId": "soldier-memory-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "activation objective size limit",
+          "passed": true,
+          "probeId": "objective-size-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "resource",
+          "code": "SKIPPED",
+          "label": "source byte limit",
+          "passed": true,
+          "probeId": "source-byte-limit",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "malformed IPC request",
+          "passed": true,
+          "probeId": "malformed-ipc-request",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "malformed IPC response",
+          "passed": true,
+          "probeId": "malformed-ipc-response",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "subprocess crash behavior",
+          "passed": true,
+          "probeId": "subprocess-crash",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "schema",
+          "code": "SKIPPED",
+          "label": "schema-invalid output",
+          "passed": true,
+          "probeId": "invalid-output",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        },
+        {
+          "category": "exception",
+          "code": "SKIPPED",
+          "label": "thrown Strategy exception",
+          "passed": true,
+          "probeId": "thrown-exception",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped"
+        }
+      ],
+      "status": "skipped",
+      "summary": {
+        "failed": 0,
+        "passed": 0,
+        "skipped": 21
+      },
+      "tradeoffs": {
+        "adapterMetadataImplications": "Future production runtime architecture decision.",
+        "containmentGaps": [
+          "No local microVM toolchain; high operations setup."
+        ],
+        "deterministicExecutionRisk": "Strong isolation does not automatically solve deterministic execution.",
+        "developerErgonomics": "Too heavy for default local v1.8 workflow.",
+        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "resourceLimitNotes": "Needs jailer/cgroup/kernel/image lifecycle controls.",
+        "unresolvedProductionRisks": [
+          "Fleet operations, cold start, and image security."
+        ]
+      }
+    }
+  ],
+  "countedMatchDefaultsUnchanged": true,
+  "generatedAt": "2026-05-22T00:00:00.000Z",
+  "noCandidatePromoted": true,
+  "publicSafe": true,
+  "schemaVersion": "runtime-sandbox-evaluation-v1.8"
+}

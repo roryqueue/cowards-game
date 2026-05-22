@@ -93,10 +93,47 @@ const isSubprocessRequest = (value) =>
   value.source.length > 0 &&
   (value.methodName === "selectActivations" ||
     value.methodName === "soldierBrain") &&
+  (value.outputByteLimit === undefined ||
+    (Number.isInteger(value.outputByteLimit) && value.outputByteLimit > 0)) &&
   Object.hasOwn(value, "input") &&
   isJsonValue(value.input)
 
 const toViolation = (type, message) => ({ type, message })
+
+const byteLength = (text) => new TextEncoder().encode(text).length
+
+const outputByteLimit = (request) =>
+  typeof request.outputByteLimit === "number" && request.outputByteLimit > 0
+    ? request.outputByteLimit
+    : 262144
+
+const capRuntimeResult = (request, result) => {
+  let serialized
+  try {
+    serialized = JSON.stringify(result)
+  } catch {
+    return {
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "Strategy method must return JSON-only data",
+      },
+    }
+  }
+
+  const capBytes = outputByteLimit(request)
+  if (byteLength(serialized) > capBytes) {
+    return {
+      ok: false,
+      violation: {
+        type: "OVERSIZED_OUTPUT",
+        message: "Strategy output exceeded " + capBytes + " bytes",
+      },
+    }
+  }
+
+  return JSON.parse(serialized)
+}
 
 const isForbiddenCapabilityMessage = (message) =>
   message.startsWith(FORBIDDEN_CAPABILITY) ||
@@ -263,7 +300,7 @@ const main = async () => {
     failProtocol("Subprocess response failed schema validation")
   }
 
-  stdout.write(JSON.stringify(result))
+  stdout.write(JSON.stringify(capRuntimeResult(request, result)))
 }
 
 void main()

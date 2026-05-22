@@ -27,7 +27,7 @@ v1.8 turns the v1.7 service, runtime, and backend contracts into harder operatin
 
 - [x] **Phase 51: Service Contract Generation and Route Migration** - Developers can regenerate service artifacts and route selected low-risk web reads through the typed service layer.
 - [x] **Phase 52: Go Read-Only Backend Parity Against Real Fixtures** - Developers can run the Go read-only service against real evidence and prove parity with TypeScript service DTOs.
-- [ ] **Phase 53: Runtime Sandbox Hardening Prototype** - Developers can evaluate sandbox candidates through the runtime ABI without changing counted Match defaults.
+- [x] **Phase 53: Runtime Sandbox Hardening Prototype** - Developers can evaluate sandbox candidates through the runtime ABI without changing counted Match defaults.
 - [ ] **Phase 54: Non-JS Strategy Product Semantics** - Users and developers see clear experimental language semantics, validation messages, and fail-closed counted-play eligibility.
 - [ ] **Phase 55: Cross-Process Local Deployment Harness** - Developers can run and diagnose the local web, service, runtime, Go, and fixture topology as separate boundaries.
 - [ ] **Phase 56: Observability, Privacy, and Boundary Drift Monitors** - Boundary, privacy, parity, and compatibility checks fail on drift or bypasses before milestone release.
@@ -74,7 +74,9 @@ Plans:
   3. Hostile fixture probes cover forbidden time, randomness, filesystem, network, environment, shell/process access, dynamic code execution, malformed IPC, oversized output, caps, limits, timeouts, and crashes.
   4. Sandbox results preserve the existing failure taxonomy by distinguishing Strategy runtime violations from system failures with public-safe messages.
   5. The evaluation records containment gaps, deterministic-execution risk, resource-limit behavior, startup and developer ergonomics, adapter metadata implications, unresolved production risks, and an explicit no-promotion decision for v1.8.
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [x] 53-01-PLAN.md — Add an evaluation-only sandbox candidate matrix, hostile probe harness, deterministic report artifact, and no-promotion drift guards.
 
 ### Phase 54: Non-JS Strategy Product Semantics
 **Goal**: Users and developers can understand non-JS Strategy language metadata, validation outcomes, and eligibility limits while JS/TS behavior remains unchanged.
@@ -121,7 +123,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 51. Service Contract Generation and Route Migration | 3/3 | Complete | 2026-05-22 |
 | 52. Go Read-Only Backend Parity Against Real Fixtures | 1/1 | Complete | 2026-05-22 |
-| 53. Runtime Sandbox Hardening Prototype | 0/TBD | Not started | - |
+| 53. Runtime Sandbox Hardening Prototype | 1/1 | Complete | 2026-05-22 |
 | 54. Non-JS Strategy Product Semantics | 0/TBD | Not started | - |
 | 55. Cross-Process Local Deployment Harness | 0/TBD | Not started | - |
 | 56. Observability, Privacy, and Boundary Drift Monitors | 0/TBD | Not started | - |
@@ -141,11 +143,11 @@ Plans:
 
 ## Next Up
 
-**Phase 52: Go Read-Only Backend Parity Against Real Fixtures** - Run the Go read-only service against real evidence and prove parity with TypeScript service DTOs.
+**Phase 54: Non-JS Strategy Product Semantics** - Define experimental language semantics, validation messages, compatibility warnings, and fail-closed counted-play eligibility.
 
 Recommended next command:
 
-`$gsd-discuss-phase 52`
+`$gsd-discuss-phase 54`
 
 ## Recent Shipped Scope
 
@@ -163,4 +165,4 @@ Recommended next command:
 
 ---
 *Roadmap created: 2026-05-22 for v1.8 Production Boundary Hardening*
-*Last updated: 2026-05-22 after v1.8 roadmap creation*
+*Last updated: 2026-05-22 after Phase 53 completion*

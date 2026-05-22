@@ -28,12 +28,12 @@ Requirements for turning the v1.7 service/runtime/backend contracts into sturdie
 
 ### Runtime Sandbox Hardening Prototype
 
-- [ ] **SBX-01**: Developer can run a sandbox evaluation harness through the existing Strategy runtime ABI without changing counted Match execution defaults.
-- [ ] **SBX-02**: Sandbox evaluation compares practical candidates such as worker baseline, host subprocess, container subprocess, WASM/WASI, Deno-style permissions, gVisor, and microVM-style isolation where locally feasible.
-- [ ] **SBX-03**: Hostile fixture probes cover system time, randomness, filesystem, network, environment, shell/process access, dynamic code execution, malformed IPC, oversized output, stdout/stderr caps, memory/source limits, timeout, and crash behavior.
-- [ ] **SBX-04**: Sandbox results preserve the existing failure taxonomy by distinguishing Strategy runtime violations from system failures with public-safe messages.
-- [ ] **SBX-05**: Sandbox evaluation records containment gaps, deterministic-execution risk, resource-limit behavior, startup and developer ergonomics, adapter metadata implications, and unresolved production risks.
-- [ ] **SBX-06**: v1.8 documentation explicitly states that no sandbox candidate is promoted to production hostile-code isolation or counted-play eligibility by default.
+- [x] **SBX-01**: Developer can run a sandbox evaluation harness through the existing Strategy runtime ABI without changing counted Match execution defaults.
+- [x] **SBX-02**: Sandbox evaluation compares practical candidates such as worker baseline, host subprocess, container subprocess, WASM/WASI, Deno-style permissions, gVisor, and microVM-style isolation where locally feasible.
+- [x] **SBX-03**: Hostile fixture probes cover system time, randomness, filesystem, network, environment, shell/process access, dynamic code execution, malformed IPC, oversized output, stdout/stderr caps, memory/source limits, timeout, and crash behavior.
+- [x] **SBX-04**: Sandbox results preserve the existing failure taxonomy by distinguishing Strategy runtime violations from system failures with public-safe messages.
+- [x] **SBX-05**: Sandbox evaluation records containment gaps, deterministic-execution risk, resource-limit behavior, startup and developer ergonomics, adapter metadata implications, and unresolved production risks.
+- [x] **SBX-06**: v1.8 documentation explicitly states that no sandbox candidate is promoted to production hostile-code isolation or counted-play eligibility by default.
 
 ### Non-JS Strategy Product Semantics
 
@@ -120,12 +120,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GO-04 | Phase 52 | Complete |
 | GO-05 | Phase 52 | Complete |
 | GO-06 | Phase 52 | Complete |
-| SBX-01 | Phase 53 | Pending |
-| SBX-02 | Phase 53 | Pending |
-| SBX-03 | Phase 53 | Pending |
-| SBX-04 | Phase 53 | Pending |
-| SBX-05 | Phase 53 | Pending |
-| SBX-06 | Phase 53 | Pending |
+| SBX-01 | Phase 53 | Complete |
+| SBX-02 | Phase 53 | Complete |
+| SBX-03 | Phase 53 | Complete |
+| SBX-04 | Phase 53 | Complete |
+| SBX-05 | Phase 53 | Complete |
+| SBX-06 | Phase 53 | Complete |
 | NJS-01 | Phase 54 | Pending |
 | NJS-02 | Phase 54 | Pending |
 | NJS-03 | Phase 54 | Pending |

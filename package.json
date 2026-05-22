@@ -15,6 +15,8 @@
     "boundary:imports": "pnpm exec tsx scripts/check-service-boundary-imports.ts",
     "go:parity:generate": "pnpm exec tsx scripts/generate-go-parity-fixtures.ts",
     "go:parity": "pnpm exec tsx scripts/generate-go-parity-fixtures.ts --check && cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./...",
+    "sandbox:evaluate": "pnpm exec tsx scripts/evaluate-runtime-sandbox.ts",
+    "sandbox:evaluate:check": "pnpm exec tsx scripts/evaluate-runtime-sandbox.ts --check",
     "preflight": "pnpm exec tsx scripts/preflight.ts",
     "preflight:docker": "pnpm services:up && pnpm preflight",
     "preflight:local": "pnpm preflight -- --skip-redis",
