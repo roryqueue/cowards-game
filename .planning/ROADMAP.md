@@ -46,7 +46,7 @@ v1.8 turns the v1.7 service, runtime, and backend contracts into harder operatin
   5. Contract linting, stale-output checks, and import-boundary checks fail on schema drift or direct migrated-route imports of persistence, migrations, workers, runtime adapters, or Strategy execution modules.
 **Plans**: 3 plans
 Plans:
-- [ ] 51-01-PLAN.md — Generate canonical v1.8 service contract metadata, schemas, fixtures, OpenAPI artifact, and lint/stale checks.
+- [x] 51-01-PLAN.md — Generate canonical v1.8 service contract metadata, schemas, fixtures, OpenAPI artifact, and lint/stale checks.
 - [ ] 51-02-PLAN.md — Migrate the named public read slice through `@cowards/service` while preserving public behavior and privacy.
 - [ ] 51-03-PLAN.md — Enforce strict named-slice import guards and report-only broad app boundary scanning.
 
@@ -117,7 +117,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 51. Service Contract Generation and Route Migration | 0/TBD | Not started | - |
+| 51. Service Contract Generation and Route Migration | 1/3 | In Progress|  |
 | 52. Go Read-Only Backend Parity Against Real Fixtures | 0/TBD | Not started | - |
 | 53. Runtime Sandbox Hardening Prototype | 0/TBD | Not started | - |
 | 54. Non-JS Strategy Product Semantics | 0/TBD | Not started | - |

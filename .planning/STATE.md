@@ -2,21 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Production Boundary Hardening
-status: ready_to_execute
-last_updated: "2026-05-22T13:30:00.000-04:00"
-last_activity: 2026-05-22 - Phase 51 planned and verified
+status: executing
+stopped_at: Completed 51-01-PLAN.md
+last_updated: "2026-05-22T19:45:41.696Z"
+last_activity: 2026-05-22
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 33
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** Phase 51 planned and ready to execute
+**Status:** Phase 51 in progress; Plan 51-01 complete
 
 ## Project Reference
 
@@ -31,11 +32,11 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 ## Current Position
 
 Phase: 51 of 56 (Service Contract Generation and Route Migration)
-Plan: 3 plans ready
-Status: Ready to execute
-Last activity: 2026-05-22 - Phase 51 planned and verified
+Plan: 1 of 3 complete; next is 51-02
+Status: Executing
+Last activity: 2026-05-22
 
-Progress: [----------] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Workflow Settings
 
@@ -70,6 +71,8 @@ Progress: [----------] 0%
 - Sandbox work is evaluative only; no candidate is promoted to production hostile-code isolation or counted-play eligibility by default.
 - Non-JS Strategy support remains experimental and fail-closed for counted MatchSets, ladders, and gauntlets.
 - Public replay, service, Go, topology, diagnostics, analytics, exports, and monitor outputs must omit private Strategy/runtime data by default.
+- [Phase 51]: Kept SERVICE_API_ROUTES as the single route registry and enriched each entry with schema-backed metadata. — Phase 51 D-07/D-09 require @cowards/spec to remain authoritative.
+- [Phase 51]: Generated service-api-v1.8 OpenAPI 3.1 JSON from Zod 4 schemas with deterministic key sorting. — Satisfies GEN-01 and GEN-03 without making generated artifacts canonical.
 
 ### Pending Todos
 
@@ -91,6 +94,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-22 13:30
-Stopped at: Phase 51 planned and verified; next step is Phase 51 execution.
-Resume file: .planning/phases/51-service-contract-generation-and-route-migration/51-01-PLAN.md
+Last session: 2026-05-22T19:45:05.328Z
+Stopped at: Completed 51-01-PLAN.md
+Resume file: None
