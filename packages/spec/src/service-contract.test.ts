@@ -90,8 +90,8 @@ describe("service contract metadata", () => {
       expect(route.request.body.parse).toBeTypeOf("function")
       expect(route.response.parse).toBeTypeOf("function")
       expect(route.error.parse).toBeTypeOf("function")
-      expect(route.examples.length).toBeGreaterThan(0)
-      expect(route.fixtureRefs.length).toBeGreaterThan(0)
+      expect(route.examples.length > 0).toBe(true)
+      expect(route.fixtureRefs.length > 0).toBe(true)
 
       for (const fixtureRef of route.fixtureRefs) {
         expect(SERVICE_API_FIXTURES).toHaveProperty(fixtureRef)
@@ -129,11 +129,13 @@ describe("service contract metadata", () => {
   })
 
   it("only exposes public route examples as public artifact examples", () => {
-    const publicExamples = Object.values(SERVICE_API_ROUTES).flatMap((route) =>
-      route.privacyClass === "public" ? route.examples : [],
+    const publicExamples: unknown[] = Object.values(SERVICE_API_ROUTES).flatMap(
+      (route) => (route.privacyClass === "public" ? [...route.examples] : []),
     )
-    const nonPublicExamples = Object.values(SERVICE_API_ROUTES).flatMap(
-      (route) => (route.privacyClass === "public" ? [] : route.examples),
+    const nonPublicExamples: unknown[] = Object.values(
+      SERVICE_API_ROUTES,
+    ).flatMap((route) =>
+      route.privacyClass === "public" ? [] : [...route.examples],
     )
 
     expect(publicExamples.length).toBeGreaterThan(0)
