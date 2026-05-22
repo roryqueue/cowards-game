@@ -201,7 +201,9 @@ const stateAtSequence = (
   data: ReplayReadyDto,
   sequence: number,
 ): ReplayStateDto | undefined =>
-  data.states.find((state) => state.sequence === sequence) ?? data.states[0]
+  [...data.states]
+    .reverse()
+    .find((state) => state.sequence <= sequence) ?? data.states[0]
 
 export const getCurrentPositionSummary = (
   data: ReplayReadyDto,

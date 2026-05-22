@@ -125,6 +125,21 @@ export function ReplayClient({ data }: ReplayClientProps) {
         </aside>
 
         <section className="replay-center" aria-label="Replay arena">
+          {data.focus ? (
+            <div
+              className={`replay-focus-banner ${data.focus.fallback === "none" ? "" : "warning"}`}
+              data-testid="replay-focus-banner"
+            >
+              <strong>{data.focus.label}</strong>
+              <span>
+                Sequence {data.focus.resolvedSequence}
+                {data.focus.fallback === "none"
+                  ? ""
+                  : " · opened at Match start"}
+              </span>
+            </div>
+          ) : null}
+
           <div className="replay-arena-placeholder" aria-label="Replay board">
             <ReplayBoard
               data={data}

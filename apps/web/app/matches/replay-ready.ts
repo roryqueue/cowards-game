@@ -13,6 +13,8 @@ import type {
 } from "@cowards/spec"
 import type {
   GetMatchReplayOptions,
+  ReplayFocusDto,
+  ReplayFocusRequest,
   ReplayMetadataDto,
   ReplayPageData,
   ReplayReadyDto,
@@ -86,6 +88,120 @@ const buildTimeline = (
       payload: event.payload,
     }
   })
+
+const momentEventTypes = {
+  BACKSTAB: ["BACKSTAB_RESOLVED"],
+  CONTRACTION: ["CONTRACTION_RESOLVED"],
+  NO_ADVANCE_CLEANUP: ["MOVE_BLOCKED"],
+  FALL: ["SOLDIER_FELL"],
+  DECISIVE_PUSH: ["PUSH_RESOLVED"],
+  LATE_CYCLE_STABILIZATION: ["CYCLE_ENDED"],
+} satisfies Record<
+  NonNullable<ReplayFocusRequest["moment"]>,
+  ChronicleEventType[]
+>
+
+const entryMatchesMoment = (
+  entry: ReplayTimelineEntryDto,
+  moment: ReplayFocusRequest["moment"],
+): boolean => {
+  if (!moment) {
+    return true
+  }
+  const targetTypes: readonly ChronicleEventType[] = momentEventTypes[moment]
+  if (!targetTypes.includes(entry.type)) {
+    return false
+  }
+  if (moment === "NO_ADVANCE_CLEANUP") {
+    return JSON.stringify(entry.payload).includes("IMMEDIATE_REVERSAL")
+  }
+  if (moment === "LATE_CYCLE_STABILIZATION") {
+    return entry.cycle !== undefined && entry.cycle >= 10
+  }
+  return true
+}
+
+const latestTimelineSequence = (
+  timeline: readonly ReplayTimelineEntryDto[],
+): number => timeline.at(-1)?.sequence ?? 0
+
+const resolveReplayFocus = (
+  timeline: readonly ReplayTimelineEntryDto[],
+  focus: ReplayFocusRequest | undefined,
+): { initialSequence: number; focus?: ReplayFocusDto | undefined } => {
+  if (!focus) {
+    return { initialSequence: 0 }
+  }
+  const exactEntry =
+    focus.sequence === undefined
+      ? undefined
+      : timeline.find((entry) => entry.sequence === focus.sequence)
+  if (
+    focus.sequence !== undefined &&
+    exactEntry &&
+    entryMatchesMoment(exactEntry, focus.moment)
+  ) {
+    return {
+      initialSequence: focus.sequence,
+      focus: {
+        requestedMoment: focus.moment,
+        requestedSequence: focus.sequence,
+        resolvedSequence: focus.sequence,
+        label: focus.moment
+          ? `Focused ${focus.moment}`
+          : `Focused sequence ${focus.sequence}`,
+        fallback: "none",
+      },
+    }
+  }
+  if (focus.sequence !== undefined && !focus.moment) {
+    return {
+      initialSequence: 0,
+      focus: {
+        requestedSequence: focus.sequence,
+        resolvedSequence: 0,
+        label: "Requested sequence unavailable; showing Match start.",
+        fallback: "match_start",
+      },
+    }
+  }
+  const matching = timeline.find((entry) => {
+    if (!entryMatchesMoment(entry, focus.moment)) return false
+    if (focus.moment === "NO_ADVANCE_CLEANUP") {
+      return JSON.stringify(entry.payload).includes("IMMEDIATE_REVERSAL")
+    }
+    if (focus.moment === "LATE_CYCLE_STABILIZATION") {
+      return (
+        entry.cycle !== undefined &&
+        entry.cycle >= 10 &&
+        entry.sequence >= latestTimelineSequence(timeline) - 12
+      )
+    }
+    return true
+  })
+  if (matching) {
+    return {
+      initialSequence: matching.sequence,
+      focus: {
+        requestedMoment: focus.moment,
+        requestedSequence: focus.sequence,
+        resolvedSequence: matching.sequence,
+        label: `Focused ${focus.moment ?? "moment"}`,
+      fallback: focus.sequence === undefined ? "none" : "moment_not_found",
+      },
+    }
+  }
+  return {
+    initialSequence: 0,
+    focus: {
+      requestedMoment: focus.moment,
+      requestedSequence: focus.sequence,
+      resolvedSequence: 0,
+      label: "Requested moment unavailable; showing Match start.",
+      fallback: "match_start",
+    },
+  }
+}
 
 const projectionFailure = (
   matchId: ReplayMetadataDto["matchId"],
@@ -190,14 +306,18 @@ export const buildReadyReplayFromChronicle = ({
           }
         : undefined
 
+    const timeline = buildTimeline(projection.events, chronicle.events)
+    const focus = resolveReplayFocus(timeline, options.focus)
+
     return {
       status: "ready",
       mode,
       metadata,
       projection,
-      timeline: buildTimeline(projection.events, chronicle.events),
+      timeline,
       states,
-      initialSequence: 0,
+      initialSequence: focus.initialSequence,
+      ...(focus.focus === undefined ? {} : { focus: focus.focus }),
       ...(mode === "owner" && options.ownerPlayerId
         ? { ownerPlayerId: options.ownerPlayerId }
         : {}),

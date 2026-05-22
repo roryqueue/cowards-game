@@ -155,6 +155,49 @@ describe("replay fixture projection", () => {
     },
   )
 
+  it("[projection] replay deep links focus exact sequences and moment fallbacks", () => {
+    const momentOnly = expectReady(
+      createReplayFixtureData({
+        scenarioId: "legal-backstab",
+        focus: { moment: "BACKSTAB" },
+      }),
+    )
+    const exact = expectReady(
+      createReplayFixtureData({
+        scenarioId: "legal-backstab",
+        focus: {
+          moment: "BACKSTAB",
+          sequence: momentOnly.initialSequence,
+        },
+      }),
+    )
+    const unavailable = expectReady(
+      createReplayFixtureData({
+        scenarioId: "push",
+        focus: { sequence: 9999 },
+      }),
+    )
+
+    expect(exact.initialSequence).toBe(momentOnly.initialSequence)
+    expect(exact.focus).toMatchObject({
+      requestedMoment: "BACKSTAB",
+      requestedSequence: momentOnly.initialSequence,
+      resolvedSequence: momentOnly.initialSequence,
+      fallback: "none",
+    })
+    expect(
+      momentOnly.timeline.find(
+        (entry) => entry.sequence === momentOnly.initialSequence,
+      )?.type,
+    ).toBe("BACKSTAB_RESOLVED")
+    expect(unavailable.initialSequence).toBe(0)
+    expect(unavailable.focus).toMatchObject({
+      requestedSequence: 9999,
+      fallback: "match_start",
+    })
+    expect(JSON.stringify(exact)).not.toContain("ownerDebug")
+  })
+
   it.each(projectionScenarioIds)(
     "[projection] %s fixture states length matches replay iteration count",
     (scenarioId) => {

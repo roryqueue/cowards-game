@@ -18,7 +18,8 @@
     "./profiles": "./src/profiles.ts",
     "./repositories": "./src/repositories.ts",
     "./starter-strategies": "./src/starter-strategies.ts",
-    "./workshop": "./src/workshop.ts"
+    "./workshop": "./src/workshop.ts",
+    "./workshop-analytics": "./src/workshop-analytics.ts"
   },
   "scripts": {
     "build": "tsc -b",

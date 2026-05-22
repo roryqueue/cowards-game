@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest"
 import {
+  ANALYTICS_PROFILE_SCHEMA_VERSION,
+  ANALYTICS_RUN_SCHEMA_VERSION,
+  ANALYTICS_SUMMARY_SCHEMA_VERSION,
+  assertAnalyticsPublicSummaryLeakSafe,
+  deriveAnalyticsEvidenceBand,
+} from "./analytics.js"
+import {
   assertPublicMatchSetResultLeakSafe,
   COMPETITION_PRESET_IDS,
   getCompetitionPreset,
 } from "./competition.js"
 import {
   ActionSchema,
+  AnalyticsGauntletRunSummarySchema,
   ChronicleSchema,
   RuntimeViolationUserGuidanceSchema,
   RuntimeViolationTypeSchema,
@@ -23,6 +31,7 @@ import {
   RUNTIME_VIOLATION_TYPES,
   SOLDIER_INACTIVITY_EXPLANATION_CAUSES,
 } from "./types.js"
+import type { AnalyticsGauntletRunSummary } from "./analytics.js"
 
 describe("Coward's Game spec contracts", () => {
   it("compatibility versions have exactly the core six keys", () => {
@@ -556,5 +565,158 @@ describe("Coward's Game spec contracts", () => {
         entrants: [{ source: "private strategy code" }],
       }),
     ).toThrow(/private field/)
+  })
+
+  it("defines owner-safe analytics summaries with stable evidence bands", () => {
+    expect(
+      deriveAnalyticsEvidenceBand({
+        counted: true,
+        completedCount: 8,
+        replayBackedCount: 8,
+        totalCount: 8,
+        systemFailureCount: 0,
+        degraded: false,
+        strongEvidenceThreshold: 4,
+      }),
+    ).toBe("strong")
+    expect(
+      deriveAnalyticsEvidenceBand({
+        counted: true,
+        completedCount: 1,
+        replayBackedCount: 1,
+        totalCount: 1,
+        systemFailureCount: 0,
+        degraded: false,
+        strongEvidenceThreshold: 4,
+      }),
+    ).toBe("thin")
+    expect(
+      deriveAnalyticsEvidenceBand({
+        counted: true,
+        completedCount: 8,
+        replayBackedCount: 8,
+        totalCount: 8,
+        systemFailureCount: 1,
+        degraded: false,
+        strongEvidenceThreshold: 4,
+      }),
+    ).toBe("system_failed")
+
+    const summary = {
+      summarySchemaVersion: ANALYTICS_SUMMARY_SCHEMA_VERSION,
+      profileId: "analytics-profile:demo",
+      runId: "analytics-run:demo:2",
+      ownerUserId: "user:local",
+      lifecycleStatus: "complete",
+      compatibility: {
+        hash: "compat-hash",
+        equivalent: true,
+        mismatches: [],
+        key: {
+          profileSchemaVersion: ANALYTICS_PROFILE_SCHEMA_VERSION,
+          candidateRevisionIds: ["revision:sentinel"],
+          opponentRevisionIds: ["revision:opponent"],
+          presetId: "standard-v1",
+          seeds: ["seed:001"],
+          mirrorSides: true,
+          scoringPolicyVersion: "matchset-scoring-v1",
+          ruleVersion: "rules-v1.6",
+          chronicleVersion: "chronicle-v1.4",
+          runtimeAdapter: "runtime-js",
+          runtimeVersion: "runtime-js-v1",
+          matrixOrder: ["revision:sentinel|revision:opponent|seed:001"],
+        },
+      },
+      totals: {
+        wins: 1,
+        losses: 0,
+        draws: 0,
+        points: 3,
+        matchups: 1,
+        completedMatches: 1,
+        failedMatches: 0,
+      },
+      matchupRecords: [
+        {
+          candidate: {
+            revisionId: "revision:sentinel",
+            label: "Sentinel",
+            sourceHash: "hash-sentinel",
+            tags: ["Local"],
+          },
+          opponent: {
+            opponentId: "starter:centerline-bully",
+            revisionId: "revision:opponent",
+            label: "Centerline Bully",
+            sourceHash: "hash-opponent",
+            tags: ["Starter"],
+            tier: "starter",
+            archetypeTags: ["pressure"],
+          },
+          matchSetId: "match-set:analytics:demo",
+          matchIds: ["match:demo"],
+          wins: 1,
+          losses: 0,
+          draws: 0,
+          points: 3,
+          failureCount: 0,
+          sideBias: "balanced",
+          evidence: {
+            band: "strong",
+            counted: true,
+            completedCount: 1,
+            replayBackedCount: 1,
+            totalCount: 1,
+            failureCount: 0,
+            systemFailureCount: 0,
+            notes: ["Replay-backed deterministic summary."],
+          },
+          replayReferences: [
+            {
+              matchId: "match:demo",
+              momentType: "DECISIVE_PUSH",
+              sequence: 12,
+              label: "Decisive push",
+              side: "bottom",
+              fallbackState: "available",
+              href: "/matches/match%3Ademo/replay?moment=DECISIVE_PUSH&sequence=12",
+            },
+          ],
+        },
+      ],
+      provenance: {
+        matchSetIds: ["match-set:analytics:demo"],
+        generatedAt: "2026-05-22T00:00:00.000Z",
+        runSchemaVersion: ANALYTICS_RUN_SCHEMA_VERSION,
+      },
+      privacy: {
+        ownerSafe: true,
+        publicFieldsExcluded: [
+          "strategy code",
+          "private strategy state",
+          "private soldier state",
+          "activation payloads",
+        ],
+      },
+    } satisfies AnalyticsGauntletRunSummary
+
+    expect(AnalyticsGauntletRunSummarySchema.parse(summary)).toEqual(summary)
+    expect(() => assertAnalyticsPublicSummaryLeakSafe(summary)).not.toThrow()
+    expect(() =>
+      assertAnalyticsPublicSummaryLeakSafe({
+        matchupRecords: [{ ownerDebug: "private" }],
+      }),
+    ).toThrow(/private field/)
+    expect(() =>
+      assertAnalyticsPublicSummaryLeakSafe({
+        matchupRecords: [{ Strategy_Memory: "private" }],
+      }),
+    ).toThrow(/private field/)
+    expect(
+      AnalyticsGauntletRunSummarySchema.safeParse({
+        ...summary,
+        metadata: { objective_payload: "private" },
+      }).success,
+    ).toBe(false)
   })
 })

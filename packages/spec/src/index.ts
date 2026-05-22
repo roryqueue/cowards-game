@@ -1,4 +1,5 @@
 export * from "./constants.js"
+export * from "./analytics.js"
 export * from "./competition.js"
 export * from "./fixtures/index.js"
 export * from "./schemas.js"

@@ -2,28 +2,28 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Workshop Analytics and Evidence Explorer
-status: planning
+status: implemented
 last_updated: "2026-05-22T00:00:00.000Z"
-last_activity: 2026-05-22 — Phase 44 context gathered
+last_activity: 2026-05-22 — v1.6 analytics cycle implemented, reviewed, validated, browser-verified, and audited
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 7
   total_plans: 7
-  completed_plans: 0
-  percent: 0
+  completed_plans: 7
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.6 Workshop Analytics and Evidence Explorer planning started
+**Status:** v1.6 Workshop Analytics and Evidence Explorer implemented and verified
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-21)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.6 phase discussions complete; ready to plan Phase 38
+**Current focus:** v1.6 local analytics demo is available for user review
 **Current milestone:** v1.6 Workshop Analytics and Evidence Explorer
 **Requirements:** .planning/REQUIREMENTS.md (54/54 mapped)
 **Roadmap:** .planning/ROADMAP.md
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-05-21)
 ## Current Position
 
 Phase: 44 — Demo, Docs, Verification
-Plan: —
-Status: All v1.6 phase contexts gathered
-Last activity: 2026-05-22 — Phase 44 context captured in `.planning/phases/44-demo-docs-verification/44-CONTEXT.md`
+Plan: Complete
+Status: v1.6 phases 38-44 implemented, reviewed, validated, and audited
+Last activity: 2026-05-22 — Browser-verified Workshop heatmap, Evidence Explorer, replay deep links, and owner-safe exports
 
 ## Workflow Settings
 
@@ -90,7 +90,7 @@ Items acknowledged and deferred after v1.5 milestone completion on 2026-05-21:
 
 ## Next Command
 
-Run `$gsd-plan-phase 38` to begin planning v1.6 implementation from the first phase.
+Review the local v1.6 demo at `http://localhost:3000/` and `http://localhost:3000/workshop/evidence`.
 
 ---
-*Last updated: 2026-05-22 after Phase 44 context gathering*
+*Last updated: 2026-05-22 after v1.6 implementation and verification*

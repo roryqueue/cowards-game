@@ -11,6 +11,14 @@ import {
   validateWorkshopSource,
   WORKSHOP_STRATEGY_ID,
 } from "@cowards/persistence/workshop"
+import {
+  comparePersistedWorkshopAnalyticsRuns,
+  createWorkshopAnalyticsDemoSnapshot,
+  createWorkshopAnalyticsExport,
+  createPersistedWorkshopAnalyticsRerun,
+  getWorkshopAnalyticsSnapshot,
+  seedWorkshopAnalyticsDemo,
+} from "@cowards/persistence/workshop-analytics"
 import type {
   MatchSetId,
   StrategyRevision,
@@ -18,6 +26,7 @@ import type {
 } from "@cowards/spec"
 import type {
   WorkshopLaunchTestRequest,
+  WorkshopInitialData,
   WorkshopSubmitRequest,
   WorkshopSubmitResponse,
 } from "./types.js"
@@ -32,6 +41,7 @@ export interface WorkshopServerDeps {
   insertRevision?: typeof insertWorkshopRevision | undefined
   createTestMatchSet?: typeof createWorkshopTestMatchSet | undefined
   getTestSummary?: typeof getWorkshopTestSummary | undefined
+  getAnalyticsSnapshot?: typeof getWorkshopAnalyticsSnapshot | undefined
 }
 
 const withDatabasePool: WithPool = async (fn) => {
@@ -82,6 +92,7 @@ const storageUnavailableCodes = new Set([
   "EAI_AGAIN",
   "ENOTFOUND",
   "ETIMEDOUT",
+  "42P01",
 ])
 
 export const isStorageUnavailableError = (error: unknown): boolean => {
@@ -122,18 +133,26 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
   const insertRevision = deps.insertRevision ?? insertWorkshopRevision
   const createTest = deps.createTestMatchSet ?? createWorkshopTestMatchSet
   const testSummary = deps.getTestSummary ?? getWorkshopTestSummary
+  const analyticsSnapshot = deps.getAnalyticsSnapshot ?? getWorkshopAnalyticsSnapshot
+  const loadInitialData = async (): Promise<WorkshopInitialData> => {
+    try {
+      return await withPool(async (pool) => ({
+        ...(await snapshot(pool)),
+        analytics: await analyticsSnapshot(pool),
+      }))
+    } catch (error) {
+      if (!isStorageUnavailableError(error)) {
+        throw error
+      }
+      return {
+        ...getWorkshopStaticSnapshot(),
+        analytics: createWorkshopAnalyticsDemoSnapshot(),
+      }
+    }
+  }
 
   return {
-    getInitialData: async () => {
-      try {
-        return await withPool((pool) => snapshot(pool))
-      } catch (error) {
-        if (!isStorageUnavailableError(error)) {
-          throw error
-        }
-        return getWorkshopStaticSnapshot()
-      }
-    },
+    getInitialData: loadInitialData,
 
     validateSource: (source: string) => validateWorkshopSource(source),
 
@@ -180,6 +199,30 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
       matchSetId: MatchSetId,
     ): Promise<WorkshopTestSummary | null> {
       return withPool((pool) => testSummary(pool, matchSetId))
+    },
+
+    async exportAnalytics(format: "json" | "csv") {
+      const analytics = await loadInitialData().then((data) => data.analytics)
+      return createWorkshopAnalyticsExport(analytics, format)
+    },
+
+    async saveAnalyticsProfile() {
+      return withPool(async (pool) => {
+        const analytics = await seedWorkshopAnalyticsDemo(pool)
+        return analytics.profiles[0] ?? null
+      })
+    },
+
+    async rerunAnalyticsProfile(profileId: string) {
+      return withPool((pool) =>
+        createPersistedWorkshopAnalyticsRerun(pool, profileId),
+      )
+    },
+
+    async compareAnalyticsRuns(profileId: string) {
+      return withPool((pool) =>
+        comparePersistedWorkshopAnalyticsRuns(pool, profileId),
+      )
     },
   }
 }

@@ -1,5 +1,15 @@
 import { z } from "zod"
 import {
+  ANALYTICS_COMPATIBILITY_MISMATCH_CODES,
+  ANALYTICS_EVIDENCE_BANDS,
+  ANALYTICS_PROFILE_SCHEMA_VERSION,
+  ANALYTICS_REPLAY_FALLBACK_STATES,
+  ANALYTICS_REPLAY_MOMENT_TYPES,
+  ANALYTICS_RUN_SCHEMA_VERSION,
+  ANALYTICS_SUMMARY_SCHEMA_VERSION,
+  assertAnalyticsPublicSummaryLeakSafe,
+} from "./analytics.js"
+import {
   OBJECTIVE_PAYLOAD_BYTES,
   SOLDIER_MEMORY_BYTES,
   STRATEGY_MEMORY_BYTES,
@@ -23,6 +33,215 @@ export const JsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
     z.array(JsonValueSchema),
     z.record(z.string(), JsonValueSchema),
   ]),
+)
+
+export const AnalyticsEvidenceBandSchema = z.enum(ANALYTICS_EVIDENCE_BANDS)
+export const AnalyticsReplayMomentTypeSchema = z.enum(
+  ANALYTICS_REPLAY_MOMENT_TYPES,
+)
+export const AnalyticsReplayFallbackStateSchema = z.enum(
+  ANALYTICS_REPLAY_FALLBACK_STATES,
+)
+export const AnalyticsCompatibilityMismatchCodeSchema = z.enum(
+  ANALYTICS_COMPATIBILITY_MISMATCH_CODES,
+)
+
+export const AnalyticsStrategySnapshotSchema = z.object({
+  revisionId: z.string().min(1),
+  label: z.string().min(1),
+  sourceHash: z.string().min(1),
+  tags: z.array(z.string().min(1)),
+})
+
+export const AnalyticsOpponentSnapshotSchema =
+  AnalyticsStrategySnapshotSchema.extend({
+    opponentId: z.string().min(1),
+    tier: z.enum(["starter", "advanced", "workshop"]),
+    archetypeTags: z.array(z.string().min(1)),
+  })
+
+export const AnalyticsCompatibilityKeySchema = z.object({
+  profileSchemaVersion: z.literal(ANALYTICS_PROFILE_SCHEMA_VERSION),
+  candidateRevisionIds: z.array(z.string().min(1)),
+  opponentRevisionIds: z.array(z.string().min(1)),
+  presetId: z.string().min(1),
+  seeds: z.array(z.string().min(1)),
+  mirrorSides: z.boolean(),
+  scoringPolicyVersion: z.string().min(1),
+  ruleVersion: z.string().min(1),
+  chronicleVersion: z.string().min(1),
+  runtimeAdapter: z.string().min(1),
+  runtimeVersion: z.string().min(1),
+  matrixOrder: z.array(z.string().min(1)),
+})
+
+export const AnalyticsCompatibilitySummarySchema = z.object({
+  hash: z.string().min(1),
+  key: AnalyticsCompatibilityKeySchema,
+  equivalent: z.boolean(),
+  mismatches: z.array(AnalyticsCompatibilityMismatchCodeSchema),
+})
+
+export const AnalyticsReplayReferenceSchema = z.object({
+  matchId: z.string().min(1),
+  momentType: AnalyticsReplayMomentTypeSchema,
+  sequence: z.number().int().nonnegative(),
+  label: z.string().min(1),
+  side: z.enum(["bottom", "top", "neutral"]),
+  fallbackState: AnalyticsReplayFallbackStateSchema,
+  href: z.string().min(1),
+})
+
+export const AnalyticsEvidenceSummarySchema = z.object({
+  band: AnalyticsEvidenceBandSchema,
+  counted: z.boolean(),
+  completedCount: z.number().int().nonnegative(),
+  replayBackedCount: z.number().int().nonnegative(),
+  totalCount: z.number().int().nonnegative(),
+  failureCount: z.number().int().nonnegative(),
+  systemFailureCount: z.number().int().nonnegative(),
+  notes: z.array(z.string().min(1)),
+})
+
+export const AnalyticsMatchupRecordSchema = z.object({
+  candidate: AnalyticsStrategySnapshotSchema,
+  opponent: AnalyticsOpponentSnapshotSchema,
+  matchSetId: z.string().min(1),
+  matchIds: z.array(z.string().min(1)),
+  wins: z.number().int().nonnegative(),
+  losses: z.number().int().nonnegative(),
+  draws: z.number().int().nonnegative(),
+  points: z.number().int(),
+  failureCount: z.number().int().nonnegative(),
+  sideBias: z.enum(["bottom", "top", "balanced", "insufficient"]),
+  evidence: AnalyticsEvidenceSummarySchema,
+  replayReferences: z.array(AnalyticsReplayReferenceSchema),
+})
+
+export const AnalyticsGauntletProfileDefinitionSchema = z.object({
+  profileSchemaVersion: z.literal(ANALYTICS_PROFILE_SCHEMA_VERSION),
+  candidates: z.array(AnalyticsStrategySnapshotSchema).min(1),
+  opponents: z.array(AnalyticsOpponentSnapshotSchema).min(1),
+  presetId: z.string().min(1),
+  seeds: z.array(z.string().min(1)),
+  mirrorSides: z.boolean(),
+  scoringPolicyVersion: z.string().min(1),
+  ruleVersion: z.string().min(1),
+  chronicleVersion: z.string().min(1),
+  runtimeAdapter: z.string().min(1),
+  runtimeVersion: z.string().min(1),
+  matrixOrder: z.array(z.string().min(1)),
+})
+
+export const AnalyticsGauntletProfileSchema = z.object({
+  id: z.string().min(1),
+  ownerUserId: z.string().min(1),
+  name: z.string().min(1),
+  notes: z.string().min(1).optional(),
+  status: z.enum(["active", "archived"]),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+  definition: AnalyticsGauntletProfileDefinitionSchema,
+  compatibility: AnalyticsCompatibilitySummarySchema,
+})
+
+const addAnalyticsLeakCheck = <T extends z.ZodType>(schema: T) =>
+  schema.superRefine((value, ctx) => {
+    try {
+      assertAnalyticsPublicSummaryLeakSafe(value)
+    } catch (error) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Analytics payload contains private fields",
+      })
+    }
+  })
+
+export const AnalyticsGauntletRunSummarySchema = addAnalyticsLeakCheck(
+  z.object({
+    summarySchemaVersion: z.literal(ANALYTICS_SUMMARY_SCHEMA_VERSION),
+    profileId: z.string().min(1),
+    runId: z.string().min(1),
+    ownerUserId: z.string().min(1),
+    lifecycleStatus: z.enum([
+      "queued",
+      "running",
+      "complete",
+      "blocked_preflight",
+    ]),
+    compatibility: AnalyticsCompatibilitySummarySchema,
+    totals: z.object({
+      wins: z.number().int().nonnegative(),
+      losses: z.number().int().nonnegative(),
+      draws: z.number().int().nonnegative(),
+      points: z.number().int(),
+      matchups: z.number().int().nonnegative(),
+      completedMatches: z.number().int().nonnegative(),
+      failedMatches: z.number().int().nonnegative(),
+    }),
+    matchupRecords: z.array(AnalyticsMatchupRecordSchema),
+    provenance: z.object({
+      matchSetIds: z.array(z.string().min(1)),
+      generatedAt: z.string().min(1),
+      runSchemaVersion: z.literal(ANALYTICS_RUN_SCHEMA_VERSION),
+    }),
+    privacy: z.object({
+      ownerSafe: z.literal(true),
+      publicFieldsExcluded: z.array(z.string().min(1)),
+    }),
+    metadata: JsonValueSchema.optional(),
+  }),
+)
+
+export const AnalyticsGauntletProfileRunSchema = addAnalyticsLeakCheck(
+  z
+    .object({
+      id: z.string().min(1),
+      profileId: z.string().min(1),
+      ownerUserId: z.string().min(1),
+      runIndex: z.number().int().nonnegative(),
+      createdAt: z.string().min(1),
+      completedAt: z.string().min(1).optional(),
+      notes: z.string().min(1).optional(),
+      summary: AnalyticsGauntletRunSummarySchema,
+    })
+    .superRefine((run, ctx) => {
+      if (run.id !== run.summary.runId) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["summary", "runId"],
+          message: "run id must match summary.runId",
+        })
+      }
+      if (run.profileId !== run.summary.profileId) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["summary", "profileId"],
+          message: "profile id must match summary.profileId",
+        })
+      }
+      if (run.ownerUserId !== run.summary.ownerUserId) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["summary", "ownerUserId"],
+          message: "owner user id must match summary.ownerUserId",
+        })
+      }
+    }),
+)
+
+export const AnalyticsExportEnvelopeSchema = addAnalyticsLeakCheck(
+  z.object({
+    exportedBy: z.string().min(1),
+    exportedAt: z.string().min(1),
+    format: z.enum(["json", "csv"]),
+    summarySchemaVersion: z.literal(ANALYTICS_SUMMARY_SCHEMA_VERSION),
+    profile: AnalyticsGauntletProfileSchema,
+    runs: z.array(AnalyticsGauntletProfileRunSchema),
+  }),
 )
 
 export const DirectionSchema = z.enum(["UP", "DOWN", "LEFT", "RIGHT"])

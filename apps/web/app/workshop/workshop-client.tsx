@@ -5,10 +5,11 @@ import type { StrategyRevisionValidationReport } from "@cowards/spec"
 import { StrategySourceEditor } from "./monaco-editor.js"
 import type {
   WorkshopSampleSummary,
-  WorkshopSnapshot,
+  WorkshopInitialData,
   WorkshopTemplateSummary,
   WorkshopTestSummary,
 } from "./types.js"
+import { WorkshopHeatmap } from "./heatmap-client.js"
 import {
   canSubmitRevision,
   canOpenReplay,
@@ -32,7 +33,7 @@ import {
 } from "./workshop-client-state.js"
 
 export interface WorkshopClientProps {
-  initialData: WorkshopSnapshot
+  initialData: WorkshopInitialData
 }
 
 const replaceDraftCopy =
@@ -190,7 +191,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setIsDirty(false)
   }
 
-  const applyStarter = (starter: WorkshopSnapshot["starters"][number]) => {
+  const applyStarter = (starter: WorkshopInitialData["starters"][number]) => {
     if (isDirty && !window.confirm(replaceDraftCopy)) {
       return
     }
@@ -207,7 +208,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   }
 
   const applyAdvanced = (
-    advanced: WorkshopSnapshot["advancedStrategies"][number],
+    advanced: WorkshopInitialData["advancedStrategies"][number],
   ) => {
     if (isDirty && !window.confirm(replaceDraftCopy)) {
       return
@@ -263,7 +264,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       const body = (await response.json()) as {
         error?: string
         ok?: boolean
-        revision?: WorkshopSnapshot["revisions"][number]
+        revision?: WorkshopInitialData["revisions"][number]
         validation?: StrategyRevisionValidationReport
       }
       if (!response.ok || body.ok === false || !body.revision) {
@@ -1049,6 +1050,12 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
               </div>
             ) : null}
           </section>
+          <WorkshopHeatmap
+            profiles={initialData.analytics.profiles}
+            runs={initialData.analytics.runs}
+            selectedProfileId={initialData.analytics.selectedProfileId}
+            selectedRunId={initialData.analytics.selectedRunId}
+          />
         </aside>
       </div>
     </main>

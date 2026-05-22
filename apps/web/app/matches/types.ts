@@ -1,4 +1,5 @@
 import type {
+  AnalyticsReplayMomentType,
   ChronicleEventContext,
   ChronicleEventType,
   ChronicleProjection,
@@ -17,6 +18,7 @@ export interface GetMatchReplayOptions {
   ownerPlayerId?: PlayerId | undefined
   requestedOwnerPlayerId?: PlayerId | undefined
   allowOwnerDebug?: boolean | undefined
+  focus?: ReplayFocusRequest | undefined
 }
 
 export type ReplayUnavailableReason = "missing-chronicle" | "invalid-chronicle"
@@ -53,6 +55,19 @@ export interface ReplayMetadataDto {
   arenaVariantId: string
 }
 
+export interface ReplayFocusRequest {
+  moment?: AnalyticsReplayMomentType | undefined
+  sequence?: number | undefined
+}
+
+export interface ReplayFocusDto {
+  requestedMoment?: AnalyticsReplayMomentType | undefined
+  requestedSequence?: number | undefined
+  resolvedSequence: number
+  label: string
+  fallback: "none" | "match_start" | "moment_not_found"
+}
+
 export interface ReplayReadyDto {
   status: "ready"
   mode: ReplayViewMode
@@ -60,7 +75,8 @@ export interface ReplayReadyDto {
   projection: ChronicleProjection
   timeline: ReplayTimelineEntryDto[]
   states: ReplayStateDto[]
-  initialSequence: 0
+  initialSequence: number
+  focus?: ReplayFocusDto | undefined
   ownerPlayerId?: PlayerId | undefined
   ownerDebug?:
     | {

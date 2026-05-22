@@ -3,6 +3,7 @@ import type {
   StrategyRevisionId,
   StrategyRevisionValidationReport,
 } from "@cowards/spec"
+import type { WorkshopAnalyticsSnapshot } from "@cowards/persistence/workshop-analytics"
 import type {
   WorkshopOpponentSummary,
   WorkshopPresetSummary,
@@ -21,6 +22,11 @@ export type {
   WorkshopSampleSummary,
   WorkshopTemplateSummary,
   WorkshopTestSummary,
+  WorkshopAnalyticsSnapshot,
+}
+
+export type WorkshopInitialData = WorkshopSnapshot & {
+  analytics: WorkshopAnalyticsSnapshot
 }
 
 export interface WorkshopSubmitRequest {

@@ -1,6 +1,6 @@
 # Milestone v1.6: Workshop Analytics and Evidence Explorer
 
-**Status:** Planned
+**Status:** Implemented and verified
 **Phases:** 38-44
 **Total Plans:** 7
 **Requirements:** 54/54 mapped
@@ -15,7 +15,7 @@ v1.6 turns the deterministic evidence created in v1.5 into something players can
 
 **Goal:** Define stable summary data for gauntlets, MatchSets, matchup records, archetype tags, evidence bands, and replay references.
 **Requirements:** AEM-01 through AEM-08
-**Status:** Pending
+**Status:** Complete
 
 Success criteria:
 
@@ -28,7 +28,7 @@ Success criteria:
 
 **Goal:** Let users save, rerun, compare, and name deterministic gauntlet profiles without rerunning Strategy code in web/API.
 **Requirements:** SGP-01 through SGP-08
-**Status:** Pending
+**Status:** Complete
 
 Success criteria:
 
@@ -41,7 +41,7 @@ Success criteria:
 
 **Goal:** Add Workshop heatmaps showing per-opponent W-L-D, points, failures, side bias, and confidence/evidence count.
 **Requirements:** HEAT-01 through HEAT-08
-**Status:** Pending
+**Status:** Complete
 
 Success criteria:
 
@@ -54,7 +54,7 @@ Success criteria:
 
 **Goal:** Build sortable/filterable evidence views with drilldowns from Strategy to opponent to MatchSet to replay.
 **Requirements:** EXP-01 through EXP-08
-**Status:** Pending
+**Status:** Complete
 
 Success criteria:
 
@@ -67,7 +67,7 @@ Success criteria:
 
 **Goal:** Add replay links targeted to key moments: Backstab, contraction, no-advance cleanup, fall, decisive push, and late-cycle stabilization.
 **Requirements:** LINK-01 through LINK-07
-**Status:** Pending
+**Status:** Complete
 
 Success criteria:
 
@@ -80,7 +80,7 @@ Success criteria:
 
 **Goal:** Add owner-only JSON/CSV export for gauntlet summaries while preserving public privacy boundaries.
 **Requirements:** EXPOR-01 through EXPOR-08
-**Status:** Pending
+**Status:** Complete
 
 Success criteria:
 
@@ -93,7 +93,7 @@ Success criteria:
 
 **Goal:** Generate v1.6 example analytics data, browser-verify pages, update docs, and audit privacy/runtime isolation.
 **Requirements:** VER-01 through VER-07
-**Status:** Pending
+**Status:** Complete
 
 Success criteria:
 
