@@ -34,6 +34,9 @@ export const listAnalyticsProfilesExample = firstExampleFor(
   "listAnalyticsProfiles",
 )
 export const createAnalyticsRunExample = firstExampleFor("createAnalyticsRun")
+export const analyticsRunSummaryExample = firstExampleFor(
+  "getAnalyticsRunSummary",
+)
 export const exportAnalyticsRunExample = firstExampleFor("exportAnalyticsRun")
 export const listLadderSeasonsExample = firstExampleFor("listLadderSeasons")
 export const enterLadderSeasonExample = firstExampleFor("enterLadderSeason")
@@ -55,6 +58,7 @@ export const SERVICE_API_FIXTURES = {
   publicReplayMetadataExample,
   listAnalyticsProfilesExample,
   createAnalyticsRunExample,
+  analyticsRunSummaryExample,
   exportAnalyticsRunExample,
   listLadderSeasonsExample,
   enterLadderSeasonExample,

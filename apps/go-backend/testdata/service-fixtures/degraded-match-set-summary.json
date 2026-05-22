@@ -1,0 +1,125 @@
+{
+  "apiVersion": "service-api-v1.8",
+  "kind": "publicMatchSetSummary",
+  "matchSetId": "match-set:go-parity:degraded",
+  "result": {
+    "entrants": [
+      {
+        "displayLabel": "@bottom / golden fixture",
+        "engineCompatibility": {
+          "engine": "engine-v1",
+          "spec": "cowards-rules-v1.4"
+        },
+        "entrantId": "entrant:bottom",
+        "entrantIndex": 0,
+        "lockedAt": "2026-05-22T00:00:00.000Z",
+        "ownerHandle": "bottom",
+        "ownerUserId": "user:bottom",
+        "runtime": {
+          "abiVersion": "strategy-runtime-abi-v1.7",
+          "adapter": {
+            "id": "runtime-js-worker-thread",
+            "version": "runtime-js-v1"
+          },
+          "language": {
+            "id": "typescript",
+            "version": "runtime-js-v1"
+          },
+          "package": {
+            "entrypoint": "default",
+            "mode": "none"
+          },
+          "requiredCapabilities": []
+        },
+        "sourceBytes": 128,
+        "sourceHash": "sourcehash-bottom",
+        "strategyRevisionId": "strategy-revision:golden-bottom"
+      },
+      {
+        "displayLabel": "@top / golden fixture",
+        "engineCompatibility": {
+          "engine": "engine-v1",
+          "spec": "cowards-rules-v1.4"
+        },
+        "entrantId": "entrant:top",
+        "entrantIndex": 1,
+        "lockedAt": "2026-05-22T00:00:00.000Z",
+        "ownerHandle": "top",
+        "ownerUserId": "user:top",
+        "runtime": {
+          "abiVersion": "strategy-runtime-abi-v1.7",
+          "adapter": {
+            "id": "runtime-js-worker-thread",
+            "version": "runtime-js-v1"
+          },
+          "language": {
+            "id": "typescript",
+            "version": "runtime-js-v1"
+          },
+          "package": {
+            "entrypoint": "default",
+            "mode": "none"
+          },
+          "requiredCapabilities": []
+        },
+        "sourceBytes": 128,
+        "sourceHash": "sourcehash-top",
+        "strategyRevisionId": "strategy-revision:golden-top"
+      }
+    ],
+    "matches": [
+      {
+        "arenaVariantId": "arena:standard",
+        "entrants": {
+          "bottom": "entrant:bottom",
+          "top": "entrant:top"
+        },
+        "matchId": "match:go-parity:system-failed",
+        "publicReason": "system_failure",
+        "replayAvailable": false,
+        "status": "failed_system"
+      }
+    ],
+    "matchSetId": "match-set:go-parity:degraded",
+    "metadata": {
+      "counted": false,
+      "publicReason": "system_failure"
+    },
+    "preset": {
+      "id": "smoke-exhibition-v1",
+      "label": "Smoke exhibition",
+      "version": "v1"
+    },
+    "provenance": {
+      "chronicleHashes": [],
+      "entrantSnapshotIds": [
+        "entrant:bottom",
+        "entrant:top"
+      ],
+      "matchSetId": "match-set:go-parity:degraded",
+      "presetId": "smoke-exhibition-v1",
+      "scoringPolicyVersion": "v1"
+    },
+    "publication": {
+      "privateFieldsExcluded": [
+        "Strategy source",
+        "StrategyMemory",
+        "SoldierMemory",
+        "objective payloads"
+      ],
+      "publicReplayEvidence": true,
+      "publicResults": true
+    },
+    "scoringPolicy": {
+      "drawPoints": 1,
+      "id": "exhibition-points-v1",
+      "lossPoints": 0,
+      "strategyFailurePenaltyPoints": -1,
+      "version": "v1",
+      "winPoints": 3
+    },
+    "standings": [],
+    "status": "degraded",
+    "visibility": "public"
+  }
+}

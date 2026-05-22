@@ -26,7 +26,7 @@ v1.8 turns the v1.7 service, runtime, and backend contracts into harder operatin
 ## Phases
 
 - [x] **Phase 51: Service Contract Generation and Route Migration** - Developers can regenerate service artifacts and route selected low-risk web reads through the typed service layer.
-- [ ] **Phase 52: Go Read-Only Backend Parity Against Real Fixtures** - Developers can run the Go read-only service against real evidence and prove parity with TypeScript service DTOs.
+- [x] **Phase 52: Go Read-Only Backend Parity Against Real Fixtures** - Developers can run the Go read-only service against real evidence and prove parity with TypeScript service DTOs.
 - [ ] **Phase 53: Runtime Sandbox Hardening Prototype** - Developers can evaluate sandbox candidates through the runtime ABI without changing counted Match defaults.
 - [ ] **Phase 54: Non-JS Strategy Product Semantics** - Users and developers see clear experimental language semantics, validation messages, and fail-closed counted-play eligibility.
 - [ ] **Phase 55: Cross-Process Local Deployment Harness** - Developers can run and diagnose the local web, service, runtime, Go, and fixture topology as separate boundaries.
@@ -60,7 +60,9 @@ Plans:
   3. Go and TypeScript service outputs match as parsed canonical DTOs for status, deterministic ordering, compatibility/version fields, privacy redaction, and public error shapes.
   4. Go route inventory is explicitly allowlisted and read-only, with tests failing on mutation verbs or unsupported ownership expansion.
   5. Go documentation and fixtures prove TypeScript still owns auth mutation, Strategy submission/source retrieval, MatchSet creation, orchestration, jobs, migrations, writes, Strategy execution, and degraded/system-failed public privacy behavior.
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [x] 52-01-PLAN.md — Generate TypeScript-service-backed Go parity fixtures, add owner-scoped analytics summary parity, and harden Go read-only fixture serving.
 
 ### Phase 53: Runtime Sandbox Hardening Prototype
 **Goal**: Developers can evaluate practical hostile Strategy sandbox candidates through the existing Strategy runtime ABI while counted Match execution defaults remain unchanged.
@@ -118,7 +120,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 51. Service Contract Generation and Route Migration | 3/3 | Complete | 2026-05-22 |
-| 52. Go Read-Only Backend Parity Against Real Fixtures | 0/TBD | Not started | - |
+| 52. Go Read-Only Backend Parity Against Real Fixtures | 1/1 | Complete | 2026-05-22 |
 | 53. Runtime Sandbox Hardening Prototype | 0/TBD | Not started | - |
 | 54. Non-JS Strategy Product Semantics | 0/TBD | Not started | - |
 | 55. Cross-Process Local Deployment Harness | 0/TBD | Not started | - |

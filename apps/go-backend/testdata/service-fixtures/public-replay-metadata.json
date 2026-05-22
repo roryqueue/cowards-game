@@ -1,0 +1,16 @@
+{
+  "apiVersion": "service-api-v1.8",
+  "kind": "publicReplayMetadata",
+  "matchId": "golden:v1-7:match",
+  "metadata": {
+    "arenaVariantId": "golden:v1-7:arena",
+    "bottomPlayerId": "bottom",
+    "chronicleId": "chronicle:6f8063dfee2dc7922a5248d9cde760d3da3de829f8a0f3795cceabe7ab4f4e97",
+    "eventCount": 251,
+    "hash": "6f8063dfee2dc7922a5248d9cde760d3da3de829f8a0f3795cceabe7ab4f4e97",
+    "matchId": "golden:v1-7:match",
+    "schemaVersion": "chronicle-v1.4",
+    "snapshotCount": 11,
+    "topPlayerId": "top"
+  }
+}

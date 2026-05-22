@@ -1,0 +1,6 @@
+{
+  "code": "NOT_FOUND",
+  "message": "Resource not found.",
+  "publicSafe": true,
+  "status": 404
+}

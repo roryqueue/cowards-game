@@ -1,0 +1,13 @@
+{
+  "files": {
+    "analytics-run-summary.json": "sha256:8c09ab802236168752bc190c496830a836af332aff53ab62575919b5bb052608",
+    "degraded-match-set-summary.json": "sha256:f7ae070454bf5e4929211fee06286aed0c24008eef682cf18ceb237ba0fe18e8",
+    "forbidden-error.json": "sha256:56f90864bfb3af1c065f825755b6dc20a4a321eaca4df759c9dde1a267af750a",
+    "health.json": "sha256:56488b12b6397ceee7ddc05dfe54ca7f0f7d428a7073f16122443a7e5d37deb0",
+    "not-found-error.json": "sha256:558857729a5410e46f11c58906b6642cddbeb888463ba96eec26256e5ffca538",
+    "public-match-set-summary.json": "sha256:905765b8a71b69af04c96eab83ab2bc59f4a990212c4364e44c6a0d8c8c652a8",
+    "public-replay-metadata.json": "sha256:21bfb503304b0367528544cba109fa6ec73543ff6af1df40ab0b74777e85baed",
+    "route-manifest.json": "sha256:b701eca63e6a060fded58d7aa630bb198d9d2b8386709b16c795ce53293e8437"
+  },
+  "schemaVersion": "go-parity-fixtures-v1.8"
+}

@@ -6,14 +6,19 @@ import type {
 } from "@cowards/persistence/chronicle-store"
 import { buildPublicMatchSetResultDto } from "@cowards/persistence/competition"
 import { buildPublicStrategyCardDto } from "@cowards/persistence/profiles"
+import { getWorkshopAnalyticsSnapshot } from "@cowards/persistence/workshop-analytics"
 import {
   assertPublicServiceDtoLeakSafe,
   SERVICE_API_VERSION,
+  AnalyticsRunSummaryServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
+  assertAnalyticsPublicSummaryLeakSafe,
   type MatchId,
   type MatchSetId,
+  type AnalyticsRunSummaryServiceDto,
+  type UserId,
   type PublicMatchSetSummaryServiceDto,
   type PublicReplayMetadataServiceDto,
   type PublicStrategyPageServiceDto,
@@ -46,6 +51,10 @@ export interface CowardsService {
   getPublicStrategyPage(
     strategyId: StrategyId,
   ): Promise<PublicStrategyPageServiceDto | null>
+  getAnalyticsRunSummary(
+    viewerUserId: UserId,
+    runId: string,
+  ): Promise<AnalyticsRunSummaryServiceDto | null>
 }
 
 export interface CreateCowardsLocalServiceOptions {
@@ -53,6 +62,7 @@ export interface CreateCowardsLocalServiceOptions {
   createChronicleStore?: ((pool: ServicePool) => ChronicleStore) | undefined
   buildPublicMatchSetResult?: typeof buildPublicMatchSetResultDto | undefined
   buildPublicStrategyCard?: typeof buildPublicStrategyCardDto | undefined
+  getAnalyticsSnapshot?: typeof getWorkshopAnalyticsSnapshot | undefined
 }
 
 const healthDto: ServiceHealthDto = {
@@ -89,6 +99,8 @@ export const createCowardsLocalService = (
     options.buildPublicMatchSetResult ?? buildPublicMatchSetResultDto
   const buildPublicStrategyCard =
     options.buildPublicStrategyCard ?? buildPublicStrategyCardDto
+  const getAnalyticsSnapshot =
+    options.getAnalyticsSnapshot ?? getWorkshopAnalyticsSnapshot
 
   return {
     health: () => healthDto,
@@ -142,6 +154,27 @@ export const createCowardsLocalService = (
         return PublicStrategyPageServiceDtoSchema.parse(
           dto,
         ) as PublicStrategyPageServiceDto
+      })
+    },
+
+    async getAnalyticsRunSummary(viewerUserId, runId) {
+      return options.withPool(async (pool) => {
+        const snapshot = await getAnalyticsSnapshot(pool)
+        const run = snapshot.runs.find((candidate) => candidate.id === runId)
+        if (!run || run.ownerUserId !== viewerUserId) {
+          return null
+        }
+        assertAnalyticsPublicSummaryLeakSafe(run.summary)
+        const dto: AnalyticsRunSummaryServiceDto = {
+          apiVersion: SERVICE_API_VERSION,
+          kind: "analyticsRunSummary",
+          runId: run.id,
+          profileId: run.profileId,
+          summary: run.summary,
+        }
+        const parsed = AnalyticsRunSummaryServiceDtoSchema.parse(dto)
+        assertPublicServiceDtoLeakSafe(parsed)
+        return parsed
       })
     },
   }

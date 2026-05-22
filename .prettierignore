@@ -7,5 +7,6 @@ dist
 coverage
 pnpm-lock.yaml
 packages/spec/artifacts/*.json
+apps/go-backend/testdata/service-fixtures/*.json
 CowardsGameSpec_Full_Consolidated_v1.md
 CowardsGame_Technical_Architecture_Spec_V1.md

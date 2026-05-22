@@ -1,0 +1,6 @@
+{
+  "code": "FORBIDDEN",
+  "message": "Owner authorization required.",
+  "publicSafe": true,
+  "status": 403
+}

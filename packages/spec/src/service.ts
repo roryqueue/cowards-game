@@ -11,11 +11,13 @@ import type {
   PublicMatchSetResultDto,
   PublicStrategyCardDto,
 } from "./competition.js"
+import type { AnalyticsGauntletRunSummary } from "./analytics.js"
 import type { StrategyRuntimeMetadata } from "./runtime.js"
 import {
   AuthSessionServiceDtoSchema,
   CreateAnalyticsRunRequestBodySchema,
   CreateAnalyticsRunServiceDtoSchema,
+  AnalyticsRunSummaryServiceDtoSchema,
   CreateMatchSetRequestBodySchema,
   CreateMatchSetServiceDtoSchema,
   CreateSessionRequestBodySchema,
@@ -410,6 +412,77 @@ export const SERVICE_API_ROUTES = {
     ],
     fixtureRefs: ["createAnalyticsRunExample"],
   },
+  getAnalyticsRunSummary: {
+    id: "getAnalyticsRunSummary",
+    operationId: "getAnalyticsRunSummary",
+    method: "GET",
+    path: "/analytics/runs/{runId}/summary",
+    signature: "GET /analytics/runs/{runId}/summary",
+    authScope: "owner",
+    privacyClass: "owner",
+    request: request(RunIdParamsSchema),
+    response: AnalyticsRunSummaryServiceDtoSchema,
+    error: ServiceErrorDtoSchema,
+    examples: [
+      {
+        apiVersion: SERVICE_API_VERSION,
+        kind: "analyticsRunSummary",
+        runId: "analytics-run:demo",
+        profileId: "analytics-profile:demo",
+        summary: {
+          summarySchemaVersion: "analytics-summary-v1.6",
+          profileId: "analytics-profile:demo",
+          runId: "analytics-run:demo",
+          ownerUserId: "user:demo",
+          lifecycleStatus: "complete",
+          compatibility: {
+            hash: "sha256:analytics-demo",
+            key: {
+              profileSchemaVersion: "analytics-profile-v1.6",
+              candidateRevisionIds: ["strategy-revision:demo"],
+              opponentRevisionIds: ["strategy-revision:opponent"],
+              presetId: "smoke-exhibition-v1",
+              seeds: ["seed:demo"],
+              mirrorSides: true,
+              scoringPolicyVersion: "v1",
+              ruleVersion: "cowards-rules-v1.4",
+              chronicleVersion: "chronicle-v1.4",
+              runtimeAdapter: "runtime-js-worker-thread",
+              runtimeVersion: "runtime-js-v1",
+              matrixOrder: ["strategy-revision:demo"],
+            },
+            equivalent: true,
+            mismatches: [],
+          },
+          totals: {
+            wins: 1,
+            losses: 0,
+            draws: 0,
+            points: 3,
+            matchups: 1,
+            completedMatches: 1,
+            failedMatches: 0,
+          },
+          matchupRecords: [],
+          provenance: {
+            matchSetIds: ["match-set:demo"],
+            generatedAt: "2026-05-22T00:00:00.000Z",
+            runSchemaVersion: "analytics-run-v1.6",
+          },
+          privacy: {
+            ownerSafe: true,
+            publicFieldsExcluded: [
+              "Strategy source",
+              "StrategyMemory",
+              "SoldierMemory",
+              "objective payloads",
+            ],
+          },
+        },
+      },
+    ],
+    fixtureRefs: ["analyticsRunSummaryExample"],
+  },
   exportAnalyticsRun: {
     id: "exportAnalyticsRun",
     operationId: "exportAnalyticsRun",
@@ -662,6 +735,14 @@ export interface AnalyticsRunServiceDto {
   profileId: string
   status: "queued" | "running" | "complete" | "failed"
   summary?: JsonValue | undefined
+}
+
+export interface AnalyticsRunSummaryServiceDto {
+  apiVersion: typeof SERVICE_API_VERSION
+  kind: "analyticsRunSummary"
+  runId: string
+  profileId: string
+  summary: AnalyticsGauntletRunSummary
 }
 
 export interface ExportManifestServiceDto {

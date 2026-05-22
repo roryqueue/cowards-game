@@ -4,35 +4,35 @@ milestone: v1.8
 milestone_name: Production Boundary Hardening
 status: executing
 stopped_at: Completed 51-03-PLAN.md
-last_updated: "2026-05-22T20:09:44.000Z"
+last_updated: "2026-05-22T21:27:00.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 6
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
   percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** Phase 51 complete; ready for Phase 52 planning/execution
+**Status:** Phase 52 complete; ready for Phase 53 planning/execution
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 52 - Go Read-Only Backend Parity Against Real Fixtures
+**Current focus:** Phase 53 - Runtime Sandbox Hardening Prototype
 **Latest shipped milestone:** v1.7 Runtime and Backend Boundary Stabilization
 **Requirements:** v1.8 requirements mapped 38/38 in .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 52 of 56 (Go Read-Only Backend Parity Against Real Fixtures)
-Plan: Phase 51 complete; next is Phase 52
+Phase: 53 of 56 (Runtime Sandbox Hardening Prototype)
+Plan: Phase 52 complete; next is Phase 53
 Status: Executing
 Last activity: 2026-05-22
 
@@ -76,10 +76,14 @@ Progress: [██████████] 100%
 - [Phase 51]: Migrated public Strategy page and replay metadata reads through @cowards/service using canonical public DTO schemas. — Satisfies GEN-05/GEN-06 while keeping writes, orchestration, and Strategy execution TypeScript-owned.
 - [Phase 51]: Enforced named migrated route/page import boundaries with broad apps/web/app direct-import debt kept report-only. — Satisfies GEN-07 and preserves D-11 until a later strict monitor phase.
 - [Phase 51]: Restricted the committed OpenAPI artifact to public routes and public runtime metadata without runtime limits. — Keeps the public contract artifact free of private Strategy/runtime key strings.
+- [Phase 52]: Generated committed Go parity fixtures by invoking the TypeScript service boundary over golden Match/Chronicle data and the deterministic Workshop analytics snapshot. — Avoids hand-written Go DTO examples drifting from canonical service output.
+- [Phase 52]: Kept Go read-only while serving health, public MatchSet summaries, public replay metadata, and an owner-scoped analytics summary from validated fixtures. — TypeScript still owns writes, auth mutation, jobs, orchestration, persistence migrations, source retrieval, and Strategy execution.
+- [Phase 52]: Owner analytics reads require a configured bearer token identity and check authorization before resource lookup. — Prevents caller-supplied owner ids and unauthenticated run-existence oracles.
+- [Phase 52]: The Go fixture loader validates route allowlist, top-level DTO shape, canonical private-field denylist, generated fixture hashes, and embedded TypeScript reference hashes before serving override fixtures. — Makes fixture drift and self-blessed invalid overrides fail at startup.
 
 ### Pending Todos
 
-None yet.
+Phase 53 needs sandbox evaluation research before selecting which candidates are local prototypes versus documented tradeoff analysis.
 
 ### Blockers/Concerns
 

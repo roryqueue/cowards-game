@@ -19,12 +19,12 @@ Requirements for turning the v1.7 service/runtime/backend contracts into sturdie
 
 ### Go Read-Only Backend Parity
 
-- [ ] **GO-01**: Developer can run the Go read-only service against real golden fixtures or safe local persisted data instead of only static DTO examples.
-- [ ] **GO-02**: Go read-only endpoints cover health, public MatchSet summary, replay metadata, and one selected analytics summary.
-- [ ] **GO-03**: Go and TypeScript service outputs match as parsed canonical DTOs for status, deterministic ordering, compatibility/version fields, privacy redaction, and public error shapes.
-- [ ] **GO-04**: Go route inventory is allowlisted and read-only, with tests failing on mutation verbs or unsupported ownership expansion.
-- [ ] **GO-05**: Go backend documentation states that auth mutation, Strategy submission, Strategy source retrieval, MatchSet creation, Match orchestration, job claiming, migrations, persistence writes, and Strategy execution remain TypeScript-owned.
-- [ ] **GO-06**: Go parity fixtures include at least one degraded or system-failed evidence case without exposing private Strategy/runtime data in public responses.
+- [x] **GO-01**: Developer can run the Go read-only service against real golden fixtures or safe local persisted data instead of only static DTO examples.
+- [x] **GO-02**: Go read-only endpoints cover health, public MatchSet summary, replay metadata, and one selected analytics summary.
+- [x] **GO-03**: Go and TypeScript service outputs match as parsed canonical DTOs for status, deterministic ordering, compatibility/version fields, privacy redaction, and public error shapes.
+- [x] **GO-04**: Go route inventory is allowlisted and read-only, with tests failing on mutation verbs or unsupported ownership expansion.
+- [x] **GO-05**: Go backend documentation states that auth mutation, Strategy submission, Strategy source retrieval, MatchSet creation, Match orchestration, job claiming, migrations, persistence writes, and Strategy execution remain TypeScript-owned.
+- [x] **GO-06**: Go parity fixtures include at least one degraded or system-failed evidence case without exposing private Strategy/runtime data in public responses.
 
 ### Runtime Sandbox Hardening Prototype
 
@@ -114,12 +114,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GEN-05 | Phase 51 | Complete |
 | GEN-06 | Phase 51 | Complete |
 | GEN-07 | Phase 51 | Complete |
-| GO-01 | Phase 52 | Pending |
-| GO-02 | Phase 52 | Pending |
-| GO-03 | Phase 52 | Pending |
-| GO-04 | Phase 52 | Pending |
-| GO-05 | Phase 52 | Pending |
-| GO-06 | Phase 52 | Pending |
+| GO-01 | Phase 52 | Complete |
+| GO-02 | Phase 52 | Complete |
+| GO-03 | Phase 52 | Complete |
+| GO-04 | Phase 52 | Complete |
+| GO-05 | Phase 52 | Complete |
+| GO-06 | Phase 52 | Complete |
 | SBX-01 | Phase 53 | Pending |
 | SBX-02 | Phase 53 | Pending |
 | SBX-03 | Phase 53 | Pending |

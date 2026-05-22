@@ -1,0 +1,35 @@
+[
+  {
+    "authScope": "public",
+    "id": "health",
+    "method": "GET",
+    "path": "/health",
+    "privacyClass": "public",
+    "samplePath": "/health"
+  },
+  {
+    "authScope": "public",
+    "id": "getPublicMatchSetSummary",
+    "method": "GET",
+    "path": "/public/matchsets/{matchSetId}/summary",
+    "privacyClass": "public",
+    "samplePath": "/public/matchsets/match-set%3Ago-parity%3Agolden/summary"
+  },
+  {
+    "authScope": "public",
+    "id": "getPublicReplayMetadata",
+    "method": "GET",
+    "path": "/public/replays/{matchId}/metadata",
+    "privacyClass": "public",
+    "samplePath": "/public/replays/golden%3Av1-7%3Amatch/metadata"
+  },
+  {
+    "authScope": "owner",
+    "id": "getAnalyticsRunSummary",
+    "method": "GET",
+    "path": "/analytics/runs/{runId}/summary",
+    "privacyClass": "owner",
+    "requiresBearerToken": true,
+    "samplePath": "/analytics/runs/analytics-run%3Aworkshop-v1.6-demo%3A2/summary"
+  }
+]

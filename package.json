@@ -13,6 +13,8 @@
     "contract:check": "pnpm --filter @cowards/spec contract:check",
     "contract:lint": "redocly lint --extends recommended packages/spec/artifacts/service-api-v1.8.openapi.json",
     "boundary:imports": "pnpm exec tsx scripts/check-service-boundary-imports.ts",
+    "go:parity:generate": "pnpm exec tsx scripts/generate-go-parity-fixtures.ts",
+    "go:parity": "pnpm exec tsx scripts/generate-go-parity-fixtures.ts --check && cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./...",
     "preflight": "pnpm exec tsx scripts/preflight.ts",
     "preflight:docker": "pnpm services:up && pnpm preflight",
     "preflight:local": "pnpm preflight -- --skip-redis",

@@ -7,6 +7,7 @@ import {
   type PublicStrategyCardDto,
 } from "@cowards/spec"
 import type { StoredChronicle } from "@cowards/persistence/chronicle-store"
+import { createWorkshopAnalyticsDemoSnapshot } from "@cowards/persistence/workshop-analytics"
 import { createCowardsLocalService } from "./index.js"
 
 const publicResult = {
@@ -238,6 +239,42 @@ describe("createCowardsLocalService", () => {
     })
     await expect(
       service.getPublicReplayMetadata("match:missing"),
+    ).resolves.toBe(null)
+  })
+
+  it("returns parsed analytics run summaries through the service boundary", async () => {
+    const snapshot = createWorkshopAnalyticsDemoSnapshot()
+    const run = snapshot.runs.find(
+      (candidate) => candidate.id === snapshot.selectedRunId,
+    )
+    if (!run) {
+      throw new Error("Expected analytics demo run")
+    }
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      getAnalyticsSnapshot: async () => snapshot,
+    })
+
+    await expect(
+      service.getAnalyticsRunSummary(run.ownerUserId, run.id),
+    ).resolves.toMatchObject({
+      apiVersion: SERVICE_API_VERSION,
+      kind: "analyticsRunSummary",
+      runId: run.id,
+      profileId: run.profileId,
+      summary: {
+        runId: run.id,
+        profileId: run.profileId,
+        privacy: {
+          ownerSafe: true,
+        },
+      },
+    })
+    await expect(
+      service.getAnalyticsRunSummary(run.ownerUserId, "analytics-run:missing"),
+    ).resolves.toBe(null)
+    await expect(
+      service.getAnalyticsRunSummary("user:not-owner", run.id),
     ).resolves.toBe(null)
   })
 })

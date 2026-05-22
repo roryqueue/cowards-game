@@ -1,0 +1,1062 @@
+{
+  "apiVersion": "service-api-v1.8",
+  "kind": "analyticsRunSummary",
+  "profileId": "analytics-profile:workshop-v1.6-demo",
+  "runId": "analytics-run:workshop-v1.6-demo:2",
+  "summary": {
+    "compatibility": {
+      "equivalent": true,
+      "hash": "sha256:e6cf6d96fdb4e52bb37402d64bd4a5ac7714ccfac0acb3bf3e453940479a387c",
+      "key": {
+        "candidateRevisionIds": [
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d"
+        ],
+        "chronicleVersion": "chronicle-v1.4",
+        "matrixOrder": [
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:starter:centerline-bully:9d6f04a2520f1c5e406a49d6bad6200429b4b48481d55d23b97a2ac4e97c27c5",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:starter:corner-lurker:017f99e5ea2502eb6ba8bbf44e861fbb38b0092f93e7cf3a1c6859b385ce0916",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:starter:backstab-hunter:d4b2d480a743ae3f5f4bbcb167385183a03d1fc0e52a8fb8c333014fbe3e2b39",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:starter:wall-press:5d8d25942b8c36ee938305c7b7cffeace1cd9a15d0377db1156cf9bc28c97762",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:starter:ring-runner:76cfb902ba1090855f0aa18b6fb39d861b1417373bbd6c22b89284dd2c914348",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:starter:mirror-breaker:caf829a7338cef862e3eeac7ef6f527f251924688c470376453e2f7c458445e7",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:starter:center-turtle:659d6906c2857f7e0d60553ace1d58e84ac9fec5e5bd4bd2e695d7a0797423d0",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:starter:aggro-chaser:5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:starter:escape-artist:8c40a5163b2ce42cceda4ea864c5cd56b31311550e9b871d438aeae58b9667ad",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:starter:trap-setter:7cc3d77b33d4a0be36b63145766789177ef561449741a9d8062d83849dafcee4",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:advanced:vanguard-pressure:02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:advanced:rear-guard-sentinel:4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:advanced:stonewall-shear:27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1",
+          "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d|revision:advanced:ring-shelter:fb848a6651bf7f53056d3435cddd273ed3c12f0f6383d1202cc0cbadc8bff8b5"
+        ],
+        "mirrorSides": true,
+        "opponentRevisionIds": [
+          "revision:starter:centerline-bully:9d6f04a2520f1c5e406a49d6bad6200429b4b48481d55d23b97a2ac4e97c27c5",
+          "revision:starter:corner-lurker:017f99e5ea2502eb6ba8bbf44e861fbb38b0092f93e7cf3a1c6859b385ce0916",
+          "revision:starter:backstab-hunter:d4b2d480a743ae3f5f4bbcb167385183a03d1fc0e52a8fb8c333014fbe3e2b39",
+          "revision:starter:wall-press:5d8d25942b8c36ee938305c7b7cffeace1cd9a15d0377db1156cf9bc28c97762",
+          "revision:starter:ring-runner:76cfb902ba1090855f0aa18b6fb39d861b1417373bbd6c22b89284dd2c914348",
+          "revision:starter:mirror-breaker:caf829a7338cef862e3eeac7ef6f527f251924688c470376453e2f7c458445e7",
+          "revision:starter:center-turtle:659d6906c2857f7e0d60553ace1d58e84ac9fec5e5bd4bd2e695d7a0797423d0",
+          "revision:starter:aggro-chaser:5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1",
+          "revision:starter:escape-artist:8c40a5163b2ce42cceda4ea864c5cd56b31311550e9b871d438aeae58b9667ad",
+          "revision:starter:trap-setter:7cc3d77b33d4a0be36b63145766789177ef561449741a9d8062d83849dafcee4",
+          "revision:advanced:vanguard-pressure:02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37",
+          "revision:advanced:rear-guard-sentinel:4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224",
+          "revision:advanced:stonewall-shear:27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1",
+          "revision:advanced:ring-shelter:fb848a6651bf7f53056d3435cddd273ed3c12f0f6383d1202cc0cbadc8bff8b5"
+        ],
+        "presetId": "standard-v1",
+        "profileSchemaVersion": "analytics-profile-v1.6",
+        "ruleVersion": "rules-v1.6",
+        "runtimeAdapter": "runtime-js",
+        "runtimeVersion": "runtime-js-v1",
+        "scoringPolicyVersion": "matchset-scoring-v1",
+        "seeds": [
+          "seed:standard:001",
+          "seed:standard:002"
+        ]
+      },
+      "mismatches": []
+    },
+    "lifecycleStatus": "complete",
+    "matchupRecords": [
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 1,
+        "evidence": {
+          "band": "strong",
+          "completedCount": 8,
+          "counted": true,
+          "failureCount": 0,
+          "notes": [
+            "Strong replay-backed deterministic evidence."
+          ],
+          "replayBackedCount": 8,
+          "systemFailureCount": 0,
+          "totalCount": 8
+        },
+        "failureCount": 0,
+        "losses": 1,
+        "matchIds": [
+          "match:analytics:00:1",
+          "match:analytics:00:2",
+          "match:analytics:00:3",
+          "match:analytics:00:4",
+          "match:analytics:00:5",
+          "match:analytics:00:6",
+          "match:analytics:00:7",
+          "match:analytics:00:8"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:starter:centerline-bully",
+        "opponent": {
+          "archetypeTags": [
+            "Center control",
+            "Pressure",
+            "Readable"
+          ],
+          "label": "Centerline Bully",
+          "opponentId": "starter:centerline-bully",
+          "revisionId": "revision:starter:centerline-bully:9d6f04a2520f1c5e406a49d6bad6200429b4b48481d55d23b97a2ac4e97c27c5",
+          "sourceHash": "9d6f04a2520f1c5e406a49d6bad6200429b4b48481d55d23b97a2ac4e97c27c5",
+          "tags": [
+            "Center control",
+            "Pressure",
+            "Readable"
+          ],
+          "tier": "starter"
+        },
+        "points": 19,
+        "replayReferences": [
+          {
+            "fallbackState": "available",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Acompound-tour/replay?moment=DECISIVE_PUSH&sequence=24",
+            "label": "Decisive push",
+            "matchId": "match:e2e-replay-fixture:compound-tour",
+            "momentType": "DECISIVE_PUSH",
+            "sequence": 24,
+            "side": "bottom"
+          }
+        ],
+        "sideBias": "balanced",
+        "wins": 6
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 2,
+        "evidence": {
+          "band": "strong",
+          "completedCount": 8,
+          "counted": true,
+          "failureCount": 0,
+          "notes": [
+            "Strong replay-backed deterministic evidence."
+          ],
+          "replayBackedCount": 8,
+          "systemFailureCount": 0,
+          "totalCount": 8
+        },
+        "failureCount": 0,
+        "losses": 4,
+        "matchIds": [
+          "match:analytics:01:1",
+          "match:analytics:01:2",
+          "match:analytics:01:3",
+          "match:analytics:01:4",
+          "match:analytics:01:5",
+          "match:analytics:01:6",
+          "match:analytics:01:7",
+          "match:analytics:01:8"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:starter:corner-lurker",
+        "opponent": {
+          "archetypeTags": [
+            "Defense",
+            "Corners",
+            "STONE"
+          ],
+          "label": "Corner Lurker",
+          "opponentId": "starter:corner-lurker",
+          "revisionId": "revision:starter:corner-lurker:017f99e5ea2502eb6ba8bbf44e861fbb38b0092f93e7cf3a1c6859b385ce0916",
+          "sourceHash": "017f99e5ea2502eb6ba8bbf44e861fbb38b0092f93e7cf3a1c6859b385ce0916",
+          "tags": [
+            "Defense",
+            "Corners",
+            "STONE"
+          ],
+          "tier": "starter"
+        },
+        "points": 8,
+        "replayReferences": [
+          {
+            "fallbackState": "available",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Alegal-backstab/replay?moment=BACKSTAB&sequence=18",
+            "label": "Backstab swing",
+            "matchId": "match:e2e-replay-fixture:legal-backstab",
+            "momentType": "BACKSTAB",
+            "sequence": 18,
+            "side": "top"
+          }
+        ],
+        "sideBias": "top",
+        "wins": 2
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 2,
+        "evidence": {
+          "band": "strong",
+          "completedCount": 8,
+          "counted": true,
+          "failureCount": 0,
+          "notes": [
+            "Strong replay-backed deterministic evidence."
+          ],
+          "replayBackedCount": 8,
+          "systemFailureCount": 0,
+          "totalCount": 8
+        },
+        "failureCount": 0,
+        "losses": 5,
+        "matchIds": [
+          "match:analytics:02:1",
+          "match:analytics:02:2",
+          "match:analytics:02:3",
+          "match:analytics:02:4",
+          "match:analytics:02:5",
+          "match:analytics:02:6",
+          "match:analytics:02:7",
+          "match:analytics:02:8"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:starter:backstab-hunter",
+        "opponent": {
+          "archetypeTags": [
+            "Backstab",
+            "Memory",
+            "Tactics"
+          ],
+          "label": "Backstab Hunter",
+          "opponentId": "starter:backstab-hunter",
+          "revisionId": "revision:starter:backstab-hunter:d4b2d480a743ae3f5f4bbcb167385183a03d1fc0e52a8fb8c333014fbe3e2b39",
+          "sourceHash": "d4b2d480a743ae3f5f4bbcb167385183a03d1fc0e52a8fb8c333014fbe3e2b39",
+          "tags": [
+            "Backstab",
+            "Memory",
+            "Tactics"
+          ],
+          "tier": "starter"
+        },
+        "points": 5,
+        "replayReferences": [
+          {
+            "fallbackState": "available",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Alegal-backstab/replay?moment=BACKSTAB&sequence=18",
+            "label": "Backstab swing",
+            "matchId": "match:e2e-replay-fixture:legal-backstab",
+            "momentType": "BACKSTAB",
+            "sequence": 18,
+            "side": "top"
+          }
+        ],
+        "sideBias": "top",
+        "wins": 1
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 3,
+        "evidence": {
+          "band": "thin",
+          "completedCount": 3,
+          "counted": true,
+          "failureCount": 0,
+          "notes": [
+            "Thin evidence: counted but below the strong threshold."
+          ],
+          "replayBackedCount": 3,
+          "systemFailureCount": 0,
+          "totalCount": 3
+        },
+        "failureCount": 0,
+        "losses": 2,
+        "matchIds": [
+          "match:analytics:03:1",
+          "match:analytics:03:2",
+          "match:analytics:03:3"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:starter:wall-press",
+        "opponent": {
+          "archetypeTags": [
+            "Edges",
+            "Push",
+            "Pressure"
+          ],
+          "label": "Wall Press",
+          "opponentId": "starter:wall-press",
+          "revisionId": "revision:starter:wall-press:5d8d25942b8c36ee938305c7b7cffeace1cd9a15d0377db1156cf9bc28c97762",
+          "sourceHash": "5d8d25942b8c36ee938305c7b7cffeace1cd9a15d0377db1156cf9bc28c97762",
+          "tags": [
+            "Edges",
+            "Push",
+            "Pressure"
+          ],
+          "tier": "starter"
+        },
+        "points": 12,
+        "replayReferences": [
+          {
+            "fallbackState": "available",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Acompound-tour/replay?moment=LATE_CYCLE_STABILIZATION&sequence=34",
+            "label": "Late-cycle stabilization",
+            "matchId": "match:e2e-replay-fixture:compound-tour",
+            "momentType": "LATE_CYCLE_STABILIZATION",
+            "sequence": 34,
+            "side": "bottom"
+          }
+        ],
+        "sideBias": "insufficient",
+        "wins": 3
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 0,
+        "evidence": {
+          "band": "degraded_non_counted",
+          "completedCount": 2,
+          "counted": false,
+          "failureCount": 1,
+          "notes": [
+            "Degraded evidence: one replay is unavailable, not counted."
+          ],
+          "replayBackedCount": 1,
+          "systemFailureCount": 0,
+          "totalCount": 8
+        },
+        "failureCount": 1,
+        "losses": 2,
+        "matchIds": [
+          "match:analytics:04:1",
+          "match:analytics:04:2",
+          "match:analytics:04:3",
+          "match:analytics:04:4",
+          "match:analytics:04:5",
+          "match:analytics:04:6",
+          "match:analytics:04:7",
+          "match:analytics:04:8"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:starter:ring-runner",
+        "opponent": {
+          "archetypeTags": [
+            "Mobility",
+            "Memory",
+            "Contraction"
+          ],
+          "label": "Ring Runner",
+          "opponentId": "starter:ring-runner",
+          "revisionId": "revision:starter:ring-runner:76cfb902ba1090855f0aa18b6fb39d861b1417373bbd6c22b89284dd2c914348",
+          "sourceHash": "76cfb902ba1090855f0aa18b6fb39d861b1417373bbd6c22b89284dd2c914348",
+          "tags": [
+            "Mobility",
+            "Memory",
+            "Contraction"
+          ],
+          "tier": "starter"
+        },
+        "points": 0,
+        "replayReferences": [
+          {
+            "fallbackState": "replay_unavailable",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Afall/replay?moment=FALL&sequence=14",
+            "label": "Fall after pressure",
+            "matchId": "match:e2e-replay-fixture:fall",
+            "momentType": "FALL",
+            "sequence": 14,
+            "side": "bottom"
+          }
+        ],
+        "sideBias": "insufficient",
+        "wins": 0
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 3,
+        "evidence": {
+          "band": "strong",
+          "completedCount": 8,
+          "counted": true,
+          "failureCount": 0,
+          "notes": [
+            "Strong replay-backed deterministic evidence."
+          ],
+          "replayBackedCount": 8,
+          "systemFailureCount": 0,
+          "totalCount": 8
+        },
+        "failureCount": 0,
+        "losses": 0,
+        "matchIds": [
+          "match:analytics:05:1",
+          "match:analytics:05:2",
+          "match:analytics:05:3",
+          "match:analytics:05:4",
+          "match:analytics:05:5",
+          "match:analytics:05:6",
+          "match:analytics:05:7",
+          "match:analytics:05:8"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:starter:mirror-breaker",
+        "opponent": {
+          "archetypeTags": [
+            "Symmetry",
+            "Memory",
+            "Timing"
+          ],
+          "label": "Mirror Breaker",
+          "opponentId": "starter:mirror-breaker",
+          "revisionId": "revision:starter:mirror-breaker:caf829a7338cef862e3eeac7ef6f527f251924688c470376453e2f7c458445e7",
+          "sourceHash": "caf829a7338cef862e3eeac7ef6f527f251924688c470376453e2f7c458445e7",
+          "tags": [
+            "Symmetry",
+            "Memory",
+            "Timing"
+          ],
+          "tier": "starter"
+        },
+        "points": 18,
+        "replayReferences": [
+          {
+            "fallbackState": "available",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Acompound-tour/replay?moment=CONTRACTION&sequence=30",
+            "label": "Contraction checkpoint",
+            "matchId": "match:e2e-replay-fixture:compound-tour",
+            "momentType": "CONTRACTION",
+            "sequence": 30,
+            "side": "bottom"
+          }
+        ],
+        "sideBias": "balanced",
+        "wins": 5
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 4,
+        "evidence": {
+          "band": "thin",
+          "completedCount": 3,
+          "counted": true,
+          "failureCount": 0,
+          "notes": [
+            "Thin evidence: counted but below the strong threshold."
+          ],
+          "replayBackedCount": 3,
+          "systemFailureCount": 0,
+          "totalCount": 3
+        },
+        "failureCount": 0,
+        "losses": 2,
+        "matchIds": [
+          "match:analytics:06:1",
+          "match:analytics:06:2",
+          "match:analytics:06:3"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:starter:center-turtle",
+        "opponent": {
+          "archetypeTags": [
+            "Defense",
+            "Center",
+            "Stable"
+          ],
+          "label": "Center Turtle",
+          "opponentId": "starter:center-turtle",
+          "revisionId": "revision:starter:center-turtle:659d6906c2857f7e0d60553ace1d58e84ac9fec5e5bd4bd2e695d7a0797423d0",
+          "sourceHash": "659d6906c2857f7e0d60553ace1d58e84ac9fec5e5bd4bd2e695d7a0797423d0",
+          "tags": [
+            "Defense",
+            "Center",
+            "Stable"
+          ],
+          "tier": "starter"
+        },
+        "points": 10,
+        "replayReferences": [
+          {
+            "fallbackState": "available",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Acompound-tour/replay?moment=NO_ADVANCE_CLEANUP&sequence=21",
+            "label": "No-advance cleanup",
+            "matchId": "match:e2e-replay-fixture:compound-tour",
+            "momentType": "NO_ADVANCE_CLEANUP",
+            "sequence": 21,
+            "side": "bottom"
+          }
+        ],
+        "sideBias": "balanced",
+        "wins": 2
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 0,
+        "evidence": {
+          "band": "system_failed",
+          "completedCount": 0,
+          "counted": false,
+          "failureCount": 0,
+          "notes": [
+            "System failure: excluded from matchup scoring."
+          ],
+          "replayBackedCount": 0,
+          "systemFailureCount": 4,
+          "totalCount": 4
+        },
+        "failureCount": 4,
+        "losses": 0,
+        "matchIds": [
+          "match:analytics:07:1",
+          "match:analytics:07:2",
+          "match:analytics:07:3",
+          "match:analytics:07:4"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:starter:aggro-chaser",
+        "opponent": {
+          "archetypeTags": [
+            "Aggro",
+            "Chase",
+            "Contact"
+          ],
+          "label": "Aggro Chaser",
+          "opponentId": "starter:aggro-chaser",
+          "revisionId": "revision:starter:aggro-chaser:5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1",
+          "sourceHash": "5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1",
+          "tags": [
+            "Aggro",
+            "Chase",
+            "Contact"
+          ],
+          "tier": "starter"
+        },
+        "points": 0,
+        "replayReferences": [],
+        "sideBias": "insufficient",
+        "wins": 0
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 1,
+        "evidence": {
+          "band": "strong",
+          "completedCount": 8,
+          "counted": true,
+          "failureCount": 0,
+          "notes": [
+            "Strong replay-backed deterministic evidence."
+          ],
+          "replayBackedCount": 8,
+          "systemFailureCount": 0,
+          "totalCount": 8
+        },
+        "failureCount": 0,
+        "losses": 1,
+        "matchIds": [
+          "match:analytics:08:1",
+          "match:analytics:08:2",
+          "match:analytics:08:3",
+          "match:analytics:08:4",
+          "match:analytics:08:5",
+          "match:analytics:08:6",
+          "match:analytics:08:7",
+          "match:analytics:08:8"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:starter:escape-artist",
+        "opponent": {
+          "archetypeTags": [
+            "Mobility",
+            "Memory",
+            "Survival"
+          ],
+          "label": "Escape Artist",
+          "opponentId": "starter:escape-artist",
+          "revisionId": "revision:starter:escape-artist:8c40a5163b2ce42cceda4ea864c5cd56b31311550e9b871d438aeae58b9667ad",
+          "sourceHash": "8c40a5163b2ce42cceda4ea864c5cd56b31311550e9b871d438aeae58b9667ad",
+          "tags": [
+            "Mobility",
+            "Memory",
+            "Survival"
+          ],
+          "tier": "starter"
+        },
+        "points": 19,
+        "replayReferences": [
+          {
+            "fallbackState": "available",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Acompound-tour/replay?moment=DECISIVE_PUSH&sequence=24",
+            "label": "Decisive push",
+            "matchId": "match:e2e-replay-fixture:compound-tour",
+            "momentType": "DECISIVE_PUSH",
+            "sequence": 24,
+            "side": "bottom"
+          }
+        ],
+        "sideBias": "balanced",
+        "wins": 6
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 2,
+        "evidence": {
+          "band": "strong",
+          "completedCount": 8,
+          "counted": true,
+          "failureCount": 0,
+          "notes": [
+            "Strong replay-backed deterministic evidence."
+          ],
+          "replayBackedCount": 8,
+          "systemFailureCount": 0,
+          "totalCount": 8
+        },
+        "failureCount": 0,
+        "losses": 4,
+        "matchIds": [
+          "match:analytics:09:1",
+          "match:analytics:09:2",
+          "match:analytics:09:3",
+          "match:analytics:09:4",
+          "match:analytics:09:5",
+          "match:analytics:09:6",
+          "match:analytics:09:7",
+          "match:analytics:09:8"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:starter:trap-setter",
+        "opponent": {
+          "archetypeTags": [
+            "Trap",
+            "Memory",
+            "STONE"
+          ],
+          "label": "Trap Setter",
+          "opponentId": "starter:trap-setter",
+          "revisionId": "revision:starter:trap-setter:7cc3d77b33d4a0be36b63145766789177ef561449741a9d8062d83849dafcee4",
+          "sourceHash": "7cc3d77b33d4a0be36b63145766789177ef561449741a9d8062d83849dafcee4",
+          "tags": [
+            "Trap",
+            "Memory",
+            "STONE"
+          ],
+          "tier": "starter"
+        },
+        "points": 8,
+        "replayReferences": [
+          {
+            "fallbackState": "available",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Alegal-backstab/replay?moment=BACKSTAB&sequence=18",
+            "label": "Backstab swing",
+            "matchId": "match:e2e-replay-fixture:legal-backstab",
+            "momentType": "BACKSTAB",
+            "sequence": 18,
+            "side": "top"
+          }
+        ],
+        "sideBias": "top",
+        "wins": 2
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 2,
+        "evidence": {
+          "band": "strong",
+          "completedCount": 8,
+          "counted": true,
+          "failureCount": 0,
+          "notes": [
+            "Strong replay-backed deterministic evidence."
+          ],
+          "replayBackedCount": 8,
+          "systemFailureCount": 0,
+          "totalCount": 8
+        },
+        "failureCount": 0,
+        "losses": 5,
+        "matchIds": [
+          "match:analytics:10:1",
+          "match:analytics:10:2",
+          "match:analytics:10:3",
+          "match:analytics:10:4",
+          "match:analytics:10:5",
+          "match:analytics:10:6",
+          "match:analytics:10:7",
+          "match:analytics:10:8"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:advanced:vanguard-pressure",
+        "opponent": {
+          "archetypeTags": [
+            "pressure / contact",
+            "Advanced seed",
+            "Pressure",
+            "Contact"
+          ],
+          "label": "Vanguard Pressure",
+          "opponentId": "advanced:vanguard-pressure",
+          "revisionId": "revision:advanced:vanguard-pressure:02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37",
+          "sourceHash": "02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37",
+          "tags": [
+            "Advanced seed",
+            "Pressure",
+            "Contact"
+          ],
+          "tier": "advanced"
+        },
+        "points": 5,
+        "replayReferences": [
+          {
+            "fallbackState": "available",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Alegal-backstab/replay?moment=BACKSTAB&sequence=18",
+            "label": "Backstab swing",
+            "matchId": "match:e2e-replay-fixture:legal-backstab",
+            "momentType": "BACKSTAB",
+            "sequence": 18,
+            "side": "top"
+          }
+        ],
+        "sideBias": "top",
+        "wins": 1
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 3,
+        "evidence": {
+          "band": "thin",
+          "completedCount": 3,
+          "counted": true,
+          "failureCount": 0,
+          "notes": [
+            "Thin evidence: counted but below the strong threshold."
+          ],
+          "replayBackedCount": 3,
+          "systemFailureCount": 0,
+          "totalCount": 3
+        },
+        "failureCount": 0,
+        "losses": 2,
+        "matchIds": [
+          "match:analytics:11:1",
+          "match:analytics:11:2",
+          "match:analytics:11:3"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:advanced:rear-guard-sentinel",
+        "opponent": {
+          "archetypeTags": [
+            "anti-backstab positioning",
+            "Advanced seed",
+            "Anti-Backstab",
+            "Positioning",
+            "Memory"
+          ],
+          "label": "Rear Guard Sentinel",
+          "opponentId": "advanced:rear-guard-sentinel",
+          "revisionId": "revision:advanced:rear-guard-sentinel:4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224",
+          "sourceHash": "4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224",
+          "tags": [
+            "Advanced seed",
+            "Anti-Backstab",
+            "Positioning",
+            "Memory"
+          ],
+          "tier": "advanced"
+        },
+        "points": 12,
+        "replayReferences": [
+          {
+            "fallbackState": "available",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Acompound-tour/replay?moment=LATE_CYCLE_STABILIZATION&sequence=34",
+            "label": "Late-cycle stabilization",
+            "matchId": "match:e2e-replay-fixture:compound-tour",
+            "momentType": "LATE_CYCLE_STABILIZATION",
+            "sequence": 34,
+            "side": "bottom"
+          }
+        ],
+        "sideBias": "insufficient",
+        "wins": 3
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 0,
+        "evidence": {
+          "band": "degraded_non_counted",
+          "completedCount": 2,
+          "counted": false,
+          "failureCount": 1,
+          "notes": [
+            "Degraded evidence: one replay is unavailable, not counted."
+          ],
+          "replayBackedCount": 1,
+          "systemFailureCount": 0,
+          "totalCount": 8
+        },
+        "failureCount": 1,
+        "losses": 2,
+        "matchIds": [
+          "match:analytics:12:1",
+          "match:analytics:12:2",
+          "match:analytics:12:3",
+          "match:analytics:12:4",
+          "match:analytics:12:5",
+          "match:analytics:12:6",
+          "match:analytics:12:7",
+          "match:analytics:12:8"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:advanced:stonewall-shear",
+        "opponent": {
+          "archetypeTags": [
+            "wall control",
+            "Advanced seed",
+            "Wall",
+            "Edge",
+            "Control"
+          ],
+          "label": "Stonewall Shear",
+          "opponentId": "advanced:stonewall-shear",
+          "revisionId": "revision:advanced:stonewall-shear:27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1",
+          "sourceHash": "27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1",
+          "tags": [
+            "Advanced seed",
+            "Wall",
+            "Edge",
+            "Control"
+          ],
+          "tier": "advanced"
+        },
+        "points": 0,
+        "replayReferences": [
+          {
+            "fallbackState": "replay_unavailable",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Afall/replay?moment=FALL&sequence=14",
+            "label": "Fall after pressure",
+            "matchId": "match:e2e-replay-fixture:fall",
+            "momentType": "FALL",
+            "sequence": 14,
+            "side": "bottom"
+          }
+        ],
+        "sideBias": "insufficient",
+        "wins": 0
+      },
+      {
+        "candidate": {
+          "label": "Sentinel Workshop",
+          "revisionId": "revision:workshop:4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+          "tags": [
+            "Local",
+            "Sentinel",
+            "Stone"
+          ]
+        },
+        "draws": 3,
+        "evidence": {
+          "band": "strong",
+          "completedCount": 8,
+          "counted": true,
+          "failureCount": 0,
+          "notes": [
+            "Strong replay-backed deterministic evidence."
+          ],
+          "replayBackedCount": 8,
+          "systemFailureCount": 0,
+          "totalCount": 8
+        },
+        "failureCount": 0,
+        "losses": 0,
+        "matchIds": [
+          "match:analytics:13:1",
+          "match:analytics:13:2",
+          "match:analytics:13:3",
+          "match:analytics:13:4",
+          "match:analytics:13:5",
+          "match:analytics:13:6",
+          "match:analytics:13:7",
+          "match:analytics:13:8"
+        ],
+        "matchSetId": "match-set:analytics:v1.6:advanced:ring-shelter",
+        "opponent": {
+          "archetypeTags": [
+            "contraction survival",
+            "Advanced seed",
+            "Contraction",
+            "Survival",
+            "Memory"
+          ],
+          "label": "Ring Shelter",
+          "opponentId": "advanced:ring-shelter",
+          "revisionId": "revision:advanced:ring-shelter:fb848a6651bf7f53056d3435cddd273ed3c12f0f6383d1202cc0cbadc8bff8b5",
+          "sourceHash": "fb848a6651bf7f53056d3435cddd273ed3c12f0f6383d1202cc0cbadc8bff8b5",
+          "tags": [
+            "Advanced seed",
+            "Contraction",
+            "Survival",
+            "Memory"
+          ],
+          "tier": "advanced"
+        },
+        "points": 18,
+        "replayReferences": [
+          {
+            "fallbackState": "available",
+            "href": "/matches/match%3Ae2e-replay-fixture%3Acompound-tour/replay?moment=CONTRACTION&sequence=30",
+            "label": "Contraction checkpoint",
+            "matchId": "match:e2e-replay-fixture:compound-tour",
+            "momentType": "CONTRACTION",
+            "sequence": 30,
+            "side": "bottom"
+          }
+        ],
+        "sideBias": "balanced",
+        "wins": 5
+      }
+    ],
+    "metadata": {
+      "compatibilityEquivalentToPreviousRun": true,
+      "demo": true,
+      "localOwnerPlayerId": "player:workshop-local"
+    },
+    "ownerUserId": "user:local",
+    "privacy": {
+      "ownerSafe": true,
+      "publicFieldsExcluded": [
+        "strategy code",
+        "private strategy state",
+        "private soldier state",
+        "activation payloads",
+        "owner-only debugging",
+        "private grid observations",
+        "runtime internals"
+      ]
+    },
+    "profileId": "analytics-profile:workshop-v1.6-demo",
+    "provenance": {
+      "generatedAt": "2026-05-22T00:00:00.000Z",
+      "matchSetIds": [
+        "match-set:analytics:v1.6:starter:centerline-bully",
+        "match-set:analytics:v1.6:starter:corner-lurker",
+        "match-set:analytics:v1.6:starter:backstab-hunter",
+        "match-set:analytics:v1.6:starter:wall-press",
+        "match-set:analytics:v1.6:starter:ring-runner",
+        "match-set:analytics:v1.6:starter:mirror-breaker",
+        "match-set:analytics:v1.6:starter:center-turtle",
+        "match-set:analytics:v1.6:starter:aggro-chaser",
+        "match-set:analytics:v1.6:starter:escape-artist",
+        "match-set:analytics:v1.6:starter:trap-setter",
+        "match-set:analytics:v1.6:advanced:vanguard-pressure",
+        "match-set:analytics:v1.6:advanced:rear-guard-sentinel",
+        "match-set:analytics:v1.6:advanced:stonewall-shear",
+        "match-set:analytics:v1.6:advanced:ring-shelter"
+      ],
+      "runSchemaVersion": "analytics-run-v1.6"
+    },
+    "runId": "analytics-run:workshop-v1.6-demo:2",
+    "summarySchemaVersion": "analytics-summary-v1.6",
+    "totals": {
+      "completedMatches": 77,
+      "draws": 26,
+      "failedMatches": 6,
+      "losses": 30,
+      "matchups": 14,
+      "points": 134,
+      "wins": 36
+    }
+  }
+}

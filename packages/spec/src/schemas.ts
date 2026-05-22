@@ -668,6 +668,7 @@ const SERVICE_SCHEMA_ROUTE_IDS = [
   "getPublicReplayMetadata",
   "listAnalyticsProfiles",
   "createAnalyticsRun",
+  "getAnalyticsRunSummary",
   "exportAnalyticsRun",
   "listLadderSeasons",
   "enterLadderSeason",
@@ -957,6 +958,14 @@ export const CreateAnalyticsRunServiceDtoSchema = z.object({
   profileId: z.string().min(1),
   status: z.enum(["queued", "running", "complete", "failed"]),
   summary: JsonValueSchema.optional(),
+})
+
+export const AnalyticsRunSummaryServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("analyticsRunSummary"),
+  runId: z.string().min(1),
+  profileId: z.string().min(1),
+  summary: AnalyticsGauntletRunSummarySchema,
 })
 
 export const ExportAnalyticsRunServiceDtoSchema = z.object({
