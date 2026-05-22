@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: Ready for v1.6 planning
-status: milestone_complete
+milestone: v1.6
+milestone_name: Workshop Analytics and Evidence Explorer
+status: planning
 last_updated: "2026-05-21T00:00:00.000Z"
-last_activity: 2026-05-21 — v1.5 archived and tagged
+last_activity: 2026-05-21 — Milestone v1.6 started
 progress:
   total_phases: 0
   completed_phases: 0
@@ -16,24 +16,24 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.5 Strategy Workshop Power Tools and Advanced Strategy Library shipped and archived
+**Status:** v1.6 Workshop Analytics and Evidence Explorer planning started
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-21)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Planning the next milestone
-**Current milestone:** None active
-**Requirements:** Fresh `.planning/REQUIREMENTS.md` should be created by `$gsd-new-milestone`
+**Current focus:** Defining v1.6 requirements and roadmap
+**Current milestone:** v1.6 Workshop Analytics and Evidence Explorer
+**Requirements:** Fresh `.planning/REQUIREMENTS.md` is being created for v1.6
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: None active
-Plan: Needs `$gsd-new-milestone`
-Status: v1.5 archived; ready to define v1.6
-Last activity: 2026-05-21 — v1.5 completed, audited, archived, and tagged
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-21 — Milestone v1.6 started
 
 ## Workflow Settings
 
@@ -90,7 +90,7 @@ Items acknowledged and deferred after v1.5 milestone completion on 2026-05-21:
 
 ## Next Command
 
-Run `$gsd-new-milestone` to define the next milestone and create a fresh `.planning/REQUIREMENTS.md`.
+Complete v1.6 requirements and roadmap, then run `$gsd-discuss-phase 38`.
 
 ---
-*Last updated: 2026-05-21 after v1.5 milestone completion*
+*Last updated: 2026-05-21 after v1.6 milestone start*

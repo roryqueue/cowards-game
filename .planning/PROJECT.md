@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.5 Strategy Workshop Power Tools and Advanced Strategy Library on 2026-05-21
-**Current milestone:** None active; ready to define v1.6.
-**Status:** v1.5 shipped and archived; fresh requirements should be created with `$gsd-new-milestone`.
+**Current milestone:** v1.6 Workshop Analytics and Evidence Explorer.
+**Status:** v1.6 milestone definition in progress.
 **Last audit:** v1.5 milestone audit passed, 53/53 requirements satisfied.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible starter Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, and trust that public outputs do not expose private Strategy data.
@@ -12,6 +12,18 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.6 Workshop Analytics and Evidence Explorer
+
+**Goal:** Turn v1.5's deterministic evidence into studyable Workshop analytics through saved gauntlet profiles, matchup heatmaps, evidence bands, replay deep links, and owner-safe exportable summaries.
+
+**Target features:**
+- Saved named gauntlet profiles with exact opponents, presets, seeds, rule versions, scoring policy, and revision ids.
+- Compatibility-aware profile reruns and comparisons that never execute Strategy code in the web/API process.
+- Workshop matchup heatmaps across selected Strategies and opponents, including W-L-D, points, failures, side bias, evidence confidence, and evidence counts.
+- Evidence explorer drilldowns from Strategy to opponent to MatchSet to replay.
+- Replay deep links to meaningful public moments such as Backstab, contraction, no-advance cleanup, fall, decisive push, and late-cycle stabilization.
+- Owner-only JSON/CSV exports for deterministic gauntlet summaries that preserve public privacy boundaries.
 
 ## Latest Shipped Milestone: v1.5 Strategy Workshop Power Tools and Advanced Strategy Library
 
@@ -27,10 +39,9 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 ## Next Milestone Goals
 
-The next milestone should start with `$gsd-new-milestone` and fresh requirements. Strong candidate directions are:
+v1.6 is now active. Candidate directions not included in this milestone remain:
 
-- Richer Workshop analytics: saved gauntlet profiles, matchup heatmaps, evidence bands, and owner-only exportable summaries.
-- Replay analysis UX: better timeline search, event filters, threat/backstab overlays, contraction risk markers, and side-by-side replay comparison.
+- Replay analysis UX beyond targeted deep links, such as full timeline search, event filters, threat/backstab overlays, contraction risk markers, and side-by-side replay comparison.
 - Public competition operations: official scheduled tournament formats, governance/moderation flows, and clearer public tournament pages without durable ratings yet.
 - Production runtime hardening: promote containerized subprocess isolation toward a production-grade hostile-code boundary.
 - Strategy authoring ergonomics: snippets, lint rules, local tactical helpers, and stronger diagnostics for common no-advance/trapped-Soldier mistakes.
@@ -184,4 +195,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-21 after v1.5 milestone completion*
+*Last updated: 2026-05-21 after v1.6 milestone start*
