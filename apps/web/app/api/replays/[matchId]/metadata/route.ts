@@ -1,6 +1,6 @@
 import type { MatchId } from "@cowards/spec"
 import { competitiveErrorResponse } from "../../../../competitive/http.js"
-import { matchReplayServer } from "../../../../matches/server.js"
+import { getPublicReplayMetadata } from "../../../../../lib/public-service-boundary.js"
 
 export async function GET(
   _request: Request,
@@ -8,9 +8,7 @@ export async function GET(
 ): Promise<Response> {
   try {
     const params = await context.params
-    const metadata = await matchReplayServer.getPublicReplayMetadata(
-      decodeURIComponent(params.matchId) as MatchId,
-    )
+    const metadata = await getPublicReplayMetadata(params.matchId as MatchId)
     if (!metadata) {
       return Response.json(
         { error: "Replay metadata not found." },

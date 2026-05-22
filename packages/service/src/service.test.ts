@@ -123,6 +123,46 @@ describe("createCowardsLocalService", () => {
     })
   })
 
+  it("parses public MatchSet summaries through the public service schema", async () => {
+    const resultWithPrivateRuntimeLimits = {
+      ...publicResult,
+      entrants: [
+        {
+          entrantId: "entrant:demo",
+          entrantIndex: 0,
+          strategyRevisionId: "strategy-revision:demo",
+          ownerUserId: "user:demo",
+          ownerHandle: "demo-player",
+          displayLabel: "Demo Strategy",
+          sourceHash: "sourcehash-demo",
+          sourceBytes: 256,
+          runtime: {
+            ...runtime,
+            limits: {
+              timeoutMs: 1000,
+              memoryBytes: 64 * 1024 * 1024,
+            },
+          },
+          engineCompatibility: {
+            spec: "cowards-rules-v1.4",
+            engine: "engine-v1",
+          },
+          lockedAt: "2026-05-22T00:00:00.000Z",
+        },
+      ],
+    } as unknown as PublicMatchSetResultDto
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      buildPublicMatchSetResult: async () => resultWithPrivateRuntimeLimits,
+    })
+
+    const summary = await service.getPublicMatchSetSummary("match-set:demo")
+
+    expect(summary?.result.entrants[0]?.runtime).toEqual(runtime)
+    expect(JSON.stringify(summary)).not.toContain("timeoutMs")
+    expect(JSON.stringify(summary)).not.toContain("memoryBytes")
+  })
+
   it("wraps public Strategy cards in a public page service envelope", async () => {
     const service = createCowardsLocalService({
       withPool: async (fn) => fn({} as never),
@@ -186,7 +226,7 @@ describe("createCowardsLocalService", () => {
       matchId: "match:demo",
       metadata: {
         matchId: "match:demo",
-        chronicleId: "match:demo",
+        chronicleId: "chronicle:demo",
         hash: "chroniclehash-demo",
         schemaVersion: "chronicle-v1.4",
         eventCount: 2,

@@ -10,6 +10,7 @@ const strictFiles = [
   "apps/web/app/matchsets/[matchSetId]/page.tsx",
   "apps/web/app/api/replays/[matchId]/metadata/route.ts",
   "apps/web/app/strategies/[strategyId]/page.tsx",
+  "apps/web/lib/public-service-boundary.ts",
 ] as const
 
 const writeRepoFile = (
@@ -82,5 +83,116 @@ describe("service boundary import guard", () => {
       },
     ])
     expect(result.exitCode).toBe(0)
+  })
+
+  it("fails strict migrated files on broad web server facades", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    for (const file of strictFiles) {
+      writeRepoFile(repoRoot, file, "export const ok = true\n")
+    }
+    writeRepoFile(
+      repoRoot,
+      strictFiles[1],
+      "import { competitiveServer } from '../../../competitive/server.js'\n",
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.strictOffenses).toEqual([
+      {
+        path: strictFiles[1],
+        line: 1,
+        pattern: "competitive/server",
+      },
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
+  it("fails strict local dependencies on forbidden imports", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    for (const file of strictFiles) {
+      writeRepoFile(repoRoot, file, "export const ok = true\n")
+    }
+    writeRepoFile(
+      repoRoot,
+      strictFiles[1],
+      "import { load } from '../../../../lib/unsafe-helper.js'\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/web/lib/unsafe-helper.ts",
+      "import { createDatabasePool } from '@cowards/persistence/db'\n",
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.strictOffenses).toEqual([
+      {
+        path: "apps/web/lib/unsafe-helper.ts",
+        line: 1,
+        pattern: "@cowards/persistence",
+      },
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
+  it("allows the approved public service adapter to own local persistence bridging", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    for (const file of strictFiles) {
+      writeRepoFile(repoRoot, file, "export const ok = true\n")
+    }
+    writeRepoFile(
+      repoRoot,
+      strictFiles[1],
+      "import { read } from '../../../../lib/public-service-boundary.js'\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/web/lib/public-service-boundary.ts",
+      "import { adapter } from './public-service-adapter.js'\nexport const read = adapter\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/web/lib/public-service-adapter.ts",
+      "import { createDatabasePool } from '@cowards/persistence/db'\nexport const adapter = createDatabasePool\n",
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.strictOffenses).toEqual([])
+    expect(result.exitCode).toBe(0)
+  })
+
+  it("fails the approved public service adapter on non-persistence forbidden imports", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    for (const file of strictFiles) {
+      writeRepoFile(repoRoot, file, "export const ok = true\n")
+    }
+    writeRepoFile(
+      repoRoot,
+      strictFiles[1],
+      "import { read } from '../../../../lib/public-service-boundary.js'\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/web/lib/public-service-boundary.ts",
+      "import { adapter } from './public-service-adapter.js'\nexport const read = adapter\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/web/lib/public-service-adapter.ts",
+      "import { runWorkerOnce } from '@cowards/worker'\nexport const adapter = runWorkerOnce\n",
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.strictOffenses).toEqual([
+      {
+        path: "apps/web/lib/public-service-adapter.ts",
+        line: 1,
+        pattern: "@cowards/worker",
+      },
+    ])
+    expect(result.exitCode).toBe(1)
   })
 })

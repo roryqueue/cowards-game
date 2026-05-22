@@ -1,4 +1,5 @@
-import { competitiveServer } from "../../competitive/server.js"
+import type { StrategyId } from "@cowards/spec"
+import { getPublicStrategyCard } from "../../../lib/public-service-boundary.js"
 
 export const dynamic = "force-dynamic"
 
@@ -8,9 +9,7 @@ export default async function StrategyCardPage({
   params: Promise<{ strategyId: string }> | { strategyId: string }
 }) {
   const { strategyId } = await params
-  const strategy = await competitiveServer.getPublicStrategyCard(
-    decodeURIComponent(strategyId),
-  )
+  const strategy = await getPublicStrategyCard(strategyId as StrategyId)
   if (!strategy) {
     return (
       <main className="app-page">

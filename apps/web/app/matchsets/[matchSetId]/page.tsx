@@ -1,8 +1,5 @@
 import type { MatchSetId } from "@cowards/spec"
-import {
-  competitiveServer,
-  getCurrentCompetitiveUser,
-} from "../../competitive/server.js"
+import { getPublicMatchSetResult } from "../../../lib/public-service-boundary.js"
 
 export const dynamic = "force-dynamic"
 
@@ -25,9 +22,9 @@ export default async function MatchSetResultPage({
   params: Promise<{ matchSetId: string }> | { matchSetId: string }
 }) {
   const resolvedParams = await params
-  const matchSetId = decodeURIComponent(resolvedParams.matchSetId) as MatchSetId
-  const user = await getCurrentCompetitiveUser()
-  const result = await competitiveServer.getMatchSetResult(matchSetId, user)
+  const result = await getPublicMatchSetResult(
+    resolvedParams.matchSetId as MatchSetId,
+  )
 
   if (!result) {
     return (

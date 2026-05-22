@@ -331,7 +331,7 @@ describe("Match replay server facade", () => {
       matchId: "match:replay-test",
       metadata: {
         matchId: "match:replay-test",
-        chronicleId: "match:replay-test",
+        chronicleId: stored.metadata.id,
         hash: stored.metadata.hash,
         schemaVersion: "chronicle-v1.4",
         eventCount: stored.artifact.events.length,

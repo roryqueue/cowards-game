@@ -40,9 +40,7 @@ import {
   GovernanceInputError,
   markMatchSetGovernanceStatus,
 } from "@cowards/persistence/governance"
-import {
-  buildPublicPlayerProfileDto,
-} from "@cowards/persistence/profiles"
+import { buildPublicPlayerProfileDto } from "@cowards/persistence/profiles"
 import { findAdvancedStrategy } from "@cowards/persistence/advanced-strategies"
 import { findStarterStrategy } from "@cowards/persistence/starter-strategies"
 import {
@@ -58,24 +56,8 @@ import {
   type StrategyRevisionId,
   type TrialLadderSeasonStatus,
 } from "@cowards/spec"
-
-export const SESSION_COOKIE_NAME = "cowards_session"
-export const COMPETITIVE_SESSION_DAYS = 30
-
-export class CompetitiveInputError extends Error {
-  readonly status: number
-  readonly retryAfterSeconds?: number | undefined
-
-  constructor(
-    message: string,
-    options: { status?: number; retryAfterSeconds?: number } = {},
-  ) {
-    super(message)
-    this.name = "CompetitiveInputError"
-    this.status = options.status ?? 400
-    this.retryAfterSeconds = options.retryAfterSeconds
-  }
-}
+import { CompetitiveInputError } from "../../lib/competitive-errors.js"
+import { SESSION_COOKIE_NAME } from "../../lib/competitive-session.js"
 
 export type CompetitiveUser = PublicUserAccount
 export type CompetitiveRevisionSummary = AccountStrategyRevisionSummary

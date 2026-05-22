@@ -1,8 +1,8 @@
+import { CompetitiveInputError } from "../../lib/competitive-errors.js"
 import {
   COMPETITIVE_SESSION_DAYS,
-  CompetitiveInputError,
   SESSION_COOKIE_NAME,
-} from "./server.js"
+} from "../../lib/competitive-session.js"
 
 export const sessionCookie = (sessionId: string): string => {
   const maxAge = COMPETITIVE_SESSION_DAYS * 24 * 60 * 60

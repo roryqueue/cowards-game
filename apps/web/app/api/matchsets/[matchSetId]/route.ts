@@ -1,9 +1,6 @@
 import type { MatchSetId } from "@cowards/spec"
-import {
-  competitiveServer,
-  getCurrentCompetitiveUser,
-} from "../../../competitive/server.js"
 import { competitiveErrorResponse } from "../../../competitive/http.js"
+import { getPublicMatchSetResult } from "../../../../lib/public-service-boundary.js"
 
 export async function GET(
   _request: Request,
@@ -11,9 +8,8 @@ export async function GET(
 ): Promise<Response> {
   try {
     const params = await context.params
-    const result = await competitiveServer.getMatchSetResult(
-      decodeURIComponent(params.matchSetId) as MatchSetId,
-      await getCurrentCompetitiveUser(),
+    const result = await getPublicMatchSetResult(
+      params.matchSetId as MatchSetId,
     )
     if (!result) {
       return Response.json({ error: "MatchSet not found." }, { status: 404 })

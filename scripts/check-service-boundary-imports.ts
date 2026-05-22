@@ -10,7 +10,12 @@ export const strictMigratedFiles = [
   "apps/web/app/matchsets/[matchSetId]/page.tsx",
   "apps/web/app/api/replays/[matchId]/metadata/route.ts",
   "apps/web/app/strategies/[strategyId]/page.tsx",
+  "apps/web/lib/public-service-boundary.ts",
 ] as const
+
+const strictAllowedForbiddenImports = new Map<string, ReadonlySet<string>>([
+  ["apps/web/lib/public-service-adapter.ts", new Set(["@cowards/persistence"])],
+])
 
 const forbiddenPatterns = [
   "@cowards/persistence",
@@ -20,6 +25,8 @@ const forbiddenPatterns = [
   "apps/worker",
   "packages/runtime-js",
   "packages/runtime-python",
+  "competitive/server",
+  "matches/server",
   "migrations",
   "runWorkerOnce",
   "StrategyExecutionAdapter",
@@ -55,6 +62,7 @@ export interface ServiceBoundaryAnalysis {
 
 interface ImportLikeStatement {
   line: number
+  source: string | undefined
   text: string
 }
 
@@ -126,6 +134,9 @@ const extractImportLikeStatements = (
       )
       statements.push({
         line: line + 1,
+        source: ts.isStringLiteral(statement.moduleSpecifier)
+          ? statement.moduleSpecifier.text
+          : undefined,
         text: statement.getText(sourceFile),
       })
     }
@@ -136,9 +147,91 @@ const extractImportLikeStatements = (
 const matchedPattern = (statement: ImportLikeStatement): string | undefined =>
   forbiddenPatterns.find((pattern) => statement.text.includes(pattern))
 
+const resolveSourceFile = (
+  repoRoot: string,
+  repoPath: string,
+): string | undefined => {
+  const absolutePath = path.join(repoRoot, repoPath)
+  if (existsSync(absolutePath) && isSourceFile(absolutePath)) {
+    return toRepoPath(repoRoot, absolutePath)
+  }
+  const extension = path.extname(repoPath)
+  const candidates =
+    extension.length > 0
+      ? [
+          `${repoPath.slice(0, -extension.length)}.ts`,
+          `${repoPath.slice(0, -extension.length)}.tsx`,
+        ]
+      : [
+          `${repoPath}.ts`,
+          `${repoPath}.tsx`,
+          path.join(repoPath, "index.ts"),
+          path.join(repoPath, "index.tsx"),
+        ]
+
+  return candidates
+    .map((candidate) => path.normalize(candidate).split(path.sep).join("/"))
+    .find((candidate) => {
+      const absoluteCandidate = path.join(repoRoot, candidate)
+      return existsSync(absoluteCandidate) && isSourceFile(absoluteCandidate)
+    })
+}
+
+const resolveLocalImport = (
+  repoRoot: string,
+  fromRepoPath: string,
+  source: string | undefined,
+): string | undefined => {
+  if (!source?.startsWith(".")) {
+    return undefined
+  }
+  const target = path
+    .normalize(path.join(path.dirname(fromRepoPath), source))
+    .split(path.sep)
+    .join("/")
+  return resolveSourceFile(repoRoot, target)
+}
+
+const collectStrictFiles = (
+  repoRoot: string,
+  entryRepoPaths: readonly string[],
+): readonly string[] => {
+  const seen = new Set<string>()
+  const queue = [...entryRepoPaths]
+
+  while (queue.length > 0) {
+    const repoPath = queue.shift()!
+    if (seen.has(repoPath)) {
+      continue
+    }
+    seen.add(repoPath)
+
+    const absolutePath = path.join(repoRoot, repoPath)
+    if (!existsSync(absolutePath)) {
+      continue
+    }
+    const sourceText = readFileSync(absolutePath, "utf8")
+    for (const statement of extractImportLikeStatements(repoPath, sourceText)) {
+      const localImport = resolveLocalImport(
+        repoRoot,
+        repoPath,
+        statement.source,
+      )
+      if (localImport && !seen.has(localImport)) {
+        queue.push(localImport)
+      }
+    }
+  }
+
+  return [...seen].sort()
+}
+
 const findOffenses = (
   repoRoot: string,
   repoPaths: readonly string[],
+  options: {
+    allowedForbiddenImports?: ReadonlyMap<string, ReadonlySet<string>>
+  } = {},
 ): readonly ServiceBoundaryOffense[] =>
   repoPaths
     .flatMap((repoPath) => {
@@ -150,6 +243,12 @@ const findOffenses = (
       return extractImportLikeStatements(repoPath, sourceText).flatMap(
         (statement) => {
           const pattern = matchedPattern(statement)
+          if (
+            pattern &&
+            options.allowedForbiddenImports?.get(repoPath)?.has(pattern)
+          ) {
+            return []
+          }
           return pattern
             ? [{ path: repoPath, line: statement.line, pattern }]
             : []
@@ -173,11 +272,14 @@ export const analyzeServiceBoundaryImports = (
   options: AnalyzeServiceBoundaryOptions = {},
 ): ServiceBoundaryAnalysis => {
   const repoRoot = options.repoRoot ?? process.cwd()
-  const strictFileSet = new Set<string>(strictMigratedFiles)
+  const strictFiles = collectStrictFiles(repoRoot, strictMigratedFiles)
+  const strictFileSet = new Set<string>(strictFiles)
   const reportOnlyFiles = walkSourceFiles(repoRoot, "apps/web/app").map(
     (absolutePath) => toRepoPath(repoRoot, absolutePath),
   )
-  const strictOffenses = findOffenses(repoRoot, strictMigratedFiles)
+  const strictOffenses = findOffenses(repoRoot, strictFiles, {
+    allowedForbiddenImports: strictAllowedForbiddenImports,
+  })
   const reportOnlyOffenses = findOffenses(repoRoot, reportOnlyFiles).filter(
     (offense) => !strictFileSet.has(offense.path),
   )

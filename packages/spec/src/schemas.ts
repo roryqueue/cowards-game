@@ -733,8 +733,8 @@ export const AuthSessionServiceDtoSchema = z.object({
 })
 
 export const CreateSessionRequestBodySchema = z.object({
-  handle: z.string().min(1).optional(),
-  password: z.string().min(1).optional(),
+  username: z.string().min(1),
+  password: z.string().min(1),
 })
 
 export const CreateSessionServiceDtoSchema = AuthSessionServiceDtoSchema

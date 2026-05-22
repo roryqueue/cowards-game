@@ -9,6 +9,7 @@ import { buildPublicStrategyCardDto } from "@cowards/persistence/profiles"
 import {
   assertPublicServiceDtoLeakSafe,
   SERVICE_API_VERSION,
+  PublicMatchSetSummaryServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
   type MatchId,
@@ -68,7 +69,7 @@ const toReplayMetadataDto = (
   matchId: stored.metadata.matchId,
   metadata: {
     matchId: stored.metadata.matchId,
-    chronicleId: stored.metadata.matchId,
+    chronicleId: stored.metadata.id,
     hash: stored.metadata.hash,
     schemaVersion: stored.artifact.schemaVersion,
     eventCount: stored.artifact.events.length,
@@ -104,8 +105,9 @@ export const createCowardsLocalService = (
           matchSetId,
           result,
         }
-        assertPublicServiceDtoLeakSafe(dto)
-        return dto
+        const parsed = PublicMatchSetSummaryServiceDtoSchema.parse(dto)
+        assertPublicServiceDtoLeakSafe(parsed)
+        return parsed
       })
     },
 
