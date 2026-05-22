@@ -412,17 +412,19 @@ This example follows the existing service pattern of wrapping persistence output
 | A2 | Planner may want stronger transitive import protection later, but Phase 51 should stay direct-only unless clarified. | Open Questions | If transitive checks are required now, planner must first split legacy mixed server facades or accept broader refactor scope. |
 | A3 | Research validity estimate is 30 days for repo architecture and 7 days for npm package versions. | Metadata | If package versions move sooner, planner should re-run `npm view` before implementation. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should service response schemas use specific public DTO schemas or `PublicPageServiceDto` with `JsonValue` payload for public pages?** [VERIFIED: packages/spec/src/service.ts]
    - What we know: `PublicPageServiceDto` already exists with generic `payload: JsonValue`, and `PublicStrategyCardDto` exists as an interface. [VERIFIED: packages/spec/src/service.ts; VERIFIED: packages/spec/src/competition.ts]
    - What's unclear: Whether Phase 51 should spend effort adding full Zod schemas for public Strategy card/profile/ladder DTOs or keep the page envelope generic for the first slice. [VERIFIED: packages/spec/src/schemas.ts]
    - Recommendation: Add a specific `PublicStrategyCardDtoSchema` for the chosen public Strategy page if planner has budget; otherwise use `PublicPageServiceDtoSchema` only as a temporary generation-ready envelope and flag specific public page payload schemas for Phase 52/56. [VERIFIED: repo inspection]
+   - **RESOLVED:** Phase 51 will add a specific public Strategy page payload schema for the selected public Strategy page slice. Other public page payload schemas may remain generic or deferred unless needed for the committed v1.8 artifact.
 
 2. **Should strict import guards be direct-only or transitive for Phase 51?** [VERIFIED: 51-CONTEXT.md D-12]
    - What we know: D-12 says direct imports, and current broad server facades still import persistence for non-migrated methods. [VERIFIED: 51-CONTEXT.md; VERIFIED: apps/web/app/competitive/server.ts]
    - What's unclear: Whether planner wants stronger transitive protection immediately. [ASSUMED]
    - Recommendation: Make Phase 51 strict guard direct-only for named route/page files, and report transitive/legacy facade debt separately. [VERIFIED: 51-CONTEXT.md D-10/D-11]
+   - **RESOLVED:** Phase 51 strict guards are direct-only for named migrated route/page files. Broader and transitive findings are report-only debt signals unless a later phase explicitly ratchets them into failing checks.
 
 ## Environment Availability
 
