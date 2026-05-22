@@ -1,89 +1,69 @@
-# Pitfalls Research: v1.7 Runtime and Backend Boundary Stabilization
+# Pitfalls Research: v1.8 Production Boundary Hardening
 
 **Date:** 2026-05-22
-**Milestone:** v1.7 Runtime and Backend Boundary Stabilization
+**Milestone:** v1.8 Production Boundary Hardening
+**Scope:** Boundary-hardening pitfalls only. This file assumes likely phases 51-56, continuing from shipped v1.7 phases 45-50.
 
-## Boundary Pitfalls
+## Summary
 
-### Contract Drift
+v1.8 should make v1.7's contracts harder to bypass, not broader in product scope. The main failure mode is turning generated contracts, Go parity, sandbox exploration, non-JS language semantics, local multi-process deployment, and monitors into partial rewrites or production promises. Each phase should add proof, diagnostics, and guardrails around existing boundaries while leaving orchestration, writes, job claiming, counted non-JS play, and production sandbox promotion out of scope.
 
-If TypeScript, Go, OpenAPI, and runtime adapters each define their own DTOs, parity will decay immediately.
+The most important prevention theme is "one source of truth plus fail-closed checks." Generated API artifacts must derive from the existing service/spec schemas or a deliberately chosen authoritative source. Go must prove parity against real fixtures without owning writes. Runtime sandbox work must evaluate hostile-code options without declaring them safe. Product semantics for non-JS languages must explain experimental status, compatibility, validation, and eligibility before exposing broad language support. Local topology and monitors must catch bypasses, privacy leaks, drift, and developer workflow regressions early.
 
-Prevention:
+## Pitfall Table
 
-- Keep `@cowards/spec` authoritative in v1.7.
-- Use generated fixtures and schema validation as the cross-language handshake.
-- Require every Go/Python spike output to round-trip through the same golden JSON.
+| Pitfall | What Goes Wrong | Warning Signs | Prevent In Phase |
+| --- | --- | --- | --- |
+| Generated contracts become a second schema source | OpenAPI, generated clients, TypeScript schemas, and Go DTOs drift because edits happen in multiple places. | Manual edits under generated output; generated artifacts not checked by tests; diffs in generated files without source schema diffs; route handlers accept shapes not validated by `@cowards/spec`. | Phase 51: Generated Contracts and Route Boundary Migration |
+| Route migration creates hidden persistence bypasses | New or migrated Next routes keep importing persistence roots, migration helpers, or runtime modules directly. | `apps/web/app/**` imports from persistence internals; route tests mock DB workflows instead of service clients; bundling pulls filesystem/migration code into web paths; old server helpers remain as parallel APIs. | Phase 51 |
+| Privacy-safe DTOs regress during contract export | Public OpenAPI/client examples or route DTOs expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, stack traces, stderr, raw Awareness Grid, sessions, or runtime internals. | Public schema fields named `source`, `memory`, `objective`, `stderr`, `stack`, `debug`, `session`; example fixtures copied from owner/internal records; public DTO tests only cover happy-path summaries. | Phase 51 and Phase 56: Drift, Privacy, and Bypass Monitors |
+| Generated clients hide breaking schema drift | Client generation compiles even when route behavior changes because fallback decoding or permissive schema parsing accepts unknown/missing data. | `z.any`, broad passthrough schemas, optional fields added to quiet tests, fallback-to-empty DTOs, snapshot updates without contract-drift review. | Phase 51 and Phase 56 |
+| Go parity is tested against synthetic toy JSON only | The Go read-only service matches tiny fixtures but fails on real MatchSet, replay metadata, analytics, ordering, degraded states, or privacy redaction. | Fixtures omit degraded/system-failed MatchSets; no analytics summary fixture; no persisted local data smoke; Go tests compare only status codes; ordering differences hidden by maps. | Phase 52: Go Read-Only Parity Against Real Fixtures |
+| Go spike accidentally becomes backend migration | Read-only parity work starts moving writes, job claiming, orchestration, Strategy execution, auth ownership, or persistence ownership into Go. | New Go mutation endpoints; worker/job code references Go service; TypeScript orchestrator bypassed; docs say "backend replacement"; tests require Go for normal local Match execution. | Phase 52 |
+| Cross-language parity ignores canonical ordering | Go and TypeScript return semantically similar data with different sort order, zero values, null/omitted fields, time formatting, or numeric precision. | Flaky parity tests; use of Go maps for ordered response content; byte-for-byte comparisons where canonical parsed equality is intended; fixtures updated for serializer convenience. | Phase 52 and Phase 56 |
+| Sandbox prototype is mistaken for production isolation | Container, microVM, WASM/WASI, subprocess, or worker evaluation produces a winner without hostile matrix coverage, resource enforcement proof, or deployment constraints. | "Production-ready" labels in docs; counted-play enablement changes; Node `vm` proposed as containment; no tests for filesystem/network/env/time/random/shell access; no distinction between Strategy violation and system failure. | Phase 53: Sandbox Prototype Evaluation |
+| Sandbox evaluation optimizes for ergonomics over threat model | The easiest local runner wins despite weak isolation, nondeterministic resource behavior, or unclear package policy. | Evaluation matrix lacks threat model rows; no timeout/output/memory limits; inherited environment; shell invocation; no cold-start/resource notes; no failure taxonomy mapping. | Phase 53 |
+| Runtime prototype leaks nondeterminism into engine expectations | Sandbox or adapter code allows randomness, system time, network, filesystem, environment, or live model access to influence Strategy outputs. | Strategy fixtures using current time/random; tests pass only on one machine; runtime metadata lacks deterministic restrictions; engine tests reach outside pure inputs. | Phase 53 and Phase 56 |
+| Non-JS product semantics over-promise support | Workshop or docs imply Python/Go/Rust Strategies are production-supported before package, compatibility, validation, sandbox, and counted-play policy exist. | Language selector visible for counted play; experimental labels absent; examples look official; compatibility warnings missing; eligibility checks allow non-JS in ladders or counted MatchSets. | Phase 54: Non-JS Product Semantics |
+| Non-JS validation messages are developer-hostile | Users see adapter-internal errors instead of language-aware, public-safe validation and runtime messages. | Raw stack traces; stderr shown publicly; opaque ABI errors; JS-only terminology in Python/Go messages; no distinction between source validation, package metadata, runtime violation, and system failure. | Phase 54 |
+| Compatibility keys miss language/package dimensions | Analytics, gauntlets, ladders, and replay evidence compare results across behavior-significant language, adapter, ABI, package, limits, or sandbox changes. | Saved gauntlet reruns compare across adapter versions; counted-play eligibility checks ignore package metadata; compatibility mismatch reasons are generic; analytics evidence bands hide runtime differences. | Phase 54 and Phase 56 |
+| Cross-process local topology is too brittle for contributors | Web, worker/runtime adapter, TypeScript service, Go read-only service, fixtures, ports, health checks, and smoke requests require tribal knowledge. | Multiple manual terminals with undocumented order; port conflicts; stale fixture paths; health endpoints disagree; smoke checks fail with unclear diagnostics; no single preflight command or script. | Phase 55: Cross-Process Local Topology |
+| Local topology masks production boundary failures | Dev mode silently falls back to in-process calls or static fixtures when a cross-process service is down, so bypasses survive verification. | "Optional" Go/service/runtime env vars that skip checks; broad try/catch fallback to TypeScript paths; smoke tests pass when a service is stopped; logs do not identify which process served a request. | Phase 55 and Phase 56 |
+| Monitors produce noise instead of enforcement | Drift/privacy/bypass monitors are bolted on as snapshots or warnings that developers ignore. | CI prints warnings but exits 0; allowlists grow without owner; monitors scan generated files instead of source boundaries; false positives are common; no phase owns monitor triage. | Phase 56 |
+| Bypass monitors miss import-level violations | Runtime/web execution and persistence-root bypasses reappear because checks only exercise HTTP behavior, not module boundaries. | No import graph checks; test files import executable worker subpaths; `@cowards/service` imports DB migration roots; web bundle includes runtime worker or filesystem code. | Phase 56 |
+| Over-scoping turns hardening into new product | v1.8 starts adding official tournaments, durable ratings, full Go backend ownership, production non-JS languages, package management, or production sandbox replacement. | Requirements mention durable rankings, mutation endpoints, package registries, public non-JS launch, or "replace TypeScript"; phase plans include user-facing language marketplace or orchestration rewrite. | Every phase, enforced in Phase 56 release gate |
+| Developer ergonomics regress under hardening | Guardrails become so hard to run that developers bypass them locally. | Long undocumented commands; generated artifacts require global tools; failures do not name the owner/source schema; local smoke requires Docker when no-Docker path is expected; no quick test slice. | Phase 51, Phase 55, and Phase 56 |
 
-### Accidental Rewrite
+## Warning Signs
 
-Service-boundary work can become a backend migration in disguise.
+- A phase adds a new boundary artifact without a check proving it derives from, or round-trips through, the authoritative contract.
+- A public DTO or generated example includes fields that sound private: `source`, `strategyMemory`, `soldierMemory`, `objective`, `awareness`, `debug`, `stderr`, `stack`, `session`, `runtimeInternal`.
+- A route migration is considered complete because the page renders, not because direct persistence/runtime imports were removed and service DTO equivalence was proven.
+- Go parity uses only hand-authored happy-path JSON and does not cover real v1.7 golden fixtures, degraded/system-failed states, replay metadata, analytics summaries, privacy redaction, and deterministic ordering.
+- Sandbox evaluation changes eligibility or runtime defaults. Evaluation should produce a decision record and prototype evidence, not production enablement.
+- Non-JS language copy, examples, or UI controls imply counted-play support without experimental labeling and fail-closed eligibility checks.
+- Local cross-process checks pass when one process is stopped, because fallback behavior hides the missing boundary.
+- Monitors are warning-only, snapshot-only, or too noisy to block merges.
 
-Prevention:
+## Prevention Strategy
 
-- Limit Go to read-only endpoints.
-- Keep orchestration, job claiming, Strategy execution, and writes in the existing TypeScript stack.
-- Track "not moved yet" explicitly in requirements and roadmap.
+1. **Keep one authoritative contract path.** Decide where generated service artifacts come from, then require generation checks that fail when checked-in artifacts drift from source. Generated output should be reviewed for consumer impact, but hand edits should be treated as defects.
+2. **Pair route migration with import guards.** Every migrated route should have DTO equivalence/privacy tests and an import-boundary check proving it does not reach persistence roots, migration helpers, runtime worker entrypoints, or Strategy execution adapters directly.
+3. **Use real fixtures for Go parity.** Promote Go only through read-only parity against existing golden fixtures and safe persisted local data. Cover health, public MatchSet summary, replay metadata, selected analytics summaries, privacy redaction, deterministic ordering, degraded states, and graceful errors.
+4. **Separate sandbox evidence from sandbox adoption.** Evaluate container, microVM, WASM/WASI, subprocess, and worker tradeoffs against a written matrix: isolation guarantees, filesystem/network/env/time/random blocking, resource limits, IPC shape, failure taxonomy, cold start, local DX, deployment complexity, and compatibility with deterministic Strategy execution.
+5. **Define non-JS semantics before broad UX.** Specify language labels, source/package metadata, validation messages, compatibility warnings, counted-play eligibility, docs/examples, and experimental status. Keep non-JS disabled for counted play until a later milestone explicitly promotes it.
+6. **Make local topology observable.** Provide a repeatable cross-process command or documented command set with stable ports, health checks, fixture loading, smoke requests, process attribution in logs, and failure diagnostics that say which boundary failed.
+7. **Turn monitors into gates.** Drift, privacy, bypass, adapter compatibility, and Go/TypeScript parity monitors should fail CI or the milestone verification gate. Allowlist entries need names, reasons, and expiry or follow-up requirements.
 
-### Runtime ABI That Leaks JS Assumptions
+## Phase Coverage
 
-The current subprocess IPC is useful but not fully language-neutral.
+| Likely Phase | Boundary to Harden | Must Prevent | Exit Evidence |
+| --- | --- | --- | --- |
+| Phase 51: Generated Contracts and Route Boundary Migration | Service API artifacts, generated clients/schemas, Next route/service boundary | Schema drift, generated artifact hand edits, persistence-root imports, privacy DTO leaks, permissive fallback decoding | Generation drift check, route import guard, public/owner/internal DTO tests, service equivalence tests for migrated routes |
+| Phase 52: Go Read-Only Parity Against Real Fixtures | Go read-only service for health, public MatchSet summary, replay metadata, selected analytics | Toy-fixture confidence, ordering/null drift, privacy drift, accidental mutation/orchestration migration | Go tests against real golden fixtures and safe persisted local data, HTTP smoke checks, docs listing TypeScript-owned responsibilities |
+| Phase 53: Sandbox Prototype Evaluation | Hostile Strategy runtime boundary options | Production-readiness overclaim, weak threat model, nondeterminism, shell/env/filesystem/network leaks, failure taxonomy collapse | Evaluation matrix, hostile capability probes, resource-limit notes, failure mapping, explicit non-promotion decision |
+| Phase 54: Non-JS Product Semantics | Language selection semantics, metadata, validation, compatibility, docs/examples | User-facing overpromise, counted-play leakage, JS-only messages, missing package/adapter compatibility dimensions | Product semantics spec, experimental labels, fail-closed eligibility tests, language-aware public-safe validation messages |
+| Phase 55: Cross-Process Local Topology | Web, worker/runtime adapter, TypeScript service boundary, Go read-only service, fixtures, health/smoke diagnostics | Brittle local setup, silent fallback to in-process paths, unclear process ownership, port/fixture drift | Repeatable local topology command/docs, health aggregation, smoke requests, fixture load checks, process-attributed diagnostics |
+| Phase 56: Drift, Privacy, and Bypass Monitors | Milestone-wide release gates | Warning-only monitors, noisy checks, missed import bypasses, adapter/parity drift, private DTO leaks, scope creep | CI/local monitor suite that fails on private DTO fields, service contract drift, web/runtime execution bypass, adapter compatibility drift, and Go/TypeScript parity drift |
 
-Prevention:
-
-- Avoid JS-specific terms in ABI fields where language-neutral vocabulary works.
-- Model source/package metadata separately from raw source.
-- Define capability restrictions and failure taxonomy outside `runtime-js`.
-
-### Privacy Regression Across New DTOs
-
-Boundary expansion creates new places for Strategy source, memories, objectives, raw Awareness Grid, stack traces, and owner debug data to leak.
-
-Prevention:
-
-- Make privacy redaction a golden fixture category.
-- Keep leak assertions in `@cowards/spec`.
-- Require public DTO schemas for replay, MatchSets, analytics, exports, ladders, profiles, and public Strategy cards.
-
-### False Confidence From One Runtime Spike
-
-A Python or Go spike can prove ABI shape but not production sandbox safety.
-
-Prevention:
-
-- Mark the second runtime experimental.
-- Keep JS/TS as the only fully enabled runtime.
-- Preserve hostile runtime tests and do not weaken the existing worker/subprocess distinction.
-
-### JSON Canonicalization Surprises
-
-Go, Node, and Python can all emit semantically equivalent JSON with different string formatting, ordering, escaping, or trailing newlines.
-
-Prevention:
-
-- Compare parsed canonical data for most fixtures.
-- Use explicit normalized hashes only where hash contracts require them.
-- Avoid raw byte comparisons unless the test owns serialization settings.
-
-Primary source note: Go `encoding/json.Encoder.Encode` adds a trailing newline, and JSON escaping behavior has safety defaults. Source: https://pkg.go.dev/encoding/json
-
-### Shell and Environment Hazards
-
-Runtime spikes that invoke shell commands, inherit environment, or use ambiguous executable lookup undermine the security model.
-
-Prevention:
-
-- No shell invocation for runtime subprocesses.
-- Empty/minimal environment.
-- Fully qualified executable path or controlled runtime launcher.
-- stdout/stderr caps and timeout behavior preserved.
-
-Primary source note: Python subprocess docs warn about `shell=True`, recommend fully qualified executable paths for reliability, and state subprocess does not implicitly choose a shell. Source: https://docs.python.org/3/library/subprocess.html
-
-## Phase Placement Guidance
-
-- Service boundary contract should come before Go backend spike.
-- Runtime ABI should come before adapter registry and non-JS spike.
-- Golden parity should come before relying on cross-language behavior.
-- Adapter registry should come before compatibility-sensitive MatchSet/analytics changes.
-- Spikes should remain late enough to consume contracts but early enough to expose contract gaps before milestone close.
+Phase 56 should be the final hardening gate, but it should not be the first time these issues are tested. Each earlier phase should add its own focused guard, then Phase 56 should compose them into a milestone verification slice.
