@@ -1,100 +1,91 @@
-# Architecture Research: v1.6 Workshop Analytics and Evidence Explorer
+# Architecture Research: v1.7 Runtime and Backend Boundary Stabilization
 
-**Project:** Coward's Game
-**Date:** 2026-05-21
-**Milestone context:** v1.6 Workshop Analytics and Evidence Explorer
+**Date:** 2026-05-22
+**Milestone:** v1.7 Runtime and Backend Boundary Stabilization
 
-## Integration Shape
+## Existing Integration Points
 
-v1.6 should add a stable analytics layer between existing MatchSet evidence and Workshop UI.
+- `packages/spec/src/types.ts` and `packages/spec/src/schemas.ts` define canonical game, Strategy, Chronicle, analytics, competition, and privacy-facing schemas.
+- `packages/runtime-js/src/adapter.ts` defines `StrategyExecutionAdapter`, metadata, runtime controls, and JS adapter readiness.
+- `packages/runtime-js/src/subprocess-ipc.ts` defines current JSON IPC request/response guards and system failure taxonomy.
+- `packages/runtime-js/src/revision.ts` builds immutable JS/TS Strategy Revisions and currently fixes `runtime.name` to `"runtime-js"`.
+- `apps/worker/src/runtime-config.ts` selects `worker-thread`, `subprocess`, or `container-subprocess` adapters.
+- `apps/worker/src/runner.ts` attaches runtime adapter metadata to worker execution.
+- `apps/web/app/workshop/server.ts` and `apps/web/app/competitive/server.ts` are service-like modules but still depend directly on persistence and Next-specific concerns.
+- `packages/persistence` owns real storage and high-level domain workflows.
 
-```mermaid
-flowchart LR
-  Profile["Saved Gauntlet Profile"] --> MatchSet["Existing MatchSet + Jobs"]
-  MatchSet --> Chronicle["Chronicle Store"]
-  Chronicle --> Summary["Analytics Evidence Summary"]
-  Summary --> Heatmap["Workshop Heatmap"]
-  Summary --> Explorer["Evidence Explorer"]
-  Summary --> Export["Owner Export"]
-  Chronicle --> Moments["Replay Moment Index"]
-  Moments --> Replay["Replay Deep Links"]
-```
+## Recommended Architecture Direction
 
-## New Concepts
+### Boundary Ownership
 
-### Gauntlet Profile
+Use `@cowards/spec` as the authoritative contract package for:
 
-Persist a named owner-owned profile with an immutable compatibility snapshot. The user can rename or annotate a profile, but rerun compatibility should be based on captured inputs and compatibility versions.
+- Service DTO schemas.
+- Runtime ABI schemas.
+- Adapter registry metadata schema.
+- Compatibility keys and version constants.
+- Golden fixture validation helpers.
+- Public privacy assertions.
 
-Likely fields:
+Keep `@cowards/engine` pure and unaware of API/runtime language mechanics.
 
-- `id`, `owner_user_id`, `name`, `description`, `created_at`, `updated_at`.
-- `candidate_revision_ids`, `opponent_revision_ids`.
-- `opponent_tags` or denormalized public labels at creation time.
-- `preset_id`, `seed_policy`, `mirror_sides`, `scoring_policy`.
-- `rule_version`, `chronicle_version`, `runtime_adapter`, `runtime_version`.
-- `profile_hash` and `compatibility_key`.
+### Service Boundary
 
-### Analytics Summary
+Introduce a typed client/service layer between Next route handlers/pages and persistence.
 
-Create typed summary DTOs in persistence/spec rather than deriving UI-only structures in React. Summaries should be serializable and public-safe by default.
+Suggested shape:
 
-Likely objects:
+- `packages/spec`: `ServiceApiContract`, endpoint DTO schemas, public/private DTO privacy guards.
+- `apps/web/app/services` or a shared package: typed service client/server facade for current in-process calls.
+- Next route handlers call the facade, not persistence directly.
+- Persistence remains the implementation behind the facade in v1.7.
+- Go spike implements a subset of the same contract and can be swapped behind a feature flag or client base URL for a read-only path.
 
-- `GauntletSummary`.
-- `MatchupRecord`.
-- `EvidenceBand`.
-- `ReplayReference`.
-- `ExportableGauntletSummary`.
+### Runtime ABI
 
-### Replay Moment Index
+Introduce ABI-level envelopes separate from JS implementation types:
 
-Build representative moment selection from public-projected Chronicle/timeline data. The index should map moments to sequence numbers and public labels while avoiding private payload details.
+- `StrategyRuntimeRequestEnvelope`
+- `StrategyRuntimeResponseEnvelope`
+- `RuntimeViolationEnvelope`
+- `RuntimeSystemFailureEnvelope`
+- `RuntimeAdapterMetadata`
+- `StrategyLanguageMetadata`
+- `StrategyPackageMetadata`
+- `RuntimeCompatibilityKey`
 
-Moment selection can be deterministic:
+The envelope should wrap existing `StrategyInput`, `SoldierBrainInput`, `StrategyResult`, and `SoldierBrainResult` schemas instead of redefining game concepts.
 
-- First and/or most decisive Backstab.
-- First contraction.
-- First Fall.
-- Push resolving a large position swing where detectable from public events.
-- No-advance cleanup as blocked/no-reverse or inactivity-style public explanation where available.
-- Late-cycle stabilization near the final counted phase of the Match.
+### Golden Parity
 
-## Modified Areas
+Add golden fixture categories before the Go/Python implementation grows:
 
-- `packages/persistence/src/workshop.ts`: saved profiles, rerun creation, profile summaries.
-- `packages/persistence/src/matchset-status.ts` and `scoring.ts`: evidence counts, failure categories, side splits.
-- `apps/web/app/workshop/server.ts`: server methods for profiles, analytics, reruns, exports.
-- `apps/web/app/workshop/workshop-client.tsx`: heatmap, explorer, export controls.
-- `apps/web/app/matches/replay-ready.ts`: initial sequence/deep-link support and representative moment metadata.
-- `packages/spec/src`: schemas/types for analytics DTOs and export DTOs.
-- `packages/persistence/migrations`: profile/summary persistence.
+- Engine and Chronicle fixtures from `packages/test-utils`.
+- Runtime ABI fixtures from current JS subprocess behavior.
+- Service DTO fixtures from current persistence/web DTO outputs.
+- Privacy fixtures for public replay, analytics, exports, and MatchSet pages.
+- Ordering fixtures for summaries, matrices, standings, and exports.
 
-## Build Order
+### Spike Isolation
 
-1. Define analytics contracts and evidence-band rules before UI.
-2. Persist saved profile inputs and compatibility keys.
-3. Add rerun/compare service methods that reuse existing MatchSet creation and worker jobs.
-4. Build heatmap/explorer projections from summaries.
-5. Add replay moment indexing and deep-link handling.
-6. Add owner-safe export DTOs and endpoints.
-7. Generate demo data and verify privacy/runtime boundaries.
+Keep the Go backend and non-JS runtime spike separated:
 
-## Testing Implications
+- Go backend spike proves HTTP/API/DTO parity.
+- Python or Go runtime spike proves Strategy ABI parity.
+- Neither spike should own the canonical contract.
 
-- Contract/schema tests for every public/owner analytics DTO.
-- Determinism tests for profile hash, compatibility equivalence, matrix expansion, summary ordering, evidence-band classification, and replay moment selection.
-- Persistence tests for profile save/rerun/compare/export.
-- Privacy leak tests for public analytics, replay references, and exports.
-- Runtime isolation tests proving profile/rerun routes enqueue MatchSets/jobs but never execute Strategy code in web/API.
-- Playwright/browser checks for Workshop heatmap, explorer drilldown, deep links, and export affordances.
+## Suggested Build Order
 
-## Sources
+1. Define service contract and typed facade over existing persistence behavior.
+2. Define runtime ABI and adapter registry metadata.
+3. Build golden parity fixtures across existing behavior.
+4. Add adapter metadata to Strategy Revisions and MatchSet compatibility.
+5. Add one experimental non-JS runtime using the ABI.
+6. Add minimal read-only Go backend endpoint(s) using the service contract.
 
-- `packages/spec/src/types.ts`
-- `packages/spec/src/schemas.ts`
-- `packages/persistence/src/workshop.ts`
-- `packages/persistence/src/matchset-status.ts`
-- `packages/persistence/src/scoring.ts`
-- `apps/web/app/workshop/server.ts`
-- `apps/web/app/matches/replay-ready.ts`
+## Open Design Pressure
+
+- Whether service contracts should be endpoint-first OpenAPI or schema-first TypeScript with optional OpenAPI export.
+- Whether the non-JS runtime spike should be Python for user reach or Go for symmetry.
+- Whether the Go backend reads PostgreSQL directly or consumes exported fixture/service snapshots for the first proof.
+- How much of `apps/web/app/competitive/server.ts` should move into a shared service package in v1.7 versus just wrapping it.

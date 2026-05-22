@@ -1,56 +1,70 @@
-# Stack Research: v1.6 Workshop Analytics and Evidence Explorer
+# Stack Research: v1.7 Runtime and Backend Boundary Stabilization
 
-**Project:** Coward's Game
-**Date:** 2026-05-21
-**Milestone context:** v1.6 Workshop Analytics and Evidence Explorer
+**Date:** 2026-05-22
+**Milestone:** v1.7 Runtime and Backend Boundary Stabilization
 
-## Recommendation
+## Existing Stack To Preserve
 
-Do not introduce a parallel analytics stack. Extend the existing TypeScript monorepo, Next.js web app, PostgreSQL persistence layer, MatchSet service, worker execution pipeline, Chronicle store, replay projection, and Vitest/Playwright verification spine.
+- TypeScript pnpm monorepo with `apps/web`, `apps/worker`, and shared packages.
+- `@cowards/spec` owns shared DTOs, zod schemas, compatibility versions, analytics contracts, privacy checks, competition contracts, and canonical game types.
+- `@cowards/engine` remains pure and deterministic; it consumes runtime results and must not learn about web, persistence, process, or language details.
+- `@cowards/replay` owns Chronicle validation, hashing, projection, reconstruction, and replay privacy.
+- `@cowards/runtime-js` owns current JS/TS Strategy validation, immutable revision building, worker-thread, Node subprocess, and container-subprocess adapters.
+- `@cowards/persistence` owns PostgreSQL-backed orchestration, MatchSet, Workshop, auth, analytics, ladder, profile, and governance services.
+- `apps/web` Next route handlers currently call persistence-facing server modules directly.
 
-## Existing Stack to Reuse
+## Stack Additions Recommended
 
-- **Persistence:** `packages/persistence` already owns MatchSet creation, scoring, Chronicle storage, workshop snapshots, strategy cards, public profile DTOs, migrations, and privacy-sensitive query boundaries.
-- **Workshop service boundary:** `apps/web/app/workshop/server.ts` delegates to persistence functions and never executes Strategy code directly.
-- **Runtime isolation:** Strategy code remains behind `StrategyExecutionAdapter`, worker jobs, and runtime subprocess/container candidates. v1.6 analytics should only create MatchSets/jobs or read completed evidence.
-- **Replay:** `apps/web/app/matches/replay-ready.ts` builds public/owner projections and timeline entries from Chronicles. Deep links should target projected public event sequence numbers, not private runtime data.
-- **UI:** The web app currently uses React/Next with local CSS, Monaco, and Pixi. There is no table, chart, or visualization dependency yet.
+### Contract Package Surface
 
-## Possible Additions
+Add explicit service/API and runtime ABI contracts to the existing package layout rather than creating a separate contract repo in v1.7.
 
-### Tables and Filtering
+Recommended shape:
 
-TanStack Table is a credible option if v1.6 evidence tables become complex enough to need controlled sorting, filtering, faceting, row expansion, and column state. Its docs explicitly distinguish client-side and server-side sorting/filtering concerns, which matters if evidence grows beyond a local Workshop page.
+- Extend `packages/spec` with API DTO schemas, runtime ABI schemas, language/runtime adapter metadata, compatibility keys, and public privacy assertions.
+- Add contract fixtures under either `packages/spec/src/fixtures` or a new `packages/test-utils/src/golden` module.
+- Keep OpenAPI optional but useful: generate or hand-maintain a minimal OpenAPI document from the schema-owned DTOs once endpoints stabilize.
 
-For v1.6, a local typed table model may be better unless the UI needs rich column state immediately. The current app has no existing TanStack dependency, and the first milestone goal is deterministic study surfaces, not a general data-grid platform.
+Primary source note: OpenAPI publishes versioned specs including v3.1.x and v3.2.0; its own site warns schemas help catch many errors but the prose spec is authoritative when schema and text disagree. This supports using OpenAPI as a boundary artifact, not the only source of truth. Source: https://spec.openapis.org/oas/
 
-### Heatmaps
+### Go Spike Stack
 
-D3 color scales are useful reference material, but a D3 dependency is not mandatory. v1.6 can represent heatmap cells with deterministic numeric bands and CSS variables. If later visualization needs continuous scales or legends, D3 sequential scales and chromatic schemes are a mature source for quantitative color encoding.
+Use standard Go first:
 
-### Deep Links
+- `net/http` for the minimal read-only service.
+- `encoding/json` for DTO decode/encode.
+- `database/sql` plus the existing PostgreSQL driver selected during implementation, only if the spike reads the database directly.
+- Golden JSON fixtures from TypeScript tests as the parity source.
 
-Replay deep links should use stable URL query parameters or fragments carrying public-safe sequence/event identifiers. `URLSearchParams` is a standard browser API and fits Next client/server handling without a routing dependency.
+Primary source notes:
 
-### Exports
+- Go's module system is the official dependency management path; `pkg.go.dev` lists module metadata and standard package docs.
+- `encoding/json` `Encoder.Encode` emits JSON plus a trailing newline and the package has compatibility behavior around UTF-8 replacement and HTML escaping defaults. Golden tests should compare parsed canonical JSON or controlled normalized output, not raw strings by accident.
+- `net/http/httptest` is available for HTTP tests.
 
-Owner exports should support JSON directly from typed DTOs and CSV following RFC 4180-style escaping for comma, quote, and newline handling. Browser download can be implemented with `Blob` where client-side export is appropriate, but server-created files are unnecessary for local v1.6.
+Sources: https://pkg.go.dev/encoding/json and https://pkg.go.dev/net/http
 
-## What Not to Add
+### Non-JS Runtime Spike Stack
 
-- No analytics warehouse, OLAP service, background inference process, or external metrics platform.
-- No client-side execution or replaying of Strategy source.
-- No public export pipeline that touches source, memory, objectives, raw Awareness Grid, stack traces, owner debug, or runtime internals.
-- No chart library unless the local CSS/React heatmap proves insufficient.
+Python is the best user-reach spike for v1.7 unless the user later chooses backend/runtime symmetry over reach. Keep it deliberately tiny:
 
-## Sources
+- A Python executable or module launched by the existing subprocess/container-style host.
+- JSON over stdin/stdout with no shell invocation.
+- No package installation in the first spike unless metadata and lockfile handling are explicitly scoped.
+- Fixture coverage for valid action, invalid output, timeout, thrown exception, stdout/stderr cap, and memory limit violations.
 
-- Codebase: `packages/persistence/src/workshop.ts`, `apps/web/app/workshop/server.ts`, `apps/web/app/matches/replay-ready.ts`, `packages/persistence/src/matchset-service.ts`, `packages/persistence/src/scoring.ts`.
-- TanStack Table sorting guide: https://tanstack.dev/table/latest/docs/guide/sorting
-- TanStack Table filter APIs: https://tanstack.com/table/v8/docs/api/features/filters
-- D3 sequential scales: https://d3js.org/d3-scale/sequential
-- D3 sequential color schemes: https://d3js.org/d3-scale-chromatic/sequential
-- MDN `URLSearchParams`: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
-- RFC 4180 CSV: https://www.rfc-editor.org/rfc/rfc4180
-- MDN `Blob`: https://developer.mozilla.org/en-US/docs/Web/API/Blob
-- OWASP Privacy by Design guidance: https://owasp.org/www-project-devsecops-guideline/latest/02g-Privacy
+Primary source note: Python subprocess docs recommend fully qualified executable paths for reliability, warn to read security considerations before `shell=True`, and state that subprocess does not implicitly choose a shell. This matches the no-shell ABI direction. Source: https://docs.python.org/3/library/subprocess.html
+
+## Stack Additions To Avoid In v1.7
+
+- Do not move orchestration to Go yet.
+- Do not make Go the sole source of DTO truth yet.
+- Do not introduce gRPC before the JSON API boundary is proven.
+- Do not add broad package management for non-JS Strategies until the ABI and metadata model are locked.
+- Do not treat Python subprocess execution as production hostile-code isolation; it is a parity spike behind the same boundary vocabulary.
+
+## Versioning Implications
+
+- Add explicit API contract version, runtime ABI version, runtime adapter id/version, and language id/version fields.
+- Keep `runtime-js` compatibility intact while broadening `StrategyRuntimeName` beyond the current `"runtime-js"` literal.
+- Include adapter version in MatchSet/analytics compatibility keys so comparisons fail closed when runtime behavior may differ.

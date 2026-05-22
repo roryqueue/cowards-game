@@ -1,67 +1,89 @@
-# Pitfalls Research: v1.6 Workshop Analytics and Evidence Explorer
+# Pitfalls Research: v1.7 Runtime and Backend Boundary Stabilization
 
-**Project:** Coward's Game
-**Date:** 2026-05-21
-**Milestone context:** v1.6 Workshop Analytics and Evidence Explorer
+**Date:** 2026-05-22
+**Milestone:** v1.7 Runtime and Backend Boundary Stabilization
 
-## Major Risks
+## Boundary Pitfalls
 
-### Comparing Unlike Evidence
+### Contract Drift
 
-Saved profile names are human labels, not compatibility. Comparing results across changed seeds, presets, opponents, scoring policy, rule version, Chronicle version, or runtime adapter can mislead players.
+If TypeScript, Go, OpenAPI, and runtime adapters each define their own DTOs, parity will decay immediately.
 
-**Prevention:** Store a compatibility key and require equality for result comparison. Show mismatch reasons when comparison is blocked.
+Prevention:
 
-### Reintroducing Runtime Risk
+- Keep `@cowards/spec` authoritative in v1.7.
+- Use generated fixtures and schema validation as the cross-language handshake.
+- Require every Go/Python spike output to round-trip through the same golden JSON.
 
-Analytics may tempt implementation to run Strategy code synchronously for "quick summaries" or browser previews.
+### Accidental Rewrite
 
-**Prevention:** Analytics reads completed MatchSets/Chronicles or enqueues existing worker-backed MatchSets only. Add tests proving web/API routes do not execute Strategy code.
+Service-boundary work can become a backend migration in disguise.
 
-### Public Privacy Leakage
+Prevention:
 
-Evidence drilldowns and exports can accidentally expose owner debug, Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid, stack traces, or runtime internals.
+- Limit Go to read-only endpoints.
+- Keep orchestration, job claiming, Strategy execution, and writes in the existing TypeScript stack.
+- Track "not moved yet" explicitly in requirements and roadmap.
 
-**Prevention:** Public analytics must use public DTOs/projections only. Owner exports must be explicit summary DTOs, not raw Chronicle or raw database dumps. Keep owner debug as a separate server-authorized replay mode.
+### Runtime ABI That Leaks JS Assumptions
 
-### Overstating Confidence
+The current subprocess IPC is useful but not fully language-neutral.
 
-Heatmaps can visually imply certainty even with tiny samples or degraded/system-failed evidence.
+Prevention:
 
-**Prevention:** Evidence bands and counts must be visible in cells and drilldowns. Degraded/non-counted and system-failed evidence should be visually distinct from weak Strategy performance.
+- Avoid JS-specific terms in ABI fields where language-neutral vocabulary works.
+- Model source/package metadata separately from raw source.
+- Define capability restrictions and failure taxonomy outside `runtime-js`.
 
-### Deep Links That Drift
+### Privacy Regression Across New DTOs
 
-Deep links to raw event offsets can become wrong if Chronicle compatibility or projection rules change.
+Boundary expansion creates new places for Strategy source, memories, objectives, raw Awareness Grid, stack traces, and owner debug data to leak.
 
-**Prevention:** Deep links should include Match id plus public sequence/moment type and be generated from the stored Chronicle compatibility version. Replay should gracefully fall back if the sequence is unavailable.
+Prevention:
 
-### CSV Injection and Export Confusion
+- Make privacy redaction a golden fixture category.
+- Keep leak assertions in `@cowards/spec`.
+- Require public DTO schemas for replay, MatchSets, analytics, exports, ladders, profiles, and public Strategy cards.
 
-CSV exports can be opened in spreadsheet tools. Values starting with formula-trigger characters may behave unexpectedly.
+### False Confidence From One Runtime Spike
 
-**Prevention:** Use a dedicated CSV formatter, RFC 4180 escaping, and consider prefixing risky cell values when export fields can contain user-controlled text.
+A Python or Go spike can prove ABI shape but not production sandbox safety.
 
-### UI Density Without Study Value
+Prevention:
 
-Heatmaps and explorer tables can become colorful noise if every metric appears at once.
+- Mark the second runtime experimental.
+- Keep JS/TS as the only fully enabled runtime.
+- Preserve hostile runtime tests and do not weaken the existing worker/subprocess distinction.
 
-**Prevention:** Keep the top-level heatmap focused on matchup outcome/evidence, with drilldowns for detailed failure counts, side bias, and replay references.
+### JSON Canonicalization Surprises
 
-## Phase Ownership
+Go, Node, and Python can all emit semantically equivalent JSON with different string formatting, ordering, escaping, or trailing newlines.
 
-- Phase 38 should lock data contracts, compatibility rules, and privacy boundaries.
-- Phase 39 should handle saved profile persistence/rerun/compare without new runtime execution paths.
-- Phase 40 should make heatmaps honest about evidence count, side bias, failures, and confidence.
-- Phase 41 should make drilldowns and filters useful without raw payload leakage.
-- Phase 42 should make moment links deterministic and public-safe.
-- Phase 43 should keep exports summary-oriented and owner-only.
-- Phase 44 should prove the whole flow through demo data, browser verification, docs, and privacy/runtime audits.
+Prevention:
 
-## Sources
+- Compare parsed canonical data for most fixtures.
+- Use explicit normalized hashes only where hash contracts require them.
+- Avoid raw byte comparisons unless the test owns serialization settings.
 
-- User v1.6 milestone brief.
-- `.planning/PROJECT.md`
-- `.planning/milestones/v1.5-MILESTONE-AUDIT.md`
-- OWASP Privacy by Design guidance: https://owasp.org/www-project-devsecops-guideline/latest/02g-Privacy
-- RFC 4180 CSV: https://www.rfc-editor.org/rfc/rfc4180
+Primary source note: Go `encoding/json.Encoder.Encode` adds a trailing newline, and JSON escaping behavior has safety defaults. Source: https://pkg.go.dev/encoding/json
+
+### Shell and Environment Hazards
+
+Runtime spikes that invoke shell commands, inherit environment, or use ambiguous executable lookup undermine the security model.
+
+Prevention:
+
+- No shell invocation for runtime subprocesses.
+- Empty/minimal environment.
+- Fully qualified executable path or controlled runtime launcher.
+- stdout/stderr caps and timeout behavior preserved.
+
+Primary source note: Python subprocess docs warn about `shell=True`, recommend fully qualified executable paths for reliability, and state subprocess does not implicitly choose a shell. Source: https://docs.python.org/3/library/subprocess.html
+
+## Phase Placement Guidance
+
+- Service boundary contract should come before Go backend spike.
+- Runtime ABI should come before adapter registry and non-JS spike.
+- Golden parity should come before relying on cross-language behavior.
+- Adapter registry should come before compatibility-sensitive MatchSet/analytics changes.
+- Spikes should remain late enough to consume contracts but early enough to expose contract gaps before milestone close.
