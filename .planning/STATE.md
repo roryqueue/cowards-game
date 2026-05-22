@@ -2,29 +2,29 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Production Boundary Hardening
-status: executing
-stopped_at: Completed Phase 55
-last_updated: "2026-05-22T22:25:00.000Z"
+status: milestone_complete
+stopped_at: Completed v1.8
+last_updated: "2026-05-22T22:40:00.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 6
   completed_plans: 6
-  percent: 83
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** Phase 55 complete; ready for Phase 56 planning/execution
+**Status:** v1.8 complete; ready for milestone audit/next milestone selection
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 56 - Observability, Privacy, and Boundary Drift Monitors
+**Current focus:** v1.8 completion audit and v1.9 milestone shape
 **Latest shipped milestone:** v1.7 Runtime and Backend Boundary Stabilization
 **Requirements:** v1.8 requirements mapped 38/38 in .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
@@ -32,11 +32,11 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 ## Current Position
 
 Phase: 56 of 56 (Observability, Privacy, and Boundary Drift Monitors)
-Plan: Phase 55 complete; next is Phase 56
-Status: Executing
+Plan: v1.8 phases complete
+Status: Milestone complete
 Last activity: 2026-05-22
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Workflow Settings
 
@@ -89,10 +89,13 @@ Progress: [████████░░] 83%
 - [Phase 55]: Local topology is now a diagnostic harness, not a process supervisor: `pnpm topology:check` validates static scripts, fixtures, TypeScript service health, runtime adapter metadata, optional live web/Go smoke, required-boundary failures, and public-safe diagnostics. — Keeps ownership boundaries loud without rewriting orchestration.
 - [Phase 55]: Env-provided topology URLs are optional smoke targets unless `--require-web` or `--require-go` is passed. — Plain static checks stay repeatable on developer machines with leftover environment variables.
 - [Phase 55]: Topology diagnostics redact token-like URL data and require owner analytics to reject unauthenticated requests with HTTP 401/403. — Prevents local failure output from becoming a private-data channel.
+- [Phase 56]: `pnpm boundary:monitors` now composes contract generation/lint, web import boundaries, Go parity, sandbox artifact checks, topology diagnostics, and cross-boundary drift monitors. — v1.8 has one local command for boundary release confidence.
+- [Phase 56]: Broad web direct persistence/runtime debt is baseline-gated with normalized import fingerprints. — Known debt stays visible, but new forbidden imports fail even on existing lines.
+- [Phase 56]: Runtime adapter/product semantics and Go route manifests now drift-check against canonical spec metadata without executing Strategy code or expanding Go ownership. — Keeps monitors useful without moving the production boundary prematurely.
 
 ### Pending Todos
 
-Phase 56 needs monitor planning for service contract drift, private DTO leaks, runtime/web execution bypasses, persistence import regressions, adapter drift, Go/TypeScript parity drift, and v1.8 regression coverage.
+All v1.8 phases are complete. Next work should audit the milestone and choose whether v1.9 starts with backend read-model expansion, production runtime isolation, or mutation boundary design.
 
 ### Blockers/Concerns
 
@@ -110,6 +113,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-22T22:25:00.000Z
-Stopped at: Completed Phase 55
+Last session: 2026-05-22T22:40:00.000Z
+Stopped at: Completed v1.8
 Resume file: None

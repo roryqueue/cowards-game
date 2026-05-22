@@ -55,13 +55,13 @@ Requirements for turning the v1.7 service/runtime/backend contracts into sturdie
 
 ### Observability, Privacy, and Boundary Drift Monitors
 
-- [ ] **MON-01**: Boundary checks fail on service contract drift, stale generated artifacts, or route schema mismatches.
-- [ ] **MON-02**: Public DTO leak scanners fail if service, replay, MatchSet, ladder, analytics, export, Go, topology, or diagnostic outputs expose private Strategy/runtime fields by default.
-- [ ] **MON-03**: Web/API boundary monitors fail on direct Strategy runtime execution or runtime worker imports from web/API processes.
-- [ ] **MON-04**: Migrated-route monitors fail on direct persistence-root imports outside approved service implementation modules.
-- [ ] **MON-05**: Adapter compatibility drift checks compare registry metadata, ABI version, adapter id/version, language id/version, limits, readiness, and counted-play eligibility against executable adapter behavior.
-- [ ] **MON-06**: Go/TypeScript parity drift checks run locally or in CI for every v1.8 Go read-only endpoint.
-- [ ] **MON-07**: v1.8 verification proves existing JS/TS Workshop, immutable Strategy Revision, exhibition/trial evidence, replay viewer, saved gauntlet analytics, golden parity, and public privacy behavior remain unchanged.
+- [x] **MON-01**: Boundary checks fail on service contract drift, stale generated artifacts, or route schema mismatches.
+- [x] **MON-02**: Public DTO leak scanners fail if service, replay, MatchSet, ladder, analytics, export, Go, topology, or diagnostic outputs expose private Strategy/runtime fields by default.
+- [x] **MON-03**: Web/API boundary monitors fail on direct Strategy runtime execution or runtime worker imports from web/API processes.
+- [x] **MON-04**: Migrated-route monitors fail on direct persistence-root imports outside approved service implementation modules.
+- [x] **MON-05**: Adapter compatibility drift checks compare registry metadata, ABI version, adapter id/version, language id/version, limits, readiness, and counted-play eligibility against executable adapter behavior.
+- [x] **MON-06**: Go/TypeScript parity drift checks run locally or in CI for every v1.8 Go read-only endpoint.
+- [x] **MON-07**: v1.8 verification proves existing JS/TS Workshop, immutable Strategy Revision, exhibition/trial evidence, replay viewer, saved gauntlet analytics, golden parity, and public privacy behavior remain unchanged.
 
 ## Future Requirements
 
@@ -138,13 +138,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOPO-04 | Phase 55 | Complete |
 | TOPO-05 | Phase 55 | Complete |
 | TOPO-06 | Phase 55 | Complete |
-| MON-01 | Phase 56 | Pending |
-| MON-02 | Phase 56 | Pending |
-| MON-03 | Phase 56 | Pending |
-| MON-04 | Phase 56 | Pending |
-| MON-05 | Phase 56 | Pending |
-| MON-06 | Phase 56 | Pending |
-| MON-07 | Phase 56 | Pending |
+| MON-01 | Phase 56 | Complete |
+| MON-02 | Phase 56 | Complete |
+| MON-03 | Phase 56 | Complete |
+| MON-04 | Phase 56 | Complete |
+| MON-05 | Phase 56 | Complete |
+| MON-06 | Phase 56 | Complete |
+| MON-07 | Phase 56 | Complete |
 
 **Coverage:**
 - v1.8 requirements: 38 total
@@ -153,4 +153,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after Phase 55 completion*
+*Last updated: 2026-05-22 after Phase 56 completion*

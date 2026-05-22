@@ -10,11 +10,11 @@
 - [x] **v1.5 Strategy Workshop Power Tools and Advanced Strategy Library** - Phases 30-37, shipped 2026-05-21. See `.planning/milestones/v1.5-ROADMAP.md`.
 - [x] **v1.6 Workshop Analytics and Evidence Explorer** - Phases 38-44, shipped 2026-05-22. See `.planning/milestones/v1.6-ROADMAP.md`.
 - [x] **v1.7 Runtime and Backend Boundary Stabilization** - Phases 45-50, shipped 2026-05-22. See `.planning/milestones/v1.7-ROADMAP.md`.
-- [ ] **v1.8 Production Boundary Hardening** - Phases 51-56, planned.
+- [x] **v1.8 Production Boundary Hardening** - Phases 51-56, completed 2026-05-22.
 
 ## Current Milestone: v1.8 Production Boundary Hardening
 
-**Status:** Executing
+**Status:** Complete
 **Phases:** 51-56
 **Granularity:** Standard
 **Requirements:** 38/38 mapped
@@ -30,7 +30,7 @@ v1.8 turns the v1.7 service, runtime, and backend contracts into harder operatin
 - [x] **Phase 53: Runtime Sandbox Hardening Prototype** - Developers can evaluate sandbox candidates through the runtime ABI without changing counted Match defaults.
 - [x] **Phase 54: Non-JS Strategy Product Semantics** - Users and developers see clear experimental language semantics, validation messages, and fail-closed counted-play eligibility.
 - [x] **Phase 55: Cross-Process Local Deployment Harness** - Developers can run and diagnose the local web, service, runtime, Go, and fixture topology as separate boundaries.
-- [ ] **Phase 56: Observability, Privacy, and Boundary Drift Monitors** - Boundary, privacy, parity, and compatibility checks fail on drift or bypasses before milestone release.
+- [x] **Phase 56: Observability, Privacy, and Boundary Drift Monitors** - Boundary, privacy, parity, and compatibility checks fail on drift or bypasses before milestone release.
 
 ## Phase Details
 
@@ -117,7 +117,9 @@ Plans:
   3. Web/API boundary monitors fail on direct Strategy runtime execution, runtime worker imports, or direct persistence-root imports outside approved service implementation modules.
   4. Adapter compatibility and Go/TypeScript parity drift checks compare registry metadata, ABI details, limits, readiness, counted-play eligibility, and every v1.8 Go read-only endpoint against executable behavior.
   5. v1.8 verification proves existing JS/TS Workshop, immutable Strategy Revision, exhibition/trial evidence, replay viewer, saved gauntlet analytics, golden parity, and public privacy behavior remain unchanged.
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [x] 56-01-PLAN.md — Add a composed v1.8 monitor command with contract, privacy, import-boundary, runtime adapter, Go parity, sandbox, and topology drift checks.
 
 ## Progress
 
@@ -130,7 +132,7 @@ Plans:
 | 53. Runtime Sandbox Hardening Prototype | 1/1 | Complete | 2026-05-22 |
 | 54. Non-JS Strategy Product Semantics | 1/1 | Complete | 2026-05-22 |
 | 55. Cross-Process Local Deployment Harness | 1/1 | Complete | 2026-05-22 |
-| 56. Observability, Privacy, and Boundary Drift Monitors | 0/TBD | Not started | - |
+| 56. Observability, Privacy, and Boundary Drift Monitors | 1/1 | Complete | 2026-05-22 |
 
 ## Requirement Coverage
 
@@ -147,11 +149,11 @@ Plans:
 
 ## Next Up
 
-**Phase 56: Observability, Privacy, and Boundary Drift Monitors** - Compose lightweight checks that catch service contract drift, private DTO leaks, runtime/web execution bypasses, adapter drift, and Go/TypeScript parity drift before milestone release.
+**v1.9 candidate: Backend and Runtime Ownership Split** - Use v1.8 contracts, parity fixtures, topology, and monitors to choose the first real ownership move: either Go read model expansion, worker/runtime process isolation, or backend mutation boundary design.
 
 Recommended next command:
 
-`$gsd-discuss-phase 56`
+`$gsd-new-milestone`
 
 ## Recent Shipped Scope
 
@@ -169,4 +171,4 @@ Recommended next command:
 
 ---
 *Roadmap created: 2026-05-22 for v1.8 Production Boundary Hardening*
-*Last updated: 2026-05-22 after Phase 55 completion*
+*Last updated: 2026-05-22 after Phase 56 completion*

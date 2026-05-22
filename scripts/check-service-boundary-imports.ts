@@ -48,6 +48,7 @@ export interface ServiceBoundaryOffense {
   path: string
   line: number
   pattern: string
+  statementText?: string | undefined
 }
 
 export interface AnalyzeServiceBoundaryOptions {
@@ -249,9 +250,19 @@ const findOffenses = (
           ) {
             return []
           }
-          return pattern
-            ? [{ path: repoPath, line: statement.line, pattern }]
-            : []
+          if (!pattern) {
+            return []
+          }
+          const offense: ServiceBoundaryOffense = {
+            path: repoPath,
+            line: statement.line,
+            pattern,
+          }
+          Object.defineProperty(offense, "statementText", {
+            value: statement.text.replace(/\s+/g, " ").trim(),
+            enumerable: false,
+          })
+          return [offense]
         },
       )
     })
