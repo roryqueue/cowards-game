@@ -1,4 +1,8 @@
-import { COMPATIBILITY_VERSIONS, type Chronicle } from "@cowards/spec"
+import {
+  COMPATIBILITY_VERSIONS,
+  SERVICE_API_VERSION,
+  type Chronicle,
+} from "@cowards/spec"
 import {
   createChronicleMetadata,
   type StoredChronicle,
@@ -308,6 +312,94 @@ describe("Match replay server facade", () => {
 
     expect(response.status).toBe("ready")
     expect(seen).toEqual(["match:replay-test"])
+  })
+
+  it("returns public replay metadata through the service boundary", async () => {
+    const stored = createStoredChronicle()
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+    })
+
+    await expect(
+      server.getPublicReplayMetadata("match:replay-test"),
+    ).resolves.toEqual({
+      apiVersion: SERVICE_API_VERSION,
+      kind: "publicReplayMetadata",
+      matchId: "match:replay-test",
+      metadata: {
+        matchId: "match:replay-test",
+        chronicleId: "match:replay-test",
+        hash: stored.metadata.hash,
+        schemaVersion: "chronicle-v1.4",
+        eventCount: stored.artifact.events.length,
+        snapshotCount: stored.artifact.snapshots.length,
+        bottomPlayerId: "player:bottom",
+        topPlayerId: "player:top",
+        arenaVariantId: "arena:replay-test",
+      },
+    })
+  })
+
+  it("decodes URL-encoded Match ids for public replay metadata", async () => {
+    const stored = createStoredChronicle()
+    const seen: string[] = []
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async (matchId) => {
+          seen.push(matchId)
+          return stored
+        },
+      }),
+    })
+
+    await expect(
+      server.getPublicReplayMetadata(encodeURIComponent("match:replay-test")),
+    ).resolves.toMatchObject({
+      kind: "publicReplayMetadata",
+      matchId: "match:replay-test",
+    })
+    expect(seen).toEqual(["match:replay-test"])
+  })
+
+  it("returns null when public replay metadata has no Chronicle", async () => {
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => null,
+      }),
+    })
+
+    await expect(
+      server.getPublicReplayMetadata("match:missing"),
+    ).resolves.toBeNull()
+  })
+
+  it("does not expose private Chronicle fields in public replay metadata", async () => {
+    const stored = createStoredChronicle()
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+    })
+
+    const metadata = await server.getPublicReplayMetadata("match:replay-test")
+    const serialized = JSON.stringify(metadata)
+
+    expect(serialized).not.toContain("strategyMemory")
+    expect(serialized).not.toContain("soldierMemory")
+    expect(serialized).not.toContain("objectivePayload")
+    expect(serialized).not.toContain("awarenessGrid")
+    expect(serialized).not.toContain("strategySource")
+    expect(serialized).not.toContain("rawRuntimeDetails")
+    expect(serialized).not.toContain("ownerDebug")
+    expect(serialized).not.toContain("PRIVATE_STRATEGY_MEMORY")
+    expect(serialized).not.toContain("PRIVATE_AWARENESS_GRID")
+    expect(serialized).not.toContain("PRIVATE_OWNER_DEBUG_EXPLANATION")
   })
 
   it("returns public replay data by default without private markers", async () => {
