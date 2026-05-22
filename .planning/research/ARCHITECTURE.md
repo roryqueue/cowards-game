@@ -1,102 +1,100 @@
-# Architecture Research: v1.3 Competition Trust Beta
+# Architecture Research: v1.6 Workshop Analytics and Evidence Explorer
 
-**Project:** Coward's Game  
-**Date:** 2026-05-19  
-**Milestone context:** v1.3 Competition Trust Beta
+**Project:** Coward's Game
+**Date:** 2026-05-21
+**Milestone context:** v1.6 Workshop Analytics and Evidence Explorer
 
-## Architectural Direction
+## Integration Shape
 
-v1.3 should extend the v1.2 competition architecture rather than create a separate ranked system. The correct spine is:
-
-1. `@cowards/spec` owns season, ladder, public profile, public Strategy card, dispute, moderation, and adapter metadata contracts.
-2. `@cowards/persistence` owns migrations, repositories, season entry eligibility, scheduler state, standings aggregation, moderation audit, and starter template storage/seeding.
-3. `@cowards/worker` keeps MatchSet execution and retry/degraded classification outside the web/API request path.
-4. `@cowards/runtime-js` owns the production adapter spike behind the existing Strategy execution boundary.
-5. `apps/web` renders account/workshop/season/profile/result views using server DTOs; it does not infer rules or expose private fields.
-
-## Proposed Data Flow
+v1.6 should add a stable analytics layer between existing MatchSet evidence and Workshop UI.
 
 ```mermaid
-flowchart TD
-  A["User forks starter Strategy"] --> B["Account-owned Strategy Revision"]
-  B --> C["Exhibition test MatchSet"]
-  B --> D["Trial ladder entry"]
-  D --> E["Season entry snapshot lock"]
-  E --> F["Scheduler forms pod MatchSets"]
-  F --> G["Worker executes Matches"]
-  G --> H["Chronicle and scoring evidence"]
-  H --> I["Counted standings projection"]
-  H --> J["Public result and replay pages"]
-  J --> K["Flag result / dispute note"]
-  K --> L["Admin review and audit log"]
-  L --> I
+flowchart LR
+  Profile["Saved Gauntlet Profile"] --> MatchSet["Existing MatchSet + Jobs"]
+  MatchSet --> Chronicle["Chronicle Store"]
+  Chronicle --> Summary["Analytics Evidence Summary"]
+  Summary --> Heatmap["Workshop Heatmap"]
+  Summary --> Explorer["Evidence Explorer"]
+  Summary --> Export["Owner Export"]
+  Chronicle --> Moments["Replay Moment Index"]
+  Moments --> Replay["Replay Deep Links"]
 ```
 
-## New or Modified Components
+## New Concepts
 
-### `packages/spec`
+### Gauntlet Profile
 
-- Add `CompetitionSeason`, `TrialLadderPreset`, `SeasonEntry`, `SeasonEntryStatus`, `SeasonMatchSet`, `SeasonStanding`, `PublicPlayerProfileDto`, `PublicStrategyCardDto`, `ResultFlagDto`, `ModerationAuditEventDto`, and leak-safe assertion helpers.
-- Extend competition statuses to distinguish counted, pending review, invalid, and non-competitive where public standings need it.
-- Preserve canonical terminology and keep ladder contracts independent from engine rules.
+Persist a named owner-owned profile with an immutable compatibility snapshot. The user can rename or annotate a profile, but rerun compatibility should be based on captured inputs and compatibility versions.
 
-### `packages/persistence`
+Likely fields:
 
-- Add v1.3 migration for seasons, entries, standings, scheduler batches, public profiles/cards, starter templates, result flags, and moderation audit.
-- Add services:
-  - `season-service.ts`: create/open/close seasons, entry rules, replacement/stale behavior.
-  - `season-scheduler.ts`: deterministic pod/round-robin MatchSet generation.
-  - `standings-service.ts`: counted MatchSet aggregation and invalidation recalculation.
-  - `public-profile-service.ts`: player and Strategy public DTOs.
-  - `moderation-service.ts`: flags, admin review, invalidation, audit log.
-  - `starter-strategy-service.ts`: starter library listing, validation, fork into account-owned Strategy.
-- Reuse existing `competition.ts`, `matchset-service.ts`, `matchset-status.ts`, and `scoring.ts` rather than duplicating MatchSet execution.
+- `id`, `owner_user_id`, `name`, `description`, `created_at`, `updated_at`.
+- `candidate_revision_ids`, `opponent_revision_ids`.
+- `opponent_tags` or denormalized public labels at creation time.
+- `preset_id`, `seed_policy`, `mirror_sides`, `scoring_policy`.
+- `rule_version`, `chronicle_version`, `runtime_adapter`, `runtime_version`.
+- `profile_hash` and `compatibility_key`.
 
-### `apps/web`
+### Analytics Summary
 
-- Add public pages for seasons, player handles, and Strategy cards.
-- Extend account/workshop to show Starter Library and fork controls.
-- Add ladder entry flow for exactly one active revision per user per season.
-- Extend result page with counted/non-counted status, dispute flagging, and public moderation outcome.
-- Add admin-only review route. Keep authorization server-side.
+Create typed summary DTOs in persistence/spec rather than deriving UI-only structures in React. Summaries should be serializable and public-safe by default.
 
-### `apps/worker`
+Likely objects:
 
-- Add scheduled job entry point or service call for periodic pod generation.
-- Keep Match execution behavior unchanged; standings should consume MatchSet evidence rather than change engine/worker result semantics.
+- `GauntletSummary`.
+- `MatchupRecord`.
+- `EvidenceBand`.
+- `ReplayReference`.
+- `ExportableGauntletSummary`.
 
-### `packages/runtime-js`
+### Replay Moment Index
 
-- Promote the existing subprocess adapter from spike to a selectable production candidate, then wrap it in container controls if selected.
-- Add adapter metadata for production readiness, resource controls, unsupported capabilities, and fallback behavior.
-- Keep all JSON IPC schema validation and failure taxonomy strict.
+Build representative moment selection from public-projected Chronicle/timeline data. The index should map moments to sequence numbers and public labels while avoiding private payload details.
 
-## Suggested Build Order
+Moment selection can be deterministic:
 
-1. Starter Strategy Library and public Strategy metadata contracts, because these give new players credible entry points without depending on ladder scheduling.
-2. Season/entry eligibility model, because one active revision per user and stale behavior are trust contracts.
-3. Scheduler and standings aggregation, because the ladder loop depends on deterministic pods and counted MatchSet policy.
-4. Public profiles/Strategy cards/season pages, because users need visibility once standings exist.
-5. Dispute/moderation/invalidation, because standings need governance before beta launch.
-6. Runtime production boundary spike, which can proceed in parallel after contracts are stable but must land before calling trial ladder trustworthy.
+- First and/or most decisive Backstab.
+- First contraction.
+- First Fall.
+- Push resolving a large position swing where detectable from public events.
+- No-advance cleanup as blocked/no-reverse or inactivity-style public explanation where available.
+- Late-cycle stabilization near the final counted phase of the Match.
 
-## Integration Risks
+## Modified Areas
 
-- If starter templates are stored only as code constants, lineage/versioning and public cards become awkward. Prefer explicit template metadata plus source hash.
-- If standings are stored as mutable totals without provenance, invalidation will become risky. Prefer recomputable aggregation from counted MatchSets, with optional cached projections.
-- If scheduler uses wall-clock order or database row order as a tie-breaker, standings can become non-deterministic. Use explicit season seed, entry snapshot ids, source hashes, and stable ids.
-- If admin review uses public DTOs only, it will not have enough context to govern disputes. Use server-only inspection DTOs behind admin authorization while keeping public DTOs leak-safe.
-- If container/WASI work changes the Strategy API or runtime output shape, it will ripple through engine/replay. Keep the adapter contract stable.
+- `packages/persistence/src/workshop.ts`: saved profiles, rerun creation, profile summaries.
+- `packages/persistence/src/matchset-status.ts` and `scoring.ts`: evidence counts, failure categories, side splits.
+- `apps/web/app/workshop/server.ts`: server methods for profiles, analytics, reruns, exports.
+- `apps/web/app/workshop/workshop-client.tsx`: heatmap, explorer, export controls.
+- `apps/web/app/matches/replay-ready.ts`: initial sequence/deep-link support and representative moment metadata.
+- `packages/spec/src`: schemas/types for analytics DTOs and export DTOs.
+- `packages/persistence/migrations`: profile/summary persistence.
+
+## Build Order
+
+1. Define analytics contracts and evidence-band rules before UI.
+2. Persist saved profile inputs and compatibility keys.
+3. Add rerun/compare service methods that reuse existing MatchSet creation and worker jobs.
+4. Build heatmap/explorer projections from summaries.
+5. Add replay moment indexing and deep-link handling.
+6. Add owner-safe export DTOs and endpoints.
+7. Generate demo data and verify privacy/runtime boundaries.
+
+## Testing Implications
+
+- Contract/schema tests for every public/owner analytics DTO.
+- Determinism tests for profile hash, compatibility equivalence, matrix expansion, summary ordering, evidence-band classification, and replay moment selection.
+- Persistence tests for profile save/rerun/compare/export.
+- Privacy leak tests for public analytics, replay references, and exports.
+- Runtime isolation tests proving profile/rerun routes enqueue MatchSets/jobs but never execute Strategy code in web/API.
+- Playwright/browser checks for Workshop heatmap, explorer drilldown, deep links, and export affordances.
 
 ## Sources
 
-- Local: `.planning/PROJECT.md`
-- Local: `.planning/milestones/v1.2-ROADMAP.md`
-- Local: `packages/spec/src/competition.ts`
-- Local: `packages/persistence/src/competition.ts`
-- Local: `packages/persistence/src/scoring.ts`
-- Local: `apps/worker/src/runner.ts`
-- Local: `packages/runtime-js/src/adapter.ts`
-- Docker resource constraints docs: https://docs.docker.com/engine/containers/resource_constraints/
-- Node child process docs: https://nodejs.org/api/child_process.html
-- Wasmtime interruption docs: https://docs.wasmtime.dev/examples-interrupting-wasm.html
+- `packages/spec/src/types.ts`
+- `packages/spec/src/schemas.ts`
+- `packages/persistence/src/workshop.ts`
+- `packages/persistence/src/matchset-status.ts`
+- `packages/persistence/src/scoring.ts`
+- `apps/web/app/workshop/server.ts`
+- `apps/web/app/matches/replay-ready.ts`

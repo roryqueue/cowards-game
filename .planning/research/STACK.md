@@ -1,78 +1,56 @@
-# Stack Research: v1.3 Competition Trust Beta
+# Stack Research: v1.6 Workshop Analytics and Evidence Explorer
 
-**Project:** Coward's Game  
-**Date:** 2026-05-19  
-**Milestone context:** v1.3 Competition Trust Beta
+**Project:** Coward's Game
+**Date:** 2026-05-21
+**Milestone context:** v1.6 Workshop Analytics and Evidence Explorer
 
-## Existing Stack to Preserve
+## Recommendation
 
-- TypeScript monorepo with pnpm, Turbo, Vitest, Playwright, Next.js, PostgreSQL, Docker Compose, and package boundaries across `@cowards/spec`, `@cowards/engine`, `@cowards/replay`, `@cowards/runtime-js`, `@cowards/persistence`, `@cowards/web`, and `@cowards/worker`.
-- Pure deterministic engine remains isolated from persistence, network, filesystem, wall-clock time, and React.
-- Competition contracts already exist in `packages/spec/src/competition.ts` for exhibition presets, immutable entrant snapshots, public standings, Match evidence, provenance, publication policy, and leak checks.
-- Persistence already has v1.2 ownership/session/competition tables in `packages/persistence/migrations/0003_competitive_alpha.sql`.
-- Runtime already exposes a replaceable Strategy execution adapter and has worker-thread plus subprocess metadata in `packages/runtime-js/src/adapter.ts` and `packages/runtime-js/src/subprocess-adapter.ts`.
+Do not introduce a parallel analytics stack. Extend the existing TypeScript monorepo, Next.js web app, PostgreSQL persistence layer, MatchSet service, worker execution pipeline, Chronicle store, replay projection, and Vitest/Playwright verification spine.
 
-## Recommended Stack Additions
+## Existing Stack to Reuse
 
-### Ladder and Governance Persistence
+- **Persistence:** `packages/persistence` already owns MatchSet creation, scoring, Chronicle storage, workshop snapshots, strategy cards, public profile DTOs, migrations, and privacy-sensitive query boundaries.
+- **Workshop service boundary:** `apps/web/app/workshop/server.ts` delegates to persistence functions and never executes Strategy code directly.
+- **Runtime isolation:** Strategy code remains behind `StrategyExecutionAdapter`, worker jobs, and runtime subprocess/container candidates. v1.6 analytics should only create MatchSets/jobs or read completed evidence.
+- **Replay:** `apps/web/app/matches/replay-ready.ts` builds public/owner projections and timeline entries from Chronicles. Deep links should target projected public event sequence numbers, not private runtime data.
+- **UI:** The web app currently uses React/Next with local CSS, Monaco, and Pixi. There is no table, chart, or visualization dependency yet.
 
-Add a v1.3 migration for:
+## Possible Additions
 
-- `competition_seasons`: resettable trial ladder seasons with status, preset/scoring policy, open/close timestamps, and publication policy.
-- `season_entries`: one active Strategy Revision snapshot per user per season, replacement policy, stale behavior, and public entry status.
-- `season_matchsets`: scheduled MatchSet batches/pods tied to a season and counted/non-counted status.
-- `season_standings`: materialized or recomputable public standings derived from counted MatchSets.
-- `result_flags`: player-submitted dispute notes tied to MatchSet/Match/result evidence.
-- `result_moderation_events`: admin-only audit trail for invalidation, non-competitive marking, and review decisions.
-- `starter_strategies` or seed metadata: forkable default Strategy templates with doctrine metadata, source, tags, validation status, and versioning.
+### Tables and Filtering
 
-### Public Surface
+TanStack Table is a credible option if v1.6 evidence tables become complex enough to need controlled sorting, filtering, faceting, row expansion, and column state. Its docs explicitly distinguish client-side and server-side sorting/filtering concerns, which matters if evidence grows beyond a local Workshop page.
 
-Use existing Next.js app routes and server modules:
+For v1.6, a local typed table model may be better unless the UI needs rich column state immediately. The current app has no existing TanStack dependency, and the first milestone goal is deterministic study surfaces, not a general data-grid platform.
 
-- `/players/[handle]` for public player handle pages.
-- `/strategies/[strategyId]` or `/strategies/[strategySlug]` for public Strategy cards without source.
-- `/seasons/[seasonId]` for trial ladder standings and season state.
-- `/seasons/[seasonId]/enter` or account/workshop affordances for ladder entry.
-- Existing `/matchsets/[matchSetId]` result page should gain counted/non-counted/provenance/dispute state instead of a duplicate result surface.
+### Heatmaps
 
-### Runtime Boundary Spike
+D3 color scales are useful reference material, but a D3 dependency is not mandatory. v1.6 can represent heatmap cells with deterministic numeric bands and CSS variables. If later visualization needs continuous scales or legends, D3 sequential scales and chromatic schemes are a mature source for quantitative color encoding.
 
-Keep `worker-thread` as the local/dev fallback, but treat it as compatibility containment only. Node worker resource limits constrain V8 heap/stack in the Worker and still share the host process; Node docs explicitly say those limits affect the JS engine and not all external data, and a global out-of-memory can still abort the process.
+### Deep Links
 
-Prefer a v1.3 production spike around the existing subprocess adapter upgraded to one of:
+Replay deep links should use stable URL query parameters or fragments carrying public-safe sequence/event identifiers. `URLSearchParams` is a standard browser API and fits Next client/server handling without a routing dependency.
 
-1. **Containerized subprocess adapter:** invoke the existing JSON IPC harness inside a short-lived container or sandboxed service with Docker CPU/memory/pids/network/filesystem controls.
-2. **Hardened subprocess adapter:** keep a host process boundary with shell disabled, explicit env, stdio caps, timeout, and kill handling as an incremental step while container work lands.
-3. **WASM/WASI prototype only if compiled Strategy language changes become in-scope:** Wasmtime has deterministic fuel and resource limiter mechanisms, but moving JS/TS Strategy authoring to Wasm is a larger product/runtime shift.
+### Exports
 
-Do not use Node `node:wasi` as a hostile-code sandbox. Node documentation marks WASI experimental and says not to rely on it for untrusted code.
+Owner exports should support JSON directly from typed DTOs and CSV following RFC 4180-style escaping for comma, quote, and newline handling. Browser download can be implemented with `Blob` where client-side export is appropriate, but server-created files are unnecessary for local v1.6.
 
 ## What Not to Add
 
-- No permanent rating engine dependency yet. Trial standings can use existing deterministic points, tie-breakers, and counted MatchSet aggregation.
-- No all-time leaderboard tables or durable Elo/Glicko schema contracts in v1.3.
-- No new engine dependency for ladder rules. Eligibility, scheduling, and standings belong in spec/persistence/service layers.
-- No React-owned game or scoring rules.
-- No Strategy source execution in web/API routes.
-
-## Verification Implications
-
-- Extend Vitest coverage for season eligibility, one-active-entry constraints, replacement policy, stale revisions, standings aggregation, counted/non-counted MatchSets, disputes, invalidation audit logs, public DTO privacy, and starter template validation.
-- Extend service-backed Playwright coverage for fork starter -> save revision -> exhibition test -> enter ladder -> generated MatchSet -> standings/result/replay evidence.
-- Add hostile Strategy runtime regression tests around the chosen production adapter path: forbidden globals, dynamic import, process/worker/fs/network attempts, infinite loop, memory pressure, stdout/stderr flood, malformed JSON IPC, subprocess/container exit, timeout, and adapter system failure.
+- No analytics warehouse, OLAP service, background inference process, or external metrics platform.
+- No client-side execution or replaying of Strategy source.
+- No public export pipeline that touches source, memory, objectives, raw Awareness Grid, stack traces, owner debug, or runtime internals.
+- No chart library unless the local CSS/React heatmap proves insufficient.
 
 ## Sources
 
-- Local: `.planning/PROJECT.md`
-- Local: `.planning/milestones/v1.2-REQUIREMENTS.md`
-- Local: `packages/spec/src/competition.ts`
-- Local: `packages/persistence/migrations/0003_competitive_alpha.sql`
-- Local: `packages/runtime-js/src/adapter.ts`
-- Local: `packages/runtime-js/src/subprocess-adapter.ts`
-- Node child process docs: https://nodejs.org/api/child_process.html
-- Node worker threads docs: https://nodejs.org/api/worker_threads.html
-- Node WASI docs: https://nodejs.org/api/wasi.html
-- Docker resource constraints docs: https://docs.docker.com/engine/containers/resource_constraints/
-- Wasmtime interruption docs: https://docs.wasmtime.dev/examples-interrupting-wasm.html
-- Wasmtime resource limiter docs: https://docs.wasmtime.dev/api/src/wasmtime/runtime/limits.rs.html
+- Codebase: `packages/persistence/src/workshop.ts`, `apps/web/app/workshop/server.ts`, `apps/web/app/matches/replay-ready.ts`, `packages/persistence/src/matchset-service.ts`, `packages/persistence/src/scoring.ts`.
+- TanStack Table sorting guide: https://tanstack.dev/table/latest/docs/guide/sorting
+- TanStack Table filter APIs: https://tanstack.com/table/v8/docs/api/features/filters
+- D3 sequential scales: https://d3js.org/d3-scale/sequential
+- D3 sequential color schemes: https://d3js.org/d3-scale-chromatic/sequential
+- MDN `URLSearchParams`: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
+- RFC 4180 CSV: https://www.rfc-editor.org/rfc/rfc4180
+- MDN `Blob`: https://developer.mozilla.org/en-US/docs/Web/API/Blob
+- OWASP Privacy by Design guidance: https://owasp.org/www-project-devsecops-guideline/latest/02g-Privacy

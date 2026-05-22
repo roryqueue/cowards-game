@@ -1,102 +1,94 @@
-# Feature Research: v1.3 Competition Trust Beta
+# Feature Research: v1.6 Workshop Analytics and Evidence Explorer
 
-**Project:** Coward's Game  
-**Date:** 2026-05-19  
-**Milestone context:** v1.3 Competition Trust Beta
+**Project:** Coward's Game
+**Date:** 2026-05-21
+**Milestone context:** v1.6 Workshop Analytics and Evidence Explorer
 
 ## Table Stakes
 
-### Trial Ladder Seasons
+### Saved Gauntlet Profiles
 
-- Resettable seasons/trial ladders with public status: pending, open, scheduling, active, completed, archived.
-- Standings are season-scoped and resettable, not permanent all-time ratings.
-- Scoring uses deterministic MatchSet points and visible tie-breakers; v1.3 should not promise Elo/Glicko.
-- Public season pages show eligible entries, scheduled/active/completed MatchSets, counted status, standings, and replay evidence.
+Players need named, rerunnable profiles that capture the exact deterministic test contract:
 
-### Competition Eligibility Rules
+- Candidate Strategy Revision ids.
+- Opponent Strategy Revision ids and opponent labels/archetype tags.
+- Preset, seeds, mirror/side policy, scoring policy, rule version, Chronicle version, runtime adapter/version, and profile expansion order.
+- Creator/owner and timestamps.
+- Compatibility hash or equivalence fingerprint.
 
-- Exhibition remains flexible: 2-8 owned revisions, same-user self-play allowed.
-- Trial ladder enforces one active Strategy Revision per user per season.
-- Ladder entries lock immutable Strategy Revision snapshots at entry time.
-- Replacement policy is explicit: either next-season-only or cooldown-based. Recommended v1.3 default is next-season-only for trust and simplicity, with cooldown-based replacement deferred unless needed.
-- Stale, deleted, superseded, incompatible, withdrawn, or invalidated revisions have visible behavior before scheduling, after scheduling, and after result publication.
+The profile is the thing players compare, not just the display name. Renaming should not affect compatibility; changing participants, seeds, preset, scoring, or compatibility versions should.
 
-### Submission and Matchmaking Queue
+### Rerun and Compare
 
-- Signed-in user can enter an eligible Strategy Revision into the current trial ladder.
-- Periodic scheduler generates MatchSets from queued entries.
-- Small round-robin pods are the best v1.3 scheduling shape because they are easy to inspect, deterministic, and compatible with existing MatchSet scoring.
-- Pending, active, completed, degraded, invalid, and non-competitive states are visible to users.
-- Retry/degraded/system-failure policy prevents unresolved system failures from counting toward standings.
+Players need to rerun saved profiles through the existing MatchSet/worker infrastructure and compare result summaries only when profiles are compatibility-equivalent. A comparison should explain mismatch causes rather than silently comparing unlike evidence.
 
-### Public Player and Strategy Profiles
+### Matchup Heatmaps
 
-- Public handle page for each player.
-- Public Strategy card with name, description, tags, author handle, public revision lineage metadata, source hash, runtime compatibility, record, and replay/result links.
-- Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid details, and private runtime internals stay hidden by default.
-- Owner-only affordances let the author fork, edit, inspect source, or debug from authorized routes.
+Heatmaps should let players scan Strategy-by-opponent performance:
 
-### Dispute and Moderation Surface
+- W-L-D, points, failure counts, degraded/non-counted counts.
+- Side bias, especially bottom/top splits under mirrored presets.
+- Evidence count and confidence/evidence band.
+- Opponent archetype tags, including Starter and Advanced lineages.
+- Drilldown affordance to the underlying MatchSet and representative replays.
 
-- Result page can accept a flag/dispute note from a signed-in user.
-- Public result pages show whether a MatchSet counted, is under review, was invalidated, or was marked non-competitive.
-- Admin-only review view can inspect private evidence needed for governance without changing public projection policy.
-- Admin can mark a MatchSet invalid/non-competitive for standings.
-- Invalidation creates an immutable audit log with actor, reason, timestamp, target, before/after state, and public explanation.
+### Evidence Bands
 
-### Runtime/Sandbox Production Decision Spike
+Evidence bands should be product language, not hidden math:
 
-- Choose the near-term production runtime boundary: hardened subprocess, containerized subprocess, or WASM/WASI.
-- Prototype the chosen boundary behind the existing `StrategyExecutionAdapter`.
-- Keep worker-thread runtime as local/dev fallback if useful.
-- Expand hostile Strategy regression coverage around the chosen path.
+- **Strong evidence:** enough counted, replay-backed compatible Matches to treat a pattern as meaningful.
+- **Thin evidence:** counted evidence exists but sample size is too low or too narrow.
+- **Degraded/non-counted evidence:** some completed evidence exists, but non-counted/degraded status prevents confident conclusions.
+- **System-failed evidence:** system failure dominates; it should not punish or credit Strategy quality.
 
-### Starter Strategy Library
+### Evidence Explorer
 
-- Seed about 10 forkable starter Strategies as first-class Workshop library entries, not automatic active submissions.
-- Each starter has name, description, tags, doctrine notes, expected behavior, source, validation report, and version/source hash.
-- Starter Strategies should be simple enough to read and credible enough to beat naive or mismatched opponents.
-- Recommended set:
-  - Centerline Bully: claims central space and pressures enemies toward contraction danger.
-  - Corner Lurker: defensive corner doctrine that punishes overextension.
-  - Backstab Hunter: positions for legal Backstab opportunities.
-  - Wall Press: uses edges and lateral pressure for traps.
-  - Ring Runner: stays just inside danger and outlasts slower opponents.
-  - Mirror Breaker: mirrors early, then breaks symmetry around contraction or pressure openings.
-  - Center Turtle: conservative central survival and low-risk mobility.
-  - Aggro Chaser: direct pursuit baseline with real offensive pressure.
-  - Escape Artist: prioritizes legal exits, mobility, and anti-pin behavior.
-  - Trap Setter: baits opponent into edge, contraction, or push-chain danger.
+Players need a sortable/filterable path from high-level profile to concrete proof:
+
+Strategy -> opponent/archetype -> matchup record -> MatchSet -> Match -> replay moment.
+
+The explorer should support filters for opponent tier, archetype, evidence band, failure category, side bias, counted status, and replay availability. It should not require reading raw event payloads.
+
+### Replay Deep Links
+
+Deep links should target meaningful public moments:
+
+- Backstab.
+- Contraction.
+- No-advance cleanup or blocked/no-reverse recovery.
+- Fall.
+- Decisive push.
+- Late-cycle stabilization.
+
+These links should open the public replay at or near a public sequence and preserve owner-debug authorization separately.
+
+### Owner Export
+
+Owner exports should be useful for offline analysis:
+
+- JSON summary preserving profile, compatibility hash, MatchSet references, heatmap records, evidence bands, representative replay links, and aggregate metrics.
+- CSV rows for matchup records and optional Match-level summaries.
+- Explicit privacy boundary: no Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid, stack traces, owner debug, or private runtime internals unless a future owner-authorized export mode is explicitly designed.
 
 ## Differentiators
 
-- Replay-backed trial ladder evidence from day one.
-- Public Strategy cards that create pride and learning without leaking source.
-- Starter Strategies that teach doctrine families instead of only API syntax.
-- Governance surface before rankings are permanent.
-- Runtime hardening treated as a competition trust feature, not invisible infrastructure.
+- The player studies deterministic evidence without needing to rerun Strategy code in the web/API process.
+- Heatmaps are not vague ratings; every cell can explain its profile, evidence band, counted status, and representative replay proof.
+- Public analytics remain safe by construction, while owner exports are richer but still summary-oriented.
 
-## Anti-Features for v1.3
+## Anti-Features
 
-- Permanent all-time rating contract.
-- Public tournaments or prizes.
-- Auto-submitting starter Strategies on behalf of users.
-- Publishing Strategy source or private runtime/debug fields.
-- Public moderation tooling that exposes sensitive evidence.
-- Multi-language Strategy support as part of the starter library.
-
-## Open Product Decisions
-
-1. Replacement policy: recommended next-season-only for v1.3, with cooldown-based replacement as future work.
-2. Scheduler cadence: recommended manual/admin-triggered plus periodic job support, so early operations can inspect pods.
-3. Admin scope: recommended minimal single-role admin capability rather than full role/organization system.
-4. Starter Strategy ownership: recommended system-owned immutable templates that users fork into account-owned Strategies.
+- Durable rating claims or all-time balance truth.
+- Public exposure of private Strategy internals.
+- Cross-profile comparisons that blur rule/preset/seed/scoring differences.
+- Deep links that merely point to Match start.
+- Analytics computed by re-executing Strategy source in React/API code.
 
 ## Sources
 
-- User v1.3 milestone brief.
-- Local: `.planning/PROJECT.md`
-- Local: `.planning/milestones/v1.2-REQUIREMENTS.md`
-- Local: `packages/persistence/src/workshop.ts`
-- Local: `apps/web/app/exhibitions/new/exhibition-client.tsx`
-- Local: `apps/web/app/matchsets/[matchSetId]/page.tsx`
+- User v1.6 milestone brief.
+- `.planning/milestones/v1.5-REQUIREMENTS.md`
+- `.planning/milestones/v1.5-ROADMAP.md`
+- `apps/web/app/workshop/workshop-client.tsx`
+- `packages/persistence/src/workshop.ts`
+- `apps/web/app/matches/replay-ready.ts`
