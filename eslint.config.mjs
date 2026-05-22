@@ -29,7 +29,7 @@ export default [
       },
       parserOptions: {
         projectService: {
-          allowDefaultProject: ["packages/spec/scripts/*.ts"],
+          allowDefaultProject: ["packages/spec/scripts/*.ts", "scripts/*.ts"],
         },
         tsconfigRootDir: import.meta.dirname,
       },
