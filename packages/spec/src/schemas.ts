@@ -20,6 +20,18 @@ import {
   SOLDIER_INACTIVITY_EXPLANATION_CAUSES,
   type JsonValue,
 } from "./types.js"
+import {
+  SERVICE_API_ROUTES,
+  SERVICE_API_VERSION,
+  SERVICE_ERROR_CODES,
+} from "./service.js"
+import {
+  STRATEGY_LANGUAGE_IDS,
+  STRATEGY_RUNTIME_ABI_VERSION,
+  STRATEGY_RUNTIME_ADAPTER_IDS,
+  STRATEGY_RUNTIME_SYSTEM_FAILURE_CODES,
+  STRATEGY_RUNTIME_VIOLATION_CODES,
+} from "./runtime.js"
 
 export const jsonByteLength = (value: unknown): number =>
   new TextEncoder().encode(JSON.stringify(value)).length
@@ -419,6 +431,126 @@ export const SoldierInactivityExplanationDtoSchema = z.object({
 
 export const StrategyRuntimeNameSchema = z.literal("runtime-js")
 
+export const StrategyLanguageIdSchema = z.enum(STRATEGY_LANGUAGE_IDS)
+export const StrategyRuntimeAdapterIdSchema = z.enum(
+  STRATEGY_RUNTIME_ADAPTER_IDS,
+)
+
+export const StrategyRuntimeLimitsSchema = z.object({
+  timeoutMs: z.number().int().positive(),
+  stdoutBytes: z.number().int().positive(),
+  stderrBytes: z.number().int().positive(),
+  sourceBytes: z.number().int().positive(),
+  strategyMemoryBytes: z.number().int().positive(),
+  soldierMemoryBytes: z.number().int().positive(),
+  objectivePayloadBytes: z.number().int().positive(),
+  environment: z.enum(["empty", "minimal", "inherited"]),
+  filesystem: z.enum(["none", "read-only-root", "host"]),
+  network: z.enum(["disabled", "inherited"]),
+  shell: z.enum(["disabled", "inherited"]),
+  packagePolicy: z.enum(["none", "experimental"]),
+})
+
+export const StrategyPackageMetadataSchema = z
+  .object({
+    mode: z.enum(["none", "declared"]),
+    entrypoint: z.string().min(1),
+    manifestHash: z.string().min(1).optional(),
+    lockfileHash: z.string().min(1).optional(),
+    declaredDependencies: z.record(z.string(), z.string()).optional(),
+  })
+  .superRefine((metadata, ctx) => {
+    if (metadata.mode === "declared" && !metadata.manifestHash) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["manifestHash"],
+        message:
+          "package manifest hash is required when package mode is declared",
+      })
+    }
+  })
+
+export const StrategyRuntimeMetadataSchema = z.object({
+  abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
+  language: z.object({
+    id: StrategyLanguageIdSchema,
+    version: z.string().min(1),
+  }),
+  adapter: z.object({
+    id: StrategyRuntimeAdapterIdSchema,
+    version: z.string().min(1),
+  }),
+  package: StrategyPackageMetadataSchema,
+  requiredCapabilities: z.array(z.string().min(1)),
+  limits: StrategyRuntimeLimitsSchema,
+})
+
+export const StrategyRuntimeViolationEnvelopeSchema = z.object({
+  ok: z.literal(false),
+  abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
+  failureKind: z.literal("runtimeViolation"),
+  violation: z.object({
+    code: z.enum(STRATEGY_RUNTIME_VIOLATION_CODES),
+    message: z.string().min(1),
+    publicMessage: z.string().min(1),
+    privateDiagnostics: JsonValueSchema.optional(),
+  }),
+})
+
+export const StrategyRuntimeSystemFailureEnvelopeSchema = z.object({
+  ok: z.literal(false),
+  abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
+  failureKind: z.literal("systemFailure"),
+  systemFailure: z.object({
+    code: z.enum(STRATEGY_RUNTIME_SYSTEM_FAILURE_CODES),
+    message: z.string().min(1),
+    publicMessage: z.string().min(1),
+    privateDiagnostics: JsonValueSchema.optional(),
+  }),
+})
+
+export const StrategyRuntimeSuccessEnvelopeSchema = z.object({
+  ok: z.literal(true),
+  abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
+  value: JsonValueSchema,
+})
+
+export const StrategyRuntimeResponseEnvelopeSchema = z.union([
+  StrategyRuntimeSuccessEnvelopeSchema,
+  StrategyRuntimeViolationEnvelopeSchema,
+  StrategyRuntimeSystemFailureEnvelopeSchema,
+])
+
+export const StrategyRuntimeRequestEnvelopeSchema = z.discriminatedUnion(
+  "methodName",
+  [
+    z.object({
+      abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
+      methodName: z.literal("selectActivations"),
+      runtime: StrategyRuntimeMetadataSchema,
+      source: z.object({
+        text: z.string().min(1),
+        hash: z.string().min(1),
+        bytes: z.number().int().min(0),
+        entrypoint: z.string().min(1),
+      }),
+      input: StrategyInputSchema,
+    }),
+    z.object({
+      abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
+      methodName: z.literal("soldierBrain"),
+      runtime: StrategyRuntimeMetadataSchema,
+      source: z.object({
+        text: z.string().min(1),
+        hash: z.string().min(1),
+        bytes: z.number().int().min(0),
+        entrypoint: z.string().min(1),
+      }),
+      input: SoldierBrainInputSchema,
+    }),
+  ],
+)
+
 export const StrategyRevisionValidationSeveritySchema = z.enum([
   "error",
   "warning",
@@ -502,16 +634,58 @@ export const StrategyRevisionSchema = z.object({
     ),
   sourceHash: z.string().min(1),
   sourceBytes: z.number().int().min(0).max(STRATEGY_SOURCE_BYTES),
-  runtime: z.object({
-    name: StrategyRuntimeNameSchema,
-    version: z.string().min(1),
-  }),
+  runtime: StrategyRuntimeMetadataSchema,
   engineCompatibility: z.object({
     spec: z.string().min(1),
     engine: z.string().min(1),
   }),
   validation: StrategyRevisionValidationReportSchema,
   metadata: StrategyRevisionMetadataSchema,
+})
+
+export const ServiceErrorDtoSchema = z.object({
+  code: z.enum(SERVICE_ERROR_CODES),
+  message: z.string().min(1),
+  status: z.number().int().min(400).max(599),
+  publicSafe: z.literal(true),
+  details: JsonValueSchema.optional(),
+})
+
+export const ServiceHealthDtoSchema = z.object({
+  ok: z.literal(true),
+  service: z.literal("cowards-service"),
+  version: z.literal(SERVICE_API_VERSION),
+})
+
+export const ServiceApiRouteIdSchema = z.enum(
+  Object.keys(SERVICE_API_ROUTES) as [
+    keyof typeof SERVICE_API_ROUTES,
+    ...(keyof typeof SERVICE_API_ROUTES)[],
+  ],
+)
+
+export const AuthSessionServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_API_VERSION),
+  kind: z.literal("authSession"),
+  user: z
+    .object({
+      id: z.string().min(1),
+      handle: z.string().min(1),
+      displayName: z.string().min(1),
+    })
+    .nullable(),
+})
+
+export const StrategyRevisionSummaryServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_API_VERSION),
+  kind: z.literal("strategyRevisionSummary"),
+  strategyId: z.string().min(1),
+  strategyRevisionId: z.string().min(1),
+  sourceHash: z.string().min(1),
+  sourceBytes: z.number().int().min(0),
+  runtime: StrategyRuntimeMetadataSchema,
+  validationStatus: z.enum(["valid", "invalid"]),
+  lockedAt: z.string().min(1).optional(),
 })
 
 export const ArenaVariantSchema = z.object({

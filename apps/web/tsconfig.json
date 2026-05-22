@@ -10,7 +10,8 @@
   "references": [
     { "path": "../../packages/spec" },
     { "path": "../../packages/runtime-js" },
-    { "path": "../../packages/persistence" }
+    { "path": "../../packages/persistence" },
+    { "path": "../../packages/service" }
   ],
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"]
 }

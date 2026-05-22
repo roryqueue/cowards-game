@@ -1,3 +1,5 @@
+import type { StrategyRuntimeMetadata } from "./runtime.js"
+
 export type JsonPrimitive = string | number | boolean | null
 export type JsonValue =
   | JsonPrimitive
@@ -254,10 +256,7 @@ export interface StrategyRevision {
   source: string
   sourceHash: string
   sourceBytes: number
-  runtime: {
-    name: StrategyRuntimeName
-    version: string
-  }
+  runtime: StrategyRuntimeMetadata
   engineCompatibility: {
     spec: string
     engine: string

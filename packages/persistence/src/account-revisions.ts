@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { buildStrategyRevision } from "@cowards/runtime-js"
+import { normalizeStrategyRuntimeMetadata } from "@cowards/spec"
 import type {
   StrategyId,
   StrategyRevision,
@@ -155,7 +156,7 @@ export const listAccountStrategyRevisions = async (
     sourceHash: row.source_hash,
     sourceBytes: row.source_bytes,
     valid: row.validation.valid,
-    runtime: row.runtime,
+    runtime: normalizeStrategyRuntimeMetadata(row.runtime),
     engineCompatibility: row.engine_compatibility,
     createdAt: row.created_at.toISOString(),
     ...(row.locked_at ? { lockedAt: row.locked_at.toISOString() } : {}),

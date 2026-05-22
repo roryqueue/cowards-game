@@ -92,7 +92,6 @@ const storageUnavailableCodes = new Set([
   "EAI_AGAIN",
   "ENOTFOUND",
   "ETIMEDOUT",
-  "42P01",
 ])
 
 export const isStorageUnavailableError = (error: unknown): boolean => {
@@ -133,7 +132,8 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
   const insertRevision = deps.insertRevision ?? insertWorkshopRevision
   const createTest = deps.createTestMatchSet ?? createWorkshopTestMatchSet
   const testSummary = deps.getTestSummary ?? getWorkshopTestSummary
-  const analyticsSnapshot = deps.getAnalyticsSnapshot ?? getWorkshopAnalyticsSnapshot
+  const analyticsSnapshot =
+    deps.getAnalyticsSnapshot ?? getWorkshopAnalyticsSnapshot
   const loadInitialData = async (): Promise<WorkshopInitialData> => {
     try {
       return await withPool(async (pool) => ({

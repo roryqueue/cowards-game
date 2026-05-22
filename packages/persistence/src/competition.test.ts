@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { defaultRuntimeMetadata } from "@cowards/spec"
 import {
   buildExhibitionDuplicateKey,
   evaluateRateLimit,
@@ -16,7 +17,7 @@ const entrants = [
     displayLabel: "@alpha / A / hash-a",
     sourceHash: "hash-a",
     sourceBytes: 120,
-    runtime: { name: "runtime-js" as const, version: "runtime-js-v1" },
+    runtime: defaultRuntimeMetadata(),
     engineCompatibility: { spec: "spec-v1", engine: "engine-v1" },
     lockedAt: "2026-05-19T00:00:00.000Z",
   },
@@ -29,7 +30,7 @@ const entrants = [
     displayLabel: "@alpha / B / hash-b",
     sourceHash: "hash-b",
     sourceBytes: 128,
-    runtime: { name: "runtime-js" as const, version: "runtime-js-v1" },
+    runtime: defaultRuntimeMetadata(),
     engineCompatibility: { spec: "spec-v1", engine: "engine-v1" },
     lockedAt: "2026-05-19T00:00:00.000Z",
   },
@@ -42,7 +43,7 @@ const entrants = [
     displayLabel: "@alpha / C / hash-c",
     sourceHash: "hash-c",
     sourceBytes: 136,
-    runtime: { name: "runtime-js" as const, version: "runtime-js-v1" },
+    runtime: defaultRuntimeMetadata(),
     engineCompatibility: { spec: "spec-v1", engine: "engine-v1" },
     lockedAt: "2026-05-19T00:00:00.000Z",
   },

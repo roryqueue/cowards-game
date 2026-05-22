@@ -22,9 +22,9 @@ import {
   ActiveDuplicateExhibitionError,
   CompetitionInputError,
   ExhibitionRateLimitError,
-  buildPublicMatchSetResultDto,
   createManualExhibitionMatchSet,
 } from "@cowards/persistence/competition"
+import { createCowardsLocalService } from "@cowards/service"
 import {
   buildTrialLadderSeasonDto,
   createTrialLadderSeason,
@@ -271,6 +271,7 @@ const toMatchSetResultDto = (
 
 export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
   const withPool = deps.withPool ?? withDatabasePool
+  const cowardsService = createCowardsLocalService({ withPool })
 
   return {
     listPresets: competitivePresets,
@@ -685,10 +686,9 @@ export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
       currentUser: CompetitiveUser | null,
     ): Promise<MatchSetResultDto | null> {
       try {
-        return await withPool(async (pool) => {
-          const result = await buildPublicMatchSetResultDto(pool, matchSetId)
-          return result ? toMatchSetResultDto(result, currentUser) : null
-        })
+        const summary =
+          await cowardsService.getPublicMatchSetSummary(matchSetId)
+        return summary ? toMatchSetResultDto(summary.result, currentUser) : null
       } catch (error) {
         return mapPersistenceError(error)
       }

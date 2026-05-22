@@ -6,6 +6,7 @@ import type {
   StrategyRevisionId,
   UserId,
 } from "./types.js"
+import type { StrategyRuntimeMetadata } from "./runtime.js"
 
 export const COMPETITION_PRESET_IDS = [
   "smoke-exhibition-v1",
@@ -255,10 +256,7 @@ export interface CompetitionEntrantSnapshot {
   displayLabel: string
   sourceHash: string
   sourceBytes: number
-  runtime: {
-    name: "runtime-js"
-    version: string
-  }
+  runtime: StrategyRuntimeMetadata
   engineCompatibility: {
     spec: string
     engine: string

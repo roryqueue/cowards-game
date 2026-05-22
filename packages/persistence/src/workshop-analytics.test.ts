@@ -25,9 +25,9 @@ describe("Workshop analytics", () => {
         "system_failed",
       ]),
     )
-    expect(JSON.stringify(first)).not.toContain("\"strategyMemory\":")
-    expect(JSON.stringify(first)).not.toContain("\"soldierMemory\":")
-    expect(JSON.stringify(first)).not.toContain("\"objectivePayload\":")
+    expect(JSON.stringify(first)).not.toContain('"strategyMemory":')
+    expect(JSON.stringify(first)).not.toContain('"soldierMemory":')
+    expect(JSON.stringify(first)).not.toContain('"objectivePayload":')
   })
 
   it("keeps compatibility hashes independent of display metadata", () => {
@@ -55,10 +55,8 @@ describe("Workshop analytics", () => {
     expect(typeof json).toBe("object")
     expect(typeof csv).toBe("string")
     expect(csv).toContain("profile_id")
-    expect(escapeAnalyticsCsvCell("=SUM(1,1)")).toBe("\"'=SUM(1,1)\"")
-    expect(escapeAnalyticsCsvCell("  =SUM(1,1)")).toBe("\"'  =SUM(1,1)\"")
-    expect(escapeAnalyticsCsvCell("quoted \"value\"")).toBe(
-      "\"quoted \"\"value\"\"\"",
-    )
+    expect(escapeAnalyticsCsvCell("=SUM(1,1)")).toBe('"\'=SUM(1,1)"')
+    expect(escapeAnalyticsCsvCell("  =SUM(1,1)")).toBe('"\'  =SUM(1,1)"')
+    expect(escapeAnalyticsCsvCell('quoted "value"')).toBe('"quoted ""value"""')
   })
 })

@@ -55,13 +55,10 @@ export default async function ReplayPage({
   const resolvedParams = await Promise.resolve(params)
   const resolvedSearchParams =
     searchParams === undefined ? undefined : await Promise.resolve(searchParams)
-  const data = await getMatchReplay(
-    resolvedParams.matchId,
-    {
-      ...resolveOwnerDebugReplayOptions(resolvedSearchParams),
-      focus: resolveReplayFocus(resolvedSearchParams),
-    },
-  )
+  const data = await getMatchReplay(resolvedParams.matchId, {
+    ...resolveOwnerDebugReplayOptions(resolvedSearchParams),
+    focus: resolveReplayFocus(resolvedSearchParams),
+  })
 
   if (data.status === "unavailable") {
     return <ReplayUnavailable data={data} />

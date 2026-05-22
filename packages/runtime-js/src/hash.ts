@@ -31,6 +31,7 @@ export const createStrategyRevisionId = (input: {
   specVersion: string
   engineVersion: string
   strategyRevisionVersion: string
+  runtimeCompatibility?: unknown
   strategyId?: string | undefined
 }): StrategyRevisionId =>
   `strategy-revision:${sha256Hex(stableStringify(input))}`

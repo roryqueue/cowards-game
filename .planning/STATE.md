@@ -2,38 +2,38 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime and Backend Boundary Stabilization
-status: planning
-last_updated: "2026-05-22T00:00:00.000Z"
-last_activity: 2026-05-22 — Milestone v1.7 started
+status: implemented
+last_updated: "2026-05-22T12:20:00.000-04:00"
+last_activity: 2026-05-22 — Milestone v1.7 implemented, audited, and verified
 progress:
   total_phases: 6
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 6
+  total_plans: 6
+  completed_plans: 6
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.7 Runtime and Backend Boundary Stabilization planning started
+**Status:** v1.7 Runtime and Backend Boundary Stabilization implemented and verified
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 45 Service Boundary Contract context discussion
+**Current focus:** v1.7 audit complete; ready for milestone completion or next-cycle review
 **Current milestone:** v1.7 Runtime and Backend Boundary Stabilization
 **Requirements:** 32/32 mapped in .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 45 - Service Boundary Contract
-Plan: —
-Status: Ready for phase context discussion
-Last activity: 2026-05-22 — v1.7 requirements and roadmap created
+Phase: 45-50 - v1.7 Runtime and Backend Boundary Stabilization
+Plan: 6/6 implemented
+Status: Verified
+Last activity: 2026-05-22 — v1.7 implementation, validation, and audit completed
 
 ## Workflow Settings
 
@@ -69,6 +69,7 @@ Last activity: 2026-05-22 — v1.7 requirements and roadmap created
 - v1.6 shipped saved gauntlet analytics, compatibility-aware reruns/comparisons, Workshop heatmaps, Evidence Explorer drilldowns, replay deep links, owner-safe JSON/CSV exports, and a local analytics demo.
 - Public replay output remains privacy-safe by default and does not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid details, owner debug, or private runtime details.
 - Strategy code must continue to run only behind worker/runtime adapter boundaries, never in web/API processes.
+- v1.7 adds `service-api-v1.7` and `strategy-runtime-abi-v1.7` contracts, a typed service layer, a runtime adapter registry, golden parity fixtures, an experimental Python ABI spike, and a minimal Go backend spike.
 
 ## Deferred Items
 
@@ -101,7 +102,7 @@ Items acknowledged and deferred after v1.6 milestone completion on 2026-05-22:
 
 ## Next Command
 
-Run `$gsd-discuss-phase 45` to clarify Service Boundary Contract decisions.
+Run `$gsd-complete-milestone v1.7` to archive this milestone, or review `.planning/milestones/v1.7-execution-audit.md` first.
 
 ---
-*Last updated: 2026-05-22 after v1.7 roadmap creation*
+*Last updated: 2026-05-22 after v1.7 implementation and verification*

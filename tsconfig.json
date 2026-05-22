@@ -6,8 +6,11 @@
     { "path": "packages/spec" },
     { "path": "packages/engine" },
     { "path": "packages/runtime-js" },
+    { "path": "packages/runtime-python" },
     { "path": "packages/replay" },
     { "path": "packages/persistence" },
+    { "path": "packages/service" },
+    { "path": "packages/golden" },
     { "path": "packages/map-configs" },
     { "path": "packages/test-utils" }
   ]

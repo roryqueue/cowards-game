@@ -16,7 +16,6 @@ import type {
   StrategyRevisionId,
 } from "@cowards/spec"
 import {
-  ANALYTICS_FORBIDDEN_PUBLIC_KEYS,
   ANALYTICS_PROFILE_SCHEMA_VERSION,
   ANALYTICS_RUN_SCHEMA_VERSION,
   ANALYTICS_SUMMARY_SCHEMA_VERSION,
@@ -57,7 +56,10 @@ const canonicalJson = (value: unknown): string => {
   if (value !== null && typeof value === "object") {
     return `{${Object.entries(value as Record<string, unknown>)
       .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, entryValue]) => `${JSON.stringify(key)}:${canonicalJson(entryValue)}`)
+      .map(
+        ([key, entryValue]) =>
+          `${JSON.stringify(key)}:${canonicalJson(entryValue)}`,
+      )
       .join(",")}}`
   }
   return JSON.stringify(value)
@@ -71,7 +73,8 @@ export const createAnalyticsCompatibilityHash = (
 const workshopCandidate = (): AnalyticsStrategySnapshot => {
   const validation = validateStrategySource(sentinelSource)
   return {
-    revisionId: `revision:workshop:${validation.sourceHash}` as StrategyRevisionId,
+    revisionId:
+      `revision:workshop:${validation.sourceHash}` as StrategyRevisionId,
     label: "Sentinel Workshop",
     sourceHash: validation.sourceHash,
     tags: ["Local", "Sentinel", "Stone"],
@@ -81,7 +84,8 @@ const workshopCandidate = (): AnalyticsStrategySnapshot => {
 const starterOpponentSnapshots = (): AnalyticsOpponentSnapshot[] =>
   listStarterStrategies().map((starter) => ({
     opponentId: starter.id,
-    revisionId: `revision:${starter.id}:${starter.sourceHash}` as StrategyRevisionId,
+    revisionId:
+      `revision:${starter.id}:${starter.sourceHash}` as StrategyRevisionId,
     label: starter.name,
     sourceHash: starter.sourceHash,
     tags: starter.tags,
@@ -101,7 +105,8 @@ const advancedOpponentSnapshots = (): AnalyticsOpponentSnapshot[] =>
     )
     .map((advanced) => ({
       opponentId: advanced.id,
-      revisionId: `revision:${advanced.id}:${advanced.sourceHash}` as StrategyRevisionId,
+      revisionId:
+        `revision:${advanced.id}:${advanced.sourceHash}` as StrategyRevisionId,
       label: advanced.name,
       sourceHash: advanced.sourceHash,
       tags: advanced.tags,
@@ -122,14 +127,86 @@ const replayHref = (
 }
 
 const matchupShape = [
-  { wins: 6, losses: 1, draws: 1, points: 19, band: "strong", moment: "DECISIVE_PUSH", sequence: 24, sideBias: "balanced" },
-  { wins: 2, losses: 4, draws: 2, points: 8, band: "strong", moment: "BACKSTAB", sequence: 18, sideBias: "top" },
-  { wins: 1, losses: 5, draws: 2, points: 5, band: "strong", moment: "BACKSTAB", sequence: 18, sideBias: "top" },
-  { wins: 3, losses: 2, draws: 3, points: 12, band: "thin", moment: "LATE_CYCLE_STABILIZATION", sequence: 34, sideBias: "insufficient" },
-  { wins: 0, losses: 2, draws: 0, points: 0, band: "degraded_non_counted", moment: "FALL", sequence: 14, sideBias: "insufficient" },
-  { wins: 5, losses: 0, draws: 3, points: 18, band: "strong", moment: "CONTRACTION", sequence: 30, sideBias: "balanced" },
-  { wins: 2, losses: 2, draws: 4, points: 10, band: "thin", moment: "NO_ADVANCE_CLEANUP", sequence: 21, sideBias: "balanced" },
-  { wins: 0, losses: 0, draws: 0, points: 0, band: "system_failed", moment: "DECISIVE_PUSH", sequence: 0, sideBias: "insufficient" },
+  {
+    wins: 6,
+    losses: 1,
+    draws: 1,
+    points: 19,
+    band: "strong",
+    moment: "DECISIVE_PUSH",
+    sequence: 24,
+    sideBias: "balanced",
+  },
+  {
+    wins: 2,
+    losses: 4,
+    draws: 2,
+    points: 8,
+    band: "strong",
+    moment: "BACKSTAB",
+    sequence: 18,
+    sideBias: "top",
+  },
+  {
+    wins: 1,
+    losses: 5,
+    draws: 2,
+    points: 5,
+    band: "strong",
+    moment: "BACKSTAB",
+    sequence: 18,
+    sideBias: "top",
+  },
+  {
+    wins: 3,
+    losses: 2,
+    draws: 3,
+    points: 12,
+    band: "thin",
+    moment: "LATE_CYCLE_STABILIZATION",
+    sequence: 34,
+    sideBias: "insufficient",
+  },
+  {
+    wins: 0,
+    losses: 2,
+    draws: 0,
+    points: 0,
+    band: "degraded_non_counted",
+    moment: "FALL",
+    sequence: 14,
+    sideBias: "insufficient",
+  },
+  {
+    wins: 5,
+    losses: 0,
+    draws: 3,
+    points: 18,
+    band: "strong",
+    moment: "CONTRACTION",
+    sequence: 30,
+    sideBias: "balanced",
+  },
+  {
+    wins: 2,
+    losses: 2,
+    draws: 4,
+    points: 10,
+    band: "thin",
+    moment: "NO_ADVANCE_CLEANUP",
+    sequence: 21,
+    sideBias: "balanced",
+  },
+  {
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    points: 0,
+    band: "system_failed",
+    moment: "DECISIVE_PUSH",
+    sequence: 0,
+    sideBias: "insufficient",
+  },
 ] as const
 
 const buildCompatibility = (
@@ -167,13 +244,19 @@ const buildMatchup = (
   index: number,
 ): AnalyticsMatchupRecord => {
   const shape = matchupShape[index % matchupShape.length]!
-  const totalCount = shape.band === "system_failed" ? 4 : shape.band === "thin" ? 3 : 8
+  const totalCount =
+    shape.band === "system_failed" ? 4 : shape.band === "thin" ? 3 : 8
   const completedCount =
-    shape.band === "system_failed" ? 0 : shape.band === "degraded_non_counted" ? 2 : totalCount
+    shape.band === "system_failed"
+      ? 0
+      : shape.band === "degraded_non_counted"
+        ? 2
+        : totalCount
   const replayBackedCount =
     shape.band === "degraded_non_counted" ? 1 : completedCount
   const systemFailureCount = shape.band === "system_failed" ? 4 : 0
-  const counted = shape.band !== "degraded_non_counted" && shape.band !== "system_failed"
+  const counted =
+    shape.band !== "degraded_non_counted" && shape.band !== "system_failed"
   const derivedBand = deriveAnalyticsEvidenceBand({
     counted,
     completedCount,
@@ -189,7 +272,8 @@ const buildMatchup = (
       : shape.moment === "BACKSTAB"
         ? "legal-backstab"
         : "compound-tour"
-  const matchId = `match:analytics:${index.toString().padStart(2, "0")}` as MatchId
+  const matchId =
+    `match:analytics:${index.toString().padStart(2, "0")}` as MatchId
   const matchSetId =
     `match-set:analytics:v1.6:${opponent.opponentId}` as MatchSetId
 
@@ -310,7 +394,8 @@ export const createWorkshopAnalyticsDemoSnapshot =
         draws: acc.draws + matchup.draws,
         points: acc.points + matchup.points,
         matchups: acc.matchups + 1,
-        completedMatches: acc.completedMatches + matchup.evidence.completedCount,
+        completedMatches:
+          acc.completedMatches + matchup.evidence.completedCount,
         failedMatches: acc.failedMatches + matchup.failureCount,
       }),
       {
@@ -587,7 +672,9 @@ export const createPersistedWorkshopAnalyticsRerun = async (
   mismatchCodes: []
 } | null> => {
   const snapshot = await getWorkshopAnalyticsSnapshot(pool)
-  const profile = snapshot.profiles.find((candidate) => candidate.id === profileId)
+  const profile = snapshot.profiles.find(
+    (candidate) => candidate.id === profileId,
+  )
   if (!profile) {
     return null
   }
@@ -668,7 +755,7 @@ export const escapeAnalyticsCsvCell = (value: unknown): string => {
         ? value
         : String(value)
   const neutralized = csvNeedsNeutralization(raw) ? `'${raw}` : raw
-  return `"${neutralized.replaceAll("\"", "\"\"")}"`
+  return `"${neutralized.replaceAll('"', '""')}"`
 }
 
 export const createWorkshopAnalyticsExport = (

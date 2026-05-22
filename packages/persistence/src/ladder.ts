@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto"
 import {
   assertPublicMatchSetResultLeakSafe,
   EXHIBITION_SCORING_POLICY_V1,
+  normalizeStrategyRuntimeMetadata,
+  STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   type CompetitionEntrantSnapshot,
   type LadderMatchSetCountedStatus,
   type LadderNonCountedReason,
@@ -28,6 +30,21 @@ export class LadderInputError extends Error {
     super(message)
     this.name = "LadderInputError"
   }
+}
+
+const assertLadderEligibleRuntime = (
+  runtime: unknown,
+): CompetitionEntrantSnapshot["runtime"] => {
+  const normalized = normalizeStrategyRuntimeMetadata(runtime)
+  const adapter = STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
+    (candidate) => candidate.id === normalized.adapter.id,
+  )
+  if (!adapter?.enabledForNormalPlay || !adapter.countedResultsAllowed) {
+    throw new LadderInputError(
+      `Strategy Revision runtime adapter is not eligible for trial ladder entry: ${normalized.adapter.id}`,
+    )
+  }
+  return normalized
 }
 
 export const TRIAL_LADDER_PRESET_ID = "standard-exhibition-v1" as const
@@ -232,11 +249,12 @@ export const enterTrialLadderSeason = async (
   if (!row) {
     throw new LadderInputError("Strategy Revision is not owned by this user.")
   }
-  if (!row.validation.valid || row.runtime.name !== "runtime-js") {
+  if (!row.validation.valid) {
     throw new LadderInputError(
       "Strategy Revision is not eligible for trial ladder entry.",
     )
   }
+  const runtime = assertLadderEligibleRuntime(row.runtime)
   const entryCount = await pool.query<{ count: number }>(
     "select count(*)::integer as count from trial_ladder_entries where season_id = $1",
     [input.seasonId],
@@ -253,7 +271,7 @@ export const enterTrialLadderSeason = async (
     displayLabel: `@${row.handle} / "${label}" / ${row.source_hash.slice(0, 10)}`,
     sourceHash: row.source_hash,
     sourceBytes: row.source_bytes,
-    runtime: row.runtime,
+    runtime,
     engineCompatibility: row.engine_compatibility,
     lockedAt: new Date().toISOString(),
     seasonId: input.seasonId,

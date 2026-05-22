@@ -48,7 +48,8 @@ export default async function StrategyCardPage({
           <dd>{strategy.sourceHash}</dd>
           <dt>runtime</dt>
           <dd>
-            {strategy.runtime.name} {strategy.runtime.version}
+            {strategy.runtime.language.id} / {strategy.runtime.adapter.id}{" "}
+            {strategy.runtime.adapter.version}
           </dd>
           <dt>record</dt>
           <dd>

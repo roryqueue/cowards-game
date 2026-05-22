@@ -1,14 +1,20 @@
 import { describe, expect, it } from "vitest"
-import { runMatch, violation, type StrategyRuntime } from "@cowards/engine"
+import {
+  runMatch,
+  violation,
+  type RuntimeResult,
+  type StrategyRuntime,
+} from "@cowards/engine"
 import {
   transpileStrategySource,
   validateStrategySource,
 } from "@cowards/runtime-js"
 import {
-  createRuntimeFromRevision,
-  type StrategyExecutionAdapter,
-} from "@cowards/runtime-js/worker"
-import { INITIAL_BOUNDS } from "@cowards/spec"
+  INITIAL_BOUNDS,
+  type SoldierBrainResult,
+  type StrategyResult,
+  type StrategyRevision,
+} from "@cowards/spec"
 import {
   assertWorkshopRevisionCanBeTested,
   buildWorkshopRevision,
@@ -41,27 +47,38 @@ import {
   mapMatchSetMatchSummaryRow,
 } from "./matchset-status.js"
 
-const createStarterSmokeAdapter = (): StrategyExecutionAdapter => {
+type StarterSmokeAdapter = {
+  execute(request: {
+    source: string
+    methodName: "selectActivations" | "soldierBrain"
+    input: unknown
+  }): RuntimeResult<unknown>
+}
+
+const createStarterSmokeRuntime = (
+  revision: StrategyRevision,
+  adapter: StarterSmokeAdapter,
+): StrategyRuntime => ({
+  selectActivations(input) {
+    return adapter.execute({
+      source: revision.source,
+      methodName: "selectActivations",
+      input,
+    }) as RuntimeResult<StrategyResult>
+  },
+  runSoldierBrain(input) {
+    return adapter.execute({
+      source: revision.source,
+      methodName: "soldierBrain",
+      input,
+    }) as RuntimeResult<SoldierBrainResult>
+  },
+})
+
+const createStarterSmokeAdapter = (): StarterSmokeAdapter => {
   const cache = new Map<string, Record<string, unknown>>()
 
   return {
-    metadata: {
-      id: "starter-smoke",
-      label: "Starter smoke adapter",
-      default: false,
-      isolationBoundary:
-        "Test-only execution path for built-in Starter Strategy sources.",
-      notes: [
-        "Only used by the Starter Strategy gauntlet to avoid worker startup per Cycle.",
-      ],
-      runtimeControls: {
-        timeout: false,
-        outputByteLimit: false,
-        environment: "minimal",
-        execArgv: "empty",
-        resourceLimits: [],
-      },
-    },
     execute(request) {
       const cached = cache.get(request.source)
       const strategy =
@@ -191,13 +208,13 @@ describe("Workshop service contracts", () => {
     for (const [bottom, top] of pairs) {
       playedStarterIds.add(bottom.id)
       playedStarterIds.add(top.id)
-      const bottomRuntime = createRuntimeFromRevision(
+      const bottomRuntime = createStarterSmokeRuntime(
         buildStarterStrategyRevision(bottom),
-        { adapter },
+        adapter,
       )
-      const topRuntime = createRuntimeFromRevision(
+      const topRuntime = createStarterSmokeRuntime(
         buildStarterStrategyRevision(top),
-        { adapter },
+        adapter,
       )
       const runtime: StrategyRuntime = {
         selectActivations(input) {
@@ -313,13 +330,13 @@ describe("Workshop service contracts", () => {
 
     advancedStrategies.forEach((advanced, index) => {
       const starter = starters[index % starters.length]!
-      const bottomRuntime = createRuntimeFromRevision(
+      const bottomRuntime = createStarterSmokeRuntime(
         buildAdvancedStrategyRevision(advanced),
-        { adapter },
+        adapter,
       )
-      const topRuntime = createRuntimeFromRevision(
+      const topRuntime = createStarterSmokeRuntime(
         buildStarterStrategyRevision(starter),
-        { adapter },
+        adapter,
       )
       const runtime: StrategyRuntime = {
         selectActivations(input) {

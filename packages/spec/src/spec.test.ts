@@ -25,6 +25,7 @@ import {
   StrategyRevisionSchema,
 } from "./schemas.js"
 import { fixtures } from "./fixtures/index.js"
+import { defaultRuntimeMetadata } from "./runtime.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 import { STRATEGY_SOURCE_BYTES } from "./constants.js"
 import {
@@ -402,10 +403,7 @@ describe("Coward's Game spec contracts", () => {
       source,
       sourceHash: "abc123",
       sourceBytes: new TextEncoder().encode(source).length,
-      runtime: {
-        name: "runtime-js",
-        version: COMPATIBILITY_VERSIONS.runtimeJs,
-      },
+      runtime: defaultRuntimeMetadata(),
       engineCompatibility: {
         spec: COMPATIBILITY_VERSIONS.spec,
         engine: COMPATIBILITY_VERSIONS.engine,
@@ -443,10 +441,7 @@ describe("Coward's Game spec contracts", () => {
         source,
         sourceHash: "oversized",
         sourceBytes: STRATEGY_SOURCE_BYTES + 1,
-        runtime: {
-          name: "runtime-js",
-          version: COMPATIBILITY_VERSIONS.runtimeJs,
-        },
+        runtime: defaultRuntimeMetadata(),
         engineCompatibility: {
           spec: COMPATIBILITY_VERSIONS.spec,
           engine: COMPATIBILITY_VERSIONS.engine,
@@ -506,10 +501,7 @@ describe("Coward's Game spec contracts", () => {
         source,
         sourceHash: "invalid-report",
         sourceBytes: new TextEncoder().encode(source).length,
-        runtime: {
-          name: "runtime-js",
-          version: COMPATIBILITY_VERSIONS.runtimeJs,
-        },
+        runtime: defaultRuntimeMetadata(),
         engineCompatibility: {
           spec: COMPATIBILITY_VERSIONS.spec,
           engine: COMPATIBILITY_VERSIONS.engine,

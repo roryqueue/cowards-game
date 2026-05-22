@@ -187,7 +187,7 @@ const resolveReplayFocus = (
         requestedSequence: focus.sequence,
         resolvedSequence: matching.sequence,
         label: `Focused ${focus.moment ?? "moment"}`,
-      fallback: focus.sequence === undefined ? "none" : "moment_not_found",
+        fallback: focus.sequence === undefined ? "none" : "moment_not_found",
       },
     }
   }

@@ -17,6 +17,7 @@ import {
 } from "../packages/persistence/src/ladder.ts"
 import {
   EXHIBITION_SCORING_POLICY_V1,
+  normalizeStrategyRuntimeMetadata,
   type CompetitionEntrantSnapshot,
   type MatchId,
   type MatchSetId,
@@ -280,7 +281,7 @@ const loadEntrant = async (
     displayLabel: `@${row.handle} / "${row.strategy_name}" / ${row.source_hash.slice(0, 10)}`,
     sourceHash: row.source_hash,
     sourceBytes: row.source_bytes,
-    runtime: row.runtime,
+    runtime: normalizeStrategyRuntimeMetadata(row.runtime),
     engineCompatibility: row.engine_compatibility,
     lockedAt: new Date("2026-05-20T00:00:00.000Z").toISOString(),
   }

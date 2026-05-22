@@ -1,0 +1,22 @@
+{
+  "name": "@cowards/golden",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "eslint .",
+    "typecheck": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@cowards/engine": "workspace:*",
+    "@cowards/replay": "workspace:*",
+    "@cowards/spec": "workspace:*"
+  }
+}

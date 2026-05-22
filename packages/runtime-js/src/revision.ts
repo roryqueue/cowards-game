@@ -1,8 +1,11 @@
 import {
   COMPATIBILITY_VERSIONS,
+  defaultRuntimeMetadata,
+  runtimeCompatibilityKey,
   StrategyRevisionSchema,
   type StrategyRevision,
   type StrategyRevisionMetadata,
+  type StrategyRuntimeMetadata,
 } from "@cowards/spec"
 import { createStrategyRevisionId, hashStrategySource } from "./hash.js"
 import { validateStrategySource } from "./validation.js"
@@ -23,26 +26,32 @@ export const buildStrategyRevision = (input: {
   source: string
   strategyId?: string | undefined
   metadata?: StrategyRevisionMetadata | undefined
+  runtime?: StrategyRuntimeMetadata | undefined
 }): StrategyRevision => {
   const validation = validateStrategySource(input.source)
   const sourceHash = hashStrategySource(input.source)
+  const runtime = input.runtime ?? defaultRuntimeMetadata("typescript")
+  const compatibilityKey = runtimeCompatibilityKey({
+    runtime,
+    sourceHash,
+    specVersion: COMPATIBILITY_VERSIONS.spec,
+    engineVersion: COMPATIBILITY_VERSIONS.engine,
+  })
   const revision = StrategyRevisionSchema.parse({
     id: createStrategyRevisionId({
       sourceHash,
-      runtimeVersion: COMPATIBILITY_VERSIONS.runtimeJs,
+      runtimeVersion: runtime.adapter.version,
       specVersion: COMPATIBILITY_VERSIONS.spec,
       engineVersion: COMPATIBILITY_VERSIONS.engine,
       strategyRevisionVersion: COMPATIBILITY_VERSIONS.strategyRevision,
       strategyId: input.strategyId,
+      runtimeCompatibility: compatibilityKey,
     }),
     ...(input.strategyId === undefined ? {} : { strategyId: input.strategyId }),
     source: input.source,
     sourceHash,
     sourceBytes: validation.sourceBytes,
-    runtime: {
-      name: "runtime-js",
-      version: COMPATIBILITY_VERSIONS.runtimeJs,
-    },
+    runtime,
     engineCompatibility: {
       spec: COMPATIBILITY_VERSIONS.spec,
       engine: COMPATIBILITY_VERSIONS.engine,

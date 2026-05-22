@@ -6,6 +6,7 @@ import type {
   StrategyRevision,
   StrategyRevisionId,
 } from "@cowards/spec"
+import { normalizeStrategyRuntimeMetadata } from "@cowards/spec"
 import type { Pool, PoolClient } from "pg"
 
 export type Queryable = Pick<Pool | PoolClient, "query">
@@ -122,7 +123,7 @@ export const createRepositories = (db: Queryable) => ({
       source: row.source,
       sourceHash: row.source_hash,
       sourceBytes: row.source_bytes,
-      runtime: row.runtime,
+      runtime: normalizeStrategyRuntimeMetadata(row.runtime),
       engineCompatibility: row.engine_compatibility,
       validation: row.validation,
       metadata: row.metadata,

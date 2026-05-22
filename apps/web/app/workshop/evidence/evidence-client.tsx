@@ -36,15 +36,18 @@ export function EvidenceExplorerClient({
     [filters, run],
   )
   const initialSelection =
-    matchups.find((matchup) => matchup.opponent.opponentId === defaultOpponentId) ??
+    matchups.find(
+      (matchup) => matchup.opponent.opponentId === defaultOpponentId,
+    ) ??
     matchups[0] ??
     null
   const [selectedOpponentId, setSelectedOpponentId] = useState(
     initialSelection?.opponent.opponentId ?? "",
   )
   const selected =
-    matchups.find((matchup) => matchup.opponent.opponentId === selectedOpponentId) ??
-    initialSelection
+    matchups.find(
+      (matchup) => matchup.opponent.opponentId === selectedOpponentId,
+    ) ?? initialSelection
 
   const updateFilter = <K extends keyof EvidenceFilters>(
     key: K,
@@ -186,7 +189,9 @@ export function EvidenceExplorerClient({
         <div className="app-panel evidence-table" data-testid="evidence-table">
           {matchups.map((matchup) => (
             <button
-              aria-pressed={selected?.opponent.opponentId === matchup.opponent.opponentId}
+              aria-pressed={
+                selected?.opponent.opponentId === matchup.opponent.opponentId
+              }
               className={`evidence-row band-${matchup.evidence.band} ${
                 selected?.opponent.opponentId === matchup.opponent.opponentId
                   ? "active"
@@ -211,7 +216,10 @@ export function EvidenceExplorerClient({
           ) : null}
         </div>
 
-        <aside className="app-panel evidence-detail" data-testid="evidence-detail">
+        <aside
+          className="app-panel evidence-detail"
+          data-testid="evidence-detail"
+        >
           {selected ? (
             <>
               <p className="workshop-label">Selected matchup</p>
@@ -264,20 +272,20 @@ export function EvidenceExplorerClient({
                 <p className="workshop-muted">{replayLabel(selected)}</p>
               ) : null}
               {ownerLocal ? (
-              <div className="analytics-export-row">
-                <a
-                  className="workshop-replay-link"
-                  href="/api/workshop/analytics/export?format=json"
-                >
-                  Export JSON
-                </a>
-                <a
-                  className="workshop-replay-link"
-                  href="/api/workshop/analytics/export?format=csv"
-                >
-                  Export CSV
-                </a>
-              </div>
+                <div className="analytics-export-row">
+                  <a
+                    className="workshop-replay-link"
+                    href="/api/workshop/analytics/export?format=json"
+                  >
+                    Export JSON
+                  </a>
+                  <a
+                    className="workshop-replay-link"
+                    href="/api/workshop/analytics/export?format=csv"
+                  >
+                    Export CSV
+                  </a>
+                </div>
               ) : null}
             </>
           ) : (

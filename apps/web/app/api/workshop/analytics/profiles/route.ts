@@ -8,7 +8,9 @@ const localAnalyticsAllowed = (): boolean =>
 export async function POST(): Promise<Response> {
   if (!localAnalyticsAllowed()) {
     return Response.json(
-      { error: "Analytics profile save is available only locally or to owners." },
+      {
+        error: "Analytics profile save is available only locally or to owners.",
+      },
       { status: 403, headers: noStore },
     )
   }

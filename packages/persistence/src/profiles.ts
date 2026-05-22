@@ -1,5 +1,6 @@
 import {
   assertPublicMatchSetResultLeakSafe,
+  normalizeStrategyRuntimeMetadata,
   type PublicPlayerProfileDto,
   type PublicStrategyCardDto,
 } from "@cowards/spec"
@@ -259,7 +260,7 @@ export const listPublicStrategyCardsForUser = async (
     authorHandle: row.handle,
     sourceHash: row.source_hash,
     sourceBytes: row.source_bytes,
-    runtime: row.runtime,
+    runtime: normalizeStrategyRuntimeMetadata(row.runtime),
     engineCompatibility: row.engine_compatibility,
     validationStatus: row.validation.valid ? "valid" : "invalid",
     ...(row.metadata.starterLineage

@@ -91,7 +91,7 @@ const executableSource = (
   | { ok: true; source: string }
   | { ok: false; violation: RuntimeViolation } => {
   const validation = validateStrategySource(revision.source, {
-    runtimeVersion: revision.runtime.version,
+    runtimeVersion: revision.runtime.adapter.version,
     specVersion: revision.engineCompatibility.spec,
     engineVersion: revision.engineCompatibility.engine,
   })

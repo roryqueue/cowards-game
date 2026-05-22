@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto"
 import {
   assertPublicMatchSetResultLeakSafe,
   getCompetitionPreset,
+  normalizeStrategyRuntimeMetadata,
+  STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   type CompetitionEntrantSnapshot,
   type CompetitionPresetId,
   type PublicMatchSetResultDto,
@@ -24,6 +26,21 @@ export class CompetitionInputError extends Error {
     super(message)
     this.name = "CompetitionInputError"
   }
+}
+
+const runtimeAllowsCountedPlay = (
+  runtime: unknown,
+): CompetitionEntrantSnapshot["runtime"] => {
+  const normalized = normalizeStrategyRuntimeMetadata(runtime)
+  const adapter = STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
+    (candidate) => candidate.id === normalized.adapter.id,
+  )
+  if (!adapter?.enabledForNormalPlay || !adapter.countedResultsAllowed) {
+    throw new CompetitionInputError(
+      `StrategyRevision runtime adapter is not compatible: ${normalized.adapter.id}`,
+    )
+  }
+  return normalized
 }
 
 export class ExhibitionRateLimitError extends Error {
@@ -295,11 +312,7 @@ const loadOwnedRevisionSnapshots = async (
         `StrategyRevision is not valid for exhibition entry: ${revisionId}`,
       )
     }
-    if (row.runtime.name !== "runtime-js") {
-      throw new CompetitionInputError(
-        `StrategyRevision runtime is not compatible: ${revisionId}`,
-      )
-    }
+    const runtime = runtimeAllowsCountedPlay(row.runtime)
     const label = row.metadata.label ?? `Revision ${entrantIndex + 1}`
     const shortHash = row.source_hash.slice(0, 10)
     return {
@@ -311,7 +324,7 @@ const loadOwnedRevisionSnapshots = async (
       displayLabel: `@${row.handle} / "${label}" / ${shortHash}`,
       sourceHash: row.source_hash,
       sourceBytes: row.source_bytes,
-      runtime: row.runtime,
+      runtime,
       engineCompatibility: row.engine_compatibility,
       lockedAt: input.lockedAt.toISOString(),
     }
