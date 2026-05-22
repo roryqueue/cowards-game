@@ -3,40 +3,40 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Production Boundary Hardening
 status: executing
-stopped_at: Completed 51-02-PLAN.md
-last_updated: "2026-05-22T19:53:53.000Z"
+stopped_at: Completed 51-03-PLAN.md
+last_updated: "2026-05-22T20:09:44.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 66
+  completed_plans: 3
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** Phase 51 in progress; Plan 51-02 complete
+**Status:** Phase 51 complete; ready for Phase 52 planning/execution
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 51 - Service Contract Generation and Route Migration
+**Current focus:** Phase 52 - Go Read-Only Backend Parity Against Real Fixtures
 **Latest shipped milestone:** v1.7 Runtime and Backend Boundary Stabilization
 **Requirements:** v1.8 requirements mapped 38/38 in .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 51 of 56 (Service Contract Generation and Route Migration)
-Plan: 2 of 3 complete; next is 51-03
+Phase: 52 of 56 (Go Read-Only Backend Parity Against Real Fixtures)
+Plan: Phase 51 complete; next is Phase 52
 Status: Executing
 Last activity: 2026-05-22
 
-Progress: [██████░░░░] 66%
+Progress: [██████████] 100%
 
 ## Workflow Settings
 
@@ -74,6 +74,8 @@ Progress: [██████░░░░] 66%
 - [Phase 51]: Kept SERVICE_API_ROUTES as the single route registry and enriched each entry with schema-backed metadata. — Phase 51 D-07/D-09 require @cowards/spec to remain authoritative.
 - [Phase 51]: Generated service-api-v1.8 OpenAPI 3.1 JSON from Zod 4 schemas with deterministic key sorting. — Satisfies GEN-01 and GEN-03 without making generated artifacts canonical.
 - [Phase 51]: Migrated public Strategy page and replay metadata reads through @cowards/service using canonical public DTO schemas. — Satisfies GEN-05/GEN-06 while keeping writes, orchestration, and Strategy execution TypeScript-owned.
+- [Phase 51]: Enforced named migrated route/page import boundaries with broad apps/web/app direct-import debt kept report-only. — Satisfies GEN-07 and preserves D-11 until a later strict monitor phase.
+- [Phase 51]: Restricted the committed OpenAPI artifact to public routes and public runtime metadata without runtime limits. — Keeps the public contract artifact free of private Strategy/runtime key strings.
 
 ### Pending Todos
 
@@ -95,6 +97,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-22T19:53:53.000Z
-Stopped at: Completed 51-02-PLAN.md
+Last session: 2026-05-22T20:09:44.000Z
+Stopped at: Completed 51-03-PLAN.md
 Resume file: None

@@ -25,7 +25,7 @@ v1.8 turns the v1.7 service, runtime, and backend contracts into harder operatin
 
 ## Phases
 
-- [ ] **Phase 51: Service Contract Generation and Route Migration** - Developers can regenerate service artifacts and route selected low-risk web reads through the typed service layer.
+- [x] **Phase 51: Service Contract Generation and Route Migration** - Developers can regenerate service artifacts and route selected low-risk web reads through the typed service layer.
 - [ ] **Phase 52: Go Read-Only Backend Parity Against Real Fixtures** - Developers can run the Go read-only service against real evidence and prove parity with TypeScript service DTOs.
 - [ ] **Phase 53: Runtime Sandbox Hardening Prototype** - Developers can evaluate sandbox candidates through the runtime ABI without changing counted Match defaults.
 - [ ] **Phase 54: Non-JS Strategy Product Semantics** - Users and developers see clear experimental language semantics, validation messages, and fail-closed counted-play eligibility.
@@ -48,7 +48,7 @@ v1.8 turns the v1.7 service, runtime, and backend contracts into harder operatin
 Plans:
 - [x] 51-01-PLAN.md — Generate canonical v1.8 service contract metadata, schemas, fixtures, OpenAPI artifact, and lint/stale checks.
 - [x] 51-02-PLAN.md — Migrate the named public read slice through `@cowards/service` while preserving public behavior and privacy.
-- [ ] 51-03-PLAN.md — Enforce strict named-slice import guards and report-only broad app boundary scanning.
+- [x] 51-03-PLAN.md — Enforce strict named-slice import guards and report-only broad app boundary scanning.
 
 ### Phase 52: Go Read-Only Backend Parity Against Real Fixtures
 **Goal**: Developers can run the Go read-only service against real golden fixtures or safe local data and prove it matches the TypeScript service for its allowlisted read surface.
@@ -117,7 +117,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 51. Service Contract Generation and Route Migration | 2/3 | In Progress|  |
+| 51. Service Contract Generation and Route Migration | 3/3 | Complete | 2026-05-22 |
 | 52. Go Read-Only Backend Parity Against Real Fixtures | 0/TBD | Not started | - |
 | 53. Runtime Sandbox Hardening Prototype | 0/TBD | Not started | - |
 | 54. Non-JS Strategy Product Semantics | 0/TBD | Not started | - |
@@ -139,11 +139,11 @@ Plans:
 
 ## Next Up
 
-**Phase 51: Service Contract Generation and Route Migration** - Generate service contract artifacts and migrate selected low-risk web/API reads behind `@cowards/service`.
+**Phase 52: Go Read-Only Backend Parity Against Real Fixtures** - Run the Go read-only service against real evidence and prove parity with TypeScript service DTOs.
 
 Recommended next command:
 
-`$gsd-discuss-phase 51`
+`$gsd-discuss-phase 52`
 
 ## Recent Shipped Scope
 
