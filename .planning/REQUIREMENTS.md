@@ -9,10 +9,10 @@ Requirements for making one deliberate ownership move: migrate more web read/use
 
 ### Ownership Decision and Scope Control
 
-- [ ] **OWN-01**: Developer can inspect a v1.9 ownership matrix that names which selected routes, files, DTOs, and processes are owned by web, `@cowards/service`, `@cowards/spec`, Go, runtime adapters, or future milestones.
-- [ ] **OWN-02**: Developer can verify baseline boundary evidence before migration, including `pnpm boundary:imports`, `pnpm boundary:monitors`, current strict offenses, and current report-only broad web persistence/runtime offenses.
-- [ ] **OWN-03**: Developer can see explicit v1.9 non-goals for Go writes, production sandbox promotion, counted non-JS play, full replay projection, Workshop Strategy source/test/save flows, and backend rewrites.
-- [ ] **OWN-04**: Developer can verify that no v1.9 ownership change moves game rules into React components, web route handlers, service DTO mappers, or Go handlers.
+- [x] **OWN-01**: Developer can inspect a v1.9 ownership matrix that names which selected routes, files, DTOs, and processes are owned by web, `@cowards/service`, `@cowards/spec`, Go, runtime adapters, or future milestones.
+- [x] **OWN-02**: Developer can verify baseline boundary evidence before migration, including `pnpm boundary:imports`, `pnpm boundary:monitors`, current strict offenses, and current report-only broad web persistence/runtime offenses.
+- [x] **OWN-03**: Developer can see explicit v1.9 non-goals for Go writes, production sandbox promotion, counted non-JS play, full replay projection, Workshop Strategy source/test/save flows, and backend rewrites.
+- [x] **OWN-04**: Developer can verify that no v1.9 ownership change moves game rules into React components, web route handlers, service DTO mappers, or Go handlers.
 
 ### Public Player Profile Service Migration
 
@@ -101,10 +101,10 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| OWN-01 | Phase 57 | Pending |
-| OWN-02 | Phase 57 | Pending |
-| OWN-03 | Phase 57 | Pending |
-| OWN-04 | Phase 57 | Pending |
+| OWN-01 | Phase 57 | Complete |
+| OWN-02 | Phase 57 | Complete |
+| OWN-03 | Phase 57 | Complete |
+| OWN-04 | Phase 57 | Complete |
 | SVC-01 | Phase 58 | Pending |
 | SVC-02 | Phase 58 | Pending |
 | SVC-03 | Phase 58 | Pending |
@@ -139,4 +139,4 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after v1.9 roadmap creation*
+*Last updated: 2026-05-22 after Phase 57 completion*

@@ -26,7 +26,7 @@ v1.9 makes one production ownership move: service-backed web read/user surfaces 
 
 ## Phases
 
-- [ ] **Phase 57: Ownership Matrix and Baseline Evidence** - Developers can see the v1.9 ownership split, non-goals, and starting boundary evidence before migration begins.
+- [x] **Phase 57: Ownership Matrix and Baseline Evidence** - Developers can see the v1.9 ownership split, non-goals, and starting boundary evidence before migration begins.
 - [ ] **Phase 58: Public Player Profile Service Read** - Users can view public player profiles through `@cowards/service` with unchanged behavior, privacy, and stricter imports.
 - [ ] **Phase 59: Owner Account Read Service Slice** - Signed-in users can load account session and revision-list reads through service-owned DTOs without moving mutations or source retrieval.
 - [ ] **Phase 60: Public Ladder Service Read Follow-Up** - Users can view the selected public ladder season through `@cowards/service` while Go writes and Go route expansion stay out of scope.
@@ -45,7 +45,9 @@ v1.9 makes one production ownership move: service-backed web read/user surfaces 
   2. Developer can verify baseline boundary evidence from `pnpm boundary:imports`, `pnpm boundary:monitors`, current strict offenses, and current report-only broad web persistence/runtime offenses.
   3. Developer can see explicit v1.9 non-goals for Go writes, production sandbox promotion, counted non-JS play, full replay projection, Workshop source/test/save flows, and backend rewrites.
   4. Developer can verify no v1.9 ownership change moves game rules into React components, web route handlers, service DTO mappers, or Go handlers.
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [x] 57-01-PLAN.md — Capture v1.9 ownership matrix, baseline boundary evidence, and non-goals.
 
 ### Phase 58: Public Player Profile Service Read
 **Goal**: Users can view the public player profile page through the service boundary with the same public behavior, privacy guarantees, and stricter dependency enforcement.
@@ -124,7 +126,7 @@ v1.9 makes one production ownership move: service-backed web read/user surfaces 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 57. Ownership Matrix and Baseline Evidence | 0/TBD | Not started | - |
+| 57. Ownership Matrix and Baseline Evidence | 1/1 | Complete | 2026-05-22 |
 | 58. Public Player Profile Service Read | 0/TBD | Not started | - |
 | 59. Owner Account Read Service Slice | 0/TBD | Not started | - |
 | 60. Public Ladder Service Read Follow-Up | 0/TBD | Not started | - |
@@ -145,16 +147,17 @@ v1.9 makes one production ownership move: service-backed web read/user surfaces 
 | VER-01 through VER-03 | Phase 63 | 3 |
 
 **Coverage:** 28/28 v1.9 requirements mapped.
+**Completed:** 4/28 v1.9 requirements.
 **Unmapped requirements:** 0.
 **Branch note:** The approved v1.9 direction selects the public ladder service read branch. Future Go read-model expansion is tracked in BACKX-03 and BACKX-04, outside the active 28-requirement roadmap.
 
 ## Next Up
 
-**Phase 57: Ownership Matrix and Baseline Evidence**
+**Phase 58: Public Player Profile Service Read**
 
 Recommended next command:
 
-`$gsd-discuss-phase 57`
+`$gsd-discuss-phase 58`
 
 ---
-*Roadmap created: 2026-05-22 for v1.9 Backend and Runtime Ownership Split*
+*Last updated: 2026-05-22 after Phase 57 completion*
