@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Generic Strategy Artifact and Runtime Boundary Contract
 status: planning
-stopped_at: Phase 91 context gathered
-last_updated: "2026-05-23T23:33:16.000Z"
+stopped_at: Phase 92 context gathered
+last_updated: "2026-05-23T23:39:06.000Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 7
@@ -24,7 +24,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 91 - Generated Strategy Artifact Manifest.
+**Current focus:** Phase 92 - Runtime ABI v1.14 Contract.
 **Latest shipped milestone:** v1.13 Go Backend Ownership Cutover
 **Active milestone:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract
 **Requirements:** .planning/REQUIREMENTS.md
@@ -32,10 +32,10 @@ See: .planning/PROJECT.md (updated 2026-05-23)
 
 ## Current Position
 
-Phase: 91 - Generated Strategy Artifact Manifest
+Phase: 92 - Runtime ABI v1.14 Contract
 Plan: Context gathered
-Status: Ready for Phase 92 discussion and Phase 91 planning
-Last activity: 2026-05-23 - Phase 91 context gathered
+Status: Ready for Phase 93 discussion and Phase 92 planning
+Last activity: 2026-05-23 - Phase 92 context gathered
 
 Progress: [----------] 0%
 
@@ -115,6 +115,6 @@ v1.14 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-23T23:33:16.000Z
-Stopped at: Phase 91 context gathered
-Resume file: .planning/phases/091-generated-strategy-artifact-manifest/091-CONTEXT.md
+Last session: 2026-05-23T23:39:06.000Z
+Stopped at: Phase 92 context gathered
+Resume file: .planning/phases/092-runtime-abi-v1-14-contract/092-CONTEXT.md
