@@ -22,6 +22,7 @@ type Layer =
   | "worker_runtime"
   | "runtime_isolation"
   | "web_process"
+  | "web_go_read"
   | "go_readonly"
   | "privacy"
 
@@ -38,6 +39,7 @@ interface TopologyOptions {
   goUrl: string | null
   requireWeb: boolean
   requireGo: boolean
+  requireWebGoPublicStrategyRead: boolean
   requireRuntimeContainer: boolean
   json: boolean
 }
@@ -76,6 +78,8 @@ const localCommands = [
   "cd apps/go-backend && COWARDS_GO_BACKEND_OWNER_TOKENS=<secret>=user:local go run .",
   "pnpm sandbox:evaluate:container",
   "pnpm topology:check -- --web-url http://localhost:3000 --go-url http://127.0.0.1:8087",
+  "COWARDS_GO_PUBLIC_STRATEGY_READS=1 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 pnpm --filter @cowards/web dev",
+  "pnpm topology:check -- --require-web-go-public-strategy-read --web-url http://localhost:3000",
 ] as const
 
 const sensitiveQueryKeys = new Set([
@@ -97,6 +101,7 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
     goUrl: process.env.COWARDS_GO_BACKEND_URL ?? null,
     requireWeb: false,
     requireGo: false,
+    requireWebGoPublicStrategyRead: false,
     requireRuntimeContainer: false,
     json: false,
   }
@@ -114,6 +119,13 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
         break
       case "--require-go":
         options.requireGo = true
+        options.goUrl ??= "http://127.0.0.1:8087"
+        break
+      case "--require-web-go-public-strategy-read":
+        options.requireWebGoPublicStrategyRead = true
+        options.requireWeb = true
+        options.requireGo = true
+        options.webUrl ??= "http://localhost:3000"
         options.goUrl ??= "http://127.0.0.1:8087"
         break
       case "--require-runtime-container":
@@ -238,6 +250,15 @@ const checkPublicPayload = (value: unknown): string => {
   assertPublicServiceDtoLeakSafe(value)
   const serialized = JSON.stringify(value)
   return `${serialized.length} public-safe bytes`
+}
+
+const checkPublicText = (value: string): string => {
+  for (const marker of privateMarkers) {
+    if (value.includes(marker)) {
+      throw new Error(`public text contains private marker ${marker}`)
+    }
+  }
+  return `${value.length} public-safe text bytes`
 }
 
 export const evaluateLocalTopology = async (
@@ -429,6 +450,37 @@ export const evaluateLocalTopology = async (
         },
       ),
     )
+    if (options.requireWebGoPublicStrategyRead) {
+      checks.push(
+        await check(
+          "web_go_read",
+          "web-through-Go public Strategy read",
+          true,
+          async () => {
+            const route = sampleRoute("getPublicStrategyPage")
+            const response = await fetch(
+              new URL(
+                route.samplePath.replace("/public", ""),
+                options.webUrl ?? "http://localhost:3000",
+              ),
+            )
+            const text = await response.text()
+            checkPublicText(text)
+            if (!response.ok) {
+              throw new Error(
+                `web public Strategy page HTTP ${response.status}`,
+              )
+            }
+            if (!text.includes("Go Parity Sentinel")) {
+              throw new Error(
+                "web public Strategy page did not render the Go parity sentinel; ensure the web process started with COWARDS_GO_PUBLIC_STRATEGY_READS=1 and COWARDS_GO_BACKEND_URL",
+              )
+            }
+            return `web rendered Go parity sentinel through selected route at ${sanitizeDiagnosticUrl(options.webUrl ?? "http://localhost:3000")}`
+          },
+        ),
+      )
+    }
   } else {
     checks.push({
       layer: "web_process",

@@ -10,6 +10,7 @@ import type {
 } from "@cowards/spec"
 import {
   getCurrentPublicReadUser,
+  publicGoReadFailureDiagnostic,
   publicReadService,
   type PublicReadUser,
 } from "./public-service-adapter.js"
@@ -113,6 +114,9 @@ export const getPublicStrategyCard = async (
   )
   return page ? page.payload.strategy : null
 }
+
+export const isPublicStrategyReadUnavailable = (error: unknown): boolean =>
+  publicGoReadFailureDiagnostic(error) !== null
 
 export const getPublicPlayerProfile = async (
   handle: string,

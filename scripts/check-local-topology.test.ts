@@ -29,11 +29,13 @@ describe("local topology harness", () => {
       parseTopologyOptions([
         "--require-web",
         "--require-go",
+        "--require-web-go-public-strategy-read",
         "--require-runtime-container",
       ]),
     ).toMatchObject({
       requireWeb: true,
       requireGo: true,
+      requireWebGoPublicStrategyRead: true,
       requireRuntimeContainer: true,
       webUrl: "http://localhost:3000",
       goUrl: "http://127.0.0.1:8087",
@@ -89,6 +91,7 @@ describe("local topology harness", () => {
       goUrl: null,
       requireWeb: false,
       requireGo: false,
+      requireWebGoPublicStrategyRead: false,
       requireRuntimeContainer: false,
       json: false,
     })
@@ -108,12 +111,80 @@ describe("local topology harness", () => {
     )
   })
 
+  it("can require web-through-Go public Strategy read evidence", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes("/api/service/health")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            service: "cowards-service",
+            version: "service-api-v1.8",
+          }),
+          { status: 200 },
+        )
+      }
+      if (url.includes("127.0.0.1:8087/health")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            service: "cowards-service",
+            version: "service-api-v1.8",
+          }),
+          { status: 200 },
+        )
+      }
+      if (
+        url.includes("127.0.0.1:8087/public/matchsets/") ||
+        url.includes("127.0.0.1:8087/public/replays/") ||
+        url.includes("127.0.0.1:8087/public/strategies/")
+      ) {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 })
+      }
+      if (url.includes("127.0.0.1:8087/analytics/runs/")) {
+        return new Response(
+          JSON.stringify({
+            code: "FORBIDDEN",
+            message: "Forbidden.",
+            publicSafe: true,
+            status: 403,
+          }),
+          { status: 403 },
+        )
+      }
+      if (url.includes("/strategies/strategy%3Ago-parity%3Asentinel")) {
+        return new Response("<h1>Go Parity Sentinel</h1>", { status: 200 })
+      }
+      throw new Error(`unexpected fetch ${url}`)
+    })
+
+    const checks = await evaluateLocalTopology({
+      webUrl: "http://localhost:3000",
+      goUrl: "http://127.0.0.1:8087",
+      requireWeb: true,
+      requireGo: true,
+      requireWebGoPublicStrategyRead: true,
+      requireRuntimeContainer: false,
+      json: false,
+    })
+    const webGoRead = checks.find(
+      (check) => check.name === "web-through-Go public Strategy read",
+    )
+
+    expect(webGoRead).toMatchObject({
+      layer: "web_go_read",
+      ok: true,
+      required: true,
+    })
+  })
+
   it("reports required live Go failures without leaking private diagnostics", async () => {
     const checks = await evaluateLocalTopology({
       webUrl: null,
       goUrl: "http://127.0.0.1:1",
       requireWeb: false,
       requireGo: true,
+      requireWebGoPublicStrategyRead: false,
       requireRuntimeContainer: false,
       json: false,
     })
@@ -153,6 +224,7 @@ describe("local topology harness", () => {
       goUrl: "http://127.0.0.1:8087",
       requireWeb: false,
       requireGo: true,
+      requireWebGoPublicStrategyRead: false,
       requireRuntimeContainer: false,
       json: false,
     })
@@ -170,6 +242,7 @@ describe("local topology harness", () => {
       goUrl: null,
       requireWeb: false,
       requireGo: false,
+      requireWebGoPublicStrategyRead: false,
       requireRuntimeContainer: true,
       json: false,
     })

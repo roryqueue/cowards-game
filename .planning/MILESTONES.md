@@ -1,5 +1,41 @@
 # Milestones
 
+## v1.12 Go Backend Promotion Readiness and Cutover Plan
+
+**Status:** Complete 2026-05-23
+**Phases:** 6
+**Phase range:** 76-81
+**Plans:** 6/6 complete
+**Requirements:** 36/36 complete or explicitly blocked/deferred; 36/36 mapped
+**Audit:** .planning/milestones/v1.12-MILESTONE-AUDIT.md
+**Decision:** `promote-none-yet`
+
+### Delivered
+
+- Re-baselined TypeScript-service versus Go ownership, including the 29 report-only broad web offenses and five GET-only Go manifest entries.
+- Selected only `getPublicStrategyPage` as a candidate and recorded all other routes as blocked, evidence-only, or deferred.
+- Added a route-specific public Strategy Go read switch that defaults to TypeScript, requires explicit config, validates canonical schemas, scans raw JSON for private fields, rejects unsafe links, and fails closed without TypeScript fallback.
+- Added web-through-Go topology evidence and a route ownership manifest gate to boundary monitors.
+- Ran operational drills for forward switch, stopped-Go no-fallback, bad body/schema/privacy/divergence handling, and rollback.
+- Recorded `promote-none-yet` because the Go handler remains fixture-backed and lacks a production-equivalent data provider.
+
+### Planned Phases
+
+| Phase | Name |
+| --- | --- |
+| 76 | Scope Lock and Route Ownership Manifest — Complete |
+| 77 | Production Read Switch Contract — Complete |
+| 78 | Conditional Public Strategy Go Read Path — Complete |
+| 79 | Privacy, Parity, and Boundary Drift Gate — Complete |
+| 80 | Rollback and Operational Failure Drill — Complete |
+| 81 | Milestone Verification and Promotion Decision — Complete |
+
+### Archives
+
+- .planning/milestones/v1.12-MILESTONE-AUDIT.md
+- .planning/artifacts/v1.12-promotion-decision.md
+- .planning/artifacts/v1.12-live-web-go-topology.json
+
 ## v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
 
 **Status:** Shipped 2026-05-23

@@ -14,11 +14,11 @@
 - [x] **v1.9 Backend and Runtime Ownership Split** - Phases 57-63, shipped 2026-05-23. See `.planning/milestones/v1.9-ROADMAP.md`.
 - [x] **v1.10 Service Boundary Completion and Go Read-Model Decision** - Phases 64-69, shipped 2026-05-23. See `.planning/milestones/v1.10-ROADMAP.md`.
 - [x] **v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence** - Phases 70-75, shipped 2026-05-23. See `.planning/milestones/v1.11-ROADMAP.md`.
-- [ ] **v1.12 Go Backend Promotion Readiness and Cutover Plan** - Phases 76-81, in planning.
+- [x] **v1.12 Go Backend Promotion Readiness and Cutover Plan** - Phases 76-81, complete with promote-none-yet decision.
 
 ## Current Milestone: v1.12 Go Backend Promotion Readiness and Cutover Plan
 
-**Status:** Planned
+**Status:** Complete
 **Phases:** 76-81
 **Granularity:** Standard
 **Requirements:** 36/36 mapped
@@ -32,12 +32,12 @@ The milestone is successful if it produces a defensible `promote-none-yet` decis
 
 ## Phases
 
-- [ ] **Phase 76: Scope Lock and Route Ownership Manifest** - Developers can inspect current ownership, select at most the public Strategy page route as a candidate, and lock promotion/no-go criteria before implementation.
-- [ ] **Phase 77: Production Read Switch Contract** - Developers can implement and test a route-scoped TypeScript-vs-Go read switch that defaults to TypeScript and fails closed without fallback in Go-selected mode.
-- [ ] **Phase 78: Conditional Public Strategy Go Read Path** - Users can keep loading public Strategy pages through TypeScript by default, and optionally through Go only if live-read promotion criteria are satisfied.
-- [ ] **Phase 79: Privacy, Parity, and Boundary Drift Gate** - Developers can prove Go responses, diagnostics, topology output, route manifests, and boundary monitors preserve canonical schemas and privacy.
-- [ ] **Phase 80: Rollback and Operational Failure Drill** - Operators can rehearse forward cutover, stopped-Go no-fallback, bad-response/timeout/privacy-failure behavior, and rollback to TypeScript.
-- [ ] **Phase 81: Milestone Verification and Promotion Decision** - Developers can run the full v1.12 gate and record either `promote-one-route` or `promote-none-yet` with evidence and deferred work.
+- [x] **Phase 76: Scope Lock and Route Ownership Manifest** - Developers can inspect current ownership, select at most the public Strategy page route as a candidate, and lock promotion/no-go criteria before implementation.
+- [x] **Phase 77: Production Read Switch Contract** - Developers can implement and test a route-scoped TypeScript-vs-Go read switch that defaults to TypeScript and fails closed without fallback in Go-selected mode.
+- [x] **Phase 78: Conditional Public Strategy Go Read Path** - Users can keep loading public Strategy pages through TypeScript by default, and optionally through Go only if live-read promotion criteria are satisfied.
+- [x] **Phase 79: Privacy, Parity, and Boundary Drift Gate** - Developers can prove Go responses, diagnostics, topology output, route manifests, and boundary monitors preserve canonical schemas and privacy.
+- [x] **Phase 80: Rollback and Operational Failure Drill** - Operators can rehearse forward cutover, stopped-Go no-fallback, bad-response/timeout/privacy-failure behavior, and rollback to TypeScript.
+- [x] **Phase 81: Milestone Verification and Promotion Decision** - Developers can run the full v1.12 gate and record either `promote-one-route` or `promote-none-yet` with evidence and deferred work.
 
 ## Phase Details
 
@@ -56,7 +56,7 @@ The milestone is successful if it produces a defensible `promote-none-yet` decis
 
 **Plans:** 1 plan
 
-- [ ] 76-01-PLAN.md - Capture ownership matrix, candidate scorecard, route selection, promotion/no-go criteria, and non-goals.
+- [x] 76-01-PLAN.md - Capture ownership matrix, candidate scorecard, route selection, promotion/no-go criteria, and non-goals.
 
 ### Phase 77: Production Read Switch Contract
 
@@ -74,7 +74,7 @@ The milestone is successful if it produces a defensible `promote-none-yet` decis
 
 **Plans:** 1 plan
 
-- [ ] 77-01-PLAN.md - Implement the route-scoped switch contract, typed Go client behavior, no-fallback semantics, and diagnostics tests.
+- [x] 77-01-PLAN.md - Implement the route-scoped switch contract, typed Go client behavior, no-fallback semantics, and diagnostics tests.
 
 ### Phase 78: Conditional Public Strategy Go Read Path
 
@@ -93,7 +93,7 @@ The milestone is successful if it produces a defensible `promote-none-yet` decis
 
 **Plans:** 1 plan
 
-- [ ] 78-01-PLAN.md - Attempt the conditional public Strategy read path or record `promote-none-yet` blockers when live criteria are not met.
+- [x] 78-01-PLAN.md - Attempt the conditional public Strategy read path or record `promote-none-yet` blockers when live criteria are not met.
 
 ### Phase 79: Privacy, Parity, and Boundary Drift Gate
 
@@ -111,7 +111,7 @@ The milestone is successful if it produces a defensible `promote-none-yet` decis
 
 **Plans:** 1 plan
 
-- [ ] 79-01-PLAN.md - Harden parity, privacy, topology, route manifest, and boundary monitors around the selected route decision.
+- [x] 79-01-PLAN.md - Harden parity, privacy, topology, route manifest, and boundary monitors around the selected route decision.
 
 ### Phase 80: Rollback and Operational Failure Drill
 
@@ -129,7 +129,7 @@ The milestone is successful if it produces a defensible `promote-none-yet` decis
 
 **Plans:** 1 plan
 
-- [ ] 80-01-PLAN.md - Add rollback runbook, operational drills, public-safe failure behavior, and evidence artifacts.
+- [x] 80-01-PLAN.md - Add rollback runbook, operational drills, public-safe failure behavior, and evidence artifacts.
 
 ### Phase 81: Milestone Verification and Promotion Decision
 
@@ -146,7 +146,7 @@ The milestone is successful if it produces a defensible `promote-none-yet` decis
 
 **Plans:** 1 plan
 
-- [ ] 81-01-PLAN.md - Run the final v1.12 verification gate and record the route promotion decision.
+- [x] 81-01-PLAN.md - Run the final v1.12 verification gate and record the route promotion decision.
 
 ## Progress
 
@@ -154,12 +154,12 @@ The milestone is successful if it produces a defensible `promote-none-yet` decis
 
 | Phase | Plans Complete | Status | Completed |
 | --- | --- | --- | --- |
-| 76. Scope Lock and Route Ownership Manifest | 0/1 | Pending | - |
-| 77. Production Read Switch Contract | 0/1 | Pending | - |
-| 78. Conditional Public Strategy Go Read Path | 0/1 | Pending | - |
-| 79. Privacy, Parity, and Boundary Drift Gate | 0/1 | Pending | - |
-| 80. Rollback and Operational Failure Drill | 0/1 | Pending | - |
-| 81. Milestone Verification and Promotion Decision | 0/1 | Pending | - |
+| 76. Scope Lock and Route Ownership Manifest | 1/1 | Complete | 2026-05-23 |
+| 77. Production Read Switch Contract | 1/1 | Complete | 2026-05-23 |
+| 78. Conditional Public Strategy Go Read Path | 1/1 | Complete | 2026-05-23 |
+| 79. Privacy, Parity, and Boundary Drift Gate | 1/1 | Complete | 2026-05-23 |
+| 80. Rollback and Operational Failure Drill | 1/1 | Complete | 2026-05-23 |
+| 81. Milestone Verification and Promotion Decision | 1/1 | Complete | 2026-05-23 |
 
 ## Requirement Coverage
 
@@ -173,7 +173,7 @@ The milestone is successful if it produces a defensible `promote-none-yet` decis
 | VER-01 through VER-05 | Phase 81 | 5 |
 
 **Coverage:** 36/36 v1.12 requirements mapped.
-**Completed:** 0/36 v1.12 requirements.
+**Completed:** 36/36 v1.12 requirements covered or explicitly blocked/deferred.
 **Unmapped requirements:** 0.
 **Selected Go production read candidate:** `getPublicStrategyPage` / `GET /public/strategies/{strategyId}`.
 **Valid final decisions:** `promote-one-route` or `promote-none-yet`.
@@ -181,11 +181,7 @@ The milestone is successful if it produces a defensible `promote-none-yet` decis
 
 ## Next Up
 
-Phase 76: Scope Lock and Route Ownership Manifest.
-
-`$gsd-discuss-phase 76` - clarify the ownership matrix, route scorecard, promotion/no-go criteria, and evidence shape before planning.
-
-Also: `$gsd-plan-phase 76` - skip discussion and plan directly.
+v1.12 complete. Final decision: `promote-none-yet` because Go public Strategy reads remain fixture-backed rather than production-equivalent.
 
 ## Archived Execution History
 

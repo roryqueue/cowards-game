@@ -109,48 +109,48 @@ Which phases cover active v1.12 requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| OWN-01 | Phase 76 | Pending |
-| OWN-02 | Phase 76 | Pending |
-| OWN-03 | Phase 76 | Pending |
-| OWN-04 | Phase 76 | Pending |
-| OWN-05 | Phase 76 | Pending |
-| OWN-06 | Phase 76 | Pending |
-| SWCH-01 | Phase 77 | Pending |
-| SWCH-02 | Phase 77 | Pending |
-| SWCH-03 | Phase 77 | Pending |
-| SWCH-04 | Phase 77 | Pending |
-| SWCH-05 | Phase 77 | Pending |
-| SWCH-06 | Phase 77 | Pending |
-| GOREAD-01 | Phase 78 | Pending |
-| GOREAD-02 | Phase 78 | Pending |
-| GOREAD-03 | Phase 78 | Pending |
-| GOREAD-04 | Phase 78 | Pending |
-| GOREAD-05 | Phase 78 | Pending |
-| GOREAD-06 | Phase 78 | Pending |
-| GOREAD-07 | Phase 78 | Pending |
-| GATE-01 | Phase 79 | Pending |
-| GATE-02 | Phase 79 | Pending |
-| GATE-03 | Phase 79 | Pending |
-| GATE-04 | Phase 79 | Pending |
-| GATE-05 | Phase 79 | Pending |
-| GATE-06 | Phase 79 | Pending |
-| OPS-01 | Phase 80 | Pending |
-| OPS-02 | Phase 80 | Pending |
-| OPS-03 | Phase 80 | Pending |
-| OPS-04 | Phase 80 | Pending |
-| OPS-05 | Phase 80 | Pending |
-| OPS-06 | Phase 80 | Pending |
-| VER-01 | Phase 81 | Pending |
-| VER-02 | Phase 81 | Pending |
-| VER-03 | Phase 81 | Pending |
-| VER-04 | Phase 81 | Pending |
-| VER-05 | Phase 81 | Pending |
+| OWN-01 | Phase 76 | Complete |
+| OWN-02 | Phase 76 | Complete |
+| OWN-03 | Phase 76 | Complete |
+| OWN-04 | Phase 76 | Complete |
+| OWN-05 | Phase 76 | Complete |
+| OWN-06 | Phase 76 | Complete |
+| SWCH-01 | Phase 77 | Complete |
+| SWCH-02 | Phase 77 | Complete |
+| SWCH-03 | Phase 77 | Complete |
+| SWCH-04 | Phase 77 | Complete |
+| SWCH-05 | Phase 77 | Complete |
+| SWCH-06 | Phase 77 | Complete |
+| GOREAD-01 | Phase 78 | Complete |
+| GOREAD-02 | Phase 78 | Complete |
+| GOREAD-03 | Phase 78 | Complete |
+| GOREAD-04 | Phase 78 | Complete |
+| GOREAD-05 | Phase 78 | Complete |
+| GOREAD-06 | Phase 78 | Complete |
+| GOREAD-07 | Phase 78 | Complete |
+| GATE-01 | Phase 79 | Complete |
+| GATE-02 | Phase 79 | Complete |
+| GATE-03 | Phase 79 | Complete |
+| GATE-04 | Phase 79 | Complete |
+| GATE-05 | Phase 79 | Complete |
+| GATE-06 | Phase 79 | Complete |
+| OPS-01 | Phase 80 | Complete |
+| OPS-02 | Phase 80 | Complete |
+| OPS-03 | Phase 80 | Complete |
+| OPS-04 | Phase 80 | Complete |
+| OPS-05 | Phase 80 | Complete |
+| OPS-06 | Phase 80 | Complete |
+| VER-01 | Phase 81 | Complete |
+| VER-02 | Phase 81 | Complete |
+| VER-03 | Phase 81 | Complete |
+| VER-04 | Phase 81 | Complete |
+| VER-05 | Phase 81 | Complete |
 
 **Coverage:**
 - v1.12 requirements: 36 total
 - Mapped to phases: 36
 - Unmapped: 0
-- Complete: 0
+- Complete: 36
 - Selected production Go read candidate: `getPublicStrategyPage` / `GET /public/strategies/{strategyId}`
 - Valid final decisions: `promote-one-route` or `promote-none-yet`
 

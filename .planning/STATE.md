@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: Go Backend Promotion Readiness and Cutover Plan
-status: planning
-stopped_at: Phase 81 context gathered
-last_updated: "2026-05-23T17:00:00.000Z"
+status: complete
+stopped_at: v1.12 promote-none-yet decision recorded
+last_updated: "2026-05-23T17:30:00.000Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 6
   total_plans: 6
-  completed_plans: 0
-  percent: 0
+  completed_plans: 6
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.12 planning active
+**Status:** v1.12 complete with promote-none-yet decision
 
 ## Project Reference
 
@@ -32,11 +32,11 @@ See: .planning/PROJECT.md (updated 2026-05-23)
 ## Current Position
 
 Phase: 81 - Milestone Verification and Promotion Decision
-Plan: -
-Status: Context gathered
-Last activity: 2026-05-23 - Phase 81 context gathered; all v1.12 phase contexts captured
+Plan: 81-01
+Status: Complete
+Last activity: 2026-05-23 - v1.12 verified; final decision is promote-none-yet
 
-Progress: [----------] 0%
+Progress: [##########] 100%
 
 ## Workflow Settings
 
@@ -96,8 +96,8 @@ v1.12 direction:
 
 ## Next Todos
 
-- Run `$gsd-discuss-phase 76` for Scope Lock and Route Ownership Manifest.
-- Then run `$gsd-plan-phase 76` and `$gsd-execute-phase 76`.
+- Keep production web reads on TypeScript unless a later milestone adds a production-equivalent Go data provider.
+- Use the v1.12 topology hook before any future public Strategy Go promotion attempt.
 
 ## Blockers/Concerns
 
@@ -110,6 +110,7 @@ None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing l
 | backend | 29 remaining broad web report-only direct persistence offenses not selected in v1.11 | Deferred | v1.11 scope |
 | backend | Go mutation endpoints, auth/session mutation, ladder writes, orchestration, persistence writes, job claiming, migrations, and Match execution | Deferred | v1.11 scope |
 | backend | Production web routing to Go | Deferred | v1.11 scope |
+| backend | Public Strategy Go promotion blocked until Go has production-equivalent data provider | Deferred | v1.12 decision |
 | replay | Full replay projection, owner-debug replay migration, and private Chronicle assembly | Deferred | v1.11 research |
 | workshop | Workshop source retrieval, source save, validation, test launch, analytics rerun, profile save, export, and runtime flows | Deferred | v1.11 scope |
 | runtime | Production hostile-code sandbox promotion | Deferred | v1.11 scope |
@@ -119,6 +120,6 @@ None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing l
 
 ## Session Continuity
 
-Last session: 2026-05-23T17:00:00.000Z
-Stopped at: Phase 81 context gathered
-Resume file: .planning/phases/081-milestone-verification-and-promotion-decision/081-CONTEXT.md
+Last session: 2026-05-23T17:30:00.000Z
+Stopped at: v1.12 promote-none-yet decision recorded
+Resume file: .planning/phases/081-milestone-verification-and-promotion-decision/081-VERIFICATION.md

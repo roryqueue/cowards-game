@@ -1,6 +1,9 @@
-import type { StrategyId } from "@cowards/spec"
+import type { PublicStrategyCardDto, StrategyId } from "@cowards/spec"
 import { describeStrategyRuntimeProductSemantics } from "@cowards/spec"
-import { getPublicStrategyCard } from "../../../lib/public-service-boundary.js"
+import {
+  getPublicStrategyCard,
+  isPublicStrategyReadUnavailable,
+} from "../../../lib/public-service-boundary.js"
 
 export const dynamic = "force-dynamic"
 
@@ -10,7 +13,22 @@ export default async function StrategyCardPage({
   params: Promise<{ strategyId: string }> | { strategyId: string }
 }) {
   const { strategyId } = await params
-  const strategy = await getPublicStrategyCard(strategyId as StrategyId)
+  let strategy: PublicStrategyCardDto | null
+  try {
+    strategy = await getPublicStrategyCard(strategyId as StrategyId)
+  } catch (error) {
+    if (!isPublicStrategyReadUnavailable(error)) {
+      throw error
+    }
+    return (
+      <main className="app-page">
+        <section className="app-panel">
+          <h1>Strategy temporarily unavailable</h1>
+          <p className="workshop-muted">Try again shortly.</p>
+        </section>
+      </main>
+    )
+  }
   if (!strategy) {
     return (
       <main className="app-page">

@@ -4,7 +4,7 @@
 
 **Shipped version:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence on 2026-05-23
 **Current milestone:** v1.12 Go Backend Promotion Readiness and Cutover Plan
-**Status:** Planning v1.12 requirements and roadmap.
+**Status:** v1.12 complete with a `promote-none-yet` decision.
 **Last audit:** v1.11 milestone audit passed after audit-fix.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, read-only Go parity fixtures including a public Strategy read model, runtime isolation readiness evidence gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors proving future multi-language runtime and backend migration paths without promoting unsafe ownership moves.
@@ -24,7 +24,7 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - Decide whether to promote at most `getPublicStrategyPage` / `GET /public/strategies/{strategyId}` behind an explicit route-scoped switch; otherwise document `promote-none-yet` with blockers.
 - Keep Go writes, auth/session mutation, ladder writes, Match orchestration, jobs, migrations, persistence ownership, Strategy source retrieval, Strategy execution, production runtime sandbox promotion, counted non-JS play, and rule/engine changes out of scope.
 
-**Decision posture:** Zero production Go route promotion is a valid successful v1.12 outcome when evidence shows the route is not ready.
+**Decision:** `promote-none-yet`. The route-scoped switch and failure evidence are in place, but Go still serves the selected public Strategy read from parity fixtures rather than a production-equivalent data provider.
 
 **Research summary:** `.planning/research/SUMMARY.md`
 

@@ -36,6 +36,7 @@ type MonitorLayer =
   | "runtime_isolation"
   | "non_js_runtime"
   | "go_parity"
+  | "go_promotion"
   | "topology"
 
 export interface BoundaryMonitorCheck {
@@ -65,6 +66,28 @@ interface RuntimeAdapterBridge {
   specAdapterId: StrategyRuntimeAdapterId
 }
 
+interface GoPromotionRouteOwnershipEntry {
+  routeId: string
+  method: string
+  path: string
+  currentOwner: string
+  eligibleForGoPromotion: boolean
+  selectedCandidate: boolean
+  privacyClass: string
+  fallbackPolicy: string
+  rollbackOwner: string
+  promotionStatus: string
+  blockedReasons: readonly string[]
+  disallowedScopes: readonly string[]
+}
+
+interface GoPromotionRouteOwnershipManifest {
+  milestone: string
+  decision: "promote-one-route" | "promote-none-yet"
+  selectedRouteId: string | null
+  routes: readonly GoPromotionRouteOwnershipEntry[]
+}
+
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -75,6 +98,8 @@ const openApiArtifactPath =
 const goFixtureDir = "apps/go-backend/testdata/service-fixtures"
 const sandboxEvaluationArtifactPath =
   ".planning/artifacts/runtime-sandbox-evaluation.json"
+const goPromotionManifestPath =
+  ".planning/artifacts/v1.12-route-ownership-manifest.json"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/account/advanced-forks/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
@@ -332,6 +357,59 @@ const checkGoRouteManifest = (): string => {
   return `${manifest.length} Go route manifest entries checked`
 }
 
+const checkGoPromotionOwnershipManifest = (): string => {
+  const manifest = readJson<GoPromotionRouteOwnershipManifest>(
+    goPromotionManifestPath,
+  )
+  if (manifest.milestone !== "v1.12") {
+    throw new Error(
+      `promotion manifest milestone drifted to ${manifest.milestone}`,
+    )
+  }
+  const selected = manifest.routes.filter((entry) => entry.selectedCandidate)
+  if (selected.length > 1) {
+    throw new Error("promotion manifest selects more than one route")
+  }
+  if (
+    selected.length === 1 &&
+    selected[0]?.routeId !== "getPublicStrategyPage"
+  ) {
+    throw new Error(`unexpected selected route ${selected[0]?.routeId}`)
+  }
+  if (
+    manifest.decision === "promote-one-route" &&
+    manifest.selectedRouteId !== "getPublicStrategyPage"
+  ) {
+    throw new Error("promote-one-route must select getPublicStrategyPage")
+  }
+  for (const entry of manifest.routes) {
+    if (entry.method !== "GET") {
+      throw new Error(`promotion route ${entry.routeId} is not GET`)
+    }
+    if (entry.privacyClass !== "public" && entry.privacyClass !== "owner") {
+      throw new Error(`promotion route ${entry.routeId} privacy drifted`)
+    }
+    if (entry.fallbackPolicy !== "no_fallback_when_go_selected") {
+      throw new Error(
+        `promotion route ${entry.routeId} fallback policy drifted`,
+      )
+    }
+    if (entry.rollbackOwner !== "typescript_service") {
+      throw new Error(`promotion route ${entry.routeId} rollback owner drifted`)
+    }
+    assertMonitorPublicPayload({
+      routeId: entry.routeId,
+      method: entry.method,
+      path: entry.path,
+      currentOwner: entry.currentOwner,
+      promotionStatus: entry.promotionStatus,
+      blockedReasons: entry.blockedReasons,
+      disallowedScopes: entry.disallowedScopes,
+    })
+  }
+  return `${manifest.routes.length} route ownership entries checked; decision=${manifest.decision}`
+}
+
 export const checkRuntimeAdapterBridge = (
   bridge: RuntimeAdapterBridge,
 ): string => {
@@ -517,6 +595,7 @@ const checkTopologyDiagnostics = async (): Promise<string> => {
     goUrl: null,
     requireWeb: false,
     requireGo: false,
+    requireWebGoPublicStrategyRead: false,
     requireRuntimeContainer: false,
     json: false,
   })
@@ -556,6 +635,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("go_parity", "Go route manifest metadata", () =>
     checkGoRouteManifest(),
+  ),
+  await check("go_promotion", "v1.12 route ownership manifest", () =>
+    checkGoPromotionOwnershipManifest(),
   ),
   await check("topology", "static topology diagnostics", () =>
     checkTopologyDiagnostics(),
