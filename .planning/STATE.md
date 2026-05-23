@@ -1,42 +1,42 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.9
-milestone_name: Backend and Runtime Ownership Split
-status: audited
-stopped_at: v1.9 milestone audit passed; ready for milestone archive
-last_updated: "2026-05-23T01:30:00.000Z"
+milestone: none
+milestone_name: None
+status: ready_for_next_milestone
+stopped_at: v1.9 milestone archived and tagged; ready to select the next milestone
+last_updated: "2026-05-23T02:10:00.000Z"
 last_activity: 2026-05-23
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.9 audited
+**Status:** Ready for next milestone
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-22)
+See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.9 Backend and Runtime Ownership Split
-**Latest shipped milestone:** v1.8 Production Boundary Hardening
-**Requirements:** 28/28 active v1.9 requirements complete; 28/28 mapped; v1.8 requirements archived in .planning/milestones/v1.8-REQUIREMENTS.md
+**Current focus:** No active milestone; ready to choose the next ownership or product move
+**Latest shipped milestone:** v1.9 Backend and Runtime Ownership Split
+**Requirements:** Active requirements cleared; v1.9 requirements archived in .planning/milestones/v1.9-REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 63 of 63 (Milestone Verification and Regression Gate)
-Plan: 63-01
-Status: v1.9 milestone audit passed; ready for milestone archive
-Last activity: 2026-05-23 — Completed v1.9 milestone audit
+Phase: None
+Plan: None
+Status: v1.9 archived; ready for `$gsd-new-milestone`
+Last activity: 2026-05-23 — Archived v1.9 milestone
 
-Progress: [██████████] 100%
+Progress: [----------] 0%
 
 ## Workflow Settings
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100%
 | v1.6 Workshop Analytics and Evidence Explorer | 7 | 7 | 54/54 | Shipped |
 | v1.7 Runtime and Backend Boundary Stabilization | 6 | 6 | 32/32 | Shipped |
 | v1.8 Production Boundary Hardening | 6 | 8 | 38/38 | Shipped |
+| v1.9 Backend and Runtime Ownership Split | 7 | 7 | 28/28 | Shipped |
 
 ## Accumulated Context
 
@@ -106,8 +107,8 @@ Progress: [██████████] 100%
 
 ### Next Todos
 
-- Run `$gsd-complete-milestone v1.9` to archive v1.9 and prepare the next milestone.
-- Keep Go writes, production runtime promotion, and counted non-JS play out of v1.9 unless the milestone is explicitly replanned.
+- Start the next milestone with `$gsd-new-milestone`.
+- Recommended next direction: continue service-backed web read/user migration, shrink remaining broad web persistence debt, and prepare Go read-model expansion only after explicit route scope and TypeScript-service-backed parity fixtures.
 
 ### Blockers/Concerns
 
@@ -125,6 +126,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-23T01:30:00.000Z
-Stopped at: v1.9 milestone audit passed; ready for milestone archive
+Last session: 2026-05-23T02:10:00.000Z
+Stopped at: v1.9 milestone archived and ready for next milestone selection
 Resume file: None

@@ -2,12 +2,20 @@
 
 ## v1.9 Backend and Runtime Ownership Split
 
-**Status:** Verified 2026-05-22
+**Status:** Shipped 2026-05-23
 **Phases:** 7
 **Phase range:** 57-63
 **Plans:** 7/7 complete
 **Requirements:** 28/28 complete; 28/28 mapped
 **Audit:** .planning/milestones/v1.9-MILESTONE-AUDIT.md
+
+### Delivered
+
+- Moved selected public/player, owner account, and public ladder read surfaces behind `@cowards/service`.
+- Widened strict import enforcement while reducing broad web report-only persistence debt from 41 to 34 known offenses.
+- Added runtime isolation readiness and non-JS promotion guardrails without promoting any runtime candidate.
+- Fixed the audit-found container runtime eligibility blocker so the production-candidate container adapter remains evidence-only and non-counted.
+- Verified the milestone through package tests, replay smoke tests, typecheck, topology, sandbox evaluation checks, Go parity, and boundary monitors.
 
 ### Goal
 
@@ -40,6 +48,20 @@ Use the v1.8 service contracts, Go parity fixtures, runtime semantics, local top
 - Public replay, service, Go, topology, monitor, and runtime outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, and private runtime internals by default.
 - Go backend work remains read-only unless v1.9 explicitly scopes a write boundary.
 - Non-JS runtimes remain experimental unless v1.9 explicitly proves promotion criteria.
+
+### Archives
+
+- .planning/milestones/v1.9-ROADMAP.md
+- .planning/milestones/v1.9-REQUIREMENTS.md
+- .planning/milestones/v1.9-MILESTONE-AUDIT.md
+- .planning/milestones/v1.9-phases/
+
+### Known Deferred Items
+
+- Future Go read-model expansion remains deferred until a route is explicitly scoped with generated TypeScript-service-backed parity fixtures, GET-only routing, topology diagnosis, and rollback scope.
+- Go mutation endpoints, writes, jobs, migrations, Match orchestration, and Strategy execution remain TypeScript-owned.
+- Production hostile-code sandbox promotion remains deferred until live container or stronger isolation evidence is complete in CI or a production-equivalent lane.
+- Python and other non-JS runtimes remain experimental and non-counted.
 
 ## v1.8 Production Boundary Hardening
 

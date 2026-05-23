@@ -2,29 +2,41 @@
 
 ## Current State
 
-**Shipped version:** v1.8 Production Boundary Hardening on 2026-05-22
-**Current milestone:** v1.9 Backend and Runtime Ownership Split.
-**Status:** v1.9 planning started; researching which ownership boundary should move first.
-**Last audit:** v1.8 milestone audit passed.
+**Shipped version:** v1.9 Backend and Runtime Ownership Split on 2026-05-23
+**Current milestone:** None.
+**Status:** Ready for next milestone selection.
+**Last audit:** v1.9 milestone audit passed after code review and audit-fix.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated v1.8 TypeScript service contracts, read-only Go parity fixtures, sandbox evaluation evidence, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors proving future multi-language runtime and backend migration paths.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder reads, read-only Go parity fixtures, runtime isolation readiness evidence gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors proving future multi-language runtime and backend migration paths without promoting unsafe ownership moves.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.9 Backend and Runtime Ownership Split
+## Next Milestone Candidates
 
-**Goal:** Use the v1.8 contracts, parity fixtures, local topology, and monitors to make one deliberate ownership move without blending backend rewrite, production sandbox promotion, and non-JS counted play into one risky change.
+The strongest next move is a service-boundary consolidation milestone: continue migrating high-value web read/user surfaces behind `@cowards/service`, shrink the remaining report-only direct persistence debt, and prepare one future Go read-model route only when TypeScript-service-backed parity fixtures and rollback scope are explicit.
 
-**Target features:**
-- Research and decide which ownership boundary moves first: service-backed web reads, Go read-model expansion, runtime isolation, or non-JS runtime promotion criteria.
-- Reduce direct web persistence debt by migrating more read/user surfaces behind `@cowards/service` and widening strict import enforcement.
-- Keep Go backend work read-only unless route ownership, auth, jobs, migrations, rollback, and write semantics are explicitly specified.
-- Keep production runtime isolation behind evidence gates for resource limits, filesystem/network denial, deployment ergonomics, and failure taxonomy.
-- Keep Python and other non-JS runtimes experimental and non-counted unless explicit promotion criteria are defined and satisfied.
+Candidate directions:
+- Continue service-backed web read migration and move more direct persistence imports from report-only to strict enforcement.
+- Prepare the first explicit Go read-model expansion with generated TypeScript-service-backed parity fixtures, GET-only routing, topology diagnosis, and rollback scope.
+- Deepen production runtime isolation evidence in a CI or production-equivalent container lane before any counted promotion.
+- Improve replay/Workshop product surfaces on top of the steadier service/runtime boundaries.
 
-## Latest Shipped Milestone: v1.8 Production Boundary Hardening
+## Latest Shipped Milestone: v1.9 Backend and Runtime Ownership Split
+
+**Goal:** Use the v1.8 service contracts, Go parity fixtures, runtime semantics, local topology, and boundary monitors to make one deliberate ownership move without blending backend rewrite, production sandbox promotion, and non-JS counted play into one risky change.
+
+**Delivered:**
+- Selected the service-backed web read/user branch as the v1.9 ownership move while keeping Go expansion as follow-up-only.
+- Moved public player profiles, owner account session/revision-list reads, and public ladder season reads behind `@cowards/service`.
+- Widened strict import enforcement and reduced broad web report-only direct persistence debt from 41 to 34 known offenses.
+- Added runtime isolation readiness guardrails and monitor evidence without promoting worker, subprocess, container, or other candidates to counted hostile-code execution.
+- Added spec-owned non-JS promotion criteria while keeping Python and other non-JS runtimes experimental, disabled for normal play, and non-counted.
+- Fixed the audit-found container runtime blocker so the container adapter remains evidence-only and non-counted until explicit promotion criteria are satisfied.
+- Archived audit: `.planning/milestones/v1.9-MILESTONE-AUDIT.md`.
+
+## Previous Shipped Milestone: v1.8 Production Boundary Hardening
 
 **Goal:** Turn the v1.7 service/runtime/backend contracts into sturdier operating boundaries that are boring, observable, repeatable, and hard to accidentally bypass without prematurely rewriting orchestration, backend ownership, or production multi-language runtime support.
 
@@ -114,6 +126,15 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - ✓ `pnpm topology:check` validates local topology setup, fixtures, TypeScript service health, runtime adapter metadata, optional live web/Go smoke, and privacy-safe diagnostics.
 - ✓ `pnpm boundary:monitors` composes contract, privacy, import-boundary, runtime adapter, Go parity, sandbox, and topology drift checks.
 
+## Validated in v1.9
+
+- ✓ Selected service-backed web read/user surfaces as the deliberate production ownership move.
+- ✓ Public player profiles, owner account session/revision-list reads, and public ladder season reads now pass through `@cowards/service`.
+- ✓ Strict import enforcement widened while broad web report-only direct persistence debt dropped from 41 to 34 known offenses.
+- ✓ Runtime isolation readiness, topology diagnostics, and boundary monitors remain evidence-only, with the container adapter explicitly non-counted after audit-fix.
+- ✓ Non-JS promotion criteria are spec-owned; Python and other non-JS runtimes remain experimental, disabled for normal play, and non-counted.
+- ✓ Full milestone gate covered package tests, typecheck, boundary monitors, replay smoke privacy, Go parity, topology checks, sandbox evidence checks, code review, audit-fix, and milestone audit.
+
 ## Validated in v1.0
 
 - ✓ TypeScript monorepo, local workflow, canonical contracts, and versioning spine.
@@ -201,6 +222,10 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.8-REQUIREMENTS.md`
 - `.planning/milestones/v1.8-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.8-phases/`
+- `.planning/milestones/v1.9-ROADMAP.md`
+- `.planning/milestones/v1.9-REQUIREMENTS.md`
+- `.planning/milestones/v1.9-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.9-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -242,6 +267,9 @@ Planning archives live under `.planning/milestones/`:
 | Freeze contracts before rewrites | Service and runtime boundaries should be specified, tested, and proven with small spikes before moving orchestration or production language support. | ✓ Implemented in v1.7 |
 | Keep non-JS runtimes experimental until sandbox/product semantics are real | Python can prove ABI shape, but counted play should remain JS/TS until isolation, package policy, Workshop UX, and compatibility are designed. | ✓ Good |
 | Keep Go backend migration read-only first | A static/read-only Go spike proves DTO/deployment shape without prematurely moving writes, jobs, or Strategy execution. | ✓ Good |
+| Move service-backed web reads before Go route ownership | v1.9 showed that reducing direct web persistence debt is the cleanest first backend ownership move and preserves the TypeScript service as the contract source. | ✓ Good |
+| Keep Go expansion follow-up-only until fixtures and rollback are explicit | A future Go read-model route needs generated TypeScript-service-backed parity fixtures, GET-only routing, topology diagnosis, auth/error semantics, and rollback scope before ownership moves. | ✓ Good |
+| Keep production runtime promotion evidence-only | The container adapter and other runtime candidates must not become counted hostile-code boundaries until live isolation evidence and promotion criteria are satisfied. | ✓ Good |
 
 ## Constraints
 
@@ -262,4 +290,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-22 after starting v1.9 milestone planning*
+*Last updated: 2026-05-23 after completing v1.9 milestone*
