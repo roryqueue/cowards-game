@@ -52,9 +52,9 @@ Requirements for making one deliberate ownership move: migrate more web read/use
 
 ### Milestone Verification
 
-- [ ] **VER-01**: Developer can run v1.9 verification commands for contracts, import boundaries, service tests, web tests, typecheck, topology, boundary monitors, and any selected Go/runtime guardrail checks.
-- [ ] **VER-02**: Developer can verify existing JS/TS Workshop, immutable Strategy Revision behavior, exhibition/trial evidence, replay viewer, saved gauntlet analytics, golden parity, and public privacy behavior remain unchanged.
-- [ ] **VER-03**: Developer can verify public replay, service, Go, topology, monitor, export, analytics, and runtime outputs still omit private Strategy/runtime data by default.
+- [x] **VER-01**: Developer can run v1.9 verification commands for contracts, import boundaries, service tests, web tests, typecheck, topology, boundary monitors, and any selected Go/runtime guardrail checks.
+- [x] **VER-02**: Developer can verify existing JS/TS Workshop, immutable Strategy Revision behavior, exhibition/trial evidence, replay viewer, saved gauntlet analytics, golden parity, and public privacy behavior remain unchanged.
+- [x] **VER-03**: Developer can verify public replay, service, Go, topology, monitor, export, analytics, and runtime outputs still omit private Strategy/runtime data by default.
 
 ## Future Requirements
 
@@ -126,9 +126,9 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 | NJS-02 | Phase 62 | Complete |
 | NJS-03 | Phase 62 | Complete |
 | NJS-04 | Phase 62 | Complete |
-| VER-01 | Phase 63 | Pending |
-| VER-02 | Phase 63 | Pending |
-| VER-03 | Phase 63 | Pending |
+| VER-01 | Phase 63 | Complete |
+| VER-02 | Phase 63 | Complete |
+| VER-03 | Phase 63 | Complete |
 
 **Coverage:**
 - v1.9 requirements: 28 total
@@ -139,4 +139,4 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after Phase 62 completion*
+*Last updated: 2026-05-22 after Phase 63 verification*

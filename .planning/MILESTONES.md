@@ -2,11 +2,11 @@
 
 ## v1.9 Backend and Runtime Ownership Split
 
-**Status:** In progress 2026-05-22
+**Status:** Verified 2026-05-22
 **Phases:** 7
 **Phase range:** 57-63
-**Plans:** 6/6 complete so far
-**Requirements:** 25/28 complete; 28/28 mapped
+**Plans:** 7/7 complete
+**Requirements:** 28/28 complete; 28/28 mapped
 **Audit:** TBD
 
 ### Goal
@@ -31,7 +31,7 @@ Use the v1.8 service contracts, Go parity fixtures, runtime semantics, local top
 | 60 | Public Ladder Service Read Follow-Up — Complete |
 | 61 | Runtime Isolation Readiness Guardrails — Complete |
 | 62 | Experimental Non-JS Runtime Guardrails — Complete |
-| 63 | Milestone Verification and Regression Gate |
+| 63 | Milestone Verification and Regression Gate — Complete |
 
 ### Active Constraints
 

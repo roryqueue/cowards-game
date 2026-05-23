@@ -11,11 +11,11 @@
 - [x] **v1.6 Workshop Analytics and Evidence Explorer** - Phases 38-44, shipped 2026-05-22. See `.planning/milestones/v1.6-ROADMAP.md`.
 - [x] **v1.7 Runtime and Backend Boundary Stabilization** - Phases 45-50, shipped 2026-05-22. See `.planning/milestones/v1.7-ROADMAP.md`.
 - [x] **v1.8 Production Boundary Hardening** - Phases 51-56, shipped 2026-05-22. See `.planning/milestones/v1.8-ROADMAP.md`.
-- [ ] **v1.9 Backend and Runtime Ownership Split** - Phases 57-63, planned.
+- [x] **v1.9 Backend and Runtime Ownership Split** - Phases 57-63, verified 2026-05-22.
 
 ## Current Milestone: v1.9 Backend and Runtime Ownership Split
 
-**Status:** Roadmap created
+**Status:** Verified
 **Phases:** 57-63
 **Granularity:** Standard
 **Requirements:** 28/28 mapped
@@ -32,7 +32,7 @@ v1.9 makes one production ownership move: service-backed web read/user surfaces 
 - [x] **Phase 60: Public Ladder Service Read Follow-Up** - Users can view the selected public ladder season through `@cowards/service` while Go writes and Go route expansion stay out of scope.
 - [x] **Phase 61: Runtime Isolation Readiness Guardrails** - Developers can inspect production runtime-isolation readiness criteria and verify no candidate is promoted by default.
 - [x] **Phase 62: Experimental Non-JS Runtime Guardrails** - Users and developers see experimental non-JS semantics while counted eligibility remains fail-closed.
-- [ ] **Phase 63: Milestone Verification and Regression Gate** - Developers can run the v1.9 verification set and prove existing JS/TS, replay, analytics, and privacy behavior remain unchanged.
+- [x] **Phase 63: Milestone Verification and Regression Gate** - Developers can run the v1.9 verification set and prove existing JS/TS, replay, analytics, and privacy behavior remain unchanged.
 
 ## Phase Details
 
@@ -128,7 +128,9 @@ Plans:
   1. Developer can run v1.9 verification commands for contracts, import boundaries, service tests, web tests, typecheck, topology, boundary monitors, and selected Go/runtime guardrail checks.
   2. Developer can verify existing JS/TS Workshop, immutable Strategy Revision behavior, exhibition/trial evidence, replay viewer, saved gauntlet analytics, golden parity, and public privacy behavior remain unchanged.
   3. Developer can verify public replay, service, Go, topology, monitor, export, analytics, and runtime outputs still omit private Strategy/runtime data by default.
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [x] 63-01-PLAN.md — Run the v1.9 verification gate, fix stale replay smoke coverage, and close milestone state.
 
 ## Progress
 
@@ -142,7 +144,7 @@ Plans:
 | 60. Public Ladder Service Read Follow-Up | 1/1 | Complete | 2026-05-22 |
 | 61. Runtime Isolation Readiness Guardrails | 1/1 | Complete | 2026-05-22 |
 | 62. Experimental Non-JS Runtime Guardrails | 1/1 | Complete | 2026-05-22 |
-| 63. Milestone Verification and Regression Gate | 0/TBD | Not started | - |
+| 63. Milestone Verification and Regression Gate | 1/1 | Complete | 2026-05-22 |
 
 ## Requirement Coverage
 
@@ -157,17 +159,17 @@ Plans:
 | VER-01 through VER-03 | Phase 63 | 3 |
 
 **Coverage:** 28/28 v1.9 requirements mapped.
-**Completed:** 25/28 v1.9 requirements.
+**Completed:** 28/28 v1.9 requirements.
 **Unmapped requirements:** 0.
 **Branch note:** The approved v1.9 direction selects the public ladder service read branch. Future Go read-model expansion is tracked in BACKX-03 and BACKX-04, outside the active 28-requirement roadmap.
 
 ## Next Up
 
-**Phase 63: Milestone Verification and Regression Gate**
+**Milestone v1.9 verified**
 
 Recommended next command:
 
-`$gsd-discuss-phase 63`
+`$gsd-audit-milestone`
 
 ---
-*Last updated: 2026-05-22 after Phase 62 completion*
+*Last updated: 2026-05-22 after Phase 63 verification*

@@ -55,6 +55,25 @@ const scenarioHref = (
   return scenario.replayHref
 }
 
+const selectFirstTimelineEvent = async (
+  page: Page,
+  eventType: string,
+): Promise<number> => {
+  const button = page
+    .getByRole("button", {
+      name: new RegExp(`^Timeline event \\d+: ${eventType}$`),
+    })
+    .first()
+  await expect(button).toBeVisible()
+  const label = await button.getAttribute("aria-label")
+  const match = label?.match(/^Timeline event (\d+): /)
+  if (!match) {
+    throw new Error(`[ui rendering] unable to parse timeline label ${label}`)
+  }
+  await button.click()
+  return Number.parseInt(match[1]!, 10)
+}
+
 test("replay fixture renders board, timeline, inspector, callouts, and public privacy", async ({
   page,
 }) => {
@@ -99,10 +118,10 @@ test("replay fixture renders board, timeline, inspector, callouts, and public pr
       input.dispatchEvent(new Event("input", { bubbles: true }))
       input.dispatchEvent(new Event("change", { bubbles: true }))
     })
-  await page
-    .getByRole("button", { name: "Timeline event 6: ACTION_EMITTED" })
-    .evaluate((node) => (node as HTMLButtonElement).click())
-  await expect(page.getByText(/Sequence 6/).first()).toBeVisible()
+  const actionSequence = await selectFirstTimelineEvent(page, "ACTION_EMITTED")
+  await expect(
+    page.getByText(new RegExp(`Sequence ${actionSequence}`)).first(),
+  ).toBeVisible()
   await expect(page.getByText("Selected event")).toBeVisible()
 
   await page

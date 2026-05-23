@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Backend and Runtime Ownership Split
-status: in_progress
-stopped_at: Phase 62 complete; Phase 63 ready for discussion/planning
-last_updated: "2026-05-23T00:04:00.000Z"
+status: verified
+stopped_at: Phase 63 complete; v1.9 verified and ready for milestone audit/archive
+last_updated: "2026-05-23T00:10:20.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 7
-  completed_phases: 6
-  total_plans: 6
-  completed_plans: 6
-  percent: 86
+  completed_phases: 7
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.9 in progress
+**Status:** v1.9 verified
 
 ## Project Reference
 
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** v1.9 Backend and Runtime Ownership Split
 **Latest shipped milestone:** v1.8 Production Boundary Hardening
-**Requirements:** 25/28 active v1.9 requirements complete; 28/28 mapped; v1.8 requirements archived in .planning/milestones/v1.8-REQUIREMENTS.md
+**Requirements:** 28/28 active v1.9 requirements complete; 28/28 mapped; v1.8 requirements archived in .planning/milestones/v1.8-REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
 Phase: 63 of 63 (Milestone Verification and Regression Gate)
-Plan: —
-Status: Phase 62 complete; ready to discuss Phase 63
-Last activity: 2026-05-22 — Completed Phase 62 experimental non-JS runtime guardrails
+Plan: 63-01
+Status: Phase 63 complete; v1.9 verified and ready for milestone audit/archive
+Last activity: 2026-05-22 — Completed Phase 63 milestone verification and regression gate
 
-Progress: [█████████-] 86%
+Progress: [██████████] 100%
 
 ## Workflow Settings
 
@@ -101,11 +101,12 @@ Progress: [█████████-] 86%
 - [Phase 60]: Public ladder season page reads now flow through `@cowards/service` and the ladder page is strict import-gated. — The public OpenAPI artifact now includes `/public/ladders/{seasonId}`, Go route manifest remains unchanged at 4 read-only routes, and report-only broad web offenses dropped from 35 to 34.
 - [Phase 61]: Runtime isolation promotion-readiness is now artifacted and monitor-gated without promoting any runtime candidate. — `pnpm sandbox:evaluate:container` and `--require-runtime-container` fail loudly when live container evidence is missing, topology reports runtime isolation readiness, and boundary monitors enforce the evidence-only/no-fallback posture.
 - [Phase 62]: Non-JS promotion criteria are now spec-owned and monitor-gated. — Python remains experimental, disabled for normal play, non-counted, and fail-closed for counted exhibition/ladder gates; no public language picker was added.
+- [Phase 63]: v1.9 verification passed across full package tests, typecheck, boundary monitors, and browser replay smoke. — The gate caught and fixed a stale replay smoke assertion so public `ACTION_EMITTED` timeline coverage follows the accessible event instead of a fixed sequence; strict import offenses remain 0 and report-only web debt is baseline-gated at 34.
 
 ### Next Todos
 
-- Run `$gsd-discuss-phase 63` to clarify the milestone verification and regression gate.
-- Run `$gsd-plan-phase 63` after discussion to create the final executable v1.9 verification plan.
+- Run `$gsd-audit-milestone` to produce the v1.9 milestone audit.
+- Run `$gsd-complete-milestone` if archiving v1.9 and preparing v2.0 should happen now.
 - Keep Go writes, production runtime promotion, and counted non-JS play out of v1.9 unless the milestone is explicitly replanned.
 
 ### Blockers/Concerns
@@ -124,6 +125,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-23T00:04:00.000Z
-Stopped at: Phase 62 complete; Phase 63 ready for discussion/planning
+Last session: 2026-05-23T00:10:20.000Z
+Stopped at: Phase 63 complete; v1.9 verified and ready for milestone audit/archive
 Resume file: None
