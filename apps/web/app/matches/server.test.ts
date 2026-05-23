@@ -293,6 +293,33 @@ describe("Match replay server facade", () => {
     expect(JSON.stringify(response)).not.toContain("PRIVATE_STRATEGY_MEMORY")
   })
 
+  it("rejects replay boards with visible pieces outside declared bounds", async () => {
+    const stored = createStoredChronicle()
+    stored.artifact.snapshots = stored.artifact.snapshots.map((snapshot) => ({
+      ...snapshot,
+      board: {
+        ...snapshot.board,
+        bounds: { minX: 0, maxX: 4, minY: 0, maxY: 4 },
+      },
+    }))
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+    })
+
+    const response = await server.getMatchReplay("match:replay-test")
+
+    expect(response.status).toBe("unavailable")
+    if (response.status !== "unavailable") {
+      return
+    }
+    expect(response.reason).toBe("invalid-chronicle")
+    expect(response.message).toContain("[validation]")
+    expect(response.message).toContain("out-of-bounds Soldier")
+  })
+
   it("decodes URL-encoded persisted Match ids before Chronicle lookup", async () => {
     const stored = createStoredChronicle()
     const seen: string[] = []

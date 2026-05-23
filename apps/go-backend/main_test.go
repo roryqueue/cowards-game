@@ -278,6 +278,43 @@ func TestRouteManifestValidationRejectsCutoverDrift(t *testing.T) {
 	}
 }
 
+func TestCompetitionArenasContainCanonicalStartingPositions(t *testing.T) {
+	startingPositions := []map[string]int{
+		{"x": 2, "y": 11},
+		{"x": 3, "y": 11},
+		{"x": 4, "y": 11},
+		{"x": 5, "y": 11},
+		{"x": 6, "y": 11},
+		{"x": 7, "y": 11},
+		{"x": 8, "y": 11},
+		{"x": 9, "y": 11},
+		{"x": 2, "y": 0},
+		{"x": 3, "y": 0},
+		{"x": 4, "y": 0},
+		{"x": 5, "y": 0},
+		{"x": 6, "y": 0},
+		{"x": 7, "y": 0},
+		{"x": 8, "y": 0},
+		{"x": 9, "y": 0},
+	}
+
+	for _, arena := range competitionArenaDefinitions() {
+		bounds := arena["initialBounds"].(map[string]any)
+		for _, position := range startingPositions {
+			if !pointInBounds(position["x"], position["y"], bounds) {
+				t.Fatalf("%s initial bounds do not contain starting position (%d,%d)", arena["id"], position["x"], position["y"])
+			}
+		}
+	}
+}
+
+func pointInBounds(x int, y int, bounds map[string]any) bool {
+	return x >= bounds["minX"].(int) &&
+		x <= bounds["maxX"].(int) &&
+		y >= bounds["minY"].(int) &&
+		y <= bounds["maxY"].(int)
+}
+
 func TestMutationVerbsDoNotSucceed(t *testing.T) {
 	server := NewServer().routes()
 	for _, route := range routeInventory {

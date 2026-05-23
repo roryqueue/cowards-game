@@ -45,6 +45,7 @@ Follow the roadmap:
 
 - Engine rules require focused unit tests and invariant/property-style tests.
 - Replay requires deterministic reconstruction and integrity tests.
+- Replay or Match creation changes must include board realism checks: visible Soldier and terrain positions must stay inside declared board bounds, canonical arenas must contain canonical starting positions, and local browser validation should confirm the replay board shows a plausible full Match start instead of clipped or off-screen pieces.
 - Runtime requires tests for invalid outputs, timeout behavior, forbidden capabilities, memory/source limits, and schema validation.
 - Worker tests must distinguish strategy failure from system failure.
 - End-to-end tests should cover edit -> submit revision -> create MatchSet -> execute -> replay.

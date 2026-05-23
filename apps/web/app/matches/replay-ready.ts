@@ -89,6 +89,36 @@ const buildTimeline = (
     }
   })
 
+const isInsideBounds = (
+  position: { x: number; y: number },
+  bounds: { minX: number; maxX: number; minY: number; maxY: number },
+): boolean =>
+  position.x >= bounds.minX &&
+  position.x <= bounds.maxX &&
+  position.y >= bounds.minY &&
+  position.y <= bounds.maxY
+
+const replayBoardRealismError = (
+  states: ReplayReadyDto["states"],
+): string | null => {
+  for (const state of states) {
+    for (const soldier of state.board.soldiers) {
+      if (
+        soldier.position &&
+        !isInsideBounds(soldier.position, state.board.bounds)
+      ) {
+        return `Replay board contains an out-of-bounds Soldier at sequence ${state.sequence}.`
+      }
+    }
+    for (const terrainStone of state.board.terrainStones) {
+      if (!isInsideBounds(terrainStone, state.board.bounds)) {
+        return `Replay board contains out-of-bounds terrain at sequence ${state.sequence}.`
+      }
+    }
+  }
+  return null
+}
+
 const momentEventTypes = {
   BACKSTAB: ["BACKSTAB_RESOLVED"],
   CONTRACTION: ["CONTRACTION_RESOLVED"],
@@ -296,6 +326,14 @@ export const buildReadyReplayFromChronicle = ({
         ? {}
         : { outcome: entry.state.outcome }),
     }))
+    const boardRealismError = replayBoardRealismError(states)
+    if (boardRealismError) {
+      return projectionFailure(
+        metadata.matchId,
+        boardRealismError,
+        "validation",
+      )
+    }
     const ownerDebug =
       mode === "owner" && options.ownerPlayerId
         ? {

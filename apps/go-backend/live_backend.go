@@ -1684,25 +1684,7 @@ func generatePairwiseMatches(matchSetID string, matchSetPresetID string, entrant
 }
 
 func ensureCompetitionArenas(ctx context.Context, tx pgx.Tx) error {
-	for _, arena := range []map[string]any{
-		{
-			"id":            "arena:smoke:v1",
-			"name":          "Smoke",
-			"initialBounds": map[string]any{"minX": -4, "maxX": 4, "minY": -4, "maxY": 4},
-			"terrainStones": []map[string]any{},
-		},
-		{
-			"id":            "arena:standard-cross:v1",
-			"name":          "Standard Cross",
-			"initialBounds": map[string]any{"minX": -4, "maxX": 4, "minY": -4, "maxY": 4},
-			"terrainStones": []map[string]any{
-				{"x": 3, "y": 2},
-				{"x": 2, "y": 3},
-				{"x": 4, "y": 3},
-				{"x": 3, "y": 4},
-			},
-		},
-	} {
+	for _, arena := range competitionArenaDefinitions() {
 		if _, err := tx.Exec(ctx, `
 			insert into arena_variants (id, name, config)
 			values ($1, $2, $3)
@@ -1714,6 +1696,29 @@ func ensureCompetitionArenas(ctx context.Context, tx pgx.Tx) error {
 		}
 	}
 	return nil
+}
+
+func competitionArenaDefinitions() []map[string]any {
+	initialBounds := map[string]any{"minX": 0, "maxX": 11, "minY": 0, "maxY": 11}
+	return []map[string]any{
+		{
+			"id":            "arena:smoke:v1",
+			"name":          "Smoke",
+			"initialBounds": initialBounds,
+			"terrainStones": []map[string]any{},
+		},
+		{
+			"id":            "arena:standard-cross:v1",
+			"name":          "Standard Cross",
+			"initialBounds": initialBounds,
+			"terrainStones": []map[string]any{
+				{"x": 3, "y": 2},
+				{"x": 2, "y": 3},
+				{"x": 4, "y": 3},
+				{"x": 3, "y": 4},
+			},
+		},
+	}
 }
 
 func buildDuplicateKey(userID string, presetID string, revisionIDs []string) string {
