@@ -13,6 +13,7 @@ import {
   buildPublicStrategyCardDto,
 } from "@cowards/persistence/profiles"
 import { getWorkshopAnalyticsSnapshot } from "@cowards/persistence/workshop-analytics"
+import { getWorkshopTestSummary } from "@cowards/persistence/workshop"
 import {
   assertPublicServiceDtoLeakSafe,
   SERVICE_API_VERSION,
@@ -24,7 +25,11 @@ import {
   PublicPlayerPageServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
+  MatchSetIdParamsSchema,
+  ProfileIdParamsSchema,
   WorkshopAnalyticsSnapshotSchema,
+  WorkshopAnalyticsComparisonServiceDtoSchema,
+  WorkshopTestSummaryServiceDtoSchema,
   assertAnalyticsPublicSummaryLeakSafe,
   type MatchId,
   type MatchSetId,
@@ -41,7 +46,10 @@ import {
   type ServiceErrorDto,
   type ServiceHealthDto,
   type StrategyId,
+  type WorkshopAnalyticsComparison,
+  type WorkshopAnalyticsComparisonServiceDto,
   type WorkshopAnalyticsSnapshot,
+  type WorkshopTestSummaryServiceDto,
 } from "@cowards/spec"
 
 export type ServicePool = Pool
@@ -85,6 +93,12 @@ export interface CowardsService {
     runId: string,
   ): Promise<AnalyticsRunSummaryServiceDto | null>
   getWorkshopAnalyticsSnapshot(): Promise<WorkshopAnalyticsSnapshot>
+  getWorkshopTestSummary(
+    matchSetId: MatchSetId,
+  ): Promise<WorkshopTestSummaryServiceDto | null>
+  compareWorkshopAnalyticsRuns(
+    profileId: string,
+  ): Promise<WorkshopAnalyticsComparisonServiceDto | null>
 }
 
 export interface CreateCowardsLocalServiceOptions {
@@ -97,6 +111,7 @@ export interface CreateCowardsLocalServiceOptions {
   getSession?: typeof getSession | undefined
   listAccountRevisions?: typeof listAccountStrategyRevisions | undefined
   getAnalyticsSnapshot?: typeof getWorkshopAnalyticsSnapshot | undefined
+  getWorkshopTestSummary?: typeof getWorkshopTestSummary | undefined
 }
 
 const healthDto: ServiceHealthDto = {
@@ -142,6 +157,8 @@ export const createCowardsLocalService = (
     options.listAccountRevisions ?? listAccountStrategyRevisions
   const getAnalyticsSnapshot =
     options.getAnalyticsSnapshot ?? getWorkshopAnalyticsSnapshot
+  const getTestSummary =
+    options.getWorkshopTestSummary ?? getWorkshopTestSummary
 
   return {
     health: () => healthDto,
@@ -342,6 +359,67 @@ export const createCowardsLocalService = (
         for (const run of parsed.runs) {
           assertAnalyticsPublicSummaryLeakSafe(run.summary)
         }
+        assertPublicServiceDtoLeakSafe(parsed)
+        return parsed
+      })
+    },
+
+    async getWorkshopTestSummary(matchSetId) {
+      const params = MatchSetIdParamsSchema.parse({ matchSetId })
+      return options.withPool(async (pool) => {
+        const summary = await getTestSummary(pool, params.matchSetId)
+        if (!summary) {
+          return null
+        }
+        const dto = {
+          apiVersion: SERVICE_API_VERSION,
+          kind: "workshopTestSummary",
+          matchSetId: params.matchSetId,
+          summary,
+        }
+        assertPublicServiceDtoLeakSafe(dto)
+        const parsed = WorkshopTestSummaryServiceDtoSchema.parse(dto)
+        assertPublicServiceDtoLeakSafe(parsed)
+        return parsed
+      })
+    },
+
+    async compareWorkshopAnalyticsRuns(profileId) {
+      const params = ProfileIdParamsSchema.parse({ profileId })
+      return options.withPool(async (pool) => {
+        const snapshot = await getAnalyticsSnapshot(pool)
+        const runs = snapshot.runs
+          .filter((run) => run.profileId === params.profileId)
+          .sort((left, right) => right.runIndex - left.runIndex)
+        const [compare, base] = runs
+        if (!compare || !base) {
+          return null
+        }
+        if (
+          compare.summary.compatibility.hash !== base.summary.compatibility.hash
+        ) {
+          return null
+        }
+        const comparison: WorkshopAnalyticsComparison = {
+          profileId: params.profileId,
+          baseRunId: base.id,
+          compareRunId: compare.id,
+          compatibilityEquivalent: true,
+          delta: {
+            wins: compare.summary.totals.wins - base.summary.totals.wins,
+            losses: compare.summary.totals.losses - base.summary.totals.losses,
+            draws: compare.summary.totals.draws - base.summary.totals.draws,
+            points: compare.summary.totals.points - base.summary.totals.points,
+          },
+        }
+        const dto: WorkshopAnalyticsComparisonServiceDto = {
+          apiVersion: SERVICE_API_VERSION,
+          kind: "workshopAnalyticsComparison",
+          profileId: params.profileId,
+          comparison,
+        }
+        assertPublicServiceDtoLeakSafe(dto)
+        const parsed = WorkshopAnalyticsComparisonServiceDtoSchema.parse(dto)
         assertPublicServiceDtoLeakSafe(parsed)
         return parsed
       })

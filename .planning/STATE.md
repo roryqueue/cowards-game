@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
-status: planning
-stopped_at: Phase 75 context gathered
-last_updated: "2026-05-23T16:50:00.000Z"
+status: complete
+stopped_at: v1.11 milestone complete
+last_updated: "2026-05-23T04:45:00.000Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 6
   total_plans: 6
-  completed_plans: 0
-  percent: 0
+  completed_plans: 6
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** Planning v1.11
+**Status:** v1.11 complete
 
 ## Project Reference
 
@@ -25,18 +25,18 @@ See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence.
-**Latest shipped milestone:** v1.10 Service Boundary Completion and Go Read-Model Decision
+**Latest shipped milestone:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
 **Requirements:** .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
 Phase: 75 - Milestone Verification and Regression Gate
-Plan: -
-Status: Context gathered; ready to plan Phase 75
-Last activity: 2026-05-23 - Phase 75 context gathered
+Plan: 75-01
+Status: Complete
+Last activity: 2026-05-23 - v1.11 completed and audited
 
-Progress: [----------] 0%
+Progress: [##########] 100%
 
 ## Workflow Settings
 
@@ -75,8 +75,17 @@ v1.11 targets the next safe service-boundary burn-down after v1.10:
 | v1.8 Production Boundary Hardening | 6 | 8 | 38/38 | Shipped |
 | v1.9 Backend and Runtime Ownership Split | 7 | 7 | 28/28 | Shipped |
 | v1.10 Service Boundary Completion and Go Read-Model Decision | 6 | 6 | 29/29 | Shipped |
+| v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence | 6 | 6 | 30/30 | Shipped |
 
 ## Latest Milestone Outcomes
+
+- v1.11 moved Workshop test-summary and analytics-compare reads behind `@cowards/service`.
+- Migrated Workshop read files are strict import-gated.
+- Broad web report-only direct persistence debt dropped from 30 to 29.
+- Live Go readiness is now required evidence-only validation: required topology passes with Go live and fails without Go.
+- Production web traffic remains on the TypeScript service path; Go writes and runtime/non-JS promotion remain deferred.
+
+## Previous Milestone Outcomes
 
 - v1.10 moved account Strategy Revision list reads and Workshop analytics/Evidence Explorer reads behind `@cowards/service`.
 - Migrated web read surfaces are strict import-gated.
@@ -87,18 +96,17 @@ v1.11 targets the next safe service-boundary burn-down after v1.10:
 
 ## Next Todos
 
-- Run `$gsd-plan-phase 75` to plan Milestone Verification and Regression Gate.
-- Phase discussions for v1.11 are complete; proceed through planning/execution when ready.
+- Prepare the next milestone from the remaining 29 broad web report-only offenses when ready.
 
 ## Blockers/Concerns
 
-None active.
+None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing local migrations but its development MatchSet smoke returned `idle`; replay smoke passed after migrations.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 | --- | --- | --- | --- |
-| backend | Remaining broad web report-only direct persistence offenses not selected in v1.11 | Deferred | v1.11 scope |
+| backend | 29 remaining broad web report-only direct persistence offenses not selected in v1.11 | Deferred | v1.11 scope |
 | backend | Go mutation endpoints, auth/session mutation, ladder writes, orchestration, persistence writes, job claiming, migrations, and Match execution | Deferred | v1.11 scope |
 | backend | Production web routing to Go | Deferred | v1.11 scope |
 | replay | Full replay projection, owner-debug replay migration, and private Chronicle assembly | Deferred | v1.11 research |
@@ -110,6 +118,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-23T16:50:00.000Z
-Stopped at: Phase 75 context gathered
-Resume file: .planning/phases/75-milestone-verification-and-regression-gate/75-CONTEXT.md
+Last session: 2026-05-23T04:45:00.000Z
+Stopped at: v1.11 milestone complete
+Resume file: .planning/milestones/v1.11-MILESTONE-AUDIT.md

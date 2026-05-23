@@ -106,7 +106,6 @@ export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/workshop/server.ts:1:@cowards/persistence:import { createDatabasePool } from "@cowards/persistence/db"',
   'apps/web/app/workshop/server.ts:2:@cowards/persistence:import { buildWorkshopRevision, createWorkshopTestMatchSet, getWorkshopRevisionSource, getWorkshopSnapshot, getWorkshopStaticSnapshot, getWorkshopTestSummary, insertWorkshopRevision, type WorkshopTestSummary, validateWorkshopSource, WORKSHOP_STRATEGY_ID, } from "@cowards/persistence/workshop"',
   'apps/web/app/workshop/server.ts:14:@cowards/persistence:import { comparePersistedWorkshopAnalyticsRuns, createWorkshopAnalyticsDemoSnapshot, createWorkshopAnalyticsExport, createPersistedWorkshopAnalyticsRerun, getWorkshopAnalyticsSnapshot, seedWorkshopAnalyticsDemo, } from "@cowards/persistence/workshop-analytics"',
-  'apps/web/app/workshop/types.ts:7:@cowards/persistence:import type { WorkshopOpponentSummary, WorkshopPresetSummary, WorkshopRevisionSummary, WorkshopSnapshot, WorkshopSampleSummary, WorkshopTemplateSummary, WorkshopTestSummary, } from "@cowards/persistence/workshop"',
 ] as const)
 
 const forbiddenPublicArtifactStrings = [

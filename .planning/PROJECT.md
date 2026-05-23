@@ -2,10 +2,10 @@
 
 ## Current State
 
-**Shipped version:** v1.10 Service Boundary Completion and Go Read-Model Decision on 2026-05-23
+**Shipped version:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence on 2026-05-23
 **Current milestone:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
-**Status:** Planning v1.11.
-**Last audit:** v1.10 milestone audit passed after audit-fix.
+**Status:** v1.11 complete.
+**Last audit:** v1.11 milestone audit passed after audit-fix.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, read-only Go parity fixtures including a public Strategy read model, runtime isolation readiness evidence gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors proving future multi-language runtime and backend migration paths without promoting unsafe ownership moves.
 
@@ -13,17 +13,18 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
+## Latest Shipped Milestone: v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
 
 **Goal:** Reduce the remaining 30 broad web report-only direct persistence offenses by moving the next narrow Workshop read surfaces behind `@cowards/service`, and make live Go readiness evidence a required evidence-only validation lane without promoting Go ownership.
 
-**Target features:**
-- Re-baseline and classify the 30 remaining broad web report-only offenses before implementation, separating service candidates from deferred write/private/runtime/replay surfaces.
-- Move Workshop test-summary and analytics-compare reads behind spec/service-owned DTOs while keeping Workshop source, save, validation, launch, rerun, export, and runtime flows TypeScript-owned.
-- Promote only proven migrated files and source-free type cleanup to strict import enforcement, with `strict_offenses=0` and `report_only_offenses` below 30.
-- Require live Go readiness evidence through parity, topology, privacy, GET-only route inventory, no-fallback semantics, and rollback documentation while keeping production web traffic on the TypeScript service path.
+**Delivered:**
+- Re-baselined and classified the 30 remaining broad web report-only offenses before implementation, separating service candidates from deferred write/private/runtime/replay surfaces.
+- Moved Workshop test-summary and analytics-compare reads behind spec/service-owned DTOs while keeping Workshop source, save, validation, launch, rerun, export, and runtime flows TypeScript-owned.
+- Promoted proven migrated files and source-free type cleanup to strict import enforcement, with `strict_offenses=0` and `report_only_offenses=29`.
+- Required live Go readiness evidence through parity, topology, privacy, GET-only route inventory, no-fallback semantics, and rollback documentation while keeping production web traffic on the TypeScript service path.
+- Archived audit: `.planning/milestones/v1.11-MILESTONE-AUDIT.md`.
 
-## Latest Shipped Milestone: v1.10 Service Boundary Completion and Go Read-Model Decision
+## Previous Shipped Milestone: v1.10 Service Boundary Completion and Go Read-Model Decision
 
 **Goal:** Continue the v1.9 service-boundary ownership move by migrating high-value web read/user surfaces behind `@cowards/service`, reducing the remaining broad web report-only direct persistence debt from the 34-offense baseline, and implementing exactly one guarded Go public Strategy read-model route only after TypeScript-service-backed parity fixtures and rollback criteria are explicit.
 

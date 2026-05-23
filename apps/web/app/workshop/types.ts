@@ -1,29 +1,107 @@
 import type {
   MatchSetId,
+  RuntimeViolationType,
+  StrategyRevision,
   StrategyRevisionId,
+  StrategyRevisionValidationCode,
   StrategyRevisionValidationReport,
   WorkshopAnalyticsSnapshot,
+  WorkshopTestSummary,
 } from "@cowards/spec"
-import type {
-  WorkshopOpponentSummary,
-  WorkshopPresetSummary,
-  WorkshopRevisionSummary,
-  WorkshopSnapshot,
-  WorkshopSampleSummary,
-  WorkshopTemplateSummary,
-  WorkshopTestSummary,
-} from "@cowards/persistence/workshop"
 
-export type {
-  WorkshopOpponentSummary,
-  WorkshopPresetSummary,
-  WorkshopRevisionSummary,
-  WorkshopSnapshot,
-  WorkshopSampleSummary,
-  WorkshopTemplateSummary,
-  WorkshopTestSummary,
-  WorkshopAnalyticsSnapshot,
+export type MatchSetPresetId = "smoke-v1" | "standard-v1" | "stress-v1"
+
+export interface WorkshopRevisionSummary {
+  id: StrategyRevisionId
+  strategyId: string
+  label?: string | undefined
+  notes?: string | undefined
+  createdBy?: string | undefined
+  sourceHash: string
+  sourceBytes: number
+  valid: boolean
+  validation: StrategyRevisionValidationReport
+  metadata: StrategyRevision["metadata"]
+  createdAt: string
+  usedInMatches: number
 }
+
+export interface WorkshopPresetSummary {
+  id: MatchSetPresetId
+  label: string
+  matchCount: number
+  arenaVariantIds: string[]
+  seeds: string[]
+  mirrorSides: boolean
+}
+
+export interface WorkshopOpponentSummary {
+  id: "opponent:cautious" | "opponent:reckless"
+  label: string
+  revisionId: StrategyRevisionId
+}
+
+export interface WorkshopTemplateSummary {
+  id: "template:cautious" | "template:reckless" | "template:sentinel"
+  label: string
+  source: string
+  validation: StrategyRevisionValidationReport
+}
+
+interface WorkshopSampleBase {
+  id: `sample:${string}`
+  label: string
+  description: string
+  categories: string[]
+  source: string
+  validation: StrategyRevisionValidationReport
+}
+
+export type WorkshopSampleSummary =
+  | (WorkshopSampleBase & {
+      sampleKind: "starter"
+      expectedValidationCode?: undefined
+      expectedRuntimeViolationType?: undefined
+    })
+  | (WorkshopSampleBase & {
+      sampleKind: "failure-mode"
+      expectedValidationCode?: StrategyRevisionValidationCode | undefined
+      expectedRuntimeViolationType?: RuntimeViolationType | undefined
+    })
+
+export interface StarterStrategySummary {
+  id: string
+  name: string
+  version: string
+  description: string
+  tags: string[]
+  doctrineNotes: string[]
+  expectedBehavior: string
+  usesMemory: boolean
+  source: string
+  validation: StrategyRevisionValidationReport
+  sourceHash: string
+  sourceBytes: number
+}
+
+export interface AdvancedStrategySummary extends StarterStrategySummary {
+  primaryArchetype: string
+  benchmarkStarterId: string
+}
+
+export interface WorkshopSnapshot {
+  templateSource: string
+  templateValidation: StrategyRevisionValidationReport
+  revisions: WorkshopRevisionSummary[]
+  presets: WorkshopPresetSummary[]
+  opponents: WorkshopOpponentSummary[]
+  templates: WorkshopTemplateSummary[]
+  starters: StarterStrategySummary[]
+  advancedStrategies: AdvancedStrategySummary[]
+  samples: WorkshopSampleSummary[]
+}
+
+export type { WorkshopTestSummary, WorkshopAnalyticsSnapshot }
 
 export type WorkshopInitialData = WorkshopSnapshot & {
   analytics: WorkshopAnalyticsSnapshot

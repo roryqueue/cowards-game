@@ -1,21 +1,38 @@
 import type { MatchSetId } from "@cowards/spec"
-import { workshopServer } from "../../../../workshop/server.js"
+import { getWorkshopTestSummaryRead } from "../../../../../lib/workshop-read-service-boundary.js"
+import { isStorageUnavailableError } from "../../../../../lib/storage-unavailable-error.js"
 import type { WorkshopErrorResponse } from "../../../../workshop/types.js"
 
-export async function GET(
-  _request: Request,
-  context: { params: Promise<{ matchSetId: string }> | { matchSetId: string } },
-): Promise<Response> {
-  const params = await context.params
-  const summary = await workshopServer.getTestSummary(
-    params.matchSetId as MatchSetId,
-  )
-  if (summary === null) {
-    return Response.json(
-      { error: "Match set not found" } satisfies WorkshopErrorResponse,
-      { status: 404 },
-    )
+type RouteContext = {
+  params: Promise<{ matchSetId: string }> | { matchSetId: string }
+}
+
+type ReadWorkshopTestSummary = typeof getWorkshopTestSummaryRead
+
+export const createWorkshopTestSummaryGetHandler =
+  (readSummary: ReadWorkshopTestSummary = getWorkshopTestSummaryRead) =>
+  async (_request: Request, context: RouteContext): Promise<Response> => {
+    const params = await context.params
+    let dto
+    try {
+      dto = await readSummary(params.matchSetId as MatchSetId)
+    } catch (error) {
+      if (isStorageUnavailableError(error)) {
+        return Response.json(
+          { error: "Storage is unavailable; start local services and retry." },
+          { status: 503 },
+        )
+      }
+      throw error
+    }
+    if (dto === null) {
+      return Response.json(
+        { error: "Match set not found" } satisfies WorkshopErrorResponse,
+        { status: 404 },
+      )
+    }
+
+    return Response.json(dto.summary)
   }
 
-  return Response.json(summary)
-}
+export const GET = createWorkshopTestSummaryGetHandler()

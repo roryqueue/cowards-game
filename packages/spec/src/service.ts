@@ -16,6 +16,10 @@ import type {
 } from "./competition.js"
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
 import type { StrategyRuntimeProductSemantics } from "./runtime.js"
+import type {
+  WorkshopAnalyticsComparisonSchema,
+  WorkshopTestSummarySchema,
+} from "./schemas.js"
 import {
   AuthSessionServiceDtoSchema,
   CreateAnalyticsRunRequestBodySchema,
@@ -780,6 +784,15 @@ export interface PublicMatchSetSummaryServiceDto {
   result: PublicMatchSetResultDto
 }
 
+export type WorkshopTestSummary = z.infer<typeof WorkshopTestSummarySchema>
+
+export interface WorkshopTestSummaryServiceDto {
+  apiVersion: typeof SERVICE_API_VERSION
+  kind: "workshopTestSummary"
+  matchSetId: MatchSetId
+  summary: WorkshopTestSummary
+}
+
 export interface PublicReplayMetadataServiceDto {
   apiVersion: typeof SERVICE_API_VERSION
   kind: "publicReplayMetadata"
@@ -821,6 +834,17 @@ export interface AnalyticsRunSummaryServiceDto {
   runId: string
   profileId: string
   summary: AnalyticsGauntletRunSummary
+}
+
+export type WorkshopAnalyticsComparison = z.infer<
+  typeof WorkshopAnalyticsComparisonSchema
+>
+
+export interface WorkshopAnalyticsComparisonServiceDto {
+  apiVersion: typeof SERVICE_API_VERSION
+  kind: "workshopAnalyticsComparison"
+  profileId: string
+  comparison: WorkshopAnalyticsComparison
 }
 
 export interface ExportManifestServiceDto {

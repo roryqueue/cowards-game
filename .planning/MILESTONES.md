@@ -2,12 +2,12 @@
 
 ## v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
 
-**Status:** Planned 2026-05-23
+**Status:** Shipped 2026-05-23
 **Phases:** 6
 **Phase range:** 70-75
-**Plans:** 0/6 complete
-**Requirements:** 0/30 complete; 30/30 mapped
-**Audit:** Pending
+**Plans:** 6/6 complete
+**Requirements:** 30/30 complete; 30/30 mapped
+**Audit:** .planning/milestones/v1.11-MILESTONE-AUDIT.md
 
 ### Goal
 
@@ -22,16 +22,31 @@ Build on v1.10's service-boundary completion work by reducing the remaining broa
 - Require live Go readiness evidence through parity, boundary monitors, required local topology checks, privacy checks, no-fallback semantics, and rollback documentation.
 - Keep Go writes, auth/session mutation, ladder writes, Match orchestration, jobs, migrations, persistence writes, Strategy source retrieval, Strategy execution, production Go routing, production sandbox promotion, and counted non-JS play out of scope.
 
+### Delivered
+
+- Re-baselined the 30 broad web report-only direct persistence offenses and selected two narrow Workshop read surfaces.
+- Moved Workshop test-summary GET and Workshop analytics-compare GET reads behind `@cowards/service` with spec-owned DTO validation.
+- Promoted selected migrated routes and the safe read-boundary helper to strict import enforcement.
+- Removed one real report-only fingerprint from `apps/web/app/workshop/types.ts`, reducing report-only debt from 30 to 29.
+- Required live Go readiness evidence as validation only, including no-fallback proof when Go is unavailable.
+- Preserved TypeScript ownership for writes, source retrieval, Workshop source/save/test/rerun/export/runtime flows, Match orchestration, jobs, migrations, Strategy execution, production Go routing, runtime promotion, and counted non-JS play.
+
 ### Planned Phases
 
 | Phase | Name |
 | --- | --- |
-| 70 | Boundary Debt Rebaseline and v1.11 Scope Lock |
-| 71 | Workshop Test Summary Read Boundary |
-| 72 | Workshop Analytics Compare Read Boundary |
-| 73 | Boundary Enforcement and Source-Free Type Cleanup |
-| 74 | Live Go Readiness Evidence Gate |
-| 75 | Milestone Verification and Regression Gate |
+| 70 | Boundary Debt Rebaseline and v1.11 Scope Lock — Complete |
+| 71 | Workshop Test Summary Read Boundary — Complete |
+| 72 | Workshop Analytics Compare Read Boundary — Complete |
+| 73 | Boundary Enforcement and Source-Free Type Cleanup — Complete |
+| 74 | Live Go Readiness Evidence Gate — Complete |
+| 75 | Milestone Verification and Regression Gate — Complete |
+
+### Archives
+
+- .planning/milestones/v1.11-ROADMAP.md
+- .planning/milestones/v1.11-REQUIREMENTS.md
+- .planning/milestones/v1.11-MILESTONE-AUDIT.md
 
 ### Active Constraints
 
@@ -43,7 +58,7 @@ Build on v1.10's service-boundary completion work by reducing the remaining broa
 
 ### Known Deferred Items
 
-- Remaining broad web report-only direct persistence offenses not selected in v1.11 remain visible for future service-boundary milestones.
+- 29 remaining broad web report-only direct persistence offenses not selected in v1.11 remain visible for future service-boundary milestones.
 - Workshop source/save/validation/test-launch/runtime/rerun/profile-save/export flows remain TypeScript-owned.
 - Replay owner-debug/private Chronicle assembly remains out of scope.
 - Go mutation endpoints, auth/session mutation, ladder writes, jobs, migrations, Match orchestration, persistence writes, Strategy source retrieval, and Strategy execution remain TypeScript-owned.

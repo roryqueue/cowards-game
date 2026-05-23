@@ -32,6 +32,8 @@ import {
   StrategyRevisionValidationReportSchema,
   StrategyRevisionValidationIssueSchema,
   StrategyRevisionSchema,
+  WorkshopAnalyticsComparisonServiceDtoSchema,
+  WorkshopTestSummaryServiceDtoSchema,
 } from "./schemas.js"
 import { fixtures } from "./fixtures/index.js"
 import {
@@ -95,6 +97,59 @@ describe("Coward's Game spec contracts", () => {
         }
       }
     }
+  })
+
+  it("parses Workshop read service DTOs without private fields", () => {
+    const testSummary = WorkshopTestSummaryServiceDtoSchema.parse({
+      apiVersion: SERVICE_API_VERSION,
+      kind: "workshopTestSummary",
+      matchSetId: "match-set:workshop:demo",
+      summary: {
+        matchSetId: "match-set:workshop:demo",
+        status: "complete",
+        matchCount: 1,
+        matchIds: ["match:demo"],
+        matches: [
+          {
+            matchId: "match:demo",
+            status: "complete",
+            bottomPlayerId: "player:bottom",
+            topPlayerId: "player:top",
+            outcome: { type: "DRAW" },
+            hasReplay: true,
+          },
+        ],
+        scoring: {
+          complete: true,
+          degraded: false,
+          rankings: [],
+        },
+      },
+    })
+    const comparison = WorkshopAnalyticsComparisonServiceDtoSchema.parse({
+      apiVersion: SERVICE_API_VERSION,
+      kind: "workshopAnalyticsComparison",
+      profileId: "analytics-profile:demo",
+      comparison: {
+        profileId: "analytics-profile:demo",
+        baseRunId: "analytics-run:base",
+        compareRunId: "analytics-run:compare",
+        compatibilityEquivalent: true,
+        delta: { wins: 1, losses: -1, draws: 0, points: 3 },
+      },
+    })
+
+    expect(() => assertPublicServiceDtoLeakSafe(testSummary)).not.toThrow()
+    expect(() => assertPublicServiceDtoLeakSafe(comparison)).not.toThrow()
+    expect(() =>
+      assertPublicServiceDtoLeakSafe({
+        ...testSummary,
+        summary: {
+          ...testSummary.summary,
+          ownerDebug: { hidden: true },
+        },
+      }),
+    ).toThrow(/private field/)
   })
 
   it("compatibility versions have exactly the core six keys", () => {

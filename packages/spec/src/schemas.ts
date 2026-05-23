@@ -959,6 +959,74 @@ export const PublicMatchSetSummaryServiceDtoSchema = z.object({
   result: PublicMatchSetResultServiceDtoSchema,
 })
 
+const WorkshopMatchStatusSchema = z.enum([
+  "pending",
+  "running",
+  "complete",
+  "failed_system",
+  "blocked",
+])
+
+const WorkshopMatchSetStatusSchema = z.enum([
+  "pending",
+  "running",
+  "complete",
+  "failed_system",
+  "blocked",
+  "degraded",
+])
+
+const WorkshopScorePenaltySchema = z.object({
+  matchId: z.string().min(1),
+  reason: z.literal("strategy_failure"),
+  points: z.number().int(),
+})
+
+const WorkshopStrategyScoreSchema = z.object({
+  strategyRevisionId: z.string().min(1),
+  wins: z.number().int().nonnegative(),
+  losses: z.number().int().nonnegative(),
+  draws: z.number().int().nonnegative(),
+  points: z.number().int(),
+  penaltyPoints: z.number().int(),
+  penalties: z.array(WorkshopScorePenaltySchema),
+  failedSystemMatches: z.number().int().nonnegative(),
+  survivingSoldiers: z.number().int().nonnegative(),
+  survivalTurns: z.number().int().nonnegative(),
+})
+
+const WorkshopMatchSetScoreSchema = z.object({
+  degraded: z.boolean(),
+  complete: z.boolean(),
+  rankings: z.array(WorkshopStrategyScoreSchema),
+})
+
+const WorkshopMatchSummarySchema = z.object({
+  matchId: z.string().min(1),
+  status: WorkshopMatchStatusSchema,
+  bottomPlayerId: z.string().min(1),
+  topPlayerId: z.string().min(1),
+  outcome: z.lazy(() => MatchOutcomeSchema).optional(),
+  winnerPlayerId: z.string().min(1).optional(),
+  hasReplay: z.boolean(),
+})
+
+export const WorkshopTestSummarySchema = z.object({
+  matchSetId: z.string().min(1),
+  status: WorkshopMatchSetStatusSchema,
+  matchCount: z.number().int().nonnegative(),
+  matchIds: z.array(z.string().min(1)).optional(),
+  matches: z.array(WorkshopMatchSummarySchema),
+  scoring: WorkshopMatchSetScoreSchema,
+})
+
+export const WorkshopTestSummaryServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("workshopTestSummary"),
+  matchSetId: z.string().min(1),
+  summary: WorkshopTestSummarySchema,
+})
+
 export const PublicReplayMetadataServiceDtoSchema = z.object({
   apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
   kind: z.literal("publicReplayMetadata"),
@@ -1010,6 +1078,26 @@ export const AnalyticsRunSummaryServiceDtoSchema = z.object({
   runId: z.string().min(1),
   profileId: z.string().min(1),
   summary: AnalyticsGauntletRunSummarySchema,
+})
+
+export const WorkshopAnalyticsComparisonSchema = z.object({
+  profileId: z.string().min(1),
+  baseRunId: z.string().min(1),
+  compareRunId: z.string().min(1),
+  compatibilityEquivalent: z.literal(true),
+  delta: z.object({
+    wins: z.number().int(),
+    losses: z.number().int(),
+    draws: z.number().int(),
+    points: z.number().int(),
+  }),
+})
+
+export const WorkshopAnalyticsComparisonServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("workshopAnalyticsComparison"),
+  profileId: z.string().min(1),
+  comparison: WorkshopAnalyticsComparisonSchema,
 })
 
 export const ExportAnalyticsRunServiceDtoSchema = z.object({

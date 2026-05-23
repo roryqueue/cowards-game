@@ -622,4 +622,133 @@ describe("createCowardsLocalService", () => {
       "Analytics summary leaks private field",
     )
   })
+
+  it("returns parsed Workshop test summaries through the service boundary", async () => {
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      getWorkshopTestSummary: async (_pool, matchSetId) => ({
+        matchSetId,
+        status: "complete",
+        matchCount: 1,
+        matchIds: ["match:demo"],
+        matches: [
+          {
+            matchId: "match:demo",
+            status: "complete",
+            bottomPlayerId: "player:bottom",
+            topPlayerId: "player:top",
+            winnerPlayerId: "player:bottom",
+            outcome: { type: "WIN", winnerPlayerId: "player:bottom" },
+            hasReplay: true,
+          },
+        ],
+        scoring: {
+          complete: true,
+          degraded: false,
+          rankings: [
+            {
+              strategyRevisionId: "strategy-revision:bottom",
+              wins: 1,
+              losses: 0,
+              draws: 0,
+              points: 3,
+              penaltyPoints: 0,
+              penalties: [],
+              failedSystemMatches: 0,
+              survivingSoldiers: 4,
+              survivalTurns: 12,
+            },
+          ],
+        },
+      }),
+    })
+
+    await expect(
+      service.getWorkshopTestSummary("match-set:workshop:demo"),
+    ).resolves.toMatchObject({
+      apiVersion: SERVICE_API_VERSION,
+      kind: "workshopTestSummary",
+      matchSetId: "match-set:workshop:demo",
+      summary: {
+        matchSetId: "match-set:workshop:demo",
+        matchCount: 1,
+        matches: [
+          expect.objectContaining({
+            hasReplay: true,
+            winnerPlayerId: "player:bottom",
+          }),
+        ],
+      },
+    })
+  })
+
+  it("rejects Workshop test summaries with private fields", async () => {
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      getWorkshopTestSummary: async (_pool, matchSetId) =>
+        ({
+          matchSetId,
+          status: "complete",
+          matchCount: 0,
+          matches: [],
+          scoring: { complete: true, degraded: false, rankings: [] },
+          ownerDebug: { hidden: true },
+        }) as never,
+    })
+
+    await expect(
+      service.getWorkshopTestSummary("match-set:workshop:demo"),
+    ).rejects.toThrow("Public service DTO leaks private field")
+  })
+
+  it("compares Workshop analytics runs through the service boundary", async () => {
+    const snapshot = createWorkshopAnalyticsDemoSnapshot()
+    const base = snapshot.runs[0]!
+    const compare = {
+      ...base,
+      id: "analytics-run:compare",
+      runIndex: base.runIndex + 1,
+      summary: {
+        ...base.summary,
+        runId: "analytics-run:compare",
+        totals: {
+          ...base.summary.totals,
+          wins: base.summary.totals.wins + 2,
+          losses: base.summary.totals.losses - 1,
+          draws: base.summary.totals.draws,
+          points: base.summary.totals.points + 7,
+        },
+      },
+    }
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      getAnalyticsSnapshot: async () => ({
+        ...snapshot,
+        runs: [base, compare],
+      }),
+    })
+
+    await expect(
+      service.compareWorkshopAnalyticsRuns(base.profileId),
+    ).resolves.toEqual({
+      apiVersion: SERVICE_API_VERSION,
+      kind: "workshopAnalyticsComparison",
+      profileId: base.profileId,
+      comparison: {
+        profileId: base.profileId,
+        baseRunId: base.id,
+        compareRunId: compare.id,
+        compatibilityEquivalent: true,
+        delta: {
+          wins: 2,
+          losses: -1,
+          draws: 0,
+          points: 7,
+        },
+      },
+    })
+    await expect(
+      service.compareWorkshopAnalyticsRuns("analytics-profile:missing"),
+    ).resolves.toBe(null)
+  })
 })

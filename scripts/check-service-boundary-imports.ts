@@ -17,9 +17,12 @@ export const strictMigratedFiles = [
   "apps/web/app/api/auth/session/route.ts",
   "apps/web/app/exhibitions/new/page.tsx",
   "apps/web/app/workshop/evidence/page.tsx",
+  "apps/web/app/api/workshop/tests/[matchSetId]/route.ts",
+  "apps/web/app/api/workshop/analytics/profiles/[profileId]/compare/route.ts",
   "apps/web/lib/public-service-boundary.ts",
   "apps/web/lib/account-service-boundary.ts",
   "apps/web/lib/workshop-analytics-service-boundary.ts",
+  "apps/web/lib/workshop-read-service-boundary.ts",
 ] as const
 
 const strictAllowedForbiddenImports = new Map<string, ReadonlySet<string>>([
@@ -30,6 +33,10 @@ const strictAllowedForbiddenImports = new Map<string, ReadonlySet<string>>([
   ],
   [
     "apps/web/lib/workshop-analytics-service-adapter.ts",
+    new Set(["@cowards/persistence"]),
+  ],
+  [
+    "apps/web/lib/workshop-read-service-adapter.ts",
     new Set(["@cowards/persistence"]),
   ],
 ])
