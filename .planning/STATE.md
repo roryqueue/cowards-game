@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Go Backend Ownership Cutover
 status: planning
-stopped_at: Phase 83 context gathered
-last_updated: "2026-05-23T21:14:46.000Z"
+stopped_at: Phase 84 context gathered
+last_updated: "2026-05-23T21:17:05.000Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 7
@@ -31,10 +31,10 @@ See: .planning/PROJECT.md (updated 2026-05-23)
 
 ## Current Position
 
-Phase: 83 - Go Persistence and Live DTO Foundation
+Phase: 84 - Public Read Ownership Cutover
 Plan: Context gathered
 Status: Ready for planning
-Last activity: 2026-05-23 - Phase 83 discussion captured live DB, route provider, parity, schema/privacy, and sanitized error decisions
+Last activity: 2026-05-23 - Phase 84 discussion captured public read family cutover, Go-default routing, replay metadata scope, fail-closed behavior, and multi-route switch decisions
 
 Progress: [----------] 0%
 
@@ -121,6 +121,6 @@ None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing l
 
 ## Session Continuity
 
-Last session: 2026-05-23T21:14:46.000Z
-Stopped at: Phase 83 context gathered
-Resume file: .planning/phases/083-go-persistence-and-live-dto-foundation/083-CONTEXT.md
+Last session: 2026-05-23T21:17:05.000Z
+Stopped at: Phase 84 context gathered
+Resume file: .planning/phases/084-public-read-ownership-cutover/084-CONTEXT.md
