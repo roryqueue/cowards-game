@@ -1,74 +1,31 @@
-# Research Summary: v1.10 Service Boundary Completion and Go Read-Model Decision
+# Research Summary: v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
 
 **Project:** Coward's Game
-**Milestone:** v1.10 Service Boundary Completion and Go Read-Model Decision
+**Milestone:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
 **Date:** 2026-05-23
-**Confidence:** HIGH for service-boundary read/user slice; HIGH for selecting one public Strategy Go read-model route with explicit guardrails.
+**Confidence:** HIGH for Workshop test-summary and analytics-compare read migration; HIGH for live Go evidence-only validation; MEDIUM for exact report-only count reduction until implementation proves dependency cleanup.
 
 ## Executive Recommendation
 
-v1.10 should continue the v1.9 service-boundary ownership move without chasing every remaining web import offense. The current baseline is `strict_offenses=0 report_only_offenses=34`. The strongest next slice is to classify those remaining offenses, migrate only high-value web read/user surfaces that can be proven behind `@cowards/service`, and keep writes, Strategy source retrieval, Workshop execution, Match orchestration, replay owner-debug assembly, and runtime candidates out of scope.
+v1.11 should continue service-boundary debt reduction from the live baseline of `strict_offenses=0 report_only_offenses=30`. Most remaining offenses are writes, source-bearing owner reads, replay owner-debug/private Chronicle assembly, or mixed Workshop source/runtime/export surfaces. The safest selected slice is Workshop test-summary GET plus Workshop analytics-compare GET behind `@cowards/service`, with source-free type cleanup only where DTO ownership is proven.
 
-The approved Go read-model expansion is exactly one route: `GET /public/strategies/{strategyId}` via `getPublicStrategyPage`. It is already public, service-owned, spec-registered, schema-validated, and privacy-scanned by TypeScript. It is the safest Go read expansion because it avoids owner auth/session bridging, ladder lifecycle state, full replay projection, and Strategy source retrieval.
+Live Go readiness is mature enough to require as validation evidence, but not mature enough for production promotion. Require Go parity, boundary monitors, and required live Go topology evidence, while keeping production web traffic on the TypeScript service path.
 
-## Current Boundary Evidence
+## Selected v1.11 Scope
 
-- `pnpm boundary:imports` currently passes with `strict_offenses=0 report_only_offenses=34`.
-- Remaining report-only offenses cluster around account mixed read/write APIs, auth/session mutations, exhibition and ladder mutations, governance/admin writes, Workshop source/save/test/runtime flows, Workshop analytics reads, replay assembly, and the legacy `competitive/server` facade.
-- `@cowards/service` already owns public Strategy, public player, public ladder, public MatchSet summary, public replay metadata, auth session, account revision list, and owner analytics run summary reads.
-- The Go backend currently serves four read-only fixture-backed routes: health, public MatchSet summary, public replay metadata, and owner analytics run summary.
-
-## Recommended v1.10 Scope
-
-### 1. Boundary Triage and Scope Lock
-
-Capture an explicit v1.10 ownership matrix before implementation. Classify the 34 report-only offenses into:
-
-- service-migration candidates,
-- intentionally deferred writes,
-- Strategy source/private owner reads,
-- Workshop runtime/source/test execution,
-- replay owner-debug/private Chronicle assembly,
-- tests/types that can be cleaned only after their production dependency closes.
-
-This prevents false cleanup where an import disappears from one page but persistence ownership simply hides behind another broad facade.
-
-### 2. Account Revision-List Read Disentangling
-
-The account revision-list `GET` already reads through `listAccountReadRevisions()`, but it shares `apps/web/app/api/account/revisions/route.ts` with the `POST` save route and therefore still imports `competitive/server`. v1.10 should split or otherwise disentangle the read-only route so the GET path can become strict without moving save/source/fork behavior.
-
-Do not migrate Strategy Revision save, fork, source retrieval, validation, test execution, MatchSet creation, or submission flows just to reduce the count.
-
-### 3. Workshop Analytics/Evidence Read Service Slice
-
-The best new service read/user surface is the Workshop analytics Evidence Explorer read path. It is high value and user-visible, but must be carved away from Workshop source/save/test/runtime flows. The target shape is spec/service-owned owner-safe analytics profile/list/summary DTOs, service schema parsing, analytics leak assertions, and strict web import coverage for the new read boundary.
-
-Workshop Strategy source retrieval, source validation, submission, test Match launch, worker execution, analytics rerun mutations, and exports stay TypeScript-owned and out of scope unless explicitly replanned.
-
-### 4. One Go Read-Model Expansion
-
-Add exactly one Go read-model route only after TypeScript-service-backed fixtures are generated:
-
-`GET /public/strategies/{strategyId}` -> `getPublicStrategyPage`
-
-Required proof:
-
-- route is generated from `SERVICE_API_ROUTES`,
-- fixture is produced by invoking `@cowards/service`, not by hand,
-- route inventory remains GET-only,
-- missing strategy returns the public `NOT_FOUND` error shape,
-- Go fixture loader rejects private fields and checksum drift,
-- topology and boundary monitors know the route,
-- rollback leaves web traffic on the TypeScript service path.
+- Re-baseline and classify all 30 remaining broad web report-only offenses before implementation.
+- Move `GET /api/workshop/tests/{matchSetId}` behind a spec/service-owned source-free test-summary DTO.
+- Move `GET /api/workshop/analytics/profiles/{profileId}/compare` behind a spec/service-owned comparison DTO.
+- Promote only proven migrated files and source-free type cleanup to strict import enforcement.
+- Require live Go readiness evidence with no production Go routing or ownership promotion.
 
 ## Explicit Non-Goals
 
-- Go writes, Go auth/session mutation, Go ladder entry/schedule/status writes, Go Match orchestration, job claiming, migrations, persistence writes, or Strategy execution.
-- Backend rewrite or production web routing to Go without a one-switch rollback and required-boundary no-fallback checks.
-- Production hostile-code sandbox promotion.
-- Counted Python or other non-JS MatchSets, ladders, gauntlets, analytics comparisons, or standings.
-- Public language picker or package ecosystem implying non-JS support parity.
-- Strategy source, Workshop save/test/validate/submit execution, full replay projection, owner-debug replay migration, or private Chronicle DTO migration.
+- Go writes, auth/session mutation, ladder writes, Match orchestration, jobs, migrations, persistence writes, Strategy source retrieval, or Strategy execution.
+- Production web routing to Go or silent TypeScript fallback during required Go validation.
+- Production hostile-code sandbox promotion or counted non-JS play.
+- Workshop source retrieval, source save, validation/test execution, test launch, analytics rerun, profile save, or export migration.
+- Full replay projection, owner-debug replay migration, private Chronicle assembly, or replay fixture rewrite.
 - Rule, Chronicle, scoring, terminology, engine, or deterministic runtime semantics changes.
 
 ## Validation Commands
@@ -76,31 +33,33 @@ Required proof:
 Expected milestone gate:
 
 ```bash
-pnpm boundary:imports
-pnpm boundary:monitors
 pnpm contract:check
 pnpm contract:lint
+pnpm boundary:imports
 pnpm --filter @cowards/spec test
 pnpm --filter @cowards/service test
 pnpm --filter @cowards/web test
 pnpm typecheck
-pnpm go:parity:generate --check
 pnpm go:parity
-pnpm topology:check
+pnpm boundary:monitors
+pnpm topology:check -- --require-go --json
 pnpm e2e:smoke
+pnpm format:check
+git diff --check
 ```
 
 Expected outcomes:
 
 - `strict_offenses=0`.
-- `report_only_offenses` drops below the v1.9 baseline of 34.
+- `report_only_offenses` drops below 30 through real fingerprint removal.
 - Public/service/Go/topology/monitor outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, and private runtime internals by default.
-- Go route manifest expands by exactly one read-only public route if the Go phase is implemented.
-- Runtime isolation and non-JS remain evidence/criteria-only and non-counted.
+- Live Go evidence is required for validation but does not route production web traffic to Go.
+- Runtime isolation and non-JS remain evidence-only/non-counted.
 
 ## Key Risks
 
-- Fake service migration that hides persistence behind `competitive/server` or another broad facade.
-- Owner-source leakage if account revision source retrieval is included accidentally.
-- Workshop analytics migration pulling in source validation, test execution, worker, or rerun mutation flows.
-- Go route expansion without generated TypeScript-service-backed fixtures, exact error semantics, topology checks, privacy scans, or rollback.
+- Migrating Workshop reads through a new broad facade without reducing direct persistence debt.
+- Accidentally moving Workshop launch, source, rerun, export, or runtime behavior under the read DTO work.
+- Treating replay as a low-risk read surface even though the remaining replay imports touch private Chronicle and owner-debug assembly.
+- Treating live Go evidence as production promotion.
+- Letting required Go validation silently fall back to TypeScript when Go is unavailable or divergent.

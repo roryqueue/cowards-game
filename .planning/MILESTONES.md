@@ -1,5 +1,54 @@
 # Milestones
 
+## v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
+
+**Status:** Planned 2026-05-23
+**Phases:** 6
+**Phase range:** 70-75
+**Plans:** 0/6 complete
+**Requirements:** 0/30 complete; 30/30 mapped
+**Audit:** Pending
+
+### Goal
+
+Build on v1.10's service-boundary completion work by reducing the remaining broad web report-only direct persistence debt from the 30-offense baseline, selecting the next narrow public/owner-safe Workshop read surfaces to route through `@cowards/service`, and requiring live Go readiness evidence as validation-only proof without promoting Go ownership.
+
+### Selected Direction
+
+- Re-baseline and classify the current 30 broad web report-only offenses before implementation.
+- Move Workshop test-summary GET reads behind spec/service-owned DTOs while keeping launch/source/runtime behavior out of scope.
+- Move Workshop analytics-compare GET reads behind spec/service-owned DTOs while keeping rerun/save/export/execution behavior out of scope.
+- Promote only proven migrated files and source-free type cleanup to strict import enforcement.
+- Require live Go readiness evidence through parity, boundary monitors, required local topology checks, privacy checks, no-fallback semantics, and rollback documentation.
+- Keep Go writes, auth/session mutation, ladder writes, Match orchestration, jobs, migrations, persistence writes, Strategy source retrieval, Strategy execution, production Go routing, production sandbox promotion, and counted non-JS play out of scope.
+
+### Planned Phases
+
+| Phase | Name |
+| --- | --- |
+| 70 | Boundary Debt Rebaseline and v1.11 Scope Lock |
+| 71 | Workshop Test Summary Read Boundary |
+| 72 | Workshop Analytics Compare Read Boundary |
+| 73 | Boundary Enforcement and Source-Free Type Cleanup |
+| 74 | Live Go Readiness Evidence Gate |
+| 75 | Milestone Verification and Regression Gate |
+
+### Active Constraints
+
+- Engine logic remains pure, deterministic, serializable, and side-effect free.
+- Strategy code does not execute in the web/API process, and Node `vm` is not used as a hostile-code security boundary.
+- Public replay, service, Go, topology, monitor, analytics, export, and runtime outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, and private runtime internals by default.
+- Go backend work remains read-only and evidence-only; production web traffic remains on the TypeScript service path.
+- Python and other non-JS runtimes remain experimental, disabled for normal play, and non-counted.
+
+### Known Deferred Items
+
+- Remaining broad web report-only direct persistence offenses not selected in v1.11 remain visible for future service-boundary milestones.
+- Workshop source/save/validation/test-launch/runtime/rerun/profile-save/export flows remain TypeScript-owned.
+- Replay owner-debug/private Chronicle assembly remains out of scope.
+- Go mutation endpoints, auth/session mutation, ladder writes, jobs, migrations, Match orchestration, persistence writes, Strategy source retrieval, and Strategy execution remain TypeScript-owned.
+- Production runtime isolation promotion and counted non-JS play remain deferred.
+
 ## v1.10 Service Boundary Completion and Go Read-Model Decision
 
 **Status:** Shipped 2026-05-23

@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.10 Service Boundary Completion and Go Read-Model Decision on 2026-05-23
-**Current milestone:** None; ready for v1.11 selection.
-**Status:** Ready for next milestone.
+**Current milestone:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
+**Status:** Planning v1.11.
 **Last audit:** v1.10 milestone audit passed after audit-fix.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, read-only Go parity fixtures including a public Strategy read model, runtime isolation readiness evidence gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors proving future multi-language runtime and backend migration paths without promoting unsafe ownership moves.
@@ -13,18 +13,15 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone
+## Current Milestone: v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
 
-No active milestone. v1.10 has shipped and the project is ready to select v1.11.
+**Goal:** Reduce the remaining 30 broad web report-only direct persistence offenses by moving the next narrow Workshop read surfaces behind `@cowards/service`, and make live Go readiness evidence a required evidence-only validation lane without promoting Go ownership.
 
-## Next Milestone Candidates
-
-Likely next moves are:
-- Continue service-backed web read migration for remaining public/owner-safe surfaces after the account and Workshop analytics read slices.
-- Reduce the 30 remaining broad web report-only direct persistence offenses without hiding ownership behind broad facades.
-- Consider live Go-readiness evidence or a second Go public read-model route only after v1.10's Strategy page route remains stable under parity, topology, privacy, and rollback checks.
-- Deepen production runtime isolation evidence in a CI or production-equivalent container lane before any counted promotion.
-- Improve replay/Workshop product surfaces on top of the steadier service/runtime boundaries.
+**Target features:**
+- Re-baseline and classify the 30 remaining broad web report-only offenses before implementation, separating service candidates from deferred write/private/runtime/replay surfaces.
+- Move Workshop test-summary and analytics-compare reads behind spec/service-owned DTOs while keeping Workshop source, save, validation, launch, rerun, export, and runtime flows TypeScript-owned.
+- Promote only proven migrated files and source-free type cleanup to strict import enforcement, with `strict_offenses=0` and `report_only_offenses` below 30.
+- Require live Go readiness evidence through parity, topology, privacy, GET-only route inventory, no-fallback semantics, and rollback documentation while keeping production web traffic on the TypeScript service path.
 
 ## Latest Shipped Milestone: v1.10 Service Boundary Completion and Go Read-Model Decision
 
@@ -321,4 +318,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-23 after starting v1.10 milestone*
+*Last updated: 2026-05-23 after starting v1.11 milestone*
