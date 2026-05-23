@@ -1,5 +1,48 @@
 # Milestones
 
+## v1.14 Generic Strategy Artifact and Runtime Boundary Contract
+
+**Status:** Active 2026-05-23
+**Phases:** 7
+**Phase range:** 89-95
+**Plans:** 0/0 complete
+**Requirements:** 48/48 mapped
+**Decision:** Pending final promotion gate
+
+### Goal
+
+Define and implement generic Strategy Artifact/Revision contracts and a strict runtime ABI boundary so Go can consume parity-safe Strategy templates/forks without executing hostile Strategy code, while public outputs, replay safety, schema validation, and deterministic engine boundaries remain hard gates.
+
+### Selected Direction
+
+- Treat TypeScript service behavior as the parity oracle where needed, not the future backend path.
+- Create a generic Strategy Artifact / Revision model for user revisions, server-native templates, Starter and Advanced libraries, future language variants, runtime metadata, source hashes, validation, lineage, and immutable Match eligibility.
+- Generate parity-safe Strategy artifact manifests from TypeScript-owned source registries instead of duplicating library source in Go.
+- Define `strategy-runtime-abi-v1.14` as the strict public interface between deterministic server/native orchestration and hostile Strategy runtime code.
+- Keep Strategy execution out of web/API/Go processes; TypeScript worker/runtime remains the owner unless a later milestone explicitly promotes another boundary.
+- Let Go consume generated artifacts for Starter/Advanced forks and lineage-preserving saves without executing Strategy source.
+- Preserve public-output privacy and replay board realism through shared deny-list contracts, topology evidence, and browser/server validation.
+
+### Planned Phases
+
+| Phase | Name |
+| --- | --- |
+| 89 | Boundary Baseline and Scope Lock |
+| 90 | Generic Strategy Artifact Contract |
+| 91 | Generated Strategy Artifact Manifest |
+| 92 | Runtime ABI v1.14 Contract |
+| 93 | JS Runtime Adapter Conformance |
+| 94 | Go Artifact Consumption and Fork Parity |
+| 95 | Privacy, Realism, Topology, and Promotion Gate |
+
+### Active Constraints
+
+- Engine logic remains pure, deterministic, serializable, and side-effect free.
+- Strategy code does not execute in the web/API process or Go backend, and Node `vm` is not used as a hostile-code security boundary.
+- Strategy Revisions are immutable once submitted for Match or MatchSet play.
+- TypeScript worker/runtime remains the owner for hostile Strategy execution and Match job completion unless a later milestone explicitly promotes that boundary.
+- Public replay, service, Go, topology, monitor, analytics, export, and runtime outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals by default.
+
 ## v1.13 Go Backend Ownership Cutover
 
 **Status:** Complete 2026-05-23
@@ -49,6 +92,7 @@ Perform a fast, decisive Go backend ownership cutover for normal product workflo
 - .planning/milestones/v1.13-ROADMAP.md
 - .planning/milestones/v1.13-REQUIREMENTS.md
 - .planning/milestones/v1.13-MILESTONE-AUDIT.md
+- .planning/milestones/v1.13-phases/
 - .planning/artifacts/v1.13-promotion-decision.md
 - .planning/artifacts/v1.13-live-web-go-topology.json
 

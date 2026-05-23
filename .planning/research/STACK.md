@@ -1,29 +1,32 @@
-# v1.13 Stack Research: Go Backend Ownership Cutover
+# v1.14 Stack Research
 
-**Milestone:** v1.13 Go Backend Ownership Cutover
-**Researched:** 2026-05-23
+**Milestone:** Generic Strategy Artifact and Runtime Boundary Contract
+**Date:** 2026-05-23
 
-## Recommendation
+## Keep
 
-Keep the existing TypeScript web UI, TypeScript worker/runtime, and canonical `@cowards/spec` service contracts. Add production-equivalent Go backend capabilities only where Go can prove live PostgreSQL access, canonical DTO shape, privacy safety, fail-closed routing, and rollback behavior.
+- TypeScript monorepo and `@cowards/spec` as the canonical type/schema source.
+- `@cowards/service` and TypeScript service behavior as parity oracle/reference where needed.
+- Go backend for selected live API ownership and future artifact consumption.
+- TypeScript worker/runtime for hostile Strategy execution and Match completion.
+- Existing PostgreSQL schema unless a phase proves an additive artifact metadata migration is required.
 
-## Required Stack Additions
+## Add Or Extend
 
-- Go PostgreSQL access in `apps/go-backend`, likely through `github.com/jackc/pgx/v5/pgxpool`.
-- Go route ownership registry that can express multiple public, owner, session, and mutation routes without the v1.12 single-route assumption.
-- Go DTO builders for public Strategy, player, ladder, MatchSet summary, replay metadata, auth/session, account Strategy Revision, and exhibition creation responses.
-- A generated or hand-maintained parity test lane that compares Go live DTOs against TypeScript service outputs for seeded local data.
-- Web client/adapters that route selected product APIs to Go as the primary owner and fail closed when Go-selected paths are unavailable.
+- Spec-owned Strategy Artifact schemas/types and fixtures.
+- Generated Strategy artifact manifests for Starter, Advanced, and Workshop template/source registries.
+- Stale-output and checksum gates for generated artifacts.
+- Go manifest loader and parity tests that consume generated JSON data only.
+- `strategy-runtime-abi-v1.14` schemas, fixtures, conformance helpers, and adapter bridge metadata.
+- Shared public forbidden-field contract exported from spec and consumed by service, replay, analytics, Go tests, topology, and monitors.
+- Repeatable live topology/replay realism evidence command or script.
 
-## Stack To Preserve
+## Do Not Add
 
-- `@cowards/spec` remains the source of truth for service routes, schemas, DTO privacy rules, and OpenAPI artifacts.
-- `@cowards/service` remains the parity oracle and migration reference, not the future production path.
-- `@cowards/persistence` remains the TypeScript reference for SQL semantics while Go ports the selected behavior.
-- `@cowards/runtime-js`, the worker, Chronicle construction, and Strategy execution stay outside web/API and Go cutover scope unless explicitly promoted later.
-
-## Avoid
-
-- Node `vm` for hostile Strategy isolation.
-- ORM adoption, GraphQL, gRPC, Kubernetes, service mesh, or broad observability stack work.
-- Moving game rules, runtime execution, worker job claiming/completion, or private replay projection into Go as part of the backend API cutover.
+- Go Strategy execution.
+- Web/API Strategy execution.
+- Node `vm` as a security boundary.
+- Production sandbox promotion.
+- Counted non-JS public play.
+- Broad ORM/migration rewrite.
+- New cloud, service mesh, Kubernetes, or observability stack.

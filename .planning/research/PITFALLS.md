@@ -1,30 +1,31 @@
-# v1.13 Pitfalls Research: Go Backend Ownership Cutover
+# v1.14 Pitfalls Research
 
-**Milestone:** v1.13 Go Backend Ownership Cutover
-**Researched:** 2026-05-23
+**Milestone:** Generic Strategy Artifact and Runtime Boundary Contract
+**Date:** 2026-05-23
 
-## Major Pitfalls
+## Artifact Pitfalls
 
-1. **Fixture confidence mistaken for production ownership**
-   - Prevention: every promoted route needs live DB-backed Go evidence and TypeScript-service parity comparison.
+- **Duplicating source in Go:** Hand-maintained Go copies of Starter/Advanced source will drift. Use generated manifests.
+- **Losing lineage on saves:** Go already accepts `starterId`/`advancedId` but can drop lineage. Require source-hash matched artifact metadata.
+- **Confusing public built-in source with owner-private source:** Built-in forkable source can be in manifests; account source remains owner-private by default.
+- **Breaking StrategyRevision compatibility:** Add generic artifact metadata without invalidating existing public cards, account lists, and replay provenance.
 
-2. **Silent TypeScript fallback hides cutover failure**
-   - Prevention: Go-selected routes fail closed; rollback is explicit owner/config change or code revert.
+## Runtime ABI Pitfalls
 
-3. **Private source/session data leaks through diagnostics**
-   - Prevention: scan raw Go responses, web HTML, topology JSON, monitor output, logs, and artifacts for forbidden keys and values.
+- **Paper ABI differs from actual execution:** Existing counted JS adapters use a smaller request shape. Phase 93 must close or explicitly bridge this.
+- **Limit drift:** Timeout/source/memory/output limits appear in spec, runtime guards, worker config, and adapters. Centralize and test effective limits.
+- **Failure taxonomy collapse:** Runtime violation, validation failure, and system failure must not become one public error bucket.
+- **Private diagnostics leak:** Stack traces, stderr, host paths, source, and runtime internals must stay private and redacted by default.
 
-4. **Mutation cutover crosses Strategy execution boundaries**
-   - Prevention: Strategy Revision save/fork may persist source and metadata, but no Strategy code executes in web/API or Go.
+## Go Ownership Pitfalls
 
-5. **Session mutation diverges from TypeScript auth semantics**
-   - Prevention: prove password hashing, session token hashing, cookie behavior, revoke behavior, unauthorized behavior, and public-safe error parity before making Go primary.
+- **Go executes Strategy source to validate parity:** Do not do this. Consume canonical validation metadata from generated artifacts and keep hostile execution worker-owned.
+- **Silent TypeScript fallback:** Go-selected fork routes must fail closed on manifest/schema/privacy/topology failures.
+- **Runtime ownership creep:** Go can create jobs only in scoped flows; it must not claim jobs, execute Matches, build Chronicles, or classify runtime failures.
 
-6. **Exhibition creation accidentally becomes orchestration ownership**
-   - Prevention: Go may create MatchSet/job records only if TypeScript worker ownership of claiming/completion/execution remains explicit and tested.
+## Privacy And Replay Pitfalls
 
-7. **Boundary monitors still assume v1.12 single-route ownership**
-   - Prevention: update route ownership manifests, topology checks, and monitors before broad cutover evidence is accepted.
-
-8. **Report-only boundary debt masks incomplete ownership**
-   - Prevention: keep `strict_offenses=0`, prevent report-only count growth above 29, and classify every remaining offense after the cutover.
+- **Deny-list drift:** Service, replay, Go, analytics, topology, and monitor guards currently duplicate forbidden fields. Export one spec-owned contract.
+- **Owner-private source exception broadens accidentally:** Source should return only on authenticated owner source routes with private/no-store behavior.
+- **Replay realism evidence stays manual:** Go-created Match/replay changes need repeatable board bounds, visible piece, terrain, and browser canvas checks.
+- **Artifacts expose private runtime internals in diagnostics:** Manifest, topology, and monitor outputs should carry provenance and public messages, not raw diagnostics.

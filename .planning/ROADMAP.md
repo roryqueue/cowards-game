@@ -16,193 +16,177 @@
 - [x] **v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence** - Phases 70-75, shipped 2026-05-23. See `.planning/milestones/v1.11-ROADMAP.md`.
 - [x] **v1.12 Go Backend Promotion Readiness and Cutover Plan** - Phases 76-81, shipped 2026-05-23 with `promote-none-yet`. See `.planning/milestones/v1.12-ROADMAP.md`.
 - [x] **v1.13 Go Backend Ownership Cutover** - Phases 82-88, completed 2026-05-23 with selected Go backend route promotion. See `.planning/milestones/v1.13-ROADMAP.md`.
+- [ ] **v1.14 Generic Strategy Artifact and Runtime Boundary Contract** - Phases 89-95, active.
 
-## Latest Completed Milestone: v1.13 Go Backend Ownership Cutover
+## Current Milestone: v1.14 Generic Strategy Artifact and Runtime Boundary Contract
 
-**Status:** Complete 2026-05-23
-**Phases:** 82-88
+**Status:** Ready for Phase 89
+**Phases:** 89-95
 **Granularity:** Standard
-**Requirements:** 42/44 complete or promoted, 2/44 accepted deferred, 44/44 mapped
+**Requirements:** 48 mapped
 **Research:** `.planning/research/SUMMARY.md`
 
 ## Overview
 
-v1.13 is an aggressive Go backend ownership cutover. v1.12 proved route-scoped fail-closed switching and topology evidence but stopped at `promote-none-yet` because Go data was fixture-backed. v1.13 adds live Go persistence access, promotes selected product API families to Go ownership, and includes auth/session mutation, account Strategy Revision write/fork/source flows, and exhibition creation as primary scope.
+v1.14 turns Strategy source, validation, lineage, runtime metadata, and public/private runtime boundaries into explicit contracts. v1.13 promoted selected Go backend routes but deferred Starter/Advanced fork ownership because Go lacks parity-safe library source access. v1.14 resolves that by creating generic Strategy Artifact contracts and generated manifests, then using those manifests for Go fork parity without executing hostile Strategy code in Go or web/API.
 
-The milestone succeeds only if Go-owned routes preserve canonical DTOs, privacy, schema validation, no-fallback semantics, rollback behavior, deterministic engine boundaries, and hostile Strategy isolation. TypeScript service behavior remains the parity oracle and rollback reference, not silent fallback in Go-selected evidence paths.
+The milestone also freezes a stricter `strategy-runtime-abi-v1.14` so deterministic server/native orchestration and hostile runtime code communicate through one public boundary. Existing JS runtime adapters may remain TypeScript worker-owned, but they must conform to the ABI or an explicit conformance bridge. Privacy and replay realism remain hard gates throughout.
 
 ## Phases
 
-- [x] **Phase 82: Ownership Baseline and Aggressive Cutover Registry** - Developers can inspect v1.13 route ownership, selected primary scope, baseline evidence, and explicit non-goals before implementation.
-- [x] **Phase 83: Go Persistence and Live DTO Foundation** - Developers can run Go against live PostgreSQL and assemble selected service DTOs with privacy-safe schema/error behavior.
-- [x] **Phase 84: Public Read Ownership Cutover** - Users can load selected public Strategy, player, ladder, MatchSet summary, and replay metadata surfaces through Go-owned live data.
-- [x] **Phase 85: Auth, Session, and Account Read Ownership** - Users can sign up, sign in, sign out, refresh session, and list account revision metadata through Go-owned routes.
-- [x] **Phase 86: Account Strategy Revision Source and Write Ownership** - Users can retrieve owner-private source and save account revisions through Go-owned routes without executing Strategy code; Starter/Advanced forks are accepted deferred.
-- [x] **Phase 87: Exhibition Creation Ownership and Worker Handoff** - Users can create exhibition MatchSets through Go-owned mutation while TypeScript worker/runtime remains the execution owner.
-- [x] **Phase 88: Multi-Route Cutover Verification and Rollback Gate** - Developers can prove topology, privacy, no-fallback, rollback, boundary monitors, and final ownership evidence across all selected route families.
+- [ ] **Phase 89: Boundary Baseline and Scope Lock** - Developers can inspect the exact v1.14 starting boundary and non-goals before implementation.
+- [ ] **Phase 90: Generic Strategy Artifact Contract** - Developers can validate source-bearing Strategy artifacts and compatible revisions through spec-owned schemas.
+- [ ] **Phase 91: Generated Strategy Artifact Manifest** - Developers can generate parity-safe Strategy artifact manifests from TypeScript-owned libraries/templates.
+- [ ] **Phase 92: Runtime ABI v1.14 Contract** - Developers can validate strict method-specific runtime ABI envelopes and failure taxonomy.
+- [ ] **Phase 93: JS Runtime Adapter Conformance** - Developers can prove existing JS adapters conform to v1.14 ABI boundaries without moving execution into web/API/Go.
+- [ ] **Phase 94: Go Artifact Consumption and Fork Parity** - Users can fork Starter/Advanced Strategies through Go-owned routes from generated artifacts with TypeScript-oracle parity.
+- [ ] **Phase 95: Privacy, Realism, Topology, and Promotion Gate** - Developers can prove privacy, board realism, topology, no-fallback, and final promotion/defer decisions across v1.14 surfaces.
 
 ## Phase Details
 
-### Phase 82: Ownership Baseline and Aggressive Cutover Registry
+### Phase 89: Boundary Baseline and Scope Lock
 
-**Goal:** Developers can inspect the v1.13 ownership baseline, aggressive selected scope, route registry, and non-goals before implementation changes begin.
-**Depends on:** Phase 81
-**Requirements:** OWN-01, OWN-02, OWN-03, OWN-04, OWN-05, OWN-06
-
-**Success Criteria:**
-1. Developer can inspect a route ownership matrix covering selected public, owner/session, mutation, worker/runtime, and deferred surfaces.
-2. Developer can inspect a multi-route ownership registry with owner, auth scope, privacy class, fallback policy, rollback owner, diagnostics class, and disallowed scopes.
-3. Developer can verify v1.13 includes auth/session mutation, account Strategy Revision write/fork/source flows, and exhibition creation as primary scope.
-4. Developer can verify TypeScript service behavior is the parity oracle and rollback reference rather than silent fallback.
-5. Developer can verify baseline evidence records `strict_offenses=0`, `report_only_offenses=29`, current Go fixture inventory, v1.12 blockers, and explicit non-goals.
-
-**Plans:** 1 plan
-
-- [x] 82-01-PLAN.md - Capture ownership baseline, aggressive cutover registry, selected scope, non-goals, and baseline evidence.
-
-### Phase 83: Go Persistence and Live DTO Foundation
-
-**Goal:** Developers can run Go with live PostgreSQL access and assemble selected DTOs through route-specific providers with schema, privacy, and public-safe error behavior.
-**Depends on:** Phase 82
-**Requirements:** GODB-01, GODB-02, GODB-03, GODB-04, GODB-05, GODB-06
+**Goal:** Developers can inspect the v1.14 baseline for Go ownership, blocked forks, artifact/template sources, runtime ABI drift, privacy gates, replay realism gates, topology evidence, and explicit non-goals.
+**Depends on:** Phase 88
+**Requirements:** BASE-01, BASE-02, BASE-03, BASE-04, BASE-05, BASE-06
 
 **Success Criteria:**
-1. Developer can configure Go DB access without exposing DSNs, credentials, tokens, host paths, or private runtime internals.
-2. Developer can run Go in live DB-backed mode and see promoted routes reject fixture-only ownership claims.
-3. Developer can inspect route-specific query/provider code for selected DTOs without broad ORM or migration ownership.
-4. Developer can compare Go live DTOs with TypeScript service/reference outputs for seeded local success and failure cases.
-5. Developer can verify Go DTOs pass canonical schema/contract checks and privacy scans before web clients consume them.
-6. Developer can verify Go maps storage and validation failures to public-safe service errors.
+1. Developer can inspect a v1.14 ownership/boundary manifest that separates live Go routes, fixture routes, TypeScript oracle/reference surfaces, worker-owned runtime surfaces, and deferred surfaces.
+2. Developer can inspect concrete code references for Starter/Advanced fork deferral, Go lineage loss, Go reduced revision validation, runtime ABI drift, adapter ID drift, limit drift, privacy deny-list drift, and replay realism coverage.
+3. Developer can verify explicit non-goals prevent Go/web/API Strategy execution, Node `vm` security boundary use, counted non-JS play, sandbox promotion, Go migrations, full replay projection, owner-debug replay migration, Workshop runtime ownership, and job claiming/completion migration.
+4. Developer can verify baseline evidence records `strict_offenses=0`, `report_only_offenses=29`, v1.13 selected route ownership, and current topology/monitor gaps.
 
-**Plans:** 1 plan
+**Plans:** 0 plans
 
-- [x] 83-01-PLAN.md - Add Go PostgreSQL access, route-specific live DTO providers, parity harness, schema checks, and sanitized error handling.
+### Phase 90: Generic Strategy Artifact Contract
 
-### Phase 84: Public Read Ownership Cutover
-
-**Goal:** Users can load selected public product reads through Go-owned live data by default while TypeScript service remains explicit rollback/reference.
-**Depends on:** Phase 83
-**Requirements:** PUB-01, PUB-02, PUB-03, PUB-04, PUB-05, PUB-06
+**Goal:** Developers can represent Strategy source artifacts and compatible revisions through generic spec-owned contracts that preserve existing behavior while enabling future language and template variants.
+**Depends on:** Phase 89
+**Requirements:** ART-01, ART-02, ART-03, ART-04, ART-05, ART-06, ART-07
 
 **Success Criteria:**
-1. User can load public Strategy pages through Go-owned live data, preserving source-free public Strategy card behavior.
-2. User can load public player pages through Go-owned live data, preserving Strategy cards, ladder history, result links, and privacy exclusions.
-3. User can load public ladder pages through Go-owned live data, preserving entries, standings, MatchSet links, policy text, and counted-state explanations.
-4. User can load public MatchSet summary pages through Go-owned live data, preserving scoring, entrants, standings, replay links, and governance public explanations.
-5. User can load public replay metadata through Go-owned live data without migrating full replay projection or owner debug.
-6. Developer can verify every selected public Go read fails closed without silent TypeScript fallback on unavailable, timeout, bad JSON, schema, privacy, divergence, or unsafe-link failures.
+1. Developer can use Strategy Artifact schemas for account revisions, server-native templates, Starter entries, Advanced entries, and future language variants.
+2. Developer can validate artifact metadata for kind, source visibility, fork eligibility, source hash/bytes, runtime/language/package metadata, validation report/status, engine compatibility, lineage, and immutable Match eligibility.
+3. Developer can verify existing StrategyRevision consumers remain backward-compatible while generic lineage and artifact metadata become available.
+4. Developer can run valid/invalid artifact fixture tests covering public-safe summaries, built-in forkable source, owner-private source, and unsupported runtime/language examples.
 
-**Plans:** 1 plan
+**Plans:** 0 plans
 
-- [x] 84-01-PLAN.md - Cut over selected public reads to Go live DTOs with fail-closed web routing and parity tests.
+### Phase 91: Generated Strategy Artifact Manifest
 
-### Phase 85: Auth, Session, and Account Read Ownership
-
-**Goal:** Users can sign up, sign in, sign out, refresh session, and list account Strategy Revision metadata through Go-owned routes with token-safe diagnostics.
-**Depends on:** Phase 83
-**Requirements:** AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06
+**Goal:** Developers can generate parity-safe manifests from TypeScript-owned Starter, Advanced, and Workshop template sources for TypeScript and Go consumers.
+**Depends on:** Phase 90
+**Requirements:** MAN-01, MAN-02, MAN-03, MAN-04, MAN-05, MAN-06
 
 **Success Criteria:**
-1. User can sign up through Go-owned auth mutation with existing password, username, handle, display name, uniqueness, and cookie handoff semantics.
-2. User can sign in through Go-owned auth mutation with existing credential, session token hashing, cookie handoff, and invalid-credential behavior.
-3. User can sign out through Go-owned revoke behavior that remains idempotent and token-safe.
-4. User can refresh session through Go-owned session read and receive only public account fields.
-5. User can view source-free account Strategy Revision metadata through Go-owned reads.
-6. Developer can verify session/auth route evidence omits raw sessions, tokens, password hashes, cookies, DB details, stack traces, and private runtime internals.
+1. Developer can run a generation command that emits artifact manifests from canonical TypeScript registries/templates.
+2. Developer can verify manifest entries include source, source hash/bytes, validation report/status, runtime metadata, engine compatibility, names, notes, tags, versions, archetypes, lineage metadata, and fork eligibility.
+3. Developer can run stale-output and checksum gates that fail when source registries and generated manifests diverge.
+4. Developer can verify Go consumes manifests as data without importing TypeScript modules or executing Strategy source.
+5. Developer can verify manifest privacy classification distinguishes built-in forkable source from owner-private source.
 
-**Plans:** 1 plan
+**Plans:** 0 plans
 
-- [x] 85-01-PLAN.md - Move auth/session read and mutation plus account revision list reads to Go-owned routes with parity and privacy tests.
+### Phase 92: Runtime ABI v1.14 Contract
 
-### Phase 86: Account Strategy Revision Source and Write Ownership
-
-**Goal:** Users can retrieve owner-private source, save account revisions, and fork Starter/Advanced Strategies through Go-owned routes without executing Strategy code in Go or web/API.
-**Depends on:** Phase 85
-**Requirements:** ACCT-01, ACCT-02, ACCT-03, ACCT-04, ACCT-05, ACCT-06, ACCT-07
+**Goal:** Developers can validate `strategy-runtime-abi-v1.14` as the strict public interface between deterministic server/native orchestration and hostile Strategy runtime code.
+**Depends on:** Phase 90
+**Requirements:** ABI-01, ABI-02, ABI-03, ABI-04, ABI-05, ABI-06, ABI-07, ABI-08
 
 **Success Criteria:**
-1. User can retrieve owner-private Strategy Revision source through Go only when authenticated as the owner, with private/no-store response behavior.
-2. User can save/create account Strategy Revisions through Go while preserving immutable revision semantics, source hash/bytes, metadata, validation status, runtime metadata, and engine compatibility.
-3. User can fork Starter Strategies through Go while preserving lineage, source hash, tags, name, notes, validation status, and owner association.
-4. User can fork Advanced Strategies through Go while preserving lineage, archetype, source hash, tags, name, notes, validation status, and owner association.
-5. Developer can verify Go source/write/fork routes do not execute Strategy code and do not use Node `vm`.
-6. Developer can verify unauthorized, invalid source, invalid fork id, duplicate, storage, schema, and privacy failures fail closed without TypeScript fallback.
+1. Developer can validate method-specific request and response envelopes for `selectActivations` and `soldierBrain`.
+2. Developer can verify source hash/bytes, byte caps, runtime metadata, adapter id/version, language id/version, package mode, capabilities, limits, and compatibility are enforced at the ABI boundary.
+3. Developer can verify runtime output schema, output byte caps, StrategyMemory, SoldierMemory, objective payload, and JSON-only limits are enforced consistently.
+4. Developer can verify runtime violations, system failures, public messages, and private diagnostics use one spec-owned taxonomy.
+5. Developer can run ABI fixtures for JS/TS counted runtime, experimental Python metadata, invalid language/adapter/package combinations, timeout, oversized output, malformed IPC, and redacted diagnostics.
 
-**Plans:** 1 plan
+**Plans:** 0 plans
 
-- [x] 86-01-PLAN.md - Move owner-private source and Strategy Revision save/create flows to Go with no-execution guarantees; keep Starter/Advanced forks TypeScript-owned until Go has library source manifest parity.
+### Phase 93: JS Runtime Adapter Conformance
 
-### Phase 87: Exhibition Creation Ownership and Worker Handoff
-
-**Goal:** Users can create exhibition MatchSets through Go-owned mutation while TypeScript worker/runtime remains the explicit owner for execution.
-**Depends on:** Phase 85
-**Requirements:** MUT-01, MUT-02, MUT-03, MUT-04, MUT-05, MUT-06
+**Goal:** Developers can prove existing JS runtime adapters conform to the v1.14 ABI boundary or a single explicit bridge while Strategy execution remains worker-owned and evidence-only where appropriate.
+**Depends on:** Phase 92
+**Requirements:** RUNC-01, RUNC-02, RUNC-03, RUNC-04, RUNC-05, RUNC-06
 
 **Success Criteria:**
-1. User can create an exhibition MatchSet through Go with existing preset validation, revision validation, ownership checks, eligibility checks, rate limits, and duplicate prevention.
-2. Developer can verify Go writes MatchSet, entrant, Match, job, revision lock, provenance, and audit records transactionally.
-3. Developer can verify TypeScript worker ownership remains explicit for claiming jobs, executing Strategies, completing Matches, building Chronicles, and classifying runtime failures.
-4. User can inspect Go-created exhibition result pages and see public-safe queued/running/complete/degraded behavior.
-5. Developer can verify invalid preset, invalid revisions, unauthorized, duplicate active exhibition, rate limit, storage, and transaction failures map to public-safe errors.
-6. Developer can verify exhibition creation does not execute Strategy source or move Match orchestration/runtime ownership to Go.
+1. Developer can verify worker-thread, subprocess, and container-subprocess adapters execute through v1.14 envelopes or an explicit conformance bridge.
+2. Developer can verify effective timeout, stdout/stderr/source/memory/objective limits align across spec, runtime-js, worker config, sandbox probes, and monitors.
+3. Developer can verify runtime violations complete Match/Chronicle behavior consistently while system failures remain retryable or system-classified.
+4. Developer can run hostile/determinism probes for time, randomness, filesystem, network, environment, shell, dynamic code, stdout/stderr caps, memory/source/objective limits, and malformed output.
+5. Developer can verify executable runtime APIs remain absent from web/API and Go backend packages.
 
-**Plans:** 1 plan
+**Plans:** 0 plans
 
-- [x] 87-01-PLAN.md - Move exhibition MatchSet creation to Go with transactional parity and worker handoff guardrails.
+### Phase 94: Go Artifact Consumption and Fork Parity
 
-### Phase 88: Multi-Route Cutover Verification and Rollback Gate
-
-**Goal:** Developers can prove v1.13 route ownership, topology, privacy, no-fallback behavior, rollback, and final promotion/defer decisions across all selected route families.
-**Depends on:** Phases 84, 85, 86, 87
-**Requirements:** GATE-01, GATE-02, GATE-03, GATE-04, GATE-05, GATE-06, GATE-07
+**Goal:** Users can fork Starter and Advanced Strategies through Go-owned routes from generated artifacts, with lineage-preserving account saves and TypeScript-oracle parity, without Go executing Strategy code.
+**Depends on:** Phases 91 and 93
+**Requirements:** GOART-01, GOART-02, GOART-03, GOART-04, GOART-05, GOART-06, GOART-07
 
 **Success Criteria:**
-1. Developer can run boundary monitors and verify v1.13 route manifests, selected owners, privacy classes, rollback owners, and disallowed scopes.
-2. Developer can run direct Go and web-through-Go topology checks for selected public, owner/session, account write, and exhibition creation route families.
-3. Developer can run stopped-Go, bad body, timeout, schema/privacy failure, divergence, no-fallback, and rollback drills for selected route families.
-4. Developer can verify public/service/Go/topology/monitor/log/evidence outputs omit private Strategy, owner, session, host, database, and runtime internals by default.
-5. Developer can verify `strict_offenses=0` and report-only broad web offenses do not increase above 29 unless explicitly rebaselined.
-6. Developer can run the full v1.13 verification set and inspect a final ownership decision for Go-owned, rolled-back, and deferred routes.
+1. Developer can load generated Strategy artifact manifests in Go without TypeScript imports or Strategy execution.
+2. User can fork Starter Strategies through Go with parity for source, hash, bytes, validation, tags, label, notes, lineage, revision IDs, runtime metadata, and account list DTOs.
+3. User can fork Advanced Strategies through Go with parity for source, hash, bytes, validation, tags, label, notes, archetype, lineage, revision IDs, runtime metadata, and account list DTOs.
+4. User can save Go account revisions with Starter/Advanced/template lineage preserved when source hash and selected artifact metadata match a manifest entry.
+5. Developer can verify manifest, schema, privacy, auth, stale-output, invalid-artifact, storage, topology, and no-fallback failures fail closed without silent TypeScript fallback.
+6. Developer can verify Go artifact/fork routes do not execute Strategy code, use Node `vm`, claim jobs, run Matches, build Chronicles, or classify runtime failures.
 
-**Plans:** 1 plan
+**Plans:** 0 plans
 
-- [x] 88-01-PLAN.md - Run the final multi-route cutover gate, rollback drills, privacy scans, boundary monitors, and ownership decision record.
+### Phase 95: Privacy, Realism, Topology, and Promotion Gate
+
+**Goal:** Developers can prove v1.14 artifact, ABI, Go fork, public-output, replay realism, topology, no-fallback, and monitor evidence before recording promotion/defer decisions.
+**Depends on:** Phases 94 and 93
+**Requirements:** GATE-01, GATE-02, GATE-03, GATE-04, GATE-05, GATE-06, GATE-07, GATE-08
+
+**Success Criteria:**
+1. Developer can use one spec-owned forbidden-field contract across service, Go, replay, analytics, topology, OpenAPI, monitors, and browser-visible public replay checks.
+2. Developer can verify public/service/Go/topology/monitor outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals by default.
+3. Developer can verify owner-private source retrieval remains the only source-returning exception and remains authenticated/private/no-store.
+4. Developer can run repeatable live web-through-Go topology evidence that creates a Go-owned exhibition, runs the TypeScript worker, fetches replay metadata, and records privacy-safe output.
+5. Developer can verify board realism for replay/match creation changes, including valid bounds, canonical starting positions, in-bounds terrain and visible Soldiers, and browser nonblank/non-clipped replay canvas.
+6. Developer can verify boundary monitors fail on ABI drift, artifact manifest drift, adapter drift, privacy drift, unexpected Strategy execution, unsafe fallback, or runtime ownership creep.
+7. Developer can inspect a final v1.14 promotion decision for artifact manifests, ABI conformance, Go fork routes, privacy gates, replay realism evidence, and remaining deferred surfaces.
+
+**Plans:** 0 plans
 
 ## Progress
 
-**Execution Order:** Phase 82 -> Phase 83 -> Phase 84 -> Phase 85 -> Phase 86 -> Phase 87 -> Phase 88
+**Execution Order:** Phase 89 -> Phase 90 -> Phase 91 -> Phase 92 -> Phase 93 -> Phase 94 -> Phase 95
 
 | Phase | Plans Complete | Status | Completed |
 | --- | --- | --- | --- |
-| 82. Ownership Baseline and Aggressive Cutover Registry | 1/1 | Complete | 2026-05-23 |
-| 83. Go Persistence and Live DTO Foundation | 1/1 | Complete | 2026-05-23 |
-| 84. Public Read Ownership Cutover | 1/1 | Complete | 2026-05-23 |
-| 85. Auth, Session, and Account Read Ownership | 1/1 | Complete | 2026-05-23 |
-| 86. Account Strategy Revision Source and Write Ownership | 1/1 | Complete with fork deferral | 2026-05-23 |
-| 87. Exhibition Creation Ownership and Worker Handoff | 1/1 | Complete | 2026-05-23 |
-| 88. Multi-Route Cutover Verification and Rollback Gate | 1/1 | Complete | 2026-05-23 |
+| 89. Boundary Baseline and Scope Lock | 0/0 | Not started | — |
+| 90. Generic Strategy Artifact Contract | 0/0 | Not started | — |
+| 91. Generated Strategy Artifact Manifest | 0/0 | Not started | — |
+| 92. Runtime ABI v1.14 Contract | 0/0 | Not started | — |
+| 93. JS Runtime Adapter Conformance | 0/0 | Not started | — |
+| 94. Go Artifact Consumption and Fork Parity | 0/0 | Not started | — |
+| 95. Privacy, Realism, Topology, and Promotion Gate | 0/0 | Not started | — |
 
 ## Requirement Coverage
 
 | Requirement Group | Phase | Count |
 | --- | --- | ---: |
-| OWN-01 through OWN-06 | Phase 82 | 6 |
-| GODB-01 through GODB-06 | Phase 83 | 6 |
-| PUB-01 through PUB-06 | Phase 84 | 6 |
-| AUTH-01 through AUTH-06 | Phase 85 | 6 |
-| ACCT-01 through ACCT-07 | Phase 86 | 7 |
-| MUT-01 through MUT-06 | Phase 87 | 6 |
-| GATE-01 through GATE-07 | Phase 88 | 7 |
+| BASE-01 through BASE-06 | Phase 89 | 6 |
+| ART-01 through ART-07 | Phase 90 | 7 |
+| MAN-01 through MAN-06 | Phase 91 | 6 |
+| ABI-01 through ABI-08 | Phase 92 | 8 |
+| RUNC-01 through RUNC-06 | Phase 93 | 6 |
+| GOART-01 through GOART-07 | Phase 94 | 7 |
+| GATE-01 through GATE-08 | Phase 95 | 8 |
 
-**Coverage:** 44/44 v1.13 requirements mapped.
+**Coverage:** 48/48 v1.14 requirements mapped.
 **Unmapped requirements:** 0.
-**Completion:** 42/44 complete or promoted; ACCT-04 and ACCT-05 accepted deferred.
-**Final boundary baseline:** `strict_offenses=0 report_only_offenses=29`.
-**Selected cutover mode:** aggressive Go backend ownership with selected-route promotion.
+**Starting phase:** 89.
 
 ## Next Up
 
-Archive or start v1.14 from the accepted deferrals.
+**Phase 89: Boundary Baseline and Scope Lock** - Rebaseline v1.13 ownership, artifact/template source, runtime ABI drift, privacy, topology, and replay realism before implementation.
+
+`$gsd-discuss-phase 89`
+
+Also available: `$gsd-plan-phase 89`
 
 ---
-*Last updated: 2026-05-23 after v1.13 completion and archive*
+*Last updated: 2026-05-23 after v1.14 milestone initialization*

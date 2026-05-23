@@ -3,15 +3,28 @@
 ## Current State
 
 **Shipped version:** v1.13 Go Backend Ownership Cutover on 2026-05-23
-**Current milestone:** None active; ready for v1.14 planning.
-**Status:** Milestone complete.
+**Current milestone:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract.
+**Status:** Planning complete; ready for Phase 89.
 **Last audit:** v1.13 milestone audit passed with accepted Starter/Advanced fork deferral.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for selected backend API routes, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. v1.13 moved from readiness to selected Go backend API ownership while preserving deterministic engine, privacy, and hostile Strategy isolation boundaries.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for selected backend API routes, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. v1.14 will make Strategy source artifacts and runtime boundaries generic, manifest-backed, and parity-safe before Go owns fork/template behavior or any runtime architecture is promoted.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.14 Generic Strategy Artifact and Runtime Boundary Contract
+
+**Goal:** Define and implement generic Strategy Artifact/Revision contracts and a strict runtime ABI boundary so Go can consume parity-safe Strategy templates/forks without executing hostile Strategy code, while public outputs, replay safety, schema validation, and deterministic engine boundaries remain hard gates.
+
+**Target features:**
+- Rebaseline v1.13 route/runtime/privacy state and lock explicit v1.14 non-goals before implementation.
+- Create a generic Strategy Artifact / Revision contract for user revisions, server-native templates, Starter and Advanced libraries, future language variants, runtime metadata, source hashes, validation, lineage, and immutable Match eligibility.
+- Generate parity-safe Strategy artifact manifests from TypeScript-owned Starter, Advanced, and Workshop template sources without hand-maintained Go copies.
+- Define `strategy-runtime-abi-v1.14` as the strict public interface between deterministic server/native orchestration and hostile Strategy runtime code.
+- Make JS runtime adapters conform to the v1.14 ABI or a single explicit bridge while keeping execution outside web/API/Go.
+- Let Go consume generated artifacts for Starter/Advanced forks and lineage-preserving account saves without executing Strategy code.
+- Centralize public-output privacy rules and add repeatable live topology plus replay board realism evidence for Match/replay creation changes.
 
 ## Latest Shipped Milestone: v1.13 Go Backend Ownership Cutover
 
@@ -290,6 +303,18 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.10-REQUIREMENTS.md`
 - `.planning/milestones/v1.10-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.10-phases/`
+- `.planning/milestones/v1.11-ROADMAP.md`
+- `.planning/milestones/v1.11-REQUIREMENTS.md`
+- `.planning/milestones/v1.11-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.11-phases/`
+- `.planning/milestones/v1.12-ROADMAP.md`
+- `.planning/milestones/v1.12-REQUIREMENTS.md`
+- `.planning/milestones/v1.12-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.12-phases/`
+- `.planning/milestones/v1.13-ROADMAP.md`
+- `.planning/milestones/v1.13-REQUIREMENTS.md`
+- `.planning/milestones/v1.13-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.13-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -335,6 +360,7 @@ Planning archives live under `.planning/milestones/`:
 | Keep Go expansion follow-up-only until fixtures and rollback are explicit | A future Go read-model route needs generated TypeScript-service-backed parity fixtures, GET-only routing, topology diagnosis, auth/error semantics, and rollback scope before ownership moves. | ✓ Good |
 | Keep production runtime promotion evidence-only | The container adapter and other runtime candidates must not become counted hostile-code boundaries until live isolation evidence and promotion criteria are satisfied. | ✓ Good |
 | Use an aggressive v1.13 Go API ownership cutover | There is no live usage, so broad API cutover risk is acceptable as long as privacy, schemas, deterministic boundaries, hostile Strategy isolation, and public-output safety remain hard gates. | — Pending |
+| Define artifact and runtime contracts before more Go/runtime ownership | Generic Strategy artifacts and a strict ABI prevent fork/template parity, validation, lineage, and runtime execution boundaries from becoming one-off rewrites. | — Pending |
 
 ## Constraints
 
@@ -355,4 +381,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-23 after starting v1.13 milestone*
+*Last updated: 2026-05-23 after starting v1.14 milestone*

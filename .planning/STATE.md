@@ -1,42 +1,43 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.13
-milestone_name: Go Backend Ownership Cutover
-status: complete
-stopped_at: v1.13 milestone verified and audited
-last_updated: "2026-05-23T22:45:00.000Z"
+milestone: v1.14
+milestone_name: Generic Strategy Artifact and Runtime Boundary Contract
+status: planning
+stopped_at: requirements and roadmap created; ready for Phase 89
+last_updated: "2026-05-23T23:15:00.000Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 7
-  completed_phases: 7
+  completed_phases: 0
   total_plans: 0
-  completed_plans: 7
-  percent: 100
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.13 complete
+**Status:** v1.14 planning complete
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Ready for v1.14 planning.
+**Current focus:** Phase 89 - Boundary Baseline and Scope Lock.
 **Latest shipped milestone:** v1.13 Go Backend Ownership Cutover
-**Requirements:** No active requirements file; next milestone should create a fresh `.planning/REQUIREMENTS.md`.
+**Active milestone:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract
+**Requirements:** .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 88 - Multi-Route Cutover Verification and Rollback Gate
-Plan: 88-01 complete
-Status: Milestone verified and audited
-Last activity: 2026-05-23 - v1.13 promoted selected Go backend routes, accepted fork-route deferral, and passed final verification/audit
+Phase: Not started (Phase 89 next)
+Plan: —
+Status: Ready to discuss or plan Phase 89
+Last activity: 2026-05-23 - v1.14 milestone started with approved artifact/runtime boundary direction
 
-Progress: [##########] 100%
+Progress: [----------] 0%
 
 ## Workflow Settings
 
@@ -49,14 +50,16 @@ Progress: [##########] 100%
 - Verifier: Yes
 - Model profile: Balanced
 
-## Latest Milestone Summary
+## Current Milestone Summary
 
-v1.13 outcome:
+v1.14 goal:
 
-- Moved selected public reads, auth/session, account revision list/source/create/save, and exhibition creation to Go-owned live DB routes.
-- Preserved TypeScript worker/runtime ownership for job claiming, Match execution, Chronicle generation, scoring completion, and Strategy execution.
-- Kept Starter/Advanced forks TypeScript-owned by default because Go lacks parity-safe library source manifest access.
-- Verified privacy, schema, no-fallback, topology, preflight, boundary monitors, and fast test gates.
+- Define generic Strategy Artifact and Revision contracts for user-submitted revisions, server-native templates, Starter and Advanced libraries, future language variants, runtime metadata, source hashes, validation, lineage, and immutable Match eligibility.
+- Define `strategy-runtime-abi-v1.14` as the strict public interface between deterministic server/native orchestration and hostile Strategy runtime code.
+- Keep Strategy execution out of web/API/Go processes and preserve TypeScript worker/runtime ownership unless a later milestone explicitly promotes a different boundary.
+- Generate parity-safe Strategy artifact manifests so Go can consume Starter/Advanced/template source metadata without hand-maintained copies or source execution.
+- Promote Go-owned Starter/Advanced forks only after manifest parity, schema validation, lineage preservation, no-fallback evidence, and privacy checks pass.
+- Centralize public-output privacy rules and add repeatable replay board realism evidence for Match/replay creation changes.
 
 ## Completed Milestones
 
@@ -83,24 +86,16 @@ v1.13 outcome:
 - Public Strategy, player, ladder, MatchSet summary, and replay metadata reads are Go-owned when the Go backend owner switch is selected.
 - Auth/session read and mutation, account revision list/source/create/save, and exhibition creation are Go-owned when selected.
 - TypeScript worker/runtime ownership remains explicit; Go-created exhibitions hand off to the existing worker.
+- Starter/Advanced forks remain TypeScript-owned until v1.14 creates parity-safe Strategy artifact manifests.
 - Boundary monitors pass with `strict_offenses=0 report_only_offenses=29`.
-
-## Previous Milestone Outcomes
-
-- v1.10 moved account Strategy Revision list reads and Workshop analytics/Evidence Explorer reads behind `@cowards/service`.
-- Migrated web read surfaces are strict import-gated.
-- Broad web report-only direct persistence debt dropped from 34 to 30.
-- Go gained exactly one additional read-model route: public `GET /public/strategies/{strategyId}`.
-- Go remains read-only and fixture-backed; production web traffic still uses the TypeScript service path.
-- Runtime isolation remains evidence-only; Python and other non-JS runtimes remain experimental and non-counted.
 
 ## Next Todos
 
-- Start v1.14 around the generic Strategy artifact/template manifest, strict runtime ABI, Go fork parity, runtime/job ownership, or remaining web boundary debt.
+- Start Phase 89 with `$gsd-discuss-phase 89` or `$gsd-plan-phase 89`.
 
 ## Blockers/Concerns
 
-None active.
+- The installed `gsd-sdk` CLI does not expose the `query` subcommands referenced by the workflow, so v1.14 state/project updates were applied directly.
 
 ## Deferred Items
 
@@ -110,7 +105,7 @@ None active.
 | backend | Job claiming/completion, Match execution, Chronicle generation, and worker runtime ownership | Deferred | v1.13 scope |
 | backend | Go-owned migrations/schema ownership | Deferred | v1.13 scope |
 | backend | Runtime/orchestration ownership beyond exhibition creation handoff | Deferred | v1.13 scope |
-| backend | Go-owned Starter/Advanced fork routes pending library source manifest access | Deferred | v1.13 audit |
+| backend | Go-owned Starter/Advanced fork routes pending library source manifest access | Active in v1.14 | v1.13 audit |
 | replay | Full replay projection, owner-debug replay migration, and private Chronicle assembly | Deferred | v1.11 research |
 | workshop | Workshop validation, test launch, analytics rerun, profile save, export, and runtime flows | Deferred | v1.13 scope |
 | runtime | Production hostile-code sandbox promotion | Deferred | v1.11 scope |
@@ -120,6 +115,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-23T22:45:00.000Z
-Stopped at: v1.13 milestone verified and audited
-Resume file: .planning/milestones/v1.13-MILESTONE-AUDIT.md
+Last session: 2026-05-23T23:15:00.000Z
+Stopped at: v1.14 requirements and roadmap initialized
+Resume file: .planning/ROADMAP.md

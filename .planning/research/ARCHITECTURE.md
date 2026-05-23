@@ -1,33 +1,37 @@
-# v1.13 Architecture Research: Go Backend Ownership Cutover
+# v1.14 Architecture Research
 
-**Milestone:** v1.13 Go Backend Ownership Cutover
-**Researched:** 2026-05-23
+**Milestone:** Generic Strategy Artifact and Runtime Boundary Contract
+**Date:** 2026-05-23
 
-## Current Shape
+## Current Boundaries
 
-The web UI calls route-specific boundary modules. Those modules currently use `@cowards/service` and TypeScript persistence for most product behavior. `apps/go-backend` exposes five GET routes, all served from generated parity fixtures. v1.12 added a route-scoped public Strategy switch that fails closed when Go is selected, but promotion stopped because Go lacked a production-equivalent data provider.
+- `packages/spec` owns core types, schemas, service contracts, runtime metadata, and privacy assertions.
+- `packages/runtime-js` owns JS/TS source validation, revision construction, hashing, adapter execution, and hostile runtime probes.
+- `packages/persistence` owns TypeScript Starter/Advanced source registries and account revision/fork helpers.
+- `apps/go-backend` owns selected live API routes but currently has 501 fork stubs and reduced revision validation/source metadata logic.
+- `apps/worker` owns job claiming, runtime execution, Match completion, Chronicle generation, scoring completion, and runtime/system failure handling.
 
-## Target Shape
+## Proposed Data Flow
 
-Go becomes the primary backend API owner for selected normal product workflows:
+1. TypeScript source registries/templates remain canonical for v1.14 generation.
+2. A generation command builds Strategy Artifact manifest JSON from canonical registries.
+3. Manifest output includes canonical hashes, bytes, validation, runtime metadata, public metadata, lineage, and fork eligibility.
+4. TypeScript and Go both load generated manifest data.
+5. Go fork routes create account revisions from manifest entries without executing Strategy code.
+6. Worker runtime receives persisted revisions and executes only through runtime-owned ABI/conformance code.
 
-1. Go owns live DB access for selected public and owner DTOs.
-2. Web route/adapters call Go for selected route families by default.
-3. TypeScript service remains as a parity oracle and rollback implementation, not silent fallback in Go-selected evidence paths.
-4. TypeScript worker/runtime continues to own Strategy execution, Match job claiming/completion, Chronicle construction, and hostile-code handling.
+## Runtime Boundary
 
-## Build Order
+- Deterministic server/native orchestration builds ABI request envelopes from engine inputs and immutable revision/artifact data.
+- Hostile runtime adapters return ABI response envelopes or pass through one explicit conformance bridge.
+- Runtime violations are player/Strategy failures; system failures are infrastructure failures and must be persisted/retried/classified separately.
+- Public outputs receive only projected public messages, never private diagnostics.
 
-1. Freeze route ownership and define selected Go-owned route families.
-2. Add Go DB/persistence foundation and live DTO builders.
-3. Cut over public reads.
-4. Cut over auth/session and account reads/mutations.
-5. Cut over exhibition creation if mutation gates remain green.
-6. Extend topology, privacy, parity, rollback, and boundary monitors for multi-route Go ownership.
+## Verification Shape
 
-## Integration Notes
-
-- Go must not import or execute Strategy source to validate or run user code in web/API paths.
-- Strategy Revision creation in Go must either port deterministic source hashing/validation safely or call a non-executing validation contract that does not run Strategy code.
-- Exhibition creation may create MatchSet and job records, but job claiming, Match execution, Chronicle generation, and runtime failures remain TypeScript worker-owned.
-- Session responses and diagnostics must never leak session tokens; cookies remain a web transport concern.
+- Spec tests for artifact schemas, ABI envelopes, failure taxonomy, and forbidden public fields.
+- Manifest generation tests, stale-output checks, checksum checks, and TypeScript/Go parity tests.
+- Runtime adapter contract tests for worker-thread, subprocess, and container-subprocess paths.
+- Go tests for manifest loading, fork creation, lineage preservation, privacy, schema, and no-execution guarantees.
+- Boundary monitors for import drift, ABI drift, manifest drift, adapter drift, privacy drift, topology drift, and runtime ownership creep.
+- Live topology/replay evidence for Go-created MatchSets and browser-visible board realism.

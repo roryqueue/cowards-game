@@ -1,94 +1,78 @@
 # Project Research Summary
 
 **Project:** Coward's Game
-**Milestone:** v1.13 Go Backend Ownership Cutover
-**Domain:** Go backend API ownership, live persistence-backed DTO assembly, route cutover, session/account mutations, exhibition creation, privacy-safe diagnostics
+**Milestone:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract
+**Domain:** Generic Strategy artifacts, runtime ABI, Go artifact consumption, fork parity, privacy-safe outputs, replay board realism
 **Researched:** 2026-05-23
-**Confidence:** HIGH for repo-local route inventory, service boundaries, privacy gates, and v1.12 blockers; MEDIUM for mutation cutover until implementation proves auth/session and Strategy Revision parity.
+**Confidence:** HIGH for repo-local artifact, runtime, Go route, privacy, and replay realism findings; MEDIUM for exact implementation sequencing until Phase 89 audits current drift in detail.
 
 ## Executive Summary
 
-v1.13 should be a decisive Go backend ownership cutover, not another one-route readiness exercise. v1.12 proved a route-scoped switch, raw privacy scans, no-fallback behavior, rollback evidence, live topology hooks, and a route ownership manifest. It intentionally ended `promote-none-yet` because Go still served public Strategy reads from committed parity fixtures rather than live data.
+v1.14 should define the public contract around Strategy source and runtime execution before moving more backend/runtime ownership. v1.13 successfully promoted selected Go API routes but accepted Starter/Advanced fork deferral because Go cannot read library sources with parity. At the same time, the existing `strategy-runtime-abi-v1.7` is stricter on paper than the counted JS runtime path actually executes, and privacy deny lists are duplicated across service, replay, Go, analytics, topology, and monitor code.
 
-The essential unlock for v1.13 is Go persistence access. Once Go can read and write the same PostgreSQL-backed product state as the TypeScript service, the milestone can move substantially beyond fixture-backed public reads. Because there is no live usage, broad cutover risk is acceptable, but the non-negotiables remain: no public private-data leaks, no Strategy execution in web/API or Go, canonical schema validation, deterministic engine boundaries, immutable submitted Strategy Revisions, and fail-closed route ownership.
+The recommended milestone direction is to build a generic Strategy Artifact / Revision model, generate parity-safe manifests from TypeScript-owned source registries, freeze `strategy-runtime-abi-v1.14`, then let Go consume artifacts for Starter/Advanced forks without executing Strategy code. TypeScript service behavior remains the parity oracle where needed, but not the long-term backend path. TypeScript worker/runtime remains the execution owner unless a later milestone explicitly promotes a stronger hostile-code boundary.
 
-The user selected the aggressive scope: auth/session mutation, Strategy Revision writes/forks/source route, and exhibition creation are primary scope rather than stretch. The roadmap should still put Go DB/public reads first, because those are prerequisites for mutation confidence.
+## Stack Findings
 
-## Recommended Stack
+- Preserve TypeScript web UI, `@cowards/spec`, `@cowards/service`, TypeScript worker/runtime, and PostgreSQL-backed Go API ownership.
+- Add spec-owned Strategy artifact schemas and fixtures alongside existing StrategyRevision and runtime schemas.
+- Generate JSON artifacts/manifests from TypeScript-owned Starter, Advanced, and Workshop template sources rather than hand-maintaining Go copies.
+- Use Go manifest loading and checksum/stale gates similar to existing service fixture checks.
+- Keep Go persistence/orchestration contracts practical, but keep Strategy execution outside Go/web/API processes.
 
-- Preserve TypeScript web UI, TypeScript worker/runtime, canonical `@cowards/spec` service contracts, and TypeScript service behavior as the parity oracle.
-- Add Go PostgreSQL access in `apps/go-backend`, likely `pgx/v5` with pooled connections and explicit query functions.
-- Extend the v1.12 route switch into a multi-route Go ownership registry covering public, owner/session, and mutation routes.
-- Add parity evidence that compares Go live DTOs against TypeScript service/reference behavior for seeded local data.
-- Extend topology and monitors from one route to the selected v1.13 route families.
+## Feature Table Stakes
 
-## Selected v1.13 Cutover Slice
+### Generic Strategy Artifacts
 
-### Primary Scope
+- Represent user-submitted revisions, server-native templates, Starter library entries, Advanced library entries, and future source-bearing examples through one contract.
+- Include artifact kind, source hash, source bytes, validation report/status, runtime/language metadata, package metadata, source visibility, fork eligibility, lineage/derived-from fields, public metadata, and immutable Match eligibility.
+- Preserve backward compatibility with current StrategyRevision IDs, account revision summaries, Starter/Advanced lineage, public cards, and owner-private source routes.
 
-- Go DB/persistence foundation and live DTO assembly.
-- Go-owned public reads:
-  - public Strategy page
-  - public player page
-  - public ladder page
-  - public MatchSet summary
-  - public replay metadata
-- Go-owned owner/session reads:
-  - auth session read
-  - account Strategy Revision list
-- Go-owned account/session/product mutations:
-  - sign up
-  - sign in
-  - sign out
-  - account Strategy Revision save/create
-  - Starter Strategy fork
-  - Advanced Strategy fork
-  - owner-private Strategy Revision source retrieval
-  - exhibition MatchSet creation
+### Runtime ABI
 
-### Explicit Boundaries
+- Define `strategy-runtime-abi-v1.14` as the strict public boundary between deterministic server/native orchestration and hostile runtime code.
+- Require method-specific request/response schemas for `selectActivations` and `soldierBrain`.
+- Enforce source hash, source bytes, byte caps, runtime metadata, adapter id/version, language id/version, package mode, required capabilities, and effective limits at the ABI boundary.
+- Normalize failure taxonomy so runtime violations and system failures are consistently represented before persistence and public projection.
 
-- Go must not execute Strategy code, and web/API must not execute Strategy code.
-- Go may create exhibition MatchSet/job records only if job claiming, Match execution, Chronicle generation, and runtime failure handling remain TypeScript worker-owned.
-- Public outputs must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, or private runtime internals by default.
-- Owner-private source retrieval can return Strategy source only through authenticated owner routes with private/no-store response behavior and no inclusion in public or monitor artifacts.
+### Go Artifact Consumption
+
+- Load generated Strategy artifact manifests in Go without executing source.
+- Replace Go fork 501 stubs with manifest-backed Starter/Advanced fork writes only after parity passes.
+- Preserve lineage on Go account saves when a submitted library/template source hash matches a manifest entry.
+- Keep TypeScript service/reference behavior as the parity oracle, not silent fallback.
+
+### Privacy And Replay Realism
+
+- Centralize forbidden public fields for service, Go, replay, analytics, topology, monitors, OpenAPI artifacts, and browser-visible public replay text.
+- Keep owner-private source retrieval as the only intentional public-contract exception, authenticated and `private, no-store`.
+- Add repeatable live web-through-Go evidence that creates an exhibition, runs the TypeScript worker, checks replay metadata, and verifies board bounds plus visible piece sanity.
 
 ## Architecture Findings
 
-- `apps/go-backend` currently has five GET fixture-backed routes and no DB dependency.
-- `@cowards/service` already defines the canonical behavior for public Strategy/player/ladder/MatchSet/replay reads and account read DTOs.
-- Auth/session reads are not purely read-only today because `getSession` updates `last_seen_at`; Go ownership must model or explicitly preserve that mutation.
-- Strategy Revision creation currently uses TypeScript runtime validation/source hashing. Go must preserve immutable revision semantics and validation without executing Strategy code in web/API.
-- Exhibition creation touches ownership validation, rate limits, duplicate active checks, revision locking, MatchSet rows, Match rows, job records, and audit events. It can move before worker ownership only if job execution remains TypeScript-owned and evidence proves the handoff.
+- `StrategyRevision` is still source-bearing and hard-codes Starter/Advanced lineage. It is not yet a generic artifact model.
+- Starter and Advanced libraries are TypeScript-only source registries. Hashes and validation are computed at runtime, not generated into a Go-readable manifest.
+- Go fork routes are intentionally unavailable because library source manifests do not exist.
+- Go create/save revision currently uses reduced source metadata validation and can lose Starter/Advanced lineage on saves that include `starterId` or `advancedId`.
+- The runtime ABI exists in spec, but the counted JS runtime adapter path still uses a smaller `{ source, methodName, input, timeoutMs, outputByteLimit }` shape.
+- Runtime limits and failure taxonomy can drift across spec defaults, runtime-js guards, worker config, sandbox probes, and adapter metadata.
+- Privacy checks exist in multiple layers but use separate deny lists that can drift.
+- Replay board realism has server-side and browser-side checks, but live Go-created Match/replay board validation is not yet a repeatable command.
 
-## Validation Expectations
+## Watch Out For
 
-Minimum v1.13 gates:
-
-- `pnpm boundary:imports`
-- `pnpm boundary:monitors`
-- `pnpm contract:check`
-- `pnpm contract:lint`
-- `pnpm go:parity`
-- `cd apps/go-backend && go test ./...`
-- package tests for `@cowards/spec`, `@cowards/service`, web adapters/routes, persistence parity, and selected mutation behavior
-- live topology with Go selected for every promoted route family
-- stopped-Go, timeout, bad JSON/body, schema/privacy failure, divergence, and rollback drills
-
-## Key Risks
-
-- Go route ownership is broadened before live persistence and parity are stable.
-- Mutation routes leak tokens, source, stack traces, DB errors, or private runtime details.
-- Strategy Revision save/fork accidentally runs Strategy code in Go or web/API.
-- Exhibition creation moves job execution or Chronicle construction indirectly.
-- Boundary monitors retain v1.12 assumptions and miss a multi-route cutover regression.
+- Do not make Go execute Strategy code, validate hostile code by running it, claim jobs, complete Matches, build Chronicles, classify runtime failures, or expose private replay internals.
+- Do not treat Node `vm`, worker threads, or host subprocesses as production hostile-code security boundaries.
+- Do not promote counted non-JS play, public language picker support, production sandbox promotion, Go migrations, full replay projection, owner-debug replay, or Workshop runtime/test/rerun ownership in this milestone.
+- Do not leak Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, or private runtime internals in public/service/Go/topology/monitor outputs.
+- Do not allow Go and TypeScript revision IDs, validation reports, source hashes, runtime metadata, lineage, or eligibility to diverge silently.
 
 ## Proposed Phase Structure
 
-1. Phase 82: Ownership baseline and aggressive cutover registry.
-2. Phase 83: Go persistence foundation and live DTO spine.
-3. Phase 84: Public read ownership cutover.
-4. Phase 85: Auth/session and account read ownership.
-5. Phase 86: Account Strategy Revision source/write/fork ownership.
-6. Phase 87: Exhibition creation ownership and worker handoff guardrails.
-7. Phase 88: Multi-route topology, rollback, privacy, monitor, and milestone verification.
+1. Phase 89: Boundary Baseline and Scope Lock.
+2. Phase 90: Generic Strategy Artifact Contract.
+3. Phase 91: Generated Strategy Artifact Manifest.
+4. Phase 92: Runtime ABI v1.14 Contract.
+5. Phase 93: JS Runtime Adapter Conformance.
+6. Phase 94: Go Artifact Consumption and Fork Parity.
+7. Phase 95: Privacy, Realism, Topology, and Promotion Gate.
