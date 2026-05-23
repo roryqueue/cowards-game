@@ -2,32 +2,36 @@
 
 ## Current State
 
-**Shipped version:** v1.12 Go Backend Promotion Readiness and Cutover Plan on 2026-05-23
-**Current milestone:** v1.13 Go Backend Ownership Cutover
-**Status:** Planning active.
-**Last audit:** v1.12 milestone audit passed after audit-fix.
+**Shipped version:** v1.13 Go Backend Ownership Cutover on 2026-05-23
+**Current milestone:** None active; ready for v1.14 planning.
+**Status:** Milestone complete.
+**Last audit:** v1.13 milestone audit passed with accepted Starter/Advanced fork deferral.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, a fixture-backed Go read model with fail-closed route switching evidence, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. v1.13 moves from readiness to aggressive Go backend API ownership while preserving deterministic engine, privacy, and hostile Strategy isolation boundaries.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for selected backend API routes, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. v1.13 moved from readiness to selected Go backend API ownership while preserving deterministic engine, privacy, and hostile Strategy isolation boundaries.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.13 Go Backend Ownership Cutover
+## Latest Shipped Milestone: v1.13 Go Backend Ownership Cutover
 
-**Goal:** Perform a fast, decisive Go backend ownership cutover for normal product workflows, including live Go persistence, public reads, owner/account reads, auth/session mutations, account Strategy Revision writes/forks/source retrieval, and exhibition creation, while keeping Strategy execution, worker orchestration, deterministic engine logic, and private replay internals out of Go ownership.
+**Goal:** Perform a fast, decisive Go backend ownership cutover for normal product workflows, including live Go persistence, public reads, owner/account reads, auth/session mutations, account Strategy Revision writes/source retrieval, and exhibition creation, while keeping Strategy execution, worker orchestration, deterministic engine logic, and private replay internals out of Go ownership.
 
-**Target features:**
+**Delivered:**
 - Add Go DB/persistence access and live DTO assembly so Go no longer depends on committed parity fixtures for selected product routes.
 - Make Go the primary owner for public Strategy, player, ladder, MatchSet summary, and replay metadata reads.
 - Make Go the primary owner for auth/session read and mutation flows and source-free account Strategy Revision list reads.
-- Make Go the primary owner for account Strategy Revision source/create/save/fork flows with strict owner-private source handling and no Strategy execution in web/API or Go.
+- Make Go the primary owner for account Strategy Revision source/create/save flows with strict owner-private source handling and no Strategy execution in web/API or Go.
 - Make Go the primary owner for exhibition MatchSet creation while preserving TypeScript worker ownership for job claiming, Match execution, Chronicle generation, and runtime failure handling.
 - Extend route ownership manifests, topology checks, privacy scans, boundary monitors, rollback drills, and no-fallback evidence across all selected v1.13 routes.
+- Fix Go-created replay board realism by using canonical arena bounds and adding replay validation for out-of-bounds visible pieces.
 
-**Decision:** Aggressive cutover. TypeScript service behavior remains the parity oracle and rollback reference, not the future production path. Runtime/worker ownership, full replay projection/private Chronicle assembly, Go migration/schema ownership, production sandbox promotion, and counted non-JS play remain deferred unless explicitly replanned.
+**Decision:** `promote-selected-go-backend-routes`. TypeScript service behavior remains the parity oracle and rollback reference, not silent fallback in selected Go evidence paths. Starter/Advanced forks are accepted deferred until Go has a parity-safe generic Strategy template/source manifest. Runtime/worker ownership, full replay projection/private Chronicle assembly, Go migration/schema ownership, production sandbox promotion, and counted non-JS play remain deferred.
 
-## Latest Shipped Milestone: v1.12 Go Backend Promotion Readiness and Cutover Plan
+**Archived audit:** `.planning/milestones/v1.13-MILESTONE-AUDIT.md`
+**Tag:** `v1.13`
+
+## Previous Shipped Milestone: v1.12 Go Backend Promotion Readiness and Cutover Plan
 
 **Goal:** Prove whether production web reads can safely route to Go, with at most one narrow public read route promoted only if live parity, privacy, topology, no-fallback behavior, rollback, and operational failure evidence all pass.
 

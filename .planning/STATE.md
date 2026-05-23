@@ -24,9 +24,9 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.13 Go Backend Ownership Cutover.
+**Current focus:** Ready for v1.14 planning.
 **Latest shipped milestone:** v1.13 Go Backend Ownership Cutover
-**Requirements:** .planning/REQUIREMENTS.md
+**Requirements:** No active requirements file; next milestone should create a fresh `.planning/REQUIREMENTS.md`.
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
@@ -96,7 +96,7 @@ v1.13 outcome:
 
 ## Next Todos
 
-- Start v1.14 around accepted deferrals: Go fork parity, runtime/job ownership, or remaining web boundary debt.
+- Start v1.14 around the generic Strategy artifact/template manifest, strict runtime ABI, Go fork parity, runtime/job ownership, or remaining web boundary debt.
 
 ## Blockers/Concerns
 

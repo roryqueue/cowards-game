@@ -17,7 +17,7 @@
 - [x] **v1.12 Go Backend Promotion Readiness and Cutover Plan** - Phases 76-81, shipped 2026-05-23 with `promote-none-yet`. See `.planning/milestones/v1.12-ROADMAP.md`.
 - [x] **v1.13 Go Backend Ownership Cutover** - Phases 82-88, completed 2026-05-23 with selected Go backend route promotion. See `.planning/milestones/v1.13-ROADMAP.md`.
 
-## Current Milestone: v1.13 Go Backend Ownership Cutover
+## Latest Completed Milestone: v1.13 Go Backend Ownership Cutover
 
 **Status:** Complete 2026-05-23
 **Phases:** 82-88
@@ -205,4 +205,4 @@ The milestone succeeds only if Go-owned routes preserve canonical DTOs, privacy,
 Archive or start v1.14 from the accepted deferrals.
 
 ---
-*Last updated: 2026-05-23 after v1.13 selected Go backend route promotion*
+*Last updated: 2026-05-23 after v1.13 completion and archive*
