@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Generic Strategy Artifact and Runtime Boundary Contract
 status: planning
-stopped_at: Phase 94 context gathered
-last_updated: "2026-05-23T23:44:17.000Z"
+stopped_at: all v1.14 phase discussions captured
+last_updated: "2026-05-23T23:47:38.000Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 7
@@ -24,7 +24,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 94 - Go Artifact Consumption and Fork Parity.
+**Current focus:** v1.14 phase planning from captured discussion context.
 **Latest shipped milestone:** v1.13 Go Backend Ownership Cutover
 **Active milestone:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract
 **Requirements:** .planning/REQUIREMENTS.md
@@ -32,10 +32,10 @@ See: .planning/PROJECT.md (updated 2026-05-23)
 
 ## Current Position
 
-Phase: 94 - Go Artifact Consumption and Fork Parity
-Plan: Context gathered
-Status: Ready for Phase 95 discussion and Phase 94 planning
-Last activity: 2026-05-23 - Phase 94 context gathered
+Phase: 89-95
+Plan: Context gathered for all v1.14 phases
+Status: Ready for `$gsd-plan-phase` starting at Phase 89
+Last activity: 2026-05-23 - Phase 95 context gathered; all v1.14 phase discussions captured
 
 Progress: [----------] 0%
 
@@ -115,6 +115,6 @@ v1.14 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-23T23:44:17.000Z
-Stopped at: Phase 94 context gathered
-Resume file: .planning/phases/094-go-artifact-consumption-and-fork-parity/094-CONTEXT.md
+Last session: 2026-05-23T23:47:38.000Z
+Stopped at: all v1.14 phase discussions captured
+Resume file: .planning/phases/095-privacy-realism-topology-and-promotion-gate/095-CONTEXT.md
