@@ -273,6 +273,108 @@ export interface StrategyRevision {
   metadata: StrategyRevisionMetadata
 }
 
+export type StrategyArtifactKind =
+  | "account-revision"
+  | "starter"
+  | "advanced"
+  | "template"
+  | "example"
+
+export type StrategyArtifactSourceVisibility =
+  | "owner-private"
+  | "built-in-forkable"
+  | "public-summary-only"
+
+export type StrategyArtifactSourceFormat = "javascript" | "typescript"
+
+export interface StrategyArtifactForkEligibility {
+  forkable: boolean
+  reason?: string | undefined
+}
+
+export interface StrategyArtifactLineage {
+  derivedFrom?:
+    | {
+        artifactId: string
+        kind: StrategyArtifactKind
+        sourceHash: string
+        label?: string | undefined
+      }
+    | undefined
+  starterLineage?: StrategyRevisionMetadata["starterLineage"] | undefined
+  advancedLineage?: StrategyRevisionMetadata["advancedLineage"] | undefined
+}
+
+export interface StrategyArtifactEligibilitySnapshot {
+  lockedAt: string
+  sourceHash: string
+  validationStatus: "valid" | "invalid"
+  countedRuntimeEligible: boolean
+  runtimeCompatibility: string
+  engineCompatibility: {
+    spec: string
+    engine: string
+  }
+}
+
+export interface StrategyArtifactPublicMetadata {
+  label?: string | undefined
+  name?: string | undefined
+  notes?: string | undefined
+  description?: string | undefined
+  tags?: string[] | undefined
+  version?: string | undefined
+  archetype?: string | undefined
+  benchmarkStarterId?: string | undefined
+  level?: string | undefined
+}
+
+export interface StrategyArtifactSource {
+  text?: string | undefined
+  hash: string
+  bytes: number
+  format: StrategyArtifactSourceFormat
+  entrypoint: string
+}
+
+export interface StrategyArtifact {
+  id: string
+  revisionId?: StrategyRevisionId | undefined
+  strategyId?: StrategyId | undefined
+  kind: StrategyArtifactKind
+  sourceVisibility: StrategyArtifactSourceVisibility
+  forkEligibility: StrategyArtifactForkEligibility
+  source: StrategyArtifactSource
+  runtime: StrategyRuntimeMetadata
+  engineCompatibility: StrategyRevision["engineCompatibility"]
+  validation: StrategyRevisionValidationReport
+  publicMetadata: StrategyArtifactPublicMetadata
+  lineage: StrategyArtifactLineage
+  immutableEligibility?: StrategyArtifactEligibilitySnapshot | undefined
+  behaviorCompatibility: {
+    compatibilityKey: string
+    behaviorSignificantFields: string[]
+  }
+}
+
+export interface StrategyArtifactPublicSummary {
+  id: string
+  revisionId?: StrategyRevisionId | undefined
+  strategyId?: StrategyId | undefined
+  kind: StrategyArtifactKind
+  sourceVisibility: StrategyArtifactSourceVisibility
+  forkEligibility: StrategyArtifactForkEligibility
+  sourceHash: string
+  sourceBytes: number
+  sourceFormat: StrategyArtifactSourceFormat
+  runtime: Omit<StrategyRuntimeMetadata, "limits">
+  engineCompatibility: StrategyRevision["engineCompatibility"]
+  validationStatus: "valid" | "invalid"
+  publicMetadata: StrategyArtifactPublicMetadata
+  lineage: StrategyArtifactLineage
+  immutableEligibility?: StrategyArtifactEligibilitySnapshot | undefined
+}
+
 export type ChronicleEventType =
   | "MATCH_STARTED"
   | "ROUND_STARTED"

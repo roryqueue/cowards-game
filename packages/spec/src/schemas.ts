@@ -660,6 +660,154 @@ export const StrategyRevisionSchema = z.object({
   metadata: StrategyRevisionMetadataSchema,
 })
 
+export const StrategyArtifactKindSchema = z.enum([
+  "account-revision",
+  "starter",
+  "advanced",
+  "template",
+  "example",
+])
+
+export const StrategyArtifactSourceVisibilitySchema = z.enum([
+  "owner-private",
+  "built-in-forkable",
+  "public-summary-only",
+])
+
+export const StrategyArtifactSourceFormatSchema = z.enum([
+  "javascript",
+  "typescript",
+])
+
+export const StrategyArtifactForkEligibilitySchema = z.object({
+  forkable: z.boolean(),
+  reason: z.string().min(1).optional(),
+})
+
+export const StrategyArtifactLineageSchema = z.object({
+  derivedFrom: z
+    .object({
+      artifactId: z.string().min(1),
+      kind: StrategyArtifactKindSchema,
+      sourceHash: z.string().min(1),
+      label: z.string().min(1).optional(),
+    })
+    .optional(),
+  starterLineage: StrategyRevisionMetadataSchema.shape.starterLineage,
+  advancedLineage: StrategyRevisionMetadataSchema.shape.advancedLineage,
+})
+
+export const StrategyArtifactEligibilitySnapshotSchema = z.object({
+  lockedAt: z.string().min(1),
+  sourceHash: z.string().min(1),
+  validationStatus: z.enum(["valid", "invalid"]),
+  countedRuntimeEligible: z.boolean(),
+  runtimeCompatibility: z.string().min(1),
+  engineCompatibility: z.object({
+    spec: z.string().min(1),
+    engine: z.string().min(1),
+  }),
+})
+
+export const StrategyArtifactPublicMetadataSchema = z.object({
+  label: z.string().min(1).optional(),
+  name: z.string().min(1).optional(),
+  notes: z.string().min(1).optional(),
+  description: z.string().min(1).optional(),
+  tags: z.array(z.string().min(1)).optional(),
+  version: z.string().min(1).optional(),
+  archetype: z.string().min(1).optional(),
+  benchmarkStarterId: z.string().min(1).optional(),
+  level: z.string().min(1).optional(),
+})
+
+export const StrategyArtifactSourceSchema = z.object({
+  text: z
+    .string()
+    .min(1)
+    .refine(
+      (source) =>
+        new TextEncoder().encode(source).length <= STRATEGY_SOURCE_BYTES,
+      "Strategy source exceeds 64KB",
+    )
+    .optional(),
+  hash: z.string().min(1),
+  bytes: z.number().int().min(0).max(STRATEGY_SOURCE_BYTES),
+  format: StrategyArtifactSourceFormatSchema,
+  entrypoint: z.string().min(1),
+})
+
+export const StrategyArtifactSchema = z
+  .object({
+    id: z.string().min(1),
+    revisionId: z.string().min(1).optional(),
+    strategyId: z.string().min(1).optional(),
+    kind: StrategyArtifactKindSchema,
+    sourceVisibility: StrategyArtifactSourceVisibilitySchema,
+    forkEligibility: StrategyArtifactForkEligibilitySchema,
+    source: StrategyArtifactSourceSchema,
+    runtime: StrategyRuntimeMetadataSchema,
+    engineCompatibility: z.object({
+      spec: z.string().min(1),
+      engine: z.string().min(1),
+    }),
+    validation: StrategyRevisionValidationReportSchema,
+    publicMetadata: StrategyArtifactPublicMetadataSchema,
+    lineage: StrategyArtifactLineageSchema,
+    immutableEligibility:
+      StrategyArtifactEligibilitySnapshotSchema.optional(),
+    behaviorCompatibility: z.object({
+      compatibilityKey: z.string().min(1),
+      behaviorSignificantFields: z.array(z.string().min(1)),
+    }),
+  })
+  .superRefine((artifact, ctx) => {
+    if (
+      artifact.sourceVisibility === "public-summary-only" &&
+      artifact.source.text !== undefined
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["source", "text"],
+        message: "public summaries must not include Strategy source text",
+      })
+    }
+    if (
+      artifact.kind === "account-revision" &&
+      artifact.sourceVisibility === "built-in-forkable"
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sourceVisibility"],
+        message: "account revisions cannot be built-in forkable artifacts",
+      })
+    }
+  })
+
+export const StrategyArtifactPublicSummarySchema = z
+  .object({
+    id: z.string().min(1),
+    revisionId: z.string().min(1).optional(),
+    strategyId: z.string().min(1).optional(),
+    kind: StrategyArtifactKindSchema,
+    sourceVisibility: StrategyArtifactSourceVisibilitySchema,
+    forkEligibility: StrategyArtifactForkEligibilitySchema,
+    sourceHash: z.string().min(1),
+    sourceBytes: z.number().int().min(0).max(STRATEGY_SOURCE_BYTES),
+    sourceFormat: StrategyArtifactSourceFormatSchema,
+    runtime: PublicStrategyRuntimeMetadataSchema,
+    engineCompatibility: z.object({
+      spec: z.string().min(1),
+      engine: z.string().min(1),
+    }),
+    validationStatus: z.enum(["valid", "invalid"]),
+    publicMetadata: StrategyArtifactPublicMetadataSchema,
+    lineage: StrategyArtifactLineageSchema,
+    immutableEligibility:
+      StrategyArtifactEligibilitySnapshotSchema.optional(),
+  })
+  .strict()
+
 const SERVICE_SCHEMA_API_VERSION = "service-api-v1.8"
 
 const SERVICE_SCHEMA_ERROR_CODES = [

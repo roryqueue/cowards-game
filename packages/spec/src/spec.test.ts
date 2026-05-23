@@ -29,6 +29,8 @@ import {
   SoldierInactivityExplanationDtoSchema,
   SoldierInactivityExplanationCauseSchema,
   SoldierSchema,
+  StrategyArtifactPublicSummarySchema,
+  StrategyArtifactSchema,
   StrategyRevisionValidationReportSchema,
   StrategyRevisionValidationIssueSchema,
   StrategyRevisionSchema,
@@ -45,6 +47,7 @@ import {
   NON_JS_RUNTIME_SUPPORT_POLICY,
   STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
+  runtimeCompatibilityKey,
   validateStrategyRuntimeMetadataPolicy,
 } from "./runtime.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
@@ -676,6 +679,164 @@ describe("Coward's Game spec contracts", () => {
     }
 
     expect(StrategyRevisionSchema.parse(revision)).toEqual(revision)
+  })
+
+  it("StrategyArtifactSchema accepts built-in forkable artifacts with generic and legacy lineage", () => {
+    const source =
+      "export default { selectActivations() {}, soldierBrain() {} }"
+    const runtime = defaultRuntimeMetadata()
+    const sourceHash = "sha256:starter-artifact"
+    const compatibilityKey = JSON.stringify(
+      runtimeCompatibilityKey({
+        runtime,
+        sourceHash,
+        specVersion: COMPATIBILITY_VERSIONS.spec,
+        engineVersion: COMPATIBILITY_VERSIONS.engine,
+      }),
+    )
+    const artifact = {
+      id: "strategy-artifact:starter:centerline-bully",
+      kind: "starter",
+      sourceVisibility: "built-in-forkable",
+      forkEligibility: { forkable: true },
+      source: {
+        text: source,
+        hash: sourceHash,
+        bytes: new TextEncoder().encode(source).length,
+        format: "typescript",
+        entrypoint: "default",
+      },
+      runtime,
+      engineCompatibility: {
+        spec: COMPATIBILITY_VERSIONS.spec,
+        engine: COMPATIBILITY_VERSIONS.engine,
+      },
+      validation: {
+        valid: true,
+        errors: [],
+        warnings: [],
+        sourceBytes: new TextEncoder().encode(source).length,
+        forbiddenPatterns: [],
+        sourceHash,
+        runtimeVersion: COMPATIBILITY_VERSIONS.runtimeJs,
+        engineCompatibility: {
+          spec: COMPATIBILITY_VERSIONS.spec,
+          engine: COMPATIBILITY_VERSIONS.engine,
+        },
+      },
+      publicMetadata: {
+        name: "Centerline Bully",
+        description: "Starter Strategy",
+        tags: ["Starter"],
+        version: "v1.4",
+      },
+      lineage: {
+        starterLineage: {
+          starterId: "starter:centerline-bully",
+          starterName: "Centerline Bully",
+          starterVersion: "v1.4",
+          sourceHash,
+        },
+      },
+      immutableEligibility: {
+        lockedAt: "2026-05-23T00:00:00.000Z",
+        sourceHash,
+        validationStatus: "valid",
+        countedRuntimeEligible: true,
+        runtimeCompatibility: compatibilityKey,
+        engineCompatibility: {
+          spec: COMPATIBILITY_VERSIONS.spec,
+          engine: COMPATIBILITY_VERSIONS.engine,
+        },
+      },
+      behaviorCompatibility: {
+        compatibilityKey,
+        behaviorSignificantFields: [
+          "sourceHash",
+          "runtime",
+          "engineCompatibility",
+        ],
+      },
+    }
+
+    expect(StrategyArtifactSchema.parse(artifact)).toEqual(artifact)
+  })
+
+  it("StrategyArtifactPublicSummarySchema is source-safe by construction", () => {
+    const summary = {
+      id: "strategy-artifact:template:cautious",
+      kind: "template",
+      sourceVisibility: "public-summary-only",
+      forkEligibility: {
+        forkable: false,
+        reason: "summary-only",
+      },
+      sourceHash: "sha256:template",
+      sourceBytes: 256,
+      sourceFormat: "typescript",
+      runtime: {
+        ...defaultRuntimeMetadata(),
+        limits: undefined,
+      },
+      engineCompatibility: {
+        spec: COMPATIBILITY_VERSIONS.spec,
+        engine: COMPATIBILITY_VERSIONS.engine,
+      },
+      validationStatus: "valid",
+      publicMetadata: { label: "Cautious" },
+      lineage: {},
+    }
+    const { limits: _limits, ...runtime } = defaultRuntimeMetadata()
+
+    expect(
+      StrategyArtifactPublicSummarySchema.parse({ ...summary, runtime }),
+    ).not.toHaveProperty("source")
+    expect(
+      StrategyArtifactPublicSummarySchema.safeParse({
+        ...summary,
+        runtime,
+        source: "private",
+      }).success,
+    ).toBe(false)
+    expect(
+      StrategyArtifactSchema.safeParse({
+        id: "strategy-artifact:account:private",
+        kind: "account-revision",
+        sourceVisibility: "built-in-forkable",
+        forkEligibility: { forkable: true },
+        source: {
+          text: "export default {}",
+          hash: "sha256:private",
+          bytes: 17,
+          format: "typescript",
+          entrypoint: "default",
+        },
+        runtime: defaultRuntimeMetadata(),
+        engineCompatibility: {
+          spec: COMPATIBILITY_VERSIONS.spec,
+          engine: COMPATIBILITY_VERSIONS.engine,
+        },
+        validation: {
+          valid: true,
+          errors: [],
+          warnings: [],
+          sourceBytes: 17,
+          forbiddenPatterns: [],
+          sourceHash: "sha256:private",
+          runtimeVersion: COMPATIBILITY_VERSIONS.runtimeJs,
+          engineCompatibility: {
+            spec: COMPATIBILITY_VERSIONS.spec,
+            engine: COMPATIBILITY_VERSIONS.engine,
+          },
+        },
+        publicMetadata: {},
+        lineage: {},
+        behaviorCompatibility: {
+          compatibilityKey: "key",
+          behaviorSignificantFields: ["sourceHash"],
+        },
+      }).success,
+    ).toBe(false)
   })
 
   it("StrategyRevisionSchema rejects oversized source", () => {
