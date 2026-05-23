@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Go Backend Ownership Cutover
 status: planning
-stopped_at: Phase 86 context gathered
-last_updated: "2026-05-23T21:27:03.000Z"
+stopped_at: Phase 87 context gathered
+last_updated: "2026-05-23T21:30:32.000Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 7
@@ -31,10 +31,10 @@ See: .planning/PROJECT.md (updated 2026-05-23)
 
 ## Current Position
 
-Phase: 86 - Account Strategy Revision Source and Write Ownership
+Phase: 87 - Exhibition Creation Ownership and Worker Handoff
 Plan: Context gathered
 Status: Ready for planning
-Last activity: 2026-05-23 - Phase 86 discussion captured owner-private source, account revision write/fork, no-execution, metadata parity, and owner-safe failure decisions
+Last activity: 2026-05-23 - Phase 87 discussion captured exhibition creation ownership, transactional parity, worker handoff, no-source-execution, and owner-safe failure decisions
 
 Progress: [----------] 0%
 
@@ -121,6 +121,6 @@ None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing l
 
 ## Session Continuity
 
-Last session: 2026-05-23T21:27:03.000Z
-Stopped at: Phase 86 context gathered
-Resume file: .planning/phases/086-account-strategy-revision-source-and-write-ownership/086-CONTEXT.md
+Last session: 2026-05-23T21:30:32.000Z
+Stopped at: Phase 87 context gathered
+Resume file: .planning/phases/087-exhibition-creation-ownership-and-worker-handoff/087-CONTEXT.md
