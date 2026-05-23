@@ -1,0 +1,150 @@
+{
+  "schemaVersion": "v1.14-boundary-baseline",
+  "milestone": "v1.14",
+  "capturedAt": "2026-05-23T23:50:00.000Z",
+  "typeScriptRole": "parity_oracle_and_explicit_rollback_reference",
+  "goRole": "persistence_and_orchestration_contract_owner_where_selected",
+  "strategyRuntimeOwner": "typescript_worker_runtime_js",
+  "monitorBaseline": {
+    "strictOffenses": 0,
+    "reportOnlyOffenses": 29,
+    "source": "v1.13 promotion evidence"
+  },
+  "ownershipCategories": {
+    "liveGoRoutes": [
+      "getPublicStrategyPage",
+      "getPublicPlayerPage",
+      "getPublicLadderSeason",
+      "getPublicMatchSetSummary",
+      "getPublicReplayMetadata",
+      "authSession",
+      "createSession",
+      "createSessionSignUp",
+      "revokeSession",
+      "listStrategyRevisions",
+      "getStrategyRevisionSource",
+      "createStrategyRevision",
+      "createMatchSet"
+    ],
+    "fixtureParityRoutes": [
+      "health",
+      "public strategy/player/ladder fixtures",
+      "public matchset/replay fixtures",
+      "owner account fixtures",
+      "analytics fixtures"
+    ],
+    "typeScriptOracleReferenceSurfaces": [
+      "packages/persistence/src/starter-strategies.ts",
+      "packages/persistence/src/advanced-strategies.ts",
+      "packages/persistence/src/account-revisions.ts",
+      "apps/web/app/competitive/server.ts",
+      "packages/service/src/index.ts"
+    ],
+    "workerOwnedRuntimeSurfaces": [
+      "apps/worker/src/runner.ts",
+      "apps/worker/src/runtime-config.ts",
+      "packages/runtime-js/src/adapter.ts",
+      "packages/runtime-js/src/executor.ts",
+      "packages/runtime-js/src/worker-thread-adapter.ts",
+      "packages/runtime-js/src/subprocess-adapter.ts",
+      "packages/runtime-js/src/container-subprocess-adapter.ts"
+    ],
+    "deferredSurfaces": [
+      "Go job claiming/completion",
+      "Go Match execution",
+      "Go Chronicle generation",
+      "Go runtime failure classification",
+      "Go migrations/schema ownership",
+      "full replay projection",
+      "owner-debug replay migration",
+      "Workshop runtime ownership",
+      "production hostile-code sandbox promotion",
+      "counted non-JS play"
+    ],
+    "v114PromotionCandidates": [
+      "generic Strategy Artifact contract",
+      "generated Strategy Artifact manifest",
+      "strategy-runtime-abi-v1.14",
+      "JS runtime adapter ABI conformance bridge",
+      "Go Starter fork route",
+      "Go Advanced fork route",
+      "manifest-backed lineage preservation",
+      "central public forbidden-field contract",
+      "replay board realism gate"
+    ]
+  },
+  "driftInventory": [
+    "Starter/Advanced fork deferral",
+    "Go lineage loss",
+    "reduced Go validation",
+    "runtime ABI shape drift",
+    "adapter ID drift",
+    "limit drift",
+    "failure taxonomy drift",
+    "privacy deny-list drift",
+    "topology gaps",
+    "replay board realism gaps",
+    "report-only import baseline"
+  ],
+  "nonGoals": [
+    {
+      "scope": "Go/web/API Strategy execution",
+      "owner": "Phase 93 and Phase 95 monitors",
+      "status": "blocked"
+    },
+    {
+      "scope": "Node vm as a security boundary",
+      "owner": "Phase 92 and Phase 93 runtime contract",
+      "status": "blocked"
+    },
+    {
+      "scope": "counted non-JS play",
+      "owner": "future runtime promotion milestone",
+      "status": "deferred"
+    },
+    {
+      "scope": "production sandbox promotion",
+      "owner": "future runtime isolation milestone",
+      "status": "deferred"
+    },
+    {
+      "scope": "Go migrations/schema ownership",
+      "owner": "future backend milestone",
+      "status": "deferred"
+    },
+    {
+      "scope": "full replay projection and owner-debug replay migration",
+      "owner": "future replay milestone",
+      "status": "deferred"
+    },
+    {
+      "scope": "Workshop runtime ownership",
+      "owner": "future Workshop backend milestone",
+      "status": "deferred"
+    },
+    {
+      "scope": "job claiming/completion migration",
+      "owner": "future worker/backend milestone",
+      "status": "deferred"
+    }
+  ],
+  "publicOutputForbiddenByDefault": [
+    "Strategy source",
+    "StrategyMemory",
+    "SoldierMemory",
+    "objective payloads",
+    "owner debug",
+    "raw Awareness Grid",
+    "stack traces",
+    "stderr",
+    "sessions",
+    "tokens",
+    "host paths",
+    "DB DSNs",
+    "private runtime internals"
+  ],
+  "sourceReturningExceptions": [
+    "authenticated owner-private Strategy source endpoint",
+    "built-in forkable Strategy Artifact source from generated public/forkable manifests"
+  ]
+}
