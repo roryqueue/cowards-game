@@ -70,6 +70,63 @@ func TestEndpointFixturesMatchCanonicalJSON(t *testing.T) {
 	}
 }
 
+func TestStrategyArtifactManifestParsesAsDataOnly(t *testing.T) {
+	type artifactManifest struct {
+		SchemaVersion string `json:"schemaVersion"`
+		ArtifactCount int    `json:"artifactCount"`
+		ContentHash   string `json:"contentHash"`
+		Artifacts     []struct {
+			ID               string `json:"id"`
+			Kind             string `json:"kind"`
+			SourceVisibility string `json:"sourceVisibility"`
+			ForkEligibility  struct {
+				Forkable bool `json:"forkable"`
+			} `json:"forkEligibility"`
+			Source struct {
+				Text  string `json:"text"`
+				Hash  string `json:"hash"`
+				Bytes int    `json:"bytes"`
+			} `json:"source"`
+			Validation struct {
+				Valid      bool   `json:"valid"`
+				SourceHash string `json:"sourceHash"`
+			} `json:"validation"`
+		} `json:"artifacts"`
+	}
+
+	bytes, err := os.ReadFile("../../packages/spec/artifacts/strategy-artifacts.v1.14.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest artifactManifest
+	if err := json.Unmarshal(bytes, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	if manifest.SchemaVersion != "strategy-artifact-manifest-v1.14" {
+		t.Fatalf("unexpected schema version %q", manifest.SchemaVersion)
+	}
+	if manifest.ArtifactCount != len(manifest.Artifacts) || manifest.ArtifactCount == 0 {
+		t.Fatalf("artifact count mismatch: %d vs %d", manifest.ArtifactCount, len(manifest.Artifacts))
+	}
+	if !strings.HasPrefix(manifest.ContentHash, "sha256:") {
+		t.Fatalf("manifest missing content hash: %q", manifest.ContentHash)
+	}
+	for _, artifact := range manifest.Artifacts {
+		if artifact.Kind == "account-revision" {
+			t.Fatalf("generated manifest must not contain owner-private account source: %s", artifact.ID)
+		}
+		if artifact.SourceVisibility != "built-in-forkable" || !artifact.ForkEligibility.Forkable {
+			t.Fatalf("artifact is not explicitly built-in forkable: %s", artifact.ID)
+		}
+		if artifact.Source.Text == "" || artifact.Source.Hash == "" || artifact.Source.Bytes <= 0 {
+			t.Fatalf("artifact has incomplete source metadata: %s", artifact.ID)
+		}
+		if artifact.Validation.SourceHash != artifact.Source.Hash {
+			t.Fatalf("artifact validation hash drifted for %s", artifact.ID)
+		}
+	}
+}
+
 func TestPublicReadRoutesDecodeIdentifiersWithoutCrossRouteFallback(t *testing.T) {
 	tests := []struct {
 		name          string

@@ -1,0 +1,2417 @@
+{
+  "schemaVersion": "strategy-artifact-manifest-v1.14",
+  "generatedBy": "scripts/generate-strategy-artifact-manifest.ts",
+  "sourceOfTruth": "typescript-registries",
+  "artifactCount": 23,
+  "contentHash": "sha256:732ff750bdcc382e464931baa9ffd208d7e8101cf33732f503d0331703f9fc61",
+  "artifacts": [
+    {
+      "id": "strategy-artifact:advanced:center-gravity",
+      "kind": "advanced",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Advanced seed v1.5: center gravity\n// Benchmark reference: starter:centerline-bully.\n// Shared baseline: leave starting edge early, take rear-square chances, avoid outer-ring contraction risk,\n// avoid self-stoning, avoid off-board moves, and keep archetype flavor as a secondary priority.\nconst profile = {\n  \"banner\": \"center gravity\",\n  \"doctrine\": \"center-gravity\",\n  \"contactBias\": 3,\n  \"centerBias\": 5,\n  \"wallBias\": 0,\n  \"mobilityBias\": 1,\n  \"trapBias\": 0,\n  \"memoryBias\": 0,\n  \"lateBias\": 2\n}\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst reverse = { UP: \"DOWN\", RIGHT: \"LEFT\", DOWN: \"UP\", LEFT: \"RIGHT\" }\nconst dx = { UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1 }\nconst dy = { UP: -1, RIGHT: 0, DOWN: 1, LEFT: 0 }\nconst step = (p, d) => p ? { x: p.x + dx[d], y: p.y + dy[d] } : null\nconst inside = (p, b) => p && p.x >= b.minX && p.x <= b.maxX && p.y >= b.minY && p.y <= b.maxY\nconst dist = (a, b) => a && b ? Math.abs(a.x - b.x) + Math.abs(a.y - b.y) : 99\nconst centerDist = (p, b) => p ? Math.abs(p.x - (b.minX + b.maxX) / 2) + Math.abs(p.y - (b.minY + b.maxY) / 2) : 99\nconst toward = (a, b, f) => !a || !b ? f : Math.abs(b.x - a.x) > Math.abs(b.y - a.y) ? (b.x > a.x ? \"RIGHT\" : \"LEFT\") : b.y !== a.y ? (b.y > a.y ? \"DOWN\" : \"UP\") : f\nconst edge = (p, b) => p && (p.x === b.minX || p.x === b.maxX || p.y === b.minY || p.y === b.maxY)\nconst nearEnemy = (s, es) => es.filter((e) => e.status === \"ACTIVE\" && e.position).sort((a, b) => dist(s.position, a.position) - dist(s.position, b.position))[0] ?? null\nconst c = (g, d) => g.cells.find((x) => x.dx === dx[d] && x.dy === dy[d])\nconst rc = (g, x, y) => g.cells.find((cell) => cell.dx === x && cell.dy === y)\nconst relDir = (x, y, f) => Math.abs(x) > Math.abs(y) ? (x > 0 ? \"RIGHT\" : \"LEFT\") : y ? (y > 0 ? \"DOWN\" : \"UP\") : f\nconst behind = (f) => f === \"UP\" ? [0, 1] : f === \"DOWN\" ? [0, -1] : f === \"LEFT\" ? [1, 0] : [-1, 0]\nconst safeBoard = (s, input) =>\n  directions.filter((d) => inside(step(s.position, d), input.board.bounds))\nconst backstabBoard = (s, input) => {\n  for (const e of input.enemySoldiers) {\n    if (e.status !== \"ACTIVE\" || !e.position || !e.facing) continue\n    const b = behind(e.facing)\n    const target = { x: e.position.x + b[0], y: e.position.y + b[1] }\n    if (inside(target, input.board.bounds) && dist(s.position, target) === 1) return toward(s.position, target, s.facing ?? \"UP\")\n  }\n  return null\n}\nconst prefer = (s, input) => {\n  const e = nearEnemy(s, input.enemySoldiers)\n  const toEnemy = toward(s.position, e?.position, s.facing ?? \"UP\")\n  const toCenter = directions.filter((d) => inside(step(s.position, d), input.board.bounds)).sort((a, b) => centerDist(step(s.position, a), input.board.bounds) - centerDist(step(s.position, b), input.board.bounds))[0] ?? toEnemy\n  if (profile.centerBias + profile.lateBias + profile.mobilityBias > profile.contactBias + profile.wallBias) return toCenter\n  return backstabBoard(s, input) ?? toEnemy\n}\nconst rearMove = (g) => {\n  for (const e of g.cells) {\n    if (e.contents !== \"ENEMY_ACTIVE\" || !e.facing) continue\n    const b = behind(e.facing)\n    const tx = e.dx + b[0]\n    const ty = e.dy + b[1]\n    if (Math.abs(tx) + Math.abs(ty) === 1 && rc(g, tx, ty)?.contents === \"EMPTY\") return relDir(tx, ty, \"UP\")\n    if (tx === 0 && ty === 0 && Math.abs(e.dx) + Math.abs(e.dy) === 1) return relDir(e.dx, e.dy, \"UP\")\n  }\n  return null\n}\nconst wallAway = (g, d) => g.cells.reduce((n, x) => n + (x.contents !== \"WALL\" ? 0 : x.dx < 0 && d === \"RIGHT\" ? 8 : x.dx > 0 && d === \"LEFT\" ? 8 : x.dy < 0 && d === \"DOWN\" ? 8 : x.dy > 0 && d === \"UP\" ? 8 : 0), 0)\nconst score = (input, d, o, m) => {\n  const cell = c(input.awarenessGrid, d)\n  if (!cell || cell.contents === \"WALL\" || cell.contents === \"TERRAIN_STONE\" || cell.contents.endsWith(\"STONE\")) return -999\n  if (input.self.lastSuccessfulMoveDirection === reverse[d]) return -998\n  const activeContact = cell.contents === \"ENEMY_ACTIVE\" || cell.contents === \"FRIENDLY_ACTIVE\"\n  if (activeContact && (cell.facing === d || cell.facing === reverse[d])) return -997\n  if (cell.contents === \"FRIENDLY_ACTIVE\" && rc(input.awarenessGrid, dx[d] * 2, dy[d] * 2)?.contents === \"WALL\") return -997\n  let s = cell.contents === \"ENEMY_ACTIVE\" ? 6 + profile.contactBias : cell.contents === \"FRIENDLY_ACTIVE\" ? -3 : 1\n  if (d === o.preferred) s += 12\n  if ((o.safeDirs ?? []).includes(d)) s += 5\n  if (d === m.last) s += profile.memoryBias\n  s += wallAway(input.awarenessGrid, d) * (o.contractionSoon ? 3 : 1)\n  if (profile.mobilityBias && d !== m.tried) s += profile.mobilityBias\n  if (o.contractionSoon && cell.contents === \"EMPTY\") s += profile.lateBias\n  if (cell.contents === \"ENEMY_ACTIVE\") s += profile.trapBias\n  return s\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const contractionSoon = input.roundNumber === 4\n    const active = input.mySoldiers.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position)\n    const ranked = active\n      .map((soldier, index) => {\n        const unmoved = soldier.lastSuccessfulMoveDirection ? 0 : 1\n        const enemy = nearEnemy(soldier, input.enemySoldiers)\n        const edgeRisk = edge(soldier.position, input.board.bounds) ? 1 : 0\n        const backstabReady = backstabBoard(soldier, input) ? 1 : 0\n        const pressure = 20 - dist(soldier.position, enemy?.position)\n        const center = 20 - centerDist(soldier.position, input.board.bounds)\n        const score =\n          unmoved * 1000 +\n          backstabReady * 700 +\n          (contractionSoon ? edgeRisk * 600 : edgeRisk * 80) +\n          pressure * profile.contactBias +\n          center * (profile.centerBias + profile.lateBias) +\n          (profile.mobilityBias * (soldier.id === memory.lastSelected ? -3 : 1)) +\n          index * -0.01\n        return { soldier, score }\n      })\n      .sort((left, right) => right.score - left.score)\n    const selected = ranked.slice(0, input.activationCount).map(({ soldier }) => {\n      const preferred = prefer(soldier, input)\n      return {\n        soldierId: soldier.id,\n        objective: {\n          doctrine: profile.doctrine,\n          preferred,\n          safeDirs: safeBoard(soldier, input),\n          contractionSoon,\n          seekBackstab: true,\n        },\n      }\n    })\n    return {\n      activationOrders: selected,\n      strategyMemory: {\n        ...memory,\n        lastSelected: selected[0]?.soldierId ?? memory.lastSelected ?? null,\n        selectedThisRound: selected.map((entry) => entry.soldierId),\n      },\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    const objective = input.objective && typeof input.objective === \"object\" ? input.objective : {}\n    const backstab = rearMove(input.awarenessGrid)\n    const best = directions\n      .map((direction) => [direction, score(input, direction, objective, memory)])\n      .sort((left, right) => right[1] - left[1])\n    const chosen = backstab && score(input, backstab, objective, memory) > -900 ? backstab : (best[0]?.[1] > -900 ? best[0][0] : null)\n    if (chosen) {\n      return {\n        action: { type: \"MOVE\", direction: chosen },\n        soldierMemory: {\n          ...memory,\n          last: chosen,\n          tried: chosen,\n          doctrine: profile.doctrine,\n        },\n      }\n    }\n    const seen = input.awarenessGrid.cells.filter((cell) => cell.contents === \"ENEMY_ACTIVE\").sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - (Math.abs(b.dx) + Math.abs(b.dy)))[0]\n    const turn = objective.preferred ?? (seen ? relDir(seen.dx, seen.dy, input.self.facing ?? \"UP\") : input.self.facing ?? \"UP\")\n    return {\n      action: { type: \"TURN\", direction: turn },\n      soldierMemory: {\n        ...memory,\n        tried: turn,\n        doctrine: profile.doctrine,\n      },\n    }\n  }\n}",
+        "hash": "c0462afc35863ae47e3cff9d4b2878a8aff1a282981f6c25ee4fb30afd02bece",
+        "bytes": 7910,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 7910,
+        "forbiddenPatterns": [],
+        "sourceHash": "c0462afc35863ae47e3cff9d4b2878a8aff1a282981f6c25ee4fb30afd02bece",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Center Gravity",
+        "description": "A center-control seed that demonstrates lane priority and pressure from central space.",
+        "tags": [
+          "Advanced seed",
+          "Center",
+          "Control"
+        ],
+        "version": "v1.5",
+        "archetype": "center control",
+        "benchmarkStarterId": "starter:centerline-bully",
+        "level": "advanced"
+      },
+      "lineage": {
+        "derivedFrom": {
+          "artifactId": "strategy-artifact:starter:centerline-bully",
+          "kind": "starter",
+          "sourceHash": "c0462afc35863ae47e3cff9d4b2878a8aff1a282981f6c25ee4fb30afd02bece",
+          "label": "starter:centerline-bully"
+        },
+        "advancedLineage": {
+          "advancedId": "advanced:center-gravity",
+          "advancedName": "Center Gravity",
+          "advancedVersion": "v1.5",
+          "archetype": "center control",
+          "sourceHash": "c0462afc35863ae47e3cff9d4b2878a8aff1a282981f6c25ee4fb30afd02bece"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "c0462afc35863ae47e3cff9d4b2878a8aff1a282981f6c25ee4fb30afd02bece",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:034a0971635c13fb6c73507607a3b0c39a004f3f6138b5a9b9d78269d3081cc5",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:034a0971635c13fb6c73507607a3b0c39a004f3f6138b5a9b9d78269d3081cc5",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:advanced:ghost-orbit",
+      "kind": "advanced",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Advanced seed v1.5: evasive orbit\n// Benchmark reference: starter:escape-artist.\n// Shared baseline: leave starting edge early, take rear-square chances, avoid outer-ring contraction risk,\n// avoid self-stoning, avoid off-board moves, and keep archetype flavor as a secondary priority.\nconst profile = {\n  \"banner\": \"evasive orbit\",\n  \"doctrine\": \"ghost-orbit\",\n  \"contactBias\": 1,\n  \"centerBias\": 2,\n  \"wallBias\": 0,\n  \"mobilityBias\": 5,\n  \"trapBias\": 0,\n  \"memoryBias\": 4,\n  \"lateBias\": 3\n}\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst reverse = { UP: \"DOWN\", RIGHT: \"LEFT\", DOWN: \"UP\", LEFT: \"RIGHT\" }\nconst dx = { UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1 }\nconst dy = { UP: -1, RIGHT: 0, DOWN: 1, LEFT: 0 }\nconst step = (p, d) => p ? { x: p.x + dx[d], y: p.y + dy[d] } : null\nconst inside = (p, b) => p && p.x >= b.minX && p.x <= b.maxX && p.y >= b.minY && p.y <= b.maxY\nconst dist = (a, b) => a && b ? Math.abs(a.x - b.x) + Math.abs(a.y - b.y) : 99\nconst centerDist = (p, b) => p ? Math.abs(p.x - (b.minX + b.maxX) / 2) + Math.abs(p.y - (b.minY + b.maxY) / 2) : 99\nconst toward = (a, b, f) => !a || !b ? f : Math.abs(b.x - a.x) > Math.abs(b.y - a.y) ? (b.x > a.x ? \"RIGHT\" : \"LEFT\") : b.y !== a.y ? (b.y > a.y ? \"DOWN\" : \"UP\") : f\nconst edge = (p, b) => p && (p.x === b.minX || p.x === b.maxX || p.y === b.minY || p.y === b.maxY)\nconst nearEnemy = (s, es) => es.filter((e) => e.status === \"ACTIVE\" && e.position).sort((a, b) => dist(s.position, a.position) - dist(s.position, b.position))[0] ?? null\nconst c = (g, d) => g.cells.find((x) => x.dx === dx[d] && x.dy === dy[d])\nconst rc = (g, x, y) => g.cells.find((cell) => cell.dx === x && cell.dy === y)\nconst relDir = (x, y, f) => Math.abs(x) > Math.abs(y) ? (x > 0 ? \"RIGHT\" : \"LEFT\") : y ? (y > 0 ? \"DOWN\" : \"UP\") : f\nconst behind = (f) => f === \"UP\" ? [0, 1] : f === \"DOWN\" ? [0, -1] : f === \"LEFT\" ? [1, 0] : [-1, 0]\nconst safeBoard = (s, input) =>\n  directions.filter((d) => inside(step(s.position, d), input.board.bounds))\nconst backstabBoard = (s, input) => {\n  for (const e of input.enemySoldiers) {\n    if (e.status !== \"ACTIVE\" || !e.position || !e.facing) continue\n    const b = behind(e.facing)\n    const target = { x: e.position.x + b[0], y: e.position.y + b[1] }\n    if (inside(target, input.board.bounds) && dist(s.position, target) === 1) return toward(s.position, target, s.facing ?? \"UP\")\n  }\n  return null\n}\nconst prefer = (s, input) => {\n  const e = nearEnemy(s, input.enemySoldiers)\n  const toEnemy = toward(s.position, e?.position, s.facing ?? \"UP\")\n  const toCenter = directions.filter((d) => inside(step(s.position, d), input.board.bounds)).sort((a, b) => centerDist(step(s.position, a), input.board.bounds) - centerDist(step(s.position, b), input.board.bounds))[0] ?? toEnemy\n  if (profile.centerBias + profile.lateBias + profile.mobilityBias > profile.contactBias + profile.wallBias) return toCenter\n  return backstabBoard(s, input) ?? toEnemy\n}\nconst rearMove = (g) => {\n  for (const e of g.cells) {\n    if (e.contents !== \"ENEMY_ACTIVE\" || !e.facing) continue\n    const b = behind(e.facing)\n    const tx = e.dx + b[0]\n    const ty = e.dy + b[1]\n    if (Math.abs(tx) + Math.abs(ty) === 1 && rc(g, tx, ty)?.contents === \"EMPTY\") return relDir(tx, ty, \"UP\")\n    if (tx === 0 && ty === 0 && Math.abs(e.dx) + Math.abs(e.dy) === 1) return relDir(e.dx, e.dy, \"UP\")\n  }\n  return null\n}\nconst wallAway = (g, d) => g.cells.reduce((n, x) => n + (x.contents !== \"WALL\" ? 0 : x.dx < 0 && d === \"RIGHT\" ? 8 : x.dx > 0 && d === \"LEFT\" ? 8 : x.dy < 0 && d === \"DOWN\" ? 8 : x.dy > 0 && d === \"UP\" ? 8 : 0), 0)\nconst score = (input, d, o, m) => {\n  const cell = c(input.awarenessGrid, d)\n  if (!cell || cell.contents === \"WALL\" || cell.contents === \"TERRAIN_STONE\" || cell.contents.endsWith(\"STONE\")) return -999\n  if (input.self.lastSuccessfulMoveDirection === reverse[d]) return -998\n  const activeContact = cell.contents === \"ENEMY_ACTIVE\" || cell.contents === \"FRIENDLY_ACTIVE\"\n  if (activeContact && (cell.facing === d || cell.facing === reverse[d])) return -997\n  if (cell.contents === \"FRIENDLY_ACTIVE\" && rc(input.awarenessGrid, dx[d] * 2, dy[d] * 2)?.contents === \"WALL\") return -997\n  let s = cell.contents === \"ENEMY_ACTIVE\" ? 6 + profile.contactBias : cell.contents === \"FRIENDLY_ACTIVE\" ? -3 : 1\n  if (d === o.preferred) s += 12\n  if ((o.safeDirs ?? []).includes(d)) s += 5\n  if (d === m.last) s += profile.memoryBias\n  s += wallAway(input.awarenessGrid, d) * (o.contractionSoon ? 3 : 1)\n  if (profile.mobilityBias && d !== m.tried) s += profile.mobilityBias\n  if (o.contractionSoon && cell.contents === \"EMPTY\") s += profile.lateBias\n  if (cell.contents === \"ENEMY_ACTIVE\") s += profile.trapBias\n  return s\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const contractionSoon = input.roundNumber === 4\n    const active = input.mySoldiers.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position)\n    const ranked = active\n      .map((soldier, index) => {\n        const unmoved = soldier.lastSuccessfulMoveDirection ? 0 : 1\n        const enemy = nearEnemy(soldier, input.enemySoldiers)\n        const edgeRisk = edge(soldier.position, input.board.bounds) ? 1 : 0\n        const backstabReady = backstabBoard(soldier, input) ? 1 : 0\n        const pressure = 20 - dist(soldier.position, enemy?.position)\n        const center = 20 - centerDist(soldier.position, input.board.bounds)\n        const score =\n          unmoved * 1000 +\n          backstabReady * 700 +\n          (contractionSoon ? edgeRisk * 600 : edgeRisk * 80) +\n          pressure * profile.contactBias +\n          center * (profile.centerBias + profile.lateBias) +\n          (profile.mobilityBias * (soldier.id === memory.lastSelected ? -3 : 1)) +\n          index * -0.01\n        return { soldier, score }\n      })\n      .sort((left, right) => right.score - left.score)\n    const selected = ranked.slice(0, input.activationCount).map(({ soldier }) => {\n      const preferred = prefer(soldier, input)\n      return {\n        soldierId: soldier.id,\n        objective: {\n          doctrine: profile.doctrine,\n          preferred,\n          safeDirs: safeBoard(soldier, input),\n          contractionSoon,\n          seekBackstab: true,\n        },\n      }\n    })\n    return {\n      activationOrders: selected,\n      strategyMemory: {\n        ...memory,\n        lastSelected: selected[0]?.soldierId ?? memory.lastSelected ?? null,\n        selectedThisRound: selected.map((entry) => entry.soldierId),\n      },\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    const objective = input.objective && typeof input.objective === \"object\" ? input.objective : {}\n    const backstab = rearMove(input.awarenessGrid)\n    const best = directions\n      .map((direction) => [direction, score(input, direction, objective, memory)])\n      .sort((left, right) => right[1] - left[1])\n    const chosen = backstab && score(input, backstab, objective, memory) > -900 ? backstab : (best[0]?.[1] > -900 ? best[0][0] : null)\n    if (chosen) {\n      return {\n        action: { type: \"MOVE\", direction: chosen },\n        soldierMemory: {\n          ...memory,\n          last: chosen,\n          tried: chosen,\n          doctrine: profile.doctrine,\n        },\n      }\n    }\n    const seen = input.awarenessGrid.cells.filter((cell) => cell.contents === \"ENEMY_ACTIVE\").sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - (Math.abs(b.dx) + Math.abs(b.dy)))[0]\n    const turn = objective.preferred ?? (seen ? relDir(seen.dx, seen.dy, input.self.facing ?? \"UP\") : input.self.facing ?? \"UP\")\n    return {\n      action: { type: \"TURN\", direction: turn },\n      soldierMemory: {\n        ...memory,\n        tried: turn,\n        doctrine: profile.doctrine,\n      },\n    }\n  }\n}",
+        "hash": "0fa96cb53ab429e1599feb0cdae182e7b1cb2981be4b49a60ae6b7a9b4db2455",
+        "bytes": 7902,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 7902,
+        "forbiddenPatterns": [],
+        "sourceHash": "0fa96cb53ab429e1599feb0cdae182e7b1cb2981be4b49a60ae6b7a9b4db2455",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Ghost Orbit",
+        "description": "An evasive mobility seed that teaches controlled movement instead of pure flight.",
+        "tags": [
+          "Advanced seed",
+          "Mobility",
+          "Evasion",
+          "Memory"
+        ],
+        "version": "v1.5",
+        "archetype": "evasive mobility",
+        "benchmarkStarterId": "starter:escape-artist",
+        "level": "advanced"
+      },
+      "lineage": {
+        "derivedFrom": {
+          "artifactId": "strategy-artifact:starter:escape-artist",
+          "kind": "starter",
+          "sourceHash": "0fa96cb53ab429e1599feb0cdae182e7b1cb2981be4b49a60ae6b7a9b4db2455",
+          "label": "starter:escape-artist"
+        },
+        "advancedLineage": {
+          "advancedId": "advanced:ghost-orbit",
+          "advancedName": "Ghost Orbit",
+          "advancedVersion": "v1.5",
+          "archetype": "evasive mobility",
+          "sourceHash": "0fa96cb53ab429e1599feb0cdae182e7b1cb2981be4b49a60ae6b7a9b4db2455"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "0fa96cb53ab429e1599feb0cdae182e7b1cb2981be4b49a60ae6b7a9b4db2455",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:2acf9029dd39c6559d06cb707d8246c56d9fd4bdebc5e17b4f145ab06d3ac6ad",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:2acf9029dd39c6559d06cb707d8246c56d9fd4bdebc5e17b4f145ab06d3ac6ad",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:advanced:last-light",
+      "kind": "advanced",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Advanced seed v1.5: late-cycle light\n// Benchmark reference: starter:corner-lurker.\n// Shared baseline: leave starting edge early, take rear-square chances, avoid outer-ring contraction risk,\n// avoid self-stoning, avoid off-board moves, and keep archetype flavor as a secondary priority.\nconst profile = {\n  \"banner\": \"late-cycle light\",\n  \"doctrine\": \"last-light\",\n  \"contactBias\": 1,\n  \"centerBias\": 3,\n  \"wallBias\": 0,\n  \"mobilityBias\": 3,\n  \"trapBias\": 1,\n  \"memoryBias\": 4,\n  \"lateBias\": 6\n}\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst reverse = { UP: \"DOWN\", RIGHT: \"LEFT\", DOWN: \"UP\", LEFT: \"RIGHT\" }\nconst dx = { UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1 }\nconst dy = { UP: -1, RIGHT: 0, DOWN: 1, LEFT: 0 }\nconst step = (p, d) => p ? { x: p.x + dx[d], y: p.y + dy[d] } : null\nconst inside = (p, b) => p && p.x >= b.minX && p.x <= b.maxX && p.y >= b.minY && p.y <= b.maxY\nconst dist = (a, b) => a && b ? Math.abs(a.x - b.x) + Math.abs(a.y - b.y) : 99\nconst centerDist = (p, b) => p ? Math.abs(p.x - (b.minX + b.maxX) / 2) + Math.abs(p.y - (b.minY + b.maxY) / 2) : 99\nconst toward = (a, b, f) => !a || !b ? f : Math.abs(b.x - a.x) > Math.abs(b.y - a.y) ? (b.x > a.x ? \"RIGHT\" : \"LEFT\") : b.y !== a.y ? (b.y > a.y ? \"DOWN\" : \"UP\") : f\nconst edge = (p, b) => p && (p.x === b.minX || p.x === b.maxX || p.y === b.minY || p.y === b.maxY)\nconst nearEnemy = (s, es) => es.filter((e) => e.status === \"ACTIVE\" && e.position).sort((a, b) => dist(s.position, a.position) - dist(s.position, b.position))[0] ?? null\nconst c = (g, d) => g.cells.find((x) => x.dx === dx[d] && x.dy === dy[d])\nconst rc = (g, x, y) => g.cells.find((cell) => cell.dx === x && cell.dy === y)\nconst relDir = (x, y, f) => Math.abs(x) > Math.abs(y) ? (x > 0 ? \"RIGHT\" : \"LEFT\") : y ? (y > 0 ? \"DOWN\" : \"UP\") : f\nconst behind = (f) => f === \"UP\" ? [0, 1] : f === \"DOWN\" ? [0, -1] : f === \"LEFT\" ? [1, 0] : [-1, 0]\nconst safeBoard = (s, input) =>\n  directions.filter((d) => inside(step(s.position, d), input.board.bounds))\nconst backstabBoard = (s, input) => {\n  for (const e of input.enemySoldiers) {\n    if (e.status !== \"ACTIVE\" || !e.position || !e.facing) continue\n    const b = behind(e.facing)\n    const target = { x: e.position.x + b[0], y: e.position.y + b[1] }\n    if (inside(target, input.board.bounds) && dist(s.position, target) === 1) return toward(s.position, target, s.facing ?? \"UP\")\n  }\n  return null\n}\nconst prefer = (s, input) => {\n  const e = nearEnemy(s, input.enemySoldiers)\n  const toEnemy = toward(s.position, e?.position, s.facing ?? \"UP\")\n  const toCenter = directions.filter((d) => inside(step(s.position, d), input.board.bounds)).sort((a, b) => centerDist(step(s.position, a), input.board.bounds) - centerDist(step(s.position, b), input.board.bounds))[0] ?? toEnemy\n  if (profile.centerBias + profile.lateBias + profile.mobilityBias > profile.contactBias + profile.wallBias) return toCenter\n  return backstabBoard(s, input) ?? toEnemy\n}\nconst rearMove = (g) => {\n  for (const e of g.cells) {\n    if (e.contents !== \"ENEMY_ACTIVE\" || !e.facing) continue\n    const b = behind(e.facing)\n    const tx = e.dx + b[0]\n    const ty = e.dy + b[1]\n    if (Math.abs(tx) + Math.abs(ty) === 1 && rc(g, tx, ty)?.contents === \"EMPTY\") return relDir(tx, ty, \"UP\")\n    if (tx === 0 && ty === 0 && Math.abs(e.dx) + Math.abs(e.dy) === 1) return relDir(e.dx, e.dy, \"UP\")\n  }\n  return null\n}\nconst wallAway = (g, d) => g.cells.reduce((n, x) => n + (x.contents !== \"WALL\" ? 0 : x.dx < 0 && d === \"RIGHT\" ? 8 : x.dx > 0 && d === \"LEFT\" ? 8 : x.dy < 0 && d === \"DOWN\" ? 8 : x.dy > 0 && d === \"UP\" ? 8 : 0), 0)\nconst score = (input, d, o, m) => {\n  const cell = c(input.awarenessGrid, d)\n  if (!cell || cell.contents === \"WALL\" || cell.contents === \"TERRAIN_STONE\" || cell.contents.endsWith(\"STONE\")) return -999\n  if (input.self.lastSuccessfulMoveDirection === reverse[d]) return -998\n  const activeContact = cell.contents === \"ENEMY_ACTIVE\" || cell.contents === \"FRIENDLY_ACTIVE\"\n  if (activeContact && (cell.facing === d || cell.facing === reverse[d])) return -997\n  if (cell.contents === \"FRIENDLY_ACTIVE\" && rc(input.awarenessGrid, dx[d] * 2, dy[d] * 2)?.contents === \"WALL\") return -997\n  let s = cell.contents === \"ENEMY_ACTIVE\" ? 6 + profile.contactBias : cell.contents === \"FRIENDLY_ACTIVE\" ? -3 : 1\n  if (d === o.preferred) s += 12\n  if ((o.safeDirs ?? []).includes(d)) s += 5\n  if (d === m.last) s += profile.memoryBias\n  s += wallAway(input.awarenessGrid, d) * (o.contractionSoon ? 3 : 1)\n  if (profile.mobilityBias && d !== m.tried) s += profile.mobilityBias\n  if (o.contractionSoon && cell.contents === \"EMPTY\") s += profile.lateBias\n  if (cell.contents === \"ENEMY_ACTIVE\") s += profile.trapBias\n  return s\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const contractionSoon = input.roundNumber === 4\n    const active = input.mySoldiers.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position)\n    const ranked = active\n      .map((soldier, index) => {\n        const unmoved = soldier.lastSuccessfulMoveDirection ? 0 : 1\n        const enemy = nearEnemy(soldier, input.enemySoldiers)\n        const edgeRisk = edge(soldier.position, input.board.bounds) ? 1 : 0\n        const backstabReady = backstabBoard(soldier, input) ? 1 : 0\n        const pressure = 20 - dist(soldier.position, enemy?.position)\n        const center = 20 - centerDist(soldier.position, input.board.bounds)\n        const score =\n          unmoved * 1000 +\n          backstabReady * 700 +\n          (contractionSoon ? edgeRisk * 600 : edgeRisk * 80) +\n          pressure * profile.contactBias +\n          center * (profile.centerBias + profile.lateBias) +\n          (profile.mobilityBias * (soldier.id === memory.lastSelected ? -3 : 1)) +\n          index * -0.01\n        return { soldier, score }\n      })\n      .sort((left, right) => right.score - left.score)\n    const selected = ranked.slice(0, input.activationCount).map(({ soldier }) => {\n      const preferred = prefer(soldier, input)\n      return {\n        soldierId: soldier.id,\n        objective: {\n          doctrine: profile.doctrine,\n          preferred,\n          safeDirs: safeBoard(soldier, input),\n          contractionSoon,\n          seekBackstab: true,\n        },\n      }\n    })\n    return {\n      activationOrders: selected,\n      strategyMemory: {\n        ...memory,\n        lastSelected: selected[0]?.soldierId ?? memory.lastSelected ?? null,\n        selectedThisRound: selected.map((entry) => entry.soldierId),\n      },\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    const objective = input.objective && typeof input.objective === \"object\" ? input.objective : {}\n    const backstab = rearMove(input.awarenessGrid)\n    const best = directions\n      .map((direction) => [direction, score(input, direction, objective, memory)])\n      .sort((left, right) => right[1] - left[1])\n    const chosen = backstab && score(input, backstab, objective, memory) > -900 ? backstab : (best[0]?.[1] > -900 ? best[0][0] : null)\n    if (chosen) {\n      return {\n        action: { type: \"MOVE\", direction: chosen },\n        soldierMemory: {\n          ...memory,\n          last: chosen,\n          tried: chosen,\n          doctrine: profile.doctrine,\n        },\n      }\n    }\n    const seen = input.awarenessGrid.cells.filter((cell) => cell.contents === \"ENEMY_ACTIVE\").sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - (Math.abs(b.dx) + Math.abs(b.dy)))[0]\n    const turn = objective.preferred ?? (seen ? relDir(seen.dx, seen.dy, input.self.facing ?? \"UP\") : input.self.facing ?? \"UP\")\n    return {\n      action: { type: \"TURN\", direction: turn },\n      soldierMemory: {\n        ...memory,\n        tried: turn,\n        doctrine: profile.doctrine,\n      },\n    }\n  }\n}",
+        "hash": "32b7b1433098d58b03303c8fb64c5b0eddb70a04207ef47b1a2b280f9f4d3d54",
+        "bytes": 7907,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 7907,
+        "forbiddenPatterns": [],
+        "sourceHash": "32b7b1433098d58b03303c8fb64c5b0eddb70a04207ef47b1a2b280f9f4d3d54",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Last Light",
+        "description": "A late-cycle stabilization seed that values credible endings over early-only pressure.",
+        "tags": [
+          "Advanced seed",
+          "Late Cycle",
+          "Stabilization",
+          "Memory"
+        ],
+        "version": "v1.5",
+        "archetype": "late-cycle stabilization",
+        "benchmarkStarterId": "starter:corner-lurker",
+        "level": "advanced"
+      },
+      "lineage": {
+        "derivedFrom": {
+          "artifactId": "strategy-artifact:starter:corner-lurker",
+          "kind": "starter",
+          "sourceHash": "32b7b1433098d58b03303c8fb64c5b0eddb70a04207ef47b1a2b280f9f4d3d54",
+          "label": "starter:corner-lurker"
+        },
+        "advancedLineage": {
+          "advancedId": "advanced:last-light",
+          "advancedName": "Last Light",
+          "advancedVersion": "v1.5",
+          "archetype": "late-cycle stabilization",
+          "sourceHash": "32b7b1433098d58b03303c8fb64c5b0eddb70a04207ef47b1a2b280f9f4d3d54"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "32b7b1433098d58b03303c8fb64c5b0eddb70a04207ef47b1a2b280f9f4d3d54",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:0f8a78fd025cdab300a5de31694210ba2df79b0f8a2a1e3b389af722dacb2e11",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:0f8a78fd025cdab300a5de31694210ba2df79b0f8a2a1e3b389af722dacb2e11",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:advanced:mirror-key",
+      "kind": "advanced",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Advanced seed v1.5: mirror-key memory\n// Benchmark reference: starter:mirror-breaker.\n// Shared baseline: leave starting edge early, take rear-square chances, avoid outer-ring contraction risk,\n// avoid self-stoning, avoid off-board moves, and keep archetype flavor as a secondary priority.\nconst profile = {\n  \"banner\": \"mirror-key memory\",\n  \"doctrine\": \"mirror-key\",\n  \"contactBias\": 3,\n  \"centerBias\": 2,\n  \"wallBias\": 1,\n  \"mobilityBias\": 3,\n  \"trapBias\": 1,\n  \"memoryBias\": 5,\n  \"lateBias\": 2\n}\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst reverse = { UP: \"DOWN\", RIGHT: \"LEFT\", DOWN: \"UP\", LEFT: \"RIGHT\" }\nconst dx = { UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1 }\nconst dy = { UP: -1, RIGHT: 0, DOWN: 1, LEFT: 0 }\nconst step = (p, d) => p ? { x: p.x + dx[d], y: p.y + dy[d] } : null\nconst inside = (p, b) => p && p.x >= b.minX && p.x <= b.maxX && p.y >= b.minY && p.y <= b.maxY\nconst dist = (a, b) => a && b ? Math.abs(a.x - b.x) + Math.abs(a.y - b.y) : 99\nconst centerDist = (p, b) => p ? Math.abs(p.x - (b.minX + b.maxX) / 2) + Math.abs(p.y - (b.minY + b.maxY) / 2) : 99\nconst toward = (a, b, f) => !a || !b ? f : Math.abs(b.x - a.x) > Math.abs(b.y - a.y) ? (b.x > a.x ? \"RIGHT\" : \"LEFT\") : b.y !== a.y ? (b.y > a.y ? \"DOWN\" : \"UP\") : f\nconst edge = (p, b) => p && (p.x === b.minX || p.x === b.maxX || p.y === b.minY || p.y === b.maxY)\nconst nearEnemy = (s, es) => es.filter((e) => e.status === \"ACTIVE\" && e.position).sort((a, b) => dist(s.position, a.position) - dist(s.position, b.position))[0] ?? null\nconst c = (g, d) => g.cells.find((x) => x.dx === dx[d] && x.dy === dy[d])\nconst rc = (g, x, y) => g.cells.find((cell) => cell.dx === x && cell.dy === y)\nconst relDir = (x, y, f) => Math.abs(x) > Math.abs(y) ? (x > 0 ? \"RIGHT\" : \"LEFT\") : y ? (y > 0 ? \"DOWN\" : \"UP\") : f\nconst behind = (f) => f === \"UP\" ? [0, 1] : f === \"DOWN\" ? [0, -1] : f === \"LEFT\" ? [1, 0] : [-1, 0]\nconst safeBoard = (s, input) =>\n  directions.filter((d) => inside(step(s.position, d), input.board.bounds))\nconst backstabBoard = (s, input) => {\n  for (const e of input.enemySoldiers) {\n    if (e.status !== \"ACTIVE\" || !e.position || !e.facing) continue\n    const b = behind(e.facing)\n    const target = { x: e.position.x + b[0], y: e.position.y + b[1] }\n    if (inside(target, input.board.bounds) && dist(s.position, target) === 1) return toward(s.position, target, s.facing ?? \"UP\")\n  }\n  return null\n}\nconst prefer = (s, input) => {\n  const e = nearEnemy(s, input.enemySoldiers)\n  const toEnemy = toward(s.position, e?.position, s.facing ?? \"UP\")\n  const toCenter = directions.filter((d) => inside(step(s.position, d), input.board.bounds)).sort((a, b) => centerDist(step(s.position, a), input.board.bounds) - centerDist(step(s.position, b), input.board.bounds))[0] ?? toEnemy\n  if (profile.centerBias + profile.lateBias + profile.mobilityBias > profile.contactBias + profile.wallBias) return toCenter\n  return backstabBoard(s, input) ?? toEnemy\n}\nconst rearMove = (g) => {\n  for (const e of g.cells) {\n    if (e.contents !== \"ENEMY_ACTIVE\" || !e.facing) continue\n    const b = behind(e.facing)\n    const tx = e.dx + b[0]\n    const ty = e.dy + b[1]\n    if (Math.abs(tx) + Math.abs(ty) === 1 && rc(g, tx, ty)?.contents === \"EMPTY\") return relDir(tx, ty, \"UP\")\n    if (tx === 0 && ty === 0 && Math.abs(e.dx) + Math.abs(e.dy) === 1) return relDir(e.dx, e.dy, \"UP\")\n  }\n  return null\n}\nconst wallAway = (g, d) => g.cells.reduce((n, x) => n + (x.contents !== \"WALL\" ? 0 : x.dx < 0 && d === \"RIGHT\" ? 8 : x.dx > 0 && d === \"LEFT\" ? 8 : x.dy < 0 && d === \"DOWN\" ? 8 : x.dy > 0 && d === \"UP\" ? 8 : 0), 0)\nconst score = (input, d, o, m) => {\n  const cell = c(input.awarenessGrid, d)\n  if (!cell || cell.contents === \"WALL\" || cell.contents === \"TERRAIN_STONE\" || cell.contents.endsWith(\"STONE\")) return -999\n  if (input.self.lastSuccessfulMoveDirection === reverse[d]) return -998\n  const activeContact = cell.contents === \"ENEMY_ACTIVE\" || cell.contents === \"FRIENDLY_ACTIVE\"\n  if (activeContact && (cell.facing === d || cell.facing === reverse[d])) return -997\n  if (cell.contents === \"FRIENDLY_ACTIVE\" && rc(input.awarenessGrid, dx[d] * 2, dy[d] * 2)?.contents === \"WALL\") return -997\n  let s = cell.contents === \"ENEMY_ACTIVE\" ? 6 + profile.contactBias : cell.contents === \"FRIENDLY_ACTIVE\" ? -3 : 1\n  if (d === o.preferred) s += 12\n  if ((o.safeDirs ?? []).includes(d)) s += 5\n  if (d === m.last) s += profile.memoryBias\n  s += wallAway(input.awarenessGrid, d) * (o.contractionSoon ? 3 : 1)\n  if (profile.mobilityBias && d !== m.tried) s += profile.mobilityBias\n  if (o.contractionSoon && cell.contents === \"EMPTY\") s += profile.lateBias\n  if (cell.contents === \"ENEMY_ACTIVE\") s += profile.trapBias\n  return s\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const contractionSoon = input.roundNumber === 4\n    const active = input.mySoldiers.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position)\n    const ranked = active\n      .map((soldier, index) => {\n        const unmoved = soldier.lastSuccessfulMoveDirection ? 0 : 1\n        const enemy = nearEnemy(soldier, input.enemySoldiers)\n        const edgeRisk = edge(soldier.position, input.board.bounds) ? 1 : 0\n        const backstabReady = backstabBoard(soldier, input) ? 1 : 0\n        const pressure = 20 - dist(soldier.position, enemy?.position)\n        const center = 20 - centerDist(soldier.position, input.board.bounds)\n        const score =\n          unmoved * 1000 +\n          backstabReady * 700 +\n          (contractionSoon ? edgeRisk * 600 : edgeRisk * 80) +\n          pressure * profile.contactBias +\n          center * (profile.centerBias + profile.lateBias) +\n          (profile.mobilityBias * (soldier.id === memory.lastSelected ? -3 : 1)) +\n          index * -0.01\n        return { soldier, score }\n      })\n      .sort((left, right) => right.score - left.score)\n    const selected = ranked.slice(0, input.activationCount).map(({ soldier }) => {\n      const preferred = prefer(soldier, input)\n      return {\n        soldierId: soldier.id,\n        objective: {\n          doctrine: profile.doctrine,\n          preferred,\n          safeDirs: safeBoard(soldier, input),\n          contractionSoon,\n          seekBackstab: true,\n        },\n      }\n    })\n    return {\n      activationOrders: selected,\n      strategyMemory: {\n        ...memory,\n        lastSelected: selected[0]?.soldierId ?? memory.lastSelected ?? null,\n        selectedThisRound: selected.map((entry) => entry.soldierId),\n      },\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    const objective = input.objective && typeof input.objective === \"object\" ? input.objective : {}\n    const backstab = rearMove(input.awarenessGrid)\n    const best = directions\n      .map((direction) => [direction, score(input, direction, objective, memory)])\n      .sort((left, right) => right[1] - left[1])\n    const chosen = backstab && score(input, backstab, objective, memory) > -900 ? backstab : (best[0]?.[1] > -900 ? best[0][0] : null)\n    if (chosen) {\n      return {\n        action: { type: \"MOVE\", direction: chosen },\n        soldierMemory: {\n          ...memory,\n          last: chosen,\n          tried: chosen,\n          doctrine: profile.doctrine,\n        },\n      }\n    }\n    const seen = input.awarenessGrid.cells.filter((cell) => cell.contents === \"ENEMY_ACTIVE\").sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - (Math.abs(b.dx) + Math.abs(b.dy)))[0]\n    const turn = objective.preferred ?? (seen ? relDir(seen.dx, seen.dy, input.self.facing ?? \"UP\") : input.self.facing ?? \"UP\")\n    return {\n      action: { type: \"TURN\", direction: turn },\n      soldierMemory: {\n        ...memory,\n        tried: turn,\n        doctrine: profile.doctrine,\n      },\n    }\n  }\n}",
+        "hash": "13ca40eee8c359879ced75e99cec8135cfa8e8693ef759aa3c0948c07863b03d",
+        "bytes": 7910,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 7910,
+        "forbiddenPatterns": [],
+        "sourceHash": "13ca40eee8c359879ced75e99cec8135cfa8e8693ef759aa3c0948c07863b03d",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Mirror Key",
+        "description": "An adaptive seed for breaking symmetric or repeated matchup patterns.",
+        "tags": [
+          "Advanced seed",
+          "Mirror",
+          "Adaptive",
+          "Memory"
+        ],
+        "version": "v1.5",
+        "archetype": "mirror-breaking/adaptive play",
+        "benchmarkStarterId": "starter:mirror-breaker",
+        "level": "advanced"
+      },
+      "lineage": {
+        "derivedFrom": {
+          "artifactId": "strategy-artifact:starter:mirror-breaker",
+          "kind": "starter",
+          "sourceHash": "13ca40eee8c359879ced75e99cec8135cfa8e8693ef759aa3c0948c07863b03d",
+          "label": "starter:mirror-breaker"
+        },
+        "advancedLineage": {
+          "advancedId": "advanced:mirror-key",
+          "advancedName": "Mirror Key",
+          "advancedVersion": "v1.5",
+          "archetype": "mirror-breaking/adaptive play",
+          "sourceHash": "13ca40eee8c359879ced75e99cec8135cfa8e8693ef759aa3c0948c07863b03d"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "13ca40eee8c359879ced75e99cec8135cfa8e8693ef759aa3c0948c07863b03d",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:cd0b9fe38c119dd3af1a8abfb8b58e46b74fb14c10bbbbfe593e13e8d89c9b4f",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:cd0b9fe38c119dd3af1a8abfb8b58e46b74fb14c10bbbbfe593e13e8d89c9b4f",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:advanced:rear-guard-sentinel",
+      "kind": "advanced",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Advanced seed v1.5: anti-backstab lane memory\n// Benchmark reference: starter:escape-artist.\n// Shared baseline: leave starting edge early, take rear-square chances, avoid outer-ring contraction risk,\n// avoid self-stoning, avoid off-board moves, and keep archetype flavor as a secondary priority.\nconst profile = {\n  \"banner\": \"anti-backstab lane memory\",\n  \"doctrine\": \"rear-guard-sentinel\",\n  \"contactBias\": 2,\n  \"centerBias\": 2,\n  \"wallBias\": 0,\n  \"mobilityBias\": 4,\n  \"trapBias\": 1,\n  \"memoryBias\": 5,\n  \"lateBias\": 2\n}\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst reverse = { UP: \"DOWN\", RIGHT: \"LEFT\", DOWN: \"UP\", LEFT: \"RIGHT\" }\nconst dx = { UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1 }\nconst dy = { UP: -1, RIGHT: 0, DOWN: 1, LEFT: 0 }\nconst step = (p, d) => p ? { x: p.x + dx[d], y: p.y + dy[d] } : null\nconst inside = (p, b) => p && p.x >= b.minX && p.x <= b.maxX && p.y >= b.minY && p.y <= b.maxY\nconst dist = (a, b) => a && b ? Math.abs(a.x - b.x) + Math.abs(a.y - b.y) : 99\nconst centerDist = (p, b) => p ? Math.abs(p.x - (b.minX + b.maxX) / 2) + Math.abs(p.y - (b.minY + b.maxY) / 2) : 99\nconst toward = (a, b, f) => !a || !b ? f : Math.abs(b.x - a.x) > Math.abs(b.y - a.y) ? (b.x > a.x ? \"RIGHT\" : \"LEFT\") : b.y !== a.y ? (b.y > a.y ? \"DOWN\" : \"UP\") : f\nconst edge = (p, b) => p && (p.x === b.minX || p.x === b.maxX || p.y === b.minY || p.y === b.maxY)\nconst nearEnemy = (s, es) => es.filter((e) => e.status === \"ACTIVE\" && e.position).sort((a, b) => dist(s.position, a.position) - dist(s.position, b.position))[0] ?? null\nconst c = (g, d) => g.cells.find((x) => x.dx === dx[d] && x.dy === dy[d])\nconst rc = (g, x, y) => g.cells.find((cell) => cell.dx === x && cell.dy === y)\nconst relDir = (x, y, f) => Math.abs(x) > Math.abs(y) ? (x > 0 ? \"RIGHT\" : \"LEFT\") : y ? (y > 0 ? \"DOWN\" : \"UP\") : f\nconst behind = (f) => f === \"UP\" ? [0, 1] : f === \"DOWN\" ? [0, -1] : f === \"LEFT\" ? [1, 0] : [-1, 0]\nconst safeBoard = (s, input) =>\n  directions.filter((d) => inside(step(s.position, d), input.board.bounds))\nconst backstabBoard = (s, input) => {\n  for (const e of input.enemySoldiers) {\n    if (e.status !== \"ACTIVE\" || !e.position || !e.facing) continue\n    const b = behind(e.facing)\n    const target = { x: e.position.x + b[0], y: e.position.y + b[1] }\n    if (inside(target, input.board.bounds) && dist(s.position, target) === 1) return toward(s.position, target, s.facing ?? \"UP\")\n  }\n  return null\n}\nconst prefer = (s, input) => {\n  const e = nearEnemy(s, input.enemySoldiers)\n  const toEnemy = toward(s.position, e?.position, s.facing ?? \"UP\")\n  const toCenter = directions.filter((d) => inside(step(s.position, d), input.board.bounds)).sort((a, b) => centerDist(step(s.position, a), input.board.bounds) - centerDist(step(s.position, b), input.board.bounds))[0] ?? toEnemy\n  if (profile.centerBias + profile.lateBias + profile.mobilityBias > profile.contactBias + profile.wallBias) return toCenter\n  return backstabBoard(s, input) ?? toEnemy\n}\nconst rearMove = (g) => {\n  for (const e of g.cells) {\n    if (e.contents !== \"ENEMY_ACTIVE\" || !e.facing) continue\n    const b = behind(e.facing)\n    const tx = e.dx + b[0]\n    const ty = e.dy + b[1]\n    if (Math.abs(tx) + Math.abs(ty) === 1 && rc(g, tx, ty)?.contents === \"EMPTY\") return relDir(tx, ty, \"UP\")\n    if (tx === 0 && ty === 0 && Math.abs(e.dx) + Math.abs(e.dy) === 1) return relDir(e.dx, e.dy, \"UP\")\n  }\n  return null\n}\nconst wallAway = (g, d) => g.cells.reduce((n, x) => n + (x.contents !== \"WALL\" ? 0 : x.dx < 0 && d === \"RIGHT\" ? 8 : x.dx > 0 && d === \"LEFT\" ? 8 : x.dy < 0 && d === \"DOWN\" ? 8 : x.dy > 0 && d === \"UP\" ? 8 : 0), 0)\nconst score = (input, d, o, m) => {\n  const cell = c(input.awarenessGrid, d)\n  if (!cell || cell.contents === \"WALL\" || cell.contents === \"TERRAIN_STONE\" || cell.contents.endsWith(\"STONE\")) return -999\n  if (input.self.lastSuccessfulMoveDirection === reverse[d]) return -998\n  const activeContact = cell.contents === \"ENEMY_ACTIVE\" || cell.contents === \"FRIENDLY_ACTIVE\"\n  if (activeContact && (cell.facing === d || cell.facing === reverse[d])) return -997\n  if (cell.contents === \"FRIENDLY_ACTIVE\" && rc(input.awarenessGrid, dx[d] * 2, dy[d] * 2)?.contents === \"WALL\") return -997\n  let s = cell.contents === \"ENEMY_ACTIVE\" ? 6 + profile.contactBias : cell.contents === \"FRIENDLY_ACTIVE\" ? -3 : 1\n  if (d === o.preferred) s += 12\n  if ((o.safeDirs ?? []).includes(d)) s += 5\n  if (d === m.last) s += profile.memoryBias\n  s += wallAway(input.awarenessGrid, d) * (o.contractionSoon ? 3 : 1)\n  if (profile.mobilityBias && d !== m.tried) s += profile.mobilityBias\n  if (o.contractionSoon && cell.contents === \"EMPTY\") s += profile.lateBias\n  if (cell.contents === \"ENEMY_ACTIVE\") s += profile.trapBias\n  return s\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const contractionSoon = input.roundNumber === 4\n    const active = input.mySoldiers.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position)\n    const ranked = active\n      .map((soldier, index) => {\n        const unmoved = soldier.lastSuccessfulMoveDirection ? 0 : 1\n        const enemy = nearEnemy(soldier, input.enemySoldiers)\n        const edgeRisk = edge(soldier.position, input.board.bounds) ? 1 : 0\n        const backstabReady = backstabBoard(soldier, input) ? 1 : 0\n        const pressure = 20 - dist(soldier.position, enemy?.position)\n        const center = 20 - centerDist(soldier.position, input.board.bounds)\n        const score =\n          unmoved * 1000 +\n          backstabReady * 700 +\n          (contractionSoon ? edgeRisk * 600 : edgeRisk * 80) +\n          pressure * profile.contactBias +\n          center * (profile.centerBias + profile.lateBias) +\n          (profile.mobilityBias * (soldier.id === memory.lastSelected ? -3 : 1)) +\n          index * -0.01\n        return { soldier, score }\n      })\n      .sort((left, right) => right.score - left.score)\n    const selected = ranked.slice(0, input.activationCount).map(({ soldier }) => {\n      const preferred = prefer(soldier, input)\n      return {\n        soldierId: soldier.id,\n        objective: {\n          doctrine: profile.doctrine,\n          preferred,\n          safeDirs: safeBoard(soldier, input),\n          contractionSoon,\n          seekBackstab: true,\n        },\n      }\n    })\n    return {\n      activationOrders: selected,\n      strategyMemory: {\n        ...memory,\n        lastSelected: selected[0]?.soldierId ?? memory.lastSelected ?? null,\n        selectedThisRound: selected.map((entry) => entry.soldierId),\n      },\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    const objective = input.objective && typeof input.objective === \"object\" ? input.objective : {}\n    const backstab = rearMove(input.awarenessGrid)\n    const best = directions\n      .map((direction) => [direction, score(input, direction, objective, memory)])\n      .sort((left, right) => right[1] - left[1])\n    const chosen = backstab && score(input, backstab, objective, memory) > -900 ? backstab : (best[0]?.[1] > -900 ? best[0][0] : null)\n    if (chosen) {\n      return {\n        action: { type: \"MOVE\", direction: chosen },\n        soldierMemory: {\n          ...memory,\n          last: chosen,\n          tried: chosen,\n          doctrine: profile.doctrine,\n        },\n      }\n    }\n    const seen = input.awarenessGrid.cells.filter((cell) => cell.contents === \"ENEMY_ACTIVE\").sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - (Math.abs(b.dx) + Math.abs(b.dy)))[0]\n    const turn = objective.preferred ?? (seen ? relDir(seen.dx, seen.dy, input.self.facing ?? \"UP\") : input.self.facing ?? \"UP\")\n    return {\n      action: { type: \"TURN\", direction: turn },\n      soldierMemory: {\n        ...memory,\n        tried: turn,\n        doctrine: profile.doctrine,\n      },\n    }\n  }\n}",
+        "hash": "4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224",
+        "bytes": 7934,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 7934,
+        "forbiddenPatterns": [],
+        "sourceHash": "4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Rear Guard Sentinel",
+        "description": "An Advanced seed focused on denying clean rear arcs and forcing Backstab hunters into visible lanes.",
+        "tags": [
+          "Advanced seed",
+          "Anti-Backstab",
+          "Positioning",
+          "Memory"
+        ],
+        "version": "v1.5",
+        "archetype": "anti-backstab positioning",
+        "benchmarkStarterId": "starter:escape-artist",
+        "level": "advanced"
+      },
+      "lineage": {
+        "derivedFrom": {
+          "artifactId": "strategy-artifact:starter:escape-artist",
+          "kind": "starter",
+          "sourceHash": "4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224",
+          "label": "starter:escape-artist"
+        },
+        "advancedLineage": {
+          "advancedId": "advanced:rear-guard-sentinel",
+          "advancedName": "Rear Guard Sentinel",
+          "advancedVersion": "v1.5",
+          "archetype": "anti-backstab positioning",
+          "sourceHash": "4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:f3fdf41387a20966895f5730ddc771847381f1db2f3be2de55244783a9f146a3",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:f3fdf41387a20966895f5730ddc771847381f1db2f3be2de55244783a9f146a3",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:advanced:recall-hunter",
+      "kind": "advanced",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Advanced seed v1.5: recall hunter\n// Benchmark reference: starter:mirror-breaker.\n// Shared baseline: leave starting edge early, take rear-square chances, avoid outer-ring contraction risk,\n// avoid self-stoning, avoid off-board moves, and keep archetype flavor as a secondary priority.\nconst profile = {\n  \"banner\": \"recall hunter\",\n  \"doctrine\": \"recall-hunter\",\n  \"contactBias\": 4,\n  \"centerBias\": 1,\n  \"wallBias\": 1,\n  \"mobilityBias\": 2,\n  \"trapBias\": 1,\n  \"memoryBias\": 6,\n  \"lateBias\": 1\n}\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst reverse = { UP: \"DOWN\", RIGHT: \"LEFT\", DOWN: \"UP\", LEFT: \"RIGHT\" }\nconst dx = { UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1 }\nconst dy = { UP: -1, RIGHT: 0, DOWN: 1, LEFT: 0 }\nconst step = (p, d) => p ? { x: p.x + dx[d], y: p.y + dy[d] } : null\nconst inside = (p, b) => p && p.x >= b.minX && p.x <= b.maxX && p.y >= b.minY && p.y <= b.maxY\nconst dist = (a, b) => a && b ? Math.abs(a.x - b.x) + Math.abs(a.y - b.y) : 99\nconst centerDist = (p, b) => p ? Math.abs(p.x - (b.minX + b.maxX) / 2) + Math.abs(p.y - (b.minY + b.maxY) / 2) : 99\nconst toward = (a, b, f) => !a || !b ? f : Math.abs(b.x - a.x) > Math.abs(b.y - a.y) ? (b.x > a.x ? \"RIGHT\" : \"LEFT\") : b.y !== a.y ? (b.y > a.y ? \"DOWN\" : \"UP\") : f\nconst edge = (p, b) => p && (p.x === b.minX || p.x === b.maxX || p.y === b.minY || p.y === b.maxY)\nconst nearEnemy = (s, es) => es.filter((e) => e.status === \"ACTIVE\" && e.position).sort((a, b) => dist(s.position, a.position) - dist(s.position, b.position))[0] ?? null\nconst c = (g, d) => g.cells.find((x) => x.dx === dx[d] && x.dy === dy[d])\nconst rc = (g, x, y) => g.cells.find((cell) => cell.dx === x && cell.dy === y)\nconst relDir = (x, y, f) => Math.abs(x) > Math.abs(y) ? (x > 0 ? \"RIGHT\" : \"LEFT\") : y ? (y > 0 ? \"DOWN\" : \"UP\") : f\nconst behind = (f) => f === \"UP\" ? [0, 1] : f === \"DOWN\" ? [0, -1] : f === \"LEFT\" ? [1, 0] : [-1, 0]\nconst safeBoard = (s, input) =>\n  directions.filter((d) => inside(step(s.position, d), input.board.bounds))\nconst backstabBoard = (s, input) => {\n  for (const e of input.enemySoldiers) {\n    if (e.status !== \"ACTIVE\" || !e.position || !e.facing) continue\n    const b = behind(e.facing)\n    const target = { x: e.position.x + b[0], y: e.position.y + b[1] }\n    if (inside(target, input.board.bounds) && dist(s.position, target) === 1) return toward(s.position, target, s.facing ?? \"UP\")\n  }\n  return null\n}\nconst prefer = (s, input) => {\n  const e = nearEnemy(s, input.enemySoldiers)\n  const toEnemy = toward(s.position, e?.position, s.facing ?? \"UP\")\n  const toCenter = directions.filter((d) => inside(step(s.position, d), input.board.bounds)).sort((a, b) => centerDist(step(s.position, a), input.board.bounds) - centerDist(step(s.position, b), input.board.bounds))[0] ?? toEnemy\n  if (profile.centerBias + profile.lateBias + profile.mobilityBias > profile.contactBias + profile.wallBias) return toCenter\n  return backstabBoard(s, input) ?? toEnemy\n}\nconst rearMove = (g) => {\n  for (const e of g.cells) {\n    if (e.contents !== \"ENEMY_ACTIVE\" || !e.facing) continue\n    const b = behind(e.facing)\n    const tx = e.dx + b[0]\n    const ty = e.dy + b[1]\n    if (Math.abs(tx) + Math.abs(ty) === 1 && rc(g, tx, ty)?.contents === \"EMPTY\") return relDir(tx, ty, \"UP\")\n    if (tx === 0 && ty === 0 && Math.abs(e.dx) + Math.abs(e.dy) === 1) return relDir(e.dx, e.dy, \"UP\")\n  }\n  return null\n}\nconst wallAway = (g, d) => g.cells.reduce((n, x) => n + (x.contents !== \"WALL\" ? 0 : x.dx < 0 && d === \"RIGHT\" ? 8 : x.dx > 0 && d === \"LEFT\" ? 8 : x.dy < 0 && d === \"DOWN\" ? 8 : x.dy > 0 && d === \"UP\" ? 8 : 0), 0)\nconst score = (input, d, o, m) => {\n  const cell = c(input.awarenessGrid, d)\n  if (!cell || cell.contents === \"WALL\" || cell.contents === \"TERRAIN_STONE\" || cell.contents.endsWith(\"STONE\")) return -999\n  if (input.self.lastSuccessfulMoveDirection === reverse[d]) return -998\n  const activeContact = cell.contents === \"ENEMY_ACTIVE\" || cell.contents === \"FRIENDLY_ACTIVE\"\n  if (activeContact && (cell.facing === d || cell.facing === reverse[d])) return -997\n  if (cell.contents === \"FRIENDLY_ACTIVE\" && rc(input.awarenessGrid, dx[d] * 2, dy[d] * 2)?.contents === \"WALL\") return -997\n  let s = cell.contents === \"ENEMY_ACTIVE\" ? 6 + profile.contactBias : cell.contents === \"FRIENDLY_ACTIVE\" ? -3 : 1\n  if (d === o.preferred) s += 12\n  if ((o.safeDirs ?? []).includes(d)) s += 5\n  if (d === m.last) s += profile.memoryBias\n  s += wallAway(input.awarenessGrid, d) * (o.contractionSoon ? 3 : 1)\n  if (profile.mobilityBias && d !== m.tried) s += profile.mobilityBias\n  if (o.contractionSoon && cell.contents === \"EMPTY\") s += profile.lateBias\n  if (cell.contents === \"ENEMY_ACTIVE\") s += profile.trapBias\n  return s\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const contractionSoon = input.roundNumber === 4\n    const active = input.mySoldiers.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position)\n    const ranked = active\n      .map((soldier, index) => {\n        const unmoved = soldier.lastSuccessfulMoveDirection ? 0 : 1\n        const enemy = nearEnemy(soldier, input.enemySoldiers)\n        const edgeRisk = edge(soldier.position, input.board.bounds) ? 1 : 0\n        const backstabReady = backstabBoard(soldier, input) ? 1 : 0\n        const pressure = 20 - dist(soldier.position, enemy?.position)\n        const center = 20 - centerDist(soldier.position, input.board.bounds)\n        const score =\n          unmoved * 1000 +\n          backstabReady * 700 +\n          (contractionSoon ? edgeRisk * 600 : edgeRisk * 80) +\n          pressure * profile.contactBias +\n          center * (profile.centerBias + profile.lateBias) +\n          (profile.mobilityBias * (soldier.id === memory.lastSelected ? -3 : 1)) +\n          index * -0.01\n        return { soldier, score }\n      })\n      .sort((left, right) => right.score - left.score)\n    const selected = ranked.slice(0, input.activationCount).map(({ soldier }) => {\n      const preferred = prefer(soldier, input)\n      return {\n        soldierId: soldier.id,\n        objective: {\n          doctrine: profile.doctrine,\n          preferred,\n          safeDirs: safeBoard(soldier, input),\n          contractionSoon,\n          seekBackstab: true,\n        },\n      }\n    })\n    return {\n      activationOrders: selected,\n      strategyMemory: {\n        ...memory,\n        lastSelected: selected[0]?.soldierId ?? memory.lastSelected ?? null,\n        selectedThisRound: selected.map((entry) => entry.soldierId),\n      },\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    const objective = input.objective && typeof input.objective === \"object\" ? input.objective : {}\n    const backstab = rearMove(input.awarenessGrid)\n    const best = directions\n      .map((direction) => [direction, score(input, direction, objective, memory)])\n      .sort((left, right) => right[1] - left[1])\n    const chosen = backstab && score(input, backstab, objective, memory) > -900 ? backstab : (best[0]?.[1] > -900 ? best[0][0] : null)\n    if (chosen) {\n      return {\n        action: { type: \"MOVE\", direction: chosen },\n        soldierMemory: {\n          ...memory,\n          last: chosen,\n          tried: chosen,\n          doctrine: profile.doctrine,\n        },\n      }\n    }\n    const seen = input.awarenessGrid.cells.filter((cell) => cell.contents === \"ENEMY_ACTIVE\").sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - (Math.abs(b.dx) + Math.abs(b.dy)))[0]\n    const turn = objective.preferred ?? (seen ? relDir(seen.dx, seen.dy, input.self.facing ?? \"UP\") : input.self.facing ?? \"UP\")\n    return {\n      action: { type: \"TURN\", direction: turn },\n      soldierMemory: {\n        ...memory,\n        tried: turn,\n        doctrine: profile.doctrine,\n      },\n    }\n  }\n}",
+        "hash": "b0e6878325f869c56b1444905cb86051e5b8c65974294717bb41def92aa0e3e0",
+        "bytes": 7905,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 7905,
+        "forbiddenPatterns": [],
+        "sourceHash": "b0e6878325f869c56b1444905cb86051e5b8c65974294717bb41def92aa0e3e0",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Recall Hunter",
+        "description": "A memory-first response seed that uses remembered chase lanes to pressure opponents over repeated Cycles.",
+        "tags": [
+          "Advanced seed",
+          "Memory",
+          "Opponent Response",
+          "Backstab"
+        ],
+        "version": "v1.5",
+        "archetype": "memory-based opponent response",
+        "benchmarkStarterId": "starter:mirror-breaker",
+        "level": "advanced"
+      },
+      "lineage": {
+        "derivedFrom": {
+          "artifactId": "strategy-artifact:starter:mirror-breaker",
+          "kind": "starter",
+          "sourceHash": "b0e6878325f869c56b1444905cb86051e5b8c65974294717bb41def92aa0e3e0",
+          "label": "starter:mirror-breaker"
+        },
+        "advancedLineage": {
+          "advancedId": "advanced:recall-hunter",
+          "advancedName": "Recall Hunter",
+          "advancedVersion": "v1.5",
+          "archetype": "memory-based opponent response",
+          "sourceHash": "b0e6878325f869c56b1444905cb86051e5b8c65974294717bb41def92aa0e3e0"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "b0e6878325f869c56b1444905cb86051e5b8c65974294717bb41def92aa0e3e0",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:c1721fe58b86b1cc3c757d0b390d655b9942bb5a0dc0c00a0f57d276675d29df",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:c1721fe58b86b1cc3c757d0b390d655b9942bb5a0dc0c00a0f57d276675d29df",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:advanced:ring-shelter",
+      "kind": "advanced",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Advanced seed v1.5: contraction shelter\n// Benchmark reference: starter:center-turtle.\n// Shared baseline: leave starting edge early, take rear-square chances, avoid outer-ring contraction risk,\n// avoid self-stoning, avoid off-board moves, and keep archetype flavor as a secondary priority.\nconst profile = {\n  \"banner\": \"contraction shelter\",\n  \"doctrine\": \"ring-shelter\",\n  \"contactBias\": 1,\n  \"centerBias\": 4,\n  \"wallBias\": 0,\n  \"mobilityBias\": 3,\n  \"trapBias\": 1,\n  \"memoryBias\": 4,\n  \"lateBias\": 5\n}\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst reverse = { UP: \"DOWN\", RIGHT: \"LEFT\", DOWN: \"UP\", LEFT: \"RIGHT\" }\nconst dx = { UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1 }\nconst dy = { UP: -1, RIGHT: 0, DOWN: 1, LEFT: 0 }\nconst step = (p, d) => p ? { x: p.x + dx[d], y: p.y + dy[d] } : null\nconst inside = (p, b) => p && p.x >= b.minX && p.x <= b.maxX && p.y >= b.minY && p.y <= b.maxY\nconst dist = (a, b) => a && b ? Math.abs(a.x - b.x) + Math.abs(a.y - b.y) : 99\nconst centerDist = (p, b) => p ? Math.abs(p.x - (b.minX + b.maxX) / 2) + Math.abs(p.y - (b.minY + b.maxY) / 2) : 99\nconst toward = (a, b, f) => !a || !b ? f : Math.abs(b.x - a.x) > Math.abs(b.y - a.y) ? (b.x > a.x ? \"RIGHT\" : \"LEFT\") : b.y !== a.y ? (b.y > a.y ? \"DOWN\" : \"UP\") : f\nconst edge = (p, b) => p && (p.x === b.minX || p.x === b.maxX || p.y === b.minY || p.y === b.maxY)\nconst nearEnemy = (s, es) => es.filter((e) => e.status === \"ACTIVE\" && e.position).sort((a, b) => dist(s.position, a.position) - dist(s.position, b.position))[0] ?? null\nconst c = (g, d) => g.cells.find((x) => x.dx === dx[d] && x.dy === dy[d])\nconst rc = (g, x, y) => g.cells.find((cell) => cell.dx === x && cell.dy === y)\nconst relDir = (x, y, f) => Math.abs(x) > Math.abs(y) ? (x > 0 ? \"RIGHT\" : \"LEFT\") : y ? (y > 0 ? \"DOWN\" : \"UP\") : f\nconst behind = (f) => f === \"UP\" ? [0, 1] : f === \"DOWN\" ? [0, -1] : f === \"LEFT\" ? [1, 0] : [-1, 0]\nconst safeBoard = (s, input) =>\n  directions.filter((d) => inside(step(s.position, d), input.board.bounds))\nconst backstabBoard = (s, input) => {\n  for (const e of input.enemySoldiers) {\n    if (e.status !== \"ACTIVE\" || !e.position || !e.facing) continue\n    const b = behind(e.facing)\n    const target = { x: e.position.x + b[0], y: e.position.y + b[1] }\n    if (inside(target, input.board.bounds) && dist(s.position, target) === 1) return toward(s.position, target, s.facing ?? \"UP\")\n  }\n  return null\n}\nconst prefer = (s, input) => {\n  const e = nearEnemy(s, input.enemySoldiers)\n  const toEnemy = toward(s.position, e?.position, s.facing ?? \"UP\")\n  const toCenter = directions.filter((d) => inside(step(s.position, d), input.board.bounds)).sort((a, b) => centerDist(step(s.position, a), input.board.bounds) - centerDist(step(s.position, b), input.board.bounds))[0] ?? toEnemy\n  if (profile.centerBias + profile.lateBias + profile.mobilityBias > profile.contactBias + profile.wallBias) return toCenter\n  return backstabBoard(s, input) ?? toEnemy\n}\nconst rearMove = (g) => {\n  for (const e of g.cells) {\n    if (e.contents !== \"ENEMY_ACTIVE\" || !e.facing) continue\n    const b = behind(e.facing)\n    const tx = e.dx + b[0]\n    const ty = e.dy + b[1]\n    if (Math.abs(tx) + Math.abs(ty) === 1 && rc(g, tx, ty)?.contents === \"EMPTY\") return relDir(tx, ty, \"UP\")\n    if (tx === 0 && ty === 0 && Math.abs(e.dx) + Math.abs(e.dy) === 1) return relDir(e.dx, e.dy, \"UP\")\n  }\n  return null\n}\nconst wallAway = (g, d) => g.cells.reduce((n, x) => n + (x.contents !== \"WALL\" ? 0 : x.dx < 0 && d === \"RIGHT\" ? 8 : x.dx > 0 && d === \"LEFT\" ? 8 : x.dy < 0 && d === \"DOWN\" ? 8 : x.dy > 0 && d === \"UP\" ? 8 : 0), 0)\nconst score = (input, d, o, m) => {\n  const cell = c(input.awarenessGrid, d)\n  if (!cell || cell.contents === \"WALL\" || cell.contents === \"TERRAIN_STONE\" || cell.contents.endsWith(\"STONE\")) return -999\n  if (input.self.lastSuccessfulMoveDirection === reverse[d]) return -998\n  const activeContact = cell.contents === \"ENEMY_ACTIVE\" || cell.contents === \"FRIENDLY_ACTIVE\"\n  if (activeContact && (cell.facing === d || cell.facing === reverse[d])) return -997\n  if (cell.contents === \"FRIENDLY_ACTIVE\" && rc(input.awarenessGrid, dx[d] * 2, dy[d] * 2)?.contents === \"WALL\") return -997\n  let s = cell.contents === \"ENEMY_ACTIVE\" ? 6 + profile.contactBias : cell.contents === \"FRIENDLY_ACTIVE\" ? -3 : 1\n  if (d === o.preferred) s += 12\n  if ((o.safeDirs ?? []).includes(d)) s += 5\n  if (d === m.last) s += profile.memoryBias\n  s += wallAway(input.awarenessGrid, d) * (o.contractionSoon ? 3 : 1)\n  if (profile.mobilityBias && d !== m.tried) s += profile.mobilityBias\n  if (o.contractionSoon && cell.contents === \"EMPTY\") s += profile.lateBias\n  if (cell.contents === \"ENEMY_ACTIVE\") s += profile.trapBias\n  return s\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const contractionSoon = input.roundNumber === 4\n    const active = input.mySoldiers.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position)\n    const ranked = active\n      .map((soldier, index) => {\n        const unmoved = soldier.lastSuccessfulMoveDirection ? 0 : 1\n        const enemy = nearEnemy(soldier, input.enemySoldiers)\n        const edgeRisk = edge(soldier.position, input.board.bounds) ? 1 : 0\n        const backstabReady = backstabBoard(soldier, input) ? 1 : 0\n        const pressure = 20 - dist(soldier.position, enemy?.position)\n        const center = 20 - centerDist(soldier.position, input.board.bounds)\n        const score =\n          unmoved * 1000 +\n          backstabReady * 700 +\n          (contractionSoon ? edgeRisk * 600 : edgeRisk * 80) +\n          pressure * profile.contactBias +\n          center * (profile.centerBias + profile.lateBias) +\n          (profile.mobilityBias * (soldier.id === memory.lastSelected ? -3 : 1)) +\n          index * -0.01\n        return { soldier, score }\n      })\n      .sort((left, right) => right.score - left.score)\n    const selected = ranked.slice(0, input.activationCount).map(({ soldier }) => {\n      const preferred = prefer(soldier, input)\n      return {\n        soldierId: soldier.id,\n        objective: {\n          doctrine: profile.doctrine,\n          preferred,\n          safeDirs: safeBoard(soldier, input),\n          contractionSoon,\n          seekBackstab: true,\n        },\n      }\n    })\n    return {\n      activationOrders: selected,\n      strategyMemory: {\n        ...memory,\n        lastSelected: selected[0]?.soldierId ?? memory.lastSelected ?? null,\n        selectedThisRound: selected.map((entry) => entry.soldierId),\n      },\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    const objective = input.objective && typeof input.objective === \"object\" ? input.objective : {}\n    const backstab = rearMove(input.awarenessGrid)\n    const best = directions\n      .map((direction) => [direction, score(input, direction, objective, memory)])\n      .sort((left, right) => right[1] - left[1])\n    const chosen = backstab && score(input, backstab, objective, memory) > -900 ? backstab : (best[0]?.[1] > -900 ? best[0][0] : null)\n    if (chosen) {\n      return {\n        action: { type: \"MOVE\", direction: chosen },\n        soldierMemory: {\n          ...memory,\n          last: chosen,\n          tried: chosen,\n          doctrine: profile.doctrine,\n        },\n      }\n    }\n    const seen = input.awarenessGrid.cells.filter((cell) => cell.contents === \"ENEMY_ACTIVE\").sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - (Math.abs(b.dx) + Math.abs(b.dy)))[0]\n    const turn = objective.preferred ?? (seen ? relDir(seen.dx, seen.dy, input.self.facing ?? \"UP\") : input.self.facing ?? \"UP\")\n    return {\n      action: { type: \"TURN\", direction: turn },\n      soldierMemory: {\n        ...memory,\n        tried: turn,\n        doctrine: profile.doctrine,\n      },\n    }\n  }\n}",
+        "hash": "fb848a6651bf7f53056d3435cddd273ed3c12f0f6383d1202cc0cbadc8bff8b5",
+        "bytes": 7915,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 7915,
+        "forbiddenPatterns": [],
+        "sourceHash": "fb848a6651bf7f53056d3435cddd273ed3c12f0f6383d1202cc0cbadc8bff8b5",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Ring Shelter",
+        "description": "A contraction-survival seed that treats late-cycle stabilization as a first-class doctrine.",
+        "tags": [
+          "Advanced seed",
+          "Contraction",
+          "Survival",
+          "Memory"
+        ],
+        "version": "v1.5",
+        "archetype": "contraction survival",
+        "benchmarkStarterId": "starter:center-turtle",
+        "level": "advanced"
+      },
+      "lineage": {
+        "derivedFrom": {
+          "artifactId": "strategy-artifact:starter:center-turtle",
+          "kind": "starter",
+          "sourceHash": "fb848a6651bf7f53056d3435cddd273ed3c12f0f6383d1202cc0cbadc8bff8b5",
+          "label": "starter:center-turtle"
+        },
+        "advancedLineage": {
+          "advancedId": "advanced:ring-shelter",
+          "advancedName": "Ring Shelter",
+          "advancedVersion": "v1.5",
+          "archetype": "contraction survival",
+          "sourceHash": "fb848a6651bf7f53056d3435cddd273ed3c12f0f6383d1202cc0cbadc8bff8b5"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "fb848a6651bf7f53056d3435cddd273ed3c12f0f6383d1202cc0cbadc8bff8b5",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:a022acee34b099b23e8535d19cad94792bc8a7d67a07576fa4b0c237988961df",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:a022acee34b099b23e8535d19cad94792bc8a7d67a07576fa4b0c237988961df",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:advanced:snare-weaver",
+      "kind": "advanced",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Advanced seed v1.5: trap-control snare\n// Benchmark reference: starter:trap-setter.\n// Shared baseline: leave starting edge early, take rear-square chances, avoid outer-ring contraction risk,\n// avoid self-stoning, avoid off-board moves, and keep archetype flavor as a secondary priority.\nconst profile = {\n  \"banner\": \"trap-control snare\",\n  \"doctrine\": \"snare-weaver\",\n  \"contactBias\": 2,\n  \"centerBias\": 1,\n  \"wallBias\": 2,\n  \"mobilityBias\": 2,\n  \"trapBias\": 5,\n  \"memoryBias\": 4,\n  \"lateBias\": 2\n}\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst reverse = { UP: \"DOWN\", RIGHT: \"LEFT\", DOWN: \"UP\", LEFT: \"RIGHT\" }\nconst dx = { UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1 }\nconst dy = { UP: -1, RIGHT: 0, DOWN: 1, LEFT: 0 }\nconst step = (p, d) => p ? { x: p.x + dx[d], y: p.y + dy[d] } : null\nconst inside = (p, b) => p && p.x >= b.minX && p.x <= b.maxX && p.y >= b.minY && p.y <= b.maxY\nconst dist = (a, b) => a && b ? Math.abs(a.x - b.x) + Math.abs(a.y - b.y) : 99\nconst centerDist = (p, b) => p ? Math.abs(p.x - (b.minX + b.maxX) / 2) + Math.abs(p.y - (b.minY + b.maxY) / 2) : 99\nconst toward = (a, b, f) => !a || !b ? f : Math.abs(b.x - a.x) > Math.abs(b.y - a.y) ? (b.x > a.x ? \"RIGHT\" : \"LEFT\") : b.y !== a.y ? (b.y > a.y ? \"DOWN\" : \"UP\") : f\nconst edge = (p, b) => p && (p.x === b.minX || p.x === b.maxX || p.y === b.minY || p.y === b.maxY)\nconst nearEnemy = (s, es) => es.filter((e) => e.status === \"ACTIVE\" && e.position).sort((a, b) => dist(s.position, a.position) - dist(s.position, b.position))[0] ?? null\nconst c = (g, d) => g.cells.find((x) => x.dx === dx[d] && x.dy === dy[d])\nconst rc = (g, x, y) => g.cells.find((cell) => cell.dx === x && cell.dy === y)\nconst relDir = (x, y, f) => Math.abs(x) > Math.abs(y) ? (x > 0 ? \"RIGHT\" : \"LEFT\") : y ? (y > 0 ? \"DOWN\" : \"UP\") : f\nconst behind = (f) => f === \"UP\" ? [0, 1] : f === \"DOWN\" ? [0, -1] : f === \"LEFT\" ? [1, 0] : [-1, 0]\nconst safeBoard = (s, input) =>\n  directions.filter((d) => inside(step(s.position, d), input.board.bounds))\nconst backstabBoard = (s, input) => {\n  for (const e of input.enemySoldiers) {\n    if (e.status !== \"ACTIVE\" || !e.position || !e.facing) continue\n    const b = behind(e.facing)\n    const target = { x: e.position.x + b[0], y: e.position.y + b[1] }\n    if (inside(target, input.board.bounds) && dist(s.position, target) === 1) return toward(s.position, target, s.facing ?? \"UP\")\n  }\n  return null\n}\nconst prefer = (s, input) => {\n  const e = nearEnemy(s, input.enemySoldiers)\n  const toEnemy = toward(s.position, e?.position, s.facing ?? \"UP\")\n  const toCenter = directions.filter((d) => inside(step(s.position, d), input.board.bounds)).sort((a, b) => centerDist(step(s.position, a), input.board.bounds) - centerDist(step(s.position, b), input.board.bounds))[0] ?? toEnemy\n  if (profile.centerBias + profile.lateBias + profile.mobilityBias > profile.contactBias + profile.wallBias) return toCenter\n  return backstabBoard(s, input) ?? toEnemy\n}\nconst rearMove = (g) => {\n  for (const e of g.cells) {\n    if (e.contents !== \"ENEMY_ACTIVE\" || !e.facing) continue\n    const b = behind(e.facing)\n    const tx = e.dx + b[0]\n    const ty = e.dy + b[1]\n    if (Math.abs(tx) + Math.abs(ty) === 1 && rc(g, tx, ty)?.contents === \"EMPTY\") return relDir(tx, ty, \"UP\")\n    if (tx === 0 && ty === 0 && Math.abs(e.dx) + Math.abs(e.dy) === 1) return relDir(e.dx, e.dy, \"UP\")\n  }\n  return null\n}\nconst wallAway = (g, d) => g.cells.reduce((n, x) => n + (x.contents !== \"WALL\" ? 0 : x.dx < 0 && d === \"RIGHT\" ? 8 : x.dx > 0 && d === \"LEFT\" ? 8 : x.dy < 0 && d === \"DOWN\" ? 8 : x.dy > 0 && d === \"UP\" ? 8 : 0), 0)\nconst score = (input, d, o, m) => {\n  const cell = c(input.awarenessGrid, d)\n  if (!cell || cell.contents === \"WALL\" || cell.contents === \"TERRAIN_STONE\" || cell.contents.endsWith(\"STONE\")) return -999\n  if (input.self.lastSuccessfulMoveDirection === reverse[d]) return -998\n  const activeContact = cell.contents === \"ENEMY_ACTIVE\" || cell.contents === \"FRIENDLY_ACTIVE\"\n  if (activeContact && (cell.facing === d || cell.facing === reverse[d])) return -997\n  if (cell.contents === \"FRIENDLY_ACTIVE\" && rc(input.awarenessGrid, dx[d] * 2, dy[d] * 2)?.contents === \"WALL\") return -997\n  let s = cell.contents === \"ENEMY_ACTIVE\" ? 6 + profile.contactBias : cell.contents === \"FRIENDLY_ACTIVE\" ? -3 : 1\n  if (d === o.preferred) s += 12\n  if ((o.safeDirs ?? []).includes(d)) s += 5\n  if (d === m.last) s += profile.memoryBias\n  s += wallAway(input.awarenessGrid, d) * (o.contractionSoon ? 3 : 1)\n  if (profile.mobilityBias && d !== m.tried) s += profile.mobilityBias\n  if (o.contractionSoon && cell.contents === \"EMPTY\") s += profile.lateBias\n  if (cell.contents === \"ENEMY_ACTIVE\") s += profile.trapBias\n  return s\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const contractionSoon = input.roundNumber === 4\n    const active = input.mySoldiers.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position)\n    const ranked = active\n      .map((soldier, index) => {\n        const unmoved = soldier.lastSuccessfulMoveDirection ? 0 : 1\n        const enemy = nearEnemy(soldier, input.enemySoldiers)\n        const edgeRisk = edge(soldier.position, input.board.bounds) ? 1 : 0\n        const backstabReady = backstabBoard(soldier, input) ? 1 : 0\n        const pressure = 20 - dist(soldier.position, enemy?.position)\n        const center = 20 - centerDist(soldier.position, input.board.bounds)\n        const score =\n          unmoved * 1000 +\n          backstabReady * 700 +\n          (contractionSoon ? edgeRisk * 600 : edgeRisk * 80) +\n          pressure * profile.contactBias +\n          center * (profile.centerBias + profile.lateBias) +\n          (profile.mobilityBias * (soldier.id === memory.lastSelected ? -3 : 1)) +\n          index * -0.01\n        return { soldier, score }\n      })\n      .sort((left, right) => right.score - left.score)\n    const selected = ranked.slice(0, input.activationCount).map(({ soldier }) => {\n      const preferred = prefer(soldier, input)\n      return {\n        soldierId: soldier.id,\n        objective: {\n          doctrine: profile.doctrine,\n          preferred,\n          safeDirs: safeBoard(soldier, input),\n          contractionSoon,\n          seekBackstab: true,\n        },\n      }\n    })\n    return {\n      activationOrders: selected,\n      strategyMemory: {\n        ...memory,\n        lastSelected: selected[0]?.soldierId ?? memory.lastSelected ?? null,\n        selectedThisRound: selected.map((entry) => entry.soldierId),\n      },\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    const objective = input.objective && typeof input.objective === \"object\" ? input.objective : {}\n    const backstab = rearMove(input.awarenessGrid)\n    const best = directions\n      .map((direction) => [direction, score(input, direction, objective, memory)])\n      .sort((left, right) => right[1] - left[1])\n    const chosen = backstab && score(input, backstab, objective, memory) > -900 ? backstab : (best[0]?.[1] > -900 ? best[0][0] : null)\n    if (chosen) {\n      return {\n        action: { type: \"MOVE\", direction: chosen },\n        soldierMemory: {\n          ...memory,\n          last: chosen,\n          tried: chosen,\n          doctrine: profile.doctrine,\n        },\n      }\n    }\n    const seen = input.awarenessGrid.cells.filter((cell) => cell.contents === \"ENEMY_ACTIVE\").sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - (Math.abs(b.dx) + Math.abs(b.dy)))[0]\n    const turn = objective.preferred ?? (seen ? relDir(seen.dx, seen.dy, input.self.facing ?? \"UP\") : input.self.facing ?? \"UP\")\n    return {\n      action: { type: \"TURN\", direction: turn },\n      soldierMemory: {\n        ...memory,\n        tried: turn,\n        doctrine: profile.doctrine,\n      },\n    }\n  }\n}",
+        "hash": "eff43a1b44f254a22726c5337608d7c64d25cc5e30800f00c2c63117789964ad",
+        "bytes": 7911,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 7911,
+        "forbiddenPatterns": [],
+        "sourceHash": "eff43a1b44f254a22726c5337608d7c64d25cc5e30800f00c2c63117789964ad",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Snare Weaver",
+        "description": "A trap/control seed that baits direct pressure and turns contact timing into board control.",
+        "tags": [
+          "Advanced seed",
+          "Trap",
+          "Control",
+          "Memory"
+        ],
+        "version": "v1.5",
+        "archetype": "trap/control",
+        "benchmarkStarterId": "starter:trap-setter",
+        "level": "advanced"
+      },
+      "lineage": {
+        "derivedFrom": {
+          "artifactId": "strategy-artifact:starter:trap-setter",
+          "kind": "starter",
+          "sourceHash": "eff43a1b44f254a22726c5337608d7c64d25cc5e30800f00c2c63117789964ad",
+          "label": "starter:trap-setter"
+        },
+        "advancedLineage": {
+          "advancedId": "advanced:snare-weaver",
+          "advancedName": "Snare Weaver",
+          "advancedVersion": "v1.5",
+          "archetype": "trap/control",
+          "sourceHash": "eff43a1b44f254a22726c5337608d7c64d25cc5e30800f00c2c63117789964ad"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "eff43a1b44f254a22726c5337608d7c64d25cc5e30800f00c2c63117789964ad",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:2b7a5b97e5b9793711b5f1deb10fca59986433201b15d5590a3749d89f2c361c",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:2b7a5b97e5b9793711b5f1deb10fca59986433201b15d5590a3749d89f2c361c",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:advanced:stonewall-shear",
+      "kind": "advanced",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Advanced seed v1.5: wall-control shear\n// Benchmark reference: starter:wall-press.\n// Shared baseline: leave starting edge early, take rear-square chances, avoid outer-ring contraction risk,\n// avoid self-stoning, avoid off-board moves, and keep archetype flavor as a secondary priority.\nconst profile = {\n  \"banner\": \"wall-control shear\",\n  \"doctrine\": \"stonewall-shear\",\n  \"contactBias\": 4,\n  \"centerBias\": 0,\n  \"wallBias\": 5,\n  \"mobilityBias\": 1,\n  \"trapBias\": 1,\n  \"memoryBias\": 0,\n  \"lateBias\": 1\n}\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst reverse = { UP: \"DOWN\", RIGHT: \"LEFT\", DOWN: \"UP\", LEFT: \"RIGHT\" }\nconst dx = { UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1 }\nconst dy = { UP: -1, RIGHT: 0, DOWN: 1, LEFT: 0 }\nconst step = (p, d) => p ? { x: p.x + dx[d], y: p.y + dy[d] } : null\nconst inside = (p, b) => p && p.x >= b.minX && p.x <= b.maxX && p.y >= b.minY && p.y <= b.maxY\nconst dist = (a, b) => a && b ? Math.abs(a.x - b.x) + Math.abs(a.y - b.y) : 99\nconst centerDist = (p, b) => p ? Math.abs(p.x - (b.minX + b.maxX) / 2) + Math.abs(p.y - (b.minY + b.maxY) / 2) : 99\nconst toward = (a, b, f) => !a || !b ? f : Math.abs(b.x - a.x) > Math.abs(b.y - a.y) ? (b.x > a.x ? \"RIGHT\" : \"LEFT\") : b.y !== a.y ? (b.y > a.y ? \"DOWN\" : \"UP\") : f\nconst edge = (p, b) => p && (p.x === b.minX || p.x === b.maxX || p.y === b.minY || p.y === b.maxY)\nconst nearEnemy = (s, es) => es.filter((e) => e.status === \"ACTIVE\" && e.position).sort((a, b) => dist(s.position, a.position) - dist(s.position, b.position))[0] ?? null\nconst c = (g, d) => g.cells.find((x) => x.dx === dx[d] && x.dy === dy[d])\nconst rc = (g, x, y) => g.cells.find((cell) => cell.dx === x && cell.dy === y)\nconst relDir = (x, y, f) => Math.abs(x) > Math.abs(y) ? (x > 0 ? \"RIGHT\" : \"LEFT\") : y ? (y > 0 ? \"DOWN\" : \"UP\") : f\nconst behind = (f) => f === \"UP\" ? [0, 1] : f === \"DOWN\" ? [0, -1] : f === \"LEFT\" ? [1, 0] : [-1, 0]\nconst safeBoard = (s, input) =>\n  directions.filter((d) => inside(step(s.position, d), input.board.bounds))\nconst backstabBoard = (s, input) => {\n  for (const e of input.enemySoldiers) {\n    if (e.status !== \"ACTIVE\" || !e.position || !e.facing) continue\n    const b = behind(e.facing)\n    const target = { x: e.position.x + b[0], y: e.position.y + b[1] }\n    if (inside(target, input.board.bounds) && dist(s.position, target) === 1) return toward(s.position, target, s.facing ?? \"UP\")\n  }\n  return null\n}\nconst prefer = (s, input) => {\n  const e = nearEnemy(s, input.enemySoldiers)\n  const toEnemy = toward(s.position, e?.position, s.facing ?? \"UP\")\n  const toCenter = directions.filter((d) => inside(step(s.position, d), input.board.bounds)).sort((a, b) => centerDist(step(s.position, a), input.board.bounds) - centerDist(step(s.position, b), input.board.bounds))[0] ?? toEnemy\n  if (profile.centerBias + profile.lateBias + profile.mobilityBias > profile.contactBias + profile.wallBias) return toCenter\n  return backstabBoard(s, input) ?? toEnemy\n}\nconst rearMove = (g) => {\n  for (const e of g.cells) {\n    if (e.contents !== \"ENEMY_ACTIVE\" || !e.facing) continue\n    const b = behind(e.facing)\n    const tx = e.dx + b[0]\n    const ty = e.dy + b[1]\n    if (Math.abs(tx) + Math.abs(ty) === 1 && rc(g, tx, ty)?.contents === \"EMPTY\") return relDir(tx, ty, \"UP\")\n    if (tx === 0 && ty === 0 && Math.abs(e.dx) + Math.abs(e.dy) === 1) return relDir(e.dx, e.dy, \"UP\")\n  }\n  return null\n}\nconst wallAway = (g, d) => g.cells.reduce((n, x) => n + (x.contents !== \"WALL\" ? 0 : x.dx < 0 && d === \"RIGHT\" ? 8 : x.dx > 0 && d === \"LEFT\" ? 8 : x.dy < 0 && d === \"DOWN\" ? 8 : x.dy > 0 && d === \"UP\" ? 8 : 0), 0)\nconst score = (input, d, o, m) => {\n  const cell = c(input.awarenessGrid, d)\n  if (!cell || cell.contents === \"WALL\" || cell.contents === \"TERRAIN_STONE\" || cell.contents.endsWith(\"STONE\")) return -999\n  if (input.self.lastSuccessfulMoveDirection === reverse[d]) return -998\n  const activeContact = cell.contents === \"ENEMY_ACTIVE\" || cell.contents === \"FRIENDLY_ACTIVE\"\n  if (activeContact && (cell.facing === d || cell.facing === reverse[d])) return -997\n  if (cell.contents === \"FRIENDLY_ACTIVE\" && rc(input.awarenessGrid, dx[d] * 2, dy[d] * 2)?.contents === \"WALL\") return -997\n  let s = cell.contents === \"ENEMY_ACTIVE\" ? 6 + profile.contactBias : cell.contents === \"FRIENDLY_ACTIVE\" ? -3 : 1\n  if (d === o.preferred) s += 12\n  if ((o.safeDirs ?? []).includes(d)) s += 5\n  if (d === m.last) s += profile.memoryBias\n  s += wallAway(input.awarenessGrid, d) * (o.contractionSoon ? 3 : 1)\n  if (profile.mobilityBias && d !== m.tried) s += profile.mobilityBias\n  if (o.contractionSoon && cell.contents === \"EMPTY\") s += profile.lateBias\n  if (cell.contents === \"ENEMY_ACTIVE\") s += profile.trapBias\n  return s\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const contractionSoon = input.roundNumber === 4\n    const active = input.mySoldiers.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position)\n    const ranked = active\n      .map((soldier, index) => {\n        const unmoved = soldier.lastSuccessfulMoveDirection ? 0 : 1\n        const enemy = nearEnemy(soldier, input.enemySoldiers)\n        const edgeRisk = edge(soldier.position, input.board.bounds) ? 1 : 0\n        const backstabReady = backstabBoard(soldier, input) ? 1 : 0\n        const pressure = 20 - dist(soldier.position, enemy?.position)\n        const center = 20 - centerDist(soldier.position, input.board.bounds)\n        const score =\n          unmoved * 1000 +\n          backstabReady * 700 +\n          (contractionSoon ? edgeRisk * 600 : edgeRisk * 80) +\n          pressure * profile.contactBias +\n          center * (profile.centerBias + profile.lateBias) +\n          (profile.mobilityBias * (soldier.id === memory.lastSelected ? -3 : 1)) +\n          index * -0.01\n        return { soldier, score }\n      })\n      .sort((left, right) => right.score - left.score)\n    const selected = ranked.slice(0, input.activationCount).map(({ soldier }) => {\n      const preferred = prefer(soldier, input)\n      return {\n        soldierId: soldier.id,\n        objective: {\n          doctrine: profile.doctrine,\n          preferred,\n          safeDirs: safeBoard(soldier, input),\n          contractionSoon,\n          seekBackstab: true,\n        },\n      }\n    })\n    return {\n      activationOrders: selected,\n      strategyMemory: {\n        ...memory,\n        lastSelected: selected[0]?.soldierId ?? memory.lastSelected ?? null,\n        selectedThisRound: selected.map((entry) => entry.soldierId),\n      },\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    const objective = input.objective && typeof input.objective === \"object\" ? input.objective : {}\n    const backstab = rearMove(input.awarenessGrid)\n    const best = directions\n      .map((direction) => [direction, score(input, direction, objective, memory)])\n      .sort((left, right) => right[1] - left[1])\n    const chosen = backstab && score(input, backstab, objective, memory) > -900 ? backstab : (best[0]?.[1] > -900 ? best[0][0] : null)\n    if (chosen) {\n      return {\n        action: { type: \"MOVE\", direction: chosen },\n        soldierMemory: {\n          ...memory,\n          last: chosen,\n          tried: chosen,\n          doctrine: profile.doctrine,\n        },\n      }\n    }\n    const seen = input.awarenessGrid.cells.filter((cell) => cell.contents === \"ENEMY_ACTIVE\").sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - (Math.abs(b.dx) + Math.abs(b.dy)))[0]\n    const turn = objective.preferred ?? (seen ? relDir(seen.dx, seen.dy, input.self.facing ?? \"UP\") : input.self.facing ?? \"UP\")\n    return {\n      action: { type: \"TURN\", direction: turn },\n      soldierMemory: {\n        ...memory,\n        tried: turn,\n        doctrine: profile.doctrine,\n      },\n    }\n  }\n}",
+        "hash": "27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1",
+        "bytes": 7913,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 7913,
+        "forbiddenPatterns": [],
+        "sourceHash": "27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Stonewall Shear",
+        "description": "A wall-control Advanced seed that pressures lanes near board edges without confusing edge play for pure camping.",
+        "tags": [
+          "Advanced seed",
+          "Wall",
+          "Edge",
+          "Control"
+        ],
+        "version": "v1.5",
+        "archetype": "wall control",
+        "benchmarkStarterId": "starter:wall-press",
+        "level": "advanced"
+      },
+      "lineage": {
+        "derivedFrom": {
+          "artifactId": "strategy-artifact:starter:wall-press",
+          "kind": "starter",
+          "sourceHash": "27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1",
+          "label": "starter:wall-press"
+        },
+        "advancedLineage": {
+          "advancedId": "advanced:stonewall-shear",
+          "advancedName": "Stonewall Shear",
+          "advancedVersion": "v1.5",
+          "archetype": "wall control",
+          "sourceHash": "27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:3e229dfac3dfdf35b6762c57b6c3f8ddd643f54ea4797c308421a7a6d9dccc82",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:3e229dfac3dfdf35b6762c57b6c3f8ddd643f54ea4797c308421a7a6d9dccc82",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:advanced:vanguard-pressure",
+      "kind": "advanced",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Advanced seed v1.5: pressure/contact escalation\n// Benchmark reference: starter:aggro-chaser.\n// Shared baseline: leave starting edge early, take rear-square chances, avoid outer-ring contraction risk,\n// avoid self-stoning, avoid off-board moves, and keep archetype flavor as a secondary priority.\nconst profile = {\n  \"banner\": \"pressure/contact escalation\",\n  \"doctrine\": \"vanguard-pressure\",\n  \"contactBias\": 5,\n  \"centerBias\": 1,\n  \"wallBias\": 1,\n  \"mobilityBias\": 1,\n  \"trapBias\": 0,\n  \"memoryBias\": 0,\n  \"lateBias\": 1\n}\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst reverse = { UP: \"DOWN\", RIGHT: \"LEFT\", DOWN: \"UP\", LEFT: \"RIGHT\" }\nconst dx = { UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1 }\nconst dy = { UP: -1, RIGHT: 0, DOWN: 1, LEFT: 0 }\nconst step = (p, d) => p ? { x: p.x + dx[d], y: p.y + dy[d] } : null\nconst inside = (p, b) => p && p.x >= b.minX && p.x <= b.maxX && p.y >= b.minY && p.y <= b.maxY\nconst dist = (a, b) => a && b ? Math.abs(a.x - b.x) + Math.abs(a.y - b.y) : 99\nconst centerDist = (p, b) => p ? Math.abs(p.x - (b.minX + b.maxX) / 2) + Math.abs(p.y - (b.minY + b.maxY) / 2) : 99\nconst toward = (a, b, f) => !a || !b ? f : Math.abs(b.x - a.x) > Math.abs(b.y - a.y) ? (b.x > a.x ? \"RIGHT\" : \"LEFT\") : b.y !== a.y ? (b.y > a.y ? \"DOWN\" : \"UP\") : f\nconst edge = (p, b) => p && (p.x === b.minX || p.x === b.maxX || p.y === b.minY || p.y === b.maxY)\nconst nearEnemy = (s, es) => es.filter((e) => e.status === \"ACTIVE\" && e.position).sort((a, b) => dist(s.position, a.position) - dist(s.position, b.position))[0] ?? null\nconst c = (g, d) => g.cells.find((x) => x.dx === dx[d] && x.dy === dy[d])\nconst rc = (g, x, y) => g.cells.find((cell) => cell.dx === x && cell.dy === y)\nconst relDir = (x, y, f) => Math.abs(x) > Math.abs(y) ? (x > 0 ? \"RIGHT\" : \"LEFT\") : y ? (y > 0 ? \"DOWN\" : \"UP\") : f\nconst behind = (f) => f === \"UP\" ? [0, 1] : f === \"DOWN\" ? [0, -1] : f === \"LEFT\" ? [1, 0] : [-1, 0]\nconst safeBoard = (s, input) =>\n  directions.filter((d) => inside(step(s.position, d), input.board.bounds))\nconst backstabBoard = (s, input) => {\n  for (const e of input.enemySoldiers) {\n    if (e.status !== \"ACTIVE\" || !e.position || !e.facing) continue\n    const b = behind(e.facing)\n    const target = { x: e.position.x + b[0], y: e.position.y + b[1] }\n    if (inside(target, input.board.bounds) && dist(s.position, target) === 1) return toward(s.position, target, s.facing ?? \"UP\")\n  }\n  return null\n}\nconst prefer = (s, input) => {\n  const e = nearEnemy(s, input.enemySoldiers)\n  const toEnemy = toward(s.position, e?.position, s.facing ?? \"UP\")\n  const toCenter = directions.filter((d) => inside(step(s.position, d), input.board.bounds)).sort((a, b) => centerDist(step(s.position, a), input.board.bounds) - centerDist(step(s.position, b), input.board.bounds))[0] ?? toEnemy\n  if (profile.centerBias + profile.lateBias + profile.mobilityBias > profile.contactBias + profile.wallBias) return toCenter\n  return backstabBoard(s, input) ?? toEnemy\n}\nconst rearMove = (g) => {\n  for (const e of g.cells) {\n    if (e.contents !== \"ENEMY_ACTIVE\" || !e.facing) continue\n    const b = behind(e.facing)\n    const tx = e.dx + b[0]\n    const ty = e.dy + b[1]\n    if (Math.abs(tx) + Math.abs(ty) === 1 && rc(g, tx, ty)?.contents === \"EMPTY\") return relDir(tx, ty, \"UP\")\n    if (tx === 0 && ty === 0 && Math.abs(e.dx) + Math.abs(e.dy) === 1) return relDir(e.dx, e.dy, \"UP\")\n  }\n  return null\n}\nconst wallAway = (g, d) => g.cells.reduce((n, x) => n + (x.contents !== \"WALL\" ? 0 : x.dx < 0 && d === \"RIGHT\" ? 8 : x.dx > 0 && d === \"LEFT\" ? 8 : x.dy < 0 && d === \"DOWN\" ? 8 : x.dy > 0 && d === \"UP\" ? 8 : 0), 0)\nconst score = (input, d, o, m) => {\n  const cell = c(input.awarenessGrid, d)\n  if (!cell || cell.contents === \"WALL\" || cell.contents === \"TERRAIN_STONE\" || cell.contents.endsWith(\"STONE\")) return -999\n  if (input.self.lastSuccessfulMoveDirection === reverse[d]) return -998\n  const activeContact = cell.contents === \"ENEMY_ACTIVE\" || cell.contents === \"FRIENDLY_ACTIVE\"\n  if (activeContact && (cell.facing === d || cell.facing === reverse[d])) return -997\n  if (cell.contents === \"FRIENDLY_ACTIVE\" && rc(input.awarenessGrid, dx[d] * 2, dy[d] * 2)?.contents === \"WALL\") return -997\n  let s = cell.contents === \"ENEMY_ACTIVE\" ? 6 + profile.contactBias : cell.contents === \"FRIENDLY_ACTIVE\" ? -3 : 1\n  if (d === o.preferred) s += 12\n  if ((o.safeDirs ?? []).includes(d)) s += 5\n  if (d === m.last) s += profile.memoryBias\n  s += wallAway(input.awarenessGrid, d) * (o.contractionSoon ? 3 : 1)\n  if (profile.mobilityBias && d !== m.tried) s += profile.mobilityBias\n  if (o.contractionSoon && cell.contents === \"EMPTY\") s += profile.lateBias\n  if (cell.contents === \"ENEMY_ACTIVE\") s += profile.trapBias\n  return s\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const contractionSoon = input.roundNumber === 4\n    const active = input.mySoldiers.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position)\n    const ranked = active\n      .map((soldier, index) => {\n        const unmoved = soldier.lastSuccessfulMoveDirection ? 0 : 1\n        const enemy = nearEnemy(soldier, input.enemySoldiers)\n        const edgeRisk = edge(soldier.position, input.board.bounds) ? 1 : 0\n        const backstabReady = backstabBoard(soldier, input) ? 1 : 0\n        const pressure = 20 - dist(soldier.position, enemy?.position)\n        const center = 20 - centerDist(soldier.position, input.board.bounds)\n        const score =\n          unmoved * 1000 +\n          backstabReady * 700 +\n          (contractionSoon ? edgeRisk * 600 : edgeRisk * 80) +\n          pressure * profile.contactBias +\n          center * (profile.centerBias + profile.lateBias) +\n          (profile.mobilityBias * (soldier.id === memory.lastSelected ? -3 : 1)) +\n          index * -0.01\n        return { soldier, score }\n      })\n      .sort((left, right) => right.score - left.score)\n    const selected = ranked.slice(0, input.activationCount).map(({ soldier }) => {\n      const preferred = prefer(soldier, input)\n      return {\n        soldierId: soldier.id,\n        objective: {\n          doctrine: profile.doctrine,\n          preferred,\n          safeDirs: safeBoard(soldier, input),\n          contractionSoon,\n          seekBackstab: true,\n        },\n      }\n    })\n    return {\n      activationOrders: selected,\n      strategyMemory: {\n        ...memory,\n        lastSelected: selected[0]?.soldierId ?? memory.lastSelected ?? null,\n        selectedThisRound: selected.map((entry) => entry.soldierId),\n      },\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    const objective = input.objective && typeof input.objective === \"object\" ? input.objective : {}\n    const backstab = rearMove(input.awarenessGrid)\n    const best = directions\n      .map((direction) => [direction, score(input, direction, objective, memory)])\n      .sort((left, right) => right[1] - left[1])\n    const chosen = backstab && score(input, backstab, objective, memory) > -900 ? backstab : (best[0]?.[1] > -900 ? best[0][0] : null)\n    if (chosen) {\n      return {\n        action: { type: \"MOVE\", direction: chosen },\n        soldierMemory: {\n          ...memory,\n          last: chosen,\n          tried: chosen,\n          doctrine: profile.doctrine,\n        },\n      }\n    }\n    const seen = input.awarenessGrid.cells.filter((cell) => cell.contents === \"ENEMY_ACTIVE\").sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - (Math.abs(b.dx) + Math.abs(b.dy)))[0]\n    const turn = objective.preferred ?? (seen ? relDir(seen.dx, seen.dy, input.self.facing ?? \"UP\") : input.self.facing ?? \"UP\")\n    return {\n      action: { type: \"TURN\", direction: turn },\n      soldierMemory: {\n        ...memory,\n        tried: turn,\n        doctrine: profile.doctrine,\n      },\n    }\n  }\n}",
+        "hash": "02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37",
+        "bytes": 7935,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 7935,
+        "forbiddenPatterns": [],
+        "sourceHash": "02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Vanguard Pressure",
+        "description": "A contact-first Advanced seed that applies early pressure while preserving replayable evidence against passive doctrines.",
+        "tags": [
+          "Advanced seed",
+          "Pressure",
+          "Contact"
+        ],
+        "version": "v1.5",
+        "archetype": "pressure / contact",
+        "benchmarkStarterId": "starter:aggro-chaser",
+        "level": "advanced"
+      },
+      "lineage": {
+        "derivedFrom": {
+          "artifactId": "strategy-artifact:starter:aggro-chaser",
+          "kind": "starter",
+          "sourceHash": "02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37",
+          "label": "starter:aggro-chaser"
+        },
+        "advancedLineage": {
+          "advancedId": "advanced:vanguard-pressure",
+          "advancedName": "Vanguard Pressure",
+          "advancedVersion": "v1.5",
+          "archetype": "pressure / contact",
+          "sourceHash": "02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:80eb17d9e0434c682472f149f8369d3d3f336a93b370f9b7bd361b7f9e31f3f3",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:80eb17d9e0434c682472f149f8369d3d3f336a93b370f9b7bd361b7f9e31f3f3",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:starter:aggro-chaser",
+      "kind": "starter",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Doctrine: chase the closest active enemy and force contact before slower doctrines settle.\nconst directionToEnemy = (self, enemies) => {\n  const live = enemies.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position && self.position)\n  live.sort((left, right) =>\n    Math.abs(left.position.x - self.position.x) + Math.abs(left.position.y - self.position.y) -\n    (Math.abs(right.position.x - self.position.x) + Math.abs(right.position.y - self.position.y))\n  )\n  const target = live[0]\n  if (!target || !self.position) return self.facing ?? \"UP\"\n  const dx = target.position.x - self.position.x\n  const dy = target.position.y - self.position.y\n  return Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? \"RIGHT\" : \"LEFT\") : (dy >= 0 ? \"DOWN\" : \"UP\")\n}\n\nconst reverse = { UP: \"DOWN\", DOWN: \"UP\", LEFT: \"RIGHT\", RIGHT: \"LEFT\" }\n\nconst cellFor = (grid, direction) => {\n  if (direction === \"UP\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)\n  if (direction === \"RIGHT\") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)\n  if (direction === \"DOWN\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)\n  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)\n}\n\nconst safeAggroMove = (input, lane) => {\n  const target = cellFor(input.awarenessGrid, lane)\n  if ((target?.contents === \"EMPTY\" || target?.contents === \"ENEMY_ACTIVE\") && input.self.lastSuccessfulMoveDirection !== reverse[lane]) {\n    return lane\n  }\n  return [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"].find((direction) => {\n    const cell = cellFor(input.awarenessGrid, direction)\n    return cell?.contents === \"EMPTY\" && input.self.lastSuccessfulMoveDirection !== reverse[direction]\n  }) ?? null\n}\n\nexport default {\n  selectActivations(input) {\n    return {\n      activationOrders: input.mySoldiers\n        .filter((soldier) => soldier.status === \"ACTIVE\")\n        .slice(0, input.activationCount)\n        .map((soldier) => ({ soldierId: soldier.id, objective: { doctrine: \"aggro\", lane: directionToEnemy(soldier, input.enemySoldiers) } })),\n      strategyMemory: input.strategyMemory\n    }\n  },\n  soldierBrain(input) {\n    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {\n      return { action: { type: \"TURN\", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }\n    }\n    const lane = input.objective?.lane ?? input.self.facing ?? \"UP\"\n    const adjacent = input.awarenessGrid.cells.some((cell) => cell.contents === \"ENEMY_ACTIVE\" && Math.abs(cell.dx) + Math.abs(cell.dy) === 1)\n    const move = safeAggroMove(input, lane)\n    const attackLane = adjacent && input.self.lastSuccessfulMoveDirection !== reverse[lane] ? lane : move\n    return { action: attackLane ? { type: \"MOVE\", direction: attackLane } : { type: \"TURN\", direction: lane }, soldierMemory: input.soldierMemory }\n  }\n}",
+        "hash": "5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1",
+        "bytes": 2897,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 2897,
+        "forbiddenPatterns": [],
+        "sourceHash": "5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Aggro Chaser",
+        "description": "Pursues the closest active enemy and forces contact quickly.",
+        "tags": [
+          "Aggro",
+          "Chase",
+          "Contact"
+        ],
+        "version": "v1.4",
+        "level": "starter"
+      },
+      "lineage": {
+        "starterLineage": {
+          "starterId": "starter:aggro-chaser",
+          "starterName": "Aggro Chaser",
+          "starterVersion": "v1.4",
+          "sourceHash": "5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:ca142537948c7e60a6e49c37e48635e1f2860970fd876250964575650631ff81",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:ca142537948c7e60a6e49c37e48635e1f2860970fd876250964575650631ff81",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:starter:backstab-hunter",
+      "kind": "starter",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Doctrine: approach from exposed rear arcs and remember the last promising chase lane.\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst opposite = { UP: \"DOWN\", DOWN: \"UP\", LEFT: \"RIGHT\", RIGHT: \"LEFT\" }\n\nconst rearTarget = (grid) => {\n  const candidates = grid.cells.filter((cell) => cell.contents === \"ENEMY_ACTIVE\" && cell.facing)\n  const rear = candidates.find((cell) => {\n    if (cell.facing === \"UP\") return cell.dy === -1 && cell.dx === 0\n    if (cell.facing === \"DOWN\") return cell.dy === 1 && cell.dx === 0\n    if (cell.facing === \"LEFT\") return cell.dx === -1 && cell.dy === 0\n    return cell.dx === 1 && cell.dy === 0\n  })\n  return rear ?? candidates.sort((left, right) => Math.abs(left.dx) + Math.abs(left.dy) - (Math.abs(right.dx) + Math.abs(right.dy)))[0]\n}\n\nconst directionTo = (cell, fallback) => {\n  if (!cell) return fallback\n  if (Math.abs(cell.dx) > Math.abs(cell.dy)) return cell.dx > 0 ? \"RIGHT\" : \"LEFT\"\n  if (cell.dy !== 0) return cell.dy > 0 ? \"DOWN\" : \"UP\"\n  return fallback\n}\n\nconst cellFor = (grid, direction) => {\n  if (direction === \"UP\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)\n  if (direction === \"RIGHT\") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)\n  if (direction === \"DOWN\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)\n  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)\n}\n\nconst openLane = (input, preferred) => {\n  const ranked = directions\n    .map((direction) => {\n      const cell = cellFor(input.awarenessGrid, direction)\n      if (cell?.contents !== \"EMPTY\") return [direction, -999]\n      if (input.self.lastSuccessfulMoveDirection === opposite[direction]) return [direction, -998]\n      return [direction, direction === preferred ? 5 : 1]\n    })\n    .sort((left, right) => right[1] - left[1])\n  return ranked[0]?.[1] > -900 ? ranked[0][0] : null\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const active = input.mySoldiers.filter((soldier) => soldier.status === \"ACTIVE\")\n    return {\n      activationOrders: active.slice(0, input.activationCount).map((soldier) => ({ soldierId: soldier.id, objective: { doctrine: \"backstab\", lastLane: memory.lastLane ?? null } })),\n      strategyMemory: { ...memory, lastSelected: active.map((soldier) => soldier.id).slice(0, input.activationCount) }\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {\n      return { action: { type: \"TURN\", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: memory }\n    }\n    const target = rearTarget(input.awarenessGrid)\n    const lane = directionTo(target, memory.lastLane ?? input.self.facing ?? \"UP\")\n    const close = target && Math.abs(target.dx) + Math.abs(target.dy) === 1\n    const open = openLane(input, lane)\n    return {\n      action: close || open ? { type: \"MOVE\", direction: close ? lane : open } : { type: \"TURN\", direction: lane },\n      soldierMemory: { ...memory, lastLane: lane, rearSeen: Boolean(target?.facing) }\n    }\n  }\n}",
+        "hash": "d4b2d480a743ae3f5f4bbcb167385183a03d1fc0e52a8fb8c333014fbe3e2b39",
+        "bytes": 3299,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 3299,
+        "forbiddenPatterns": [],
+        "sourceHash": "d4b2d480a743ae3f5f4bbcb167385183a03d1fc0e52a8fb8c333014fbe3e2b39",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Backstab Hunter",
+        "description": "Tracks rear-facing opportunities and remembers the most promising chase lane.",
+        "tags": [
+          "Backstab",
+          "Memory",
+          "Tactics"
+        ],
+        "version": "v1.4",
+        "level": "starter"
+      },
+      "lineage": {
+        "starterLineage": {
+          "starterId": "starter:backstab-hunter",
+          "starterName": "Backstab Hunter",
+          "starterVersion": "v1.4",
+          "sourceHash": "d4b2d480a743ae3f5f4bbcb167385183a03d1fc0e52a8fb8c333014fbe3e2b39"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "d4b2d480a743ae3f5f4bbcb167385183a03d1fc0e52a8fb8c333014fbe3e2b39",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:68d0c42cb43a33e43da5313c8f3fb1dc50430e44382c462c2f16c95f11267ee3",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:68d0c42cb43a33e43da5313c8f3fb1dc50430e44382c462c2f16c95f11267ee3",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:starter:center-turtle",
+      "kind": "starter",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Doctrine: hold central shape, avoid needless contact, and turn to stone when boxed in.\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst reverse = { UP: \"DOWN\", DOWN: \"UP\", LEFT: \"RIGHT\", RIGHT: \"LEFT\" }\n\nconst countAdjacent = (grid, contents) =>\n  grid.cells.filter((cell) => cell.contents === contents && Math.abs(cell.dx) + Math.abs(cell.dy) === 1).length\n\nconst wallEscapeScore = (grid, direction) =>\n  grid.cells.reduce((score, cell) => {\n    if (cell.contents !== \"WALL\") return score\n    if (cell.dx < 0 && direction === \"RIGHT\") return score + 4\n    if (cell.dx > 0 && direction === \"LEFT\") return score + 4\n    if (cell.dy < 0 && direction === \"DOWN\") return score + 4\n    if (cell.dy > 0 && direction === \"UP\") return score + 4\n    return score\n  }, 0)\n\nconst rankedDirections = (input) =>\n  directions\n    .map((direction) => {\n    const cell = direction === \"UP\"\n      ? input.awarenessGrid.cells.find((candidate) => candidate.dx === 0 && candidate.dy === -1)\n      : direction === \"RIGHT\"\n        ? input.awarenessGrid.cells.find((candidate) => candidate.dx === 1 && candidate.dy === 0)\n        : direction === \"DOWN\"\n          ? input.awarenessGrid.cells.find((candidate) => candidate.dx === 0 && candidate.dy === 1)\n          : input.awarenessGrid.cells.find((candidate) => candidate.dx === -1 && candidate.dy === 0)\n      if (cell?.contents !== \"EMPTY\") return [direction, -999]\n      if (input.self.lastSuccessfulMoveDirection === reverse[direction]) return [direction, -998]\n      const facingBonus = direction === input.self.facing ? 2 : 0\n      return [direction, wallEscapeScore(input.awarenessGrid, direction) + facingBonus]\n    })\n    .sort((left, right) => right[1] - left[1])\n\nexport default {\n  selectActivations(input) {\n    return {\n      activationOrders: input.mySoldiers\n        .filter((soldier) => soldier.status === \"ACTIVE\")\n        .slice(0, input.activationCount)\n        .map((soldier) => ({ soldierId: soldier.id, objective: { doctrine: \"center-turtle\" } })),\n      strategyMemory: input.strategyMemory\n    }\n  },\n  soldierBrain(input) {\n    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {\n      return { action: { type: \"TURN\", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }\n    }\n    const enemies = countAdjacent(input.awarenessGrid, \"ENEMY_ACTIVE\")\n    const walls = countAdjacent(input.awarenessGrid, \"WALL\")\n    const ranked = rankedDirections(input)\n    const direction = ranked[0]?.[0] ?? input.self.facing ?? \"UP\"\n    if (ranked[0]?.[1] <= -900 && enemies >= 1 && walls >= 1) return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: input.soldierMemory }\n    return { action: ranked[0]?.[1] > -900 ? { type: \"MOVE\", direction } : { type: \"TURN\", direction }, soldierMemory: input.soldierMemory }\n  }\n}",
+        "hash": "659d6906c2857f7e0d60553ace1d58e84ac9fec5e5bd4bd2e695d7a0797423d0",
+        "bytes": 2866,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 2866,
+        "forbiddenPatterns": [],
+        "sourceHash": "659d6906c2857f7e0d60553ace1d58e84ac9fec5e5bd4bd2e695d7a0797423d0",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Center Turtle",
+        "description": "Holds a stable central posture, avoids unnecessary adjacency, and stones when boxed.",
+        "tags": [
+          "Defense",
+          "Center",
+          "Stable"
+        ],
+        "version": "v1.4",
+        "level": "starter"
+      },
+      "lineage": {
+        "starterLineage": {
+          "starterId": "starter:center-turtle",
+          "starterName": "Center Turtle",
+          "starterVersion": "v1.4",
+          "sourceHash": "659d6906c2857f7e0d60553ace1d58e84ac9fec5e5bd4bd2e695d7a0797423d0"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "659d6906c2857f7e0d60553ace1d58e84ac9fec5e5bd4bd2e695d7a0797423d0",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:fd96dbbaaa0973dd748daf564967a31e5b0bc44db2bbc6c6433f64c3b9a592c0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:fd96dbbaaa0973dd748daf564967a31e5b0bc44db2bbc6c6433f64c3b9a592c0",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:starter:centerline-bully",
+      "kind": "starter",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Doctrine: claim central lanes, face nearby enemies, and keep pressure off the edge.\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\n\nconst step = (position, direction) => {\n  if (!position) return null\n  if (direction === \"UP\") return { x: position.x, y: position.y - 1 }\n  if (direction === \"RIGHT\") return { x: position.x + 1, y: position.y }\n  if (direction === \"DOWN\") return { x: position.x, y: position.y + 1 }\n  return { x: position.x - 1, y: position.y }\n}\n\nconst inside = (position, bounds) =>\n  position &&\n  position.x >= bounds.minX &&\n  position.x <= bounds.maxX &&\n  position.y >= bounds.minY &&\n  position.y <= bounds.maxY\n\nconst distanceFromCenter = (position, bounds) => {\n  if (!position) return 99\n  const centerX = (bounds.minX + bounds.maxX) / 2\n  const centerY = (bounds.minY + bounds.maxY) / 2\n  return Math.abs(position.x - centerX) + Math.abs(position.y - centerY)\n}\n\nconst nearestEnemyDirection = (self, enemies) => {\n  const live = enemies.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position)\n  live.sort((left, right) =>\n    Math.abs(left.position.x - self.position.x) + Math.abs(left.position.y - self.position.y) -\n    (Math.abs(right.position.x - self.position.x) + Math.abs(right.position.y - self.position.y))\n  )\n  const target = live[0]\n  if (!target || !self.position) return self.facing ?? \"UP\"\n  const dx = target.position.x - self.position.x\n  const dy = target.position.y - self.position.y\n  return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? \"RIGHT\" : \"LEFT\") : (dy > 0 ? \"DOWN\" : \"UP\")\n}\n\nconst cellFor = (grid, direction) => {\n  if (direction === \"UP\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)\n  if (direction === \"RIGHT\") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)\n  if (direction === \"DOWN\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)\n  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)\n}\n\nconst reverse = { UP: \"DOWN\", DOWN: \"UP\", LEFT: \"RIGHT\", RIGHT: \"LEFT\" }\n\nconst wallEscapeScore = (grid, direction) =>\n  grid.cells.reduce((score, cell) => {\n    if (cell.contents !== \"WALL\") return score\n    if (cell.dx < 0 && direction === \"RIGHT\") return score + 4\n    if (cell.dx > 0 && direction === \"LEFT\") return score + 4\n    if (cell.dy < 0 && direction === \"DOWN\") return score + 4\n    if (cell.dy > 0 && direction === \"UP\") return score + 4\n    return score\n  }, 0)\n\nconst openMoveDirection = (input, preferred) => {\n  const ranked = directions\n    .map((direction) => {\n      const cell = cellFor(input.awarenessGrid, direction)\n      if (cell?.contents !== \"EMPTY\") return [direction, -999]\n      if (input.self.lastSuccessfulMoveDirection === reverse[direction]) return [direction, -998]\n      return [direction, (direction === preferred ? 6 : 0) + wallEscapeScore(input.awarenessGrid, direction)]\n    })\n    .sort((left, right) => right[1] - left[1])\n  return ranked[0]?.[1] > -900 ? ranked[0][0] : null\n}\n\nconst bestCenterDirection = (self, board) => {\n  let best = self.facing ?? \"UP\"\n  let bestScore = 999\n  for (const direction of directions) {\n    const next = step(self.position, direction)\n    if (!inside(next, board.bounds)) continue\n    const score = distanceFromCenter(next, board.bounds)\n    if (score < bestScore) {\n      best = direction\n      bestScore = score\n    }\n  }\n  return best\n}\n\nexport default {\n  selectActivations(input) {\n    const ordered = input.mySoldiers\n      .filter((soldier) => soldier.status === \"ACTIVE\")\n      .sort((left, right) => distanceFromCenter(left.position, input.board.bounds) - distanceFromCenter(right.position, input.board.bounds))\n      .slice(0, input.activationCount)\n      .map((soldier) => ({ soldierId: soldier.id, objective: { doctrine: \"centerline\", target: nearestEnemyDirection(soldier, input.enemySoldiers) } }))\n    return { activationOrders: ordered, strategyMemory: input.strategyMemory }\n  },\n  soldierBrain(input) {\n    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {\n      return { action: { type: \"TURN\", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }\n    }\n    const desired = input.objective?.target ?? bestCenterDirection(input.self, { bounds: { minX: -4, maxX: 4, minY: -4, maxY: 4 } })\n    const direction = openMoveDirection(input, desired)\n    const front = cellFor(input.awarenessGrid, desired)\n    const action = direction\n      ? { type: \"MOVE\", direction }\n      : front?.contents === \"ENEMY_ACTIVE\"\n        ? { type: \"MOVE\", direction: desired }\n        : { type: \"TURN\", direction: desired }\n    return { action, soldierMemory: input.soldierMemory }\n  }\n}",
+        "hash": "9d6f04a2520f1c5e406a49d6bad6200429b4b48481d55d23b97a2ac4e97c27c5",
+        "bytes": 4695,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 4695,
+        "forbiddenPatterns": [],
+        "sourceHash": "9d6f04a2520f1c5e406a49d6bad6200429b4b48481d55d23b97a2ac4e97c27c5",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Centerline Bully",
+        "description": "Claims central lanes early, faces pressure, and tries to keep enemies moving toward shrinking danger.",
+        "tags": [
+          "Center control",
+          "Pressure",
+          "Readable"
+        ],
+        "version": "v1.4",
+        "level": "starter"
+      },
+      "lineage": {
+        "starterLineage": {
+          "starterId": "starter:centerline-bully",
+          "starterName": "Centerline Bully",
+          "starterVersion": "v1.4",
+          "sourceHash": "9d6f04a2520f1c5e406a49d6bad6200429b4b48481d55d23b97a2ac4e97c27c5"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "9d6f04a2520f1c5e406a49d6bad6200429b4b48481d55d23b97a2ac4e97c27c5",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:d62e3f2639228565a91c864649a035f9e9fb26096a157bb9dd9b1165f33addf4",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:d62e3f2639228565a91c864649a035f9e9fb26096a157bb9dd9b1165f33addf4",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:starter:corner-lurker",
+      "kind": "starter",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Doctrine: survive near corners, wait for overextension, and turn to stone when crowded.\nconst cornerDirections = [\"UP\", \"LEFT\", \"DOWN\", \"RIGHT\"]\n\nconst adjacentEnemy = (grid) =>\n  grid.cells.some((cell) =>\n    cell.contents === \"ENEMY_ACTIVE\" &&\n    ((cell.dx === 0 && Math.abs(cell.dy) === 1) || (cell.dy === 0 && Math.abs(cell.dx) === 1))\n  )\n\nconst wallCount = (grid) =>\n  grid.cells.filter((cell) => Math.abs(cell.dx) + Math.abs(cell.dy) === 1 && cell.contents === \"WALL\").length\n\nconst openDirection = (grid, fallback) => {\n  const cells = [\n    [\"UP\", grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)],\n    [\"RIGHT\", grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)],\n    [\"DOWN\", grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)],\n    [\"LEFT\", grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)]\n  ]\n  const open = cells.find((entry) => entry[1]?.contents === \"EMPTY\")\n  return open?.[0] ?? fallback\n}\n\nconst reverse = { UP: \"DOWN\", DOWN: \"UP\", LEFT: \"RIGHT\", RIGHT: \"LEFT\" }\n\nconst mobileDirection = (input, fallback) => {\n  const candidates = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\n    .map((direction) => {\n      const cell = input.awarenessGrid.cells.find((candidate) =>\n        direction === \"UP\" ? candidate.dx === 0 && candidate.dy === -1 :\n        direction === \"RIGHT\" ? candidate.dx === 1 && candidate.dy === 0 :\n        direction === \"DOWN\" ? candidate.dx === 0 && candidate.dy === 1 :\n        candidate.dx === -1 && candidate.dy === 0\n      )\n      if (cell?.contents !== \"EMPTY\") return [direction, -999]\n      if (input.self.lastSuccessfulMoveDirection === reverse[direction]) return [direction, -998]\n      const wallEscape = input.awarenessGrid.cells.reduce((score, nearby) => {\n        if (nearby.contents !== \"WALL\") return score\n        if (nearby.dx < 0 && direction === \"RIGHT\") return score + 4\n        if (nearby.dx > 0 && direction === \"LEFT\") return score + 4\n        if (nearby.dy < 0 && direction === \"DOWN\") return score + 4\n        if (nearby.dy > 0 && direction === \"UP\") return score + 4\n        return score\n      }, 0)\n      return [direction, wallEscape + (direction === fallback ? 2 : 0)]\n    })\n    .sort((left, right) => right[1] - left[1])\n  return candidates[0]?.[1] > -900 ? candidates[0][0] : null\n}\n\nexport default {\n  selectActivations(input) {\n    return {\n      activationOrders: input.mySoldiers\n        .filter((soldier) => soldier.status === \"ACTIVE\")\n        .slice()\n        .reverse()\n        .slice(0, input.activationCount)\n        .map((soldier) => ({ soldierId: soldier.id, objective: { doctrine: \"corner-lurk\" } })),\n      strategyMemory: input.strategyMemory\n    }\n  },\n  soldierBrain(input) {\n    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {\n      return { action: { type: \"TURN\", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }\n    }\n    const facing = input.self.facing ?? cornerDirections[input.cycleIndex % cornerDirections.length]\n    const direction = mobileDirection(input, openDirection(input.awarenessGrid, facing))\n    if (!direction && adjacentEnemy(input.awarenessGrid) && wallCount(input.awarenessGrid) >= 1) {\n      return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: input.soldierMemory }\n    }\n    return {\n      action: direction ? { type: \"MOVE\", direction } : { type: \"TURN\", direction: facing },\n      soldierMemory: input.soldierMemory\n    }\n  }\n}",
+        "hash": "017f99e5ea2502eb6ba8bbf44e861fbb38b0092f93e7cf3a1c6859b385ce0916",
+        "bytes": 3479,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 3479,
+        "forbiddenPatterns": [],
+        "sourceHash": "017f99e5ea2502eb6ba8bbf44e861fbb38b0092f93e7cf3a1c6859b385ce0916",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Corner Lurker",
+        "description": "Defends near safer corners and punishes reckless contact with STONE.",
+        "tags": [
+          "Defense",
+          "Corners",
+          "STONE"
+        ],
+        "version": "v1.4",
+        "level": "starter"
+      },
+      "lineage": {
+        "starterLineage": {
+          "starterId": "starter:corner-lurker",
+          "starterName": "Corner Lurker",
+          "starterVersion": "v1.4",
+          "sourceHash": "017f99e5ea2502eb6ba8bbf44e861fbb38b0092f93e7cf3a1c6859b385ce0916"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "017f99e5ea2502eb6ba8bbf44e861fbb38b0092f93e7cf3a1c6859b385ce0916",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:5ad54ff74e3f012f0d7be31f013a5d2dcf9e53487b6be1a982d75e68af26897c",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:5ad54ff74e3f012f0d7be31f013a5d2dcf9e53487b6be1a982d75e68af26897c",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:starter:escape-artist",
+      "kind": "starter",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Doctrine: value future mobility, remember bad lanes, and leave threat zones before attacking.\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\n\nconst cellFor = (grid, direction) => {\n  if (direction === \"UP\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)\n  if (direction === \"RIGHT\") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)\n  if (direction === \"DOWN\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)\n  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)\n}\n\nconst scoreDirection = (grid, direction, badLane) => {\n  const cell = cellFor(grid, direction)\n  if (!cell || cell.contents !== \"EMPTY\") return -20\n  let score = direction === badLane ? -2 : 4\n  for (const nearby of grid.cells) {\n    if (nearby.contents === \"ENEMY_ACTIVE\") score -= Math.max(0, 3 - Math.abs(nearby.dx) - Math.abs(nearby.dy))\n    if (nearby.contents === \"WALL\") score -= Math.max(0, 2 - Math.abs(nearby.dx) - Math.abs(nearby.dy))\n  }\n  return score\n}\n\nconst reverse = { UP: \"DOWN\", DOWN: \"UP\", LEFT: \"RIGHT\", RIGHT: \"LEFT\" }\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    return {\n      activationOrders: input.mySoldiers\n        .filter((soldier) => soldier.status === \"ACTIVE\")\n        .slice(0, input.activationCount)\n        .map((soldier) => ({ soldierId: soldier.id, objective: { doctrine: \"escape\", badLane: memory.badLane ?? null } })),\n      strategyMemory: memory\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {\n      return { action: { type: \"TURN\", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: memory }\n    }\n    const ranked = directions.map((direction) => [\n      direction,\n      input.self.lastSuccessfulMoveDirection === reverse[direction] ? -998 : scoreDirection(input.awarenessGrid, direction, memory.badLane)\n    ]).sort((left, right) => right[1] - left[1])\n    const best = ranked[0][0]\n    return {\n      action: ranked[0][1] > 0 ? { type: \"MOVE\", direction: best } : { type: \"TURN\", direction: best },\n      soldierMemory: { badLane: ranked[ranked.length - 1][0], lastEscape: best }\n    }\n  }\n}",
+        "hash": "8c40a5163b2ce42cceda4ea864c5cd56b31311550e9b871d438aeae58b9667ad",
+        "bytes": 2420,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 2420,
+        "forbiddenPatterns": [],
+        "sourceHash": "8c40a5163b2ce42cceda4ea864c5cd56b31311550e9b871d438aeae58b9667ad",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Escape Artist",
+        "description": "Optimizes legal exits from threat zones and remembers bad lanes.",
+        "tags": [
+          "Mobility",
+          "Memory",
+          "Survival"
+        ],
+        "version": "v1.4",
+        "level": "starter"
+      },
+      "lineage": {
+        "starterLineage": {
+          "starterId": "starter:escape-artist",
+          "starterName": "Escape Artist",
+          "starterVersion": "v1.4",
+          "sourceHash": "8c40a5163b2ce42cceda4ea864c5cd56b31311550e9b871d438aeae58b9667ad"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "8c40a5163b2ce42cceda4ea864c5cd56b31311550e9b871d438aeae58b9667ad",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:3900b9e2bb95aa088ab80868ec0273dfc9b2d22ae1e6b766d8b3e2c58dbfbedb",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:3900b9e2bb95aa088ab80868ec0273dfc9b2d22ae1e6b766d8b3e2c58dbfbedb",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:starter:mirror-breaker",
+      "kind": "starter",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Doctrine: mirror early board pressure, then break symmetry when contraction or contact appears.\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst opposite = { UP: \"DOWN\", DOWN: \"UP\", LEFT: \"RIGHT\", RIGHT: \"LEFT\" }\n\nconst enemyVector = (self, enemies) => {\n  const live = enemies.filter((soldier) => soldier.status === \"ACTIVE\" && soldier.position && self.position)\n  live.sort((left, right) =>\n    Math.abs(left.position.x - self.position.x) + Math.abs(left.position.y - self.position.y) -\n    (Math.abs(right.position.x - self.position.x) + Math.abs(right.position.y - self.position.y))\n  )\n  const target = live[0]\n  if (!target || !self.position) return null\n  return { dx: target.position.x - self.position.x, dy: target.position.y - self.position.y }\n}\n\nconst directionFromVector = (vector, fallback) => {\n  if (!vector) return fallback\n  if (Math.abs(vector.dx) > Math.abs(vector.dy)) return vector.dx > 0 ? \"RIGHT\" : \"LEFT\"\n  if (vector.dy !== 0) return vector.dy > 0 ? \"DOWN\" : \"UP\"\n  return fallback\n}\n\nconst cellFor = (grid, direction) => {\n  if (direction === \"UP\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)\n  if (direction === \"RIGHT\") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)\n  if (direction === \"DOWN\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)\n  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)\n}\n\nconst reverseDirection = { UP: \"DOWN\", DOWN: \"UP\", LEFT: \"RIGHT\", RIGHT: \"LEFT\" }\n\nconst openMove = (input, preferred) => {\n  const ranked = directions.map((direction) => {\n    const cell = cellFor(input.awarenessGrid, direction)\n    if (cell?.contents !== \"EMPTY\") return [direction, -999]\n    if (input.self.lastSuccessfulMoveDirection === reverseDirection[direction]) return [direction, -998]\n    return [direction, direction === preferred ? 5 : 1]\n  }).sort((left, right) => right[1] - left[1])\n  return ranked[0]?.[1] > -900 ? ranked[0][0] : null\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const phase = memory.phase === \"break\" || input.phaseNumber >= 2 ? \"break\" : \"mirror\"\n    return {\n      activationOrders: input.mySoldiers\n        .filter((soldier) => soldier.status === \"ACTIVE\")\n        .slice(0, input.activationCount)\n        .map((soldier) => {\n          const lane = directionFromVector(enemyVector(soldier, input.enemySoldiers), \"UP\")\n          return { soldierId: soldier.id, objective: { doctrine: \"mirror-breaker\", lane: phase === \"mirror\" ? opposite[lane] : lane, phase } }\n        }),\n      strategyMemory: { ...memory, phase: input.phaseNumber >= 2 ? \"break\" : phase }\n    }\n  },\n  soldierBrain(input) {\n    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {\n      return { action: { type: \"TURN\", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }\n    }\n    const lane = input.objective?.lane ?? input.self.facing ?? \"UP\"\n    const closeEnemy = input.awarenessGrid.cells.some((cell) => cell.contents === \"ENEMY_ACTIVE\" && Math.abs(cell.dx) + Math.abs(cell.dy) === 1)\n    const phase = input.objective?.phase ?? \"mirror\"\n    const open = openMove(input, lane)\n    if (phase === \"break\" && closeEnemy) {\n      return { action: { type: \"MOVE\", direction: lane }, soldierMemory: { phase, lane } }\n    }\n    return { action: open ? { type: \"MOVE\", direction: open } : { type: \"TURN\", direction: lane }, soldierMemory: { phase, lane } }\n  }\n}",
+        "hash": "caf829a7338cef862e3eeac7ef6f527f251924688c470376453e2f7c458445e7",
+        "bytes": 3593,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 3593,
+        "forbiddenPatterns": [],
+        "sourceHash": "caf829a7338cef862e3eeac7ef6f527f251924688c470376453e2f7c458445e7",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Mirror Breaker",
+        "description": "Mirrors enemy pressure early, then breaks symmetry once the board tightens.",
+        "tags": [
+          "Symmetry",
+          "Memory",
+          "Timing"
+        ],
+        "version": "v1.4",
+        "level": "starter"
+      },
+      "lineage": {
+        "starterLineage": {
+          "starterId": "starter:mirror-breaker",
+          "starterName": "Mirror Breaker",
+          "starterVersion": "v1.4",
+          "sourceHash": "caf829a7338cef862e3eeac7ef6f527f251924688c470376453e2f7c458445e7"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "caf829a7338cef862e3eeac7ef6f527f251924688c470376453e2f7c458445e7",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:da2eca764d2da323f8fb8764f803f4383c4d169528395c6133e32370adaa9828",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:da2eca764d2da323f8fb8764f803f4383c4d169528395c6133e32370adaa9828",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:starter:ring-runner",
+      "kind": "starter",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Doctrine: orbit the shrinking ring while remembering a clockwise or counter-clockwise lane.\nconst clockwise = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\nconst counter = [\"UP\", \"LEFT\", \"DOWN\", \"RIGHT\"]\n\nconst nextDirection = (current, turn) => {\n  const ring = turn === \"counter\" ? counter : clockwise\n  const index = ring.indexOf(current)\n  return ring[(index < 0 ? 1 : index + 1) % ring.length]\n}\n\nconst cellFor = (grid, direction) => {\n  if (direction === \"UP\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)\n  if (direction === \"RIGHT\") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)\n  if (direction === \"DOWN\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)\n  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)\n}\n\nconst reverse = { UP: \"DOWN\", DOWN: \"UP\", LEFT: \"RIGHT\", RIGHT: \"LEFT\" }\n\nconst openDirection = (input, preferred) => {\n  const ranked = clockwise\n    .map((direction) => {\n      const cell = cellFor(input.awarenessGrid, direction)\n      if (cell?.contents !== \"EMPTY\") return [direction, -999]\n      if (input.self.lastSuccessfulMoveDirection === reverse[direction]) return [direction, -998]\n      return [direction, direction === preferred ? 4 : 1]\n    })\n    .sort((left, right) => right[1] - left[1])\n  return ranked[0]?.[1] > -900 ? ranked[0][0] : null\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const turn = memory.turn === \"counter\" ? \"counter\" : \"clockwise\"\n    return {\n      activationOrders: input.mySoldiers\n        .filter((soldier) => soldier.status === \"ACTIVE\")\n        .slice(0, input.activationCount)\n        .map((soldier) => ({ soldierId: soldier.id, objective: { doctrine: \"ring-runner\", turn } })),\n      strategyMemory: { ...memory, turn, rounds: (memory.rounds ?? 0) + 1 }\n    }\n  },\n  soldierBrain(input) {\n    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {\n      return { action: { type: \"TURN\", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }\n    }\n    const turn = input.objective?.turn === \"counter\" ? \"counter\" : \"clockwise\"\n    const facing = input.self.facing ?? \"UP\"\n    const forward = cellFor(input.awarenessGrid, facing)\n    if (forward?.contents === \"EMPTY\" && input.self.lastSuccessfulMoveDirection !== reverse[facing]) {\n      return { action: { type: \"MOVE\", direction: facing }, soldierMemory: { turn, last: facing } }\n    }\n    const direction = nextDirection(facing, turn)\n    const open = openDirection(input, direction)\n    return { action: open ? { type: \"MOVE\", direction: open } : { type: \"TURN\", direction }, soldierMemory: { turn, last: open ?? direction } }\n  }\n}",
+        "hash": "76cfb902ba1090855f0aa18b6fb39d861b1417373bbd6c22b89284dd2c914348",
+        "bytes": 2821,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 2821,
+        "forbiddenPatterns": [],
+        "sourceHash": "76cfb902ba1090855f0aa18b6fb39d861b1417373bbd6c22b89284dd2c914348",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Ring Runner",
+        "description": "Orbits the shrinking ring and remembers its turn direction between decisions.",
+        "tags": [
+          "Mobility",
+          "Memory",
+          "Contraction"
+        ],
+        "version": "v1.4",
+        "level": "starter"
+      },
+      "lineage": {
+        "starterLineage": {
+          "starterId": "starter:ring-runner",
+          "starterName": "Ring Runner",
+          "starterVersion": "v1.4",
+          "sourceHash": "76cfb902ba1090855f0aa18b6fb39d861b1417373bbd6c22b89284dd2c914348"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "76cfb902ba1090855f0aa18b6fb39d861b1417373bbd6c22b89284dd2c914348",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:063cc3a6ea0b9da2531d61b6a430d377278f39a12d343eb5222fc32c21e66ee3",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:063cc3a6ea0b9da2531d61b6a430d377278f39a12d343eb5222fc32c21e66ee3",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:starter:trap-setter",
+      "kind": "starter",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Doctrine: bait contact, remember the bait lane, then turn stone or push when the enemy commits.\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\n\nconst nearestEnemy = (grid) =>\n  grid.cells\n    .filter((cell) => cell.contents === \"ENEMY_ACTIVE\")\n    .sort((left, right) => Math.abs(left.dx) + Math.abs(left.dy) - (Math.abs(right.dx) + Math.abs(right.dy)))[0]\n\nconst directionTo = (cell, fallback) => {\n  if (!cell) return fallback\n  if (Math.abs(cell.dx) > Math.abs(cell.dy)) return cell.dx > 0 ? \"RIGHT\" : \"LEFT\"\n  if (cell.dy !== 0) return cell.dy > 0 ? \"DOWN\" : \"UP\"\n  return fallback\n}\n\nconst cellFor = (grid, direction) => {\n  if (direction === \"UP\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)\n  if (direction === \"RIGHT\") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)\n  if (direction === \"DOWN\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)\n  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)\n}\n\nconst reverse = { UP: \"DOWN\", DOWN: \"UP\", LEFT: \"RIGHT\", RIGHT: \"LEFT\" }\n\nconst openMove = (input, preferred) => {\n  const ranked = directions.map((direction) => {\n    const cell = cellFor(input.awarenessGrid, direction)\n    if (cell?.contents !== \"EMPTY\") return [direction, -999]\n    if (input.self.lastSuccessfulMoveDirection === reverse[direction]) return [direction, -998]\n    return [direction, direction === preferred ? 4 : 1]\n  }).sort((left, right) => right[1] - left[1])\n  return ranked[0]?.[1] > -900 ? ranked[0][0] : null\n}\n\nexport default {\n  selectActivations(input) {\n    const memory = input.strategyMemory && typeof input.strategyMemory === \"object\" ? input.strategyMemory : {}\n    const baitLane = memory.baitLane ?? directions[input.phaseNumber % directions.length]\n    return {\n      activationOrders: input.mySoldiers\n        .filter((soldier) => soldier.status === \"ACTIVE\")\n        .slice(0, input.activationCount)\n        .map((soldier) => ({ soldierId: soldier.id, objective: { doctrine: \"trap\", baitLane } })),\n      strategyMemory: { ...memory, baitLane }\n    }\n  },\n  soldierBrain(input) {\n    const memory = input.soldierMemory && typeof input.soldierMemory === \"object\" ? input.soldierMemory : {}\n    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {\n      return { action: { type: \"TURN\", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: memory }\n    }\n    const enemy = nearestEnemy(input.awarenessGrid)\n    const lane = directionTo(enemy, input.objective?.baitLane ?? memory.baitLane ?? input.self.facing ?? \"UP\")\n    const close = enemy && Math.abs(enemy.dx) + Math.abs(enemy.dy) === 1\n    const move = openMove(input, lane)\n    if (close && !move && input.cycleIndex > 0) {\n      return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: { baitLane: lane, sprung: true } }\n    }\n    return { action: move ? { type: \"MOVE\", direction: move } : { type: \"TURN\", direction: lane }, soldierMemory: { baitLane: lane, sprung: false } }\n  }\n}",
+        "hash": "7cc3d77b33d4a0be36b63145766789177ef561449741a9d8062d83849dafcee4",
+        "bytes": 3034,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 3034,
+        "forbiddenPatterns": [],
+        "sourceHash": "7cc3d77b33d4a0be36b63145766789177ef561449741a9d8062d83849dafcee4",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Trap Setter",
+        "description": "Baits pursuit along a remembered lane and turns to STONE when contact arrives.",
+        "tags": [
+          "Trap",
+          "Memory",
+          "STONE"
+        ],
+        "version": "v1.4",
+        "level": "starter"
+      },
+      "lineage": {
+        "starterLineage": {
+          "starterId": "starter:trap-setter",
+          "starterName": "Trap Setter",
+          "starterVersion": "v1.4",
+          "sourceHash": "7cc3d77b33d4a0be36b63145766789177ef561449741a9d8062d83849dafcee4"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "7cc3d77b33d4a0be36b63145766789177ef561449741a9d8062d83849dafcee4",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:a47a81358096f536769998890550481bd7a2301ec8f09e2d63377eb339fb5d30",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:a47a81358096f536769998890550481bd7a2301ec8f09e2d63377eb339fb5d30",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:starter:wall-press",
+      "kind": "starter",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "// Doctrine: use board edges as pressure tools and shove enemies toward unsafe lanes.\nconst directions = [\"UP\", \"RIGHT\", \"DOWN\", \"LEFT\"]\n\nconst nearestEnemy = (grid) =>\n  grid.cells\n    .filter((cell) => cell.contents === \"ENEMY_ACTIVE\")\n    .sort((left, right) => Math.abs(left.dx) + Math.abs(left.dy) - (Math.abs(right.dx) + Math.abs(right.dy)))[0]\n\nconst toward = (cell, fallback) => {\n  if (!cell) return fallback\n  if (Math.abs(cell.dx) > Math.abs(cell.dy)) return cell.dx > 0 ? \"RIGHT\" : \"LEFT\"\n  if (cell.dy !== 0) return cell.dy > 0 ? \"DOWN\" : \"UP\"\n  return fallback\n}\n\nconst wallSide = (grid) => {\n  const walls = grid.cells.filter((cell) => cell.contents === \"WALL\")\n  const top = walls.filter((cell) => cell.dy < 0).length\n  const right = walls.filter((cell) => cell.dx > 0).length\n  const bottom = walls.filter((cell) => cell.dy > 0).length\n  const left = walls.filter((cell) => cell.dx < 0).length\n  const scores = [[\"UP\", top], [\"RIGHT\", right], [\"DOWN\", bottom], [\"LEFT\", left]]\n  scores.sort((a, b) => b[1] - a[1])\n  return scores[0][0]\n}\n\nconst cellFor = (grid, direction) => {\n  if (direction === \"UP\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === -1)\n  if (direction === \"RIGHT\") return grid.cells.find((cell) => cell.dx === 1 && cell.dy === 0)\n  if (direction === \"DOWN\") return grid.cells.find((cell) => cell.dx === 0 && cell.dy === 1)\n  return grid.cells.find((cell) => cell.dx === -1 && cell.dy === 0)\n}\n\nconst oppositeWallEscape = { UP: \"DOWN\", DOWN: \"UP\", LEFT: \"RIGHT\", RIGHT: \"LEFT\" }\nconst reverse = { UP: \"DOWN\", DOWN: \"UP\", LEFT: \"RIGHT\", RIGHT: \"LEFT\" }\n\nconst bestMove = (input, preferred) => {\n  const wall = wallSide(input.awarenessGrid)\n  const away = oppositeWallEscape[wall] ?? preferred\n  const ranked = directions\n    .map((direction) => {\n      const cell = cellFor(input.awarenessGrid, direction)\n      if (cell?.contents !== \"EMPTY\") return [direction, -999]\n      if (input.self.lastSuccessfulMoveDirection === reverse[direction]) return [direction, -998]\n      return [direction, (direction === preferred ? 4 : 0) + (direction === away ? 5 : 0)]\n    })\n    .sort((left, right) => right[1] - left[1])\n  return ranked[0]?.[1] > -900 ? ranked[0][0] : null\n}\n\nexport default {\n  selectActivations(input) {\n    return {\n      activationOrders: input.mySoldiers\n        .filter((soldier) => soldier.status === \"ACTIVE\")\n        .slice(0, input.activationCount)\n        .map((soldier) => ({ soldierId: soldier.id, objective: { doctrine: \"wall-press\" } })),\n      strategyMemory: input.strategyMemory\n    }\n  },\n  soldierBrain(input) {\n    if (input.cycleIndex >= input.maxCycles - 2 && input.self.lastSuccessfulMoveDirection) {\n      return { action: { type: \"TURN\", direction: input.self.facing ?? input.self.lastSuccessfulMoveDirection }, soldierMemory: input.soldierMemory }\n    }\n    const enemy = nearestEnemy(input.awarenessGrid)\n    const pressure = toward(enemy, input.self.facing ?? \"UP\")\n    const move = bestMove(input, pressure)\n    if (move) return { action: { type: \"MOVE\", direction: move }, soldierMemory: input.soldierMemory }\n    return { action: { type: \"TURN\", direction: enemy ? pressure : wallSide(input.awarenessGrid) }, soldierMemory: input.soldierMemory }\n  }\n}",
+        "hash": "5d8d25942b8c36ee938305c7b7cffeace1cd9a15d0377db1156cf9bc28c97762",
+        "bytes": 3240,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 3240,
+        "forbiddenPatterns": [],
+        "sourceHash": "5d8d25942b8c36ee938305c7b7cffeace1cd9a15d0377db1156cf9bc28c97762",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "name": "Wall Press",
+        "description": "Uses the edge of the board as a pressure tool and advances when enemies are near constrained lanes.",
+        "tags": [
+          "Edges",
+          "Push",
+          "Pressure"
+        ],
+        "version": "v1.4",
+        "level": "starter"
+      },
+      "lineage": {
+        "starterLineage": {
+          "starterId": "starter:wall-press",
+          "starterName": "Wall Press",
+          "starterVersion": "v1.4",
+          "sourceHash": "5d8d25942b8c36ee938305c7b7cffeace1cd9a15d0377db1156cf9bc28c97762"
+        }
+      },
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "5d8d25942b8c36ee938305c7b7cffeace1cd9a15d0377db1156cf9bc28c97762",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:931fa51aedafa192787e63ba90460867e8075ef677c9c6ccb47200356a59b319",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:931fa51aedafa192787e63ba90460867e8075ef677c9c6ccb47200356a59b319",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:template:cautious",
+      "kind": "template",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "export default {\n  selectActivations(input) {\n    return {\n      activationOrders: input.mySoldiers\n        .filter((soldier) => soldier.status === \"ACTIVE\")\n        .slice(0, input.activationCount)\n        .map((soldier) => ({ soldierId: soldier.id })),\n      strategyMemory: input.strategyMemory\n    }\n  },\n  soldierBrain(input) {\n    return {\n      action: { type: \"TURN_TO_STONE\" },\n      soldierMemory: input.soldierMemory\n    }\n  }\n}",
+        "hash": "c85f2f2acd3bff9a304aeebb778524173691a031ef470360915d109a202c6b3a",
+        "bytes": 439,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 439,
+        "forbiddenPatterns": [],
+        "sourceHash": "c85f2f2acd3bff9a304aeebb778524173691a031ef470360915d109a202c6b3a",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "label": "Cautious",
+        "name": "Cautious",
+        "version": "v1.14",
+        "level": "template"
+      },
+      "lineage": {},
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "c85f2f2acd3bff9a304aeebb778524173691a031ef470360915d109a202c6b3a",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:c22812107aef96a69407d064fc558494c98d4a11b1419c733bcf5f3d25761c35",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:c22812107aef96a69407d064fc558494c98d4a11b1419c733bcf5f3d25761c35",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:template:reckless",
+      "kind": "template",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "export default {\n  selectActivations(input) {\n    return {\n      activationOrders: input.mySoldiers\n        .filter((soldier) => soldier.status === \"ACTIVE\")\n        .slice(0, input.activationCount)\n        .map((soldier) => ({ soldierId: soldier.id })),\n      strategyMemory: input.strategyMemory\n    }\n  },\n  soldierBrain(input) {\n    return {\n      action: { type: \"MOVE\", direction: input.self.facing ?? \"UP\" },\n      soldierMemory: input.soldierMemory\n    }\n  }\n}",
+        "hash": "3743b3c9bf715c72440df783ac216aa83b307d6cc5c6218ceddaa4d368493aed",
+        "bytes": 468,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 468,
+        "forbiddenPatterns": [],
+        "sourceHash": "3743b3c9bf715c72440df783ac216aa83b307d6cc5c6218ceddaa4d368493aed",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "label": "Reckless",
+        "name": "Reckless",
+        "version": "v1.14",
+        "level": "template"
+      },
+      "lineage": {},
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "3743b3c9bf715c72440df783ac216aa83b307d6cc5c6218ceddaa4d368493aed",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:9783571dc2219a43a53ffba15063d570baccf1c41214ad0578f9d0c2776b9975",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:9783571dc2219a43a53ffba15063d570baccf1c41214ad0578f9d0c2776b9975",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:template:sentinel",
+      "kind": "template",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "export default {\n  selectActivations(input) {\n    return {\n      activationOrders: input.mySoldiers\n        .filter((soldier) => soldier.status === \"ACTIVE\")\n        .slice(0, input.activationCount)\n        .map((soldier) => ({ soldierId: soldier.id, objective: { hold: true } })),\n      strategyMemory: input.strategyMemory\n    }\n  },\n  soldierBrain(input) {\n    const forward = input.self.facing ?? \"UP\"\n    return {\n      action: input.cycleIndex === 0\n        ? { type: \"TURN\", direction: forward }\n        : { type: \"TURN_TO_STONE\" },\n      soldierMemory: input.soldierMemory\n    }\n  }\n}",
+        "hash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+        "bytes": 592,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.7",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 592,
+        "forbiddenPatterns": [],
+        "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "label": "Sentinel",
+        "name": "Sentinel",
+        "version": "v1.14",
+        "level": "template"
+      },
+      "lineage": {},
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:7940e56f4fee50d38d02b2eb124fe8e4adaedca6feb0b9a8d827904d709112e7",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:7940e56f4fee50d38d02b2eb124fe8e4adaedca6feb0b9a8d827904d709112e7",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    }
+  ]
+}
