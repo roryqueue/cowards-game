@@ -169,7 +169,7 @@ Plans:
 
 Recommended next command:
 
-`$gsd-audit-milestone`
+`$gsd-complete-milestone v1.9`
 
 ---
-*Last updated: 2026-05-22 after Phase 63 verification*
+*Last updated: 2026-05-23 after v1.9 milestone audit*

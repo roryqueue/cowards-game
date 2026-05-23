@@ -7,7 +7,7 @@
 **Phase range:** 57-63
 **Plans:** 7/7 complete
 **Requirements:** 28/28 complete; 28/28 mapped
-**Audit:** TBD
+**Audit:** .planning/milestones/v1.9-MILESTONE-AUDIT.md
 
 ### Goal
 

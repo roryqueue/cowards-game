@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Backend and Runtime Ownership Split
-status: verified
-stopped_at: Phase 63 complete; v1.9 verified and ready for milestone audit/archive
-last_updated: "2026-05-23T00:10:20.000Z"
-last_activity: 2026-05-22
+status: audited
+stopped_at: v1.9 milestone audit passed; ready for milestone archive
+last_updated: "2026-05-23T01:30:00.000Z"
+last_activity: 2026-05-23
 progress:
   total_phases: 7
   completed_phases: 7
@@ -17,7 +17,7 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.9 verified
+**Status:** v1.9 audited
 
 ## Project Reference
 
@@ -33,8 +33,8 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 Phase: 63 of 63 (Milestone Verification and Regression Gate)
 Plan: 63-01
-Status: Phase 63 complete; v1.9 verified and ready for milestone audit/archive
-Last activity: 2026-05-22 — Completed Phase 63 milestone verification and regression gate
+Status: v1.9 milestone audit passed; ready for milestone archive
+Last activity: 2026-05-23 — Completed v1.9 milestone audit
 
 Progress: [██████████] 100%
 
@@ -102,11 +102,11 @@ Progress: [██████████] 100%
 - [Phase 61]: Runtime isolation promotion-readiness is now artifacted and monitor-gated without promoting any runtime candidate. — `pnpm sandbox:evaluate:container` and `--require-runtime-container` fail loudly when live container evidence is missing, topology reports runtime isolation readiness, and boundary monitors enforce the evidence-only/no-fallback posture.
 - [Phase 62]: Non-JS promotion criteria are now spec-owned and monitor-gated. — Python remains experimental, disabled for normal play, non-counted, and fail-closed for counted exhibition/ladder gates; no public language picker was added.
 - [Phase 63]: v1.9 verification passed across full package tests, typecheck, boundary monitors, and browser replay smoke. — The gate caught and fixed a stale replay smoke assertion so public `ACTION_EMITTED` timeline coverage follows the accessible event instead of a fixed sequence; strict import offenses remain 0 and report-only web debt is baseline-gated at 34.
+- [v1.9 audit]: Milestone audit passed after code review and audit-fix. — The review found and the audit-fix resolved one High runtime blocker: container subprocess is now evidence-only and non-counted until promotion criteria are explicitly satisfied.
 
 ### Next Todos
 
-- Run `$gsd-audit-milestone` to produce the v1.9 milestone audit.
-- Run `$gsd-complete-milestone` if archiving v1.9 and preparing v2.0 should happen now.
+- Run `$gsd-complete-milestone v1.9` to archive v1.9 and prepare the next milestone.
 - Keep Go writes, production runtime promotion, and counted non-JS play out of v1.9 unless the milestone is explicitly replanned.
 
 ### Blockers/Concerns
@@ -125,6 +125,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-05-23T00:10:20.000Z
-Stopped at: Phase 63 complete; v1.9 verified and ready for milestone audit/archive
+Last session: 2026-05-23T01:30:00.000Z
+Stopped at: v1.9 milestone audit passed; ready for milestone archive
 Resume file: None
