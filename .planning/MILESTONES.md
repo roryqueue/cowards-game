@@ -1,5 +1,71 @@
 # Milestones
 
+## v1.10 Service Boundary Completion and Go Read-Model Decision
+
+**Status:** Shipped 2026-05-23
+**Phases:** 6
+**Phase range:** 64-69
+**Plans:** 6/6 complete
+**Requirements:** 29/29 complete; 29/29 mapped
+**Audit:** .planning/milestones/v1.10-MILESTONE-AUDIT.md
+
+### Delivered
+
+- Classified the 34-offense v1.9 broad web report-only baseline and locked v1.10 scope before migration.
+- Moved account Strategy Revision list reads behind `@cowards/service` while keeping save, source, fork, validation, test, submission, and MatchSet creation behavior out of scope.
+- Moved the Workshop analytics/Evidence Explorer read slice behind spec/service-owned DTOs while keeping Workshop source/save/test/runtime/rerun/export flows out of scope.
+- Added exactly one Go read-model expansion, public `GET /public/strategies/{strategyId}`, backed by generated TypeScript-service parity fixtures.
+- Promoted migrated slices to strict import enforcement and reduced broad web report-only direct persistence debt from 34 to 30.
+- Preserved runtime isolation as evidence-only and kept Python/other non-JS runtimes experimental and non-counted.
+- Verified the milestone through contracts, OpenAPI lint, typecheck, tests, Go parity, topology, boundary monitors, replay smoke, formatting, whitespace checks, audit-fix, and milestone audit.
+
+### Goal
+
+Build on v1.9's first service-boundary ownership move by migrating high-value web read/user surfaces behind `@cowards/service`, reducing the remaining broad web report-only direct persistence debt from the 34-offense baseline, and implementing exactly one guarded Go public Strategy read-model route only after route ownership, auth/error semantics, generated TypeScript-service-backed parity fixtures, topology checks, privacy checks, and rollback criteria are explicit.
+
+### Selected Direction
+
+- Continue service-backed web read migration and promote proven slices from report-only to strict enforcement.
+- Disentangle the account Strategy Revision list read without moving save, fork, source, validation, test, submission, or MatchSet creation behavior.
+- Move a narrow Workshop analytics/Evidence Explorer read slice behind spec/service-owned DTOs without moving Workshop source/save/test/runtime flows.
+- Add exactly one Go read-model expansion: public `GET /public/strategies/{strategyId}` via generated TypeScript-service-backed fixtures.
+- Keep Go writes, jobs, migrations, Match orchestration, Strategy execution, production sandbox promotion, and counted non-JS play out of scope.
+
+### Planned Phases
+
+| Phase | Name |
+| --- | --- |
+| 64 | Boundary Debt Triage and Scope Lock — Complete |
+| 65 | Account Revision List Read Boundary — Complete |
+| 66 | Workshop Analytics Evidence Read Boundary — Complete |
+| 67 | Public Strategy Go Read-Model Route — Complete |
+| 68 | Boundary Enforcement and Promotion Guardrails — Complete |
+| 69 | Milestone Verification and Regression Gate — Complete |
+
+### Active Constraints
+
+- Engine logic remains pure, deterministic, serializable, and side-effect free.
+- Strategy code does not execute in the web/API process, and Node `vm` is not used as a hostile-code security boundary.
+- Public replay, service, Go, topology, monitor, analytics, export, and runtime outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, and private runtime internals by default.
+- Go backend work remains read-only and limited to exactly one selected public Strategy read route.
+- Python and other non-JS runtimes remain experimental, disabled for normal play, and non-counted.
+
+### Archives
+
+- .planning/milestones/v1.10-ROADMAP.md
+- .planning/milestones/v1.10-REQUIREMENTS.md
+- .planning/milestones/v1.10-MILESTONE-AUDIT.md
+- .planning/milestones/v1.10-phases/
+
+### Known Deferred Items
+
+- 30 broad web report-only direct persistence offenses remain for future service-boundary milestones.
+- Workshop source/save/test/runtime/rerun/export flows remain TypeScript-owned and outside the v1.10 analytics read migration.
+- Go mutation endpoints, auth/session mutation, ladder writes, jobs, migrations, Match orchestration, persistence writes, Strategy source retrieval, and Strategy execution remain TypeScript-owned.
+- Production web traffic still routes through the TypeScript service path; Go remains a read-only parity-backed route set unless a future milestone proves promotion and rollback criteria.
+- Production hostile-code sandbox promotion still requires live container or stronger production-equivalent evidence.
+- Python and other non-JS runtimes remain experimental, disabled for normal counted play, and non-counted.
+
 ## v1.9 Backend and Runtime Ownership Split
 
 **Status:** Shipped 2026-05-23

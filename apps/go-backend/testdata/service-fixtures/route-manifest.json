@@ -24,6 +24,14 @@
     "samplePath": "/public/replays/golden%3Av1-7%3Amatch/metadata"
   },
   {
+    "authScope": "public",
+    "id": "getPublicStrategyPage",
+    "method": "GET",
+    "path": "/public/strategies/{strategyId}",
+    "privacyClass": "public",
+    "samplePath": "/public/strategies/strategy%3Ago-parity%3Asentinel"
+  },
+  {
     "authScope": "owner",
     "id": "getAnalyticsRunSummary",
     "method": "GET",

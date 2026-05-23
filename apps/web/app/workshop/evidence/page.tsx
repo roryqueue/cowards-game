@@ -1,4 +1,4 @@
-import { getWorkshopInitialData } from "../server.js"
+import { getWorkshopAnalyticsReadData } from "../../../lib/workshop-analytics-service-boundary.js"
 import { EvidenceExplorerClient } from "./evidence-client.js"
 
 export const dynamic = "force-dynamic"
@@ -18,11 +18,11 @@ export default async function EvidencePage({
 }: EvidencePageProps) {
   const resolvedSearchParams =
     searchParams === undefined ? undefined : await Promise.resolve(searchParams)
-  const initialData = await getWorkshopInitialData()
+  const analytics = await getWorkshopAnalyticsReadData()
 
   return (
     <EvidenceExplorerClient
-      initialData={initialData}
+      initialData={{ analytics }}
       defaultOpponentId={readSingle(resolvedSearchParams?.opponent)}
     />
   )

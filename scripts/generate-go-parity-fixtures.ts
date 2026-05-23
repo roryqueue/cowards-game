@@ -12,6 +12,7 @@ import {
   AnalyticsRunSummaryServiceDtoSchema,
   EXHIBITION_SCORING_POLICY_V1,
   PublicMatchSetSummaryServiceDtoSchema,
+  PublicStrategyPageServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   SERVICE_API_ROUTES,
   ServiceErrorDtoSchema,
@@ -22,6 +23,8 @@ import {
   SERVICE_API_VERSION,
   type AnalyticsRunSummaryServiceDto,
   type PublicMatchSetResultDto,
+  type PublicStrategyCardDto,
+  type PublicStrategyPageServiceDto,
   type ServiceErrorDto,
 } from "../packages/spec/src/index.ts"
 
@@ -64,6 +67,34 @@ const runtime = {
   package: { mode: "none", entrypoint: "default" },
   requiredCapabilities: [],
 } as const
+
+const PUBLIC_STRATEGY_ID = "strategy:go-parity:sentinel"
+
+const createPublicStrategyCard = (): PublicStrategyCardDto => ({
+  strategyId: PUBLIC_STRATEGY_ID,
+  strategyRevisionId: "strategy-revision:go-parity:sentinel",
+  name: "Go Parity Sentinel",
+  description:
+    "Public Strategy page fixture generated through @cowards/service.",
+  tags: ["parity", "read-only"],
+  authorHandle: "go-parity",
+  sourceHash: "sha256:go-parity-sentinel",
+  sourceBytes: 192,
+  runtime,
+  engineCompatibility: {
+    spec: "cowards-rules-v1.4",
+    engine: "engine-v1",
+  },
+  validationStatus: "valid",
+  record: {
+    wins: 4,
+    losses: 2,
+    draws: 1,
+    points: 13,
+  },
+  resultLinks: ["/matchsets/match-set:go-parity:golden"],
+  replayLinks: ["/matches/golden%3Av1-7%3Amatch/replay"],
+})
 
 const createGoldenMatchSetResult = (): PublicMatchSetResultDto => {
   const { chronicle } = buildChronicleFromMatch(createGoldenMatchInput())
@@ -195,6 +226,8 @@ const createParityService = () => {
           matchId === stored.metadata.matchId ? stored : null,
         put: async () => stored,
       }),
+      buildPublicStrategyCard: async (_pool, strategyId) =>
+        strategyId === PUBLIC_STRATEGY_ID ? createPublicStrategyCard() : null,
       getAnalyticsSnapshot: async () => analyticsSnapshot,
     }),
     analyticsSnapshot,
@@ -220,6 +253,8 @@ const createServiceFixtures = async () => {
   )
   const publicReplayMetadata =
     await service.getPublicReplayMetadata(replayMatchId)
+  const publicStrategyPage =
+    await service.getPublicStrategyPage(PUBLIC_STRATEGY_ID)
   const analyticsRunSummary = await service.getAnalyticsRunSummary(
     analyticsRun.ownerUserId,
     analyticsRun.id,
@@ -229,6 +264,7 @@ const createServiceFixtures = async () => {
     !publicMatchSetSummary ||
     !degradedMatchSetSummary ||
     !publicReplayMetadata ||
+    !publicStrategyPage ||
     !analyticsRunSummary
   ) {
     throw new Error("TypeScript service did not produce all parity fixtures")
@@ -238,6 +274,9 @@ const createServiceFixtures = async () => {
     publicMatchSetSummary,
     degradedMatchSetSummary,
     publicReplayMetadata,
+    publicStrategyPage: PublicStrategyPageServiceDtoSchema.parse(
+      publicStrategyPage,
+    ) as PublicStrategyPageServiceDto,
     analyticsRunSummary: AnalyticsRunSummaryServiceDtoSchema.parse(
       analyticsRunSummary,
     ) as AnalyticsRunSummaryServiceDto,
@@ -268,6 +307,14 @@ const routeManifest = [
     authScope: SERVICE_API_ROUTES.getPublicReplayMetadata.authScope,
     privacyClass: SERVICE_API_ROUTES.getPublicReplayMetadata.privacyClass,
     samplePath: "/public/replays/golden%3Av1-7%3Amatch/metadata",
+  },
+  {
+    id: SERVICE_API_ROUTES.getPublicStrategyPage.id,
+    method: SERVICE_API_ROUTES.getPublicStrategyPage.method,
+    path: SERVICE_API_ROUTES.getPublicStrategyPage.path,
+    authScope: SERVICE_API_ROUTES.getPublicStrategyPage.authScope,
+    privacyClass: SERVICE_API_ROUTES.getPublicStrategyPage.privacyClass,
+    samplePath: "/public/strategies/strategy%3Ago-parity%3Asentinel",
   },
   {
     id: SERVICE_API_ROUTES.getAnalyticsRunSummary.id,
@@ -308,6 +355,7 @@ const serviceFixturePayloads = {
   "public-replay-metadata.json": PublicReplayMetadataServiceDtoSchema.parse(
     serviceFixtures.publicReplayMetadata,
   ),
+  "public-strategy-page.json": serviceFixtures.publicStrategyPage,
   "analytics-run-summary.json": serviceFixtures.analyticsRunSummary,
   "not-found-error.json": ServiceErrorDtoSchema.parse(notFoundError),
   "forbidden-error.json": ServiceErrorDtoSchema.parse(forbiddenError),

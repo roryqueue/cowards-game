@@ -290,7 +290,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setAccountError("")
     setAccountMessage("")
     try {
-      const response = await fetch("/api/account/revisions", {
+      const response = await fetch("/api/account/revisions/save", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

@@ -24,6 +24,7 @@ import {
   PublicPlayerPageServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
+  WorkshopAnalyticsSnapshotSchema,
   assertAnalyticsPublicSummaryLeakSafe,
   type MatchId,
   type MatchSetId,
@@ -40,6 +41,7 @@ import {
   type ServiceErrorDto,
   type ServiceHealthDto,
   type StrategyId,
+  type WorkshopAnalyticsSnapshot,
 } from "@cowards/spec"
 
 export type ServicePool = Pool
@@ -82,6 +84,7 @@ export interface CowardsService {
     viewerUserId: UserId,
     runId: string,
   ): Promise<AnalyticsRunSummaryServiceDto | null>
+  getWorkshopAnalyticsSnapshot(): Promise<WorkshopAnalyticsSnapshot>
 }
 
 export interface CreateCowardsLocalServiceOptions {
@@ -323,6 +326,22 @@ export const createCowardsLocalService = (
           summary: run.summary,
         }
         const parsed = AnalyticsRunSummaryServiceDtoSchema.parse(dto)
+        assertPublicServiceDtoLeakSafe(parsed)
+        return parsed
+      })
+    },
+
+    async getWorkshopAnalyticsSnapshot() {
+      return options.withPool(async (pool) => {
+        const snapshot = await getAnalyticsSnapshot(pool)
+        assertAnalyticsPublicSummaryLeakSafe(snapshot)
+        assertPublicServiceDtoLeakSafe(snapshot)
+        const parsed = WorkshopAnalyticsSnapshotSchema.parse(
+          snapshot,
+        ) as WorkshopAnalyticsSnapshot
+        for (const run of parsed.runs) {
+          assertAnalyticsPublicSummaryLeakSafe(run.summary)
+        }
         assertPublicServiceDtoLeakSafe(parsed)
         return parsed
       })

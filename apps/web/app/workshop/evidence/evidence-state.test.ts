@@ -1,5 +1,5 @@
-import { createWorkshopAnalyticsDemoSnapshot } from "@cowards/persistence/workshop-analytics"
 import { describe, expect, it } from "vitest"
+import { createWorkshopAnalyticsStateTestSnapshot } from "../analytics-test-fixture.js"
 import {
   defaultEvidenceFilters,
   filterEvidenceMatchups,
@@ -7,7 +7,7 @@ import {
 
 describe("Evidence Explorer state", () => {
   it("filters by band, counted status, tier, and replay availability", () => {
-    const run = createWorkshopAnalyticsDemoSnapshot().runs[0]!
+    const run = createWorkshopAnalyticsStateTestSnapshot().runs[0]!
 
     expect(filterEvidenceMatchups(run, defaultEvidenceFilters)[0]?.points).toBe(
       0,

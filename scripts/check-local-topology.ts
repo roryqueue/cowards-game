@@ -285,6 +285,10 @@ export const evaluateLocalTopology = async (
           authScope: "public",
           privacyClass: "public",
         },
+        getPublicStrategyPage: {
+          authScope: "public",
+          privacyClass: "public",
+        },
         getAnalyticsRunSummary: {
           authScope: "owner",
           privacyClass: "owner",
@@ -327,6 +331,7 @@ export const evaluateLocalTopology = async (
         "health.json",
         "public-match-set-summary.json",
         "public-replay-metadata.json",
+        "public-strategy-page.json",
         "analytics-run-summary.json",
       ]) {
         const fixturePath = path.join(
@@ -343,6 +348,7 @@ export const evaluateLocalTopology = async (
         "health.json",
         "public-match-set-summary.json",
         "public-replay-metadata.json",
+        "public-strategy-page.json",
         "forbidden-error.json",
         "not-found-error.json",
       ]) {
@@ -445,6 +451,7 @@ export const evaluateLocalTopology = async (
     for (const routeId of [
       "getPublicMatchSetSummary",
       "getPublicReplayMetadata",
+      "getPublicStrategyPage",
     ]) {
       checks.push(
         await check("go_readonly", routeId, options.requireGo, async () => {

@@ -240,6 +240,15 @@ export const AnalyticsGauntletProfileRunSchema = addAnalyticsLeakCheck(
     }),
 )
 
+export const WorkshopAnalyticsSnapshotSchema = addAnalyticsLeakCheck(
+  z.object({
+    profiles: z.array(AnalyticsGauntletProfileSchema),
+    runs: z.array(AnalyticsGauntletProfileRunSchema),
+    selectedProfileId: z.string().min(1),
+    selectedRunId: z.string().min(1),
+  }),
+)
+
 export const AnalyticsExportEnvelopeSchema = addAnalyticsLeakCheck(
   z.object({
     exportedBy: z.string().min(1),

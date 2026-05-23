@@ -360,6 +360,50 @@
 - Sessions: one extended research, discussion, planning, execution, review, validation, audit-fix, and archive loop.
 - Notable: the highest-leverage fixes were build and boundary hygiene issues rather than feature surface changes.
 
+## Milestone: v1.10 — Service Boundary Completion and Go Read-Model Decision
+
+**Shipped:** 2026-05-23
+**Phases:** 6 | **Plans:** 6
+
+### What Was Built
+
+- Account Strategy Revision list reads now flow through `@cowards/service`, with the save route split away so the read path can be strict import-gated.
+- Workshop analytics/Evidence Explorer reads now use spec/service-owned DTOs and service parsing while source/save/test/runtime/rerun/export flows remain TypeScript-owned.
+- Go serves exactly one new read-model route, public `GET /public/strategies/{strategyId}`, from TypeScript-service-generated parity fixtures.
+- Boundary monitors and import checks now hold the migrated slices strict while broad web report-only debt is reduced from 34 to 30.
+- Runtime isolation and non-JS support remain evidence-only/non-counted, with no accidental promotion during the boundary work.
+
+### What Worked
+
+- Starting with a 34-offense classification made the slice selection honest and prevented cleanup-by-hiding through broad facades.
+- The account read/save split produced a small but durable ownership win: reads can be strict while writes stay in their existing boundary.
+- Generated Go fixtures kept the Go route boring in the right way: read-only, parity-backed, checksum-checked, and easy to roll back.
+- The final audit-fix caught a planning consistency issue before archive, so the requirement checklist and traceability table now agree.
+
+### What Was Inefficient
+
+- The installed `gsd-sdk` still lacks documented `query` subcommands, so audit and completion had to be driven by direct artifact inspection.
+- Workshop still has mixed read/write/runtime gravity in `server.ts` and broader type imports, which makes the next debt reductions more surgical.
+- The milestone completed with a large uncommitted tree, so the final archive commit needs to carry both implementation and planning closure together.
+
+### Patterns Established
+
+- Service-boundary migrations should name the exact web files, service methods, DTOs, strict import targets, and explicit defer criteria before code moves.
+- Broad direct-persistence debt should shrink by deleting normalized fingerprints for proven migrations, not by masking paths.
+- Go read-model expansion should stay one route at a time until live topology, privacy, parity, and rollback evidence are routine.
+
+### Key Lessons
+
+- Split mixed route ownership before enforcing imports; otherwise the read path inherits write-surface risk.
+- Public read-model Go work is safest when generated from the TypeScript service rather than separately authored DTO examples.
+- Runtime and non-JS work benefits from being visible in every boundary milestone, even when deliberately not promoted.
+
+### Cost Observations
+
+- Model mix: not recorded.
+- Sessions: one extended milestone with research, planning, execution, audit-fix, milestone audit, and archive pass.
+- Notable: the highest-signal outcome was reducing boundary debt without weakening privacy, runtime, or Go ownership constraints.
+
 ## Cross-Milestone Trends
 
 | Trend | Observation |
@@ -369,4 +413,4 @@
 | UI polish | Narrow viewport/browser review caught issues after automated checks; responsive screenshots, local page checks, awkward intermediate widths, and playback ergonomics should move earlier in UI phases. |
 | Package boundaries | Keeping runtime execution out of web/API and importing narrow server modules prevents trust and bundling regressions. |
 | Competitive trust | Each competition milestone works best when it keeps the promise modest: exhibition before ladder, resettable ladder before durable ratings, governance before official tournaments. |
-| Boundary evolution | Freeze contracts and prove parity before changing implementation ownership; this keeps Go backend and multi-language runtime work incremental instead of cliff-shaped. |
+| Boundary evolution | Freeze contracts and prove parity before changing implementation ownership; this keeps Go backend and multi-language runtime work incremental instead of cliff-shaped. v1.10 reinforced the pattern by moving two service-backed read slices and exactly one Go read-model route while keeping writes and runtime promotion deferred. |

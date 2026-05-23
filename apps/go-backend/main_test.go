@@ -40,6 +40,11 @@ func TestEndpointFixturesMatchCanonicalJSON(t *testing.T) {
 			fixtureName: "public-replay-metadata.json",
 		},
 		{
+			name:        "public strategy page",
+			path:        "/public/strategies/strategy%3Ago-parity%3Asentinel",
+			fixtureName: "public-strategy-page.json",
+		},
+		{
 			name:        "analytics run summary",
 			path:        "/analytics/runs/analytics-run%3Aworkshop-v1.6-demo%3A2/summary",
 			fixtureName: "analytics-run-summary.json",
@@ -136,6 +141,7 @@ func TestMissingResourcesReturnPublicErrorShape(t *testing.T) {
 	tests := []string{
 		"/public/matchsets/match-set%3Amissing/summary",
 		"/public/replays/match%3Amissing/metadata",
+		"/public/strategies/strategy%3Amissing",
 	}
 
 	for _, path := range tests {
@@ -247,6 +253,16 @@ func TestFixtureOverrideFailsOnPrivateOrInvalidPayloads(t *testing.T) {
 			name:        "private diagnostics key",
 			fixtureName: "public-replay-metadata.json",
 			payload:     `{"apiVersion":"service-api-v1.8","kind":"publicReplayMetadata","matchId":"match:bad","metadata":{},"privateDiagnostics":{}}`,
+		},
+		{
+			name:        "private Strategy source",
+			fixtureName: "public-strategy-page.json",
+			payload:     `{"apiVersion":"service-api-v1.8","kind":"publicPage","page":"strategy","canonicalHref":"/strategies/strategy:bad","payload":{"strategy":{"strategyId":"strategy:bad","source":"private"}}}`,
+		},
+		{
+			name:        "schema-invalid Strategy page",
+			fixtureName: "public-strategy-page.json",
+			payload:     `{"apiVersion":"service-api-v1.8","kind":"publicPage","page":"strategy","canonicalHref":"/strategies/strategy:bad","payload":{}}`,
 		},
 		{
 			name:        "schema-invalid nested replay metadata",

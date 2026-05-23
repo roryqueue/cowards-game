@@ -571,4 +571,55 @@ describe("createCowardsLocalService", () => {
       service.getAnalyticsRunSummary("user:not-owner", run.id),
     ).resolves.toBe(null)
   })
+
+  it("returns parsed Workshop analytics snapshots through the service boundary", async () => {
+    const snapshot = createWorkshopAnalyticsDemoSnapshot()
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      getAnalyticsSnapshot: async () => snapshot,
+    })
+
+    await expect(service.getWorkshopAnalyticsSnapshot()).resolves.toEqual(
+      expect.objectContaining({
+        selectedProfileId: snapshot.selectedProfileId,
+        selectedRunId: snapshot.selectedRunId,
+        profiles: expect.arrayContaining([
+          expect.objectContaining({ id: snapshot.selectedProfileId }),
+        ]),
+        runs: expect.arrayContaining([
+          expect.objectContaining({
+            summary: expect.objectContaining({
+              privacy: expect.objectContaining({
+                ownerSafe: true,
+              }),
+            }),
+          }),
+        ]),
+      }),
+    )
+  })
+
+  it("rejects Workshop analytics snapshots with private fields", async () => {
+    const snapshot = createWorkshopAnalyticsDemoSnapshot()
+    const service = createCowardsLocalService({
+      withPool: async (fn) => fn({} as never),
+      getAnalyticsSnapshot: async () =>
+        ({
+          ...snapshot,
+          runs: [
+            {
+              ...snapshot.runs[0]!,
+              summary: {
+                ...snapshot.runs[0]!.summary,
+                ownerDebug: { hidden: true },
+              },
+            },
+          ],
+        }) as never,
+    })
+
+    await expect(service.getWorkshopAnalyticsSnapshot()).rejects.toThrow(
+      "Analytics summary leaks private field",
+    )
+  })
 })

@@ -224,6 +224,13 @@ export interface AnalyticsGauntletProfileRun {
   summary: AnalyticsGauntletRunSummary
 }
 
+export interface WorkshopAnalyticsSnapshot {
+  profiles: AnalyticsGauntletProfile[]
+  runs: AnalyticsGauntletProfileRun[]
+  selectedProfileId: string
+  selectedRunId: string
+}
+
 export interface AnalyticsExportEnvelope {
   exportedBy: UserId | PlayerId
   exportedAt: string

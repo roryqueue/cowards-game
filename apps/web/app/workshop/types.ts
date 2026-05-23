@@ -2,8 +2,8 @@ import type {
   MatchSetId,
   StrategyRevisionId,
   StrategyRevisionValidationReport,
+  WorkshopAnalyticsSnapshot,
 } from "@cowards/spec"
-import type { WorkshopAnalyticsSnapshot } from "@cowards/persistence/workshop-analytics"
 import type {
   WorkshopOpponentSummary,
   WorkshopPresetSummary,

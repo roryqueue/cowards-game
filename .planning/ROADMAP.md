@@ -12,21 +12,21 @@
 - [x] **v1.7 Runtime and Backend Boundary Stabilization** - Phases 45-50, shipped 2026-05-22. See `.planning/milestones/v1.7-ROADMAP.md`.
 - [x] **v1.8 Production Boundary Hardening** - Phases 51-56, shipped 2026-05-22. See `.planning/milestones/v1.8-ROADMAP.md`.
 - [x] **v1.9 Backend and Runtime Ownership Split** - Phases 57-63, shipped 2026-05-23. See `.planning/milestones/v1.9-ROADMAP.md`.
+- [x] **v1.10 Service Boundary Completion and Go Read-Model Decision** - Phases 64-69, shipped 2026-05-23. See `.planning/milestones/v1.10-ROADMAP.md`.
 
 ## Current Milestone
 
-No active milestone. Start the next milestone with `$gsd-new-milestone`.
+No active milestone. v1.10 has shipped and the project is ready for v1.11 selection.
 
-## Latest Completion
+## Latest Shipped Summary
 
-**v1.9 Backend and Runtime Ownership Split** shipped after auditing and fixing the runtime ownership blocker found during code review. The milestone moved selected web read/user surfaces through `@cowards/service`, widened strict import enforcement, kept Go read-only, kept runtime isolation evidence-only, and kept Python/non-JS runtimes experimental and non-counted.
+v1.10 completed the next service-boundary ownership move after v1.9. Account Strategy Revision list reads and Workshop analytics/Evidence Explorer reads now flow through `@cowards/service`, selected migrated web surfaces are strict import-gated, broad web report-only direct persistence debt dropped from 34 to 30, and Go gained exactly one additional read-model route: `GET /public/strategies/{strategyId}` backed by TypeScript-service-generated parity fixtures.
 
-## Next Candidate Directions
+Go writes, jobs, migrations, Match orchestration, Strategy execution, production web routing to Go, production sandbox promotion, and counted non-JS play remain out of scope.
 
-- Continue service-backed web read migration and shrink the remaining report-only direct persistence debt.
-- Prepare the first explicit Go read-model expansion with generated TypeScript-service-backed parity fixtures, GET-only routing, topology diagnosis, and rollback scope.
-- Deepen production runtime isolation evidence in a CI or production-equivalent container lane before any counted promotion.
-- Improve replay/Workshop product surfaces on top of the now-steadier service/runtime boundaries.
+## Next Up
+
+Select v1.11. Recommended direction: continue service-boundary debt reduction for remaining public/owner-safe web read surfaces, while deciding whether the next useful step is another service-backed read slice, a live Go-readiness evidence lane, or deeper runtime isolation proof.
 
 ---
-*Last updated: 2026-05-23 after completing v1.9*
+_Last updated: 2026-05-23 after v1.10 milestone archive_

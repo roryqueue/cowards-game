@@ -11,6 +11,7 @@ var expectedFixtureChecksumManifest = fixtureChecksumManifest{
 		"not-found-error.json"           : "sha256:558857729a5410e46f11c58906b6642cddbeb888463ba96eec26256e5ffca538",
 		"public-match-set-summary.json"  : "sha256:905765b8a71b69af04c96eab83ab2bc59f4a990212c4364e44c6a0d8c8c652a8",
 		"public-replay-metadata.json"    : "sha256:21bfb503304b0367528544cba109fa6ec73543ff6af1df40ab0b74777e85baed",
-		"route-manifest.json"            : "sha256:b701eca63e6a060fded58d7aa630bb198d9d2b8386709b16c795ce53293e8437",
+		"public-strategy-page.json"      : "sha256:f6289c14c8f0098ba2cbd46af56ad9546feeccb811e55cade634e26b30832840",
+		"route-manifest.json"            : "sha256:2d5dd51bb4c4d7daccacd71a9903f803610d1a728c32a88011f040804aceb10d",
 	},
 }

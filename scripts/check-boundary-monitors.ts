@@ -79,7 +79,6 @@ const sandboxEvaluationArtifactPath =
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/account/advanced-forks/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
   'apps/web/app/api/account/revisions/[revisionId]/source/route.ts:2:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
-  'apps/web/app/api/account/revisions/route.ts:3:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
   'apps/web/app/api/account/starter-forks/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
   'apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
   'apps/web/app/api/auth/sign-in/route.ts:1:competitive/server:import { competitiveServer } from "../../../competitive/server.js"',
@@ -104,12 +103,9 @@ export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/matches/server.ts:1:@cowards/persistence:import { createDatabasePool } from "@cowards/persistence/db"',
   'apps/web/app/matches/server.ts:2:@cowards/persistence:import { createPostgresChronicleStore, type ChronicleStore, } from "@cowards/persistence/chronicle-store"',
   'apps/web/app/matches/server.ts:6:@cowards/persistence:import type { Queryable } from "@cowards/persistence/repositories"',
-  'apps/web/app/workshop/evidence/evidence-state.test.ts:1:@cowards/persistence:import { createWorkshopAnalyticsDemoSnapshot } from "@cowards/persistence/workshop-analytics"',
-  'apps/web/app/workshop/heatmap-state.test.ts:1:@cowards/persistence:import { createWorkshopAnalyticsDemoSnapshot } from "@cowards/persistence/workshop-analytics"',
   'apps/web/app/workshop/server.ts:1:@cowards/persistence:import { createDatabasePool } from "@cowards/persistence/db"',
   'apps/web/app/workshop/server.ts:2:@cowards/persistence:import { buildWorkshopRevision, createWorkshopTestMatchSet, getWorkshopRevisionSource, getWorkshopSnapshot, getWorkshopStaticSnapshot, getWorkshopTestSummary, insertWorkshopRevision, type WorkshopTestSummary, validateWorkshopSource, WORKSHOP_STRATEGY_ID, } from "@cowards/persistence/workshop"',
   'apps/web/app/workshop/server.ts:14:@cowards/persistence:import { comparePersistedWorkshopAnalyticsRuns, createWorkshopAnalyticsDemoSnapshot, createWorkshopAnalyticsExport, createPersistedWorkshopAnalyticsRerun, getWorkshopAnalyticsSnapshot, seedWorkshopAnalyticsDemo, } from "@cowards/persistence/workshop-analytics"',
-  'apps/web/app/workshop/types.ts:6:@cowards/persistence:import type { WorkshopAnalyticsSnapshot } from "@cowards/persistence/workshop-analytics"',
   'apps/web/app/workshop/types.ts:7:@cowards/persistence:import type { WorkshopOpponentSummary, WorkshopPresetSummary, WorkshopRevisionSummary, WorkshopSnapshot, WorkshopSampleSummary, WorkshopTemplateSummary, WorkshopTestSummary, } from "@cowards/persistence/workshop"',
 ] as const)
 
@@ -276,6 +272,7 @@ const checkGoFixtures = (): string => {
     "public-match-set-summary.json",
     "degraded-match-set-summary.json",
     "public-replay-metadata.json",
+    "public-strategy-page.json",
     "not-found-error.json",
     "forbidden-error.json",
   ]) {
@@ -298,6 +295,7 @@ const checkGoRouteManifest = (): string => {
     "health",
     "getPublicMatchSetSummary",
     "getPublicReplayMetadata",
+    "getPublicStrategyPage",
     "getAnalyticsRunSummary",
   ])
   const manifestRouteIds = new Set(manifest.map((entry) => entry.id))

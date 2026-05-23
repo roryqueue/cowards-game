@@ -1,13 +1,11 @@
-import type { StrategyRevisionId } from "@cowards/spec"
-import { listAccountReadRevisions } from "../../../../lib/account-service-boundary.js"
 import {
-  competitiveServer,
-  getCurrentCompetitiveUser,
-} from "../../../competitive/server.js"
+  getCurrentAccountReadUser,
+  listAccountReadRevisions,
+} from "../../../../lib/account-service-boundary.js"
 import { competitiveErrorResponse } from "../../../competitive/http.js"
 
 const requireUser = async () => {
-  const user = await getCurrentCompetitiveUser()
+  const user = await getCurrentAccountReadUser()
   if (!user) {
     return Response.json({ error: "Sign in is required." }, { status: 401 })
   }
@@ -26,28 +24,4 @@ export async function GET(): Promise<Response> {
   } catch (error) {
     return competitiveErrorResponse(error)
   }
-}
-
-export async function POST(request: Request): Promise<Response> {
-  try {
-    const user = await requireUser()
-    if (user instanceof Response) {
-      return user
-    }
-    const body = (await request.json()) as Record<string, unknown>
-    const revision = await competitiveServer.saveAccountRevision(user, {
-      source: body.source,
-      label: body.label,
-      notes: body.notes,
-      starterId: body.starterId,
-      advancedId: body.advancedId,
-    })
-    return Response.json({ revision }, { status: 201 })
-  } catch (error) {
-    return competitiveErrorResponse(error)
-  }
-}
-
-export type AccountRevisionSourceRequest = {
-  revisionId: StrategyRevisionId
 }

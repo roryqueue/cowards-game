@@ -1,5 +1,5 @@
-import { createWorkshopAnalyticsDemoSnapshot } from "@cowards/persistence/workshop-analytics"
 import { describe, expect, it } from "vitest"
+import { createWorkshopAnalyticsStateTestSnapshot } from "./analytics-test-fixture.js"
 import {
   bandLabel,
   formatHeatmapCell,
@@ -10,7 +10,7 @@ import {
 
 describe("Workshop heatmap state", () => {
   it("sorts weak archetypes first and labels exceptional evidence", () => {
-    const snapshot = createWorkshopAnalyticsDemoSnapshot()
+    const snapshot = createWorkshopAnalyticsStateTestSnapshot()
     const run = snapshot.runs[0]!
     const sorted = sortMatchupsForWeakness(run.summary.matchupRecords)
 

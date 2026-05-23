@@ -2,28 +2,44 @@
 
 ## Current State
 
-**Shipped version:** v1.9 Backend and Runtime Ownership Split on 2026-05-23
-**Current milestone:** None.
-**Status:** Ready for next milestone selection.
-**Last audit:** v1.9 milestone audit passed after code review and audit-fix.
+**Shipped version:** v1.10 Service Boundary Completion and Go Read-Model Decision on 2026-05-23
+**Current milestone:** None; ready for v1.11 selection.
+**Status:** Ready for next milestone.
+**Last audit:** v1.10 milestone audit passed after audit-fix.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder reads, read-only Go parity fixtures, runtime isolation readiness evidence gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors proving future multi-language runtime and backend migration paths without promoting unsafe ownership moves.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, read-only Go parity fixtures including a public Strategy read model, runtime isolation readiness evidence gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors proving future multi-language runtime and backend migration paths without promoting unsafe ownership moves.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
+## Current Milestone
+
+No active milestone. v1.10 has shipped and the project is ready to select v1.11.
+
 ## Next Milestone Candidates
 
-The strongest next move is a service-boundary consolidation milestone: continue migrating high-value web read/user surfaces behind `@cowards/service`, shrink the remaining report-only direct persistence debt, and prepare one future Go read-model route only when TypeScript-service-backed parity fixtures and rollback scope are explicit.
-
-Candidate directions:
-- Continue service-backed web read migration and move more direct persistence imports from report-only to strict enforcement.
-- Prepare the first explicit Go read-model expansion with generated TypeScript-service-backed parity fixtures, GET-only routing, topology diagnosis, and rollback scope.
+Likely next moves are:
+- Continue service-backed web read migration for remaining public/owner-safe surfaces after the account and Workshop analytics read slices.
+- Reduce the 30 remaining broad web report-only direct persistence offenses without hiding ownership behind broad facades.
+- Consider live Go-readiness evidence or a second Go public read-model route only after v1.10's Strategy page route remains stable under parity, topology, privacy, and rollback checks.
 - Deepen production runtime isolation evidence in a CI or production-equivalent container lane before any counted promotion.
 - Improve replay/Workshop product surfaces on top of the steadier service/runtime boundaries.
 
-## Latest Shipped Milestone: v1.9 Backend and Runtime Ownership Split
+## Latest Shipped Milestone: v1.10 Service Boundary Completion and Go Read-Model Decision
+
+**Goal:** Continue the v1.9 service-boundary ownership move by migrating high-value web read/user surfaces behind `@cowards/service`, reducing the remaining broad web report-only direct persistence debt from the 34-offense baseline, and implementing exactly one guarded Go public Strategy read-model route only after TypeScript-service-backed parity fixtures and rollback criteria are explicit.
+
+**Delivered:**
+- Classified the remaining broad web report-only baseline before migration.
+- Moved account Strategy Revision list reads behind `@cowards/service` while keeping save/source/fork/write behavior out of scope.
+- Moved the Workshop analytics/Evidence Explorer read slice behind spec/service-owned DTOs while leaving Workshop source/save/test/runtime/rerun/export flows TypeScript-owned.
+- Added exactly one Go read-model route, public `GET /public/strategies/{strategyId}`, generated from TypeScript-service-backed parity fixtures.
+- Promoted migrated slices to strict import enforcement and reduced broad web report-only direct persistence debt from 34 to 30.
+- Kept Go writes, jobs, migrations, Match orchestration, Strategy execution, production web routing to Go, production sandbox promotion, and counted non-JS play out of scope.
+- Archived audit: `.planning/milestones/v1.10-MILESTONE-AUDIT.md`.
+
+## Previous Shipped Milestone: v1.9 Backend and Runtime Ownership Split
 
 **Goal:** Use the v1.8 service contracts, Go parity fixtures, runtime semantics, local topology, and boundary monitors to make one deliberate ownership move without blending backend rewrite, production sandbox promotion, and non-JS counted play into one risky change.
 
@@ -135,6 +151,17 @@ Candidate directions:
 - ✓ Non-JS promotion criteria are spec-owned; Python and other non-JS runtimes remain experimental, disabled for normal play, and non-counted.
 - ✓ Full milestone gate covered package tests, typecheck, boundary monitors, replay smoke privacy, Go parity, topology checks, sandbox evidence checks, code review, audit-fix, and milestone audit.
 
+## Validated in v1.10
+
+- ✓ The remaining broad web report-only baseline was classified before migration, with selected slices and non-goals recorded.
+- ✓ Account Strategy Revision list reads now pass through `@cowards/service` while save, source, fork, validation, test, submission, and MatchSet creation remain outside the read migration.
+- ✓ Workshop analytics/Evidence Explorer reads now use spec/service-owned DTOs, preserving privacy and leaving Workshop source/save/test/runtime/rerun/export flows TypeScript-owned.
+- ✓ Go gained exactly one public read-model route, `GET /public/strategies/{strategyId}`, backed by generated TypeScript-service parity fixtures.
+- ✓ Strict import offenses remain 0 and broad web report-only direct persistence debt dropped from 34 to 30.
+- ✓ Production web traffic was not routed to Go; Go writes, jobs, migrations, Match orchestration, Strategy execution, and Strategy source retrieval remain TypeScript-owned.
+- ✓ Runtime isolation remains evidence-only; Python and other non-JS runtimes remain experimental, disabled for normal counted play, and non-counted.
+- ✓ Final verification covered contracts, OpenAPI lint, typecheck, tests, Go parity, topology, boundary monitors, replay smoke, formatting, whitespace checks, audit-fix, and milestone audit.
+
 ## Validated in v1.0
 
 - ✓ TypeScript monorepo, local workflow, canonical contracts, and versioning spine.
@@ -226,6 +253,10 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.9-REQUIREMENTS.md`
 - `.planning/milestones/v1.9-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.9-phases/`
+- `.planning/milestones/v1.10-ROADMAP.md`
+- `.planning/milestones/v1.10-REQUIREMENTS.md`
+- `.planning/milestones/v1.10-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.10-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -290,4 +321,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-23 after completing v1.9 milestone*
+*Last updated: 2026-05-23 after starting v1.10 milestone*

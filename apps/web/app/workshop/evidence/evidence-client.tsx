@@ -1,8 +1,10 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import type { AnalyticsMatchupRecord } from "@cowards/spec"
-import type { WorkshopInitialData } from "../types.js"
+import type {
+  AnalyticsMatchupRecord,
+  WorkshopAnalyticsSnapshot,
+} from "@cowards/spec"
 import { bandLabel, formatWld } from "../heatmap-state.js"
 import {
   defaultEvidenceFilters,
@@ -11,7 +13,9 @@ import {
 } from "./evidence-state.js"
 
 export interface EvidenceExplorerClientProps {
-  initialData: WorkshopInitialData
+  initialData: {
+    analytics: WorkshopAnalyticsSnapshot
+  }
   defaultOpponentId?: string | undefined
 }
 

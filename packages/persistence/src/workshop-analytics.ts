@@ -11,6 +11,7 @@ import type {
   AnalyticsOpponentSnapshot,
   AnalyticsReplayMomentType,
   AnalyticsStrategySnapshot,
+  WorkshopAnalyticsSnapshot,
   MatchId,
   MatchSetId,
   StrategyRevisionId,
@@ -39,13 +40,6 @@ export const WORKSHOP_ANALYTICS_PROFILE_ID =
   "analytics-profile:workshop-v1.6-demo"
 export const WORKSHOP_ANALYTICS_RUN_ID = "analytics-run:workshop-v1.6-demo:2"
 const WORKSHOP_ANALYTICS_PREVIOUS_RUN_ID = "analytics-run:workshop-v1.6-demo:1"
-
-export interface WorkshopAnalyticsSnapshot {
-  profiles: AnalyticsGauntletProfile[]
-  runs: AnalyticsGauntletProfileRun[]
-  selectedProfileId: string
-  selectedRunId: string
-}
 
 export type WorkshopAnalyticsExportFormat = "json" | "csv"
 
