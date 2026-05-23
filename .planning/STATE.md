@@ -1,42 +1,42 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.12
-milestone_name: Go Backend Promotion Readiness and Cutover Plan
-status: awaiting_next_milestone
-stopped_at: v1.12 archived
-last_updated: "2026-05-23T17:45:00.000Z"
+milestone: v1.13
+milestone_name: Go Backend Ownership Cutover
+status: planning
+stopped_at: defining requirements
+last_updated: "2026-05-23T18:15:00.000Z"
 last_activity: 2026-05-23
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 7
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** Awaiting next milestone
+**Status:** Planning active
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Planning next milestone.
+**Current focus:** v1.13 Go Backend Ownership Cutover.
 **Latest shipped milestone:** v1.12 Go Backend Promotion Readiness and Cutover Plan
-**Requirements:** Fresh requirements will be created by `$gsd-new-milestone`.
+**Requirements:** .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: -
+Phase: Not started (defining requirements)
 Plan: -
-Status: Awaiting next milestone
-Last activity: 2026-05-23 - v1.12 archived; final decision is promote-none-yet
+Status: Defining requirements
+Last activity: 2026-05-23 - Milestone v1.13 started with aggressive Go backend ownership cutover scope
 
-Progress: [##########] 100%
+Progress: [----------] 0%
 
 ## Workflow Settings
 
@@ -51,13 +51,13 @@ Progress: [##########] 100%
 
 ## Latest Milestone Summary
 
-v1.12 outcome:
+v1.13 planning intent:
 
-- Ran one decisive Go transition readiness milestone, not a broad rewrite.
-- Re-baselined TypeScript service versus Go ownership, including 29 report-only broad web offenses and the current five GET-only Go manifest entries.
-- Added route-scoped switch, typed Go client, raw privacy scans, no-fallback semantics, rollback evidence, topology hooks, and monitor gates for `getPublicStrategyPage`.
-- Final decision: `promote-none-yet` because Go public Strategy reads remain fixture-backed rather than production-equivalent.
-- Keep Go writes, auth/session mutation, ladder writes, Match orchestration, jobs, migrations, persistence ownership, Strategy source retrieval, Strategy execution, production sandbox promotion, counted non-JS play, and rule/engine changes out of scope.
+- Move from v1.12 readiness evidence to real Go backend API ownership.
+- Add live Go DB/persistence access and DTO assembly for selected product routes.
+- Cut over public reads, owner/account reads, auth/session mutations, account Strategy Revision source/write/fork flows, and exhibition creation where parity and privacy gates pass.
+- Preserve TypeScript worker/runtime ownership for job claiming, Match execution, Chronicle generation, and Strategy execution.
+- Keep public/service/Go/topology/monitor outputs free of private Strategy, owner, session, host, database, and runtime internals by default.
 
 ## Completed Milestones
 
@@ -75,6 +75,7 @@ v1.12 outcome:
 | v1.9 Backend and Runtime Ownership Split | 7 | 7 | 28/28 | Shipped |
 | v1.10 Service Boundary Completion and Go Read-Model Decision | 6 | 6 | 29/29 | Shipped |
 | v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence | 6 | 6 | 30/30 | Shipped |
+| v1.12 Go Backend Promotion Readiness and Cutover Plan | 6 | 6 | 36/36 | Shipped |
 
 ## Latest Milestone Outcomes
 
@@ -95,9 +96,9 @@ v1.12 outcome:
 
 ## Next Todos
 
-- Keep production web reads on TypeScript unless a later milestone adds a production-equivalent Go data provider.
-- Use the v1.12 topology hook before any future public Strategy Go promotion attempt.
-- Run `$gsd-new-milestone` to begin the next milestone and recreate active requirements.
+- Create and approve fresh v1.13 requirements.
+- Create v1.13 roadmap beginning at Phase 82.
+- Start Phase 82 with `$gsd-discuss-phase 82` or `$gsd-plan-phase 82`.
 
 ## Blockers/Concerns
 
@@ -108,11 +109,11 @@ None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing l
 | Category | Item | Status | Deferred At |
 | --- | --- | --- | --- |
 | backend | 29 remaining broad web report-only direct persistence offenses not selected in v1.11 | Deferred | v1.11 scope |
-| backend | Go mutation endpoints, auth/session mutation, ladder writes, orchestration, persistence writes, job claiming, migrations, and Match execution | Deferred | v1.11 scope |
-| backend | Production web routing to Go | Deferred | v1.11 scope |
-| backend | Public Strategy Go promotion blocked until Go has production-equivalent data provider | Deferred | v1.12 decision |
+| backend | Job claiming/completion, Match execution, Chronicle generation, and worker runtime ownership | Deferred | v1.13 scope |
+| backend | Go-owned migrations/schema ownership | Deferred | v1.13 scope |
+| backend | Runtime/orchestration ownership beyond exhibition creation handoff | Deferred | v1.13 scope |
 | replay | Full replay projection, owner-debug replay migration, and private Chronicle assembly | Deferred | v1.11 research |
-| workshop | Workshop source retrieval, source save, validation, test launch, analytics rerun, profile save, export, and runtime flows | Deferred | v1.11 scope |
+| workshop | Workshop validation, test launch, analytics rerun, profile save, export, and runtime flows | Deferred | v1.13 scope |
 | runtime | Production hostile-code sandbox promotion | Deferred | v1.11 scope |
 | runtime | Counted non-JS MatchSets, ladders, or gauntlets by default | Deferred | v1.11 scope |
 | product | Public language picker implying support parity | Deferred | v1.11 scope |
@@ -121,5 +122,5 @@ None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing l
 ## Session Continuity
 
 Last session: 2026-05-23T17:45:00.000Z
-Stopped at: v1.12 archived
-Resume file: .planning/milestones/v1.12-MILESTONE-AUDIT.md
+Stopped at: v1.13 milestone planning
+Resume file: .planning/REQUIREMENTS.md

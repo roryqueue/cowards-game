@@ -1,5 +1,48 @@
 # Milestones
 
+## v1.13 Go Backend Ownership Cutover
+
+**Status:** Planning
+**Phases:** 7
+**Phase range:** 82-88
+**Plans:** 0/7 complete
+**Requirements:** 44/44 mapped
+**Decision:** Aggressive Go backend ownership cutover
+
+### Goal
+
+Perform a fast, decisive Go backend ownership cutover for normal product workflows. Go should become the primary owner for selected public reads, owner/account reads, auth/session mutations, account Strategy Revision source/write/fork flows, and exhibition creation while preserving deterministic engine boundaries, privacy, schema validation, hostile Strategy isolation, and public-output safety.
+
+### Selected Direction
+
+- Add Go DB/persistence access and live DTO assembly, replacing fixture-backed Go reads where practical.
+- Treat TypeScript service behavior as the parity oracle and rollback reference.
+- Make Go primary for public Strategy, player, ladder, MatchSet summary, and replay metadata reads.
+- Make Go primary for auth/session read and mutation plus account Strategy Revision list/source/create/save/fork.
+- Make Go primary for exhibition MatchSet creation while keeping TypeScript worker/runtime ownership for job claiming, Match execution, Chronicle generation, and Strategy execution.
+- Fail closed for Go-selected paths and avoid silent TypeScript fallback in evidence paths.
+- Keep public/service/Go/topology/monitor outputs free of private Strategy, owner, session, host, database, and runtime internals by default.
+
+### Planned Phases
+
+| Phase | Name |
+| --- | --- |
+| 82 | Ownership Baseline and Aggressive Cutover Registry |
+| 83 | Go Persistence and Live DTO Foundation |
+| 84 | Public Read Ownership Cutover |
+| 85 | Auth, Session, and Account Read Ownership |
+| 86 | Account Strategy Revision Source and Write Ownership |
+| 87 | Exhibition Creation Ownership and Worker Handoff |
+| 88 | Multi-Route Cutover Verification and Rollback Gate |
+
+### Active Constraints
+
+- Engine logic remains pure, deterministic, serializable, and side-effect free.
+- Strategy code does not execute in the web/API process or Go backend, and Node `vm` is not used as a hostile-code security boundary.
+- Strategy Revisions are immutable once submitted for Match or MatchSet play.
+- TypeScript worker/runtime remains the owner for hostile Strategy execution and Match job completion unless a later milestone explicitly promotes that boundary.
+- Public replay, service, Go, topology, monitor, analytics, export, and runtime outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals by default.
+
 ## v1.12 Go Backend Promotion Readiness and Cutover Plan
 
 **Status:** Complete 2026-05-23
