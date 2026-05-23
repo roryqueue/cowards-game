@@ -1,7 +1,17 @@
 import {
+  PublicLadderPageServiceDtoSchema,
+  PublicMatchSetSummaryServiceDtoSchema,
+  PublicPlayerPageServiceDtoSchema,
+  PublicReplayMetadataServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
   ServiceErrorDtoSchema,
   assertPublicServiceDtoLeakSafe,
+  type MatchId,
+  type MatchSetId,
+  type PublicLadderPageServiceDto,
+  type PublicMatchSetSummaryServiceDto,
+  type PublicPlayerPageServiceDto,
+  type PublicReplayMetadataServiceDto,
   type PublicStrategyPageServiceDto,
   type ServiceErrorDto,
   type StrategyId,
@@ -17,7 +27,12 @@ export type PublicGoReadFailureClass =
   | "go_body_divergent"
 
 export interface PublicGoReadFailureDiagnostic {
-  routeId: "getPublicStrategyPage"
+  routeId:
+    | "getPublicStrategyPage"
+    | "getPublicPlayerPage"
+    | "getPublicLadderSeason"
+    | "getPublicMatchSetSummary"
+    | "getPublicReplayMetadata"
   selectedBackend: "go"
   status: number | null
   durationBucket: "lt_100ms" | "lt_500ms" | "lt_1000ms" | "gte_1000ms"
@@ -49,6 +64,18 @@ export interface PublicGoReadClient {
   getPublicStrategyPage(
     strategyId: StrategyId,
   ): Promise<PublicStrategyPageServiceDto | null>
+  getPublicPlayerPage(
+    handle: string,
+  ): Promise<PublicPlayerPageServiceDto | null>
+  getPublicLadderSeason(
+    seasonId: string,
+  ): Promise<PublicLadderPageServiceDto | null>
+  getPublicMatchSetSummary(
+    matchSetId: MatchSetId,
+  ): Promise<PublicMatchSetSummaryServiceDto | null>
+  getPublicReplayMetadata(
+    matchId: MatchId,
+  ): Promise<PublicReplayMetadataServiceDto | null>
 }
 
 const durationBucket = (
@@ -74,12 +101,13 @@ const isAbortError = (error: unknown): boolean =>
     : error instanceof Error && error.name === "AbortError"
 
 const makeDiagnostic = (
+  routeId: PublicGoReadFailureDiagnostic["routeId"],
   failureClass: PublicGoReadFailureClass,
   status: number | null,
   startedAt: number,
   endedAt: number,
 ): PublicGoReadFailureDiagnostic => ({
-  routeId: "getPublicStrategyPage",
+  routeId,
   selectedBackend: "go",
   status,
   durationBucket: durationBucket(startedAt, endedAt),
@@ -96,20 +124,30 @@ const safeRelativeLinkPatterns = [
   /^\/replays\/[^/]+$/,
 ] as const
 
-const assertSafeStrategyLinks = (
-  page: PublicStrategyPageServiceDto,
+interface PublicSchema<T> {
+  safeParse(
+    value: unknown,
+  ): { success: true; data: T } | { success: false; error: unknown }
+}
+
+const assertSafeLinks = (
+  routeId: PublicGoReadFailureDiagnostic["routeId"],
+  hrefs: readonly string[],
   status: number,
   startedAt: number,
   endedAt: number,
 ): void => {
-  for (const href of [
-    ...page.payload.strategy.resultLinks,
-    ...page.payload.strategy.replayLinks,
-  ]) {
+  for (const href of hrefs) {
     if (!safeRelativeLinkPatterns.some((pattern) => pattern.test(href))) {
       throw new PublicGoReadError(
-        "Go public Strategy read returned unsafe evidence link",
-        makeDiagnostic("go_body_divergent", status, startedAt, endedAt),
+        "Go public read returned unsafe evidence link",
+        makeDiagnostic(
+          routeId,
+          "go_body_divergent",
+          status,
+          startedAt,
+          endedAt,
+        ),
       )
     }
   }
@@ -124,7 +162,8 @@ export const createPublicGoReadClient = ({
   const resolvedBaseUrl = new URL(baseUrl)
 
   const requestJson = async (
-    strategyId: StrategyId,
+    routeId: PublicGoReadFailureDiagnostic["routeId"],
+    path: string,
   ): Promise<{
     body: unknown
     status: number
@@ -134,10 +173,7 @@ export const createPublicGoReadClient = ({
     const startedAt = now()
     const controller = new AbortController()
     const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs)
-    const url = new URL(
-      `/public/strategies/${encodeURIComponent(strategyId)}`,
-      resolvedBaseUrl,
-    )
+    const url = new URL(path, resolvedBaseUrl)
     let response: Response | null = null
     try {
       response = await fetchImpl(url, {
@@ -156,7 +192,13 @@ export const createPublicGoReadClient = ({
       } catch (error) {
         throw new PublicGoReadError(
           "Go public Strategy read returned non-JSON",
-          makeDiagnostic("go_non_json", response.status, startedAt, endedAt),
+          makeDiagnostic(
+            routeId,
+            "go_non_json",
+            response.status,
+            startedAt,
+            endedAt,
+          ),
           { cause: error },
         )
       }
@@ -169,6 +211,7 @@ export const createPublicGoReadClient = ({
       throw new PublicGoReadError(
         "Go public Strategy read failed",
         makeDiagnostic(
+          routeId,
           failureClass,
           response?.status ?? null,
           startedAt,
@@ -181,83 +224,236 @@ export const createPublicGoReadClient = ({
     }
   }
 
-  return {
-    async getPublicStrategyPage(strategyId) {
-      const { body, status, startedAt, endedAt } = await requestJson(strategyId)
-      try {
-        assertPublicServiceDtoLeakSafe(body)
-      } catch (error) {
+  const requestPublicDto = async <T>({
+    routeId,
+    path,
+    schema,
+    validate,
+  }: {
+    routeId: PublicGoReadFailureDiagnostic["routeId"]
+    path: string
+    schema: PublicSchema<T>
+    validate?: (
+      dto: T,
+      status: number,
+      startedAt: number,
+      endedAt: number,
+    ) => void
+  }): Promise<T | null> => {
+    const { body, status, startedAt, endedAt } = await requestJson(
+      routeId,
+      path,
+    )
+    try {
+      assertPublicServiceDtoLeakSafe(body)
+    } catch (error) {
+      throw new PublicGoReadError(
+        "Go public read privacy validation failed",
+        makeDiagnostic(
+          routeId,
+          "go_privacy_violation",
+          status,
+          startedAt,
+          endedAt,
+        ),
+        { cause: error },
+      )
+    }
+
+    if (status === 404) {
+      const parsedError = ServiceErrorDtoSchema.safeParse(body)
+      if (!parsedError.success) {
         throw new PublicGoReadError(
-          "Go public Strategy read privacy validation failed",
-          makeDiagnostic("go_privacy_violation", status, startedAt, endedAt),
-          { cause: error },
+          "Go public read returned invalid not-found body",
+          makeDiagnostic(
+            routeId,
+            "go_status_mismatch",
+            status,
+            startedAt,
+            endedAt,
+          ),
+          { cause: parsedError.error },
         )
       }
-
-      if (status === 404) {
-        const parsedError = ServiceErrorDtoSchema.safeParse(body)
-        if (!parsedError.success) {
-          throw new PublicGoReadError(
-            "Go public Strategy read returned invalid not-found body",
-            makeDiagnostic("go_status_mismatch", status, startedAt, endedAt),
-            { cause: parsedError.error },
-          )
-        }
-        if (
-          parsedError.data.code !== "NOT_FOUND" ||
-          parsedError.data.status !== status
-        ) {
-          throw new PublicGoReadError(
-            "Go public Strategy read returned mismatched not-found body",
-            makeDiagnostic("go_status_mismatch", status, startedAt, endedAt),
-          )
-        }
-        return null
-      }
-
-      if (status < 200 || status >= 300) {
-        const parsedError = ServiceErrorDtoSchema.safeParse(body)
-        if (!parsedError.success || parsedError.data.status !== status) {
-          throw new PublicGoReadError(
-            "Go public Strategy read returned mismatched error body",
-            makeDiagnostic("go_status_mismatch", status, startedAt, endedAt),
-            { cause: parsedError.success ? undefined : parsedError.error },
-          )
-        }
-        const serviceError: ServiceErrorDto = parsedError.data
-        throw new PublicGoReadError(
-          serviceError.message,
-          makeDiagnostic("go_status_mismatch", status, startedAt, endedAt),
-        )
-      }
-
-      const parsed = PublicStrategyPageServiceDtoSchema.safeParse(body)
-      if (!parsed.success) {
-        throw new PublicGoReadError(
-          "Go public Strategy read schema validation failed",
-          makeDiagnostic("go_schema_invalid", status, startedAt, endedAt),
-          { cause: parsed.error },
-        )
-      }
-
       if (
-        parsed.data.canonicalHref !==
-        `/strategies/${encodeURIComponent(strategyId)}`
+        parsedError.data.code !== "NOT_FOUND" ||
+        parsedError.data.status !== status
       ) {
         throw new PublicGoReadError(
-          "Go public Strategy read returned divergent canonical href",
-          makeDiagnostic("go_body_divergent", status, startedAt, endedAt),
+          "Go public read returned mismatched not-found body",
+          makeDiagnostic(
+            routeId,
+            "go_status_mismatch",
+            status,
+            startedAt,
+            endedAt,
+          ),
         )
       }
+      return null
+    }
 
-      assertSafeStrategyLinks(
-        parsed.data as PublicStrategyPageServiceDto,
-        status,
-        startedAt,
-        endedAt,
+    if (status < 200 || status >= 300) {
+      const parsedError = ServiceErrorDtoSchema.safeParse(body)
+      if (!parsedError.success || parsedError.data.status !== status) {
+        throw new PublicGoReadError(
+          "Go public read returned mismatched error body",
+          makeDiagnostic(
+            routeId,
+            "go_status_mismatch",
+            status,
+            startedAt,
+            endedAt,
+          ),
+          { cause: parsedError.success ? undefined : parsedError.error },
+        )
+      }
+      const serviceError: ServiceErrorDto = parsedError.data
+      throw new PublicGoReadError(
+        serviceError.message,
+        makeDiagnostic(
+          routeId,
+          "go_status_mismatch",
+          status,
+          startedAt,
+          endedAt,
+        ),
       )
+    }
 
-      return parsed.data as PublicStrategyPageServiceDto
+    const parsed = schema.safeParse(body)
+    if (!parsed.success) {
+      throw new PublicGoReadError(
+        "Go public read schema validation failed",
+        makeDiagnostic(
+          routeId,
+          "go_schema_invalid",
+          status,
+          startedAt,
+          endedAt,
+        ),
+        { cause: parsed.error },
+      )
+    }
+
+    validate?.(parsed.data, status, startedAt, endedAt)
+    return parsed.data
+  }
+
+  const assertCanonicalHref = (
+    routeId: PublicGoReadFailureDiagnostic["routeId"],
+    actual: string,
+    expected: string,
+    status: number,
+    startedAt: number,
+    endedAt: number,
+  ): void => {
+    if (actual !== expected) {
+      throw new PublicGoReadError(
+        "Go public read returned divergent canonical href",
+        makeDiagnostic(
+          routeId,
+          "go_body_divergent",
+          status,
+          startedAt,
+          endedAt,
+        ),
+      )
+    }
+  }
+
+  return {
+    async getPublicStrategyPage(strategyId) {
+      return (await requestPublicDto({
+        routeId: "getPublicStrategyPage",
+        path: `/public/strategies/${encodeURIComponent(strategyId)}`,
+        schema:
+          PublicStrategyPageServiceDtoSchema as PublicSchema<PublicStrategyPageServiceDto>,
+        validate: (page, status, startedAt, endedAt) => {
+          assertCanonicalHref(
+            "getPublicStrategyPage",
+            page.canonicalHref,
+            `/strategies/${encodeURIComponent(strategyId)}`,
+            status,
+            startedAt,
+            endedAt,
+          )
+          assertSafeLinks(
+            "getPublicStrategyPage",
+            [
+              ...page.payload.strategy.resultLinks,
+              ...page.payload.strategy.replayLinks,
+            ],
+            status,
+            startedAt,
+            endedAt,
+          )
+        },
+      })) as PublicStrategyPageServiceDto | null
+    },
+    async getPublicPlayerPage(handle) {
+      return (await requestPublicDto({
+        routeId: "getPublicPlayerPage",
+        path: `/public/players/${encodeURIComponent(handle)}`,
+        schema:
+          PublicPlayerPageServiceDtoSchema as PublicSchema<PublicPlayerPageServiceDto>,
+        validate: (page, status, startedAt, endedAt) =>
+          assertCanonicalHref(
+            "getPublicPlayerPage",
+            page.canonicalHref,
+            `/players/${encodeURIComponent(handle)}`,
+            status,
+            startedAt,
+            endedAt,
+          ),
+      })) as PublicPlayerPageServiceDto | null
+    },
+    async getPublicLadderSeason(seasonId) {
+      return (await requestPublicDto({
+        routeId: "getPublicLadderSeason",
+        path: `/public/ladders/${encodeURIComponent(seasonId)}`,
+        schema:
+          PublicLadderPageServiceDtoSchema as PublicSchema<PublicLadderPageServiceDto>,
+        validate: (page, status, startedAt, endedAt) =>
+          assertCanonicalHref(
+            "getPublicLadderSeason",
+            page.canonicalHref,
+            `/ladder/${encodeURIComponent(seasonId)}`,
+            status,
+            startedAt,
+            endedAt,
+          ),
+      })) as PublicLadderPageServiceDto | null
+    },
+    async getPublicMatchSetSummary(matchSetId) {
+      return (await requestPublicDto({
+        routeId: "getPublicMatchSetSummary",
+        path: `/public/matchsets/${encodeURIComponent(matchSetId)}/summary`,
+        schema:
+          PublicMatchSetSummaryServiceDtoSchema as PublicSchema<PublicMatchSetSummaryServiceDto>,
+        validate: (summary, status, startedAt, endedAt) =>
+          assertSafeLinks(
+            "getPublicMatchSetSummary",
+            summary.result.matches
+              .map((match) =>
+                match.replayAvailable
+                  ? `/matches/${encodeURIComponent(match.matchId)}/replay`
+                  : "",
+              )
+              .filter(Boolean),
+            status,
+            startedAt,
+            endedAt,
+          ),
+      })) as PublicMatchSetSummaryServiceDto | null
+    },
+    async getPublicReplayMetadata(matchId) {
+      return (await requestPublicDto({
+        routeId: "getPublicReplayMetadata",
+        path: `/public/replays/${encodeURIComponent(matchId)}/metadata`,
+        schema:
+          PublicReplayMetadataServiceDtoSchema as PublicSchema<PublicReplayMetadataServiceDto>,
+      })) as PublicReplayMetadataServiceDto | null
     },
   }
 }

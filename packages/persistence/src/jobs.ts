@@ -5,6 +5,7 @@ import { withTransaction } from "./db.js"
 
 export interface ClaimMatchJobInput {
   workerId: string
+  matchIds?: readonly MatchId[] | undefined
   leaseMs?: number
   now?: Date
 }
@@ -52,7 +53,23 @@ export const claimNextMatchJob = async (
       id: string
       match_id: MatchId
       attempts: number
-    }>(CLAIM_NEXT_MATCH_JOB_SQL, [now])
+    }>(
+      input.matchIds === undefined
+        ? CLAIM_NEXT_MATCH_JOB_SQL
+        : `
+          select id, match_id, attempts
+          from match_jobs
+          where match_id = any($2::text[])
+            and (
+              (status = 'queued' and run_after <= $1)
+              or (status = 'running' and lease_expires_at < $1)
+            )
+          order by run_after asc, created_at asc
+          for update skip locked
+          limit 1
+        `,
+      input.matchIds === undefined ? [now] : [now, input.matchIds],
+    )
     const row = claim.rows[0]
     if (!row) {
       return null

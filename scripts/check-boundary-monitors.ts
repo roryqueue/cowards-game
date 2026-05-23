@@ -88,6 +88,48 @@ interface GoPromotionRouteOwnershipManifest {
   routes: readonly GoPromotionRouteOwnershipEntry[]
 }
 
+interface V113RouteOwnershipEntry {
+  routeId: string
+  method: string
+  path: string
+  routeFamily:
+    | "public_read"
+    | "session"
+    | "account_revision"
+    | "mutation"
+    | "worker_runtime"
+    | "deferred"
+  authScope: "public" | "session" | "owner" | "internal"
+  privacyClass: string
+  currentOwner: string
+  selectedOwner: string
+  fallbackPolicy: string
+  rollbackOwner: string
+  diagnosticsClass: string
+  promotionStatus:
+    | "go_primary"
+    | "typescript_primary"
+    | "typescript_reference"
+    | "worker_owned"
+    | "deferred"
+    | "blocked"
+    | "rolled_back"
+    | "evidence_only"
+  blockedReasons: readonly string[]
+  evidenceRequired: readonly string[]
+  disallowedScopes: readonly string[]
+}
+
+interface V113RouteOwnershipManifest {
+  schemaVersion: "v1.13-route-ownership-manifest"
+  milestone: "v1.13"
+  decision: "aggressive-go-backend-cutover"
+  typeScriptRole: string
+  selectedRouteFamilies: readonly string[]
+  allowedPromotionStates: readonly string[]
+  routes: readonly V113RouteOwnershipEntry[]
+}
+
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -100,6 +142,8 @@ const sandboxEvaluationArtifactPath =
   ".planning/artifacts/runtime-sandbox-evaluation.json"
 const goPromotionManifestPath =
   ".planning/artifacts/v1.12-route-ownership-manifest.json"
+const v113RouteOwnershipManifestPath =
+  ".planning/artifacts/v1.13-route-ownership-manifest.json"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/account/advanced-forks/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
@@ -410,6 +454,121 @@ const checkGoPromotionOwnershipManifest = (): string => {
   return `${manifest.routes.length} route ownership entries checked; decision=${manifest.decision}`
 }
 
+const checkV113RouteOwnershipManifest = (): string => {
+  const manifest = readJson<V113RouteOwnershipManifest>(
+    v113RouteOwnershipManifestPath,
+  )
+  if (manifest.schemaVersion !== "v1.13-route-ownership-manifest") {
+    throw new Error("v1.13 ownership manifest schema version drifted")
+  }
+  if (manifest.milestone !== "v1.13") {
+    throw new Error(`v1.13 manifest milestone drifted to ${manifest.milestone}`)
+  }
+  if (manifest.decision !== "aggressive-go-backend-cutover") {
+    throw new Error("v1.13 manifest decision drifted")
+  }
+  if (
+    manifest.typeScriptRole !== "parity_oracle_and_explicit_rollback_reference"
+  ) {
+    throw new Error("v1.13 TypeScript role drifted")
+  }
+
+  const allowedStates = new Set(manifest.allowedPromotionStates)
+  for (const state of [
+    "go_primary",
+    "typescript_primary",
+    "typescript_reference",
+    "worker_owned",
+    "deferred",
+    "blocked",
+    "rolled_back",
+    "evidence_only",
+  ]) {
+    if (!allowedStates.has(state)) {
+      throw new Error(`v1.13 manifest missing allowed state ${state}`)
+    }
+  }
+
+  const requiredRouteIds = new Set([
+    "getPublicStrategyPage",
+    "getPublicPlayerPage",
+    "getPublicLadderSeason",
+    "getPublicMatchSetSummary",
+    "getPublicReplayMetadata",
+    "authSession",
+    "createSession",
+    "signUp",
+    "revokeSession",
+    "listStrategyRevisions",
+    "getStrategyRevisionSource",
+    "createStrategyRevision",
+    "forkStarterStrategy",
+    "forkAdvancedStrategy",
+    "createMatchSet",
+    "workerRuntime",
+    "goOwnedMigrations",
+  ])
+  const routeIds = new Set(manifest.routes.map((entry) => entry.routeId))
+  for (const routeId of requiredRouteIds) {
+    if (!routeIds.has(routeId)) {
+      throw new Error(`v1.13 ownership manifest missing ${routeId}`)
+    }
+  }
+
+  for (const entry of manifest.routes) {
+    if (!allowedStates.has(entry.promotionStatus)) {
+      throw new Error(`${entry.routeId} has invalid promotion status`)
+    }
+    if (
+      entry.selectedOwner === "go_backend" &&
+      entry.promotionStatus === "typescript_primary"
+    ) {
+      throw new Error(
+        `${entry.routeId} cannot select Go while remaining TypeScript-primary`,
+      )
+    }
+    if (
+      entry.promotionStatus === "blocked" &&
+      entry.blockedReasons.length === 0
+    ) {
+      throw new Error(`${entry.routeId} blocked status requires blockers`)
+    }
+    if (
+      entry.routeFamily !== "worker_runtime" &&
+      entry.routeFamily !== "deferred" &&
+      entry.fallbackPolicy !== "no_fallback_when_go_selected"
+    ) {
+      throw new Error(`${entry.routeId} fallback policy drifted`)
+    }
+    if (
+      entry.routeFamily !== "worker_runtime" &&
+      entry.routeFamily !== "deferred" &&
+      entry.selectedOwner !== "go_backend"
+    ) {
+      throw new Error(`${entry.routeId} selected owner must be Go`)
+    }
+    if (
+      entry.routeFamily === "worker_runtime" &&
+      entry.promotionStatus !== "worker_owned"
+    ) {
+      throw new Error(`${entry.routeId} must remain worker-owned`)
+    }
+    if (
+      entry.routeFamily === "deferred" &&
+      entry.promotionStatus !== "deferred"
+    ) {
+      throw new Error(`${entry.routeId} must remain deferred`)
+    }
+    if (entry.evidenceRequired.length === 0) {
+      throw new Error(`${entry.routeId} missing evidence requirements`)
+    }
+    if (entry.disallowedScopes.length === 0) {
+      throw new Error(`${entry.routeId} missing disallowed scopes`)
+    }
+  }
+  return `${manifest.routes.length} v1.13 ownership entries checked`
+}
+
 export const checkRuntimeAdapterBridge = (
   bridge: RuntimeAdapterBridge,
 ): string => {
@@ -638,6 +797,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("go_promotion", "v1.12 route ownership manifest", () =>
     checkGoPromotionOwnershipManifest(),
+  ),
+  await check("go_promotion", "v1.13 route ownership manifest", () =>
+    checkV113RouteOwnershipManifest(),
   ),
   await check("topology", "static topology diagnostics", () =>
     checkTopologyDiagnostics(),

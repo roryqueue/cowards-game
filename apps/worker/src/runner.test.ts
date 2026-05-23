@@ -9,7 +9,7 @@ import {
   type StrategyExecutionRequest,
 } from "@cowards/runtime-js/worker"
 import { fixtures } from "@cowards/spec"
-import type { ArenaVariant, StrategyRevision } from "@cowards/spec"
+import type { ArenaVariant, MatchId, StrategyRevision } from "@cowards/spec"
 import type { WorkerRunnerDependencies } from "./runner.js"
 import {
   createClaimedMatchJobForTest,
@@ -420,5 +420,21 @@ describe("worker runner", () => {
         leaseToken: "lease:reclaimed",
       }),
     )
+  })
+
+  it("passes an optional match allowlist to the claim dependency", async () => {
+    const dependencies = baseDependencies()
+    const matchIds = ["match:target" as MatchId] as const
+
+    await runWorkerOnce(
+      pool,
+      { workerId: "worker:targeted", matchIds },
+      dependencies,
+    )
+
+    expect(dependencies.claimNextMatchJob).toHaveBeenCalledWith(pool, {
+      workerId: "worker:targeted",
+      matchIds,
+    })
   })
 })

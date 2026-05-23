@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "v1.13-live-web-go-topology",
+  "capturedAt": "2026-05-23T22:28:30Z",
+  "webUrl": "http://localhost:3000",
+  "goUrl": "http://127.0.0.1:8087",
+  "goMode": "live",
+  "webEnv": {
+    "COWARDS_GO_BACKEND_OWNER": "go",
+    "COWARDS_GO_PUBLIC_READS": "1",
+    "COWARDS_GO_ACCOUNT_REVISIONS": "1",
+    "COWARDS_GO_EXHIBITIONS": "1"
+  },
+  "createdUser": {
+    "handle": "v113player",
+    "displayName": "V113 Player"
+  },
+  "createdStrategyRevisions": [
+    {
+      "label": "V113 Go Cutover Revision",
+      "strategyRevisionId": "strategy-revision:81a29d9691bf6b9a9572a8013beaa0067bd400821c0df49332180cd43a638646",
+      "strategyId": "strategy:account:user:fUw-j0Hs-IfROSZIa_gnHQ:0Sy0N0vG2E_P-RyaF535TQ"
+    },
+    {
+      "label": "V113 Go Cutover Opponent",
+      "strategyRevisionId": "strategy-revision:c9bba292fcc2b7caa1abd18249cdce8ee12b444c0415973dc198aab182886bf2",
+      "strategyId": "strategy:account:user:fUw-j0Hs-IfROSZIa_gnHQ:QcFP2C4QBuOfYEU4-FBXzw"
+    }
+  ],
+  "createdMatchSet": {
+    "matchSetId": "match-set:exhibition:oO2ZCrPXhLz4GZgajytP-g",
+    "matchCount": 2,
+    "finalStatus": "complete"
+  },
+  "validatedRoutes": [
+    {
+      "kind": "strategyPage",
+      "url": "http://localhost:3000/strategies/strategy%3Aaccount%3Auser%3AfUw-j0Hs-IfROSZIa_gnHQ%3A0Sy0N0vG2E_P-RyaF535TQ",
+      "result": "rendered",
+      "publicSignals": ["Public Strategy card", "valid", "Counted eligible"]
+    },
+    {
+      "kind": "playerPage",
+      "url": "http://localhost:3000/players/v113player",
+      "result": "rendered",
+      "publicSignals": ["Player profile", "Strategies", "Ladder history"]
+    },
+    {
+      "kind": "matchSetPage",
+      "url": "http://localhost:3000/matchsets/match-set%3Aexhibition%3AoO2ZCrPXhLz4GZgajytP-g",
+      "result": "rendered",
+      "publicSignals": ["Competitive Alpha Result", "complete", "2 entrants"]
+    },
+    {
+      "kind": "replayMetadata",
+      "url": "http://localhost:3000/api/replays/match%3Amatch-set%3Aexhibition%3AoO2ZCrPXhLz4GZgajytP-g%3A0/metadata",
+      "result": "200",
+      "publicSignals": ["chronicleId", "eventCount", "snapshotCount"]
+    }
+  ],
+  "privacyScan": {
+    "strategySource": "absent",
+    "strategyMemory": "absent",
+    "soldierMemory": "absent",
+    "objectivePayloads": "absent",
+    "ownerDebug": "absent",
+    "rawAwarenessGrid": "absent",
+    "sessions": "absent",
+    "tokens": "absent",
+    "dbDsn": "absent",
+    "hostPaths": "absent"
+  }
+}

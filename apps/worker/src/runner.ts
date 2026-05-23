@@ -16,7 +16,7 @@ import {
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
-import type { JsonValue, PlayerId } from "@cowards/spec"
+import type { JsonValue, MatchId, PlayerId } from "@cowards/spec"
 import type { Pool } from "pg"
 import {
   createWorkerRuntimeConfig,
@@ -26,6 +26,7 @@ import {
 export interface WorkerRunnerOptions {
   workerId: string
   once?: boolean
+  matchIds?: readonly MatchId[] | undefined
   pollMs?: number
   leaseMs?: number | undefined
   runtimeConfig?: WorkerRuntimeConfig | undefined
@@ -192,6 +193,7 @@ export const runWorkerOnce = async (
   const runtimeConfig = options.runtimeConfig ?? createWorkerRuntimeConfig()
   const claimed = await dependencies.claimNextMatchJob(pool, {
     workerId: options.workerId,
+    ...(options.matchIds === undefined ? {} : { matchIds: options.matchIds }),
     ...(options.leaseMs === undefined ? {} : { leaseMs: options.leaseMs }),
   })
   if (!claimed) {

@@ -1,11 +1,16 @@
 # Requirements: Coward's Game v1.13 Go Backend Ownership Cutover
 
 **Defined:** 2026-05-23
+**Outcome:** v1.13 complete 2026-05-23. 42/44 requirements complete or promoted; ACCT-04 and ACCT-05 accepted deferred because Go lacks library source manifest access required for fork parity.
 **Core Value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
 ## v1.13 Requirements
 
 Requirements for a fast, decisive Go backend ownership cutover. Go should become the primary backend owner for selected normal product workflows, including public reads, owner/account reads, auth/session mutations, Strategy Revision source/write/fork flows, and exhibition creation. TypeScript service behavior remains the parity oracle and migration reference.
+
+### Final Status
+
+Selected Go promotion succeeded for public reads, auth/session, account revision list/source/create/save, and exhibition creation. Starter and Advanced fork routes remain TypeScript-owned by default and are recorded as blocked in the v1.13 route ownership manifest until Go can consume parity-safe library source manifests.
 
 ### Ownership and Cutover Scope
 
@@ -144,8 +149,8 @@ Which phases cover active v1.13 requirements. Updated during roadmap creation.
 | ACCT-01 | Phase 86 | Pending |
 | ACCT-02 | Phase 86 | Pending |
 | ACCT-03 | Phase 86 | Pending |
-| ACCT-04 | Phase 86 | Pending |
-| ACCT-05 | Phase 86 | Pending |
+| ACCT-04 | Phase 86 | Accepted deferred |
+| ACCT-05 | Phase 86 | Accepted deferred |
 | ACCT-06 | Phase 86 | Pending |
 | ACCT-07 | Phase 86 | Pending |
 | MUT-01 | Phase 87 | Pending |
@@ -165,10 +170,12 @@ Which phases cover active v1.13 requirements. Updated during roadmap creation.
 **Coverage:**
 - v1.13 requirements: 44 total
 - Mapped to phases: 44
+- Complete or promoted: 42
+- Accepted deferred: 2
 - Unmapped: 0
-- Starting boundary baseline: `strict_offenses=0 report_only_offenses=29`
-- Selected cutover mode: aggressive Go backend ownership
+- Final boundary baseline: `strict_offenses=0 report_only_offenses=29`
+- Selected cutover mode: aggressive Go backend ownership with selected-route promotion
 
 ---
 *Requirements defined: 2026-05-23*
-*Last updated: 2026-05-23 after v1.13 roadmap creation*
+*Last updated: 2026-05-23 after v1.13 selected Go backend route promotion*

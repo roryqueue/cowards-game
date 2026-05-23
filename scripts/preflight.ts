@@ -1,6 +1,7 @@
 #!/usr/bin/env -S pnpm exec tsx
 import net from "node:net"
 import { randomUUID } from "node:crypto"
+import { setTimeout as sleep } from "node:timers/promises"
 import {
   createDatabasePool,
   migrate,
@@ -197,7 +198,12 @@ const run = async (): Promise<number> => {
               const status = await runWorkerOnce(pool, {
                 workerId: "worker:preflight",
                 once: true,
+                matchIds: matchIds as readonly MatchId[],
               })
+              if (status === "idle") {
+                await sleep(100)
+                continue
+              }
               if (status !== "completed") {
                 throw new Error(`worker returned ${status}`)
               }

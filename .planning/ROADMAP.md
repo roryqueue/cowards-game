@@ -15,14 +15,14 @@
 - [x] **v1.10 Service Boundary Completion and Go Read-Model Decision** - Phases 64-69, shipped 2026-05-23. See `.planning/milestones/v1.10-ROADMAP.md`.
 - [x] **v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence** - Phases 70-75, shipped 2026-05-23. See `.planning/milestones/v1.11-ROADMAP.md`.
 - [x] **v1.12 Go Backend Promotion Readiness and Cutover Plan** - Phases 76-81, shipped 2026-05-23 with `promote-none-yet`. See `.planning/milestones/v1.12-ROADMAP.md`.
-- [ ] **v1.13 Go Backend Ownership Cutover** - Phases 82-88, active.
+- [x] **v1.13 Go Backend Ownership Cutover** - Phases 82-88, completed 2026-05-23 with selected Go backend route promotion. See `.planning/milestones/v1.13-ROADMAP.md`.
 
 ## Current Milestone: v1.13 Go Backend Ownership Cutover
 
-**Status:** Planning
+**Status:** Complete 2026-05-23
 **Phases:** 82-88
 **Granularity:** Standard
-**Requirements:** 44/44 mapped
+**Requirements:** 42/44 complete or promoted, 2/44 accepted deferred, 44/44 mapped
 **Research:** `.planning/research/SUMMARY.md`
 
 ## Overview
@@ -33,13 +33,13 @@ The milestone succeeds only if Go-owned routes preserve canonical DTOs, privacy,
 
 ## Phases
 
-- [ ] **Phase 82: Ownership Baseline and Aggressive Cutover Registry** - Developers can inspect v1.13 route ownership, selected primary scope, baseline evidence, and explicit non-goals before implementation.
-- [ ] **Phase 83: Go Persistence and Live DTO Foundation** - Developers can run Go against live PostgreSQL and assemble selected service DTOs with privacy-safe schema/error behavior.
-- [ ] **Phase 84: Public Read Ownership Cutover** - Users can load selected public Strategy, player, ladder, MatchSet summary, and replay metadata surfaces through Go-owned live data.
-- [ ] **Phase 85: Auth, Session, and Account Read Ownership** - Users can sign up, sign in, sign out, refresh session, and list account revision metadata through Go-owned routes.
-- [ ] **Phase 86: Account Strategy Revision Source and Write Ownership** - Users can retrieve owner-private source, save account revisions, and fork Starter/Advanced Strategies through Go-owned routes without executing Strategy code.
-- [ ] **Phase 87: Exhibition Creation Ownership and Worker Handoff** - Users can create exhibition MatchSets through Go-owned mutation while TypeScript worker/runtime remains the execution owner.
-- [ ] **Phase 88: Multi-Route Cutover Verification and Rollback Gate** - Developers can prove topology, privacy, no-fallback, rollback, boundary monitors, and final ownership evidence across all selected route families.
+- [x] **Phase 82: Ownership Baseline and Aggressive Cutover Registry** - Developers can inspect v1.13 route ownership, selected primary scope, baseline evidence, and explicit non-goals before implementation.
+- [x] **Phase 83: Go Persistence and Live DTO Foundation** - Developers can run Go against live PostgreSQL and assemble selected service DTOs with privacy-safe schema/error behavior.
+- [x] **Phase 84: Public Read Ownership Cutover** - Users can load selected public Strategy, player, ladder, MatchSet summary, and replay metadata surfaces through Go-owned live data.
+- [x] **Phase 85: Auth, Session, and Account Read Ownership** - Users can sign up, sign in, sign out, refresh session, and list account revision metadata through Go-owned routes.
+- [x] **Phase 86: Account Strategy Revision Source and Write Ownership** - Users can retrieve owner-private source and save account revisions through Go-owned routes without executing Strategy code; Starter/Advanced forks are accepted deferred.
+- [x] **Phase 87: Exhibition Creation Ownership and Worker Handoff** - Users can create exhibition MatchSets through Go-owned mutation while TypeScript worker/runtime remains the execution owner.
+- [x] **Phase 88: Multi-Route Cutover Verification and Rollback Gate** - Developers can prove topology, privacy, no-fallback, rollback, boundary monitors, and final ownership evidence across all selected route families.
 
 ## Phase Details
 
@@ -58,7 +58,7 @@ The milestone succeeds only if Go-owned routes preserve canonical DTOs, privacy,
 
 **Plans:** 1 plan
 
-- [ ] 82-01-PLAN.md - Capture ownership baseline, aggressive cutover registry, selected scope, non-goals, and baseline evidence.
+- [x] 82-01-PLAN.md - Capture ownership baseline, aggressive cutover registry, selected scope, non-goals, and baseline evidence.
 
 ### Phase 83: Go Persistence and Live DTO Foundation
 
@@ -76,7 +76,7 @@ The milestone succeeds only if Go-owned routes preserve canonical DTOs, privacy,
 
 **Plans:** 1 plan
 
-- [ ] 83-01-PLAN.md - Add Go PostgreSQL access, route-specific live DTO providers, parity harness, schema checks, and sanitized error handling.
+- [x] 83-01-PLAN.md - Add Go PostgreSQL access, route-specific live DTO providers, parity harness, schema checks, and sanitized error handling.
 
 ### Phase 84: Public Read Ownership Cutover
 
@@ -94,7 +94,7 @@ The milestone succeeds only if Go-owned routes preserve canonical DTOs, privacy,
 
 **Plans:** 1 plan
 
-- [ ] 84-01-PLAN.md - Cut over selected public reads to Go live DTOs with fail-closed web routing and parity tests.
+- [x] 84-01-PLAN.md - Cut over selected public reads to Go live DTOs with fail-closed web routing and parity tests.
 
 ### Phase 85: Auth, Session, and Account Read Ownership
 
@@ -112,7 +112,7 @@ The milestone succeeds only if Go-owned routes preserve canonical DTOs, privacy,
 
 **Plans:** 1 plan
 
-- [ ] 85-01-PLAN.md - Move auth/session read and mutation plus account revision list reads to Go-owned routes with parity and privacy tests.
+- [x] 85-01-PLAN.md - Move auth/session read and mutation plus account revision list reads to Go-owned routes with parity and privacy tests.
 
 ### Phase 86: Account Strategy Revision Source and Write Ownership
 
@@ -130,7 +130,7 @@ The milestone succeeds only if Go-owned routes preserve canonical DTOs, privacy,
 
 **Plans:** 1 plan
 
-- [ ] 86-01-PLAN.md - Move owner-private source, Strategy Revision save/create, and Starter/Advanced fork flows to Go with no-execution guarantees.
+- [x] 86-01-PLAN.md - Move owner-private source and Strategy Revision save/create flows to Go with no-execution guarantees; keep Starter/Advanced forks TypeScript-owned until Go has library source manifest parity.
 
 ### Phase 87: Exhibition Creation Ownership and Worker Handoff
 
@@ -148,7 +148,7 @@ The milestone succeeds only if Go-owned routes preserve canonical DTOs, privacy,
 
 **Plans:** 1 plan
 
-- [ ] 87-01-PLAN.md - Move exhibition MatchSet creation to Go with transactional parity and worker handoff guardrails.
+- [x] 87-01-PLAN.md - Move exhibition MatchSet creation to Go with transactional parity and worker handoff guardrails.
 
 ### Phase 88: Multi-Route Cutover Verification and Rollback Gate
 
@@ -166,7 +166,7 @@ The milestone succeeds only if Go-owned routes preserve canonical DTOs, privacy,
 
 **Plans:** 1 plan
 
-- [ ] 88-01-PLAN.md - Run the final multi-route cutover gate, rollback drills, privacy scans, boundary monitors, and ownership decision record.
+- [x] 88-01-PLAN.md - Run the final multi-route cutover gate, rollback drills, privacy scans, boundary monitors, and ownership decision record.
 
 ## Progress
 
@@ -174,13 +174,13 @@ The milestone succeeds only if Go-owned routes preserve canonical DTOs, privacy,
 
 | Phase | Plans Complete | Status | Completed |
 | --- | --- | --- | --- |
-| 82. Ownership Baseline and Aggressive Cutover Registry | 0/1 | Pending | - |
-| 83. Go Persistence and Live DTO Foundation | 0/1 | Pending | - |
-| 84. Public Read Ownership Cutover | 0/1 | Pending | - |
-| 85. Auth, Session, and Account Read Ownership | 0/1 | Pending | - |
-| 86. Account Strategy Revision Source and Write Ownership | 0/1 | Pending | - |
-| 87. Exhibition Creation Ownership and Worker Handoff | 0/1 | Pending | - |
-| 88. Multi-Route Cutover Verification and Rollback Gate | 0/1 | Pending | - |
+| 82. Ownership Baseline and Aggressive Cutover Registry | 1/1 | Complete | 2026-05-23 |
+| 83. Go Persistence and Live DTO Foundation | 1/1 | Complete | 2026-05-23 |
+| 84. Public Read Ownership Cutover | 1/1 | Complete | 2026-05-23 |
+| 85. Auth, Session, and Account Read Ownership | 1/1 | Complete | 2026-05-23 |
+| 86. Account Strategy Revision Source and Write Ownership | 1/1 | Complete with fork deferral | 2026-05-23 |
+| 87. Exhibition Creation Ownership and Worker Handoff | 1/1 | Complete | 2026-05-23 |
+| 88. Multi-Route Cutover Verification and Rollback Gate | 1/1 | Complete | 2026-05-23 |
 
 ## Requirement Coverage
 
@@ -196,14 +196,13 @@ The milestone succeeds only if Go-owned routes preserve canonical DTOs, privacy,
 
 **Coverage:** 44/44 v1.13 requirements mapped.
 **Unmapped requirements:** 0.
-**Starting boundary baseline:** `strict_offenses=0 report_only_offenses=29`.
-**Selected cutover mode:** aggressive Go backend ownership.
+**Completion:** 42/44 complete or promoted; ACCT-04 and ACCT-05 accepted deferred.
+**Final boundary baseline:** `strict_offenses=0 report_only_offenses=29`.
+**Selected cutover mode:** aggressive Go backend ownership with selected-route promotion.
 
 ## Next Up
 
-Start Phase 82: Ownership Baseline and Aggressive Cutover Registry.
-
-`$gsd-discuss-phase 82`
+Archive or start v1.14 from the accepted deferrals.
 
 ---
-*Last updated: 2026-05-23 after v1.13 roadmap creation*
+*Last updated: 2026-05-23 after v1.13 selected Go backend route promotion*

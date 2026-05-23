@@ -70,6 +70,65 @@ func TestEndpointFixturesMatchCanonicalJSON(t *testing.T) {
 	}
 }
 
+func TestPublicReadRoutesDecodeIdentifiersWithoutCrossRouteFallback(t *testing.T) {
+	tests := []struct {
+		name          string
+		path          string
+		topLevelField string
+		nestedField   []string
+		expectedValue string
+	}{
+		{
+			name:          "public matchset summary",
+			path:          "/public/matchsets/match-set%3Ago-parity%3Agolden/summary",
+			topLevelField: "matchSetId",
+			expectedValue: "match-set:go-parity:golden",
+		},
+		{
+			name:          "degraded matchset summary",
+			path:          "/public/matchsets/match-set%3Ago-parity%3Adegraded/summary",
+			topLevelField: "matchSetId",
+			expectedValue: "match-set:go-parity:degraded",
+		},
+		{
+			name:          "public replay metadata",
+			path:          "/public/replays/golden%3Av1-7%3Amatch/metadata",
+			topLevelField: "matchId",
+			expectedValue: "golden:v1-7:match",
+		},
+		{
+			name:          "public strategy page",
+			path:          "/public/strategies/strategy%3Ago-parity%3Asentinel",
+			nestedField:   []string{"payload", "strategy", "strategyId"},
+			expectedValue: "strategy:go-parity:sentinel",
+		},
+	}
+
+	server := newTestServer(t).routes()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, test.path, nil)
+
+			server.ServeHTTP(response, request)
+
+			if response.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d", response.Code)
+			}
+			body := decodeJSONMap(t, response.Body.Bytes())
+			var got string
+			if len(test.nestedField) > 0 {
+				got = nestedString(t, body, test.nestedField...)
+			} else {
+				got = stringField(t, body, test.topLevelField)
+			}
+			if got != test.expectedValue {
+				t.Fatalf("expected decoded id %q, got %q", test.expectedValue, got)
+			}
+		})
+	}
+}
+
 func TestReplayMetadataUsesV18Shape(t *testing.T) {
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(
@@ -172,6 +231,50 @@ func TestRouteInventoryIsReadOnlyAllowlist(t *testing.T) {
 		if route.AuthScope == "owner" && !route.RequiresBearerToken {
 			t.Fatalf("owner route %s does not require bearer token auth", route.ID)
 		}
+	}
+}
+
+func TestRouteManifestValidationRejectsCutoverDrift(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func([]routeSpec) []routeSpec
+	}{
+		{
+			name: "extra route",
+			mutate: func(manifest []routeSpec) []routeSpec {
+				return append(manifest, routeSpec{
+					ID:         "unexpectedWriteRoute",
+					Method:     http.MethodPost,
+					Pattern:    "/unexpected",
+					AuthScope:  "owner",
+					Privacy:    "owner",
+					SamplePath: "/unexpected",
+				})
+			},
+		},
+		{
+			name: "public read method drift",
+			mutate: func(manifest []routeSpec) []routeSpec {
+				manifest[1].Method = http.MethodPost
+				return manifest
+			},
+		},
+		{
+			name: "owner route missing bearer requirement",
+			mutate: func(manifest []routeSpec) []routeSpec {
+				manifest[len(manifest)-1].RequiresBearerToken = false
+				return manifest
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			manifest := append([]routeSpec(nil), routeInventory...)
+			if err := validateRouteManifest(test.mutate(manifest)); err == nil {
+				t.Fatal("expected route manifest validation to reject drift")
+			}
+		})
 	}
 }
 
@@ -398,4 +501,39 @@ func assertJSONEqual(t *testing.T, expected []byte, actual []byte) {
 	if !reflect.DeepEqual(expectedValue, actualValue) {
 		t.Fatalf("JSON mismatch\nexpected: %s\nactual:   %s", expected, actual)
 	}
+}
+
+func decodeJSONMap(t *testing.T, raw []byte) map[string]any {
+	t.Helper()
+	var value map[string]any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		t.Fatalf("response is not JSON object: %v", err)
+	}
+	return value
+}
+
+func stringField(t *testing.T, value map[string]any, field string) string {
+	t.Helper()
+	got, ok := value[field].(string)
+	if !ok {
+		t.Fatalf("missing string field %q", field)
+	}
+	return got
+}
+
+func nestedString(t *testing.T, value map[string]any, path ...string) string {
+	t.Helper()
+	var current any = value
+	for _, field := range path[:len(path)-1] {
+		object, ok := current.(map[string]any)
+		if !ok {
+			t.Fatalf("missing object field before %q", field)
+		}
+		current = object[field]
+	}
+	object, ok := current.(map[string]any)
+	if !ok {
+		t.Fatalf("missing object field before %q", path[len(path)-1])
+	}
+	return stringField(t, object, path[len(path)-1])
 }

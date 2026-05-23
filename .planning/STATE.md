@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Go Backend Ownership Cutover
-status: planning
-stopped_at: Phase 88 context gathered
-last_updated: "2026-05-23T21:33:21.000Z"
+status: complete
+stopped_at: v1.13 milestone verified and audited
+last_updated: "2026-05-23T22:45:00.000Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 7
   total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_plans: 7
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** Planning active
+**Status:** v1.13 complete
 
 ## Project Reference
 
@@ -25,18 +25,18 @@ See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Current focus:** v1.13 Go Backend Ownership Cutover.
-**Latest shipped milestone:** v1.12 Go Backend Promotion Readiness and Cutover Plan
+**Latest shipped milestone:** v1.13 Go Backend Ownership Cutover
 **Requirements:** .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
 Phase: 88 - Multi-Route Cutover Verification and Rollback Gate
-Plan: Context gathered
-Status: Ready for planning
-Last activity: 2026-05-23 - Phase 88 discussion captured final gate posture, evidence matrix, privacy sweep, boundary baseline, and ownership decision artifact decisions
+Plan: 88-01 complete
+Status: Milestone verified and audited
+Last activity: 2026-05-23 - v1.13 promoted selected Go backend routes, accepted fork-route deferral, and passed final verification/audit
 
-Progress: [----------] 0%
+Progress: [##########] 100%
 
 ## Workflow Settings
 
@@ -51,13 +51,12 @@ Progress: [----------] 0%
 
 ## Latest Milestone Summary
 
-v1.13 planning intent:
+v1.13 outcome:
 
-- Move from v1.12 readiness evidence to real Go backend API ownership.
-- Add live Go DB/persistence access and DTO assembly for selected product routes.
-- Cut over public reads, owner/account reads, auth/session mutations, account Strategy Revision source/write/fork flows, and exhibition creation where parity and privacy gates pass.
-- Preserve TypeScript worker/runtime ownership for job claiming, Match execution, Chronicle generation, and Strategy execution.
-- Keep public/service/Go/topology/monitor outputs free of private Strategy, owner, session, host, database, and runtime internals by default.
+- Moved selected public reads, auth/session, account revision list/source/create/save, and exhibition creation to Go-owned live DB routes.
+- Preserved TypeScript worker/runtime ownership for job claiming, Match execution, Chronicle generation, scoring completion, and Strategy execution.
+- Kept Starter/Advanced forks TypeScript-owned by default because Go lacks parity-safe library source manifest access.
+- Verified privacy, schema, no-fallback, topology, preflight, boundary monitors, and fast test gates.
 
 ## Completed Milestones
 
@@ -76,14 +75,15 @@ v1.13 planning intent:
 | v1.10 Service Boundary Completion and Go Read-Model Decision | 6 | 6 | 29/29 | Shipped |
 | v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence | 6 | 6 | 30/30 | Shipped |
 | v1.12 Go Backend Promotion Readiness and Cutover Plan | 6 | 6 | 36/36 | Shipped |
+| v1.13 Go Backend Ownership Cutover | 7 | 7 | 42/44 complete, 2 deferred | Shipped |
 
 ## Latest Milestone Outcomes
 
-- v1.11 moved Workshop test-summary and analytics-compare reads behind `@cowards/service`.
-- Migrated Workshop read files are strict import-gated.
-- Broad web report-only direct persistence debt dropped from 30 to 29.
-- Live Go readiness is now required evidence-only validation: required topology passes with Go live and fails without Go.
-- Production web traffic remains on the TypeScript service path; Go writes and runtime/non-JS promotion remain deferred.
+- v1.13 added live PostgreSQL-backed Go route providers and selected Go backend ownership.
+- Public Strategy, player, ladder, MatchSet summary, and replay metadata reads are Go-owned when the Go backend owner switch is selected.
+- Auth/session read and mutation, account revision list/source/create/save, and exhibition creation are Go-owned when selected.
+- TypeScript worker/runtime ownership remains explicit; Go-created exhibitions hand off to the existing worker.
+- Boundary monitors pass with `strict_offenses=0 report_only_offenses=29`.
 
 ## Previous Milestone Outcomes
 
@@ -96,13 +96,11 @@ v1.13 planning intent:
 
 ## Next Todos
 
-- Create and approve fresh v1.13 requirements.
-- Create v1.13 roadmap beginning at Phase 82.
-- Start Phase 82 with `$gsd-discuss-phase 82` or `$gsd-plan-phase 82`.
+- Start v1.14 around accepted deferrals: Go fork parity, runtime/job ownership, or remaining web boundary debt.
 
 ## Blockers/Concerns
 
-None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing local migrations but its development MatchSet smoke returned `idle`; replay smoke passed after migrations.
+None active.
 
 ## Deferred Items
 
@@ -112,6 +110,7 @@ None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing l
 | backend | Job claiming/completion, Match execution, Chronicle generation, and worker runtime ownership | Deferred | v1.13 scope |
 | backend | Go-owned migrations/schema ownership | Deferred | v1.13 scope |
 | backend | Runtime/orchestration ownership beyond exhibition creation handoff | Deferred | v1.13 scope |
+| backend | Go-owned Starter/Advanced fork routes pending library source manifest access | Deferred | v1.13 audit |
 | replay | Full replay projection, owner-debug replay migration, and private Chronicle assembly | Deferred | v1.11 research |
 | workshop | Workshop validation, test launch, analytics rerun, profile save, export, and runtime flows | Deferred | v1.13 scope |
 | runtime | Production hostile-code sandbox promotion | Deferred | v1.11 scope |
@@ -121,6 +120,6 @@ None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing l
 
 ## Session Continuity
 
-Last session: 2026-05-23T21:33:21.000Z
-Stopped at: Phase 88 context gathered
-Resume file: .planning/phases/088-multi-route-cutover-verification-and-rollback-gate/088-CONTEXT.md
+Last session: 2026-05-23T22:45:00.000Z
+Stopped at: v1.13 milestone verified and audited
+Resume file: .planning/milestones/v1.13-MILESTONE-AUDIT.md

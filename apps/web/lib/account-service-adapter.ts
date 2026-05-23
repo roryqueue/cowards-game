@@ -2,6 +2,10 @@ import { createDatabasePool } from "@cowards/persistence/db"
 import { createCowardsLocalService } from "@cowards/service"
 import { cookies } from "next/headers.js"
 import { SESSION_COOKIE_NAME } from "./competitive-session.js"
+import {
+  createGoBackendServiceClient,
+  type GoBackendServiceClient,
+} from "./go-backend-service-client.js"
 
 type AccountReadPool = ReturnType<typeof createDatabasePool>
 type WithPool = <T>(fn: (pool: AccountReadPool) => Promise<T>) => Promise<T>
@@ -15,9 +19,100 @@ const withDatabasePool: WithPool = async (fn) => {
   }
 }
 
-export const accountReadService = createCowardsLocalService({
-  withPool: withDatabasePool,
-})
+export interface GoBackendOwnershipEnv extends Record<
+  string,
+  string | undefined
+> {
+  COWARDS_GO_BACKEND_OWNER?: string | undefined
+  COWARDS_GO_AUTH_SESSION?: string | undefined
+  COWARDS_GO_ACCOUNT_REVISIONS?: string | undefined
+  COWARDS_GO_ACCOUNT_FORKS?: string | undefined
+  COWARDS_GO_EXHIBITIONS?: string | undefined
+  COWARDS_GO_BACKEND_URL?: string | undefined
+}
+
+export const isGoAuthSessionSelected = (
+  env: GoBackendOwnershipEnv = process.env,
+): boolean =>
+  env.COWARDS_GO_BACKEND_OWNER === "go" || env.COWARDS_GO_AUTH_SESSION === "1"
+
+export const isGoAccountRevisionsSelected = (
+  env: GoBackendOwnershipEnv = process.env,
+): boolean =>
+  env.COWARDS_GO_BACKEND_OWNER === "go" ||
+  env.COWARDS_GO_ACCOUNT_REVISIONS === "1"
+
+export const isGoAccountForksSelected = (
+  env: GoBackendOwnershipEnv = process.env,
+): boolean => env.COWARDS_GO_ACCOUNT_FORKS === "1"
+
+export const isGoExhibitionsSelected = (
+  env: GoBackendOwnershipEnv = process.env,
+): boolean =>
+  env.COWARDS_GO_BACKEND_OWNER === "go" || env.COWARDS_GO_EXHIBITIONS === "1"
+
+export const createSelectedGoBackendClient = (
+  env: GoBackendOwnershipEnv = process.env,
+  fetchImpl?: typeof fetch,
+): GoBackendServiceClient | null =>
+  env.COWARDS_GO_BACKEND_URL
+    ? createGoBackendServiceClient({
+        baseUrl: env.COWARDS_GO_BACKEND_URL,
+        ...(fetchImpl ? { fetchImpl } : {}),
+      })
+    : null
+
+export const requireSelectedGoBackendClient = (
+  routeFamily: string,
+  env: GoBackendOwnershipEnv = process.env,
+): GoBackendServiceClient => {
+  const client = createSelectedGoBackendClient(env)
+  if (!client) {
+    throw new Error(
+      `${routeFamily} Go ownership requires COWARDS_GO_BACKEND_URL`,
+    )
+  }
+  return client
+}
+
+export const createAccountReadService = ({
+  env = process.env,
+  goClient = createSelectedGoBackendClient(env),
+}: {
+  env?: GoBackendOwnershipEnv | undefined
+  goClient?: GoBackendServiceClient | null | undefined
+} = {}) => {
+  const localService = createCowardsLocalService({
+    withPool: withDatabasePool,
+  })
+  return {
+    ...localService,
+    async getAuthSession(sessionId: string) {
+      if (!isGoAuthSessionSelected(env)) {
+        return localService.getAuthSession(sessionId)
+      }
+      if (!goClient) {
+        throw new Error(
+          "auth/session Go ownership requires COWARDS_GO_BACKEND_URL",
+        )
+      }
+      return goClient.getAuthSession(sessionId)
+    },
+    async listStrategyRevisions(sessionId: string) {
+      if (!isGoAccountRevisionsSelected(env)) {
+        return localService.listStrategyRevisions(sessionId)
+      }
+      if (!goClient) {
+        throw new Error(
+          "account revisions Go ownership requires COWARDS_GO_BACKEND_URL",
+        )
+      }
+      return goClient.listStrategyRevisions(sessionId)
+    },
+  }
+}
+
+export const accountReadService = createAccountReadService()
 
 export const getAccountSessionId = async (): Promise<string> =>
   (await cookies()).get(SESSION_COOKIE_NAME)?.value ?? ""

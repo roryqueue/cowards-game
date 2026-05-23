@@ -2,12 +2,12 @@
 
 ## v1.13 Go Backend Ownership Cutover
 
-**Status:** Planning
+**Status:** Complete 2026-05-23
 **Phases:** 7
 **Phase range:** 82-88
-**Plans:** 0/7 complete
-**Requirements:** 44/44 mapped
-**Decision:** Aggressive Go backend ownership cutover
+**Plans:** 7/7 complete
+**Requirements:** 42/44 complete or promoted; 2/44 accepted deferred; 44/44 mapped
+**Decision:** `promote-selected-go-backend-routes`
 
 ### Goal
 
@@ -18,22 +18,39 @@ Perform a fast, decisive Go backend ownership cutover for normal product workflo
 - Add Go DB/persistence access and live DTO assembly, replacing fixture-backed Go reads where practical.
 - Treat TypeScript service behavior as the parity oracle and rollback reference.
 - Make Go primary for public Strategy, player, ladder, MatchSet summary, and replay metadata reads.
-- Make Go primary for auth/session read and mutation plus account Strategy Revision list/source/create/save/fork.
+- Make Go primary for auth/session read and mutation plus account Strategy Revision list/source/create/save; keep fork routes TypeScript-owned until Go can preserve library source parity.
 - Make Go primary for exhibition MatchSet creation while keeping TypeScript worker/runtime ownership for job claiming, Match execution, Chronicle generation, and Strategy execution.
 - Fail closed for Go-selected paths and avoid silent TypeScript fallback in evidence paths.
 - Keep public/service/Go/topology/monitor outputs free of private Strategy, owner, session, host, database, and runtime internals by default.
 
-### Planned Phases
+### Completed Phases
 
 | Phase | Name |
 | --- | --- |
-| 82 | Ownership Baseline and Aggressive Cutover Registry |
-| 83 | Go Persistence and Live DTO Foundation |
-| 84 | Public Read Ownership Cutover |
-| 85 | Auth, Session, and Account Read Ownership |
-| 86 | Account Strategy Revision Source and Write Ownership |
-| 87 | Exhibition Creation Ownership and Worker Handoff |
-| 88 | Multi-Route Cutover Verification and Rollback Gate |
+| 82 | Ownership Baseline and Aggressive Cutover Registry - Complete |
+| 83 | Go Persistence and Live DTO Foundation - Complete |
+| 84 | Public Read Ownership Cutover - Complete |
+| 85 | Auth, Session, and Account Read Ownership - Complete |
+| 86 | Account Strategy Revision Source and Write Ownership - Complete with fork deferral |
+| 87 | Exhibition Creation Ownership and Worker Handoff - Complete |
+| 88 | Multi-Route Cutover Verification and Rollback Gate - Complete |
+
+### Delivered
+
+- Added live PostgreSQL-backed Go backend mode with route-specific DTO assembly.
+- Cut over selected public reads, auth/session routes, account revision list/source/create/save, and exhibition creation to Go ownership under explicit owner switches.
+- Preserved fail-closed behavior for Go-selected web paths without silent TypeScript fallback.
+- Kept TypeScript worker/runtime ownership for hostile Strategy execution and Match completion.
+- Recorded Starter/Advanced fork routes as blocked/deferred because Go lacks parity-safe library source manifest access.
+- Passed `go test ./...`, `pnpm test:fast`, `pnpm boundary:monitors`, `pnpm preflight -- --skip-web`, and live browser validation.
+
+### Archives
+
+- .planning/milestones/v1.13-ROADMAP.md
+- .planning/milestones/v1.13-REQUIREMENTS.md
+- .planning/milestones/v1.13-MILESTONE-AUDIT.md
+- .planning/artifacts/v1.13-promotion-decision.md
+- .planning/artifacts/v1.13-live-web-go-topology.json
 
 ### Active Constraints
 

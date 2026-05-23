@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest"
 import {
   SERVICE_API_VERSION,
+  publicLadderPageExample,
+  publicMatchSetSummaryExample,
+  publicPlayerPageExample,
+  publicReplayMetadataExample,
   publicStrategyPageExample,
+  type PublicLadderPageServiceDto,
+  type PublicMatchSetSummaryServiceDto,
+  type PublicPlayerPageServiceDto,
+  type PublicReplayMetadataServiceDto,
   type PublicStrategyPageServiceDto,
 } from "@cowards/spec"
 import {
@@ -21,6 +29,12 @@ const encodedPublicStrategyPage: PublicStrategyPageServiceDto = {
   ...publicStrategyPage,
   canonicalHref: "/strategies/strategy%3Ademo",
 }
+const publicPlayerPage = publicPlayerPageExample as PublicPlayerPageServiceDto
+const publicLadderPage = publicLadderPageExample as PublicLadderPageServiceDto
+const publicMatchSetSummary =
+  publicMatchSetSummaryExample as PublicMatchSetSummaryServiceDto
+const publicReplayMetadata =
+  publicReplayMetadataExample as PublicReplayMetadataServiceDto
 
 describe("createPublicGoReadClient", () => {
   it("parses public Strategy pages through the canonical schema", async () => {
@@ -37,6 +51,87 @@ describe("createPublicGoReadClient", () => {
     await expect(
       client.getPublicStrategyPage("strategy:demo"),
     ).resolves.toEqual(encodedPublicStrategyPage)
+  })
+
+  it("parses multi-route public reads through route-specific schemas", async () => {
+    const requests: string[] = []
+    const encodedPlayerPage: PublicPlayerPageServiceDto = {
+      ...publicPlayerPage,
+      canonicalHref: "/players/demo-player",
+    }
+    const encodedLadderPage: PublicLadderPageServiceDto = {
+      ...publicLadderPage,
+      canonicalHref: "/ladder/ladder-season%3Ademo",
+    }
+    const encodedMatchSetSummary: PublicMatchSetSummaryServiceDto = {
+      ...publicMatchSetSummary,
+      matchSetId: "match-set:demo",
+      result: {
+        ...publicMatchSetSummary.result,
+        matchSetId: "match-set:demo",
+      },
+    }
+    const encodedReplayMetadata: PublicReplayMetadataServiceDto = {
+      ...publicReplayMetadata,
+      matchId: "match:demo",
+      metadata: {
+        ...publicReplayMetadata.metadata,
+        matchId: "match:demo",
+      },
+    }
+    const responses = new Map<string, unknown>([
+      ["/public/players/demo-player", encodedPlayerPage],
+      ["/public/ladders/ladder-season%3Ademo", encodedLadderPage],
+      ["/public/matchsets/match-set%3Ademo/summary", encodedMatchSetSummary],
+      ["/public/replays/match%3Ademo/metadata", encodedReplayMetadata],
+    ])
+    const client = createPublicGoReadClient({
+      baseUrl: "http://go.local",
+      fetchImpl: async (url) => {
+        const pathname = new URL(url.toString()).pathname
+        requests.push(pathname)
+        const body = responses.get(pathname)
+        if (!body) {
+          throw new Error(`unexpected request ${pathname}`)
+        }
+        return jsonResponse(body)
+      },
+    })
+
+    await expect(client.getPublicPlayerPage("demo-player")).resolves.toEqual(
+      encodedPlayerPage,
+    )
+    await expect(
+      client.getPublicLadderSeason("ladder-season:demo"),
+    ).resolves.toEqual(encodedLadderPage)
+    await expect(
+      client.getPublicMatchSetSummary("match-set:demo"),
+    ).resolves.toEqual(encodedMatchSetSummary)
+    await expect(client.getPublicReplayMetadata("match:demo")).resolves.toEqual(
+      encodedReplayMetadata,
+    )
+    expect(requests).toEqual([
+      "/public/players/demo-player",
+      "/public/ladders/ladder-season%3Ademo",
+      "/public/matchsets/match-set%3Ademo/summary",
+      "/public/replays/match%3Ademo/metadata",
+    ])
+  })
+
+  it("keeps route ids in multi-route Go read diagnostics", async () => {
+    const client = createPublicGoReadClient({
+      baseUrl: "http://go.local",
+      fetchImpl: async () => new Response("not-json", { status: 200 }),
+    })
+
+    await expect(
+      client.getPublicReplayMetadata("match:demo"),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        routeId: "getPublicReplayMetadata",
+        failureClass: "go_non_json",
+      },
+    })
   })
 
   it("maps public not-found errors to null", async () => {

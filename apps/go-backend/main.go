@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -648,11 +649,38 @@ func listenAddr() string {
 	return addr
 }
 
+func dataMode() string {
+	mode := os.Getenv("COWARDS_GO_BACKEND_DATA_MODE")
+	if mode == "" {
+		return "fixtures"
+	}
+	return mode
+}
+
+func handlerFromEnv(ctx context.Context) (http.Handler, func(), error) {
+	switch dataMode() {
+	case "fixtures":
+		return NewServer().routes(), func() {}, nil
+	case "live":
+		server, err := NewLiveServer(ctx, os.Getenv("DATABASE_URL"))
+		if err != nil {
+			return nil, func() {}, err
+		}
+		return server.routes(), server.Close, nil
+	default:
+		return nil, func() {}, fmt.Errorf("unsupported COWARDS_GO_BACKEND_DATA_MODE")
+	}
+}
+
 func main() {
-	server := NewServer()
+	handler, closeHandler, err := handlerFromEnv(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer closeHandler()
 	addr := listenAddr()
-	log.Printf("cowards-go-backend listening on http://%s", addr)
-	if err := http.ListenAndServe(addr, server.routes()); !errors.Is(err, http.ErrServerClosed) {
+	log.Printf("cowards-go-backend listening on http://%s mode=%s", addr, dataMode())
+	if err := http.ListenAndServe(addr, handler); !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
 }
