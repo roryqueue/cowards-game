@@ -1,42 +1,42 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.11
-milestone_name: Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
-status: awaiting_next_milestone
-stopped_at: v1.11 archived
-last_updated: "2026-05-23T05:05:00.000Z"
+milestone: v1.12
+milestone_name: Go Backend Promotion Readiness and Cutover Plan
+status: planning
+stopped_at: v1.12 roadmap initialized
+last_updated: "2026-05-23T15:45:00.000Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 6
-  completed_phases: 6
+  completed_phases: 0
   total_plans: 6
-  completed_plans: 6
-  percent: 100
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.11 archived; ready for next milestone
+**Status:** v1.12 planning active
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Planning v1.12 Go Backend Promotion Readiness and Cutover Plan.
+**Current focus:** v1.12 Go Backend Promotion Readiness and Cutover Plan.
 **Latest shipped milestone:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
-**Requirements:** archived in .planning/milestones/v1.11-REQUIREMENTS.md; fresh requirements pending next milestone
+**Requirements:** .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: -
+Phase: Not started (defining phase 76)
 Plan: -
-Status: Awaiting next milestone
-Last activity: 2026-05-23 - v1.11 archived and tagged
+Status: Defining v1.12 requirements and roadmap
+Last activity: 2026-05-23 - Milestone v1.12 started
 
-Progress: [##########] 100%
+Progress: [----------] 0%
 
 ## Workflow Settings
 
@@ -51,12 +51,14 @@ Progress: [##########] 100%
 
 ## Active Milestone Summary
 
-v1.12 candidate direction:
+v1.12 direction:
 
-- Run one large Go transition readiness milestone, not a blind full rewrite.
-- Prove production-read criteria, CI-grade live Go evidence, no-fallback behavior, rollback, privacy, and operational failure behavior.
-- Promote at most one narrow production read route only if research proves it is boring and reversible.
-- Keep Go writes, auth/session mutation, Match orchestration, jobs, migrations, persistence ownership, Strategy source retrieval, and Strategy execution out of scope unless explicit promotion criteria are proven.
+- Run one decisive Go transition readiness milestone, not a broad rewrite.
+- Re-baseline TypeScript service versus Go ownership, including 29 report-only broad web offenses and the current five GET-only Go manifest entries.
+- Define production-read promotion criteria covering route ownership, parity, schema validation, privacy, topology, live evidence, no-fallback behavior, rollback, diagnostics, and failure semantics.
+- Consider at most `getPublicStrategyPage` / `GET /public/strategies/{strategyId}` for a route-scoped Go switch.
+- Treat `promote-none-yet` as a valid outcome if live data, no-fallback, privacy, rollback, or operational evidence is insufficient.
+- Keep Go writes, auth/session mutation, ladder writes, Match orchestration, jobs, migrations, persistence ownership, Strategy source retrieval, Strategy execution, production sandbox promotion, counted non-JS play, and rule/engine changes out of scope.
 
 ## Completed Milestones
 
@@ -94,7 +96,8 @@ v1.12 candidate direction:
 
 ## Next Todos
 
-- Start `$gsd-new-milestone` for v1.12 Go Backend Promotion Readiness and Cutover Plan.
+- Run `$gsd-discuss-phase 76` for Scope Lock and Route Ownership Manifest.
+- Then run `$gsd-plan-phase 76` and `$gsd-execute-phase 76`.
 
 ## Blockers/Concerns
 
@@ -116,6 +119,6 @@ None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing l
 
 ## Session Continuity
 
-Last session: 2026-05-23T05:05:00.000Z
-Stopped at: v1.11 archived
-Resume file: .planning/MILESTONES.md
+Last session: 2026-05-23T15:45:00.000Z
+Stopped at: v1.12 roadmap initialized
+Resume file: .planning/ROADMAP.md

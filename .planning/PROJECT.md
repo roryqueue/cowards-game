@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence on 2026-05-23
-**Current milestone:** v1.12 Go Backend Promotion Readiness and Cutover Plan candidate
-**Status:** Ready to define v1.12.
+**Current milestone:** v1.12 Go Backend Promotion Readiness and Cutover Plan
+**Status:** Planning v1.12 requirements and roadmap.
 **Last audit:** v1.11 milestone audit passed after audit-fix.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, read-only Go parity fixtures including a public Strategy read model, runtime isolation readiness evidence gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors proving future multi-language runtime and backend migration paths without promoting unsafe ownership moves.
@@ -13,9 +13,20 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Next Milestone Goals
+## Current Milestone: v1.12 Go Backend Promotion Readiness and Cutover Plan
 
-Recommended v1.12 direction: one large Go transition readiness milestone that proves production-read routing criteria before promoting anything. It should research and validate CI-grade live Go evidence, route ownership, no-fallback semantics, rollback, privacy, topology, operational failure behavior, and one possible narrow read-route promotion. It should not blend Go writes, auth/session mutation, Match orchestration, jobs, migrations, persistence ownership, Strategy source retrieval, Strategy execution, production sandbox promotion, or counted non-JS play unless those promotion criteria are explicitly scoped and satisfied.
+**Goal:** Prove whether production web reads can safely route to Go, with at most one narrow public read route promoted only if live parity, privacy, topology, no-fallback behavior, rollback, and operational failure evidence all pass.
+
+**Target features:**
+- Re-baseline TypeScript-service versus Go ownership, including the remaining 29 broad web report-only offenses and the existing five GET-only Go route manifest entries.
+- Define and enforce promotion criteria for production Go reads: route ownership, generated parity fixtures, schema validation, privacy checks, topology checks, CI-grade live evidence, no-fallback semantics, rollback, diagnostics safety, and failure behavior.
+- Add production-equivalent live Go readiness evidence where feasible, including web-through-Go checks, stopped-Go no-fallback checks, and rollback-to-TypeScript evidence.
+- Decide whether to promote at most `getPublicStrategyPage` / `GET /public/strategies/{strategyId}` behind an explicit route-scoped switch; otherwise document `promote-none-yet` with blockers.
+- Keep Go writes, auth/session mutation, ladder writes, Match orchestration, jobs, migrations, persistence ownership, Strategy source retrieval, Strategy execution, production runtime sandbox promotion, counted non-JS play, and rule/engine changes out of scope.
+
+**Decision posture:** Zero production Go route promotion is a valid successful v1.12 outcome when evidence shows the route is not ready.
+
+**Research summary:** `.planning/research/SUMMARY.md`
 
 ## Latest Shipped Milestone: v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
 
@@ -323,4 +334,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-23 after completing v1.11 milestone*
+*Last updated: 2026-05-23 after starting v1.12 milestone*
