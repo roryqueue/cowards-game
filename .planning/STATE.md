@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Go Backend Ownership Cutover
 status: planning
-stopped_at: Phase 85 context gathered
-last_updated: "2026-05-23T21:23:33.000Z"
+stopped_at: Phase 86 context gathered
+last_updated: "2026-05-23T21:27:03.000Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 7
@@ -31,10 +31,10 @@ See: .planning/PROJECT.md (updated 2026-05-23)
 
 ## Current Position
 
-Phase: 85 - Auth, Session, and Account Read Ownership
+Phase: 86 - Account Strategy Revision Source and Write Ownership
 Plan: Context gathered
 Status: Ready for planning
-Last activity: 2026-05-23 - Phase 85 discussion captured auth/session cutover, cookie contract, session parity, account revision list privacy, and token-safe failure decisions
+Last activity: 2026-05-23 - Phase 86 discussion captured owner-private source, account revision write/fork, no-execution, metadata parity, and owner-safe failure decisions
 
 Progress: [----------] 0%
 
@@ -121,6 +121,6 @@ None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing l
 
 ## Session Continuity
 
-Last session: 2026-05-23T21:23:33.000Z
-Stopped at: Phase 85 context gathered
-Resume file: .planning/phases/085-auth-session-and-account-read-ownership/085-CONTEXT.md
+Last session: 2026-05-23T21:27:03.000Z
+Stopped at: Phase 86 context gathered
+Resume file: .planning/phases/086-account-strategy-revision-source-and-write-ownership/086-CONTEXT.md
