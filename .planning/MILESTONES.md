@@ -47,6 +47,7 @@ Build on v1.10's service-boundary completion work by reducing the remaining broa
 - .planning/milestones/v1.11-ROADMAP.md
 - .planning/milestones/v1.11-REQUIREMENTS.md
 - .planning/milestones/v1.11-MILESTONE-AUDIT.md
+- .planning/milestones/v1.11-phases/
 
 ### Active Constraints
 

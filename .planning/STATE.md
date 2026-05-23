@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
-status: complete
-stopped_at: v1.11 milestone complete
-last_updated: "2026-05-23T04:45:00.000Z"
+status: awaiting_next_milestone
+stopped_at: v1.11 archived
+last_updated: "2026-05-23T05:05:00.000Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 6
@@ -17,24 +17,24 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.11 complete
+**Status:** v1.11 archived; ready for next milestone
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence.
+**Current focus:** Planning v1.12 Go Backend Promotion Readiness and Cutover Plan.
 **Latest shipped milestone:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
-**Requirements:** .planning/REQUIREMENTS.md
+**Requirements:** archived in .planning/milestones/v1.11-REQUIREMENTS.md; fresh requirements pending next milestone
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 75 - Milestone Verification and Regression Gate
-Plan: 75-01
-Status: Complete
-Last activity: 2026-05-23 - v1.11 completed and audited
+Phase: -
+Plan: -
+Status: Awaiting next milestone
+Last activity: 2026-05-23 - v1.11 archived and tagged
 
 Progress: [##########] 100%
 
@@ -51,14 +51,12 @@ Progress: [##########] 100%
 
 ## Active Milestone Summary
 
-v1.11 targets the next safe service-boundary burn-down after v1.10:
+v1.12 candidate direction:
 
-- Re-baseline the 30 remaining broad web report-only direct persistence offenses.
-- Migrate Workshop test-summary GET and Workshop analytics-compare GET behind `@cowards/service` using spec-owned DTOs.
-- Preserve Workshop source/save/validation/launch/rerun/export/runtime ownership in TypeScript web/server code.
-- Promote only proven migrated files and source-free type cleanup to strict import enforcement.
-- Require live Go readiness evidence as validation only, without production Go traffic, Go writes, or Go ownership promotion.
-- Keep runtime isolation and non-JS runtimes evidence-only/non-counted.
+- Run one large Go transition readiness milestone, not a blind full rewrite.
+- Prove production-read criteria, CI-grade live Go evidence, no-fallback behavior, rollback, privacy, and operational failure behavior.
+- Promote at most one narrow production read route only if research proves it is boring and reversible.
+- Keep Go writes, auth/session mutation, Match orchestration, jobs, migrations, persistence ownership, Strategy source retrieval, and Strategy execution out of scope unless explicit promotion criteria are proven.
 
 ## Completed Milestones
 
@@ -96,7 +94,7 @@ v1.11 targets the next safe service-boundary burn-down after v1.10:
 
 ## Next Todos
 
-- Prepare the next milestone from the remaining 29 broad web report-only offenses when ready.
+- Start `$gsd-new-milestone` for v1.12 Go Backend Promotion Readiness and Cutover Plan.
 
 ## Blockers/Concerns
 
@@ -118,6 +116,6 @@ None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing l
 
 ## Session Continuity
 
-Last session: 2026-05-23T04:45:00.000Z
-Stopped at: v1.11 milestone complete
-Resume file: .planning/milestones/v1.11-MILESTONE-AUDIT.md
+Last session: 2026-05-23T05:05:00.000Z
+Stopped at: v1.11 archived
+Resume file: .planning/MILESTONES.md

@@ -404,6 +404,50 @@
 - Sessions: one extended milestone with research, planning, execution, audit-fix, milestone audit, and archive pass.
 - Notable: the highest-signal outcome was reducing boundary debt without weakening privacy, runtime, or Go ownership constraints.
 
+## Milestone: v1.11 — Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
+
+**Shipped:** 2026-05-23
+**Phases:** 6 | **Plans:** 6
+
+### What Was Built
+
+- Re-baselined the remaining 30 broad web report-only persistence offenses and selected two narrow Workshop read surfaces.
+- Moved Workshop test-summary GET and analytics-compare GET reads behind `@cowards/service` with spec-owned input/output validation.
+- Added route tests for success, missing data, local gate behavior, storage-unavailable behavior, and service DTO privacy rejection.
+- Promoted selected Workshop read routes and the safe read-boundary helper to strict import enforcement.
+- Reduced broad web report-only direct persistence debt from 30 to 29 by removing a real Workshop type fingerprint.
+- Made live Go readiness a required evidence-only validation lane, including no-fallback proof when Go is unavailable.
+
+### What Worked
+
+- Research-first slicing kept the milestone focused on public/owner-safe reads instead of drifting into writes or runtime execution.
+- The subagent review found concrete issues that mattered: type-only imports, canonical outcome validation, storage-unavailable behavior, input validation, and planning consistency.
+- Required live Go topology evidence made the Go readiness claim more realistic without promoting production routing.
+
+### What Was Inefficient
+
+- The installed `gsd-sdk` still lacks documented `query` subcommands, so complete-milestone and audit-open steps required manual file inspection.
+- The first e2e smoke failed because the local database was missing Workshop analytics migrations; preflight migrations fixed the realism problem before replay smoke passed.
+- The real report-only reduction came from source-free type cleanup rather than the migrated route imports themselves, which was easy to underestimate at planning time.
+
+### Patterns Established
+
+- Public-safe Workshop read DTOs should parse both params and outputs at the service boundary.
+- Route-level storage-unavailable handling should be tested for every migrated read route that touches local persistence.
+- Live Go evidence should prove both positive readiness and negative no-fallback behavior before any production routing discussion.
+
+### Key Lessons
+
+- Tightening schemas can expose useful type mismatches where persistence still returns broader JSON; treat that as a feature of the boundary, not friction.
+- Do not count a read migration as boundary debt reduction until an exact report-only fingerprint is removed.
+- The next Go milestone should be one decisive readiness/cutover plan, not a bundled rewrite of reads, writes, orchestration, auth, and Strategy execution.
+
+### Cost Observations
+
+- Model mix: not recorded.
+- Sessions: one extended v1.11 thread with discussion, planning, execution, review, validation, audit-fix, live Go evidence, and archive pass.
+- Notable: the most useful late-stage checks were subagent audit passes paired with full lint/type/test/boundary gates.
+
 ## Cross-Milestone Trends
 
 | Trend | Observation |
@@ -413,4 +457,4 @@
 | UI polish | Narrow viewport/browser review caught issues after automated checks; responsive screenshots, local page checks, awkward intermediate widths, and playback ergonomics should move earlier in UI phases. |
 | Package boundaries | Keeping runtime execution out of web/API and importing narrow server modules prevents trust and bundling regressions. |
 | Competitive trust | Each competition milestone works best when it keeps the promise modest: exhibition before ladder, resettable ladder before durable ratings, governance before official tournaments. |
-| Boundary evolution | Freeze contracts and prove parity before changing implementation ownership; this keeps Go backend and multi-language runtime work incremental instead of cliff-shaped. v1.10 reinforced the pattern by moving two service-backed read slices and exactly one Go read-model route while keeping writes and runtime promotion deferred. |
+| Boundary evolution | Freeze contracts and prove parity before changing implementation ownership; this keeps Go backend and multi-language runtime work incremental instead of cliff-shaped. v1.10 reinforced the pattern by moving two service-backed read slices and exactly one Go read-model route while keeping writes and runtime promotion deferred. v1.11 added required live Go evidence and no-fallback proof while still avoiding production Go routing. |

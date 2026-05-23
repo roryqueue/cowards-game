@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence on 2026-05-23
-**Current milestone:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
-**Status:** v1.11 complete.
+**Current milestone:** v1.12 Go Backend Promotion Readiness and Cutover Plan candidate
+**Status:** Ready to define v1.12.
 **Last audit:** v1.11 milestone audit passed after audit-fix.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, read-only Go parity fixtures including a public Strategy read model, runtime isolation readiness evidence gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors proving future multi-language runtime and backend migration paths without promoting unsafe ownership moves.
@@ -12,6 +12,10 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Next Milestone Goals
+
+Recommended v1.12 direction: one large Go transition readiness milestone that proves production-read routing criteria before promoting anything. It should research and validate CI-grade live Go evidence, route ownership, no-fallback semantics, rollback, privacy, topology, operational failure behavior, and one possible narrow read-route promotion. It should not blend Go writes, auth/session mutation, Match orchestration, jobs, migrations, persistence ownership, Strategy source retrieval, Strategy execution, production sandbox promotion, or counted non-JS play unless those promotion criteria are explicitly scoped and satisfied.
 
 ## Latest Shipped Milestone: v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
 
@@ -319,4 +323,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-23 after starting v1.11 milestone*
+*Last updated: 2026-05-23 after completing v1.11 milestone*
