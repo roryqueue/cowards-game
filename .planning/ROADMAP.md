@@ -31,7 +31,7 @@ v1.9 makes one production ownership move: service-backed web read/user surfaces 
 - [x] **Phase 59: Owner Account Read Service Slice** - Signed-in users can load account session and revision-list reads through service-owned DTOs without moving mutations or source retrieval.
 - [x] **Phase 60: Public Ladder Service Read Follow-Up** - Users can view the selected public ladder season through `@cowards/service` while Go writes and Go route expansion stay out of scope.
 - [x] **Phase 61: Runtime Isolation Readiness Guardrails** - Developers can inspect production runtime-isolation readiness criteria and verify no candidate is promoted by default.
-- [ ] **Phase 62: Experimental Non-JS Runtime Guardrails** - Users and developers see experimental non-JS semantics while counted eligibility remains fail-closed.
+- [x] **Phase 62: Experimental Non-JS Runtime Guardrails** - Users and developers see experimental non-JS semantics while counted eligibility remains fail-closed.
 - [ ] **Phase 63: Milestone Verification and Regression Gate** - Developers can run the v1.9 verification set and prove existing JS/TS, replay, analytics, and privacy behavior remain unchanged.
 
 ## Phase Details
@@ -115,7 +115,9 @@ Plans:
   2. Developer can verify Python and other non-JS runtimes remain experimental, disabled for normal counted play, and fail-closed for MatchSet, ladder, and gauntlet counted eligibility.
   3. User-facing runtime labels and validation messages can mention experimental non-JS semantics without adding a public language picker or implying production support parity.
   4. Developer can verify compatibility and boundary monitors fail on accidental non-JS counted eligibility or unsupported runtime promotion.
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [x] 62-01-PLAN.md — Add non-JS runtime support policy, promotion criteria, fail-closed assertions, and monitor guardrails.
 **UI hint**: yes
 
 ### Phase 63: Milestone Verification and Regression Gate
@@ -139,7 +141,7 @@ Plans:
 | 59. Owner Account Read Service Slice | 1/1 | Complete | 2026-05-22 |
 | 60. Public Ladder Service Read Follow-Up | 1/1 | Complete | 2026-05-22 |
 | 61. Runtime Isolation Readiness Guardrails | 1/1 | Complete | 2026-05-22 |
-| 62. Experimental Non-JS Runtime Guardrails | 0/TBD | Not started | - |
+| 62. Experimental Non-JS Runtime Guardrails | 1/1 | Complete | 2026-05-22 |
 | 63. Milestone Verification and Regression Gate | 0/TBD | Not started | - |
 
 ## Requirement Coverage
@@ -155,17 +157,17 @@ Plans:
 | VER-01 through VER-03 | Phase 63 | 3 |
 
 **Coverage:** 28/28 v1.9 requirements mapped.
-**Completed:** 21/28 v1.9 requirements.
+**Completed:** 25/28 v1.9 requirements.
 **Unmapped requirements:** 0.
 **Branch note:** The approved v1.9 direction selects the public ladder service read branch. Future Go read-model expansion is tracked in BACKX-03 and BACKX-04, outside the active 28-requirement roadmap.
 
 ## Next Up
 
-**Phase 62: Experimental Non-JS Runtime Guardrails**
+**Phase 63: Milestone Verification and Regression Gate**
 
 Recommended next command:
 
-`$gsd-discuss-phase 62`
+`$gsd-discuss-phase 63`
 
 ---
-*Last updated: 2026-05-22 after Phase 61 completion*
+*Last updated: 2026-05-22 after Phase 62 completion*

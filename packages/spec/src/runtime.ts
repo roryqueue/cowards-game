@@ -40,6 +40,31 @@ export interface StrategyLanguageRecord {
   notes: string[]
 }
 
+export interface NonJsRuntimeSupportPolicy {
+  status: "experimental-non-counted"
+  productionSupportedLanguageIds: readonly StrategyLanguageId[]
+  experimentalLanguageIds: readonly StrategyLanguageId[]
+  publicLanguagePickerAllowed: false
+  countedPlayRequiresProductionSupport: true
+}
+
+export interface NonJsRuntimePromotionCriterion {
+  id: string
+  category:
+    | "determinism"
+    | "sandbox"
+    | "package_policy"
+    | "workshop_ux_docs"
+    | "compatibility"
+    | "counted_eligibility"
+    | "replay_export_privacy"
+    | "rollback"
+    | "deprecation"
+  requirement: string
+  currentStatus: string
+  promotionGate: string
+}
+
 export interface StrategyRuntimeLimits {
   timeoutMs: number
   stdoutBytes: number
@@ -277,6 +302,104 @@ export const STRATEGY_LANGUAGE_REGISTRY = [
   },
 ] as const satisfies readonly StrategyLanguageRecord[]
 
+export const NON_JS_RUNTIME_SUPPORT_POLICY = {
+  status: "experimental-non-counted",
+  productionSupportedLanguageIds: ["javascript", "typescript"],
+  experimentalLanguageIds: ["python"],
+  publicLanguagePickerAllowed: false,
+  countedPlayRequiresProductionSupport: true,
+} as const satisfies NonJsRuntimeSupportPolicy
+
+export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
+  {
+    id: "deterministic-language-semantics",
+    category: "determinism",
+    requirement:
+      "Language version, locale, hash behavior, clocks, randomness, IO, dynamic loading, memory, and output behavior are deterministic and documented.",
+    currentStatus: "Python is an experimental ABI proof, not certified.",
+    promotionGate:
+      "Repeated local and CI evidence must prove deterministic behavior before counted eligibility.",
+  },
+  {
+    id: "production-sandbox",
+    category: "sandbox",
+    requirement:
+      "The promoted language runs only inside a production-owned hostile-code isolation boundary.",
+    currentStatus:
+      "The Python subprocess host is not a production hostile-code sandbox.",
+    promotionGate:
+      "Runtime isolation promotion criteria must pass before non-JS counted play.",
+  },
+  {
+    id: "package-policy",
+    category: "package_policy",
+    requirement:
+      "Package metadata, dependency resolution, native module policy, install/build timing, and supply-chain controls are explicit and reproducible.",
+    currentStatus:
+      "Counted play accepts self-contained source with no packages.",
+    promotionGate:
+      "Package policy must be versioned and reflected in compatibility keys before promotion.",
+  },
+  {
+    id: "workshop-ux-docs",
+    category: "workshop_ux_docs",
+    requirement:
+      "Workshop templates, examples, validation copy, documentation, and support matrix distinguish production-supported languages from experimental ones.",
+    currentStatus:
+      "Product surfaces may show experimental labels, but no public language picker is allowed.",
+    promotionGate:
+      "A public picker can appear only after at least one non-JS runtime is production-supported.",
+  },
+  {
+    id: "compatibility-keys",
+    category: "compatibility",
+    requirement:
+      "ABI, language version, adapter version, package mode, source hash, spec version, engine version, capabilities, and limits are part of behavior-significant compatibility.",
+    currentStatus:
+      "Runtime dimensions already exist in compatibility metadata.",
+    promotionGate:
+      "Gauntlets, ladders, replays, exports, and analytics must refuse unsafe cross-runtime comparison.",
+  },
+  {
+    id: "counted-eligibility",
+    category: "counted_eligibility",
+    requirement:
+      "MatchSet, ladder, gauntlet, analytics, and public entry gates agree on counted eligibility.",
+    currentStatus:
+      "Python remains disabled for normal play and not counted-play eligible.",
+    promotionGate:
+      "All counted gates must fail closed unless production support is explicit.",
+  },
+  {
+    id: "replay-export-privacy",
+    category: "replay_export_privacy",
+    requirement:
+      "Public replay, service, export, monitor, and topology outputs omit private Strategy/runtime data by default.",
+    currentStatus:
+      "Existing public privacy monitors apply to runtime artifacts.",
+    promotionGate:
+      "Any non-JS public output must pass the same private-data denylist before promotion.",
+  },
+  {
+    id: "rollback-policy",
+    category: "rollback",
+    requirement:
+      "Operators can disable promoted non-JS counted play without silently reclassifying existing evidence.",
+    currentStatus: "No non-JS counted evidence exists.",
+    promotionGate:
+      "Promotion requires rollback semantics for unsafe or nondeterministic runtimes.",
+  },
+  {
+    id: "deprecation-policy",
+    category: "deprecation",
+    requirement:
+      "Language/runtime deprecation rules explain compatibility, replayability, and future submission behavior.",
+    currentStatus: "Python is experimental and can remain non-counted.",
+    promotionGate:
+      "A promoted runtime needs versioned deprecation and migration rules.",
+  },
+] as const satisfies readonly NonJsRuntimePromotionCriterion[]
+
 export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
   {
     id: "runtime-js-worker-thread",
@@ -374,6 +497,58 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     ],
   },
 ] as const satisfies readonly StrategyRuntimeAdapterRecord[]
+
+export const assertNonJsRuntimeGuardrails = (): void => {
+  const experimental = new Set<StrategyLanguageId>(
+    NON_JS_RUNTIME_SUPPORT_POLICY.experimentalLanguageIds,
+  )
+  for (const language of STRATEGY_LANGUAGE_REGISTRY) {
+    const isExperimental = experimental.has(language.id)
+    if (isExperimental && language.enabledForNormalPlay) {
+      throw new Error(`${language.id} must remain experimental in v1.9`)
+    }
+  }
+  for (const adapter of STRATEGY_RUNTIME_ADAPTER_REGISTRY) {
+    const supportsNonJs = adapter.supportedLanguageIds.some((languageId) =>
+      experimental.has(languageId),
+    )
+    if (!supportsNonJs) {
+      continue
+    }
+    if (
+      adapter.enabledForNormalPlay ||
+      adapter.countedResultsAllowed ||
+      adapter.readiness !== "experimental" ||
+      adapter.isolationPromotionState !== "evidence-only"
+    ) {
+      throw new Error(
+        `${adapter.id} must remain experimental and non-counted in v1.9`,
+      )
+    }
+  }
+  if (NON_JS_RUNTIME_SUPPORT_POLICY.publicLanguagePickerAllowed !== false) {
+    throw new Error("Public non-JS language picker is not allowed in v1.9")
+  }
+  const requiredCriteria = new Set([
+    "deterministic-language-semantics",
+    "production-sandbox",
+    "package-policy",
+    "workshop-ux-docs",
+    "compatibility-keys",
+    "counted-eligibility",
+    "replay-export-privacy",
+    "rollback-policy",
+    "deprecation-policy",
+  ])
+  for (const criterion of NON_JS_RUNTIME_PROMOTION_CRITERIA) {
+    requiredCriteria.delete(criterion.id)
+  }
+  if (requiredCriteria.size > 0) {
+    throw new Error(
+      `Non-JS promotion criteria missing: ${[...requiredCriteria].join(", ")}`,
+    )
+  }
+}
 
 export const STRATEGY_RUNTIME_PRODUCT_VALIDATION_MESSAGES = {
   UNSUPPORTED_LANGUAGE: {

@@ -45,10 +45,10 @@ Requirements for making one deliberate ownership move: migrate more web read/use
 
 ### Non-JS Runtime Guardrails
 
-- [ ] **NJS-01**: Developer can inspect non-JS promotion criteria covering deterministic language semantics, package policy, Workshop UX/docs, compatibility keys, counted eligibility, replay/export privacy, rollback, and deprecation rules.
-- [ ] **NJS-02**: Developer can verify Python and other non-JS runtimes remain experimental, disabled for normal counted play, and fail-closed for MatchSet, ladder, and gauntlet counted eligibility.
-- [ ] **NJS-03**: User-facing runtime labels and validation messages can mention experimental non-JS semantics without adding a public language picker or implying production support parity.
-- [ ] **NJS-04**: Developer can verify compatibility and boundary monitors fail on accidental non-JS counted eligibility or unsupported runtime promotion.
+- [x] **NJS-01**: Developer can inspect non-JS promotion criteria covering deterministic language semantics, package policy, Workshop UX/docs, compatibility keys, counted eligibility, replay/export privacy, rollback, and deprecation rules.
+- [x] **NJS-02**: Developer can verify Python and other non-JS runtimes remain experimental, disabled for normal counted play, and fail-closed for MatchSet, ladder, and gauntlet counted eligibility.
+- [x] **NJS-03**: User-facing runtime labels and validation messages can mention experimental non-JS semantics without adding a public language picker or implying production support parity.
+- [x] **NJS-04**: Developer can verify compatibility and boundary monitors fail on accidental non-JS counted eligibility or unsupported runtime promotion.
 
 ### Milestone Verification
 
@@ -122,10 +122,10 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 | RUN-02 | Phase 61 | Complete |
 | RUN-03 | Phase 61 | Complete |
 | RUN-04 | Phase 61 | Complete |
-| NJS-01 | Phase 62 | Pending |
-| NJS-02 | Phase 62 | Pending |
-| NJS-03 | Phase 62 | Pending |
-| NJS-04 | Phase 62 | Pending |
+| NJS-01 | Phase 62 | Complete |
+| NJS-02 | Phase 62 | Complete |
+| NJS-03 | Phase 62 | Complete |
+| NJS-04 | Phase 62 | Complete |
 | VER-01 | Phase 63 | Pending |
 | VER-02 | Phase 63 | Pending |
 | VER-03 | Phase 63 | Pending |
@@ -139,4 +139,4 @@ Which phases cover active v1.9 requirements. The selected read-model follow-up b
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after Phase 61 completion*
+*Last updated: 2026-05-22 after Phase 62 completion*

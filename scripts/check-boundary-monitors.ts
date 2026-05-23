@@ -18,10 +18,13 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   COMPATIBILITY_VERSIONS,
   assertAnalyticsPublicSummaryLeakSafe,
+  assertNonJsRuntimeGuardrails,
   assertPublicServiceDtoLeakSafe,
   describeStrategyRuntimeProductSemantics,
   evaluateStrategyRuntimeCountedEligibility,
   getStrategyRuntimeAdapterRecord,
+  NON_JS_RUNTIME_PROMOTION_CRITERIA,
+  NON_JS_RUNTIME_SUPPORT_POLICY,
   type StrategyRuntimeAdapterId,
 } from "../packages/spec/src/index.ts"
 
@@ -31,6 +34,7 @@ type MonitorLayer =
   | "web_boundary"
   | "runtime_adapter"
   | "runtime_isolation"
+  | "non_js_runtime"
   | "go_parity"
   | "topology"
 
@@ -443,6 +447,14 @@ const checkRuntimeAdapters = (): string => {
   return `${runtimeAdapterBridges.length} JS/TS adapters and Python experimental gate checked`
 }
 
+const checkNonJsRuntimeGuardrails = (): string => {
+  assertNonJsRuntimeGuardrails()
+  if (NON_JS_RUNTIME_SUPPORT_POLICY.publicLanguagePickerAllowed !== false) {
+    throw new Error("public non-JS language picker must remain disabled")
+  }
+  return `${NON_JS_RUNTIME_PROMOTION_CRITERIA.length} non-JS promotion criteria checked; experimental languages=${NON_JS_RUNTIME_SUPPORT_POLICY.experimentalLanguageIds.join(",")}`
+}
+
 const checkRuntimeIsolationReadiness = (): string => {
   const report = readJson<SandboxEvaluationReport>(
     sandboxEvaluationArtifactPath,
@@ -523,6 +535,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
     "runtime_isolation",
     "runtime isolation readiness guardrails",
     () => checkRuntimeIsolationReadiness(),
+  ),
+  await check("non_js_runtime", "experimental non-JS guardrails", () =>
+    checkNonJsRuntimeGuardrails(),
   ),
   await check("go_parity", "Go route manifest metadata", () =>
     checkGoRouteManifest(),

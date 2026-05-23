@@ -59,6 +59,7 @@ describe("boundary drift monitors", () => {
         "web_boundary",
         "runtime_adapter",
         "runtime_isolation",
+        "non_js_runtime",
         "go_parity",
         "topology",
       ]),

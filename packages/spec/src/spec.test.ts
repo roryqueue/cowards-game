@@ -38,6 +38,9 @@ import {
   defaultRuntimeMetadata,
   describeStrategyRuntimeProductSemantics,
   evaluateStrategyRuntimeCountedEligibility,
+  assertNonJsRuntimeGuardrails,
+  NON_JS_RUNTIME_PROMOTION_CRITERIA,
+  NON_JS_RUNTIME_SUPPORT_POLICY,
   STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
   validateStrategyRuntimeMetadataPolicy,
@@ -220,6 +223,27 @@ describe("Coward's Game spec contracts", () => {
         "failure-taxonomy",
         "redacted-diagnostics",
         "local-ergonomics",
+      ]),
+    )
+    expect(() => assertNonJsRuntimeGuardrails()).not.toThrow()
+    expect(NON_JS_RUNTIME_SUPPORT_POLICY).toMatchObject({
+      status: "experimental-non-counted",
+      experimentalLanguageIds: ["python"],
+      publicLanguagePickerAllowed: false,
+    })
+    expect(
+      NON_JS_RUNTIME_PROMOTION_CRITERIA.map((criterion) => criterion.id),
+    ).toEqual(
+      expect.arrayContaining([
+        "deterministic-language-semantics",
+        "production-sandbox",
+        "package-policy",
+        "workshop-ux-docs",
+        "compatibility-keys",
+        "counted-eligibility",
+        "replay-export-privacy",
+        "rollback-policy",
+        "deprecation-policy",
       ]),
     )
   })
