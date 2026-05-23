@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Shipped version:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence on 2026-05-23
-**Current milestone:** v1.12 Go Backend Promotion Readiness and Cutover Plan
-**Status:** v1.12 complete with a `promote-none-yet` decision.
+**Shipped version:** v1.12 Go Backend Promotion Readiness and Cutover Plan on 2026-05-23
+**Current milestone:** None active
+**Status:** Ready for next milestone planning.
 **Last audit:** v1.11 milestone audit passed after audit-fix.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, read-only Go parity fixtures including a public Strategy read model, runtime isolation readiness evidence gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors proving future multi-language runtime and backend migration paths without promoting unsafe ownership moves.
@@ -13,7 +13,7 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.12 Go Backend Promotion Readiness and Cutover Plan
+## Latest Shipped Milestone: v1.12 Go Backend Promotion Readiness and Cutover Plan
 
 **Goal:** Prove whether production web reads can safely route to Go, with at most one narrow public read route promoted only if live parity, privacy, topology, no-fallback behavior, rollback, and operational failure evidence all pass.
 
@@ -26,9 +26,11 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 **Decision:** `promote-none-yet`. The route-scoped switch and failure evidence are in place, but Go still serves the selected public Strategy read from parity fixtures rather than a production-equivalent data provider.
 
-**Research summary:** `.planning/research/SUMMARY.md`
+**Archived audit:** `.planning/milestones/v1.12-MILESTONE-AUDIT.md`
 
-## Latest Shipped Milestone: v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
+**Next:** Start a fresh milestone with `$gsd-new-milestone`; `.planning/REQUIREMENTS.md` is intentionally removed at milestone close.
+
+## Previous Shipped Milestone: v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
 
 **Goal:** Reduce the remaining 30 broad web report-only direct persistence offenses by moving the next narrow Workshop read surfaces behind `@cowards/service`, and make live Go readiness evidence a required evidence-only validation lane without promoting Go ownership.
 

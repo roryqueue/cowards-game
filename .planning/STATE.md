@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: Go Backend Promotion Readiness and Cutover Plan
-status: complete
-stopped_at: v1.12 promote-none-yet decision recorded
-last_updated: "2026-05-23T17:30:00.000Z"
+status: awaiting_next_milestone
+stopped_at: v1.12 archived
+last_updated: "2026-05-23T17:45:00.000Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 6
@@ -17,24 +17,24 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.12 complete with promote-none-yet decision
+**Status:** Awaiting next milestone
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.12 Go Backend Promotion Readiness and Cutover Plan.
-**Latest shipped milestone:** v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
-**Requirements:** .planning/REQUIREMENTS.md
+**Current focus:** Planning next milestone.
+**Latest shipped milestone:** v1.12 Go Backend Promotion Readiness and Cutover Plan
+**Requirements:** Fresh requirements will be created by `$gsd-new-milestone`.
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 81 - Milestone Verification and Promotion Decision
-Plan: 81-01
-Status: Complete
-Last activity: 2026-05-23 - v1.12 verified; final decision is promote-none-yet
+Phase: -
+Plan: -
+Status: Awaiting next milestone
+Last activity: 2026-05-23 - v1.12 archived; final decision is promote-none-yet
 
 Progress: [##########] 100%
 
@@ -49,15 +49,14 @@ Progress: [##########] 100%
 - Verifier: Yes
 - Model profile: Balanced
 
-## Active Milestone Summary
+## Latest Milestone Summary
 
-v1.12 direction:
+v1.12 outcome:
 
-- Run one decisive Go transition readiness milestone, not a broad rewrite.
-- Re-baseline TypeScript service versus Go ownership, including 29 report-only broad web offenses and the current five GET-only Go manifest entries.
-- Define production-read promotion criteria covering route ownership, parity, schema validation, privacy, topology, live evidence, no-fallback behavior, rollback, diagnostics, and failure semantics.
-- Consider at most `getPublicStrategyPage` / `GET /public/strategies/{strategyId}` for a route-scoped Go switch.
-- Treat `promote-none-yet` as a valid outcome if live data, no-fallback, privacy, rollback, or operational evidence is insufficient.
+- Ran one decisive Go transition readiness milestone, not a broad rewrite.
+- Re-baselined TypeScript service versus Go ownership, including 29 report-only broad web offenses and the current five GET-only Go manifest entries.
+- Added route-scoped switch, typed Go client, raw privacy scans, no-fallback semantics, rollback evidence, topology hooks, and monitor gates for `getPublicStrategyPage`.
+- Final decision: `promote-none-yet` because Go public Strategy reads remain fixture-backed rather than production-equivalent.
 - Keep Go writes, auth/session mutation, ladder writes, Match orchestration, jobs, migrations, persistence ownership, Strategy source retrieval, Strategy execution, production sandbox promotion, counted non-JS play, and rule/engine changes out of scope.
 
 ## Completed Milestones
@@ -98,6 +97,7 @@ v1.12 direction:
 
 - Keep production web reads on TypeScript unless a later milestone adds a production-equivalent Go data provider.
 - Use the v1.12 topology hook before any future public Strategy Go promotion attempt.
+- Run `$gsd-new-milestone` to begin the next milestone and recreate active requirements.
 
 ## Blockers/Concerns
 
@@ -120,6 +120,6 @@ None active. Note: `pnpm preflight -- --skip-redis --skip-web` applied missing l
 
 ## Session Continuity
 
-Last session: 2026-05-23T17:30:00.000Z
-Stopped at: v1.12 promote-none-yet decision recorded
-Resume file: .planning/phases/081-milestone-verification-and-promotion-decision/081-VERIFICATION.md
+Last session: 2026-05-23T17:45:00.000Z
+Stopped at: v1.12 archived
+Resume file: .planning/milestones/v1.12-MILESTONE-AUDIT.md
