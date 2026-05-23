@@ -474,7 +474,7 @@
       }
     },
     {
-      "countedResultsAllowed": true,
+      "countedResultsAllowed": false,
       "executableAdapterId": "container-subprocess",
       "id": "container-subprocess",
       "label": "Container subprocess",

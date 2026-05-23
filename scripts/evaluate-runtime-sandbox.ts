@@ -34,7 +34,7 @@ const stableValue = (value: unknown): unknown => {
 const serialize = (value: unknown): string =>
   `${JSON.stringify(stableValue(value), null, 2)}\n`
 
-const report = evaluateRuntimeSandboxes()
+const report = evaluateRuntimeSandboxes({ defaultProbeTimeoutMs: 5_000 })
 assertSandboxEvaluationPublicSafe(report)
 
 const checkMode = process.argv.includes("--check")

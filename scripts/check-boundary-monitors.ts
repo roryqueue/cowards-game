@@ -377,11 +377,23 @@ export const checkRuntimeAdapterBridge = (
   if (spec.limits.sourceBytes !== 64 * 1024) {
     throw new Error(`${bridge.specAdapterId} source limit drifted`)
   }
-  if (
-    spec.enabledForNormalPlay !== true ||
-    spec.countedResultsAllowed !== true
-  ) {
+  const isContainerCandidate =
+    bridge.specAdapterId === "runtime-js-container-subprocess"
+  if (!isContainerCandidate && spec.enabledForNormalPlay !== true) {
     throw new Error(`${bridge.specAdapterId} unexpectedly disabled for JS/TS`)
+  }
+  if (!isContainerCandidate && spec.countedResultsAllowed !== true) {
+    throw new Error(
+      `${bridge.specAdapterId} unexpectedly blocked for counted JS/TS`,
+    )
+  }
+  if (
+    isContainerCandidate &&
+    (spec.enabledForNormalPlay || spec.countedResultsAllowed)
+  ) {
+    throw new Error(
+      "container runtime must remain non-counted until promotion criteria are satisfied",
+    )
   }
   if (spec.isolationPromotionState !== "evidence-only") {
     throw new Error(`${bridge.specAdapterId} isolation promotion state drifted`)
@@ -405,7 +417,13 @@ export const checkRuntimeAdapterBridge = (
   } as const
   const semantics = describeStrategyRuntimeProductSemantics(metadata)
   const eligibility = evaluateStrategyRuntimeCountedEligibility(metadata)
-  if (!eligibility.ok || !semantics.countedPlayEligible) {
+  if (isContainerCandidate) {
+    if (eligibility.ok || semantics.countedPlayEligible) {
+      throw new Error(
+        "container runtime product semantics must remain non-counted",
+      )
+    }
+  } else if (!eligibility.ok || !semantics.countedPlayEligible) {
     throw new Error(`${bridge.specAdapterId} product semantics drifted`)
   }
   return `${bridge.selector} -> ${bridge.specAdapterId}`

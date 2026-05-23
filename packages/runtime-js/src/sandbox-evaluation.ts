@@ -23,6 +23,8 @@ import { transpileStrategySource } from "./transpile.js"
 export const SANDBOX_EVALUATION_VERSION =
   "runtime-sandbox-evaluation-v1.8" as const
 
+const DEFAULT_SANDBOX_PROBE_TIMEOUT_MS = 500
+
 export type SandboxCandidateMode =
   | "executable"
   | "optional-executable"
@@ -934,9 +936,14 @@ const syntheticProbeResult = (
     probe.expected.kind === resultKind && probe.expected.codes.includes(code),
 })
 
+export interface SandboxEvaluationOptions {
+  defaultProbeTimeoutMs?: number | undefined
+}
+
 const executeProbe = (
   adapter: StrategyExecutionAdapter,
   probe: SandboxProbe,
+  options: SandboxEvaluationOptions = {},
 ): SandboxProbeResult => {
   if (probe.id === "malformed-ipc-request") {
     return syntheticProbeResult(probe, "MALFORMED_IPC", "systemFailure")
@@ -952,7 +959,10 @@ const executeProbe = (
         probe.methodName === "selectActivations"
           ? runtimeInput
           : soldierBrainInput,
-      timeoutMs: probe.timeoutMs ?? 500,
+      timeoutMs:
+        probe.timeoutMs ??
+        options.defaultProbeTimeoutMs ??
+        DEFAULT_SANDBOX_PROBE_TIMEOUT_MS,
       outputByteLimit: probe.outputByteLimit ?? undefined,
     })
 
@@ -1014,6 +1024,7 @@ const candidateMetadata = (candidate: SandboxCandidateDefinition) => {
 
 export const evaluateSandboxCandidate = (
   candidate: SandboxCandidateDefinition,
+  options: SandboxEvaluationOptions = {},
 ): SandboxCandidateEvaluation => {
   const metadata = candidateMetadata(candidate)
   const spec = candidate.specAdapterId
@@ -1027,7 +1038,7 @@ export const evaluateSandboxCandidate = (
   const adapter =
     shouldRun && candidate.createAdapter ? candidate.createAdapter() : null
   const probes = adapter
-    ? SANDBOX_PROBES.map((probe) => executeProbe(adapter, probe))
+    ? SANDBOX_PROBES.map((probe) => executeProbe(adapter, probe, options))
     : SANDBOX_PROBES.map(skippedProbe)
   const failed = probes.filter((probe) => !probe.passed).length
   const skipped = probes.filter(
@@ -1077,7 +1088,9 @@ export const evaluateSandboxCandidate = (
   }
 }
 
-export const evaluateRuntimeSandboxes = (): SandboxEvaluationReport => ({
+export const evaluateRuntimeSandboxes = (
+  options: SandboxEvaluationOptions = {},
+): SandboxEvaluationReport => ({
   schemaVersion: SANDBOX_EVALUATION_VERSION,
   abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
   generatedAt: "2026-05-22T00:00:00.000Z",
@@ -1085,7 +1098,9 @@ export const evaluateRuntimeSandboxes = (): SandboxEvaluationReport => ({
   noCandidatePromoted: true,
   publicSafe: true,
   runtimeIsolationReadiness: RUNTIME_ISOLATION_READINESS,
-  candidates: SANDBOX_CANDIDATES.map(evaluateSandboxCandidate),
+  candidates: SANDBOX_CANDIDATES.map((candidate) =>
+    evaluateSandboxCandidate(candidate, options),
+  ),
 })
 
 export const assertRequiredSandboxCandidatesPassed = (

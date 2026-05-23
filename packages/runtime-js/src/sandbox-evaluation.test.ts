@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import {
@@ -9,6 +9,7 @@ import {
   evaluateRuntimeSandboxes,
   SANDBOX_CANDIDATES,
   SANDBOX_PROBES,
+  type SandboxEvaluationReport,
   type SandboxCandidateDefinition,
 } from "./sandbox-evaluation.js"
 import type {
@@ -95,9 +96,13 @@ const fakeOptionalAdapter = (): StrategyExecutionAdapter => ({
 })
 
 describe("runtime sandbox evaluation harness", () => {
-  it("evaluates executable candidates without promoting any sandbox", () => {
-    const report = evaluateRuntimeSandboxes()
+  let report: SandboxEvaluationReport
 
+  beforeAll(() => {
+    report = evaluateRuntimeSandboxes({ defaultProbeTimeoutMs: 5_000 })
+  }, 120_000)
+
+  it("evaluates executable candidates without promoting any sandbox", () => {
     expect(report.countedMatchDefaultsUnchanged).toBe(true)
     expect(report.noCandidatePromoted).toBe(true)
     expect(report.publicSafe).toBe(true)
@@ -124,7 +129,6 @@ describe("runtime sandbox evaluation harness", () => {
   })
 
   it("keeps executable adapter ids mapped separately from spec adapter ids", () => {
-    const report = evaluateRuntimeSandboxes()
     const worker = report.candidates.find(
       (candidate) => candidate.id === "worker-thread-baseline",
     )
@@ -139,7 +143,6 @@ describe("runtime sandbox evaluation harness", () => {
   })
 
   it("records tradeoff-only candidates without executable probes", () => {
-    const report = evaluateRuntimeSandboxes()
     const tradeoffOnly = report.candidates.filter(
       (candidate) => candidate.mode === "tradeoff-only",
     )
@@ -160,7 +163,6 @@ describe("runtime sandbox evaluation harness", () => {
   })
 
   it("records optional executable candidates as locally skipped by default", () => {
-    const report = evaluateRuntimeSandboxes()
     const container = report.candidates.find(
       (candidate) => candidate.id === "container-subprocess",
     )
@@ -223,7 +225,6 @@ describe("runtime sandbox evaluation harness", () => {
   })
 
   it("normalizes successful adapter outputs before classifying probe results", () => {
-    const report = evaluateRuntimeSandboxes()
     const worker = report.candidates.find(
       (candidate) => candidate.id === "worker-thread-baseline",
     )
@@ -239,15 +240,12 @@ describe("runtime sandbox evaluation harness", () => {
   })
 
   it("projects public-safe evidence only", () => {
-    const report = evaluateRuntimeSandboxes()
-
     expect(() => assertSandboxEvaluationPublicSafe(report)).not.toThrow()
     expect(JSON.stringify(report)).not.toContain("export default")
     expect(JSON.stringify(report)).not.toContain("privateDiagnostics")
   })
 
   it("defines runtime isolation promotion-readiness without promoting candidates", () => {
-    const report = evaluateRuntimeSandboxes()
     const readiness = report.runtimeIsolationReadiness
 
     expect(() =>
@@ -286,8 +284,6 @@ describe("runtime sandbox evaluation harness", () => {
   })
 
   it("fails loud when required container evidence is skipped", () => {
-    const report = evaluateRuntimeSandboxes()
-
     expect(() =>
       assertRequiredSandboxCandidatesPassed(report, ["container-subprocess"]),
     ).toThrow(/Required sandbox candidate container-subprocess did not pass/)

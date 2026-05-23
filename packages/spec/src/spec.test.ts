@@ -225,6 +225,29 @@ describe("Coward's Game spec contracts", () => {
         "local-ergonomics",
       ]),
     )
+    const containerRuntime = {
+      ...jsRuntime,
+      adapter: {
+        id: "runtime-js-container-subprocess" as const,
+        version: COMPATIBILITY_VERSIONS.runtimeJs,
+      },
+    }
+    expect(evaluateStrategyRuntimeCountedEligibility(containerRuntime)).toEqual(
+      {
+        ok: false,
+        code: "NON_COUNTED_RUNTIME",
+        publicMessage:
+          "Strategy runtime is experimental and not counted-play eligible.",
+      },
+    )
+    expect(
+      describeStrategyRuntimeProductSemantics(containerRuntime),
+    ).toMatchObject({
+      adapterLabel: "runtime-js container subprocess",
+      readinessLabel: "Production candidate",
+      countedPlayLabel: "Not counted",
+      countedPlayEligible: false,
+    })
     expect(() => assertNonJsRuntimeGuardrails()).not.toThrow()
     expect(NON_JS_RUNTIME_SUPPORT_POLICY).toMatchObject({
       status: "experimental-non-counted",

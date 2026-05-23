@@ -446,8 +446,8 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     version: COMPATIBILITY_VERSIONS.runtimeJs,
     readiness: "production-candidate",
     supportedLanguageIds: ["javascript", "typescript"],
-    enabledForNormalPlay: true,
-    countedResultsAllowed: true,
+    enabledForNormalPlay: false,
+    countedResultsAllowed: false,
     isolationPromotionState: "evidence-only",
     isolationPromotionCriteria: [
       "required-container-probes",
