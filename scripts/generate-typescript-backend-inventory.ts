@@ -371,6 +371,18 @@ const extractRouteMethods = (
         }
       }
     }
+
+    if (
+      ts.isExportDeclaration(statement) &&
+      statement.exportClause &&
+      ts.isNamedExports(statement.exportClause)
+    ) {
+      for (const element of statement.exportClause.elements) {
+        if (httpMethods.has(element.name.text)) {
+          methods.push(element.name.text)
+        }
+      }
+    }
   }
 
   return uniqueSorted(methods)
@@ -506,6 +518,7 @@ const routeFamilyFor = (repoPath: string): string => {
   if (repoPath.includes("/api/admin/")) return "governance"
   if (repoPath.includes("/matches/")) return "replay"
   if (repoPath.includes("/workshop/")) return "workshop"
+  if (repoPath.includes("workshop-")) return "workshop"
   if (repoPath.includes("/ladder/")) return "ladder"
   if (repoPath.includes("/competitive/")) return "competitive"
   if (repoPath.includes("runtime-service")) return "runtime-service"
@@ -553,6 +566,11 @@ const isTestPath = (repoPath: string): boolean =>
 const classifyRole = (
   repoPath: string,
   seedEntry: ClassificationSeedEntry | undefined,
+  indicators: {
+    usesDatabase?: boolean
+    hasServiceImports?: boolean
+    hasLocalBackendImports?: boolean
+  } = {},
 ): TypeScriptBackendRole => {
   if (isTestPath(repoPath)) return "test-only"
   if (repoPath.startsWith("apps/runtime-service/src/")) return "runtime-service"
@@ -578,10 +596,25 @@ const classifyRole = (
     return "parity-only"
   }
   if (repoPath.includes("/workshop/")) return "deferred"
+  if (repoPath.includes("workshop-")) return "deferred"
   if (repoPath.includes("/ladder/") || repoPath.includes("/admin/"))
     return "deferred"
   if (repoPath.includes("/competitive/server.ts")) return "deferred"
   if (repoPath.includes("/matches/server.ts")) return "deferred"
+  if (
+    repoPath.includes("workshop-analytics-service-adapter.ts") ||
+    repoPath.includes("workshop-read-service-adapter.ts")
+  ) {
+    return "deferred"
+  }
+  if (
+    repoPath.endsWith("service-adapter.ts") &&
+    (indicators.usesDatabase ||
+      indicators.hasServiceImports ||
+      indicators.hasLocalBackendImports)
+  ) {
+    return "deferred"
+  }
   if (repoPath.includes("service-adapter.ts")) {
     return seedEntry?.role === "deferred" ? "deferred" : "frontend-only"
   }
@@ -857,8 +890,6 @@ const createSurface = (
   const kind = kindForPath(record.repoPath)
   const routePath = routePathFor(record.repoPath)
   const routeFamily = routeFamilyFor(record.repoPath)
-  const role = classifyRole(record.repoPath, seedEntry)
-  const retirementAction = retirementActionFor(role)
   const persistenceImports = importSourcesMatching(
     record.imports,
     (source, statement) =>
@@ -887,6 +918,12 @@ const createSurface = (
   const usesDatabase =
     persistenceImports.length > 0 ||
     containsAny(sourceText, ["createDatabasePool", "Queryable", "DATABASE_URL"])
+  const role = classifyRole(record.repoPath, seedEntry, {
+    usesDatabase,
+    hasServiceImports: serviceImports.length > 0,
+    hasLocalBackendImports: localBackendImports.length > 0,
+  })
+  const retirementAction = retirementActionFor(role)
   const claimsJobs = containsAny(sourceText, [
     "claimNextMatchJob",
     "claim",
@@ -1077,6 +1114,18 @@ export const validateTypeScriptBackendInventory = (
           errors.push(`${surface.path} ${surface.role} entry missing ${field}`)
         }
       }
+    }
+    if (
+      surface.role === "frontend-only" &&
+      surface.path.includes("workshop") &&
+      (surface.usesDatabase ||
+        surface.persistenceImports.length > 0 ||
+        surface.serviceImports.length > 0 ||
+        surface.localBackendImports.length > 0)
+    ) {
+      errors.push(
+        `${surface.path} frontend-only row claims TypeScript backend imports or database access`,
+      )
     }
     if (
       surface.role === "runtime-service" &&

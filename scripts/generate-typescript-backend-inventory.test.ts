@@ -63,6 +63,18 @@ export const POST = async () => Response.json({ ok: true })
   )
   writeSource(
     root,
+    "apps/web/app/api/workshop/submit/route.ts",
+    `export { POST } from "../revisions/route.js"
+`,
+  )
+  writeSource(
+    root,
+    "apps/web/app/api/workshop/revisions/route.ts",
+    `export const POST = async () => Response.json({ ok: true })
+`,
+  )
+  writeSource(
+    root,
     "apps/web/app/competitive/server.ts",
     `import { createDatabasePool } from "@cowards/persistence/db"
 import { createCowardsService } from "@cowards/service"
@@ -88,6 +100,14 @@ export const workshopServer = { validateWorkshopSource }
     "apps/web/lib/public-service-adapter.ts",
     `import { createCowardsService } from "@cowards/service"
 export const createPublicAdapter = () => createCowardsService
+`,
+  )
+  writeSource(
+    root,
+    "apps/web/lib/workshop-read-service-adapter.ts",
+    `import { createDatabasePool } from "@cowards/persistence/db"
+import { createCowardsService } from "@cowards/service"
+export const createWorkshopReadAdapter = () => [createDatabasePool, createCowardsService]
 `,
   )
   writeSource(
@@ -174,6 +194,16 @@ describe("TypeScript backend inventory generator", () => {
       role: "frontend-only",
       normalBackendOwner: "go_backend_when_selected",
     })
+
+    expect(
+      inventory.surfaces.find(
+        (surface) =>
+          surface.path === "apps/web/app/api/workshop/submit/route.ts",
+      ),
+    ).toMatchObject({
+      routeMethods: ["POST"],
+      routePath: "/workshop/submit",
+    })
   })
 
   it("discovers backend-like imports through direct imports and local import chains for BASE-01", () => {
@@ -203,6 +233,16 @@ describe("TypeScript backend inventory generator", () => {
       role: "runtime-service",
       executesStrategy: true,
       usesDatabase: false,
+    })
+    expect(
+      inventory.surfaces.find(
+        (surface) =>
+          surface.path === "apps/web/lib/workshop-read-service-adapter.ts",
+      ),
+    ).toMatchObject({
+      role: "deferred",
+      usesDatabase: true,
+      normalBackendOwner: "deferred_until_workshop_go_migration",
     })
     expect(
       inventory.surfaces.some(
@@ -236,6 +276,35 @@ describe("TypeScript backend inventory generator", () => {
         allowedRoles: ["frontend-only", "legacy"],
       } as unknown as TypeScriptBackendInventory),
     ).toContain("allowedRoles contains a role outside the Phase 103 taxonomy")
+    expect(
+      validateTypeScriptBackendInventory({
+        ...inventory,
+        surfaces: [
+          {
+            ...inventory.surfaces.find(
+              (surface) =>
+                surface.path === "apps/web/lib/workshop-read-service-adapter.ts",
+            )!,
+            role: "frontend-only",
+          },
+        ],
+      }),
+    ).toContain(
+      "apps/web/lib/workshop-read-service-adapter.ts frontend-only row claims TypeScript backend imports or database access",
+    )
+  })
+
+  it("keeps Phase 103 artifacts free of token-bearing command values", () => {
+    const phaseArtifacts = [
+      ".planning/phases/103-typescript-backend-inventory-and-retirement-contract/103-SUMMARY.md",
+      ".planning/phases/103-typescript-backend-inventory-and-retirement-contract/103-REVIEW.md",
+      ".planning/phases/103-typescript-backend-inventory-and-retirement-contract/103-VALIDATION.md",
+    ]
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n")
+
+    expect(phaseArtifacts).not.toMatch(/TOKENS?=[^<\s][^\s]*/i)
+    expect(phaseArtifacts).not.toContain(["local", "owner", "token"].join("-"))
   })
 
   it("requires owner, reason, gate, risk, and future migration for deferred and rollback-only entries", () => {

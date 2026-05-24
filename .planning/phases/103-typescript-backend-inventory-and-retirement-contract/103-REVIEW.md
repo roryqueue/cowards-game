@@ -52,7 +52,7 @@ Reviewed the Phase 103 scanner, tests, package scripts, generated inventory arti
 
 **File:** `.planning/phases/103-typescript-backend-inventory-and-retirement-contract/103-SUMMARY.md:94`
 
-**Issue:** The summary records `COWARDS_GO_BACKEND_OWNER_TOKENS=local-owner-token=user:local`. Phase 103's privacy contract says artifacts must keep token material out of public/planning outputs, and the inventory denylist explicitly includes tokens. Even if this is a local fixture token, committing token-shaped values into phase artifacts trains downstream evidence to preserve secret-bearing diagnostics.
+**Issue:** The summary records `COWARDS_GO_BACKEND_OWNER_TOKENS=<redacted-token-value>`. Phase 103's privacy contract says artifacts must keep token material out of public/planning outputs, and the inventory denylist explicitly includes tokens. Even if this is a local fixture token, committing token-shaped values into phase artifacts trains downstream evidence to preserve secret-bearing diagnostics.
 
 **Fix:** Replace the value with a placeholder, for example `COWARDS_GO_BACKEND_OWNER_TOKENS=<redacted>`, or omit the command. Add a privacy scan over Phase 103 artifacts that fails on token/session env assignments such as `TOKEN(S)?=.*`.
 

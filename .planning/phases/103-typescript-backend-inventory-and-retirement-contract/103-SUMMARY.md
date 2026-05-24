@@ -91,7 +91,7 @@ The user requested one atomic Phase 103 commit. All implementation, generated ar
 - `pnpm boundary:imports`
 - `pnpm boundary:monitors`
 - `COWARDS_RUNTIME_SERVICE_ALLOW_LOCAL_WORKER_THREAD=1 pnpm --filter @cowards/runtime-service start`
-- `cd apps/go-backend && COWARDS_GO_BACKEND_OWNER_TOKENS=local-owner-token=user:local go run .`
+- `cd apps/go-backend && COWARDS_GO_BACKEND_OWNER_TOKENS=<redacted> go run .`
 - `COWARDS_GO_PUBLIC_STRATEGY_READS=1 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 COWARDS_RUNTIME_SERVICE_URL=http://127.0.0.1:3107 pnpm --filter @cowards/web dev`
 - `COWARDS_WEB_URL=http://localhost:3000 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 COWARDS_RUNTIME_SERVICE_URL=http://127.0.0.1:3107 pnpm boundary:monitors`
 
