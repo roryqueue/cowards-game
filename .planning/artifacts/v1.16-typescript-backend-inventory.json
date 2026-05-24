@@ -8475,11 +8475,16 @@
         },
         {
           "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import { assertPublicOutputLeakSafe } from \"@cowards/spec\""
+        },
+        {
+          "line": 3,
           "source": "../../../matches/replay-fixture.js",
           "statementText": "import {\n  isReplayFixtureEnabled,\n  replayFixtureMatchId,\n} from \"../../../matches/replay-fixture.js\""
         },
         {
-          "line": 6,
+          "line": 7,
           "source": "./route.js",
           "statementText": "import { GET } from \"./route.js\""
         }
@@ -8611,7 +8616,7 @@
         {
           "line": 2,
           "source": "@cowards/spec",
-          "statementText": "import { SERVICE_API_VERSION } from \"@cowards/spec\""
+          "statementText": "import { SERVICE_API_VERSION, assertPublicOutputLeakSafe } from \"@cowards/spec\""
         },
         {
           "line": 3,
@@ -8678,7 +8683,7 @@
         {
           "line": 2,
           "source": "@cowards/spec",
-          "statementText": "import { SERVICE_API_VERSION } from \"@cowards/spec\""
+          "statementText": "import { SERVICE_API_VERSION, assertPublicOutputLeakSafe } from \"@cowards/spec\""
         },
         {
           "line": 3,

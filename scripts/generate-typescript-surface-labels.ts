@@ -194,7 +194,9 @@ const idFor = (repoPath: string): string =>
     .toLowerCase()
 
 const isWorkshopPath = (repoPath: string): boolean =>
-  repoPath.includes("/workshop/") || repoPath.includes("workshop-")
+  repoPath.includes("/workshop/") ||
+  repoPath.includes("workshop-") ||
+  repoPath.endsWith("/workshop.ts")
 
 const classifyWorkshopLabel = (repoPath: string): string => {
   if (repoPath.includes("/validate/")) return "deferred-workshop-validation"
@@ -266,7 +268,11 @@ const classifySurface = (
       monitorStatus: "phase-107-monitor-enforced",
     }
   }
-  if (repoPath.includes("/api/ladder/") || repoPath.includes("/ladder/")) {
+  if (
+    repoPath.includes("/api/ladder/") ||
+    repoPath.includes("/ladder/") ||
+    repoPath.endsWith("/ladder.ts")
+  ) {
     return {
       surfaceLabel: "deferred-ladder-mutation",
       capabilityGroup: "ladder",
