@@ -473,6 +473,49 @@ describe("Match replay server facade", () => {
     })
   })
 
+  it("uses Go public replay metadata when selected without direct Chronicle reads", async () => {
+    const stored = createStoredChronicle()
+    const getByMatchId = vi.fn(async () => {
+      throw new Error("direct Chronicle store should not be used")
+    })
+    const server = createMatchReplayServer({
+      env: {
+        COWARDS_GO_PUBLIC_READS: "1",
+        COWARDS_GO_BACKEND_URL: "http://go.test",
+      },
+      fetchImpl: vi.fn(async (url) => {
+        expect(String(url)).toBe("http://go.test/public/replays/match%3Areplay-test/metadata")
+        return Response.json({
+          apiVersion: SERVICE_API_VERSION,
+          kind: "publicReplayMetadata",
+          matchId: "match:replay-test",
+          metadata: {
+            matchId: "match:replay-test",
+            chronicleId: stored.metadata.id,
+            hash: stored.metadata.hash,
+            schemaVersion: stored.metadata.schemaVersion,
+            eventCount: stored.metadata.eventCount,
+            snapshotCount: stored.metadata.snapshotCount,
+            outcome: stored.metadata.outcome,
+            bottomPlayerId: stored.metadata.bottomPlayerId,
+            topPlayerId: stored.metadata.topPlayerId,
+            arenaVariantId: stored.metadata.arenaVariantId,
+          },
+        })
+      }) as never,
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({ getByMatchId }),
+    })
+
+    await expect(
+      server.getPublicReplayMetadata("match:replay-test"),
+    ).resolves.toMatchObject({
+      kind: "publicReplayMetadata",
+      matchId: "match:replay-test",
+    })
+    expect(getByMatchId).not.toHaveBeenCalled()
+  })
+
   it("decodes URL-encoded Match ids for public replay metadata", async () => {
     const stored = createStoredChronicle()
     const seen: string[] = []

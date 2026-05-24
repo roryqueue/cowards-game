@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   publicStrategyPageExample,
@@ -78,6 +79,62 @@ const createGoClientStub = (
 })
 
 describe("public read route ownership", () => {
+  it("does not construct the local TypeScript service when all selected public reads are Go-owned", async () => {
+    let localCalls = 0
+    const service = createPublicReadService({
+      env: {
+        COWARDS_GO_BACKEND_OWNER: "go",
+        COWARDS_GO_BACKEND_URL: "http://go.test",
+      },
+      typescriptService: createServiceStub({
+        getPublicStrategyPage: async () => {
+          localCalls += 1
+          return publicStrategyPage
+        },
+      }),
+      goClient: createGoClientStub({
+        async getPublicStrategyPage() {
+          return publicStrategyPage
+        },
+        async getPublicPlayerPage() {
+          return null
+        },
+        async getPublicLadderSeason() {
+          return null
+        },
+        async getPublicMatchSetSummary() {
+          return null
+        },
+        async getPublicReplayMetadata() {
+          return null
+        },
+      }),
+    })
+
+    await expect(
+      service.getPublicStrategyPage("strategy:demo"),
+    ).resolves.toEqual(publicStrategyPage)
+    await expect(service.getPublicPlayerPage("local")).resolves.toBeNull()
+    await expect(
+      service.getPublicLadderSeason("season:demo"),
+    ).resolves.toBeNull()
+    await expect(
+      service.getPublicMatchSetSummary("match-set:demo"),
+    ).resolves.toBeNull()
+    await expect(
+      service.getPublicReplayMetadata("match:demo"),
+    ).resolves.toBeNull()
+
+    expect(localCalls).toBe(0)
+  })
+
+  it("keeps selected public adapters free of direct session persistence", () => {
+    const source = readFileSync("apps/web/lib/public-service-adapter.ts", "utf8")
+
+    expect(source).not.toContain("@cowards/persistence/auth")
+    expect(source).not.toContain("getSession(")
+  })
+
   it("defaults the public Strategy read to the TypeScript service", async () => {
     let typescriptCalls = 0
     const service = createPublicReadService({
