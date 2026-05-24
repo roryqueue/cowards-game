@@ -21,6 +21,13 @@ import {
   type JsonValue,
 } from "./types.js"
 import {
+  RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES,
+  RUNTIME_EXECUTION_SERVICE_VERSION,
+  type RuntimeExecutionFinalState,
+  type RuntimeExecutionServiceRequest,
+} from "./runtime-execution-service.js"
+import {
+  DEFAULT_RUNTIME_LIMITS,
   STRATEGY_LANGUAGE_IDS,
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_ADAPTER_IDS,
@@ -560,6 +567,49 @@ export const StrategyRuntimeRequestEnvelopeSchema = z.discriminatedUnion(
   ],
 )
 
+const addStrategySourceIdentityChecks = <T extends z.ZodType>(schema: T) =>
+  schema.superRefine((value, ctx) => {
+    const revision = value as {
+      source?: unknown
+      sourceBytes?: unknown
+      sourceHash?: unknown
+      validation?: {
+        sourceBytes?: unknown
+        sourceHash?: unknown
+      }
+    }
+    if (typeof revision.source === "string") {
+      const actualBytes = new TextEncoder().encode(revision.source).length
+      if (revision.sourceBytes !== actualBytes) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["sourceBytes"],
+          message: "sourceBytes must match UTF-8 Strategy source bytes",
+        })
+      }
+    }
+    if (
+      revision.validation?.sourceBytes !== undefined &&
+      revision.sourceBytes !== revision.validation.sourceBytes
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["validation", "sourceBytes"],
+        message: "validation.sourceBytes must match sourceBytes",
+      })
+    }
+    if (
+      revision.validation?.sourceHash !== undefined &&
+      revision.sourceHash !== revision.validation.sourceHash
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["validation", "sourceHash"],
+        message: "validation.sourceHash must match sourceHash",
+      })
+    }
+  })
+
 export const StrategyRevisionValidationSeveritySchema = z.enum([
   "error",
   "warning",
@@ -754,8 +804,7 @@ export const StrategyArtifactSchema = z
     validation: StrategyRevisionValidationReportSchema,
     publicMetadata: StrategyArtifactPublicMetadataSchema,
     lineage: StrategyArtifactLineageSchema,
-    immutableEligibility:
-      StrategyArtifactEligibilitySnapshotSchema.optional(),
+    immutableEligibility: StrategyArtifactEligibilitySnapshotSchema.optional(),
     behaviorCompatibility: z.object({
       compatibilityKey: z.string().min(1),
       behaviorSignificantFields: z.array(z.string().min(1)),
@@ -789,7 +838,8 @@ export const StrategyArtifactSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["source", "text"],
-        message: "built-in forkable artifacts must include Strategy source text",
+        message:
+          "built-in forkable artifacts must include Strategy source text",
       })
     }
     if (
@@ -848,8 +898,7 @@ export const StrategyArtifactPublicSummarySchema = z
     validationStatus: z.enum(["valid", "invalid"]),
     publicMetadata: StrategyArtifactPublicMetadataSchema,
     lineage: StrategyArtifactLineageSchema,
-    immutableEligibility:
-      StrategyArtifactEligibilitySnapshotSchema.optional(),
+    immutableEligibility: StrategyArtifactEligibilitySnapshotSchema.optional(),
   })
   .strict()
 
@@ -1804,6 +1853,163 @@ export const ChronicleSchema = z.object({
   integrity: ChronicleIntegritySchema.optional(),
   storageMetadata: JsonValueSchema.optional(),
 })
+
+export const RuntimeExecutionServiceSystemFailureCodeSchema = z.enum(
+  RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES,
+)
+
+export const RuntimeExecutionMatchInputSchema = z
+  .object({
+    matchId: z.string().min(1),
+    seed: z.string().min(1),
+    arenaVariant: ArenaVariantSchema,
+    bottomPlayerId: z.string().min(1),
+    topPlayerId: z.string().min(1),
+    bottomStrategyRevisionId: z.string().min(1),
+    topStrategyRevisionId: z.string().min(1),
+    maxPhases: z.number().int().positive().optional(),
+  })
+  .superRefine((match, ctx) => {
+    if (match.bottomPlayerId === match.topPlayerId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["topPlayerId"],
+        message: "bottomPlayerId and topPlayerId must differ",
+      })
+    }
+  })
+
+const RuntimeExecutionStrategyRevisionSchema = addStrategySourceIdentityChecks(
+  StrategyRevisionSchema,
+)
+
+export const RuntimeExecutionServiceRequestSchema = z
+  .object({
+    contractVersion: z.literal(RUNTIME_EXECUTION_SERVICE_VERSION),
+    kind: z.literal("executeMatch"),
+    requestId: z.string().min(1),
+    match: RuntimeExecutionMatchInputSchema,
+    strategies: z.object({
+      bottom: RuntimeExecutionStrategyRevisionSchema,
+      top: RuntimeExecutionStrategyRevisionSchema,
+    }),
+    limits: StrategyRuntimeLimitsSchema.superRefine((limits, ctx) => {
+      for (const key of [
+        "timeoutMs",
+        "stdoutBytes",
+        "stderrBytes",
+        "sourceBytes",
+        "strategyMemoryBytes",
+        "soldierMemoryBytes",
+        "objectivePayloadBytes",
+      ] as const) {
+        if (limits[key] > DEFAULT_RUNTIME_LIMITS[key]) {
+          ctx.addIssue({
+            code: "too_big",
+            maximum: DEFAULT_RUNTIME_LIMITS[key],
+            inclusive: true,
+            origin: "number",
+            path: [key],
+            message: `${key} exceeds runtime service maximum`,
+          })
+        }
+      }
+    }),
+  })
+  .superRefine((request, ctx) => {
+    if (
+      request.match.bottomStrategyRevisionId !== request.strategies.bottom.id
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["strategies", "bottom", "id"],
+        message: "bottom Strategy Revision id must match Match input",
+      })
+    }
+    if (request.match.topStrategyRevisionId !== request.strategies.top.id) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["strategies", "top", "id"],
+        message: "top Strategy Revision id must match Match input",
+      })
+    }
+  }) satisfies z.ZodType<RuntimeExecutionServiceRequest>
+
+export const RuntimeExecutionEnginePlayerSchema = z.object({
+  id: z.string().min(1),
+  side: z.enum(["bottom", "top"]),
+  strategyRevisionId: z.string().min(1),
+  strategyMemory: JsonValueSchema,
+})
+
+export const RuntimeExecutionFinalStateSchema = z.object({
+  matchId: z.string().min(1),
+  seed: z.string().min(1),
+  versions: CompatibilityVersionsSchema,
+  arenaVariant: ArenaVariantSchema,
+  players: z.tuple([
+    RuntimeExecutionEnginePlayerSchema,
+    RuntimeExecutionEnginePlayerSchema,
+  ]),
+  phase: z.enum(["ROUND", "CONTRACTION", "COMPLETE"]),
+  phaseNumber: z.number().int().positive(),
+  roundNumber: z.union([
+    z.literal(1),
+    z.literal(2),
+    z.literal(3),
+    z.literal(4),
+  ]),
+  activationCount: z.union([
+    z.literal(1),
+    z.literal(2),
+    z.literal(3),
+    z.literal(4),
+  ]),
+  initiativePlayerId: z.string().min(1),
+  bounds: BoardBoundsSchema,
+  soldiers: z.array(SoldierSchema),
+  terrainStones: z.array(PositionSchema),
+  outcome: MatchOutcomeSchema.optional(),
+}) satisfies z.ZodType<RuntimeExecutionFinalState>
+
+export const RuntimeExecutionServiceSuccessResponseSchema = z.object({
+  contractVersion: z.literal(RUNTIME_EXECUTION_SERVICE_VERSION),
+  ok: z.literal(true),
+  kind: z.literal("executionResult"),
+  requestId: z.string().min(1),
+  matchId: z.string().min(1),
+  runtimeAbiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
+  result: z.object({
+    privacy: z.literal("internal_runtime_result"),
+    chronicle: ChronicleSchema,
+    finalState: RuntimeExecutionFinalStateSchema,
+    runtimeViolationEventCount: z.number().int().nonnegative(),
+  }),
+})
+
+export const RuntimeExecutionServiceSystemFailureResponseSchema = z.object({
+  contractVersion: z.literal(RUNTIME_EXECUTION_SERVICE_VERSION),
+  ok: z.literal(false),
+  kind: z.literal("systemFailure"),
+  requestId: z.string().min(1),
+  matchId: z.string().min(1).optional(),
+  runtimeAbiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
+  systemFailure: z.object({
+    code: RuntimeExecutionServiceSystemFailureCodeSchema,
+    message: z.string().min(1),
+    publicMessage: z.string().min(1),
+    retryable: z.boolean(),
+    diagnostics: JsonValueSchema.optional(),
+  }),
+})
+
+export const RuntimeExecutionServiceResponseSchema = z.discriminatedUnion(
+  "ok",
+  [
+    RuntimeExecutionServiceSuccessResponseSchema,
+    RuntimeExecutionServiceSystemFailureResponseSchema,
+  ],
+)
 
 export const ChronicleValidationErrorCodeSchema = z.enum([
   "SCHEMA_INVALID",

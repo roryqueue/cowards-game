@@ -25,6 +25,8 @@ import {
   PublicMatchSetSummaryServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
+  RuntimeExecutionServiceRequestSchema,
+  RuntimeExecutionServiceResponseSchema,
   RuntimeViolationUserGuidanceSchema,
   RuntimeViolationTypeSchema,
   SoldierInactivityExplanationDtoSchema,
@@ -47,10 +49,12 @@ import {
   NON_JS_RUNTIME_PROMOTION_CRITERIA,
   NON_JS_RUNTIME_SUPPORT_POLICY,
   STRATEGY_RUNTIME_ADAPTER_REGISTRY,
+  STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
   runtimeCompatibilityKey,
   validateStrategyRuntimeMetadataPolicy,
 } from "./runtime.js"
+import { RUNTIME_EXECUTION_SERVICE_VERSION } from "./runtime-execution-service.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 import { STRATEGY_SOURCE_BYTES } from "./constants.js"
 import {
@@ -1193,5 +1197,205 @@ describe("Coward's Game spec contracts", () => {
         metadata: { objective_payload: "private" },
       }).success,
     ).toBe(false)
+  })
+
+  it("RuntimeExecutionServiceRequestSchema accepts complete v1.15 Match execution inputs", () => {
+    const source =
+      "export default { selectActivations() {}, soldierBrain() {} }"
+    const sourceBytes = new TextEncoder().encode(source).length
+    const revision = (id: string) => ({
+      id,
+      source,
+      sourceHash: `hash:${id}`,
+      sourceBytes,
+      runtime: defaultRuntimeMetadata(),
+      engineCompatibility: {
+        spec: COMPATIBILITY_VERSIONS.spec,
+        engine: COMPATIBILITY_VERSIONS.engine,
+      },
+      validation: {
+        valid: true,
+        errors: [],
+        warnings: [],
+        sourceBytes,
+        forbiddenPatterns: [],
+        sourceHash: `hash:${id}`,
+        runtimeVersion: COMPATIBILITY_VERSIONS.runtimeJs,
+        engineCompatibility: {
+          spec: COMPATIBILITY_VERSIONS.spec,
+          engine: COMPATIBILITY_VERSIONS.engine,
+        },
+      },
+      metadata: {},
+    })
+    const request = {
+      contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+      kind: "executeMatch",
+      requestId: "runtime-request:spec",
+      match: {
+        matchId: "match:runtime-service-spec",
+        seed: "seed:runtime-service-spec",
+        arenaVariant: fixtures.valid.standardArenaVariant,
+        bottomPlayerId: "player:bottom",
+        topPlayerId: "player:top",
+        bottomStrategyRevisionId: "strategy-revision:bottom",
+        topStrategyRevisionId: "strategy-revision:top",
+        maxPhases: 2,
+      },
+      strategies: {
+        bottom: revision("strategy-revision:bottom"),
+        top: revision("strategy-revision:top"),
+      },
+      limits: defaultRuntimeMetadata().limits,
+    }
+
+    expect(RuntimeExecutionServiceRequestSchema.parse(request)).toEqual(request)
+    expect(
+      RuntimeExecutionServiceRequestSchema.parse({
+        ...request,
+        match: {
+          ...request.match,
+          topStrategyRevisionId: request.match.bottomStrategyRevisionId,
+        },
+        strategies: {
+          ...request.strategies,
+          top: request.strategies.bottom,
+        },
+      }),
+    ).toMatchObject({
+      match: {
+        bottomStrategyRevisionId: "strategy-revision:bottom",
+        topStrategyRevisionId: "strategy-revision:bottom",
+      },
+    })
+    expect(
+      RuntimeExecutionServiceRequestSchema.safeParse({
+        ...request,
+        strategies: {
+          ...request.strategies,
+          bottom: { ...request.strategies.bottom, sourceBytes: 1 },
+        },
+      }).success,
+    ).toBe(false)
+    expect(
+      RuntimeExecutionServiceRequestSchema.safeParse({
+        ...request,
+        limits: {
+          ...request.limits,
+          timeoutMs: request.limits.timeoutMs + 1_000_000,
+        },
+      }).success,
+    ).toBe(false)
+  })
+
+  it("RuntimeExecutionServiceResponseSchema accepts success and system-failure envelopes", () => {
+    const board = {
+      bounds: fixtures.valid.standardArenaVariant.initialBounds,
+      soldiers: fixtures.valid.standardInitialSoldiers.map(
+        ({ soldierMemory: _soldierMemory, ...soldier }) => soldier,
+      ),
+      terrainStones: fixtures.valid.standardArenaVariant.terrainStones,
+    }
+    const chronicle = {
+      schemaVersion: "chronicle-v1.4",
+      reproducibility: {
+        matchId: "match:runtime-service-spec",
+        seed: "seed:runtime-service-spec",
+        arenaVariantId: fixtures.valid.standardArenaVariant.id,
+        arenaVariantVersion: COMPATIBILITY_VERSIONS.arenaVariant,
+        strategyRevisionIds: [
+          "strategy-revision:bottom",
+          "strategy-revision:top",
+        ],
+        versions: COMPATIBILITY_VERSIONS,
+      },
+      events: [
+        {
+          type: "MATCH_STARTED",
+          sequence: 0,
+          context: {},
+          privacy: "public",
+          payload: {
+            matchId: "match:runtime-service-spec",
+            seed: "seed:runtime-service-spec",
+          },
+        },
+      ],
+      snapshots: [
+        {
+          kind: "MATCH_START",
+          sequence: 0,
+          context: {},
+          board,
+        },
+      ],
+    }
+    const finalState = {
+      matchId: "match:runtime-service-spec",
+      seed: "seed:runtime-service-spec",
+      versions: COMPATIBILITY_VERSIONS,
+      arenaVariant: fixtures.valid.standardArenaVariant,
+      players: [
+        {
+          id: "player:bottom",
+          side: "bottom",
+          strategyRevisionId: "strategy-revision:bottom",
+          strategyMemory: {},
+        },
+        {
+          id: "player:top",
+          side: "top",
+          strategyRevisionId: "strategy-revision:top",
+          strategyMemory: {},
+        },
+      ],
+      phase: "ROUND",
+      phaseNumber: 1,
+      roundNumber: 1,
+      activationCount: 1,
+      initiativePlayerId: "player:bottom",
+      bounds: fixtures.valid.standardArenaVariant.initialBounds,
+      soldiers: fixtures.valid.standardInitialSoldiers,
+      terrainStones: [],
+    }
+    const success = {
+      contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+      ok: true,
+      kind: "executionResult",
+      requestId: "runtime-request:spec",
+      matchId: "match:runtime-service-spec",
+      runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      result: {
+        privacy: "internal_runtime_result",
+        chronicle,
+        finalState,
+        runtimeViolationEventCount: 0,
+      },
+    }
+    const systemFailure = {
+      contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+      ok: false,
+      kind: "systemFailure",
+      requestId: "runtime-request:spec",
+      matchId: "match:runtime-service-spec",
+      runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      systemFailure: {
+        code: "SOURCE_HASH_MISMATCH",
+        message: "Runtime execution request failed source validation.",
+        publicMessage: "Runtime execution failed before Match execution.",
+        retryable: false,
+        diagnostics: {
+          reason: "source-hash-mismatch",
+          slot: "bottom",
+        },
+      },
+    }
+
+    expect(RuntimeExecutionServiceResponseSchema.parse(success)).toEqual(
+      success,
+    )
+    expect(RuntimeExecutionServiceResponseSchema.parse(systemFailure)).toEqual(
+      systemFailure,
+    )
   })
 })

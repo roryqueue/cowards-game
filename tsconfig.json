@@ -3,6 +3,7 @@
   "references": [
     { "path": "apps/web" },
     { "path": "apps/worker" },
+    { "path": "apps/runtime-service" },
     { "path": "packages/spec" },
     { "path": "packages/engine" },
     { "path": "packages/runtime-js" },

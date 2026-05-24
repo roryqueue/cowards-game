@@ -1,0 +1,151 @@
+{
+  "contractVersion": "runtime-execution-service-v1.15",
+  "kind": "executeMatch",
+  "requestId": "runtime-request:golden:v1.15",
+  "match": {
+    "matchId": "match:runtime-service:golden",
+    "seed": "seed:runtime-service:golden",
+    "arenaVariant": {
+      "id": "arena-empty-12x12",
+      "name": "Empty 12x12",
+      "initialBounds": {
+        "minX": 0,
+        "maxX": 11,
+        "minY": 0,
+        "maxY": 11
+      },
+      "terrainStones": []
+    },
+    "bottomPlayerId": "bottom",
+    "topPlayerId": "top",
+    "bottomStrategyRevisionId": "strategy-revision:f08e50c1402199af006e4da2656cc10b36ea91671a9cdc1ddb0a40eeddd7e923",
+    "topStrategyRevisionId": "strategy-revision:bdcfaed6956b2d7ad2a4491cec252efb60a7faaa797d85fd34a6238fb5dc8f91",
+    "maxPhases": 1
+  },
+  "strategies": {
+    "bottom": {
+      "id": "strategy-revision:f08e50c1402199af006e4da2656cc10b36ea91671a9cdc1ddb0a40eeddd7e923",
+      "strategyId": "strategy:runtime-service:bottom",
+      "source": "export default {\n  selectActivations() { return { activationOrders: [], strategyMemory: {} } },\n  soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: {} } },\n}\n",
+      "sourceHash": "e95417480e6c6c00b1c2c370775804167aea994aa7db545f47f89e8b635bb27d",
+      "sourceBytes": 184,
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.14",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 184,
+        "forbiddenPatterns": [],
+        "sourceHash": "e95417480e6c6c00b1c2c370775804167aea994aa7db545f47f89e8b635bb27d",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "metadata": {}
+    },
+    "top": {
+      "id": "strategy-revision:bdcfaed6956b2d7ad2a4491cec252efb60a7faaa797d85fd34a6238fb5dc8f91",
+      "strategyId": "strategy:runtime-service:top",
+      "source": "export default {\n  selectActivations() { return { activationOrders: [], strategyMemory: {} } },\n  soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: {} } },\n}\n",
+      "sourceHash": "e95417480e6c6c00b1c2c370775804167aea994aa7db545f47f89e8b635bb27d",
+      "sourceBytes": 184,
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.14",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 184,
+        "forbiddenPatterns": [],
+        "sourceHash": "e95417480e6c6c00b1c2c370775804167aea994aa7db545f47f89e8b635bb27d",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "metadata": {}
+    }
+  },
+  "limits": {
+    "timeoutMs": 250,
+    "stdoutBytes": 32768,
+    "stderrBytes": 65536,
+    "sourceBytes": 65536,
+    "strategyMemoryBytes": 32768,
+    "soldierMemoryBytes": 2048,
+    "objectivePayloadBytes": 1024,
+    "environment": "minimal",
+    "filesystem": "host",
+    "network": "inherited",
+    "shell": "disabled",
+    "packagePolicy": "none"
+  }
+}
