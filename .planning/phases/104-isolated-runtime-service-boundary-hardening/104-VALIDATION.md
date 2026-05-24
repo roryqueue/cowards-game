@@ -13,7 +13,7 @@ Phase 104 hardens the current isolated JS/TS runtime service as the v1.16 HTTP+J
 | `node -e "const fs=require('node:fs'); const j=JSON.parse(fs.readFileSync('.planning/artifacts/v1.16-runtime-service-boundary.json','utf8')); for (const key of ['strategyExecutionService','currentImplementation','transport','runtimeAbi','authority','submissionArtifactPolicy','failurePrivacy','noFallback','nonPromotion']) if (!(key in j)) throw new Error('missing '+key);"` | PASS | Machine-readable runtime boundary artifact contains all required top-level sections. |
 | `pnpm exec vitest run apps/runtime-service/src/execute-match.test.ts apps/runtime-service/src/server.test.ts apps/runtime-service/src/redaction.test.ts` | PASS | 18 runtime-service tests passed for schema failures, source mismatch, HTTP route narrowness, redaction, and authority scans. |
 | `pnpm --filter @cowards/runtime-service typecheck` | PASS | Runtime-service package and referenced spec package typechecked. |
-| `cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./... -run 'RuntimeServiceClient'` | PASS | Runtime service client tests passed, including local source validation, ABI drift, stopped service, timeout, oversized response, sanitized service failures, and no fallback request path. |
+| `cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./... -run 'RuntimeServiceClient'` | PASS | Runtime service client tests passed, including local source validation, ABI drift, stopped service, timeout, oversized response, sanitized service failures, unknown `systemFailure.code` rejection, non-contract `systemFailure.errorClass` rejection, and no fallback request path. |
 | `pnpm exec vitest run scripts/check-boundary-monitors.test.ts` | PASS | 7 monitor tests passed, including v1.16 runtime boundary artifact validation and live repository monitor checks with mocked local topology. |
 | `pnpm typescript-backend:inventory:check` | PASS | v1.16 TypeScript backend inventory artifacts are current after adding runtime-service boundary tests and monitor checks. |
 | `pnpm boundary:monitors` | PARTIAL | Contract, privacy, import-boundary, inventory, Go parity, sandbox, and new Phase 104 boundary monitor checks passed. Live topology failed because local web, Go, runtime-service, and auth-gated endpoints were not running. |
@@ -58,6 +58,39 @@ The final live topology lane failed because the local services were not running.
 - `pnpm topology:check -- --require-web-go-public-strategy-read --web-url http://localhost:3000`
 
 Residual risk: the full live web -> Go -> isolated runtime-service topology was not proven in this execution turn. Focused contract, runtime, Go client, inventory, sandbox, and monitor logic passed; live endpoint availability remains the only incomplete evidence.
+
+## Validation Audit 2026-05-24
+
+| Metric | Count |
+| --- | ---: |
+| Gaps reviewed | 2 |
+| Filled by existing behavioral tests | 1 |
+| New tests created | 0 |
+| Warnings retained | 1 |
+| Escalated blockers | 0 |
+
+### Nyquist Gap Review
+
+| Gap | Requirement | Evidence | Status |
+| --- | --- | --- | --- |
+| Go client could persist untrusted runtime-service failure text or non-contract failure classes after runtime boundary drift. | RT-05, RT-04 | `apps/go-backend/runtime_service_client_test.go` includes `TestRuntimeServiceClientSanitizesServiceFailure`, `TestRuntimeServiceClientRejectsUnknownSystemFailureCode`, and `TestRuntimeServiceClientRejectsNonContractSystemFailureErrorClass`; `apps/go-backend/runtime_service_client.go` validates closed contract failure codes before returning failures to orchestration. Re-run command: `PATH=/usr/local/go/bin:$PATH go test ./... -run 'RuntimeServiceClient' -count=1` from `apps/go-backend` passed. | FILLED |
+| Full live `pnpm boundary:monitors` topology evidence requires local web, Go, runtime-service, and auth-gated endpoints. | RT-02, RT-03, RT-06, RT-07 monitor evidence; full live topology is primarily a Phase 108 closure gate. | Re-run `pnpm boundary:monitors` passed contract, lint, import, inventory, Go parity, sandbox, and Phase 104 monitor lanes, then failed the live topology lane because the services were not running. No implementation failure was observed in focused Phase 104 tests. | WARNING |
+
+### Re-Run Evidence
+
+Commands re-run during this audit:
+
+- `pnpm exec vitest run packages/spec/src/spec.test.ts` - PASS, 33 tests.
+- `pnpm --filter @cowards/spec contract:check` - PASS.
+- `node -e "const fs=require('node:fs'); const j=JSON.parse(fs.readFileSync('.planning/artifacts/v1.16-runtime-service-boundary.json','utf8')); for (const key of ['strategyExecutionService','currentImplementation','transport','runtimeAbi','authority','submissionArtifactPolicy','failurePrivacy','noFallback','nonPromotion']) if (!(key in j)) throw new Error('missing '+key);"` - PASS.
+- `pnpm exec vitest run apps/runtime-service/src/execute-match.test.ts apps/runtime-service/src/server.test.ts apps/runtime-service/src/redaction.test.ts` - PASS, 18 tests.
+- `pnpm --filter @cowards/runtime-service typecheck` - PASS.
+- `PATH=/usr/local/go/bin:$PATH go test ./... -run 'RuntimeServiceClient' -count=1` from `apps/go-backend` - PASS.
+- `pnpm exec vitest run scripts/check-boundary-monitors.test.ts` - PASS, 7 tests.
+- `pnpm typescript-backend:inventory:check` - PASS.
+- `pnpm boundary:monitors` - WARNING/PARTIAL: non-live lanes passed; live topology failed closed due missing local service endpoints.
+
+No real secrets, owner tokens, database DSNs, session values, Strategy source payloads, StrategyMemory, SoldierMemory, objective payloads, host paths, stack traces, stderr, or private runtime internals were added to this validation artifact.
 
 ## Expected 104-SUMMARY.md Contents
 
