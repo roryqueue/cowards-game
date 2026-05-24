@@ -385,8 +385,8 @@ const webPageSmokeTargets: readonly WebPageSmokeTarget[] = [
   },
   {
     name: "Public player",
-    path: "/players/local",
-    expectedText: ["Player profile", "Local Player"],
+    path: "/players/go-parity",
+    expectedText: ["Player profile", "Go Parity Player"],
   },
   {
     name: "Public Strategy",
@@ -423,8 +423,8 @@ const v116SelectedGoPageTargets: readonly WebPageSmokeTarget[] = [
   },
   {
     name: "Public player",
-    path: "/players/local",
-    expectedText: ["Player profile", "Local Player"],
+    path: "/players/go-parity",
+    expectedText: ["Player profile", "Go Parity Player"],
   },
   {
     name: "Public Strategy",

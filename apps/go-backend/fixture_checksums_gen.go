@@ -11,10 +11,10 @@ var expectedFixtureChecksumManifest = fixtureChecksumManifest{
 		"not-found-error.json"           : "sha256:558857729a5410e46f11c58906b6642cddbeb888463ba96eec26256e5ffca538",
 		"public-ladder-page.json"        : "sha256:1955721d8b36d9eb741072936c82569f8bc9b8e5da130c1bb191afa5aecef522",
 		"public-match-set-summary.json"  : "sha256:8b6fffc9ca202b5950f41711eabb8e31679428120c9785a687768c9f1b2e9579",
-		"public-player-page.json"        : "sha256:f8aca19e98574c246ad8b0dc737c3820932767f05a4764ac0fceda95360abd9b",
+		"public-player-page.json"        : "sha256:8c1dd630741a281c4c9239e30a411c1b55a54fe40efa7f375f5ec9bc70b75235",
 		"public-replay-evidence.json"    : "sha256:bc5a96292e793dc6a317349c03c6d854ee0764d81b59fb37b2dc28b10043143b",
 		"public-replay-metadata.json"    : "sha256:21bfb503304b0367528544cba109fa6ec73543ff6af1df40ab0b74777e85baed",
 		"public-strategy-page.json"      : "sha256:4710b0ef0b9ec5a037a978dbe50564fbde109688e95a92ae258b56c42742cb58",
-		"route-manifest.json"            : "sha256:a7285970728c464d896ea43a3dc14e217330a6a815362933d09e6b17a8ff2508",
+		"route-manifest.json"            : "sha256:fe804ec317619900371ffe5f7c0e3725f12692315dbfba5bb1e830124d95d68c",
 	},
 }

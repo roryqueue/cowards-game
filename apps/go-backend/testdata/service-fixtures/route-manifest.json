@@ -13,7 +13,7 @@
     "method": "GET",
     "path": "/public/players/{handle}",
     "privacyClass": "public",
-    "samplePath": "/public/players/local"
+    "samplePath": "/public/players/go-parity"
   },
   {
     "authScope": "public",

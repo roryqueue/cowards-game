@@ -43,7 +43,7 @@ var routeInventory = []routeSpec{
 		Pattern:    "/public/players/{handle}",
 		AuthScope:  "public",
 		Privacy:    "public",
-		SamplePath: "/public/players/local",
+		SamplePath: "/public/players/go-parity",
 	},
 	{
 		ID:         "getPublicLadderSeason",

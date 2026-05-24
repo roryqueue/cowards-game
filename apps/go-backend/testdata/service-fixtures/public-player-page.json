@@ -1,13 +1,60 @@
 {
   "apiVersion": "service-api-v1.8",
-  "canonicalHref": "/players/local",
+  "canonicalHref": "/players/go-parity",
   "kind": "publicPage",
   "page": "player",
   "payload": {
-    "displayName": "Local Player",
-    "handle": "local",
+    "displayName": "Go Parity Player",
+    "handle": "go-parity",
     "ladderHistory": [],
     "results": [],
-    "strategies": []
+    "strategies": [
+      {
+        "authorHandle": "go-parity",
+        "description": "Public Strategy page fixture generated through @cowards/service.",
+        "engineCompatibility": {
+          "engine": "engine-v1",
+          "spec": "cowards-rules-v1.4"
+        },
+        "name": "Go Parity Sentinel",
+        "record": {
+          "draws": 1,
+          "losses": 2,
+          "points": 13,
+          "wins": 4
+        },
+        "replayLinks": [
+          "/matches/golden%3Av1-7%3Amatch/replay"
+        ],
+        "resultLinks": [
+          "/matchsets/match-set:go-parity:golden"
+        ],
+        "runtime": {
+          "abiVersion": "strategy-runtime-abi-v1.14",
+          "adapter": {
+            "id": "runtime-js-worker-thread",
+            "version": "runtime-js-v1"
+          },
+          "language": {
+            "id": "typescript",
+            "version": "runtime-js-v1"
+          },
+          "package": {
+            "entrypoint": "default",
+            "mode": "none"
+          },
+          "requiredCapabilities": []
+        },
+        "sourceBytes": 192,
+        "sourceHash": "sha256:go-parity-sentinel",
+        "strategyId": "strategy:go-parity:sentinel",
+        "strategyRevisionId": "strategy-revision:go-parity:sentinel",
+        "tags": [
+          "parity",
+          "read-only"
+        ],
+        "validationStatus": "valid"
+      }
+    ]
   }
 }

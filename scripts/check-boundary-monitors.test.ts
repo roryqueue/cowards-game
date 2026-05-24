@@ -855,7 +855,7 @@ describe("boundary drift monitors", () => {
             "Create account",
             "Evidence Explorer",
             "Player profile",
-            "Local Player",
+            "Go Parity Player",
             "Public Strategy card",
             "Go Parity Sentinel",
             "Competition Trust Beta",

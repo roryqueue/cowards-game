@@ -26,7 +26,7 @@ func TestEndpointFixturesMatchCanonicalJSON(t *testing.T) {
 		},
 		{
 			name:        "public player page",
-			path:        "/public/players/local",
+			path:        "/public/players/go-parity",
 			fixtureName: "public-player-page.json",
 		},
 		{
@@ -231,9 +231,9 @@ func TestPublicReadRoutesDecodeIdentifiersWithoutCrossRouteFallback(t *testing.T
 	}{
 		{
 			name:          "public player page",
-			path:          "/public/players/local",
+			path:          "/public/players/go-parity",
 			nestedField:   []string{"payload", "handle"},
-			expectedValue: "local",
+			expectedValue: "go-parity",
 		},
 		{
 			name:          "public ladder page",

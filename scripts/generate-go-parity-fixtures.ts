@@ -290,12 +290,12 @@ const createServiceFixtures = async () => {
   )
   const publicPlayerPage: PublicPlayerPageServiceDto = {
     ...(publicPlayerPageExample as PublicPlayerPageServiceDto),
-    canonicalHref: "/players/local",
+    canonicalHref: "/players/go-parity",
     payload: {
       ...(publicPlayerPageExample as PublicPlayerPageServiceDto).payload,
-      handle: "local",
-      displayName: "Local Player",
-      strategies: [],
+      handle: "go-parity",
+      displayName: "Go Parity Player",
+      strategies: [publicStrategyPage.payload.strategy],
       ladderHistory: [],
       results: [],
     },
@@ -355,7 +355,7 @@ const routeManifest = [
     path: SERVICE_API_ROUTES.getPublicPlayerPage.path,
     authScope: SERVICE_API_ROUTES.getPublicPlayerPage.authScope,
     privacyClass: SERVICE_API_ROUTES.getPublicPlayerPage.privacyClass,
-    samplePath: "/public/players/local",
+    samplePath: "/public/players/go-parity",
   },
   {
     id: SERVICE_API_ROUTES.getPublicLadderSeason.id,
