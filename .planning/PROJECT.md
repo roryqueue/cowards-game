@@ -2,28 +2,32 @@
 
 ## Current State
 
-**Shipped version:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract on 2026-05-23
-**Current milestone:** v1.15 Go Backend Ownership Completion.
-**Status:** v1.15 requirements and roadmap initialized after v1.14 shipped, archived, and tagged.
-**Last audit:** v1.14 audit passed with artifact-backed Go fork promotion and deferred runtime migration.
+**Shipped version:** v1.15 Go Backend Ownership Completion on 2026-05-24
+**Current milestone:** None. Next milestone planning starts with `$gsd-new-milestone`.
+**Status:** v1.15 shipped, archived, and ready for v1.16 planning.
+**Last audit:** v1.15 audit passed with Go backend ownership completion and strict topology/monitor/page-smoke gates.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for selected backend API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. v1.15 focuses on making Go the normal backend owner for orchestration, persistence-facing API behavior, Match lifecycle coordination, Chronicle persistence handoff, MatchSet scoring completion, and public evidence delivery while keeping hostile Strategy execution in the isolated TypeScript runtime boundary.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the isolated TypeScript runtime service boundary.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.15 Go Backend Ownership Completion
+## Current Milestone: None
+
+Start the next milestone with `$gsd-new-milestone`; `.planning/REQUIREMENTS.md` is intentionally removed at milestone close so the next milestone can define fresh active requirements.
+
+## Latest Shipped Milestone: v1.15 Go Backend Ownership Completion
 
 **Goal:** Make Go the owner of normal backend orchestration, persistence-facing API behavior, Match lifecycle coordination, Chronicle persistence, MatchSet scoring completion, and public evidence delivery while TypeScript remains frontend, parity oracle, and the isolated JS/TS Strategy runtime boundary.
 
-**Target features:**
-- Go-owned job claiming, lease, failure, retry, completion, Match lifecycle state transition, Chronicle persistence, and MatchSet scoring contracts.
-- A strict Go-to-TypeScript runtime execution boundary that uses `strategy-runtime-abi-v1.14` without moving hostile Strategy execution into Go or web/API processes.
-- Go-owned public/account/workshop/replay/evidence routes selected by research where practical, with TypeScript service behavior documented as parity-only or test-only rather than normal product backend.
-- Web frontend normal workflows call Go-owned contracts and stop directly reaching persistence/service internals except for explicit test/parity-only surfaces.
-- Public evidence, topology, route ownership, and boundary monitors fail on unsafe fallback, unexpected TypeScript backend ownership, schema/runtime ABI drift, privacy drift, and public-output leaks.
-- Realistic local topology evidence covers web frontend -> Go backend -> TypeScript runtime worker/service -> Go persistence/public evidence, with no silent TypeScript backend fallback.
+**Delivered:**
+- Go-owned job claiming, lease, heartbeat, retry, failure, completion, Match lifecycle state transition, Chronicle persistence handoff, and MatchSet scoring/status refresh contracts.
+- `runtime-execution-service-v1.15`, allowing Go orchestration to invoke the TypeScript JS/TS Strategy runtime only through `strategy-runtime-abi-v1.14`.
+- Go-owned normal exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence paths with no silent TypeScript backend fallback.
+- TypeScript surface labels documenting remaining frontend, runtime-only, parity-only, rollback-only, test-only, and deferred TypeScript ownership.
+- Strict topology, rollback, failure-drill, public-output privacy, route ownership, runtime ABI, boundary monitor, representative page-smoke, and Docker/OrbStack evidence gates.
+- Browser replay realism checks for plausible full Match starts, in-bounds visible pieces, and nonblank replay canvas rendering.
 
 **Non-goals:** Production sandbox replacement, final TypeScript runtime retirement, Node `vm` as a security boundary, Go/web/API Strategy execution, Go migration/schema ownership, full owner-debug replay migration, counted non-JS play, custom arenas, durable ratings, monetization, or broad governance expansion.
 
@@ -263,6 +267,16 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - ✓ Focused competition governance with result flags, admin status marking, standings exclusion, public counted-state explanations, and audit logs.
 - ✓ Containerized subprocess production-candidate Strategy runtime boundary behind `StrategyExecutionAdapter`, with worker-thread retained as local/dev fallback and hostile regression coverage.
 
+## Validated in v1.15
+
+- ✓ Go-owned job lifecycle contracts cover claim, lease, heartbeat, retry, failure, diagnostics redaction, duplicate-claim prevention, and explicit rollback/no-fallback behavior.
+- ✓ Go orchestrates Match execution through `runtime-execution-service-v1.15` and `strategy-runtime-abi-v1.14` while Strategy code stays out of Go and web/API processes.
+- ✓ Go-owned Match completion validates lease ownership, Chronicle schema/metadata/hash, terminal outcomes, idempotency, and atomic Chronicle/Match/job/attempt persistence.
+- ✓ Go-owned MatchSet scoring/status refresh handles complete, running, degraded, failed-system, strategy-failure penalty, survivor totals, survival turns, and stable tie-breaker scenarios.
+- ✓ Selected normal public evidence and web workflows use Go-owned contracts for exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence.
+- ✓ Remaining TypeScript production-ish ownership is limited to frontend, isolated JS/TS Strategy runtime worker/service, and explicitly documented parity/test/rollback/deferred surfaces.
+- ✓ Strict topology, boundary monitors, rollback/failure drills, browser replay realism, representative page-smoke, Docker/OrbStack retest, and final audit all passed.
+
 ## Context
 
 Source specifications are archived in the repository root:
@@ -335,6 +349,10 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.14-REQUIREMENTS.md`
 - `.planning/milestones/v1.14-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.14-phases/`
+- `.planning/milestones/v1.15-ROADMAP.md`
+- `.planning/milestones/v1.15-REQUIREMENTS.md`
+- `.planning/milestones/v1.15-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.15-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -382,6 +400,8 @@ Planning archives live under `.planning/milestones/`:
 | Use an aggressive v1.13 Go API ownership cutover | There is no live usage, so broad API cutover risk is acceptable as long as privacy, schemas, deterministic boundaries, hostile Strategy isolation, and public-output safety remain hard gates. | ✓ Implemented in v1.13 |
 | Define artifact and runtime contracts before more Go/runtime ownership | Generic Strategy artifacts and a strict ABI prevent fork/template parity, validation, lineage, and runtime execution boundaries from becoming one-off rewrites. | ✓ Implemented in v1.14 |
 | Keep Strategy execution out of Go while Go consumes artifacts as data | v1.14 proved Go can own Starter/Advanced forks through generated manifests without becoming a hostile-code execution boundary. | ✓ Good |
+| Make Go the normal backend owner without moving hostile Strategy execution | v1.15 proved Go can own orchestration, Match completion, Chronicle persistence handoff, scoring, and public evidence while invoking TypeScript only through the runtime service ABI. | ✓ Implemented in v1.15 |
+| Require representative page smoke before milestone closure | The v1.15 close loop found a public player page hard error after backend promotion; topology now smokes major page shapes before milestone completion. | ✓ Good |
 
 ## Constraints
 
@@ -402,4 +422,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-24 after starting v1.15 milestone*
+*Last updated: 2026-05-24 after completing v1.15 milestone*

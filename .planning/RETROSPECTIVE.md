@@ -493,13 +493,59 @@
 - Sessions: one long v1.14 thread with research, discussion, implementation, multiple reviews, audit-fix, live smoke, local browsing fixes, and archive pass.
 - Notable: the highest-signal checks were subagent reviews paired with live page validation against actual local data.
 
+## Milestone: v1.15 — Go Backend Ownership Completion
+
+**Shipped:** 2026-05-24
+**Phases:** 7 | **Plans:** 7
+
+### What Was Built
+
+- A v1.15 lifecycle ownership manifest and boundary baseline separating Go primary ownership from TypeScript runtime-only, parity-only, rollback-only, test-only, frontend, and deferred surfaces.
+- Go-owned Match job lifecycle contracts for claim, lease, heartbeat, retry, failure, attempt rows, diagnostics redaction, duplicate-claim prevention, and rollback/no-fallback behavior.
+- `runtime-execution-service-v1.15`, a DB-free TypeScript execution service invoked by Go through `strategy-runtime-abi-v1.14` while keeping hostile Strategy execution outside Go and web/API.
+- Go-owned Match completion and Chronicle persistence handoff with lease validation, Chronicle metadata/hash checks, idempotency, atomic persistence, replay compatibility, and failure-safe behavior.
+- Go-owned MatchSet scoring/status refresh with parity for complete, degraded, failed-system, strategy-failure penalty, survivor totals, survival turns, and tie-breakers.
+- Go-owned selected public evidence and normal web paths, strict topology/monitor/rollback/failure/page-smoke gates, replay realism checks, and Docker/OrbStack retest evidence.
+
+### What Worked
+
+- The milestone audit found a real gap: Go lifecycle primitives existed before the Go orchestration runner tied them into a normal path. Fixing that before closure made the promotion evidence much stronger.
+- Keeping Strategy execution in the TypeScript runtime service let Go own orchestration without crossing the hostile-code boundary.
+- OrbStack retesting caught and fixed container sandbox IPC details after the temporary local Postgres path had already passed.
+- The final representative page-smoke addition converted a live browser surprise on `/players/local` into a reusable milestone gate.
+
+### What Was Inefficient
+
+- The installed `gsd-sdk` still lacks the documented `query` interface, so milestone completion required the legacy `gsd-tools.cjs` path plus manual cleanup of MILESTONES, ROADMAP, PROJECT, and STATE.
+- The archive helper extracted weak accomplishments from summaries, so milestone narrative still needed a human-quality rewrite.
+- Live local topology depends on several processes and environment switches, which makes the final proof valuable but somewhat ceremony-heavy.
+
+### Patterns Established
+
+- Backend ownership migration should include both positive topology evidence and stopped-service/no-fallback drills.
+- Public route promotion must include page-load smoke, not only DTO/route smoke.
+- Remaining TypeScript surfaces need explicit labels so "frontend/runtime/parity/test/rollback/deferred" stays inspectable.
+- Go can own normal backend persistence/orchestration while TypeScript remains a strict runtime execution island.
+
+### Key Lessons
+
+- Do not mark backend-ownership milestones done until at least one representative route for every major page shape returns a real page.
+- Treat final audit findings as product truth, not paperwork; the Go orchestration runner was the difference between primitives and ownership.
+- Docker/OrbStack evidence should be part of closure whenever runtime/container claims are involved.
+
+### Cost Observations
+
+- Model mix: not recorded.
+- Sessions: one extended v1.15 thread with research, phase execution, code review, audit-fix, Docker retest, browser repair, page-smoke hardening, and archive pass.
+- Notable: the highest-signal final checks were the milestone audit, live local topology, browser page inspection, and Docker/OrbStack retest.
+
 ## Cross-Milestone Trends
 
 | Trend | Observation |
 | --- | --- |
-| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, v1.2 showed local browser UAT catches route/scoring issues after build success, v1.3 showed live replay realism checks catch product-quality strategy issues after correctness passes, v1.4 showed generated tournament evidence is essential after scheduler changes, v1.5 showed Strategy library quality needs replay/metric review beyond validation, v1.6 showed analytics needs privacy/runtime/export/browser verification together, and v1.7 showed contract parity fixtures are the right bridge before backend/runtime rewrites. |
+| Verification depth | Later audit passes became more valuable as cross-phase surfaces appeared; v1.1 showed persisted service-backed flows need explicit proof beyond fixtures, v1.2 showed local browser UAT catches route/scoring issues after build success, v1.3 showed live replay realism checks catch product-quality strategy issues after correctness passes, v1.4 showed generated tournament evidence is essential after scheduler changes, v1.5 showed Strategy library quality needs replay/metric review beyond validation, v1.6 showed analytics needs privacy/runtime/export/browser verification together, v1.7 showed contract parity fixtures are the right bridge before backend/runtime rewrites, and v1.15 showed every major page shape needs a smoke check before milestone closure. |
 | Metadata hygiene | Summary, validation, UAT, and audit artifacts should be maintained during execution, not repaired at close. |
 | UI polish | Narrow viewport/browser review caught issues after automated checks; responsive screenshots, local page checks, awkward intermediate widths, and playback ergonomics should move earlier in UI phases. |
 | Package boundaries | Keeping runtime execution out of web/API and importing narrow server modules prevents trust and bundling regressions. |
 | Competitive trust | Each competition milestone works best when it keeps the promise modest: exhibition before ladder, resettable ladder before durable ratings, governance before official tournaments. |
-| Boundary evolution | Freeze contracts and prove parity before changing implementation ownership; this keeps Go backend and multi-language runtime work incremental instead of cliff-shaped. v1.10 reinforced the pattern by moving two service-backed read slices and exactly one Go read-model route while keeping writes and runtime promotion deferred. v1.11 added required live Go evidence and no-fallback proof while still avoiding production Go routing. v1.14 turned Strategy artifacts and runtime ABI into explicit contracts, making Go orchestration a plausible next ambitious move without moving hostile Strategy execution into Go. |
+| Boundary evolution | Freeze contracts and prove parity before changing implementation ownership; this keeps Go backend and multi-language runtime work incremental instead of cliff-shaped. v1.10 reinforced the pattern by moving two service-backed read slices and exactly one Go read-model route while keeping writes and runtime promotion deferred. v1.11 added required live Go evidence and no-fallback proof while still avoiding production Go routing. v1.14 turned Strategy artifacts and runtime ABI into explicit contracts, making Go orchestration a plausible next ambitious move without moving hostile Strategy execution into Go. v1.15 then promoted normal backend orchestration to Go while keeping Strategy execution isolated in the TypeScript runtime service. |

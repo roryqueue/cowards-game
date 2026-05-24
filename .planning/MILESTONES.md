@@ -1,40 +1,43 @@
 # Milestones
 
-## v1.15 Go Backend Ownership Completion
+## v1.15 Go Backend Ownership Completion (Shipped: 2026-05-24)
 
-**Status:** Planning started 2026-05-24
+**Status:** Shipped 2026-05-24
 **Phases:** 7
 **Phase range:** 96-102
-**Plans:** 0/7 complete
-**Requirements:** 48/48 mapped, 0 complete
-**Roadmap:** .planning/ROADMAP.md
-**Requirements file:** .planning/REQUIREMENTS.md
-**Research:** .planning/research/SUMMARY.md
+**Plans:** 7/7 complete
+**Requirements:** 48/48 complete
+**Audit:** .planning/milestones/v1.15-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.15-ROADMAP.md, .planning/milestones/v1.15-REQUIREMENTS.md, .planning/milestones/v1.15-phases/
+**Decision:** `promote-go-backend-ownership-completion`
 
-### Goal
+**Key accomplishments:**
 
-Make Go the owner of normal backend orchestration, persistence-facing API behavior, Match lifecycle coordination, Chronicle persistence, MatchSet scoring completion, and public evidence delivery while TypeScript remains frontend, parity oracle, and the isolated JS/TS Strategy runtime boundary.
+- Established the v1.15 ownership baseline and lifecycle manifest separating Go-owned, TypeScript runtime-only, parity-only, rollback-only, test-only, and deferred surfaces.
+- Added Go-owned job lifecycle contracts for claim, lease, heartbeat, retry, failure, diagnostics redaction, and rollback/no-fallback behavior.
+- Added the TypeScript runtime execution service boundary and Go client so Go orchestrates Matches only through `runtime-execution-service-v1.15` and `strategy-runtime-abi-v1.14`.
+- Added Go-owned Match completion, Chronicle persistence handoff, idempotent completion, and MatchSet scoring/status refresh with parity and failure classification tests.
+- Cut selected public evidence and normal public web reads to Go-owned contracts while preserving public replay/privacy guarantees and leaving owner-debug/workshop/runtime-heavy surfaces deferred.
+- Added strict topology, boundary monitor, rollback, failure-drill, browser replay realism, representative page-smoke, and Docker/OrbStack evidence gates.
 
-### Selected Direction
+### Delivered
 
-- Treat TypeScript service and persistence behavior as parity oracle or rollback reference, not the future normal backend path.
-- Move normal job claiming, lease, retry, failure, Match completion, Chronicle persistence, and MatchSet scoring completion to Go-owned contracts.
-- Keep Strategy execution outside Go and web/API processes by routing execution through the v1.14 runtime ABI and a strict TypeScript runtime worker/service boundary.
-- Move selected public evidence and normal web backend workflows to Go-owned contracts without silent TypeScript fallback.
-- Preserve schema validation, hostile-code isolation, deterministic engine boundaries, replay/public-output privacy, owner-source privacy, and immutable Strategy Revision/Match eligibility.
-- Keep production sandbox replacement and final TypeScript runtime retirement out of scope for v1.16 or later.
+- Go is now the normal backend owner for orchestration, persistence-facing Match lifecycle, Chronicle persistence, MatchSet scoring completion, and selected public evidence delivery.
+- TypeScript remains frontend, parity oracle, rollback/test reference, and the isolated JS/TS Strategy runtime worker/service.
+- Normal v1.15 topology proves `web frontend -> Go backend -> TypeScript runtime service -> Go persistence/public evidence` without silent TypeScript backend fallback.
+- Boundary monitors and topology checks fail on unexpected TypeScript backend ownership creep, unsafe fallback, route/schema/runtime ABI drift, privacy drift, report-only drift, public-output leaks, and representative page-load failures.
 
-### Planned Phases
+### Completed Phases
 
 | Phase | Name |
 | --- | --- |
-| 96 | Boundary Baseline and Go Ownership Contract |
-| 97 | Go Job Lifecycle and Persistence Contracts |
-| 98 | Runtime Execution Service Boundary |
-| 99 | Go Match Completion and Chronicle Persistence |
-| 100 | Go MatchSet Scoring and Failure Classification |
-| 101 | Public Evidence Delivery and Web Cutover |
-| 102 | Topology, Monitors, Rollback, and Promotion Gate |
+| 96 | Boundary Baseline and Go Ownership Contract - Complete |
+| 97 | Go Job Lifecycle and Persistence Contracts - Complete |
+| 98 | Runtime Execution Service Boundary - Complete |
+| 99 | Go Match Completion and Chronicle Persistence - Complete |
+| 100 | Go MatchSet Scoring and Failure Classification - Complete |
+| 101 | Public Evidence Delivery and Web Cutover - Complete |
+| 102 | Topology, Monitors, Rollback, and Promotion Gate - Complete |
 
 ### Active Constraints
 
@@ -43,6 +46,12 @@ Make Go the owner of normal backend orchestration, persistence-facing API behavi
 - Strategy Revisions are immutable once submitted for Match or MatchSet play.
 - TypeScript runtime worker/service remains the hostile Strategy execution owner unless a later milestone explicitly promotes another boundary.
 - Public replay, service, Go, topology, monitor, analytics, export, and runtime outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals by default.
+
+### Known Deferred Items
+
+- Production sandbox replacement and final TypeScript runtime retirement remain v1.16+ scope.
+- Full owner-debug replay projection, Workshop runtime/test/rerun/profile/export migration, broader ladder/governance migration, and Go-owned migrations/schema remain deferred.
+- 29 broad web report-only direct persistence offenses remain visible baseline debt for future service/backend ownership milestones.
 
 ## v1.14 Generic Strategy Artifact and Runtime Boundary Contract
 

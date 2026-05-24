@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: Go Backend Ownership Completion
-status: audit_passed
-stopped_at: v1.15 phases 96-102 implemented, verified, audited, and passed
-last_updated: "2026-05-24T01:45:00.000-04:00"
-last_activity: 2026-05-24
+status: completed
+stopped_at: v1.15 audit passed; ready for milestone completion/archive
+last_updated: "2026-05-24T15:55:24.306Z"
+last_activity: 2026-05-24 — Milestone v1.15 completed and archived
 progress:
   total_phases: 7
   completed_phases: 7
@@ -17,27 +17,25 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.15 audit passed
+**Status:** v1.15 milestone complete
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-24)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.15 Go Backend Ownership Completion.
-**Latest shipped milestone:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract
-**Active milestone:** v1.15 Go Backend Ownership Completion
-**Requirements:** .planning/REQUIREMENTS.md
+**Current focus:** Planning next milestone.
+**Latest shipped milestone:** v1.15 Go Backend Ownership Completion
+**Active milestone:** None
+**Requirements:** Fresh `.planning/REQUIREMENTS.md` will be created by `$gsd-new-milestone`.
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: 102 complete
-Plan: 7/7 complete
-Status: Implementation, code review, validation, verification, strict topology/monitor gates, and final milestone audit complete.
-Last activity: 2026-05-24 - Final audit passed after fixing missing Go orchestration wiring with a Go runner, DB integration proof, and strategy-failure scoring attribution.
-
-Progress: [##########] 100%
+Phase: Milestone v1.15 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-24 — Milestone v1.15 completed and archived
 
 ## Workflow Settings
 
@@ -80,7 +78,7 @@ v1.15 goal:
 | v1.12 Go Backend Promotion Readiness and Cutover Plan | 6 | 6 | 36/36 | Shipped |
 | v1.13 Go Backend Ownership Cutover | 7 | 7 | 42/44 complete, 2 deferred | Shipped |
 | v1.14 Generic Strategy Artifact and Runtime Boundary Contract | 7 | 7 | 48/48 complete | Shipped |
-| v1.15 Go Backend Ownership Completion | 7 | 7/7 | 48/48 | Audit passed |
+| v1.15 Go Backend Ownership Completion | 7 | 7/7 | 48/48 | Shipped |
 
 ## Latest Milestone Outcomes
 
@@ -99,7 +97,7 @@ v1.15 goal:
 
 ## Next Todos
 
-- Complete/archive v1.15 when ready to start v1.16 planning.
+- Start v1.16 with `$gsd-new-milestone` when ready.
 
 ## Blockers/Concerns
 
@@ -122,6 +120,10 @@ v1.15 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-24T01:45:00.000-04:00
-Stopped at: v1.15 audit passed; ready for milestone completion/archive
-Resume file: .planning/phases/102-topology-monitors-rollback-and-promotion-gate/102-CONTEXT.md
+Last session: 2026-05-24T11:55:24.306-04:00
+Stopped at: v1.15 milestone complete and archived; ready for v1.16 planning
+Resume file: .planning/milestones/v1.15-phases/102-topology-monitors-rollback-and-promotion-gate/102-CONTEXT.md
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
