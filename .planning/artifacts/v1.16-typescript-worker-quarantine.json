@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "v1.16-typescript-worker-quarantine",
+  "milestone": "v1.16",
+  "phase": "106",
+  "title": "TypeScript Worker and Persistence Lifecycle Quarantine",
+  "ownership": {
+    "normalOwner": "go",
+    "typeScriptRole": "rollback_test_parity_only",
+    "singleOwnerRequired": true,
+    "normalTypeScriptLifecycleOwnerRetired": true
+  },
+  "globalPolicies": {
+    "normalTypeScriptWorkerAllowed": false,
+    "mixedGoAndTypeScriptOwnersAllowed": false,
+    "requiredWorkerPurpose": "rollback",
+    "allowedTypeScriptWorkerPurposes": ["rollback", "test", "parity"],
+    "typescriptLifecycleOwnerAloneStartsWorker": false,
+    "selectedNormalPublicEvidenceOwner": "go",
+    "selectedNormalExhibitionOwner": "go"
+  },
+  "rollbackStates": {
+    "queued_jobs": {
+      "procedure": "Start TypeScript rollback only after the Go claimant and completer are stopped and single-owner status is verified.",
+      "normalOwner": "go",
+      "typeScriptRollbackAllowed": true
+    },
+    "running_jobs": {
+      "procedure": "Wait for Go completion or lease expiry before TypeScript rollback claim.",
+      "normalOwner": "go",
+      "typeScriptRollbackAllowed": "after_lease_expiry_or_operator_abort"
+    },
+    "expired_leases": {
+      "procedure": "Reclaim only after lease expiry and no running Go owner check.",
+      "normalOwner": "go",
+      "typeScriptRollbackAllowed": true
+    },
+    "retries": {
+      "procedure": "Preserve retry classification and do not convert strategy failures into system failures.",
+      "normalOwner": "go",
+      "typeScriptRollbackAllowed": true
+    },
+    "exhausted_failures": {
+      "procedure": "Retain existing exhausted-failure state and review before retry reset.",
+      "normalOwner": "go",
+      "typeScriptRollbackAllowed": "operator_decision"
+    },
+    "incomplete_matchsets": {
+      "procedure": "Do not silently refresh scoring from TypeScript; rollback scoring requires an operator note.",
+      "normalOwner": "go",
+      "typeScriptRollbackAllowed": "operator_decision"
+    },
+    "scoring_public_evidence": {
+      "procedure": "Selected normal public summaries, replay metadata, and replay evidence stay Go-owned; TypeScript DTO paths are parity, rollback, or deferred only.",
+      "normalOwner": "go",
+      "typeScriptRollbackAllowed": "operator_decision"
+    },
+    "stopped_go": {
+      "procedure": "Verify Go job claimant and completer are stopped before TypeScript rollback starts.",
+      "required": true
+    },
+    "stopped_runtime_service": {
+      "procedure": "Runtime service stoppage is a runtime failure path, not permission for TypeScript backend fallback.",
+      "required": false
+    }
+  },
+  "restartOrder": [
+    "stop_go_job_claimant_and_completer",
+    "verify_no_running_go_owner",
+    "start_typescript_worker_with_COWARDS_TYPESCRIPT_WORKER_PURPOSE_rollback",
+    "complete_or_requeue_targeted_jobs",
+    "stop_typescript_rollback_worker",
+    "verify_no_typescript_claims_running",
+    "restart_go_owner"
+  ],
+  "sourceChecks": [
+    "assertTypeScriptWorkerEntrypointAllowed",
+    "@cowards/persistence/quarantine-lifecycle",
+    "COWARDS_TYPESCRIPT_WORKER_PURPOSE",
+    "COWARDS_LOCAL_SERVICE_ROLE",
+    "TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE"
+  ],
+  "deviations": {
+    "mixedOwnerExceptionAllowed": false,
+    "requiredActionOnConflict": "stop_and_record_blocker"
+  }
+}

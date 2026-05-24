@@ -579,6 +579,9 @@ const classifyRole = (
   if (repoPath.includes("replay-fixture.ts")) return "fixture-only"
   if (repoPath.startsWith("packages/service/src/")) return "parity-only"
   if (repoPath.startsWith("packages/persistence/src/")) {
+    if (repoPath.includes("quarantine-lifecycle")) {
+      return "quarantined"
+    }
     if (repoPath.includes("preset") || repoPath.includes("seed")) {
       return "fixture-only"
     }

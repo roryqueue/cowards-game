@@ -2886,7 +2886,7 @@
         {
           "line": 3,
           "source": "./competition.js",
-          "statementText": "import {\n  buildExhibitionDuplicateKey,\n  evaluateRateLimit,\n  generateCompetitionPairwiseMatrix,\n  runtimeAllowsCountedPlay,\n  validateManualExhibitionRevisionIds,\n} from \"./competition.js\""
+          "statementText": "import {\n  buildExhibitionDuplicateKey,\n  evaluateRateLimit,\n  generateCompetitionPairwiseMatrix,\n  TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE,\n  runtimeAllowsCountedPlay,\n  validateManualExhibitionRevisionIds,\n} from \"./competition.js\""
         }
       ],
       "persistenceImports": [],
@@ -2905,10 +2905,10 @@
         "packages/persistence/src/seed.ts"
       ],
       "usesDatabase": false,
-      "claimsJobs": false,
-      "completesMatches": false,
+      "claimsJobs": true,
+      "completesMatches": true,
       "persistsChronicles": false,
-      "refreshesScoring": false,
+      "refreshesScoring": true,
       "servesPublicEvidence": false,
       "executesStrategy": false,
       "ownerDebugAccess": false,
@@ -3508,83 +3508,48 @@
         },
         {
           "line": 10,
-          "source": "./jobs.js",
-          "statementText": "export * from \"./jobs.js\""
-        },
-        {
-          "line": 11,
-          "source": "./complete-match.js",
-          "statementText": "export * from \"./complete-match.js\""
-        },
-        {
-          "line": 12,
-          "source": "./scoring.js",
-          "statementText": "export * from \"./scoring.js\""
-        },
-        {
-          "line": 13,
-          "source": "./matchset-status.js",
-          "statementText": "export * from \"./matchset-status.js\""
-        },
-        {
-          "line": 14,
-          "source": "./dev-smoke.js",
-          "statementText": "export * from \"./dev-smoke.js\""
-        },
-        {
-          "line": 15,
-          "source": "./workshop.js",
-          "statementText": "export * from \"./workshop.js\""
-        },
-        {
-          "line": 16,
           "source": "./workshop-analytics.js",
           "statementText": "export * from \"./workshop-analytics.js\""
         },
         {
-          "line": 17,
+          "line": 11,
           "source": "./auth.js",
           "statementText": "export * from \"./auth.js\""
         },
         {
-          "line": 18,
+          "line": 12,
           "source": "./account-revisions.js",
           "statementText": "export * from \"./account-revisions.js\""
         },
         {
-          "line": 19,
-          "source": "./competition.js",
-          "statementText": "export * from \"./competition.js\""
+          "line": 13,
+          "source": "./starter-strategies.js",
+          "statementText": "export * from \"./starter-strategies.js\""
+        },
+        {
+          "line": 14,
+          "source": "./advanced-strategies.js",
+          "statementText": "export * from \"./advanced-strategies.js\""
+        },
+        {
+          "line": 15,
+          "source": "./ladder.js",
+          "statementText": "export * from \"./ladder.js\""
+        },
+        {
+          "line": 16,
+          "source": "./governance.js",
+          "statementText": "export * from \"./governance.js\""
+        },
+        {
+          "line": 17,
+          "source": "./profiles.js",
+          "statementText": "export * from \"./profiles.js\""
         },
         {
           "line": 2,
           "source": "./migrations.js",
           "statementText": "export * from \"./migrations.js\""
-        },
-        {
-          "line": 20,
-          "source": "./starter-strategies.js",
-          "statementText": "export * from \"./starter-strategies.js\""
-        },
-        {
-          "line": 21,
-          "source": "./advanced-strategies.js",
-          "statementText": "export * from \"./advanced-strategies.js\""
-        },
-        {
-          "line": 22,
-          "source": "./ladder.js",
-          "statementText": "export * from \"./ladder.js\""
-        },
-        {
-          "line": 23,
-          "source": "./governance.js",
-          "statementText": "export * from \"./governance.js\""
-        },
-        {
-          "line": 24,
-          "source": "./profiles.js",
-          "statementText": "export * from \"./profiles.js\""
         },
         {
           "line": 3,
@@ -3603,23 +3568,23 @@
         },
         {
           "line": 6,
-          "source": "./match-service.js",
-          "statementText": "export * from \"./match-service.js\""
-        },
-        {
-          "line": 7,
-          "source": "./matchset-service.js",
-          "statementText": "export * from \"./matchset-service.js\""
-        },
-        {
-          "line": 8,
           "source": "./presets.js",
           "statementText": "export * from \"./presets.js\""
         },
         {
-          "line": 9,
+          "line": 7,
           "source": "./chronicle-store.js",
           "statementText": "export * from \"./chronicle-store.js\""
+        },
+        {
+          "line": 8,
+          "source": "./dev-smoke.js",
+          "statementText": "export * from \"./dev-smoke.js\""
+        },
+        {
+          "line": 9,
+          "source": "./workshop.js",
+          "statementText": "export * from \"./workshop.js\""
         }
       ],
       "persistenceImports": [],
@@ -3631,11 +3596,9 @@
         "packages/persistence/src/auth.ts",
         "packages/persistence/src/chronicle-store.ts",
         "packages/persistence/src/competition.ts",
-        "packages/persistence/src/complete-match.ts",
         "packages/persistence/src/db.ts",
         "packages/persistence/src/dev-smoke.ts",
         "packages/persistence/src/governance.ts",
-        "packages/persistence/src/jobs.ts",
         "packages/persistence/src/ladder.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
@@ -3655,7 +3618,7 @@
       "claimsJobs": false,
       "completesMatches": false,
       "persistsChronicles": true,
-      "refreshesScoring": true,
+      "refreshesScoring": false,
       "servesPublicEvidence": false,
       "executesStrategy": false,
       "ownerDebugAccess": false,
@@ -3671,7 +3634,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/account-revisions.ts, packages/persistence/src/advanced-strategies.ts, packages/persistence/src/auth.ts, packages/persistence/src/chronicle-store.ts, packages/persistence/src/competition.ts, packages/persistence/src/complete-match.ts, packages/persistence/src/db.ts, packages/persistence/src/dev-smoke.ts, packages/persistence/src/governance.ts, packages/persistence/src/jobs.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/profiles.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop-analytics.ts, packages/persistence/src/workshop.ts"
+          "detail": "packages/persistence/src/account-revisions.ts, packages/persistence/src/advanced-strategies.ts, packages/persistence/src/auth.ts, packages/persistence/src/chronicle-store.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/dev-smoke.ts, packages/persistence/src/governance.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/profiles.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop-analytics.ts, packages/persistence/src/workshop.ts"
         }
       ]
     },
@@ -4654,6 +4617,95 @@
         {
           "code": "local_backend_import_chain",
           "detail": "packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts"
+        }
+      ]
+    },
+    {
+      "id": "packages-persistence-src-quarantine-lifecycle",
+      "path": "packages/persistence/src/quarantine-lifecycle.ts",
+      "kind": "persistence-module",
+      "role": "quarantined",
+      "retirementAction": "quarantine-until-deleted",
+      "owner": "retirement_owner",
+      "reason": "packages/persistence/src/quarantine-lifecycle.ts is quarantined until a later phase deletes or relabels it.",
+      "gate": "quarantine gate",
+      "risk": "quarantined path remains reachable",
+      "futureMigration": "Delete or relabel during TypeScript backend retirement phases.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "persistence",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "./jobs.js",
+          "statementText": "export {\n  claimNextMatchJob,\n  recordAttemptFailure,\n  type ClaimedMatchJob,\n} from \"./jobs.js\""
+        },
+        {
+          "line": 6,
+          "source": "./complete-match.js",
+          "statementText": "export { completeMatch } from \"./complete-match.js\""
+        },
+        {
+          "line": 7,
+          "source": "./matchset-status.js",
+          "statementText": "export { refreshMatchSetStatus } from \"./matchset-status.js\""
+        },
+        {
+          "line": 8,
+          "source": "./matchset-service.js",
+          "statementText": "export { createMatchSetService } from \"./matchset-service.js\""
+        },
+        {
+          "line": 9,
+          "source": "./competition.js",
+          "statementText": "export {\n  createManualExhibitionMatchSet,\n  buildPublicMatchSetResultDto,\n} from \"./competition.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "packages/persistence/src/chronicle-store.ts",
+        "packages/persistence/src/competition.ts",
+        "packages/persistence/src/complete-match.ts",
+        "packages/persistence/src/db.ts",
+        "packages/persistence/src/jobs.ts",
+        "packages/persistence/src/match-service.ts",
+        "packages/persistence/src/matchset-service.ts",
+        "packages/persistence/src/matchset-status.ts",
+        "packages/persistence/src/presets.ts",
+        "packages/persistence/src/repositories.ts",
+        "packages/persistence/src/schema.ts",
+        "packages/persistence/src/scoring.ts",
+        "packages/persistence/src/seed.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": true,
+      "completesMatches": true,
+      "persistsChronicles": false,
+      "refreshesScoring": true,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/persistence/src/quarantine-lifecycle.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "packages/persistence/src/chronicle-store.ts, packages/persistence/src/competition.ts, packages/persistence/src/complete-match.ts, packages/persistence/src/db.ts, packages/persistence/src/jobs.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
         }
       ]
     },
@@ -8221,7 +8273,7 @@
         {
           "line": 13,
           "source": "./index.js",
-          "statementText": "import { createCowardsLocalService } from \"./index.js\""
+          "statementText": "import {\n  COWARDS_LOCAL_SERVICE_ROLE,\n  createCowardsLocalService,\n} from \"./index.js\""
         },
         {
           "line": 2,
@@ -12839,10 +12891,10 @@
         {
           "line": 3,
           "source": "./runner.js",
-          "statementText": "import { runWorkerLoop } from \"./runner.js\""
+          "statementText": "import {\n  assertTypeScriptWorkerEntrypointAllowed,\n  formatTypeScriptWorkerOwnershipLogLine,\n  runWorkerLoop,\n} from \"./runner.js\""
         },
         {
-          "line": 4,
+          "line": 8,
           "source": "./runtime-config.js",
           "statementText": "import {\n  createWorkerRuntimeConfig,\n  formatWorkerRuntimeConfigLogLines,\n} from \"./runtime-config.js\""
         }
@@ -12921,86 +12973,91 @@
       "imports": [
         {
           "line": 1,
-          "source": "vitest",
-          "statementText": "import { beforeEach, describe, expect, it, vi } from \"vitest\""
-        },
-        {
-          "line": 11,
-          "source": "@cowards/spec",
-          "statementText": "import { fixtures } from \"@cowards/spec\""
+          "source": "node:fs",
+          "statementText": "import { readFileSync } from \"node:fs\""
         },
         {
           "line": 12,
           "source": "@cowards/spec",
-          "statementText": "import type { ArenaVariant, MatchId, StrategyRevision } from \"@cowards/spec\""
+          "statementText": "import { fixtures } from \"@cowards/spec\""
         },
         {
           "line": 13,
-          "source": "./runner.js",
-          "statementText": "import type { WorkerRunnerDependencies } from \"./runner.js\""
+          "source": "@cowards/spec",
+          "statementText": "import type { ArenaVariant, MatchId, StrategyRevision } from \"@cowards/spec\""
         },
         {
           "line": 14,
           "source": "./runner.js",
-          "statementText": "import {\n  assertTypeScriptWorkerJobOwnershipAllowed,\n  createClaimedMatchJobForTest,\n  createSideDispatchRuntime,\n  createTypeScriptWorkerJobOwnershipConfig,\n  loadRunMatchInput,\n  runWorkerOnce,\n  TypeScriptWorkerOwnershipError,\n} from \"./runner.js\""
+          "statementText": "import type { WorkerRunnerDependencies } from \"./runner.js\""
+        },
+        {
+          "line": 15,
+          "source": "./runner.js",
+          "statementText": "import {\n  assertTypeScriptWorkerEntrypointAllowed,\n  assertTypeScriptWorkerJobOwnershipAllowed,\n  createClaimedMatchJobForTest,\n  createSideDispatchRuntime,\n  createTypeScriptWorkerJobOwnershipConfig,\n  formatTypeScriptWorkerOwnershipLogLine,\n  loadRunMatchInput,\n  runWorkerOnce,\n  TypeScriptWorkerOwnershipError,\n} from \"./runner.js\""
         },
         {
           "line": 2,
-          "source": "pg",
-          "statementText": "import type { Pool } from \"pg\""
+          "source": "vitest",
+          "statementText": "import { beforeEach, describe, expect, it, vi } from \"vitest\""
         },
         {
-          "line": 23,
+          "line": 26,
           "source": "./runtime-config.js",
           "statementText": "import {\n  createWorkerRuntimeConfig,\n  formatWorkerRuntimeConfigLogLines,\n  WorkerRuntimeConfigError,\n  type WorkerRuntimeConfig,\n} from \"./runtime-config.js\""
         },
         {
           "line": 3,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
+        },
+        {
+          "line": 4,
           "source": "@cowards/engine",
           "statementText": "import type { StrategyRuntime } from \"@cowards/engine\""
         },
         {
-          "line": 4,
-          "source": "@cowards/persistence",
-          "statementText": "import type * as Persistence from \"@cowards/persistence\""
-        },
-        {
           "line": 5,
-          "source": "@cowards/persistence",
-          "statementText": "import { createRepositories } from \"@cowards/persistence\""
+          "source": "@cowards/persistence/repositories",
+          "statementText": "import { createRepositories } from \"@cowards/persistence/repositories\""
         },
         {
           "line": 6,
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import type * as PersistenceQuarantine from \"@cowards/persistence/quarantine-lifecycle\""
+        },
+        {
+          "line": 7,
           "source": "@cowards/runtime-js",
           "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
         },
         {
-          "line": 7,
+          "line": 8,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import {\n  SubprocessSystemFailure,\n  type StrategyExecutionRequest,\n} from \"@cowards/runtime-js/worker\""
         }
       ],
       "persistenceImports": [
         {
-          "line": 4,
-          "source": "@cowards/persistence",
-          "statementText": "import type * as Persistence from \"@cowards/persistence\""
+          "line": 5,
+          "source": "@cowards/persistence/repositories",
+          "statementText": "import { createRepositories } from \"@cowards/persistence/repositories\""
         },
         {
-          "line": 5,
-          "source": "@cowards/persistence",
-          "statementText": "import { createRepositories } from \"@cowards/persistence\""
+          "line": 6,
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import type * as PersistenceQuarantine from \"@cowards/persistence/quarantine-lifecycle\""
         }
       ],
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 6,
+          "line": 7,
           "source": "@cowards/runtime-js",
           "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
         },
         {
-          "line": 7,
+          "line": 8,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import {\n  SubprocessSystemFailure,\n  type StrategyExecutionRequest,\n} from \"@cowards/runtime-js/worker\""
         }
@@ -13029,7 +13086,7 @@
       "scannerFindings": [
         {
           "code": "persistence_import",
-          "detail": "@cowards/persistence, @cowards/persistence"
+          "detail": "@cowards/persistence/repositories, @cowards/persistence/quarantine-lifecycle"
         },
         {
           "code": "runtime_import",
@@ -13099,15 +13156,25 @@
         },
         {
           "line": 3,
-          "source": "@cowards/persistence",
-          "statementText": "import {\n  createRepositories,\n  claimNextMatchJob,\n  completeMatch,\n  recordAttemptFailure,\n  type ClaimedMatchJob,\n} from \"@cowards/persistence\""
+          "source": "@cowards/persistence/repositories",
+          "statementText": "import { createRepositories } from \"@cowards/persistence/repositories\""
+        },
+        {
+          "line": 4,
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import {\n  claimNextMatchJob,\n  completeMatch,\n  recordAttemptFailure,\n  type ClaimedMatchJob,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         }
       ],
       "persistenceImports": [
         {
           "line": 3,
-          "source": "@cowards/persistence",
-          "statementText": "import {\n  createRepositories,\n  claimNextMatchJob,\n  completeMatch,\n  recordAttemptFailure,\n  type ClaimedMatchJob,\n} from \"@cowards/persistence\""
+          "source": "@cowards/persistence/repositories",
+          "statementText": "import { createRepositories } from \"@cowards/persistence/repositories\""
+        },
+        {
+          "line": 4,
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import {\n  claimNextMatchJob,\n  completeMatch,\n  recordAttemptFailure,\n  type ClaimedMatchJob,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         }
       ],
       "serviceImports": [],
@@ -13141,7 +13208,7 @@
       "scannerFindings": [
         {
           "code": "persistence_import",
-          "detail": "@cowards/persistence"
+          "detail": "@cowards/persistence/repositories, @cowards/persistence/quarantine-lifecycle"
         },
         {
           "code": "runtime_import",

@@ -35,6 +35,7 @@ type MonitorLayer =
   | "web_boundary"
   | "runtime_adapter"
   | "runtime_isolation"
+  | "worker_quarantine"
   | "non_js_runtime"
   | "go_parity"
   | "go_promotion"
@@ -245,6 +246,8 @@ const v116RuntimeServiceBoundaryArtifactPath =
   ".planning/artifacts/v1.16-runtime-service-boundary.json"
 const v116SelectedGoRouteManifestPath =
   ".planning/artifacts/v1.16-selected-go-route-manifest.json"
+const v116TypeScriptWorkerQuarantineArtifactPath =
+  ".planning/artifacts/v1.16-typescript-worker-quarantine.json"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
@@ -1672,6 +1675,166 @@ const checkV116RuntimeServiceBoundaryArtifact = (): string =>
     readJson(v116RuntimeServiceBoundaryArtifactPath),
   )
 
+const requiredV116WorkerRollbackStates = [
+  "queued_jobs",
+  "running_jobs",
+  "expired_leases",
+  "retries",
+  "exhausted_failures",
+  "incomplete_matchsets",
+  "scoring_public_evidence",
+  "stopped_go",
+  "stopped_runtime_service",
+] as const
+
+export const validateV116TypeScriptWorkerQuarantineArtifact = (
+  artifact: unknown,
+): string => {
+  const root = requireRecord(artifact, "v1.16 TypeScript worker quarantine")
+  if (root.schemaVersion !== "v1.16-typescript-worker-quarantine") {
+    throw new Error("v1.16 TypeScript worker quarantine schema drifted")
+  }
+  if (root.milestone !== "v1.16" || root.phase !== "106") {
+    throw new Error("v1.16 TypeScript worker quarantine phase drifted")
+  }
+
+  const policies = requireRecord(root.globalPolicies, "globalPolicies")
+  if (policies.mixedGoAndTypeScriptOwnersAllowed !== false) {
+    throw new Error("mixed Go and TypeScript owners must stay forbidden")
+  }
+  if (policies.normalTypeScriptWorkerAllowed !== false) {
+    throw new Error("normal TypeScript worker startup must stay forbidden")
+  }
+  if (policies.requiredWorkerPurpose !== "rollback") {
+    throw new Error("rollback worker purpose requirement drifted")
+  }
+  const allowedPurposes = stringArray(
+    policies.allowedTypeScriptWorkerPurposes,
+    "globalPolicies.allowedTypeScriptWorkerPurposes",
+  )
+  for (const purpose of ["rollback", "test", "parity"]) {
+    if (!allowedPurposes.includes(purpose)) {
+      throw new Error(`worker quarantine missing purpose ${purpose}`)
+    }
+  }
+
+  const rollbackStates = requireRecord(root.rollbackStates, "rollbackStates")
+  for (const state of requiredV116WorkerRollbackStates) {
+    if (!isRecord(rollbackStates[state])) {
+      throw new Error(`rollback artifact missing ${state}`)
+    }
+  }
+
+  const ownership = requireRecord(root.ownership, "ownership")
+  if (
+    ownership.normalOwner !== "go" ||
+    ownership.typeScriptRole !== "rollback_test_parity_only" ||
+    ownership.singleOwnerRequired !== true
+  ) {
+    throw new Error("TypeScript worker ownership contract drifted")
+  }
+
+  const sourceChecks = stringArray(root.sourceChecks, "sourceChecks")
+  for (const marker of [
+    "assertTypeScriptWorkerEntrypointAllowed",
+    "@cowards/persistence/quarantine-lifecycle",
+    "COWARDS_TYPESCRIPT_WORKER_PURPOSE",
+  ]) {
+    if (!sourceChecks.includes(marker)) {
+      throw new Error(`worker quarantine source check missing ${marker}`)
+    }
+  }
+
+  return "v1.16 TypeScript worker quarantine single owner rollback contract checked"
+}
+
+const checkV116TypeScriptWorkerQuarantineArtifact = (): string =>
+  validateV116TypeScriptWorkerQuarantineArtifact(
+    readJson(v116TypeScriptWorkerQuarantineArtifactPath),
+  )
+
+const checkTypeScriptWorkerQuarantineSource = (): string => {
+  const indexSource = readFileSync(
+    path.join(repoRoot, "apps/worker/src/index.ts"),
+    "utf8",
+  )
+  const runnerSource = readFileSync(
+    path.join(repoRoot, "apps/worker/src/runner.ts"),
+    "utf8",
+  )
+  const persistenceRoot = readFileSync(
+    path.join(repoRoot, "packages/persistence/src/index.ts"),
+    "utf8",
+  )
+  const persistencePackage = readJson<{ exports?: Record<string, string> }>(
+    "packages/persistence/package.json",
+  )
+  const serviceSource = readFileSync(
+    path.join(repoRoot, "packages/service/src/index.ts"),
+    "utf8",
+  )
+  const competitionSource = readFileSync(
+    path.join(repoRoot, "packages/persistence/src/competition.ts"),
+    "utf8",
+  )
+
+  const guardIndex = indexSource.indexOf(
+    "assertTypeScriptWorkerEntrypointAllowed",
+  )
+  const poolIndex = indexSource.indexOf("const pool = createDatabasePool")
+  if (guardIndex < 0 || poolIndex < 0 || guardIndex > poolIndex) {
+    throw new Error("worker entrypoint guard must run before pool creation")
+  }
+  if (!indexSource.includes("COWARDS_TYPESCRIPT_WORKER_PURPOSE")) {
+    throw new Error("worker entrypoint must document purpose env gate")
+  }
+  if (
+    runnerSource.includes("explicitly selected as lifecycle owner") ||
+    runnerSource.includes("allows normal TypeScript job ownership")
+  ) {
+    throw new Error("runner still contains normal TypeScript owner language")
+  }
+  if (
+    !runnerSource.includes("@cowards/persistence/quarantine-lifecycle") ||
+    runnerSource.includes('@cowards/persistence/jobs') ||
+    runnerSource.includes('@cowards/persistence/complete-match')
+  ) {
+    throw new Error("worker must import lifecycle helpers from quarantine subpath")
+  }
+  for (const symbol of [
+    "jobs",
+    "complete-match",
+    "matchset-status",
+    "matchset-service",
+    "competition",
+  ]) {
+    if (persistenceRoot.includes(`"./${symbol}.js"`)) {
+      throw new Error(`normal persistence root exports ${symbol}`)
+    }
+  }
+  if (
+    persistencePackage.exports?.["./quarantine-lifecycle"] !==
+    "./src/quarantine-lifecycle.ts"
+  ) {
+    throw new Error("persistence package missing quarantine-lifecycle export")
+  }
+  if (
+    !serviceSource.includes("COWARDS_LOCAL_SERVICE_ROLE") ||
+    !serviceSource.includes("selectedNormalBackend: false")
+  ) {
+    throw new Error("@cowards/service missing non-normal role metadata")
+  }
+  if (
+    !competitionSource.includes("TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE") ||
+    !competitionSource.includes("createManualExhibitionMatchSet") ||
+    !competitionSource.includes("buildPublicMatchSetResultDto")
+  ) {
+    throw new Error("competition persistence missing quarantine role metadata")
+  }
+
+  return "worker guard, quarantine import/export boundary, and service labels checked"
+}
+
 const checkRuntimeServiceProductionAuthority = (): string => {
   const sourceFiles = listFiles(
     "apps/runtime-service/src",
@@ -1961,6 +2124,16 @@ export const runBoundaryMonitorChecks = async (): Promise<
     "runtime_adapter",
     "v1.16 runtime service boundary artifact",
     () => checkV116RuntimeServiceBoundaryArtifact(),
+  ),
+  await check(
+    "worker_quarantine",
+    "v1.16 TypeScript worker quarantine artifact",
+    () => checkV116TypeScriptWorkerQuarantineArtifact(),
+  ),
+  await check(
+    "worker_quarantine",
+    "TypeScript worker and lifecycle quarantine source",
+    () => checkTypeScriptWorkerQuarantineSource(),
   ),
   await check(
     "runtime_adapter",

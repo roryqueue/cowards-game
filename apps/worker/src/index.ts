@@ -10,6 +10,7 @@ import {
   formatWorkerRuntimeConfigLogLines,
 } from "./runtime-config.js"
 
+// COWARDS_TYPESCRIPT_WORKER_PURPOSE must be rollback, test, or parity.
 const jobOwnership = assertTypeScriptWorkerEntrypointAllowed(process.env)
 
 const runtimeConfig = createWorkerRuntimeConfig({

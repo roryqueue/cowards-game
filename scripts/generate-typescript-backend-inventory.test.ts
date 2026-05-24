@@ -113,8 +113,7 @@ export const createWorkshopReadAdapter = () => [createDatabasePool, createCoward
   writeSource(
     root,
     "apps/worker/src/runner.ts",
-    `import { claimNextMatchJob } from "@cowards/persistence/jobs"
-import { completeMatch } from "@cowards/persistence/complete-match"
+    `import { claimNextMatchJob, completeMatch } from "@cowards/persistence/quarantine-lifecycle"
 export const runWorkerOnce = () => [claimNextMatchJob, completeMatch]
 `,
   )
