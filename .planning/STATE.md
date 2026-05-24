@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: Go Backend Ownership Completion
-status: planning
-stopped_at: v1.15 initialized; ready for Phase 96 discussion or planning
+status: discussing
+stopped_at: Phase 96 context gathered; continuing sequential discuss-phase for v1.15
 last_updated: "2026-05-24T00:00:00.000-04:00"
 last_activity: 2026-05-24
 progress:
@@ -17,7 +17,7 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.15 planning initialized
+**Status:** v1.15 phase discussion in progress
 
 ## Project Reference
 
@@ -32,10 +32,10 @@ See: .planning/PROJECT.md (updated 2026-05-24)
 
 ## Current Position
 
-Phase: Not started (next: Phase 96)
+Phase: 96 complete for discussion; next Phase 97
 Plan: -
-Status: Defining Phase 96 approach
-Last activity: 2026-05-24 - Milestone v1.15 started with research, requirements, and roadmap.
+Status: Gathering phase contexts sequentially
+Last activity: 2026-05-24 - Phase 96 context captured for v1.15 ownership baseline and manifest decisions.
 
 Progress: [----------] 0%
 
@@ -93,8 +93,8 @@ v1.15 goal:
 
 ## Next Todos
 
-- Start Phase 96 with `$gsd-discuss-phase 96` or `$gsd-plan-phase 96`.
-- Phase 96 should rebaseline ownership and create the v1.15 lifecycle ownership manifest before implementation.
+- Continue sequential discussion with Phase 97.
+- Phase 96 context is ready for downstream research/planning.
 
 ## Blockers/Concerns
 
@@ -118,5 +118,5 @@ v1.15 goal:
 ## Session Continuity
 
 Last session: 2026-05-24T00:00:00.000-04:00
-Stopped at: v1.15 initialized; ready for Phase 96
-Resume file: .planning/ROADMAP.md
+Stopped at: Phase 96 context gathered; continuing sequential discuss-phase
+Resume file: .planning/phases/096-boundary-baseline-and-go-ownership-contract/096-CONTEXT.md
