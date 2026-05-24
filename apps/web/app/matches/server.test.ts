@@ -676,6 +676,25 @@ describe("Match replay server facade", () => {
     )
   })
 
+  it("does not let ungated owner-debug options bypass selected Go public replay evidence", async () => {
+    const getByMatchId = vi.fn(async () => createStoredChronicle())
+    const server = createMatchReplayServer({
+      env: { COWARDS_GO_PUBLIC_READS: "1" },
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({ getByMatchId }),
+    })
+
+    await expect(
+      server.getMatchReplay("match:replay-test", {
+        allowOwnerDebug: true,
+        requestedOwnerPlayerId: "player:bottom",
+      }),
+    ).rejects.toThrow(
+      "getPublicReplayEvidence Go ownership requires COWARDS_GO_BACKEND_URL",
+    )
+    expect(getByMatchId).not.toHaveBeenCalled()
+  })
+
   it("fails closed in no-TypeScript-backend mode instead of reading persisted Chronicles", async () => {
     const getByMatchId = vi.fn(async () => createStoredChronicle())
     const server = createMatchReplayServer({
