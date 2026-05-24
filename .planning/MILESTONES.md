@@ -1,5 +1,58 @@
 # Milestones
 
+## v1.16 Runtime Isolation and TypeScript Backend Retirement (Shipped: 2026-05-24)
+
+**Status:** Shipped 2026-05-24
+**Phases:** 7
+**Phase range:** 103-109
+**Plans:** 7/7 complete
+**Requirements:** 48/48 complete
+**Audit:** .planning/milestones/v1.16-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.16-ROADMAP.md, .planning/milestones/v1.16-REQUIREMENTS.md, .planning/milestones/v1.16-phases/
+**Decision:** `promote-no-typescript-backend-except-frontend-and-isolated-js-ts-runtime-service`
+
+**Key accomplishments:**
+
+- Established the v1.16 TypeScript backend retirement taxonomy across 185 TypeScript backend-like surfaces.
+- Defined the broker-ready Strategy Execution Service / Runtime Broker contract while preserving JS/TS Strategy support only inside the isolated runtime service boundary.
+- Cut selected account/session, fork, exhibition, public read, and public replay evidence routes to Go-owned contracts with no TypeScript backend fallback.
+- Quarantined TypeScript worker and persistence lifecycle code so it cannot claim or complete normal backend work outside rollback/test/parity purposes.
+- Added final TypeScript surface labels and monitor enforcement for deferred Workshop, ladder, governance, owner-debug, fixture, rollback, parity, frontend, and runtime-only surfaces.
+- Added strict no-TypeScript-backend topology, live boundary monitor, route/runtime/privacy drift, public-output, and representative page-smoke gates.
+
+### Delivered
+
+- Normal product topology is now `web frontend -> Go backend -> isolated JS/TS Strategy runtime service`.
+- TypeScript is not a normal backend owner for orchestration, persistence-facing API behavior, Match lifecycle, Chronicle persistence handoff, MatchSet scoring completion, public evidence delivery, or silent fallback.
+- Every future language runtime is expected to implement the same JSON/runtime ABI and schema-validated envelopes.
+- Strategy Revision submission performs compile, validation, or artifact packaging where practical; Matches execute immutable artifacts.
+- WASM/WASI/component-model are documented as strong long-term candidates for some languages, not v1.16 promotions; Node `node:wasi` is not treated as an untrusted-code sandbox.
+
+### Completed Phases
+
+| Phase | Name |
+| --- | --- |
+| 103 | TypeScript Backend Inventory and Retirement Contract - Complete |
+| 104 | Isolated Runtime Service Boundary Hardening - Complete |
+| 105 | Web/API Go-Only Cutover and Fallback Removal - Complete |
+| 106 | TypeScript Worker and Persistence Quarantine - Complete |
+| 107 | Deferred Surface Relabeling and Privacy Preservation - Complete |
+| 108 | No-TypeScript-Backend Topology and Monitor Gate - Complete |
+| 109 | Milestone Verification, Deletion Audit, and Promotion Decision - Complete |
+
+### Active Constraints
+
+- Engine logic remains pure, deterministic, serializable, and side-effect free.
+- Strategy code does not execute in web/API/Go processes, and Node `vm` is not used as a hostile-code security boundary.
+- JS/TS Strategy execution remains supported only through the isolated runtime service and public runtime ABI.
+- Public outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals by default.
+- `pnpm boundary:monitors` must remain synchronized with route manifests, topology artifacts, runtime contracts, final TypeScript surface labels, and fixture gates.
+
+### Known Deferred Items
+
+- True language-neutral Runtime Broker replacement and production hostile-code sandbox promotion remain future milestones.
+- Workshop migration, broader ladder/governance migration, full owner-debug replay migration, counted non-JS play, and Go-owned migrations/schema remain deferred.
+
 ## v1.15 Go Backend Ownership Completion (Shipped: 2026-05-24)
 
 **Status:** Shipped 2026-05-24

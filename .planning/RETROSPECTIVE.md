@@ -1,5 +1,42 @@
 # Retrospective
 
+## Milestone: v1.16 — Runtime Isolation and TypeScript Backend Retirement
+
+**Shipped:** 2026-05-24
+**Phases:** 7 | **Plans:** 7
+
+### What Was Built
+
+- Retired TypeScript from normal backend ownership while preserving JS/TS Strategy execution inside an isolated runtime service.
+- Named the future abstraction Strategy Execution Service / Runtime Broker and shaped today's TypeScript service contract around a language-neutral JSON/runtime ABI.
+- Cut selected normal web/API routes to Go-owned contracts and removed silent fallback to TypeScript backend paths.
+- Quarantined TypeScript worker and lifecycle persistence code behind rollback/test/parity gates.
+- Added final TypeScript surface labels and strict monitor checks for backend ownership creep, route manifest drift, runtime ABI drift, fixture leakage, public-output privacy, and page-load failure.
+
+### What Worked
+
+- Treating v1.15 Go ownership as the baseline kept v1.16 focused on retirement and quarantine instead of reopening backend ownership decisions.
+- The surface-label inventory made deferred TypeScript code safer because each retained path now has an explicit non-normal role.
+- Strict topology plus live boundary monitors gave a realistic proof that the app works as `web frontend -> Go backend -> isolated JS/TS Strategy runtime service`.
+
+### What Was Inefficient
+
+- The missing `gsd-sdk query` interface still required direct planning-file inspection and legacy/manual workflow handling.
+- The first replay visual run failed because the live web process correctly denied test fixtures without `COWARDS_ENABLE_REPLAY_FIXTURES=1`; this was expected behavior, but it added a retest loop.
+- Final milestone closure needed a separate archive/tag cleanup because the audit artifact was initially written before EXIT-04 was complete.
+
+### Patterns Established
+
+- Runtime language portability should be expressed as a stable broker contract first, not by promoting a new sandbox prematurely.
+- Final topology gates should require representative page smoke, selected route smoke, strict health metadata, and privacy scanning together.
+- Quarantined or deferred backend-like TypeScript surfaces should be monitored by path-level labels, not only prose.
+
+### Key Lessons
+
+- Backend retirement is easier to prove when the allowed TypeScript roles are narrow, named, and machine-checked.
+- Fixture gates should fail closed even during visual testing; tests can opt in explicitly.
+- Milestone audits should wait until archive/tag evidence exists before declaring promotion final.
+
 ## Milestone: v1.0 — MVP
 
 **Shipped:** 2026-05-17
