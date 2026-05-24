@@ -7,16 +7,18 @@
 ```bash
 pnpm exec vitest run scripts/check-local-topology.test.ts scripts/check-boundary-monitors.test.ts
 pnpm boundary:monitors
-pnpm topology:check -- --require-v1-16-no-typescript-backend --json --web-url http://localhost:3000 --go-url http://127.0.0.1:8087 --runtime-service-url http://127.0.0.1:3107
-COWARDS_REQUIRE_LIVE_TOPOLOGY=1 COWARDS_WEB_URL=http://localhost:3000 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 COWARDS_RUNTIME_SERVICE_URL=http://127.0.0.1:3107 pnpm exec tsx scripts/check-boundary-monitors.ts
+pnpm topology:check -- --require-v1-16-no-typescript-backend --json
+COWARDS_REQUIRE_LIVE_TOPOLOGY=1 pnpm exec tsx scripts/check-boundary-monitors.ts
+COWARDS_REQUIRE_LIVE_TOPOLOGY=1 pnpm exec vitest run scripts/check-boundary-monitors.test.ts -t "passes the live repository monitor checks"
 ```
 
 ## Results
 
-- Focused topology and boundary monitor tests: **passed**, 2 files and 23 tests.
-- `pnpm boundary:monitors`: **passed**, including `[topology] v1.16 no-TypeScript-backend topology artifact`.
+- Focused topology and boundary monitor tests: **passed**, 2 files and 24 tests.
+- `pnpm boundary:monitors`: **passed**, including `[topology] v1.16 no-TypeScript-backend topology artifact`; current broad web report-only baseline is 17/22 known offenses.
 - Strict live topology: **passed**, `ok=true`.
-- Live-required boundary monitor with explicit web/Go/runtime URLs: **passed**, 27 required live v1.16 no-TypeScript-backend topology diagnostics.
+- Live-required boundary monitor: **passed**, 27 required live v1.16 no-TypeScript-backend topology diagnostics.
+- Review warning regression command: **passed**, 1 live repository monitor test passed and 11 tests skipped by filter.
 
 ## Live Strict Topology Evidence
 
@@ -44,6 +46,7 @@ After code review found blockers in live monitor defaults, frontend-only web hea
 - Strict mode rejects a web `/api/service/health` response with `service="cowards-web"` or `backendAuthority="frontend-only"`.
 - `validateV116NoTypeScriptBackendTopologyArtifact()` now validates the markdown artifact plus `monitorMode` and `pageSmoke` fields.
 - Focused tests now include negative coverage for frontend-only health, broadened TypeScript process roles, missing page smoke requirements, stale live monitor topology, and markdown privacy leaks.
+- The former WR-01 regression gap is closed by `scripts/check-boundary-monitors.test.ts`, which now sets `COWARDS_REQUIRE_LIVE_TOPOLOGY=1`, mocks the strict representative and selected Go page smoke responses, and asserts `required live v1.16 no-TypeScript-backend topology diagnostics checked`.
 
 ## Requirement Coverage
 
