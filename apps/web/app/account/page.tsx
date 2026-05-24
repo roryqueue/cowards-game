@@ -9,11 +9,11 @@ export const dynamic = "force-dynamic"
 
 export default async function AccountPage() {
   let accountUnavailable = false
+  let revisionsUnavailable = false
   let user: Awaited<ReturnType<typeof getCurrentAccountReadUser>> = null
   let revisions: Awaited<ReturnType<typeof listAccountReadRevisions>> = []
   try {
     user = await getCurrentAccountReadUser()
-    revisions = user ? await listAccountReadRevisions() : []
   } catch (error) {
     if (
       isGoBackendServiceUnavailableError(error) ||
@@ -22,6 +22,17 @@ export default async function AccountPage() {
       accountUnavailable = isGoBackendServiceUnavailableError(error)
     } else {
       throw error
+    }
+  }
+  if (user) {
+    try {
+      revisions = await listAccountReadRevisions()
+    } catch (error) {
+      if (isGoBackendServiceUnavailableError(error)) {
+        revisionsUnavailable = true
+      } else {
+        throw error
+      }
     }
   }
 
@@ -61,7 +72,13 @@ export default async function AccountPage() {
               <h2>Account revisions</h2>
               <a href="/exhibitions/new">Create exhibition</a>
             </div>
-            {revisions.length ? (
+            {revisionsUnavailable ? (
+              <p className="workshop-muted">
+                Account revisions are temporarily unavailable. Go-backed
+                revision reads failed closed without TypeScript backend
+                fallback.
+              </p>
+            ) : revisions.length ? (
               <div className="app-table" role="table">
                 <div className="app-table-row heading" role="row">
                   <span>Revision</span>

@@ -11,11 +11,11 @@ export const dynamic = "force-dynamic"
 
 export default async function NewExhibitionPage() {
   let accountUnavailable = false
+  let revisionsUnavailable = false
   let user: Awaited<ReturnType<typeof getCurrentAccountReadUser>> = null
   let revisions: Awaited<ReturnType<typeof listAccountReadRevisions>> = []
   try {
     user = await getCurrentAccountReadUser()
-    revisions = user ? await listAccountReadRevisions() : []
   } catch (error) {
     if (
       isGoBackendServiceUnavailableError(error) ||
@@ -24,6 +24,17 @@ export default async function NewExhibitionPage() {
       accountUnavailable = isGoBackendServiceUnavailableError(error)
     } else {
       throw error
+    }
+  }
+  if (user) {
+    try {
+      revisions = await listAccountReadRevisions()
+    } catch (error) {
+      if (isGoBackendServiceUnavailableError(error)) {
+        revisionsUnavailable = true
+      } else {
+        throw error
+      }
     }
   }
   const presets = COMPETITION_PRESETS.map((preset) => ({
@@ -40,7 +51,26 @@ export default async function NewExhibitionPage() {
   return (
     <main className="app-page">
       {user ? (
-        <ExhibitionClient presets={presets} revisions={revisions} />
+        revisionsUnavailable ? (
+          <section className="app-panel">
+            <div className="app-section-header">
+              <div>
+                <p className="workshop-muted">Competitive Alpha</p>
+                <h1>Account revisions unavailable</h1>
+              </div>
+              <div className="app-actions">
+                <a href="/account">Account</a>
+                <a href="/">Workshop</a>
+              </div>
+            </div>
+            <p className="workshop-muted">
+              Go-backed account revision reads failed closed without TypeScript
+              backend fallback.
+            </p>
+          </section>
+        ) : (
+          <ExhibitionClient presets={presets} revisions={revisions} />
+        )
       ) : (
         <section className="app-panel">
           <div className="app-section-header">
