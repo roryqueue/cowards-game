@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import { assertPublicOutputLeakSafe } from "../packages/spec/src/public-output-privacy.ts"
 import {
   generateFinalTypeScriptSurfaceLabels,
   validateFinalTypeScriptSurfaceLabels,
@@ -24,6 +25,14 @@ describe("final v1.16 TypeScript surface labels", () => {
     expect(labels.surfaces.map((surface) => surface.path).sort()).toEqual(
       inventory.surfaces.map((surface) => surface.path).sort(),
     )
+
+    const markdown = readFileSync(
+      ".planning/artifacts/v1.16-final-typescript-surface-labels.md",
+      "utf8",
+    )
+    for (const surface of inventory.surfaces) {
+      expect(markdown).toContain(`| ${surface.path} |`)
+    }
   })
 
   it("includes monitor-ready metadata on every final row", () => {
@@ -87,6 +96,136 @@ describe("final v1.16 TypeScript surface labels", () => {
       "frontend-go-adapter",
     ]) {
       expect(surfaceLabels.has(expected)).toBe(true)
+    }
+  })
+
+  it("labels representative deferred product surfaces by their actual capability instead of a generic or unrelated group", () => {
+    const labels = generateFinalTypeScriptSurfaceLabels()
+    const labelsByPath = new Map(
+      labels.surfaces.map((surface) => [surface.path, surface]),
+    )
+
+    const expected = [
+      [
+        "apps/web/app/api/workshop/validate/route.ts",
+        "deferred-workshop-validation",
+        "Workshop",
+      ],
+      [
+        "apps/web/app/api/workshop/revisions/[revisionId]/source/route.ts",
+        "deferred-workshop-private-source",
+        "Workshop",
+      ],
+      [
+        "apps/web/app/api/workshop/tests/route.ts",
+        "deferred-workshop-test-launch",
+        "Workshop",
+      ],
+      [
+        "apps/web/app/api/workshop/analytics/profiles/route.ts",
+        "deferred-workshop-profile-save",
+        "Workshop",
+      ],
+      [
+        "apps/web/app/api/workshop/analytics/export/route.ts",
+        "deferred-workshop-export",
+        "Workshop",
+      ],
+      [
+        "packages/persistence/src/workshop.ts",
+        "deferred-workshop-runtime-support",
+        "Workshop",
+      ],
+      [
+        "packages/persistence/src/workshop-analytics.ts",
+        "deferred-workshop-runtime-support",
+        "Workshop",
+      ],
+      [
+        "apps/web/app/api/ladder/seasons/[seasonId]/entries/route.ts",
+        "deferred-ladder-mutation",
+        "ladder",
+      ],
+      [
+        "apps/web/app/api/ladder/seasons/[seasonId]/schedule/route.ts",
+        "deferred-ladder-mutation",
+        "ladder",
+      ],
+      [
+        "packages/persistence/src/ladder.ts",
+        "deferred-ladder-mutation",
+        "ladder",
+      ],
+      [
+        "apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts",
+        "deferred-governance-admin-mutation",
+        "governance-admin",
+      ],
+      [
+        "packages/persistence/src/governance.ts",
+        "deferred-governance-admin-mutation",
+        "governance-admin",
+      ],
+    ] as const
+
+    const mismatches = expected.flatMap(([path, surfaceLabel, capabilityGroup]) => {
+      const actual = labelsByPath.get(path)
+      const actualSummary = {
+        taxonomyRole: actual?.taxonomyRole,
+        surfaceLabel: actual?.surfaceLabel,
+        capabilityGroup: actual?.capabilityGroup,
+        selectedNormal: actual?.selectedNormal,
+        normalBackendAuthority: actual?.normalBackendAuthority,
+      }
+      const expectedSummary = {
+        taxonomyRole: "deferred",
+        surfaceLabel,
+        capabilityGroup,
+        selectedNormal: false,
+        normalBackendAuthority: false,
+      }
+      return JSON.stringify(actualSummary) === JSON.stringify(expectedSummary)
+        ? []
+        : [{ path, expected: expectedSummary, actual: actualSummary }]
+    })
+
+    expect(mismatches).toEqual([])
+  })
+
+  it("keeps shareable label fields and markdown public-output safe", () => {
+    const labels = generateFinalTypeScriptSurfaceLabels()
+    for (const surface of labels.surfaces) {
+      expect(() =>
+        assertPublicOutputLeakSafe(
+          {
+            surfaceLabel: surface.surfaceLabel,
+            capabilityGroup: surface.capabilityGroup,
+            taxonomyRole: surface.taxonomyRole,
+            publicOutputPrivacy: surface.publicOutputPrivacy,
+            owner: surface.owner,
+            reason: surface.reason,
+            risk: surface.risk,
+            privacyClass: surface.privacyClass,
+            gate: surface.gate,
+            futureMigration: surface.futureMigration,
+            monitorStatus: surface.monitorStatus,
+            selectedNormalJustification: surface.selectedNormalJustification,
+          },
+          `${surface.path} shareable label fields`,
+        ),
+      ).not.toThrow()
+    }
+
+    const markdown = renderFinalTypeScriptSurfaceLabelsMarkdown(labels)
+    expect(() => assertPublicOutputLeakSafe(markdown, "final label markdown")).not.toThrow()
+    for (const forbidden of [
+      "DATABASE_URL",
+      "postgres://",
+      "Bearer ",
+      "PRIVATE_",
+      "stack trace",
+    ]) {
+      expect(markdown).not.toContain(forbidden)
     }
   })
 

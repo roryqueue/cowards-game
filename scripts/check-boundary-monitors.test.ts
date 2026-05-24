@@ -728,6 +728,7 @@ describe("boundary drift monitors", () => {
         "non_js_runtime",
         "go_parity",
         "topology",
+        "surface_labels",
       ]),
     )
   }, 30_000)

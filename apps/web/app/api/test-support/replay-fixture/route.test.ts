@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { assertPublicOutputLeakSafe } from "@cowards/spec"
 import {
   isReplayFixtureEnabled,
   replayFixtureMatchId,
@@ -18,7 +19,9 @@ describe("replay fixture test-support route", () => {
     )
 
     expect(response.status).toBe(404)
-    await expect(response.json()).resolves.toEqual({ error: "Not found" })
+    const body = await response.json()
+    expect(body).toEqual({ error: "Not found" })
+    expect(() => assertPublicOutputLeakSafe(body)).not.toThrow()
   })
 
   it("returns a bounded fixture catalog only when explicitly enabled", async () => {
@@ -37,5 +40,6 @@ describe("replay fixture test-support route", () => {
     expect(JSON.stringify(body)).not.toContain("soldierMemory")
     expect(JSON.stringify(body)).not.toContain("objectivePayload")
     expect(JSON.stringify(body)).not.toContain("ownerDebug")
+    expect(() => assertPublicOutputLeakSafe(body)).not.toThrow()
   })
 })

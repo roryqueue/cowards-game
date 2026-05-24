@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { SERVICE_API_VERSION } from "@cowards/spec"
+import { SERVICE_API_VERSION, assertPublicOutputLeakSafe } from "@cowards/spec"
 import { createWorkshopAnalyticsCompareGetHandler } from "./route.js"
 
 describe("Workshop analytics compare route", () => {
@@ -25,13 +25,15 @@ describe("Workshop analytics compare route", () => {
     })
 
     expect(response.headers.get("cache-control")).toBe("no-store")
-    await expect(response.json()).resolves.toEqual({
+    const body = await response.json()
+    expect(body).toEqual({
       profileId: "analytics-profile:demo",
       baseRunId: "analytics-run:base",
       compareRunId: "analytics-run:compare",
       compatibilityEquivalent: true,
       delta: { wins: 1, losses: -1, draws: 0, points: 3 },
     })
+    expect(() => assertPublicOutputLeakSafe(body)).not.toThrow()
   })
 
   it("preserves production availability, missing, and storage errors", async () => {
@@ -44,6 +46,11 @@ describe("Workshop analytics compare route", () => {
       params: { profileId: "analytics-profile:demo" },
     })
     expect(forbidden.status).toBe(403)
+    const forbiddenBody = await forbidden.json()
+    expect(forbiddenBody).toEqual({
+      error: "Analytics comparison is available only locally or to owners.",
+    })
+    expect(() => assertPublicOutputLeakSafe(forbiddenBody)).not.toThrow()
 
     const missing = await createWorkshopAnalyticsCompareGetHandler(
       async () => null,
@@ -52,9 +59,11 @@ describe("Workshop analytics compare route", () => {
       params: { profileId: "analytics-profile:missing" },
     })
     expect(missing.status).toBe(404)
-    await expect(missing.json()).resolves.toEqual({
+    const missingBody = await missing.json()
+    expect(missingBody).toEqual({
       error: "Analytics profile not found",
     })
+    expect(() => assertPublicOutputLeakSafe(missingBody)).not.toThrow()
 
     const storageUnavailable = await createWorkshopAnalyticsCompareGetHandler(
       async () => {
@@ -67,8 +76,10 @@ describe("Workshop analytics compare route", () => {
       params: { profileId: "analytics-profile:demo" },
     })
     expect(storageUnavailable.status).toBe(503)
-    await expect(storageUnavailable.json()).resolves.toEqual({
+    const storageUnavailableBody = await storageUnavailable.json()
+    expect(storageUnavailableBody).toEqual({
       error: "Storage is unavailable; start local services and retry.",
     })
+    expect(() => assertPublicOutputLeakSafe(storageUnavailableBody)).not.toThrow()
   })
 })

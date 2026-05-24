@@ -17,7 +17,9 @@ describe("run-worker-once test-support route", () => {
     })()
 
     expect(response.status).toBe(404)
-    await expect(response.json()).resolves.toEqual({ error: "Not found" })
+    const body = await response.json()
+    expect(body).toEqual({ error: "Not found" })
+    expect(() => assertPublicOutputLeakSafe(body)).not.toThrow()
   })
 
   it("returns parsed worker execution payloads when enabled", async () => {
