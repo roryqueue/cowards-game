@@ -1,24 +1,16 @@
 ---
 phase: 106-typescript-worker-and-persistence-quarantine
-reviewed: 2026-05-24T21:17:46Z
+reviewed: 2026-05-24T21:21:43Z
 depth: deep
 re_review_of:
-  - c2fca1479751c091ec6ea3aadd5ff0ced688ea7f
-  - 8863ac18e56ca3aa5977c3ce1978e53d8f95ffef
-  - 4995a07b608b91fbe57147a5fa5a266587fe935d
-files_reviewed: 11
+  - 4995a0765ea20b1fbd588a9d9d60355e9153fc03
+  - 25b18ebe9c0f0617441e8c0f0ee8b5bdbce57661
+files_reviewed: 4
 files_reviewed_list:
-  - apps/web/app/matches/[matchId]/replay/page.tsx
-  - apps/web/app/matches/server.ts
-  - apps/web/app/matches/replay-ready.ts
-  - apps/web/app/matches/replay-fixture.ts
-  - packages/persistence/package.json
-  - packages/persistence/src/index.ts
-  - packages/persistence/src/quarantine-lifecycle.ts
-  - scripts/check-service-boundary-imports.ts
-  - scripts/check-service-boundary-imports.test.ts
   - scripts/check-boundary-monitors.ts
   - scripts/check-boundary-monitors.test.ts
+  - scripts/check-service-boundary-imports.ts
+  - scripts/check-service-boundary-imports.test.ts
 findings:
   critical: 0
   warning: 1
@@ -27,38 +19,35 @@ findings:
 status: issues_found
 ---
 
-# Phase 106: Final-Final Code Review Re-Review
+# Phase 106: Narrow Final Code Review Re-Review
 
-**Reviewed:** 2026-05-24T21:17:46Z
+**Reviewed:** 2026-05-24T21:21:43Z
 **Depth:** deep
-**Commits:** `c2fca1479751c091ec6ea3aadd5ff0ced688ea7f`, `8863ac18e56ca3aa5977c3ce1978e53d8f95ffef`, `4995a07b608b91fbe57147a5fa5a266587fe935d`
+**Commits:** `4995a0765ea20b1fbd588a9d9d60355e9153fc03`, `25b18ebe9c0f0617441e8c0f0ee8b5bdbce57661`
 **Status:** issues_found
 
 ## Summary
 
-Final-final re-review of the remaining Phase 106 findings after `4995a07`.
+Narrow final re-review of the remaining Phase 106 worker artifact privacy finding after `25b18eb`, plus confirmation that CR-02 remains resolved after `4995a07`.
 
-CR-02 is resolved. The selected replay page is in the strict chain, local replay dependencies are recursively followed, and the replay helper allowlist now rejects both root `@cowards/persistence` and non-explicit subpaths such as `@cowards/persistence/competition`. The explicit replay persistence subpaths allowed by the monitor are limited to `@cowards/persistence/db`, `@cowards/persistence/quarantine-lifecycle`, and `@cowards/persistence/repositories` for `apps/web/app/matches/server.ts`, and only `@cowards/persistence/quarantine-lifecycle` for `replay-ready.ts` and `replay-fixture.ts`.
+CR-02 remains resolved. The service boundary monitor recursively includes the selected replay page dependency chain, rejects non-explicit replay persistence imports such as `@cowards/persistence/competition`, and keeps current strict offenses at zero. The explicit replay helper persistence subpaths remain limited to `@cowards/persistence/db`, `@cowards/persistence/quarantine-lifecycle`, and `@cowards/persistence/repositories` for `apps/web/app/matches/server.ts`, and `@cowards/persistence/quarantine-lifecycle` for `replay-ready.ts` and `replay-fixture.ts`.
 
-WR-01 remains open. The worker quarantine artifact validator now catches the exact requested examples for `token`, `strategyMemory`, `owner debug`, `DATABASE_URL`, `postgres://`, `source`, and `sourceText`, but it still relies on exact case-sensitive marker checks and misses common private artifact variants including `postgresql://`, `owner_debug`, `databaseUrl`, and `accessToken`.
-
-No obvious regression from the replay-chain fixes was found.
+WR-01 remains open. Commit `25b18eb` added the previously cited exact probes for `postgresql://`, `owner_debug`, `databaseUrl`, and `accessToken`, and those exact forms are now rejected. The validator still relies on exact key equality and case-sensitive string matching, so the same private classes remain passable through common unlisted spellings including `databaseURL`, `access_token`, `owner-debug`, `strategy_memory`, and uppercase `POSTGRESQL://`.
 
 Supporting checks run:
 
 - `pnpm exec vitest run scripts/check-service-boundary-imports.test.ts scripts/check-boundary-monitors.test.ts` passed: 2 files, 19 tests.
 - `pnpm exec tsx scripts/check-boundary-monitors.ts` passed.
 - `pnpm exec tsx scripts/check-service-boundary-imports.ts` passed with `strict_offenses=0 report_only_offenses=17`.
-- Targeted replay strict-chain probe rejected root `@cowards/persistence` and `@cowards/persistence/competition`, and allowed only the explicit replay subpaths named above.
-- Targeted worker privacy probe rejected `token`, `strategyMemory`, `owner debug`, `DATABASE_URL`, `postgres://`, `source`, and `sourceText`, but accepted `postgresql://`, `owner_debug`, `databaseUrl`, and `accessToken`.
+- Targeted worker privacy probe rejected `owner_debug`, `databaseUrl`, and `accessToken`, but accepted `databaseURL`, `access_token`, `owner-debug`, `strategy_memory`, and `POSTGRESQL://`.
 
 ## Warnings
 
 ### WARNING WR-01: Worker Quarantine Artifact Privacy Validator Still Misses Private Variants
 
-**File:** `scripts/check-boundary-monitors.ts:1726`
+**File:** `scripts/check-boundary-monitors.ts:1718`
 
-**Issue:** `assertArtifactPrivacyLeakSafe` still checks keys with exact equality and string values with exact case-sensitive `includes` against `forbiddenWorkerArtifactStrings`. The current denylist catches the specific fixed probes, but a valid PostgreSQL DSN using `postgresql://` and common field-name variants such as `owner_debug`, `databaseUrl`, and `accessToken` still pass. That leaves the quarantine artifact privacy gate vulnerable to leaking the same token, owner-debug, and DB-DSN classes under common spellings.
+**Issue:** `assertArtifactPrivacyLeakSafe` checks object keys only by exact equality and string values with case-sensitive `includes` against `forbiddenWorkerArtifactStrings`. The current denylist now catches the exact examples added in `25b18eb`, but still permits common spelling and casing variants for the same forbidden classes, including DB URL/DSN values and private token, owner-debug, and StrategyMemory fields. A hostile or drifted artifact can therefore pass the quarantine monitor while carrying private material under names such as `databaseURL`, `access_token`, `owner-debug`, `strategy_memory`, or `POSTGRESQL://`.
 
 **Fix:**
 ```ts
@@ -72,6 +61,7 @@ const normalizePrivacyText = (value: string): string =>
 
 const forbiddenNormalizedMarkers = [
   "token",
+  "access token",
   "strategy memory",
   "soldier memory",
   "owner debug",
@@ -92,10 +82,10 @@ const isForbiddenArtifactPrivacyText = (value: string): boolean => {
 }
 ```
 
-Use this helper for both object keys and string values, and add regression tests for `postgresql://example`, `owner_debug`, `databaseUrl`, and `accessToken` in addition to the exact probes already covered.
+Use this helper for both object keys and string values, and add regression tests for `databaseURL`, `access_token`, `owner-debug`, `strategy_memory`, and uppercase `POSTGRESQL://` in addition to the exact probes already covered.
 
 ---
 
-_Reviewed: 2026-05-24T21:17:46Z_
+_Reviewed: 2026-05-24T21:21:43Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
