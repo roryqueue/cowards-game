@@ -27,10 +27,14 @@ export interface ReplayFixtureScenarioCatalogEntry {
   replayHref: string
 }
 
-export const isReplayFixtureEnabled = (): boolean =>
-  process.env.PLAYWRIGHT_TEST === "1" ||
-  process.env.NODE_ENV === "test" ||
-  process.env.NODE_ENV === "development"
+type ReplayFixtureEnv = Partial<Record<string, string | undefined>>
+
+export const isReplayFixtureEnabled = (
+  env: ReplayFixtureEnv = process.env,
+): boolean =>
+  env.PLAYWRIGHT_TEST === "1" ||
+  env.NODE_ENV === "test" ||
+  env.COWARDS_ENABLE_REPLAY_FIXTURES === "1"
 
 const safeDecodeURIComponent = (value: string): string | null => {
   try {
@@ -70,8 +74,10 @@ export const getReplayFixtureScenarioId = (
   return isCanonicalReplayScenarioId(scenarioId) ? scenarioId : null
 }
 
-export const isReplayFixtureMatch = (matchId: string): boolean =>
-  isReplayFixtureEnabled() && getReplayFixtureScenarioId(matchId) !== null
+export const isReplayFixtureMatch = (
+  matchId: string,
+  env: ReplayFixtureEnv = process.env,
+): boolean => isReplayFixtureEnabled(env) && getReplayFixtureScenarioId(matchId) !== null
 
 export const createReplayFixtureCatalog =
   (): ReplayFixtureScenarioCatalogEntry[] =>

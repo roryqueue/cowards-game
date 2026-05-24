@@ -8448,6 +8448,74 @@
       "scannerFindings": []
     },
     {
+      "id": "apps-web-app-api-test-support-replay-fixture-route-test",
+      "path": "apps/web/app/api/test-support/replay-fixture/route.test.ts",
+      "kind": "web-frontend-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "not_product_runtime",
+      "privacyClass": "private-or-owner-scoped",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "test-support",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 2,
+          "source": "../../../matches/replay-fixture.js",
+          "statementText": "import {\n  isReplayFixtureEnabled,\n  replayFixtureMatchId,\n} from \"../../../matches/replay-fixture.js\""
+        },
+        {
+          "line": 6,
+          "source": "./route.js",
+          "statementText": "import { GET } from \"./route.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/app/matches/replay-fixture.ts",
+        "apps/web/app/matches/replay-ready.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": true,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/api/test-support/replay-fixture/route.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/app/matches/replay-fixture.ts, apps/web/app/matches/replay-ready.ts"
+        }
+      ]
+    },
+    {
       "id": "apps-web-app-api-test-support-run-worker-once-route-test",
       "path": "apps/web/app/api/test-support/run-worker-once/route.test.ts",
       "kind": "web-frontend-module",
@@ -8475,6 +8543,11 @@
         },
         {
           "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import { assertPublicOutputLeakSafe } from \"@cowards/spec\""
+        },
+        {
+          "line": 3,
           "source": "./route.js",
           "statementText": "import {\n  createRunWorkerOnceHandler,\n  isWorkerTestSupportEnabled,\n} from \"./route.js\""
         }
@@ -12693,7 +12766,7 @@
           "statementText": "import {\n  createReplayFixtureData,\n  getReplayFixtureScenarioId,\n  isReplayFixtureMatch,\n} from \"./replay-fixture.js\""
         },
         {
-          "line": 45,
+          "line": 52,
           "source": "./types.js",
           "statementText": "export type { GetMatchReplayOptions } from \"./types.js\""
         },

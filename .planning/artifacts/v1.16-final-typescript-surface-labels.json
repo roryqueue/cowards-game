@@ -5,7 +5,7 @@
   "generatedAt": "2026-05-24",
   "generatedBy": "scripts/generate-typescript-surface-labels.ts",
   "sourceInventoryPath": ".planning/artifacts/v1.16-typescript-backend-inventory.json",
-  "sourceInventorySurfaceCount": 184,
+  "sourceInventorySurfaceCount": 185,
   "globalPolicies": {
     "normalTypeScriptBackendAllowed": false,
     "publicOutputPrivacyRequired": true,
@@ -22,14 +22,14 @@
     "rollback-only": 5,
     "runtime-adapter": 18,
     "runtime-service": 5,
-    "test-only": 48
+    "test-only": 49
   },
   "capabilityGroups": {
     "fixture": 3,
     "frontend-only": 38,
     "governance-admin": 2,
     "ladder": 4,
-    "owner-debug": 19,
+    "owner-debug": 20,
     "parity": 15,
     "rollback": 6,
     "runtime-adapter": 18,
@@ -3640,6 +3640,37 @@
         "taxonomyRole": "test-only",
         "surfaceLabel": "test-only",
         "capabilityGroup": "test-support",
+        "selectedNormal": false,
+        "noPublicFallback": true
+      }
+    },
+    {
+      "id": "apps-web-app-api-test-support-replay-fixture-route-test",
+      "path": "apps/web/app/api/test-support/replay-fixture/route.test.ts",
+      "kind": "web-frontend-module",
+      "taxonomyRole": "test-only",
+      "surfaceLabel": "private-owner-debug-replay",
+      "capabilityGroup": "owner-debug",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic. Phase 107 final label: Owner-debug replay is private/deferred and never public evidence fallback.",
+      "risk": "test or fixture path exposed to product runtime; Owner-debug replay is private/deferred and never public evidence fallback.",
+      "privacyClass": "owner-private-replay-debug",
+      "gate": "requires PLAYWRIGHT_TEST=1, NODE_ENV=test, or COWARDS_ENABLE_OWNER_DEBUG_REPLAY=1 plus ownerDebug/debug query and persisted owner authorization",
+      "futureMigration": "Future Go owner-debug replay projection migration; public replay evidence must not fallback to this path.",
+      "monitorStatus": "phase-107-monitor-enforced",
+      "selectedNormal": false,
+      "selectedNormalJustification": "Owner-debug replay is private/deferred and never public evidence fallback.",
+      "publicOutputPrivacy": "owner-private",
+      "noPublicFallback": true,
+      "normalBackendAuthority": false,
+      "routeMethods": [],
+      "routeFamily": "test-support",
+      "sourceInventoryRole": "test-only",
+      "publicOutputExample": {
+        "path": "apps/web/app/api/test-support/replay-fixture/route.test.ts",
+        "taxonomyRole": "test-only",
+        "surfaceLabel": "private-owner-debug-replay",
+        "capabilityGroup": "owner-debug",
         "selectedNormal": false,
         "noPublicFallback": true
       }

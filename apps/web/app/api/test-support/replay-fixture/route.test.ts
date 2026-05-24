@@ -14,7 +14,7 @@ describe("replay fixture test-support route", () => {
 
     const response = await GET(
       new Request("http://local.test/api/test-support/replay-fixture"),
-      {},
+      { env: {} },
     )
 
     expect(response.status).toBe(404)

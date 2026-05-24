@@ -126,6 +126,10 @@ const trimDiagnostic = (value: unknown): string | undefined => {
   if (trimmed.length === 0) {
     return undefined
   }
+  const privateMarker = /stack|stderr|token|session|database_url|postgres:|postgresql:|strategy|memory|objective|owner.?debug|awareness|source|host path/i
+  if (privateMarker.test(trimmed)) {
+    return "redacted diagnostic omitted"
+  }
   return trimmed.length > 2_000 ? `${trimmed.slice(0, 2_000)}...` : trimmed
 }
 
@@ -139,7 +143,7 @@ const workerFailurePayload = (error: unknown): Record<string, unknown> => {
   return {
     error:
       error instanceof Error
-        ? error.message
+        ? (trimDiagnostic(error.message) ?? "Worker test-support execution failed.")
         : "Worker test-support execution failed.",
     layer: "worker_execution" satisfies WorkerFailureLayer,
     status: "service_unavailable",
@@ -149,8 +153,8 @@ const workerFailurePayload = (error: unknown): Record<string, unknown> => {
         : undefined,
     signal:
       typeof diagnostic.signal === "string" ? diagnostic.signal : undefined,
-    stdout: trimDiagnostic(diagnostic.stdout),
-    stderr: trimDiagnostic(diagnostic.stderr),
+    outputDiagnostic: trimDiagnostic(diagnostic.stdout),
+    errorDiagnostic: trimDiagnostic(diagnostic.stderr),
   }
 }
 
@@ -168,10 +172,7 @@ export const createRunWorkerOnceHandler =
         status: "ok",
         executed: [],
       }
-      return Response.json({
-        ...payload,
-        stderr: result.stderr.trim() || undefined,
-      })
+      return Response.json(payload)
     } catch (error) {
       return Response.json(workerFailurePayload(error), { status: 503 })
     }

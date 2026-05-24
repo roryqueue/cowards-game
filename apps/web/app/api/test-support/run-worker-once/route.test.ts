@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { assertPublicOutputLeakSafe } from "@cowards/spec"
 import {
   createRunWorkerOnceHandler,
   isWorkerTestSupportEnabled,
@@ -30,11 +31,13 @@ describe("run-worker-once test-support route", () => {
     })()
 
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual({
+    const body = await response.json()
+    expect(body).toEqual({
       status: "ok",
       workerId: "worker:test",
       executed: ["completed"],
     })
+    expect(() => assertPublicOutputLeakSafe(body)).not.toThrow()
   })
 
   it("fails loudly when the service-backed worker process cannot run", async () => {
@@ -46,11 +49,13 @@ describe("run-worker-once test-support route", () => {
     })()
 
     expect(response.status).toBe(503)
-    await expect(response.json()).resolves.toMatchObject({
+    const body = await response.json()
+    expect(body).toMatchObject({
       status: "service_unavailable",
       layer: "worker_execution",
       error: "connect ECONNREFUSED 127.0.0.1:5432",
     })
+    expect(() => assertPublicOutputLeakSafe(body)).not.toThrow()
   })
 
   it("returns bounded worker diagnostics on process failure", async () => {
@@ -75,8 +80,11 @@ describe("run-worker-once test-support route", () => {
       layer: "worker_execution",
       error: "worker exited",
       code: 1,
-      stdout: "worker booted",
+      outputDiagnostic: "worker booted",
+      errorDiagnostic: "redacted diagnostic omitted",
     })
-    expect(body.stderr.length).toBeLessThanOrEqual(2_003)
+    expect(JSON.stringify(body)).not.toContain("stack trace")
+    expect(JSON.stringify(body)).not.toContain("stderr")
+    expect(() => assertPublicOutputLeakSafe(body)).not.toThrow()
   })
 })

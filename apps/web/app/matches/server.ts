@@ -42,6 +42,13 @@ type ResolveAuthorizedReplayOwners = (input: {
 const WORKSHOP_PLAYER_ID = "player:workshop-local" as PlayerId
 const WORKSHOP_MATCH_SET_PREFIX = "match-set:workshop:"
 
+const isOwnerDebugReplayRequestEnabled = (
+  env: PublicReadRouteOwnershipEnv,
+): boolean =>
+  env.PLAYWRIGHT_TEST === "1" ||
+  env.NODE_ENV === "test" ||
+  env.COWARDS_ENABLE_OWNER_DEBUG_REPLAY === "1"
+
 export type { GetMatchReplayOptions } from "./types.js"
 
 export interface MatchReplayServerDeps {
@@ -162,17 +169,16 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
       options: GetMatchReplayOptions = {},
     ): Promise<ReplayPageData> {
       const resolvedMatchId = decodeMatchId(matchId)
-      if (isReplayFixtureMatch(resolvedMatchId)) {
+      if (isReplayFixtureMatch(resolvedMatchId, env)) {
         return createReplayFixtureData({
           ...options,
           scenarioId: getReplayFixtureScenarioId(resolvedMatchId) ?? undefined,
         })
       }
-      if (
-        selectedPublicReplayEvidence &&
-        options.allowOwnerDebug !== true &&
-        options.mode !== "owner"
-      ) {
+      const allowOwnerDebug =
+        options.allowOwnerDebug === true &&
+        isOwnerDebugReplayRequestEnabled(env)
+      if (selectedPublicReplayEvidence && !allowOwnerDebug) {
         if (!publicReplayEvidenceClient) {
           throw new Error(
             "getPublicReplayEvidence Go ownership requires COWARDS_GO_BACKEND_URL",
@@ -207,7 +213,7 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
         }
 
         const authorizedRequestedOwners =
-          options.allowOwnerDebug === true &&
+          allowOwnerDebug &&
           options.requestedOwnerPlayerId !== undefined &&
           resolveAuthorizedReplayOwners !== undefined
             ? await resolveAuthorizedReplayOwners({

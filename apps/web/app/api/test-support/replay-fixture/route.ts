@@ -17,8 +17,17 @@ const readScenario = (
   return scenarios.find((candidate) => candidate.id === scenario)?.id ?? null
 }
 
-export async function GET(request: Request): Promise<Response> {
-  if (!isReplayFixtureEnabled()) {
+type ReplayFixtureRouteDeps = {
+  env?: Partial<Record<string, string | undefined>>
+}
+
+export async function GET(
+  request: Request,
+  deps: ReplayFixtureRouteDeps = {},
+): Promise<Response> {
+  const env = deps.env ?? process.env
+
+  if (!isReplayFixtureEnabled(env)) {
     return Response.json({ error: "Not found" }, { status: 404 })
   }
 
