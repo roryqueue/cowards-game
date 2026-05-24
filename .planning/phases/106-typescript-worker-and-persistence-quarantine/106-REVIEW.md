@@ -1,107 +1,75 @@
 ---
 phase: 106-typescript-worker-and-persistence-quarantine
-reviewed: 2026-05-24T20:57:51Z
+reviewed: 2026-05-24T21:05:58Z
 depth: deep
-files_reviewed: 16
+re_review_of: c2fca1479751c091ec6ea3aadd5ff0ced688ea7f
+files_reviewed: 15
 files_reviewed_list:
-  - apps/worker/src/index.ts
-  - apps/worker/src/runner.test.ts
-  - apps/worker/src/runner.ts
+  - apps/web/app/matches/[matchId]/replay/page.tsx
+  - apps/web/app/matches/replay-fixture.ts
+  - apps/web/app/matches/replay-ready.ts
+  - apps/web/app/matches/server.test.ts
+  - apps/web/app/matches/server.ts
   - packages/persistence/package.json
-  - packages/persistence/src/competition.test.ts
-  - packages/persistence/src/competition.ts
   - packages/persistence/src/index.ts
   - packages/persistence/src/quarantine-lifecycle.ts
   - packages/service/src/index.ts
   - packages/service/src/service.test.ts
   - scripts/check-boundary-monitors.test.ts
   - scripts/check-boundary-monitors.ts
+  - scripts/check-service-boundary-imports.ts
   - scripts/generate-typescript-backend-inventory.test.ts
-  - scripts/generate-typescript-backend-inventory.ts
-  - .planning/artifacts/v1.16-typescript-backend-inventory.json
   - .planning/artifacts/v1.16-typescript-worker-quarantine.json
 findings:
-  critical: 2
+  critical: 1
   warning: 1
   info: 0
-  total: 3
+  total: 2
 status: issues_found
 ---
 
-# Phase 106: Code Review Report
+# Phase 106: Code Review Re-Review
 
-**Reviewed:** 2026-05-24T20:57:51Z
+**Reviewed:** 2026-05-24T21:05:58Z
 **Depth:** deep
-**Files Reviewed:** 16
+**Commit:** `c2fca1479751c091ec6ea3aadd5ff0ced688ea7f`
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the Phase 106 worker/persistence quarantine changes from `7cf58d9..8488f9a` against `106-PLAN.md` and QUAR-01 through QUAR-07. The worker startup guard is before pool creation and normal TypeScript lifecycle ownership is blocked, but Chronicle persistence remains reachable outside the explicit quarantine boundary and the selected replay page monitor does not follow the selected normal page import chain. Current reviewed artifacts did not contain real token, DSN, host-path, Strategy source, StrategyMemory, SoldierMemory, or objective payload values, but the new worker quarantine artifact validator does not enforce that property against future changes.
+Re-reviewed commit `c2fca14` against the prior Phase 106 findings. CR-01 is resolved: Chronicle persistence is no longer exported from `@cowards/persistence` or the `@cowards/persistence/chronicle-store` package subpath, and retained access now goes through `@cowards/persistence/quarantine-lifecycle`.
 
-Supporting checks run during review:
+CR-02 remains open. The selected replay page import chain is still not enforced as a strict selected-normal boundary; the new monitor hard-codes a positive check for the quarantined Chronicle import instead of rejecting TypeScript persistence reachability through the page graph. WR-01 is partially fixed, but the artifact privacy validator still misses several required denylist variants and real DSN-style markers.
 
-- `pnpm --filter @cowards/persistence exec tsx -e ...` confirmed `@cowards/persistence` still exports `createPostgresChronicleStore`, `createChronicleMetadata`, and `createMemoryChronicleStoreForTests`.
-- `pnpm exec tsx -e ... analyzeServiceBoundaryImports()` confirmed `apps/web/app/matches/server.ts` persistence imports are report-only, not strict, and the selected replay page has no strict offense.
-- `pnpm exec tsx -e ... validateV116TypeScriptWorkerQuarantineArtifact(...)` accepted a synthetic artifact containing `token` and `strategyMemory`.
+Supporting checks run:
+
+- `pnpm --filter @cowards/persistence exec tsx -e '(async()=>{...})()'` confirmed `@cowards/persistence/chronicle-store` is rejected and quarantine exports `createPostgresChronicleStore` / `createChronicleMetadata`.
+- `pnpm exec tsx -e 'import("./scripts/check-service-boundary-imports.ts").then(...)'` showed `apps/web/app/matches/server.ts` replay persistence imports are still report-only, with zero strict offenses.
+- `pnpm exec vitest run scripts/check-boundary-monitors.test.ts scripts/generate-typescript-backend-inventory.test.ts apps/web/app/matches/server.test.ts packages/persistence/src/competition.test.ts packages/service/src/service.test.ts apps/worker/src/runner.test.ts` passed: 6 files, 98 tests.
+- `pnpm exec tsx scripts/check-boundary-monitors.ts` passed.
 
 ## Critical Issues
 
-### BLOCKER CR-01: Chronicle Persistence Is Still Exported From The Normal Persistence Root
+### BLOCKER CR-02: Selected Replay Evidence Monitor Still Does Not Follow And Enforce The Page Import Chain
 
-**File:** `packages/persistence/src/index.ts:7`
+**File:** `scripts/check-boundary-monitors.ts:890`
 
-**Issue:** QUAR-02 requires TypeScript Chronicle persistence to be deleted, quarantined, or removed from normal runtime backend reachability. The root `@cowards/persistence` export still re-exports `./chronicle-store.js`, which exposes `createPostgresChronicleStore` and its `put()` method for writing Chronicle rows. `packages/persistence/package.json:13` also keeps the direct `@cowards/persistence/chronicle-store` subpath. This means Chronicle persistence is still reachable without the explicit `@cowards/persistence/quarantine-lifecycle` boundary, and the new monitor at `scripts/check-boundary-monitors.ts:1804` omits `chronicle-store` from the forbidden root-export list, so the regression is not caught.
+**Issue:** The selected Go route validator still applies forbidden import checks only when `route.nextPath.startsWith("/api/")`. The selected replay evidence route is the page path `/matches/[matchId]/replay`, so the monitor does not recursively inspect `apps/web/app/matches/[matchId]/replay/page.tsx -> ../../server.js`. `apps/web/app/matches/server.ts:1` still imports `@cowards/persistence/db`, `apps/web/app/matches/server.ts:2` imports `@cowards/persistence/quarantine-lifecycle`, and `scripts/check-service-boundary-imports.ts:7` still omits the replay page/server from `strictMigratedFiles`, leaving those imports report-only. The added check at `scripts/check-boundary-monitors.ts:1891` requires the quarantined Chronicle boundary to be present, which documents the fallback path instead of making the selected-normal import graph fail closed.
 
-**Fix:**
-
-```typescript
-// packages/persistence/src/index.ts
-// Remove Chronicle persistence from the normal root export.
-export * from "./db.js"
-export * from "./migrations.js"
-export * from "./schema.js"
-// no export * from "./chronicle-store.js"
-```
-
-Move retained Chronicle persistence access behind an explicit non-normal subpath or split pure metadata helpers from DB-writing store helpers. Add `chronicle-store` / `createPostgresChronicleStore` to the Phase 106 root-export and package-subpath monitor checks.
-
-### BLOCKER CR-02: Selected Replay Evidence Monitor Does Not Follow The Page Import Chain
-
-**File:** `scripts/check-boundary-monitors.ts:874`
-
-**Issue:** The selected Go route monitor checks forbidden TypeScript backend imports only when `nextPath` starts with `/api/`. The selected normal public replay evidence route is a page path (`/matches/[matchId]/replay`), so the monitor only checks for the token `getMatchReplay`. That page imports `../../server.js`, and `apps/web/app/matches/server.ts` imports `@cowards/persistence/db` and `@cowards/persistence/chronicle-store`. `scripts/check-service-boundary-imports.ts:7` also omits the replay page and server from `strictMigratedFiles`, leaving those persistence imports report-only. This fails the Phase 106 requirement that selected normal public evidence paths cannot lazily use TypeScript Chronicle/public evidence fallback and that tests/monitors fail on selected-normal import regressions.
-
-**Fix:** Make selected route validation resolve local imports for both API routes and pages, then reject `@cowards/persistence`, `@cowards/service`, `@cowards/persistence/quarantine-lifecycle`, `createPostgresChronicleStore`, `buildPublicMatchSetResultDto`, and `refreshMatchSetStatus` anywhere in the selected route import graph. Also add `apps/web/app/matches/[matchId]/replay/page.tsx` and `apps/web/app/matches/server.ts` to strict boundary coverage or split selected Go replay access into a strict Go-only server module.
+**Fix:** Resolve local imports for every selected route, including pages, and reject selected-normal import graphs that reach `@cowards/persistence`, `@cowards/service`, `@cowards/persistence/quarantine-lifecycle`, `createPostgresChronicleStore`, `buildPublicMatchSetResultDto`, or `refreshMatchSetStatus`. Add `apps/web/app/matches/[matchId]/replay/page.tsx` and `apps/web/app/matches/server.ts` to strict boundary coverage, or split public selected replay access into a Go-only server module that has no TypeScript persistence imports.
 
 ## Warnings
 
-### WARNING WR-01: Worker Quarantine Artifact Validator Does Not Enforce Privacy Denylist
+### WARNING WR-01: Worker Quarantine Artifact Privacy Validator Still Has Denylist Gaps
 
-**File:** `scripts/check-boundary-monitors.ts:1690`
+**File:** `scripts/check-boundary-monitors.ts:277`
 
-**Issue:** The Phase 106 plan required monitor validation to reject Strategy source, StrategyMemory, SoldierMemory, objective payload, owner debug, stack, stderr, sessions, tokens, DB DSNs, host paths, and private runtime internals in the new artifacts. `validateV116TypeScriptWorkerQuarantineArtifact` checks structure and ownership policy, but never calls the public payload leak guard or scans the serialized artifact for private markers. A synthetic valid artifact with `token` and `strategyMemory` fields is accepted, so tests will not fail on future privacy regressions in this artifact.
+**Issue:** The validator now rejects obvious keys like `token` and `strategyMemory`, but it still uses case-sensitive substring markers and misses required variants. A synthetic otherwise-valid artifact with `diagnosticExample: { ownerDebug: true }` is rejected, but `diagnosticExample: { note: "owner debug" }`, `diagnosticExample: { DATABASE_URL: "postgres://x" }`, `diagnosticExample: { dsn: "postgres://x" }`, and `diagnosticExample: { source: "strategy code" }` are accepted. That leaves gaps for the prior denylist's owner debug, DB DSN, and Strategy source classes.
 
-**Fix:** Add a privacy assertion inside `validateV116TypeScriptWorkerQuarantineArtifact`, with tests that mutate the artifact to include each denied marker and expect the validator to throw.
-
-```typescript
-export const validateV116TypeScriptWorkerQuarantineArtifact = (
-  artifact: unknown,
-): string => {
-  const root = requireRecord(artifact, "v1.16 TypeScript worker quarantine")
-  assertMonitorPublicPayload(root)
-  const serialized = JSON.stringify(root)
-  for (const marker of requiredV116FailurePrivacyDenylist) {
-    if (serialized.includes(marker)) {
-      throw new Error(`worker quarantine artifact contains private marker ${marker}`)
-    }
-  }
-  // existing structural checks...
-}
-```
+**Fix:** Normalize keys and strings before scanning, include snake_case and spaced variants such as `owner_debug`, `owner debug`, `db_dsn`, `database_url`, `dsn`, and `strategy source`, and add value-pattern checks for DSN-like strings such as `postgres://`. Extend tests to mutate the artifact with each denied class and assert rejection.
 
 ---
 
-_Reviewed: 2026-05-24T20:57:51Z_
+_Reviewed: 2026-05-24T21:05:58Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
