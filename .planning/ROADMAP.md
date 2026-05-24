@@ -188,7 +188,7 @@ TypeScript service/backend paths may remain only as parity oracle, test fixture 
 
 ## Next Up
 
-Continue with `$gsd-plan-phase 105` or `$gsd-execute-phase 105` after reviewing the Phase 104 summary, validation notes, and verification report.
+Continue with `$gsd-plan-phase 106` after reviewing the Phase 105 summary, validation notes, and verification report.
 
 ---
-*Last updated: 2026-05-24 after Phase 104 verification*
+*Last updated: 2026-05-24 after Phase 105 verification*

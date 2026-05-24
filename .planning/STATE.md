@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: Runtime Isolation and TypeScript Backend Retirement
 status: planning
-stopped_at: Phase 105 complete; ready for Phase 106 planning
-last_updated: "2026-05-24T19:24:02.000Z"
-last_activity: 2026-05-24 - Phase 105 web/API Go-only cutover and fallback removal completed
+stopped_at: Phase 105 verified; ready for Phase 106 planning
+last_updated: "2026-05-24T20:33:02.000Z"
+last_activity: 2026-05-24 - Phase 105 verification passed for WEB-01 through WEB-08
 progress:
   total_phases: 7
   completed_phases: 3
@@ -34,8 +34,8 @@ See: .planning/PROJECT.md (updated 2026-05-24)
 
 Phase: 106 - TypeScript Worker and Persistence Quarantine
 Plan: Not started
-Status: Phase 105 complete; ready for Phase 106 planning
-Last activity: 2026-05-24 - Phase 105 completed WEB-01 through WEB-08 with selected Go-only web/API cutover
+Status: Phase 105 verified; ready for Phase 106 planning
+Last activity: 2026-05-24 - Phase 105 verification passed WEB-01 through WEB-08 with selected Go-only web/API cutover
 
 ## Workflow Settings
 
@@ -91,7 +91,7 @@ v1.16 goal:
 - Boundary monitors pass with `strict_offenses=0 report_only_offenses=29`.
 - Phase 105 cut selected web/API account, auth, fork, exhibition, public read, and public replay routes to Go-only contracts with no silent TypeScript backend fallback.
 - Phase 105 added the v1.16 selected Go route manifest and reduced boundary report-only selected normal offenses from 29 to 22.
-- Phase 105 static gates passed; live selected page smoke remains a documented residual risk until local web, Go backend, and runtime-service processes are running.
+- Phase 105 verification passed focused tests, strict selected page smoke, replay visual realism, boundary monitors, and no-fallback checks with local web, Go backend, and runtime-service processes running.
 
 ## Next Todos
 
@@ -106,7 +106,7 @@ v1.16 goal:
 - Go and TypeScript DB-owning workers must not claim or complete the same normal queue concurrently during rollback.
 - `pnpm boundary:monitors` must stay synchronized with Go route manifests, fixtures, runtime contracts, topology artifacts, and surface labels.
 - Phase 104 verification passed, but full live `pnpm boundary:monitors` still needs local web, Go, runtime-service, and auth-gated endpoints running; see `104-VALIDATION.md` and `104-VERIFICATION.md`.
-- Phase 105 live `pnpm topology:check -- --require-web-page-smoke --require-go --require-runtime-service --require-v1-16-selected-go-pages` failed because local services were not running; see `105-VALIDATION.md`.
+- Phase 105 live `pnpm topology:check -- --require-web-page-smoke --require-go --require-runtime-service --require-v1-16-selected-go-pages` passed after local services were running; see `105-VALIDATION.md` and `105-VERIFICATION.md`.
 
 ## Decisions
 
@@ -135,8 +135,8 @@ v1.16 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-24T19:24:02.000Z
-Stopped at: Phase 105 complete; Phase 106 is ready for planning.
+Last session: 2026-05-24T20:33:02.000Z
+Stopped at: Phase 105 verified; Phase 106 is ready for planning.
 Resume file: .planning/STATE.md
 
 ## Operator Next Steps
