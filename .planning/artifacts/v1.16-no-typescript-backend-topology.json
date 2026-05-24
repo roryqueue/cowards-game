@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "v1.16-no-typescript-backend-topology",
+  "milestone": "v1.16",
+  "phase": "108",
+  "ok": true,
+  "normalTopology": "web frontend -> Go backend -> isolated JS/TS Strategy runtime service",
+  "allowedTypeScriptProcesses": [
+    "web_frontend",
+    "isolated_js_ts_runtime_service"
+  ],
+  "disallowedTypeScriptBackendProcesses": [
+    "typescript_service_backend",
+    "typescript_worker_normal_lifecycle",
+    "direct_web_persistence_selected_routes",
+    "cowards_service_selected_route_fallback",
+    "strategy_execution_in_web_api_or_go_process"
+  ],
+  "strictTopologyMode": {
+    "flag": "--require-v1-16-no-typescript-backend",
+    "command": "pnpm topology:check -- --require-v1-16-no-typescript-backend --json",
+    "requires": [
+      "web_health",
+      "representative_page_smoke",
+      "go_health",
+      "runtime_service_health",
+      "selected_go_page_smoke",
+      "web_through_go_public_strategy_read",
+      "v1.15_lifecycle_evidence",
+      "v1.16_no_typescript_backend_artifacts"
+    ]
+  },
+  "monitorMode": {
+    "command": "COWARDS_REQUIRE_LIVE_TOPOLOGY=1 pnpm boundary:monitors",
+    "defaultLiveTopology": "optional",
+    "requiredLiveTopology": "v1.16_no_typescript_backend"
+  },
+  "pageSmoke": {
+    "representativeMajorPageTypesRequired": true,
+    "selectedGoPagesRequired": true,
+    "replayRealismRequired": true,
+    "workshopTreatment": "load-only-deferred-not-go-owned"
+  },
+  "failureDrills": {
+    "stoppedGo": {
+      "failClosed": true,
+      "typescriptFallbackObserved": false,
+      "expectedBehavior": "selected normal web/API reads and writes fail as unavailable rather than using TypeScript service/backend"
+    },
+    "stoppedRuntimeService": {
+      "classification": "retryable_system_failure",
+      "typescriptBackendFallbackObserved": false,
+      "expectedBehavior": "Go orchestration records or reports system failure classification rather than executing Strategy code in Go, web/API, or TypeScript backend"
+    }
+  },
+  "publicOutputForbiddenByDefault": [
+    "Strategy source",
+    "StrategyMemory",
+    "SoldierMemory",
+    "objective payload",
+    "owner debug",
+    "raw Awareness Grid",
+    "stack",
+    "stderr",
+    "session",
+    "token",
+    "DB DSN",
+    "host path",
+    "private runtime internals"
+  ],
+  "linkedArtifacts": [
+    {
+      "path": ".planning/artifacts/v1.16-selected-go-route-manifest.json",
+      "purpose": "selected normal Go route ownership and no TypeScript fallback"
+    },
+    {
+      "path": ".planning/artifacts/v1.16-runtime-service-boundary.json",
+      "purpose": "Strategy Execution Service / Runtime Broker-ready isolated JS/TS runtime service contract"
+    },
+    {
+      "path": ".planning/artifacts/v1.16-typescript-worker-quarantine.json",
+      "purpose": "normal TypeScript worker lifecycle quarantine and rollback-only policy"
+    },
+    {
+      "path": ".planning/artifacts/v1.16-final-typescript-surface-labels.json",
+      "purpose": "final TypeScript surface taxonomy and no normal backend authority labels"
+    },
+    {
+      "path": ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+      "purpose": "v1.15 backend ownership baseline evidence"
+    },
+    {
+      "path": ".planning/artifacts/v1.15-failure-drills.json",
+      "purpose": "v1.15 stopped-service fail-closed baseline"
+    }
+  ]
+}

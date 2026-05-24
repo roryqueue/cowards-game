@@ -12,7 +12,12 @@ import {
   analyzeServiceBoundaryImports,
   type ServiceBoundaryOffense,
 } from "./check-service-boundary-imports.ts"
-import { evaluateLocalTopology } from "./check-local-topology.ts"
+import {
+  evaluateLocalTopology,
+  validateV116NoTypeScriptBackendTopologyArtifact,
+} from "./check-local-topology.ts"
+
+export { validateV116NoTypeScriptBackendTopologyArtifact }
 import {
   SERVICE_API_ROUTES,
   STRATEGY_RUNTIME_ABI_VERSION,
@@ -2584,6 +2589,7 @@ const checkTopologyDiagnostics = async (): Promise<string> => {
     requireRuntimeContainer: false,
     requireV115Lifecycle: requireLiveTopology,
     requireV116SelectedGoPages: requireLiveTopology,
+    requireV116NoTypeScriptBackend: requireLiveTopology,
     json: false,
   })
   assertMonitorPublicPayload(checks)
@@ -2594,8 +2600,8 @@ const checkTopologyDiagnostics = async (): Promise<string> => {
     )
   }
   return requireLiveTopology
-    ? `${checks.length} required live topology diagnostics checked`
-    : `${checks.length} optional topology diagnostics checked; set COWARDS_REQUIRE_LIVE_TOPOLOGY=1 for live strict mode`
+    ? `${checks.length} required live v1.16 no-TypeScript-backend topology diagnostics checked`
+    : `${checks.length} optional topology diagnostics checked; set COWARDS_REQUIRE_LIVE_TOPOLOGY=1 for live v1.16 strict mode`
 }
 
 export const runBoundaryMonitorChecks = async (): Promise<
@@ -2669,6 +2675,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("go_promotion", "v1.15 lifecycle ownership manifest", () =>
     checkV115LifecycleOwnershipManifest(),
+  ),
+  await check("topology", "v1.16 no-TypeScript-backend topology artifact", () =>
+    validateV116NoTypeScriptBackendTopologyArtifact(),
   ),
   await check("topology", "live v1.15 topology diagnostics", () =>
     checkTopologyDiagnostics(),

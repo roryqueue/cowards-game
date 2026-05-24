@@ -32,6 +32,7 @@ type Layer =
   | "web_go_read"
   | "go_readonly"
   | "v115_topology"
+  | "v116_topology"
   | "failure_drill"
   | "rollback"
   | "promotion_gate"
@@ -57,6 +58,7 @@ interface TopologyOptions {
   requireRuntimeContainer: boolean
   requireV115Lifecycle: boolean
   requireV116SelectedGoPages?: boolean
+  requireV116NoTypeScriptBackend: boolean
   json: boolean
 }
 
@@ -99,6 +101,7 @@ const localCommands = [
   "pnpm topology:check -- --web-url http://localhost:3000 --go-url http://127.0.0.1:8087",
   "pnpm topology:check -- --require-web-page-smoke --web-url http://localhost:3000",
   "pnpm topology:check -- --require-v1-15-lifecycle --json",
+  "pnpm topology:check -- --require-v1-16-no-typescript-backend --json",
   "COWARDS_GO_PUBLIC_STRATEGY_READS=1 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 pnpm --filter @cowards/web dev",
   "pnpm topology:check -- --require-web-go-public-strategy-read --web-url http://localhost:3000",
   "pnpm e2e:visual",
@@ -130,6 +133,7 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
     requireRuntimeContainer: false,
     requireV115Lifecycle: false,
     requireV116SelectedGoPages: false,
+    requireV116NoTypeScriptBackend: false,
     json: false,
   }
   for (let index = 0; index < argv.length; index += 1) {
@@ -177,6 +181,19 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
         options.runtimeServiceUrl ??= "http://127.0.0.1:3107"
         break
       case "--require-v1-15-lifecycle":
+        options.requireV115Lifecycle = true
+        options.requireWeb = true
+        options.requireWebPageSmoke = true
+        options.requireGo = true
+        options.requireWebGoPublicStrategyRead = true
+        options.requireRuntimeService = true
+        options.requireV116SelectedGoPages = true
+        options.webUrl ??= "http://localhost:3000"
+        options.goUrl ??= "http://127.0.0.1:8087"
+        options.runtimeServiceUrl ??= "http://127.0.0.1:3107"
+        break
+      case "--require-v1-16-no-typescript-backend":
+        options.requireV116NoTypeScriptBackend = true
         options.requireV115Lifecycle = true
         options.requireWeb = true
         options.requireWebPageSmoke = true
@@ -275,6 +292,16 @@ const v115TypeScriptSurfaceLabelsPath =
   ".planning/artifacts/v1.15-typescript-surface-labels.json"
 const v115GoOrchestrationEvidencePath =
   ".planning/artifacts/v1.15-go-orchestration-e2e.json"
+const v116NoTypeScriptBackendTopologyArtifactPath =
+  ".planning/artifacts/v1.16-no-typescript-backend-topology.json"
+const v116RuntimeServiceBoundaryArtifactPath =
+  ".planning/artifacts/v1.16-runtime-service-boundary.json"
+const v116TypeScriptWorkerQuarantineArtifactPath =
+  ".planning/artifacts/v1.16-typescript-worker-quarantine.json"
+const v116FinalTypeScriptSurfaceLabelsPath =
+  ".planning/artifacts/v1.16-final-typescript-surface-labels.json"
+const v116SelectedGoRouteManifestPath =
+  ".planning/artifacts/v1.16-selected-go-route-manifest.json"
 
 const routeManifest = (): RouteManifestEntry[] =>
   readJson<RouteManifestEntry[]>(routeManifestPath)
@@ -648,6 +675,18 @@ const requireStringArray = (
   return entry
 }
 
+const requireStringSetIncludes = (
+  values: readonly string[],
+  required: readonly string[],
+  label: string,
+): void => {
+  for (const item of required) {
+    if (!values.includes(item)) {
+      throw new Error(`${label} missing ${item}`)
+    }
+  }
+}
+
 const requireStepIds = (
   steps: Record<string, unknown>[],
   requiredIds: readonly string[],
@@ -817,6 +856,267 @@ const validateV115FailureDrillsArtifact = (): string => {
   }
   checkPublicPayload(artifact)
   return "stopped-Go, stopped-runtime, and rollback drills checked"
+}
+
+export const validateV116NoTypeScriptBackendTopologyArtifact = (
+  artifactOverride?: unknown,
+): string => {
+  const artifact = asRecord(
+    artifactOverride ??
+      readJson<unknown>(v116NoTypeScriptBackendTopologyArtifactPath),
+    v116NoTypeScriptBackendTopologyArtifactPath,
+  )
+  if (
+    requireString(artifact, "schemaVersion", "v1.16 topology") !==
+    "v1.16-no-typescript-backend-topology"
+  ) {
+    throw new Error("v1.16 no-TypeScript-backend topology schema drifted")
+  }
+  if (requireString(artifact, "milestone", "v1.16 topology") !== "v1.16") {
+    throw new Error("v1.16 topology milestone drifted")
+  }
+  if (!requireBoolean(artifact, "ok", "v1.16 topology")) {
+    throw new Error("v1.16 topology artifact is not passing")
+  }
+  const topology = requireString(artifact, "normalTopology", "v1.16 topology")
+  if (
+    topology !==
+    "web frontend -> Go backend -> isolated JS/TS Strategy runtime service"
+  ) {
+    throw new Error("v1.16 normal topology statement drifted")
+  }
+  const allowed = requireStringArray(
+    artifact,
+    "allowedTypeScriptProcesses",
+    "v1.16 topology",
+  )
+  if (
+    JSON.stringify(allowed) !==
+    JSON.stringify(["web_frontend", "isolated_js_ts_runtime_service"])
+  ) {
+    throw new Error("v1.16 allowed TypeScript processes broadened")
+  }
+  requireStringSetIncludes(
+    requireStringArray(
+      artifact,
+      "disallowedTypeScriptBackendProcesses",
+      "v1.16 topology",
+    ),
+    [
+      "typescript_service_backend",
+      "typescript_worker_normal_lifecycle",
+      "direct_web_persistence_selected_routes",
+      "cowards_service_selected_route_fallback",
+      "strategy_execution_in_web_api_or_go_process",
+    ],
+    "v1.16 disallowed TypeScript backend processes",
+  )
+  const strictMode = asRecord(artifact.strictTopologyMode, "strictTopologyMode")
+  if (
+    requireString(strictMode, "flag", "strictTopologyMode") !==
+    "--require-v1-16-no-typescript-backend"
+  ) {
+    throw new Error("v1.16 strict topology flag drifted")
+  }
+  const command = requireString(strictMode, "command", "strictTopologyMode")
+  if (!command.includes("--require-v1-16-no-typescript-backend")) {
+    throw new Error("v1.16 strict topology command missing flag")
+  }
+  requireStringSetIncludes(
+    requireStringArray(strictMode, "requires", "strictTopologyMode"),
+    [
+      "web_health",
+      "representative_page_smoke",
+      "go_health",
+      "runtime_service_health",
+      "selected_go_page_smoke",
+      "web_through_go_public_strategy_read",
+      "v1.15_lifecycle_evidence",
+      "v1.16_no_typescript_backend_artifacts",
+    ],
+    "v1.16 strict topology requirements",
+  )
+  const failureDrills = asRecord(artifact.failureDrills, "failureDrills")
+  const stoppedGo = asRecord(failureDrills.stoppedGo, "failureDrills.stoppedGo")
+  if (
+    !requireBoolean(stoppedGo, "failClosed", "failureDrills.stoppedGo") ||
+    requireBoolean(
+      stoppedGo,
+      "typescriptFallbackObserved",
+      "failureDrills.stoppedGo",
+    )
+  ) {
+    throw new Error("v1.16 stopped-Go drill must fail closed without fallback")
+  }
+  const stoppedRuntime = asRecord(
+    failureDrills.stoppedRuntimeService,
+    "failureDrills.stoppedRuntimeService",
+  )
+  if (
+    !["retryable_system_failure", "terminal_system_failure"].includes(
+      requireString(
+        stoppedRuntime,
+        "classification",
+        "failureDrills.stoppedRuntimeService",
+      ),
+    ) ||
+    requireBoolean(
+      stoppedRuntime,
+      "typescriptBackendFallbackObserved",
+      "failureDrills.stoppedRuntimeService",
+    )
+  ) {
+    throw new Error(
+      "v1.16 stopped-runtime drill must classify without TypeScript backend fallback",
+    )
+  }
+  requireStringSetIncludes(
+    requireStringArray(
+      artifact,
+      "publicOutputForbiddenByDefault",
+      "v1.16 topology",
+    ),
+    [
+      "Strategy source",
+      "StrategyMemory",
+      "SoldierMemory",
+      "objective payload",
+      "owner debug",
+      "raw Awareness Grid",
+      "stack",
+      "stderr",
+      "session",
+      "token",
+      "DB DSN",
+      "host path",
+      "private runtime internals",
+    ],
+    "v1.16 public-output denylist",
+  )
+  const linkedArtifacts = requireRecordArray(
+    artifact,
+    "linkedArtifacts",
+    "v1.16 topology",
+  )
+  requireStringSetIncludes(
+    linkedArtifacts.map((item) => requireString(item, "path", "linkedArtifact")),
+    [
+      v116SelectedGoRouteManifestPath,
+      v116RuntimeServiceBoundaryArtifactPath,
+      v116TypeScriptWorkerQuarantineArtifactPath,
+      v116FinalTypeScriptSurfaceLabelsPath,
+    ],
+    "v1.16 linked artifacts",
+  )
+  for (const linked of linkedArtifacts) {
+    const linkedPath = requireString(linked, "path", "linkedArtifact")
+    if (!existsSync(path.join(repoRoot, linkedPath))) {
+      throw new Error(`v1.16 linked artifact missing ${linkedPath}`)
+    }
+  }
+  checkPublicPayload(artifact)
+  return "v1.16 no-TypeScript-backend topology artifact checked"
+}
+
+const validateV116NoTypeScriptBackendRuntimeContracts = (): string => {
+  validateV116NoTypeScriptBackendTopologyArtifact()
+  const runtime = asRecord(
+    readJson<unknown>(v116RuntimeServiceBoundaryArtifactPath),
+    v116RuntimeServiceBoundaryArtifactPath,
+  )
+  const currentImplementation = asRecord(
+    runtime.currentImplementation,
+    "runtime.currentImplementation",
+  )
+  if (
+    requireString(
+      currentImplementation,
+      "label",
+      "runtime.currentImplementation",
+    ) !== "isolated JS/TS runtime service" ||
+    !requireBoolean(
+      currentImplementation,
+      "notBackend",
+      "runtime.currentImplementation",
+    )
+  ) {
+    throw new Error("v1.16 runtime service is no longer isolated/not-backend")
+  }
+  const worker = asRecord(
+    readJson<unknown>(v116TypeScriptWorkerQuarantineArtifactPath),
+    v116TypeScriptWorkerQuarantineArtifactPath,
+  )
+  const workerPolicies = asRecord(worker.globalPolicies, "worker.globalPolicies")
+  if (
+    requireBoolean(
+      workerPolicies,
+      "normalTypeScriptWorkerAllowed",
+      "worker.globalPolicies",
+    )
+  ) {
+    throw new Error("v1.16 normal TypeScript worker startup became allowed")
+  }
+  const labels = asRecord(
+    readJson<unknown>(v116FinalTypeScriptSurfaceLabelsPath),
+    v116FinalTypeScriptSurfaceLabelsPath,
+  )
+  const labelPolicies = asRecord(labels.globalPolicies, "labels.globalPolicies")
+  if (
+    requireBoolean(
+      labelPolicies,
+      "normalTypeScriptBackendAllowed",
+      "labels.globalPolicies",
+    )
+  ) {
+    throw new Error("v1.16 final labels allow normal TypeScript backend")
+  }
+  const surfaces = requireRecordArray(labels, "surfaces", "labels")
+  for (const surface of surfaces) {
+    const surfacePath = requireString(surface, "path", "labels.surface")
+    if (requireBoolean(surface, "normalBackendAuthority", surfacePath)) {
+      throw new Error(`${surfacePath} claims normal backend authority`)
+    }
+    if (
+      requireBoolean(surface, "selectedNormal", surfacePath) &&
+      !["frontend-only", "runtime-service", "runtime-adapter"].includes(
+        requireString(surface, "taxonomyRole", surfacePath),
+      )
+    ) {
+      throw new Error(`${surfacePath} selected normal TypeScript backend creep`)
+    }
+  }
+  const selectedRoutes = asRecord(
+    readJson<unknown>(v116SelectedGoRouteManifestPath),
+    v116SelectedGoRouteManifestPath,
+  )
+  if (
+    requireString(selectedRoutes, "fallbackPolicy", "selectedRoutes") !==
+    "no_typescript_backend_fallback"
+  ) {
+    throw new Error("v1.16 selected Go routes allow TypeScript fallback")
+  }
+  checkPublicPayload({
+    runtime: {
+      schemaVersion: runtime.schemaVersion,
+      implementationLabel: currentImplementation.label,
+      notBackend: currentImplementation.notBackend,
+    },
+    worker: {
+      schemaVersion: worker.schemaVersion,
+      normalTypeScriptWorkerAllowed:
+        workerPolicies.normalTypeScriptWorkerAllowed,
+    },
+    labels: {
+      schemaVersion: labels.schemaVersion,
+      normalTypeScriptBackendAllowed:
+        labelPolicies.normalTypeScriptBackendAllowed,
+    },
+    selectedRoutes: {
+      schemaVersion: selectedRoutes.schemaVersion,
+      fallbackPolicy: selectedRoutes.fallbackPolicy,
+    },
+  })
+  return "v1.16 no-TypeScript-backend contracts checked"
 }
 
 const validateV115TypeScriptSurfaceLabels = (): string => {
@@ -1460,6 +1760,17 @@ export const evaluateLocalTopology = async (
     checks.push(
       await check("promotion_gate", "v1.15 promotion decision", true, () =>
         validateV115PromotionDecision(),
+      ),
+    )
+  }
+
+  if (options.requireV116NoTypeScriptBackend) {
+    checks.push(
+      await check(
+        "v116_topology",
+        "v1.16 no-TypeScript-backend topology",
+        true,
+        () => validateV116NoTypeScriptBackendRuntimeContracts(),
       ),
     )
   }

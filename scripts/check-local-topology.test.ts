@@ -34,6 +34,7 @@ describe("local topology harness", () => {
         "--require-v1-16-selected-go-pages",
         "--require-runtime-container",
         "--require-v1-15-lifecycle",
+        "--require-v1-16-no-typescript-backend",
       ]),
     ).toMatchObject({
       requireWeb: true,
@@ -44,6 +45,7 @@ describe("local topology harness", () => {
       requireRuntimeService: true,
       requireRuntimeContainer: true,
       requireV115Lifecycle: true,
+      requireV116NoTypeScriptBackend: true,
       webUrl: "http://localhost:3000",
       goUrl: "http://127.0.0.1:8087",
       runtimeServiceUrl: "http://127.0.0.1:3107",
@@ -106,6 +108,7 @@ describe("local topology harness", () => {
       requireRuntimeService: false,
       requireRuntimeContainer: false,
       requireV115Lifecycle: false,
+      requireV116NoTypeScriptBackend: false,
       json: false,
     })
 
@@ -122,6 +125,36 @@ describe("local topology harness", () => {
         "go_readonly",
         "privacy",
       ]),
+    )
+  }, 30_000)
+
+  it("validates v1.16 no-TypeScript-backend artifacts as a required topology check", async () => {
+    const checks = await evaluateLocalTopology({
+      webUrl: null,
+      goUrl: null,
+      runtimeServiceUrl: null,
+      requireWeb: false,
+      requireWebPageSmoke: false,
+      requireGo: false,
+      requireWebGoPublicStrategyRead: false,
+      requireRuntimeService: false,
+      requireRuntimeContainer: false,
+      requireV115Lifecycle: false,
+      requireV116NoTypeScriptBackend: true,
+      requireV116SelectedGoPages: false,
+      json: false,
+    })
+    const v116Topology = checks.find(
+      (check) => check.name === "v1.16 no-TypeScript-backend topology",
+    )
+
+    expect(v116Topology).toMatchObject({
+      layer: "v116_topology",
+      ok: true,
+      required: true,
+    })
+    expect(v116Topology?.detail).toContain(
+      "v1.16 no-TypeScript-backend contracts checked",
     )
   }, 30_000)
 
@@ -210,6 +243,7 @@ describe("local topology harness", () => {
       requireRuntimeService: false,
       requireRuntimeContainer: false,
       requireV115Lifecycle: false,
+      requireV116NoTypeScriptBackend: false,
       json: false,
     })
     const webGoRead = checks.find(
@@ -269,6 +303,7 @@ describe("local topology harness", () => {
       requireRuntimeService: false,
       requireRuntimeContainer: false,
       requireV115Lifecycle: false,
+      requireV116NoTypeScriptBackend: false,
       json: false,
     })
     const pageSmoke = checks.find(
@@ -355,6 +390,7 @@ describe("local topology harness", () => {
       requireRuntimeService: true,
       requireRuntimeContainer: false,
       requireV115Lifecycle: false,
+      requireV116NoTypeScriptBackend: false,
       requireV116SelectedGoPages: true,
       json: false,
     })
@@ -386,6 +422,7 @@ describe("local topology harness", () => {
       requireRuntimeService: false,
       requireRuntimeContainer: false,
       requireV115Lifecycle: false,
+      requireV116NoTypeScriptBackend: false,
       json: false,
     })
     const goChecks = checks.filter((check) => check.layer === "go_readonly")
@@ -430,6 +467,7 @@ describe("local topology harness", () => {
       requireRuntimeService: false,
       requireRuntimeContainer: false,
       requireV115Lifecycle: false,
+      requireV116NoTypeScriptBackend: false,
       json: false,
     })
     const authGate = checks.find(
@@ -452,6 +490,7 @@ describe("local topology harness", () => {
       requireRuntimeService: false,
       requireRuntimeContainer: true,
       requireV115Lifecycle: false,
+      requireV116NoTypeScriptBackend: false,
       json: false,
     })
     const runtimeIsolation = checks.find(

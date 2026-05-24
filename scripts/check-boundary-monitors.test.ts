@@ -10,6 +10,7 @@ import {
   validateSelectedGoRouteManifest,
   validateV116FinalTypeScriptSurfaceLabels,
   validateV115LifecycleOwnershipManifest,
+  validateV116NoTypeScriptBackendTopologyArtifact,
   validateV116TypeScriptWorkerQuarantineArtifact,
   validateV116RuntimeServiceBoundaryArtifact,
 } from "./check-boundary-monitors.ts"
@@ -160,6 +161,14 @@ const createV116FinalTypeScriptSurfaceLabels = () =>
   JSON.parse(
     readFileSync(
       ".planning/artifacts/v1.16-final-typescript-surface-labels.json",
+      "utf8",
+    ),
+  ) as Record<string, unknown>
+
+const createV116NoTypeScriptBackendTopologyArtifact = () =>
+  JSON.parse(
+    readFileSync(
+      ".planning/artifacts/v1.16-no-typescript-backend-topology.json",
       "utf8",
     ),
   ) as Record<string, unknown>
@@ -469,6 +478,45 @@ describe("boundary drift monitors", () => {
         },
       }),
     ).toThrow(/running_jobs/)
+  })
+
+  it("validates the v1.16 no-TypeScript-backend topology artifact", () => {
+    const artifact = createV116NoTypeScriptBackendTopologyArtifact()
+
+    expect(validateV116NoTypeScriptBackendTopologyArtifact(artifact)).toContain(
+      "v1.16 no-TypeScript-backend topology artifact checked",
+    )
+    expect(() =>
+      validateV116NoTypeScriptBackendTopologyArtifact({
+        ...artifact,
+        allowedTypeScriptProcesses: [
+          "web_frontend",
+          "isolated_js_ts_runtime_service",
+          "typescript_service_backend",
+        ],
+      }),
+    ).toThrow(/allowed TypeScript processes/)
+    expect(() =>
+      validateV116NoTypeScriptBackendTopologyArtifact({
+        ...artifact,
+        strictTopologyMode: {
+          ...(artifact.strictTopologyMode as Record<string, unknown>),
+          requires: ["web_health"],
+        },
+      }),
+    ).toThrow(/representative_page_smoke/)
+    expect(() =>
+      validateV116NoTypeScriptBackendTopologyArtifact({
+        ...artifact,
+        failureDrills: {
+          ...(artifact.failureDrills as Record<string, unknown>),
+          stoppedGo: {
+            failClosed: true,
+            typescriptFallbackObserved: true,
+          },
+        },
+      }),
+    ).toThrow(/stopped-Go/)
   })
 
   it("validates the final v1.16 TypeScript surface labels contract", () => {
