@@ -303,6 +303,17 @@ describe("boundary drift monitors", () => {
         },
       }),
     ).toThrow(/artifact privacy marker|artifact private field/)
+    expect(() =>
+      validateV116TypeScriptWorkerQuarantineArtifact({
+        ...createV116WorkerQuarantineArtifact(),
+        diagnosticExample: {
+          "owner-debug": true,
+          databaseURL: "POSTGRESQL://example",
+          access_token: "secret",
+          strategy_memory: {},
+        },
+      }),
+    ).toThrow(/artifact privacy marker|artifact private field/)
   })
 
   it("detects runtime registry and adapter metadata drift", () => {

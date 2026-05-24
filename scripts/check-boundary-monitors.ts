@@ -1715,6 +1715,45 @@ const requiredV116WorkerRollbackStates = [
   "stopped_runtime_service",
 ] as const
 
+const forbiddenWorkerArtifactStringMarkers = forbiddenWorkerArtifactStrings.map(
+  (marker) => marker.toLowerCase(),
+)
+
+const forbiddenWorkerArtifactKeyMarkers = new Set(
+  [
+    "strategySource",
+    "strategy_source",
+    "strategyMemory",
+    "strategy_memory",
+    "soldierMemory",
+    "soldier_memory",
+    "objectivePayload",
+    "objective_payload",
+    "ownerDebug",
+    "owner_debug",
+    "owner-debug",
+    "rawAwarenessGrid",
+    "awarenessGrid",
+    "database_url",
+    "databaseUrl",
+    "DATABASE_URL",
+    "dsn",
+    "dbDsn",
+    "source",
+    "sourceText",
+    "session",
+    "accessToken",
+    "access_token",
+    "token",
+    "tokens",
+    "hostPath",
+    "privateRuntimeInternals",
+    "stack",
+    "stackTrace",
+    "stderr",
+  ].map((marker) => marker.toLowerCase().replace(/[-_]/g, "")),
+)
+
 const assertArtifactPrivacyLeakSafe = (
   value: unknown,
   pathLabel = "$",
@@ -1727,8 +1766,9 @@ const assertArtifactPrivacyLeakSafe = (
   }
   if (value === null || typeof value !== "object") {
     if (typeof value === "string") {
-      for (const marker of forbiddenWorkerArtifactStrings) {
-        if (value.includes(marker)) {
+      const lowerValue = value.toLowerCase()
+      for (const marker of forbiddenWorkerArtifactStringMarkers) {
+        if (lowerValue.includes(marker)) {
           throw new Error(
             `artifact privacy marker ${marker} found at ${pathLabel}`,
           )
@@ -1739,10 +1779,9 @@ const assertArtifactPrivacyLeakSafe = (
   }
 
   for (const [key, nested] of Object.entries(value)) {
-    for (const marker of forbiddenWorkerArtifactStrings) {
-      if (key === marker) {
-        throw new Error(`artifact private field ${key} found at ${pathLabel}`)
-      }
+    const normalizedKey = key.toLowerCase().replace(/[-_]/g, "")
+    if (forbiddenWorkerArtifactKeyMarkers.has(normalizedKey)) {
+      throw new Error(`artifact private field ${key} found at ${pathLabel}`)
     }
     assertArtifactPrivacyLeakSafe(nested, `${pathLabel}.${key}`)
   }
