@@ -199,6 +199,10 @@ const run = async (): Promise<number> => {
                 workerId: "worker:preflight",
                 once: true,
                 matchIds: matchIds as readonly MatchId[],
+                jobOwnership: {
+                  lifecycleOwner: "go",
+                  workerPurpose: "test",
+                },
               })
               if (status === "idle") {
                 await sleep(100)

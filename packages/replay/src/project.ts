@@ -107,7 +107,7 @@ export const projectPublicChronicle = (
   chronicle: Chronicle,
 ): ChronicleProjection => {
   const canonical = canonicalChronicle(chronicle)
-  const projection = {
+  const projection: ChronicleProjection = {
     schemaVersion: canonical.schemaVersion,
     viewer: { access: "public" },
     reproducibility: cloneJson(canonical.reproducibility),

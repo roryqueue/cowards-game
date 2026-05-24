@@ -30,6 +30,7 @@ export interface WorkerRunnerOptions {
   pollMs?: number
   leaseMs?: number | undefined
   runtimeConfig?: WorkerRuntimeConfig | undefined
+  jobOwnership?: TypeScriptWorkerJobOwnershipConfig | undefined
 }
 
 export interface WorkerRunnerDependencies {
@@ -42,6 +43,18 @@ export interface WorkerRunnerDependencies {
   buildChronicleFromMatch: typeof buildChronicleFromMatch
   completeMatch: typeof completeMatch
   recordAttemptFailure: typeof recordAttemptFailure
+}
+
+export interface TypeScriptWorkerJobOwnershipConfig {
+  lifecycleOwner: "typescript" | "go" | "unspecified"
+  workerPurpose: "normal" | "rollback" | "test" | "parity"
+}
+
+export class TypeScriptWorkerOwnershipError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "TypeScriptWorkerOwnershipError"
+  }
 }
 
 export const createSideDispatchRuntime = (
@@ -128,6 +141,46 @@ const defaultDependencies: WorkerRunnerDependencies = {
   recordAttemptFailure,
 }
 
+export const createTypeScriptWorkerJobOwnershipConfig = (
+  env: Record<string, string | undefined> = process.env,
+): TypeScriptWorkerJobOwnershipConfig => {
+  const lifecycleOwner =
+    env.COWARDS_MATCH_JOB_LIFECYCLE_OWNER === "go" ||
+    env.COWARDS_BACKEND_OWNER === "go"
+      ? "go"
+      : env.COWARDS_MATCH_JOB_LIFECYCLE_OWNER === "typescript" ||
+          env.COWARDS_BACKEND_OWNER === "typescript"
+        ? "typescript"
+        : "unspecified"
+  const rawPurpose = env.COWARDS_TYPESCRIPT_WORKER_PURPOSE
+  const workerPurpose =
+    rawPurpose === "rollback" ||
+    rawPurpose === "test" ||
+    rawPurpose === "parity"
+      ? rawPurpose
+      : "normal"
+
+  return { lifecycleOwner, workerPurpose }
+}
+
+export const assertTypeScriptWorkerJobOwnershipAllowed = (
+  config: TypeScriptWorkerJobOwnershipConfig,
+): void => {
+  if (
+    config.workerPurpose === "rollback" ||
+    config.workerPurpose === "test" ||
+    config.workerPurpose === "parity"
+  ) {
+    return
+  }
+  if (config.lifecycleOwner === "typescript") {
+    return
+  }
+  throw new TypeScriptWorkerOwnershipError(
+    "TypeScript Match job claiming is disabled unless TypeScript is explicitly selected as lifecycle owner or the worker purpose is rollback, test, or parity.",
+  )
+}
+
 const isJsonScalar = (value: unknown): value is JsonValue =>
   value === null ||
   typeof value === "string" ||
@@ -190,6 +243,9 @@ export const runWorkerOnce = async (
   options: WorkerRunnerOptions,
   dependencies: WorkerRunnerDependencies = defaultDependencies,
 ): Promise<"completed" | "failed_system" | "idle"> => {
+  assertTypeScriptWorkerJobOwnershipAllowed(
+    options.jobOwnership ?? createTypeScriptWorkerJobOwnershipConfig(),
+  )
   const runtimeConfig = options.runtimeConfig ?? createWorkerRuntimeConfig()
   const claimed = await dependencies.claimNextMatchJob(pool, {
     workerId: options.workerId,

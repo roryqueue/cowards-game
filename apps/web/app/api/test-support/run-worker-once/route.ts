@@ -37,7 +37,13 @@ const workerScript = `
   void (async () => {
     try {
       for (let index = 0; index < maxJobs; index += 1) {
-        const status = await runWorkerOnce(pool, { workerId });
+        const status = await runWorkerOnce(pool, {
+          workerId,
+          jobOwnership: {
+            lifecycleOwner: "go",
+            workerPurpose: "test",
+          },
+        });
         if (status === "idle") {
           break;
         }
@@ -83,6 +89,8 @@ export const runWorkerOnceProcess = async (
       ...env,
       COWARDS_TEST_WORKER_ID:
         env.COWARDS_TEST_WORKER_ID ?? "worker:test-support",
+      COWARDS_TYPESCRIPT_WORKER_PURPOSE:
+        env.COWARDS_TYPESCRIPT_WORKER_PURPOSE ?? "test",
     },
     maxBuffer: 1024 * 1024,
     timeout: 60_000,

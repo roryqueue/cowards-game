@@ -333,6 +333,10 @@ const main = async (): Promise<void> => {
         once: true,
         leaseMs: DEMO_MATCH_LEASE_MS,
         runtimeConfig,
+        jobOwnership: {
+          lifecycleOwner: "go",
+          workerPurpose: "parity",
+        },
       })
       if (status === "idle") break
     }

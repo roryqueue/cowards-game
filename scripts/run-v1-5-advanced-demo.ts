@@ -493,6 +493,10 @@ const runWorkers = async (
       once: true,
       leaseMs: DEMO_MATCH_LEASE_MS,
       runtimeConfig,
+      jobOwnership: {
+        lifecycleOwner: "go",
+        workerPurpose: "parity",
+      },
     })
     if (status === "idle") break
   }

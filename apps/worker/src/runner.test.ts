@@ -12,10 +12,13 @@ import { fixtures } from "@cowards/spec"
 import type { ArenaVariant, MatchId, StrategyRevision } from "@cowards/spec"
 import type { WorkerRunnerDependencies } from "./runner.js"
 import {
+  assertTypeScriptWorkerJobOwnershipAllowed,
   createClaimedMatchJobForTest,
   createSideDispatchRuntime,
+  createTypeScriptWorkerJobOwnershipConfig,
   loadRunMatchInput,
   runWorkerOnce,
+  TypeScriptWorkerOwnershipError,
 } from "./runner.js"
 import {
   createWorkerRuntimeConfig,
@@ -33,6 +36,10 @@ vi.mock("@cowards/persistence", async (importOriginal) => {
 })
 
 const pool = {} as Pool
+const explicitTestJobOwnership = {
+  lifecycleOwner: "go",
+  workerPurpose: "test",
+} as const
 
 const baseDependencies = (): WorkerRunnerDependencies => ({
   claimNextMatchJob: vi.fn().mockResolvedValue(createClaimedMatchJobForTest()),
@@ -116,8 +123,8 @@ const stubRepositories = (
   const repositories = {
     getMatch: vi.fn().mockResolvedValue({
       seed: "seed:test",
-      bottom_player_id: "player:bottom",
-      top_player_id: "player:top",
+      bottom_player_id: "bottom",
+      top_player_id: "top",
       bottom_strategy_revision_id: bottomRevision.id,
       top_strategy_revision_id: topRevision.id,
       arena_variant_id: arenaVariant.id,
@@ -187,6 +194,78 @@ describe("worker runner", () => {
     ])
   })
 
+  it("resolves TypeScript worker ownership guard config from environment", () => {
+    expect(
+      createTypeScriptWorkerJobOwnershipConfig({
+        COWARDS_BACKEND_OWNER: "go",
+        COWARDS_TYPESCRIPT_WORKER_PURPOSE: "parity",
+      }),
+    ).toEqual({
+      lifecycleOwner: "go",
+      workerPurpose: "parity",
+    })
+    expect(
+      createTypeScriptWorkerJobOwnershipConfig({
+        COWARDS_MATCH_JOB_LIFECYCLE_OWNER: "typescript",
+        COWARDS_TYPESCRIPT_WORKER_PURPOSE: "surprise",
+      }),
+    ).toEqual({
+      lifecycleOwner: "typescript",
+      workerPurpose: "normal",
+    })
+  })
+
+  it("blocks normal TypeScript job ownership when lifecycle owner is Go or unspecified", async () => {
+    const dependencies = baseDependencies()
+
+    await expect(
+      runWorkerOnce(
+        pool,
+        {
+          workerId: "worker:test",
+          jobOwnership: { lifecycleOwner: "go", workerPurpose: "normal" },
+        },
+        dependencies,
+      ),
+    ).rejects.toThrow(TypeScriptWorkerOwnershipError)
+    expect(dependencies.claimNextMatchJob).not.toHaveBeenCalled()
+
+    await expect(
+      runWorkerOnce(
+        pool,
+        {
+          workerId: "worker:test",
+          jobOwnership: {
+            lifecycleOwner: "unspecified",
+            workerPurpose: "normal",
+          },
+        },
+        dependencies,
+      ),
+    ).rejects.toThrow(TypeScriptWorkerOwnershipError)
+    expect(dependencies.claimNextMatchJob).not.toHaveBeenCalled()
+  })
+
+  it("allows explicit rollback test and parity TypeScript worker purposes", () => {
+    for (const workerPurpose of ["rollback", "test", "parity"] as const) {
+      expect(() =>
+        assertTypeScriptWorkerJobOwnershipAllowed({
+          lifecycleOwner: "go",
+          workerPurpose,
+        }),
+      ).not.toThrow()
+    }
+  })
+
+  it("allows normal TypeScript job ownership only when explicitly selected", () => {
+    expect(() =>
+      assertTypeScriptWorkerJobOwnershipAllowed({
+        lifecycleOwner: "typescript",
+        workerPurpose: "normal",
+      }),
+    ).not.toThrow()
+  })
+
   it("routes strategy calls using persisted Match player IDs", () => {
     const bottomRuntime: StrategyRuntime = {
       selectActivations: vi.fn().mockReturnValue({ ok: true, value: {} }),
@@ -215,25 +294,23 @@ describe("worker runner", () => {
   it("passes the selected adapter into bottom and top Strategy runtimes", async () => {
     stubRepositories()
     const runtimeConfig = createCapturingRuntimeConfig()
+    const bottomInput = fixtures.valid.standardStrategyInput
+    const topInput = {
+      ...bottomInput,
+      mySoldiers: bottomInput.enemySoldiers,
+      enemySoldiers: bottomInput.mySoldiers,
+    }
 
     const input = await loadRunMatchInput(pool, "match:test", runtimeConfig)
 
-    expect(
-      input.runtime.selectActivations({
-        mySoldiers: [{ ownerPlayerId: "player:bottom" }],
-      } as never),
-    ).toEqual({
+    expect(input.runtime.selectActivations(bottomInput)).toEqual({
       ok: true,
       value: {
         activationOrders: [],
         strategyMemory: {},
       },
     })
-    expect(
-      input.runtime.selectActivations({
-        mySoldiers: [{ ownerPlayerId: "player:top" }],
-      } as never),
-    ).toEqual({
+    expect(input.runtime.selectActivations(topInput)).toEqual({
       ok: true,
       value: {
         activationOrders: [],
@@ -252,7 +329,11 @@ describe("worker runner", () => {
     const dependencies = baseDependencies()
 
     await expect(
-      runWorkerOnce(pool, { workerId: "worker:test" }, dependencies),
+      runWorkerOnce(
+        pool,
+        { workerId: "worker:test", jobOwnership: explicitTestJobOwnership },
+        dependencies,
+      ),
     ).resolves.toBe("completed")
     expect(dependencies.completeMatch).toHaveBeenCalledOnce()
     expect(dependencies.recordAttemptFailure).not.toHaveBeenCalled()
@@ -278,7 +359,11 @@ describe("worker runner", () => {
     } as never)
 
     await expect(
-      runWorkerOnce(pool, { workerId: "worker:test" }, dependencies),
+      runWorkerOnce(
+        pool,
+        { workerId: "worker:test", jobOwnership: explicitTestJobOwnership },
+        dependencies,
+      ),
     ).resolves.toBe("completed")
     expect(dependencies.completeMatch).toHaveBeenCalledOnce()
     expect(dependencies.recordAttemptFailure).not.toHaveBeenCalled()
@@ -291,7 +376,11 @@ describe("worker runner", () => {
     })
 
     await expect(
-      runWorkerOnce(pool, { workerId: "worker:test" }, dependencies),
+      runWorkerOnce(
+        pool,
+        { workerId: "worker:test", jobOwnership: explicitTestJobOwnership },
+        dependencies,
+      ),
     ).resolves.toBe("idle")
     expect(dependencies.recordAttemptFailure).toHaveBeenCalledWith(
       pool,
@@ -325,7 +414,11 @@ describe("worker runner", () => {
     await expect(
       runWorkerOnce(
         pool,
-        { workerId: "worker:test", runtimeConfig },
+        {
+          workerId: "worker:test",
+          runtimeConfig,
+          jobOwnership: explicitTestJobOwnership,
+        },
         dependencies,
       ),
     ).resolves.toBe("idle")
@@ -371,7 +464,11 @@ describe("worker runner", () => {
     await expect(
       runWorkerOnce(
         pool,
-        { workerId: "worker:test", runtimeConfig },
+        {
+          workerId: "worker:test",
+          runtimeConfig,
+          jobOwnership: explicitTestJobOwnership,
+        },
         dependencies,
       ),
     ).resolves.toBe("failed_system")
@@ -396,7 +493,11 @@ describe("worker runner", () => {
     )
 
     await expect(
-      runWorkerOnce(pool, { workerId: "worker:test" }, dependencies),
+      runWorkerOnce(
+        pool,
+        { workerId: "worker:test", jobOwnership: explicitTestJobOwnership },
+        dependencies,
+      ),
     ).resolves.toBe("failed_system")
   })
 
@@ -409,7 +510,11 @@ describe("worker runner", () => {
       }),
     )
 
-    await runWorkerOnce(pool, { workerId: "worker:next" }, dependencies)
+    await runWorkerOnce(
+      pool,
+      { workerId: "worker:next", jobOwnership: explicitTestJobOwnership },
+      dependencies,
+    )
     expect(dependencies.claimNextMatchJob).toHaveBeenCalledWith(pool, {
       workerId: "worker:next",
     })
@@ -428,7 +533,11 @@ describe("worker runner", () => {
 
     await runWorkerOnce(
       pool,
-      { workerId: "worker:targeted", matchIds },
+      {
+        workerId: "worker:targeted",
+        matchIds,
+        jobOwnership: explicitTestJobOwnership,
+      },
       dependencies,
     )
 
