@@ -62,6 +62,35 @@ interface GoRouteManifestEntry {
   requiresBearerToken?: boolean
 }
 
+export interface SelectedGoRouteManifestEntry {
+  routeId: string
+  routeFamily:
+    | "health"
+    | "auth_session"
+    | "account_revision"
+    | "account_fork"
+    | "exhibition"
+    | "public_read"
+    | "public_replay"
+  method: "GET" | "POST" | "DELETE"
+  goPath: string
+  nextPath: string
+  authScope: "public" | "session" | "owner"
+  privacyClass: "public" | "session" | "owner-private-source"
+  selectedNormal: boolean
+  fallbackPolicy: "no_typescript_backend_fallback"
+  stoppedGoBehavior: "fail_closed_classified"
+  nonNormalClassification: "selected-normal" | "frontend-health"
+}
+
+export interface SelectedGoRouteManifest {
+  schemaVersion: "v1.16-selected-go-route-manifest"
+  milestone: "v1.16"
+  fallbackPolicy: "no_typescript_backend_fallback"
+  routes: readonly SelectedGoRouteManifestEntry[]
+  explicitlyOutOfScope: readonly string[]
+}
+
 interface RuntimeAdapterBridge {
   selector: string
   specAdapterId: StrategyRuntimeAdapterId
@@ -214,16 +243,11 @@ const v115LifecycleOwnershipManifestPath =
   ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json"
 const v116RuntimeServiceBoundaryArtifactPath =
   ".planning/artifacts/v1.16-runtime-service-boundary.json"
+const v116SelectedGoRouteManifestPath =
+  ".planning/artifacts/v1.16-selected-go-route-manifest.json"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
-  'apps/web/app/api/account/advanced-forks/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
-  'apps/web/app/api/account/revisions/[revisionId]/source/route.ts:2:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
-  'apps/web/app/api/account/starter-forks/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
   'apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
-  'apps/web/app/api/auth/sign-in/route.ts:1:competitive/server:import { competitiveServer } from "../../../competitive/server.js"',
-  'apps/web/app/api/auth/sign-out/route.ts:1:competitive/server:import { competitiveServer, getSessionIdFromCookies, } from "../../../competitive/server.js"',
-  'apps/web/app/api/auth/sign-up/route.ts:1:competitive/server:import { competitiveServer } from "../../../competitive/server.js"',
-  'apps/web/app/api/exhibitions/route.ts:2:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../competitive/server.js"',
   'apps/web/app/api/ladder/seasons/[seasonId]/entries/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
   'apps/web/app/api/ladder/seasons/[seasonId]/schedule/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
   'apps/web/app/api/ladder/seasons/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
@@ -240,8 +264,8 @@ export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/matches/replay-ready.ts:7:@cowards/persistence:import type { StoredChronicle } from "@cowards/persistence/chronicle-store"',
   'apps/web/app/matches/server.test.ts:6:@cowards/persistence:import { createChronicleMetadata, type StoredChronicle, } from "@cowards/persistence"',
   'apps/web/app/matches/server.ts:1:@cowards/persistence:import { createDatabasePool } from "@cowards/persistence/db"',
-  'apps/web/app/matches/server.ts:2:@cowards/persistence:import { createPostgresChronicleStore, type ChronicleStore, } from "@cowards/persistence/chronicle-store"',
-  'apps/web/app/matches/server.ts:6:@cowards/persistence:import type { Queryable } from "@cowards/persistence/repositories"',
+  'apps/web/app/matches/server.ts:2:@cowards/persistence:import { createPostgresChronicleStore, type ChronicleMetadata, type ChronicleStore, } from "@cowards/persistence/chronicle-store"',
+  'apps/web/app/matches/server.ts:7:@cowards/persistence:import type { Queryable } from "@cowards/persistence/repositories"',
   'apps/web/app/workshop/server.ts:1:@cowards/persistence:import { createDatabasePool } from "@cowards/persistence/db"',
   'apps/web/app/workshop/server.ts:2:@cowards/persistence:import { buildWorkshopRevision, createWorkshopTestMatchSet, getWorkshopRevisionSource, getWorkshopSnapshot, getWorkshopStaticSnapshot, getWorkshopTestSummary, insertWorkshopRevision, type WorkshopTestSummary, validateWorkshopSource, WORKSHOP_STRATEGY_ID, } from "@cowards/persistence/workshop"',
   'apps/web/app/workshop/server.ts:14:@cowards/persistence:import { comparePersistedWorkshopAnalyticsRuns, createWorkshopAnalyticsDemoSnapshot, createWorkshopAnalyticsExport, createPersistedWorkshopAnalyticsRerun, getWorkshopAnalyticsSnapshot, seedWorkshopAnalyticsDemo, } from "@cowards/persistence/workshop-analytics"',
@@ -277,6 +301,245 @@ const runtimeAdapterBridges: RuntimeAdapterBridge[] = [
 
 const readJson = <T>(relativePath: string): T =>
   JSON.parse(readFileSync(path.join(repoRoot, relativePath), "utf8")) as T
+
+export const selectedGoRouteManifest: SelectedGoRouteManifest = {
+  schemaVersion: "v1.16-selected-go-route-manifest",
+  milestone: "v1.16",
+  fallbackPolicy: "no_typescript_backend_fallback",
+  explicitlyOutOfScope: [
+    "Workshop validation, submission, source, test, analytics, export, and runtime flows",
+    "broader ladder scheduling and mutation routes",
+    "governance and admin routes",
+    "owner-debug/private Chronicle migration",
+    "test-support routes and fixture generators",
+    "rollback and parity paths",
+    "migrations and schema ownership",
+    "runtime service replacement or Runtime Broker implementation",
+  ],
+  routes: [
+    {
+      routeId: "health",
+      routeFamily: "health",
+      method: "GET",
+      goPath: "/health",
+      nextPath: "/api/service/health",
+      authScope: "public",
+      privacyClass: "public",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "frontend-health",
+    },
+    {
+      routeId: "authSession",
+      routeFamily: "auth_session",
+      method: "GET",
+      goPath: "/auth/session",
+      nextPath: "/api/auth/session",
+      authScope: "session",
+      privacyClass: "session",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "createSession",
+      routeFamily: "auth_session",
+      method: "POST",
+      goPath: "/auth/session",
+      nextPath: "/api/auth/sign-in",
+      authScope: "public",
+      privacyClass: "session",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "signUp",
+      routeFamily: "auth_session",
+      method: "POST",
+      goPath: "/auth/sign-up",
+      nextPath: "/api/auth/sign-up",
+      authScope: "public",
+      privacyClass: "session",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "revokeSession",
+      routeFamily: "auth_session",
+      method: "DELETE",
+      goPath: "/auth/session",
+      nextPath: "/api/auth/sign-out",
+      authScope: "session",
+      privacyClass: "session",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "listStrategyRevisions",
+      routeFamily: "account_revision",
+      method: "GET",
+      goPath: "/account/strategy-revisions",
+      nextPath: "/api/account/revisions",
+      authScope: "session",
+      privacyClass: "session",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "createStrategyRevision",
+      routeFamily: "account_revision",
+      method: "POST",
+      goPath: "/account/strategy-revisions",
+      nextPath: "/api/account/revisions",
+      authScope: "session",
+      privacyClass: "session",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "getStrategyRevisionSource",
+      routeFamily: "account_revision",
+      method: "GET",
+      goPath: "/account/strategy-revisions/{strategyRevisionId}/source",
+      nextPath: "/api/account/revisions/[revisionId]/source",
+      authScope: "owner",
+      privacyClass: "owner-private-source",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "forkStarterStrategy",
+      routeFamily: "account_fork",
+      method: "POST",
+      goPath: "/account/starter-forks",
+      nextPath: "/api/account/starter-forks",
+      authScope: "session",
+      privacyClass: "session",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "forkAdvancedStrategy",
+      routeFamily: "account_fork",
+      method: "POST",
+      goPath: "/account/advanced-forks",
+      nextPath: "/api/account/advanced-forks",
+      authScope: "session",
+      privacyClass: "session",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "createMatchSet",
+      routeFamily: "exhibition",
+      method: "POST",
+      goPath: "/matchsets",
+      nextPath: "/api/exhibitions",
+      authScope: "session",
+      privacyClass: "session",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "getPublicStrategyPage",
+      routeFamily: "public_read",
+      method: "GET",
+      goPath: "/public/strategies/{strategyId}",
+      nextPath: "/strategies/[strategyId]",
+      authScope: "public",
+      privacyClass: "public",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "getPublicPlayerPage",
+      routeFamily: "public_read",
+      method: "GET",
+      goPath: "/public/players/{handle}",
+      nextPath: "/players/[handle]",
+      authScope: "public",
+      privacyClass: "public",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "getPublicLadderSeason",
+      routeFamily: "public_read",
+      method: "GET",
+      goPath: "/public/ladders/{seasonId}",
+      nextPath: "/ladder/[seasonId]",
+      authScope: "public",
+      privacyClass: "public",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "getPublicMatchSetSummary",
+      routeFamily: "public_read",
+      method: "GET",
+      goPath: "/public/matchsets/{matchSetId}/summary",
+      nextPath: "/matchsets/[matchSetId]",
+      authScope: "public",
+      privacyClass: "public",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "getPublicReplayMetadata",
+      routeFamily: "public_replay",
+      method: "GET",
+      goPath: "/public/replays/{matchId}/metadata",
+      nextPath: "/api/replays/[matchId]/metadata",
+      authScope: "public",
+      privacyClass: "public",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+    {
+      routeId: "getPublicReplayEvidence",
+      routeFamily: "public_replay",
+      method: "GET",
+      goPath: "/public/replays/{matchId}/evidence",
+      nextPath: "/matches/[matchId]/replay",
+      authScope: "public",
+      privacyClass: "public",
+      selectedNormal: true,
+      fallbackPolicy: "no_typescript_backend_fallback",
+      stoppedGoBehavior: "fail_closed_classified",
+      nonNormalClassification: "selected-normal",
+    },
+  ],
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
@@ -530,6 +793,112 @@ const checkGoRouteManifest = (): string => {
     }
   }
   return `${manifest.length} Go route manifest entries checked`
+}
+
+export const validateSelectedGoRouteManifest = (
+  manifest: SelectedGoRouteManifest,
+): string => {
+  if (manifest.schemaVersion !== "v1.16-selected-go-route-manifest") {
+    throw new Error("v1.16 selected Go route manifest schema drifted")
+  }
+  if (manifest.milestone !== "v1.16") {
+    throw new Error("v1.16 selected Go route manifest milestone drifted")
+  }
+  if (manifest.fallbackPolicy !== "no_typescript_backend_fallback") {
+    throw new Error("v1.16 selected Go route manifest fallback policy drifted")
+  }
+  const requiredRouteIds = new Set([
+    "health",
+    "authSession",
+    "createSession",
+    "signUp",
+    "revokeSession",
+    "listStrategyRevisions",
+    "createStrategyRevision",
+    "getStrategyRevisionSource",
+    "forkStarterStrategy",
+    "forkAdvancedStrategy",
+    "createMatchSet",
+    "getPublicStrategyPage",
+    "getPublicPlayerPage",
+    "getPublicLadderSeason",
+    "getPublicMatchSetSummary",
+    "getPublicReplayMetadata",
+    "getPublicReplayEvidence",
+  ])
+  const routeIds = new Set(manifest.routes.map((route) => route.routeId))
+  for (const routeId of requiredRouteIds) {
+    if (!routeIds.has(routeId)) {
+      throw new Error(`v1.16 selected Go route manifest missing ${routeId}`)
+    }
+  }
+  if (routeIds.size !== manifest.routes.length) {
+    throw new Error("v1.16 selected Go route manifest has duplicate route ids")
+  }
+  const liveBackend = readFileSync(
+    path.join(repoRoot, "apps/go-backend/live_backend.go"),
+    "utf8",
+  )
+  for (const route of manifest.routes) {
+    if (route.selectedNormal !== true) {
+      throw new Error(`${route.routeId} must be selected normal`)
+    }
+    if (route.fallbackPolicy !== "no_typescript_backend_fallback") {
+      throw new Error(`${route.routeId} fallback policy drifted`)
+    }
+    if (route.stoppedGoBehavior !== "fail_closed_classified") {
+      throw new Error(`${route.routeId} stopped-Go behavior drifted`)
+    }
+    if (
+      route.privacyClass === "owner-private-source" &&
+      route.routeId !== "getStrategyRevisionSource"
+    ) {
+      throw new Error(`${route.routeId} cannot use owner-private-source`)
+    }
+    const registration = `mux.HandleFunc("${route.method} ${route.goPath}"`
+    if (!liveBackend.includes(registration)) {
+      throw new Error(`${route.routeId} missing live Go route ${registration}`)
+    }
+    assertMonitorPublicPayload({
+      routeId: route.routeId,
+      routeFamily: route.routeFamily,
+      method: route.method,
+      goPath: route.goPath,
+      nextPath: route.nextPath,
+      authScope: route.authScope,
+      privacyClass: route.privacyClass,
+      fallbackPolicy: route.fallbackPolicy,
+      stoppedGoBehavior: route.stoppedGoBehavior,
+      nonNormalClassification: route.nonNormalClassification,
+    })
+  }
+  for (const excluded of [
+    "Workshop",
+    "broader ladder",
+    "governance",
+    "owner-debug",
+    "test-support",
+    "rollback",
+    "migrations",
+    "runtime service replacement",
+  ]) {
+    if (!manifest.explicitlyOutOfScope.some((item) => item.includes(excluded))) {
+      throw new Error(`v1.16 selected Go route manifest missing out-of-scope ${excluded}`)
+    }
+  }
+  return `${manifest.routes.length} v1.16 selected Go routes checked`
+}
+
+const checkSelectedGoRouteManifest = (): string => {
+  const artifact = readJson<SelectedGoRouteManifest>(
+    v116SelectedGoRouteManifestPath,
+  )
+  const expected = JSON.stringify(selectedGoRouteManifest)
+  const actual = JSON.stringify(artifact)
+  if (actual !== expected) {
+    throw new Error("v1.16 selected Go route manifest artifact drifted")
+  }
+  return validateSelectedGoRouteManifest(artifact)
 }
 
 const checkGoPromotionOwnershipManifest = (): string => {
@@ -1465,17 +1834,18 @@ const checkWebBoundary = (): string => {
 }
 
 const checkTopologyDiagnostics = async (): Promise<string> => {
+  const requireLiveTopology = process.env.COWARDS_REQUIRE_LIVE_TOPOLOGY === "1"
   const checks = await evaluateLocalTopology({
-    webUrl: process.env.COWARDS_WEB_URL ?? "http://localhost:3000",
-    goUrl: process.env.COWARDS_GO_BACKEND_URL ?? "http://127.0.0.1:8087",
-    runtimeServiceUrl:
-      process.env.COWARDS_RUNTIME_SERVICE_URL ?? "http://127.0.0.1:3107",
-    requireWeb: true,
-    requireGo: true,
-    requireWebGoPublicStrategyRead: true,
-    requireRuntimeService: true,
+    webUrl: process.env.COWARDS_WEB_URL ?? null,
+    goUrl: process.env.COWARDS_GO_BACKEND_URL ?? null,
+    runtimeServiceUrl: process.env.COWARDS_RUNTIME_SERVICE_URL ?? null,
+    requireWeb: requireLiveTopology,
+    requireGo: requireLiveTopology,
+    requireWebGoPublicStrategyRead: requireLiveTopology,
+    requireRuntimeService: requireLiveTopology,
     requireRuntimeContainer: false,
-    requireV115Lifecycle: true,
+    requireV115Lifecycle: requireLiveTopology,
+    requireV116SelectedGoPages: requireLiveTopology,
     json: false,
   })
   assertMonitorPublicPayload(checks)
@@ -1485,7 +1855,9 @@ const checkTopologyDiagnostics = async (): Promise<string> => {
       `live v1.15 topology checks failed: ${failures.map((item) => item.name).join(", ")}`,
     )
   }
-  return `${checks.length} topology diagnostics checked`
+  return requireLiveTopology
+    ? `${checks.length} required live topology diagnostics checked`
+    : `${checks.length} optional topology diagnostics checked; set COWARDS_REQUIRE_LIVE_TOPOLOGY=1 for live strict mode`
 }
 
 export const runBoundaryMonitorChecks = async (): Promise<
@@ -1529,6 +1901,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("go_parity", "Go route manifest metadata", () =>
     checkGoRouteManifest(),
+  ),
+  await check("go_promotion", "v1.16 selected Go route manifest", () =>
+    checkSelectedGoRouteManifest(),
   ),
   await check("go_promotion", "v1.12 route ownership manifest", () =>
     checkGoPromotionOwnershipManifest(),

@@ -123,30 +123,24 @@
       "imports": [
         {
           "line": 1,
-          "source": "../../../competitive/server.js",
-          "statementText": "import {\n  competitiveServer,\n  getCurrentCompetitiveUser,\n} from \"../../../competitive/server.js\""
-        },
-        {
-          "line": 12,
-          "source": "../../../../lib/account-service-boundary.js",
-          "statementText": "import { listAccountReadRevisions } from \"../../../../lib/account-service-boundary.js\""
-        },
-        {
-          "line": 5,
           "source": "../../../competitive/http.js",
           "statementText": "import { competitiveErrorResponse } from \"../../../competitive/http.js\""
         },
         {
-          "line": 6,
+          "line": 2,
           "source": "../../../../lib/account-service-adapter.js",
           "statementText": "import {\n  assertGoAccountForksCanReadBack,\n  getAccountSessionId,\n  isGoAccountForksSelected,\n  requireSelectedGoBackendClient,\n} from \"../../../../lib/account-service-adapter.js\""
+        },
+        {
+          "line": 8,
+          "source": "../../../../lib/account-service-boundary.js",
+          "statementText": "import { listAccountReadRevisions } from \"../../../../lib/account-service-boundary.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/app/competitive/server.ts",
         "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
@@ -174,7 +168,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/competitive/server.ts, apps/web/lib/account-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -210,25 +204,19 @@
         },
         {
           "line": 2,
-          "source": "../../../../../competitive/server.js",
-          "statementText": "import {\n  competitiveServer,\n  getCurrentCompetitiveUser,\n} from \"../../../../../competitive/server.js\""
-        },
-        {
-          "line": 6,
           "source": "../../../../../competitive/http.js",
           "statementText": "import { competitiveErrorResponse } from \"../../../../../competitive/http.js\""
         },
         {
-          "line": 7,
+          "line": 3,
           "source": "../../../../../../lib/account-service-adapter.js",
-          "statementText": "import {\n  getAccountSessionId,\n  isGoAccountRevisionsSelected,\n  requireSelectedGoBackendClient,\n} from \"../../../../../../lib/account-service-adapter.js\""
+          "statementText": "import {\n  getAccountSessionId,\n  requireSelectedGoBackendClient,\n} from \"../../../../../../lib/account-service-adapter.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/app/competitive/server.ts",
         "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
@@ -256,7 +244,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/competitive/server.ts, apps/web/lib/account-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -371,7 +359,6 @@
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/app/competitive/server.ts",
         "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
@@ -399,7 +386,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/competitive/server.ts, apps/web/lib/account-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -430,30 +417,24 @@
       "imports": [
         {
           "line": 1,
-          "source": "../../../competitive/server.js",
-          "statementText": "import {\n  competitiveServer,\n  getCurrentCompetitiveUser,\n} from \"../../../competitive/server.js\""
-        },
-        {
-          "line": 12,
-          "source": "../../../../lib/account-service-boundary.js",
-          "statementText": "import { listAccountReadRevisions } from \"../../../../lib/account-service-boundary.js\""
-        },
-        {
-          "line": 5,
           "source": "../../../competitive/http.js",
           "statementText": "import { competitiveErrorResponse } from \"../../../competitive/http.js\""
         },
         {
-          "line": 6,
+          "line": 2,
           "source": "../../../../lib/account-service-adapter.js",
           "statementText": "import {\n  assertGoAccountForksCanReadBack,\n  getAccountSessionId,\n  isGoAccountForksSelected,\n  requireSelectedGoBackendClient,\n} from \"../../../../lib/account-service-adapter.js\""
+        },
+        {
+          "line": 8,
+          "source": "../../../../lib/account-service-boundary.js",
+          "statementText": "import { listAccountReadRevisions } from \"../../../../lib/account-service-boundary.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/app/competitive/server.ts",
         "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
@@ -481,7 +462,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/competitive/server.ts, apps/web/lib/account-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -652,25 +633,19 @@
       "imports": [
         {
           "line": 1,
-          "source": "../../../competitive/server.js",
-          "statementText": "import { competitiveServer } from \"../../../competitive/server.js\""
+          "source": "../../../competitive/http.js",
+          "statementText": "import { competitiveErrorResponse } from \"../../../competitive/http.js\""
         },
         {
           "line": 2,
-          "source": "../../../competitive/http.js",
-          "statementText": "import {\n  competitiveErrorResponse,\n  sessionCookie,\n} from \"../../../competitive/http.js\""
-        },
-        {
-          "line": 6,
           "source": "../../../../lib/account-service-adapter.js",
-          "statementText": "import {\n  isGoAuthSessionSelected,\n  requireSelectedGoBackendClient,\n} from \"../../../../lib/account-service-adapter.js\""
+          "statementText": "import { requireSelectedGoBackendClient } from \"../../../../lib/account-service-adapter.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/app/competitive/server.ts",
         "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
@@ -698,7 +673,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/competitive/server.ts, apps/web/lib/account-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -729,25 +704,19 @@
       "imports": [
         {
           "line": 1,
-          "source": "../../../competitive/server.js",
-          "statementText": "import {\n  competitiveServer,\n  getSessionIdFromCookies,\n} from \"../../../competitive/server.js\""
-        },
-        {
-          "line": 5,
           "source": "../../../competitive/http.js",
           "statementText": "import {\n  clearSessionCookie,\n  competitiveErrorResponse,\n} from \"../../../competitive/http.js\""
         },
         {
-          "line": 9,
+          "line": 5,
           "source": "../../../../lib/account-service-adapter.js",
-          "statementText": "import {\n  isGoAuthSessionSelected,\n  requireSelectedGoBackendClient,\n} from \"../../../../lib/account-service-adapter.js\""
+          "statementText": "import {\n  getAccountSessionId,\n  requireSelectedGoBackendClient,\n} from \"../../../../lib/account-service-adapter.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/app/competitive/server.ts",
         "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
@@ -775,7 +744,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/competitive/server.ts, apps/web/lib/account-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -806,25 +775,19 @@
       "imports": [
         {
           "line": 1,
-          "source": "../../../competitive/server.js",
-          "statementText": "import { competitiveServer } from \"../../../competitive/server.js\""
+          "source": "../../../competitive/http.js",
+          "statementText": "import { competitiveErrorResponse } from \"../../../competitive/http.js\""
         },
         {
           "line": 2,
-          "source": "../../../competitive/http.js",
-          "statementText": "import {\n  competitiveErrorResponse,\n  sessionCookie,\n} from \"../../../competitive/http.js\""
-        },
-        {
-          "line": 6,
           "source": "../../../../lib/account-service-adapter.js",
-          "statementText": "import {\n  isGoAuthSessionSelected,\n  requireSelectedGoBackendClient,\n} from \"../../../../lib/account-service-adapter.js\""
+          "statementText": "import { requireSelectedGoBackendClient } from \"../../../../lib/account-service-adapter.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/app/competitive/server.ts",
         "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
@@ -852,7 +815,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/competitive/server.ts, apps/web/lib/account-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -888,25 +851,19 @@
         },
         {
           "line": 2,
-          "source": "../../competitive/server.js",
-          "statementText": "import {\n  competitiveServer,\n  getCurrentCompetitiveUser,\n} from \"../../competitive/server.js\""
-        },
-        {
-          "line": 6,
           "source": "../../competitive/http.js",
           "statementText": "import { competitiveErrorResponse } from \"../../competitive/http.js\""
         },
         {
-          "line": 7,
+          "line": 3,
           "source": "../../../lib/account-service-adapter.js",
-          "statementText": "import {\n  getAccountSessionId,\n  isGoExhibitionsSelected,\n  requireSelectedGoBackendClient,\n} from \"../../../lib/account-service-adapter.js\""
+          "statementText": "import {\n  getAccountSessionId,\n  requireSelectedGoBackendClient,\n} from \"../../../lib/account-service-adapter.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/app/competitive/server.ts",
         "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
@@ -934,7 +891,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/competitive/server.ts, apps/web/lib/account-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -1262,7 +1219,7 @@
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -1289,7 +1246,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -1339,7 +1296,7 @@
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -1366,7 +1323,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -1394,21 +1351,9 @@
       "goRouteIds": [
         "service.health"
       ],
-      "imports": [
-        {
-          "line": 1,
-          "source": "@cowards/service",
-          "statementText": "import { createCowardsLocalService } from \"@cowards/service\""
-        }
-      ],
+      "imports": [],
       "persistenceImports": [],
-      "serviceImports": [
-        {
-          "line": 1,
-          "source": "@cowards/service",
-          "statementText": "import { createCowardsLocalService } from \"@cowards/service\""
-        }
-      ],
+      "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [],
       "usesDatabase": false,
@@ -1433,10 +1378,6 @@
         {
           "code": "next_api_route",
           "detail": "exports GET"
-        },
-        {
-          "code": "service_import",
-          "detail": "@cowards/service"
         }
       ]
     },
@@ -8956,8 +8897,7 @@
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/lib/account-service-adapter.ts",
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -8979,7 +8919,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/lib/account-service-adapter.ts, apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -9077,7 +9017,7 @@
         "apps/web/app/matches/replay-fixture.ts",
         "apps/web/app/matches/replay-ready.ts",
         "apps/web/app/matches/server.ts",
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -9099,7 +9039,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/matches/replay-fixture.ts, apps/web/app/matches/replay-ready.ts, apps/web/app/matches/server.ts, apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/app/matches/replay-fixture.ts, apps/web/app/matches/replay-ready.ts, apps/web/app/matches/server.ts, apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -9142,7 +9082,7 @@
         "apps/web/app/matches/replay-fixture.ts",
         "apps/web/app/matches/replay-ready.ts",
         "apps/web/app/matches/server.ts",
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -9164,7 +9104,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/matches/replay-fixture.ts, apps/web/app/matches/replay-ready.ts, apps/web/app/matches/server.ts, apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/app/matches/replay-fixture.ts, apps/web/app/matches/replay-ready.ts, apps/web/app/matches/server.ts, apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -9227,7 +9167,7 @@
         "apps/web/app/matches/replay-fixture.ts",
         "apps/web/app/matches/replay-ready.ts",
         "apps/web/app/matches/server.ts",
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -9249,7 +9189,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/matches/replay-fixture.ts, apps/web/app/matches/replay-ready.ts, apps/web/app/matches/server.ts, apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/app/matches/replay-fixture.ts, apps/web/app/matches/replay-ready.ts, apps/web/app/matches/server.ts, apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -10171,7 +10111,7 @@
         "apps/web/app/matches/replay-fixture.ts",
         "apps/web/app/matches/replay-ready.ts",
         "apps/web/app/matches/server.ts",
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": true,
       "claimsJobs": false,
@@ -10197,7 +10137,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/matches/replay-fixture.ts, apps/web/app/matches/replay-ready.ts, apps/web/app/matches/server.ts, apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/app/matches/replay-fixture.ts, apps/web/app/matches/replay-ready.ts, apps/web/app/matches/server.ts, apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -10287,7 +10227,7 @@
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -10309,7 +10249,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -10406,7 +10346,7 @@
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -10428,7 +10368,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -10473,7 +10413,7 @@
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -10495,7 +10435,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -11346,25 +11286,19 @@
       "imports": [
         {
           "line": 1,
-          "source": "../app/competitive/server.js",
-          "statementText": "import {\n  competitiveServer,\n  getCurrentCompetitiveUser,\n} from \"../app/competitive/server.js\""
-        },
-        {
-          "line": 10,
-          "source": "./account-service-boundary.js",
-          "statementText": "import { listAccountReadRevisions } from \"./account-service-boundary.js\""
+          "source": "./account-service-adapter.js",
+          "statementText": "import {\n  getAccountSessionId,\n  requireSelectedGoBackendClient,\n} from \"./account-service-adapter.js\""
         },
         {
           "line": 5,
-          "source": "./account-service-adapter.js",
-          "statementText": "import {\n  getAccountSessionId,\n  isGoAccountRevisionsSelected,\n  requireSelectedGoBackendClient,\n} from \"./account-service-adapter.js\""
+          "source": "./account-service-boundary.js",
+          "statementText": "import { listAccountReadRevisions } from \"./account-service-boundary.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/app/competitive/server.ts",
         "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
@@ -11387,7 +11321,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/competitive/server.ts, apps/web/lib/account-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -11414,13 +11348,18 @@
       "imports": [
         {
           "line": 1,
-          "source": "vitest",
-          "statementText": "import { describe, expect, it } from \"vitest\""
+          "source": "node:fs",
+          "statementText": "import { readFileSync } from \"node:fs\""
         },
         {
           "line": 2,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it, vi } from \"vitest\""
+        },
+        {
+          "line": 24,
           "source": "./account-service-adapter.js",
-          "statementText": "import {\n  assertGoAccountForksCanReadBack,\n  isGoAccountForksSelected,\n} from \"./account-service-adapter.js\""
+          "statementText": "import {\n  assertGoAccountForksCanReadBack,\n  createAccountReadService,\n  isGoAccountRevisionsSelected,\n  isGoAuthSessionSelected,\n  isGoExhibitionsSelected,\n  isGoAccountForksSelected,\n} from \"./account-service-adapter.js\""
         }
       ],
       "persistenceImports": [],
@@ -11429,7 +11368,7 @@
       "localBackendImports": [
         "apps/web/lib/account-service-adapter.ts"
       ],
-      "usesDatabase": false,
+      "usesDatabase": true,
       "claimsJobs": false,
       "completesMatches": false,
       "persistsChronicles": false,
@@ -11887,8 +11826,8 @@
       "imports": [
         {
           "line": 1,
-          "source": "vitest",
-          "statementText": "import { describe, expect, it } from \"vitest\""
+          "source": "node:fs",
+          "statementText": "import { readFileSync } from \"node:fs\""
         },
         {
           "line": 11,
@@ -11897,13 +11836,13 @@
         },
         {
           "line": 2,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  publicStrategyPageExample,\n  type PublicStrategyPageServiceDto,\n} from \"@cowards/spec\""
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
         },
         {
-          "line": 6,
-          "source": "@cowards/service",
-          "statementText": "import type { CowardsService } from \"@cowards/service\""
+          "line": 3,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  publicStrategyPageExample,\n  type PublicStrategyPageServiceDto,\n} from \"@cowards/spec\""
         },
         {
           "line": 7,
@@ -11912,16 +11851,10 @@
         }
       ],
       "persistenceImports": [],
-      "serviceImports": [
-        {
-          "line": 6,
-          "source": "@cowards/service",
-          "statementText": "import type { CowardsService } from \"@cowards/service\""
-        }
-      ],
+      "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -11942,12 +11875,8 @@
       ],
       "scannerFindings": [
         {
-          "code": "service_import",
-          "detail": "@cowards/service"
-        },
-        {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -11974,57 +11903,27 @@
       "imports": [
         {
           "line": 1,
-          "source": "@cowards/persistence/db",
-          "statementText": "import { createDatabasePool } from \"@cowards/persistence/db\""
-        },
-        {
-          "line": 14,
-          "source": "./competitive-session.js",
-          "statementText": "import { SESSION_COOKIE_NAME } from \"./competitive-session.js\""
+          "source": "@cowards/spec",
+          "statementText": "import type { AuthSessionServiceDto } from \"@cowards/spec\""
         },
         {
           "line": 2,
-          "source": "@cowards/persistence/auth",
-          "statementText": "import { getSession, type PublicUserAccount } from \"@cowards/persistence/auth\""
-        },
-        {
-          "line": 3,
-          "source": "@cowards/service",
-          "statementText": "import {\n  createCowardsLocalService,\n  type CowardsService,\n} from \"@cowards/service\""
-        },
-        {
-          "line": 7,
-          "source": "next/headers.js",
-          "statementText": "import { cookies } from \"next/headers.js\""
+          "source": "./public-go-read-client.js",
+          "statementText": "import {\n  createPublicGoReadClient,\n  isPublicGoReadError,\n  type PublicGoReadClient,\n  type PublicGoReadFailureDiagnostic,\n} from \"./public-go-read-client.js\""
         },
         {
           "line": 8,
-          "source": "./public-go-read-client.js",
-          "statementText": "import {\n  createPublicGoReadClient,\n  isPublicGoReadError,\n  type PublicGoReadClient,\n  type PublicGoReadFailureDiagnostic,\n} from \"./public-go-read-client.js\""
+          "source": "./account-service-boundary.js",
+          "statementText": "import { getAccountSession } from \"./account-service-boundary.js\""
         }
       ],
-      "persistenceImports": [
-        {
-          "line": 1,
-          "source": "@cowards/persistence/db",
-          "statementText": "import { createDatabasePool } from \"@cowards/persistence/db\""
-        },
-        {
-          "line": 2,
-          "source": "@cowards/persistence/auth",
-          "statementText": "import { getSession, type PublicUserAccount } from \"@cowards/persistence/auth\""
-        }
-      ],
-      "serviceImports": [
-        {
-          "line": 3,
-          "source": "@cowards/service",
-          "statementText": "import {\n  createCowardsLocalService,\n  type CowardsService,\n} from \"@cowards/service\""
-        }
-      ],
+      "persistenceImports": [],
+      "serviceImports": [],
       "runtimeImports": [],
-      "localBackendImports": [],
-      "usesDatabase": true,
+      "localBackendImports": [
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "usesDatabase": false,
       "claimsJobs": false,
       "completesMatches": false,
       "persistsChronicles": false,
@@ -12043,12 +11942,8 @@
       ],
       "scannerFindings": [
         {
-          "code": "persistence_import",
-          "detail": "@cowards/persistence/db, @cowards/persistence/auth"
-        },
-        {
-          "code": "service_import",
-          "detail": "@cowards/service"
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -12088,7 +11983,7 @@
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -12110,7 +12005,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -12628,48 +12523,48 @@
         },
         {
           "line": 14,
+          "source": "@cowards/spec",
+          "statementText": "import { SERVICE_API_VERSION } from \"@cowards/spec\""
+        },
+        {
+          "line": 15,
           "source": "./types.js",
           "statementText": "import type { GetMatchReplayOptions, ReplayPageData } from \"./types.js\""
         },
         {
-          "line": 15,
+          "line": 16,
           "source": "./replay-ready.js",
           "statementText": "import {\n  buildReadyReplayFromPublicEvidence,\n  buildReadyReplayFromStoredChronicle,\n} from \"./replay-ready.js\""
         },
         {
-          "line": 19,
+          "line": 2,
+          "source": "@cowards/persistence/chronicle-store",
+          "statementText": "import {\n  createPostgresChronicleStore,\n  type ChronicleMetadata,\n  type ChronicleStore,\n} from \"@cowards/persistence/chronicle-store\""
+        },
+        {
+          "line": 20,
           "source": "../../lib/public-go-read-client.js",
           "statementText": "import {\n  createPublicGoReadClient,\n  type PublicGoReadClient,\n} from \"../../lib/public-go-read-client.js\""
         },
         {
-          "line": 2,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import {\n  createPostgresChronicleStore,\n  type ChronicleStore,\n} from \"@cowards/persistence/chronicle-store\""
-        },
-        {
-          "line": 23,
+          "line": 24,
           "source": "../../lib/public-service-adapter.js",
           "statementText": "import {\n  resolvePublicReadRouteOwnership,\n  type PublicReadRouteOwnershipEnv,\n} from \"../../lib/public-service-adapter.js\""
         },
         {
-          "line": 27,
+          "line": 28,
           "source": "./replay-fixture.js",
           "statementText": "import {\n  createReplayFixtureData,\n  getReplayFixtureScenarioId,\n  isReplayFixtureMatch,\n} from \"./replay-fixture.js\""
         },
         {
-          "line": 44,
+          "line": 45,
           "source": "./types.js",
           "statementText": "export type { GetMatchReplayOptions } from \"./types.js\""
         },
         {
-          "line": 6,
+          "line": 7,
           "source": "@cowards/persistence/repositories",
           "statementText": "import type { Queryable } from \"@cowards/persistence/repositories\""
-        },
-        {
-          "line": 7,
-          "source": "@cowards/service",
-          "statementText": "import { createCowardsLocalService } from \"@cowards/service\""
         },
         {
           "line": 8,
@@ -12686,26 +12581,20 @@
         {
           "line": 2,
           "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import {\n  createPostgresChronicleStore,\n  type ChronicleStore,\n} from \"@cowards/persistence/chronicle-store\""
+          "statementText": "import {\n  createPostgresChronicleStore,\n  type ChronicleMetadata,\n  type ChronicleStore,\n} from \"@cowards/persistence/chronicle-store\""
         },
         {
-          "line": 6,
+          "line": 7,
           "source": "@cowards/persistence/repositories",
           "statementText": "import type { Queryable } from \"@cowards/persistence/repositories\""
         }
       ],
-      "serviceImports": [
-        {
-          "line": 7,
-          "source": "@cowards/service",
-          "statementText": "import { createCowardsLocalService } from \"@cowards/service\""
-        }
-      ],
+      "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
         "apps/web/app/matches/replay-fixture.ts",
         "apps/web/app/matches/replay-ready.ts",
-        "apps/web/lib/public-service-adapter.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": true,
       "claimsJobs": false,
@@ -12730,12 +12619,8 @@
           "detail": "@cowards/persistence/db, @cowards/persistence/chronicle-store, @cowards/persistence/repositories"
         },
         {
-          "code": "service_import",
-          "detail": "@cowards/service"
-        },
-        {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/matches/replay-fixture.ts, apps/web/app/matches/replay-ready.ts, apps/web/lib/public-service-adapter.ts"
+          "detail": "apps/web/app/matches/replay-fixture.ts, apps/web/app/matches/replay-ready.ts, apps/web/lib/account-service-adapter.ts"
         }
       ]
     },

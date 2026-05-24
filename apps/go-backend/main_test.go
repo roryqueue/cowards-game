@@ -85,6 +85,37 @@ func TestEndpointFixturesMatchCanonicalJSON(t *testing.T) {
 	}
 }
 
+func TestLiveServerRoutesIncludeV116SelectedGoManifestPaths(t *testing.T) {
+	source, err := os.ReadFile("live_backend.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	required := []string{
+		`mux.HandleFunc("GET /health"`,
+		`mux.HandleFunc("GET /auth/session"`,
+		`mux.HandleFunc("POST /auth/session"`,
+		`mux.HandleFunc("POST /auth/sign-up"`,
+		`mux.HandleFunc("DELETE /auth/session"`,
+		`mux.HandleFunc("GET /account/strategy-revisions"`,
+		`mux.HandleFunc("POST /account/strategy-revisions"`,
+		`mux.HandleFunc("GET /account/strategy-revisions/{strategyRevisionId}/source"`,
+		`mux.HandleFunc("POST /account/starter-forks"`,
+		`mux.HandleFunc("POST /account/advanced-forks"`,
+		`mux.HandleFunc("POST /matchsets"`,
+		`mux.HandleFunc("GET /public/strategies/{strategyId}"`,
+		`mux.HandleFunc("GET /public/players/{handle}"`,
+		`mux.HandleFunc("GET /public/ladders/{seasonId}"`,
+		`mux.HandleFunc("GET /public/matchsets/{matchSetId}/summary"`,
+		`mux.HandleFunc("GET /public/replays/{matchId}/metadata"`,
+		`mux.HandleFunc("GET /public/replays/{matchId}/evidence"`,
+	}
+	for _, registration := range required {
+		if !strings.Contains(string(source), registration) {
+			t.Fatalf("live backend missing selected v1.16 route registration %s", registration)
+		}
+	}
+}
+
 func TestStrategyArtifactManifestParsesAsDataOnly(t *testing.T) {
 	type artifactManifest struct {
 		SchemaVersion string `json:"schemaVersion"`

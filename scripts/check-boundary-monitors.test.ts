@@ -156,11 +156,11 @@ describe("boundary drift monitors", () => {
     expect(
       findUnknownReportOnlyOffenses([
         {
-          path: "apps/web/app/api/auth/sign-in/route.ts",
+          path: "apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts",
           line: 1,
           pattern: "competitive/server",
           statementText:
-            'import { competitiveServer } from "../../../competitive/server.js"',
+            'import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
         },
         {
           path: "apps/web/app/api/new-runtime/route.ts",
@@ -428,6 +428,24 @@ describe("boundary drift monitors", () => {
       }
       if (url.includes("/strategies/strategy%3Ago-parity%3Asentinel")) {
         return new Response("<h1>Go Parity Sentinel</h1>", { status: 200 })
+      }
+      if (url.startsWith("http://localhost:3000/")) {
+        return new Response(
+          [
+            "Competitive account",
+            "Competitive Alpha",
+            "Player profile",
+            "Local Player",
+            "Public Strategy card",
+            "Go Parity Sentinel",
+            "Competition Trust Beta",
+            "Demo Trial Ladder",
+            "Smoke exhibition",
+            "Replay",
+            "golden:v1-7:match",
+          ].join(" "),
+          { status: 200 },
+        )
       }
       throw new Error(`unexpected fetch ${url}`)
     })

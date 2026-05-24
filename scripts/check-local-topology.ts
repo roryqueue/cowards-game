@@ -56,6 +56,7 @@ interface TopologyOptions {
   requireRuntimeService: boolean
   requireRuntimeContainer: boolean
   requireV115Lifecycle: boolean
+  requireV116SelectedGoPages?: boolean
   json: boolean
 }
 
@@ -127,6 +128,7 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
     requireRuntimeService: false,
     requireRuntimeContainer: false,
     requireV115Lifecycle: false,
+    requireV116SelectedGoPages: false,
     json: false,
   }
   for (let index = 0; index < argv.length; index += 1) {
@@ -164,6 +166,15 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
         options.requireRuntimeService = true
         options.runtimeServiceUrl ??= "http://127.0.0.1:3107"
         break
+      case "--require-v1-16-selected-go-pages":
+        options.requireV116SelectedGoPages = true
+        options.requireWeb = true
+        options.requireGo = true
+        options.requireRuntimeService = true
+        options.webUrl ??= "http://localhost:3000"
+        options.goUrl ??= "http://127.0.0.1:8087"
+        options.runtimeServiceUrl ??= "http://127.0.0.1:3107"
+        break
       case "--require-v1-15-lifecycle":
         options.requireV115Lifecycle = true
         options.requireWeb = true
@@ -171,6 +182,7 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
         options.requireGo = true
         options.requireWebGoPublicStrategyRead = true
         options.requireRuntimeService = true
+        options.requireV116SelectedGoPages = true
         options.webUrl ??= "http://localhost:3000"
         options.goUrl ??= "http://127.0.0.1:8087"
         options.runtimeServiceUrl ??= "http://127.0.0.1:3107"
@@ -340,6 +352,44 @@ const webPageSmokeTargets: readonly WebPageSmokeTarget[] = [
     name: "Workshop evidence",
     path: "/workshop/evidence",
     expectedText: ["Evidence Explorer"],
+  },
+  {
+    name: "Public player",
+    path: "/players/local",
+    expectedText: ["Player profile", "Local Player"],
+  },
+  {
+    name: "Public Strategy",
+    path: "/strategies/strategy%3Ago-parity%3Asentinel",
+    expectedText: ["Public Strategy card", "Go Parity Sentinel"],
+  },
+  {
+    name: "Public ladder",
+    path: "/ladder/ladder-season%3Ademo",
+    expectedText: ["Competition Trust Beta", "Demo Trial Ladder"],
+  },
+  {
+    name: "Public MatchSet",
+    path: "/matchsets/match-set%3Ago-parity%3Agolden",
+    expectedText: ["Competitive Alpha", "Smoke exhibition"],
+  },
+  {
+    name: "Public replay",
+    path: "/matches/golden%3Av1-7%3Amatch/replay",
+    expectedText: ["Replay", "golden:v1-7:match"],
+  },
+] as const
+
+const v116SelectedGoPageTargets: readonly WebPageSmokeTarget[] = [
+  {
+    name: "Account",
+    path: "/account",
+    expectedText: ["Competitive account"],
+  },
+  {
+    name: "Exhibition creation",
+    path: "/exhibitions/new",
+    expectedText: ["Competitive Alpha"],
   },
   {
     name: "Public player",
@@ -1100,6 +1150,30 @@ export const evaluateLocalTopology = async (
         detail:
           "skipped; pass --require-web-page-smoke for representative page-load smoke",
       })
+    }
+    if (options.requireV116SelectedGoPages) {
+      const webUrl = options.webUrl ?? "http://localhost:3000"
+      checks.push(
+        await check(
+          "web_page_smoke",
+          "v1.16 selected Go page smoke",
+          true,
+          async () => {
+            if (!options.goUrl) {
+              throw new Error("v1.16 selected page smoke requires Go URL")
+            }
+            if (!options.runtimeServiceUrl) {
+              throw new Error(
+                "v1.16 selected page smoke requires runtime-service URL",
+              )
+            }
+            for (const target of v116SelectedGoPageTargets) {
+              await checkWebPageLoads(webUrl, target)
+            }
+            return `${v116SelectedGoPageTargets.length} v1.16 selected Go pages loaded at ${sanitizeDiagnosticUrl(webUrl)}; Workshop is deferred/load-only`
+          },
+        ),
+      )
     }
     if (options.requireWebGoPublicStrategyRead) {
       checks.push(
