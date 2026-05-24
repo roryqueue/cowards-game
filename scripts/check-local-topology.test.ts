@@ -36,6 +36,7 @@ describe("local topology harness", () => {
       ]),
     ).toMatchObject({
       requireWeb: true,
+      requireWebPageSmoke: true,
       requireGo: true,
       requireWebGoPublicStrategyRead: true,
       requireRuntimeService: true,
@@ -55,6 +56,7 @@ describe("local topology harness", () => {
     try {
       expect(parseTopologyOptions([])).toMatchObject({
         requireWeb: false,
+        requireWebPageSmoke: false,
         requireGo: false,
         webUrl: "http://localhost:3100",
         goUrl: "http://127.0.0.1:8187",
@@ -96,6 +98,7 @@ describe("local topology harness", () => {
       goUrl: null,
       runtimeServiceUrl: null,
       requireWeb: false,
+      requireWebPageSmoke: false,
       requireGo: false,
       requireWebGoPublicStrategyRead: false,
       requireRuntimeService: false,
@@ -113,6 +116,7 @@ describe("local topology harness", () => {
         "worker_runtime",
         "runtime_isolation",
         "web_process",
+        "web_page_smoke",
         "go_readonly",
         "privacy",
       ]),
@@ -155,6 +159,21 @@ describe("local topology harness", () => {
         )
       }
       if (
+        url.includes("127.0.0.1:8087/public/players/") ||
+        url.includes("127.0.0.1:8087/public/ladders/")
+      ) {
+        const fixture = url.includes("/public/players/")
+          ? "public-player-page.json"
+          : "public-ladder-page.json"
+        return new Response(
+          readFileSync(
+            `apps/go-backend/testdata/service-fixtures/${fixture}`,
+            "utf8",
+          ),
+          { status: 200 },
+        )
+      }
+      if (
         url.includes("127.0.0.1:8087/public/matchsets/") ||
         url.includes("127.0.0.1:8087/public/replays/") ||
         url.includes("127.0.0.1:8087/public/strategies/")
@@ -183,6 +202,7 @@ describe("local topology harness", () => {
       goUrl: "http://127.0.0.1:8087",
       runtimeServiceUrl: null,
       requireWeb: true,
+      requireWebPageSmoke: false,
       requireGo: true,
       requireWebGoPublicStrategyRead: true,
       requireRuntimeService: false,
@@ -201,12 +221,73 @@ describe("local topology harness", () => {
     })
   }, 30_000)
 
+  it("can require representative web page-load smoke", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes("/api/service/health")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            service: "cowards-service",
+            version: "service-api-v1.8",
+          }),
+          { status: 200 },
+        )
+      }
+      return new Response(
+        [
+          "Strategy Workshop",
+          "Competitive Alpha",
+          "Sign in",
+          "Create account",
+          "Competitive account",
+          "Evidence Explorer",
+          "Player profile",
+          "Local Player",
+          "Public Strategy card",
+          "Go Parity Sentinel",
+          "Competition Trust Beta",
+          "Demo Trial Ladder",
+          "Smoke exhibition",
+          "Replay",
+          "golden:v1-7:match",
+        ].join(" "),
+        { status: 200 },
+      )
+    })
+
+    const checks = await evaluateLocalTopology({
+      webUrl: "http://localhost:3000",
+      goUrl: null,
+      runtimeServiceUrl: null,
+      requireWeb: true,
+      requireWebPageSmoke: true,
+      requireGo: false,
+      requireWebGoPublicStrategyRead: false,
+      requireRuntimeService: false,
+      requireRuntimeContainer: false,
+      requireV115Lifecycle: false,
+      json: false,
+    })
+    const pageSmoke = checks.find(
+      (check) => check.name === "representative page loads",
+    )
+
+    expect(pageSmoke).toMatchObject({
+      layer: "web_page_smoke",
+      ok: true,
+      required: true,
+    })
+    expect(pageSmoke?.detail).toContain("11 representative page types")
+  }, 30_000)
+
   it("reports required live Go failures without leaking private diagnostics", async () => {
     const checks = await evaluateLocalTopology({
       webUrl: null,
       goUrl: "http://127.0.0.1:1",
       runtimeServiceUrl: null,
       requireWeb: false,
+      requireWebPageSmoke: false,
       requireGo: true,
       requireWebGoPublicStrategyRead: false,
       requireRuntimeService: false,
@@ -250,6 +331,7 @@ describe("local topology harness", () => {
       goUrl: "http://127.0.0.1:8087",
       runtimeServiceUrl: null,
       requireWeb: false,
+      requireWebPageSmoke: false,
       requireGo: true,
       requireWebGoPublicStrategyRead: false,
       requireRuntimeService: false,
@@ -271,6 +353,7 @@ describe("local topology harness", () => {
       goUrl: null,
       runtimeServiceUrl: null,
       requireWeb: false,
+      requireWebPageSmoke: false,
       requireGo: false,
       requireWebGoPublicStrategyRead: false,
       requireRuntimeService: false,

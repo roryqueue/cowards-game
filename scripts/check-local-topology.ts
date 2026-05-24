@@ -28,6 +28,7 @@ type Layer =
   | "runtime_service"
   | "go_lifecycle"
   | "web_process"
+  | "web_page_smoke"
   | "web_go_read"
   | "go_readonly"
   | "v115_topology"
@@ -49,6 +50,7 @@ interface TopologyOptions {
   goUrl: string | null
   runtimeServiceUrl: string | null
   requireWeb: boolean
+  requireWebPageSmoke: boolean
   requireGo: boolean
   requireWebGoPublicStrategyRead: boolean
   requireRuntimeService: boolean
@@ -94,6 +96,7 @@ const localCommands = [
   "cd apps/go-backend && redacted-local-test-db-env go test ./... -run TestGoMatchOrchestratorIntegration",
   "pnpm sandbox:evaluate:container",
   "pnpm topology:check -- --web-url http://localhost:3000 --go-url http://127.0.0.1:8087",
+  "pnpm topology:check -- --require-web-page-smoke --web-url http://localhost:3000",
   "pnpm topology:check -- --require-v1-15-lifecycle --json",
   "COWARDS_GO_PUBLIC_STRATEGY_READS=1 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 pnpm --filter @cowards/web dev",
   "pnpm topology:check -- --require-web-go-public-strategy-read --web-url http://localhost:3000",
@@ -118,6 +121,7 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
     goUrl: process.env.COWARDS_GO_BACKEND_URL ?? null,
     runtimeServiceUrl: process.env.COWARDS_RUNTIME_SERVICE_URL ?? null,
     requireWeb: false,
+    requireWebPageSmoke: false,
     requireGo: false,
     requireWebGoPublicStrategyRead: false,
     requireRuntimeService: false,
@@ -134,6 +138,11 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
         options.json = true
         break
       case "--require-web":
+        options.requireWeb = true
+        options.webUrl ??= "http://localhost:3000"
+        break
+      case "--require-web-page-smoke":
+        options.requireWebPageSmoke = true
         options.requireWeb = true
         options.webUrl ??= "http://localhost:3000"
         break
@@ -158,6 +167,7 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
       case "--require-v1-15-lifecycle":
         options.requireV115Lifecycle = true
         options.requireWeb = true
+        options.requireWebPageSmoke = true
         options.requireGo = true
         options.requireWebGoPublicStrategyRead = true
         options.requireRuntimeService = true
@@ -293,6 +303,99 @@ const smokeJson = async (
   baseUrl: string,
   samplePath: string,
 ): Promise<unknown> => fetchJson(new URL(samplePath, baseUrl))
+
+interface WebPageSmokeTarget {
+  name: string
+  path: string
+  expectedText: readonly string[]
+}
+
+const webPageSmokeTargets: readonly WebPageSmokeTarget[] = [
+  {
+    name: "Workshop",
+    path: "/",
+    expectedText: ["Strategy Workshop"],
+  },
+  {
+    name: "Sign in",
+    path: "/auth/sign-in",
+    expectedText: ["Competitive Alpha", "Sign in"],
+  },
+  {
+    name: "Sign up",
+    path: "/auth/sign-up",
+    expectedText: ["Competitive Alpha", "Create account"],
+  },
+  {
+    name: "Account",
+    path: "/account",
+    expectedText: ["Competitive account"],
+  },
+  {
+    name: "Exhibition creation",
+    path: "/exhibitions/new",
+    expectedText: ["Competitive Alpha"],
+  },
+  {
+    name: "Workshop evidence",
+    path: "/workshop/evidence",
+    expectedText: ["Evidence Explorer"],
+  },
+  {
+    name: "Public player",
+    path: "/players/local",
+    expectedText: ["Player profile", "Local Player"],
+  },
+  {
+    name: "Public Strategy",
+    path: "/strategies/strategy%3Ago-parity%3Asentinel",
+    expectedText: ["Public Strategy card", "Go Parity Sentinel"],
+  },
+  {
+    name: "Public ladder",
+    path: "/ladder/ladder-season%3Ademo",
+    expectedText: ["Competition Trust Beta", "Demo Trial Ladder"],
+  },
+  {
+    name: "Public MatchSet",
+    path: "/matchsets/match-set%3Ago-parity%3Agolden",
+    expectedText: ["Competitive Alpha", "Smoke exhibition"],
+  },
+  {
+    name: "Public replay",
+    path: "/matches/golden%3Av1-7%3Amatch/replay",
+    expectedText: ["Replay", "golden:v1-7:match"],
+  },
+] as const
+
+const checkWebPageLoads = async (
+  baseUrl: string,
+  target: WebPageSmokeTarget,
+): Promise<string> => {
+  const url = new URL(target.path, baseUrl)
+  const response = await fetch(url)
+  const text = await response.text()
+  if (!response.ok) {
+    throw new Error(
+      `${target.name} page ${sanitizeDiagnosticUrl(url.href)} returned HTTP ${response.status}`,
+    )
+  }
+  for (const marker of [
+    "Application error",
+    "Unhandled Runtime Error",
+    "PublicGoReadError",
+  ]) {
+    if (text.includes(marker)) {
+      throw new Error(`${target.name} page rendered ${marker}`)
+    }
+  }
+  for (const expected of target.expectedText) {
+    if (!text.includes(expected)) {
+      throw new Error(`${target.name} page did not include ${expected}`)
+    }
+  }
+  return `${target.name} loaded ${target.path}`
+}
 
 const checkPublicPayload = (value: unknown): string => {
   assertPublicServiceDtoLeakSafe(value)
@@ -973,6 +1076,31 @@ export const evaluateLocalTopology = async (
         },
       ),
     )
+    if (options.requireWebPageSmoke) {
+      const webUrl = options.webUrl ?? "http://localhost:3000"
+      checks.push(
+        await check(
+          "web_page_smoke",
+          "representative page loads",
+          true,
+          async () => {
+            for (const target of webPageSmokeTargets) {
+              await checkWebPageLoads(webUrl, target)
+            }
+            return `${webPageSmokeTargets.length} representative page types loaded at ${sanitizeDiagnosticUrl(webUrl)}`
+          },
+        ),
+      )
+    } else {
+      checks.push({
+        layer: "web_page_smoke",
+        name: "representative page loads",
+        required: false,
+        ok: true,
+        detail:
+          "skipped; pass --require-web-page-smoke for representative page-load smoke",
+      })
+    }
     if (options.requireWebGoPublicStrategyRead) {
       checks.push(
         await check(
@@ -1011,6 +1139,14 @@ export const evaluateLocalTopology = async (
       required: false,
       ok: true,
       detail: "skipped; pass --web-url or --require-web for live web smoke",
+    })
+    checks.push({
+      layer: "web_page_smoke",
+      name: "representative page loads",
+      required: false,
+      ok: true,
+      detail:
+        "skipped; pass --web-url with --require-web-page-smoke for representative page-load smoke",
     })
   }
 
