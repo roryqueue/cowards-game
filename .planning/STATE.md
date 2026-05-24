@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: Runtime Isolation and TypeScript Backend Retirement
 status: planning
-stopped_at: Phase 103 verified complete; ready for Phase 104 planning
-last_updated: "2026-05-24T17:37:14.000Z"
-last_activity: 2026-05-24 - Milestone v1.16 started
+stopped_at: Phase 104 complete; ready for Phase 105 planning
+last_updated: "2026-05-24T18:15:10.000Z"
+last_activity: 2026-05-24 - Phase 104 runtime service boundary hardening completed
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 1
-  percent: 14
+  completed_plans: 2
+  percent: 28
 ---
 
 # State: Coward's Game
@@ -24,7 +24,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-24)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 104 - Isolated Runtime Service Boundary Hardening planning.
+**Current focus:** Phase 105 - Web/API Go-Only Cutover and Fallback Removal planning.
 **Latest shipped milestone:** v1.15 Go Backend Ownership Completion
 **Active milestone:** v1.16 Runtime Isolation and TypeScript Backend Retirement
 **Requirements:** .planning/REQUIREMENTS.md
@@ -32,10 +32,10 @@ See: .planning/PROJECT.md (updated 2026-05-24)
 
 ## Current Position
 
-Phase: 104 - Isolated Runtime Service Boundary Hardening
+Phase: 105 - Web/API Go-Only Cutover and Fallback Removal
 Plan: Not started
-Status: Phase 103 verified complete; ready for Phase 104 planning
-Last activity: 2026-05-24 - Phase 103 verification passed and inventory baseline was accepted
+Status: Phase 104 complete; ready for Phase 105 planning
+Last activity: 2026-05-24 - Phase 104 completed broker-ready runtime boundary artifacts, tests, monitors, and validation notes
 
 ## Workflow Settings
 
@@ -92,8 +92,8 @@ v1.16 goal:
 
 ## Next Todos
 
-- Run `$gsd-plan-phase 104` to create the executable isolated runtime service boundary hardening plan.
-- Proceed through phases 104-109 using the captured CONTEXT.md decisions.
+- Run `$gsd-plan-phase 105` to create the executable Web/API Go-only cutover and fallback removal plan.
+- Proceed through phases 105-109 using the captured CONTEXT.md decisions and Phase 104 runtime boundary artifacts.
 
 ## Blockers/Concerns
 
@@ -102,6 +102,14 @@ v1.16 goal:
 - WASM/WASI/component-model is a long-term candidate path for some languages, not a v1.16 promotion; Node `node:wasi` must not be treated as an untrusted-code sandbox.
 - Go and TypeScript DB-owning workers must not claim or complete the same normal queue concurrently during rollback.
 - `pnpm boundary:monitors` must stay synchronized with Go route manifests, fixtures, runtime contracts, topology artifacts, and surface labels.
+- Phase 104 focused gates passed, but full live `pnpm boundary:monitors` still needs local web, Go, runtime-service, and auth-gated endpoints running; see `104-VALIDATION.md`.
+
+## Decisions
+
+- Phase 104 preserves `runtime-execution-service-v1.15` and `strategy-runtime-abi-v1.14` while adding broker-ready Strategy Execution Service / Runtime Broker metadata.
+- Today's runtime implementation is explicitly labeled the isolated JS/TS runtime service, not the backend and not the final Runtime Broker.
+- Runtime-service health metadata now reports boundary name, implementation label, HTTP+JSON binding, and `backendAuthority=false`.
+- Phase 104 regenerated the v1.16 TypeScript backend inventory artifacts after adding runtime-service boundary tests and monitor checks.
 
 ## Deferred Items
 
@@ -119,10 +127,10 @@ v1.16 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-24T16:30:00.000-04:00
-Stopped at: Phase 103 verified complete; Phase 104 is ready for discussion/planning.
+Last session: 2026-05-24T18:15:10.000Z
+Stopped at: Phase 104 complete; Phase 105 is ready for planning.
 Resume file: .planning/STATE.md
 
 ## Operator Next Steps
 
-- Start Phase 104 with /gsd-discuss-phase 104 or /gsd-plan-phase 104.
+- Start Phase 105 with /gsd-discuss-phase 105 or /gsd-plan-phase 105.

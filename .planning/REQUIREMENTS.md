@@ -17,13 +17,13 @@
 
 ### Runtime Service Boundary
 
-- [ ] **RT-01**: Developer can inspect the final v1.16 runtime service boundary as a broker-ready, language-neutral **Strategy Execution Service** / **Runtime Broker** contract, including transport contract, runtime ABI use, JSON/schema-validated envelopes, source package policy, execution limits, timeouts, diagnostics, logs, crash semantics, replay privacy, and no-fallback behavior.
-- [ ] **RT-02**: Developer can verify JS/TS Strategy execution remains supported only inside the isolated runtime service or its explicit runtime adapter boundary.
-- [ ] **RT-03**: Developer can verify the runtime service does not claim jobs, complete Matches, persist Chronicles, refresh MatchSet scoring, serve normal product API routes, access web/API request state, or act as a backend fallback.
-- [ ] **RT-04**: Developer can verify Go invokes runtime execution exclusively through `runtime-execution-service-v1.15` and `strategy-runtime-abi-v1.14` or a documented compatible successor whose JSON request/response shape can be implemented by every language runtime and fronted by a future language-neutral Runtime Broker.
-- [ ] **RT-05**: Developer can verify runtime service request and response schemas reject ABI drift, malformed inputs, source hash/byte mismatches, oversized payloads, timeout failures, invalid outputs, unsafe diagnostics, and private output leaks, and that Strategy Revision submission performs compile, validation, or artifact packaging checks where practical before immutable Match execution.
-- [ ] **RT-06**: Developer can verify Go and web/API processes do not import, evaluate, transpile, or execute Strategy source and do not use Node `vm` as a hostile-code security boundary.
-- [ ] **RT-07**: Developer can verify runtime readiness labels for worker-thread, subprocess, container-subprocess, and non-JS candidates remain explicit and do not silently promote production hostile-code isolation or counted non-JS play.
+- [x] **RT-01**: Developer can inspect the final v1.16 runtime service boundary as a broker-ready, language-neutral **Strategy Execution Service** / **Runtime Broker** contract, including transport contract, runtime ABI use, JSON/schema-validated envelopes, source package policy, execution limits, timeouts, diagnostics, logs, crash semantics, replay privacy, and no-fallback behavior.
+- [x] **RT-02**: Developer can verify JS/TS Strategy execution remains supported only inside the isolated runtime service or its explicit runtime adapter boundary.
+- [x] **RT-03**: Developer can verify the runtime service does not claim jobs, complete Matches, persist Chronicles, refresh MatchSet scoring, serve normal product API routes, access web/API request state, or act as a backend fallback.
+- [x] **RT-04**: Developer can verify Go invokes runtime execution exclusively through `runtime-execution-service-v1.15` and `strategy-runtime-abi-v1.14` or a documented compatible successor whose JSON request/response shape can be implemented by every language runtime and fronted by a future language-neutral Runtime Broker.
+- [x] **RT-05**: Developer can verify runtime service request and response schemas reject ABI drift, malformed inputs, source hash/byte mismatches, oversized payloads, timeout failures, invalid outputs, unsafe diagnostics, and private output leaks, and that Strategy Revision submission performs compile, validation, or artifact packaging checks where practical before immutable Match execution.
+- [x] **RT-06**: Developer can verify Go and web/API processes do not import, evaluate, transpile, or execute Strategy source and do not use Node `vm` as a hostile-code security boundary.
+- [x] **RT-07**: Developer can verify runtime readiness labels for worker-thread, subprocess, container-subprocess, and non-JS candidates remain explicit and do not silently promote production hostile-code isolation or counted non-JS play.
 
 ### Web And API Backend Retirement
 
@@ -117,13 +117,13 @@
 | BASE-04 | Phase 103 | Complete |
 | BASE-05 | Phase 103 | Complete |
 | BASE-06 | Phase 103 | Complete |
-| RT-01 | Phase 104 | Pending |
-| RT-02 | Phase 104 | Pending |
-| RT-03 | Phase 104 | Pending |
-| RT-04 | Phase 104 | Pending |
-| RT-05 | Phase 104 | Pending |
-| RT-06 | Phase 104 | Pending |
-| RT-07 | Phase 104 | Pending |
+| RT-01 | Phase 104 | Complete |
+| RT-02 | Phase 104 | Complete |
+| RT-03 | Phase 104 | Complete |
+| RT-04 | Phase 104 | Complete |
+| RT-05 | Phase 104 | Complete |
+| RT-06 | Phase 104 | Complete |
+| RT-07 | Phase 104 | Complete |
 | WEB-01 | Phase 105 | Pending |
 | WEB-02 | Phase 105 | Pending |
 | WEB-03 | Phase 105 | Pending |
@@ -167,4 +167,4 @@
 
 ---
 *Requirements defined: 2026-05-24*
-*Last updated: 2026-05-24 after v1.16 milestone initialization*
+*Last updated: 2026-05-24 after Phase 104 completion*
