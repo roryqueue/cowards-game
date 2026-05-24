@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: Runtime Isolation and TypeScript Backend Retirement
 status: planning
-stopped_at: Phase 104 complete; ready for Phase 105 planning
-last_updated: "2026-05-24T18:15:10.000Z"
-last_activity: 2026-05-24 - Phase 104 runtime service boundary hardening completed
+stopped_at: Phase 104 verified; ready for Phase 105 planning
+last_updated: "2026-05-24T18:44:42.000Z"
+last_activity: 2026-05-24 - Phase 104 runtime service boundary hardening verified
 progress:
   total_phases: 7
   completed_phases: 2
@@ -34,8 +34,8 @@ See: .planning/PROJECT.md (updated 2026-05-24)
 
 Phase: 105 - Web/API Go-Only Cutover and Fallback Removal
 Plan: Not started
-Status: Phase 104 complete; ready for Phase 105 planning
-Last activity: 2026-05-24 - Phase 104 completed broker-ready runtime boundary artifacts, tests, monitors, and validation notes
+Status: Phase 104 verified; ready for Phase 105 planning
+Last activity: 2026-05-24 - Phase 104 verification passed for RT-01 through RT-07 and D-01 through D-18
 
 ## Workflow Settings
 
@@ -102,7 +102,7 @@ v1.16 goal:
 - WASM/WASI/component-model is a long-term candidate path for some languages, not a v1.16 promotion; Node `node:wasi` must not be treated as an untrusted-code sandbox.
 - Go and TypeScript DB-owning workers must not claim or complete the same normal queue concurrently during rollback.
 - `pnpm boundary:monitors` must stay synchronized with Go route manifests, fixtures, runtime contracts, topology artifacts, and surface labels.
-- Phase 104 focused gates passed, but full live `pnpm boundary:monitors` still needs local web, Go, runtime-service, and auth-gated endpoints running; see `104-VALIDATION.md`.
+- Phase 104 verification passed, but full live `pnpm boundary:monitors` still needs local web, Go, runtime-service, and auth-gated endpoints running; see `104-VALIDATION.md` and `104-VERIFICATION.md`.
 
 ## Decisions
 
@@ -110,6 +110,7 @@ v1.16 goal:
 - Today's runtime implementation is explicitly labeled the isolated JS/TS runtime service, not the backend and not the final Runtime Broker.
 - Runtime-service health metadata now reports boundary name, implementation label, HTTP+JSON binding, and `backendAuthority=false`.
 - Phase 104 regenerated the v1.16 TypeScript backend inventory artifacts after adding runtime-service boundary tests and monitor checks.
+- Phase 104 verification scored 7/7 must-haves verified, with live topology evidence deferred to Phase 108/109 rather than blocking Phase 104.
 
 ## Deferred Items
 
@@ -127,8 +128,8 @@ v1.16 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-24T18:15:10.000Z
-Stopped at: Phase 104 complete; Phase 105 is ready for planning.
+Last session: 2026-05-24T18:44:42.000Z
+Stopped at: Phase 104 verified; Phase 105 is ready for planning.
 Resume file: .planning/STATE.md
 
 ## Operator Next Steps
