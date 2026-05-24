@@ -265,12 +265,47 @@ func sanitizeRuntimeServiceDetails(details map[string]any) map[string]any {
 
 func redactRuntimeServiceMessage(message string) string {
 	lower := strings.ToLower(message)
-	for _, forbidden := range []string{"export default", "strategymemory", "soldiermemory", "objectivepayload", "objective payload", "raw awareness grid", "awareness grid", "stderr", "stack", "database_url", "postgres://", "postgresql://", "token", "/users/", "/home/", "/tmp/"} {
+	for _, forbidden := range runtimeServicePrivateMarkers {
 		if strings.Contains(lower, forbidden) {
 			return "Runtime execution service failed with redacted diagnostics"
 		}
 	}
 	return message
+}
+
+var runtimeServicePrivateMarkers = []string{
+	"export default",
+	"strategy source",
+	"strategymemory",
+	"strategy memory",
+	"soldiermemory",
+	"soldier memory",
+	"objectivepayload",
+	"objective payload",
+	"ownerdebug",
+	"owner debug",
+	"raw awareness grid",
+	"awareness grid",
+	"stderr",
+	"stack",
+	"sessionid",
+	"session id",
+	"session",
+	"token",
+	"database_url",
+	"database url",
+	"db dsn",
+	"dsn",
+	"mysql://",
+	"postgres://",
+	"postgresql://",
+	"hostpath",
+	"host path",
+	"/users/",
+	"/home/",
+	"/tmp/",
+	"private runtime internals",
+	"privateruntimeinternals",
 }
 
 func redactRuntimeServiceDetailStrings(details map[string]any) map[string]any {

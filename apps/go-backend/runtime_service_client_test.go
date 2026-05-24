@@ -182,6 +182,17 @@ func TestRuntimeServiceClientRejectsRuntimeABIDriftInResponse(t *testing.T) {
 
 func TestRuntimeServiceClientSanitizesServiceFailure(t *testing.T) {
 	request := validRuntimeServiceRequestForTest()
+	privateMarkers := []string{
+		"export default strategy source",
+		"StrategyMemory ownerDebug",
+		"SoldierMemory objectivePayload",
+		"raw Awareness Grid stack trace",
+		"stderr sessionId token",
+		"mysql://user:pass@localhost:3306/cowards",
+		"postgres://user:pass@localhost:5432/cowards",
+		"hostPath /Users/secret/project",
+		"private runtime internals",
+	}
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(http.StatusUnprocessableEntity)
 		writeRuntimeServiceTestJSON(t, writer, runtimeServiceResponse{
@@ -193,8 +204,12 @@ func TestRuntimeServiceClientSanitizesServiceFailure(t *testing.T) {
 			RuntimeABIVersion: strategyRuntimeABIVersion,
 			SystemFailure: &runtimeServiceFailure{
 				Code:         "SubprocessSystemFailure",
-				ErrorMessage: "stderr contained export default strategyMemory",
-				Retryable:    true,
+				ErrorMessage: strings.Join(privateMarkers, " | "),
+				PublicMessage: strings.Join(
+					append([]string{"runtime failed"}, privateMarkers...),
+					" | ",
+				),
+				Retryable: true,
 				Details: map[string]any{
 					"strategyExecutionAdapterId": "subprocess",
 					"stderr":                     "export default {}",
