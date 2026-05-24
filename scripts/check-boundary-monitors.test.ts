@@ -9,6 +9,7 @@ import {
   selectedGoRouteManifest,
   validateSelectedGoRouteManifest,
   validateV115LifecycleOwnershipManifest,
+  validateV116TypeScriptWorkerQuarantineArtifact,
   validateV116RuntimeServiceBoundaryArtifact,
 } from "./check-boundary-monitors.ts"
 
@@ -142,6 +143,14 @@ const createV116RuntimeBoundaryArtifact = () =>
   JSON.parse(
     readFileSync(
       ".planning/artifacts/v1.16-runtime-service-boundary.json",
+      "utf8",
+    ),
+  ) as Record<string, unknown>
+
+const createV116WorkerQuarantineArtifact = () =>
+  JSON.parse(
+    readFileSync(
+      ".planning/artifacts/v1.16-typescript-worker-quarantine.json",
       "utf8",
     ),
   ) as Record<string, unknown>
@@ -374,6 +383,31 @@ describe("boundary drift monitors", () => {
         },
       }),
     ).toThrow(/node:wasi/)
+  })
+
+  it("validates the v1.16 TypeScript worker quarantine artifact contract", () => {
+    const artifact = createV116WorkerQuarantineArtifact()
+
+    expect(validateV116TypeScriptWorkerQuarantineArtifact(artifact)).toContain(
+      "single owner",
+    )
+    expect(() =>
+      validateV116TypeScriptWorkerQuarantineArtifact({
+        ...artifact,
+        globalPolicies: {
+          ...(artifact.globalPolicies as Record<string, unknown>),
+          mixedGoAndTypeScriptOwnersAllowed: true,
+        },
+      }),
+    ).toThrow(/mixed Go and TypeScript owners/)
+    expect(() =>
+      validateV116TypeScriptWorkerQuarantineArtifact({
+        ...artifact,
+        rollbackStates: {
+          queued_jobs: {},
+        },
+      }),
+    ).toThrow(/running_jobs/)
   })
 
   it("passes the live repository monitor checks", async () => {

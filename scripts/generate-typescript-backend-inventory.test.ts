@@ -229,6 +229,9 @@ describe("TypeScript backend inventory generator", () => {
       claimsJobs: true,
       completesMatches: true,
     })
+    expect(worker?.imports.map((entry) => entry.source)).toContain(
+      "@cowards/persistence/quarantine-lifecycle",
+    )
     expect(runtime).toMatchObject({
       role: "runtime-service",
       executesStrategy: true,
@@ -293,6 +296,33 @@ describe("TypeScript backend inventory generator", () => {
     ).toContain(
       "apps/web/lib/workshop-read-service-adapter.ts frontend-only row claims TypeScript backend imports or database access",
     )
+  })
+
+  it("labels Phase 106 quarantine lifecycle modules as non-normal lifecycle support", () => {
+    const root = createFixtureRepo()
+    writeSource(
+      root,
+      "packages/persistence/src/quarantine-lifecycle.ts",
+      `export { claimNextMatchJob } from "./jobs.js"
+export { completeMatch } from "./complete-match.js"
+export const TYPE_SCRIPT_LIFECYCLE_QUARANTINE = { normalBackend: false }
+`,
+    )
+
+    const inventory = generateTypeScriptBackendInventory({ repoRoot: root })
+    const quarantine = inventory.surfaces.find(
+      (surface) =>
+        surface.path === "packages/persistence/src/quarantine-lifecycle.ts",
+    )
+
+    expect(quarantine).toMatchObject({
+      role: "quarantined",
+      normalBackendOwner: "go_backend",
+      fallbackPolicy: "no_silent_typescript_backend_fallback",
+      claimsJobs: true,
+      completesMatches: true,
+    })
+    expect(quarantine?.gate).toContain("quarantine")
   })
 
   it("keeps Phase 103 artifacts free of token-bearing command values", () => {
