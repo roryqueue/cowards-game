@@ -8,6 +8,7 @@
 pnpm exec vitest run scripts/check-local-topology.test.ts scripts/check-boundary-monitors.test.ts
 pnpm boundary:monitors
 pnpm topology:check -- --require-v1-16-no-typescript-backend --json --web-url http://localhost:3000 --go-url http://127.0.0.1:8087 --runtime-service-url http://127.0.0.1:3107
+COWARDS_REQUIRE_LIVE_TOPOLOGY=1 COWARDS_WEB_URL=http://localhost:3000 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 COWARDS_RUNTIME_SERVICE_URL=http://127.0.0.1:3107 pnpm exec tsx scripts/check-boundary-monitors.ts
 ```
 
 ## Results
@@ -15,6 +16,7 @@ pnpm topology:check -- --require-v1-16-no-typescript-backend --json --web-url ht
 - Focused topology and boundary monitor tests: **passed**, 2 files and 23 tests.
 - `pnpm boundary:monitors`: **passed**, including `[topology] v1.16 no-TypeScript-backend topology artifact`.
 - Strict live topology: **passed**, `ok=true`.
+- Live-required boundary monitor with explicit web/Go/runtime URLs: **passed**, 27 required live v1.16 no-TypeScript-backend topology diagnostics.
 
 ## Live Strict Topology Evidence
 
@@ -33,6 +35,15 @@ That run verified:
 - v1.15 lifecycle, failure drill, rollback, and promotion evidence still passed
 - v1.16 no-TypeScript-backend contract checks passed
 - diagnostic output contained no private markers
+
+## Review Fix Validation
+
+After code review found blockers in live monitor defaults, frontend-only web health acceptance, and artifact drift coverage:
+
+- `checkTopologyDiagnostics()` now builds live mode from `parseTopologyOptions(["--require-v1-16-no-typescript-backend"])`, preserving strict defaults.
+- Strict mode rejects a web `/api/service/health` response with `service="cowards-web"` or `backendAuthority="frontend-only"`.
+- `validateV116NoTypeScriptBackendTopologyArtifact()` now validates the markdown artifact plus `monitorMode` and `pageSmoke` fields.
+- Focused tests now include negative coverage for frontend-only health, broadened TypeScript process roles, missing page smoke requirements, stale live monitor topology, and markdown privacy leaks.
 
 ## Requirement Coverage
 
