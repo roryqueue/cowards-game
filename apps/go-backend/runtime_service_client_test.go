@@ -204,7 +204,6 @@ func TestRuntimeServiceClientSanitizesServiceFailure(t *testing.T) {
 			RuntimeABIVersion: strategyRuntimeABIVersion,
 			SystemFailure: &runtimeServiceFailure{
 				Code:         "SubprocessSystemFailure-ownerDebug-sessionId",
-				ErrorClass:   "FallbackSystemFailure",
 				ErrorMessage: strings.Join(privateMarkers, " | "),
 				PublicMessage: strings.Join(
 					append([]string{"runtime failed"}, privateMarkers...),
@@ -232,8 +231,38 @@ func TestRuntimeServiceClientSanitizesServiceFailure(t *testing.T) {
 	client := newRuntimeServiceClient(server.URL)
 
 	_, failure := client.executeMatch(context.Background(), request)
-	if failure == nil || failure.ErrorClass != "FallbackSystemFailure" || !failure.Retryable {
+	if failure == nil || failure.ErrorClass != "RuntimeServiceSystemFailure" || !failure.Retryable {
 		t.Fatalf("expected service failure, got %+v", failure)
+	}
+	assertRuntimeServiceFailureSafe(t, failure)
+}
+
+func TestRuntimeServiceClientRejectsNonContractSystemFailureErrorClass(t *testing.T) {
+	request := validRuntimeServiceRequestForTest()
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusUnprocessableEntity)
+		writeRuntimeServiceTestJSON(t, writer, map[string]any{
+			"contractVersion":   runtimeExecutionServiceVersion,
+			"ok":                false,
+			"kind":              "systemFailure",
+			"requestId":         request.RequestID,
+			"matchId":           request.Match.MatchID,
+			"runtimeAbiVersion": strategyRuntimeABIVersion,
+			"systemFailure": map[string]any{
+				"code":          "EXECUTION_EXCEPTION",
+				"errorClass":    "FallbackSystemFailure",
+				"message":       "Runtime execution failed.",
+				"publicMessage": "Runtime execution failed before completion.",
+				"retryable":     true,
+			},
+		})
+	}))
+	defer server.Close()
+	client := newRuntimeServiceClient(server.URL)
+
+	_, failure := client.executeMatch(context.Background(), request)
+	if failure == nil || failure.ErrorClass != "RuntimeServiceMalformedResponse" || !failure.Retryable {
+		t.Fatalf("expected malformed response for non-contract errorClass, got %+v", failure)
 	}
 	assertRuntimeServiceFailureSafe(t, failure)
 }

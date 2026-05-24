@@ -71,7 +71,7 @@ type runtimeServiceResponse struct {
 
 type runtimeServiceFailure struct {
 	Code          string         `json:"code"`
-	ErrorClass    string         `json:"errorClass,omitempty"`
+	ErrorClass    string         `json:"-"`
 	ErrorMessage  string         `json:"message"`
 	PublicMessage string         `json:"publicMessage,omitempty"`
 	Retryable     bool           `json:"retryable"`
@@ -134,9 +134,6 @@ func (client *runtimeServiceClient) executeMatch(ctx context.Context, request ru
 	decoder := json.NewDecoder(bytes.NewReader(payload))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&decoded); err != nil {
-		if response.StatusCode < 200 || response.StatusCode >= 300 {
-			return nil, newRuntimeServiceFailure("RuntimeServiceHTTPStatus", "Runtime execution service returned a non-success status", true, map[string]any{"status": response.StatusCode, "actualBytes": len(payload)})
-		}
 		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service response did not match the execution contract", true, map[string]any{"actualBytes": len(payload)})
 	}
 	if failure := validateRuntimeServiceResponse(request, &decoded); failure != nil {
@@ -242,9 +239,6 @@ func newRuntimeServiceFailure(errorClass string, message string, retryable bool,
 
 func sanitizeRuntimeServiceFailure(failure runtimeServiceFailure) runtimeServiceFailure {
 	code := sanitizeRuntimeServiceFailureCode(failure.Code)
-	if code == "" {
-		code = sanitizeRuntimeServiceFailureCode(failure.ErrorClass)
-	}
 	if code == "" {
 		code = "RuntimeServiceSystemFailure"
 	}
