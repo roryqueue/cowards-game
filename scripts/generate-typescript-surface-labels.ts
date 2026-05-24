@@ -299,7 +299,7 @@ const classifySurface = (
       surfaceLabel: "private-owner-debug-replay",
       capabilityGroup: "owner-debug",
       gate:
-        "requires PLAYWRIGHT_TEST=1, NODE_ENV=test, or COWARDS_ENABLE_OWNER_DEBUG_REPLAY=1 plus ownerDebug/debug query and persisted owner authorization",
+        "requires PLAYWRIGHT_TEST=1, NODE_ENV=test, or COWARDS_ENABLE_OWNER_DEBUG_REPLAY=1 plus ownerDebug/debug query, COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID, and persisted owner authorization",
       futureMigration:
         "Future Go owner-debug replay projection migration; public replay evidence must not fallback to this path.",
       privacyClass: "owner-private-replay-debug",

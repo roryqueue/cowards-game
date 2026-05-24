@@ -2038,6 +2038,9 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
       if (!/PLAYWRIGHT_TEST|NODE_ENV=test|COWARDS_ENABLE_OWNER_DEBUG_REPLAY/.test(combined)) {
         throw new Error(`${pathValue} owner-debug missing enablement gates`)
       }
+      if (!/COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID/.test(combined)) {
+        throw new Error(`${pathValue} owner-debug missing requester identity gate`)
+      }
       if (!/owner authorization|persisted owner authorization|owner/.test(combined)) {
         throw new Error(`${pathValue} owner-debug missing owner authorization`)
       }
@@ -2060,9 +2063,12 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
     try {
       assertPublicOutputLeakSafe(
         {
+          surfaceLabel: surface.surfaceLabel,
+          capabilityGroup: surface.capabilityGroup,
           owner: surface.owner,
           reason: surface.reason,
           risk: surface.risk,
+          privacyClass: surface.privacyClass,
           gate: surface.gate,
           futureMigration: surface.futureMigration,
           monitorStatus: surface.monitorStatus,

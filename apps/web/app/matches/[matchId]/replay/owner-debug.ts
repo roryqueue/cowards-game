@@ -30,12 +30,14 @@ export const resolveOwnerDebugReplayOptions = (
   }
 
   const ownerPlayerId = firstValue(searchParams.ownerPlayerId)
-  if (!ownerPlayerId) {
+  const currentRequesterPlayerId = env.COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID
+  if (!ownerPlayerId || currentRequesterPlayerId !== ownerPlayerId) {
     return undefined
   }
 
   return {
     allowOwnerDebug: true,
     requestedOwnerPlayerId: ownerPlayerId as PlayerId,
+    currentRequesterPlayerId: currentRequesterPlayerId as PlayerId,
   }
 }

@@ -19,12 +19,34 @@ describe("owner debug replay route options", () => {
     expect(
       resolveOwnerDebugReplayOptions(
         { ownerDebug: "1", ownerPlayerId: "player:bottom" },
-        { PLAYWRIGHT_TEST: "1" },
+        {
+          PLAYWRIGHT_TEST: "1",
+          COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID: "player:bottom",
+        },
       ),
     ).toEqual({
       allowOwnerDebug: true,
       requestedOwnerPlayerId: "player:bottom",
+      currentRequesterPlayerId: "player:bottom",
     })
+  })
+
+  it("requires a trusted server-side requester identity", () => {
+    expect(
+      resolveOwnerDebugReplayOptions(
+        { ownerDebug: "1", ownerPlayerId: "player:bottom" },
+        { PLAYWRIGHT_TEST: "1" },
+      ),
+    ).toBeUndefined()
+    expect(
+      resolveOwnerDebugReplayOptions(
+        { ownerDebug: "1", ownerPlayerId: "player:bottom" },
+        {
+          PLAYWRIGHT_TEST: "1",
+          COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID: "player:intruder",
+        },
+      ),
+    ).toBeUndefined()
   })
 
   it("requires an explicit owner player id", () => {

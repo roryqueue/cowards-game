@@ -568,6 +568,20 @@ describe("boundary drift monitors", () => {
         ),
       }),
     ).toThrow(/shareable label leak/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
+          (surface, index) =>
+            index === 0
+              ? {
+                  ...surface,
+                  privacyClass: "DATABASE_URL",
+                }
+              : surface,
+        ),
+      }),
+    ).toThrow(/shareable label leak/)
   })
 
   it("passes the live repository monitor checks", async () => {
