@@ -3,13 +3,29 @@ import {
   getCurrentAccountReadUser,
   listAccountReadRevisions,
 } from "../../../lib/account-service-boundary.js"
+import { CompetitiveInputError } from "../../../lib/competitive-errors.js"
+import { isGoBackendServiceUnavailableError } from "../../../lib/go-backend-service-client.js"
 import { ExhibitionClient } from "./exhibition-client.js"
 
 export const dynamic = "force-dynamic"
 
 export default async function NewExhibitionPage() {
-  const user = await getCurrentAccountReadUser()
-  const revisions = user ? await listAccountReadRevisions() : []
+  let accountUnavailable = false
+  let user: Awaited<ReturnType<typeof getCurrentAccountReadUser>> = null
+  let revisions: Awaited<ReturnType<typeof listAccountReadRevisions>> = []
+  try {
+    user = await getCurrentAccountReadUser()
+    revisions = user ? await listAccountReadRevisions() : []
+  } catch (error) {
+    if (
+      isGoBackendServiceUnavailableError(error) ||
+      (error instanceof CompetitiveInputError && error.status === 401)
+    ) {
+      accountUnavailable = isGoBackendServiceUnavailableError(error)
+    } else {
+      throw error
+    }
+  }
   const presets = COMPETITION_PRESETS.map((preset) => ({
     id: preset.id,
     label: preset.label,
@@ -37,6 +53,12 @@ export default async function NewExhibitionPage() {
               <a href="/auth/sign-up">Create account</a>
             </div>
           </div>
+          {accountUnavailable ? (
+            <p className="workshop-muted">
+              Account services are temporarily unavailable. Exhibition entry
+              failed closed without TypeScript backend fallback.
+            </p>
+          ) : null}
           <p>
             Exhibition entry requires a session-backed account so Strategy
             Revision ownership can be checked before the MatchSet is created.

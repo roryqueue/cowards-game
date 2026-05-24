@@ -2,12 +2,28 @@ import {
   getCurrentAccountReadUser,
   listAccountReadRevisions,
 } from "../../lib/account-service-boundary.js"
+import { CompetitiveInputError } from "../../lib/competitive-errors.js"
+import { isGoBackendServiceUnavailableError } from "../../lib/go-backend-service-client.js"
 
 export const dynamic = "force-dynamic"
 
 export default async function AccountPage() {
-  const user = await getCurrentAccountReadUser()
-  const revisions = user ? await listAccountReadRevisions() : []
+  let accountUnavailable = false
+  let user: Awaited<ReturnType<typeof getCurrentAccountReadUser>> = null
+  let revisions: Awaited<ReturnType<typeof listAccountReadRevisions>> = []
+  try {
+    user = await getCurrentAccountReadUser()
+    revisions = user ? await listAccountReadRevisions() : []
+  } catch (error) {
+    if (
+      isGoBackendServiceUnavailableError(error) ||
+      (error instanceof CompetitiveInputError && error.status === 401)
+    ) {
+      accountUnavailable = isGoBackendServiceUnavailableError(error)
+    } else {
+      throw error
+    }
+  }
 
   return (
     <main className="app-page">
@@ -86,10 +102,18 @@ export default async function AccountPage() {
             )}
           </>
         ) : (
-          <p>
-            Anonymous Workshop drafting still works. Competitive revision saves
-            and exhibition entry require a session-backed account.
-          </p>
+          <>
+            {accountUnavailable ? (
+              <p className="workshop-muted">
+                Account services are temporarily unavailable. Go-backed account
+                reads failed closed without TypeScript backend fallback.
+              </p>
+            ) : null}
+            <p>
+              Anonymous Workshop drafting still works. Competitive revision
+              saves and exhibition entry require a session-backed account.
+            </p>
+          </>
         )}
       </section>
     </main>

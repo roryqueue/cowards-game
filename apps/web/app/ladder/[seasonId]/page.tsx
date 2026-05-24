@@ -1,5 +1,5 @@
-import { getCurrentAccountReadUser } from "../../../lib/account-service-boundary.js"
 import { getPublicLadderSeason } from "../../../lib/public-service-boundary.js"
+import { getCurrentPublicReadUser } from "../../../lib/public-service-adapter.js"
 
 export const dynamic = "force-dynamic"
 
@@ -12,7 +12,7 @@ export default async function TrialLadderSeasonPage({
   const seasonId = decodeURIComponent(resolvedParams.seasonId)
   const [season, user] = await Promise.all([
     getPublicLadderSeason(seasonId),
-    getCurrentAccountReadUser(),
+    getCurrentPublicReadUser(),
   ])
 
   if (!season) {

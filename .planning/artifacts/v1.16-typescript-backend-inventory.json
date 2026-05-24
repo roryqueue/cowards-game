@@ -8299,6 +8299,16 @@
           "line": 1,
           "source": "../../lib/account-service-boundary.js",
           "statementText": "import {\n  getCurrentAccountReadUser,\n  listAccountReadRevisions,\n} from \"../../lib/account-service-boundary.js\""
+        },
+        {
+          "line": 5,
+          "source": "../../lib/competitive-errors.js",
+          "statementText": "import { CompetitiveInputError } from \"../../lib/competitive-errors.js\""
+        },
+        {
+          "line": 6,
+          "source": "../../lib/go-backend-service-client.js",
+          "statementText": "import { isGoBackendServiceUnavailableError } from \"../../lib/go-backend-service-client.js\""
         }
       ],
       "persistenceImports": [],
@@ -8882,6 +8892,16 @@
         },
         {
           "line": 6,
+          "source": "../../../lib/competitive-errors.js",
+          "statementText": "import { CompetitiveInputError } from \"../../../lib/competitive-errors.js\""
+        },
+        {
+          "line": 7,
+          "source": "../../../lib/go-backend-service-client.js",
+          "statementText": "import { isGoBackendServiceUnavailableError } from \"../../../lib/go-backend-service-client.js\""
+        },
+        {
+          "line": 8,
           "source": "./exhibition-client.js",
           "statementText": "import { ExhibitionClient } from \"./exhibition-client.js\""
         }
@@ -8939,13 +8959,13 @@
       "imports": [
         {
           "line": 1,
-          "source": "../../../lib/account-service-boundary.js",
-          "statementText": "import { getCurrentAccountReadUser } from \"../../../lib/account-service-boundary.js\""
+          "source": "../../../lib/public-service-boundary.js",
+          "statementText": "import { getPublicLadderSeason } from \"../../../lib/public-service-boundary.js\""
         },
         {
           "line": 2,
-          "source": "../../../lib/public-service-boundary.js",
-          "statementText": "import { getPublicLadderSeason } from \"../../../lib/public-service-boundary.js\""
+          "source": "../../../lib/public-service-adapter.js",
+          "statementText": "import { getCurrentPublicReadUser } from \"../../../lib/public-service-adapter.js\""
         }
       ],
       "persistenceImports": [],
@@ -11962,6 +11982,11 @@
           "statementText": "import type { AuthSessionServiceDto } from \"@cowards/spec\""
         },
         {
+          "line": 10,
+          "source": "./go-backend-service-client.js",
+          "statementText": "import { isGoBackendServiceUnavailableError } from \"./go-backend-service-client.js\""
+        },
+        {
           "line": 2,
           "source": "./public-go-read-client.js",
           "statementText": "import {\n  createPublicGoReadClient,\n  isPublicGoReadError,\n  type PublicGoReadClient,\n  type PublicGoReadFailureDiagnostic,\n} from \"./public-go-read-client.js\""
@@ -11970,6 +11995,11 @@
           "line": 8,
           "source": "./account-service-boundary.js",
           "statementText": "import { getAccountSession } from \"./account-service-boundary.js\""
+        },
+        {
+          "line": 9,
+          "source": "./competitive-errors.js",
+          "statementText": "import { CompetitiveInputError } from \"./competitive-errors.js\""
         }
       ],
       "persistenceImports": [],

@@ -6,6 +6,8 @@ import {
   type PublicGoReadFailureDiagnostic,
 } from "./public-go-read-client.js"
 import { getAccountSession } from "./account-service-boundary.js"
+import { CompetitiveInputError } from "./competitive-errors.js"
+import { isGoBackendServiceUnavailableError } from "./go-backend-service-client.js"
 
 export type PublicReadBackendOwner = "typescript" | "go"
 export type PublicReadRouteId =
@@ -197,4 +199,16 @@ export const publicGoReadFailureDiagnostic = (
   isPublicGoReadError(error) ? error.diagnostic : null
 
 export const getCurrentPublicReadUser =
-  async (): Promise<PublicReadUser | null> => (await getAccountSession()).user
+  async (): Promise<PublicReadUser | null> => {
+    try {
+      return (await getAccountSession()).user
+    } catch (error) {
+      if (
+        isGoBackendServiceUnavailableError(error) ||
+        (error instanceof CompetitiveInputError && error.status === 401)
+      ) {
+        return null
+      }
+      throw error
+    }
+  }

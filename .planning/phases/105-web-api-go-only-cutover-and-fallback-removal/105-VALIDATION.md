@@ -2,16 +2,17 @@
 
 ## Status
 
-Nyquist validation is **partial**: WEB-01 through WEB-08 have focused automated coverage for selected Go-only route behavior, fallback removal, schema/privacy checks, manifests, monitors, and rendered replay smoke. The live selected page-smoke gate is still a residual risk because the required local web, Go backend, and runtime-service processes were not running when the strict topology command was executed.
+Nyquist validation is **complete**: WEB-01 through WEB-08 have focused automated coverage for selected Go-only route behavior, fallback removal, schema/privacy checks, manifests, monitors, rendered replay smoke, and live selected page-smoke with the web frontend, Go backend, and runtime service running.
 
 ## Validation Audit 2026-05-24
 
 | Metric | Count |
 | --- | ---: |
-| Gaps found | 1 |
+| Gaps found | 2 |
 | Resolved with new behavioral tests | 1 |
 | Escalated | 0 |
-| Residual live/manual risks | 1 |
+| Resolved with live topology rerun | 1 |
+| Residual live/manual risks | 0 |
 
 ## Tests Added
 
@@ -31,26 +32,28 @@ Nyquist validation is **partial**: WEB-01 through WEB-08 have focused automated 
 | `cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./...` | passed |
 | `pnpm boundary:monitors` | passed; live topology inside this command remains optional unless `COWARDS_REQUIRE_LIVE_TOPOLOGY=1` |
 | `PLAYWRIGHT_TEST=1 pnpm exec playwright test --project=desktop replay.visual.spec.ts` | passed, 7 desktop replay visual tests with rendered board/canvas-pixel checks |
+| `pnpm topology:check -- --require-web-page-smoke --require-go --require-runtime-service --require-v1-16-selected-go-pages --web-url http://localhost:3000 --go-url http://127.0.0.1:8087 --runtime-service-url http://127.0.0.1:3107 --json` | passed with running runtime service, Go fixture backend, and strict Go/no-TypeScript-backend web frontend; 11 representative pages and 7 selected Go pages loaded |
 
-## Live Topology Attempt
+## Live Topology Evidence
 
-Command attempted:
+Initial command attempted:
 
 ```bash
 pnpm topology:check -- --require-web-page-smoke --require-go --require-runtime-service --require-v1-16-selected-go-pages
 ```
 
-Result: failed because local live services were not running. Failures were `runtime service health`, `web service health route`, representative page loads, `v1.16 selected Go page smoke`, Go health, selected public read routes, and owner analytics auth gate. Diagnostics were redacted and did not include Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner-debug data, tokens, DB DSNs, host paths, stack traces, stderr, or private runtime material.
+Initial result: failed because local live services were not running. Failures were `runtime service health`, `web service health route`, representative page loads, `v1.16 selected Go page smoke`, Go health, selected public read routes, and owner analytics auth gate. Diagnostics were redacted and did not include Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner-debug data, tokens, DB DSNs, host paths, stack traces, stderr, or private runtime material.
 
-Startup commands for a full live rerun:
+Rerun services:
 
 ```bash
-pnpm services:up
-pnpm --filter @cowards/runtime-service start
-cd apps/go-backend && COWARDS_GO_BACKEND_DATA_MODE=live redacted-db-env COWARDS_RUNTIME_SERVICE_URL=http://127.0.0.1:3107 go run .
-COWARDS_GO_BACKEND_OWNER=go COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 COWARDS_GO_PUBLIC_READS=1 pnpm --filter @cowards/web dev
-pnpm topology:check -- --require-web-page-smoke --require-go --require-runtime-service --require-v1-16-selected-go-pages
+COWARDS_RUNTIME_SERVICE_ALLOW_LOCAL_WORKER_THREAD=1 pnpm --filter @cowards/runtime-service start
+cd apps/go-backend && PATH=/usr/local/go/bin:$PATH COWARDS_GO_BACKEND_ADDR=127.0.0.1:8087 go run .
+COWARDS_NO_TYPESCRIPT_BACKEND=1 COWARDS_GO_BACKEND_OWNER=go COWARDS_GO_PUBLIC_READS=1 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 COWARDS_RUNTIME_SERVICE_URL=http://127.0.0.1:3107 pnpm --filter @cowards/web dev
+pnpm topology:check -- --require-web-page-smoke --require-go --require-runtime-service --require-v1-16-selected-go-pages --web-url http://localhost:3000 --go-url http://127.0.0.1:8087 --runtime-service-url http://127.0.0.1:3107 --json
 ```
+
+Final result: passed. The topology report showed runtime service health, web health, Go health, representative page loads, selected Go page smoke, selected public read routes, owner analytics auth rejection, and privacy diagnostics all green. The selected Go page-smoke detail was: `7 v1.16 selected Go pages loaded at http://localhost:3000/ with replay board realism checked; rendered replay board visual smoke harness checks canvas pixels and snapshots; Workshop is deferred/load-only`.
 
 ## WEB-01 Through WEB-08 Evidence
 
@@ -67,7 +70,7 @@ pnpm topology:check -- --require-web-page-smoke --require-go --require-runtime-s
 
 ## Residual Risk
 
-- **WARNING:** Live selected page-smoke is not fully closed. The strict command was actually run and failed due missing local live services. Do not mark `v1.16 selected Go page smoke` complete until `pnpm topology:check -- --require-web-page-smoke --require-go --require-runtime-service --require-v1-16-selected-go-pages` passes with the web frontend, Go backend, and runtime service running.
+No Phase 105 validation residual risk remains. Full live-database Match orchestration remains part of later milestone-wide topology/audit coverage, not a Phase 105 selected web/API cutover gap.
 
 ## Explicitly Out of Scope
 
