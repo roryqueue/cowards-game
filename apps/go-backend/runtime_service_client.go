@@ -218,6 +218,9 @@ func validateRuntimeServiceResponse(request runtimeServiceRequest, response *run
 	if response.Kind != "systemFailure" || response.SystemFailure == nil || response.Result != nil {
 		return newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service failure response was incomplete", true, nil)
 	}
+	if !isRuntimeServiceContractFailureCode(response.SystemFailure.Code) {
+		return newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service failure code is outside the execution contract", true, nil)
+	}
 	return nil
 }
 
@@ -253,21 +256,24 @@ func sanitizeRuntimeServiceFailure(failure runtimeServiceFailure) runtimeService
 }
 
 func sanitizeRuntimeServiceFailureCode(code string) string {
-	if code == "" {
-		return ""
+	if isRuntimeServiceContractFailureCode(code) {
+		return code
 	}
-	for _, marker := range runtimeServicePrivateMarkers {
-		if strings.Contains(strings.ToLower(code), marker) {
-			return ""
-		}
+	return ""
+}
+
+func isRuntimeServiceContractFailureCode(code string) bool {
+	switch code {
+	case "MALFORMED_REQUEST",
+		"SOURCE_HASH_MISMATCH",
+		"SOURCE_BYTES_MISMATCH",
+		"UNSUPPORTED_RUNTIME_ADAPTER",
+		"EXECUTION_EXCEPTION",
+		"RESPONSE_SCHEMA_INVALID":
+		return true
+	default:
+		return false
 	}
-	for _, r := range code {
-		if (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
-			continue
-		}
-		return ""
-	}
-	return code
 }
 
 func sanitizeRuntimeServiceDetails(details map[string]any) map[string]any {

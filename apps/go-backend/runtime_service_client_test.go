@@ -203,7 +203,7 @@ func TestRuntimeServiceClientSanitizesServiceFailure(t *testing.T) {
 			MatchID:           request.Match.MatchID,
 			RuntimeABIVersion: strategyRuntimeABIVersion,
 			SystemFailure: &runtimeServiceFailure{
-				Code:         "SubprocessSystemFailure-ownerDebug-sessionId",
+				Code:         "EXECUTION_EXCEPTION",
 				ErrorMessage: strings.Join(privateMarkers, " | "),
 				PublicMessage: strings.Join(
 					append([]string{"runtime failed"}, privateMarkers...),
@@ -231,10 +231,38 @@ func TestRuntimeServiceClientSanitizesServiceFailure(t *testing.T) {
 	client := newRuntimeServiceClient(server.URL)
 
 	_, failure := client.executeMatch(context.Background(), request)
-	if failure == nil || failure.ErrorClass != "RuntimeServiceSystemFailure" || !failure.Retryable {
+	if failure == nil || failure.ErrorClass != "EXECUTION_EXCEPTION" || !failure.Retryable {
 		t.Fatalf("expected service failure, got %+v", failure)
 	}
 	assertRuntimeServiceFailureSafe(t, failure)
+}
+
+func TestRuntimeServiceClientRejectsUnknownSystemFailureCode(t *testing.T) {
+	request := validRuntimeServiceRequestForTest()
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusUnprocessableEntity)
+		writeRuntimeServiceTestJSON(t, writer, runtimeServiceResponse{
+			ContractVersion:   runtimeExecutionServiceVersion,
+			OK:                false,
+			Kind:              "systemFailure",
+			RequestID:         request.RequestID,
+			MatchID:           request.Match.MatchID,
+			RuntimeABIVersion: strategyRuntimeABIVersion,
+			SystemFailure: &runtimeServiceFailure{
+				Code:          "SubprocessSystemFailure",
+				ErrorMessage:  "Runtime execution failed.",
+				PublicMessage: "Runtime execution failed before completion.",
+				Retryable:     true,
+			},
+		})
+	}))
+	defer server.Close()
+	client := newRuntimeServiceClient(server.URL)
+
+	_, failure := client.executeMatch(context.Background(), request)
+	if failure == nil || failure.ErrorClass != "RuntimeServiceMalformedResponse" || !failure.Retryable {
+		t.Fatalf("expected malformed response for unknown failure code, got %+v", failure)
+	}
 }
 
 func TestRuntimeServiceClientRejectsNonContractSystemFailureErrorClass(t *testing.T) {
