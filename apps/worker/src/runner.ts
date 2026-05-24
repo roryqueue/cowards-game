@@ -57,6 +57,15 @@ export class TypeScriptWorkerOwnershipError extends Error {
   }
 }
 
+const allowedTypeScriptWorkerPurposes = ["rollback", "test", "parity"] as const
+
+const isAllowedTypeScriptWorkerPurpose = (
+  purpose: TypeScriptWorkerJobOwnershipConfig["workerPurpose"],
+): purpose is (typeof allowedTypeScriptWorkerPurposes)[number] =>
+  allowedTypeScriptWorkerPurposes.includes(
+    purpose as (typeof allowedTypeScriptWorkerPurposes)[number],
+  )
+
 export const createSideDispatchRuntime = (
   bottomRuntime: StrategyRuntime,
   topRuntime: StrategyRuntime,
@@ -166,20 +175,26 @@ export const createTypeScriptWorkerJobOwnershipConfig = (
 export const assertTypeScriptWorkerJobOwnershipAllowed = (
   config: TypeScriptWorkerJobOwnershipConfig,
 ): void => {
-  if (
-    config.workerPurpose === "rollback" ||
-    config.workerPurpose === "test" ||
-    config.workerPurpose === "parity"
-  ) {
-    return
-  }
-  if (config.lifecycleOwner === "typescript") {
+  if (isAllowedTypeScriptWorkerPurpose(config.workerPurpose)) {
     return
   }
   throw new TypeScriptWorkerOwnershipError(
-    "TypeScript Match job claiming is disabled unless TypeScript is explicitly selected as lifecycle owner or the worker purpose is rollback, test, or parity.",
+    "TypeScript Match job claiming is disabled for normal backend ownership and requires COWARDS_TYPESCRIPT_WORKER_PURPOSE=rollback, test, or parity.",
   )
 }
+
+export const assertTypeScriptWorkerEntrypointAllowed = (
+  env: Record<string, string | undefined> = process.env,
+): TypeScriptWorkerJobOwnershipConfig => {
+  const config = createTypeScriptWorkerJobOwnershipConfig(env)
+  assertTypeScriptWorkerJobOwnershipAllowed(config)
+  return config
+}
+
+export const formatTypeScriptWorkerOwnershipLogLine = (
+  config: TypeScriptWorkerJobOwnershipConfig,
+): string =>
+  `TypeScript worker purpose=${config.workerPurpose} lifecycleOwner=${config.lifecycleOwner}; DB lifecycle access is quarantine-only rollback/test/parity infrastructure.`
 
 const isJsonScalar = (value: unknown): value is JsonValue =>
   value === null ||
