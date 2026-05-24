@@ -1,8 +1,8 @@
 ---
 phase: 108-no-typescript-backend-topology-and-monitor-gate
-reviewed: 2026-05-24T22:58:33Z
+reviewed: 2026-05-24T23:07:25Z
 depth: deep
-files_reviewed: 8
+files_reviewed: 6
 files_reviewed_list:
   - scripts/check-local-topology.ts
   - scripts/check-local-topology.test.ts
@@ -10,77 +10,48 @@ files_reviewed_list:
   - scripts/check-boundary-monitors.test.ts
   - .planning/artifacts/v1.16-no-typescript-backend-topology.json
   - .planning/artifacts/v1.16-no-typescript-backend-topology.md
-  - .planning/phases/108-no-typescript-backend-topology-and-monitor-gate/108-PLAN.md
-  - .planning/phases/108-no-typescript-backend-topology-and-monitor-gate/108-RESEARCH.md
 findings:
-  critical: 3
-  warning: 0
+  critical: 0
+  warning: 1
   info: 0
-  total: 3
+  total: 1
 status: issues_found
 ---
 
 # Phase 108: Code Review Report
 
-**Reviewed:** 2026-05-24T22:58:33Z
+**Reviewed:** 2026-05-24T23:07:25Z
 **Depth:** deep
-**Files Reviewed:** 8
+**Files Reviewed:** 6
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the Phase 108 strict topology gate, boundary monitor wiring, tests, and topology artifacts against GATE-01 through GATE-09. The standalone strict topology command passed locally, and the focused Vitest suite passed, but the live boundary monitor command documented by the artifact failed. More importantly, the monitor path and strict page-smoke checks still have false negatives for the no-TypeScript-backend claim and artifact privacy/drift coverage.
+Re-reviewed fix commit `d1a4813` against the prior blockers:
+
+- CR-01 is resolved in implementation: `checkTopologyDiagnostics()` now derives live mode from `parseTopologyOptions(["--require-v1-16-no-typescript-backend"])`, preserving strict defaults for representative page smoke, selected Go page smoke, Go, web, and runtime-service checks.
+- CR-02 is resolved in implementation: strict web health now rejects `service: "cowards-web"` and `backendAuthority: "frontend-only"` before accepting `cowards-service`.
+- CR-03 is resolved in implementation/artifacts: the JSON validator now pins monitor mode and page-smoke contract fields, reads the markdown artifact, checks it for public-safe text, and asserts required topology/failure-drill text.
 
 Verification run:
 
-- `pnpm exec vitest run scripts/check-local-topology.test.ts scripts/check-boundary-monitors.test.ts` passed, 23 tests.
+- `pnpm exec vitest run scripts/check-local-topology.test.ts scripts/check-boundary-monitors.test.ts` passed, 24 tests.
 - `pnpm topology:check -- --require-v1-16-no-typescript-backend --json` passed.
-- `COWARDS_REQUIRE_LIVE_TOPOLOGY=1 pnpm boundary:monitors` failed at `v1.16 selected Go page smoke`.
+- `COWARDS_REQUIRE_LIVE_TOPOLOGY=1 pnpm boundary:monitors` passed.
+- `COWARDS_REQUIRE_LIVE_TOPOLOGY=1 pnpm exec vitest run scripts/check-boundary-monitors.test.ts -t "passes the live repository monitor checks"` failed because the test fixture does not exercise the documented strict live path correctly.
 
-## Critical Issues
+## Warnings
 
-### CR-01: BLOCKER - Live Boundary Monitor Does Not Use The Strict Topology Defaults
+### WR-01: WARNING - Boundary Monitor Regression Test Does Not Exercise Strict Live Mode
 
-**File:** `scripts/check-boundary-monitors.ts:2579`
+**File:** `scripts/check-boundary-monitors.test.ts:761`
 
-**Issue:** `checkTopologyDiagnostics()` builds `TopologyOptions` by hand from environment variables instead of going through `parseTopologyOptions(["--require-v1-16-no-typescript-backend"])`. That misses the strict parser defaults and implied flags. In live mode it sets `requireV116SelectedGoPages` and `requireV116NoTypeScriptBackend`, but leaves `requireWebPageSmoke` unset and leaves `runtimeServiceUrl` as `null` unless `COWARDS_RUNTIME_SERVICE_URL` is provided. The documented artifact command, `COWARDS_REQUIRE_LIVE_TOPOLOGY=1 pnpm boundary:monitors`, therefore failed locally even with the default runtime service available, and it can also skip representative page smoke once the URL issue is patched.
+**Issue:** The test named `passes the live repository monitor checks` calls `runBoundaryMonitorChecks()` without setting `COWARDS_REQUIRE_LIVE_TOPOLOGY=1`, so it only exercises the optional topology-monitor path. When rerun with `COWARDS_REQUIRE_LIVE_TOPOLOGY=1`, the same test fails at `scripts/check-boundary-monitors.test.ts:865` because the mocked page responses do not include all text required by strict representative and selected Go page smoke. This leaves CR-01's strict live boundary monitor behavior covered by the real command, but not by a stable regression test.
 
-**Fix:**
-
-```ts
-const strictOptions = parseTopologyOptions([
-  "--require-v1-16-no-typescript-backend",
-])
-const checks = await evaluateLocalTopology({
-  ...strictOptions,
-  webUrl: process.env.COWARDS_WEB_URL ?? strictOptions.webUrl,
-  goUrl: process.env.COWARDS_GO_BACKEND_URL ?? strictOptions.goUrl,
-  runtimeServiceUrl:
-    process.env.COWARDS_RUNTIME_SERVICE_URL ?? strictOptions.runtimeServiceUrl,
-  json: false,
-})
-```
-
-Add a boundary monitor test that asserts live mode produces required `representative page loads`, required `v1.16 selected Go page smoke`, and default runtime-service URL coverage without extra env vars.
-
-### CR-02: BLOCKER - Strict Topology Can Pass Without Proving The Web Process Disabled TypeScript Backend Fallback
-
-**File:** `scripts/check-local-topology.ts:1538`
-
-**Issue:** The strict gate checks that `/api/service/health` returns a public-safe payload, but it does not assert that the web process is running in `COWARDS_NO_TYPESCRIPT_BACKEND=1` / Go-owner mode. A web process that returns the fallback frontend-only health body can still satisfy the health check. The selected page smoke at `scripts/check-local-topology.ts:1581` only checks page text plus direct Go replay evidence; it does not prove account/session pages and selected normal pages are using Go-owned adapters rather than TypeScript backend reads. Cross-file impact: `apps/web/lib/account-service-adapter.ts:116` still uses the local TypeScript service when strict Go ownership is not selected.
-
-**Fix:** In `evaluateLocalTopology`, when `requireV116NoTypeScriptBackend` is true, parse the web health response and reject `service: "cowards-web"` / `backendAuthority: "frontend-only"`. Require a Go-backed health body or an explicit fail-closed Go backend classification. Add a negative test where mocked web health returns the frontend-only body and selected page HTML contains the expected text; strict mode must fail.
-
-### CR-03: BLOCKER - Topology Artifact Privacy And Drift Checks Ignore The Markdown Artifact And Key Contract Fields
-
-**File:** `scripts/check-local-topology.ts:861`
-
-**Issue:** `validateV116NoTypeScriptBackendTopologyArtifact()` validates only the JSON artifact and calls `checkPublicPayload(artifact)` at `scripts/check-local-topology.ts:1017`. It never reads `.planning/artifacts/v1.16-no-typescript-backend-topology.md`, even though that public artifact is part of the Phase 108 deliverable and operator evidence. It also does not validate `monitorMode` or `pageSmoke` fields from the JSON artifact. A stale markdown command, a missing live monitor requirement, or leaked token/host/source material in the markdown artifact would pass boundary monitors.
-
-**Fix:** Add a markdown artifact path constant and validate it with `checkPublicText()`. Assert the JSON `monitorMode.command`, `monitorMode.requiredLiveTopology`, `pageSmoke.representativeMajorPageTypesRequired`, `pageSmoke.selectedGoPagesRequired`, `pageSmoke.replayRealismRequired`, and `pageSmoke.workshopTreatment` values. Add tests that mutate each field and add a private marker to the markdown artifact path/content.
+**Fix:** Set and restore `process.env.COWARDS_REQUIRE_LIVE_TOPOLOGY = "1"` inside this test or add a separate strict-live test. Update the mocked page responses so `/auth/sign-in`, `/auth/sign-up`, `/workshop/evidence`, and `/strategies/strategy%3Ago-parity%3Asentinel` include the same expected text required by `checkWebPageLoads()`, then assert the topology monitor detail contains `required live v1.16 no-TypeScript-backend topology diagnostics checked`.
 
 ---
 
-_Reviewed: 2026-05-24T22:58:33Z_
+_Reviewed: 2026-05-24T23:07:25Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
