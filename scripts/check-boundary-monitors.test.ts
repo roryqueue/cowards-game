@@ -494,6 +494,18 @@ describe("boundary drift monitors", () => {
     expect(() =>
       validateV116FinalTypeScriptSurfaceLabels({
         ...artifact,
+        surfaces: [
+          ...(artifact.surfaces as Array<Record<string, unknown>>).slice(1),
+          {
+            ...(artifact.surfaces as Array<Record<string, unknown>>)[0],
+            path: "apps/web/app/not-in-inventory.ts",
+          },
+        ],
+      }),
+    ).toThrow(/not in source inventory|missing final label/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
         surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
           (surface, index) =>
             index === 0
@@ -541,7 +553,21 @@ describe("boundary drift monitors", () => {
               : surface,
         ),
       }),
-    ).toThrow(/public output leak/)
+    ).toThrow(/public output\/shareable label leak/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
+          (surface, index) =>
+            index === 0
+              ? {
+                  ...surface,
+                  reason: "contains DATABASE_URL",
+                }
+              : surface,
+        ),
+      }),
+    ).toThrow(/shareable label leak/)
   })
 
   it("passes the live repository monitor checks", async () => {

@@ -17,6 +17,7 @@ export interface GetMatchReplayOptions {
   mode?: ReplayViewMode | undefined
   ownerPlayerId?: PlayerId | undefined
   requestedOwnerPlayerId?: PlayerId | undefined
+  currentRequesterPlayerId?: PlayerId | undefined
   allowOwnerDebug?: boolean | undefined
   focus?: ReplayFocusRequest | undefined
 }

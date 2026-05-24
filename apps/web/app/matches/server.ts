@@ -39,7 +39,6 @@ type ResolveAuthorizedReplayOwners = (input: {
   currentPlayerId: PlayerId
 }) => Promise<readonly PlayerId[]>
 
-const WORKSHOP_PLAYER_ID = "player:workshop-local" as PlayerId
 const WORKSHOP_MATCH_SET_PREFIX = "match-set:workshop:"
 
 const isOwnerDebugReplayRequestEnabled = (
@@ -94,7 +93,7 @@ const resolvePersistedMatchOwners: ResolveAuthorizedReplayOwners = async ({
   currentPlayerId,
 }) => {
   if (
-    currentPlayerId !== WORKSHOP_PLAYER_ID ||
+    currentPlayerId !== requestedOwnerPlayerId ||
     requestedOwnerPlayerId !== currentPlayerId
   ) {
     return []
@@ -175,9 +174,12 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
           scenarioId: getReplayFixtureScenarioId(resolvedMatchId) ?? undefined,
         })
       }
+      const currentRequesterPlayerId = options.currentRequesterPlayerId
       const allowOwnerDebug =
         options.allowOwnerDebug === true &&
-        isOwnerDebugReplayRequestEnabled(env)
+        isOwnerDebugReplayRequestEnabled(env) &&
+        currentRequesterPlayerId !== undefined &&
+        options.requestedOwnerPlayerId === currentRequesterPlayerId
       if (selectedPublicReplayEvidence && !allowOwnerDebug) {
         if (!publicReplayEvidenceClient) {
           throw new Error(
@@ -220,7 +222,7 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
                 pool,
                 matchId: resolvedMatchId,
                 requestedOwnerPlayerId: options.requestedOwnerPlayerId,
-                currentPlayerId: WORKSHOP_PLAYER_ID,
+                currentPlayerId: currentRequesterPlayerId,
               })
             : []
 

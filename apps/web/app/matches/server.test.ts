@@ -750,6 +750,7 @@ describe("Match replay server facade", () => {
     const response = await server.getMatchReplay("match:replay-test", {
       allowOwnerDebug: true,
       requestedOwnerPlayerId: "player:top",
+      currentRequesterPlayerId: "player:top",
     })
 
     expect(response.status).toBe("ready")
@@ -765,6 +766,57 @@ describe("Match replay server facade", () => {
     )
   })
 
+  it("keeps owner-debug public when requester identity is missing", async () => {
+    const stored = createStoredChronicleForBottomOwner("player:workshop-local")
+    const pool = createMatchOwnerPool([{ authorized: true }])
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn(pool),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+    })
+
+    const response = await server.getMatchReplay("match:replay-test", {
+      allowOwnerDebug: true,
+      requestedOwnerPlayerId: "player:workshop-local",
+    })
+
+    expect(response.status).toBe("ready")
+    if (response.status !== "ready") {
+      return
+    }
+    expect(response.mode).toBe("public")
+    expect(response).not.toHaveProperty("ownerPlayerId")
+    expect(response).not.toHaveProperty("ownerDebug")
+  })
+
+  it("keeps owner-debug public when requested owner differs from requester", async () => {
+    const stored = createStoredChronicle()
+    const resolver = vi.fn(async () => ["player:bottom"] as const)
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+      resolveAuthorizedReplayOwners: resolver,
+    })
+
+    const response = await server.getMatchReplay("match:replay-test", {
+      allowOwnerDebug: true,
+      requestedOwnerPlayerId: "player:bottom",
+      currentRequesterPlayerId: "player:intruder",
+    })
+
+    expect(resolver).not.toHaveBeenCalled()
+    expect(response.status).toBe("ready")
+    if (response.status !== "ready") {
+      return
+    }
+    expect(response.mode).toBe("public")
+    expect(response).not.toHaveProperty("ownerPlayerId")
+    expect(response).not.toHaveProperty("ownerDebug")
+  })
+
   it("uses persisted Match participant data to authorize requested owner replay", async () => {
     const stored = createStoredChronicleForBottomOwner("player:workshop-local")
     const pool = createMatchOwnerPool([{ authorized: true }])
@@ -778,6 +830,7 @@ describe("Match replay server facade", () => {
     const response = await server.getMatchReplay("match:replay-test", {
       allowOwnerDebug: true,
       requestedOwnerPlayerId: "player:workshop-local",
+      currentRequesterPlayerId: "player:workshop-local",
     })
 
     expect(response.status).toBe("ready")
@@ -809,13 +862,14 @@ describe("Match replay server facade", () => {
     const response = await server.getMatchReplay("match:replay-test", {
       allowOwnerDebug: true,
       requestedOwnerPlayerId: "player:bottom",
+      currentRequesterPlayerId: "player:bottom",
     })
 
     expect(resolver).toHaveBeenCalledWith({
       pool: {},
       matchId: "match:replay-test",
       requestedOwnerPlayerId: "player:bottom",
-      currentPlayerId: "player:workshop-local",
+      currentPlayerId: "player:bottom",
     })
     expect(response.status).toBe("ready")
     if (response.status !== "ready") {
@@ -852,6 +906,7 @@ describe("Match replay server facade", () => {
     const response = await server.getMatchReplay("match:replay-test", {
       allowOwnerDebug: true,
       requestedOwnerPlayerId: "player:intruder",
+      currentRequesterPlayerId: "player:intruder",
     })
 
     expect(response.status).toBe("ready")
@@ -881,6 +936,7 @@ describe("Match replay server facade", () => {
 
     const response = await server.getMatchReplay("match:replay-test", {
       allowOwnerDebug: true,
+      currentRequesterPlayerId: "player:bottom",
     })
 
     expect(resolver).not.toHaveBeenCalled()
@@ -907,6 +963,7 @@ describe("Match replay server facade", () => {
       mode: "owner",
       ownerPlayerId: "player:bottom",
       allowOwnerDebug: true,
+      currentRequesterPlayerId: "player:bottom",
     })
 
     expect(response.status).toBe("ready")

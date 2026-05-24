@@ -19,6 +19,7 @@ import {
   RUNTIME_EXECUTION_SERVICE_VERSION,
   COMPATIBILITY_VERSIONS,
   assertAnalyticsPublicSummaryLeakSafe,
+  assertPublicOutputLeakSafe,
   assertNonJsRuntimeGuardrails,
   assertPublicServiceDtoLeakSafe,
   describeStrategyRuntimeProductSemantics,
@@ -1913,6 +1914,15 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
   const inventory = readJson<{ surfaces: readonly unknown[] }>(
     v116TypeScriptBackendInventoryPath,
   )
+  const inventoryPaths = new Set(
+    inventory.surfaces.map((item) => {
+      const surface = requireRecord(item, "inventory surface")
+      if (typeof surface.path !== "string" || surface.path.length === 0) {
+        throw new Error("inventory surface missing path")
+      }
+      return surface.path
+    }),
+  )
   const sourceInventorySurfaceCount = root.sourceInventorySurfaceCount
   if (
     typeof sourceInventorySurfaceCount !== "number" ||
@@ -1976,6 +1986,9 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
       throw new Error(`duplicate final label path ${pathValue}`)
     }
     seen.add(pathValue)
+    if (!inventoryPaths.has(pathValue)) {
+      throw new Error(`final label path ${pathValue} is not in source inventory`)
+    }
     if (typeof taxonomyRole !== "string") {
       throw new Error(`${pathValue} missing taxonomy role`)
     }
@@ -2045,13 +2058,30 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
       }
     }
     try {
+      assertPublicOutputLeakSafe(
+        {
+          owner: surface.owner,
+          reason: surface.reason,
+          risk: surface.risk,
+          gate: surface.gate,
+          futureMigration: surface.futureMigration,
+          monitorStatus: surface.monitorStatus,
+          selectedNormalJustification: surface.selectedNormalJustification,
+        },
+        `${pathValue} shareable label fields`,
+      )
       assertMonitorPublicPayload(surface.publicOutputExample ?? {})
     } catch (error) {
       throw new Error(
-        `${pathValue} public output leak: ${
+        `${pathValue} public output/shareable label leak: ${
           error instanceof Error ? error.message : String(error)
         }`,
       )
+    }
+  }
+  for (const inventoryPath of inventoryPaths) {
+    if (!seen.has(inventoryPath)) {
+      throw new Error(`source inventory path ${inventoryPath} missing final label`)
     }
   }
 
