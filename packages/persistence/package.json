@@ -16,6 +16,7 @@
     "./governance": "./src/governance.ts",
     "./ladder": "./src/ladder.ts",
     "./profiles": "./src/profiles.ts",
+    "./quarantine-lifecycle": "./src/quarantine-lifecycle.ts",
     "./repositories": "./src/repositories.ts",
     "./starter-strategies": "./src/starter-strategies.ts",
     "./workshop": "./src/workshop.ts",

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { Pool } from "pg"
 import type { StrategyRuntime } from "@cowards/engine"
-import { createRepositories } from "@cowards/persistence"
+import { createRepositories } from "@cowards/persistence/repositories"
 import type * as PersistenceQuarantine from "@cowards/persistence/quarantine-lifecycle"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import {
@@ -35,8 +35,9 @@ vi.mock("@cowards/persistence/quarantine-lifecycle", async (importOriginal) => {
   return actual
 })
 
-vi.mock("@cowards/persistence", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@cowards/persistence")>()
+vi.mock("@cowards/persistence/repositories", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@cowards/persistence/repositories")>()
   return {
     ...actual,
     createRepositories: vi.fn(),
@@ -342,8 +343,11 @@ describe("worker runner", () => {
     const source = readFileSync("apps/worker/src/runner.ts", "utf8")
 
     expect(source).toContain("@cowards/persistence/quarantine-lifecycle")
-    expect(source).not.toMatch(
-      /from\s+["']@cowards\/persistence["'][\s\S]*claimNextMatchJob/,
+    const rootImportBlocks = source.match(
+      /import\s+\{[\s\S]*?\}\s+from\s+["']@cowards\/persistence["']/g,
+    )
+    expect(rootImportBlocks ?? []).not.toEqual(
+      expect.arrayContaining([expect.stringContaining("claimNextMatchJob")]),
     )
   })
 

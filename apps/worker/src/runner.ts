@@ -1,12 +1,12 @@
 import { buildChronicleFromMatch } from "@cowards/replay"
 import { setTimeout as sleep } from "node:timers/promises"
+import { createRepositories } from "@cowards/persistence/repositories"
 import {
-  createRepositories,
   claimNextMatchJob,
   completeMatch,
   recordAttemptFailure,
   type ClaimedMatchJob,
-} from "@cowards/persistence"
+} from "@cowards/persistence/quarantine-lifecycle"
 import {
   createRuntimeFromRevision,
   SubprocessSystemFailure,

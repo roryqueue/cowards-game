@@ -114,6 +114,19 @@ export interface CreateCowardsLocalServiceOptions {
   getWorkshopTestSummary?: typeof getWorkshopTestSummary | undefined
 }
 
+export const COWARDS_LOCAL_SERVICE_ROLE = {
+  normalBackend: false,
+  selectedNormalBackend: false,
+  roles: [
+    "parity-oracle",
+    "fixture-generator",
+    "rollback-reference",
+    "deferred-support",
+  ],
+  selectedNormalOwner: "go",
+  note: "@cowards/service is a local DB-backed TypeScript reference service for parity, fixtures, rollback, and deferred surfaces; selected normal routes must use Go-owned contracts.",
+} as const
+
 const healthDto: ServiceHealthDto = {
   ok: true,
   service: "cowards-service",

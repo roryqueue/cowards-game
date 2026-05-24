@@ -21,6 +21,18 @@ import type { MatchSetStatus, MatchStatus } from "./schema.js"
 import type { MatchSetScore } from "./scoring.js"
 import { refreshMatchSetStatus } from "./matchset-status.js"
 
+export const TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE = {
+  normalBackend: false,
+  selectedNormalBackend: false,
+  allowedRoles: ["rollback", "test", "parity", "fixture", "deferred"],
+  quarantinedFunctions: [
+    "createManualExhibitionMatchSet",
+    "buildPublicMatchSetResultDto",
+  ],
+  selectedNormalOwner: "go",
+  note: "TypeScript competition persistence is retained for rollback/parity/test/fixture/deferred use only; selected normal exhibition creation and public MatchSet DTO reads are Go-owned.",
+} as const
+
 export class CompetitionInputError extends Error {
   constructor(message: string) {
     super(message)
