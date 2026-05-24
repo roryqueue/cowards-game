@@ -1,0 +1,194 @@
+{
+  "ok": true,
+  "checks": [
+    {
+      "layer": "env_setup",
+      "name": "topology commands",
+      "required": true,
+      "ok": true,
+      "detail": "start with: pnpm services:up | pnpm dev | pnpm --filter @cowards/worker dev | pnpm --filter @cowards/runtime-service start | cd apps/go-backend && COWARDS_GO_BACKEND_OWNER_TOKENS=<secret>=user:local go run . | cd apps/go-backend && COWARDS_GO_BACKEND_DATA_MODE=live redacted-db-env COWARDS_RUNTIME_SERVICE_URL=http://127.0.0.1:3107/ go run . | cd apps/go-backend && redacted-local-test-db-env go test ./... -run TestGoMatchOrchestratorIntegration | pnpm sandbox:evaluate:container | pnpm topology:check -- --web-url http://localhost:3000/ --go-url http://127.0.0.1:8087/ | pnpm topology:check -- --require-web-page-smoke --web-url http://localhost:3000/ | pnpm topology:check -- --require-v1-15-lifecycle --json | pnpm topology:check -- --require-v1-16-no-typescript-backend --json | COWARDS_GO_PUBLIC_STRATEGY_READS=1 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087/ pnpm --filter @cowards/web dev | pnpm topology:check -- --require-web-go-public-strategy-read --web-url http://localhost:3000/ | pnpm e2e:visual"
+    },
+    {
+      "layer": "fixture_loading",
+      "name": "Go route manifest",
+      "required": true,
+      "ok": true,
+      "detail": "8 read-only routes from apps/go-backend/testdata/service-fixtures/route-manifest.json"
+    },
+    {
+      "layer": "fixture_loading",
+      "name": "Go fixture files",
+      "required": true,
+      "ok": true,
+      "detail": "committed Go parity fixtures parse and public fixtures are privacy-safe"
+    },
+    {
+      "layer": "typescript_service",
+      "name": "service health",
+      "required": true,
+      "ok": true,
+      "detail": "cowards-service service-api-v1.8"
+    },
+    {
+      "layer": "worker_runtime",
+      "name": "runtime adapter metadata",
+      "required": true,
+      "ok": true,
+      "detail": "worker-thread; abi=strategy-runtime-abi-v1.14; boundary=Default compatibility containment and prototype boundary for Strategy execution; not a final sandbox for hostile Strategy code."
+    },
+    {
+      "layer": "runtime_isolation",
+      "name": "runtime isolation readiness",
+      "required": true,
+      "ok": true,
+      "detail": "status=evidence_only_not_promoted; selected=container-subprocess; container=skipped; criteria=9; noFallback=true"
+    },
+    {
+      "layer": "runtime_service",
+      "name": "runtime service health",
+      "required": true,
+      "ok": true,
+      "detail": "runtime service health ok at http://127.0.0.1:3107/"
+    },
+    {
+      "layer": "web_process",
+      "name": "web service health route",
+      "required": true,
+      "ok": true,
+      "detail": "web health ok at http://localhost:3000/"
+    },
+    {
+      "layer": "web_page_smoke",
+      "name": "representative page loads",
+      "required": true,
+      "ok": true,
+      "detail": "11 representative page types loaded at http://localhost:3000/"
+    },
+    {
+      "layer": "web_page_smoke",
+      "name": "v1.16 selected Go page smoke",
+      "required": true,
+      "ok": true,
+      "detail": "7 v1.16 selected Go pages loaded at http://localhost:3000/ with replay board realism checked; rendered replay board visual smoke harness checks canvas pixels and snapshots; Workshop is deferred/load-only"
+    },
+    {
+      "layer": "web_go_read",
+      "name": "web-through-Go public Strategy read",
+      "required": true,
+      "ok": true,
+      "detail": "web rendered Go parity sentinel through selected route at http://localhost:3000/"
+    },
+    {
+      "layer": "go_readonly",
+      "name": "Go health",
+      "required": true,
+      "ok": true,
+      "detail": "go health ok at http://127.0.0.1:8087/"
+    },
+    {
+      "layer": "go_readonly",
+      "name": "getPublicPlayerPage",
+      "required": true,
+      "ok": true,
+      "detail": "208 public-safe bytes"
+    },
+    {
+      "layer": "go_readonly",
+      "name": "getPublicLadderSeason",
+      "required": true,
+      "ok": true,
+      "detail": "794 public-safe bytes"
+    },
+    {
+      "layer": "go_readonly",
+      "name": "getPublicMatchSetSummary",
+      "required": true,
+      "ok": true,
+      "detail": "2346 public-safe bytes"
+    },
+    {
+      "layer": "go_readonly",
+      "name": "getPublicReplayMetadata",
+      "required": true,
+      "ok": true,
+      "detail": "453 public-safe bytes"
+    },
+    {
+      "layer": "go_readonly",
+      "name": "getPublicReplayEvidence",
+      "required": true,
+      "ok": true,
+      "detail": "93930 public-safe bytes"
+    },
+    {
+      "layer": "go_readonly",
+      "name": "getPublicStrategyPage",
+      "required": true,
+      "ok": true,
+      "detail": "1007 public-safe bytes"
+    },
+    {
+      "layer": "go_readonly",
+      "name": "owner analytics auth gate",
+      "required": true,
+      "ok": true,
+      "detail": "owner analytics rejected unauthenticated request with HTTP 403"
+    },
+    {
+      "layer": "go_lifecycle",
+      "name": "v1.15 Go orchestration wiring",
+      "required": true,
+      "ok": true,
+      "detail": "Go orchestrator wiring and strategy-failure attribution checked"
+    },
+    {
+      "layer": "go_lifecycle",
+      "name": "v1.15 Go orchestration E2E evidence",
+      "required": true,
+      "ok": true,
+      "detail": "6 Go orchestration E2E steps checked"
+    },
+    {
+      "layer": "v115_topology",
+      "name": "v1.15 lifecycle topology evidence",
+      "required": true,
+      "ok": true,
+      "detail": "9 v1.15 topology steps checked"
+    },
+    {
+      "layer": "failure_drill",
+      "name": "v1.15 stopped-service drills",
+      "required": true,
+      "ok": true,
+      "detail": "stopped-Go, stopped-runtime, and rollback drills checked"
+    },
+    {
+      "layer": "rollback",
+      "name": "v1.15 TypeScript surface labels",
+      "required": true,
+      "ok": true,
+      "detail": "13 TypeScript surfaces labeled"
+    },
+    {
+      "layer": "promotion_gate",
+      "name": "v1.15 promotion decision",
+      "required": true,
+      "ok": true,
+      "detail": "2944 source-safe promotion decision bytes"
+    },
+    {
+      "layer": "v116_topology",
+      "name": "v1.16 no-TypeScript-backend topology",
+      "required": true,
+      "ok": true,
+      "detail": "v1.16 no-TypeScript-backend contracts checked"
+    },
+    {
+      "layer": "privacy",
+      "name": "diagnostic output",
+      "required": true,
+      "ok": true,
+      "detail": "diagnostics contain no private markers"
+    }
+  ]
+}
