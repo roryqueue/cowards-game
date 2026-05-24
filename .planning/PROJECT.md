@@ -4,7 +4,7 @@
 
 **Shipped version:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract on 2026-05-23
 **Current milestone:** None; ready for next milestone.
-**Status:** v1.14 complete and verified.
+**Status:** v1.14 shipped, archived, and tagged.
 **Last audit:** v1.14 audit passed with artifact-backed Go fork promotion and deferred runtime migration.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for selected backend API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. v1.14 made Strategy source artifacts and runtime boundaries generic, manifest-backed, and parity-safe without moving hostile Strategy execution into web/API/Go.
@@ -62,6 +62,16 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 **Archived audit:** `.planning/milestones/v1.12-MILESTONE-AUDIT.md`
 
 **Next:** Start a fresh milestone with `$gsd-new-milestone`; `.planning/REQUIREMENTS.md` is intentionally removed at milestone close.
+
+## Next Milestone Candidate Goals
+
+**First choice: v1.15 Go Orchestration and Match Execution Cutover.** Move the backend transition from route ownership into orchestration ownership: Go-owned job claiming/completion contracts, Match execution coordination, Chronicle persistence, scoring completion, runtime failure classification, and rollback/no-fallback drills. Keep hostile Strategy execution in the isolated TypeScript runtime worker unless a later runtime milestone promotes a stronger boundary. This is the most ambitious useful next step because v1.14 made Strategy artifacts and ABI boundaries explicit enough for Go to coordinate without executing hostile code.
+
+Other ambitious candidates:
+
+- **v1.15 Production Runtime Isolation Promotion** — prove and promote a real hostile-code sandbox boundary with resource, filesystem, network, image provenance, redacted diagnostics, no-fallback, and rollback evidence.
+- **v1.15 Replay Projection and Public Evidence Ownership** — move public replay projection, owner authorization contracts, and realism verification closer to server-native ownership while preserving public/private Chronicle separation.
+- **v1.15 Strategy Ecosystem and Multi-Language Alpha** — turn generic artifact/runtime contracts into product value with package policy, Workshop language semantics, non-JS experimental UX, and counted-eligibility gates.
 
 ## Previous Shipped Milestone: v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
 
@@ -317,6 +327,10 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.13-REQUIREMENTS.md`
 - `.planning/milestones/v1.13-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.13-phases/`
+- `.planning/milestones/v1.14-ROADMAP.md`
+- `.planning/milestones/v1.14-REQUIREMENTS.md`
+- `.planning/milestones/v1.14-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.14-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -361,8 +375,9 @@ Planning archives live under `.planning/milestones/`:
 | Move service-backed web reads before Go route ownership | v1.9 showed that reducing direct web persistence debt is the cleanest first backend ownership move and preserves the TypeScript service as the contract source. | ✓ Good |
 | Keep Go expansion follow-up-only until fixtures and rollback are explicit | A future Go read-model route needs generated TypeScript-service-backed parity fixtures, GET-only routing, topology diagnosis, auth/error semantics, and rollback scope before ownership moves. | ✓ Good |
 | Keep production runtime promotion evidence-only | The container adapter and other runtime candidates must not become counted hostile-code boundaries until live isolation evidence and promotion criteria are satisfied. | ✓ Good |
-| Use an aggressive v1.13 Go API ownership cutover | There is no live usage, so broad API cutover risk is acceptable as long as privacy, schemas, deterministic boundaries, hostile Strategy isolation, and public-output safety remain hard gates. | — Pending |
-| Define artifact and runtime contracts before more Go/runtime ownership | Generic Strategy artifacts and a strict ABI prevent fork/template parity, validation, lineage, and runtime execution boundaries from becoming one-off rewrites. | — Pending |
+| Use an aggressive v1.13 Go API ownership cutover | There is no live usage, so broad API cutover risk is acceptable as long as privacy, schemas, deterministic boundaries, hostile Strategy isolation, and public-output safety remain hard gates. | ✓ Implemented in v1.13 |
+| Define artifact and runtime contracts before more Go/runtime ownership | Generic Strategy artifacts and a strict ABI prevent fork/template parity, validation, lineage, and runtime execution boundaries from becoming one-off rewrites. | ✓ Implemented in v1.14 |
+| Keep Strategy execution out of Go while Go consumes artifacts as data | v1.14 proved Go can own Starter/Advanced forks through generated manifests without becoming a hostile-code execution boundary. | ✓ Good |
 
 ## Constraints
 
@@ -383,4 +398,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-23 after starting v1.14 milestone*
+*Last updated: 2026-05-23 after archiving v1.14 milestone*

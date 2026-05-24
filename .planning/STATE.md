@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Generic Strategy Artifact and Runtime Boundary Contract
-status: completed
-stopped_at: v1.14 implemented, verified, and audit-fixed
-last_updated: "2026-05-23T20:44:55.000-04:00"
+status: archived
+stopped_at: v1.14 shipped, archived, and ready for v1.15 planning
+last_updated: "2026-05-23T21:15:00.000-04:00"
 last_activity: 2026-05-23
 progress:
   total_phases: 7
@@ -17,25 +17,25 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.14 complete
+**Status:** v1.14 shipped and archived
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.14 completion handoff and next-milestone readiness.
+**Current focus:** v1.15 selection and fresh requirements.
 **Latest shipped milestone:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract
 **Active milestone:** None; ready for next milestone.
-**Requirements:** .planning/REQUIREMENTS.md
+**Requirements:** None active; create fresh requirements with `$gsd-new-milestone`.
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
 Phase: 89-95
 Plan: All v1.14 phase plans executed and verified
-Status: Complete
-Last activity: 2026-05-23 - v1.14 artifact, runtime ABI, Go fork, privacy, realism, topology, audit-fix, and promotion gates implemented and verified
+Status: Archived
+Last activity: 2026-05-23 - v1.14 artifact, runtime ABI, Go fork, privacy, realism, topology, audit-fix, promotion gates, and milestone archive completed
 
 Progress: [##########] 100%
 
@@ -79,7 +79,7 @@ v1.14 goal:
 | v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence | 6 | 6 | 30/30 | Shipped |
 | v1.12 Go Backend Promotion Readiness and Cutover Plan | 6 | 6 | 36/36 | Shipped |
 | v1.13 Go Backend Ownership Cutover | 7 | 7 | 42/44 complete, 2 deferred | Shipped |
-| v1.14 Generic Strategy Artifact and Runtime Boundary Contract | 7 | 7 | 48/48 complete | Complete |
+| v1.14 Generic Strategy Artifact and Runtime Boundary Contract | 7 | 7 | 48/48 complete | Shipped |
 
 ## Latest Milestone Outcomes
 
@@ -92,7 +92,8 @@ v1.14 goal:
 
 ## Next Todos
 
-- Open the next milestone when ready.
+- Recommended next milestone: v1.15 Go Orchestration and Match Execution Cutover.
+- Open the next milestone with fresh requirements when ready.
 
 ## Blockers/Concerns
 
@@ -116,6 +117,6 @@ v1.14 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-23T20:44:55.000-04:00
-Stopped at: v1.14 complete after audit-fix pass
-Resume file: .planning/milestones/v1.14-MILESTONE-AUDIT.md
+Last session: 2026-05-23T21:15:00.000-04:00
+Stopped at: v1.14 archived; ready to start v1.15
+Resume file: .planning/PROJECT.md

@@ -448,6 +448,51 @@
 - Sessions: one extended v1.11 thread with discussion, planning, execution, review, validation, audit-fix, live Go evidence, and archive pass.
 - Notable: the most useful late-stage checks were subagent audit passes paired with full lint/type/test/boundary gates.
 
+## Milestone: v1.14 — Generic Strategy Artifact and Runtime Boundary Contract
+
+**Shipped:** 2026-05-23
+**Phases:** 7 | **Plans:** 7
+
+### What Was Built
+
+- Generic Strategy Artifact and Strategy Revision schemas for source-bearing artifacts, public summaries, runtime metadata, validation, lineage, future language variants, and immutable Match eligibility.
+- A generated `strategy-artifact-manifest-v1.14` from TypeScript-owned Starter, Advanced, and template registries, with stale-output checks and Go data-only consumption.
+- `strategy-runtime-abi-v1.14` as the public request/response boundary for `selectActivations` and `soldierBrain`.
+- A runtime JS ABI conformance bridge that validates original revision source hash/bytes while passing transpiled executable code only to adapters.
+- Go-owned Starter/Advanced fork routes and lineage-preserving account saves backed by generated artifacts, without executing Strategy source in Go.
+- Centralized public-output privacy checks, replay projection leak guards, topology/ownership monitor hardening, and canonical replay board realism validation.
+
+### What Worked
+
+- Research-first phase ordering kept artifact contracts, manifest generation, ABI definition, runtime conformance, Go consumption, and privacy gates from collapsing into one risky change.
+- Subagent review found real correctness issues around ABI source signing, artifact invariants, Go runtime metadata exposure, lineage hashes, and public replay leak safety.
+- Live page smoke caught a realistic canonical-board mismatch that unit tests did not: canonical Soldiers use `player:bottom` / `player:top` owner IDs while canonical identity is better derived from Soldier IDs and positions.
+
+### What Was Inefficient
+
+- The installed `gsd-sdk` still lacks documented `query` subcommands, so complete-milestone, audit-open, and archive steps required direct artifact inspection and manual updates.
+- Static topology remains fixture-ID based, so live web-through-Go evidence is manual smoke evidence rather than a first-class monitor path.
+- Local seed data exposed older/null public identity and runtime metadata shapes after the milestone, requiring compatibility cleanup before example pages were pleasant to browse.
+
+### Patterns Established
+
+- Go can consume Strategy source artifacts as signed, generated data without becoming a hostile-code execution boundary.
+- ABI envelopes must preserve original revision source/hash even when adapters execute transpiled code.
+- Public-output privacy should be centralized in spec-owned deny-list helpers and reused in service, Go, replay, analytics, topology, and monitors.
+- Replay realism checks should validate canonical starting layout, declared bounds, visible piece sanity, and terrain overlap before rendering.
+
+### Key Lessons
+
+- The next backend milestone can be ambitious, but should keep Go orchestration separate from Strategy execution until a production sandbox is promoted.
+- Schema validation is most valuable when it rejects older local data loudly, but public projections should normalize compatible legacy metadata where safe.
+- Manifest lineage checks need to verify parent existence and source hash, not just copy shape-compatible metadata.
+
+### Cost Observations
+
+- Model mix: not recorded.
+- Sessions: one long v1.14 thread with research, discussion, implementation, multiple reviews, audit-fix, live smoke, local browsing fixes, and archive pass.
+- Notable: the highest-signal checks were subagent reviews paired with live page validation against actual local data.
+
 ## Cross-Milestone Trends
 
 | Trend | Observation |
@@ -457,4 +502,4 @@
 | UI polish | Narrow viewport/browser review caught issues after automated checks; responsive screenshots, local page checks, awkward intermediate widths, and playback ergonomics should move earlier in UI phases. |
 | Package boundaries | Keeping runtime execution out of web/API and importing narrow server modules prevents trust and bundling regressions. |
 | Competitive trust | Each competition milestone works best when it keeps the promise modest: exhibition before ladder, resettable ladder before durable ratings, governance before official tournaments. |
-| Boundary evolution | Freeze contracts and prove parity before changing implementation ownership; this keeps Go backend and multi-language runtime work incremental instead of cliff-shaped. v1.10 reinforced the pattern by moving two service-backed read slices and exactly one Go read-model route while keeping writes and runtime promotion deferred. v1.11 added required live Go evidence and no-fallback proof while still avoiding production Go routing. |
+| Boundary evolution | Freeze contracts and prove parity before changing implementation ownership; this keeps Go backend and multi-language runtime work incremental instead of cliff-shaped. v1.10 reinforced the pattern by moving two service-backed read slices and exactly one Go read-model route while keeping writes and runtime promotion deferred. v1.11 added required live Go evidence and no-fallback proof while still avoiding production Go routing. v1.14 turned Strategy artifacts and runtime ABI into explicit contracts, making Go orchestration a plausible next ambitious move without moving hostile Strategy execution into Go. |

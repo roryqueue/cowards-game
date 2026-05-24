@@ -2,13 +2,14 @@
 
 ## v1.14 Generic Strategy Artifact and Runtime Boundary Contract
 
-**Status:** Complete 2026-05-23
+**Status:** Shipped 2026-05-23
 **Phases:** 7
 **Phase range:** 89-95
 **Plans:** 7/7 complete
 **Requirements:** 48/48 complete
 **Audit:** .planning/milestones/v1.14-MILESTONE-AUDIT.md
 **Decision:** `promote-artifact-backed-go-forks-and-runtime-abi-v1.14`
+**Archives:** .planning/milestones/v1.14-ROADMAP.md, .planning/milestones/v1.14-REQUIREMENTS.md, .planning/milestones/v1.14-phases/
 
 ### Goal
 
