@@ -4,6 +4,9 @@ import {
   type ServerResponse,
 } from "node:http"
 import {
+  RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,
+  RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,
+  RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,
   RuntimeExecutionServiceResponseSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
   type RuntimeExecutionServiceResponse,
@@ -85,6 +88,10 @@ export const createRuntimeExecutionHttpHandler = (
       writeJson(response, 200, {
         ok: true,
         service: "runtime-execution-service-v1.15",
+        boundaryName: RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,
+        implementationLabel: RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,
+        transportBinding: RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING.current,
+        backendAuthority: false,
         runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
         adapter: runtimeConfig.metadata.id,
       })

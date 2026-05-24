@@ -11,11 +11,14 @@ const SENSITIVE_PATTERNS: readonly RegExp[] = [
   /soldierMemory/gi,
   /objectivePayload/gi,
   /objective[_\s-]?payload/gi,
+  /owner[_\s-]?debug/gi,
   /awareness\s*grid/gi,
   /stack/gi,
   /stderr/gi,
+  /session(?:id|[_\s-]?secret)?/gi,
   /token/gi,
-  /postgres(?:ql)?:\/\/\S+/gi,
+  /(?:postgres(?:ql)?|mysql):\/\/\S+/gi,
+  /private\s+runtime\s+internals/gi,
   /\/(?:Users|home|var|tmp)\/[^\s"'`]+/gi,
 ]
 
