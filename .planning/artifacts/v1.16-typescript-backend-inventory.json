@@ -7591,7 +7591,7 @@
       "usesDatabase": false,
       "claimsJobs": true,
       "completesMatches": true,
-      "persistsChronicles": false,
+      "persistsChronicles": true,
       "refreshesScoring": true,
       "servesPublicEvidence": false,
       "executesStrategy": true,
@@ -7782,6 +7782,61 @@
       ]
     },
     {
+      "id": "apps-runtime-service-src-redaction-test",
+      "path": "apps/runtime-service/src/redaction.test.ts",
+      "kind": "runtime-service-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "typescript_runtime_service_only",
+      "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership",
+      "privacyClass": "private-or-owner-scoped",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "runtime-service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 2,
+          "source": "./redaction.js",
+          "statementText": "import {\n  publicSystemFailureMessage,\n  redactedDiagnostics,\n  redactedErrorMessage,\n} from \"./redaction.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": true,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/runtime-service/src/redaction.test.ts"
+      ],
+      "scannerFindings": []
+    },
+    {
       "id": "apps-runtime-service-src-redaction",
       "path": "apps/runtime-service/src/redaction.ts",
       "kind": "runtime-service-module",
@@ -7895,6 +7950,81 @@
       ]
     },
     {
+      "id": "apps-runtime-service-src-server-test",
+      "path": "apps/runtime-service/src/server.test.ts",
+      "kind": "runtime-service-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "typescript_runtime_service_only",
+      "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "runtime-service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:events",
+          "statementText": "import { once } from \"node:events\""
+        },
+        {
+          "line": 2,
+          "source": "node:net",
+          "statementText": "import type { AddressInfo } from \"node:net\""
+        },
+        {
+          "line": 3,
+          "source": "vitest",
+          "statementText": "import { afterEach, describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 4,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  RUNTIME_EXECUTION_SERVICE_VERSION,\n  RuntimeExecutionServiceResponseSchema,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 8,
+          "source": "./runtime-config.js",
+          "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
+        },
+        {
+          "line": 9,
+          "source": "./server.js",
+          "statementText": "import { createRuntimeExecutionHttpServer } from \"./server.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": true,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": true,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/runtime-service/src/server.test.ts"
+      ],
+      "scannerFindings": []
+    },
+    {
       "id": "apps-runtime-service-src-server",
       "path": "apps/runtime-service/src/server.ts",
       "kind": "runtime-service-module",
@@ -7921,19 +8051,19 @@
           "statementText": "import {\n  createServer,\n  type IncomingMessage,\n  type ServerResponse,\n} from \"node:http\""
         },
         {
-          "line": 11,
+          "line": 14,
           "source": "./runtime-config.js",
           "statementText": "import {\n  createRuntimeServiceConfig,\n  type RuntimeServiceConfig,\n} from \"./runtime-config.js\""
         },
         {
-          "line": 15,
+          "line": 18,
           "source": "./execute-match.js",
           "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
         },
         {
           "line": 6,
           "source": "@cowards/spec",
-          "statementText": "import {\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type RuntimeExecutionServiceResponse,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,\n  RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,\n  RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type RuntimeExecutionServiceResponse,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],

@@ -1,5 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
-import { readFileSync } from "node:fs"
+import { readdirSync, readFileSync, statSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { createWorkerRuntimeConfig } from "../apps/worker/src/runtime-config.ts"
@@ -16,6 +16,7 @@ import { evaluateLocalTopology } from "./check-local-topology.ts"
 import {
   SERVICE_API_ROUTES,
   STRATEGY_RUNTIME_ABI_VERSION,
+  RUNTIME_EXECUTION_SERVICE_VERSION,
   COMPATIBILITY_VERSIONS,
   assertAnalyticsPublicSummaryLeakSafe,
   assertNonJsRuntimeGuardrails,
@@ -211,6 +212,8 @@ const v114RouteOwnershipManifestPath =
   ".planning/artifacts/v1.14-route-ownership-manifest.json"
 const v115LifecycleOwnershipManifestPath =
   ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json"
+const v116RuntimeServiceBoundaryArtifactPath =
+  ".planning/artifacts/v1.16-runtime-service-boundary.json"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/account/advanced-forks/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
@@ -274,6 +277,50 @@ const runtimeAdapterBridges: RuntimeAdapterBridge[] = [
 
 const readJson = <T>(relativePath: string): T =>
   JSON.parse(readFileSync(path.join(repoRoot, relativePath), "utf8")) as T
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+
+const stringArray = (
+  value: unknown,
+  field: string,
+): readonly string[] => {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+    throw new Error(`${field} must be a string array`)
+  }
+  return value as string[]
+}
+
+const requireRecord = (
+  value: unknown,
+  field: string,
+): Record<string, unknown> => {
+  if (!isRecord(value)) {
+    throw new Error(`${field} must be an object`)
+  }
+  return value
+}
+
+const listFiles = (
+  relativeDir: string,
+  predicate: (relativePath: string) => boolean,
+): readonly string[] => {
+  const root = path.join(repoRoot, relativeDir)
+  const walk = (dir: string): string[] =>
+    readdirSync(dir).flatMap((entry) => {
+      if (entry === "node_modules" || entry === "dist" || entry === ".next") {
+        return []
+      }
+      const absolute = path.join(dir, entry)
+      const stat = statSync(absolute)
+      if (stat.isDirectory()) {
+        return walk(absolute)
+      }
+      const relative = path.relative(repoRoot, absolute)
+      return predicate(relative) ? [relative] : []
+    })
+  return walk(root).sort()
+}
 
 const offenseKey = (offense: ServiceBoundaryOffense): string =>
   offense.statementText
@@ -791,6 +838,67 @@ const requiredRuntimeOnlyDisallowedScopes = [
   "product_api_fallback",
 ] as const
 
+const requiredV116DecisionCoverage = [
+  "D-01",
+  "D-02",
+  "D-03",
+  "D-04",
+  "D-05",
+  "D-06",
+  "D-07",
+  "D-08",
+  "D-09",
+  "D-10",
+  "D-11",
+  "D-12",
+  "D-13",
+  "D-14",
+  "D-15",
+  "D-16",
+  "D-17",
+  "D-18",
+] as const
+
+const requiredV116FailurePrivacyDenylist = [
+  "Strategy source",
+  "StrategyMemory",
+  "SoldierMemory",
+  "objective payloads",
+  "owner debug",
+  "raw Awareness Grid",
+  "stack traces",
+  "stderr",
+  "sessions",
+  "tokens",
+  "DB DSNs",
+  "host paths",
+  "private runtime internals",
+] as const
+
+const forbiddenRuntimeServiceAuthorityMarkers = [
+  "@cowards/persistence",
+  "@cowards/service",
+  "claimNextMatchJob",
+  "completeMatch",
+  "recordAttemptFailure",
+  "createPostgresChronicleStore",
+  "matchset-status",
+  "MatchSet scoring",
+  "retired TypeScript backend",
+] as const
+
+const forbiddenStrategyExecutionOutsideBoundaryMarkers = [
+  "@cowards/runtime-js/worker",
+  "createRuntimeFromRevision",
+  "runtimeJsWorkerEntrypoint",
+  "node:vm",
+  "node:wasi",
+  "from \"vm\"",
+  "from 'vm'",
+  "require(\"vm\")",
+  "require('vm')",
+] as const
+
 const requiredMixedDbOwnerSurfaceIds = [
   "matchJobLifecycle",
   "matchCompletion",
@@ -971,6 +1079,210 @@ const checkV115LifecycleOwnershipManifest = (): string =>
       v115LifecycleOwnershipManifestPath,
     ),
   )
+
+export const validateV116RuntimeServiceBoundaryArtifact = (
+  artifact: unknown,
+): string => {
+  const root = requireRecord(artifact, "v1.16 runtime boundary artifact")
+  if (root.schemaVersion !== "v1.16-runtime-service-boundary") {
+    throw new Error("v1.16 runtime boundary schema version drifted")
+  }
+
+  const service = requireRecord(
+    root.strategyExecutionService,
+    "strategyExecutionService",
+  )
+  if (
+    service.publicName !== "Strategy Execution Service / Runtime Broker" ||
+    service.futureBrokerReady !== true
+  ) {
+    throw new Error("Strategy Execution Service / Runtime Broker name drifted")
+  }
+
+  const implementation = requireRecord(
+    root.currentImplementation,
+    "currentImplementation",
+  )
+  if (implementation.label !== "isolated JS/TS runtime service") {
+    throw new Error("current runtime implementation label drifted")
+  }
+  if (implementation.notBackend !== true) {
+    throw new Error("current runtime implementation must be not a backend")
+  }
+  if (implementation.notFinalRuntimeBroker !== true) {
+    throw new Error("current runtime implementation must not be final broker")
+  }
+
+  const transport = requireRecord(root.transport, "transport")
+  if (
+    transport.currentBinding !== "HTTP+JSON" ||
+    transport.transportNeutralContract !== true
+  ) {
+    throw new Error("v1.16 transport binding drifted")
+  }
+
+  const runtimeAbi = requireRecord(root.runtimeAbi, "runtimeAbi")
+  if (
+    runtimeAbi.serviceContractVersion !== RUNTIME_EXECUTION_SERVICE_VERSION
+  ) {
+    throw new Error("runtime execution service contract version drifted")
+  }
+  if (runtimeAbi.strategyRuntimeAbiVersion !== STRATEGY_RUNTIME_ABI_VERSION) {
+    throw new Error("runtime ABI version drifted")
+  }
+  if (runtimeAbi.languageSpecificShortcutsAllowed !== false) {
+    throw new Error("language-specific shortcut contracts must stay forbidden")
+  }
+
+  const authority = requireRecord(root.authority, "authority")
+  const disallowed = stringArray(authority.disallowed, "authority.disallowed")
+  for (const scope of [
+    "claim-jobs",
+    "complete-matches",
+    "persist-chronicles",
+    "refresh-matchset-scoring",
+    "serve-product-api-routes",
+    "read-web-session-state",
+    "deliver-public-evidence",
+    "fallback-to-retired-typescript-backend",
+  ]) {
+    if (!disallowed.includes(scope)) {
+      throw new Error(`runtime authority missing prohibition ${scope}`)
+    }
+  }
+
+  const artifactPolicy = requireRecord(
+    root.submissionArtifactPolicy,
+    "submissionArtifactPolicy",
+  )
+  if (
+    artifactPolicy.executeImmutableRevisionsOnly !== true ||
+    artifactPolicy.goAndWebApiMayImportEvaluateTranspileOrExecuteStrategySource !==
+      false
+  ) {
+    throw new Error("runtime submission artifact policy drifted")
+  }
+
+  const failurePrivacy = requireRecord(root.failurePrivacy, "failurePrivacy")
+  const denylist = stringArray(
+    failurePrivacy.privateDenylist,
+    "failurePrivacy.privateDenylist",
+  )
+  for (const marker of requiredV116FailurePrivacyDenylist) {
+    if (!denylist.includes(marker)) {
+      throw new Error(`v1.16 failure privacy denylist missing ${marker}`)
+    }
+  }
+  if (failurePrivacy.successResultPrivacy !== "internal_runtime_result") {
+    throw new Error("runtime success privacy marker drifted")
+  }
+
+  const noFallback = requireRecord(root.noFallback, "noFallback")
+  if (
+    noFallback.runtimeFailureMayFallbackToRetiredTypeScriptBackend !== false ||
+    noFallback.goMustClassifyRuntimeFailure !== true ||
+    noFallback.webApiMayExecuteStrategySourceOnFailure !== false
+  ) {
+    throw new Error("runtime no-fallback policy drifted")
+  }
+
+  const nonPromotion = requireRecord(root.nonPromotion, "nonPromotion")
+  for (const [key, value] of Object.entries(nonPromotion)) {
+    if (value !== false) {
+      if (key === "nodeWasiAcceptedAsSandbox") {
+        throw new Error("node:wasi must not be accepted as a Strategy sandbox")
+      }
+      throw new Error(`deferred runtime idea promoted: ${key}`)
+    }
+  }
+
+  const decisions = stringArray(root.decisionCoverage, "decisionCoverage")
+  for (const decision of requiredV116DecisionCoverage) {
+    if (!decisions.includes(decision)) {
+      throw new Error(`v1.16 runtime boundary missing ${decision}`)
+    }
+  }
+
+  const publicArtifactPolicy = requireRecord(
+    root.publicArtifactPolicy,
+    "publicArtifactPolicy",
+  )
+  if (
+    publicArtifactPolicy.containsRealTokensDsnsOrHostSecrets !== false ||
+    publicArtifactPolicy.privateStrategyMaterialIncluded !== false
+  ) {
+    throw new Error("v1.16 runtime artifact public-safety policy drifted")
+  }
+
+  return `${service.publicName} ${runtimeAbi.serviceContractVersion} boundary checked`
+}
+
+const checkV116RuntimeServiceBoundaryArtifact = (): string =>
+  validateV116RuntimeServiceBoundaryArtifact(
+    readJson(v116RuntimeServiceBoundaryArtifactPath),
+  )
+
+const checkRuntimeServiceProductionAuthority = (): string => {
+  const sourceFiles = listFiles(
+    "apps/runtime-service/src",
+    (relative) => relative.endsWith(".ts") && !relative.endsWith(".test.ts"),
+  )
+  const sourceText = sourceFiles
+    .map((file) => readFileSync(path.join(repoRoot, file), "utf8"))
+    .join("\n")
+  const importText = sourceText
+    .split("\n")
+    .filter((line) => line.trimStart().startsWith("import "))
+    .join("\n")
+  const packageJson = readJson<{
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }>("apps/runtime-service/package.json")
+  const dependencyNames = new Set([
+    ...Object.keys(packageJson.dependencies ?? {}),
+    ...Object.keys(packageJson.devDependencies ?? {}),
+  ])
+
+  for (const marker of forbiddenRuntimeServiceAuthorityMarkers) {
+    if (importText.includes(marker) || dependencyNames.has(marker)) {
+      throw new Error(`runtime service gained backend authority marker ${marker}`)
+    }
+  }
+  for (const marker of forbiddenRuntimeServiceAuthorityMarkers.filter(
+    (marker) => marker !== "@cowards/persistence" && marker !== "@cowards/service",
+  )) {
+    if (sourceText.includes(marker)) {
+      throw new Error(`runtime service source contains backend authority ${marker}`)
+    }
+  }
+  return `${sourceFiles.length} runtime-service production files checked`
+}
+
+const checkNoStrategyExecutionOutsideRuntimeBoundary = (): string => {
+  const files = [
+    ...listFiles("apps/go-backend", (relative) => relative.endsWith(".go")),
+    ...listFiles(
+      "apps/web",
+      (relative) =>
+        (relative.endsWith(".ts") ||
+          relative.endsWith(".tsx") ||
+          relative.endsWith(".mjs")) &&
+        !relative.endsWith(".test.ts") &&
+        !relative.endsWith(".test.tsx"),
+    ),
+  ]
+  for (const file of files) {
+    const text = readFileSync(path.join(repoRoot, file), "utf8")
+    for (const marker of forbiddenStrategyExecutionOutsideBoundaryMarkers) {
+      if (text.includes(marker)) {
+        throw new Error(
+          `${file} contains forbidden runtime boundary marker ${marker}`,
+        )
+      }
+    }
+  }
+  return `${files.length} Go/web files checked for no Strategy execution imports`
+}
 
 export const checkRuntimeAdapterBridge = (
   bridge: RuntimeAdapterBridge,
@@ -1191,6 +1503,21 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("runtime_adapter", "runtime registry and adapter metadata", () =>
     checkRuntimeAdapters(),
+  ),
+  await check(
+    "runtime_adapter",
+    "v1.16 runtime service boundary artifact",
+    () => checkV116RuntimeServiceBoundaryArtifact(),
+  ),
+  await check(
+    "runtime_adapter",
+    "runtime service production authority",
+    () => checkRuntimeServiceProductionAuthority(),
+  ),
+  await check(
+    "runtime_adapter",
+    "no Strategy execution outside runtime boundary",
+    () => checkNoStrategyExecutionOutsideRuntimeBoundary(),
   ),
   await check(
     "runtime_isolation",
