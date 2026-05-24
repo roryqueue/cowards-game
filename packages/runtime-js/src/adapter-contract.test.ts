@@ -11,6 +11,7 @@ import {
 import { createWorkerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
 import { transpileStrategySource } from "./transpile.js"
 import { createRuntimeFromRevision } from "./executor.js"
+import { executeStrategyRuntimeAbiV114 } from "./abi-bridge.js"
 import { buildStrategyRevision } from "./revision.js"
 import { createSubprocessStrategyExecutionAdapter } from "./subprocess-adapter.js"
 import { SubprocessSystemFailure } from "./subprocess-ipc.js"
@@ -203,6 +204,34 @@ describe("StrategyExecutionAdapter contract", () => {
 
     expect(result).toEqual({ ok: true, value: { accepted: true } })
     expect(getStrategyExecutionAdapterMetadata(adapter)).toBe(adapter.metadata)
+  })
+
+  it("runs adapter calls through the v1.14 ABI conformance bridge", () => {
+    const revision = buildStrategyRevision({ source: validStrategySource })
+    const adapter = {
+      metadata: workerThreadStrategyExecutionAdapterMetadata,
+      execute(request) {
+        expect(request.methodName).toBe("selectActivations")
+        expect(request.input).toEqual(runtimeInput)
+        expect(request.source).toContain("selectActivations")
+        return {
+          ok: true,
+          value: { activationOrders: [], strategyMemory: {} },
+        }
+      },
+    } satisfies StrategyExecutionAdapter
+
+    expect(
+      executeStrategyRuntimeAbiV114({
+        adapter,
+        revision,
+        executableSource: transpileOrThrow(validStrategySource),
+        methodName: "selectActivations",
+        input: runtimeInput,
+        timeoutMs: 25,
+        outputByteLimit: 512,
+      }),
+    ).toEqual({ ok: true, value: { activationOrders: [], strategyMemory: {} } })
   })
 
   it("worker-thread adapter delegates valid calls to the worker bridge", () => {

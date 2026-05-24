@@ -19,6 +19,7 @@ import {
 } from "./guards.js"
 import { transpileStrategySource } from "./transpile.js"
 import type { StrategyExecutionAdapter } from "./adapter.js"
+import { executeStrategyRuntimeAbiV114 } from "./abi-bridge.js"
 import { workerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
 import { validateStrategySource } from "./validation.js"
 
@@ -143,8 +144,10 @@ export const createRuntimeFromRevision = (
         return source
       }
 
-      const result = adapter.execute({
-        source: source.source,
+      const result = executeStrategyRuntimeAbiV114({
+        adapter,
+        revision,
+        executableSource: source.source,
         methodName: "selectActivations",
         input,
         timeoutMs,
@@ -163,8 +166,10 @@ export const createRuntimeFromRevision = (
         return source
       }
 
-      const result = adapter.execute({
-        source: source.source,
+      const result = executeStrategyRuntimeAbiV114({
+        adapter,
+        revision,
+        executableSource: source.source,
         methodName: "soldierBrain",
         input,
         timeoutMs,

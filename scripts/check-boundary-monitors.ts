@@ -693,7 +693,7 @@ const checkRuntimeAdapters = (): string => {
   if (pythonEligibility.ok || pythonSemantics.countedPlayEligible) {
     throw new Error("Python runtime product semantics must remain non-counted")
   }
-  if (STRATEGY_RUNTIME_ABI_VERSION !== "strategy-runtime-abi-v1.7") {
+  if (STRATEGY_RUNTIME_ABI_VERSION !== "strategy-runtime-abi-v1.14") {
     throw new Error(`runtime ABI drifted to ${STRATEGY_RUNTIME_ABI_VERSION}`)
   }
   return `${runtimeAdapterBridges.length} JS/TS adapters and Python experimental gate checked`
