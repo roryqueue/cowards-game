@@ -17,6 +17,10 @@
 | `<local-test-db-env> pnpm boundary:monitors` | PASS |
 | `PLAYWRIGHT_TEST=1 pnpm e2e -- replay.visual.spec.ts` | PASS, 14 tests |
 | `git diff --check` | PASS |
+| `pnpm services:up` | PASS under OrbStack Docker |
+| `pnpm preflight -- --skip-web` | PASS under OrbStack Docker |
+| `cd apps/go-backend && <docker-db-env> PATH=/usr/local/go/bin:$PATH go test ./...` | PASS |
+| `pnpm sandbox:evaluate:container` | PASS after container adapter stdin/output-limit fixes |
 
 ## Goal-Backward Checks
 
@@ -45,4 +49,4 @@
 
 ## Database Evidence
 
-Docker was unavailable, so final DB evidence used a temporary local Postgres started with the installed `initdb`/`pg_ctl` binaries on port 55432. The DB-backed Go suite passed against that database, including `TestGoMatchOrchestratorIntegration`.
+Initial final verification used a temporary local Postgres because Docker was unavailable. After OrbStack was started, Docker Compose Postgres/Redis passed preflight, the DB-backed Go suite passed against Docker Postgres, and `pnpm sandbox:evaluate:container` passed all 21 container subprocess probes after fixing Docker stdin and `outputByteLimit` forwarding in the container adapter. See `.planning/artifacts/v1.15-docker-orbstack-retest.json`.

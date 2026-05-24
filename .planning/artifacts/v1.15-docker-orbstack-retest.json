@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "v1.15-docker-retest-v1",
+  "recordedAt": "2026-05-24T11:30:00-04:00",
+  "dockerRuntime": {
+    "server": "29.4.0",
+    "platform": "OrbStack",
+    "compose": "v5.1.2"
+  },
+  "services": {
+    "postgres": {
+      "image": "postgres:18",
+      "container": "cowards-postgres",
+      "status": "healthy"
+    },
+    "redis": {
+      "image": "redis:8",
+      "container": "cowards-redis",
+      "status": "healthy"
+    }
+  },
+  "commands": [
+    {
+      "id": "services_up",
+      "command": "pnpm services:up",
+      "status": "pass",
+      "evidence": "Compose Postgres and Redis containers reached healthy status."
+    },
+    {
+      "id": "preflight_docker",
+      "command": "pnpm preflight -- --skip-web",
+      "status": "pass",
+      "evidence": "Database query, Redis TCP check, 5 migrations, development seed smoke, Chronicle validation, and public replay projection passed."
+    },
+    {
+      "id": "go_backend_docker_db",
+      "command": "COWARDS_GO_BACKEND_TEST_DATABASE_URL=<redacted-docker-db> go test ./...",
+      "status": "pass",
+      "evidence": "Go backend DB-backed suite passed against Docker Postgres, including orchestration integration tests."
+    },
+    {
+      "id": "container_sandbox_gate",
+      "command": "pnpm sandbox:evaluate:container",
+      "status": "pass",
+      "evidence": "Container subprocess candidate ran 21 probes with 21 passed, 0 failed, 0 skipped after adapter stdin and output-limit fixes."
+    },
+    {
+      "id": "runtime_js_adapter_tests",
+      "command": "pnpm exec vitest run src/container-subprocess-adapter.test.ts src/sandbox-evaluation.test.ts",
+      "status": "pass",
+      "evidence": "20 runtime-js adapter and sandbox-evaluation tests passed from the runtime-js package directory."
+    },
+    {
+      "id": "strict_topology",
+      "command": "pnpm topology:check -- --require-v1-15-lifecycle --json",
+      "status": "pass",
+      "evidence": "Strict v1.15 topology returned 22 passing checks with live web, Go fixture, and runtime-service processes."
+    },
+    {
+      "id": "boundary_monitors",
+      "command": "COWARDS_GO_BACKEND_TEST_DATABASE_URL=<redacted-docker-db> pnpm boundary:monitors",
+      "status": "pass",
+      "evidence": "Boundary monitors passed, including default sandbox artifact check and live v1.15 topology diagnostics."
+    }
+  ],
+  "findingsFixed": [
+    {
+      "id": "DOCKER-IPC-01",
+      "status": "fixed",
+      "summary": "Container subprocess adapter now keeps Docker stdin open with docker run -i so the harness receives JSON IPC input."
+    },
+    {
+      "id": "DOCKER-IPC-02",
+      "status": "fixed",
+      "summary": "Container subprocess adapter now forwards outputByteLimit through IPC so oversized Strategy output is classified as OVERSIZED_OUTPUT instead of a transport failure."
+    }
+  ],
+  "promotionImpact": {
+    "productionSandboxPromoted": false,
+    "typeScriptRuntimeRetired": false,
+    "note": "Docker container evidence is improved, but production sandbox replacement and final TypeScript runtime retirement remain out of v1.15 scope."
+  }
+}

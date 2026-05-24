@@ -98,6 +98,7 @@ const expectNoOffenses = (offenses: readonly Offense[]) => {
 const isInsideAllowedExecutableRuntimeRoot = (file: string): boolean => {
   const repoPath = toRepoPath(file)
   return (
+    repoPath.startsWith("apps/runtime-service/") ||
     repoPath.startsWith("apps/worker/") ||
     repoPath.startsWith("packages/runtime-js/")
   )

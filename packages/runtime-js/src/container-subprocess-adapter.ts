@@ -89,6 +89,7 @@ const dockerArgs = (input: {
 }): readonly string[] => [
   "run",
   "--rm",
+  "-i",
   "--network",
   "none",
   "--read-only",
@@ -160,6 +161,7 @@ export const createContainerSubprocessStrategyExecutionAdapter = (
         source: request.source,
         methodName: request.methodName,
         input: request.input,
+        outputByteLimit: request.outputByteLimit,
       })
       const result = spawn(
         dockerPath,

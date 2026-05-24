@@ -78,6 +78,7 @@ describe("container subprocess adapter", () => {
           "module.exports.default = { selectActivations() {}, soldierBrain() {} }",
         methodName: "selectActivations",
         input: {},
+        outputByteLimit: 512,
       }),
     ).toEqual({ ok: true, value: { accepted: true } })
 
@@ -86,6 +87,7 @@ describe("container subprocess adapter", () => {
     expect(calls[0]?.args).toEqual([
       "run",
       "--rm",
+      "-i",
       "--network",
       "none",
       "--read-only",
@@ -113,6 +115,9 @@ describe("container subprocess adapter", () => {
     ])
     expect(calls[0]?.options.shell).toBe(false)
     expect(calls[0]?.options.stdio).toEqual(["pipe", "pipe", "pipe"])
+    expect(JSON.parse(String(calls[0]?.options.input))).toMatchObject({
+      outputByteLimit: 512,
+    })
   })
 
   it("treats container launch failure as system failure", () => {

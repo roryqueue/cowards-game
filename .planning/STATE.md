@@ -88,7 +88,8 @@ v1.15 goal:
 - Added `runtime-execution-service-v1.15` so Go orchestration invokes the TypeScript JS/TS Strategy runtime only through the explicit v1.14 ABI boundary; Go/web/API still do not execute Strategy code.
 - Added strict v1.15 topology and boundary monitor gates covering live web -> Go -> runtime-service health, Go public evidence, no silent TypeScript fallback, rollback order, TypeScript surface labels, route manifest drift, runtime ABI drift, and public-output leaks.
 - Browser replay realism passed 14/14 desktop/mobile checks, including visible board bounds and nonblank canvas rendering.
-- Final DB-backed Go integration passed against a temporary local Postgres, including the Go orchestration runner path.
+- Final DB-backed Go integration passed against temporary local Postgres and later against OrbStack Docker Postgres, including the Go orchestration runner path.
+- OrbStack Docker retest also passed Compose preflight, container sandbox evaluation, strict topology, and boundary monitors after fixing container adapter stdin and output-limit IPC handling.
 - v1.14 added generic Strategy Artifact and Revision schemas for source-bearing artifacts, source-safe summaries, runtime metadata, validation, lineage, and immutable match eligibility.
 - Generated `strategy-artifact-manifest-v1.14` from TypeScript-owned Starter, Advanced, and template registries with checksum gates and Go data-only parsing.
 - Promoted `strategy-runtime-abi-v1.14` and routed JS runtime adapter execution through an explicit ABI bridge.
@@ -99,11 +100,10 @@ v1.15 goal:
 ## Next Todos
 
 - Complete/archive v1.15 when ready to start v1.16 planning.
-- Rerun DB-backed Go integration under Docker Compose once the daemon is available.
 
 ## Blockers/Concerns
 
-- Docker daemon was unavailable for `pnpm services:up`, so final DB evidence used temporary local Postgres via installed `initdb`/`pg_ctl`.
+- Initial final verification used temporary local Postgres because Docker was unavailable; OrbStack Docker retest now passes.
 - Go orchestration must not execute Strategy code; the TypeScript runtime worker/service remains the hostile-code execution boundary until a future runtime milestone replaces it.
 - Go and TypeScript DB-owning workers must not claim or complete the same normal queue concurrently during rollback.
 
