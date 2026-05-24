@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Generic Strategy Artifact and Runtime Boundary Contract
 status: completed
-stopped_at: v1.14 implemented, verified, and audited
-last_updated: "2026-05-23T20:25:00.000-04:00"
+stopped_at: v1.14 implemented, verified, and audit-fixed
+last_updated: "2026-05-23T20:44:55.000-04:00"
 last_activity: 2026-05-23
 progress:
   total_phases: 7
@@ -35,7 +35,7 @@ See: .planning/PROJECT.md (updated 2026-05-23)
 Phase: 89-95
 Plan: All v1.14 phase plans executed and verified
 Status: Complete
-Last activity: 2026-05-23 - v1.14 artifact, runtime ABI, Go fork, privacy, realism, topology, and promotion gates implemented and verified
+Last activity: 2026-05-23 - v1.14 artifact, runtime ABI, Go fork, privacy, realism, topology, audit-fix, and promotion gates implemented and verified
 
 Progress: [##########] 100%
 
@@ -87,7 +87,7 @@ v1.14 goal:
 - Generated `strategy-artifact-manifest-v1.14` from TypeScript-owned Starter, Advanced, and template registries with checksum gates and Go data-only parsing.
 - Promoted `strategy-runtime-abi-v1.14` and routed JS runtime adapter execution through an explicit ABI bridge.
 - Added Go-owned Starter/Advanced fork routes that consume generated artifacts as data, preserve source hash/runtime/validation/tags/lineage, and fail closed without TypeScript fallback when selected.
-- Centralized public-output privacy checks in `@cowards/spec` and extended replay realism validation before rendering.
+- Centralized public-output privacy checks in `@cowards/spec` and extended replay realism validation before rendering, including canonical start validation for canonical arenas.
 - Boundary monitors pass with `strict_offenses=0 report_only_offenses=29`.
 
 ## Next Todos
@@ -116,6 +116,6 @@ v1.14 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-23T20:25:00.000-04:00
-Stopped at: v1.14 complete
-Resume file: .planning/artifacts/v1.14-promotion-decision.md
+Last session: 2026-05-23T20:44:55.000-04:00
+Stopped at: v1.14 complete after audit-fix pass
+Resume file: .planning/milestones/v1.14-MILESTONE-AUDIT.md

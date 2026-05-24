@@ -130,8 +130,12 @@ const canonicalStartError = (
   ) {
     return "Replay board canonical Match start has non-canonical bounds."
   }
-  const bottom = soldiers.filter((soldier) => soldier.ownerPlayerId === "bottom")
-  const top = soldiers.filter((soldier) => soldier.ownerPlayerId === "top")
+  const bottom = soldiers.filter((soldier) =>
+    soldier.id.startsWith("bottom-soldier-"),
+  )
+  const top = soldiers.filter((soldier) =>
+    soldier.id.startsWith("top-soldier-"),
+  )
   if (bottom.length !== 8 || top.length !== 8 || soldiers.length !== 16) {
     return "Replay board canonical Match start must contain 16 Soldiers."
   }
@@ -168,7 +172,10 @@ const replayBoardRealismError = (
   states: ReplayReadyDto["states"],
   arenaVariantId: string,
 ): string | null => {
-  const startError = canonicalStartError(states[0], arenaVariantId)
+  const startError = canonicalStartError(
+    states.find((state) => state.board.soldiers.length > 0) ?? states[0],
+    arenaVariantId,
+  )
   if (startError) {
     return startError
   }

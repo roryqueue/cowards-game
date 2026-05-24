@@ -7,6 +7,7 @@
 **Phase range:** 89-95
 **Plans:** 7/7 complete
 **Requirements:** 48/48 complete
+**Audit:** .planning/milestones/v1.14-MILESTONE-AUDIT.md
 **Decision:** `promote-artifact-backed-go-forks-and-runtime-abi-v1.14`
 
 ### Goal
@@ -42,7 +43,7 @@ Define and implement generic Strategy Artifact/Revision contracts and a strict r
 - Promoted `strategy-runtime-abi-v1.14` and added an explicit runtime JS ABI bridge for `selectActivations` and `soldierBrain`.
 - Implemented Go-owned Starter and Advanced fork routes that consume generated artifacts as data only, preserve validation/runtime/hash/lineage metadata, and fail closed without silent TypeScript fallback.
 - Centralized public-output privacy deny-list behavior in `@cowards/spec` and reused it across service, analytics, competition, replay projection, and monitors.
-- Added replay board realism checks for invalid bounds, visible piece sanity, and terrain/Soldier overlap.
+- Added replay board realism checks for invalid bounds, canonical starting layout, visible piece sanity, and terrain/Soldier overlap.
 - Recorded v1.14 topology, ownership, and promotion artifacts.
 
 ### Active Constraints
