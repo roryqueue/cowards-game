@@ -447,6 +447,49 @@ const checkWebPageLoads = async (
   return `${target.name} loaded ${target.path}`
 }
 
+const checkPublicReplayEvidenceRealism = (value: unknown): void => {
+  PublicReplayEvidenceServiceDtoSchema.parse(value)
+  const evidence = asRecord(value, "public replay evidence")
+  const projection = asRecord(evidence.projection, "public replay projection")
+  const snapshots = requireRecordArray(
+    projection,
+    "snapshots",
+    "public replay projection",
+  )
+  if (snapshots.length === 0) {
+    throw new Error("public replay evidence has no board snapshots")
+  }
+  const firstSnapshot = asRecord(snapshots[0], "public replay snapshot")
+  const board = asRecord(firstSnapshot.board, "public replay board")
+  const bounds = asRecord(board.bounds, "public replay board bounds")
+  const minX = requireNumber(bounds, "minX", "public replay board bounds")
+  const maxX = requireNumber(bounds, "maxX", "public replay board bounds")
+  const minY = requireNumber(bounds, "minY", "public replay board bounds")
+  const maxY = requireNumber(bounds, "maxY", "public replay board bounds")
+  if (minX > maxX || minY > maxY) {
+    throw new Error("public replay evidence has invalid board bounds")
+  }
+  const soldiers = requireRecordArray(
+    board,
+    "soldiers",
+    "public replay board",
+  )
+  if (soldiers.length < 2) {
+    throw new Error("public replay evidence has too few visible Soldiers")
+  }
+  for (const soldier of soldiers) {
+    const position = asRecord(
+      soldier.position,
+      "public replay Soldier position",
+    )
+    const x = requireNumber(position, "x", "public replay Soldier position")
+    const y = requireNumber(position, "y", "public replay Soldier position")
+    if (x < minX || x > maxX || y < minY || y > maxY) {
+      throw new Error("public replay evidence has out-of-bounds Soldiers")
+    }
+  }
+}
+
 const checkPublicPayload = (value: unknown): string => {
   assertPublicServiceDtoLeakSafe(value)
   const serialized = JSON.stringify(value)
@@ -490,6 +533,18 @@ const requireBoolean = (
   const entry = value[key]
   if (typeof entry !== "boolean") {
     throw new Error(`${label}.${key} must be a boolean`)
+  }
+  return entry
+}
+
+const requireNumber = (
+  value: Record<string, unknown>,
+  key: string,
+  label: string,
+): number => {
+  const entry = value[key]
+  if (typeof entry !== "number" || !Number.isFinite(entry)) {
+    throw new Error(`${label}.${key} must be a finite number`)
   }
   return entry
 }
@@ -1170,7 +1225,13 @@ export const evaluateLocalTopology = async (
             for (const target of v116SelectedGoPageTargets) {
               await checkWebPageLoads(webUrl, target)
             }
-            return `${v116SelectedGoPageTargets.length} v1.16 selected Go pages loaded at ${sanitizeDiagnosticUrl(webUrl)}; Workshop is deferred/load-only`
+            const replayRoute = sampleRoute("getPublicReplayEvidence")
+            const evidence = await smokeJson(
+              options.goUrl ?? "http://127.0.0.1:8087",
+              replayRoute.samplePath,
+            )
+            checkPublicReplayEvidenceRealism(evidence)
+            return `${v116SelectedGoPageTargets.length} v1.16 selected Go pages loaded at ${sanitizeDiagnosticUrl(webUrl)} with replay board realism checked; Workshop is deferred/load-only`
           },
         ),
       )

@@ -291,6 +291,41 @@ describe("local topology harness", () => {
       if (url.includes("/api/service/health")) {
         return Response.json({ ok: true, service: "cowards-web" })
       }
+      if (
+        url.includes("127.0.0.1:8087/public/replays/") &&
+        url.endsWith("/evidence")
+      ) {
+        return new Response(
+          readFileSync(
+            "apps/go-backend/testdata/service-fixtures/public-replay-evidence.json",
+            "utf8",
+          ),
+          { status: 200 },
+        )
+      }
+      if (
+        url.includes("127.0.0.1:8087/public/players/") ||
+        url.includes("127.0.0.1:8087/public/ladders/")
+      ) {
+        const fixture = url.includes("/public/players/")
+          ? "public-player-page.json"
+          : "public-ladder-page.json"
+        return new Response(
+          readFileSync(
+            `apps/go-backend/testdata/service-fixtures/${fixture}`,
+            "utf8",
+          ),
+          { status: 200 },
+        )
+      }
+      if (
+        url.includes("127.0.0.1:8087/health") ||
+        url.includes("127.0.0.1:8087/public/matchsets/") ||
+        url.includes("127.0.0.1:8087/public/replays/") ||
+        url.includes("127.0.0.1:8087/public/strategies/")
+      ) {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 })
+      }
       return new Response(
         [
           "Competitive account",
@@ -332,6 +367,7 @@ describe("local topology harness", () => {
       ok: true,
       required: true,
     })
+    expect(selectedSmoke?.detail).toContain("replay board realism checked")
     expect(seen.some((url) => url.includes("/workshop"))).toBe(false)
   }, 30_000)
 

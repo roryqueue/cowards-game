@@ -40,6 +40,15 @@ describe("account service adapter ownership gates", () => {
     expect(isGoExhibitionsSelected(env)).toBe(true)
   })
 
+  it("selects all Phase 105 account route families in no-TypeScript-backend mode", () => {
+    const env = { COWARDS_NO_TYPESCRIPT_BACKEND: "1" }
+
+    expect(isGoAuthSessionSelected(env)).toBe(true)
+    expect(isGoAccountRevisionsSelected(env)).toBe(true)
+    expect(isGoAccountForksSelected(env)).toBe(true)
+    expect(isGoExhibitionsSelected(env)).toBe(true)
+  })
+
   it("selects Go account forks when the backend owner is Go", () => {
     expect(isGoAccountForksSelected({ COWARDS_GO_BACKEND_OWNER: "go" })).toBe(
       true,

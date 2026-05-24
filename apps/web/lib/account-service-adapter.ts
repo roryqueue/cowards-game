@@ -29,23 +29,32 @@ export interface GoBackendOwnershipEnv extends Record<
   COWARDS_GO_ACCOUNT_FORKS?: string | undefined
   COWARDS_GO_EXHIBITIONS?: string | undefined
   COWARDS_GO_BACKEND_URL?: string | undefined
+  COWARDS_NO_TYPESCRIPT_BACKEND?: string | undefined
 }
+
+const isStrictNoTypeScriptBackendSelected = (
+  env: GoBackendOwnershipEnv,
+): boolean =>
+  env.COWARDS_GO_BACKEND_OWNER === "go" ||
+  env.COWARDS_NO_TYPESCRIPT_BACKEND === "1"
 
 export const isGoAuthSessionSelected = (
   env: GoBackendOwnershipEnv = process.env,
 ): boolean =>
-  env.COWARDS_GO_BACKEND_OWNER === "go" || env.COWARDS_GO_AUTH_SESSION === "1"
+  isStrictNoTypeScriptBackendSelected(env) ||
+  env.COWARDS_GO_AUTH_SESSION === "1"
 
 export const isGoAccountRevisionsSelected = (
   env: GoBackendOwnershipEnv = process.env,
 ): boolean =>
-  env.COWARDS_GO_BACKEND_OWNER === "go" ||
+  isStrictNoTypeScriptBackendSelected(env) ||
   env.COWARDS_GO_ACCOUNT_REVISIONS === "1"
 
 export const isGoAccountForksSelected = (
   env: GoBackendOwnershipEnv = process.env,
 ): boolean =>
-  env.COWARDS_GO_BACKEND_OWNER === "go" || env.COWARDS_GO_ACCOUNT_FORKS === "1"
+  isStrictNoTypeScriptBackendSelected(env) ||
+  env.COWARDS_GO_ACCOUNT_FORKS === "1"
 
 export const assertGoAccountForksCanReadBack = (
   env: GoBackendOwnershipEnv = process.env,
@@ -60,7 +69,8 @@ export const assertGoAccountForksCanReadBack = (
 export const isGoExhibitionsSelected = (
   env: GoBackendOwnershipEnv = process.env,
 ): boolean =>
-  env.COWARDS_GO_BACKEND_OWNER === "go" || env.COWARDS_GO_EXHIBITIONS === "1"
+  isStrictNoTypeScriptBackendSelected(env) ||
+  env.COWARDS_GO_EXHIBITIONS === "1"
 
 export const createSelectedGoBackendClient = (
   env: GoBackendOwnershipEnv = process.env,

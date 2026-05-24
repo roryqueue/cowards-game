@@ -1,5 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
-import { readdirSync, readFileSync, statSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { createWorkerRuntimeConfig } from "../apps/worker/src/runtime-config.ts"
@@ -859,6 +859,25 @@ export const validateSelectedGoRouteManifest = (
     if (!liveBackend.includes(registration)) {
       throw new Error(`${route.routeId} missing live Go route ${registration}`)
     }
+    const nextFile = selectedGoRouteNextFile(route.nextPath)
+    if (!existsSync(path.join(repoRoot, nextFile))) {
+      throw new Error(`${route.routeId} missing Next route/page ${nextFile}`)
+    }
+    if (route.nextPath.startsWith("/api/")) {
+      const source = readFileSync(path.join(repoRoot, nextFile), "utf8")
+      for (const forbidden of [
+        "competitiveServer",
+        "getCurrentCompetitiveUser",
+        "@cowards/persistence",
+        "@cowards/service",
+      ]) {
+        if (source.includes(forbidden)) {
+          throw new Error(
+            `${route.routeId} selected Next adapter imports ${forbidden}`,
+          )
+        }
+      }
+    }
     assertMonitorPublicPayload({
       routeId: route.routeId,
       routeFamily: route.routeFamily,
@@ -887,6 +906,14 @@ export const validateSelectedGoRouteManifest = (
     }
   }
   return `${manifest.routes.length} v1.16 selected Go routes checked`
+}
+
+const selectedGoRouteNextFile = (nextPath: string): string => {
+  const relative = nextPath.startsWith("/") ? nextPath.slice(1) : nextPath
+  if (relative.startsWith("api/")) {
+    return path.join("apps/web/app", relative, "route.ts")
+  }
+  return path.join("apps/web/app", relative, "page.tsx")
 }
 
 const checkSelectedGoRouteManifest = (): string => {

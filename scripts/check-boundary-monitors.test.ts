@@ -217,6 +217,16 @@ describe("boundary drift monitors", () => {
         ),
       }),
     ).toThrow(/createMatchSet fallback policy/)
+    expect(() =>
+      validateSelectedGoRouteManifest({
+        ...selectedGoRouteManifest,
+        routes: selectedGoRouteManifest.routes.map((route) =>
+          route.routeId === "authSession"
+            ? { ...route, nextPath: "/api/auth/missing-session" }
+            : route,
+        ),
+      }),
+    ).toThrow(/authSession missing Next route\/page/)
   })
 
   it("uses the canonical public DTO leak guard", () => {

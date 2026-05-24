@@ -39,6 +39,7 @@ export interface PublicReadRouteOwnershipEnv extends Record<
   COWARDS_GO_PUBLIC_READS?: string | undefined
   COWARDS_GO_BACKEND_OWNER?: string | undefined
   COWARDS_GO_BACKEND_URL?: string | undefined
+  COWARDS_NO_TYPESCRIPT_BACKEND?: string | undefined
 }
 
 const disallowedScopes = [
@@ -59,7 +60,9 @@ export const resolvePublicReadRouteOwnership = (
   env: PublicReadRouteOwnershipEnv = process.env,
 ): PublicReadRouteOwnership => {
   const allGoSelected =
-    env.COWARDS_GO_PUBLIC_READS === "1" || env.COWARDS_GO_BACKEND_OWNER === "go"
+    env.COWARDS_GO_PUBLIC_READS === "1" ||
+    env.COWARDS_GO_BACKEND_OWNER === "go" ||
+    env.COWARDS_NO_TYPESCRIPT_BACKEND === "1"
   const selectedRoutes: PublicReadRouteId[] = allGoSelected
     ? [
         "getPublicStrategyPage",
@@ -118,11 +121,26 @@ const requireGoClient = (
   return goClient
 }
 
+const assertRouteGoSelected = (
+  routeId: PublicReadRouteId,
+  routeOwnership: PublicReadRouteOwnership,
+): void => {
+  if (
+    routeOwnership.selectedRoutes.length > 0 &&
+    !routeOwnership.selectedRoutes.includes(routeId)
+  ) {
+    throw new Error(
+      `${routeId} is not selected for Go ownership in this topology`,
+    )
+  }
+}
+
 export const createPublicReadService = ({
   env = process.env,
   goClient,
   fetchImpl,
 }: CreatePublicReadServiceOptions = {}): PublicReadService => {
+  const routeOwnership = resolvePublicReadRouteOwnership(env)
   const selectedGoClient =
     goClient ??
     (env.COWARDS_GO_BACKEND_URL
@@ -134,30 +152,35 @@ export const createPublicReadService = ({
 
   return {
     async getPublicMatchSetSummary(matchSetId) {
+      assertRouteGoSelected("getPublicMatchSetSummary", routeOwnership)
       return requireGoClient(
         "getPublicMatchSetSummary",
         selectedGoClient,
       ).getPublicMatchSetSummary(matchSetId)
     },
     async getPublicReplayMetadata(matchId) {
+      assertRouteGoSelected("getPublicReplayMetadata", routeOwnership)
       return requireGoClient(
         "getPublicReplayMetadata",
         selectedGoClient,
       ).getPublicReplayMetadata(matchId)
     },
     async getPublicStrategyPage(strategyId) {
+      assertRouteGoSelected("getPublicStrategyPage", routeOwnership)
       return requireGoClient(
         "getPublicStrategyPage",
         selectedGoClient,
       ).getPublicStrategyPage(strategyId)
     },
     async getPublicPlayerPage(handle) {
+      assertRouteGoSelected("getPublicPlayerPage", routeOwnership)
       return requireGoClient(
         "getPublicPlayerPage",
         selectedGoClient,
       ).getPublicPlayerPage(handle)
     },
     async getPublicLadderSeason(seasonId) {
+      assertRouteGoSelected("getPublicLadderSeason", routeOwnership)
       return requireGoClient(
         "getPublicLadderSeason",
         selectedGoClient,

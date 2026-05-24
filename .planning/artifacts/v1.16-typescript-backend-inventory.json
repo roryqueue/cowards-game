@@ -8332,6 +8332,61 @@
       ]
     },
     {
+      "id": "apps-web-app-api-service-health-route-test",
+      "path": "apps/web/app/api/service/health/route.test.ts",
+      "kind": "web-frontend-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { afterEach, describe, expect, it, vi } from \"vitest\""
+        },
+        {
+          "line": 2,
+          "source": "./route.js",
+          "statementText": "import { GET } from \"./route.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/api/service/health/route.test.ts"
+      ],
+      "scannerFindings": []
+    },
+    {
       "id": "apps-web-app-api-test-support-run-worker-once-route-test",
       "path": "apps/web/app/api/test-support/run-worker-once/route.test.ts",
       "kind": "web-frontend-module",

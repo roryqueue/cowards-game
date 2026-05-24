@@ -98,7 +98,7 @@ describe("public read route ownership", () => {
     expect(resolvePublicReadRouteOwnership({}).selectedOwner).toBe("typescript")
   })
 
-  it("routes public reads to Go without local fallback when a route-scoped switch is enabled", async () => {
+  it("routes only the public Strategy page to Go when the legacy strategy-scoped switch is enabled", async () => {
     const goCalls: string[] = []
     const service = createPublicReadService({
       env: { COWARDS_GO_PUBLIC_STRATEGY_READS: "1" },
@@ -131,21 +131,37 @@ describe("public read route ownership", () => {
     ).resolves.toEqual(publicStrategyPage)
     await expect(
       service.getPublicMatchSetSummary("match-set:demo"),
-    ).resolves.toBeNull()
+    ).rejects.toThrow("getPublicMatchSetSummary is not selected")
     await expect(
       service.getPublicReplayMetadata("match:demo"),
-    ).resolves.toBeNull()
-    await expect(service.getPublicPlayerPage("local")).resolves.toBeNull()
+    ).rejects.toThrow("getPublicReplayMetadata is not selected")
+    await expect(service.getPublicPlayerPage("local")).rejects.toThrow(
+      "getPublicPlayerPage is not selected",
+    )
     await expect(
       service.getPublicLadderSeason("season:demo"),
-    ).resolves.toBeNull()
+    ).rejects.toThrow("getPublicLadderSeason is not selected")
 
-    expect(goCalls).toEqual([
-      "strategy:strategy:demo",
-      "matchset:match-set:demo",
-      "replay:match:demo",
-      "player:local",
-      "ladder:season:demo",
+    expect(goCalls).toEqual(["strategy:strategy:demo"])
+    expect(
+      resolvePublicReadRouteOwnership({
+        COWARDS_GO_PUBLIC_STRATEGY_READS: "1",
+      }).selectedRoutes,
+    ).toEqual(["getPublicStrategyPage"])
+  })
+
+  it("routes every public read to Go in no-TypeScript-backend mode", () => {
+    expect(
+      resolvePublicReadRouteOwnership({
+        COWARDS_NO_TYPESCRIPT_BACKEND: "1",
+      }).selectedRoutes,
+    ).toEqual([
+      "getPublicStrategyPage",
+      "getPublicPlayerPage",
+      "getPublicLadderSeason",
+      "getPublicMatchSetSummary",
+      "getPublicReplayEvidence",
+      "getPublicReplayMetadata",
     ])
   })
 
