@@ -97,3 +97,54 @@ This is an implementation gap in `scripts/generate-typescript-surface-labels.ts`
 | 1 | Test import error | Changed script-level privacy import to the repo-local helper path used by the generator. | Import fixed. |
 | 2 | Test expectation too broad | Replaced markdown ban on gate terminology with canonical public-output guard plus secret marker checks. | Privacy assertion fixed. |
 | 3 | Assertion failure against committed artifact behavior | Collected all representative mismatches without weakening expected semantics. | Confirmed implementation blocker above. |
+
+## Post-Fix Validation Pass After `6f012b9` - 2026-05-24
+
+**Scope:** Re-ran the previously escalated DEF-01 / DEF-02 / DEF-06 gaps after `6f012b9` (`fix(phase-107): classify deferred persistence surfaces precisely`). Focus was the final TypeScript surface label semantics for `packages/persistence/src/workshop.ts` and `packages/persistence/src/ladder.ts`, plus monitor behavior for path-level semantic drift and public-output/privacy enum drift.
+
+### Commands Run
+
+```bash
+pnpm exec vitest run scripts/generate-typescript-surface-labels.test.ts scripts/check-boundary-monitors.test.ts
+pnpm exec tsx -e '<standalone mutation probe: packages/persistence/src/workshop.ts -> deferred-service-support/owner-debug; fail if validator accepts drift>'
+pnpm exec tsx -e '<standalone mutation probe: packages/persistence/src/ladder.ts -> private-owner-debug-replay/owner-debug plus publicOutputPrivacy/privacyClass invalid enum values; fail if validator accepts drift>'
+pnpm typescript-surface-labels:check
+pnpm exec tsx scripts/check-boundary-monitors.ts
+pnpm exec vitest run scripts/generate-typescript-surface-labels.test.ts scripts/check-boundary-monitors.test.ts 'apps/web/app/matches/[matchId]/replay/owner-debug.test.ts' apps/web/app/matches/server.test.ts apps/web/app/api/test-support/run-worker-once/route.test.ts apps/web/app/api/test-support/replay-fixture/route.test.ts 'apps/web/app/api/workshop/analytics/profiles/[profileId]/compare/route.test.ts' 'apps/web/app/api/workshop/tests/[matchSetId]/route.test.ts'
+```
+
+### Results
+
+- Focused generator/monitor tests: **passed**, 2 files passed, 18 tests passed.
+- Full Phase 107 focused suite: **passed**, 8 files passed, 61 tests passed.
+- `pnpm typescript-surface-labels:check`: **passed**, final surface label artifacts current.
+- `pnpm exec tsx scripts/check-boundary-monitors.ts`: **passed**, including `[surface_labels] v1.16 final TypeScript surface labels: 185 final TypeScript surface labels checked`.
+- Exact committed artifact labels now match the required semantics:
+
+| Path | Required label | Observed label | Status |
+| --- | --- | --- | --- |
+| `packages/persistence/src/workshop.ts` | `taxonomyRole=deferred`, `surfaceLabel=deferred-workshop-runtime-support`, `capabilityGroup=Workshop` | `taxonomyRole=deferred`, `surfaceLabel=deferred-workshop-runtime-support`, `capabilityGroup=Workshop` | green |
+| `packages/persistence/src/ladder.ts` | `taxonomyRole=deferred`, `surfaceLabel=deferred-ladder-mutation`, `capabilityGroup=ladder` | `taxonomyRole=deferred`, `surfaceLabel=deferred-ladder-mutation`, `capabilityGroup=ladder` | green |
+
+### Remaining Escalation
+
+**BLOCKER - DEF-06 monitor coverage still accepts path-level semantic drift and privacy enum drift**
+
+The normal monitor command passes against the current artifact, but adversarial mutation probes show `validateV116FinalTypeScriptSurfaceLabels()` still accepts bad future drift:
+
+| Probe | Expected | Actual |
+| --- | --- | --- |
+| Mutate `packages/persistence/src/workshop.ts` from `deferred-workshop-runtime-support` / `Workshop` to `deferred-service-support` / `owner-debug` | Monitor rejects path-level semantic drift | `ACCEPTED_DRIFT` |
+| Mutate `packages/persistence/src/ladder.ts` from `deferred-ladder-mutation` / `ladder` to `private-owner-debug-replay` / `owner-debug` with owner-debug gate language | Monitor rejects path-level semantic drift | `ACCEPTED_DRIFT` |
+| Mutate a row's `publicOutputPrivacy` to invalid enum value `public` | Monitor rejects privacy enum drift | `ACCEPTED_DRIFT` |
+| Mutate a row's `privacyClass` to invalid enum value `public` | Monitor rejects privacy enum drift | `ACCEPTED_DRIFT` |
+
+The combined ladder/privacy mutation probe exited `1` with this exact output:
+
+```text
+ladder path semantic drift: ACCEPTED_DRIFT
+publicOutputPrivacy enum drift: ACCEPTED_DRIFT
+privacyClass enum drift: ACCEPTED_DRIFT
+```
+
+Implementation files are read-only for this validation pass, so the monitor validator was not changed. The post-`6f012b9` state is **PARTIAL**: the final artifact labels for DEF-01/DEF-02/DEF-06 are corrected, but DEF-06 monitor coverage does not yet prove those semantics are protected from future path-level or privacy-enum drift.
