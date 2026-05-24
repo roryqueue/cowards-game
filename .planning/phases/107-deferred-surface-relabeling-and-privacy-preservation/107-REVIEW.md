@@ -1,131 +1,127 @@
 ---
 phase: 107-deferred-surface-relabeling-and-privacy-preservation
-reviewed: 2026-05-24T22:09:39Z
+reviewed: 2026-05-24T22:18:06Z
 depth: deep
-files_reviewed: 21
+re_review_of_commit: 9c86a392434cc5216267a41643a9f59db7faceab
+files_reviewed: 13
 files_reviewed_list:
-  - .planning/REQUIREMENTS.md
-  - .planning/ROADMAP.md
-  - .planning/STATE.md
-  - .planning/artifacts/v1.16-final-typescript-surface-labels.json
-  - .planning/artifacts/v1.16-final-typescript-surface-labels.md
   - .planning/artifacts/v1.16-typescript-backend-inventory.json
-  - .planning/artifacts/v1.16-typescript-backend-inventory.md
-  - .planning/phases/107-deferred-surface-relabeling-and-privacy-preservation/107-SUMMARY.md
-  - .planning/phases/107-deferred-surface-relabeling-and-privacy-preservation/107-VALIDATION.md
-  - apps/web/app/api/test-support/replay-fixture/route.test.ts
-  - apps/web/app/api/test-support/replay-fixture/route.ts
-  - apps/web/app/api/test-support/run-worker-once/route.test.ts
-  - apps/web/app/api/test-support/run-worker-once/route.ts
-  - apps/web/app/matches/replay-fixture.ts
+  - apps/web/app/matches/[matchId]/replay/page.tsx
+  - apps/web/app/matches/[matchId]/replay/owner-debug.ts
+  - apps/web/app/matches/[matchId]/replay/owner-debug.test.ts
   - apps/web/app/matches/server.test.ts
   - apps/web/app/matches/server.ts
-  - package.json
+  - apps/web/app/matches/types.ts
+  - apps/web/app/workshop/workshop-client-state.ts
+  - apps/web/e2e/workshop-to-replay.spec.ts
+  - packages/spec/src/public-output-privacy.ts
   - scripts/check-boundary-monitors.test.ts
   - scripts/check-boundary-monitors.ts
-  - scripts/generate-typescript-surface-labels.test.ts
   - scripts/generate-typescript-surface-labels.ts
 findings:
-  critical: 2
+  critical: 1
   warning: 1
   info: 0
-  total: 3
+  total: 2
 status: issues_found
 ---
 
-# Phase 107: Code Review Report
+# Phase 107: Focused Code Re-review Report
 
-**Reviewed:** 2026-05-24T22:09:39Z
+**Reviewed:** 2026-05-24T22:18:06Z
 **Depth:** deep
-**Files Reviewed:** 21
+**Commit Reviewed:** `9c86a392434cc5216267a41643a9f59db7faceab`
+**Files Reviewed:** 13
 **Status:** issues_found
 
 ## Summary
 
-Reviewed commits `da2a266..050bd52` against `107-PLAN.md` and DEF-01 through DEF-06, focusing on owner-debug privacy, test-support/fixture gating, public-output scanning, monitor drift, selected Go public replay ownership, accidental Workshop/ladder/governance migration, and planning status.
+Focused re-review of commit `9c86a39` against the three prior findings in `107-REVIEW.md`: owner-debug requester authorization, exact final label inventory path coverage, and shareable artifact/privacy scanning beyond the synthetic `publicOutputExample`.
 
-Selected Go public replay remains the normal path when owner-debug is not explicitly enabled, and fixture/test-support routes are no longer enabled by development mode alone. However, two ship-blocking gaps remain: owner-debug authorization does not bind to the real requester, and the boundary monitor does not prove the final labels cover the exact inventory path set. Planning completion claims are therefore premature until these blockers are fixed.
+The exact final label inventory coverage blocker is resolved: `validateV116FinalTypeScriptSurfaceLabels` now builds an inventory path set, rejects non-inventory final rows, rejects missing inventory rows, and has a regression test that swaps a real path for `apps/web/app/not-in-inventory.ts`.
 
-Validation run during review:
+The owner-debug fix is secure in the narrow server-unit path because missing or mismatched `currentRequesterPlayerId` now fails closed. However, the real replay page still never derives or passes a requester identity, so the Workshop owner-debug link path that the product/e2e expects can no longer produce owner-debug data. The privacy monitor also still does not scan every shareable row/markdown field; for example, a forbidden marker in `privacyClass` passes validation.
 
-- `pnpm exec vitest run scripts/generate-typescript-surface-labels.test.ts scripts/check-boundary-monitors.test.ts 'apps/web/app/matches/[matchId]/replay/owner-debug.test.ts' apps/web/app/matches/server.test.ts apps/web/app/api/test-support/run-worker-once/route.test.ts apps/web/app/api/test-support/replay-fixture/route.test.ts` - passed, 51 tests.
+Validation run during re-review:
+
+- `pnpm exec vitest run scripts/check-boundary-monitors.test.ts apps/web/app/matches/server.test.ts 'apps/web/app/matches/[matchId]/replay/owner-debug.test.ts'` - passed, 42 tests.
 - `pnpm typescript-surface-labels:check` - passed.
+- `pnpm exec tsx scripts/check-boundary-monitors.ts` - passed, including `surface_labels`.
+- Manual negative probe: mutating the in-memory final labels artifact to set `surfaces[0].privacyClass = "DATABASE_URL"` still returned `PASSED`.
 
 ## Critical Issues
 
-### CR-01: BLOCKER - Owner-Debug Replay Authorization Is Not Bound To The Requesting Owner
+### CR-01: BLOCKER - Owner-Debug Requester Binding Is Not Wired Into The Real Replay Page
 
 **File:** `apps/web/app/matches/[matchId]/replay/page.tsx:58`
 
-**Issue:** `resolveOwnerDebugReplayOptions` turns public query params into `allowOwnerDebug` options, but the replay page never supplies an authenticated current player. The server then calls the authorization resolver with `currentPlayerId: WORKSHOP_PLAYER_ID` hardcoded at `apps/web/app/matches/server.ts:223`. The default resolver authorizes when that hardcoded id matches `requestedOwnerPlayerId` and the Match belongs to a workshop MatchSet (`apps/web/app/matches/server.ts:96`). In any environment with `COWARDS_ENABLE_OWNER_DEBUG_REPLAY=1`, a public requester can use `?ownerDebug=1&ownerPlayerId=player:workshop-local` for an eligible workshop Match and receive owner/private replay data without proving they are that owner.
+**Issue:** Commit `9c86a39` makes `getMatchReplay` require `options.currentRequesterPlayerId` before owner-debug can be authorized (`apps/web/app/matches/server.ts:177-182`) and passes that value into the authorization resolver (`apps/web/app/matches/server.ts:221-225`). That is a correct fail-closed server guard, but the actual replay page still calls `getMatchReplay` with only `resolveOwnerDebugReplayOptions(resolvedSearchParams)` and focus options. `resolveOwnerDebugReplayOptions` only returns `allowOwnerDebug` and `requestedOwnerPlayerId` (`apps/web/app/matches/[matchId]/replay/owner-debug.ts:37-40`), so the real page path never supplies `currentRequesterPlayerId`.
 
-This violates DEF-03 and DEF-05. The planning files also mark DEF-03 complete (`.planning/REQUIREMENTS.md:53`) and state that owner-debug is "owner-authorized" (`.planning/STATE.md:130`), which is not accurate while requester identity is not checked.
+This means the security issue is avoided by making owner-debug unreachable through the normal persisted replay page rather than by binding it to a real authenticated requester. That breaks the Workshop owner-debug flow that still emits `?ownerDebug=1&ownerPlayerId=player:workshop-local` links (`apps/web/app/workshop/workshop-client-state.ts:170-174`) and whose e2e expects the clicked replay to show the `Owner debug` status (`apps/web/e2e/workshop-to-replay.spec.ts:121-124`).
 
-**Fix:**
-
-Require a real authenticated/local owner identity before owner-debug can be resolved, and make the default path fail closed when no current owner is available.
+**Fix:** Derive a trusted requester identity at the page/server boundary, pass it as `currentRequesterPlayerId`, and cover the real page path with tests. Do not derive it from public query params.
 
 ```typescript
-type ResolveAuthorizedReplayOwners = (input: {
-  pool: Queryable
-  matchId: MatchId
-  requestedOwnerPlayerId: PlayerId
-  currentPlayerId: PlayerId
-}) => Promise<readonly PlayerId[]>
+const ownerOptions = resolveOwnerDebugReplayOptions(resolvedSearchParams)
+const currentRequesterPlayerId =
+  ownerOptions === undefined
+    ? undefined
+    : await resolveTrustedReplayRequesterPlayerId({
+        matchId: resolvedParams.matchId,
+        requestedOwnerPlayerId: ownerOptions.requestedOwnerPlayerId,
+      })
 
-// Page/server boundary should pass the authenticated current owner, not a constant.
-if (!options.currentPlayerId || options.currentPlayerId !== options.requestedOwnerPlayerId) {
-  return []
-}
+const data = await getMatchReplay(resolvedParams.matchId, {
+  ...ownerOptions,
+  ...(currentRequesterPlayerId ? { currentRequesterPlayerId } : {}),
+  focus: resolveReplayFocus(resolvedSearchParams),
+})
 ```
 
-Add route/page tests that exercise the real `resolveOwnerDebugReplayOptions -> getMatchReplay` path without an authenticated owner and assert that owner-private fields are not returned even when `COWARDS_ENABLE_OWNER_DEBUG_REPLAY=1`.
-
-### CR-02: BLOCKER - Surface Label Monitor Does Not Verify Exact Inventory Coverage
-
-**File:** `scripts/check-boundary-monitors.ts:1913`
-
-**Issue:** `validateV116FinalTypeScriptSurfaceLabels` reads the source inventory, but only checks `sourceInventorySurfaceCount` and final row count (`scripts/check-boundary-monitors.ts:1913-1921`, `1963-1965`). It tracks duplicates in the final artifact (`1966-1978`) but never compares the final label path set to the inventory path set. During review, replacing one committed label path with `apps/web/app/fake-uninventoried-surface.ts` still returned `185 final TypeScript surface labels checked`.
-
-That means the `surface_labels` lane can pass while omitting an actual inventory surface, so it cannot prove DEF-06 coverage and can mask an unsafe or newly drifted TypeScript backend-like surface.
-
-**Fix:**
-
-Build an inventory path set and require exact equality.
-
-```typescript
-const inventoryPaths = new Set(
-  inventory.surfaces.map((item) => requireRecord(item, "inventory surface").path),
-)
-
-for (const inventoryPath of inventoryPaths) {
-  if (!seen.has(inventoryPath)) {
-    throw new Error(`final labels missing inventory surface ${inventoryPath}`)
-  }
-}
-for (const finalPath of seen) {
-  if (!inventoryPaths.has(finalPath)) {
-    throw new Error(`final labels include non-inventory surface ${finalPath}`)
-  }
-}
-```
-
-Add a monitor regression test that replaces one real path with a fake unique path and expects validation to throw.
+Add an integration/page-level regression that clicks or renders the real Workshop owner-debug replay path and asserts owner data appears only when the trusted requester resolves to the requested owner.
 
 ## Warnings
 
-### WR-01: WARNING - Public-Output Privacy Monitor Only Checks Synthetic Examples
+### WR-01: WARNING - Shareable Label Privacy Scan Still Misses Public Artifact Fields
 
-**File:** `scripts/check-boundary-monitors.ts:2047`
+**File:** `scripts/check-boundary-monitors.ts:2061`
 
-**Issue:** The Phase 107 monitor calls `assertMonitorPublicPayload(surface.publicOutputExample ?? {})`, but `publicOutputExample` is generated as a tiny synthetic object containing only path, role, label, group, selectedNormal, and noPublicFallback (`scripts/generate-typescript-surface-labels.ts:472-482`). The validator does not scan the committed label row fields, markdown output, route response samples, or other default/public artifacts for forbidden private markers. A private marker in `reason`, `risk`, `gate`, `futureMigration`, or generated markdown would not be caught by this monitor lane.
+**Issue:** The monitor now scans several label row fields with `assertPublicOutputLeakSafe`, but it omits other shareable fields that are rendered into the markdown artifact, including `privacyClass` (`scripts/generate-typescript-surface-labels.ts:674`). During re-review, mutating the in-memory final labels artifact to set `surfaces[0].privacyClass = "DATABASE_URL"` still passed `validateV116FinalTypeScriptSurfaceLabels`.
 
-This weakens the DEF-05 privacy evidence and does not satisfy the plan's requirement that monitor privacy checks reject public/default examples or artifacts containing Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner-debug data, raw Awareness Grid, stack/stderr, session/token, DB DSN, host path, or private runtime internals.
+That leaves a gap in the prior privacy finding: the monitor is no longer limited to synthetic `publicOutputExample`, but it still does not prove the complete shareable JSON/markdown label surface is free of forbidden private markers.
 
-**Fix:** Define an allowlisted privacy scan for public/default artifact fields and actual public route fixtures. Keep intentionally named policy fields such as `publicOutputForbiddenMarkers` out of the scan, but scan generated row metadata and markdown text that are meant to be shareable evidence.
+**Fix:** Scan every shareable final-label field that is written to JSON or markdown, with explicit allowlisting only for intentional policy vocabulary. At minimum, include `privacyClass`, `surfaceLabel`, `capabilityGroup`, `publicOutputPrivacy`, and the markdown-rendered row payload, or centralize the scan by building the exact markdown row object and validating it before rendering.
+
+```typescript
+assertPublicOutputLeakSafe(
+  {
+    path: surface.path,
+    taxonomyRole: surface.taxonomyRole,
+    surfaceLabel: surface.surfaceLabel,
+    capabilityGroup: surface.capabilityGroup,
+    selectedNormal: surface.selectedNormal,
+    privacyClass: surface.privacyClass,
+    gate: surface.gate,
+    futureMigration: surface.futureMigration,
+    monitorStatus: surface.monitorStatus,
+    owner: surface.owner,
+    reason: surface.reason,
+    risk: surface.risk,
+    publicOutputPrivacy: surface.publicOutputPrivacy,
+    selectedNormalJustification: surface.selectedNormalJustification,
+  },
+  `${pathValue} shareable label fields`,
+)
+```
+
+Add a regression test that mutates `privacyClass` or another markdown-rendered field to a forbidden marker and expects validation to throw.
+
+## Resolved Prior Findings
+
+- **CR-02 resolved:** exact final label inventory coverage now compares final paths with inventory paths in both directions and rejects swapped fake paths.
 
 ---
 
-_Reviewed: 2026-05-24T22:09:39Z_
+_Reviewed: 2026-05-24T22:18:06Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
