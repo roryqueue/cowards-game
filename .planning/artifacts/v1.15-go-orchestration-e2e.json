@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "v1.15-go-orchestration-e2e",
+  "milestone": "v1.15",
+  "createdAt": "2026-05-24",
+  "ok": true,
+  "sourceSafe": true,
+  "mode": "db-backed local integration using temporary local Postgres",
+  "workflow": [
+    {
+      "stepId": "go_create_exhibition",
+      "owner": "go_backend",
+      "contract": "Go live backend creates a public exhibition MatchSet and queued Match jobs",
+      "evidence": ["apps/go-backend/live_backend.go", "apps/go-backend/orchestrator_test.go"]
+    },
+    {
+      "stepId": "go_claim_job",
+      "owner": "go_backend",
+      "contract": "Go lifecycle claims queued jobs with leases and attempt rows",
+      "evidence": ["apps/go-backend/job_lifecycle.go", "apps/go-backend/orchestrator.go"]
+    },
+    {
+      "stepId": "typescript_runtime_service_execute",
+      "owner": "typescript_runtime_service",
+      "contract": "Go calls the isolated TypeScript runtime execution service contract; Go does not execute Strategy code",
+      "evidence": ["apps/go-backend/runtime_service_client.go", "apps/go-backend/orchestrator_test.go"]
+    },
+    {
+      "stepId": "go_complete_persist_chronicle",
+      "owner": "go_backend",
+      "contract": "Go validates runtime results and persists Chronicle plus Match/job completion atomically",
+      "evidence": ["apps/go-backend/completion.go", "apps/go-backend/orchestrator_test.go"]
+    },
+    {
+      "stepId": "go_refresh_matchset_scoring",
+      "owner": "go_backend",
+      "contract": "Go refreshes MatchSet scoring/status after completed Matches and applies Strategy-failure attribution from Chronicle runtime violations",
+      "evidence": ["apps/go-backend/matchset_status.go", "apps/go-backend/orchestrator_test.go"]
+    },
+    {
+      "stepId": "go_public_replay_evidence",
+      "owner": "go_backend",
+      "contract": "Go serves public replay evidence for the Go-completed Match without owner-private projection",
+      "evidence": ["apps/go-backend/live_backend.go", "apps/go-backend/orchestrator_test.go"]
+    }
+  ],
+  "commandEvidence": [
+    {
+      "id": "go-orchestration-db-e2e",
+      "command": "cd apps/go-backend && redacted-local-test-db-env go test ./... -run TestGoMatchOrchestratorIntegration",
+      "status": "pass",
+      "completedAt": "2026-05-24T01:23:00-04:00",
+      "repoHead": "61d792e+phase102",
+      "evidenceRef": ".planning/phases/102-topology-monitors-rollback-and-promotion-gate/102-VERIFICATION.md",
+      "proves": [
+        "go_created_exhibition",
+        "go_claimed_job",
+        "typescript_runtime_service_called",
+        "go_completed_match",
+        "go_persisted_chronicle",
+        "go_refreshed_scoring",
+        "go_served_public_evidence"
+      ]
+    }
+  ],
+  "privacy": {
+    "publicOutputsSourceSafe": true,
+    "ownerPrivateProjectionObserved": false
+  },
+  "runtimeBoundary": {
+    "goExecutesStrategyCode": false,
+    "webExecutesStrategyCode": false,
+    "runtimeServiceContract": "runtime-execution-service-v1.15",
+    "strategyRuntimeAbi": "strategy-runtime-abi-v1.14"
+  }
+}

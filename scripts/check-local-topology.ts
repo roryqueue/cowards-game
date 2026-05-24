@@ -12,6 +12,8 @@ import { createCowardsLocalService } from "../packages/service/src/index.ts"
 import {
   SERVICE_API_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION,
+  PublicReplayEvidenceServiceDtoSchema,
+  assertPublicOutputLeakSafe,
   assertPublicServiceDtoLeakSafe,
 } from "../packages/spec/src/index.ts"
 
@@ -21,9 +23,15 @@ type Layer =
   | "typescript_service"
   | "worker_runtime"
   | "runtime_isolation"
+  | "runtime_service"
+  | "go_lifecycle"
   | "web_process"
   | "web_go_read"
   | "go_readonly"
+  | "v115_topology"
+  | "failure_drill"
+  | "rollback"
+  | "promotion_gate"
   | "privacy"
 
 interface TopologyCheck {
@@ -37,10 +45,13 @@ interface TopologyCheck {
 interface TopologyOptions {
   webUrl: string | null
   goUrl: string | null
+  runtimeServiceUrl: string | null
   requireWeb: boolean
   requireGo: boolean
   requireWebGoPublicStrategyRead: boolean
+  requireRuntimeService: boolean
   requireRuntimeContainer: boolean
+  requireV115Lifecycle: boolean
   json: boolean
 }
 
@@ -75,9 +86,13 @@ const localCommands = [
   "pnpm services:up",
   "pnpm dev",
   "pnpm --filter @cowards/worker dev",
+  "pnpm --filter @cowards/runtime-service start",
   "cd apps/go-backend && COWARDS_GO_BACKEND_OWNER_TOKENS=<secret>=user:local go run .",
+  "cd apps/go-backend && COWARDS_GO_BACKEND_DATA_MODE=live redacted-db-env COWARDS_RUNTIME_SERVICE_URL=http://127.0.0.1:3107 go run .",
+  "cd apps/go-backend && redacted-local-test-db-env go test ./... -run TestGoMatchOrchestratorIntegration",
   "pnpm sandbox:evaluate:container",
   "pnpm topology:check -- --web-url http://localhost:3000 --go-url http://127.0.0.1:8087",
+  "pnpm topology:check -- --require-v1-15-lifecycle --json",
   "COWARDS_GO_PUBLIC_STRATEGY_READS=1 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 pnpm --filter @cowards/web dev",
   "pnpm topology:check -- --require-web-go-public-strategy-read --web-url http://localhost:3000",
 ] as const
@@ -99,10 +114,13 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
   const options: TopologyOptions = {
     webUrl: process.env.COWARDS_WEB_URL ?? null,
     goUrl: process.env.COWARDS_GO_BACKEND_URL ?? null,
+    runtimeServiceUrl: process.env.COWARDS_RUNTIME_SERVICE_URL ?? null,
     requireWeb: false,
     requireGo: false,
     requireWebGoPublicStrategyRead: false,
+    requireRuntimeService: false,
     requireRuntimeContainer: false,
+    requireV115Lifecycle: false,
     json: false,
   }
   for (let index = 0; index < argv.length; index += 1) {
@@ -131,12 +149,30 @@ export const parseTopologyOptions = (argv: string[]): TopologyOptions => {
       case "--require-runtime-container":
         options.requireRuntimeContainer = true
         break
+      case "--require-runtime-service":
+        options.requireRuntimeService = true
+        options.runtimeServiceUrl ??= "http://127.0.0.1:3107"
+        break
+      case "--require-v1-15-lifecycle":
+        options.requireV115Lifecycle = true
+        options.requireWeb = true
+        options.requireGo = true
+        options.requireWebGoPublicStrategyRead = true
+        options.requireRuntimeService = true
+        options.webUrl ??= "http://localhost:3000"
+        options.goUrl ??= "http://127.0.0.1:8087"
+        options.runtimeServiceUrl ??= "http://127.0.0.1:3107"
+        break
       case "--web-url":
         options.webUrl = requireOptionValue(argv, index, arg)
         index += 1
         break
       case "--go-url":
         options.goUrl = requireOptionValue(argv, index, arg)
+        index += 1
+        break
+      case "--runtime-service-url":
+        options.runtimeServiceUrl = requireOptionValue(argv, index, arg)
         index += 1
         break
       default:
@@ -204,6 +240,16 @@ const readJson = <T>(relativePath: string): T =>
 
 const routeManifestPath =
   "apps/go-backend/testdata/service-fixtures/route-manifest.json"
+const v115TopologyArtifactPath =
+  ".planning/artifacts/v1.15-live-web-go-runtime-topology.json"
+const v115FailureDrillsArtifactPath =
+  ".planning/artifacts/v1.15-failure-drills.json"
+const v115PromotionDecisionPath =
+  ".planning/artifacts/v1.15-promotion-decision.md"
+const v115TypeScriptSurfaceLabelsPath =
+  ".planning/artifacts/v1.15-typescript-surface-labels.json"
+const v115GoOrchestrationEvidencePath =
+  ".planning/artifacts/v1.15-go-orchestration-e2e.json"
 
 const routeManifest = (): RouteManifestEntry[] =>
   readJson<RouteManifestEntry[]>(routeManifestPath)
@@ -253,12 +299,425 @@ const checkPublicPayload = (value: unknown): string => {
 }
 
 const checkPublicText = (value: string): string => {
+  assertPublicOutputLeakSafe({ text: value }, "Public text artifact")
   for (const marker of privateMarkers) {
     if (value.includes(marker)) {
       throw new Error(`public text contains private marker ${marker}`)
     }
   }
   return `${value.length} public-safe text bytes`
+}
+
+const asRecord = (value: unknown, label: string): Record<string, unknown> => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be an object`)
+  }
+  return value as Record<string, unknown>
+}
+
+const requireString = (
+  value: Record<string, unknown>,
+  key: string,
+  label: string,
+): string => {
+  const entry = value[key]
+  if (typeof entry !== "string" || entry.length === 0) {
+    throw new Error(`${label}.${key} must be a non-empty string`)
+  }
+  return entry
+}
+
+const requireBoolean = (
+  value: Record<string, unknown>,
+  key: string,
+  label: string,
+): boolean => {
+  const entry = value[key]
+  if (typeof entry !== "boolean") {
+    throw new Error(`${label}.${key} must be a boolean`)
+  }
+  return entry
+}
+
+const requireRecordArray = (
+  value: Record<string, unknown>,
+  key: string,
+  label: string,
+): Record<string, unknown>[] => {
+  const entry = value[key]
+  if (!Array.isArray(entry)) {
+    throw new Error(`${label}.${key} must be an array`)
+  }
+  return entry.map((item, index) => asRecord(item, `${label}.${key}[${index}]`))
+}
+
+const requireStringArray = (
+  value: Record<string, unknown>,
+  key: string,
+  label: string,
+): string[] => {
+  const entry = value[key]
+  if (
+    !Array.isArray(entry) ||
+    !entry.every((item) => typeof item === "string")
+  ) {
+    throw new Error(`${label}.${key} must be a string array`)
+  }
+  return entry
+}
+
+const requireStepIds = (
+  steps: Record<string, unknown>[],
+  requiredIds: readonly string[],
+): void => {
+  const ids = new Set(
+    steps.map((step) => requireString(step, "stepId", "step")),
+  )
+  for (const stepId of requiredIds) {
+    if (!ids.has(stepId)) {
+      throw new Error(`v1.15 topology missing step ${stepId}`)
+    }
+  }
+}
+
+const validateV115TopologyArtifact = (): string => {
+  const artifact = asRecord(
+    readJson<unknown>(v115TopologyArtifactPath),
+    v115TopologyArtifactPath,
+  )
+  if (
+    requireString(artifact, "schemaVersion", "topology") !==
+    "v1.15-live-web-go-runtime-topology"
+  ) {
+    throw new Error("v1.15 topology artifact schema drifted")
+  }
+  if (!requireBoolean(artifact, "ok", "topology")) {
+    throw new Error("v1.15 topology artifact is not passing")
+  }
+  if (!requireBoolean(artifact, "sourceSafe", "topology")) {
+    throw new Error("v1.15 topology artifact must be source-safe")
+  }
+  const steps = requireRecordArray(artifact, "workflow", "topology")
+  requireStepIds(steps, [
+    "web_frontend_selected_go",
+    "go_exhibition_create",
+    "go_match_job_lifecycle",
+    "go_orchestration_e2e",
+    "typescript_runtime_service_boundary",
+    "go_chronicle_persistence",
+    "go_matchset_scoring",
+    "go_public_evidence",
+    "browser_replay_realism",
+  ])
+  for (const step of steps) {
+    if (
+      requireString(step, "fallbackPolicy", "topology.workflow") !==
+      "no_silent_typescript_backend_fallback"
+    ) {
+      throw new Error(
+        `${requireString(step, "stepId", "topology.workflow")} lost no-fallback policy`,
+      )
+    }
+  }
+  const requiredCommandIds = new Set([
+    "go-test",
+    "go-live-db-test",
+    "go-parity",
+    "topology-v115-live",
+    "boundary-monitors",
+    "replay-visual",
+  ])
+  const commandEvidence = requireRecordArray(
+    artifact,
+    "commandEvidence",
+    "topology",
+  )
+  if (commandEvidence.length !== requiredCommandIds.size) {
+    throw new Error("v1.15 topology command evidence count drifted")
+  }
+  for (const command of commandEvidence) {
+    const commandID = requireString(command, "id", "topology.commandEvidence")
+    if (!requiredCommandIds.delete(commandID)) {
+      throw new Error(`unexpected or duplicate command evidence ${commandID}`)
+    }
+    if (
+      requireString(command, "status", "topology.commandEvidence") !== "pass"
+    ) {
+      throw new Error(
+        `${requireString(command, "command", "topology.commandEvidence")} did not pass`,
+      )
+    }
+    requireString(command, "completedAt", "topology.commandEvidence")
+    requireString(command, "repoHead", "topology.commandEvidence")
+    requireString(command, "evidenceRef", "topology.commandEvidence")
+  }
+  if (requiredCommandIds.size > 0) {
+    throw new Error(
+      `v1.15 topology missing command evidence ${[...requiredCommandIds].join(", ")}`,
+    )
+  }
+  const replayRealism = asRecord(
+    artifact.replayRealism,
+    "topology.replayRealism",
+  )
+  if (
+    requireString(replayRealism, "status", "topology.replayRealism") !== "pass"
+  ) {
+    throw new Error("v1.15 replay realism evidence did not pass")
+  }
+  checkPublicPayload(artifact)
+  return `${steps.length} v1.15 topology steps checked`
+}
+
+const validateV115FailureDrillsArtifact = (): string => {
+  const artifact = asRecord(
+    readJson<unknown>(v115FailureDrillsArtifactPath),
+    v115FailureDrillsArtifactPath,
+  )
+  if (
+    requireString(artifact, "schemaVersion", "failureDrills") !==
+    "v1.15-failure-drills"
+  ) {
+    throw new Error("v1.15 failure drills schema drifted")
+  }
+  if (!requireBoolean(artifact, "ok", "failureDrills")) {
+    throw new Error("v1.15 failure drills are not passing")
+  }
+  const stoppedGo = asRecord(artifact.stoppedGo, "failureDrills.stoppedGo")
+  if (
+    !requireBoolean(stoppedGo, "failClosed", "failureDrills.stoppedGo") ||
+    requireBoolean(
+      stoppedGo,
+      "typescriptFallbackObserved",
+      "failureDrills.stoppedGo",
+    )
+  ) {
+    throw new Error("stopped-Go drill no longer proves fail-closed behavior")
+  }
+  const stoppedRuntime = asRecord(
+    artifact.stoppedRuntimeService,
+    "failureDrills.stoppedRuntimeService",
+  )
+  if (
+    !["retryable_system_failure", "terminal_system_failure"].includes(
+      requireString(
+        stoppedRuntime,
+        "classification",
+        "failureDrills.stoppedRuntimeService",
+      ),
+    ) ||
+    requireBoolean(
+      stoppedRuntime,
+      "typescriptPersistenceFallbackObserved",
+      "failureDrills.stoppedRuntimeService",
+    )
+  ) {
+    throw new Error(
+      "stopped-runtime drill no longer proves Go-owned failure classification",
+    )
+  }
+  const rollback = asRecord(artifact.rollback, "failureDrills.rollback")
+  if (!requireBoolean(rollback, "noMixedDbOwners", "failureDrills.rollback")) {
+    throw new Error("rollback drill allows mixed DB owners")
+  }
+  const rollbackSteps = requireStringArray(
+    rollback,
+    "operatorSequence",
+    "failureDrills.rollback",
+  )
+  const expectedRollbackSteps = [
+    "stop_go_orchestration",
+    "switch_lifecycle_owner_to_typescript",
+    "start_typescript_rollback_worker",
+  ]
+  if (JSON.stringify(rollbackSteps) !== JSON.stringify(expectedRollbackSteps)) {
+    throw new Error("rollback drill operatorSequence order drifted")
+  }
+  checkPublicPayload(artifact)
+  return "stopped-Go, stopped-runtime, and rollback drills checked"
+}
+
+const validateV115TypeScriptSurfaceLabels = (): string => {
+  const labels = asRecord(
+    readJson<unknown>(v115TypeScriptSurfaceLabelsPath),
+    v115TypeScriptSurfaceLabelsPath,
+  )
+  if (
+    requireString(labels, "schemaVersion", "surfaceLabels") !==
+    "v1.15-typescript-surface-labels"
+  ) {
+    throw new Error("v1.15 TypeScript surface label schema drifted")
+  }
+  const allowed = new Set(
+    requireStringArray(labels, "allowedRoles", "surfaceLabels"),
+  )
+  for (const role of [
+    "frontend",
+    "parity_only",
+    "rollback_only",
+    "test_only",
+    "runtime_only",
+    "deferred",
+  ]) {
+    if (!allowed.has(role)) {
+      throw new Error(`surface labels missing allowed role ${role}`)
+    }
+  }
+  for (const workflow of [
+    "exhibition_create",
+    "public_matchset_summary",
+    "public_replay_metadata",
+    "public_replay_evidence",
+  ]) {
+    if (
+      !requireStringArray(
+        labels,
+        "selectedNormalGoWorkflows",
+        "surfaceLabels",
+      ).includes(workflow)
+    ) {
+      throw new Error(`surface labels missing selected workflow ${workflow}`)
+    }
+  }
+  const surfaces = requireRecordArray(labels, "surfaces", "surfaceLabels")
+  for (const surface of surfaces) {
+    if (!allowed.has(requireString(surface, "role", "surfaceLabels.surface"))) {
+      throw new Error(
+        `${requireString(surface, "surface", "surfaceLabels.surface")} has invalid role`,
+      )
+    }
+  }
+  const requiredSurfaces = new Map([
+    ["apps/runtime-service", "runtime_only"],
+    ["apps/worker/src/runner.ts", "rollback_only"],
+    ["apps/web/app/matches/server.ts", "frontend"],
+    ["packages/persistence/src/chronicle-store.ts", "parity_only"],
+    ["apps/web/app/workshop/server.ts", "deferred"],
+  ])
+  for (const [surfacePath, expectedRole] of requiredSurfaces) {
+    const surface = surfaces.find(
+      (item) =>
+        requireString(item, "surface", "surfaceLabels.surface") === surfacePath,
+    )
+    if (
+      !surface ||
+      requireString(surface, "role", "surfaceLabels.surface") !== expectedRole
+    ) {
+      throw new Error(
+        `surface labels missing ${surfacePath} as ${expectedRole}`,
+      )
+    }
+  }
+  checkPublicPayload(labels)
+  return `${surfaces.length} TypeScript surfaces labeled`
+}
+
+const validateV115PromotionDecision = (): string => {
+  const text = readFileSync(
+    path.join(repoRoot, v115PromotionDecisionPath),
+    "utf8",
+  )
+  checkPublicText(text)
+  for (const requiredText of [
+    "promote-go-backend-ownership-for-selected-normal-workflows",
+    "no silent TypeScript backend fallback",
+    "TypeScript runtime execution service remains",
+    "production sandbox replacement remains out of scope",
+    "final TypeScript runtime retirement remains out of scope",
+  ]) {
+    if (!text.includes(requiredText)) {
+      throw new Error(`promotion decision missing ${requiredText}`)
+    }
+  }
+  return `${text.length} source-safe promotion decision bytes`
+}
+
+const validateGoOrchestrationWiring = (): string => {
+  const orchestrator = readFileSync(
+    path.join(repoRoot, "apps/go-backend/orchestrator.go"),
+    "utf8",
+  )
+  for (const requiredText of [
+    "claimNextMatchJob",
+    "buildRuntimeServiceRequestForClaimedMatch",
+    "executeMatch",
+    "completeMatch",
+    "recordAttemptFailure",
+  ]) {
+    if (!orchestrator.includes(requiredText)) {
+      throw new Error(`Go orchestrator missing ${requiredText}`)
+    }
+  }
+  const scoring = readFileSync(
+    path.join(repoRoot, "apps/go-backend/matchset_status.go"),
+    "utf8",
+  )
+  if (
+    !scoring.includes("strategyFailureRevisionIDFromChronicle") ||
+    !scoring.includes("RUNTIME_VIOLATION")
+  ) {
+    throw new Error("Go MatchSet scoring lost runtime-violation attribution")
+  }
+  return "Go orchestrator wiring and strategy-failure attribution checked"
+}
+
+const validateV115GoOrchestrationEvidence = (): string => {
+  const artifact = asRecord(
+    readJson<unknown>(v115GoOrchestrationEvidencePath),
+    v115GoOrchestrationEvidencePath,
+  )
+  if (
+    requireString(artifact, "schemaVersion", "goOrchestrationEvidence") !==
+    "v1.15-go-orchestration-e2e"
+  ) {
+    throw new Error("v1.15 Go orchestration evidence schema drifted")
+  }
+  if (!requireBoolean(artifact, "ok", "goOrchestrationEvidence")) {
+    throw new Error("v1.15 Go orchestration E2E evidence is not passing")
+  }
+  if (!requireBoolean(artifact, "sourceSafe", "goOrchestrationEvidence")) {
+    throw new Error("v1.15 Go orchestration E2E evidence must be source-safe")
+  }
+  const steps = requireRecordArray(
+    artifact,
+    "workflow",
+    "goOrchestrationEvidence",
+  )
+  requireStepIds(steps, [
+    "go_create_exhibition",
+    "go_claim_job",
+    "typescript_runtime_service_execute",
+    "go_complete_persist_chronicle",
+    "go_refresh_matchset_scoring",
+    "go_public_replay_evidence",
+  ])
+  const commands = requireRecordArray(
+    artifact,
+    "commandEvidence",
+    "goOrchestrationEvidence",
+  )
+  const command = commands.find(
+    (item) =>
+      requireString(item, "id", "goOrchestrationEvidence.commandEvidence") ===
+      "go-orchestration-db-e2e",
+  )
+  if (!command) {
+    throw new Error("v1.15 Go orchestration evidence missing DB E2E command")
+  }
+  if (
+    requireString(
+      command,
+      "status",
+      "goOrchestrationEvidence.commandEvidence",
+    ) !== "pass"
+  ) {
+    throw new Error("v1.15 Go orchestration DB E2E command did not pass")
+  }
+  for (const key of ["completedAt", "repoHead", "evidenceRef"]) {
+    requireString(command, key, "goOrchestrationEvidence.commandEvidence")
+  }
+  checkPublicPayload(artifact)
+  return `${steps.length} Go orchestration E2E steps checked`
 }
 
 export const evaluateLocalTopology = async (
@@ -303,6 +762,10 @@ export const evaluateLocalTopology = async (
           privacyClass: "public",
         },
         getPublicReplayMetadata: {
+          authScope: "public",
+          privacyClass: "public",
+        },
+        getPublicReplayEvidence: {
           authScope: "public",
           privacyClass: "public",
         },
@@ -352,6 +815,7 @@ export const evaluateLocalTopology = async (
         "health.json",
         "public-match-set-summary.json",
         "public-replay-metadata.json",
+        "public-replay-evidence.json",
         "public-strategy-page.json",
         "analytics-run-summary.json",
       ]) {
@@ -369,6 +833,7 @@ export const evaluateLocalTopology = async (
         "health.json",
         "public-match-set-summary.json",
         "public-replay-metadata.json",
+        "public-replay-evidence.json",
         "public-strategy-page.json",
         "forbidden-error.json",
         "not-found-error.json",
@@ -431,6 +896,50 @@ export const evaluateLocalTopology = async (
       },
     ),
   )
+
+  if (options.runtimeServiceUrl || options.requireRuntimeService) {
+    checks.push(
+      await check(
+        "runtime_service",
+        "runtime service health",
+        options.requireRuntimeService,
+        async () => {
+          const runtimeUrl =
+            options.runtimeServiceUrl ?? "http://127.0.0.1:3107"
+          const health = asRecord(
+            await fetchJson(new URL("/health", runtimeUrl)),
+            "runtimeService.health",
+          )
+          if (
+            requireString(health, "service", "runtimeService.health") !==
+            "runtime-execution-service-v1.15"
+          ) {
+            throw new Error("runtime service contract version drifted")
+          }
+          if (
+            requireString(
+              health,
+              "runtimeAbiVersion",
+              "runtimeService.health",
+            ) !== STRATEGY_RUNTIME_ABI_VERSION
+          ) {
+            throw new Error("runtime service ABI drifted")
+          }
+          checkPublicPayload(health)
+          return `runtime service health ok at ${sanitizeDiagnosticUrl(runtimeUrl)}`
+        },
+      ),
+    )
+  } else {
+    checks.push({
+      layer: "runtime_service",
+      name: "runtime service health",
+      required: false,
+      ok: true,
+      detail:
+        "skipped; pass --runtime-service-url or --require-runtime-service for live runtime-service smoke",
+    })
+  }
 
   if (options.webUrl || options.requireWeb) {
     checks.push(
@@ -503,11 +1012,15 @@ export const evaluateLocalTopology = async (
     for (const routeId of [
       "getPublicMatchSetSummary",
       "getPublicReplayMetadata",
+      "getPublicReplayEvidence",
       "getPublicStrategyPage",
     ]) {
       checks.push(
         await check("go_readonly", routeId, options.requireGo, async () => {
           const body = await smokeJson(goUrl, sampleRoute(routeId).samplePath)
+          if (routeId === "getPublicReplayEvidence") {
+            PublicReplayEvidenceServiceDtoSchema.parse(body)
+          }
           return checkPublicPayload(body)
         }),
       )
@@ -543,6 +1056,45 @@ export const evaluateLocalTopology = async (
       ok: true,
       detail: "skipped; pass --go-url or --require-go for live Go smoke",
     })
+  }
+
+  if (options.requireV115Lifecycle) {
+    checks.push(
+      await check("go_lifecycle", "v1.15 Go orchestration wiring", true, () =>
+        validateGoOrchestrationWiring(),
+      ),
+    )
+    checks.push(
+      await check(
+        "go_lifecycle",
+        "v1.15 Go orchestration E2E evidence",
+        true,
+        () => validateV115GoOrchestrationEvidence(),
+      ),
+    )
+    checks.push(
+      await check(
+        "v115_topology",
+        "v1.15 lifecycle topology evidence",
+        true,
+        () => validateV115TopologyArtifact(),
+      ),
+    )
+    checks.push(
+      await check("failure_drill", "v1.15 stopped-service drills", true, () =>
+        validateV115FailureDrillsArtifact(),
+      ),
+    )
+    checks.push(
+      await check("rollback", "v1.15 TypeScript surface labels", true, () =>
+        validateV115TypeScriptSurfaceLabels(),
+      ),
+    )
+    checks.push(
+      await check("promotion_gate", "v1.15 promotion decision", true, () =>
+        validateV115PromotionDecision(),
+      ),
+    )
   }
 
   checks.push(

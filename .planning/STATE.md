@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: Go Backend Ownership Completion
-status: planning_ready
-stopped_at: All v1.15 phase contexts gathered; ready for sequential plan-phase
-last_updated: "2026-05-24T00:00:00.000-04:00"
+status: audit_passed
+stopped_at: v1.15 phases 96-102 implemented, verified, audited, and passed
+last_updated: "2026-05-24T01:45:00.000-04:00"
 last_activity: 2026-05-24
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 7
   total_plans: 7
-  completed_plans: 0
-  percent: 0
+  completed_plans: 7
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.15 phase discussion complete
+**Status:** v1.15 audit passed
 
 ## Project Reference
 
@@ -32,12 +32,12 @@ See: .planning/PROJECT.md (updated 2026-05-24)
 
 ## Current Position
 
-Phase: 102 complete for discussion; next Phase 96 planning
-Plan: -
-Status: All phase contexts gathered; ready for planning
-Last activity: 2026-05-24 - Phase 102 context captured for topology, monitors, rollback, and promotion gate decisions.
+Phase: 102 complete
+Plan: 7/7 complete
+Status: Implementation, code review, validation, verification, strict topology/monitor gates, and final milestone audit complete.
+Last activity: 2026-05-24 - Final audit passed after fixing missing Go orchestration wiring with a Go runner, DB integration proof, and strategy-failure scoring attribution.
 
-Progress: [----------] 0%
+Progress: [##########] 100%
 
 ## Workflow Settings
 
@@ -80,10 +80,15 @@ v1.15 goal:
 | v1.12 Go Backend Promotion Readiness and Cutover Plan | 6 | 6 | 36/36 | Shipped |
 | v1.13 Go Backend Ownership Cutover | 7 | 7 | 42/44 complete, 2 deferred | Shipped |
 | v1.14 Generic Strategy Artifact and Runtime Boundary Contract | 7 | 7 | 48/48 complete | Shipped |
-| v1.15 Go Backend Ownership Completion | 7 | 0/7 | 0/48 | Planning |
+| v1.15 Go Backend Ownership Completion | 7 | 7/7 | 48/48 | Audit passed |
 
 ## Latest Milestone Outcomes
 
+- v1.15 made Go the normal owner for job lifecycle contracts, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence.
+- Added `runtime-execution-service-v1.15` so Go orchestration invokes the TypeScript JS/TS Strategy runtime only through the explicit v1.14 ABI boundary; Go/web/API still do not execute Strategy code.
+- Added strict v1.15 topology and boundary monitor gates covering live web -> Go -> runtime-service health, Go public evidence, no silent TypeScript fallback, rollback order, TypeScript surface labels, route manifest drift, runtime ABI drift, and public-output leaks.
+- Browser replay realism passed 14/14 desktop/mobile checks, including visible board bounds and nonblank canvas rendering.
+- Final DB-backed Go integration passed against a temporary local Postgres, including the Go orchestration runner path.
 - v1.14 added generic Strategy Artifact and Revision schemas for source-bearing artifacts, source-safe summaries, runtime metadata, validation, lineage, and immutable match eligibility.
 - Generated `strategy-artifact-manifest-v1.14` from TypeScript-owned Starter, Advanced, and template registries with checksum gates and Go data-only parsing.
 - Promoted `strategy-runtime-abi-v1.14` and routed JS runtime adapter execution through an explicit ABI bridge.
@@ -93,14 +98,14 @@ v1.15 goal:
 
 ## Next Todos
 
-- Begin sequential planning with Phase 96.
-- Phase 96 through Phase 102 contexts are ready for downstream research/planning.
+- Complete/archive v1.15 when ready to start v1.16 planning.
+- Rerun DB-backed Go integration under Docker Compose once the daemon is available.
 
 ## Blockers/Concerns
 
-- The installed `gsd-sdk` CLI does not expose the `query` subcommands referenced by the workflow, so v1.15 state/project updates were applied directly.
-- Go orchestration must not execute Strategy code; the TypeScript runtime worker/service remains the hostile-code execution boundary for this milestone.
-- Go and TypeScript DB-owning workers must not claim or complete the same normal queue concurrently during cutover.
+- Docker daemon was unavailable for `pnpm services:up`, so final DB evidence used temporary local Postgres via installed `initdb`/`pg_ctl`.
+- Go orchestration must not execute Strategy code; the TypeScript runtime worker/service remains the hostile-code execution boundary until a future runtime milestone replaces it.
+- Go and TypeScript DB-owning workers must not claim or complete the same normal queue concurrently during rollback.
 
 ## Deferred Items
 
@@ -117,6 +122,6 @@ v1.15 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-24T00:00:00.000-04:00
-Stopped at: All v1.15 phase contexts gathered; ready for sequential plan-phase
+Last session: 2026-05-24T01:45:00.000-04:00
+Stopped at: v1.15 audit passed; ready for milestone completion/archive
 Resume file: .planning/phases/102-topology-monitors-rollback-and-promotion-gate/102-CONTEXT.md

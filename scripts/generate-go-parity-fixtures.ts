@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { buildChronicleFromMatch } from "../packages/replay/src/build.ts"
+import { projectPublicChronicle } from "../packages/replay/src/project.ts"
 import { createChronicleMetadata } from "../packages/persistence/src/chronicle-store.ts"
 import { createWorkshopAnalyticsDemoSnapshot } from "../packages/persistence/src/workshop-analytics.ts"
 import { createCowardsLocalService } from "../packages/service/src/index.ts"
@@ -12,6 +13,7 @@ import {
   AnalyticsRunSummaryServiceDtoSchema,
   EXHIBITION_SCORING_POLICY_V1,
   PublicMatchSetSummaryServiceDtoSchema,
+  PublicReplayEvidenceServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   SERVICE_API_ROUTES,
@@ -23,6 +25,7 @@ import {
   SERVICE_API_VERSION,
   type AnalyticsRunSummaryServiceDto,
   type PublicMatchSetResultDto,
+  type PublicReplayEvidenceServiceDto,
   type PublicStrategyCardDto,
   type PublicStrategyPageServiceDto,
   type ServiceErrorDto,
@@ -232,11 +235,13 @@ const createParityService = () => {
     }),
     analyticsSnapshot,
     replayMatchId: stored.metadata.matchId,
+    stored,
   }
 }
 
 const createServiceFixtures = async () => {
-  const { service, analyticsSnapshot, replayMatchId } = createParityService()
+  const { service, analyticsSnapshot, replayMatchId, stored } =
+    createParityService()
   const analyticsRun =
     analyticsSnapshot.runs.find(
       (candidate) => candidate.id === analyticsSnapshot.selectedRunId,
@@ -253,6 +258,24 @@ const createServiceFixtures = async () => {
   )
   const publicReplayMetadata =
     await service.getPublicReplayMetadata(replayMatchId)
+  const publicReplayEvidence: PublicReplayEvidenceServiceDto = {
+    apiVersion: SERVICE_API_VERSION,
+    kind: "publicReplayEvidence",
+    matchId: stored.metadata.matchId,
+    metadata: {
+      matchId: stored.metadata.matchId,
+      chronicleId: stored.metadata.id,
+      hash: stored.metadata.hash,
+      schemaVersion: stored.metadata.schemaVersion,
+      eventCount: stored.metadata.eventCount,
+      snapshotCount: stored.metadata.snapshotCount,
+      outcome: stored.metadata.outcome,
+      bottomPlayerId: stored.metadata.bottomPlayerId,
+      topPlayerId: stored.metadata.topPlayerId,
+      arenaVariantId: stored.metadata.arenaVariantId,
+    },
+    projection: projectPublicChronicle(stored.artifact),
+  }
   const publicStrategyPage =
     await service.getPublicStrategyPage(PUBLIC_STRATEGY_ID)
   const analyticsRunSummary = await service.getAnalyticsRunSummary(
@@ -264,6 +287,7 @@ const createServiceFixtures = async () => {
     !publicMatchSetSummary ||
     !degradedMatchSetSummary ||
     !publicReplayMetadata ||
+    !publicReplayEvidence ||
     !publicStrategyPage ||
     !analyticsRunSummary
   ) {
@@ -274,6 +298,9 @@ const createServiceFixtures = async () => {
     publicMatchSetSummary,
     degradedMatchSetSummary,
     publicReplayMetadata,
+    publicReplayEvidence: PublicReplayEvidenceServiceDtoSchema.parse(
+      publicReplayEvidence,
+    ) as PublicReplayEvidenceServiceDto,
     publicStrategyPage: PublicStrategyPageServiceDtoSchema.parse(
       publicStrategyPage,
     ) as PublicStrategyPageServiceDto,
@@ -307,6 +334,14 @@ const routeManifest = [
     authScope: SERVICE_API_ROUTES.getPublicReplayMetadata.authScope,
     privacyClass: SERVICE_API_ROUTES.getPublicReplayMetadata.privacyClass,
     samplePath: "/public/replays/golden%3Av1-7%3Amatch/metadata",
+  },
+  {
+    id: SERVICE_API_ROUTES.getPublicReplayEvidence.id,
+    method: SERVICE_API_ROUTES.getPublicReplayEvidence.method,
+    path: SERVICE_API_ROUTES.getPublicReplayEvidence.path,
+    authScope: SERVICE_API_ROUTES.getPublicReplayEvidence.authScope,
+    privacyClass: SERVICE_API_ROUTES.getPublicReplayEvidence.privacyClass,
+    samplePath: "/public/replays/golden%3Av1-7%3Amatch/evidence",
   },
   {
     id: SERVICE_API_ROUTES.getPublicStrategyPage.id,
@@ -354,6 +389,9 @@ const serviceFixturePayloads = {
     ),
   "public-replay-metadata.json": PublicReplayMetadataServiceDtoSchema.parse(
     serviceFixtures.publicReplayMetadata,
+  ),
+  "public-replay-evidence.json": PublicReplayEvidenceServiceDtoSchema.parse(
+    serviceFixtures.publicReplayEvidence,
   ),
   "public-strategy-page.json": serviceFixtures.publicStrategyPage,
   "analytics-run-summary.json": serviceFixtures.analyticsRunSummary,

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -156,6 +157,42 @@ func TestGoMatchSetStatusIntegration(t *testing.T) {
 			t.Fatalf("expected entrant-mapped evidence with arena, got %+v", matches[0])
 		}
 		assertPhase100MatchSetStored(t, ctx, pool, ids.matchSetID, matchSetStatusComplete, false, true)
+	})
+
+	t.Run("creates Go-owned exhibition MatchSet with queued jobs", func(t *testing.T) {
+		prefix := "phase102-exhibition"
+		userID, revisionIDs := seedPhase102OwnedRevisions(t, ctx, pool, prefix)
+		cleanupPhase102ExhibitionRows(t, ctx, pool, prefix, userID)
+		userID, revisionIDs = seedPhase102OwnedRevisions(t, ctx, pool, prefix)
+		defer cleanupPhase102ExhibitionRows(t, ctx, pool, prefix, userID)
+
+		result, err := (&LiveServer{
+			pool: pool,
+			now:  func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
+		}).createExhibitionMatchSet(ctx, userID, "smoke-exhibition-v1", revisionIDs)
+		if err != nil {
+			t.Fatal(err)
+		}
+		matchSetID := stringValue(result, "matchSetId")
+		if stringValue(result, "status") != "queued" || intValue(result, "matchCount") != 2 {
+			t.Fatalf("unexpected exhibition creation result: %+v", result)
+		}
+
+		var matchStatus string
+		var jobCount int
+		if err := pool.QueryRow(ctx, `
+			select ms.status::text, count(mj.id)::integer
+			from match_sets ms
+			join match_set_matches msm on msm.match_set_id = ms.id
+			join match_jobs mj on mj.match_id = msm.match_id
+			where ms.id = $1
+			group by ms.status
+		`, matchSetID).Scan(&matchStatus, &jobCount); err != nil {
+			t.Fatal(err)
+		}
+		if matchStatus != "pending" || jobCount != 2 {
+			t.Fatalf("expected pending MatchSet with 2 queued jobs, got status=%s jobs=%d", matchStatus, jobCount)
+		}
 	})
 
 	t.Run("public ladder aggregates refreshed counted scoring", func(t *testing.T) {
@@ -535,6 +572,134 @@ func insertPhase101ChronicleArtifact(t *testing.T, ctx context.Context, pool *pg
 		)
 		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`, metadata.ID, metadata.MatchID, metadata.SchemaVersion, metadata.Hash, outcome, metadata.EventCount, metadata.SnapshotCount, metadata.BottomPlayerID, metadata.TopPlayerID, metadata.BottomStrategyRevisionID, metadata.TopStrategyRevisionID, metadata.ArenaVariantID, artifact); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func seedPhase102OwnedRevisions(t *testing.T, ctx context.Context, pool *pgxpool.Pool, prefix string) (string, []string) {
+	t.Helper()
+	userID := "user:" + prefix
+	if _, err := pool.Exec(ctx, `
+		insert into users (id, username, handle, display_name, metadata)
+		values ($1, $2, $2, $3, '{}'::jsonb)
+		on conflict (id) do update
+		set username = excluded.username,
+		    handle = excluded.handle,
+		    display_name = excluded.display_name
+	`, userID, "owner-"+prefix, "Phase 102 Owner"); err != nil {
+		t.Fatal(err)
+	}
+	revisions := []string{}
+	for _, side := range []string{"bottom", "top"} {
+		strategyID := "strategy:" + prefix + ":" + side
+		revisionID := "strategy-revision:" + prefix + ":" + side
+		source := "export default { async selectActivations() { return []; } } // " + side
+		sourceHash := hashStrategySourceForGo(source)
+		sourceBytes := len([]byte(source))
+		if _, err := pool.Exec(ctx, `
+			insert into strategies (id, owner_user_id, name, metadata)
+			values ($1, $2, $3, '{}'::jsonb)
+			on conflict (id) do nothing
+		`, strategyID, userID, "Phase 102 "+side); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := pool.Exec(ctx, `
+			insert into strategy_revisions (
+			  id, strategy_id, source, source_hash, source_bytes, runtime,
+			  engine_compatibility, validation, metadata
+			)
+			values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			on conflict (id) do update
+			set source = excluded.source,
+			    source_hash = excluded.source_hash,
+			    source_bytes = excluded.source_bytes,
+			    runtime = excluded.runtime,
+			    engine_compatibility = excluded.engine_compatibility,
+			    validation = excluded.validation,
+			    metadata = excluded.metadata,
+			    locked_at = null
+		`, revisionID, strategyID, source, sourceHash, sourceBytes, defaultRuntimeMetadata(), map[string]any{
+			"spec":   "cowards-rules-v1.4",
+			"engine": "0.1.4",
+		}, map[string]any{
+			"valid":       true,
+			"sourceHash":  sourceHash,
+			"sourceBytes": sourceBytes,
+		}, map[string]any{
+			"label": "Phase 102 " + side,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		revisions = append(revisions, revisionID)
+	}
+	return userID, revisions
+}
+
+func cleanupPhase102ExhibitionRows(t *testing.T, ctx context.Context, pool *pgxpool.Pool, prefix string, userID string) {
+	t.Helper()
+	if _, err := pool.Exec(ctx, `
+		delete from match_job_attempts
+		where job_id in (
+		  select mj.id
+		  from match_jobs mj
+		  join match_set_matches msm on msm.match_id = mj.match_id
+		  join match_sets ms on ms.id = msm.match_set_id
+		  where ms.creator_user_id = $1
+		)
+	`, userID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `
+		delete from match_jobs
+		where match_id in (
+		  select msm.match_id
+		  from match_set_matches msm
+		  join match_sets ms on ms.id = msm.match_set_id
+		  where ms.creator_user_id = $1
+		)
+	`, userID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, "delete from match_set_matches where match_set_id in (select id from match_sets where creator_user_id = $1)", userID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, "delete from competition_entrants where match_set_id in (select id from match_sets where creator_user_id = $1)", userID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `
+		delete from chronicles
+		where match_id in (
+		  select id
+		  from matches
+		  where bottom_strategy_revision_id like $1
+		     or top_strategy_revision_id like $1
+		)
+	`, "strategy-revision:"+prefix+":%"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `
+		delete from matches
+		where id like 'match:match-set:exhibition:%'
+		  and (
+		    bottom_strategy_revision_id like $1 or
+		    top_strategy_revision_id like $1
+		  )
+	`, "strategy-revision:"+prefix+":%"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, "delete from competition_submission_events where user_id = $1", userID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, "delete from match_sets where creator_user_id = $1", userID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, "delete from strategy_revisions where id like $1", "strategy-revision:"+prefix+":%"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, "delete from strategies where id like $1", "strategy:"+prefix+":%"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, "delete from users where id = $1", userID); err != nil {
 		t.Fatal(err)
 	}
 }

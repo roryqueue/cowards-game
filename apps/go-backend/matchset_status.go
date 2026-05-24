@@ -113,9 +113,11 @@ func listMatchSetScoreInputsTx(ctx context.Context, tx pgx.Tx, matchSetID string
 		  m.top_surviving_soldiers,
 		  m.survival_turns,
 		  m.bottom_survival_turns,
-		  m.top_survival_turns
+		  m.top_survival_turns,
+		  c.artifact
 		from match_set_matches msm
 		join matches m on m.id = msm.match_id
+		left join chronicles c on c.match_id = m.id
 		where msm.match_set_id = $1
 		order by msm.matrix_index asc
 	`, matchSetID)
@@ -141,8 +143,9 @@ func listMatchSetScoreInputsTx(ctx context.Context, tx pgx.Tx, matchSetID string
 			survivalTurns            *int
 			bottomSurvivalTurns      *int
 			topSurvivalTurns         *int
+			chronicleArtifact        []byte
 		}
-		if err := rows.Scan(&row.matchID, &row.status, &row.bottomStrategyRevisionID, &row.topStrategyRevisionID, &row.winnerPlayerID, &row.bottomPlayerID, &row.topPlayerID, &row.survivingSoldiers, &row.bottomSurvivingSoldiers, &row.topSurvivingSoldiers, &row.survivalTurns, &row.bottomSurvivalTurns, &row.topSurvivalTurns); err != nil {
+		if err := rows.Scan(&row.matchID, &row.status, &row.bottomStrategyRevisionID, &row.topStrategyRevisionID, &row.winnerPlayerID, &row.bottomPlayerID, &row.topPlayerID, &row.survivingSoldiers, &row.bottomSurvivingSoldiers, &row.topSurvivingSoldiers, &row.survivalTurns, &row.bottomSurvivalTurns, &row.topSurvivalTurns, &row.chronicleArtifact); err != nil {
 			return nil, nil, err
 		}
 		var winnerStrategyRevisionID *string
@@ -161,13 +164,20 @@ func listMatchSetScoreInputsTx(ctx context.Context, tx pgx.Tx, matchSetID string
 			BottomStrategyRevisionID: row.bottomStrategyRevisionID,
 			TopStrategyRevisionID:    row.topStrategyRevisionID,
 			WinnerStrategyRevisionID: winnerStrategyRevisionID,
-			Status:                   row.status,
-			SurvivingSoldiers:        survivingSoldiers,
-			BottomSurvivingSoldiers:  intOr(row.bottomSurvivingSoldiers, survivingSoldiers),
-			TopSurvivingSoldiers:     intOr(row.topSurvivingSoldiers, survivingSoldiers),
-			SurvivalTurns:            survivalTurns,
-			BottomSurvivalTurns:      intOr(row.bottomSurvivalTurns, survivalTurns),
-			TopSurvivalTurns:         intOr(row.topSurvivalTurns, survivalTurns),
+			StrategyFailureRevisionID: strategyFailureRevisionIDFromChronicle(
+				row.chronicleArtifact,
+				row.bottomPlayerID,
+				row.topPlayerID,
+				row.bottomStrategyRevisionID,
+				row.topStrategyRevisionID,
+			),
+			Status:                  row.status,
+			SurvivingSoldiers:       survivingSoldiers,
+			BottomSurvivingSoldiers: intOr(row.bottomSurvivingSoldiers, survivingSoldiers),
+			TopSurvivingSoldiers:    intOr(row.topSurvivingSoldiers, survivingSoldiers),
+			SurvivalTurns:           survivalTurns,
+			BottomSurvivalTurns:     intOr(row.bottomSurvivalTurns, survivalTurns),
+			TopSurvivalTurns:        intOr(row.topSurvivalTurns, survivalTurns),
 		})
 		statuses = append(statuses, row.status)
 	}
@@ -186,4 +196,43 @@ func intOr(value *int, fallback int) int {
 
 func stringPtr(value string) *string {
 	return &value
+}
+
+func strategyFailureRevisionIDFromChronicle(artifact []byte, bottomPlayerID string, topPlayerID string, bottomRevisionID string, topRevisionID string) *string {
+	if len(artifact) == 0 {
+		return nil
+	}
+	var chronicle map[string]any
+	if err := json.Unmarshal(artifact, &chronicle); err != nil {
+		return nil
+	}
+	for _, event := range sliceValue(chronicle, "events") {
+		eventMap, ok := event.(map[string]any)
+		if !ok || stringValue(eventMap, "type") != "RUNTIME_VIOLATION" {
+			continue
+		}
+		payload, _ := eventMap["payload"].(map[string]any)
+		contextMap, _ := eventMap["context"].(map[string]any)
+		playerID := firstNonEmptyString(
+			stringValue(payload, "ownerPlayerId"),
+			stringValue(payload, "playerId"),
+			stringValue(contextMap, "actingPlayerId"),
+		)
+		switch playerID {
+		case bottomPlayerID:
+			return stringPtr(bottomRevisionID)
+		case topPlayerID:
+			return stringPtr(topRevisionID)
+		}
+	}
+	return nil
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }

@@ -33,6 +33,8 @@ type LiveServer struct {
 	pool              *pgxpool.Pool
 	now               func() time.Time
 	strategyArtifacts map[string]strategyArtifact
+	orchestrator      *goMatchOrchestrator
+	stopOrchestrator  context.CancelFunc
 }
 
 func NewLiveServer(ctx context.Context, databaseURL string) (*LiveServer, error) {
@@ -52,10 +54,28 @@ func NewLiveServer(ctx context.Context, databaseURL string) (*LiveServer, error)
 		pool.Close()
 		return nil, fmt.Errorf("load strategy artifacts: %w", err)
 	}
-	return &LiveServer{pool: pool, now: time.Now, strategyArtifacts: artifacts}, nil
+	server := &LiveServer{
+		pool:              pool,
+		now:               time.Now,
+		strategyArtifacts: artifacts,
+		orchestrator:      newGoMatchOrchestrator(pool, os.Getenv("COWARDS_RUNTIME_SERVICE_URL")),
+	}
+	orchestrationMode := strings.TrimSpace(os.Getenv("COWARDS_GO_ORCHESTRATION"))
+	runtimeServiceURL := strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SERVICE_URL"))
+	if orchestrationMode != "0" && runtimeServiceURL != "" {
+		server.stopOrchestrator = server.orchestrator.start(ctx)
+	}
+	if orchestrationMode == "1" && runtimeServiceURL == "" {
+		pool.Close()
+		return nil, errors.New("live Go orchestration requires COWARDS_RUNTIME_SERVICE_URL")
+	}
+	return server, nil
 }
 
 func (server *LiveServer) Close() {
+	if server.stopOrchestrator != nil {
+		server.stopOrchestrator()
+	}
 	server.pool.Close()
 }
 
@@ -78,7 +98,23 @@ func (server *LiveServer) routes() http.Handler {
 	mux.HandleFunc("POST /account/starter-forks", server.forkStarterStrategy)
 	mux.HandleFunc("POST /account/advanced-forks", server.forkAdvancedStrategy)
 	mux.HandleFunc("POST /matchsets", server.createExhibition)
+	mux.HandleFunc("POST /internal/match-jobs/run-once", server.runMatchJobOnce)
 	return mux
+}
+
+func (server *LiveServer) runMatchJobOnce(writer http.ResponseWriter, request *http.Request) {
+	token := os.Getenv("COWARDS_GO_BACKEND_INTERNAL_TOKEN")
+	if token == "" || request.Header.Get("X-Cowards-Internal-Token") != token {
+		writeServiceError(writer, http.StatusForbidden, "FORBIDDEN", "Forbidden.")
+		return
+	}
+	result, err := server.orchestrator.runOnce(request.Context(), nil)
+	if err != nil {
+		server.orchestrator.logf("manual Go orchestration run failed: %v", err)
+		goOrchestrationHTTPError(writer, http.StatusBadGateway)
+		return
+	}
+	writeGoOrchestrationResult(writer, http.StatusOK, result)
 }
 
 func (server *LiveServer) healthHandler(writer http.ResponseWriter, _ *http.Request) {

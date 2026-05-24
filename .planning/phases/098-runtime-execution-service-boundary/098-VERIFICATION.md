@@ -17,6 +17,17 @@ Result: PASS.
 - `packages/spec/artifacts/runtime-execution-service-request.v1.15.json` is parsed by TypeScript and Go tests as the shared contract fixture.
 - Runtime-service health returns `{"ok":true,"service":"runtime-execution-service-v1.15","runtimeAbiVersion":"strategy-runtime-abi-v1.14","adapter":"worker-thread"}`.
 
+## Requirement Coverage
+
+| Requirement | Status | Evidence |
+| --- | --- | --- |
+| RT-01 | PASS | The v1.15 runtime execution service schema carries complete Match inputs, Strategy metadata, arena, seed, players, and limits. |
+| RT-02 | PASS | Runtime-service tests and imports prove the TypeScript service executes only behind the runtime ABI and has no job/completion/Chronicle/scoring writes. |
+| RT-03 | PASS | Go runtime client validates source metadata but never imports, evaluates, transpiles, or executes Strategy source and contains no Node `vm` use. |
+| RT-04 | PASS | Service/client tests cover runtime violations as valid execution outcomes and system failures as retryable/terminal envelopes. |
+| RT-05 | PASS | Tests cover invalid output, timeout, malformed response, source hash mismatch, oversized output, stopped service, and redacted diagnostics. |
+| RT-06 | PASS | Boundary monitors preserve worker-thread, subprocess, container-subprocess, and non-JS readiness labels. |
+
 ## Commands
 
 ```bash

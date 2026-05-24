@@ -54,6 +54,14 @@ var routeInventory = []routeSpec{
 		SamplePath: "/public/replays/golden%3Av1-7%3Amatch/metadata",
 	},
 	{
+		ID:         "getPublicReplayEvidence",
+		Method:     http.MethodGet,
+		Pattern:    "/public/replays/{matchId}/evidence",
+		AuthScope:  "public",
+		Privacy:    "public",
+		SamplePath: "/public/replays/golden%3Av1-7%3Amatch/evidence",
+	},
+	{
 		ID:         "getPublicStrategyPage",
 		Method:     http.MethodGet,
 		Pattern:    "/public/strategies/{strategyId}",
@@ -78,6 +86,7 @@ type Server struct {
 	forbidden   json.RawMessage
 	matchSet    map[string]json.RawMessage
 	replay      map[string]json.RawMessage
+	evidence    map[string]json.RawMessage
 	strategy    map[string]json.RawMessage
 	analysis    map[string]ownerFixture
 	ownerTokens map[string]string
@@ -128,6 +137,10 @@ func NewServerFromFixtureDirWithOwnerTokens(dir string, ownerTokens map[string]s
 	if err != nil {
 		return nil, err
 	}
+	evidence, err := readValidatedFixture(dir, "public-replay-evidence.json", "publicReplayEvidence", checksums)
+	if err != nil {
+		return nil, err
+	}
 	strategy, err := readValidatedFixture(dir, "public-strategy-page.json", "publicStrategyPage", checksums)
 	if err != nil {
 		return nil, err
@@ -157,6 +170,9 @@ func NewServerFromFixtureDirWithOwnerTokens(dir string, ownerTokens map[string]s
 		replay: map[string]json.RawMessage{
 			mustStringField(replay, "matchId"): replay,
 		},
+		evidence: map[string]json.RawMessage{
+			mustStringField(evidence, "matchId"): evidence,
+		},
 		strategy: map[string]json.RawMessage{
 			mustPublicStrategyIDField(strategy): strategy,
 		},
@@ -179,6 +195,8 @@ func (server *Server) routes() http.Handler {
 			mux.HandleFunc(route.Method+" "+route.Pattern, server.matchSetSummary)
 		case "getPublicReplayMetadata":
 			mux.HandleFunc(route.Method+" "+route.Pattern, server.replayMetadata)
+		case "getPublicReplayEvidence":
+			mux.HandleFunc(route.Method+" "+route.Pattern, server.replayEvidence)
 		case "getPublicStrategyPage":
 			mux.HandleFunc(route.Method+" "+route.Pattern, server.publicStrategyPage)
 		case "getAnalyticsRunSummary":
@@ -207,6 +225,16 @@ func (server *Server) matchSetSummary(writer http.ResponseWriter, request *http.
 func (server *Server) replayMetadata(writer http.ResponseWriter, request *http.Request) {
 	matchID := decodePathValue(request.PathValue("matchId"))
 	dto, ok := server.replay[matchID]
+	if !ok {
+		writeJSON(writer, http.StatusNotFound, server.notFound)
+		return
+	}
+	writeJSON(writer, http.StatusOK, dto)
+}
+
+func (server *Server) replayEvidence(writer http.ResponseWriter, request *http.Request) {
+	matchID := decodePathValue(request.PathValue("matchId"))
+	dto, ok := server.evidence[matchID]
 	if !ok {
 		writeJSON(writer, http.StatusNotFound, server.notFound)
 		return
@@ -332,6 +360,14 @@ type publicReplayMetadataFixture struct {
 	Metadata   map[string]any `json:"metadata"`
 }
 
+type publicReplayEvidenceFixture struct {
+	APIVersion string         `json:"apiVersion"`
+	Kind       string         `json:"kind"`
+	MatchID    string         `json:"matchId"`
+	Metadata   map[string]any `json:"metadata"`
+	Projection map[string]any `json:"projection"`
+}
+
 type analyticsRunSummaryFixture struct {
 	APIVersion string         `json:"apiVersion"`
 	Kind       string         `json:"kind"`
@@ -380,6 +416,21 @@ func validateFixtureShape(raw []byte, expectedKind string) error {
 		}
 		if dto.APIVersion != serviceAPIVersion || dto.Kind != expectedKind || dto.MatchID == "" || len(dto.Metadata) == 0 {
 			return fmt.Errorf("invalid public replay metadata fixture")
+		}
+	case "publicReplayEvidence":
+		var dto publicReplayEvidenceFixture
+		if err := decodeStrict(raw, &dto); err != nil {
+			return err
+		}
+		viewer, ok := dto.Projection["viewer"].(map[string]any)
+		if dto.APIVersion != serviceAPIVersion || dto.Kind != expectedKind || dto.MatchID == "" || len(dto.Metadata) == 0 || len(dto.Projection) == 0 || !ok {
+			return fmt.Errorf("invalid public replay evidence fixture")
+		}
+		if viewer["access"] != "public" {
+			return fmt.Errorf("public replay evidence fixture must use public viewer")
+		}
+		if _, ok := dto.Projection["ownerPrivate"]; ok {
+			return fmt.Errorf("public replay evidence fixture must not contain ownerPrivate")
 		}
 	case "publicStrategyPage":
 		var dto publicStrategyPageFixture

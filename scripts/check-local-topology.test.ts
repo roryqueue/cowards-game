@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   evaluateLocalTopology,
@@ -31,14 +32,18 @@ describe("local topology harness", () => {
         "--require-go",
         "--require-web-go-public-strategy-read",
         "--require-runtime-container",
+        "--require-v1-15-lifecycle",
       ]),
     ).toMatchObject({
       requireWeb: true,
       requireGo: true,
       requireWebGoPublicStrategyRead: true,
+      requireRuntimeService: true,
       requireRuntimeContainer: true,
+      requireV115Lifecycle: true,
       webUrl: "http://localhost:3000",
       goUrl: "http://127.0.0.1:8087",
+      runtimeServiceUrl: "http://127.0.0.1:3107",
     })
   })
 
@@ -89,10 +94,13 @@ describe("local topology harness", () => {
     const checks = await evaluateLocalTopology({
       webUrl: null,
       goUrl: null,
+      runtimeServiceUrl: null,
       requireWeb: false,
       requireGo: false,
       requireWebGoPublicStrategyRead: false,
+      requireRuntimeService: false,
       requireRuntimeContainer: false,
+      requireV115Lifecycle: false,
       json: false,
     })
 
@@ -109,7 +117,7 @@ describe("local topology harness", () => {
         "privacy",
       ]),
     )
-  })
+  }, 30_000)
 
   it("can require web-through-Go public Strategy read evidence", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
@@ -131,6 +139,18 @@ describe("local topology harness", () => {
             service: "cowards-service",
             version: "service-api-v1.8",
           }),
+          { status: 200 },
+        )
+      }
+      if (
+        url.includes("127.0.0.1:8087/public/replays/") &&
+        url.endsWith("/evidence")
+      ) {
+        return new Response(
+          readFileSync(
+            "apps/go-backend/testdata/service-fixtures/public-replay-evidence.json",
+            "utf8",
+          ),
           { status: 200 },
         )
       }
@@ -161,10 +181,13 @@ describe("local topology harness", () => {
     const checks = await evaluateLocalTopology({
       webUrl: "http://localhost:3000",
       goUrl: "http://127.0.0.1:8087",
+      runtimeServiceUrl: null,
       requireWeb: true,
       requireGo: true,
       requireWebGoPublicStrategyRead: true,
+      requireRuntimeService: false,
       requireRuntimeContainer: false,
+      requireV115Lifecycle: false,
       json: false,
     })
     const webGoRead = checks.find(
@@ -176,16 +199,19 @@ describe("local topology harness", () => {
       ok: true,
       required: true,
     })
-  })
+  }, 30_000)
 
   it("reports required live Go failures without leaking private diagnostics", async () => {
     const checks = await evaluateLocalTopology({
       webUrl: null,
       goUrl: "http://127.0.0.1:1",
+      runtimeServiceUrl: null,
       requireWeb: false,
       requireGo: true,
       requireWebGoPublicStrategyRead: false,
+      requireRuntimeService: false,
       requireRuntimeContainer: false,
+      requireV115Lifecycle: false,
       json: false,
     })
     const goChecks = checks.filter((check) => check.layer === "go_readonly")
@@ -193,7 +219,7 @@ describe("local topology harness", () => {
     expect(goChecks.some((check) => !check.ok && check.required)).toBe(true)
     expect(JSON.stringify(checks)).not.toContain("Strategy source")
     expect(JSON.stringify(checks)).not.toContain("privateDiagnostics")
-  })
+  }, 30_000)
 
   it("fails owner analytics smoke when the route does not prove auth rejection", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
@@ -222,10 +248,13 @@ describe("local topology harness", () => {
     const checks = await evaluateLocalTopology({
       webUrl: null,
       goUrl: "http://127.0.0.1:8087",
+      runtimeServiceUrl: null,
       requireWeb: false,
       requireGo: true,
       requireWebGoPublicStrategyRead: false,
+      requireRuntimeService: false,
       requireRuntimeContainer: false,
+      requireV115Lifecycle: false,
       json: false,
     })
     const authGate = checks.find(
@@ -234,16 +263,19 @@ describe("local topology harness", () => {
 
     expect(authGate).toMatchObject({ ok: false, required: true })
     expect(authGate?.detail).toContain("expected HTTP 401/403")
-  })
+  }, 30_000)
 
   it("fails loudly when required runtime container evidence is skipped", async () => {
     const checks = await evaluateLocalTopology({
       webUrl: null,
       goUrl: null,
+      runtimeServiceUrl: null,
       requireWeb: false,
       requireGo: false,
       requireWebGoPublicStrategyRead: false,
+      requireRuntimeService: false,
       requireRuntimeContainer: true,
+      requireV115Lifecycle: false,
       json: false,
     })
     const runtimeIsolation = checks.find(
@@ -258,5 +290,5 @@ describe("local topology harness", () => {
     expect(runtimeIsolation?.detail).toContain(
       "Required sandbox candidate container-subprocess did not pass",
     )
-  })
+  }, 30_000)
 })

@@ -15,6 +15,19 @@ Result: PASS.
 - `apps/go-backend/completion_test.go` covers completion derivation, Chronicle validation, DB-backed completion, idempotency, invalid lease, wrong-job lease, outcome drift, hash normalization, and invalid Chronicle failure.
 - Existing TypeScript oracle tests for completion fields, Chronicle storage, and public projection still pass.
 
+## Requirement Coverage
+
+| Requirement | Status | Evidence |
+| --- | --- | --- |
+| COMP-01 | PASS | Go completion requires a valid running lease token before completing a Match. |
+| COMP-02 | PASS | Duplicate completion is idempotent only when a completed Match already has Chronicle metadata. |
+| COMP-03 | PASS | Go derives outcome, winner, survivor counts, side counts, survival turns, and side survival turns with TypeScript parity fixtures. |
+| COMP-04 | PASS | Go validates Chronicle schema version, Match id, Strategy Revision ids, arena id, terminal outcome, counts, metadata, and content hash before persistence. |
+| COMP-05 | PASS | DB-backed completion wraps Chronicle persistence, Match completion, job completion, and attempt completion in one transaction. |
+| COMP-06 | PASS | Invalid Chronicles, id drift, hash drift, missing terminal data, storage conflicts, and projection leak cases fail closed. |
+| COMP-07 | PASS | TypeScript replay/public projection oracle tests read Go-compatible completed Chronicle metadata. |
+| COMP-08 | PASS | Go and TypeScript parity tests cover successful completion, runtime violation completion, duplicate completion, invalid lease, invalid Chronicle, and storage conflict behavior. |
+
 ## Commands
 
 ```bash

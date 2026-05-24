@@ -18,6 +18,17 @@ Result: PASS.
 - `apps/go-backend/live_backend.go` public MatchSet and ladder reads refresh through Go scoring, preserve safe penalty arrays, map public evidence to entrant ids, and aggregate counted ladder standings.
 - Go and TypeScript oracle tests pass for scoring/status behavior.
 
+## Requirement Coverage
+
+| Requirement | Status | Evidence |
+| --- | --- | --- |
+| SCORE-01 | PASS | Go scorer parity covers wins, losses, draws, points, strategy-failure penalties, failed-system Matches, survivor totals, survival turns, and stable tie-breakers. |
+| SCORE-02 | PASS | Go MatchSet status refresh covers pending, running, complete, degraded, failed-system, and blocked states. |
+| SCORE-03 | PASS | Go updates `match_sets.status`, `scoring`, `degraded`, and `completed_at` after terminal Match completion or exhausted system failure. |
+| SCORE-04 | PASS | Public MatchSet reads use Go-scored summaries after complete or degraded MatchSets. |
+| SCORE-05 | PASS | Runtime violations and system failures are classified into scoring/degraded outcomes without false player losses. |
+| SCORE-06 | PASS | Go and TypeScript parity fixtures cover complete, running, degraded, failed-system, strategy-failure penalty, and tie-breaker scenarios. |
+
 ## Commands
 
 ```bash

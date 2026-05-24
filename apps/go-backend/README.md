@@ -7,6 +7,7 @@ Endpoints:
 - `GET /health`
 - `GET /public/matchsets/{matchSetId}/summary`
 - `GET /public/replays/{matchId}/metadata`
+- `GET /public/replays/{matchId}/evidence`
 - `GET /public/strategies/{strategyId}`
 - `GET /analytics/runs/{runId}/summary` with an operator-configured bearer token mapped to the fixture owner
 
@@ -30,4 +31,4 @@ Owner-scoped analytics reads are disabled until a bearer token is configured wit
 
 ## Ownership Boundary
 
-Go remains read-only. TypeScript still owns auth mutation, Strategy submission, Strategy source retrieval, MatchSet creation, Match orchestration, job claiming, migrations, persistence writes, and Strategy execution. The analytics summary endpoint is owner-scoped parity evidence only; the Go service requires a locally configured bearer-token identity for that route and does not promote a public analytics product route.
+In fixture mode, Go remains read-only. In live mode, Go owns selected v1.15 lifecycle and public evidence contracts while Strategy execution remains outside Go behind the TypeScript runtime execution service boundary. The analytics summary endpoint is owner-scoped parity evidence only; the Go service requires a locally configured bearer-token identity for that route and does not promote a public analytics product route.

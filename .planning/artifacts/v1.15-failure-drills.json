@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "v1.15-failure-drills",
+  "milestone": "v1.15",
+  "createdAt": "2026-05-24",
+  "ok": true,
+  "sourceSafe": true,
+  "stoppedGo": {
+    "scenario": "Go-selected web and public read workflows cannot reach Go",
+    "failClosed": true,
+    "typescriptFallbackObserved": false,
+    "expectedDiagnostics": [
+      "go_unavailable",
+      "go_status_mismatch",
+      "missing_go_backend_url"
+    ],
+    "evidence": [
+      "apps/web/lib/account-service-adapter.test.ts",
+      "apps/web/lib/public-go-read-client.test.ts",
+      "apps/web/app/matches/server.test.ts"
+    ]
+  },
+  "stoppedRuntimeService": {
+    "scenario": "Go orchestration cannot reach the TypeScript runtime execution service",
+    "classification": "retryable_system_failure",
+    "typescriptPersistenceFallbackObserved": false,
+    "goRecordsFailure": true,
+    "evidence": [
+      "apps/go-backend/runtime_service_client_test.go",
+      "apps/go-backend/job_lifecycle_test.go",
+      "apps/go-backend/matchset_status_test.go"
+    ]
+  },
+  "rollback": {
+    "scenario": "Operator-directed rollback from Go orchestration to TypeScript rollback worker",
+    "noMixedDbOwners": true,
+    "operatorSequence": [
+      "stop_go_orchestration",
+      "switch_lifecycle_owner_to_typescript",
+      "start_typescript_rollback_worker"
+    ],
+    "coveredStates": [
+      "queued_jobs",
+      "running_jobs",
+      "expired_leases",
+      "retries",
+      "incomplete_matchsets",
+      "public_evidence_requests"
+    ],
+    "policy": "Rollback is explicit, never automatic, and must not run Go completion and TypeScript completion owners at the same time.",
+    "evidence": [
+      "apps/worker/src/runner.ts",
+      "apps/go-backend/job_lifecycle.go",
+      ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json"
+    ]
+  },
+  "privacy": {
+    "diagnosticsRedacted": true,
+    "publicSafe": true
+  }
+}

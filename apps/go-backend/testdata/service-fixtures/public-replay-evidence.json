@@ -1,0 +1,6601 @@
+{
+  "apiVersion": "service-api-v1.8",
+  "kind": "publicReplayEvidence",
+  "matchId": "golden:v1-7:match",
+  "metadata": {
+    "arenaVariantId": "golden:v1-7:arena",
+    "bottomPlayerId": "bottom",
+    "chronicleId": "chronicle:6f8063dfee2dc7922a5248d9cde760d3da3de829f8a0f3795cceabe7ab4f4e97",
+    "eventCount": 251,
+    "hash": "6f8063dfee2dc7922a5248d9cde760d3da3de829f8a0f3795cceabe7ab4f4e97",
+    "matchId": "golden:v1-7:match",
+    "outcome": {
+      "type": "WIN",
+      "winnerPlayerId": "bottom"
+    },
+    "schemaVersion": "chronicle-v1.4",
+    "snapshotCount": 11,
+    "topPlayerId": "top"
+  },
+  "projection": {
+    "events": [
+      {
+        "context": {},
+        "payload": {
+          "matchId": "golden:v1-7:match",
+          "seed": "golden:v1-7:seed"
+        },
+        "sequence": 0,
+        "type": "MATCH_STARTED"
+      },
+      {
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 1
+        },
+        "payload": {
+          "roundNumber": 1
+        },
+        "sequence": 1,
+        "type": "ROUND_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "phaseNumber": 1,
+          "roundNumber": 1
+        },
+        "payload": {
+          "playerId": "bottom"
+        },
+        "sequence": 2,
+        "type": "STRATEGY_EVALUATED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "phaseNumber": 1,
+          "roundNumber": 1
+        },
+        "payload": {
+          "playerId": "top"
+        },
+        "sequence": 3,
+        "type": "STRATEGY_EVALUATED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 4,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 5,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 6,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 7,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 8,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 9,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 10,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 11,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 12,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 13,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 14,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 15,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 16,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 17,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 1,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 18,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 1,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 19,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 2,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 20,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 2,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 21,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 3,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 22,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 3,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 23,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 4,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 24,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 4,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 25,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 5,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 26,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 5,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 27,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 6,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 6,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 28,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 6,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 6,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 29,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 7,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 7,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 30,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 7,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 7,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 31,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 8,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 8,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 32,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 8,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 8,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 33,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 9,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 9,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 34,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 9,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 9,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 35,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 10,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 10,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 36,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 10,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 10,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 37,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:1:0",
+          "activationIndex": 0,
+          "cycleIndex": 11,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "top-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 11,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-1"
+        },
+        "sequence": 38,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:1:1",
+          "activationIndex": 1,
+          "cycleIndex": 11,
+          "phaseNumber": 1,
+          "roundNumber": 1,
+          "soldierId": "bottom-soldier-1"
+        },
+        "payload": {
+          "cycleIndex": 11,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-1"
+        },
+        "sequence": 39,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 2
+        },
+        "payload": {
+          "roundNumber": 2
+        },
+        "sequence": 40,
+        "type": "ROUND_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "phaseNumber": 1,
+          "roundNumber": 2
+        },
+        "payload": {
+          "playerId": "bottom"
+        },
+        "sequence": 41,
+        "type": "STRATEGY_EVALUATED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "phaseNumber": 1,
+          "roundNumber": 2
+        },
+        "payload": {
+          "playerId": "top"
+        },
+        "sequence": 42,
+        "type": "STRATEGY_EVALUATED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 43,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 44,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 45,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 46,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 47,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 48,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 49,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 50,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 51,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 52,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 53,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 54,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 55,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 56,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 57,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 58,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 59,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 60,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 61,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 62,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 63,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 64,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 65,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 66,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 67,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 68,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 69,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 70,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 1,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 71,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 1,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 72,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 1,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 73,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 1,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 74,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 2,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 75,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 2,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 76,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 2,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 77,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 2,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 78,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 3,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 79,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 3,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 80,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 3,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 81,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 3,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 82,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 4,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 83,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 4,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 84,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 4,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 85,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 4,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 86,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 5,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 87,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 5,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 88,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 5,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 89,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 5,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 90,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 6,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 6,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 91,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 6,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 6,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 92,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 6,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 6,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 93,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 6,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 6,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 94,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 7,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 7,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 95,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 7,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 7,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 96,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 7,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 7,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 97,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 7,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 7,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 98,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 8,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 8,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 99,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 8,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 8,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 100,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 8,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 8,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 101,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 8,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 8,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 102,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 9,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 9,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 103,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 9,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 9,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 104,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 9,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 9,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 105,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 9,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 9,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 106,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 10,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 10,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 107,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 10,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 10,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 108,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 10,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 10,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 109,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 10,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 10,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 110,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:0",
+          "activationIndex": 0,
+          "cycleIndex": 11,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 11,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-2"
+        },
+        "sequence": 111,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:1",
+          "activationIndex": 1,
+          "cycleIndex": 11,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-2"
+        },
+        "payload": {
+          "cycleIndex": 11,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-2"
+        },
+        "sequence": 112,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:2:2",
+          "activationIndex": 2,
+          "cycleIndex": 11,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "top-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 11,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-3"
+        },
+        "sequence": 113,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:2:3",
+          "activationIndex": 3,
+          "cycleIndex": 11,
+          "phaseNumber": 1,
+          "roundNumber": 2,
+          "soldierId": "bottom-soldier-3"
+        },
+        "payload": {
+          "cycleIndex": 11,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-3"
+        },
+        "sequence": 114,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 3
+        },
+        "payload": {
+          "roundNumber": 3
+        },
+        "sequence": 115,
+        "type": "ROUND_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "phaseNumber": 1,
+          "roundNumber": 3
+        },
+        "payload": {
+          "playerId": "bottom"
+        },
+        "sequence": 116,
+        "type": "STRATEGY_EVALUATED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "phaseNumber": 1,
+          "roundNumber": 3
+        },
+        "payload": {
+          "playerId": "top"
+        },
+        "sequence": 117,
+        "type": "STRATEGY_EVALUATED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 118,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 119,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 120,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 121,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 122,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 123,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 124,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 125,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 126,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 127,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 128,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 129,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 130,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 131,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 132,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 133,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 134,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 135,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 136,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 137,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 138,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 139,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 140,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 141,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 142,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 143,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 144,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 145,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 146,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 147,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 148,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 149,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 150,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 151,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 152,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 153,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 154,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 155,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 156,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 157,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 158,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 159,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 1,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 160,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 1,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 161,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 1,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 162,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 1,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 163,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 1,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 164,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 1,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 165,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 2,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 166,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 2,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 167,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 2,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 168,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 2,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 169,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 2,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 170,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 2,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 171,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 3,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 172,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 3,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 173,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 3,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 174,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 3,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 175,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 3,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 176,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 3,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 177,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 4,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 178,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 4,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 179,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 4,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 180,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 4,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 181,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 4,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 182,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 4,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 4,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 183,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 5,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 184,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 5,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 185,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 5,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 186,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 5,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 187,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 5,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 188,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 5,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 5,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 189,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 6,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 6,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 190,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 6,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 6,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 191,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 6,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 6,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 192,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 6,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 6,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 193,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 6,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 6,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 194,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 6,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 6,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 195,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 7,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 7,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 196,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 7,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 7,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 197,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 7,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 7,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 198,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 7,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 7,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 199,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 7,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 7,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 200,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 7,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 7,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 201,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 8,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 8,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 202,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 8,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 8,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 203,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 8,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 8,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 204,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 8,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 8,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 205,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 8,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 8,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 206,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 8,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 8,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 207,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 9,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 9,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 208,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 9,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 9,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 209,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 9,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 9,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 210,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 9,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 9,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 211,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 9,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 9,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 212,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 9,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 9,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 213,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 10,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 10,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 214,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 10,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 10,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 215,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 10,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 10,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 216,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 10,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 10,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 217,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 10,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 10,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 218,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 10,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 10,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 219,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:0",
+          "activationIndex": 0,
+          "cycleIndex": 11,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 11,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-4"
+        },
+        "sequence": 220,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:1",
+          "activationIndex": 1,
+          "cycleIndex": 11,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-4"
+        },
+        "payload": {
+          "cycleIndex": 11,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-4"
+        },
+        "sequence": 221,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:2",
+          "activationIndex": 2,
+          "cycleIndex": 11,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 11,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-5"
+        },
+        "sequence": 222,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:3",
+          "activationIndex": 3,
+          "cycleIndex": 11,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-5"
+        },
+        "payload": {
+          "cycleIndex": 11,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-5"
+        },
+        "sequence": 223,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:3:4",
+          "activationIndex": 4,
+          "cycleIndex": 11,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "top-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 11,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-6"
+        },
+        "sequence": 224,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:3:5",
+          "activationIndex": 5,
+          "cycleIndex": 11,
+          "phaseNumber": 1,
+          "roundNumber": 3,
+          "soldierId": "bottom-soldier-6"
+        },
+        "payload": {
+          "cycleIndex": 11,
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-6"
+        },
+        "sequence": 225,
+        "type": "ACTIVATION_SKIPPED"
+      },
+      {
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 4
+        },
+        "payload": {
+          "roundNumber": 4
+        },
+        "sequence": 226,
+        "type": "ROUND_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "phaseNumber": 1,
+          "roundNumber": 4
+        },
+        "payload": {
+          "playerId": "bottom"
+        },
+        "sequence": 227,
+        "type": "STRATEGY_EVALUATED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "phaseNumber": 1,
+          "roundNumber": 4
+        },
+        "payload": {
+          "playerId": "top"
+        },
+        "sequence": 228,
+        "type": "STRATEGY_EVALUATED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:4:0",
+          "activationIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "bottom-soldier-7"
+        },
+        "payload": {
+          "soldierId": "bottom-soldier-7"
+        },
+        "sequence": 229,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:1",
+          "activationIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-7"
+        },
+        "payload": {
+          "soldierId": "top-soldier-7"
+        },
+        "sequence": 230,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:2",
+          "activationIndex": 2,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-8"
+        },
+        "payload": {
+          "soldierId": "top-soldier-8"
+        },
+        "sequence": 231,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:4:3",
+          "activationIndex": 3,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "bottom-soldier-8"
+        },
+        "payload": {
+          "soldierId": "bottom-soldier-8"
+        },
+        "sequence": 232,
+        "type": "ACTIVATION_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:4:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "bottom-soldier-7"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-7"
+        },
+        "sequence": 233,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:4:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "bottom-soldier-7"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-7"
+        },
+        "sequence": 234,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:4:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "bottom-soldier-7"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "bottom-soldier-7"
+        },
+        "sequence": 235,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:4:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "bottom-soldier-7"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "bottom-soldier-7"
+        },
+        "sequence": 236,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:4:0",
+          "activationIndex": 0,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "bottom-soldier-7"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "bottom-soldier-7"
+        },
+        "sequence": 237,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "bottom",
+          "activationId": "1:4:0",
+          "activationIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "bottom-soldier-7"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "bottom-soldier-7"
+        },
+        "sequence": 238,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-7"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-7"
+        },
+        "sequence": 239,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-7"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-7"
+        },
+        "sequence": 240,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-7"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "top-soldier-7"
+        },
+        "sequence": 241,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-7"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "top-soldier-7"
+        },
+        "sequence": 242,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:1",
+          "activationIndex": 1,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-7"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-7"
+        },
+        "sequence": 243,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:1",
+          "activationIndex": 1,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-7"
+        },
+        "payload": {
+          "reason": "SOLDIER_STONED",
+          "soldierId": "top-soldier-7"
+        },
+        "sequence": 244,
+        "type": "ACTIVATION_ENDED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-8"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-8"
+        },
+        "sequence": 245,
+        "type": "CYCLE_STARTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-8"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-8"
+        },
+        "sequence": 246,
+        "type": "AWARENESS_GRID_OBSERVED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-8"
+        },
+        "payload": {
+          "action": {
+            "type": "TURN_TO_STONE"
+          },
+          "soldierId": "top-soldier-8"
+        },
+        "sequence": 247,
+        "type": "ACTION_EMITTED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-8"
+        },
+        "payload": {
+          "reason": "TURN_TO_STONE",
+          "soldierId": "top-soldier-8"
+        },
+        "sequence": 248,
+        "type": "SOLDIER_STONED"
+      },
+      {
+        "context": {
+          "actingPlayerId": "top",
+          "activationId": "1:4:2",
+          "activationIndex": 2,
+          "cycleIndex": 0,
+          "phaseNumber": 1,
+          "roundNumber": 4,
+          "soldierId": "top-soldier-8"
+        },
+        "payload": {
+          "cycleIndex": 0,
+          "soldierId": "top-soldier-8"
+        },
+        "sequence": 249,
+        "type": "CYCLE_ENDED"
+      },
+      {
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 4
+        },
+        "payload": {
+          "type": "WIN",
+          "winnerPlayerId": "bottom"
+        },
+        "sequence": 250,
+        "type": "MATCH_ENDED"
+      }
+    ],
+    "reproducibility": {
+      "arenaVariantId": "golden:v1-7:arena",
+      "arenaVariantVersion": "0.1.0",
+      "matchId": "golden:v1-7:match",
+      "seed": "golden:v1-7:seed",
+      "strategyRevisionIds": [
+        "strategy-revision:golden-bottom",
+        "strategy-revision:golden-top"
+      ],
+      "versions": {
+        "arenaVariant": "0.1.0",
+        "chronicle": "chronicle-v1.4",
+        "engine": "0.1.4",
+        "runtimeJs": "0.1.0",
+        "spec": "cowards-rules-v1.4",
+        "strategyRevision": "0.1.4"
+      }
+    },
+    "schemaVersion": "chronicle-v1.4",
+    "snapshots": [
+      {
+        "board": {
+          "bounds": {
+            "maxX": 11,
+            "maxY": 11,
+            "minX": 0,
+            "minY": 0
+          },
+          "soldiers": [
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 2,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 3,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 4,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 5,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 6,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 7,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 8,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 9,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 2,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 3,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 4,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 5,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 6,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 7,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 8,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 9,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            }
+          ],
+          "terrainStones": [
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 7,
+              "y": 7
+            }
+          ]
+        },
+        "context": {},
+        "kind": "MATCH_START",
+        "sequence": 0
+      },
+      {
+        "board": {
+          "bounds": {
+            "maxX": 11,
+            "maxY": 11,
+            "minX": 0,
+            "minY": 0
+          },
+          "soldiers": [
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 2,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 3,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 4,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 5,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 6,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 7,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 8,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 9,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 2,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 3,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 4,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 5,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 6,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 7,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 8,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 9,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            }
+          ],
+          "terrainStones": [
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 7,
+              "y": 7
+            }
+          ]
+        },
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 1
+        },
+        "kind": "ROUND_START",
+        "sequence": 1
+      },
+      {
+        "board": {
+          "bounds": {
+            "maxX": 11,
+            "maxY": 11,
+            "minX": 0,
+            "minY": 0
+          },
+          "soldiers": [
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 2,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 3,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 4,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 5,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 6,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 7,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 8,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 9,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 2,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 3,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 4,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 5,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 6,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 7,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 8,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 9,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            }
+          ],
+          "terrainStones": [
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 7,
+              "y": 7
+            }
+          ]
+        },
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 1
+        },
+        "kind": "ROUND_END",
+        "sequence": 39
+      },
+      {
+        "board": {
+          "bounds": {
+            "maxX": 11,
+            "maxY": 11,
+            "minX": 0,
+            "minY": 0
+          },
+          "soldiers": [
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 2,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 3,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 4,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 5,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 6,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 7,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 8,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 9,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 2,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 3,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 4,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 5,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 6,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 7,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 8,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 9,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            }
+          ],
+          "terrainStones": [
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 7,
+              "y": 7
+            }
+          ]
+        },
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 2
+        },
+        "kind": "ROUND_START",
+        "sequence": 40
+      },
+      {
+        "board": {
+          "bounds": {
+            "maxX": 11,
+            "maxY": 11,
+            "minX": 0,
+            "minY": 0
+          },
+          "soldiers": [
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 2,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 3,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 4,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 5,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 6,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 7,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 8,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 9,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 2,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 3,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 4,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 5,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 6,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 7,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 8,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 9,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            }
+          ],
+          "terrainStones": [
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 7,
+              "y": 7
+            }
+          ]
+        },
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 2
+        },
+        "kind": "ROUND_END",
+        "sequence": 114
+      },
+      {
+        "board": {
+          "bounds": {
+            "maxX": 11,
+            "maxY": 11,
+            "minX": 0,
+            "minY": 0
+          },
+          "soldiers": [
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 2,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 3,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 4,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 5,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 6,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 7,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 8,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 9,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 2,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 3,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 4,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 5,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 6,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 7,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 8,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 9,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            }
+          ],
+          "terrainStones": [
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 7,
+              "y": 7
+            }
+          ]
+        },
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 3
+        },
+        "kind": "ROUND_START",
+        "sequence": 115
+      },
+      {
+        "board": {
+          "bounds": {
+            "maxX": 11,
+            "maxY": 11,
+            "minX": 0,
+            "minY": 0
+          },
+          "soldiers": [
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 2,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 3,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 4,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 5,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 6,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 7,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 8,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 9,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 2,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 3,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 4,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 5,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 6,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 7,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 8,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 9,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            }
+          ],
+          "terrainStones": [
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 7,
+              "y": 7
+            }
+          ]
+        },
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 3
+        },
+        "kind": "ROUND_END",
+        "sequence": 225
+      },
+      {
+        "board": {
+          "bounds": {
+            "maxX": 11,
+            "maxY": 11,
+            "minX": 0,
+            "minY": 0
+          },
+          "soldiers": [
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 2,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 3,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 4,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 5,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 6,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 7,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 8,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 9,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 2,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 3,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 4,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 5,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 6,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 7,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 8,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 9,
+                "y": 0
+              },
+              "status": "ACTIVE"
+            }
+          ],
+          "terrainStones": [
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 7,
+              "y": 7
+            }
+          ]
+        },
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 4
+        },
+        "kind": "ROUND_START",
+        "sequence": 226
+      },
+      {
+        "board": {
+          "bounds": {
+            "maxX": 11,
+            "maxY": 11,
+            "minX": 0,
+            "minY": 0
+          },
+          "soldiers": [
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 2,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 3,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 4,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 5,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 6,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 7,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 8,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 9,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 2,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 3,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 4,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 5,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 6,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 7,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 8,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 9,
+                "y": 0
+              },
+              "status": "STONE"
+            }
+          ],
+          "terrainStones": [
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 7,
+              "y": 7
+            }
+          ]
+        },
+        "context": {
+          "phaseNumber": 1,
+          "roundNumber": 4
+        },
+        "kind": "ROUND_END",
+        "outcome": {
+          "type": "WIN",
+          "winnerPlayerId": "bottom"
+        },
+        "sequence": 250
+      },
+      {
+        "board": {
+          "bounds": {
+            "maxX": 11,
+            "maxY": 11,
+            "minX": 0,
+            "minY": 0
+          },
+          "soldiers": [
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 2,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 3,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 4,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 5,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 6,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 7,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 8,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 9,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 2,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 3,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 4,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 5,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 6,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 7,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 8,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 9,
+                "y": 0
+              },
+              "status": "STONE"
+            }
+          ],
+          "terrainStones": [
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 7,
+              "y": 7
+            }
+          ]
+        },
+        "context": {},
+        "kind": "MATCH_END",
+        "outcome": {
+          "type": "WIN",
+          "winnerPlayerId": "bottom"
+        },
+        "sequence": 250
+      },
+      {
+        "board": {
+          "bounds": {
+            "maxX": 11,
+            "maxY": 11,
+            "minX": 0,
+            "minY": 0
+          },
+          "soldiers": [
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 2,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 3,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 4,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 5,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 6,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 7,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 8,
+                "y": 11
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "UP",
+              "id": "bottom-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "bottom",
+              "position": {
+                "x": 9,
+                "y": 11
+              },
+              "status": "ACTIVE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-1",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 2,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-2",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 3,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-3",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 4,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-4",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 5,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-5",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 6,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-6",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 7,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-7",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 8,
+                "y": 0
+              },
+              "status": "STONE"
+            },
+            {
+              "facing": "DOWN",
+              "id": "top-soldier-8",
+              "lastSuccessfulMoveDirection": null,
+              "ownerPlayerId": "top",
+              "position": {
+                "x": 9,
+                "y": 0
+              },
+              "status": "STONE"
+            }
+          ],
+          "terrainStones": [
+            {
+              "x": 4,
+              "y": 4
+            },
+            {
+              "x": 7,
+              "y": 7
+            }
+          ]
+        },
+        "context": {},
+        "kind": "TERMINAL",
+        "outcome": {
+          "type": "WIN",
+          "winnerPlayerId": "bottom"
+        },
+        "sequence": 250
+      }
+    ],
+    "viewer": {
+      "access": "public"
+    }
+  }
+}

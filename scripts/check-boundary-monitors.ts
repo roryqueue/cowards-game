@@ -418,6 +418,7 @@ const checkGoFixtures = (): string => {
     "public-match-set-summary.json",
     "degraded-match-set-summary.json",
     "public-replay-metadata.json",
+    "public-replay-evidence.json",
     "public-strategy-page.json",
     "not-found-error.json",
     "forbidden-error.json",
@@ -441,6 +442,7 @@ const checkGoRouteManifest = (): string => {
     "health",
     "getPublicMatchSetSummary",
     "getPublicReplayMetadata",
+    "getPublicReplayEvidence",
     "getPublicStrategyPage",
     "getAnalyticsRunSummary",
   ])
@@ -1148,19 +1150,23 @@ const checkWebBoundary = (): string => {
 
 const checkTopologyDiagnostics = async (): Promise<string> => {
   const checks = await evaluateLocalTopology({
-    webUrl: null,
-    goUrl: null,
-    requireWeb: false,
-    requireGo: false,
-    requireWebGoPublicStrategyRead: false,
+    webUrl: process.env.COWARDS_WEB_URL ?? "http://localhost:3000",
+    goUrl: process.env.COWARDS_GO_BACKEND_URL ?? "http://127.0.0.1:8087",
+    runtimeServiceUrl:
+      process.env.COWARDS_RUNTIME_SERVICE_URL ?? "http://127.0.0.1:3107",
+    requireWeb: true,
+    requireGo: true,
+    requireWebGoPublicStrategyRead: true,
+    requireRuntimeService: true,
     requireRuntimeContainer: false,
+    requireV115Lifecycle: true,
     json: false,
   })
   assertMonitorPublicPayload(checks)
   const failures = checks.filter((item) => !item.ok)
   if (failures.length > 0) {
     throw new Error(
-      `static topology checks failed: ${failures.map((item) => item.name).join(", ")}`,
+      `live v1.15 topology checks failed: ${failures.map((item) => item.name).join(", ")}`,
     )
   }
   return `${checks.length} topology diagnostics checked`
@@ -1205,7 +1211,7 @@ export const runBoundaryMonitorChecks = async (): Promise<
   await check("go_promotion", "v1.15 lifecycle ownership manifest", () =>
     checkV115LifecycleOwnershipManifest(),
   ),
-  await check("topology", "static topology diagnostics", () =>
+  await check("topology", "live v1.15 topology diagnostics", () =>
     checkTopologyDiagnostics(),
   ),
 ]

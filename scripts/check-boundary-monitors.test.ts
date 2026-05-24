@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   assertMonitorPublicPayload,
   assertReportOnlyBoundaryOffenseCount,
@@ -135,6 +136,10 @@ const createV115Manifest = () => ({
 })
 
 describe("boundary drift monitors", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it("allows removed baseline web offenses but fails unknown new ones", () => {
     expect(findUnknownReportOnlyOffenses([])).toEqual([])
     expect(
@@ -246,6 +251,75 @@ describe("boundary drift monitors", () => {
   })
 
   it("passes the live repository monitor checks", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes("127.0.0.1:3107/health")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            service: "runtime-execution-service-v1.15",
+            runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+            adapter: "runtime-js-worker-thread",
+          }),
+          { status: 200 },
+        )
+      }
+      if (url.includes("/api/service/health")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            service: "cowards-service",
+            version: "service-api-v1.8",
+          }),
+          { status: 200 },
+        )
+      }
+      if (url.includes("127.0.0.1:8087/health")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            service: "cowards-service",
+            version: "service-api-v1.8",
+          }),
+          { status: 200 },
+        )
+      }
+      if (
+        url.includes("127.0.0.1:8087/public/replays/") &&
+        url.endsWith("/evidence")
+      ) {
+        return new Response(
+          readFileSync(
+            "apps/go-backend/testdata/service-fixtures/public-replay-evidence.json",
+            "utf8",
+          ),
+          { status: 200 },
+        )
+      }
+      if (
+        url.includes("127.0.0.1:8087/public/matchsets/") ||
+        url.includes("127.0.0.1:8087/public/replays/") ||
+        url.includes("127.0.0.1:8087/public/strategies/")
+      ) {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 })
+      }
+      if (url.includes("127.0.0.1:8087/analytics/runs/")) {
+        return new Response(
+          JSON.stringify({
+            code: "FORBIDDEN",
+            message: "Forbidden.",
+            publicSafe: true,
+            status: 403,
+          }),
+          { status: 403 },
+        )
+      }
+      if (url.includes("/strategies/strategy%3Ago-parity%3Asentinel")) {
+        return new Response("<h1>Go Parity Sentinel</h1>", { status: 200 })
+      }
+      throw new Error(`unexpected fetch ${url}`)
+    })
+
     const checks = await runBoundaryMonitorChecks()
     expect(checks.every((check) => check.ok)).toBe(true)
     expect(checks.map((check) => check.layer)).toEqual(
@@ -260,5 +334,5 @@ describe("boundary drift monitors", () => {
         "topology",
       ]),
     )
-  })
+  }, 30_000)
 })

@@ -17,14 +17,14 @@
 - [x] **v1.12 Go Backend Promotion Readiness and Cutover Plan** - Phases 76-81, shipped 2026-05-23 with `promote-none-yet`. See `.planning/milestones/v1.12-ROADMAP.md`.
 - [x] **v1.13 Go Backend Ownership Cutover** - Phases 82-88, completed 2026-05-23 with selected Go backend route promotion. See `.planning/milestones/v1.13-ROADMAP.md`.
 - [x] **v1.14 Generic Strategy Artifact and Runtime Boundary Contract** - Phases 89-95, completed 2026-05-23 with artifact-backed Go fork promotion and runtime ABI v1.14.
-- [ ] **v1.15 Go Backend Ownership Completion** - Phases 96-102, initialized 2026-05-24.
+- [x] **v1.15 Go Backend Ownership Completion** - Phases 96-102, completed 2026-05-24 with Go backend ownership completion and strict topology/monitor gates.
 
 ## Current Milestone: v1.15 Go Backend Ownership Completion
 
-**Status:** Planning
+**Status:** Complete - final audit passed
 **Phases:** 96-102
 **Granularity:** Standard
-**Requirements:** 48 mapped
+**Requirements:** 48/48 complete
 **Research:** `.planning/research/SUMMARY.md`
 
 ## Overview
@@ -37,13 +37,13 @@ The target flow is:
 
 ## Phases
 
-- [ ] **Phase 96: Boundary Baseline and Go Ownership Contract** - Developers can inspect the v1.15 ownership baseline, lifecycle manifest, non-goals, and parity/reference surfaces before implementation.
-- [ ] **Phase 97: Go Job Lifecycle and Persistence Contracts** - Developers can claim, lease, retry, fail, and complete job lifecycle primitives in Go with TypeScript parity and no duplicate DB-owning workers.
-- [ ] **Phase 98: Runtime Execution Service Boundary** - Developers can coordinate Match execution from Go through a strict TypeScript runtime service boundary while Strategy execution remains isolated behind `strategy-runtime-abi-v1.14`.
-- [ ] **Phase 99: Go Match Completion and Chronicle Persistence** - Developers can complete Matches and persist validated Chronicles through Go atomically, with replay compatibility and failure-safe idempotency.
-- [ ] **Phase 100: Go MatchSet Scoring and Failure Classification** - Users can see Go-scored MatchSet standings/status after terminal Matches, with parity for scoring, penalties, degraded/system failure, and tie-breakers.
-- [ ] **Phase 101: Public Evidence Delivery and Web Cutover** - Users can view Go-owned public MatchSet/replay evidence and selected normal web workflows without TypeScript backend fallback or public privacy leaks.
-- [ ] **Phase 102: Topology, Monitors, Rollback, and Promotion Gate** - Developers can prove the full local topology, no-fallback behavior, rollback path, privacy safety, board realism, and ownership monitors before promotion.
+- [x] **Phase 96: Boundary Baseline and Go Ownership Contract** - Developers can inspect the v1.15 ownership baseline, lifecycle manifest, non-goals, and parity/reference surfaces before implementation.
+- [x] **Phase 97: Go Job Lifecycle and Persistence Contracts** - Developers can claim, lease, retry, fail, and complete job lifecycle primitives in Go with TypeScript parity and no duplicate DB-owning workers.
+- [x] **Phase 98: Runtime Execution Service Boundary** - Developers can coordinate Match execution from Go through a strict TypeScript runtime service boundary while Strategy execution remains isolated behind `strategy-runtime-abi-v1.14`.
+- [x] **Phase 99: Go Match Completion and Chronicle Persistence** - Developers can complete Matches and persist validated Chronicles through Go atomically, with replay compatibility and failure-safe idempotency.
+- [x] **Phase 100: Go MatchSet Scoring and Failure Classification** - Users can see Go-scored MatchSet standings/status after terminal Matches, with parity for scoring, penalties, degraded/system failure, and tie-breakers.
+- [x] **Phase 101: Public Evidence Delivery and Web Cutover** - Users can view Go-owned public MatchSet/replay evidence and selected normal web workflows without TypeScript backend fallback or public privacy leaks.
+- [x] **Phase 102: Topology, Monitors, Rollback, and Promotion Gate** - Developers can prove the full local topology, no-fallback behavior, rollback path, privacy safety, board realism, and ownership monitors before promotion.
 
 ## Phase Details
 
@@ -160,13 +160,13 @@ The target flow is:
 
 | Phase | Plans Complete | Status | Completed |
 | --- | --- | --- | --- |
-| 96. Boundary Baseline and Go Ownership Contract | 0/1 | Pending | - |
-| 97. Go Job Lifecycle and Persistence Contracts | 0/1 | Pending | - |
-| 98. Runtime Execution Service Boundary | 0/1 | Pending | - |
-| 99. Go Match Completion and Chronicle Persistence | 0/1 | Pending | - |
-| 100. Go MatchSet Scoring and Failure Classification | 0/1 | Pending | - |
-| 101. Public Evidence Delivery and Web Cutover | 0/1 | Pending | - |
-| 102. Topology, Monitors, Rollback, and Promotion Gate | 0/1 | Pending | - |
+| 96. Boundary Baseline and Go Ownership Contract | 1/1 | Complete | 2026-05-24 |
+| 97. Go Job Lifecycle and Persistence Contracts | 1/1 | Complete | 2026-05-24 |
+| 98. Runtime Execution Service Boundary | 1/1 | Complete | 2026-05-24 |
+| 99. Go Match Completion and Chronicle Persistence | 1/1 | Complete | 2026-05-24 |
+| 100. Go MatchSet Scoring and Failure Classification | 1/1 | Complete | 2026-05-24 |
+| 101. Public Evidence Delivery and Web Cutover | 1/1 | Complete | 2026-05-24 |
+| 102. Topology, Monitors, Rollback, and Promotion Gate | 1/1 | Complete | 2026-05-24 |
 
 ## Requirement Coverage
 
@@ -180,17 +180,13 @@ The target flow is:
 | API-01 through API-06 | Phase 101 | 6 |
 | GATE-01 through GATE-08 | Phase 102 | 8 |
 
-**Coverage:** 48/48 v1.15 requirements mapped.
+**Coverage:** 48/48 v1.15 requirements mapped and complete.
 **Unmapped requirements:** 0.
-**Starting phase:** 96.
+**Completed phases:** 96-102.
 
 ## Next Up
 
-Phase 96: Boundary Baseline and Go Ownership Contract.
-
-`$gsd-discuss-phase 96`
-
-Also: `$gsd-plan-phase 96` to skip discussion and plan directly.
+Final milestone audit passed. Completion packaging is ready when v1.15 is archived.
 
 ---
-*Last updated: 2026-05-24 after v1.15 milestone initialization*
+*Last updated: 2026-05-24 after v1.15 final audit*

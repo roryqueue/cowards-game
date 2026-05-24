@@ -1,0 +1,222 @@
+{
+  "schemaVersion": "v1.15-live-web-go-runtime-topology",
+  "milestone": "v1.15",
+  "createdAt": "2026-05-24",
+  "ok": true,
+  "sourceSafe": true,
+  "mode": "local integration evidence with fixture-backed public Go smoke",
+  "workflow": [
+    {
+      "stepId": "web_frontend_selected_go",
+      "owner": "web_frontend",
+      "contract": "selected public/account routes call Go clients when Go ownership flags are enabled",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "evidence": [
+        "apps/web/lib/account-service-adapter.ts",
+        "apps/web/lib/public-service-adapter.ts",
+        "apps/web/lib/public-go-read-client.ts"
+      ]
+    },
+    {
+      "stepId": "go_exhibition_create",
+      "owner": "go_backend",
+      "contract": "Go creates selected exhibition MatchSets and jobs in live mode",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "evidence": [
+        "apps/go-backend/live_backend.go",
+        "apps/go-backend/main_test.go"
+      ]
+    },
+    {
+      "stepId": "go_match_job_lifecycle",
+      "owner": "go_backend",
+      "contract": "Go claims jobs, owns leases, invokes the runtime service boundary, records retryable system failures, and prevents mixed DB claimers",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "evidence": [
+        "apps/go-backend/job_lifecycle.go",
+        "apps/go-backend/orchestrator.go",
+        "apps/go-backend/job_lifecycle_test.go"
+      ]
+    },
+    {
+      "stepId": "go_orchestration_e2e",
+      "owner": "go_backend",
+      "contract": "Go creates an exhibition, claims queued jobs, invokes the runtime service, completes/persists Chronicles, refreshes scoring, and serves generated public evidence",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "evidence": [
+        ".planning/artifacts/v1.15-go-orchestration-e2e.json",
+        "apps/go-backend/orchestrator_test.go"
+      ]
+    },
+    {
+      "stepId": "typescript_runtime_service_boundary",
+      "owner": "typescript_runtime_service",
+      "contract": "Strategy execution crosses only the runtime-execution-service-v1.15 and strategy-runtime-abi-v1.14 boundary",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "evidence": [
+        "apps/runtime-service/src/server.ts",
+        "apps/go-backend/runtime_service_client.go"
+      ]
+    },
+    {
+      "stepId": "go_chronicle_persistence",
+      "owner": "go_backend",
+      "contract": "Go validates Chronicle metadata and persists completed Match evidence",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "evidence": [
+        "apps/go-backend/completion.go",
+        "apps/go-backend/completion_test.go"
+      ]
+    },
+    {
+      "stepId": "go_matchset_scoring",
+      "owner": "go_backend",
+      "contract": "Go refreshes MatchSet scoring and degraded status after completion or exhausted system failure",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "evidence": [
+        "apps/go-backend/scoring.go",
+        "apps/go-backend/matchset_status.go",
+        "apps/go-backend/matchset_status_test.go"
+      ]
+    },
+    {
+      "stepId": "go_public_evidence",
+      "owner": "go_backend",
+      "contract": "Go serves public MatchSet summary, replay metadata, and selected public replay evidence",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "evidence": [
+        "apps/go-backend/live_backend.go",
+        "apps/go-backend/testdata/service-fixtures/public-replay-evidence.json",
+        "apps/web/app/matches/server.test.ts"
+      ]
+    },
+    {
+      "stepId": "browser_replay_realism",
+      "owner": "web_frontend",
+      "contract": "Replay renderer receives public Go evidence and validates visible board state before rendering",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "evidence": [
+        "apps/web/app/matches/replay-ready.ts",
+        "apps/web/e2e/replay.visual.spec.ts"
+      ]
+    }
+  ],
+  "commandEvidence": [
+    {
+      "id": "go-test",
+      "command": "cd apps/go-backend && go test ./...",
+      "status": "pass",
+      "completedAt": "2026-05-24T04:35:00-04:00",
+      "repoHead": "61d792e+phase102",
+      "evidenceRef": ".planning/phases/102-topology-monitors-rollback-and-promotion-gate/102-VERIFICATION.md",
+      "proves": [
+        "go_fixture_public_evidence",
+        "go_lifecycle",
+        "go_completion",
+        "go_scoring"
+      ]
+    },
+    {
+      "id": "go-live-db-test",
+      "command": "cd apps/go-backend && redacted-local-test-db-env go test ./...",
+      "status": "pass",
+      "completedAt": "2026-05-24T01:23:00-04:00",
+      "repoHead": "61d792e+phase102",
+      "evidenceRef": ".planning/phases/102-topology-monitors-rollback-and-promotion-gate/102-VERIFICATION.md",
+      "proves": [
+        "database_job_claiming",
+        "runtime_service_handoff",
+        "chronicle_persistence",
+        "matchset_scoring",
+        "public_evidence_projection"
+      ]
+    },
+    {
+      "id": "go-parity",
+      "command": "pnpm go:parity",
+      "status": "pass",
+      "completedAt": "2026-05-24T04:35:00-04:00",
+      "repoHead": "61d792e+phase102",
+      "evidenceRef": ".planning/phases/102-topology-monitors-rollback-and-promotion-gate/102-VERIFICATION.md",
+      "proves": [
+        "go_fixture_checksums",
+        "go_public_replay_evidence_fixture",
+        "go_route_manifest"
+      ]
+    },
+    {
+      "id": "topology-v115-live",
+      "command": "pnpm topology:check -- --require-v1-15-lifecycle --json",
+      "status": "pass",
+      "completedAt": "2026-05-24T04:35:00-04:00",
+      "repoHead": "61d792e+phase102",
+      "evidenceRef": ".planning/phases/102-topology-monitors-rollback-and-promotion-gate/102-VERIFICATION.md",
+      "proves": [
+        "live_web_health",
+        "live_runtime_service_health",
+        "web_through_go_public_strategy_read",
+        "go_orchestration_wiring",
+        "live_go_public_replay_evidence_schema",
+        "v1.15_artifact_gate"
+      ]
+    },
+    {
+      "id": "boundary-monitors",
+      "command": "pnpm boundary:monitors",
+      "status": "pass",
+      "completedAt": "2026-05-24T04:35:00-04:00",
+      "repoHead": "61d792e+phase102",
+      "evidenceRef": ".planning/phases/102-topology-monitors-rollback-and-promotion-gate/102-VERIFICATION.md",
+      "proves": [
+        "v1.15_topology_artifact",
+        "failure_drills",
+        "promotion_decision",
+        "public_output_privacy"
+      ]
+    },
+    {
+      "id": "replay-visual",
+      "command": "PLAYWRIGHT_TEST=1 pnpm e2e -- replay.visual.spec.ts",
+      "status": "pass",
+      "completedAt": "2026-05-24T04:35:00-04:00",
+      "repoHead": "61d792e+phase102",
+      "evidenceRef": ".planning/phases/102-topology-monitors-rollback-and-promotion-gate/102-VERIFICATION.md",
+      "proves": [
+        "browser_replay_realism",
+        "visible_board_bounds",
+        "canvas_render"
+      ]
+    }
+  ],
+  "replayRealism": {
+    "status": "pass",
+    "mode": "browser_visual_gate",
+    "checks": [
+      "visible Soldiers stay inside declared board bounds",
+      "terrain stays inside declared board bounds",
+      "canonical arenas preserve canonical starts",
+      "canvas renders nonblank replay board"
+    ]
+  },
+  "runtimeBoundary": {
+    "serviceContract": "runtime-execution-service-v1.15",
+    "strategyRuntimeAbi": "strategy-runtime-abi-v1.14",
+    "goExecutesStrategyCode": false,
+    "webExecutesStrategyCode": false
+  },
+  "privacy": {
+    "publicOutputsSourceSafe": true,
+    "privateFieldsExcluded": [
+      "strategy code",
+      "strategy memory",
+      "soldier memory",
+      "objective data",
+      "owner diagnostics",
+      "raw awareness grid",
+      "process diagnostics",
+      "credential material",
+      "machine paths",
+      "database connection material"
+    ]
+  }
+}

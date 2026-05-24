@@ -40,6 +40,11 @@ func TestEndpointFixturesMatchCanonicalJSON(t *testing.T) {
 			fixtureName: "public-replay-metadata.json",
 		},
 		{
+			name:        "public replay evidence",
+			path:        "/public/replays/golden%3Av1-7%3Amatch/evidence",
+			fixtureName: "public-replay-evidence.json",
+		},
+		{
 			name:        "public strategy page",
 			path:        "/public/strategies/strategy%3Ago-parity%3Asentinel",
 			fixtureName: "public-strategy-page.json",
@@ -255,6 +260,39 @@ func TestReplayMetadataUsesV18Shape(t *testing.T) {
 	}
 }
 
+func TestReplayEvidenceUsesPublicProjectionShape(t *testing.T) {
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(
+		http.MethodGet,
+		"/public/replays/golden%3Av1-7%3Amatch/evidence",
+		nil,
+	)
+
+	NewServer().routes().ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", response.Code)
+	}
+	bodyText := response.Body.String()
+	for _, forbidden := range []string{"ownerPrivate", "strategyMemory", "soldierMemory", "objectivePayload", "ownerDebug"} {
+		if strings.Contains(bodyText, forbidden) {
+			t.Fatalf("public replay evidence leaked %s", forbidden)
+		}
+	}
+	body := decodeJSONMap(t, response.Body.Bytes())
+	if stringField(t, body, "kind") != "publicReplayEvidence" {
+		t.Fatal("replay evidence did not use the public evidence kind")
+	}
+	projection, ok := body["projection"].(map[string]any)
+	if !ok {
+		t.Fatal("replay evidence missing projection")
+	}
+	viewer, ok := projection["viewer"].(map[string]any)
+	if !ok || viewer["access"] != "public" {
+		t.Fatal("replay evidence did not use the public viewer")
+	}
+}
+
 func TestAnalyticsRunSummaryRequiresTrustedOwnerToken(t *testing.T) {
 	server := newTestServer(t).routes()
 	path := "/analytics/runs/analytics-run%3Aworkshop-v1.6-demo%3A2/summary"
@@ -305,6 +343,7 @@ func TestMissingResourcesReturnPublicErrorShape(t *testing.T) {
 	tests := []string{
 		"/public/matchsets/match-set%3Amissing/summary",
 		"/public/replays/match%3Amissing/metadata",
+		"/public/replays/match%3Amissing/evidence",
 		"/public/strategies/strategy%3Amissing",
 	}
 

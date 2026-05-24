@@ -28,6 +28,17 @@
 - Public replay metadata/evidence clients reject mismatched Match ids.
 - Remaining TypeScript surfaces are explicitly labeled as frontend, parity-only, runtime-only, rollback-only, test-only, or deferred.
 
+## Requirement Coverage
+
+| Requirement | Status | Evidence |
+| --- | --- | --- |
+| API-01 | PASS | Go-selected exhibition creation returns Go-owned queued MatchSet responses without TypeScript backend fallback. |
+| API-02 | PASS | Public MatchSet summary/evidence is served through Go-owned contracts from Go-completed/scored data. |
+| API-03 | PASS | Public replay metadata and selected replay evidence are available from Go-owned contracts without raw/private projection data by default. |
+| API-04 | PASS | Selected normal web workflows call Go client contracts instead of direct persistence/service internals. |
+| API-05 | PASS | TypeScript service/web API surfaces are labeled as test-only, parity-only, rollback-only, runtime-only, frontend, or deferred. |
+| API-06 | PASS | Public/account/workshop/replay/evidence payloads are checked for source, memory, objective, owner, session, host, DB, and runtime-internal leaks. |
+
 ## Residual Risk
 
 Owner-debug replay and workshop/admin mutation surfaces remain intentionally deferred or test-only for v1.15. Phase 102 must prove live topology realism and no-fallback behavior with running services.

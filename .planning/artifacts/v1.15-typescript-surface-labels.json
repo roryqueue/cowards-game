@@ -67,6 +67,12 @@
       "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership"
     },
     {
+      "surface": "apps/worker/src/runner.ts",
+      "role": "rollback_only",
+      "normalBackendOwner": "go_backend_for_normal_job_lifecycle_after_v1.15",
+      "fallbackPolicy": "explicit_operator_rollback_only_no_silent_fallback"
+    },
+    {
       "surface": "apps/web/app/workshop/server.ts",
       "role": "deferred",
       "normalBackendOwner": "typescript_web_api_until_future_workshop_migration",
@@ -91,5 +97,5 @@
       "fallbackPolicy": "not_product_runtime"
     }
   ],
-  "privacyDefault": "public and service outputs must omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals"
+  "privacyDefault": "public and service outputs use only source-safe, memory-safe, objective-free, owner-public, redacted diagnostics"
 }

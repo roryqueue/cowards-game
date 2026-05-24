@@ -25,6 +25,14 @@
   },
   {
     "authScope": "public",
+    "id": "getPublicReplayEvidence",
+    "method": "GET",
+    "path": "/public/replays/{matchId}/evidence",
+    "privacyClass": "public",
+    "samplePath": "/public/replays/golden%3Av1-7%3Amatch/evidence"
+  },
+  {
+    "authScope": "public",
     "id": "getPublicStrategyPage",
     "method": "GET",
     "path": "/public/strategies/{strategyId}",
