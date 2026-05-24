@@ -1886,6 +1886,82 @@ const requiredFinalLabelRoles = [
   "test-only",
 ] as const
 
+const allowedFinalSurfaceLabels = new Set([
+  "deferred-account-private-source",
+  "deferred-governance-admin-mutation",
+  "deferred-ladder-mutation",
+  "deferred-service-support",
+  "deferred-workshop-analytics-rerun",
+  "deferred-workshop-export",
+  "deferred-workshop-private-source",
+  "deferred-workshop-profile-save",
+  "deferred-workshop-runtime-support",
+  "deferred-workshop-test-launch",
+  "deferred-workshop-ui",
+  "deferred-workshop-validation",
+  "fixture-only",
+  "frontend-go-adapter",
+  "frontend-go-private-source-adapter",
+  "parity-reference",
+  "private-owner-debug-replay",
+  "quarantined-lifecycle",
+  "rollback-only",
+  "runtime-adapter-execution-boundary",
+  "runtime-service-execution-boundary",
+  "test-only",
+  "test-support-route",
+] as const)
+
+const allowedFinalPrivacyClasses = new Set([
+  "admin-private",
+  "deferred-private-support",
+  "fixture-public-redacted",
+  "frontend-public-or-session-redacted",
+  "internal-runtime-redacted",
+  "owner-private-replay-debug",
+  "owner-private-source",
+  "owner-private-source-through-go",
+  "owner-private-workshop",
+  "parity-reference-not-public",
+  "quarantined-private",
+  "rollback-diagnostics-redacted",
+  "session-or-public-redacted",
+  "test-diagnostics-redacted",
+  "test-only",
+] as const)
+
+const allowedFinalPublicOutputPrivacy = new Set([
+  "not-public-output",
+  "owner-private",
+  "public-redacted",
+] as const)
+
+const requiredV116PathSemanticLabels = new Map(
+  Object.entries({
+    "packages/persistence/src/workshop.ts": {
+      surfaceLabel: "deferred-workshop-runtime-support",
+      capabilityGroup: "Workshop",
+      taxonomyRole: "deferred",
+      privacyClass: "owner-private-workshop",
+      publicOutputPrivacy: "owner-private",
+    },
+    "packages/persistence/src/ladder.ts": {
+      surfaceLabel: "deferred-ladder-mutation",
+      capabilityGroup: "ladder",
+      taxonomyRole: "deferred",
+      privacyClass: "session-or-public-redacted",
+      publicOutputPrivacy: "not-public-output",
+    },
+    "packages/persistence/src/governance.ts": {
+      surfaceLabel: "deferred-governance-admin-mutation",
+      capabilityGroup: "governance-admin",
+      taxonomyRole: "deferred",
+      privacyClass: "admin-private",
+      publicOutputPrivacy: "not-public-output",
+    },
+  }),
+)
+
 export const validateV116FinalTypeScriptSurfaceLabels = (
   artifact: unknown,
 ): string => {
@@ -1992,11 +2068,24 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
     if (typeof taxonomyRole !== "string") {
       throw new Error(`${pathValue} missing taxonomy role`)
     }
+    if (!(requiredFinalLabelRoles as readonly string[]).includes(taxonomyRole)) {
+      throw new Error(`${pathValue} has invalid taxonomyRole ${taxonomyRole}`)
+    }
     if (taxonomyRole.includes("backend")) {
       throw new Error(`${pathValue} claims normal TypeScript backend role`)
     }
     if (typeof surfaceLabel !== "string" || surfaceLabel.length === 0) {
       throw new Error(`${pathValue} missing surface label`)
+    }
+    if (!allowedFinalSurfaceLabels.has(surfaceLabel as never)) {
+      throw new Error(`${pathValue} has invalid surfaceLabel ${surfaceLabel}`)
+    }
+    const capabilityGroup = surface.capabilityGroup
+    if (typeof capabilityGroup !== "string" || capabilityGroup.length === 0) {
+      throw new Error(`${pathValue} missing capabilityGroup`)
+    }
+    if (typeof capabilityGroups[capabilityGroup] !== "number") {
+      throw new Error(`${pathValue} has invalid capabilityGroup ${capabilityGroup}`)
     }
     for (const field of [
       "owner",
@@ -2009,6 +2098,29 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
     ]) {
       if (typeof surface[field] !== "string" || surface[field].trim().length === 0) {
         throw new Error(`${pathValue} missing ${field}`)
+      }
+    }
+    const privacyClass = String(surface.privacyClass)
+    if (!allowedFinalPrivacyClasses.has(privacyClass as never)) {
+      throw new Error(`${pathValue} has invalid privacyClass ${privacyClass}`)
+    }
+    const publicOutputPrivacy = surface.publicOutputPrivacy
+    if (
+      typeof publicOutputPrivacy !== "string" ||
+      !allowedFinalPublicOutputPrivacy.has(publicOutputPrivacy as never)
+    ) {
+      throw new Error(
+        `${pathValue} has invalid publicOutputPrivacy ${String(publicOutputPrivacy)}`,
+      )
+    }
+    const semanticExpectation = requiredV116PathSemanticLabels.get(pathValue)
+    if (semanticExpectation) {
+      for (const [field, expected] of Object.entries(semanticExpectation)) {
+        if (surface[field] !== expected) {
+          throw new Error(
+            `${pathValue} semantic label drift: ${field} must be ${expected}`,
+          )
+        }
       }
     }
     if (

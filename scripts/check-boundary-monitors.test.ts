@@ -544,6 +544,79 @@ describe("boundary drift monitors", () => {
       validateV116FinalTypeScriptSurfaceLabels({
         ...artifact,
         surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
+          (surface) =>
+            surface.path === "packages/persistence/src/workshop.ts"
+              ? {
+                  ...surface,
+                  surfaceLabel: "deferred-service-support",
+                  capabilityGroup: "owner-debug",
+                }
+              : surface,
+        ),
+      }),
+    ).toThrow(/workshop\.ts semantic label/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
+          (surface) =>
+            surface.path === "packages/persistence/src/ladder.ts"
+              ? {
+                  ...surface,
+                  surfaceLabel: "private-owner-debug-replay",
+                  capabilityGroup: "owner-debug",
+                }
+              : surface,
+        ),
+      }),
+    ).toThrow(/ladder\.ts semantic label/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
+          (surface) =>
+            surface.path === "packages/persistence/src/governance.ts"
+              ? {
+                  ...surface,
+                  surfaceLabel: "deferred-service-support",
+                  capabilityGroup: "owner-debug",
+                }
+              : surface,
+        ),
+      }),
+    ).toThrow(/governance\.ts semantic label/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
+          (surface) =>
+            surface.path === "packages/persistence/src/ladder.ts"
+              ? {
+                  ...surface,
+                  privacyClass: "public",
+                }
+              : surface,
+        ),
+      }),
+    ).toThrow(/privacyClass/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
+          (surface) =>
+            surface.path === "packages/persistence/src/ladder.ts"
+              ? {
+                  ...surface,
+                  publicOutputPrivacy: "public",
+                }
+              : surface,
+        ),
+      }),
+    ).toThrow(/publicOutputPrivacy/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
           (surface, index) =>
             index === 0
               ? {
@@ -567,7 +640,7 @@ describe("boundary drift monitors", () => {
               : surface,
         ),
       }),
-    ).toThrow(/shareable label leak/)
+    ).toThrow(/privacyClass|shareable label leak/)
     expect(() =>
       validateV116FinalTypeScriptSurfaceLabels({
         ...artifact,
@@ -581,7 +654,7 @@ describe("boundary drift monitors", () => {
               : surface,
         ),
       }),
-    ).toThrow(/shareable label leak/)
+    ).toThrow(/privacyClass|shareable label leak/)
     expect(() =>
       validateV116FinalTypeScriptSurfaceLabels({
         ...artifact,
@@ -596,7 +669,7 @@ describe("boundary drift monitors", () => {
               : surface,
         ),
       }),
-    ).toThrow(/shareable label leak/)
+    ).toThrow(/taxonomyRole|shareable label leak/)
     expect(() =>
       validateV116FinalTypeScriptSurfaceLabels({
         ...artifact,
@@ -610,7 +683,7 @@ describe("boundary drift monitors", () => {
               : surface,
         ),
       }),
-    ).toThrow(/shareable label leak/)
+    ).toThrow(/publicOutputPrivacy|shareable label leak/)
   })
 
   it("passes the live repository monitor checks", async () => {
