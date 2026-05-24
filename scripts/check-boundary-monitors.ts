@@ -36,6 +36,7 @@ type MonitorLayer =
   | "runtime_adapter"
   | "runtime_isolation"
   | "worker_quarantine"
+  | "surface_labels"
   | "non_js_runtime"
   | "go_parity"
   | "go_promotion"
@@ -248,6 +249,10 @@ const v116SelectedGoRouteManifestPath =
   ".planning/artifacts/v1.16-selected-go-route-manifest.json"
 const v116TypeScriptWorkerQuarantineArtifactPath =
   ".planning/artifacts/v1.16-typescript-worker-quarantine.json"
+const v116FinalTypeScriptSurfaceLabelsPath =
+  ".planning/artifacts/v1.16-final-typescript-surface-labels.json"
+const v116TypeScriptBackendInventoryPath =
+  ".planning/artifacts/v1.16-typescript-backend-inventory.json"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
@@ -1854,6 +1859,210 @@ const checkV116TypeScriptWorkerQuarantineArtifact = (): string =>
     readJson(v116TypeScriptWorkerQuarantineArtifactPath),
   )
 
+const requiredFinalLabelCapabilityGroups = [
+  "Workshop",
+  "ladder",
+  "governance-admin",
+  "owner-debug",
+  "test-support",
+  "fixture",
+  "parity",
+  "rollback",
+  "runtime-service",
+  "runtime-adapter",
+  "frontend-only",
+] as const
+
+const requiredFinalLabelRoles = [
+  "deferred",
+  "fixture-only",
+  "frontend-only",
+  "parity-only",
+  "quarantined",
+  "rollback-only",
+  "runtime-adapter",
+  "runtime-service",
+  "test-only",
+] as const
+
+export const validateV116FinalTypeScriptSurfaceLabels = (
+  artifact: unknown,
+): string => {
+  const root = requireRecord(artifact, "v1.16 final TypeScript surface labels")
+  if (root.schemaVersion !== "v1.16-final-typescript-surface-labels") {
+    throw new Error("final TypeScript surface labels schema drifted")
+  }
+  if (root.milestone !== "v1.16" || root.phase !== "107") {
+    throw new Error("final TypeScript surface labels phase drifted")
+  }
+
+  const policies = requireRecord(root.globalPolicies, "globalPolicies")
+  if (policies.normalTypeScriptBackendAllowed !== false) {
+    throw new Error("normal TypeScript backend must remain disallowed")
+  }
+  if (policies.publicOutputPrivacyRequired !== true) {
+    throw new Error("public output privacy must remain required")
+  }
+  if (policies.ownerDebugPublicEvidenceFallbackAllowed !== false) {
+    throw new Error("owner-debug public evidence fallback must remain forbidden")
+  }
+  if (policies.testSupportNormalProductTrafficAllowed !== false) {
+    throw new Error("test-support normal product traffic must remain forbidden")
+  }
+
+  const inventory = readJson<{ surfaces: readonly unknown[] }>(
+    v116TypeScriptBackendInventoryPath,
+  )
+  const sourceInventorySurfaceCount = root.sourceInventorySurfaceCount
+  if (
+    typeof sourceInventorySurfaceCount !== "number" ||
+    sourceInventorySurfaceCount !== inventory.surfaces.length
+  ) {
+    throw new Error("source inventory count drifted")
+  }
+
+  const capabilityGroups = requireRecord(root.capabilityGroups, "capabilityGroups")
+  for (const group of requiredFinalLabelCapabilityGroups) {
+    if (typeof capabilityGroups[group] !== "number" || capabilityGroups[group] <= 0) {
+      throw new Error(`missing capability group ${group}`)
+    }
+  }
+  const roleCounts = requireRecord(root.roleCounts, "roleCounts")
+  for (const role of requiredFinalLabelRoles) {
+    if (typeof roleCounts[role] !== "number" || roleCounts[role] <= 0) {
+      throw new Error(`missing taxonomy role ${role}`)
+    }
+  }
+
+  const decisions = stringArray(root.phase107DecisionCoverage, "phase107DecisionCoverage")
+  for (const decision of [
+    "D-01",
+    "D-02",
+    "D-03",
+    "D-04",
+    "D-05",
+    "D-06",
+    "D-07",
+    "D-08",
+    "D-09",
+    "D-10",
+    "D-11",
+    "D-12",
+    "D-13",
+    "D-14",
+    "D-15",
+  ]) {
+    if (!decisions.includes(decision)) {
+      throw new Error(`final labels missing decision ${decision}`)
+    }
+  }
+
+  if (!Array.isArray(root.surfaces)) {
+    throw new Error("final labels surfaces must be an array")
+  }
+  if (root.surfaces.length !== inventory.surfaces.length) {
+    throw new Error("source inventory count does not match final label rows")
+  }
+  const seen = new Set<string>()
+  for (const item of root.surfaces) {
+    const surface = requireRecord(item, "surface")
+    const pathValue = surface.path
+    const taxonomyRole = surface.taxonomyRole
+    const surfaceLabel = surface.surfaceLabel
+    if (typeof pathValue !== "string" || pathValue.length === 0) {
+      throw new Error("surface missing path")
+    }
+    if (seen.has(pathValue)) {
+      throw new Error(`duplicate final label path ${pathValue}`)
+    }
+    seen.add(pathValue)
+    if (typeof taxonomyRole !== "string") {
+      throw new Error(`${pathValue} missing taxonomy role`)
+    }
+    if (taxonomyRole.includes("backend")) {
+      throw new Error(`${pathValue} claims normal TypeScript backend role`)
+    }
+    if (typeof surfaceLabel !== "string" || surfaceLabel.length === 0) {
+      throw new Error(`${pathValue} missing surface label`)
+    }
+    for (const field of [
+      "owner",
+      "reason",
+      "risk",
+      "privacyClass",
+      "gate",
+      "futureMigration",
+      "monitorStatus",
+    ]) {
+      if (typeof surface[field] !== "string" || surface[field].trim().length === 0) {
+        throw new Error(`${pathValue} missing ${field}`)
+      }
+    }
+    if (
+      surface.selectedNormal === true &&
+      taxonomyRole !== "frontend-only" &&
+      taxonomyRole !== "runtime-service" &&
+      taxonomyRole !== "runtime-adapter"
+    ) {
+      throw new Error(`${pathValue} selectedNormal is not allowed for ${taxonomyRole}`)
+    }
+    if (surface.normalBackendAuthority !== false) {
+      throw new Error(`${pathValue} must not claim backend authority`)
+    }
+    if (
+      taxonomyRole === "deferred" &&
+      (String(surface.gate).trim().length === 0 ||
+        String(surface.futureMigration).trim().length === 0 ||
+        String(surface.owner).trim().length === 0 ||
+        String(surface.risk).trim().length === 0 ||
+        String(surface.privacyClass).trim().length === 0 ||
+        String(surface.monitorStatus).trim().length === 0)
+    ) {
+      throw new Error(`${pathValue} deferred row missing monitor metadata`)
+    }
+    if (surfaceLabel === "private-owner-debug-replay") {
+      const combined = `${surface.gate} ${surface.futureMigration} ${surface.selectedNormalJustification}`
+      if (!/PLAYWRIGHT_TEST|NODE_ENV=test|COWARDS_ENABLE_OWNER_DEBUG_REPLAY/.test(combined)) {
+        throw new Error(`${pathValue} owner-debug missing enablement gates`)
+      }
+      if (!/owner authorization|persisted owner authorization|owner/.test(combined)) {
+        throw new Error(`${pathValue} owner-debug missing owner authorization`)
+      }
+      if (!/fallback|public replay evidence|public evidence/.test(combined) || surface.noPublicFallback !== true) {
+        throw new Error(`${pathValue} owner-debug public fallback policy missing`)
+      }
+    }
+    if (surfaceLabel === "test-support-route") {
+      const gate = String(surface.gate)
+      if (!/PLAYWRIGHT_TEST|NODE_ENV=test|test-support/.test(gate) || !/404|normal product runtime/.test(gate)) {
+        throw new Error(`${pathValue} test-support gate is insufficient`)
+      }
+    }
+    if (surfaceLabel === "fixture-only") {
+      const gate = String(surface.gate)
+      if (!/PLAYWRIGHT_TEST|NODE_ENV=test|COWARDS_ENABLE_REPLAY_FIXTURES|fixture env gate/.test(gate) || !/normal product traffic|product traffic/.test(gate)) {
+        throw new Error(`${pathValue} fixture gate is insufficient`)
+      }
+    }
+    try {
+      assertMonitorPublicPayload(surface.publicOutputExample ?? {})
+    } catch (error) {
+      throw new Error(
+        `${pathValue} public output leak: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      )
+    }
+  }
+
+  return `${root.surfaces.length} final TypeScript surface labels checked`
+}
+
+const checkV116FinalTypeScriptSurfaceLabels = (): string =>
+  validateV116FinalTypeScriptSurfaceLabels(
+    readJson(v116FinalTypeScriptSurfaceLabelsPath),
+  )
+
 const checkTypeScriptWorkerQuarantineSource = (): string => {
   const indexSource = readFileSync(
     path.join(repoRoot, "apps/worker/src/index.ts"),
@@ -2269,6 +2478,11 @@ export const runBoundaryMonitorChecks = async (): Promise<
     "worker_quarantine",
     "TypeScript worker and lifecycle quarantine source",
     () => checkTypeScriptWorkerQuarantineSource(),
+  ),
+  await check(
+    "surface_labels",
+    "v1.16 final TypeScript surface labels",
+    () => checkV116FinalTypeScriptSurfaceLabels(),
   ),
   await check(
     "runtime_adapter",
