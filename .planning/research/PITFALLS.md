@@ -1,31 +1,46 @@
-# v1.14 Pitfalls Research
+# Pitfalls Research: v1.15 Go Backend Ownership Completion
 
-**Milestone:** Generic Strategy Artifact and Runtime Boundary Contract
-**Date:** 2026-05-23
+**Project:** Coward's Game
+**Milestone:** v1.15 Go Backend Ownership Completion
+**Researched:** 2026-05-24
 
-## Artifact Pitfalls
+## Likely Mistakes
 
-- **Duplicating source in Go:** Hand-maintained Go copies of Starter/Advanced source will drift. Use generated manifests.
-- **Losing lineage on saves:** Go already accepts `starterId`/`advancedId` but can drop lineage. Require source-hash matched artifact metadata.
-- **Confusing public built-in source with owner-private source:** Built-in forkable source can be in manifests; account source remains owner-private by default.
-- **Breaking StrategyRevision compatibility:** Add generic artifact metadata without invalidating existing public cards, account lists, and replay provenance.
+- Promoting `createMatchSet` without promoting downstream lifecycle ownership. v1.14 made Go own exhibition creation, but still deferred job claiming, Match execution, Chronicle generation, and runtime failure classification.
+- Imperfect job semantics port. Go must preserve `FOR UPDATE SKIP LOCKED`, lease tokens, attempt numbering, expired-running reclaim, retry exhaustion, and Match/job status updates.
+- Breaking idempotent completion. Duplicate completion should be accepted only when the Match is already complete and an existing Chronicle row exists.
+- Scoring drift. Go must match TypeScript behavior for degraded/system failure, strategy failure penalties, W-L-D, survivor/survival-turn tie-breakers, and stable ordering.
+- Treating Go orchestration as permission to execute Strategy source. Go is a coordinator and persistence owner, not a hostile-code host.
+- Returning raw Chronicles or private replay data as public evidence.
+- Relabeling worker-thread/subprocess runtime evidence as production sandbox promotion.
+- Allowing silent TypeScript backend fallback to hide Go lifecycle failure.
 
-## Runtime ABI Pitfalls
+## Privacy And Determinism Hazards
 
-- **Paper ABI differs from actual execution:** Existing counted JS adapters use a smaller request shape. Phase 93 must close or explicitly bridge this.
-- **Limit drift:** Timeout/source/memory/output limits appear in spec, runtime guards, worker config, and adapters. Centralize and test effective limits.
-- **Failure taxonomy collapse:** Runtime violation, validation failure, and system failure must not become one public error bucket.
-- **Private diagnostics leak:** Stack traces, stderr, host paths, source, and runtime internals must stay private and redacted by default.
+- Public/service/Go/topology/monitor output must omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals.
+- Runtime ABI handoff must preserve original revision source/hash metadata and must not trust transpiled executable source as the only identity input.
+- Go may use time/randomness for sessions, leases, ids, and submission events, but never for engine outcomes, Chronicle content hashes, scoring inputs, or replay reconstruction.
+- Board realism checks must remain part of any replay or Match creation change.
 
-## Go Ownership Pitfalls
+## Rollback Hazards
 
-- **Go executes Strategy source to validate parity:** Do not do this. Consume canonical validation metadata from generated artifacts and keep hostile execution worker-owned.
-- **Silent TypeScript fallback:** Go-selected fork routes must fail closed on manifest/schema/privacy/topology failures.
-- **Runtime ownership creep:** Go can create jobs only in scoped flows; it must not claim jobs, execute Matches, build Chronicles, or classify runtime failures.
+- Mixed Go and TypeScript DB workers can double-claim or double-complete jobs.
+- Partial rollback can strand `running` jobs, expired leases, incomplete Chronicles, and MatchSets stuck `running`.
+- A stopped TypeScript runtime service should produce explicit Go-owned retry/system-failure behavior, not TypeScript persistence fallback.
+- A stopped Go backend should make selected web workflows fail closed without switching to TypeScript service internals.
 
-## Privacy And Replay Pitfalls
+## Evidence Gaps To Close
 
-- **Deny-list drift:** Service, replay, Go, analytics, topology, and monitor guards currently duplicate forbidden fields. Export one spec-owned contract.
-- **Owner-private source exception broadens accidentally:** Source should return only on authenticated owner source routes with private/no-store behavior.
-- **Replay realism evidence stays manual:** Go-created Match/replay changes need repeatable board bounds, visible piece, terrain, and browser canvas checks.
-- **Artifacts expose private runtime internals in diagnostics:** Manifest, topology, and monitor outputs should carry provenance and public messages, not raw diagnostics.
+- Add lifecycle topology evidence: create MatchSet through Go, claim/execute through runtime boundary, persist Chronicle, refresh scoring, render public MatchSet and replay.
+- Add monitor coverage for Go job SQL semantics, lease expiry, retry exhaustion, lifecycle manifest drift, MatchSet scoring parity, runtime ABI drift, and no-fallback behavior.
+- Add Go DB-backed integration tests for queue claim, expired lease reclaim, completion idempotency, Chronicle uniqueness, scoring completion, and stopped-runtime classification.
+
+## Prevention By Phase
+
+1. Baseline ownership and non-goals before implementation.
+2. Port job lifecycle semantics with parity tests before orchestration.
+3. Build runtime execution service as stateless/persistence-free before Go invokes it.
+4. Persist only validated Chronicles and enforce idempotency.
+5. Port scoring with golden parity before public standings depend on Go.
+6. Serve public evidence only through privacy and board-realism gates.
+7. Require live topology, stopped-service, rollback, privacy, and monitor evidence before promotion.

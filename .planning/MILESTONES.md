@@ -1,5 +1,49 @@
 # Milestones
 
+## v1.15 Go Backend Ownership Completion
+
+**Status:** Planning started 2026-05-24
+**Phases:** 7
+**Phase range:** 96-102
+**Plans:** 0/7 complete
+**Requirements:** 48/48 mapped, 0 complete
+**Roadmap:** .planning/ROADMAP.md
+**Requirements file:** .planning/REQUIREMENTS.md
+**Research:** .planning/research/SUMMARY.md
+
+### Goal
+
+Make Go the owner of normal backend orchestration, persistence-facing API behavior, Match lifecycle coordination, Chronicle persistence, MatchSet scoring completion, and public evidence delivery while TypeScript remains frontend, parity oracle, and the isolated JS/TS Strategy runtime boundary.
+
+### Selected Direction
+
+- Treat TypeScript service and persistence behavior as parity oracle or rollback reference, not the future normal backend path.
+- Move normal job claiming, lease, retry, failure, Match completion, Chronicle persistence, and MatchSet scoring completion to Go-owned contracts.
+- Keep Strategy execution outside Go and web/API processes by routing execution through the v1.14 runtime ABI and a strict TypeScript runtime worker/service boundary.
+- Move selected public evidence and normal web backend workflows to Go-owned contracts without silent TypeScript fallback.
+- Preserve schema validation, hostile-code isolation, deterministic engine boundaries, replay/public-output privacy, owner-source privacy, and immutable Strategy Revision/Match eligibility.
+- Keep production sandbox replacement and final TypeScript runtime retirement out of scope for v1.16 or later.
+
+### Planned Phases
+
+| Phase | Name |
+| --- | --- |
+| 96 | Boundary Baseline and Go Ownership Contract |
+| 97 | Go Job Lifecycle and Persistence Contracts |
+| 98 | Runtime Execution Service Boundary |
+| 99 | Go Match Completion and Chronicle Persistence |
+| 100 | Go MatchSet Scoring and Failure Classification |
+| 101 | Public Evidence Delivery and Web Cutover |
+| 102 | Topology, Monitors, Rollback, and Promotion Gate |
+
+### Active Constraints
+
+- Engine logic remains pure, deterministic, serializable, and side-effect free.
+- Strategy code does not execute in the web/API process or Go backend, and Node `vm` is not used as a hostile-code security boundary.
+- Strategy Revisions are immutable once submitted for Match or MatchSet play.
+- TypeScript runtime worker/service remains the hostile Strategy execution owner unless a later milestone explicitly promotes another boundary.
+- Public replay, service, Go, topology, monitor, analytics, export, and runtime outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals by default.
+
 ## v1.14 Generic Strategy Artifact and Runtime Boundary Contract
 
 **Status:** Shipped 2026-05-23

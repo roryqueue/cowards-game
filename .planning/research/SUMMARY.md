@@ -1,78 +1,79 @@
 # Project Research Summary
 
 **Project:** Coward's Game
-**Milestone:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract
-**Domain:** Generic Strategy artifacts, runtime ABI, Go artifact consumption, fork parity, privacy-safe outputs, replay board realism
-**Researched:** 2026-05-23
-**Confidence:** HIGH for repo-local artifact, runtime, Go route, privacy, and replay realism findings; MEDIUM for exact implementation sequencing until Phase 89 audits current drift in detail.
+**Milestone:** v1.15 Go Backend Ownership Completion
+**Domain:** Go backend orchestration ownership, Match lifecycle coordination, Chronicle persistence, MatchSet scoring completion, public evidence delivery, runtime ABI handoff
+**Researched:** 2026-05-24
+**Confidence:** High for repo-local ownership, route, worker, persistence, privacy, and topology findings; medium for exact implementation sequencing until Phase 96 rebaselines drift.
 
 ## Executive Summary
 
-v1.14 should define the public contract around Strategy source and runtime execution before moving more backend/runtime ownership. v1.13 successfully promoted selected Go API routes but accepted Starter/Advanced fork deferral because Go cannot read library sources with parity. At the same time, the existing `strategy-runtime-abi-v1.7` is stricter on paper than the counted JS runtime path actually executes, and privacy deny lists are duplicated across service, replay, Go, analytics, topology, and monitor code.
+v1.15 should complete the normal backend ownership cutover by moving persistence-facing orchestration from TypeScript to Go while preserving the hostile Strategy execution boundary created in v1.14. The correct ownership line is not a Go engine/runtime rewrite. It is a Go-owned lifecycle where web calls Go, Go claims and completes jobs, Go persists validated Chronicles, Go finalizes MatchSet scoring, and Go serves public evidence; TypeScript remains the frontend, parity oracle, and isolated JS/TS Strategy runtime service behind `strategy-runtime-abi-v1.14`.
 
-The recommended milestone direction is to build a generic Strategy Artifact / Revision model, generate parity-safe manifests from TypeScript-owned source registries, freeze `strategy-runtime-abi-v1.14`, then let Go consume artifacts for Starter/Advanced forks without executing Strategy code. TypeScript service behavior remains the parity oracle where needed, but not the long-term backend path. TypeScript worker/runtime remains the execution owner unless a later milestone explicitly promotes a stronger hostile-code boundary.
+The current repository already has live PostgreSQL-backed Go routes for selected public reads, auth/session, account Strategy Revisions, artifact-backed Starter/Advanced forks, and exhibition MatchSet creation. The remaining normal backend ownership gap is downstream of that creation step: TypeScript still claims jobs, loads Match inputs, runs engine/replay creation, writes Chronicles, completes Matches, records system failures, refreshes MatchSet scoring, and serves full replay data through persistence-facing web paths.
 
 ## Stack Findings
 
-- Preserve TypeScript web UI, `@cowards/spec`, `@cowards/service`, TypeScript worker/runtime, and PostgreSQL-backed Go API ownership.
-- Add spec-owned Strategy artifact schemas and fixtures alongside existing StrategyRevision and runtime schemas.
-- Generate JSON artifacts/manifests from TypeScript-owned Starter, Advanced, and Workshop template sources rather than hand-maintaining Go copies.
-- Use Go manifest loading and checksum/stale gates similar to existing service fixture checks.
-- Keep Go persistence/orchestration contracts practical, but keep Strategy execution outside Go/web/API processes.
+- Keep the existing stack: Go backend, PostgreSQL, TypeScript frontend, TypeScript spec/service contracts, TypeScript runtime-js boundary, and existing topology/monitor scripts.
+- Do not add a new queue, broker, orchestration framework, cloud deployment layer, or production sandbox replacement.
+- Add Go lifecycle code for job claim/lease/failure/retry/completion, Chronicle persistence, MatchSet scoring refresh, and public evidence delivery.
+- Add or refactor a TypeScript stateless execution service so Strategy execution remains outside Go/web/API and behind `strategy-runtime-abi-v1.14`.
+- Treat TypeScript persistence/service behavior as parity oracle and rollback reference, not the normal future backend path.
 
 ## Feature Table Stakes
 
-### Generic Strategy Artifacts
+### Go Orchestration
 
-- Represent user-submitted revisions, server-native templates, Starter library entries, Advanced library entries, and future source-bearing examples through one contract.
-- Include artifact kind, source hash, source bytes, validation report/status, runtime/language metadata, package metadata, source visibility, fork eligibility, lineage/derived-from fields, public metadata, and immutable Match eligibility.
-- Preserve backward compatibility with current StrategyRevision IDs, account revision summaries, Starter/Advanced lineage, public cards, and owner-private source routes.
+- Go owns Match job claim, lease, heartbeat, expired-lease reclaim, retry/failure recording, Match status transitions, attempt rows, and completion idempotency.
+- Go owns the selected normal orchestration owner switch and fails closed when selected dependencies are unavailable.
+- Go prevents TypeScript DB-owning workers from claiming normal jobs during Go-selected operation.
 
-### Runtime ABI
+### Runtime ABI Handoff
 
-- Define `strategy-runtime-abi-v1.14` as the strict public boundary between deterministic server/native orchestration and hostile runtime code.
-- Require method-specific request/response schemas for `selectActivations` and `soldierBrain`.
-- Enforce source hash, source bytes, byte caps, runtime metadata, adapter id/version, language id/version, package mode, required capabilities, and effective limits at the ABI boundary.
-- Normalize failure taxonomy so runtime violations and system failures are consistently represented before persistence and public projection.
+- Go invokes TypeScript runtime execution only through a versioned execution contract that preserves v1.14 runtime ABI semantics.
+- TypeScript runtime service executes Strategy code, but does not own normal persistence writes or job completion.
+- Runtime violations become valid Match/Chronicle outcomes; system failures are retried or classified by Go.
 
-### Go Artifact Consumption
+### Chronicle And MatchSet Completion
 
-- Load generated Strategy artifact manifests in Go without executing source.
-- Replace Go fork 501 stubs with manifest-backed Starter/Advanced fork writes only after parity passes.
-- Preserve lineage on Go account saves when a submitted library/template source hash matches a manifest entry.
-- Keep TypeScript service/reference behavior as the parity oracle, not silent fallback.
+- Go validates Chronicle schema/version, Match id, Strategy Revision ids, arena id, source hashes, terminal outcome, content hash, and metadata before persistence.
+- Go atomically updates Match completion fields, `match_jobs`, `match_job_attempts`, and Chronicle rows.
+- Go ports MatchSet scoring/status semantics, including degraded/system failure, strategy-failure penalty, tie-breakers, and completed/degraded timestamps.
 
-### Privacy And Replay Realism
+### Public Evidence And Web Cutover
 
-- Centralize forbidden public fields for service, Go, replay, analytics, topology, monitors, OpenAPI artifacts, and browser-visible public replay text.
-- Keep owner-private source retrieval as the only intentional public-contract exception, authenticated and `private, no-store`.
-- Add repeatable live web-through-Go evidence that creates an exhibition, runs the TypeScript worker, checks replay metadata, and verifies board bounds plus visible piece sanity.
+- Go public MatchSet/replay/evidence routes reflect Go-completed Matches and scored MatchSets.
+- Web normal workflows call Go contracts instead of reaching TypeScript persistence/service internals.
+- Public outputs remain source/memory/objective/debug/token/path/DSN/runtime-private safe by default.
+
+### Topology And Monitors
+
+- Local topology evidence covers web frontend -> Go backend -> TypeScript runtime service -> Go persistence -> Go public evidence.
+- Boundary monitors fail on unexpected TypeScript backend ownership, unsafe fallback, runtime ABI drift, schema drift, privacy drift, report-only offense increases, and public-output leaks.
 
 ## Architecture Findings
 
-- `StrategyRevision` is still source-bearing and hard-codes Starter/Advanced lineage. It is not yet a generic artifact model.
-- Starter and Advanced libraries are TypeScript-only source registries. Hashes and validation are computed at runtime, not generated into a Go-readable manifest.
-- Go fork routes are intentionally unavailable because library source manifests do not exist.
-- Go create/save revision currently uses reduced source metadata validation and can lose Starter/Advanced lineage on saves that include `starterId` or `advancedId`.
-- The runtime ABI exists in spec, but the counted JS runtime adapter path still uses a smaller `{ source, methodName, input, timeoutMs, outputByteLimit }` shape.
-- Runtime limits and failure taxonomy can drift across spec defaults, runtime-js guards, worker config, sandbox probes, and adapter metadata.
-- Privacy checks exist in multiple layers but use separate deny lists that can drift.
-- Replay board realism has server-side and browser-side checks, but live Go-created Match/replay board validation is not yet a repeatable command.
+- Go already creates exhibition MatchSets and `match_jobs`, but TypeScript still owns job claiming and completion.
+- `packages/persistence/src/jobs.ts`, `complete-match.ts`, `chronicle-store.ts`, `matchset-status.ts`, and `scoring.ts` are the TypeScript parity sources for Go lifecycle work.
+- `apps/worker/src/runner.ts` is the current coupling point between DB job ownership and runtime/engine execution.
+- `apps/web/app/matches/server.ts` and Workshop routes still directly import persistence/service internals for normal replay/workshop paths.
+- Existing topology checks are strong for route-level public reads but need lifecycle-level evidence.
 
 ## Watch Out For
 
-- Do not make Go execute Strategy code, validate hostile code by running it, claim jobs, complete Matches, build Chronicles, classify runtime failures, or expose private replay internals.
-- Do not treat Node `vm`, worker threads, or host subprocesses as production hostile-code security boundaries.
-- Do not promote counted non-JS play, public language picker support, production sandbox promotion, Go migrations, full replay projection, owner-debug replay, or Workshop runtime/test/rerun ownership in this milestone.
-- Do not leak Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, or private runtime internals in public/service/Go/topology/monitor outputs.
-- Do not allow Go and TypeScript revision IDs, validation reports, source hashes, runtime metadata, lineage, or eligibility to diverge silently.
+- Do not execute Strategy code in Go or web/API.
+- Do not use Node `vm` as a security boundary.
+- Do not retire TypeScript runtime execution or promote production sandbox replacement in v1.15.
+- Do not expose raw Chronicles, Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, or private runtime internals by default.
+- Do not allow Go and TypeScript workers to claim/complete the same normal jobs concurrently.
+- Do not let public reads lazily hide missing Go scoring completion by calling TypeScript refresh code.
 
-## Proposed Phase Structure
+## Recommended Phase Structure
 
-1. Phase 89: Boundary Baseline and Scope Lock.
-2. Phase 90: Generic Strategy Artifact Contract.
-3. Phase 91: Generated Strategy Artifact Manifest.
-4. Phase 92: Runtime ABI v1.14 Contract.
-5. Phase 93: JS Runtime Adapter Conformance.
-6. Phase 94: Go Artifact Consumption and Fork Parity.
-7. Phase 95: Privacy, Realism, Topology, and Promotion Gate.
+1. Phase 96: Boundary Baseline and Go Ownership Contract.
+2. Phase 97: Go Job Lifecycle and Persistence Contracts.
+3. Phase 98: Runtime Execution Service Boundary.
+4. Phase 99: Go Match Completion and Chronicle Persistence.
+5. Phase 100: Go MatchSet Scoring and Failure Classification.
+6. Phase 101: Public Evidence Delivery and Web Cutover.
+7. Phase 102: Topology, Monitors, Rollback, and Promotion Gate.

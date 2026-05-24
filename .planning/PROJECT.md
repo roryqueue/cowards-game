@@ -3,15 +3,29 @@
 ## Current State
 
 **Shipped version:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract on 2026-05-23
-**Current milestone:** None; ready for next milestone.
-**Status:** v1.14 shipped, archived, and tagged.
+**Current milestone:** v1.15 Go Backend Ownership Completion.
+**Status:** v1.15 requirements and roadmap initialized after v1.14 shipped, archived, and tagged.
 **Last audit:** v1.14 audit passed with artifact-backed Go fork promotion and deferred runtime migration.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for selected backend API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. v1.14 made Strategy source artifacts and runtime boundaries generic, manifest-backed, and parity-safe without moving hostile Strategy execution into web/API/Go.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for selected backend API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. v1.15 focuses on making Go the normal backend owner for orchestration, persistence-facing API behavior, Match lifecycle coordination, Chronicle persistence handoff, MatchSet scoring completion, and public evidence delivery while keeping hostile Strategy execution in the isolated TypeScript runtime boundary.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.15 Go Backend Ownership Completion
+
+**Goal:** Make Go the owner of normal backend orchestration, persistence-facing API behavior, Match lifecycle coordination, Chronicle persistence, MatchSet scoring completion, and public evidence delivery while TypeScript remains frontend, parity oracle, and the isolated JS/TS Strategy runtime boundary.
+
+**Target features:**
+- Go-owned job claiming, lease, failure, retry, completion, Match lifecycle state transition, Chronicle persistence, and MatchSet scoring contracts.
+- A strict Go-to-TypeScript runtime execution boundary that uses `strategy-runtime-abi-v1.14` without moving hostile Strategy execution into Go or web/API processes.
+- Go-owned public/account/workshop/replay/evidence routes selected by research where practical, with TypeScript service behavior documented as parity-only or test-only rather than normal product backend.
+- Web frontend normal workflows call Go-owned contracts and stop directly reaching persistence/service internals except for explicit test/parity-only surfaces.
+- Public evidence, topology, route ownership, and boundary monitors fail on unsafe fallback, unexpected TypeScript backend ownership, schema/runtime ABI drift, privacy drift, and public-output leaks.
+- Realistic local topology evidence covers web frontend -> Go backend -> TypeScript runtime worker/service -> Go persistence/public evidence, with no silent TypeScript backend fallback.
+
+**Non-goals:** Production sandbox replacement, final TypeScript runtime retirement, Node `vm` as a security boundary, Go/web/API Strategy execution, Go migration/schema ownership, full owner-debug replay migration, counted non-JS play, custom arenas, durable ratings, monetization, or broad governance expansion.
 
 ## Latest Shipped Milestone: v1.14 Generic Strategy Artifact and Runtime Boundary Contract
 
@@ -62,16 +76,6 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 **Archived audit:** `.planning/milestones/v1.12-MILESTONE-AUDIT.md`
 
 **Next:** Start a fresh milestone with `$gsd-new-milestone`; `.planning/REQUIREMENTS.md` is intentionally removed at milestone close.
-
-## Next Milestone Candidate Goals
-
-**First choice: v1.15 Go Orchestration and Match Execution Cutover.** Move the backend transition from route ownership into orchestration ownership: Go-owned job claiming/completion contracts, Match execution coordination, Chronicle persistence, scoring completion, runtime failure classification, and rollback/no-fallback drills. Keep hostile Strategy execution in the isolated TypeScript runtime worker unless a later runtime milestone promotes a stronger boundary. This is the most ambitious useful next step because v1.14 made Strategy artifacts and ABI boundaries explicit enough for Go to coordinate without executing hostile code.
-
-Other ambitious candidates:
-
-- **v1.15 Production Runtime Isolation Promotion** — prove and promote a real hostile-code sandbox boundary with resource, filesystem, network, image provenance, redacted diagnostics, no-fallback, and rollback evidence.
-- **v1.15 Replay Projection and Public Evidence Ownership** — move public replay projection, owner authorization contracts, and realism verification closer to server-native ownership while preserving public/private Chronicle separation.
-- **v1.15 Strategy Ecosystem and Multi-Language Alpha** — turn generic artifact/runtime contracts into product value with package policy, Workshop language semantics, non-JS experimental UX, and counted-eligibility gates.
 
 ## Previous Shipped Milestone: v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence
 
@@ -398,4 +402,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-23 after archiving v1.14 milestone*
+*Last updated: 2026-05-24 after starting v1.15 milestone*

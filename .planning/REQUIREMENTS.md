@@ -1,0 +1,167 @@
+# Requirements: Coward's Game
+
+**Defined:** 2026-05-24
+**Milestone:** v1.15 Go Backend Ownership Completion
+**Core Value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## v1 Requirements
+
+### Baseline And Scope
+
+- [ ] **BASE-01**: Developer can inspect a v1.15 baseline covering v1.14 Go-owned routes, TypeScript-owned job/runtime surfaces, public/private replay ownership, broad web report-only offenses, topology evidence, and monitor gaps.
+- [ ] **BASE-02**: Developer can inspect explicit v1.15 non-goals for Go/web/API Strategy execution, Node `vm` security-boundary use, production sandbox replacement, final TypeScript runtime retirement, Go migration/schema ownership, counted non-JS play, owner-debug replay migration, and broad ladder/governance expansion.
+- [ ] **BASE-03**: Developer can inspect a v1.15 route/lifecycle ownership manifest separating Go primary routes, Go orchestration surfaces, TypeScript parity-oracle surfaces, TypeScript runtime execution surfaces, test-only surfaces, rollback owners, and deferred surfaces.
+- [ ] **BASE-04**: Developer can verify TypeScript service and persistence behavior is documented as parity oracle or rollback reference rather than the future normal backend path.
+- [ ] **BASE-05**: Developer can verify `strict_offenses=0` and the 29 broad web report-only direct persistence offenses are rebaselined before any web cutover work.
+- [ ] **BASE-06**: Developer can verify the v1.15 plan preserves deterministic engine purity, Strategy Revision immutability, schema validation, replay/public-output privacy, and hostile Strategy isolation.
+
+### Go Orchestration Contracts
+
+- [ ] **ORCH-01**: Developer can use Go-owned job claim contracts that preserve queued/running selection, `FOR UPDATE SKIP LOCKED` behavior or equivalent database locking, lease token creation, attempt numbering, and expired-lease reclaim semantics.
+- [ ] **ORCH-02**: Developer can use Go-owned heartbeat/lease extension behavior that rejects stale or mismatched leases and never updates unrelated jobs.
+- [ ] **ORCH-03**: Developer can use Go-owned attempt failure recording that preserves retryable failure, retry exhaustion, `failed_system` Match status, attempt rows, and redacted diagnostics.
+- [ ] **ORCH-04**: Developer can verify Go lifecycle contracts are schema-validated and parity-tested against TypeScript `jobs.ts`, `complete-match.ts`, and worker runner behavior.
+- [ ] **ORCH-05**: Developer can verify Go-selected normal orchestration prevents the TypeScript DB-owning worker from claiming or completing normal product jobs.
+- [ ] **ORCH-06**: Developer can inspect rollback/no-fallback rules for Go job lifecycle ownership, including how running jobs, expired leases, retries, and incomplete MatchSets behave during rollback.
+- [ ] **ORCH-07**: Developer can verify Go orchestration diagnostics omit Strategy source, memories, objective payloads, stack traces, stderr, tokens, host paths, DB DSNs, and private runtime internals by default.
+- [ ] **ORCH-08**: Developer can run Go tests covering successful claim, no-job idle, lease mismatch, expired lease reclaim, retry queueing, retry exhaustion, and no duplicate running claims.
+
+### Runtime Execution Boundary
+
+- [ ] **RT-01**: Developer can use a versioned Go-to-TypeScript Match execution contract that carries complete Match inputs, Strategy Revision source/hash/bytes/runtime metadata, arena data, seed, player ids, and execution limits.
+- [ ] **RT-02**: Developer can verify the TypeScript runtime execution service executes Strategy code only behind `strategy-runtime-abi-v1.14` and does not own normal job claiming, Match completion, Chronicle persistence, or MatchSet scoring writes.
+- [ ] **RT-03**: Developer can verify Go never imports, evaluates, transpiles, or executes Strategy source and never uses Node `vm`.
+- [ ] **RT-04**: Developer can verify runtime violations are returned as valid Match/Chronicle outcomes while system failures are returned as retryable or terminal system-failure envelopes for Go classification.
+- [ ] **RT-05**: Developer can run invalid output, timeout, malformed response, source hash mismatch, oversized output, stopped runtime service, and redacted diagnostics tests for the execution boundary.
+- [ ] **RT-06**: Developer can verify worker-thread, subprocess, container-subprocess, and non-JS runtime candidates remain at their existing readiness labels unless a later milestone promotes them.
+
+### Match Completion And Chronicle Persistence
+
+- [ ] **COMP-01**: Developer can complete a claimed Match through Go only when the lease token is valid and the job is running.
+- [ ] **COMP-02**: Developer can verify duplicate completion is idempotent only when the Match is already complete and a Chronicle row exists.
+- [ ] **COMP-03**: Developer can verify Go derives Match completion fields from final state with TypeScript parity for outcome, winner, survivor counts, per-side survivor counts, survival turns, and per-side survival turns.
+- [ ] **COMP-04**: Developer can verify Go validates Chronicle schema version, Match id, Strategy Revision ids, arena id, terminal outcome, event/snapshot counts, canonical metadata, and content hash before persistence.
+- [ ] **COMP-05**: Developer can verify Chronicle persistence is atomic with Match completion, job completion, and attempt completion updates.
+- [ ] **COMP-06**: Developer can verify invalid Chronicles, mismatched Match ids, hash drift, missing terminal snapshots, or private/public projection leaks fail closed without completing the Match.
+- [ ] **COMP-07**: Developer can verify Go-completed Chronicles remain readable by existing replay reconstruction and public projection code during migration.
+- [ ] **COMP-08**: Developer can run Go and TypeScript parity fixtures for successful completion, runtime violation completion, duplicate completion, invalid lease, invalid Chronicle, and storage conflict behavior.
+
+### MatchSet Scoring Completion
+
+- [ ] **SCORE-01**: Developer can use Go-owned scoring logic with parity for wins, losses, draws, points, strategy-failure penalties, failed system Matches, survivor totals, survival turns, and stable tie-breakers.
+- [ ] **SCORE-02**: Developer can use Go-owned MatchSet status refresh with parity for pending, running, complete, degraded, failed-system, and blocked input states.
+- [ ] **SCORE-03**: Developer can verify Go updates `match_sets.status`, `scoring`, `degraded`, and `completed_at` after terminal Match completion without relying on TypeScript public reads to lazily refresh scoring.
+- [ ] **SCORE-04**: User can view Go-scored public MatchSet standings after all Matches complete or degrade.
+- [ ] **SCORE-05**: Developer can verify strategy runtime violations affect scoring as player/Strategy failures where the existing rules require, while system failures degrade or fail the MatchSet without assigning false player losses.
+- [ ] **SCORE-06**: Developer can run parity fixtures for complete, running, degraded, failed_system, strategy-failure penalty, and tie-breaker MatchSet scenarios.
+
+### Public Evidence And Web Cutover
+
+- [ ] **API-01**: User can create an exhibition through the web frontend with Go selected and receive a Go-owned MatchSet queued response without TypeScript backend fallback.
+- [ ] **API-02**: User can view public MatchSet summary/evidence produced from Go-completed Matches and Go-scored MatchSets.
+- [ ] **API-03**: User can view public replay metadata and selected public replay evidence from Go-owned contracts without exposing raw Chronicle/private projection data by default.
+- [ ] **API-04**: Developer can verify web normal backend workflows selected for v1.15 call Go-owned contracts rather than direct persistence/service internals.
+- [ ] **API-05**: Developer can verify TypeScript service/web API surfaces left in the product are explicitly labeled test-only, parity-only, rollback-only, runtime-only, or deferred.
+- [ ] **API-06**: Developer can verify public/account/workshop/replay/evidence outputs remain free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals by default.
+
+### Topology And Promotion Gate
+
+- [ ] **GATE-01**: Developer can run a repeatable local topology command that creates a Go-owned exhibition, executes Matches through the TypeScript runtime boundary, persists Chronicles through Go, finalizes scoring through Go, and fetches public evidence through Go.
+- [ ] **GATE-02**: Developer can verify local browser replay validation shows plausible full Match starts with in-bounds visible Soldiers and terrain for Go-created or Go-completed replay evidence.
+- [ ] **GATE-03**: Developer can verify stopped-Go behavior fails closed for Go-selected normal backend workflows without TypeScript backend fallback.
+- [ ] **GATE-04**: Developer can verify stopped-runtime-service behavior is classified by Go as retryable or terminal system failure without TypeScript persistence fallback.
+- [ ] **GATE-05**: Developer can verify rollback from Go orchestration to TypeScript worker ownership is explicit, documented, and does not silently mix DB-completing owners.
+- [ ] **GATE-06**: Developer can verify boundary monitors fail on unexpected TypeScript backend ownership creep, unsafe fallback, schema drift, runtime ABI drift, route manifest drift, privacy drift, report-only offense increases, and public-output leaks.
+- [ ] **GATE-07**: Developer can inspect final v1.15 promotion/defer artifacts covering Go orchestration, runtime boundary, Chronicle persistence, MatchSet scoring, public evidence, rollback, no-fallback, privacy, and remaining TypeScript runtime ownership.
+- [ ] **GATE-08**: Developer can verify the remaining TypeScript production-ish process is only the isolated JS/TS Strategy runtime worker/service plus explicitly documented parity/test/rollback surfaces.
+
+## Future Requirements
+
+### Runtime And Sandbox
+
+- **RTP-01**: Developer can promote a production hostile-code isolation boundary after a later milestone proves resource, filesystem, network, image provenance, redacted diagnostics, no-fallback, and rollback evidence.
+- **RTP-02**: Developer can retire the TypeScript runtime worker only after a later milestone provides a replacement runtime boundary with parity, isolation, observability, and rollback evidence.
+- **RTP-03**: User can submit counted non-JS Strategy Revisions only after sandbox, package policy, Workshop UX, documentation, compatibility, privacy, and rollback criteria are satisfied.
+
+### Replay, Workshop, And Operations
+
+- **RPLY-01**: Go can own full replay projection and owner-debug replay after public/private Chronicle projection parity and owner authorization semantics are proven.
+- **WORK-01**: Go can own Workshop validation, test launch, analytics rerun, profile save, export, or runtime flows after artifact/runtime contracts and worker boundaries are stable enough for those product workflows.
+- **OPS-01**: Go can own database migrations/schema after migration ownership, rollback, compatibility, and local topology contracts are explicitly planned.
+- **LADR-01**: Go can own broader ladder admin/scheduling/governance routes after Match lifecycle ownership is complete.
+
+## Out of Scope
+
+| Feature | Reason |
+| --- | --- |
+| Executing Strategy code in Go or web/API | Violates hostile-code isolation and deterministic boundary constraints. |
+| Node `vm` as a security boundary | Explicitly prohibited and not suitable for hostile code isolation. |
+| Production sandbox replacement | v1.15 coordinates through the existing runtime ABI; sandbox promotion is v1.16 or later. |
+| Final TypeScript runtime retirement | The JS/TS runtime worker/service remains the execution boundary this milestone. |
+| Full Go engine rewrite | TypeScript engine/replay behavior remains parity oracle while Go takes backend ownership. |
+| Go-owned migrations/schema ownership | Separate operational rollback risk. |
+| Full owner-debug replay migration | Requires public/private projection and authorization migration beyond v1.15's public evidence goal. |
+| Workshop runtime/test/rerun/profile/export migration | Runtime-heavy product area deferred until backend lifecycle ownership is complete. |
+| Durable ratings, official public tournaments, custom arenas, monetization, or marketplace work | Not part of backend ownership completion. |
+
+## Traceability
+
+| Requirement | Phase | Status |
+| --- | --- | --- |
+| BASE-01 | Phase 96 | Pending |
+| BASE-02 | Phase 96 | Pending |
+| BASE-03 | Phase 96 | Pending |
+| BASE-04 | Phase 96 | Pending |
+| BASE-05 | Phase 96 | Pending |
+| BASE-06 | Phase 96 | Pending |
+| ORCH-01 | Phase 97 | Pending |
+| ORCH-02 | Phase 97 | Pending |
+| ORCH-03 | Phase 97 | Pending |
+| ORCH-04 | Phase 97 | Pending |
+| ORCH-05 | Phase 97 | Pending |
+| ORCH-06 | Phase 97 | Pending |
+| ORCH-07 | Phase 97 | Pending |
+| ORCH-08 | Phase 97 | Pending |
+| RT-01 | Phase 98 | Pending |
+| RT-02 | Phase 98 | Pending |
+| RT-03 | Phase 98 | Pending |
+| RT-04 | Phase 98 | Pending |
+| RT-05 | Phase 98 | Pending |
+| RT-06 | Phase 98 | Pending |
+| COMP-01 | Phase 99 | Pending |
+| COMP-02 | Phase 99 | Pending |
+| COMP-03 | Phase 99 | Pending |
+| COMP-04 | Phase 99 | Pending |
+| COMP-05 | Phase 99 | Pending |
+| COMP-06 | Phase 99 | Pending |
+| COMP-07 | Phase 99 | Pending |
+| COMP-08 | Phase 99 | Pending |
+| SCORE-01 | Phase 100 | Pending |
+| SCORE-02 | Phase 100 | Pending |
+| SCORE-03 | Phase 100 | Pending |
+| SCORE-04 | Phase 100 | Pending |
+| SCORE-05 | Phase 100 | Pending |
+| SCORE-06 | Phase 100 | Pending |
+| API-01 | Phase 101 | Pending |
+| API-02 | Phase 101 | Pending |
+| API-03 | Phase 101 | Pending |
+| API-04 | Phase 101 | Pending |
+| API-05 | Phase 101 | Pending |
+| API-06 | Phase 101 | Pending |
+| GATE-01 | Phase 102 | Pending |
+| GATE-02 | Phase 102 | Pending |
+| GATE-03 | Phase 102 | Pending |
+| GATE-04 | Phase 102 | Pending |
+| GATE-05 | Phase 102 | Pending |
+| GATE-06 | Phase 102 | Pending |
+| GATE-07 | Phase 102 | Pending |
+| GATE-08 | Phase 102 | Pending |
+
+**Coverage:**
+- v1 requirements: 48 total
+- Mapped to phases: 48
+- Unmapped: 0
+
+---
+*Requirements defined: 2026-05-24*
+*Last updated: 2026-05-24 after v1.15 milestone initialization*
