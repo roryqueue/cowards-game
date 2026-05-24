@@ -1,6 +1,6 @@
 ---
 phase: 104-isolated-runtime-service-boundary-hardening
-reviewed: 2026-05-24T18:25:50Z
+reviewed: 2026-05-24T18:29:16Z
 depth: deep
 files_reviewed: 16
 files_reviewed_list:
@@ -176,5 +176,82 @@ Update the Go regression so the mocked runtime service returns unsafe markers in
 ---
 
 _Re-reviewed: 2026-05-24T18:25:50Z_
+_Reviewer: the agent (gsd-code-reviewer)_
+_Depth: deep_
+
+## Final Re-Review: Fix Commits `0ca962f` and `ba18211`
+
+**Reviewed:** 2026-05-24T18:29:16Z
+**Depth:** deep
+**Files Re-Reviewed:** `apps/go-backend/runtime_service_client.go`, `apps/go-backend/runtime_service_client_test.go`, plus the Phase 104 runtime-service/spec contract references that define valid failure responses
+**Fix Commits:** `0ca962f387ce46c23a67a6783a87a4d707221d49`, `ba18211129ca842c1a6df000c5128c4cf5bd2596`
+**Status:** issues_found
+
+### Summary
+
+The two fix commits close the direct D-17 private-marker leakage originally found in `systemFailure.message`, `systemFailure.publicMessage`, and `systemFailure.code`: unsafe markers now cause Go-side redaction or fallback classification. However, the second fix introduces and tests a non-contract recovery path where an invalid runtime-service `code` can be replaced by `systemFailure.errorClass`.
+
+That still leaves Phase 104's runtime service boundary not fail-closed. The TypeScript boundary contract exposes a closed `systemFailure.code` enum and no `systemFailure.errorClass` field, but the Go client accepts `errorClass` and persists it as the authoritative job failure class.
+
+### Verification Run
+
+- `cd apps/go-backend && go test ./... -run 'RuntimeServiceClient' -count=1` - PASS
+- `pnpm exec vitest run apps/runtime-service/src/redaction.test.ts apps/runtime-service/src/execute-match.test.ts apps/runtime-service/src/server.test.ts packages/spec/src/spec.test.ts` - PASS
+
+### CR-01: Go Client Still Accepts Non-Contract Runtime Failure Classes
+
+**Classification:** BLOCKER
+
+**File:** `apps/go-backend/runtime_service_client.go:72`
+
+**Issue:** `runtimeServiceFailure` includes `ErrorClass string json:"errorClass,omitempty"` even though the Phase 104 runtime execution service contract only defines `systemFailure.code`, `message`, `publicMessage`, `retryable`, and optional `diagnostics` (`packages/spec/src/runtime-execution-service.ts:121`, `packages/spec/src/schemas.ts:2017`). The sanitization added in `ba18211` then falls back from an invalid `Code` to this non-contract `ErrorClass` at `apps/go-backend/runtime_service_client.go:243-247`, and `orchestrator.go` persists the result as both `ErrorClass` and `strategyExecutionSystemFailureCode` at `apps/go-backend/orchestrator.go:102-112`.
+
+The new regression test now codifies the violation: it returns `Code: "SubprocessSystemFailure-ownerDebug-sessionId"` plus `ErrorClass: "FallbackSystemFailure"` and expects the client to accept `"FallbackSystemFailure"` (`apps/go-backend/runtime_service_client_test.go:205-235`). A drifted or compromised runtime service can therefore send a schema-invalid failure response with any marker-free string and have Go store it as an authoritative runtime failure class. That bypasses the closed enum/fail-closed response contract (`MALFORMED_REQUEST`, `SOURCE_HASH_MISMATCH`, `SOURCE_BYTES_MISMATCH`, `UNSUPPORTED_RUNTIME_ADAPTER`, `EXECUTION_EXCEPTION`, `RESPONSE_SCHEMA_INVALID`) and masks malformed boundary responses instead of classifying them as malformed.
+
+**Fix:**
+
+Remove `ErrorClass` from the runtime-service response struct and validate `systemFailure.code` against the Phase 104 enum in Go. If `code` is missing, private-marker-bearing, or outside the closed enum, classify the response as `RuntimeServiceMalformedResponse` or another local transport/boundary failure; do not recover from `systemFailure.errorClass`.
+
+```go
+var runtimeServiceFailureCodes = map[string]struct{}{
+	"MALFORMED_REQUEST":             {},
+	"SOURCE_HASH_MISMATCH":          {},
+	"SOURCE_BYTES_MISMATCH":         {},
+	"UNSUPPORTED_RUNTIME_ADAPTER":   {},
+	"EXECUTION_EXCEPTION":           {},
+	"RESPONSE_SCHEMA_INVALID":       {},
+}
+
+func sanitizeRuntimeServiceFailureCode(code string) string {
+	if code == "" || redactRuntimeServiceMessage(code) != code {
+		return ""
+	}
+	if _, ok := runtimeServiceFailureCodes[code]; !ok {
+		return ""
+	}
+	return code
+}
+
+func sanitizeRuntimeServiceFailure(failure runtimeServiceFailure) runtimeServiceFailure {
+	code := sanitizeRuntimeServiceFailureCode(failure.Code)
+	if code == "" {
+		code = "RuntimeServiceMalformedResponse"
+	}
+	return runtimeServiceFailure{
+		Code:          code,
+		ErrorClass:    code,
+		ErrorMessage:  redactRuntimeServiceMessage(failure.ErrorMessage),
+		PublicMessage: redactRuntimeServiceMessage(failure.PublicMessage),
+		Retryable:     failure.Retryable,
+		Details:       sanitizeRuntimeServiceDetails(failure.Details),
+	}
+}
+```
+
+Update `TestRuntimeServiceClientSanitizesServiceFailure` so the mocked service does not emit `errorClass`, then add assertions that an unknown `systemFailure.code` becomes the local malformed-response classification and is never persisted as `strategyExecutionSystemFailureCode`.
+
+---
+
+_Re-reviewed: 2026-05-24T18:29:16Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
