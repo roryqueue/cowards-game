@@ -2065,6 +2065,8 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
         {
           surfaceLabel: surface.surfaceLabel,
           capabilityGroup: surface.capabilityGroup,
+          taxonomyRole: surface.taxonomyRole,
+          publicOutputPrivacy: surface.publicOutputPrivacy,
           owner: surface.owner,
           reason: surface.reason,
           risk: surface.risk,
