@@ -4,6 +4,7 @@ import {
 } from "../../../competitive/server.js"
 import { competitiveErrorResponse } from "../../../competitive/http.js"
 import {
+  assertGoAccountForksCanReadBack,
   getAccountSessionId,
   isGoAccountForksSelected,
   requireSelectedGoBackendClient,
@@ -14,6 +15,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const body = (await request.json()) as Record<string, unknown>
     if (isGoAccountForksSelected()) {
+      assertGoAccountForksCanReadBack()
       const created = await requireSelectedGoBackendClient(
         "account revisions",
       ).forkAdvancedStrategy(await getAccountSessionId(), body.advancedId)

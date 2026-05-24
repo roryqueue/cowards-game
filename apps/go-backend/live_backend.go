@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -29,8 +30,9 @@ const exhibitionRateLimit = 5
 const exhibitionRateLimitWindow = time.Hour
 
 type LiveServer struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
+	pool              *pgxpool.Pool
+	now               func() time.Time
+	strategyArtifacts map[string]strategyArtifact
 }
 
 func NewLiveServer(ctx context.Context, databaseURL string) (*LiveServer, error) {
@@ -45,7 +47,12 @@ func NewLiveServer(ctx context.Context, databaseURL string) (*LiveServer, error)
 		pool.Close()
 		return nil, fmt.Errorf("connect live database")
 	}
-	return &LiveServer{pool: pool, now: time.Now}, nil
+	artifacts, err := loadStrategyArtifactManifest(defaultStrategyArtifactManifestPath())
+	if err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("load strategy artifacts: %w", err)
+	}
+	return &LiveServer{pool: pool, now: time.Now, strategyArtifacts: artifacts}, nil
 }
 
 func (server *LiveServer) Close() {
@@ -67,8 +74,8 @@ func (server *LiveServer) routes() http.Handler {
 	mux.HandleFunc("GET /account/strategy-revisions", server.listStrategyRevisions)
 	mux.HandleFunc("POST /account/strategy-revisions", server.createStrategyRevision)
 	mux.HandleFunc("GET /account/strategy-revisions/{strategyRevisionId}/source", server.strategyRevisionSource)
-	mux.HandleFunc("POST /account/starter-forks", server.forkUnavailable)
-	mux.HandleFunc("POST /account/advanced-forks", server.forkUnavailable)
+	mux.HandleFunc("POST /account/starter-forks", server.forkStarterStrategy)
+	mux.HandleFunc("POST /account/advanced-forks", server.forkAdvancedStrategy)
 	mux.HandleFunc("POST /matchsets", server.createExhibition)
 	return mux
 }
@@ -105,6 +112,44 @@ type revisionRow struct {
 	Metadata            map[string]any
 	CreatedAt           time.Time
 	LockedAt            *time.Time
+}
+
+type strategyArtifactManifest struct {
+	SchemaVersion string             `json:"schemaVersion"`
+	ArtifactCount int                `json:"artifactCount"`
+	Artifacts     []strategyArtifact `json:"artifacts"`
+}
+
+type strategyArtifact struct {
+	ID               string         `json:"id"`
+	Kind             string         `json:"kind"`
+	SourceVisibility string         `json:"sourceVisibility"`
+	ForkEligibility  map[string]any `json:"forkEligibility"`
+	Source           struct {
+		Text  string `json:"text"`
+		Hash  string `json:"hash"`
+		Bytes int    `json:"bytes"`
+	} `json:"source"`
+	Runtime             map[string]any `json:"runtime"`
+	EngineCompatibility map[string]any `json:"engineCompatibility"`
+	Validation          map[string]any `json:"validation"`
+	PublicMetadata      map[string]any `json:"publicMetadata"`
+	Lineage             map[string]any `json:"lineage"`
+}
+
+type accountRevisionInsert struct {
+	UserID              string
+	StrategyID          string
+	Source              string
+	Label               string
+	Notes               string
+	StrategyName        string
+	Metadata            map[string]any
+	SourceHash          string
+	SourceBytes         int
+	Runtime             map[string]any
+	EngineCompatibility map[string]any
+	Validation          map[string]any
 }
 
 func (server *LiveServer) publicStrategyPage(writer http.ResponseWriter, request *http.Request) {
@@ -426,7 +471,20 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 	if !decodeBody(writer, request, &body) {
 		return
 	}
-	revision, err := server.insertAccountRevision(request.Context(), user.ID, body.StrategyID, body.Source, body.Label, body.Notes, nil)
+	input := accountRevisionInsert{
+		UserID:     user.ID,
+		StrategyID: body.StrategyID,
+		Source:     body.Source,
+		Label:      body.Label,
+		Notes:      body.Notes,
+	}
+	if artifact, ok := server.matchSubmittedArtifact(body.Source, body.StarterID, "starter"); ok {
+		input.applyArtifact(artifact)
+	}
+	if artifact, ok := server.matchSubmittedArtifact(body.Source, body.AdvancedID, "advanced"); ok {
+		input.applyArtifact(artifact)
+	}
+	revision, err := server.insertAccountRevision(request.Context(), input)
 	if err != nil {
 		writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Strategy Revision could not be saved.")
 		return
@@ -440,8 +498,152 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 	})
 }
 
-func (server *LiveServer) forkUnavailable(writer http.ResponseWriter, _ *http.Request) {
-	writeServiceError(writer, http.StatusNotImplemented, "UPSTREAM_UNAVAILABLE", "Go-owned library fork routes require a generated library source manifest.")
+func (server *LiveServer) forkStarterStrategy(writer http.ResponseWriter, request *http.Request) {
+	user, err := server.requireUser(writer, request)
+	if err != nil || user == nil {
+		return
+	}
+	var body struct {
+		StarterID string `json:"starterId"`
+	}
+	if !decodeBody(writer, request, &body) {
+		return
+	}
+	artifact, err := server.forkableStrategyArtifact("starter", body.StarterID)
+	if err != nil {
+		writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Starter Strategy could not be forked.")
+		return
+	}
+	revision, err := server.insertAccountRevision(request.Context(), artifact.accountRevisionInsert(user.ID))
+	if err != nil {
+		writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Starter Strategy could not be forked.")
+		return
+	}
+	writeJSONValue(writer, http.StatusCreated, map[string]any{
+		"apiVersion":         serviceAPIVersion,
+		"kind":               "strategyRevisionCreated",
+		"strategyId":         revision["strategyId"],
+		"strategyRevisionId": revision["strategyRevisionId"],
+		"validationStatus":   revision["validationStatus"],
+	})
+}
+
+func (server *LiveServer) forkAdvancedStrategy(writer http.ResponseWriter, request *http.Request) {
+	user, err := server.requireUser(writer, request)
+	if err != nil || user == nil {
+		return
+	}
+	var body struct {
+		AdvancedID string `json:"advancedId"`
+	}
+	if !decodeBody(writer, request, &body) {
+		return
+	}
+	artifact, err := server.forkableStrategyArtifact("advanced", body.AdvancedID)
+	if err != nil {
+		writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Advanced Strategy could not be forked.")
+		return
+	}
+	revision, err := server.insertAccountRevision(request.Context(), artifact.accountRevisionInsert(user.ID))
+	if err != nil {
+		writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Advanced Strategy could not be forked.")
+		return
+	}
+	writeJSONValue(writer, http.StatusCreated, map[string]any{
+		"apiVersion":         serviceAPIVersion,
+		"kind":               "strategyRevisionCreated",
+		"strategyId":         revision["strategyId"],
+		"strategyRevisionId": revision["strategyRevisionId"],
+		"validationStatus":   revision["validationStatus"],
+	})
+}
+
+func (server *LiveServer) forkableStrategyArtifact(kind string, artifactID string) (strategyArtifact, error) {
+	normalizedID := normalizeStrategyArtifactID(kind, artifactID)
+	artifact, ok := server.strategyArtifacts[normalizedID]
+	if !ok {
+		return strategyArtifact{}, errors.New("strategy artifact not found")
+	}
+	if artifact.Kind != kind || artifact.SourceVisibility != "built-in-forkable" || !boolValue(artifact.ForkEligibility, "forkable") {
+		return strategyArtifact{}, errors.New("strategy artifact is not forkable")
+	}
+	if !boolValue(artifact.Validation, "valid") || artifact.Source.Text == "" || artifact.Source.Hash == "" {
+		return strategyArtifact{}, errors.New("strategy artifact is not valid")
+	}
+	if artifact.Source.Bytes != len([]byte(artifact.Source.Text)) || intValue(artifact.Validation, "sourceBytes") != artifact.Source.Bytes {
+		return strategyArtifact{}, errors.New("strategy artifact source bytes drift")
+	}
+	if stringValue(artifact.Validation, "sourceHash") != artifact.Source.Hash || artifact.Source.Hash != hashString(artifact.Source.Text) {
+		return strategyArtifact{}, errors.New("strategy artifact source hash drift")
+	}
+	if !runtimeAllowsCountedPlay(artifact.Runtime) {
+		return strategyArtifact{}, errors.New("strategy artifact runtime is not counted-play eligible")
+	}
+	return artifact, nil
+}
+
+func (server *LiveServer) matchSubmittedArtifact(source string, artifactID string, kind string) (strategyArtifact, bool) {
+	if artifactID == "" {
+		return strategyArtifact{}, false
+	}
+	artifact, err := server.forkableStrategyArtifact(kind, artifactID)
+	if err != nil {
+		return strategyArtifact{}, false
+	}
+	if artifact.Source.Hash != hashString(source) {
+		return strategyArtifact{}, false
+	}
+	return artifact, true
+}
+
+func (artifact strategyArtifact) accountRevisionInsert(userID string) accountRevisionInsert {
+	input := accountRevisionInsert{
+		UserID:              userID,
+		Source:              artifact.Source.Text,
+		Label:               stringValue(artifact.PublicMetadata, "name"),
+		Notes:               stringValue(artifact.PublicMetadata, "description"),
+		StrategyName:        stringValue(artifact.PublicMetadata, "name"),
+		Metadata:            map[string]any{},
+		SourceHash:          artifact.Source.Hash,
+		SourceBytes:         artifact.Source.Bytes,
+		Runtime:             cloneMap(artifact.Runtime),
+		EngineCompatibility: cloneMap(artifact.EngineCompatibility),
+		Validation:          cloneMap(artifact.Validation),
+	}
+	if tags := stringSliceFromAny(artifact.PublicMetadata["tags"]); len(tags) > 0 {
+		input.Metadata["tags"] = tags
+	}
+	copyOptional(input.Metadata, artifact.Lineage, "starterLineage")
+	copyOptional(input.Metadata, artifact.Lineage, "advancedLineage")
+	return input
+}
+
+func (input *accountRevisionInsert) applyArtifact(artifact strategyArtifact) {
+	if input.Source == "" {
+		input.Source = artifact.Source.Text
+	}
+	if input.Label == "" {
+		input.Label = stringValue(artifact.PublicMetadata, "name")
+	}
+	if input.Notes == "" {
+		input.Notes = stringValue(artifact.PublicMetadata, "description")
+	}
+	if input.StrategyName == "" {
+		input.StrategyName = stringValue(artifact.PublicMetadata, "name")
+	}
+	if input.Metadata == nil {
+		input.Metadata = map[string]any{}
+	}
+	if tags := stringSliceFromAny(artifact.PublicMetadata["tags"]); len(tags) > 0 {
+		input.Metadata["tags"] = tags
+	}
+	copyOptional(input.Metadata, artifact.Lineage, "starterLineage")
+	copyOptional(input.Metadata, artifact.Lineage, "advancedLineage")
+	input.SourceHash = artifact.Source.Hash
+	input.SourceBytes = artifact.Source.Bytes
+	input.Runtime = cloneMap(artifact.Runtime)
+	input.EngineCompatibility = cloneMap(artifact.EngineCompatibility)
+	input.Validation = cloneMap(artifact.Validation)
 }
 
 func (server *LiveServer) createExhibition(writer http.ResponseWriter, request *http.Request) {
@@ -1032,18 +1234,41 @@ func (server *LiveServer) accountRevisionSummaries(ctx context.Context, userID s
 	return summaries, rows.Err()
 }
 
-func (server *LiveServer) insertAccountRevision(ctx context.Context, userID string, strategyID string, source string, label string, notes string, metadata map[string]any) (map[string]any, error) {
+func (server *LiveServer) insertAccountRevision(ctx context.Context, input accountRevisionInsert) (map[string]any, error) {
+	userID := input.UserID
+	strategyID := input.StrategyID
+	source := input.Source
+	label := input.Label
+	notes := input.Notes
 	if source == "" || utf8.RuneCountInString(source) == 0 || len([]byte(source)) > strategySourceBytes {
 		return nil, errors.New("invalid source")
 	}
 	sourceHash := hashString(source)
+	if input.SourceHash != "" {
+		sourceHash = input.SourceHash
+	}
+	sourceBytes := len([]byte(source))
+	if input.SourceBytes > 0 {
+		sourceBytes = input.SourceBytes
+	}
 	createStrategy := strategyID == ""
 	if createStrategy {
 		strategyID = "strategy:account:" + userID + ":" + randomID()
 	}
 	runtime := defaultRuntimeMetadata()
+	if input.Runtime != nil {
+		runtime = input.Runtime
+	}
 	validation := validateSourceMetadata(source)
+	if input.Validation != nil {
+		validation = input.Validation
+	}
+	engine := engineCompatibility()
+	if input.EngineCompatibility != nil {
+		engine = input.EngineCompatibility
+	}
 	revisionID := "strategy-revision:" + hashString(stableRevisionIdentity(sourceHash, strategyID))
+	metadata := cloneMap(input.Metadata)
 	if metadata == nil {
 		metadata = map[string]any{}
 	}
@@ -1064,6 +1289,12 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, userID stri
 	if label != "" {
 		strategyName = strings.TrimSpace(label)
 	}
+	if input.StrategyName != "" {
+		strategyName = strings.TrimSpace(input.StrategyName)
+	}
+	strategyMetadata := map[string]any{"accountOwned": true}
+	copyOptional(strategyMetadata, metadata, "starterLineage")
+	copyOptional(strategyMetadata, metadata, "advancedLineage")
 	if !createStrategy {
 		var ownedStrategyID string
 		err := tx.QueryRow(ctx, `
@@ -1077,16 +1308,17 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, userID stri
 		}
 		if _, err := tx.Exec(ctx, `
 			update strategies
-			set name = $3
+			set name = $3,
+			    metadata = metadata || $4::jsonb
 			where id = $1 and owner_user_id = $2
-		`, strategyID, userID, strategyName); err != nil {
+		`, strategyID, userID, strategyName, strategyMetadata); err != nil {
 			return nil, err
 		}
 	} else {
 		if _, err := tx.Exec(ctx, `
 			insert into strategies (id, owner_user_id, name, metadata)
-			values ($1, $2, $3, '{"accountOwned": true}'::jsonb)
-		`, strategyID, userID, strategyName); err != nil {
+			values ($1, $2, $3, $4)
+		`, strategyID, userID, strategyName, strategyMetadata); err != nil {
 			return nil, err
 		}
 	}
@@ -1097,7 +1329,7 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, userID stri
 		)
 		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		on conflict (id) do nothing
-	`, revisionID, strategyID, source, sourceHash, len([]byte(source)), runtime, engineCompatibility(), validation, metadata); err != nil {
+	`, revisionID, strategyID, source, sourceHash, sourceBytes, runtime, engine, validation, metadata); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -1742,6 +1974,73 @@ func jsonMap(raw []byte) map[string]any {
 	return value
 }
 
+func loadStrategyArtifactManifest(path string) (map[string]strategyArtifact, error) {
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var manifest strategyArtifactManifest
+	if err := json.Unmarshal(bytes, &manifest); err != nil {
+		return nil, err
+	}
+	if manifest.SchemaVersion != "strategy-artifact-manifest-v1.14" || manifest.ArtifactCount != len(manifest.Artifacts) {
+		return nil, errors.New("invalid strategy artifact manifest")
+	}
+	artifacts := map[string]strategyArtifact{}
+	for _, artifact := range manifest.Artifacts {
+		if artifact.ID == "" {
+			return nil, errors.New("strategy artifact missing id")
+		}
+		if _, exists := artifacts[artifact.ID]; exists {
+			return nil, errors.New("duplicate strategy artifact id")
+		}
+		artifacts[artifact.ID] = artifact
+	}
+	return artifacts, nil
+}
+
+func defaultStrategyArtifactManifestPath() string {
+	if path := strings.TrimSpace(os.Getenv("COWARDS_STRATEGY_ARTIFACT_MANIFEST")); path != "" {
+		return path
+	}
+	candidates := []string{
+		filepath.Join("..", "..", "packages", "spec", "artifacts", "strategy-artifacts.v1.14.json"),
+		filepath.Join("packages", "spec", "artifacts", "strategy-artifacts.v1.14.json"),
+	}
+	for _, candidate := range candidates {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	return candidates[0]
+}
+
+func normalizeStrategyArtifactID(kind string, value string) string {
+	id := strings.TrimSpace(value)
+	if strings.HasPrefix(id, "strategy-artifact:") {
+		return id
+	}
+	if strings.HasPrefix(id, kind+":") {
+		return "strategy-artifact:" + id
+	}
+	return "strategy-artifact:" + kind + ":" + id
+}
+
+func cloneMap(value map[string]any) map[string]any {
+	if value == nil {
+		return nil
+	}
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return nil
+	}
+	var cloned map[string]any
+	if err := json.Unmarshal(bytes, &cloned); err != nil {
+		return nil
+	}
+	return cloned
+}
+
 func jsonStringArray(raw []byte) []string {
 	var values []string
 	if err := json.Unmarshal(raw, &values); err != nil {
@@ -1772,6 +2071,11 @@ func copyOptional(target map[string]any, source map[string]any, key string) {
 
 func stringValue(value map[string]any, key string) string {
 	item, _ := value[key].(string)
+	return item
+}
+
+func boolValue(value map[string]any, key string) bool {
+	item, _ := value[key].(bool)
 	return item
 }
 

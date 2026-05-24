@@ -127,6 +127,39 @@ func TestStrategyArtifactManifestParsesAsDataOnly(t *testing.T) {
 	}
 }
 
+func TestLiveStrategyArtifactManifestSupportsForkLookups(t *testing.T) {
+	artifacts, err := loadStrategyArtifactManifest("../../packages/spec/artifacts/strategy-artifacts.v1.14.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := &LiveServer{strategyArtifacts: artifacts}
+
+	artifact, err := server.forkableStrategyArtifact("starter", "aggro-chaser")
+	if err != nil {
+		t.Fatal(err)
+	}
+	insert := artifact.accountRevisionInsert("user:manifest-test")
+	if insert.Source == "" || insert.SourceHash == "" || insert.SourceHash != hashString(insert.Source) {
+		t.Fatalf("fork insert did not preserve manifest source hash")
+	}
+	if insert.Runtime == nil || stringValue(insert.Runtime, "abiVersion") != "strategy-runtime-abi-v1.14" {
+		t.Fatalf("fork insert did not preserve runtime ABI metadata")
+	}
+	if insert.Validation == nil || !boolValue(insert.Validation, "valid") {
+		t.Fatalf("fork insert did not preserve validation status")
+	}
+	if _, ok := insert.Metadata["starterLineage"]; !ok {
+		t.Fatalf("fork insert missing starter lineage")
+	}
+	if _, ok := insert.Metadata["tags"]; !ok {
+		t.Fatalf("fork insert missing public tags")
+	}
+
+	if _, err := server.forkableStrategyArtifact("advanced", "aggro-chaser"); err == nil {
+		t.Fatalf("starter artifact was accepted as an advanced fork")
+	}
+}
+
 func TestPublicReadRoutesDecodeIdentifiersWithoutCrossRouteFallback(t *testing.T) {
 	tests := []struct {
 		name          string

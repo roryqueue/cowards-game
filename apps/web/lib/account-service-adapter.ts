@@ -44,7 +44,18 @@ export const isGoAccountRevisionsSelected = (
 
 export const isGoAccountForksSelected = (
   env: GoBackendOwnershipEnv = process.env,
-): boolean => env.COWARDS_GO_ACCOUNT_FORKS === "1"
+): boolean =>
+  env.COWARDS_GO_BACKEND_OWNER === "go" || env.COWARDS_GO_ACCOUNT_FORKS === "1"
+
+export const assertGoAccountForksCanReadBack = (
+  env: GoBackendOwnershipEnv = process.env,
+): void => {
+  if (isGoAccountForksSelected(env) && !isGoAccountRevisionsSelected(env)) {
+    throw new Error(
+      "account forks Go ownership requires Go-owned account revision reads",
+    )
+  }
+}
 
 export const isGoExhibitionsSelected = (
   env: GoBackendOwnershipEnv = process.env,
