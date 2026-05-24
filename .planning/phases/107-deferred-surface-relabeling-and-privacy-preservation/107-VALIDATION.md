@@ -148,3 +148,29 @@ privacyClass enum drift: ACCEPTED_DRIFT
 ```
 
 Implementation files are read-only for this validation pass, so the monitor validator was not changed. The post-`6f012b9` state is **PARTIAL**: the final artifact labels for DEF-01/DEF-02/DEF-06 are corrected, but DEF-06 monitor coverage does not yet prove those semantics are protected from future path-level or privacy-enum drift.
+
+## Post-Fix Validation Pass After `810a03e` - 2026-05-24
+
+**Scope:** Re-ran the outstanding DEF-06 monitor coverage gaps after `810a03e` (`fix(phase-107): enforce path-level surface label semantics`). Focus was adversarial drift in `validateV116FinalTypeScriptSurfaceLabels()` rather than the generator alone.
+
+### Commands Run
+
+```bash
+pnpm exec vitest run scripts/check-boundary-monitors.test.ts
+pnpm boundary:monitors
+```
+
+### Results
+
+- `scripts/check-boundary-monitors.test.ts`: **passed**, 11 tests passed.
+- `pnpm boundary:monitors`: **passed**, including `[surface_labels] v1.16 final TypeScript surface labels: 185 final TypeScript surface labels checked`.
+- `validateV116FinalTypeScriptSurfaceLabels()` now rejects:
+  - `packages/persistence/src/workshop.ts` drift from `deferred-workshop-runtime-support` / `Workshop` to `deferred-service-support` / `owner-debug`.
+  - `packages/persistence/src/ladder.ts` drift from `deferred-ladder-mutation` / `ladder` to `private-owner-debug-replay` / `owner-debug`.
+  - `packages/persistence/src/governance.ts` drift away from `deferred-governance-admin-mutation` / `governance-admin`.
+  - Invalid `privacyClass` enum values such as `public`.
+  - Invalid `publicOutputPrivacy` enum values such as `public`.
+
+### Final Validation Status
+
+**PASS.** The original artifact label bug and the follow-up monitor coverage bug are both closed. DEF-01, DEF-02, DEF-03, DEF-04, DEF-05, and DEF-06 are covered by generator tests, monitor tests, focused route/privacy tests, current artifacts, and boundary monitors. Phase 108 can rely on the Phase 107 surface-label lane as a strict drift monitor.
