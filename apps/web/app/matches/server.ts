@@ -1,16 +1,17 @@
 import { createDatabasePool } from "@cowards/persistence/db"
 import {
   createPostgresChronicleStore,
+  type ChronicleMetadata,
   type ChronicleStore,
 } from "@cowards/persistence/chronicle-store"
 import type { Queryable } from "@cowards/persistence/repositories"
-import { createCowardsLocalService } from "@cowards/service"
 import type {
   MatchId,
   PlayerId,
   PublicReplayEvidenceServiceDto,
   PublicReplayMetadataServiceDto,
 } from "@cowards/spec"
+import { SERVICE_API_VERSION } from "@cowards/spec"
 import type { GetMatchReplayOptions, ReplayPageData } from "./types.js"
 import {
   buildReadyReplayFromPublicEvidence,
@@ -52,6 +53,12 @@ export interface MatchReplayServerDeps {
   env?: PublicReadRouteOwnershipEnv | undefined
   publicReplayEvidenceClient?:
     | Pick<PublicGoReadClient, "getPublicReplayEvidence">
+    | undefined
+  publicReplayReadClient?:
+    | Pick<
+        PublicGoReadClient,
+        "getPublicReplayEvidence" | "getPublicReplayMetadata"
+      >
     | undefined
   fetchImpl?: typeof fetch | undefined
 }
@@ -110,30 +117,44 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
   const createStore = deps.createChronicleStore ?? createPostgresChronicleStore
   const resolveAuthorizedReplayOwners =
     deps.resolveAuthorizedReplayOwners ?? resolvePersistedMatchOwners
-  const cowardsService = createCowardsLocalService({
-    withPool: withPool as never,
-    createChronicleStore: ((pool: unknown) =>
-      createStore(pool as Queryable)) as never,
-  })
   const env = deps.env ?? process.env
   const publicReadOwnership = resolvePublicReadRouteOwnership(env)
   const selectedPublicReplayEvidence =
     publicReadOwnership.selectedRoutes.includes("getPublicReplayEvidence")
+  const selectedPublicReplayMetadata =
+    publicReadOwnership.selectedRoutes.includes("getPublicReplayMetadata")
+  const createdPublicReplayReadClient = env.COWARDS_GO_BACKEND_URL
+    ? createPublicGoReadClient({
+        baseUrl: env.COWARDS_GO_BACKEND_URL,
+        ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+      })
+    : null
+  const publicReplayMetadataClient =
+    deps.publicReplayReadClient ?? createdPublicReplayReadClient
   const publicReplayEvidenceClient =
+    deps.publicReplayReadClient ??
     deps.publicReplayEvidenceClient ??
-    (env.COWARDS_GO_BACKEND_URL
-      ? createPublicGoReadClient({
-          baseUrl: env.COWARDS_GO_BACKEND_URL,
-          ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
-        })
-      : null)
+    createdPublicReplayReadClient
 
   return {
     async getPublicReplayMetadata(
       matchId: MatchId,
     ): Promise<PublicReplayMetadataServiceDto | null> {
       const resolvedMatchId = decodeMatchId(matchId)
-      return cowardsService.getPublicReplayMetadata(resolvedMatchId)
+      if (selectedPublicReplayMetadata) {
+        if (!publicReplayMetadataClient) {
+          throw new Error(
+            "getPublicReplayMetadata Go ownership requires COWARDS_GO_BACKEND_URL",
+          )
+        }
+        return publicReplayMetadataClient.getPublicReplayMetadata(
+          resolvedMatchId,
+        )
+      }
+      return withPool(async (pool) => {
+        const stored = await createStore(pool).getByMatchId(resolvedMatchId)
+        return stored === null ? null : toPublicReplayMetadata(stored.metadata)
+      })
     },
 
     async getMatchReplay(
@@ -206,6 +227,25 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
     },
   }
 }
+
+const toPublicReplayMetadata = (
+  metadata: ChronicleMetadata,
+): PublicReplayMetadataServiceDto => ({
+  apiVersion: SERVICE_API_VERSION,
+  kind: "publicReplayMetadata",
+  matchId: metadata.matchId,
+  metadata: {
+    matchId: metadata.matchId,
+    chronicleId: metadata.id,
+    hash: metadata.hash,
+    schemaVersion: metadata.schemaVersion,
+    eventCount: metadata.eventCount,
+    snapshotCount: metadata.snapshotCount,
+    bottomPlayerId: metadata.bottomPlayerId,
+    topPlayerId: metadata.topPlayerId,
+    arenaVariantId: metadata.arenaVariantId,
+  },
+})
 
 const buildReadyReplayFromGoEvidence = (
   evidence: PublicReplayEvidenceServiceDto,

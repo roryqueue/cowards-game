@@ -1,20 +1,11 @@
-import { createDatabasePool } from "@cowards/persistence/db"
-import { getSession, type PublicUserAccount } from "@cowards/persistence/auth"
-import {
-  createCowardsLocalService,
-  type CowardsService,
-} from "@cowards/service"
-import { cookies } from "next/headers.js"
+import type { AuthSessionServiceDto } from "@cowards/spec"
 import {
   createPublicGoReadClient,
   isPublicGoReadError,
   type PublicGoReadClient,
   type PublicGoReadFailureDiagnostic,
 } from "./public-go-read-client.js"
-import { SESSION_COOKIE_NAME } from "./competitive-session.js"
-
-type PublicReadPool = ReturnType<typeof createDatabasePool>
-type WithPool = <T>(fn: (pool: PublicReadPool) => Promise<T>) => Promise<T>
+import { getAccountSession } from "./account-service-boundary.js"
 
 export type PublicReadBackendOwner = "typescript" | "go"
 export type PublicReadRouteId =
@@ -97,33 +88,25 @@ export const resolvePublicReadRouteOwnership = (
   }
 }
 
-const withDatabasePool: WithPool = async (fn) => {
-  const pool = createDatabasePool()
-  try {
-    return await fn(pool)
-  } finally {
-    await pool.end()
-  }
-}
+export type PublicReadUser = NonNullable<AuthSessionServiceDto["user"]>
 
-export type PublicReadUser = PublicUserAccount
+export interface PublicReadService {
+  getPublicMatchSetSummary: PublicGoReadClient["getPublicMatchSetSummary"]
+  getPublicReplayMetadata: PublicGoReadClient["getPublicReplayMetadata"]
+  getPublicStrategyPage: PublicGoReadClient["getPublicStrategyPage"]
+  getPublicPlayerPage: PublicGoReadClient["getPublicPlayerPage"]
+  getPublicLadderSeason: PublicGoReadClient["getPublicLadderSeason"]
+}
 
 export interface CreatePublicReadServiceOptions {
   env?: PublicReadRouteOwnershipEnv | undefined
-  typescriptService?: CowardsService | undefined
   goClient?: PublicGoReadClient | undefined
   fetchImpl?: typeof fetch | undefined
-  withPool?: WithPool | undefined
 }
 
 export const publicReadRouteOwnership = resolvePublicReadRouteOwnership(
   process.env,
 )
-
-const isRouteGoSelected = (
-  ownership: PublicReadRouteOwnership,
-  routeId: PublicReadRouteId,
-): boolean => ownership.selectedRoutes.includes(routeId)
 
 const requireGoClient = (
   routeId: PublicReadRouteId,
@@ -137,17 +120,9 @@ const requireGoClient = (
 
 export const createPublicReadService = ({
   env = process.env,
-  typescriptService,
   goClient,
   fetchImpl,
-  withPool = withDatabasePool,
-}: CreatePublicReadServiceOptions = {}): CowardsService => {
-  const routeOwnership = resolvePublicReadRouteOwnership(env)
-  const localService =
-    typescriptService ??
-    createCowardsLocalService({
-      withPool,
-    })
+}: CreatePublicReadServiceOptions = {}): PublicReadService => {
   const selectedGoClient =
     goClient ??
     (env.COWARDS_GO_BACKEND_URL
@@ -158,47 +133,31 @@ export const createPublicReadService = ({
       : null)
 
   return {
-    ...localService,
     async getPublicMatchSetSummary(matchSetId) {
-      if (!isRouteGoSelected(routeOwnership, "getPublicMatchSetSummary")) {
-        return localService.getPublicMatchSetSummary(matchSetId)
-      }
       return requireGoClient(
         "getPublicMatchSetSummary",
         selectedGoClient,
       ).getPublicMatchSetSummary(matchSetId)
     },
     async getPublicReplayMetadata(matchId) {
-      if (!isRouteGoSelected(routeOwnership, "getPublicReplayMetadata")) {
-        return localService.getPublicReplayMetadata(matchId)
-      }
       return requireGoClient(
         "getPublicReplayMetadata",
         selectedGoClient,
       ).getPublicReplayMetadata(matchId)
     },
     async getPublicStrategyPage(strategyId) {
-      if (!isRouteGoSelected(routeOwnership, "getPublicStrategyPage")) {
-        return localService.getPublicStrategyPage(strategyId)
-      }
       return requireGoClient(
         "getPublicStrategyPage",
         selectedGoClient,
       ).getPublicStrategyPage(strategyId)
     },
     async getPublicPlayerPage(handle) {
-      if (!isRouteGoSelected(routeOwnership, "getPublicPlayerPage")) {
-        return localService.getPublicPlayerPage(handle)
-      }
       return requireGoClient(
         "getPublicPlayerPage",
         selectedGoClient,
       ).getPublicPlayerPage(handle)
     },
     async getPublicLadderSeason(seasonId) {
-      if (!isRouteGoSelected(routeOwnership, "getPublicLadderSeason")) {
-        return localService.getPublicLadderSeason(seasonId)
-      }
       return requireGoClient(
         "getPublicLadderSeason",
         selectedGoClient,
@@ -215,10 +174,4 @@ export const publicGoReadFailureDiagnostic = (
   isPublicGoReadError(error) ? error.diagnostic : null
 
 export const getCurrentPublicReadUser =
-  async (): Promise<PublicReadUser | null> => {
-    const sessionId = (await cookies()).get(SESSION_COOKIE_NAME)?.value ?? ""
-    return (
-      (await withDatabasePool((pool) => getSession(pool, sessionId)))?.user ??
-      null
-    )
-  }
+  async (): Promise<PublicReadUser | null> => (await getAccountSession()).user
