@@ -3,7 +3,7 @@ import {
   createPostgresChronicleStore,
   type ChronicleMetadata,
   type ChronicleStore,
-} from "@cowards/persistence/chronicle-store"
+} from "@cowards/persistence/quarantine-lifecycle"
 import type { Queryable } from "@cowards/persistence/repositories"
 import type {
   MatchId,

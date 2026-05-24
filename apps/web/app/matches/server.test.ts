@@ -6,7 +6,7 @@ import {
 import {
   createChronicleMetadata,
   type StoredChronicle,
-} from "@cowards/persistence"
+} from "@cowards/persistence/quarantine-lifecycle"
 import { projectPublicChronicle } from "@cowards/replay"
 import { describe, expect, it, vi } from "vitest"
 import { isReplayFixtureMatch, replayFixtureMatchId } from "./replay-fixture.js"

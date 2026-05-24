@@ -4,7 +4,7 @@ import {
   projectOwnerChronicle,
   projectPublicChronicle,
 } from "@cowards/replay"
-import type { StoredChronicle } from "@cowards/persistence/chronicle-store"
+import type { StoredChronicle } from "@cowards/persistence/quarantine-lifecycle"
 import type {
   Chronicle,
   ChronicleEvent,

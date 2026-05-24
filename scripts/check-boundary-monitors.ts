@@ -263,11 +263,11 @@ export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/competitive/server.ts:36:@cowards/persistence:import { assertAdminUser, flagMatchSetResult, GovernanceInputError, markMatchSetGovernanceStatus, } from "@cowards/persistence/governance"',
   'apps/web/app/competitive/server.ts:42:@cowards/persistence:import { findAdvancedStrategy } from "@cowards/persistence/advanced-strategies"',
   'apps/web/app/competitive/server.ts:43:@cowards/persistence:import { findStarterStrategy } from "@cowards/persistence/starter-strategies"',
-  'apps/web/app/matches/replay-fixture.ts:6:@cowards/persistence:import { createChronicleMetadata } from "@cowards/persistence/chronicle-store"',
-  'apps/web/app/matches/replay-ready.ts:7:@cowards/persistence:import type { StoredChronicle } from "@cowards/persistence/chronicle-store"',
-  'apps/web/app/matches/server.test.ts:6:@cowards/persistence:import { createChronicleMetadata, type StoredChronicle, } from "@cowards/persistence"',
+  'apps/web/app/matches/replay-fixture.ts:6:@cowards/persistence:import { createChronicleMetadata } from "@cowards/persistence/quarantine-lifecycle"',
+  'apps/web/app/matches/replay-ready.ts:7:@cowards/persistence:import type { StoredChronicle } from "@cowards/persistence/quarantine-lifecycle"',
+  'apps/web/app/matches/server.test.ts:6:@cowards/persistence:import { createChronicleMetadata, type StoredChronicle, } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/server.ts:1:@cowards/persistence:import { createDatabasePool } from "@cowards/persistence/db"',
-  'apps/web/app/matches/server.ts:2:@cowards/persistence:import { createPostgresChronicleStore, type ChronicleMetadata, type ChronicleStore, } from "@cowards/persistence/chronicle-store"',
+  'apps/web/app/matches/server.ts:2:@cowards/persistence:import { createPostgresChronicleStore, type ChronicleMetadata, type ChronicleStore, } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/server.ts:7:@cowards/persistence:import type { Queryable } from "@cowards/persistence/repositories"',
   'apps/web/app/workshop/server.ts:1:@cowards/persistence:import { createDatabasePool } from "@cowards/persistence/db"',
   'apps/web/app/workshop/server.ts:2:@cowards/persistence:import { buildWorkshopRevision, createWorkshopTestMatchSet, getWorkshopRevisionSource, getWorkshopSnapshot, getWorkshopStaticSnapshot, getWorkshopTestSummary, insertWorkshopRevision, type WorkshopTestSummary, validateWorkshopSource, WORKSHOP_STRATEGY_ID, } from "@cowards/persistence/workshop"',
@@ -285,6 +285,22 @@ const forbiddenPublicArtifactStrings = [
   "tokens",
   "hostPath",
   "privateRuntimeInternals",
+] as const
+
+const forbiddenWorkerArtifactStrings = [
+  ...forbiddenPublicArtifactStrings,
+  "strategySource",
+  "strategy_source",
+  "Strategy source",
+  "StrategyMemory",
+  "SoldierMemory",
+  "objective_payload",
+  "rawAwarenessGrid",
+  "stack",
+  "session",
+  "token",
+  "dbDsn",
+  "DB DSN",
 ] as const
 
 const runtimeAdapterBridges: RuntimeAdapterBridge[] = [
@@ -1687,10 +1703,44 @@ const requiredV116WorkerRollbackStates = [
   "stopped_runtime_service",
 ] as const
 
+const assertArtifactPrivacyLeakSafe = (
+  value: unknown,
+  pathLabel = "$",
+): void => {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) =>
+      assertArtifactPrivacyLeakSafe(item, `${pathLabel}[${index}]`),
+    )
+    return
+  }
+  if (value === null || typeof value !== "object") {
+    if (typeof value === "string") {
+      for (const marker of forbiddenWorkerArtifactStrings) {
+        if (value.includes(marker)) {
+          throw new Error(
+            `artifact privacy marker ${marker} found at ${pathLabel}`,
+          )
+        }
+      }
+    }
+    return
+  }
+
+  for (const [key, nested] of Object.entries(value)) {
+    for (const marker of forbiddenWorkerArtifactStrings) {
+      if (key.includes(marker)) {
+        throw new Error(`artifact private field ${key} found at ${pathLabel}`)
+      }
+    }
+    assertArtifactPrivacyLeakSafe(nested, `${pathLabel}.${key}`)
+  }
+}
+
 export const validateV116TypeScriptWorkerQuarantineArtifact = (
   artifact: unknown,
 ): string => {
   const root = requireRecord(artifact, "v1.16 TypeScript worker quarantine")
+  assertArtifactPrivacyLeakSafe(root)
   if (root.schemaVersion !== "v1.16-typescript-worker-quarantine") {
     throw new Error("v1.16 TypeScript worker quarantine schema drifted")
   }
@@ -1766,6 +1816,10 @@ const checkTypeScriptWorkerQuarantineSource = (): string => {
     path.join(repoRoot, "packages/persistence/src/index.ts"),
     "utf8",
   )
+  const persistenceQuarantine = readFileSync(
+    path.join(repoRoot, "packages/persistence/src/quarantine-lifecycle.ts"),
+    "utf8",
+  )
   const persistencePackage = readJson<{ exports?: Record<string, string> }>(
     "packages/persistence/package.json",
   )
@@ -1775,6 +1829,14 @@ const checkTypeScriptWorkerQuarantineSource = (): string => {
   )
   const competitionSource = readFileSync(
     path.join(repoRoot, "packages/persistence/src/competition.ts"),
+    "utf8",
+  )
+  const replayPageSource = readFileSync(
+    path.join(repoRoot, "apps/web/app/matches/[matchId]/replay/page.tsx"),
+    "utf8",
+  )
+  const replayServerSource = readFileSync(
+    path.join(repoRoot, "apps/web/app/matches/server.ts"),
     "utf8",
   )
 
@@ -1804,6 +1866,7 @@ const checkTypeScriptWorkerQuarantineSource = (): string => {
   for (const symbol of [
     "jobs",
     "complete-match",
+    "chronicle-store",
     "matchset-status",
     "matchset-service",
     "competition",
@@ -1813,10 +1876,31 @@ const checkTypeScriptWorkerQuarantineSource = (): string => {
     }
   }
   if (
+    persistencePackage.exports?.["./chronicle-store"] !== undefined ||
     persistencePackage.exports?.["./quarantine-lifecycle"] !==
     "./src/quarantine-lifecycle.ts"
   ) {
-    throw new Error("persistence package missing quarantine-lifecycle export")
+    throw new Error("persistence package quarantine lifecycle export drifted")
+  }
+  if (
+    !persistenceQuarantine.includes("createPostgresChronicleStore") ||
+    !persistenceQuarantine.includes("createChronicleMetadata")
+  ) {
+    throw new Error("Chronicle persistence must be exported only via quarantine")
+  }
+  if (
+    !replayPageSource.includes('from "../../server.js"') ||
+    !replayServerSource.includes("@cowards/persistence/quarantine-lifecycle")
+  ) {
+    throw new Error(
+      "selected replay page import chain must expose quarantined Chronicle boundary",
+    )
+  }
+  if (
+    replayServerSource.includes("@cowards/persistence/chronicle-store") ||
+    replayServerSource.includes('from "@cowards/persistence"')
+  ) {
+    throw new Error("replay server bypasses Chronicle quarantine boundary")
   }
   if (
     !serviceSource.includes("COWARDS_LOCAL_SERVICE_ROLE") ||

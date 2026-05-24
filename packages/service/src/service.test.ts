@@ -8,7 +8,7 @@ import {
   type PublicStrategyCardDto,
   type PublicTrialLadderSeasonDto,
 } from "@cowards/spec"
-import type { StoredChronicle } from "@cowards/persistence/chronicle-store"
+import type { StoredChronicle } from "@cowards/persistence/quarantine-lifecycle"
 import { createWorkshopAnalyticsDemoSnapshot } from "@cowards/persistence/workshop-analytics"
 import {
   COWARDS_LOCAL_SERVICE_ROLE,

@@ -84,7 +84,7 @@ export const competitiveServer = { createDatabasePool, createCowardsService }
   writeSource(
     root,
     "apps/web/app/matches/server.ts",
-    `import { createPostgresChronicleStore } from "@cowards/persistence/chronicle-store"
+    `import { createPostgresChronicleStore } from "@cowards/persistence/quarantine-lifecycle"
 export const loadReplay = () => createPostgresChronicleStore
 `,
   )
@@ -164,7 +164,7 @@ export const executeMatch = () => executeStrategyRuntimeAbiV114
   writeSource(
     root,
     "packages/service/src/index.ts",
-    `import { createPostgresChronicleStore } from "@cowards/persistence/chronicle-store"
+    `import { createPostgresChronicleStore } from "@cowards/persistence/quarantine-lifecycle"
 export const createCowardsService = () => createPostgresChronicleStore
 `,
   )

@@ -3508,41 +3508,36 @@
         },
         {
           "line": 10,
-          "source": "./workshop-analytics.js",
-          "statementText": "export * from \"./workshop-analytics.js\""
-        },
-        {
-          "line": 11,
           "source": "./auth.js",
           "statementText": "export * from \"./auth.js\""
         },
         {
-          "line": 12,
+          "line": 11,
           "source": "./account-revisions.js",
           "statementText": "export * from \"./account-revisions.js\""
         },
         {
-          "line": 13,
+          "line": 12,
           "source": "./starter-strategies.js",
           "statementText": "export * from \"./starter-strategies.js\""
         },
         {
-          "line": 14,
+          "line": 13,
           "source": "./advanced-strategies.js",
           "statementText": "export * from \"./advanced-strategies.js\""
         },
         {
-          "line": 15,
+          "line": 14,
           "source": "./ladder.js",
           "statementText": "export * from \"./ladder.js\""
         },
         {
-          "line": 16,
+          "line": 15,
           "source": "./governance.js",
           "statementText": "export * from \"./governance.js\""
         },
         {
-          "line": 17,
+          "line": 16,
           "source": "./profiles.js",
           "statementText": "export * from \"./profiles.js\""
         },
@@ -3573,18 +3568,18 @@
         },
         {
           "line": 7,
-          "source": "./chronicle-store.js",
-          "statementText": "export * from \"./chronicle-store.js\""
-        },
-        {
-          "line": 8,
           "source": "./dev-smoke.js",
           "statementText": "export * from \"./dev-smoke.js\""
         },
         {
-          "line": 9,
+          "line": 8,
           "source": "./workshop.js",
           "statementText": "export * from \"./workshop.js\""
+        },
+        {
+          "line": 9,
+          "source": "./workshop-analytics.js",
+          "statementText": "export * from \"./workshop-analytics.js\""
         }
       ],
       "persistenceImports": [],
@@ -3594,7 +3589,6 @@
         "packages/persistence/src/account-revisions.ts",
         "packages/persistence/src/advanced-strategies.ts",
         "packages/persistence/src/auth.ts",
-        "packages/persistence/src/chronicle-store.ts",
         "packages/persistence/src/competition.ts",
         "packages/persistence/src/db.ts",
         "packages/persistence/src/dev-smoke.ts",
@@ -3617,7 +3611,7 @@
       "usesDatabase": false,
       "claimsJobs": false,
       "completesMatches": false,
-      "persistsChronicles": true,
+      "persistsChronicles": false,
       "refreshesScoring": false,
       "servesPublicEvidence": false,
       "executesStrategy": false,
@@ -3634,7 +3628,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/account-revisions.ts, packages/persistence/src/advanced-strategies.ts, packages/persistence/src/auth.ts, packages/persistence/src/chronicle-store.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/dev-smoke.ts, packages/persistence/src/governance.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/profiles.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop-analytics.ts, packages/persistence/src/workshop.ts"
+          "detail": "packages/persistence/src/account-revisions.ts, packages/persistence/src/advanced-strategies.ts, packages/persistence/src/auth.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/dev-smoke.ts, packages/persistence/src/governance.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/profiles.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop-analytics.ts, packages/persistence/src/workshop.ts"
         }
       ]
     },
@@ -4647,6 +4641,11 @@
           "statementText": "export {\n  claimNextMatchJob,\n  recordAttemptFailure,\n  type ClaimedMatchJob,\n} from \"./jobs.js\""
         },
         {
+          "line": 13,
+          "source": "./chronicle-store.js",
+          "statementText": "export {\n  createChronicleMetadata,\n  createMemoryChronicleStoreForTests,\n  createPostgresChronicleStore,\n  type ChronicleMetadata,\n  type ChronicleStore,\n  type StoredChronicle,\n} from \"./chronicle-store.js\""
+        },
+        {
           "line": 6,
           "source": "./complete-match.js",
           "statementText": "export { completeMatch } from \"./complete-match.js\""
@@ -4688,7 +4687,7 @@
       "usesDatabase": false,
       "claimsJobs": true,
       "completesMatches": true,
-      "persistsChronicles": false,
+      "persistsChronicles": true,
       "refreshesScoring": true,
       "servesPublicEvidence": false,
       "executesStrategy": false,
@@ -8136,13 +8135,13 @@
         },
         {
           "line": 2,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import { createPostgresChronicleStore } from \"@cowards/persistence/chronicle-store\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import { createPostgresChronicleStore } from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
           "line": 3,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import type {\n  ChronicleStore,\n  StoredChronicle,\n} from \"@cowards/persistence/chronicle-store\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import type {\n  ChronicleStore,\n  StoredChronicle,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
           "line": 7,
@@ -8183,13 +8182,13 @@
         },
         {
           "line": 2,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import { createPostgresChronicleStore } from \"@cowards/persistence/chronicle-store\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import { createPostgresChronicleStore } from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
           "line": 3,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import type {\n  ChronicleStore,\n  StoredChronicle,\n} from \"@cowards/persistence/chronicle-store\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import type {\n  ChronicleStore,\n  StoredChronicle,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
           "line": 7,
@@ -8230,7 +8229,7 @@
       "scannerFindings": [
         {
           "code": "persistence_import",
-          "detail": "@cowards/persistence/ladder, @cowards/persistence/profiles, @cowards/persistence/workshop-analytics, @cowards/persistence/workshop, @cowards/persistence/chronicle-store, @cowards/persistence/chronicle-store, @cowards/persistence/competition, @cowards/persistence/auth, @cowards/persistence/account-revisions"
+          "detail": "@cowards/persistence/ladder, @cowards/persistence/profiles, @cowards/persistence/workshop-analytics, @cowards/persistence/workshop, @cowards/persistence/quarantine-lifecycle, @cowards/persistence/quarantine-lifecycle, @cowards/persistence/competition, @cowards/persistence/auth, @cowards/persistence/account-revisions"
         }
       ]
     },
@@ -8262,8 +8261,8 @@
         },
         {
           "line": 11,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import type { StoredChronicle } from \"@cowards/persistence/chronicle-store\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import type { StoredChronicle } from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
           "line": 12,
@@ -8284,8 +8283,8 @@
       "persistenceImports": [
         {
           "line": 11,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import type { StoredChronicle } from \"@cowards/persistence/chronicle-store\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import type { StoredChronicle } from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
           "line": 12,
@@ -8318,7 +8317,7 @@
       "scannerFindings": [
         {
           "code": "persistence_import",
-          "detail": "@cowards/persistence/chronicle-store, @cowards/persistence/workshop-analytics"
+          "detail": "@cowards/persistence/quarantine-lifecycle, @cowards/persistence/workshop-analytics"
         },
         {
           "code": "local_backend_import_chain",
@@ -10038,8 +10037,8 @@
         },
         {
           "line": 6,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import { createChronicleMetadata } from \"@cowards/persistence/chronicle-store\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import { createChronicleMetadata } from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
           "line": 7,
@@ -10055,8 +10054,8 @@
       "persistenceImports": [
         {
           "line": 6,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import { createChronicleMetadata } from \"@cowards/persistence/chronicle-store\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import { createChronicleMetadata } from \"@cowards/persistence/quarantine-lifecycle\""
         }
       ],
       "serviceImports": [],
@@ -10067,7 +10066,7 @@
       "usesDatabase": true,
       "claimsJobs": false,
       "completesMatches": false,
-      "persistsChronicles": true,
+      "persistsChronicles": false,
       "refreshesScoring": false,
       "servesPublicEvidence": false,
       "executesStrategy": false,
@@ -10084,7 +10083,7 @@
       "scannerFindings": [
         {
           "code": "persistence_import",
-          "detail": "@cowards/persistence/chronicle-store"
+          "detail": "@cowards/persistence/quarantine-lifecycle"
         },
         {
           "code": "local_backend_import_chain",
@@ -10130,8 +10129,8 @@
         },
         {
           "line": 7,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import type { StoredChronicle } from \"@cowards/persistence/chronicle-store\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import type { StoredChronicle } from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
           "line": 8,
@@ -10142,8 +10141,8 @@
       "persistenceImports": [
         {
           "line": 7,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import type { StoredChronicle } from \"@cowards/persistence/chronicle-store\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import type { StoredChronicle } from \"@cowards/persistence/quarantine-lifecycle\""
         }
       ],
       "serviceImports": [],
@@ -10152,7 +10151,7 @@
       "usesDatabase": true,
       "claimsJobs": false,
       "completesMatches": false,
-      "persistsChronicles": true,
+      "persistsChronicles": false,
       "refreshesScoring": false,
       "servesPublicEvidence": false,
       "executesStrategy": false,
@@ -10169,7 +10168,7 @@
       "scannerFindings": [
         {
           "code": "persistence_import",
-          "detail": "@cowards/persistence/chronicle-store"
+          "detail": "@cowards/persistence/quarantine-lifecycle"
         }
       ]
     },
@@ -10221,15 +10220,15 @@
         },
         {
           "line": 6,
-          "source": "@cowards/persistence",
-          "statementText": "import {\n  createChronicleMetadata,\n  type StoredChronicle,\n} from \"@cowards/persistence\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import {\n  createChronicleMetadata,\n  type StoredChronicle,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         }
       ],
       "persistenceImports": [
         {
           "line": 6,
-          "source": "@cowards/persistence",
-          "statementText": "import {\n  createChronicleMetadata,\n  type StoredChronicle,\n} from \"@cowards/persistence\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import {\n  createChronicleMetadata,\n  type StoredChronicle,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         }
       ],
       "serviceImports": [],
@@ -10260,7 +10259,7 @@
       "scannerFindings": [
         {
           "code": "persistence_import",
-          "detail": "@cowards/persistence"
+          "detail": "@cowards/persistence/quarantine-lifecycle"
         },
         {
           "code": "local_backend_import_chain",
@@ -12675,8 +12674,8 @@
         },
         {
           "line": 2,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import {\n  createPostgresChronicleStore,\n  type ChronicleMetadata,\n  type ChronicleStore,\n} from \"@cowards/persistence/chronicle-store\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import {\n  createPostgresChronicleStore,\n  type ChronicleMetadata,\n  type ChronicleStore,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
           "line": 20,
@@ -12717,8 +12716,8 @@
         },
         {
           "line": 2,
-          "source": "@cowards/persistence/chronicle-store",
-          "statementText": "import {\n  createPostgresChronicleStore,\n  type ChronicleMetadata,\n  type ChronicleStore,\n} from \"@cowards/persistence/chronicle-store\""
+          "source": "@cowards/persistence/quarantine-lifecycle",
+          "statementText": "import {\n  createPostgresChronicleStore,\n  type ChronicleMetadata,\n  type ChronicleStore,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
           "line": 7,
@@ -12753,7 +12752,7 @@
       "scannerFindings": [
         {
           "code": "persistence_import",
-          "detail": "@cowards/persistence/db, @cowards/persistence/chronicle-store, @cowards/persistence/repositories"
+          "detail": "@cowards/persistence/db, @cowards/persistence/quarantine-lifecycle, @cowards/persistence/repositories"
         },
         {
           "code": "local_backend_import_chain",

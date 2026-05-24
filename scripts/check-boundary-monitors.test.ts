@@ -264,6 +264,15 @@ describe("boundary drift monitors", () => {
     ).toThrow(/private field/)
   })
 
+  it("fails worker quarantine artifacts that contain private markers", () => {
+    expect(() =>
+      validateV116TypeScriptWorkerQuarantineArtifact({
+        ...createV116WorkerQuarantineArtifact(),
+        diagnosticExample: { token: "secret", strategyMemory: {} },
+      }),
+    ).toThrow(/artifact private field/)
+  })
+
   it("detects runtime registry and adapter metadata drift", () => {
     expect(
       checkRuntimeAdapterBridge({

@@ -3,7 +3,7 @@ import {
   getCanonicalReplayScenarioIds,
   type CanonicalReplayScenarioId,
 } from "@cowards/test-utils"
-import { createChronicleMetadata } from "@cowards/persistence/chronicle-store"
+import { createChronicleMetadata } from "@cowards/persistence/quarantine-lifecycle"
 import type { Chronicle, MatchId } from "@cowards/spec"
 import type {
   GetMatchReplayOptions,

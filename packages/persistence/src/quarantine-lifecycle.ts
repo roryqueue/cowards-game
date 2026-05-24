@@ -10,6 +10,14 @@ export {
   createManualExhibitionMatchSet,
   buildPublicMatchSetResultDto,
 } from "./competition.js"
+export {
+  createChronicleMetadata,
+  createMemoryChronicleStoreForTests,
+  createPostgresChronicleStore,
+  type ChronicleMetadata,
+  type ChronicleStore,
+  type StoredChronicle,
+} from "./chronicle-store.js"
 
 export const TYPE_SCRIPT_LIFECYCLE_QUARANTINE = {
   normalBackend: false,
@@ -24,6 +32,8 @@ export const TYPE_SCRIPT_LIFECYCLE_QUARANTINE = {
     "createMatchSetService",
     "createManualExhibitionMatchSet",
     "buildPublicMatchSetResultDto",
+    "createPostgresChronicleStore",
+    "createChronicleMetadata",
   ],
   importBoundary: "@cowards/persistence/quarantine-lifecycle",
   note: "TypeScript lifecycle persistence is rollback/test/parity support only; Go owns normal Match jobs, completion, Chronicle handoff, MatchSet scoring, exhibition creation, and selected public evidence.",

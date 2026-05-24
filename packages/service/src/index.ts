@@ -1,9 +1,9 @@
 import type { Pool } from "pg"
-import { createPostgresChronicleStore } from "@cowards/persistence/chronicle-store"
+import { createPostgresChronicleStore } from "@cowards/persistence/quarantine-lifecycle"
 import type {
   ChronicleStore,
   StoredChronicle,
-} from "@cowards/persistence/chronicle-store"
+} from "@cowards/persistence/quarantine-lifecycle"
 import { buildPublicMatchSetResultDto } from "@cowards/persistence/competition"
 import { getSession } from "@cowards/persistence/auth"
 import { listAccountStrategyRevisions } from "@cowards/persistence/account-revisions"
