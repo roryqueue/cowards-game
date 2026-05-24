@@ -41,7 +41,7 @@ TypeScript service/backend paths may remain only as parity oracle, test fixture 
 ## Phases
 
 - [ ] **Phase 103: TypeScript Backend Inventory and Retirement Contract** - Developers can inspect a complete v1.16 ownership inventory, allowed TypeScript roles, non-goals, and retirement contract before deletion or quarantine work begins.
-- [ ] **Phase 104: Isolated Runtime Service Boundary Hardening** - Developers can verify JS/TS Strategy execution remains supported only through the isolated runtime service and runtime ABI, with no DB/job/API ownership.
+- [ ] **Phase 104: Isolated Runtime Service Boundary Hardening** - Developers can verify JS/TS Strategy execution remains supported only through a broker-ready isolated runtime service contract and runtime ABI, with no DB/job/API ownership.
 - [ ] **Phase 105: Web/API Go-Only Cutover and Fallback Removal** - Users can use selected normal web/account/exhibition/public evidence flows through Go-owned contracts without TypeScript backend fallback.
 - [ ] **Phase 106: TypeScript Worker and Persistence Quarantine** - Developers can verify TypeScript worker and persistence lifecycle modules are rollback/parity/test only and unreachable as normal backend paths.
 - [ ] **Phase 107: Deferred Surface Relabeling and Privacy Preservation** - Developers can inspect remaining Workshop, ladder, governance, owner-debug, test-support, and parity surfaces as explicitly deferred or non-normal, with privacy guards intact.
@@ -66,16 +66,17 @@ TypeScript service/backend paths may remain only as parity oracle, test fixture 
 
 ### Phase 104: Isolated Runtime Service Boundary Hardening
 
-**Goal:** Developers can verify the runtime service is a narrow hostile-code execution service invoked by Go through the public runtime ABI and not a backend.
+**Goal:** Developers can verify the runtime service is a narrow hostile-code execution service invoked by Go through a broker-ready public runtime ABI contract and not a backend.
 **Depends on:** Phase 103
 **Requirements:** RT-01, RT-02, RT-03, RT-04, RT-05, RT-06, RT-07
 
 **Success Criteria:**
-1. Developer can inspect runtime service transport, ABI, limits, timeout, package, diagnostics, crash, log, privacy, and no-fallback contracts.
+1. Developer can inspect runtime service transport, ABI, limits, timeout, package, diagnostics, crash, log, privacy, and no-fallback contracts as language-neutral broker-ready boundaries.
 2. Developer can verify `apps/runtime-service` and runtime-js execute JS/TS Strategies only through the ABI boundary and perform no DB/job/public API ownership.
 3. Developer can verify Go and web/API do not execute Strategy source or use Node `vm`.
 4. Developer can run runtime boundary tests for malformed input, ABI drift, timeout, invalid output, oversized payload, source mismatch, and redacted diagnostics.
 5. Developer can verify non-JS and production sandbox candidates remain unpromoted unless explicitly planned later.
+6. Developer can verify a future runtime broker could front or replace the current TypeScript runtime service without changing Go orchestration, persistence, scoring, or public evidence ownership.
 
 **Plans:** 1 plan
 

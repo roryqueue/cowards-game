@@ -19,12 +19,12 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 **Target features:**
 - Inventory every remaining TypeScript web/API/service/worker/persistence/runtime surface and classify it as frontend, runtime-only, parity-only, rollback-only, test-only, fixture-only, deferred, or retired.
-- Define the final JS/TS runtime service boundary, including runtime ABI use, source package policy, limits, timeouts, diagnostics, logs, crash semantics, replay privacy, and no-fallback behavior.
+- Define the final JS/TS runtime service boundary as broker-ready and language-neutral, including runtime ABI use, source package policy, limits, timeouts, diagnostics, logs, crash semantics, replay privacy, and no-fallback behavior.
 - Move or lock selected normal web/API workflows to Go-owned contracts and remove silent TypeScript backend fallback for account/session, fork, exhibition, public read, and public replay evidence flows.
 - Quarantine or relabel TypeScript worker, job lifecycle, Match completion, Chronicle persistence, MatchSet scoring, MatchSet creation, and `@cowards/service` paths as parity, rollback, test, fixture, or deferred only.
 - Add a no-TypeScript-backend topology mode plus monitor gates proving web frontend -> Go backend -> isolated JS/TS runtime service, with representative page-load smoke and public-output privacy checks.
 
-**Key tradeoff:** JS/TS Strategy support remains in scope only through the isolated runtime service boundary. The runtime service may produce ABI execution results for Go, but it must not own normal backend routes, job claiming, persistence, Chronicle storage, MatchSet scoring, public evidence delivery, or fallback behavior.
+**Key tradeoff:** JS/TS Strategy support remains in scope only through the isolated runtime service boundary. The runtime service may produce ABI execution results for Go, but it must not own normal backend routes, job claiming, persistence, Chronicle storage, MatchSet scoring, public evidence delivery, or fallback behavior. The v1.16 contract should be shaped so a language-neutral runtime broker can front or replace the current TypeScript runtime service without changing normal Go orchestration semantics.
 
 ## Latest Shipped Milestone: v1.15 Go Backend Ownership Completion
 
@@ -411,7 +411,7 @@ Planning archives live under `.planning/milestones/`:
 | Keep Strategy execution out of Go while Go consumes artifacts as data | v1.14 proved Go can own Starter/Advanced forks through generated manifests without becoming a hostile-code execution boundary. | ✓ Good |
 | Make Go the normal backend owner without moving hostile Strategy execution | v1.15 proved Go can own orchestration, Match completion, Chronicle persistence handoff, scoring, and public evidence while invoking TypeScript only through the runtime service ABI. | ✓ Implemented in v1.15 |
 | Require representative page smoke before milestone closure | The v1.15 close loop found a public player page hard error after backend promotion; topology now smokes major page shapes before milestone completion. | ✓ Good |
-| Retire TypeScript backend, not JS/TS Strategy support | v1.16 should remove or quarantine TypeScript service/backend ownership while preserving the isolated JS/TS runtime service as hostile-code execution infrastructure invoked by Go through the ABI. | — Pending v1.16 |
+| Retire TypeScript backend, not JS/TS Strategy support | v1.16 should remove or quarantine TypeScript service/backend ownership while preserving the isolated JS/TS runtime service as hostile-code execution infrastructure invoked by Go through a broker-ready, language-neutral ABI contract. | — Pending v1.16 |
 
 ## Constraints
 

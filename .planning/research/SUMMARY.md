@@ -17,6 +17,7 @@ The remaining risk is not that TypeScript still exists. It is that TypeScript st
 - Keep the existing stack: Next.js frontend, Go backend, PostgreSQL, TypeScript spec/contracts, TypeScript runtime service, runtime-js adapters, and current topology/monitor scripts.
 - Do not add a new runtime language host, broker, queue, sandbox replacement, cloud deployment layer, or service mesh.
 - Keep `apps/runtime-service` as the JS/TS Strategy execution boundary, provided it stays DB-free and owns no normal job lifecycle, persistence, scoring, public API, or fallback behavior.
+- Shape the runtime execution contract as if a language-neutral runtime broker will front or replace the current TypeScript runtime service soon; broker implementation remains out of v1.16 scope.
 - Treat `@cowards/service`, TypeScript persistence lifecycle code, and `apps/worker` as parity, rollback, test, fixture, or deferred surfaces after explicit relabeling.
 - Extend monitors and topology from v1.15 so page smoke and no-TypeScript-backend operation are closure gates, not optional evidence.
 

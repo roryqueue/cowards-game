@@ -54,7 +54,7 @@ v1.16 goal:
 
 - Finish TypeScript backend retirement by making TypeScript's remaining role explicit and narrow: frontend plus an isolated JS/TS Strategy runtime service only.
 - Treat v1.15 Go ownership behavior as the backend baseline for normal orchestration, persistence-facing API behavior, Match lifecycle, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence.
-- Preserve JS/TS Strategy execution support only through the isolated runtime service and public runtime ABI; do not execute Strategy code in web/API or Go processes.
+- Preserve JS/TS Strategy execution support only through the isolated runtime service and broker-ready public runtime ABI; do not execute Strategy code in web/API or Go processes.
 - Delete, quarantine, or explicitly relabel remaining TypeScript service/backend paths, Next.js API backend routes, direct persistence imports, `@cowards/service` fallbacks, worker/job lifecycle paths, and backend ownership switches that are no longer normal after v1.15.
 - Add no-TypeScript-backend topology and monitor gates proving the normal product topology is web frontend -> Go backend -> isolated JS/TS Strategy runtime service, with no silent fallback to retired TypeScript backend paths.
 - Preserve schema validation, deterministic engine boundaries, immutable Strategy Revision/Match eligibility, replay/public-output privacy, owner-source privacy, hostile-code isolation, rollback clarity, and representative page-load smoke.
@@ -98,7 +98,7 @@ v1.16 goal:
 ## Blockers/Concerns
 
 - The installed `gsd-sdk query ...` interface is not available locally; continue using legacy GSD tools or direct planning-file inspection when workflows reference unavailable commands.
-- The TypeScript runtime service can remain the JS/TS Strategy execution boundary, but it must not become a normal backend, claim jobs, write persistence, score MatchSets, serve public evidence, or provide fallback behavior.
+- The TypeScript runtime service can remain the JS/TS Strategy execution boundary, but the v1.16 contract should be broker-ready and it must not become a normal backend, claim jobs, write persistence, score MatchSets, serve public evidence, or provide fallback behavior.
 - Go and TypeScript DB-owning workers must not claim or complete the same normal queue concurrently during rollback.
 - `pnpm boundary:monitors` must stay synchronized with Go route manifests, fixtures, runtime contracts, topology artifacts, and surface labels.
 
