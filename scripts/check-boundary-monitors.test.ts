@@ -759,6 +759,8 @@ describe("boundary drift monitors", () => {
   })
 
   it("passes the live repository monitor checks", async () => {
+    const previousLiveTopology = process.env.COWARDS_REQUIRE_LIVE_TOPOLOGY
+    process.env.COWARDS_REQUIRE_LIVE_TOPOLOGY = "1"
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input)
       if (url.includes("127.0.0.1:3107/health")) {
@@ -838,13 +840,20 @@ describe("boundary drift monitors", () => {
         )
       }
       if (url.includes("/strategies/strategy%3Ago-parity%3Asentinel")) {
-        return new Response("<h1>Go Parity Sentinel</h1>", { status: 200 })
+        return new Response(
+          "<h1>Public Strategy card</h1><p>Go Parity Sentinel</p>",
+          { status: 200 },
+        )
       }
       if (url.startsWith("http://localhost:3000/")) {
         return new Response(
           [
+            "Strategy Workshop",
             "Competitive account",
             "Competitive Alpha",
+            "Sign in",
+            "Create account",
+            "Evidence Explorer",
             "Player profile",
             "Local Player",
             "Public Strategy card",
@@ -861,20 +870,34 @@ describe("boundary drift monitors", () => {
       throw new Error(`unexpected fetch ${url}`)
     })
 
-    const checks = await runBoundaryMonitorChecks()
-    expect(checks.every((check) => check.ok)).toBe(true)
-    expect(checks.map((check) => check.layer)).toEqual(
-      expect.arrayContaining([
-        "contract_drift",
-        "privacy",
-        "web_boundary",
-        "runtime_adapter",
-        "runtime_isolation",
-        "non_js_runtime",
-        "go_parity",
-        "topology",
-        "surface_labels",
-      ]),
-    )
+    try {
+      const checks = await runBoundaryMonitorChecks()
+      expect(checks.every((check) => check.ok)).toBe(true)
+      expect(checks.map((check) => check.layer)).toEqual(
+        expect.arrayContaining([
+          "contract_drift",
+          "privacy",
+          "web_boundary",
+          "runtime_adapter",
+          "runtime_isolation",
+          "non_js_runtime",
+          "go_parity",
+          "topology",
+          "surface_labels",
+        ]),
+      )
+      const topology = checks.find(
+        (check) => check.name === "live v1.15 topology diagnostics",
+      )
+      expect(topology?.detail).toContain(
+        "required live v1.16 no-TypeScript-backend topology diagnostics checked",
+      )
+    } finally {
+      if (previousLiveTopology === undefined) {
+        delete process.env.COWARDS_REQUIRE_LIVE_TOPOLOGY
+      } else {
+        process.env.COWARDS_REQUIRE_LIVE_TOPOLOGY = previousLiveTopology
+      }
+    }
   }, 30_000)
 })
