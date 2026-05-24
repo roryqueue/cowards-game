@@ -294,6 +294,8 @@ const v115GoOrchestrationEvidencePath =
   ".planning/artifacts/v1.15-go-orchestration-e2e.json"
 const v116NoTypeScriptBackendTopologyArtifactPath =
   ".planning/artifacts/v1.16-no-typescript-backend-topology.json"
+const v116NoTypeScriptBackendTopologyMarkdownPath =
+  ".planning/artifacts/v1.16-no-typescript-backend-topology.md"
 const v116RuntimeServiceBoundaryArtifactPath =
   ".planning/artifacts/v1.16-runtime-service-boundary.json"
 const v116TypeScriptWorkerQuarantineArtifactPath =
@@ -860,6 +862,7 @@ const validateV115FailureDrillsArtifact = (): string => {
 
 export const validateV116NoTypeScriptBackendTopologyArtifact = (
   artifactOverride?: unknown,
+  markdownOverride?: string,
 ): string => {
   const artifact = asRecord(
     artifactOverride ??
@@ -936,6 +939,35 @@ export const validateV116NoTypeScriptBackendTopologyArtifact = (
     ],
     "v1.16 strict topology requirements",
   )
+  const monitorMode = asRecord(artifact.monitorMode, "monitorMode")
+  const monitorCommand = requireString(monitorMode, "command", "monitorMode")
+  if (
+    monitorCommand !== "COWARDS_REQUIRE_LIVE_TOPOLOGY=1 pnpm boundary:monitors"
+  ) {
+    throw new Error("v1.16 live monitor command drifted")
+  }
+  if (
+    requireString(monitorMode, "requiredLiveTopology", "monitorMode") !==
+    "v1.16_no_typescript_backend"
+  ) {
+    throw new Error("v1.16 live monitor topology requirement drifted")
+  }
+  const pageSmoke = asRecord(artifact.pageSmoke, "pageSmoke")
+  for (const field of [
+    "representativeMajorPageTypesRequired",
+    "selectedGoPagesRequired",
+    "replayRealismRequired",
+  ]) {
+    if (!requireBoolean(pageSmoke, field, "pageSmoke")) {
+      throw new Error(`v1.16 page smoke ${field} must stay required`)
+    }
+  }
+  if (
+    requireString(pageSmoke, "workshopTreatment", "pageSmoke") !==
+    "load-only-deferred-not-go-owned"
+  ) {
+    throw new Error("v1.16 Workshop page smoke treatment drifted")
+  }
   const failureDrills = asRecord(artifact.failureDrills, "failureDrills")
   const stoppedGo = asRecord(failureDrills.stoppedGo, "failureDrills.stoppedGo")
   if (
@@ -1012,6 +1044,24 @@ export const validateV116NoTypeScriptBackendTopologyArtifact = (
     const linkedPath = requireString(linked, "path", "linkedArtifact")
     if (!existsSync(path.join(repoRoot, linkedPath))) {
       throw new Error(`v1.16 linked artifact missing ${linkedPath}`)
+    }
+  }
+  const markdown =
+    markdownOverride ??
+    readFileSync(
+      path.join(repoRoot, v116NoTypeScriptBackendTopologyMarkdownPath),
+      "utf8",
+    )
+  checkPublicText(markdown)
+  for (const requiredText of [
+    "web frontend -> Go backend -> isolated JS/TS Strategy runtime service",
+    "--require-v1-16-no-typescript-backend",
+    "COWARDS_REQUIRE_LIVE_TOPOLOGY=1 pnpm boundary:monitors",
+    "Stopped Go must fail closed",
+    "Stopped runtime service must classify",
+  ]) {
+    if (!markdown.includes(requiredText)) {
+      throw new Error(`v1.16 topology markdown missing ${requiredText}`)
     }
   }
   checkPublicPayload(artifact)
@@ -1542,12 +1592,35 @@ export const evaluateLocalTopology = async (
         "web service health route",
         options.requireWeb,
         async () => {
-          const health = await fetchJson(
-            new URL(
-              "/api/service/health",
-              options.webUrl ?? "http://localhost:3000",
+          const health = asRecord(
+            await fetchJson(
+              new URL(
+                "/api/service/health",
+                options.webUrl ?? "http://localhost:3000",
+              ),
             ),
+            "web health",
           )
+          if (options.requireV116NoTypeScriptBackend) {
+            const service = requireString(health, "service", "web health")
+            const backendAuthority =
+              typeof health.backendAuthority === "string"
+                ? health.backendAuthority
+                : ""
+            if (
+              service === "cowards-web" ||
+              backendAuthority === "frontend-only"
+            ) {
+              throw new Error(
+                "v1.16 strict topology requires the web process to proxy Go health with COWARDS_NO_TYPESCRIPT_BACKEND=1 or COWARDS_GO_BACKEND_OWNER=go",
+              )
+            }
+            if (service !== "cowards-service") {
+              throw new Error(
+                `v1.16 strict topology expected Go-backed web health service cowards-service, got ${service}`,
+              )
+            }
+          }
           checkPublicPayload(health)
           return `web health ok at ${sanitizeDiagnosticUrl(options.webUrl ?? "http://localhost:3000")}`
         },

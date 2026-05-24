@@ -14,6 +14,7 @@ import {
 } from "./check-service-boundary-imports.ts"
 import {
   evaluateLocalTopology,
+  parseTopologyOptions,
   validateV116NoTypeScriptBackendTopologyArtifact,
 } from "./check-local-topology.ts"
 
@@ -2578,18 +2579,16 @@ const checkWebBoundary = (): string => {
 
 const checkTopologyDiagnostics = async (): Promise<string> => {
   const requireLiveTopology = process.env.COWARDS_REQUIRE_LIVE_TOPOLOGY === "1"
+  const strictOptions = requireLiveTopology
+    ? parseTopologyOptions(["--require-v1-16-no-typescript-backend"])
+    : parseTopologyOptions([])
   const checks = await evaluateLocalTopology({
-    webUrl: process.env.COWARDS_WEB_URL ?? null,
-    goUrl: process.env.COWARDS_GO_BACKEND_URL ?? null,
-    runtimeServiceUrl: process.env.COWARDS_RUNTIME_SERVICE_URL ?? null,
-    requireWeb: requireLiveTopology,
-    requireGo: requireLiveTopology,
-    requireWebGoPublicStrategyRead: requireLiveTopology,
-    requireRuntimeService: requireLiveTopology,
-    requireRuntimeContainer: false,
-    requireV115Lifecycle: requireLiveTopology,
-    requireV116SelectedGoPages: requireLiveTopology,
-    requireV116NoTypeScriptBackend: requireLiveTopology,
+    ...strictOptions,
+    webUrl: process.env.COWARDS_WEB_URL ?? strictOptions.webUrl,
+    goUrl: process.env.COWARDS_GO_BACKEND_URL ?? strictOptions.goUrl,
+    runtimeServiceUrl:
+      process.env.COWARDS_RUNTIME_SERVICE_URL ??
+      strictOptions.runtimeServiceUrl,
     json: false,
   })
   assertMonitorPublicPayload(checks)

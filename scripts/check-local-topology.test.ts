@@ -158,6 +158,42 @@ describe("local topology harness", () => {
     )
   }, 30_000)
 
+  it("fails v1.16 strict topology when web health is frontend-only instead of Go-backed", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes("/api/service/health")) {
+        return Response.json({
+          ok: true,
+          service: "cowards-web",
+          backendAuthority: "frontend-only",
+        })
+      }
+      return Response.json({ ok: true, service: "cowards-service" })
+    })
+
+    const checks = await evaluateLocalTopology({
+      webUrl: "http://localhost:3000",
+      goUrl: null,
+      runtimeServiceUrl: null,
+      requireWeb: true,
+      requireWebPageSmoke: false,
+      requireGo: false,
+      requireWebGoPublicStrategyRead: false,
+      requireRuntimeService: false,
+      requireRuntimeContainer: false,
+      requireV115Lifecycle: false,
+      requireV116NoTypeScriptBackend: true,
+      requireV116SelectedGoPages: false,
+      json: false,
+    })
+    const webHealth = checks.find(
+      (check) => check.name === "web service health route",
+    )
+
+    expect(webHealth).toMatchObject({ ok: false, required: true })
+    expect(webHealth?.detail).toContain("COWARDS_NO_TYPESCRIPT_BACKEND")
+  }, 30_000)
+
   it("can require web-through-Go public Strategy read evidence", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input)

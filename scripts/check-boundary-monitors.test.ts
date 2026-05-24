@@ -517,6 +517,30 @@ describe("boundary drift monitors", () => {
         },
       }),
     ).toThrow(/stopped-Go/)
+    expect(() =>
+      validateV116NoTypeScriptBackendTopologyArtifact({
+        ...artifact,
+        monitorMode: {
+          ...(artifact.monitorMode as Record<string, unknown>),
+          requiredLiveTopology: "v1.15_lifecycle",
+        },
+      }),
+    ).toThrow(/live monitor topology/)
+    expect(() =>
+      validateV116NoTypeScriptBackendTopologyArtifact({
+        ...artifact,
+        pageSmoke: {
+          ...(artifact.pageSmoke as Record<string, unknown>),
+          representativeMajorPageTypesRequired: false,
+        },
+      }),
+    ).toThrow(/representativeMajorPageTypesRequired/)
+    expect(() =>
+      validateV116NoTypeScriptBackendTopologyArtifact(
+        artifact,
+        "token DATABASE_URL Strategy source",
+      ),
+    ).toThrow(/private marker|private field/)
   })
 
   it("validates the final v1.16 TypeScript surface labels contract", () => {
