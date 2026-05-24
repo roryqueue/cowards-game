@@ -285,6 +285,21 @@ describe("boundary drift monitors", () => {
         )
       }
       if (
+        url.includes("127.0.0.1:8087/public/players/") ||
+        url.includes("127.0.0.1:8087/public/ladders/")
+      ) {
+        const fixture = url.includes("/public/players/")
+          ? "public-player-page.json"
+          : "public-ladder-page.json"
+        return new Response(
+          readFileSync(
+            `apps/go-backend/testdata/service-fixtures/${fixture}`,
+            "utf8",
+          ),
+          { status: 200 },
+        )
+      }
+      if (
         url.includes("127.0.0.1:8087/public/replays/") &&
         url.endsWith("/evidence")
       ) {

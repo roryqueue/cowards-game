@@ -415,6 +415,8 @@ const checkPublicServiceExamples = (): string => {
 const checkGoFixtures = (): string => {
   for (const file of [
     "health.json",
+    "public-player-page.json",
+    "public-ladder-page.json",
     "public-match-set-summary.json",
     "degraded-match-set-summary.json",
     "public-replay-metadata.json",
@@ -440,6 +442,8 @@ const checkGoRouteManifest = (): string => {
   )
   const expectedRouteIds = new Set([
     "health",
+    "getPublicPlayerPage",
+    "getPublicLadderSeason",
     "getPublicMatchSetSummary",
     "getPublicReplayMetadata",
     "getPublicReplayEvidence",
