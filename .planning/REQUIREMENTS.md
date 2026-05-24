@@ -38,13 +38,13 @@
 
 ### TypeScript Worker And Persistence Quarantine
 
-- [ ] **QUAR-01**: Developer can verify `apps/worker` is no longer a normal backend worker entrypoint and can run only as explicit rollback, parity, or test infrastructure.
-- [ ] **QUAR-02**: Developer can verify TypeScript job claim, lease, retry, failure, Match completion, Chronicle persistence, and MatchSet scoring modules are no longer exported or reachable as normal runtime backend paths.
-- [ ] **QUAR-03**: Developer can verify TypeScript MatchSet creation services for selected normal exhibition flows are deleted, quarantined, or relabeled as rollback/deferred/test-only.
-- [ ] **QUAR-04**: Developer can verify TypeScript public DTO reads no longer lazily refresh Go-owned MatchSet scoring/status in selected normal public evidence paths.
-- [ ] **QUAR-05**: Developer can verify `@cowards/service` is treated as parity oracle, fixture generator, rollback reference, or deferred support rather than the normal backend for selected routes.
-- [ ] **QUAR-06**: Developer can run tests proving normal TypeScript job ownership remains blocked unless the worker purpose is explicitly rollback, test, or parity.
-- [ ] **QUAR-07**: Developer can inspect rollback documentation that prevents mixed Go and TypeScript DB claim/completion owners and describes queued jobs, running jobs, expired leases, retries, incomplete MatchSets, and public evidence behavior.
+- [x] **QUAR-01**: Developer can verify `apps/worker` is no longer a normal backend worker entrypoint and can run only as explicit rollback, parity, or test infrastructure.
+- [x] **QUAR-02**: Developer can verify TypeScript job claim, lease, retry, failure, Match completion, Chronicle persistence, and MatchSet scoring modules are no longer exported or reachable as normal runtime backend paths.
+- [x] **QUAR-03**: Developer can verify TypeScript MatchSet creation services for selected normal exhibition flows are deleted, quarantined, or relabeled as rollback/deferred/test-only.
+- [x] **QUAR-04**: Developer can verify TypeScript public DTO reads no longer lazily refresh Go-owned MatchSet scoring/status in selected normal public evidence paths.
+- [x] **QUAR-05**: Developer can verify `@cowards/service` is treated as parity oracle, fixture generator, rollback reference, or deferred support rather than the normal backend for selected routes.
+- [x] **QUAR-06**: Developer can run tests proving normal TypeScript job ownership remains blocked unless the worker purpose is explicitly rollback, test, or parity.
+- [x] **QUAR-07**: Developer can inspect rollback documentation that prevents mixed Go and TypeScript DB claim/completion owners and describes queued jobs, running jobs, expired leases, retries, incomplete MatchSets, and public evidence behavior.
 
 ### Deferred Surfaces And Privacy
 
@@ -132,13 +132,13 @@
 | WEB-06 | Phase 105 | Complete |
 | WEB-07 | Phase 105 | Complete |
 | WEB-08 | Phase 105 | Complete |
-| QUAR-01 | Phase 106 | Pending |
-| QUAR-02 | Phase 106 | Pending |
-| QUAR-03 | Phase 106 | Pending |
-| QUAR-04 | Phase 106 | Pending |
-| QUAR-05 | Phase 106 | Pending |
-| QUAR-06 | Phase 106 | Pending |
-| QUAR-07 | Phase 106 | Pending |
+| QUAR-01 | Phase 106 | Complete |
+| QUAR-02 | Phase 106 | Complete |
+| QUAR-03 | Phase 106 | Complete |
+| QUAR-04 | Phase 106 | Complete |
+| QUAR-05 | Phase 106 | Complete |
+| QUAR-06 | Phase 106 | Complete |
+| QUAR-07 | Phase 106 | Complete |
 | DEF-01 | Phase 107 | Pending |
 | DEF-02 | Phase 107 | Pending |
 | DEF-03 | Phase 107 | Pending |
@@ -167,4 +167,4 @@
 
 ---
 *Requirements defined: 2026-05-24*
-*Last updated: 2026-05-24 after Phase 105 verification*
+*Last updated: 2026-05-24 after Phase 106 execution*

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: Runtime Isolation and TypeScript Backend Retirement
 status: planning
-stopped_at: Phase 105 verified; ready for Phase 106 planning
-last_updated: "2026-05-24T20:33:02.000Z"
-last_activity: 2026-05-24 - Phase 105 verification passed for WEB-01 through WEB-08
+stopped_at: Phase 106 complete; ready for Phase 107 planning
+last_updated: "2026-05-24T20:51:54.000Z"
+last_activity: 2026-05-24 - Phase 106 execution passed for QUAR-01 through QUAR-07
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 7
-  completed_plans: 3
-  percent: 42
+  completed_plans: 4
+  percent: 57
 ---
 
 # State: Coward's Game
@@ -24,7 +24,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-24)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 106 - TypeScript Worker and Persistence Quarantine planning.
+**Current focus:** Phase 107 - Deferred Surface Relabeling and Privacy Preservation planning.
 **Latest shipped milestone:** v1.15 Go Backend Ownership Completion
 **Active milestone:** v1.16 Runtime Isolation and TypeScript Backend Retirement
 **Requirements:** .planning/REQUIREMENTS.md
@@ -32,10 +32,10 @@ See: .planning/PROJECT.md (updated 2026-05-24)
 
 ## Current Position
 
-Phase: 106 - TypeScript Worker and Persistence Quarantine
+Phase: 107 - Deferred Surface Relabeling and Privacy Preservation
 Plan: Not started
-Status: Phase 105 verified; ready for Phase 106 planning
-Last activity: 2026-05-24 - Phase 105 verification passed WEB-01 through WEB-08 with selected Go-only web/API cutover
+Status: Phase 106 complete; ready for Phase 107 planning
+Last activity: 2026-05-24 - Phase 106 verification passed QUAR-01 through QUAR-07 with TypeScript worker and persistence lifecycle quarantine
 
 ## Workflow Settings
 
@@ -92,11 +92,14 @@ v1.16 goal:
 - Phase 105 cut selected web/API account, auth, fork, exhibition, public read, and public replay routes to Go-only contracts with no silent TypeScript backend fallback.
 - Phase 105 added the v1.16 selected Go route manifest and reduced boundary report-only selected normal offenses from 29 to 22.
 - Phase 105 verification passed focused tests, strict selected page smoke, replay visual realism, boundary monitors, and no-fallback checks with local web, Go backend, and runtime-service processes running.
+- Phase 106 made `apps/worker` rollback/test/parity-only by default, removed normal TypeScript lifecycle owner semantics, and guards executable startup before database pool creation.
+- Phase 106 moved retained TypeScript lifecycle persistence behind `@cowards/persistence/quarantine-lifecycle`, removed lifecycle helpers from the normal persistence root, and labeled `@cowards/service` as non-normal support.
+- Phase 106 added the v1.16 TypeScript worker quarantine rollback artifact and refreshed the TypeScript backend inventory to 184 surfaces.
 
 ## Next Todos
 
-- Run `$gsd-plan-phase 106` to create the TypeScript worker and persistence quarantine plan.
-- Use Phase 105 selected route manifest, validation notes, and updated TypeScript backend inventory as Phase 106 context.
+- Run `$gsd-plan-phase 107` to create the deferred surface relabeling and privacy preservation plan.
+- Use Phase 106 worker quarantine artifact, validation notes, and refreshed TypeScript backend inventory as Phase 107 context.
 
 ## Blockers/Concerns
 
@@ -118,6 +121,9 @@ v1.16 goal:
 - Selected normal web/API routes now fail closed on missing Go configuration instead of falling back to TypeScript service or persistence.
 - Public replay metadata and public evidence use Go public read clients in selected mode; private owner-debug Chronicle access remains explicit.
 - Boundary monitors keep live topology optional by default, while strict selected Go page smoke is required via explicit topology flags.
+- COWARDS_MATCH_JOB_LIFECYCLE_OWNER=typescript no longer grants normal job ownership; the TypeScript worker requires rollback, test, or parity purpose.
+- Retained TypeScript lifecycle persistence is reachable only through `@cowards/persistence/quarantine-lifecycle`.
+- `@cowards/service` and TypeScript competition persistence are parity/fixture/rollback/deferred support, not selected normal backend.
 
 ## Deferred Items
 
@@ -135,10 +141,10 @@ v1.16 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-24T20:33:02.000Z
-Stopped at: Phase 105 verified; Phase 106 is ready for planning.
+Last session: 2026-05-24T20:51:54.000Z
+Stopped at: Phase 106 complete; Phase 107 is ready for planning.
 Resume file: .planning/STATE.md
 
 ## Operator Next Steps
 
-- Start Phase 106 with /gsd-discuss-phase 106 or /gsd-plan-phase 106.
+- Start Phase 107 with /gsd-discuss-phase 107 or /gsd-plan-phase 107.
