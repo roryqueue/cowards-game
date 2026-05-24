@@ -216,6 +216,28 @@ describe("runtime execution service", () => {
     expect(stringify(response)).not.toContain(passiveSource.trim())
   })
 
+  it("fails closed when declared Strategy source byte count does not match source", () => {
+    const revision = buildStrategyRevision({ source: passiveSource })
+    const mismatchedRevision: StrategyRevision = {
+      ...revision,
+      source: `${revision.source}\n`,
+    }
+    const response = executeRuntimeServiceRequest(
+      requestFor({ bottom: mismatchedRevision }),
+      runtimeConfig,
+    )
+
+    expect(response.ok).toBe(false)
+    if (response.ok) {
+      throw new Error("expected source byte mismatch to fail")
+    }
+    expect(["SOURCE_BYTES_MISMATCH", "MALFORMED_REQUEST"]).toContain(
+      response.systemFailure.code,
+    )
+    expect(response.systemFailure.retryable).toBe(false)
+    expect(stringify(response)).not.toContain(passiveSource.trim())
+  })
+
   it("rejects request-controlled limits above the service maximum", () => {
     const request = requestFor()
     const response = executeRuntimeServiceRequest(
@@ -258,6 +280,40 @@ describe("runtime execution service", () => {
     expect(text).not.toContain("stderr")
   })
 
+  it("fails closed with schema-valid failure when the internal response shape drifts", () => {
+    const response = executeRuntimeServiceRequest(requestFor(), runtimeConfig, {
+      buildChronicleFromMatch() {
+        return {
+          chronicle: {
+            schemaVersion: "chronicle-v1.4",
+            reproducibility: {
+              matchId: "match:runtime-service-test",
+              seed: "seed:runtime-service-test",
+              arenaVariantId: arenaVariant.id,
+              arenaVariantVersion: "arena-v1",
+              strategyRevisionIds: ["strategy:bottom", "strategy:top"],
+              versions: {},
+            },
+            events: [],
+            snapshots: [],
+          },
+          finalState: {
+            matchId: "match:runtime-service-test",
+            seed: "seed:runtime-service-test",
+          },
+        } as never
+      },
+    })
+
+    expect(response.ok).toBe(false)
+    if (response.ok) {
+      throw new Error("expected invalid response schema to fail")
+    }
+    expect(response.systemFailure.code).toBe("RESPONSE_SCHEMA_INVALID")
+    expect(response.systemFailure.retryable).toBe(true)
+    expect(stringify(response)).not.toContain("StrategyMemory")
+  })
+
   it("keeps runtime-service imports and dependencies DB-free", () => {
     const appRoot = new URL("..", import.meta.url).pathname
     const srcRoot = join(appRoot, "src")
@@ -274,13 +330,38 @@ describe("runtime execution service", () => {
     ) as { dependencies?: Record<string, string> }
     const dependencyNames = Object.keys(packageJson.dependencies ?? {})
 
-    expect(importLines.join("\n")).not.toContain("@cowards/persistence")
-    expect(importLines.join("\n")).not.toContain("pg")
-    expect(importLines.join("\n")).not.toContain("claimNextMatchJob")
-    expect(importLines.join("\n")).not.toContain("completeMatch")
-    expect(importLines.join("\n")).not.toContain("recordAttemptFailure")
+    const productionText = sourceFiles
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n")
+    for (const forbiddenImportOrDependency of [
+      "@cowards/persistence",
+      "@cowards/service",
+      "pg",
+      "claimNextMatchJob",
+      "completeMatch",
+      "recordAttemptFailure",
+      "createPostgresChronicleStore",
+      "matchset-status",
+      "governance",
+      "session",
+    ]) {
+      expect(importLines.join("\n")).not.toContain(
+        forbiddenImportOrDependency,
+      )
+      expect(dependencyNames).not.toContain(forbiddenImportOrDependency)
+    }
+    for (const forbiddenAuthority of [
+      "claimNextMatchJob",
+      "completeMatch",
+      "recordAttemptFailure",
+      "createPostgresChronicleStore",
+      "matchset-status",
+      "MatchSet scoring",
+      "public evidence",
+      "retired TypeScript backend",
+    ]) {
+      expect(productionText).not.toContain(forbiddenAuthority)
+    }
     expect(importLines.join("\n")).not.toMatch(/\bscoring\b/)
-    expect(dependencyNames).not.toContain("@cowards/persistence")
-    expect(dependencyNames).not.toContain("pg")
   })
 })
