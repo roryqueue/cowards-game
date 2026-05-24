@@ -1,6 +1,6 @@
 ---
 phase: 104-isolated-runtime-service-boundary-hardening
-reviewed: 2026-05-24T18:21:32Z
+reviewed: 2026-05-24T18:25:50Z
 depth: deep
 files_reviewed: 16
 files_reviewed_list:
@@ -97,5 +97,84 @@ Add a focused regression in `apps/go-backend/runtime_service_client_test.go` tha
 ---
 
 _Reviewed: 2026-05-24T18:21:32Z_
+_Reviewer: the agent (gsd-code-reviewer)_
+_Depth: deep_
+
+## Re-Review: Fix Commit `0ca962f`
+
+**Reviewed:** 2026-05-24T18:25:50Z
+**Depth:** deep
+**Files Re-Reviewed:** 16 Phase 104 touched source files, with focused inspection of `apps/go-backend/runtime_service_client.go` and `apps/go-backend/runtime_service_client_test.go`
+**Fix Commit:** `0ca962f387ce46c23a67a6783a87a4d707221d49`
+**Status:** issues_found
+
+### Summary
+
+The fix commit closes the original message-field leak for `systemFailure.message` and `systemFailure.publicMessage`: both fields now pass through `redactRuntimeServiceMessage`, and `TestRuntimeServiceClientSanitizesServiceFailure` puts D-17 markers directly in those fields instead of only in dropped diagnostics.
+
+However, the runtime service `systemFailure.code` remains trusted free text in the Go client. The TypeScript contract defines a closed failure-code enum, but the Go response path never validates that enum before persisting `failure.Code` as both `error_class` and `strategyExecutionSystemFailureCode`. The original blocker is therefore only partially fixed.
+
+### Verification Run
+
+- `cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./... -run 'RuntimeServiceClient' -count=1` - PASS
+- `pnpm exec vitest run apps/runtime-service/src/redaction.test.ts apps/runtime-service/src/execute-match.test.ts apps/runtime-service/src/server.test.ts` - PASS
+- `pnpm exec vitest run scripts/check-boundary-monitors.test.ts` - PASS
+
+### CR-01: Runtime Service Failure Code Still Bypasses Redaction and Contract Validation
+
+**Classification:** BLOCKER
+
+**File:** `apps/go-backend/runtime_service_client.go:243`
+
+**Issue:** `sanitizeRuntimeServiceFailure` still copies `failure.Code` into `Code` and `ErrorClass` without validating it against `RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES` or applying the D-17 private marker denylist. The fix only redacts `failure.ErrorMessage` and `failure.PublicMessage` at `apps/go-backend/runtime_service_client.go:254-255`.
+
+A drifted or compromised runtime service can return a struct-shaped JSON object with a private marker in `systemFailure.code`, for example `sessionId=abc ownerDebug=mysql://...`, while using safe message text. Go accepts the failure at `apps/go-backend/runtime_service_client.go:145-147`; `orchestrator.go` then persists that untrusted code through `ErrorClass: failure.Code` and `strategyExecutionSystemFailureCode: failure.Code` at `apps/go-backend/orchestrator.go:102-112`. That still violates D-17 / RT-05 because private runtime/session/database material can cross the service boundary and be stored in job failure state.
+
+The new regression test does not catch this because it keeps `Code: "SubprocessSystemFailure"` at `apps/go-backend/runtime_service_client_test.go:206` and only injects private markers into message fields.
+
+**Fix:**
+
+Validate service-provided failure codes against the runtime execution service enum before persistence, and replace unsafe or unknown codes with a safe Go-side class such as `RuntimeServiceMalformedResponse` or `RuntimeServiceSystemFailure`. Keep the D-17 marker check on code text as defense in depth.
+
+```go
+func sanitizeRuntimeServiceFailureCode(code string) string {
+	if code == "" || redactRuntimeServiceMessage(code) != code {
+		return "RuntimeServiceMalformedResponse"
+	}
+	switch code {
+	case "MALFORMED_REQUEST",
+		"SOURCE_HASH_MISMATCH",
+		"SOURCE_BYTES_MISMATCH",
+		"UNSUPPORTED_RUNTIME_ADAPTER",
+		"EXECUTION_EXCEPTION",
+		"RESPONSE_SCHEMA_INVALID":
+		return code
+	default:
+		return "RuntimeServiceMalformedResponse"
+	}
+}
+
+func sanitizeRuntimeServiceFailure(failure runtimeServiceFailure) runtimeServiceFailure {
+	code := failure.Code
+	if code == "" {
+		code = failure.ErrorClass
+	}
+	code = sanitizeRuntimeServiceFailureCode(code)
+	return runtimeServiceFailure{
+		Code:          code,
+		ErrorClass:    code,
+		ErrorMessage:  redactRuntimeServiceMessage(failure.ErrorMessage),
+		PublicMessage: redactRuntimeServiceMessage(failure.PublicMessage),
+		Retryable:     failure.Retryable,
+		Details:       sanitizeRuntimeServiceDetails(failure.Details),
+	}
+}
+```
+
+Update the Go regression so the mocked runtime service returns unsafe markers in `code`, `message`, and `publicMessage`, then assert `runtimeServiceFailureJSONSafe(failure)` contains none of the D-17 markers and that `failure.Code` is a safe known value.
+
+---
+
+_Re-reviewed: 2026-05-24T18:25:50Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
