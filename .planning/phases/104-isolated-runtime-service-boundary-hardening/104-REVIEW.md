@@ -1,6 +1,6 @@
 ---
 phase: 104-isolated-runtime-service-boundary-hardening
-reviewed: 2026-05-24T18:32:54Z
+reviewed: 2026-05-24T18:35:57Z
 depth: deep
 files_reviewed: 16
 files_reviewed_list:
@@ -21,11 +21,11 @@ files_reviewed_list:
   - scripts/check-boundary-monitors.test.ts
   - scripts/check-local-topology.ts
 findings:
-  critical: 1
+  critical: 0
   warning: 0
   info: 0
-  total: 1
-status: issues_found
+  total: 0
+status: clean
 ---
 
 # Phase 104: Code Review Report
@@ -322,5 +322,32 @@ Add a Go regression where the mocked runtime service returns `systemFailure.code
 ---
 
 _Re-reviewed: 2026-05-24T18:32:54Z_
+_Reviewer: the agent (gsd-code-reviewer)_
+_Depth: deep_
+
+## Final Re-Review: Fix Commit `7e081f2`
+
+**Reviewed:** 2026-05-24T18:35:57Z
+**Depth:** deep
+**Files Re-Reviewed:** `apps/go-backend/runtime_service_client.go`, `apps/go-backend/runtime_service_client_test.go`, plus the Phase 104 runtime-service/spec contract references for valid failure responses
+**Fix Commit:** `7e081f28910b3692cbfe85f46808be7c0d9825e1`
+**Status:** clean
+
+### Summary
+
+`7e081f2` resolves the remaining blocker from the prior re-review. The Go client now rejects runtime-service `systemFailure.code` values unless they are in the closed Phase 104 runtime execution service enum (`MALFORMED_REQUEST`, `SOURCE_HASH_MISMATCH`, `SOURCE_BYTES_MISMATCH`, `UNSUPPORTED_RUNTIME_ADAPTER`, `EXECUTION_EXCEPTION`, `RESPONSE_SCHEMA_INVALID`) before any failure is returned to the orchestrator. The non-contract `errorClass` field remains non-decodable from JSON, and `DisallowUnknownFields` continues to classify responses containing `systemFailure.errorClass` as malformed.
+
+The added regression `TestRuntimeServiceClientRejectsUnknownSystemFailureCode` covers a marker-free unknown code (`SubprocessSystemFailure`) and verifies it is classified as `RuntimeServiceMalformedResponse` instead of being persisted as an authoritative runtime failure class. The earlier blockers for unsafe message/publicMessage leakage, unsafe code leakage, non-contract `errorClass` recovery, and unknown marker-free code acceptance are resolved.
+
+No new blockers were substantiated in this final pass.
+
+### Verification Run
+
+- `cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./... -run 'RuntimeServiceClient' -count=1` - PASS
+- `pnpm exec vitest run apps/runtime-service/src/redaction.test.ts apps/runtime-service/src/execute-match.test.ts apps/runtime-service/src/server.test.ts packages/spec/src/spec.test.ts scripts/check-boundary-monitors.test.ts` - PASS
+
+---
+
+_Re-reviewed: 2026-05-24T18:35:57Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
