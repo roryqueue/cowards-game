@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.15 Go Backend Ownership Completion on 2026-05-24
-**Current milestone:** None. Next milestone planning starts with `$gsd-new-milestone`.
-**Status:** v1.15 shipped, archived, and ready for v1.16 planning.
+**Current milestone:** v1.16 Runtime Isolation and TypeScript Backend Retirement
+**Status:** v1.16 planning active; Phase 103 is next.
 **Last audit:** v1.15 audit passed with Go backend ownership completion and strict topology/monitor/page-smoke gates.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the isolated TypeScript runtime service boundary.
@@ -13,9 +13,18 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: None
+## Current Milestone: v1.16 Runtime Isolation and TypeScript Backend Retirement
 
-Start the next milestone with `$gsd-new-milestone`; `.planning/REQUIREMENTS.md` is intentionally removed at milestone close so the next milestone can define fresh active requirements.
+**Goal:** Finish the TypeScript backend retirement by making TypeScript's remaining role explicit and narrow: frontend plus an isolated JS/TS Strategy runtime service only.
+
+**Target features:**
+- Inventory every remaining TypeScript web/API/service/worker/persistence/runtime surface and classify it as frontend, runtime-only, parity-only, rollback-only, test-only, fixture-only, deferred, or retired.
+- Define the final JS/TS runtime service boundary, including runtime ABI use, source package policy, limits, timeouts, diagnostics, logs, crash semantics, replay privacy, and no-fallback behavior.
+- Move or lock selected normal web/API workflows to Go-owned contracts and remove silent TypeScript backend fallback for account/session, fork, exhibition, public read, and public replay evidence flows.
+- Quarantine or relabel TypeScript worker, job lifecycle, Match completion, Chronicle persistence, MatchSet scoring, MatchSet creation, and `@cowards/service` paths as parity, rollback, test, fixture, or deferred only.
+- Add a no-TypeScript-backend topology mode plus monitor gates proving web frontend -> Go backend -> isolated JS/TS runtime service, with representative page-load smoke and public-output privacy checks.
+
+**Key tradeoff:** JS/TS Strategy support remains in scope only through the isolated runtime service boundary. The runtime service may produce ABI execution results for Go, but it must not own normal backend routes, job claiming, persistence, Chronicle storage, MatchSet scoring, public evidence delivery, or fallback behavior.
 
 ## Latest Shipped Milestone: v1.15 Go Backend Ownership Completion
 
@@ -402,10 +411,11 @@ Planning archives live under `.planning/milestones/`:
 | Keep Strategy execution out of Go while Go consumes artifacts as data | v1.14 proved Go can own Starter/Advanced forks through generated manifests without becoming a hostile-code execution boundary. | ✓ Good |
 | Make Go the normal backend owner without moving hostile Strategy execution | v1.15 proved Go can own orchestration, Match completion, Chronicle persistence handoff, scoring, and public evidence while invoking TypeScript only through the runtime service ABI. | ✓ Implemented in v1.15 |
 | Require representative page smoke before milestone closure | The v1.15 close loop found a public player page hard error after backend promotion; topology now smokes major page shapes before milestone completion. | ✓ Good |
+| Retire TypeScript backend, not JS/TS Strategy support | v1.16 should remove or quarantine TypeScript service/backend ownership while preserving the isolated JS/TS runtime service as hostile-code execution infrastructure invoked by Go through the ABI. | — Pending v1.16 |
 
 ## Constraints
 
-The active constraints remain: deterministic engine behavior, engine purity, Strategy Revision immutability, hostile Strategy treatment, runtime isolation, memory/source/output limits, package boundaries, replay privacy, Chronicle compatibility, and competitive integrity.
+The active constraints remain: deterministic engine behavior, engine purity, Strategy Revision immutability, hostile Strategy treatment, runtime isolation, memory/source/output limits, package boundaries, replay privacy, Chronicle compatibility, competitive integrity, Go-owned normal backend behavior, no silent TypeScript backend fallback, and representative page-load smoke for major page types.
 
 Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy/analytics surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, and private runtime internals by default. v1.5 created local example MatchSets and a completed example tournament for demonstration, and v1.6 created saved gauntlet analytics for study; neither establishes official public tournament operations or durable ratings.
 
@@ -422,4 +432,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-24 after completing v1.15 milestone*
+*Last updated: 2026-05-24 after starting v1.16 milestone*

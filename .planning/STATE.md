@@ -1,41 +1,41 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.15
-milestone_name: Go Backend Ownership Completion
-status: completed
-stopped_at: v1.15 audit passed; ready for milestone completion/archive
-last_updated: "2026-05-24T15:55:24.306Z"
-last_activity: 2026-05-24 — Milestone v1.15 completed and archived
+milestone: v1.16
+milestone_name: Runtime Isolation and TypeScript Backend Retirement
+status: planning
+stopped_at: milestone v1.16 initialized; ready for Phase 103 discussion/planning
+last_updated: "2026-05-24T16:30:00.000Z"
+last_activity: 2026-05-24 - Milestone v1.16 started
 progress:
   total_phases: 7
-  completed_phases: 7
+  completed_phases: 0
   total_plans: 7
-  completed_plans: 7
-  percent: 100
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.15 milestone complete
+**Status:** v1.16 milestone planning
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-24)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Planning next milestone.
+**Current focus:** Phase 103 - TypeScript Backend Inventory and Retirement Contract.
 **Latest shipped milestone:** v1.15 Go Backend Ownership Completion
-**Active milestone:** None
-**Requirements:** Fresh `.planning/REQUIREMENTS.md` will be created by `$gsd-new-milestone`.
+**Active milestone:** v1.16 Runtime Isolation and TypeScript Backend Retirement
+**Requirements:** .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: Milestone v1.15 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-24 — Milestone v1.15 completed and archived
+Phase: 103 - TypeScript Backend Inventory and Retirement Contract
+Plan: Not started
+Status: Defining phase context
+Last activity: 2026-05-24 - Milestone v1.16 started
 
 ## Workflow Settings
 
@@ -50,14 +50,14 @@ Last activity: 2026-05-24 — Milestone v1.15 completed and archived
 
 ## Current Milestone Summary
 
-v1.15 goal:
+v1.16 goal:
 
-- Make Go the owner of normal backend orchestration, persistence-facing API behavior, Match lifecycle coordination, Chronicle persistence, MatchSet scoring completion, and public evidence delivery.
-- Keep TypeScript as frontend, parity oracle where needed, and isolated JS/TS Strategy runtime worker/service behind `strategy-runtime-abi-v1.14`.
-- Move normal job claiming/completion, Match state transitions, Chronicle persistence, scoring completion, and selected public evidence delivery to Go-owned contracts.
-- Ensure web normal backend workflows call Go-owned contracts rather than direct persistence/service internals except explicit test/parity/rollback/runtime surfaces.
-- Preserve schema validation, hostile-code isolation, deterministic engine boundaries, replay/public-output privacy, owner-source privacy, and immutable Strategy Revision/Match eligibility.
-- Add local topology evidence for web frontend -> Go backend -> TypeScript runtime worker/service -> Go persistence/public evidence with no silent TypeScript backend fallback.
+- Finish TypeScript backend retirement by making TypeScript's remaining role explicit and narrow: frontend plus an isolated JS/TS Strategy runtime service only.
+- Treat v1.15 Go ownership behavior as the backend baseline for normal orchestration, persistence-facing API behavior, Match lifecycle, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence.
+- Preserve JS/TS Strategy execution support only through the isolated runtime service and public runtime ABI; do not execute Strategy code in web/API or Go processes.
+- Delete, quarantine, or explicitly relabel remaining TypeScript service/backend paths, Next.js API backend routes, direct persistence imports, `@cowards/service` fallbacks, worker/job lifecycle paths, and backend ownership switches that are no longer normal after v1.15.
+- Add no-TypeScript-backend topology and monitor gates proving the normal product topology is web frontend -> Go backend -> isolated JS/TS Strategy runtime service, with no silent fallback to retired TypeScript backend paths.
+- Preserve schema validation, deterministic engine boundaries, immutable Strategy Revision/Match eligibility, replay/public-output privacy, owner-source privacy, hostile-code isolation, rollback clarity, and representative page-load smoke.
 
 ## Completed Milestones
 
@@ -88,42 +88,40 @@ v1.15 goal:
 - Browser replay realism passed 14/14 desktop/mobile checks, including visible board bounds and nonblank canvas rendering.
 - Final DB-backed Go integration passed against temporary local Postgres and later against OrbStack Docker Postgres, including the Go orchestration runner path.
 - OrbStack Docker retest also passed Compose preflight, container sandbox evaluation, strict topology, and boundary monitors after fixing container adapter stdin and output-limit IPC handling.
-- v1.14 added generic Strategy Artifact and Revision schemas for source-bearing artifacts, source-safe summaries, runtime metadata, validation, lineage, and immutable match eligibility.
-- Generated `strategy-artifact-manifest-v1.14` from TypeScript-owned Starter, Advanced, and template registries with checksum gates and Go data-only parsing.
-- Promoted `strategy-runtime-abi-v1.14` and routed JS runtime adapter execution through an explicit ABI bridge.
-- Added Go-owned Starter/Advanced fork routes that consume generated artifacts as data, preserve source hash/runtime/validation/tags/lineage, and fail closed without TypeScript fallback when selected.
-- Centralized public-output privacy checks in `@cowards/spec` and extended replay realism validation before rendering, including canonical start validation for canonical arenas.
 - Boundary monitors pass with `strict_offenses=0 report_only_offenses=29`.
 
 ## Next Todos
 
-- Start v1.16 with `$gsd-new-milestone` when ready.
+- Run `$gsd-discuss-phase 103` to clarify the inventory and retirement contract.
+- Run `$gsd-plan-phase 103` after discussion to create the executable Phase 103 plan.
 
 ## Blockers/Concerns
 
-- Initial final verification used temporary local Postgres because Docker was unavailable; OrbStack Docker retest now passes.
-- Go orchestration must not execute Strategy code; the TypeScript runtime worker/service remains the hostile-code execution boundary until a future runtime milestone replaces it.
+- The installed `gsd-sdk query ...` interface is not available locally; continue using legacy GSD tools or direct planning-file inspection when workflows reference unavailable commands.
+- The TypeScript runtime service can remain the JS/TS Strategy execution boundary, but it must not become a normal backend, claim jobs, write persistence, score MatchSets, serve public evidence, or provide fallback behavior.
 - Go and TypeScript DB-owning workers must not claim or complete the same normal queue concurrently during rollback.
+- `pnpm boundary:monitors` must stay synchronized with Go route manifests, fixtures, runtime contracts, topology artifacts, and surface labels.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 | --- | --- | --- | --- |
-| backend | 29 broad web report-only direct persistence offenses not yet migrated | Active baseline | v1.15 start |
-| replay | Full owner-debug replay projection migration | Deferred | v1.15 scope |
-| workshop | Workshop validation, test launch, analytics rerun, profile save, export, and runtime flows | Deferred | v1.15 scope |
-| runtime | Production hostile-code sandbox promotion | Deferred | v1.15 scope |
-| runtime | Final TypeScript runtime retirement | Deferred | v1.15 scope |
-| runtime | Counted non-JS MatchSets, ladders, or gauntlets by default | Deferred | v1.15 scope |
-| ops | Go-owned migrations/schema ownership | Deferred | v1.15 scope |
-| ops | Kubernetes, service mesh, cloud deployment, or production observability stack | Deferred | v1.15 scope |
+| replay | Full owner-debug replay projection migration | Deferred unless selected | v1.16 start |
+| workshop | Workshop validation, test launch, analytics rerun, profile save, export, and runtime flows | Deferred unless selected | v1.16 start |
+| ladder | Broader ladder scheduling/mutation migration | Deferred unless selected | v1.16 start |
+| governance | Admin/governance mutation migration | Deferred unless selected | v1.16 start |
+| runtime | Production hostile-code sandbox promotion | Deferred | v1.16 start |
+| runtime | Final JS/TS runtime service replacement | Deferred | v1.16 start |
+| runtime | Counted non-JS MatchSets, ladders, or gauntlets by default | Deferred | v1.16 start |
+| ops | Go-owned migrations/schema ownership | Deferred | v1.16 start |
+| ops | Kubernetes, service mesh, cloud deployment, or production observability stack | Deferred | v1.16 start |
 
 ## Session Continuity
 
-Last session: 2026-05-24T11:55:24.306-04:00
-Stopped at: v1.15 milestone complete and archived; ready for v1.16 planning
-Resume file: .planning/milestones/v1.15-phases/102-topology-monitors-rollback-and-promotion-gate/102-CONTEXT.md
+Last session: 2026-05-24T16:30:00.000-04:00
+Stopped at: v1.16 milestone initialized; Phase 103 is ready for discussion/planning.
+Resume file: .planning/STATE.md
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Start Phase 103 with /gsd-discuss-phase 103 or /gsd-plan-phase 103.
