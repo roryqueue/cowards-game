@@ -25,7 +25,7 @@
 **Status:** Execution in progress
 **Phases:** 103-109
 **Granularity:** Standard
-**Requirements:** 28 complete, 20 pending
+**Requirements:** 34 complete, 14 pending
 **Research:** `.planning/research/v1.16-SUMMARY.md`
 
 ## Overview
@@ -44,7 +44,7 @@ TypeScript service/backend paths may remain only as parity oracle, test fixture 
 - [x] **Phase 104: Isolated Runtime Service Boundary Hardening** - Developers can verify JS/TS Strategy execution remains supported only through a broker-ready Strategy Execution Service / Runtime Broker contract and runtime ABI, with no DB/job/API ownership.
 - [x] **Phase 105: Web/API Go-Only Cutover and Fallback Removal** - Users can use selected normal web/account/exhibition/public evidence flows through Go-owned contracts without TypeScript backend fallback.
 - [x] **Phase 106: TypeScript Worker and Persistence Quarantine** - Developers can verify TypeScript worker and persistence lifecycle modules are rollback/parity/test only and unreachable as normal backend paths.
-- [ ] **Phase 107: Deferred Surface Relabeling and Privacy Preservation** - Developers can inspect remaining Workshop, ladder, governance, owner-debug, test-support, and parity surfaces as explicitly deferred or non-normal, with privacy guards intact.
+- [x] **Phase 107: Deferred Surface Relabeling and Privacy Preservation** - Developers can inspect remaining Workshop, ladder, governance, owner-debug, test-support, and parity surfaces as explicitly deferred or non-normal, with privacy guards intact.
 - [ ] **Phase 108: No-TypeScript-Backend Topology and Monitor Gate** - Developers can prove the normal product topology works with TypeScript service/backend disabled or absent except for frontend and runtime service.
 - [ ] **Phase 109: Milestone Verification, Deletion Audit, and Promotion Decision** - Developers can run final verification, inspect deletion/quarantine evidence, and record whether v1.16 achieved no TypeScript backend.
 
@@ -167,7 +167,7 @@ TypeScript service/backend paths may remain only as parity oracle, test fixture 
 | 104. Isolated Runtime Service Boundary Hardening | 1/1 | Complete | 2026-05-24 |
 | 105. Web/API Go-Only Cutover and Fallback Removal | 1/1 | Complete | 2026-05-24 |
 | 106. TypeScript Worker and Persistence Quarantine | 1/1 | Complete | 2026-05-24 |
-| 107. Deferred Surface Relabeling and Privacy Preservation | 0/1 | Pending | — |
+| 107. Deferred Surface Relabeling and Privacy Preservation | 1/1 | Complete | 2026-05-24 |
 | 108. No-TypeScript-Backend Topology and Monitor Gate | 0/1 | Pending | — |
 | 109. Milestone Verification, Deletion Audit, and Promotion Decision | 0/1 | Pending | — |
 
@@ -188,7 +188,7 @@ TypeScript service/backend paths may remain only as parity oracle, test fixture 
 
 ## Next Up
 
-Continue with `$gsd-plan-phase 106` after reviewing the Phase 105 summary, validation notes, and verification report.
+Continue with `$gsd-plan-phase 108` after reviewing the Phase 107 summary, validation notes, and final TypeScript surface label artifacts.
 
 ---
-*Last updated: 2026-05-24 after Phase 106 execution*
+*Last updated: 2026-05-24 after Phase 107 execution*

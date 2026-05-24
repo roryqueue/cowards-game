@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: Runtime Isolation and TypeScript Backend Retirement
 status: planning
-stopped_at: Phase 106 complete; ready for Phase 107 planning
-last_updated: "2026-05-24T20:51:54.000Z"
-last_activity: 2026-05-24 - Phase 106 execution passed for QUAR-01 through QUAR-07
+stopped_at: Phase 107 complete; ready for Phase 108 planning
+last_updated: "2026-05-24T22:03:35.000Z"
+last_activity: 2026-05-24 - Phase 107 execution passed for DEF-01 through DEF-06
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 7
-  completed_plans: 4
-  percent: 57
+  completed_plans: 5
+  percent: 71
 ---
 
 # State: Coward's Game
@@ -24,7 +24,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-24)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 107 - Deferred Surface Relabeling and Privacy Preservation planning.
+**Current focus:** Phase 108 - No-TypeScript-Backend Topology and Monitor Gate planning.
 **Latest shipped milestone:** v1.15 Go Backend Ownership Completion
 **Active milestone:** v1.16 Runtime Isolation and TypeScript Backend Retirement
 **Requirements:** .planning/REQUIREMENTS.md
@@ -32,10 +32,10 @@ See: .planning/PROJECT.md (updated 2026-05-24)
 
 ## Current Position
 
-Phase: 107 - Deferred Surface Relabeling and Privacy Preservation
+Phase: 108 - No-TypeScript-Backend Topology and Monitor Gate
 Plan: Not started
-Status: Phase 106 complete; ready for Phase 107 planning
-Last activity: 2026-05-24 - Phase 106 verification passed QUAR-01 through QUAR-07 with TypeScript worker and persistence lifecycle quarantine
+Status: Phase 107 complete; ready for Phase 108 planning
+Last activity: 2026-05-24 - Phase 107 verification passed DEF-01 through DEF-06 with final TypeScript surface labels and monitor integration
 
 ## Workflow Settings
 
@@ -95,11 +95,13 @@ v1.16 goal:
 - Phase 106 made `apps/worker` rollback/test/parity-only by default, removed normal TypeScript lifecycle owner semantics, and guards executable startup before database pool creation.
 - Phase 106 moved retained TypeScript lifecycle persistence behind `@cowards/persistence/quarantine-lifecycle`, removed lifecycle helpers from the normal persistence root, and labeled `@cowards/service` as non-normal support.
 - Phase 106 added the v1.16 TypeScript worker quarantine rollback artifact and refreshed the TypeScript backend inventory to 184 surfaces.
+- Phase 107 added final v1.16 TypeScript surface label artifacts covering 185 current inventory surfaces and integrated them into boundary monitors.
+- Phase 107 hardened owner-debug replay, replay fixture, and test-support gates while preserving public-output privacy defaults.
 
 ## Next Todos
 
-- Run `$gsd-plan-phase 107` to create the deferred surface relabeling and privacy preservation plan.
-- Use Phase 106 worker quarantine artifact, validation notes, and refreshed TypeScript backend inventory as Phase 107 context.
+- Run `$gsd-plan-phase 108` to create the no-TypeScript-backend topology and monitor gate plan.
+- Use Phase 107 final surface labels, validation notes, and monitor lane as Phase 108 context.
 
 ## Blockers/Concerns
 
@@ -124,6 +126,9 @@ v1.16 goal:
 - COWARDS_MATCH_JOB_LIFECYCLE_OWNER=typescript no longer grants normal job ownership; the TypeScript worker requires rollback, test, or parity purpose.
 - Retained TypeScript lifecycle persistence is reachable only through `@cowards/persistence/quarantine-lifecycle`.
 - `@cowards/service` and TypeScript competition persistence are parity/fixture/rollback/deferred support, not selected normal backend.
+- Final TypeScript surface labels are generated from the Phase 103 inventory and consumed by `boundary:monitors` through the `surface_labels` lane.
+- Owner-debug replay is private/deferred, env-gated, owner-authorized, and not a public evidence fallback.
+- Replay fixtures require test/playwright or `COWARDS_ENABLE_REPLAY_FIXTURES=1`; development mode alone is not sufficient.
 
 ## Deferred Items
 
@@ -141,10 +146,10 @@ v1.16 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-24T20:51:54.000Z
-Stopped at: Phase 106 complete; Phase 107 is ready for planning.
+Last session: 2026-05-24T22:03:35.000Z
+Stopped at: Phase 107 complete; Phase 108 is ready for planning.
 Resume file: .planning/STATE.md
 
 ## Operator Next Steps
 
-- Start Phase 107 with /gsd-discuss-phase 107 or /gsd-plan-phase 107.
+- Start Phase 108 with /gsd-discuss-phase 108 or /gsd-plan-phase 108.

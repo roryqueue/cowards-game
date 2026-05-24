@@ -48,12 +48,12 @@
 
 ### Deferred Surfaces And Privacy
 
-- [ ] **DEF-01**: Developer can inspect remaining Workshop validation, source, test launch, analytics rerun, profile save, export, and runtime flows labeled as deferred unless migrated to Go in this milestone.
-- [ ] **DEF-02**: Developer can inspect remaining admin/governance and ladder mutation surfaces labeled as deferred unless migrated to Go in this milestone.
-- [ ] **DEF-03**: Developer can inspect owner-debug replay behavior as an explicit private/deferred path with authorization gates, not a public evidence fallback.
-- [ ] **DEF-04**: Developer can verify test-support routes, fixture generators, and parity harnesses are gated and labeled so they cannot serve normal product runtime traffic.
-- [ ] **DEF-05**: Developer can verify all deferred or rollback TypeScript paths preserve public-output privacy and owner-source privacy when exercised by tests or explicit local workflows.
-- [ ] **DEF-06**: Developer can inspect a final TypeScript surface label artifact that covers every remaining TypeScript backend-like path and explains why it is allowed to remain.
+- [x] **DEF-01**: Developer can inspect remaining Workshop validation, source, test launch, analytics rerun, profile save, export, and runtime flows labeled as deferred unless migrated to Go in this milestone.
+- [x] **DEF-02**: Developer can inspect remaining admin/governance and ladder mutation surfaces labeled as deferred unless migrated to Go in this milestone.
+- [x] **DEF-03**: Developer can inspect owner-debug replay behavior as an explicit private/deferred path with authorization gates, not a public evidence fallback.
+- [x] **DEF-04**: Developer can verify test-support routes, fixture generators, and parity harnesses are gated and labeled so they cannot serve normal product runtime traffic.
+- [x] **DEF-05**: Developer can verify all deferred or rollback TypeScript paths preserve public-output privacy and owner-source privacy when exercised by tests or explicit local workflows.
+- [x] **DEF-06**: Developer can inspect a final TypeScript surface label artifact that covers every remaining TypeScript backend-like path and explains why it is allowed to remain.
 
 ### Topology And Monitors
 
@@ -139,12 +139,12 @@
 | QUAR-05 | Phase 106 | Complete |
 | QUAR-06 | Phase 106 | Complete |
 | QUAR-07 | Phase 106 | Complete |
-| DEF-01 | Phase 107 | Pending |
-| DEF-02 | Phase 107 | Pending |
-| DEF-03 | Phase 107 | Pending |
-| DEF-04 | Phase 107 | Pending |
-| DEF-05 | Phase 107 | Pending |
-| DEF-06 | Phase 107 | Pending |
+| DEF-01 | Phase 107 | Complete |
+| DEF-02 | Phase 107 | Complete |
+| DEF-03 | Phase 107 | Complete |
+| DEF-04 | Phase 107 | Complete |
+| DEF-05 | Phase 107 | Complete |
+| DEF-06 | Phase 107 | Complete |
 | GATE-01 | Phase 108 | Pending |
 | GATE-02 | Phase 108 | Pending |
 | GATE-03 | Phase 108 | Pending |
