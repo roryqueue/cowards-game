@@ -1,0 +1,13 @@
+{
+  "apiVersion": "service-api-v1.8",
+  "canonicalHref": "/players/local",
+  "kind": "publicPage",
+  "page": "player",
+  "payload": {
+    "displayName": "Local Player",
+    "handle": "local",
+    "ladderHistory": [],
+    "results": [],
+    "strategies": []
+  }
+}

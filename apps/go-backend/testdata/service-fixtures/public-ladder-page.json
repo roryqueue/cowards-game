@@ -1,0 +1,39 @@
+{
+  "apiVersion": "service-api-v1.8",
+  "canonicalHref": "/ladder/ladder-season%3Ademo",
+  "kind": "publicPage",
+  "page": "ladder",
+  "payload": {
+    "entries": [],
+    "matchSets": [],
+    "name": "Demo Trial Ladder",
+    "policy": {
+      "minimumEntries": 2,
+      "noPermanentRatings": true,
+      "oneEntryPerUser": true,
+      "replacementPolicy": "next-season-only",
+      "staleRevisionPolicy": "Immutable revisions stay eligible for the current season.",
+      "standingsReset": true,
+      "targetPodSize": 4
+    },
+    "publication": {
+      "privateFieldsExcluded": [
+        "Strategy source",
+        "StrategyMemory",
+        "SoldierMemory",
+        "objective payloads",
+        "owner debug",
+        "private runtime internals"
+      ],
+      "publicEntries": true,
+      "publicReplayEvidence": true,
+      "publicStandings": true
+    },
+    "seasonId": "ladder-season:demo",
+    "seasonSeed": "trial-ladder-demo-seed",
+    "slug": "demo-season",
+    "standings": [],
+    "status": "open",
+    "statusLabel": "Open"
+  }
+}

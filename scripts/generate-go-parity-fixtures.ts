@@ -12,7 +12,9 @@ import { createGoldenMatchInput } from "../packages/golden/src/index.ts"
 import {
   AnalyticsRunSummaryServiceDtoSchema,
   EXHIBITION_SCORING_POLICY_V1,
+  PublicLadderPageServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
+  PublicPlayerPageServiceDtoSchema,
   PublicReplayEvidenceServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
@@ -24,11 +26,15 @@ import {
   serviceHealthExample,
   SERVICE_API_VERSION,
   type AnalyticsRunSummaryServiceDto,
+  type PublicLadderPageServiceDto,
   type PublicMatchSetResultDto,
+  type PublicPlayerPageServiceDto,
   type PublicReplayEvidenceServiceDto,
   type PublicStrategyCardDto,
   type PublicStrategyPageServiceDto,
   type ServiceErrorDto,
+  publicLadderPageExample,
+  publicPlayerPageExample,
 } from "../packages/spec/src/index.ts"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -282,6 +288,22 @@ const createServiceFixtures = async () => {
     analyticsRun.ownerUserId,
     analyticsRun.id,
   )
+  const publicPlayerPage: PublicPlayerPageServiceDto = {
+    ...(publicPlayerPageExample as PublicPlayerPageServiceDto),
+    canonicalHref: "/players/local",
+    payload: {
+      ...(publicPlayerPageExample as PublicPlayerPageServiceDto).payload,
+      handle: "local",
+      displayName: "Local Player",
+      strategies: [],
+      ladderHistory: [],
+      results: [],
+    },
+  }
+  const publicLadderPage: PublicLadderPageServiceDto = {
+    ...(publicLadderPageExample as PublicLadderPageServiceDto),
+    canonicalHref: "/ladder/ladder-season%3Ademo",
+  }
 
   if (
     !publicMatchSetSummary ||
@@ -289,12 +311,20 @@ const createServiceFixtures = async () => {
     !publicReplayMetadata ||
     !publicReplayEvidence ||
     !publicStrategyPage ||
-    !analyticsRunSummary
+    !analyticsRunSummary ||
+    !publicPlayerPage ||
+    !publicLadderPage
   ) {
     throw new Error("TypeScript service did not produce all parity fixtures")
   }
   assertAnalyticsPublicSummaryLeakSafe(analyticsRunSummary.summary)
   return {
+    publicPlayerPage: PublicPlayerPageServiceDtoSchema.parse(
+      publicPlayerPage,
+    ) as PublicPlayerPageServiceDto,
+    publicLadderPage: PublicLadderPageServiceDtoSchema.parse(
+      publicLadderPage,
+    ) as PublicLadderPageServiceDto,
     publicMatchSetSummary,
     degradedMatchSetSummary,
     publicReplayMetadata,
@@ -318,6 +348,22 @@ const routeManifest = [
     authScope: SERVICE_API_ROUTES.health.authScope,
     privacyClass: SERVICE_API_ROUTES.health.privacyClass,
     samplePath: "/health",
+  },
+  {
+    id: SERVICE_API_ROUTES.getPublicPlayerPage.id,
+    method: SERVICE_API_ROUTES.getPublicPlayerPage.method,
+    path: SERVICE_API_ROUTES.getPublicPlayerPage.path,
+    authScope: SERVICE_API_ROUTES.getPublicPlayerPage.authScope,
+    privacyClass: SERVICE_API_ROUTES.getPublicPlayerPage.privacyClass,
+    samplePath: "/public/players/local",
+  },
+  {
+    id: SERVICE_API_ROUTES.getPublicLadderSeason.id,
+    method: SERVICE_API_ROUTES.getPublicLadderSeason.method,
+    path: SERVICE_API_ROUTES.getPublicLadderSeason.path,
+    authScope: SERVICE_API_ROUTES.getPublicLadderSeason.authScope,
+    privacyClass: SERVICE_API_ROUTES.getPublicLadderSeason.privacyClass,
+    samplePath: "/public/ladders/ladder-season%3Ademo",
   },
   {
     id: SERVICE_API_ROUTES.getPublicMatchSetSummary.id,
@@ -380,6 +426,8 @@ const forbiddenError: ServiceErrorDto = {
 const serviceFixtures = await createServiceFixtures()
 const serviceFixturePayloads = {
   "health.json": ServiceHealthDtoSchema.parse(serviceHealthExample),
+  "public-player-page.json": serviceFixtures.publicPlayerPage,
+  "public-ladder-page.json": serviceFixtures.publicLadderPage,
   "public-match-set-summary.json": PublicMatchSetSummaryServiceDtoSchema.parse(
     serviceFixtures.publicMatchSetSummary,
   ),

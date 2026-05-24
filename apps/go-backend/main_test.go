@@ -25,6 +25,16 @@ func TestEndpointFixturesMatchCanonicalJSON(t *testing.T) {
 			fixtureName: "health.json",
 		},
 		{
+			name:        "public player page",
+			path:        "/public/players/local",
+			fixtureName: "public-player-page.json",
+		},
+		{
+			name:        "public ladder page",
+			path:        "/public/ladders/ladder-season%3Ademo",
+			fixtureName: "public-ladder-page.json",
+		},
+		{
 			name:        "public matchset summary",
 			path:        "/public/matchsets/match-set%3Ago-parity%3Agolden/summary",
 			fixtureName: "public-match-set-summary.json",
@@ -189,6 +199,18 @@ func TestPublicReadRoutesDecodeIdentifiersWithoutCrossRouteFallback(t *testing.T
 		expectedValue string
 	}{
 		{
+			name:          "public player page",
+			path:          "/public/players/local",
+			nestedField:   []string{"payload", "handle"},
+			expectedValue: "local",
+		},
+		{
+			name:          "public ladder page",
+			path:          "/public/ladders/ladder-season%3Ademo",
+			nestedField:   []string{"payload", "seasonId"},
+			expectedValue: "ladder-season:demo",
+		},
+		{
 			name:          "public matchset summary",
 			path:          "/public/matchsets/match-set%3Ago-parity%3Agolden/summary",
 			topLevelField: "matchSetId",
@@ -341,6 +363,8 @@ func TestAnalyticsRunSummaryRequiresTrustedOwnerToken(t *testing.T) {
 
 func TestMissingResourcesReturnPublicErrorShape(t *testing.T) {
 	tests := []string{
+		"/public/players/missing-player",
+		"/public/ladders/ladder-season%3Amissing",
 		"/public/matchsets/match-set%3Amissing/summary",
 		"/public/replays/match%3Amissing/metadata",
 		"/public/replays/match%3Amissing/evidence",
@@ -518,6 +542,26 @@ func TestFixtureOverrideFailsOnPrivateOrInvalidPayloads(t *testing.T) {
 		fixtureName string
 		payload     string
 	}{
+		{
+			name:        "private Player source",
+			fixtureName: "public-player-page.json",
+			payload:     `{"apiVersion":"service-api-v1.8","kind":"publicPage","page":"player","canonicalHref":"/players/bad","payload":{"handle":"bad","displayName":"Bad","strategies":[],"ladderHistory":[],"results":[],"source":"private"}}`,
+		},
+		{
+			name:        "schema-invalid Player page",
+			fixtureName: "public-player-page.json",
+			payload:     `{"apiVersion":"service-api-v1.8","kind":"publicPage","page":"player","canonicalHref":"/players/bad","payload":{}}`,
+		},
+		{
+			name:        "private Ladder runtime internals",
+			fixtureName: "public-ladder-page.json",
+			payload:     `{"apiVersion":"service-api-v1.8","kind":"publicPage","page":"ladder","canonicalHref":"/ladder/bad","payload":{"seasonId":"ladder:bad","runtimeInternals":{}}}`,
+		},
+		{
+			name:        "schema-invalid Ladder page",
+			fixtureName: "public-ladder-page.json",
+			payload:     `{"apiVersion":"service-api-v1.8","kind":"publicPage","page":"ladder","canonicalHref":"/ladder/bad","payload":{}}`,
+		},
 		{
 			name:        "private source key",
 			fixtureName: "public-match-set-summary.json",

@@ -12,6 +12,8 @@ import { createCowardsLocalService } from "../packages/service/src/index.ts"
 import {
   SERVICE_API_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION,
+  PublicLadderPageServiceDtoSchema,
+  PublicPlayerPageServiceDtoSchema,
   PublicReplayEvidenceServiceDtoSchema,
   assertPublicOutputLeakSafe,
   assertPublicServiceDtoLeakSafe,
@@ -757,6 +759,14 @@ export const evaluateLocalTopology = async (
         }
       > = {
         health: { authScope: "public", privacyClass: "public" },
+        getPublicPlayerPage: {
+          authScope: "public",
+          privacyClass: "public",
+        },
+        getPublicLadderSeason: {
+          authScope: "public",
+          privacyClass: "public",
+        },
         getPublicMatchSetSummary: {
           authScope: "public",
           privacyClass: "public",
@@ -813,6 +823,8 @@ export const evaluateLocalTopology = async (
       for (const file of [
         "fixture-manifest.json",
         "health.json",
+        "public-player-page.json",
+        "public-ladder-page.json",
         "public-match-set-summary.json",
         "public-replay-metadata.json",
         "public-replay-evidence.json",
@@ -831,6 +843,8 @@ export const evaluateLocalTopology = async (
       }
       for (const file of [
         "health.json",
+        "public-player-page.json",
+        "public-ladder-page.json",
         "public-match-set-summary.json",
         "public-replay-metadata.json",
         "public-replay-evidence.json",
@@ -1010,6 +1024,8 @@ export const evaluateLocalTopology = async (
       }),
     )
     for (const routeId of [
+      "getPublicPlayerPage",
+      "getPublicLadderSeason",
       "getPublicMatchSetSummary",
       "getPublicReplayMetadata",
       "getPublicReplayEvidence",
@@ -1018,6 +1034,12 @@ export const evaluateLocalTopology = async (
       checks.push(
         await check("go_readonly", routeId, options.requireGo, async () => {
           const body = await smokeJson(goUrl, sampleRoute(routeId).samplePath)
+          if (routeId === "getPublicPlayerPage") {
+            PublicPlayerPageServiceDtoSchema.parse(body)
+          }
+          if (routeId === "getPublicLadderSeason") {
+            PublicLadderPageServiceDtoSchema.parse(body)
+          }
           if (routeId === "getPublicReplayEvidence") {
             PublicReplayEvidenceServiceDtoSchema.parse(body)
           }

@@ -38,6 +38,22 @@ var routeInventory = []routeSpec{
 		SamplePath: "/health",
 	},
 	{
+		ID:         "getPublicPlayerPage",
+		Method:     http.MethodGet,
+		Pattern:    "/public/players/{handle}",
+		AuthScope:  "public",
+		Privacy:    "public",
+		SamplePath: "/public/players/local",
+	},
+	{
+		ID:         "getPublicLadderSeason",
+		Method:     http.MethodGet,
+		Pattern:    "/public/ladders/{seasonId}",
+		AuthScope:  "public",
+		Privacy:    "public",
+		SamplePath: "/public/ladders/ladder-season%3Ademo",
+	},
+	{
 		ID:         "getPublicMatchSetSummary",
 		Method:     http.MethodGet,
 		Pattern:    "/public/matchsets/{matchSetId}/summary",
@@ -84,6 +100,8 @@ type Server struct {
 	health      json.RawMessage
 	notFound    json.RawMessage
 	forbidden   json.RawMessage
+	player      map[string]json.RawMessage
+	ladder      map[string]json.RawMessage
 	matchSet    map[string]json.RawMessage
 	replay      map[string]json.RawMessage
 	evidence    map[string]json.RawMessage
@@ -125,6 +143,14 @@ func NewServerFromFixtureDirWithOwnerTokens(dir string, ownerTokens map[string]s
 	if err != nil {
 		return nil, err
 	}
+	player, err := readValidatedFixture(dir, "public-player-page.json", "publicPlayerPage", checksums)
+	if err != nil {
+		return nil, err
+	}
+	ladder, err := readValidatedFixture(dir, "public-ladder-page.json", "publicLadderPage", checksums)
+	if err != nil {
+		return nil, err
+	}
 	publicMatchSet, err := readValidatedFixture(dir, "public-match-set-summary.json", "publicMatchSetSummary", checksums)
 	if err != nil {
 		return nil, err
@@ -163,6 +189,12 @@ func NewServerFromFixtureDirWithOwnerTokens(dir string, ownerTokens map[string]s
 		notFound:    notFound,
 		forbidden:   forbidden,
 		ownerTokens: cloneOwnerTokens(ownerTokens),
+		player: map[string]json.RawMessage{
+			mustNestedStringField(player, "payload", "handle"): player,
+		},
+		ladder: map[string]json.RawMessage{
+			mustNestedStringField(ladder, "payload", "seasonId"): ladder,
+		},
 		matchSet: map[string]json.RawMessage{
 			mustStringField(publicMatchSet, "matchSetId"):   publicMatchSet,
 			mustStringField(degradedMatchSet, "matchSetId"): degradedMatchSet,
@@ -191,6 +223,10 @@ func (server *Server) routes() http.Handler {
 		switch route.ID {
 		case "health":
 			mux.HandleFunc(route.Method+" "+route.Pattern, server.healthHandler)
+		case "getPublicPlayerPage":
+			mux.HandleFunc(route.Method+" "+route.Pattern, server.publicPlayerPage)
+		case "getPublicLadderSeason":
+			mux.HandleFunc(route.Method+" "+route.Pattern, server.publicLadderSeason)
 		case "getPublicMatchSetSummary":
 			mux.HandleFunc(route.Method+" "+route.Pattern, server.matchSetSummary)
 		case "getPublicReplayMetadata":
@@ -210,6 +246,26 @@ func (server *Server) routes() http.Handler {
 
 func (server *Server) healthHandler(writer http.ResponseWriter, _ *http.Request) {
 	writeJSON(writer, http.StatusOK, server.health)
+}
+
+func (server *Server) publicPlayerPage(writer http.ResponseWriter, request *http.Request) {
+	handle := decodePathValue(request.PathValue("handle"))
+	dto, ok := server.player[handle]
+	if !ok {
+		writeJSON(writer, http.StatusNotFound, server.notFound)
+		return
+	}
+	writeJSON(writer, http.StatusOK, dto)
+}
+
+func (server *Server) publicLadderSeason(writer http.ResponseWriter, request *http.Request) {
+	seasonID := decodePathValue(request.PathValue("seasonId"))
+	dto, ok := server.ladder[seasonID]
+	if !ok {
+		writeJSON(writer, http.StatusNotFound, server.notFound)
+		return
+	}
+	writeJSON(writer, http.StatusOK, dto)
 }
 
 func (server *Server) matchSetSummary(writer http.ResponseWriter, request *http.Request) {
@@ -353,6 +409,22 @@ type publicMatchSetSummaryFixture struct {
 	Result     map[string]any `json:"result"`
 }
 
+type publicPlayerPageFixture struct {
+	APIVersion    string         `json:"apiVersion"`
+	Kind          string         `json:"kind"`
+	Page          string         `json:"page"`
+	CanonicalHref string         `json:"canonicalHref"`
+	Payload       map[string]any `json:"payload"`
+}
+
+type publicLadderPageFixture struct {
+	APIVersion    string         `json:"apiVersion"`
+	Kind          string         `json:"kind"`
+	Page          string         `json:"page"`
+	CanonicalHref string         `json:"canonicalHref"`
+	Payload       map[string]any `json:"payload"`
+}
+
 type publicReplayMetadataFixture struct {
 	APIVersion string         `json:"apiVersion"`
 	Kind       string         `json:"kind"`
@@ -408,6 +480,28 @@ func validateFixtureShape(raw []byte, expectedKind string) error {
 		}
 		if dto.APIVersion != serviceAPIVersion || dto.Kind != expectedKind || dto.MatchSetID == "" || len(dto.Result) == 0 {
 			return fmt.Errorf("invalid public MatchSet summary fixture")
+		}
+	case "publicPlayerPage":
+		var dto publicPlayerPageFixture
+		if err := decodeStrict(raw, &dto); err != nil {
+			return err
+		}
+		if dto.APIVersion != serviceAPIVersion || dto.Kind != "publicPage" || dto.Page != "player" || dto.CanonicalHref == "" || len(dto.Payload) == 0 {
+			return fmt.Errorf("invalid public Player page fixture")
+		}
+		if handle, ok := dto.Payload["handle"].(string); !ok || handle == "" {
+			return fmt.Errorf("public Player page fixture missing handle")
+		}
+	case "publicLadderPage":
+		var dto publicLadderPageFixture
+		if err := decodeStrict(raw, &dto); err != nil {
+			return err
+		}
+		if dto.APIVersion != serviceAPIVersion || dto.Kind != "publicPage" || dto.Page != "ladder" || dto.CanonicalHref == "" || len(dto.Payload) == 0 {
+			return fmt.Errorf("invalid public Ladder page fixture")
+		}
+		if seasonID, ok := dto.Payload["seasonId"].(string); !ok || seasonID == "" {
+			return fmt.Errorf("public Ladder page fixture missing season id")
 		}
 	case "publicReplayMetadata":
 		var dto publicReplayMetadataFixture

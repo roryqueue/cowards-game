@@ -9,6 +9,22 @@
   },
   {
     "authScope": "public",
+    "id": "getPublicPlayerPage",
+    "method": "GET",
+    "path": "/public/players/{handle}",
+    "privacyClass": "public",
+    "samplePath": "/public/players/local"
+  },
+  {
+    "authScope": "public",
+    "id": "getPublicLadderSeason",
+    "method": "GET",
+    "path": "/public/ladders/{seasonId}",
+    "privacyClass": "public",
+    "samplePath": "/public/ladders/ladder-season%3Ademo"
+  },
+  {
+    "authScope": "public",
     "id": "getPublicMatchSetSummary",
     "method": "GET",
     "path": "/public/matchsets/{matchSetId}/summary",
