@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: Runtime Isolation and TypeScript Backend Retirement
 status: planning
-stopped_at: Phase 103 discussion complete; ready for Phase 104 discussion
-last_updated: "2026-05-24T17:05:00.000Z"
+stopped_at: Phase 104 discussion complete; ready for Phase 105 discussion
+last_updated: "2026-05-24T17:15:00.000Z"
 last_activity: 2026-05-24 - Milestone v1.16 started
 progress:
   total_phases: 7
@@ -24,7 +24,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-24)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 104 - Isolated Runtime Service Boundary Hardening.
+**Current focus:** Phase 105 - Web/API Go-Only Cutover and Fallback Removal.
 **Latest shipped milestone:** v1.15 Go Backend Ownership Completion
 **Active milestone:** v1.16 Runtime Isolation and TypeScript Backend Retirement
 **Requirements:** .planning/REQUIREMENTS.md
@@ -32,10 +32,10 @@ See: .planning/PROJECT.md (updated 2026-05-24)
 
 ## Current Position
 
-Phase: 104 - Isolated Runtime Service Boundary Hardening
+Phase: 105 - Web/API Go-Only Cutover and Fallback Removal
 Plan: Not started
 Status: Discussing phase context
-Last activity: 2026-05-24 - Phase 103 discussion captured strict inventory and retirement contract decisions
+Last activity: 2026-05-24 - Phase 104 discussion captured broker-ready isolated runtime service boundary decisions
 
 ## Workflow Settings
 
@@ -92,7 +92,7 @@ v1.16 goal:
 
 ## Next Todos
 
-- Run `$gsd-discuss-phase 104` to clarify isolated runtime service boundary hardening.
+- Run `$gsd-discuss-phase 105` to clarify web/API Go-only cutover and fallback removal.
 - Run `$gsd-plan-phase 103` after milestone discussion sequencing completes or when ready to plan Phase 103.
 
 ## Blockers/Concerns
