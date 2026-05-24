@@ -54,9 +54,17 @@ import {
   runtimeCompatibilityKey,
   validateStrategyRuntimeMetadataPolicy,
 } from "./runtime.js"
-import { RUNTIME_EXECUTION_SERVICE_VERSION } from "./runtime-execution-service.js"
+import {
+  RUNTIME_EXECUTION_SERVICE_AUTHORITY_POLICY,
+  RUNTIME_EXECUTION_SERVICE_BOUNDARY_CONTRACT,
+  RUNTIME_EXECUTION_SERVICE_CURRENT_IMPLEMENTATION,
+  RUNTIME_EXECUTION_SERVICE_FAILURE_PRIVACY_POLICY,
+  RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,
+  RUNTIME_EXECUTION_SERVICE_VERSION,
+} from "./runtime-execution-service.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 import { STRATEGY_SOURCE_BYTES } from "./constants.js"
+import { readFileSync } from "node:fs"
 import {
   RUNTIME_VIOLATION_TYPES,
   SOLDIER_INACTIVITY_EXPLANATION_CAUSES,
@@ -1397,5 +1405,151 @@ describe("Coward's Game spec contracts", () => {
     expect(RuntimeExecutionServiceResponseSchema.parse(systemFailure)).toEqual(
       systemFailure,
     )
+  })
+
+  it("publishes the v1.16 Strategy Execution Service / Runtime Broker boundary contract", () => {
+    expect(RUNTIME_EXECUTION_SERVICE_VERSION).toBe(
+      "runtime-execution-service-v1.15",
+    )
+    expect(RUNTIME_EXECUTION_SERVICE_BOUNDARY_CONTRACT).toMatchObject({
+      publicName: "Strategy Execution Service / Runtime Broker",
+      currentImplementationLabel: "isolated JS/TS runtime service",
+      contractVersion: "runtime-execution-service-v1.15",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+    })
+    expect(RUNTIME_EXECUTION_SERVICE_CURRENT_IMPLEMENTATION).toMatchObject({
+      label: "isolated JS/TS runtime service",
+      role: "current-http-json-binding",
+      notBackend: true,
+      notFinalRuntimeBroker: true,
+    })
+    expect(RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING).toMatchObject({
+      current: "HTTP+JSON",
+      transportNeutralContract: true,
+      replacementPolicy:
+        "Future brokers may front or replace this binding without changing Go orchestration, persistence, scoring, or public evidence ownership.",
+    })
+    expect(RUNTIME_EXECUTION_SERVICE_AUTHORITY_POLICY.disallowed).toEqual(
+      expect.arrayContaining([
+        "claim-jobs",
+        "complete-matches",
+        "persist-chronicles",
+        "refresh-matchset-scoring",
+        "serve-product-api-routes",
+        "read-web-session-state",
+        "deliver-public-evidence",
+        "fallback-to-retired-typescript-backend",
+      ]),
+    )
+    expect(
+      RUNTIME_EXECUTION_SERVICE_FAILURE_PRIVACY_POLICY.privateDenylist,
+    ).toEqual(
+      expect.arrayContaining([
+        "Strategy source",
+        "StrategyMemory",
+        "SoldierMemory",
+        "objective payloads",
+        "owner debug",
+        "raw Awareness Grid",
+        "stack traces",
+        "stderr",
+        "sessions",
+        "tokens",
+        "DB DSNs",
+        "host paths",
+        "private runtime internals",
+      ]),
+    )
+  })
+
+  it("publishes public-safe v1.16 runtime service boundary artifacts covering D-01 through D-18", () => {
+    const artifact = JSON.parse(
+      readFileSync(
+        new URL(
+          "../../../.planning/artifacts/v1.16-runtime-service-boundary.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    )
+    const markdown = readFileSync(
+      new URL(
+        "../../../.planning/artifacts/v1.16-runtime-service-boundary.md",
+        import.meta.url,
+      ),
+      "utf8",
+    )
+
+    for (const key of [
+      "strategyExecutionService",
+      "currentImplementation",
+      "transport",
+      "runtimeAbi",
+      "authority",
+      "submissionArtifactPolicy",
+      "failurePrivacy",
+      "noFallback",
+      "nonPromotion",
+    ]) {
+      expect(artifact).toHaveProperty(key)
+    }
+
+    expect(artifact.strategyExecutionService.publicName).toBe(
+      "Strategy Execution Service / Runtime Broker",
+    )
+    expect(artifact.currentImplementation.label).toBe(
+      "isolated JS/TS runtime service",
+    )
+    expect(artifact.transport.currentBinding).toBe("HTTP+JSON")
+    expect(artifact.runtimeAbi).toMatchObject({
+      serviceContractVersion: "runtime-execution-service-v1.15",
+      strategyRuntimeAbiVersion: "strategy-runtime-abi-v1.14",
+      languageSpecificShortcutsAllowed: false,
+    })
+    expect(artifact.decisionCoverage).toEqual([
+      "D-01",
+      "D-02",
+      "D-03",
+      "D-04",
+      "D-05",
+      "D-06",
+      "D-07",
+      "D-08",
+      "D-09",
+      "D-10",
+      "D-11",
+      "D-12",
+      "D-13",
+      "D-14",
+      "D-15",
+      "D-16",
+      "D-17",
+      "D-18",
+    ])
+    expect(artifact.nonPromotion).toMatchObject({
+      wasmWasiComponentModelPromoted: false,
+      nodeWasiAcceptedAsSandbox: false,
+      countedNonJsPlayPromoted: false,
+      productionSandboxReplacementPromoted: false,
+    })
+
+    const publicArtifactText = `${JSON.stringify(artifact)}\n${markdown}`
+    for (const forbidden of [
+      "StrategyMemory:",
+      "SoldierMemory:",
+      "objectivePayload:",
+      "ownerToken:",
+      "sessionSecret:",
+      "postgres://",
+      "DATABASE_URL",
+      "/Users/",
+      "runtime private stack",
+    ]) {
+      expect(publicArtifactText).not.toContain(forbidden)
+    }
+    expect(markdown).toContain("Strategy Execution Service / Runtime Broker")
+    expect(markdown).toContain("isolated JS/TS runtime service")
+    expect(markdown).toContain("not a backend")
+    expect(markdown).toContain("No deferred idea is promoted in v1.16")
   })
 })
