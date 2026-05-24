@@ -145,6 +145,54 @@ interface V113RouteOwnershipManifest {
   }
 }
 
+type V115TypeScriptRole =
+  | "frontend"
+  | "parity_only"
+  | "rollback_only"
+  | "test_only"
+  | "runtime_only"
+  | "deferred"
+
+interface V115LifecycleSurface {
+  surfaceId: string
+  surfaceKind: string
+  capability: string
+  currentOwner: string
+  selectedOwner: string
+  typeScriptRole: V115TypeScriptRole
+  fallbackPolicy: string
+  rollbackOwner: string
+  stoppedGoBehavior: string
+  stoppedRuntimeBehavior: string
+  codeReferences: readonly string[]
+  evidenceRequired: readonly string[]
+  disallowedScopes: readonly string[]
+}
+
+interface V115LifecycleOwnershipManifest {
+  schemaVersion: "v1.15-lifecycle-ownership-manifest"
+  milestone: "v1.15"
+  decision: "go-backend-lifecycle-ownership-completion"
+  typeScriptRole: string
+  allowedTypeScriptRoles: readonly V115TypeScriptRole[]
+  monitorBaseline: {
+    strictOffenses: number
+    reportOnlyOffenses: number
+    source: string
+  }
+  globalPolicies: {
+    fallbackPolicy: string
+    mixedDbCompletingOwnersAllowed: boolean
+    runtimeAbiVersion: string
+    goExecutesStrategyCode: boolean
+    nodeVmSecurityBoundaryAllowed: boolean
+    productionSandboxPromotionInScope: boolean
+    typescriptRuntimeRetirementInScope: boolean
+  }
+  publicOutputForbiddenByDefault: readonly string[]
+  surfaces: readonly V115LifecycleSurface[]
+}
+
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -161,6 +209,8 @@ const v113RouteOwnershipManifestPath =
   ".planning/artifacts/v1.13-route-ownership-manifest.json"
 const v114RouteOwnershipManifestPath =
   ".planning/artifacts/v1.14-route-ownership-manifest.json"
+const v115LifecycleOwnershipManifestPath =
+  ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/account/advanced-forks/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
@@ -238,6 +288,17 @@ export const findUnknownReportOnlyOffenses = (
     .map(offenseKey)
     .filter((key) => !baseline.has(key))
     .sort()
+
+export const assertReportOnlyBoundaryOffenseCount = (
+  count: number,
+  baseline: ReadonlySet<string> = knownReportOnlyBoundaryOffenses,
+): void => {
+  if (count !== baseline.size) {
+    throw new Error(
+      `report-only offense baseline drifted: expected ${baseline.size}, got ${count}`,
+    )
+  }
+}
 
 export const assertMonitorPublicPayload = (value: unknown): void => {
   assertPublicServiceDtoLeakSafe(value)
@@ -687,6 +748,224 @@ const checkV114RouteOwnershipManifest = (): string => {
   return `${manifest.routes.length} v1.14 ownership entries checked; fork routes promoted`
 }
 
+const requiredV115SurfaceIds = [
+  "publicReads",
+  "accountAndExhibitionRoutes",
+  "matchJobLifecycle",
+  "runtimeExecutionService",
+  "matchCompletion",
+  "chroniclePersistence",
+  "matchSetScoring",
+  "publicEvidenceDelivery",
+  "workshopAndAdminDeferred",
+  "topologyAndPromotionGate",
+] as const
+
+const requiredV115PublicOutputForbidden = [
+  "Strategy source",
+  "StrategyMemory",
+  "SoldierMemory",
+  "objective payloads",
+  "owner debug",
+  "raw Awareness Grid",
+  "stack traces",
+  "stderr",
+  "sessions",
+  "tokens",
+  "host paths",
+  "DB DSNs",
+  "private runtime internals",
+] as const
+
+const requiredRuntimeOnlyDisallowedScopes = [
+  "db_job_claiming",
+  "match_completion",
+  "chronicle_persistence",
+  "matchset_scoring",
+  "product_api_fallback",
+] as const
+
+const requiredMixedDbOwnerSurfaceIds = [
+  "matchJobLifecycle",
+  "matchCompletion",
+] as const
+
+export const validateV115LifecycleOwnershipManifest = (
+  manifest: V115LifecycleOwnershipManifest,
+): string => {
+  if (manifest.schemaVersion !== "v1.15-lifecycle-ownership-manifest") {
+    throw new Error("v1.15 lifecycle manifest schema version drifted")
+  }
+  if (manifest.milestone !== "v1.15") {
+    throw new Error(`v1.15 lifecycle manifest milestone drifted`)
+  }
+  if (manifest.decision !== "go-backend-lifecycle-ownership-completion") {
+    throw new Error("v1.15 lifecycle manifest decision drifted")
+  }
+  if (manifest.monitorBaseline.strictOffenses !== 0) {
+    throw new Error("v1.15 strict offense baseline drifted")
+  }
+  if (manifest.monitorBaseline.reportOnlyOffenses !== 29) {
+    throw new Error("v1.15 report-only offense baseline drifted")
+  }
+  if (
+    manifest.globalPolicies.fallbackPolicy !==
+    "no_silent_typescript_backend_fallback"
+  ) {
+    throw new Error("v1.15 global fallback policy drifted")
+  }
+  if (manifest.globalPolicies.mixedDbCompletingOwnersAllowed !== false) {
+    throw new Error("v1.15 mixed DB-completing owners must stay forbidden")
+  }
+  if (
+    manifest.globalPolicies.runtimeAbiVersion !== STRATEGY_RUNTIME_ABI_VERSION
+  ) {
+    throw new Error("v1.15 runtime ABI drifted")
+  }
+  if (manifest.globalPolicies.goExecutesStrategyCode !== false) {
+    throw new Error("Go must not execute Strategy code in v1.15")
+  }
+  if (manifest.globalPolicies.nodeVmSecurityBoundaryAllowed !== false) {
+    throw new Error("Node vm must not be a v1.15 security boundary")
+  }
+  if (
+    manifest.globalPolicies.productionSandboxPromotionInScope ||
+    manifest.globalPolicies.typescriptRuntimeRetirementInScope
+  ) {
+    throw new Error("v1.15 manifest pulled v1.16 runtime scope into milestone")
+  }
+  for (const marker of requiredV115PublicOutputForbidden) {
+    if (!manifest.publicOutputForbiddenByDefault.includes(marker)) {
+      throw new Error(`v1.15 public-output denylist missing ${marker}`)
+    }
+  }
+
+  const allowedRoles = new Set<V115TypeScriptRole>([
+    "frontend",
+    "parity_only",
+    "rollback_only",
+    "test_only",
+    "runtime_only",
+    "deferred",
+  ])
+  for (const role of manifest.allowedTypeScriptRoles) {
+    if (!allowedRoles.has(role)) {
+      throw new Error(`v1.15 manifest has invalid allowed role ${role}`)
+    }
+  }
+
+  const surfaceById = new Map(
+    manifest.surfaces.map((surface) => [surface.surfaceId, surface]),
+  )
+  for (const surfaceId of requiredV115SurfaceIds) {
+    if (!surfaceById.has(surfaceId)) {
+      throw new Error(`v1.15 lifecycle manifest missing ${surfaceId}`)
+    }
+  }
+
+  for (const surface of manifest.surfaces) {
+    if (!allowedRoles.has(surface.typeScriptRole)) {
+      throw new Error(`${surface.surfaceId} has invalid TypeScript role`)
+    }
+    if (surface.evidenceRequired.length === 0) {
+      throw new Error(`${surface.surfaceId} missing evidence requirements`)
+    }
+    if (surface.disallowedScopes.length === 0) {
+      throw new Error(`${surface.surfaceId} missing disallowed scopes`)
+    }
+    if (surface.codeReferences.length === 0) {
+      throw new Error(`${surface.surfaceId} missing code references`)
+    }
+    if (
+      surface.selectedOwner === "go_backend" &&
+      surface.fallbackPolicy !== "no_silent_typescript_backend_fallback"
+    ) {
+      throw new Error(`${surface.surfaceId} selected Go without no-fallback`)
+    }
+    if (
+      surface.selectedOwner === "go_backend" &&
+      surface.rollbackOwner.trim().length === 0
+    ) {
+      throw new Error(`${surface.surfaceId} selected Go without rollback owner`)
+    }
+    if (surface.typeScriptRole === "runtime_only") {
+      for (const scope of requiredRuntimeOnlyDisallowedScopes) {
+        if (!surface.disallowedScopes.includes(scope)) {
+          throw new Error(
+            `${surface.surfaceId} missing runtime-only prohibition ${scope}`,
+          )
+        }
+      }
+    }
+    if (
+      requiredMixedDbOwnerSurfaceIds.includes(
+        surface.surfaceId as (typeof requiredMixedDbOwnerSurfaceIds)[number],
+      ) &&
+      !surface.disallowedScopes.includes("mixed_db_completing_owners")
+    ) {
+      throw new Error(`${surface.surfaceId} missing mixed DB owner prohibition`)
+    }
+    if (
+      surface.surfaceId !== "workshopAndAdminDeferred" &&
+      surface.disallowedScopes.includes("mixed_db_completing_owners") &&
+      manifest.globalPolicies.mixedDbCompletingOwnersAllowed
+    ) {
+      throw new Error(`${surface.surfaceId} allows mixed DB owners`)
+    }
+  }
+
+  const runtimeSurface = surfaceById.get("runtimeExecutionService")
+  if (runtimeSurface?.typeScriptRole !== "runtime_only") {
+    throw new Error("runtimeExecutionService must stay runtime_only")
+  }
+  if (runtimeSurface.selectedOwner !== "typescript_runtime_service") {
+    throw new Error("runtimeExecutionService selected owner drifted")
+  }
+
+  for (const surfaceId of [
+    "matchJobLifecycle",
+    "matchCompletion",
+    "chroniclePersistence",
+    "matchSetScoring",
+    "publicEvidenceDelivery",
+  ]) {
+    const surface = surfaceById.get(surfaceId)
+    if (surface?.selectedOwner !== "go_backend") {
+      throw new Error(`${surfaceId} must select Go backend in v1.15`)
+    }
+  }
+
+  assertMonitorPublicPayload({
+    schemaVersion: manifest.schemaVersion,
+    milestone: manifest.milestone,
+    decision: manifest.decision,
+    globalPolicies: manifest.globalPolicies,
+    surfaces: manifest.surfaces.map((surface) => ({
+      surfaceId: surface.surfaceId,
+      surfaceKind: surface.surfaceKind,
+      capability: surface.capability,
+      currentOwner: surface.currentOwner,
+      selectedOwner: surface.selectedOwner,
+      typeScriptRole: surface.typeScriptRole,
+      fallbackPolicy: surface.fallbackPolicy,
+      rollbackOwner: surface.rollbackOwner,
+      stoppedGoBehavior: surface.stoppedGoBehavior,
+      stoppedRuntimeBehavior: surface.stoppedRuntimeBehavior,
+      evidenceRequired: surface.evidenceRequired,
+      disallowedScopes: surface.disallowedScopes,
+    })),
+  })
+
+  return `${manifest.surfaces.length} v1.15 lifecycle ownership surfaces checked`
+}
+
+const checkV115LifecycleOwnershipManifest = (): string =>
+  validateV115LifecycleOwnershipManifest(
+    readJson<V115LifecycleOwnershipManifest>(
+      v115LifecycleOwnershipManifestPath,
+    ),
+  )
+
 export const checkRuntimeAdapterBridge = (
   bridge: RuntimeAdapterBridge,
 ): string => {
@@ -863,6 +1142,7 @@ const checkWebBoundary = (): string => {
       `unknown broad web boundary offenses: ${unknown.join(", ")}`,
     )
   }
+  assertReportOnlyBoundaryOffenseCount(analysis.reportOnlyOffenses.length)
   return `${analysis.reportOnlyOffenses.length} known broad web offenses baseline-gated`
 }
 
@@ -921,6 +1201,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("go_promotion", "v1.14 route ownership manifest", () =>
     checkV114RouteOwnershipManifest(),
+  ),
+  await check("go_promotion", "v1.15 lifecycle ownership manifest", () =>
+    checkV115LifecycleOwnershipManifest(),
   ),
   await check("topology", "static topology diagnostics", () =>
     checkTopologyDiagnostics(),

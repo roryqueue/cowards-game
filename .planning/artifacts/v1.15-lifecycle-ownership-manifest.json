@@ -1,0 +1,332 @@
+{
+  "schemaVersion": "v1.15-lifecycle-ownership-manifest",
+  "milestone": "v1.15",
+  "decision": "go-backend-lifecycle-ownership-completion",
+  "typeScriptRole": "frontend_parity_runtime_rollback_test_or_deferred_only",
+  "allowedTypeScriptRoles": [
+    "frontend",
+    "parity_only",
+    "rollback_only",
+    "test_only",
+    "runtime_only",
+    "deferred"
+  ],
+  "monitorBaseline": {
+    "strictOffenses": 0,
+    "reportOnlyOffenses": 29,
+    "source": "v1.14 promotion evidence"
+  },
+  "globalPolicies": {
+    "fallbackPolicy": "no_silent_typescript_backend_fallback",
+    "mixedDbCompletingOwnersAllowed": false,
+    "runtimeAbiVersion": "strategy-runtime-abi-v1.14",
+    "goExecutesStrategyCode": false,
+    "nodeVmSecurityBoundaryAllowed": false,
+    "productionSandboxPromotionInScope": false,
+    "typescriptRuntimeRetirementInScope": false
+  },
+  "publicOutputForbiddenByDefault": [
+    "Strategy source",
+    "StrategyMemory",
+    "SoldierMemory",
+    "objective payloads",
+    "owner debug",
+    "raw Awareness Grid",
+    "stack traces",
+    "stderr",
+    "sessions",
+    "tokens",
+    "host paths",
+    "DB DSNs",
+    "private runtime internals"
+  ],
+  "surfaces": [
+    {
+      "surfaceId": "publicReads",
+      "surfaceKind": "route_family",
+      "capability": "public read routes",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "typeScriptRole": "rollback_only",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "rollbackOwner": "typescript_service",
+      "stoppedGoBehavior": "fail_closed_for_go_selected_public_reads",
+      "stoppedRuntimeBehavior": "not_applicable",
+      "codeReferences": [
+        "apps/go-backend/live_backend.go",
+        "apps/web/lib/public-service-adapter.ts"
+      ],
+      "evidenceRequired": [
+        "schema",
+        "privacy",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "strategy_source",
+        "memory",
+        "objective_payloads",
+        "owner_debug",
+        "raw_replay",
+        "runtime_execution"
+      ]
+    },
+    {
+      "surfaceId": "accountAndExhibitionRoutes",
+      "surfaceKind": "route_family",
+      "capability": "account, auth, fork, and exhibition routes",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "typeScriptRole": "rollback_only",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "rollbackOwner": "typescript_web_api",
+      "stoppedGoBehavior": "fail_closed_for_go_selected_account_and_exhibition_routes",
+      "stoppedRuntimeBehavior": "not_applicable",
+      "codeReferences": [
+        "apps/go-backend/live_backend.go",
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "evidenceRequired": [
+        "schema",
+        "privacy",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "raw_token",
+        "token_hash",
+        "password_hash",
+        "strategy_execution",
+        "mixed_db_completing_owners"
+      ]
+    },
+    {
+      "surfaceId": "matchJobLifecycle",
+      "surfaceKind": "lifecycle",
+      "capability": "job claim, lease, heartbeat, retry, and system failure",
+      "currentOwner": "typescript_persistence",
+      "selectedOwner": "go_backend",
+      "typeScriptRole": "rollback_only",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "rollbackOwner": "typescript_worker",
+      "stoppedGoBehavior": "normal_jobs_remain_queued_or_expire_without_typescript_claim",
+      "stoppedRuntimeBehavior": "not_applicable",
+      "codeReferences": [
+        "packages/persistence/src/jobs.ts",
+        "apps/worker/src/runner.ts"
+      ],
+      "evidenceRequired": [
+        "for_update_skip_locked_parity",
+        "lease_mismatch_rejection",
+        "retry_exhaustion_parity",
+        "no_mixed_db_claimers"
+      ],
+      "disallowedScopes": [
+        "strategy_execution",
+        "chronicle_persistence",
+        "matchset_scoring",
+        "mixed_db_completing_owners",
+        "silent_typescript_fallback"
+      ]
+    },
+    {
+      "surfaceId": "runtimeExecutionService",
+      "surfaceKind": "runtime_boundary",
+      "capability": "Strategy runtime execution handoff",
+      "currentOwner": "typescript_worker_runtime_js",
+      "selectedOwner": "typescript_runtime_service",
+      "typeScriptRole": "runtime_only",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "rollbackOwner": "typescript_worker_runtime_only",
+      "stoppedGoBehavior": "not_applicable",
+      "stoppedRuntimeBehavior": "go_records_retryable_or_terminal_system_failure",
+      "codeReferences": [
+        "packages/runtime-js/src/abi-bridge.ts",
+        "packages/runtime-js/src/executor.ts",
+        "apps/worker/src/runtime-config.ts"
+      ],
+      "evidenceRequired": [
+        "strategy-runtime-abi-v1.14",
+        "db_free_runtime_service",
+        "redacted_system_failure",
+        "no_node_vm_boundary"
+      ],
+      "disallowedScopes": [
+        "db_job_claiming",
+        "match_completion",
+        "chronicle_persistence",
+        "matchset_scoring",
+        "product_api_fallback",
+        "node_vm_sandbox_promotion"
+      ]
+    },
+    {
+      "surfaceId": "matchCompletion",
+      "surfaceKind": "lifecycle",
+      "capability": "Match completion and lifecycle state transitions",
+      "currentOwner": "typescript_persistence",
+      "selectedOwner": "go_backend",
+      "typeScriptRole": "parity_only",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "rollbackOwner": "typescript_worker",
+      "stoppedGoBehavior": "claimed_matches_do_not_complete_without_explicit_rollback",
+      "stoppedRuntimeBehavior": "not_applicable",
+      "codeReferences": [
+        "packages/persistence/src/complete-match.ts"
+      ],
+      "evidenceRequired": [
+        "valid_running_lease",
+        "atomic_transaction",
+        "idempotent_existing_chronicle",
+        "parity_fields"
+      ],
+      "disallowedScopes": [
+        "invalid_lease_completion",
+        "partial_completion",
+        "mixed_db_completing_owners",
+        "private_replay_leak"
+      ]
+    },
+    {
+      "surfaceId": "chroniclePersistence",
+      "surfaceKind": "persistence",
+      "capability": "Chronicle validation and persistence",
+      "currentOwner": "typescript_persistence",
+      "selectedOwner": "go_backend",
+      "typeScriptRole": "parity_only",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "rollbackOwner": "typescript_worker",
+      "stoppedGoBehavior": "chronicle_not_persisted_without_explicit_rollback",
+      "stoppedRuntimeBehavior": "not_applicable",
+      "codeReferences": [
+        "packages/persistence/src/chronicle-store.ts",
+        "packages/replay/src/validate.ts",
+        "packages/replay/src/hash.ts"
+      ],
+      "evidenceRequired": [
+        "schema_validation",
+        "content_hash_validation",
+        "metadata_parity",
+        "public_projection_safety"
+      ],
+      "disallowedScopes": [
+        "raw_private_projection",
+        "hash_drift",
+        "storage_conflict_ambiguity",
+        "private_runtime_internals"
+      ]
+    },
+    {
+      "surfaceId": "matchSetScoring",
+      "surfaceKind": "scoring",
+      "capability": "MatchSet scoring and status refresh",
+      "currentOwner": "typescript_persistence",
+      "selectedOwner": "go_backend",
+      "typeScriptRole": "parity_only",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "rollbackOwner": "typescript_service",
+      "stoppedGoBehavior": "standings_not_refreshed_without_explicit_rollback",
+      "stoppedRuntimeBehavior": "not_applicable",
+      "codeReferences": [
+        "packages/persistence/src/scoring.ts",
+        "packages/persistence/src/matchset-status.ts"
+      ],
+      "evidenceRequired": [
+        "scoring_parity",
+        "failure_classification_parity",
+        "stable_tie_breakers",
+        "public_standings"
+      ],
+      "disallowedScopes": [
+        "false_player_loss_for_system_failure",
+        "lazy_typescript_scoring_refresh",
+        "private_runtime_internals"
+      ]
+    },
+    {
+      "surfaceId": "publicEvidenceDelivery",
+      "surfaceKind": "public_evidence",
+      "capability": "public MatchSet, replay metadata, and selected replay evidence",
+      "currentOwner": "mixed_go_and_typescript",
+      "selectedOwner": "go_backend",
+      "typeScriptRole": "frontend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "rollbackOwner": "typescript_service",
+      "stoppedGoBehavior": "public_evidence_requests_fail_closed_when_go_selected",
+      "stoppedRuntimeBehavior": "not_applicable",
+      "codeReferences": [
+        "apps/go-backend/live_backend.go",
+        "apps/web/app/matches/server.ts",
+        "apps/web/lib/public-service-adapter.ts"
+      ],
+      "evidenceRequired": [
+        "schema",
+        "privacy",
+        "browser_replay_realism",
+        "no_direct_persistence_for_selected_normal_flow"
+      ],
+      "disallowedScopes": [
+        "raw_chronicle_private_projection",
+        "owner_debug_by_default",
+        "strategy_source",
+        "memory",
+        "objective_payloads"
+      ]
+    },
+    {
+      "surfaceId": "workshopAndAdminDeferred",
+      "surfaceKind": "deferred_scope",
+      "capability": "workshop, admin, ladder, governance, and owner-debug internals",
+      "currentOwner": "typescript_web_api",
+      "selectedOwner": "typescript_web_api",
+      "typeScriptRole": "deferred",
+      "fallbackPolicy": "not_selected_for_go_in_v1.15",
+      "rollbackOwner": "typescript_web_api",
+      "stoppedGoBehavior": "not_applicable",
+      "stoppedRuntimeBehavior": "not_applicable",
+      "codeReferences": [
+        "apps/web/app/workshop/server.ts",
+        "apps/web/app/competitive/server.ts"
+      ],
+      "evidenceRequired": [
+        "explicit_deferred_label"
+      ],
+      "disallowedScopes": [
+        "normal_go_backend_claim",
+        "silent_product_fallback"
+      ]
+    },
+    {
+      "surfaceId": "topologyAndPromotionGate",
+      "surfaceKind": "topology",
+      "capability": "live topology, monitors, rollback, and promotion evidence",
+      "currentOwner": "planning_and_scripts",
+      "selectedOwner": "planning_and_scripts",
+      "typeScriptRole": "test_only",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "rollbackOwner": "operator_documented",
+      "stoppedGoBehavior": "topology_drill_must_fail_closed",
+      "stoppedRuntimeBehavior": "topology_drill_must_record_system_failure",
+      "codeReferences": [
+        "scripts/check-local-topology.ts",
+        "scripts/check-boundary-monitors.ts"
+      ],
+      "evidenceRequired": [
+        "live_web_go_runtime_topology",
+        "stopped_go_drill",
+        "stopped_runtime_drill",
+        "rollback_drill",
+        "browser_replay_realism"
+      ],
+      "disallowedScopes": [
+        "strategy_source",
+        "memory",
+        "objective_payloads",
+        "stack_traces",
+        "stderr",
+        "sessions",
+        "tokens",
+        "host_paths",
+        "db_dsns"
+      ]
+    }
+  ]
+}
