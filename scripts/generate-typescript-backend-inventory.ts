@@ -576,6 +576,7 @@ const classifyRole = (
   if (repoPath.startsWith("apps/runtime-service/src/")) return "runtime-service"
   if (repoPath.startsWith("packages/runtime-js/src/")) return "runtime-adapter"
   if (repoPath.startsWith("apps/worker/src/")) return "rollback-only"
+  if (repoPath.includes("replay-fixture.ts")) return "fixture-only"
   if (repoPath.startsWith("packages/service/src/")) return "parity-only"
   if (repoPath.startsWith("packages/persistence/src/")) {
     if (repoPath.includes("preset") || repoPath.includes("seed")) {

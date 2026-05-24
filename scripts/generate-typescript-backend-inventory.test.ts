@@ -482,6 +482,14 @@ describe("TypeScript backend inventory generator", () => {
     expect(
       inventory.surfaces.some((surface) => surface.kind === "service-module"),
     ).toBe(true)
+    expect(
+      inventory.surfaces.find(
+        (surface) => surface.path === "apps/web/app/matches/replay-fixture.ts",
+      ),
+    ).toMatchObject({
+      role: "fixture-only",
+      usesDatabase: true,
+    })
   })
 
   it("keeps the committed v1.16 artifact on the BASE-03, BASE-05, and BASE-06 contract", () => {
