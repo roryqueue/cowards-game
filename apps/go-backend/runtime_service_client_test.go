@@ -203,7 +203,8 @@ func TestRuntimeServiceClientSanitizesServiceFailure(t *testing.T) {
 			MatchID:           request.Match.MatchID,
 			RuntimeABIVersion: strategyRuntimeABIVersion,
 			SystemFailure: &runtimeServiceFailure{
-				Code:         "SubprocessSystemFailure",
+				Code:         "SubprocessSystemFailure-ownerDebug-sessionId",
+				ErrorClass:   "FallbackSystemFailure",
 				ErrorMessage: strings.Join(privateMarkers, " | "),
 				PublicMessage: strings.Join(
 					append([]string{"runtime failed"}, privateMarkers...),
@@ -231,7 +232,7 @@ func TestRuntimeServiceClientSanitizesServiceFailure(t *testing.T) {
 	client := newRuntimeServiceClient(server.URL)
 
 	_, failure := client.executeMatch(context.Background(), request)
-	if failure == nil || failure.ErrorClass != "SubprocessSystemFailure" || !failure.Retryable {
+	if failure == nil || failure.ErrorClass != "FallbackSystemFailure" || !failure.Retryable {
 		t.Fatalf("expected service failure, got %+v", failure)
 	}
 	assertRuntimeServiceFailureSafe(t, failure)

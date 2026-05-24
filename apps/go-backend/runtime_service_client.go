@@ -241,9 +241,9 @@ func newRuntimeServiceFailure(errorClass string, message string, retryable bool,
 }
 
 func sanitizeRuntimeServiceFailure(failure runtimeServiceFailure) runtimeServiceFailure {
-	code := failure.Code
+	code := sanitizeRuntimeServiceFailureCode(failure.Code)
 	if code == "" {
-		code = failure.ErrorClass
+		code = sanitizeRuntimeServiceFailureCode(failure.ErrorClass)
 	}
 	if code == "" {
 		code = "RuntimeServiceSystemFailure"
@@ -256,6 +256,24 @@ func sanitizeRuntimeServiceFailure(failure runtimeServiceFailure) runtimeService
 		Retryable:     failure.Retryable,
 		Details:       sanitizeRuntimeServiceDetails(failure.Details),
 	}
+}
+
+func sanitizeRuntimeServiceFailureCode(code string) string {
+	if code == "" {
+		return ""
+	}
+	for _, marker := range runtimeServicePrivateMarkers {
+		if strings.Contains(strings.ToLower(code), marker) {
+			return ""
+		}
+	}
+	for _, r := range code {
+		if (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
+			continue
+		}
+		return ""
+	}
+	return code
 }
 
 func sanitizeRuntimeServiceDetails(details map[string]any) map[string]any {
