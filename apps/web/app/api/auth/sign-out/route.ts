@@ -1,26 +1,17 @@
 import {
-  competitiveServer,
-  getSessionIdFromCookies,
-} from "../../../competitive/server.js"
-import {
   clearSessionCookie,
   competitiveErrorResponse,
 } from "../../../competitive/http.js"
 import {
-  isGoAuthSessionSelected,
+  getAccountSessionId,
   requireSelectedGoBackendClient,
 } from "../../../../lib/account-service-adapter.js"
 
 export async function POST(): Promise<Response> {
   try {
-    const sessionId = await getSessionIdFromCookies()
-    if (isGoAuthSessionSelected()) {
-      await requireSelectedGoBackendClient("auth/session").revokeSession(
-        sessionId,
-      )
-    } else {
-      await competitiveServer.signOut(sessionId)
-    }
+    await requireSelectedGoBackendClient("auth/session").revokeSession(
+      await getAccountSessionId(),
+    )
     return Response.json(
       { ok: true },
       { headers: { "Set-Cookie": clearSessionCookie() } },

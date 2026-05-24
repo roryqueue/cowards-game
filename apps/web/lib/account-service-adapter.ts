@@ -93,14 +93,19 @@ export const createAccountReadService = ({
   env?: GoBackendOwnershipEnv | undefined
   goClient?: GoBackendServiceClient | null | undefined
 } = {}) => {
-  const localService = createCowardsLocalService({
-    withPool: withDatabasePool,
-  })
+  let localService:
+    | ReturnType<typeof createCowardsLocalService>
+    | undefined
+  const getLocalService = (): ReturnType<typeof createCowardsLocalService> => {
+    localService ??= createCowardsLocalService({
+      withPool: withDatabasePool,
+    })
+    return localService
+  }
   return {
-    ...localService,
     async getAuthSession(sessionId: string) {
       if (!isGoAuthSessionSelected(env)) {
-        return localService.getAuthSession(sessionId)
+        return getLocalService().getAuthSession(sessionId)
       }
       if (!goClient) {
         throw new Error(
@@ -111,7 +116,7 @@ export const createAccountReadService = ({
     },
     async listStrategyRevisions(sessionId: string) {
       if (!isGoAccountRevisionsSelected(env)) {
-        return localService.listStrategyRevisions(sessionId)
+        return getLocalService().listStrategyRevisions(sessionId)
       }
       if (!goClient) {
         throw new Error(
