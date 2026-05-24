@@ -10,7 +10,10 @@ import {
 } from "@cowards/spec"
 import type { StoredChronicle } from "@cowards/persistence/chronicle-store"
 import { createWorkshopAnalyticsDemoSnapshot } from "@cowards/persistence/workshop-analytics"
-import { createCowardsLocalService } from "./index.js"
+import {
+  COWARDS_LOCAL_SERVICE_ROLE,
+  createCowardsLocalService,
+} from "./index.js"
 
 const publicResult = {
   matchSetId: "match-set:demo",
@@ -198,6 +201,17 @@ const storedChronicle = {
 } as unknown as StoredChronicle
 
 describe("createCowardsLocalService", () => {
+  it("labels the local DB-backed service as non-normal support", () => {
+    expect(COWARDS_LOCAL_SERVICE_ROLE.normalBackend).toBe(false)
+    expect(COWARDS_LOCAL_SERVICE_ROLE.selectedNormalBackend).toBe(false)
+    expect(COWARDS_LOCAL_SERVICE_ROLE.roles).toEqual([
+      "parity-oracle",
+      "fixture-generator",
+      "rollback-reference",
+      "deferred-support",
+    ])
+  })
+
   it("returns stable health metadata", () => {
     const service = createCowardsLocalService({
       withPool: async (fn) => fn({} as never),

@@ -1,8 +1,9 @@
+import { readFileSync } from "node:fs"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { Pool } from "pg"
 import type { StrategyRuntime } from "@cowards/engine"
-import type * as Persistence from "@cowards/persistence"
 import { createRepositories } from "@cowards/persistence"
+import type * as PersistenceQuarantine from "@cowards/persistence/quarantine-lifecycle"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import {
   SubprocessSystemFailure,
@@ -29,8 +30,13 @@ import {
   type WorkerRuntimeConfig,
 } from "./runtime-config.js"
 
+vi.mock("@cowards/persistence/quarantine-lifecycle", async (importOriginal) => {
+  const actual = await importOriginal<typeof PersistenceQuarantine>()
+  return actual
+})
+
 vi.mock("@cowards/persistence", async (importOriginal) => {
-  const actual = await importOriginal<typeof Persistence>()
+  const actual = await importOriginal<typeof import("@cowards/persistence")>()
   return {
     ...actual,
     createRepositories: vi.fn(),
@@ -330,6 +336,15 @@ describe("worker runner", () => {
         workerPurpose: "rollback",
       }),
     ).not.toContain("normal backend")
+  })
+
+  it("imports lifecycle persistence helpers through the explicit quarantine subpath", () => {
+    const source = readFileSync("apps/worker/src/runner.ts", "utf8")
+
+    expect(source).toContain("@cowards/persistence/quarantine-lifecycle")
+    expect(source).not.toMatch(
+      /from\s+["']@cowards\/persistence["'][\s\S]*claimNextMatchJob/,
+    )
   })
 
   it("routes strategy calls using persisted Match player IDs", () => {

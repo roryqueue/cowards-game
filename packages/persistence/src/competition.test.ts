@@ -4,6 +4,7 @@ import {
   buildExhibitionDuplicateKey,
   evaluateRateLimit,
   generateCompetitionPairwiseMatrix,
+  TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE,
   runtimeAllowsCountedPlay,
   validateManualExhibitionRevisionIds,
 } from "./competition.js"
@@ -51,6 +52,57 @@ const entrants = [
 ]
 
 describe("competition helpers", () => {
+  it("keeps lifecycle and selected-normal creation helpers out of the normal persistence root export", async () => {
+    const root = await import("@cowards/persistence")
+    for (const symbol of [
+      "claimNextMatchJob",
+      "completeMatch",
+      "recordAttemptFailure",
+      "refreshMatchSetStatus",
+      "createMatchSetService",
+      "createManualExhibitionMatchSet",
+    ]) {
+      expect(root).not.toHaveProperty(symbol)
+    }
+  })
+
+  it("exposes TypeScript lifecycle helpers only through an explicit quarantine subpath", async () => {
+    const quarantine = await import("@cowards/persistence/quarantine-lifecycle")
+
+    expect(quarantine.TYPE_SCRIPT_LIFECYCLE_QUARANTINE.allowedPurposes).toEqual(
+      ["rollback", "test", "parity"],
+    )
+    expect(quarantine.TYPE_SCRIPT_LIFECYCLE_QUARANTINE.normalBackend).toBe(
+      false,
+    )
+    expect(quarantine).toHaveProperty("claimNextMatchJob")
+    expect(quarantine).toHaveProperty("completeMatch")
+    expect(quarantine).toHaveProperty("refreshMatchSetStatus")
+    expect(quarantine).toHaveProperty("createManualExhibitionMatchSet")
+  })
+
+  it("labels TypeScript competition MatchSet creation and public DTO refresh as non-normal support", () => {
+    expect(TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE.normalBackend).toBe(false)
+    expect(TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE.selectedNormalBackend).toBe(
+      false,
+    )
+    expect(TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE.allowedRoles).toEqual([
+      "rollback",
+      "test",
+      "parity",
+      "fixture",
+      "deferred",
+    ])
+    expect(
+      TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE.quarantinedFunctions,
+    ).toEqual(
+      expect.arrayContaining([
+        "createManualExhibitionMatchSet",
+        "buildPublicMatchSetResultDto",
+      ]),
+    )
+  })
+
   it("allows 2-8 distinct owned revisions for manual exhibitions", () => {
     expect(() =>
       validateManualExhibitionRevisionIds([
