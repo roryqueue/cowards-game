@@ -95,7 +95,7 @@
                       "additionalProperties": false,
                       "properties": {
                         "abiVersion": {
-                          "const": "strategy-runtime-abi-v1.7",
+                          "const": "strategy-runtime-abi-v1.14",
                           "type": "string"
                         },
                         "adapter": {
@@ -711,7 +711,7 @@
                       "additionalProperties": false,
                       "properties": {
                         "abiVersion": {
-                          "const": "strategy-runtime-abi-v1.7",
+                          "const": "strategy-runtime-abi-v1.14",
                           "type": "string"
                         },
                         "adapter": {
@@ -1485,7 +1485,7 @@
                       "additionalProperties": false,
                       "properties": {
                         "abiVersion": {
-                          "const": "strategy-runtime-abi-v1.7",
+                          "const": "strategy-runtime-abi-v1.14",
                           "type": "string"
                         },
                         "adapter": {
@@ -1906,7 +1906,7 @@
                     "additionalProperties": false,
                     "properties": {
                       "abiVersion": {
-                        "const": "strategy-runtime-abi-v1.7",
+                        "const": "strategy-runtime-abi-v1.14",
                         "type": "string"
                       },
                       "adapter": {
@@ -2832,7 +2832,7 @@
                             "/matchsets/match-set:demo"
                           ],
                           "runtime": {
-                            "abiVersion": "strategy-runtime-abi-v1.7",
+                            "abiVersion": "strategy-runtime-abi-v1.14",
                             "adapter": {
                               "id": "runtime-js-worker-thread",
                               "version": "runtime-js-v1"

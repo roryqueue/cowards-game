@@ -3,7 +3,7 @@
   "generatedBy": "scripts/generate-strategy-artifact-manifest.ts",
   "sourceOfTruth": "typescript-registries",
   "artifactCount": 23,
-  "contentHash": "sha256:732ff750bdcc382e464931baa9ffd208d7e8101cf33732f503d0331703f9fc61",
+  "contentHash": "sha256:54b502b1fd0a7cdd9734fd4046b1c39fd364a54391e01bb7250255503063cf74",
   "artifacts": [
     {
       "id": "strategy-artifact:advanced:center-gravity",
@@ -20,7 +20,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -99,14 +99,14 @@
         "sourceHash": "c0462afc35863ae47e3cff9d4b2878a8aff1a282981f6c25ee4fb30afd02bece",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:034a0971635c13fb6c73507607a3b0c39a004f3f6138b5a9b9d78269d3081cc5",
+        "runtimeCompatibility": "sha256:14242baf4dd68fb4fd533df6464debd562e82bf673558bc03724f9d5123fc3a3",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:034a0971635c13fb6c73507607a3b0c39a004f3f6138b5a9b9d78269d3081cc5",
+        "compatibilityKey": "sha256:14242baf4dd68fb4fd533df6464debd562e82bf673558bc03724f9d5123fc3a3",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -131,7 +131,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -211,14 +211,14 @@
         "sourceHash": "0fa96cb53ab429e1599feb0cdae182e7b1cb2981be4b49a60ae6b7a9b4db2455",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:2acf9029dd39c6559d06cb707d8246c56d9fd4bdebc5e17b4f145ab06d3ac6ad",
+        "runtimeCompatibility": "sha256:7088883a8ab0c710c8c21350d3a9a28fcb778e0e8303e0baf710d726fbcb877f",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:2acf9029dd39c6559d06cb707d8246c56d9fd4bdebc5e17b4f145ab06d3ac6ad",
+        "compatibilityKey": "sha256:7088883a8ab0c710c8c21350d3a9a28fcb778e0e8303e0baf710d726fbcb877f",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -243,7 +243,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -323,14 +323,14 @@
         "sourceHash": "32b7b1433098d58b03303c8fb64c5b0eddb70a04207ef47b1a2b280f9f4d3d54",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:0f8a78fd025cdab300a5de31694210ba2df79b0f8a2a1e3b389af722dacb2e11",
+        "runtimeCompatibility": "sha256:d63ba3ef672a888924c584f5df4b1225fa1c280c71ed157d62534110b12644d9",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:0f8a78fd025cdab300a5de31694210ba2df79b0f8a2a1e3b389af722dacb2e11",
+        "compatibilityKey": "sha256:d63ba3ef672a888924c584f5df4b1225fa1c280c71ed157d62534110b12644d9",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -355,7 +355,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -435,14 +435,14 @@
         "sourceHash": "13ca40eee8c359879ced75e99cec8135cfa8e8693ef759aa3c0948c07863b03d",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:cd0b9fe38c119dd3af1a8abfb8b58e46b74fb14c10bbbbfe593e13e8d89c9b4f",
+        "runtimeCompatibility": "sha256:d27911a70bb3a1b420813990e775f004f8cc83e9466a01f0902c6cac0a60cd96",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:cd0b9fe38c119dd3af1a8abfb8b58e46b74fb14c10bbbbfe593e13e8d89c9b4f",
+        "compatibilityKey": "sha256:d27911a70bb3a1b420813990e775f004f8cc83e9466a01f0902c6cac0a60cd96",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -467,7 +467,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -547,14 +547,14 @@
         "sourceHash": "4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:f3fdf41387a20966895f5730ddc771847381f1db2f3be2de55244783a9f146a3",
+        "runtimeCompatibility": "sha256:8fff2aef5da2eb7d03954c2285bf435b5de59b14933d6bba76e2b7c21a94edb7",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:f3fdf41387a20966895f5730ddc771847381f1db2f3be2de55244783a9f146a3",
+        "compatibilityKey": "sha256:8fff2aef5da2eb7d03954c2285bf435b5de59b14933d6bba76e2b7c21a94edb7",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -579,7 +579,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -659,14 +659,14 @@
         "sourceHash": "b0e6878325f869c56b1444905cb86051e5b8c65974294717bb41def92aa0e3e0",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:c1721fe58b86b1cc3c757d0b390d655b9942bb5a0dc0c00a0f57d276675d29df",
+        "runtimeCompatibility": "sha256:4e7d9b06bdfa04bcbd1dab763c8ecc40746678f30011d3bec0be14c79ee06b9e",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:c1721fe58b86b1cc3c757d0b390d655b9942bb5a0dc0c00a0f57d276675d29df",
+        "compatibilityKey": "sha256:4e7d9b06bdfa04bcbd1dab763c8ecc40746678f30011d3bec0be14c79ee06b9e",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -691,7 +691,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -771,14 +771,14 @@
         "sourceHash": "fb848a6651bf7f53056d3435cddd273ed3c12f0f6383d1202cc0cbadc8bff8b5",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:a022acee34b099b23e8535d19cad94792bc8a7d67a07576fa4b0c237988961df",
+        "runtimeCompatibility": "sha256:12ea1f2f25d04bbfc60c3a02da7535e44a597d4fcb129b11457ad3372a52b6b6",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:a022acee34b099b23e8535d19cad94792bc8a7d67a07576fa4b0c237988961df",
+        "compatibilityKey": "sha256:12ea1f2f25d04bbfc60c3a02da7535e44a597d4fcb129b11457ad3372a52b6b6",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -803,7 +803,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -883,14 +883,14 @@
         "sourceHash": "eff43a1b44f254a22726c5337608d7c64d25cc5e30800f00c2c63117789964ad",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:2b7a5b97e5b9793711b5f1deb10fca59986433201b15d5590a3749d89f2c361c",
+        "runtimeCompatibility": "sha256:bb79fd6be3ab09edc51fa6f6651f426ac602ef9529149503a4526e293f2d5baf",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:2b7a5b97e5b9793711b5f1deb10fca59986433201b15d5590a3749d89f2c361c",
+        "compatibilityKey": "sha256:bb79fd6be3ab09edc51fa6f6651f426ac602ef9529149503a4526e293f2d5baf",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -915,7 +915,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -995,14 +995,14 @@
         "sourceHash": "27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:3e229dfac3dfdf35b6762c57b6c3f8ddd643f54ea4797c308421a7a6d9dccc82",
+        "runtimeCompatibility": "sha256:6d57b525ccae8d273453011fd32fb16e50bcf8fde2fe6aba1c6d34a40a147a64",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:3e229dfac3dfdf35b6762c57b6c3f8ddd643f54ea4797c308421a7a6d9dccc82",
+        "compatibilityKey": "sha256:6d57b525ccae8d273453011fd32fb16e50bcf8fde2fe6aba1c6d34a40a147a64",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1027,7 +1027,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -1106,14 +1106,14 @@
         "sourceHash": "02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:80eb17d9e0434c682472f149f8369d3d3f336a93b370f9b7bd361b7f9e31f3f3",
+        "runtimeCompatibility": "sha256:88f636197cacb3f6cc1a20f4464ab8f7793ff5abaf9d207327454a1dc91d952e",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:80eb17d9e0434c682472f149f8369d3d3f336a93b370f9b7bd361b7f9e31f3f3",
+        "compatibilityKey": "sha256:88f636197cacb3f6cc1a20f4464ab8f7793ff5abaf9d207327454a1dc91d952e",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1138,7 +1138,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -1208,14 +1208,14 @@
         "sourceHash": "5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:ca142537948c7e60a6e49c37e48635e1f2860970fd876250964575650631ff81",
+        "runtimeCompatibility": "sha256:45e9b4d1d810d82eb57bdbec011d334ef52fe97bcb9405f0a7f1ed61140cc33c",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:ca142537948c7e60a6e49c37e48635e1f2860970fd876250964575650631ff81",
+        "compatibilityKey": "sha256:45e9b4d1d810d82eb57bdbec011d334ef52fe97bcb9405f0a7f1ed61140cc33c",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1240,7 +1240,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -1310,14 +1310,14 @@
         "sourceHash": "d4b2d480a743ae3f5f4bbcb167385183a03d1fc0e52a8fb8c333014fbe3e2b39",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:68d0c42cb43a33e43da5313c8f3fb1dc50430e44382c462c2f16c95f11267ee3",
+        "runtimeCompatibility": "sha256:2e7e6a1ec7a1368a3144d08292be44ad93c8ac63f156f77b52ffbf0fea3a671e",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:68d0c42cb43a33e43da5313c8f3fb1dc50430e44382c462c2f16c95f11267ee3",
+        "compatibilityKey": "sha256:2e7e6a1ec7a1368a3144d08292be44ad93c8ac63f156f77b52ffbf0fea3a671e",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1342,7 +1342,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -1412,14 +1412,14 @@
         "sourceHash": "659d6906c2857f7e0d60553ace1d58e84ac9fec5e5bd4bd2e695d7a0797423d0",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:fd96dbbaaa0973dd748daf564967a31e5b0bc44db2bbc6c6433f64c3b9a592c0",
+        "runtimeCompatibility": "sha256:10545d2ef6a43c450a094dbbb806937fee03380a31883fb4f052c939ac4825c0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:fd96dbbaaa0973dd748daf564967a31e5b0bc44db2bbc6c6433f64c3b9a592c0",
+        "compatibilityKey": "sha256:10545d2ef6a43c450a094dbbb806937fee03380a31883fb4f052c939ac4825c0",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1444,7 +1444,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -1514,14 +1514,14 @@
         "sourceHash": "9d6f04a2520f1c5e406a49d6bad6200429b4b48481d55d23b97a2ac4e97c27c5",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:d62e3f2639228565a91c864649a035f9e9fb26096a157bb9dd9b1165f33addf4",
+        "runtimeCompatibility": "sha256:4a989bcaed18b3f52f8dabc8273b62b9d3270bfd1bc4c9d09e1de7024b478d3c",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:d62e3f2639228565a91c864649a035f9e9fb26096a157bb9dd9b1165f33addf4",
+        "compatibilityKey": "sha256:4a989bcaed18b3f52f8dabc8273b62b9d3270bfd1bc4c9d09e1de7024b478d3c",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1546,7 +1546,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -1616,14 +1616,14 @@
         "sourceHash": "017f99e5ea2502eb6ba8bbf44e861fbb38b0092f93e7cf3a1c6859b385ce0916",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:5ad54ff74e3f012f0d7be31f013a5d2dcf9e53487b6be1a982d75e68af26897c",
+        "runtimeCompatibility": "sha256:4e788ec1573ada177dabb5dd93c519aa2224ce77008d5efb5a4ec4ef9372d5fb",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:5ad54ff74e3f012f0d7be31f013a5d2dcf9e53487b6be1a982d75e68af26897c",
+        "compatibilityKey": "sha256:4e788ec1573ada177dabb5dd93c519aa2224ce77008d5efb5a4ec4ef9372d5fb",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1648,7 +1648,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -1718,14 +1718,14 @@
         "sourceHash": "8c40a5163b2ce42cceda4ea864c5cd56b31311550e9b871d438aeae58b9667ad",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:3900b9e2bb95aa088ab80868ec0273dfc9b2d22ae1e6b766d8b3e2c58dbfbedb",
+        "runtimeCompatibility": "sha256:d78664c600300a26619dd345622fce9396471c695138dd852b51bfbed55940e4",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:3900b9e2bb95aa088ab80868ec0273dfc9b2d22ae1e6b766d8b3e2c58dbfbedb",
+        "compatibilityKey": "sha256:d78664c600300a26619dd345622fce9396471c695138dd852b51bfbed55940e4",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1750,7 +1750,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -1820,14 +1820,14 @@
         "sourceHash": "caf829a7338cef862e3eeac7ef6f527f251924688c470376453e2f7c458445e7",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:da2eca764d2da323f8fb8764f803f4383c4d169528395c6133e32370adaa9828",
+        "runtimeCompatibility": "sha256:445a52349978a0c38fe117b549019a8af8809b4a428cc195e8a5764fd8473dfb",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:da2eca764d2da323f8fb8764f803f4383c4d169528395c6133e32370adaa9828",
+        "compatibilityKey": "sha256:445a52349978a0c38fe117b549019a8af8809b4a428cc195e8a5764fd8473dfb",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1852,7 +1852,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -1922,14 +1922,14 @@
         "sourceHash": "76cfb902ba1090855f0aa18b6fb39d861b1417373bbd6c22b89284dd2c914348",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:063cc3a6ea0b9da2531d61b6a430d377278f39a12d343eb5222fc32c21e66ee3",
+        "runtimeCompatibility": "sha256:8299710afdecaef49a78290c4deb8253bb2727be46d43885b90ae6004a287de5",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:063cc3a6ea0b9da2531d61b6a430d377278f39a12d343eb5222fc32c21e66ee3",
+        "compatibilityKey": "sha256:8299710afdecaef49a78290c4deb8253bb2727be46d43885b90ae6004a287de5",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1954,7 +1954,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -2024,14 +2024,14 @@
         "sourceHash": "7cc3d77b33d4a0be36b63145766789177ef561449741a9d8062d83849dafcee4",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:a47a81358096f536769998890550481bd7a2301ec8f09e2d63377eb339fb5d30",
+        "runtimeCompatibility": "sha256:eec4b3ca3920f59380a80f87fcba9d32aa2e22d6ed79b173c182fb54590c64b1",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:a47a81358096f536769998890550481bd7a2301ec8f09e2d63377eb339fb5d30",
+        "compatibilityKey": "sha256:eec4b3ca3920f59380a80f87fcba9d32aa2e22d6ed79b173c182fb54590c64b1",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -2056,7 +2056,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -2126,14 +2126,14 @@
         "sourceHash": "5d8d25942b8c36ee938305c7b7cffeace1cd9a15d0377db1156cf9bc28c97762",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:931fa51aedafa192787e63ba90460867e8075ef677c9c6ccb47200356a59b319",
+        "runtimeCompatibility": "sha256:d7fae251d3790d25f1dcee0da163164f8c466786376aa849eaa0048f8049df5f",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:931fa51aedafa192787e63ba90460867e8075ef677c9c6ccb47200356a59b319",
+        "compatibilityKey": "sha256:d7fae251d3790d25f1dcee0da163164f8c466786376aa849eaa0048f8049df5f",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -2158,7 +2158,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -2216,14 +2216,14 @@
         "sourceHash": "c85f2f2acd3bff9a304aeebb778524173691a031ef470360915d109a202c6b3a",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:c22812107aef96a69407d064fc558494c98d4a11b1419c733bcf5f3d25761c35",
+        "runtimeCompatibility": "sha256:ed12d07e6dbfd961c8567c93c23da33721937d5a28171a8111b399718425583d",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:c22812107aef96a69407d064fc558494c98d4a11b1419c733bcf5f3d25761c35",
+        "compatibilityKey": "sha256:ed12d07e6dbfd961c8567c93c23da33721937d5a28171a8111b399718425583d",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -2248,7 +2248,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -2306,14 +2306,14 @@
         "sourceHash": "3743b3c9bf715c72440df783ac216aa83b307d6cc5c6218ceddaa4d368493aed",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:9783571dc2219a43a53ffba15063d570baccf1c41214ad0578f9d0c2776b9975",
+        "runtimeCompatibility": "sha256:e3a9225c90f87ea8a15523ce9d647932e771966bd60fd637453e9586af2c916b",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:9783571dc2219a43a53ffba15063d570baccf1c41214ad0578f9d0c2776b9975",
+        "compatibilityKey": "sha256:e3a9225c90f87ea8a15523ce9d647932e771966bd60fd637453e9586af2c916b",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -2338,7 +2338,7 @@
         "entrypoint": "default"
       },
       "runtime": {
-        "abiVersion": "strategy-runtime-abi-v1.7",
+        "abiVersion": "strategy-runtime-abi-v1.14",
         "language": {
           "id": "typescript",
           "version": "0.1.0"
@@ -2396,14 +2396,14 @@
         "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:7940e56f4fee50d38d02b2eb124fe8e4adaedca6feb0b9a8d827904d709112e7",
+        "runtimeCompatibility": "sha256:1f714e08014441bc2628eda664ae426f1ee47bec12c4c4309afaa23045c34a40",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
           "engine": "0.1.4"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:7940e56f4fee50d38d02b2eb124fe8e4adaedca6feb0b9a8d827904d709112e7",
+        "compatibilityKey": "sha256:1f714e08014441bc2628eda664ae426f1ee47bec12c4c4309afaa23045c34a40",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",

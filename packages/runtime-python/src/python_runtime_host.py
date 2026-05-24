@@ -2,7 +2,7 @@
 import json
 import sys
 
-ABI_VERSION = "strategy-runtime-abi-v1.7"
+ABI_VERSION = "strategy-runtime-abi-v1.14"
 
 
 def failure(kind, code, message, public_message):

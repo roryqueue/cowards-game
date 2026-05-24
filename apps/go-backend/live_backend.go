@@ -1484,7 +1484,7 @@ func validUsername(value string) bool {
 
 func defaultRuntimeMetadata() map[string]any {
 	return map[string]any{
-		"abiVersion": "strategy-runtime-abi-v1.7",
+		"abiVersion": "strategy-runtime-abi-v1.14",
 		"language": map[string]any{
 			"id":      "typescript",
 			"version": "0.1.0",
@@ -1583,7 +1583,7 @@ func validationStatus(validation map[string]any) string {
 }
 
 func runtimeAllowsCountedPlay(runtime map[string]any) bool {
-	if stringValue(runtime, "abiVersion") != "strategy-runtime-abi-v1.7" {
+	if stringValue(runtime, "abiVersion") != "strategy-runtime-abi-v1.14" {
 		return false
 	}
 	language := mapValue(runtime, "language")

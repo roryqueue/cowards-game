@@ -16,7 +16,7 @@
         "ownerHandle": "bottom",
         "ownerUserId": "user:bottom",
         "runtime": {
-          "abiVersion": "strategy-runtime-abi-v1.7",
+          "abiVersion": "strategy-runtime-abi-v1.14",
           "adapter": {
             "id": "runtime-js-worker-thread",
             "version": "runtime-js-v1"
@@ -47,7 +47,7 @@
         "ownerHandle": "top",
         "ownerUserId": "user:top",
         "runtime": {
-          "abiVersion": "strategy-runtime-abi-v1.7",
+          "abiVersion": "strategy-runtime-abi-v1.14",
           "adapter": {
             "id": "runtime-js-worker-thread",
             "version": "runtime-js-v1"

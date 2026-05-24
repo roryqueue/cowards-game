@@ -231,7 +231,7 @@ describe("Coward's Game spec contracts", () => {
   it("runtime product semantics keep JS counted and Python experimental", () => {
     const jsRuntime = defaultRuntimeMetadata()
     const pythonRuntime = {
-      abiVersion: "strategy-runtime-abi-v1.7",
+      abiVersion: "strategy-runtime-abi-v1.14",
       language: { id: "python", version: "3.9" },
       adapter: {
         id: "runtime-python-subprocess-experimental",

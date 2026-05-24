@@ -58,7 +58,7 @@ const withTrailingNewline = (value: unknown): string =>
   `${JSON.stringify(stableValue(value), null, 2)}\n`
 
 const runtime = {
-  abiVersion: "strategy-runtime-abi-v1.7",
+  abiVersion: "strategy-runtime-abi-v1.14",
   language: { id: "typescript", version: "runtime-js-v1" },
   adapter: {
     id: "runtime-js-worker-thread",

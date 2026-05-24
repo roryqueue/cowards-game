@@ -1,7 +1,7 @@
 import type { JsonValue, StrategyRevisionValidationIssue } from "./types.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 
-export const STRATEGY_RUNTIME_ABI_VERSION = "strategy-runtime-abi-v1.7"
+export const STRATEGY_RUNTIME_ABI_VERSION = "strategy-runtime-abi-v1.14"
 
 export const STRATEGY_LANGUAGE_IDS = [
   "javascript",
