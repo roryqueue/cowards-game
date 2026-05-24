@@ -8,12 +8,12 @@
 
 ### Baseline And Classification
 
-- [ ] **BASE-01**: Developer can inspect a v1.16 inventory of every remaining Next.js API route, TypeScript server module, persistence import, `@cowards/service` use, worker/job lifecycle path, replay/public evidence path, runtime-service path, frontend-only path, parity-only path, rollback-only path, test-only path, and deferred path.
-- [ ] **BASE-02**: Developer can inspect a v1.16 ownership manifest that defines allowed TypeScript roles as frontend, runtime-only, parity-only, rollback-only, test-only, fixture-only, or deferred, with no normal TypeScript backend role.
-- [ ] **BASE-03**: Developer can verify v1.15 Go ownership behavior is treated as the backend baseline for orchestration, persistence-facing API behavior, Match lifecycle, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence.
-- [ ] **BASE-04**: Developer can verify TypeScript service/backend behavior is documented only as parity oracle, test fixture source, rollback reference, frontend support, or isolated runtime service where still needed.
-- [ ] **BASE-05**: Developer can verify explicit v1.16 non-goals exclude replacing JS/TS Strategy support, building the future Runtime Broker, promoting WASM/WASI or non-JS counted play, production sandbox replacement, Go/web/API Strategy execution, Node `vm` security-boundary use, Node `node:wasi` as an untrusted-code sandbox, Go migration/schema ownership, durable ratings, official tournaments, custom arenas, marketplace work, or cloud deployment work.
-- [ ] **BASE-06**: Developer can verify the v1.16 baseline preserves deterministic engine purity, Strategy Revision immutability, schema validation, replay/public-output privacy, owner-source privacy, hostile-code isolation, rollback clarity, and no silent fallback.
+- [x] **BASE-01**: Developer can inspect a v1.16 inventory of every remaining Next.js API route, TypeScript server module, persistence import, `@cowards/service` use, worker/job lifecycle path, replay/public evidence path, runtime-service path, frontend-only path, parity-only path, rollback-only path, test-only path, and deferred path.
+- [x] **BASE-02**: Developer can inspect a v1.16 ownership manifest that defines allowed TypeScript roles as frontend, runtime-only, parity-only, rollback-only, test-only, fixture-only, or deferred, with no normal TypeScript backend role.
+- [x] **BASE-03**: Developer can verify v1.15 Go ownership behavior is treated as the backend baseline for orchestration, persistence-facing API behavior, Match lifecycle, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence.
+- [x] **BASE-04**: Developer can verify TypeScript service/backend behavior is documented only as parity oracle, test fixture source, rollback reference, frontend support, or isolated runtime service where still needed.
+- [x] **BASE-05**: Developer can verify explicit v1.16 non-goals exclude replacing JS/TS Strategy support, building the future Runtime Broker, promoting WASM/WASI or non-JS counted play, production sandbox replacement, Go/web/API Strategy execution, Node `vm` security-boundary use, Node `node:wasi` as an untrusted-code sandbox, Go migration/schema ownership, durable ratings, official tournaments, custom arenas, marketplace work, or cloud deployment work.
+- [x] **BASE-06**: Developer can verify the v1.16 baseline preserves deterministic engine purity, Strategy Revision immutability, schema validation, replay/public-output privacy, owner-source privacy, hostile-code isolation, rollback clarity, and no silent fallback.
 
 ### Runtime Service Boundary
 
@@ -111,12 +111,12 @@
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| BASE-01 | Phase 103 | Pending |
-| BASE-02 | Phase 103 | Pending |
-| BASE-03 | Phase 103 | Pending |
-| BASE-04 | Phase 103 | Pending |
-| BASE-05 | Phase 103 | Pending |
-| BASE-06 | Phase 103 | Pending |
+| BASE-01 | Phase 103 | Complete |
+| BASE-02 | Phase 103 | Complete |
+| BASE-03 | Phase 103 | Complete |
+| BASE-04 | Phase 103 | Complete |
+| BASE-05 | Phase 103 | Complete |
+| BASE-06 | Phase 103 | Complete |
 | RT-01 | Phase 104 | Pending |
 | RT-02 | Phase 104 | Pending |
 | RT-03 | Phase 104 | Pending |
