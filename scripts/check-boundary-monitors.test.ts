@@ -8,6 +8,7 @@ import {
   runBoundaryMonitorChecks,
   selectedGoRouteManifest,
   validateSelectedGoRouteManifest,
+  validateV116FinalTypeScriptSurfaceLabels,
   validateV115LifecycleOwnershipManifest,
   validateV116TypeScriptWorkerQuarantineArtifact,
   validateV116RuntimeServiceBoundaryArtifact,
@@ -151,6 +152,14 @@ const createV116WorkerQuarantineArtifact = () =>
   JSON.parse(
     readFileSync(
       ".planning/artifacts/v1.16-typescript-worker-quarantine.json",
+      "utf8",
+    ),
+  ) as Record<string, unknown>
+
+const createV116FinalTypeScriptSurfaceLabels = () =>
+  JSON.parse(
+    readFileSync(
+      ".planning/artifacts/v1.16-final-typescript-surface-labels.json",
       "utf8",
     ),
   ) as Record<string, unknown>
@@ -460,6 +469,79 @@ describe("boundary drift monitors", () => {
         },
       }),
     ).toThrow(/running_jobs/)
+  })
+
+  it("validates the final v1.16 TypeScript surface labels contract", () => {
+    const artifact = createV116FinalTypeScriptSurfaceLabels()
+    expect(validateV116FinalTypeScriptSurfaceLabels(artifact)).toContain(
+      "final TypeScript surface labels",
+    )
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        capabilityGroups: {
+          ...(artifact.capabilityGroups as Record<string, unknown>),
+          Workshop: undefined,
+        },
+      }),
+    ).toThrow(/missing capability group Workshop/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        sourceInventorySurfaceCount: 1,
+      }),
+    ).toThrow(/source inventory count/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
+          (surface, index) =>
+            index === 0
+              ? {
+                  ...surface,
+                  taxonomyRole: "deferred",
+                  selectedNormal: true,
+                }
+              : surface,
+        ),
+      }),
+    ).toThrow(/selectedNormal/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
+          (surface) =>
+            surface.surfaceLabel === "private-owner-debug-replay"
+              ? { ...surface, gate: "debug query only" }
+              : surface,
+        ),
+      }),
+    ).toThrow(/owner-debug/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
+          (surface) =>
+            surface.surfaceLabel === "test-support-route"
+              ? { ...surface, gate: "open route" }
+              : surface,
+        ),
+      }),
+    ).toThrow(/test-support/)
+    expect(() =>
+      validateV116FinalTypeScriptSurfaceLabels({
+        ...artifact,
+        surfaces: (artifact.surfaces as Array<Record<string, unknown>>).map(
+          (surface, index) =>
+            index === 0
+              ? {
+                  ...surface,
+                  publicOutputExample: { token: "Bearer secret" },
+                }
+              : surface,
+        ),
+      }),
+    ).toThrow(/public output leak/)
   })
 
   it("passes the live repository monitor checks", async () => {
