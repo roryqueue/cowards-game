@@ -249,6 +249,9 @@ func (lifecycle *matchJobLifecycle) recordAttemptFailure(ctx context.Context, in
 		`, input.ErrorMessage, row.matchID); err != nil {
 			return "", err
 		}
+		if err := refreshMatchSetsForMatchTx(ctx, tx, row.matchID); err != nil {
+			return "", err
+		}
 		status = "failed_system"
 	} else if _, err := tx.Exec(ctx, `
 		update match_jobs

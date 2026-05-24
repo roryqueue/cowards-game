@@ -880,7 +880,7 @@ func (server *LiveServer) publicLadder(ctx context.Context, seasonIDOrSlug strin
 	if err != nil {
 		return nil, err
 	}
-	matchSets, err := server.ladderMatchSets(ctx, seasonID)
+	matchSets, standings, err := server.ladderMatchSetsAndStandings(ctx, seasonID, entries)
 	if err != nil {
 		return nil, err
 	}
@@ -901,7 +901,7 @@ func (server *LiveServer) publicLadder(ctx context.Context, seasonIDOrSlug strin
 			"targetPodSize":       targetPodSize,
 		},
 		"entries":   entries,
-		"standings": []map[string]any{},
+		"standings": standings,
 		"matchSets": matchSets,
 		"publication": map[string]any{
 			"publicEntries":        true,
@@ -948,30 +948,219 @@ func (server *LiveServer) ladderEntries(ctx context.Context, seasonID string) ([
 	return entries, rows.Err()
 }
 
-func (server *LiveServer) ladderMatchSets(ctx context.Context, seasonID string) ([]map[string]any, error) {
+func (server *LiveServer) ladderMatchSetsAndStandings(ctx context.Context, seasonID string, entries []map[string]any) ([]map[string]any, []map[string]any, error) {
 	rows, err := server.pool.Query(ctx, `
-		select id, status, counted_status, public_counted_reason, public_counted_explanation
-		from match_sets
-		where ladder_season_id = $1
-		order by created_at asc, id asc
+		select
+		  ms.id,
+		  ms.status::text,
+		  ms.ladder_schedule_run_id,
+		  ms.ladder_pod_index,
+		  ms.counted_status,
+		  ms.public_counted_reason,
+		  ms.public_counted_explanation,
+		  count(distinct c.match_id)::integer as chronicle_count,
+		  count(distinct msm.match_id)::integer as match_count
+		from match_sets ms
+		left join match_set_matches msm on msm.match_set_id = ms.id
+		left join chronicles c on c.match_id = msm.match_id
+		where ms.ladder_season_id = $1
+		group by ms.id
+		order by ms.created_at asc, ms.id asc
 	`, seasonID)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	matchSets := []map[string]any{}
+	totals := map[string]*matchSetStrategyScore{}
+	for rows.Next() {
+		var matchSetID, status, countedStatus string
+		var scheduleRunID *string
+		var podIndex *int
+		var reason, explanation *string
+		var chronicleCount, matchCount int
+		if err := rows.Scan(&matchSetID, &status, &scheduleRunID, &podIndex, &countedStatus, &reason, &explanation, &chronicleCount, &matchCount); err != nil {
+			return nil, nil, err
+		}
+		refreshedStatus, refreshedScoring, err := newMatchSetStatusService(server.pool).refreshMatchSetStatus(ctx, matchSetID)
+		if err != nil {
+			return nil, nil, err
+		}
+		classification := classifyLadderCountedStatus(refreshedStatus, countedStatus, reason, explanation, chronicleCount, matchCount)
+		if stringValue(classification, "countedStatus") == "counted" {
+			for _, ranking := range refreshedScoring.Rankings {
+				addMatchSetScore(totals, ranking)
+			}
+		}
+		entrantIDs, err := server.ladderMatchSetEntrantIDs(ctx, matchSetID)
+		if err != nil {
+			return nil, nil, err
+		}
+		summary := ladderMatchSetSummary(matchSetID, seasonID, refreshedStatus, stringValue(classification, "countedStatus"), stringPtrFromMap(classification, "publicReason"), stringPtrFromMap(classification, "publicExplanation"), entrantIDs)
+		if scheduleRunID != nil && *scheduleRunID != "" {
+			summary["scheduleRunId"] = *scheduleRunID
+		}
+		if podIndex != nil {
+			summary["podIndex"] = *podIndex
+		}
+		matchSets = append(matchSets, summary)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+	return matchSets, ladderStandingsFromScores(totals, entries), nil
+}
+
+func (server *LiveServer) ladderMatchSetEntrantIDs(ctx context.Context, matchSetID string) ([]string, error) {
+	rows, err := server.pool.Query(ctx, `
+		select snapshot
+		from competition_entrants
+		where match_set_id = $1
+		order by entrant_index asc
+	`, matchSetID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	matchSets := []map[string]any{}
+	entrantIDs := []string{}
 	for rows.Next() {
-		var matchSetID, status, countedStatus string
-		var reason, explanation *string
-		if err := rows.Scan(&matchSetID, &status, &countedStatus, &reason, &explanation); err != nil {
+		var snapshotRaw []byte
+		if err := rows.Scan(&snapshotRaw); err != nil {
 			return nil, err
 		}
-		matchSets = append(matchSets, ladderMatchSetSummary(matchSetID, seasonID, status, countedStatus, reason, explanation, []string{}))
+		snapshot := jsonMap(snapshotRaw)
+		entrantIDs = append(entrantIDs, fallbackString(stringValue(snapshot, "entryId"), stringValue(snapshot, "entrantId")))
 	}
-	return matchSets, rows.Err()
+	return entrantIDs, rows.Err()
+}
+
+func classifyLadderCountedStatus(status string, storedCountedStatus string, storedReason *string, storedExplanation *string, chronicleCount int, matchCount int) map[string]any {
+	if storedCountedStatus != "" && storedCountedStatus != "pending" {
+		result := map[string]any{
+			"countedStatus": storedCountedStatus,
+			"publicExplanation": func() string {
+				if storedCountedStatus == "under_review" {
+					return "Result is under review and excluded until review completes."
+				}
+				return valueOr(storedExplanation, "Result does not count for standings.")
+			}(),
+		}
+		if storedReason != nil && *storedReason != "" {
+			result["publicReason"] = *storedReason
+		}
+		return result
+	}
+	if status == matchSetStatusComplete && matchCount > 0 && chronicleCount == matchCount {
+		return map[string]any{
+			"countedStatus":     "counted",
+			"publicExplanation": "Counts for trial ladder standings.",
+		}
+	}
+	if status == matchSetStatusFailedSystem || status == matchSetStatusDegraded {
+		return map[string]any{
+			"countedStatus":     "non_counted",
+			"publicReason":      "system_failure",
+			"publicExplanation": "System failure prevented complete evidence; this result is excluded.",
+		}
+	}
+	countedStatus := "pending"
+	if status == matchSetStatusRunning {
+		countedStatus = "retrying"
+	}
+	return map[string]any{
+		"countedStatus":     countedStatus,
+		"publicReason":      "incomplete_evidence",
+		"publicExplanation": "Waiting for complete replay-backed evidence.",
+	}
+}
+
+func stringPtrFromMap(value map[string]any, key string) *string {
+	text := stringValue(value, key)
+	if text == "" {
+		return nil
+	}
+	return &text
+}
+
+func addMatchSetScore(totals map[string]*matchSetStrategyScore, entry matchSetStrategyScore) {
+	current := totals[entry.StrategyRevisionID]
+	if current == nil {
+		current = &matchSetStrategyScore{
+			StrategyRevisionID: entry.StrategyRevisionID,
+			Penalties:          []scorePenalty{},
+		}
+		totals[entry.StrategyRevisionID] = current
+	}
+	current.Wins += entry.Wins
+	current.Losses += entry.Losses
+	current.Draws += entry.Draws
+	current.Points += entry.Points
+	current.PenaltyPoints += entry.PenaltyPoints
+	current.Penalties = append(current.Penalties, entry.Penalties...)
+	current.FailedSystemMatches += entry.FailedSystemMatches
+	current.SurvivingSoldiers += entry.SurvivingSoldiers
+	current.SurvivalTurns += entry.SurvivalTurns
+}
+
+func ladderStandingsFromScores(totals map[string]*matchSetStrategyScore, entries []map[string]any) []map[string]any {
+	rankings := make([]matchSetStrategyScore, 0, len(totals))
+	for _, ranking := range totals {
+		rankings = append(rankings, *ranking)
+	}
+	sort.Slice(rankings, func(leftIndex, rightIndex int) bool {
+		left := rankings[leftIndex]
+		right := rankings[rightIndex]
+		if left.Points != right.Points {
+			return left.Points > right.Points
+		}
+		if left.Wins != right.Wins {
+			return left.Wins > right.Wins
+		}
+		if left.SurvivingSoldiers != right.SurvivingSoldiers {
+			return left.SurvivingSoldiers > right.SurvivingSoldiers
+		}
+		if left.SurvivalTurns != right.SurvivalTurns {
+			return left.SurvivalTurns > right.SurvivalTurns
+		}
+		return left.StrategyRevisionID < right.StrategyRevisionID
+	})
+
+	entryByRevision := map[string]map[string]any{}
+	for _, entry := range entries {
+		entryByRevision[stringValue(entry, "strategyRevisionId")] = entry
+	}
+	standings := []map[string]any{}
+	for index, ranking := range rankings {
+		entry := entryByRevision[ranking.StrategyRevisionID]
+		standings = append(standings, map[string]any{
+			"rank":               index + 1,
+			"entrantId":          fallbackString(stringValue(entry, "entryId"), ranking.StrategyRevisionID),
+			"strategyRevisionId": ranking.StrategyRevisionID,
+			"ownerHandle":        fallbackString(stringValue(entry, "ownerHandle"), "unknown"),
+			"displayLabel":       fallbackString(stringValue(entry, "displayLabel"), ranking.StrategyRevisionID),
+			"sourceHash":         stringValue(entry, "sourceHash"),
+			"points":             ranking.Points,
+			"wins":               ranking.Wins,
+			"draws":              ranking.Draws,
+			"losses":             ranking.Losses,
+			"penalties":          publicPenaltiesFromScorePenalties(ranking.Penalties),
+			"survivingSoldiers":  ranking.SurvivingSoldiers,
+			"survivalTurns":      ranking.SurvivalTurns,
+			"tieBreakerPath":     []string{"points", "wins", "survivingSoldiers", "survivalTurns", "strategyRevisionId"},
+		})
+	}
+	return standings
 }
 
 func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID string) (map[string]any, error) {
+	if ok, err := server.publicCompetitionMatchSetExists(ctx, matchSetID); err != nil {
+		return nil, err
+	} else if !ok {
+		return nil, nil
+	}
+	if _, _, err := newMatchSetStatusService(server.pool).refreshMatchSetStatus(ctx, matchSetID); err != nil {
+		return nil, err
+	}
 	var status string
 	var competitionPresetID, competitionPresetVersion, scoringPolicyVersion, visibility *string
 	var scoringRaw []byte
@@ -991,7 +1180,7 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 	if err != nil {
 		return nil, err
 	}
-	matches, err := server.matchSetEvidence(ctx, matchSetID)
+	matches, err := server.matchSetEvidence(ctx, matchSetID, entrants)
 	if err != nil {
 		return nil, err
 	}
@@ -1035,6 +1224,17 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 	}, nil
 }
 
+func (server *LiveServer) publicCompetitionMatchSetExists(ctx context.Context, matchSetID string) (bool, error) {
+	var competitionPresetID *string
+	if err := server.pool.QueryRow(ctx, "select competition_preset_id from match_sets where id = $1", matchSetID).Scan(&competitionPresetID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return competitionPresetID != nil && *competitionPresetID != "", nil
+}
+
 func (server *LiveServer) matchSetEntrants(ctx context.Context, matchSetID string) ([]map[string]any, error) {
 	rows, err := server.pool.Query(ctx, `
 		select snapshot
@@ -1057,10 +1257,17 @@ func (server *LiveServer) matchSetEntrants(ctx context.Context, matchSetID strin
 	return entrants, rows.Err()
 }
 
-func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID string) ([]map[string]any, error) {
+func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID string, entrants []map[string]any) ([]map[string]any, error) {
+	entrantByRevision := map[string]string{}
+	for _, entrant := range entrants {
+		revisionID := stringValue(entrant, "strategyRevisionId")
+		if revisionID != "" {
+			entrantByRevision[revisionID] = fallbackString(stringValue(entrant, "entryId"), stringValue(entrant, "entrantId"))
+		}
+	}
 	rows, err := server.pool.Query(ctx, `
 		select m.id, m.status, m.bottom_strategy_revision_id, m.top_strategy_revision_id,
-		       c.hash
+		       m.arena_variant_id, c.hash
 		from match_set_matches msm
 		join matches m on m.id = msm.match_id
 		left join chronicles c on c.match_id = m.id
@@ -1073,9 +1280,9 @@ func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID strin
 	defer rows.Close()
 	matches := []map[string]any{}
 	for rows.Next() {
-		var matchID, status, bottomRevisionID, topRevisionID string
+		var matchID, status, bottomRevisionID, topRevisionID, arenaVariantID string
 		var chronicleHash *string
-		if err := rows.Scan(&matchID, &status, &bottomRevisionID, &topRevisionID, &chronicleHash); err != nil {
+		if err := rows.Scan(&matchID, &status, &bottomRevisionID, &topRevisionID, &arenaVariantID, &chronicleHash); err != nil {
 			return nil, err
 		}
 		dto := map[string]any{
@@ -1083,12 +1290,16 @@ func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID strin
 			"status":          status,
 			"replayAvailable": chronicleHash != nil,
 			"entrants": map[string]any{
-				"bottom": bottomRevisionID,
-				"top":    topRevisionID,
+				"bottom": fallbackString(entrantByRevision[bottomRevisionID], bottomRevisionID),
+				"top":    fallbackString(entrantByRevision[topRevisionID], topRevisionID),
 			},
+			"arenaVariantId": arenaVariantID,
 		}
 		if chronicleHash != nil {
 			dto["chronicleHash"] = *chronicleHash
+		}
+		if status == matchStatusFailedSystem {
+			dto["publicReason"] = "system_failure"
 		}
 		matches = append(matches, dto)
 	}
@@ -2218,13 +2429,52 @@ func standingsFromScoring(raw []byte, entrants []map[string]any) []map[string]an
 			"wins":               intValue(rankingMap, "wins"),
 			"draws":              intValue(rankingMap, "draws"),
 			"losses":             intValue(rankingMap, "losses"),
-			"penalties":          []map[string]any{},
+			"penalties":          publicPenaltiesFromScoring(rankingMap),
 			"survivingSoldiers":  intValue(rankingMap, "survivingSoldiers"),
 			"survivalTurns":      intValue(rankingMap, "survivalTurns"),
 			"tieBreakerPath":     []string{"points", "wins", "survivingSoldiers", "survivalTurns", "strategyRevisionId"},
 		})
 	}
 	return standings
+}
+
+func publicPenaltiesFromScoring(ranking map[string]any) []map[string]any {
+	rawPenalties, ok := ranking["penalties"].([]any)
+	if !ok {
+		return []map[string]any{}
+	}
+	penalties := []map[string]any{}
+	for _, rawPenalty := range rawPenalties {
+		penalty, ok := rawPenalty.(map[string]any)
+		if !ok {
+			continue
+		}
+		reason := stringValue(penalty, "reason")
+		if reason != "strategy_failure" {
+			continue
+		}
+		penalties = append(penalties, map[string]any{
+			"matchId": stringValue(penalty, "matchId"),
+			"reason":  reason,
+			"points":  intValue(penalty, "points"),
+		})
+	}
+	return penalties
+}
+
+func publicPenaltiesFromScorePenalties(rawPenalties []scorePenalty) []map[string]any {
+	penalties := []map[string]any{}
+	for _, penalty := range rawPenalties {
+		if penalty.Reason != "strategy_failure" {
+			continue
+		}
+		penalties = append(penalties, map[string]any{
+			"matchId": penalty.MatchID,
+			"reason":  penalty.Reason,
+			"points":  penalty.Points,
+		})
+	}
+	return penalties
 }
 
 func stableRevisionIdentity(sourceHash string, strategyID string) string {

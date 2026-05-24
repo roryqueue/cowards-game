@@ -96,8 +96,22 @@ func TestGoMatchCompletionIntegration(t *testing.T) {
 	t.Run("completes atomically with Chronicle", func(t *testing.T) {
 		prefix := "phase99-complete"
 		cleanupPhase97Rows(t, ctx, pool, prefix)
+		if _, err := pool.Exec(ctx, "delete from match_sets where id = $1", "match-set:"+prefix); err != nil {
+			t.Fatal(err)
+		}
 		defer cleanupPhase97Rows(t, ctx, pool, prefix)
+		defer func() {
+			if _, err := pool.Exec(ctx, "delete from match_sets where id = $1", "match-set:"+prefix); err != nil {
+				t.Fatal(err)
+			}
+		}()
 		ids := seedPhase97MatchJob(t, ctx, pool, prefix, 3, "queued", 0, nil)
+		if _, err := pool.Exec(ctx, "insert into match_sets (id, status, matrix) values ($1, 'pending', '{}'::jsonb)", "match-set:"+prefix); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := pool.Exec(ctx, "insert into match_set_matches (match_set_id, match_id, matrix_index) values ($1, $2, 0)", "match-set:"+prefix, ids.matchID); err != nil {
+			t.Fatal(err)
+		}
 		lifecycle := newTestMatchJobLifecycle(pool, time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC), "lease:go:complete")
 		claimed, err := lifecycle.claimNextMatchJob(ctx, claimMatchJobInput{WorkerID: "worker:go:complete"})
 		if err != nil {
@@ -120,6 +134,7 @@ func TestGoMatchCompletionIntegration(t *testing.T) {
 		assertPhase97MatchStatus(t, ctx, pool, ids.matchID, "complete")
 		assertChronicleExists(t, ctx, pool, ids.matchID)
 		assertPhase97Attempt(t, ctx, pool, ids.jobID, 1, "complete")
+		assertPhase100MatchSetStored(t, ctx, pool, "match-set:"+prefix, matchSetStatusComplete, false, true)
 
 		duplicate, err := service.completeMatch(ctx, completeMatchInput{
 			JobID:      claimed.JobID,

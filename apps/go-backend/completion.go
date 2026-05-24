@@ -197,6 +197,9 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 	if tag.RowsAffected() != 1 {
 		return nil, errors.New("completion did not finish exactly one job attempt")
 	}
+	if err := refreshMatchSetsForMatchTx(ctx, tx, fields.MatchID); err != nil {
+		return nil, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
