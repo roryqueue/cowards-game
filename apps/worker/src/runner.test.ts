@@ -12,10 +12,12 @@ import { fixtures } from "@cowards/spec"
 import type { ArenaVariant, MatchId, StrategyRevision } from "@cowards/spec"
 import type { WorkerRunnerDependencies } from "./runner.js"
 import {
+  assertTypeScriptWorkerEntrypointAllowed,
   assertTypeScriptWorkerJobOwnershipAllowed,
   createClaimedMatchJobForTest,
   createSideDispatchRuntime,
   createTypeScriptWorkerJobOwnershipConfig,
+  formatTypeScriptWorkerOwnershipLogLine,
   loadRunMatchInput,
   runWorkerOnce,
   TypeScriptWorkerOwnershipError,
@@ -257,13 +259,77 @@ describe("worker runner", () => {
     }
   })
 
-  it("allows normal TypeScript job ownership only when explicitly selected", () => {
+  it("blocks normal TypeScript job ownership even when TypeScript lifecycle owner is explicitly selected", () => {
     expect(() =>
       assertTypeScriptWorkerJobOwnershipAllowed({
         lifecycleOwner: "typescript",
         workerPurpose: "normal",
       }),
-    ).not.toThrow()
+    ).toThrow(TypeScriptWorkerOwnershipError)
+    expect(() =>
+      assertTypeScriptWorkerJobOwnershipAllowed({
+        lifecycleOwner: "typescript",
+        workerPurpose: "normal",
+      }),
+    ).toThrow(
+      "TypeScript Match job claiming is disabled for normal backend ownership",
+    )
+  })
+
+  it("requires an explicit non-normal worker purpose at executable startup", () => {
+    expect(() =>
+      assertTypeScriptWorkerEntrypointAllowed({
+        COWARDS_MATCH_JOB_LIFECYCLE_OWNER: "typescript",
+      }),
+    ).toThrow(TypeScriptWorkerOwnershipError)
+    expect(() =>
+      assertTypeScriptWorkerEntrypointAllowed({
+        COWARDS_BACKEND_OWNER: "typescript",
+        COWARDS_TYPESCRIPT_WORKER_PURPOSE: "unexpected",
+      }),
+    ).toThrow(TypeScriptWorkerOwnershipError)
+
+    expect(
+      assertTypeScriptWorkerEntrypointAllowed({
+        COWARDS_MATCH_JOB_LIFECYCLE_OWNER: "typescript",
+        COWARDS_TYPESCRIPT_WORKER_PURPOSE: "rollback",
+      }),
+    ).toEqual({
+      lifecycleOwner: "typescript",
+      workerPurpose: "rollback",
+    })
+    expect(
+      assertTypeScriptWorkerEntrypointAllowed({
+        COWARDS_BACKEND_OWNER: "go",
+        COWARDS_TYPESCRIPT_WORKER_PURPOSE: "test",
+      }),
+    ).toEqual({
+      lifecycleOwner: "go",
+      workerPurpose: "test",
+    })
+    expect(
+      assertTypeScriptWorkerEntrypointAllowed({
+        COWARDS_TYPESCRIPT_WORKER_PURPOSE: "parity",
+      }),
+    ).toEqual({
+      lifecycleOwner: "unspecified",
+      workerPurpose: "parity",
+    })
+  })
+
+  it("labels worker startup as non-normal rollback test or parity infrastructure", () => {
+    expect(
+      formatTypeScriptWorkerOwnershipLogLine({
+        lifecycleOwner: "typescript",
+        workerPurpose: "rollback",
+      }),
+    ).toContain("rollback")
+    expect(
+      formatTypeScriptWorkerOwnershipLogLine({
+        lifecycleOwner: "typescript",
+        workerPurpose: "rollback",
+      }),
+    ).not.toContain("normal backend")
   })
 
   it("routes strategy calls using persisted Match player IDs", () => {
