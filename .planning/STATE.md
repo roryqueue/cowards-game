@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: Runtime Isolation and TypeScript Backend Retirement
 status: planning
-stopped_at: Phase 104 verified; ready for Phase 105 planning
-last_updated: "2026-05-24T18:44:42.000Z"
-last_activity: 2026-05-24 - Phase 104 runtime service boundary hardening verified
+stopped_at: Phase 105 complete; ready for Phase 106 planning
+last_updated: "2026-05-24T19:24:02.000Z"
+last_activity: 2026-05-24 - Phase 105 web/API Go-only cutover and fallback removal completed
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 2
-  percent: 28
+  completed_plans: 3
+  percent: 42
 ---
 
 # State: Coward's Game
@@ -24,7 +24,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-24)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 105 - Web/API Go-Only Cutover and Fallback Removal planning.
+**Current focus:** Phase 106 - TypeScript Worker and Persistence Quarantine planning.
 **Latest shipped milestone:** v1.15 Go Backend Ownership Completion
 **Active milestone:** v1.16 Runtime Isolation and TypeScript Backend Retirement
 **Requirements:** .planning/REQUIREMENTS.md
@@ -32,10 +32,10 @@ See: .planning/PROJECT.md (updated 2026-05-24)
 
 ## Current Position
 
-Phase: 105 - Web/API Go-Only Cutover and Fallback Removal
+Phase: 106 - TypeScript Worker and Persistence Quarantine
 Plan: Not started
-Status: Phase 104 verified; ready for Phase 105 planning
-Last activity: 2026-05-24 - Phase 104 verification passed for RT-01 through RT-07 and D-01 through D-18
+Status: Phase 105 complete; ready for Phase 106 planning
+Last activity: 2026-05-24 - Phase 105 completed WEB-01 through WEB-08 with selected Go-only web/API cutover
 
 ## Workflow Settings
 
@@ -89,11 +89,14 @@ v1.16 goal:
 - Final DB-backed Go integration passed against temporary local Postgres and later against OrbStack Docker Postgres, including the Go orchestration runner path.
 - OrbStack Docker retest also passed Compose preflight, container sandbox evaluation, strict topology, and boundary monitors after fixing container adapter stdin and output-limit IPC handling.
 - Boundary monitors pass with `strict_offenses=0 report_only_offenses=29`.
+- Phase 105 cut selected web/API account, auth, fork, exhibition, public read, and public replay routes to Go-only contracts with no silent TypeScript backend fallback.
+- Phase 105 added the v1.16 selected Go route manifest and reduced boundary report-only selected normal offenses from 29 to 22.
+- Phase 105 static gates passed; live selected page smoke remains a documented residual risk until local web, Go backend, and runtime-service processes are running.
 
 ## Next Todos
 
-- Run `$gsd-plan-phase 105` to create the executable Web/API Go-only cutover and fallback removal plan.
-- Proceed through phases 105-109 using the captured CONTEXT.md decisions and Phase 104 runtime boundary artifacts.
+- Run `$gsd-plan-phase 106` to create the TypeScript worker and persistence quarantine plan.
+- Use Phase 105 selected route manifest, validation notes, and updated TypeScript backend inventory as Phase 106 context.
 
 ## Blockers/Concerns
 
@@ -103,6 +106,7 @@ v1.16 goal:
 - Go and TypeScript DB-owning workers must not claim or complete the same normal queue concurrently during rollback.
 - `pnpm boundary:monitors` must stay synchronized with Go route manifests, fixtures, runtime contracts, topology artifacts, and surface labels.
 - Phase 104 verification passed, but full live `pnpm boundary:monitors` still needs local web, Go, runtime-service, and auth-gated endpoints running; see `104-VALIDATION.md` and `104-VERIFICATION.md`.
+- Phase 105 live `pnpm topology:check -- --require-web-page-smoke --require-go --require-runtime-service --require-v1-16-selected-go-pages` failed because local services were not running; see `105-VALIDATION.md`.
 
 ## Decisions
 
@@ -111,6 +115,9 @@ v1.16 goal:
 - Runtime-service health metadata now reports boundary name, implementation label, HTTP+JSON binding, and `backendAuthority=false`.
 - Phase 104 regenerated the v1.16 TypeScript backend inventory artifacts after adding runtime-service boundary tests and monitor checks.
 - Phase 104 verification scored 7/7 must-haves verified, with live topology evidence deferred to Phase 108/109 rather than blocking Phase 104.
+- Selected normal web/API routes now fail closed on missing Go configuration instead of falling back to TypeScript service or persistence.
+- Public replay metadata and public evidence use Go public read clients in selected mode; private owner-debug Chronicle access remains explicit.
+- Boundary monitors keep live topology optional by default, while strict selected Go page smoke is required via explicit topology flags.
 
 ## Deferred Items
 
@@ -128,10 +135,10 @@ v1.16 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-24T18:44:42.000Z
-Stopped at: Phase 104 verified; Phase 105 is ready for planning.
+Last session: 2026-05-24T19:24:02.000Z
+Stopped at: Phase 105 complete; Phase 106 is ready for planning.
 Resume file: .planning/STATE.md
 
 ## Operator Next Steps
 
-- Start Phase 105 with /gsd-discuss-phase 105 or /gsd-plan-phase 105.
+- Start Phase 106 with /gsd-discuss-phase 106 or /gsd-plan-phase 106.

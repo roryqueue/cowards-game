@@ -25,7 +25,7 @@
 **Status:** Execution in progress
 **Phases:** 103-109
 **Granularity:** Standard
-**Requirements:** 13 complete, 35 pending
+**Requirements:** 21 complete, 27 pending
 **Research:** `.planning/research/v1.16-SUMMARY.md`
 
 ## Overview
@@ -42,7 +42,7 @@ TypeScript service/backend paths may remain only as parity oracle, test fixture 
 
 - [x] **Phase 103: TypeScript Backend Inventory and Retirement Contract** - Developers can inspect a complete v1.16 ownership inventory, allowed TypeScript roles, non-goals, and retirement contract before deletion or quarantine work begins.
 - [x] **Phase 104: Isolated Runtime Service Boundary Hardening** - Developers can verify JS/TS Strategy execution remains supported only through a broker-ready Strategy Execution Service / Runtime Broker contract and runtime ABI, with no DB/job/API ownership.
-- [ ] **Phase 105: Web/API Go-Only Cutover and Fallback Removal** - Users can use selected normal web/account/exhibition/public evidence flows through Go-owned contracts without TypeScript backend fallback.
+- [x] **Phase 105: Web/API Go-Only Cutover and Fallback Removal** - Users can use selected normal web/account/exhibition/public evidence flows through Go-owned contracts without TypeScript backend fallback.
 - [ ] **Phase 106: TypeScript Worker and Persistence Quarantine** - Developers can verify TypeScript worker and persistence lifecycle modules are rollback/parity/test only and unreachable as normal backend paths.
 - [ ] **Phase 107: Deferred Surface Relabeling and Privacy Preservation** - Developers can inspect remaining Workshop, ladder, governance, owner-debug, test-support, and parity surfaces as explicitly deferred or non-normal, with privacy guards intact.
 - [ ] **Phase 108: No-TypeScript-Backend Topology and Monitor Gate** - Developers can prove the normal product topology works with TypeScript service/backend disabled or absent except for frontend and runtime service.
@@ -165,7 +165,7 @@ TypeScript service/backend paths may remain only as parity oracle, test fixture 
 | --- | --- | --- | --- |
 | 103. TypeScript Backend Inventory and Retirement Contract | 1/1 | Complete | 2026-05-24 |
 | 104. Isolated Runtime Service Boundary Hardening | 1/1 | Complete | 2026-05-24 |
-| 105. Web/API Go-Only Cutover and Fallback Removal | 0/1 | Pending | — |
+| 105. Web/API Go-Only Cutover and Fallback Removal | 1/1 | Complete | 2026-05-24 |
 | 106. TypeScript Worker and Persistence Quarantine | 0/1 | Pending | — |
 | 107. Deferred Surface Relabeling and Privacy Preservation | 0/1 | Pending | — |
 | 108. No-TypeScript-Backend Topology and Monitor Gate | 0/1 | Pending | — |

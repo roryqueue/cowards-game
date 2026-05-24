@@ -27,14 +27,14 @@
 
 ### Web And API Backend Retirement
 
-- [ ] **WEB-01**: User can perform selected normal account/session flows through web frontend routes that call Go-owned contracts without TypeScript persistence or `@cowards/service` fallback.
-- [ ] **WEB-02**: User can create selected exhibition MatchSets through web frontend routes that call Go-owned contracts without TypeScript competition persistence fallback.
-- [ ] **WEB-03**: User can view selected public Strategy, player, ladder, MatchSet, replay metadata, and public replay evidence pages through Go-owned read contracts without TypeScript service fallback.
-- [ ] **WEB-04**: Developer can verify selected Next.js API routes are frontend adapters to Go or are explicitly test-only, parity-only, rollback-only, runtime-only, or deferred.
-- [ ] **WEB-05**: Developer can verify `apps/web/app/competitive/server.ts` no longer owns selected normal auth/session/account/fork/exhibition backend behavior, or the remaining code is quarantined as rollback/deferred only.
-- [ ] **WEB-06**: Developer can verify `apps/web/lib/account-service-adapter.ts` and `apps/web/lib/public-service-adapter.ts` cannot silently fall back to TypeScript backend behavior when Go is selected or required.
-- [ ] **WEB-07**: Developer can verify selected public replay evidence avoids persistence-backed TypeScript Chronicle reads except explicitly authorized owner-debug or test/deferred paths.
-- [ ] **WEB-08**: Developer can verify all selected web/API cutovers preserve schema validation, error classification, auth/session privacy, owner-source privacy, public DTO privacy, and no secret-bearing diagnostics.
+- [x] **WEB-01**: User can perform selected normal account/session flows through web frontend routes that call Go-owned contracts without TypeScript persistence or `@cowards/service` fallback.
+- [x] **WEB-02**: User can create selected exhibition MatchSets through web frontend routes that call Go-owned contracts without TypeScript competition persistence fallback.
+- [x] **WEB-03**: User can view selected public Strategy, player, ladder, MatchSet, replay metadata, and public replay evidence pages through Go-owned read contracts without TypeScript service fallback.
+- [x] **WEB-04**: Developer can verify selected Next.js API routes are frontend adapters to Go or are explicitly test-only, parity-only, rollback-only, runtime-only, or deferred.
+- [x] **WEB-05**: Developer can verify `apps/web/app/competitive/server.ts` no longer owns selected normal auth/session/account/fork/exhibition backend behavior, or the remaining code is quarantined as rollback/deferred only.
+- [x] **WEB-06**: Developer can verify `apps/web/lib/account-service-adapter.ts` and `apps/web/lib/public-service-adapter.ts` cannot silently fall back to TypeScript backend behavior when Go is selected or required.
+- [x] **WEB-07**: Developer can verify selected public replay evidence avoids persistence-backed TypeScript Chronicle reads except explicitly authorized owner-debug or test/deferred paths.
+- [x] **WEB-08**: Developer can verify all selected web/API cutovers preserve schema validation, error classification, auth/session privacy, owner-source privacy, public DTO privacy, and no secret-bearing diagnostics.
 
 ### TypeScript Worker And Persistence Quarantine
 
@@ -124,14 +124,14 @@
 | RT-05 | Phase 104 | Complete |
 | RT-06 | Phase 104 | Complete |
 | RT-07 | Phase 104 | Complete |
-| WEB-01 | Phase 105 | Pending |
-| WEB-02 | Phase 105 | Pending |
-| WEB-03 | Phase 105 | Pending |
-| WEB-04 | Phase 105 | Pending |
-| WEB-05 | Phase 105 | Pending |
-| WEB-06 | Phase 105 | Pending |
-| WEB-07 | Phase 105 | Pending |
-| WEB-08 | Phase 105 | Pending |
+| WEB-01 | Phase 105 | Complete |
+| WEB-02 | Phase 105 | Complete |
+| WEB-03 | Phase 105 | Complete |
+| WEB-04 | Phase 105 | Complete |
+| WEB-05 | Phase 105 | Complete |
+| WEB-06 | Phase 105 | Complete |
+| WEB-07 | Phase 105 | Complete |
+| WEB-08 | Phase 105 | Complete |
 | QUAR-01 | Phase 106 | Pending |
 | QUAR-02 | Phase 106 | Pending |
 | QUAR-03 | Phase 106 | Pending |
