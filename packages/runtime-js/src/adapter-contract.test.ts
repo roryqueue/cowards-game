@@ -13,6 +13,7 @@ import { transpileStrategySource } from "./transpile.js"
 import { createRuntimeFromRevision } from "./executor.js"
 import { executeStrategyRuntimeAbiV114 } from "./abi-bridge.js"
 import { buildStrategyRevision } from "./revision.js"
+import { hashStrategySource } from "./hash.js"
 import { createSubprocessStrategyExecutionAdapter } from "./subprocess-adapter.js"
 import { SubprocessSystemFailure } from "./subprocess-ipc.js"
 
@@ -213,7 +214,8 @@ describe("StrategyExecutionAdapter contract", () => {
       execute(request) {
         expect(request.methodName).toBe("selectActivations")
         expect(request.input).toEqual(runtimeInput)
-        expect(request.source).toContain("selectActivations")
+        expect(request.source).toBe(transpileOrThrow(validStrategySource))
+        expect(hashStrategySource(revision.source)).toBe(revision.sourceHash)
         return {
           ok: true,
           value: { activationOrders: [], strategyMemory: {} },

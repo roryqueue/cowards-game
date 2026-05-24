@@ -395,6 +395,33 @@ describe("Match replay server facade", () => {
     }
   })
 
+  it("rejects canonical arena replays without canonical starting Soldiers", async () => {
+    const stored = createStoredChronicle()
+    stored.artifact.reproducibility = {
+      ...stored.artifact.reproducibility,
+      arenaVariantId: "arena:smoke:v1",
+    }
+    stored.metadata = {
+      ...stored.metadata,
+      arenaVariantId: "arena:smoke:v1",
+    }
+    const server = createMatchReplayServer({
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+    })
+
+    const response = await server.getMatchReplay("match:canonical-start")
+
+    expect(response.status).toBe("unavailable")
+    if (response.status !== "unavailable") {
+      return
+    }
+    expect(response.reason).toBe("invalid-chronicle")
+    expect(response.message).toContain("canonical Match start")
+  })
+
   it("decodes URL-encoded persisted Match ids before Chronicle lookup", async () => {
     const stored = createStoredChronicle()
     const seen: string[] = []

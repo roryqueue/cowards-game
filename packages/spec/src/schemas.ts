@@ -782,6 +782,51 @@ export const StrategyArtifactSchema = z
         message: "account revisions cannot be built-in forkable artifacts",
       })
     }
+    if (
+      artifact.sourceVisibility === "built-in-forkable" &&
+      artifact.source.text === undefined
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["source", "text"],
+        message: "built-in forkable artifacts must include Strategy source text",
+      })
+    }
+    if (
+      artifact.source.text !== undefined &&
+      new TextEncoder().encode(artifact.source.text).length !==
+        artifact.source.bytes
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["source", "bytes"],
+        message: "artifact source bytes must match source text byte length",
+      })
+    }
+    if (artifact.validation.sourceHash !== artifact.source.hash) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["validation", "sourceHash"],
+        message: "artifact validation source hash must match source hash",
+      })
+    }
+    if (artifact.validation.sourceBytes !== artifact.source.bytes) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["validation", "sourceBytes"],
+        message: "artifact validation source bytes must match source bytes",
+      })
+    }
+    if (
+      artifact.immutableEligibility &&
+      artifact.immutableEligibility.sourceHash !== artifact.source.hash
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["immutableEligibility", "sourceHash"],
+        message: "artifact eligibility source hash must match source hash",
+      })
+    }
   })
 
 export const StrategyArtifactPublicSummarySchema = z

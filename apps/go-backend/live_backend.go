@@ -784,7 +784,7 @@ func (row revisionRow) publicCard() map[string]any {
 		"authorHandle":        row.OwnerHandle,
 		"sourceHash":          row.SourceHash,
 		"sourceBytes":         row.SourceBytes,
-		"runtime":             row.Runtime,
+		"runtime":             publicRuntimeMetadata(row.Runtime),
 		"engineCompatibility": row.Engine,
 		"validationStatus":    validationStatus(row.Validation),
 		"record": map[string]any{
@@ -1505,7 +1505,7 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, 
 			"displayLabel":        "@" + handle + " / \"" + label + "\" / " + shortHash(sourceHash),
 			"sourceHash":          sourceHash,
 			"sourceBytes":         sourceBytes,
-			"runtime":             runtime,
+			"runtime":             publicRuntimeMetadata(runtime),
 			"engineCompatibility": jsonMap(engineRaw),
 			"lockedAt":            lockedAt.Format(time.RFC3339Nano),
 		}
@@ -1805,6 +1805,15 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 		"warnings":             []string{},
 		"validationIssueCodes": []string{},
 	}
+}
+
+func publicRuntimeMetadata(runtime map[string]any) map[string]any {
+	publicRuntime := cloneMap(runtime)
+	if publicRuntime == nil {
+		return map[string]any{}
+	}
+	delete(publicRuntime, "limits")
+	return publicRuntime
 }
 
 func validationStatus(validation map[string]any) string {

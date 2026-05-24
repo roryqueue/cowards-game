@@ -2,12 +2,12 @@
 
 ## v1.14 Generic Strategy Artifact and Runtime Boundary Contract
 
-**Status:** Active 2026-05-23
+**Status:** Complete 2026-05-23
 **Phases:** 7
 **Phase range:** 89-95
-**Plans:** 0/0 complete
-**Requirements:** 48/48 mapped
-**Decision:** Pending final promotion gate
+**Plans:** 7/7 complete
+**Requirements:** 48/48 complete
+**Decision:** `promote-artifact-backed-go-forks-and-runtime-abi-v1.14`
 
 ### Goal
 
@@ -23,17 +23,27 @@ Define and implement generic Strategy Artifact/Revision contracts and a strict r
 - Let Go consume generated artifacts for Starter/Advanced forks and lineage-preserving saves without executing Strategy source.
 - Preserve public-output privacy and replay board realism through shared deny-list contracts, topology evidence, and browser/server validation.
 
-### Planned Phases
+### Completed Phases
 
 | Phase | Name |
 | --- | --- |
-| 89 | Boundary Baseline and Scope Lock |
-| 90 | Generic Strategy Artifact Contract |
-| 91 | Generated Strategy Artifact Manifest |
-| 92 | Runtime ABI v1.14 Contract |
-| 93 | JS Runtime Adapter Conformance |
-| 94 | Go Artifact Consumption and Fork Parity |
-| 95 | Privacy, Realism, Topology, and Promotion Gate |
+| 89 | Boundary Baseline and Scope Lock - Complete |
+| 90 | Generic Strategy Artifact Contract - Complete |
+| 91 | Generated Strategy Artifact Manifest - Complete |
+| 92 | Runtime ABI v1.14 Contract - Complete |
+| 93 | JS Runtime Adapter Conformance - Complete |
+| 94 | Go Artifact Consumption and Fork Parity - Complete |
+| 95 | Privacy, Realism, Topology, and Promotion Gate - Complete |
+
+### Delivered
+
+- Added generic Strategy Artifact and Strategy Revision schemas for source-bearing artifacts, source-safe summaries, runtime metadata, validation, lineage, behavior compatibility, and immutable Match eligibility.
+- Generated `strategy-artifact-manifest-v1.14` from canonical TypeScript Starter, Advanced, and template registries with stale-output checks.
+- Promoted `strategy-runtime-abi-v1.14` and added an explicit runtime JS ABI bridge for `selectActivations` and `soldierBrain`.
+- Implemented Go-owned Starter and Advanced fork routes that consume generated artifacts as data only, preserve validation/runtime/hash/lineage metadata, and fail closed without silent TypeScript fallback.
+- Centralized public-output privacy deny-list behavior in `@cowards/spec` and reused it across service, analytics, competition, replay projection, and monitors.
+- Added replay board realism checks for invalid bounds, visible piece sanity, and terrain/Soldier overlap.
+- Recorded v1.14 topology, ownership, and promotion artifacts.
 
 ### Active Constraints
 

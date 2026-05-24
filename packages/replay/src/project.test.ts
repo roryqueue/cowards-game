@@ -387,6 +387,16 @@ describe("Chronicle projections", () => {
     expect(serialized).not.toContain(PRIVATE_AWARENESS_GRID_MARKER)
   })
 
+  it("rejects forbidden markers in schema-allowed public strings", () => {
+    const chronicle = createChronicle()
+    chronicle.reproducibility = {
+      ...chronicle.reproducibility,
+      matchId: "Bearer secret",
+    }
+
+    expect(() => projectPublicChronicle(chronicle)).toThrow(/private marker/)
+  })
+
   it("dispatches owner projection through projectChronicle", () => {
     const projection = projectChronicle(createChronicle(), {
       access: "owner",

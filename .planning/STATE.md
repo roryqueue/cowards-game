@@ -2,42 +2,42 @@
 gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Generic Strategy Artifact and Runtime Boundary Contract
-status: planning
-stopped_at: all v1.14 phase discussions captured
-last_updated: "2026-05-23T23:47:38.000Z"
+status: completed
+stopped_at: v1.14 implemented, verified, and audited
+last_updated: "2026-05-23T20:25:00.000-04:00"
 last_activity: 2026-05-23
 progress:
   total_phases: 7
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 7
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.14 planning complete
+**Status:** v1.14 complete
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.14 phase planning from captured discussion context.
-**Latest shipped milestone:** v1.13 Go Backend Ownership Cutover
-**Active milestone:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract
+**Current focus:** v1.14 completion handoff and next-milestone readiness.
+**Latest shipped milestone:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract
+**Active milestone:** None; ready for next milestone.
 **Requirements:** .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
 Phase: 89-95
-Plan: Context gathered for all v1.14 phases
-Status: Ready for `$gsd-plan-phase` starting at Phase 89
-Last activity: 2026-05-23 - Phase 95 context gathered; all v1.14 phase discussions captured
+Plan: All v1.14 phase plans executed and verified
+Status: Complete
+Last activity: 2026-05-23 - v1.14 artifact, runtime ABI, Go fork, privacy, realism, topology, and promotion gates implemented and verified
 
-Progress: [----------] 0%
+Progress: [##########] 100%
 
 ## Workflow Settings
 
@@ -58,8 +58,8 @@ v1.14 goal:
 - Define `strategy-runtime-abi-v1.14` as the strict public interface between deterministic server/native orchestration and hostile Strategy runtime code.
 - Keep Strategy execution out of web/API/Go processes and preserve TypeScript worker/runtime ownership unless a later milestone explicitly promotes a different boundary.
 - Generate parity-safe Strategy artifact manifests so Go can consume Starter/Advanced/template source metadata without hand-maintained copies or source execution.
-- Promote Go-owned Starter/Advanced forks only after manifest parity, schema validation, lineage preservation, no-fallback evidence, and privacy checks pass.
-- Centralize public-output privacy rules and add repeatable replay board realism evidence for Match/replay creation changes.
+- Promoted Go-owned Starter/Advanced forks behind generated Strategy artifact manifests with lineage preservation and no Strategy execution in Go.
+- Centralized public-output privacy rules and added repeatable replay board realism evidence for Match/replay creation changes.
 
 ## Completed Milestones
 
@@ -79,19 +79,20 @@ v1.14 goal:
 | v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence | 6 | 6 | 30/30 | Shipped |
 | v1.12 Go Backend Promotion Readiness and Cutover Plan | 6 | 6 | 36/36 | Shipped |
 | v1.13 Go Backend Ownership Cutover | 7 | 7 | 42/44 complete, 2 deferred | Shipped |
+| v1.14 Generic Strategy Artifact and Runtime Boundary Contract | 7 | 7 | 48/48 complete | Complete |
 
 ## Latest Milestone Outcomes
 
-- v1.13 added live PostgreSQL-backed Go route providers and selected Go backend ownership.
-- Public Strategy, player, ladder, MatchSet summary, and replay metadata reads are Go-owned when the Go backend owner switch is selected.
-- Auth/session read and mutation, account revision list/source/create/save, and exhibition creation are Go-owned when selected.
-- TypeScript worker/runtime ownership remains explicit; Go-created exhibitions hand off to the existing worker.
-- Starter/Advanced forks remain TypeScript-owned until v1.14 creates parity-safe Strategy artifact manifests.
+- v1.14 added generic Strategy Artifact and Revision schemas for source-bearing artifacts, public summaries, runtime metadata, validation, lineage, and immutable match eligibility.
+- Generated `strategy-artifact-manifest-v1.14` from TypeScript-owned Starter, Advanced, and template registries with checksum gates and Go data-only parsing.
+- Promoted `strategy-runtime-abi-v1.14` and routed JS runtime adapter execution through an explicit ABI bridge.
+- Added Go-owned Starter/Advanced fork routes that consume generated artifacts as data, preserve source hash/runtime/validation/tags/lineage, and fail closed without TypeScript fallback when selected.
+- Centralized public-output privacy checks in `@cowards/spec` and extended replay realism validation before rendering.
 - Boundary monitors pass with `strict_offenses=0 report_only_offenses=29`.
 
 ## Next Todos
 
-- Start Phase 89 with `$gsd-discuss-phase 89` or `$gsd-plan-phase 89`.
+- Open the next milestone when ready.
 
 ## Blockers/Concerns
 
@@ -105,7 +106,7 @@ v1.14 goal:
 | backend | Job claiming/completion, Match execution, Chronicle generation, and worker runtime ownership | Deferred | v1.13 scope |
 | backend | Go-owned migrations/schema ownership | Deferred | v1.13 scope |
 | backend | Runtime/orchestration ownership beyond exhibition creation handoff | Deferred | v1.13 scope |
-| backend | Go-owned Starter/Advanced fork routes pending library source manifest access | Active in v1.14 | v1.13 audit |
+| backend | Go-owned Starter/Advanced fork routes pending library source manifest access | Completed in v1.14 | v1.13 audit |
 | replay | Full replay projection, owner-debug replay migration, and private Chronicle assembly | Deferred | v1.11 research |
 | workshop | Workshop validation, test launch, analytics rerun, profile save, export, and runtime flows | Deferred | v1.13 scope |
 | runtime | Production hostile-code sandbox promotion | Deferred | v1.11 scope |
@@ -115,6 +116,6 @@ v1.14 goal:
 
 ## Session Continuity
 
-Last session: 2026-05-23T23:47:38.000Z
-Stopped at: all v1.14 phase discussions captured
-Resume file: .planning/phases/095-privacy-realism-topology-and-promotion-gate/095-CONTEXT.md
+Last session: 2026-05-23T20:25:00.000-04:00
+Stopped at: v1.14 complete
+Resume file: .planning/artifacts/v1.14-promotion-decision.md

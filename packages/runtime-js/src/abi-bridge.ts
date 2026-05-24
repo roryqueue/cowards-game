@@ -10,6 +10,7 @@ import type {
   StrategyExecutionAdapterOptions,
   StrategyMethodName,
 } from "./adapter.js"
+import { hashStrategySource } from "./hash.js"
 
 export interface ExecuteStrategyRuntimeAbiBridgeInput
   extends StrategyExecutionAdapterOptions {
@@ -28,16 +29,29 @@ export const executeStrategyRuntimeAbiV114 = (
     methodName: input.methodName,
     runtime: input.revision.runtime,
     source: {
-      text: input.executableSource,
+      text: input.revision.source,
       hash: input.revision.sourceHash,
       bytes: input.revision.sourceBytes,
       entrypoint: input.revision.runtime.package.entrypoint,
     },
     input: input.input,
   })
+  if (
+    hashStrategySource(request.source.text) !== request.source.hash ||
+    new TextEncoder().encode(request.source.text).length !==
+      request.source.bytes
+  ) {
+    return {
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "Strategy Revision failed ABI source validation",
+      },
+    }
+  }
 
   const result = input.adapter.execute({
-    source: request.source.text,
+    source: input.executableSource,
     methodName: request.methodName,
     input: request.input,
     timeoutMs: input.timeoutMs,

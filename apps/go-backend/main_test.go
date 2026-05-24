@@ -160,6 +160,21 @@ func TestLiveStrategyArtifactManifestSupportsForkLookups(t *testing.T) {
 	}
 }
 
+func TestPublicRuntimeMetadataOmitsPrivateLimits(t *testing.T) {
+	runtime := defaultRuntimeMetadata()
+	publicRuntime := publicRuntimeMetadata(runtime)
+
+	if _, ok := publicRuntime["limits"]; ok {
+		t.Fatalf("public runtime leaked limits")
+	}
+	if _, ok := runtime["limits"]; !ok {
+		t.Fatalf("public runtime projection mutated source runtime")
+	}
+	if stringValue(publicRuntime, "abiVersion") != "strategy-runtime-abi-v1.14" {
+		t.Fatalf("public runtime lost ABI metadata")
+	}
+}
+
 func TestPublicReadRoutesDecodeIdentifiersWithoutCrossRouteFallback(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -521,6 +536,41 @@ func TestFixtureOverrideFailsOnPrivateOrInvalidPayloads(t *testing.T) {
 				t.Fatal("expected invalid fixture override to fail startup")
 			}
 		})
+	}
+}
+
+func TestValidateNoPrivateKeysUsesCentralizedPublicOutputContract(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload any
+	}{
+		{name: "source text", payload: map[string]any{"sourceText": "private"}},
+		{name: "normalized stack trace", payload: map[string]any{"Stack_Trace": "private"}},
+		{name: "raw awareness grid", payload: map[string]any{"rawAwarenessGrid": map[string]any{}}},
+		{name: "private error", payload: map[string]any{"privateError": "private"}},
+		{name: "authorization", payload: map[string]any{"authorization": "Bearer secret"}},
+		{name: "access token", payload: map[string]any{"access_token": "secret"}},
+		{name: "session id", payload: map[string]any{"session-id": "secret"}},
+		{name: "database url", payload: map[string]any{"databaseUrl": "postgres://private"}},
+		{name: "db dsn", payload: map[string]any{"dbDSN": "postgres://private"}},
+		{name: "private marker string", payload: map[string]any{"message": "Bearer secret"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := validateNoPrivateKeys(test.payload, "$"); err == nil {
+				t.Fatal("expected payload to fail privacy validation")
+			}
+		})
+	}
+
+	if err := validateNoPrivateKeys(map[string]any{
+		"sourceHash": "abc",
+		"runtime": map[string]any{
+			"abiVersion": "strategy-runtime-abi-v1.14",
+		},
+	}, "$"); err != nil {
+		t.Fatalf("safe public payload failed privacy validation: %v", err)
 	}
 }
 

@@ -7,7 +7,12 @@ import type {
   JsonValue,
   PlayerId,
 } from "@cowards/spec"
-import { ChronicleSchema, PUBLIC_OUTPUT_FORBIDDEN_FIELDS } from "@cowards/spec"
+import {
+  ChronicleSchema,
+  PUBLIC_OUTPUT_FORBIDDEN_FIELDS,
+  PUBLIC_OUTPUT_FORBIDDEN_MARKERS,
+  assertPublicOutputLeakSafe,
+} from "@cowards/spec"
 
 const PRIVATE_PAYLOAD_KEYS = new Set([
   ...PUBLIC_OUTPUT_FORBIDDEN_FIELDS,
@@ -46,6 +51,13 @@ const readString = (
 const sanitizeJson = (value: JsonValue): JsonValue => {
   if (Array.isArray(value)) {
     return value.map(sanitizeJson)
+  }
+  if (typeof value === "string") {
+    for (const marker of PUBLIC_OUTPUT_FORBIDDEN_MARKERS) {
+      if (value.includes(marker)) {
+        return "[redacted]"
+      }
+    }
   }
   if (!isRecord(value)) {
     return value
@@ -95,13 +107,15 @@ export const projectPublicChronicle = (
   chronicle: Chronicle,
 ): ChronicleProjection => {
   const canonical = canonicalChronicle(chronicle)
-  return {
+  const projection = {
     schemaVersion: canonical.schemaVersion,
     viewer: { access: "public" },
     reproducibility: cloneJson(canonical.reproducibility),
     events: canonical.events.map(projectEvent),
     snapshots: cloneJson(canonical.snapshots),
   }
+  assertPublicOutputLeakSafe(projection, "Public replay projection")
+  return projection
 }
 
 export const projectOwnerChronicle = (

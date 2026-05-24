@@ -505,33 +505,46 @@ func validateRouteManifest(manifest []routeSpec) error {
 
 func validateNoPrivateKeys(value any, path string) error {
 	forbidden := map[string]bool{
-		"source":                  true,
-		"strategySource":          true,
-		"strategyMemory":          true,
-		"soldierMemory":           true,
-		"objective":               true,
-		"objectivePayload":        true,
-		"ownerDebug":              true,
-		"exactAwarenessGrid":      true,
-		"awarenessGrid":           true,
-		"rawRuntimeDetails":       true,
-		"privateRuntime":          true,
-		"privateDiagnostics":      true,
-		"stack":                   true,
-		"stackTrace":              true,
-		"stderr":                  true,
-		"password":                true,
-		"passwordHash":            true,
-		"token":                   true,
-		"tokens":                  true,
-		"session":                 true,
-		"sessions":                true,
-		"hostPath":                true,
-		"hostPaths":               true,
-		"runtimeInternal":         true,
-		"runtimeInternals":        true,
-		"privateRuntimeInternal":  true,
-		"privateRuntimeInternals": true,
+		normalizePublicOutputKey("source"):                  true,
+		normalizePublicOutputKey("sourceText"):              true,
+		normalizePublicOutputKey("strategySource"):          true,
+		normalizePublicOutputKey("strategyMemory"):          true,
+		normalizePublicOutputKey("soldierMemory"):           true,
+		normalizePublicOutputKey("objective"):               true,
+		normalizePublicOutputKey("objectivePayload"):        true,
+		normalizePublicOutputKey("ownerDebug"):              true,
+		normalizePublicOutputKey("exactAwarenessGrid"):      true,
+		normalizePublicOutputKey("awarenessGrid"):           true,
+		normalizePublicOutputKey("rawAwarenessGrid"):        true,
+		normalizePublicOutputKey("rawRuntimeDetails"):       true,
+		normalizePublicOutputKey("runtimeDetails"):          true,
+		normalizePublicOutputKey("privateRuntime"):          true,
+		normalizePublicOutputKey("privateDiagnostics"):      true,
+		normalizePublicOutputKey("privateError"):            true,
+		normalizePublicOutputKey("stack"):                   true,
+		normalizePublicOutputKey("stackTrace"):              true,
+		normalizePublicOutputKey("stderr"):                  true,
+		normalizePublicOutputKey("password"):                true,
+		normalizePublicOutputKey("passwordHash"):            true,
+		normalizePublicOutputKey("authorization"):           true,
+		normalizePublicOutputKey("token"):                   true,
+		normalizePublicOutputKey("tokens"):                  true,
+		normalizePublicOutputKey("accessToken"):             true,
+		normalizePublicOutputKey("refreshToken"):            true,
+		normalizePublicOutputKey("session"):                 true,
+		normalizePublicOutputKey("sessions"):                true,
+		normalizePublicOutputKey("sessionId"):               true,
+		normalizePublicOutputKey("hostPath"):                true,
+		normalizePublicOutputKey("hostPaths"):               true,
+		normalizePublicOutputKey("databaseUrl"):             true,
+		normalizePublicOutputKey("databaseURL"):             true,
+		normalizePublicOutputKey("dbDsn"):                   true,
+		normalizePublicOutputKey("dbDSN"):                   true,
+		normalizePublicOutputKey("dsn"):                     true,
+		normalizePublicOutputKey("runtimeInternal"):         true,
+		normalizePublicOutputKey("runtimeInternals"):        true,
+		normalizePublicOutputKey("privateRuntimeInternal"):  true,
+		normalizePublicOutputKey("privateRuntimeInternals"): true,
 	}
 	switch node := value.(type) {
 	case []any:
@@ -540,9 +553,15 @@ func validateNoPrivateKeys(value any, path string) error {
 				return err
 			}
 		}
+	case string:
+		for _, marker := range publicOutputForbiddenMarkers {
+			if strings.Contains(node, marker) {
+				return fmt.Errorf("private marker %s", path)
+			}
+		}
 	case map[string]any:
 		for key, item := range node {
-			if forbidden[key] {
+			if forbidden[normalizePublicOutputKey(key)] {
 				return fmt.Errorf("private key %s.%s", path, key)
 			}
 			if err := validateNoPrivateKeys(item, path+"."+key); err != nil {
@@ -551,6 +570,31 @@ func validateNoPrivateKeys(value any, path string) error {
 		}
 	}
 	return nil
+}
+
+var publicOutputForbiddenMarkers = []string{
+	"PRIVATE_",
+	"GOLDEN_PRIVATE_",
+	"DATABASE_URL",
+	"postgres://",
+	"postgresql://",
+	"Bearer ",
+	"stack trace",
+}
+
+func normalizePublicOutputKey(value string) string {
+	var builder strings.Builder
+	for _, char := range value {
+		switch {
+		case char >= 'a' && char <= 'z':
+			builder.WriteRune(char)
+		case char >= 'A' && char <= 'Z':
+			builder.WriteRune(char + ('a' - 'A'))
+		case char >= '0' && char <= '9':
+			builder.WriteRune(char)
+		}
+	}
+	return builder.String()
 }
 
 func cloneOwnerTokens(ownerTokens map[string]string) map[string]string {

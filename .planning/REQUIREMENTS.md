@@ -8,72 +8,72 @@
 
 ### Baseline And Scope
 
-- [ ] **BASE-01**: Developer can inspect a v1.14 baseline covering v1.13 Go-owned routes, blocked fork routes, runtime/worker ownership, broad web report-only offenses, privacy gates, replay realism gates, and topology evidence.
-- [ ] **BASE-02**: Developer can inspect explicit v1.14 non-goals for Go Strategy execution, web/API Strategy execution, Node `vm` security boundary use, counted non-JS play, production sandbox promotion, Go migrations, full replay projection, owner-debug replay migration, Workshop runtime ownership, and job claiming/completion migration.
-- [ ] **BASE-03**: Developer can inspect a v1.14 ownership manifest separating live Go routes, fixture parity routes, TypeScript oracle/reference behavior, worker-owned runtime surfaces, deferred surfaces, and selected promotion candidates.
-- [ ] **BASE-04**: Developer can verify current Starter/Advanced fork deferral and Go account-save lineage gaps are recorded with concrete code references and parity risks.
-- [ ] **BASE-05**: Developer can verify current runtime ABI drift, adapter ID mapping drift, limit drift, failure taxonomy drift, and public/private diagnostic risks are recorded before implementation.
-- [ ] **BASE-06**: Developer can verify current public-output privacy deny lists and replay board realism checks are inventoried before new gates are added.
+- [x] **BASE-01**: Developer can inspect a v1.14 baseline covering v1.13 Go-owned routes, blocked fork routes, runtime/worker ownership, broad web report-only offenses, privacy gates, replay realism gates, and topology evidence.
+- [x] **BASE-02**: Developer can inspect explicit v1.14 non-goals for Go Strategy execution, web/API Strategy execution, Node `vm` security boundary use, counted non-JS play, production sandbox promotion, Go migrations, full replay projection, owner-debug replay migration, Workshop runtime ownership, and job claiming/completion migration.
+- [x] **BASE-03**: Developer can inspect a v1.14 ownership manifest separating live Go routes, fixture parity routes, TypeScript oracle/reference behavior, worker-owned runtime surfaces, deferred surfaces, and selected promotion candidates.
+- [x] **BASE-04**: Developer can verify current Starter/Advanced fork deferral and Go account-save lineage gaps are recorded with concrete code references and parity risks.
+- [x] **BASE-05**: Developer can verify current runtime ABI drift, adapter ID mapping drift, limit drift, failure taxonomy drift, and public/private diagnostic risks are recorded before implementation.
+- [x] **BASE-06**: Developer can verify current public-output privacy deny lists and replay board realism checks are inventoried before new gates are added.
 
 ### Strategy Artifact Contract
 
-- [ ] **ART-01**: Developer can use spec-owned Strategy Artifact types and schemas that cover user revisions, server-native templates, Starter entries, Advanced entries, and future language variants.
-- [ ] **ART-02**: Developer can represent artifact kind, source visibility, fork eligibility, source hash, source bytes, source format, validation status/report, runtime metadata, language metadata, package metadata, engine compatibility, and behavior-significant compatibility in the artifact contract.
-- [ ] **ART-03**: Developer can represent generic lineage/derived-from metadata without losing compatibility with existing Starter and Advanced lineage fields.
-- [ ] **ART-04**: Developer can mark immutable Match/MatchSet eligibility snapshots from artifact/revision data, including validation status, counted runtime eligibility, source hash, runtime compatibility, and locked-at semantics.
-- [ ] **ART-05**: Developer can validate artifact schemas with golden valid/invalid fixtures for template, Starter, Advanced, account revision, and future-language examples.
-- [ ] **ART-06**: Developer can verify public artifact summaries are source-safe by default while owner-private and built-in forkable source access remain explicitly classified.
-- [ ] **ART-07**: Developer can verify StrategyRevision remains backward-compatible while new artifact metadata is introduced.
+- [x] **ART-01**: Developer can use spec-owned Strategy Artifact types and schemas that cover user revisions, server-native templates, Starter entries, Advanced entries, and future language variants.
+- [x] **ART-02**: Developer can represent artifact kind, source visibility, fork eligibility, source hash, source bytes, source format, validation status/report, runtime metadata, language metadata, package metadata, engine compatibility, and behavior-significant compatibility in the artifact contract.
+- [x] **ART-03**: Developer can represent generic lineage/derived-from metadata without losing compatibility with existing Starter and Advanced lineage fields.
+- [x] **ART-04**: Developer can mark immutable Match/MatchSet eligibility snapshots from artifact/revision data, including validation status, counted runtime eligibility, source hash, runtime compatibility, and locked-at semantics.
+- [x] **ART-05**: Developer can validate artifact schemas with golden valid/invalid fixtures for template, Starter, Advanced, account revision, and future-language examples.
+- [x] **ART-06**: Developer can verify public artifact summaries are source-safe by default while owner-private and built-in forkable source access remain explicitly classified.
+- [x] **ART-07**: Developer can verify StrategyRevision remains backward-compatible while new artifact metadata is introduced.
 
 ### Artifact Manifest
 
-- [ ] **MAN-01**: Developer can generate a Strategy artifact manifest from TypeScript-owned Starter, Advanced, and Workshop template/source registries.
-- [ ] **MAN-02**: Developer can verify generated manifest entries include source, source hash, source bytes, validation report/status, runtime metadata, engine compatibility, tags, notes, names, version, archetype/level metadata, lineage metadata, and fork eligibility.
-- [ ] **MAN-03**: Developer can run a stale-output/checksum gate that fails when TypeScript source registries and generated manifests diverge.
-- [ ] **MAN-04**: Developer can verify generated manifests distinguish built-in public/forkable source from owner-private account source and never classify owner-private source as public.
-- [ ] **MAN-05**: Developer can verify TypeScript and Go manifest consumers agree on artifact IDs, hashes, bytes, validation status, runtime metadata, lineage, and public metadata.
-- [ ] **MAN-06**: Developer can verify manifests do not require Go to import TypeScript modules or execute Strategy source.
+- [x] **MAN-01**: Developer can generate a Strategy artifact manifest from TypeScript-owned Starter, Advanced, and Workshop template/source registries.
+- [x] **MAN-02**: Developer can verify generated manifest entries include source, source hash, source bytes, validation report/status, runtime metadata, engine compatibility, tags, notes, names, version, archetype/level metadata, lineage metadata, and fork eligibility.
+- [x] **MAN-03**: Developer can run a stale-output/checksum gate that fails when TypeScript source registries and generated manifests diverge.
+- [x] **MAN-04**: Developer can verify generated manifests distinguish built-in public/forkable source from owner-private account source and never classify owner-private source as public.
+- [x] **MAN-05**: Developer can verify TypeScript and Go manifest consumers agree on artifact IDs, hashes, bytes, validation status, runtime metadata, lineage, and public metadata.
+- [x] **MAN-06**: Developer can verify manifests do not require Go to import TypeScript modules or execute Strategy source.
 
 ### Runtime ABI
 
-- [ ] **ABI-01**: Developer can inspect `strategy-runtime-abi-v1.14` as the strict public ABI between deterministic server/native orchestration and hostile Strategy runtime code.
-- [ ] **ABI-02**: Developer can validate method-specific request and response envelopes for `selectActivations` and `soldierBrain`, including `StrategyInput`, `StrategyResult`, `SoldierBrainInput`, and `SoldierBrainResult` schemas.
-- [ ] **ABI-03**: Developer can verify ABI request validation enforces source hash, source bytes, source byte limits, runtime metadata, adapter id/version, language id/version, package mode, required capabilities, effective limits, and behavior-significant compatibility.
-- [ ] **ABI-04**: Developer can verify ABI response validation enforces output schema, output byte caps, StrategyMemory limits, SoldierMemory limits, objective payload limits, and JSON-only values.
-- [ ] **ABI-05**: Developer can verify `SOURCE_TOO_LARGE` and other preflight validation failures are classified consistently rather than being confused with runtime violations.
-- [ ] **ABI-06**: Developer can verify runtime violations and system failures use one spec-owned taxonomy with public messages and private diagnostics separated.
-- [ ] **ABI-07**: Developer can verify adapter ID mapping is first-class and versioned rather than hidden in monitor-only bridge code.
-- [ ] **ABI-08**: Developer can verify ABI fixtures cover JS/TS counted runtime, experimental Python/non-JS metadata, invalid language/adapter/package combinations, timeout, oversized output, malformed IPC, and redacted diagnostics.
+- [x] **ABI-01**: Developer can inspect `strategy-runtime-abi-v1.14` as the strict public ABI between deterministic server/native orchestration and hostile Strategy runtime code.
+- [x] **ABI-02**: Developer can validate method-specific request and response envelopes for `selectActivations` and `soldierBrain`, including `StrategyInput`, `StrategyResult`, `SoldierBrainInput`, and `SoldierBrainResult` schemas.
+- [x] **ABI-03**: Developer can verify ABI request validation enforces source hash, source bytes, source byte limits, runtime metadata, adapter id/version, language id/version, package mode, required capabilities, effective limits, and behavior-significant compatibility.
+- [x] **ABI-04**: Developer can verify ABI response validation enforces output schema, output byte caps, StrategyMemory limits, SoldierMemory limits, objective payload limits, and JSON-only values.
+- [x] **ABI-05**: Developer can verify `SOURCE_TOO_LARGE` and other preflight validation failures are classified consistently rather than being confused with runtime violations.
+- [x] **ABI-06**: Developer can verify runtime violations and system failures use one spec-owned taxonomy with public messages and private diagnostics separated.
+- [x] **ABI-07**: Developer can verify adapter ID mapping is first-class and versioned rather than hidden in monitor-only bridge code.
+- [x] **ABI-08**: Developer can verify ABI fixtures cover JS/TS counted runtime, experimental Python/non-JS metadata, invalid language/adapter/package combinations, timeout, oversized output, malformed IPC, and redacted diagnostics.
 
 ### Runtime Adapter Conformance
 
-- [ ] **RUNC-01**: Developer can verify worker-thread, subprocess, and container-subprocess JS adapters either execute through v1.14 envelopes or use one explicit conformance bridge with tests.
-- [ ] **RUNC-02**: Developer can verify effective timeout, stdout/stderr/source/memory/objective limits align across spec defaults, runtime-js guards, adapter metadata, worker config, sandbox probes, and boundary monitors.
-- [ ] **RUNC-03**: Developer can verify runtime violations complete Match/Chronicle behavior consistently while system failures remain retryable or classified as system failure without becoming player losses.
-- [ ] **RUNC-04**: Developer can run hostile/determinism probes for time, randomness, filesystem, network, environment, shell, dynamic code, stdout/stderr caps, memory limits, source limits, objective payloads, and malformed outputs.
-- [ ] **RUNC-05**: Developer can verify executable runtime APIs remain absent from web/API and Go backend packages.
-- [ ] **RUNC-06**: Developer can verify container and non-JS runtimes remain evidence-only/non-counted unless a later milestone explicitly promotes them.
+- [x] **RUNC-01**: Developer can verify worker-thread, subprocess, and container-subprocess JS adapters either execute through v1.14 envelopes or use one explicit conformance bridge with tests.
+- [x] **RUNC-02**: Developer can verify effective timeout, stdout/stderr/source/memory/objective limits align across spec defaults, runtime-js guards, adapter metadata, worker config, sandbox probes, and boundary monitors.
+- [x] **RUNC-03**: Developer can verify runtime violations complete Match/Chronicle behavior consistently while system failures remain retryable or classified as system failure without becoming player losses.
+- [x] **RUNC-04**: Developer can run hostile/determinism probes for time, randomness, filesystem, network, environment, shell, dynamic code, stdout/stderr caps, memory limits, source limits, objective payloads, and malformed outputs.
+- [x] **RUNC-05**: Developer can verify executable runtime APIs remain absent from web/API and Go backend packages.
+- [x] **RUNC-06**: Developer can verify container and non-JS runtimes remain evidence-only/non-counted unless a later milestone explicitly promotes them.
 
 ### Go Artifact Consumption
 
-- [ ] **GOART-01**: Developer can load generated Strategy artifact manifests in Go without importing TypeScript modules or executing Strategy source.
-- [ ] **GOART-02**: User can fork Starter Strategies through Go-owned routes with TypeScript-oracle parity for source, source hash, source bytes, validation status/report shape, tags, label, notes, lineage, strategy ID, revision ID, runtime metadata, and account list DTO behavior.
-- [ ] **GOART-03**: User can fork Advanced Strategies through Go-owned routes with TypeScript-oracle parity for source, source hash, source bytes, validation status/report shape, tags, label, notes, archetype, lineage, strategy ID, revision ID, runtime metadata, and account list DTO behavior.
-- [ ] **GOART-04**: User can save an account revision through Go with Starter/Advanced/template lineage preserved when submitted source hash and selected artifact metadata match a manifest entry.
-- [ ] **GOART-05**: Developer can verify Go artifact/fork routes fail closed for missing manifest, stale manifest, invalid artifact ID, invalid source/hash, invalid validation metadata, unauthorized session, duplicate/storage failure, schema failure, privacy failure, and topology failure without silent TypeScript fallback.
-- [ ] **GOART-06**: Developer can verify Go artifact/fork routes never execute Strategy code, use Node `vm`, claim jobs, run Matches, build Chronicles, or classify runtime failures.
-- [ ] **GOART-07**: Developer can verify route ownership manifests, web selection flags, topology checks, and rollback drills promote Starter/Advanced fork routes only after manifest parity passes.
+- [x] **GOART-01**: Developer can load generated Strategy artifact manifests in Go without importing TypeScript modules or executing Strategy source.
+- [x] **GOART-02**: User can fork Starter Strategies through Go-owned routes with TypeScript-oracle parity for source, source hash, source bytes, validation status/report shape, tags, label, notes, lineage, strategy ID, revision ID, runtime metadata, and account list DTO behavior.
+- [x] **GOART-03**: User can fork Advanced Strategies through Go-owned routes with TypeScript-oracle parity for source, source hash, source bytes, validation status/report shape, tags, label, notes, archetype, lineage, strategy ID, revision ID, runtime metadata, and account list DTO behavior.
+- [x] **GOART-04**: User can save an account revision through Go with Starter/Advanced/template lineage preserved when submitted source hash and selected artifact metadata match a manifest entry.
+- [x] **GOART-05**: Developer can verify Go artifact/fork routes fail closed for missing manifest, stale manifest, invalid artifact ID, invalid source/hash, invalid validation metadata, unauthorized session, duplicate/storage failure, schema failure, privacy failure, and topology failure without silent TypeScript fallback.
+- [x] **GOART-06**: Developer can verify Go artifact/fork routes never execute Strategy code, use Node `vm`, claim jobs, run Matches, build Chronicles, or classify runtime failures.
+- [x] **GOART-07**: Developer can verify route ownership manifests, web selection flags, topology checks, and rollback drills promote Starter/Advanced fork routes only after manifest parity passes.
 
 ### Privacy, Realism, And Promotion Gate
 
-- [ ] **GATE-01**: Developer can use one spec-owned public forbidden-field contract across service guards, Go tests, replay projection tests, analytics guards, topology checks, OpenAPI public artifacts, boundary monitors, and browser-visible public replay text.
-- [ ] **GATE-02**: Developer can verify public/service/Go/topology/monitor outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals by default.
-- [ ] **GATE-03**: Developer can verify owner-private source retrieval remains the only source-returning exception, requires authenticated ownership, and uses private/no-store behavior.
-- [ ] **GATE-04**: Developer can run a repeatable live web-through-Go topology command that creates a Go-owned exhibition, runs the TypeScript worker, fetches replay metadata, and records privacy-safe evidence.
-- [ ] **GATE-05**: Developer can verify board realism for Go-created or replay/match creation changes: declared bounds are valid, canonical arenas contain starting positions, terrain and visible Soldiers stay within bounds, and browser replay canvas is nonblank and not clipped.
-- [ ] **GATE-06**: Developer can verify boundary monitors fail on ABI drift, artifact manifest drift, adapter metadata drift, privacy deny-list drift, unexpected Go/web Strategy execution, unsafe fallback, or runtime ownership creep.
-- [ ] **GATE-07**: Developer can verify `strict_offenses=0` and broad web report-only offenses do not increase above 29 unless explicitly rebaselined.
-- [ ] **GATE-08**: Developer can inspect a final v1.14 promotion decision for artifact manifest, ABI conformance, Go fork routes, privacy gates, replay realism evidence, and remaining deferred runtime/backend surfaces.
+- [x] **GATE-01**: Developer can use one spec-owned public forbidden-field contract across service guards, Go tests, replay projection tests, analytics guards, topology checks, OpenAPI public artifacts, boundary monitors, and browser-visible public replay text.
+- [x] **GATE-02**: Developer can verify public/service/Go/topology/monitor outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals by default.
+- [x] **GATE-03**: Developer can verify owner-private source retrieval remains the only source-returning exception, requires authenticated ownership, and uses private/no-store behavior.
+- [x] **GATE-04**: Developer can run a repeatable live web-through-Go topology command that creates a Go-owned exhibition, runs the TypeScript worker, fetches replay metadata, and records privacy-safe evidence.
+- [x] **GATE-05**: Developer can verify board realism for Go-created or replay/match creation changes: declared bounds are valid, canonical arenas contain starting positions, terrain and visible Soldiers stay within bounds, and browser replay canvas is nonblank and not clipped.
+- [x] **GATE-06**: Developer can verify boundary monitors fail on ABI drift, artifact manifest drift, adapter metadata drift, privacy deny-list drift, unexpected Go/web Strategy execution, unsafe fallback, or runtime ownership creep.
+- [x] **GATE-07**: Developer can verify `strict_offenses=0` and broad web report-only offenses do not increase above 29 unless explicitly rebaselined.
+- [x] **GATE-08**: Developer can inspect a final v1.14 promotion decision for artifact manifest, ABI conformance, Go fork routes, privacy gates, replay realism evidence, and remaining deferred runtime/backend surfaces.
 
 ## Future Requirements
 

@@ -631,6 +631,38 @@ const checkV114RouteOwnershipManifest = (): string => {
   if (forkRoutes.length !== 2) {
     throw new Error("v1.14 fork route ownership entries missing")
   }
+  const allowedStates = new Set(manifest.allowedPromotionStates)
+  for (const entry of manifest.routes) {
+    if (!allowedStates.has(entry.promotionStatus)) {
+      throw new Error(`${entry.routeId} has invalid v1.14 promotion status`)
+    }
+    if (
+      entry.routeFamily !== "worker_runtime" &&
+      entry.routeFamily !== "deferred" &&
+      entry.selectedOwner !== "go_backend"
+    ) {
+      throw new Error(`${entry.routeId} selected owner must remain Go in v1.14`)
+    }
+    if (
+      entry.routeFamily !== "worker_runtime" &&
+      entry.routeFamily !== "deferred" &&
+      entry.fallbackPolicy !== "no_fallback_when_go_selected"
+    ) {
+      throw new Error(`${entry.routeId} v1.14 fallback policy drifted`)
+    }
+    if (
+      entry.promotionStatus === "blocked" &&
+      entry.blockedReasons.length === 0
+    ) {
+      throw new Error(`${entry.routeId} blocked status requires blockers`)
+    }
+    if (entry.evidenceRequired.length === 0) {
+      throw new Error(`${entry.routeId} missing v1.14 evidence requirements`)
+    }
+    if (entry.disallowedScopes.length === 0) {
+      throw new Error(`${entry.routeId} missing v1.14 disallowed scopes`)
+    }
+  }
   for (const entry of forkRoutes) {
     if (
       entry.routeFamily !== "artifact_fork" ||

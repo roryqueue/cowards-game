@@ -16,11 +16,11 @@
 - [x] **v1.11 Remaining Web Read Boundary Burn-Down and Live Go Readiness Evidence** - Phases 70-75, shipped 2026-05-23. See `.planning/milestones/v1.11-ROADMAP.md`.
 - [x] **v1.12 Go Backend Promotion Readiness and Cutover Plan** - Phases 76-81, shipped 2026-05-23 with `promote-none-yet`. See `.planning/milestones/v1.12-ROADMAP.md`.
 - [x] **v1.13 Go Backend Ownership Cutover** - Phases 82-88, completed 2026-05-23 with selected Go backend route promotion. See `.planning/milestones/v1.13-ROADMAP.md`.
-- [ ] **v1.14 Generic Strategy Artifact and Runtime Boundary Contract** - Phases 89-95, active.
+- [x] **v1.14 Generic Strategy Artifact and Runtime Boundary Contract** - Phases 89-95, completed 2026-05-23 with artifact-backed Go fork promotion and runtime ABI v1.14.
 
 ## Current Milestone: v1.14 Generic Strategy Artifact and Runtime Boundary Contract
 
-**Status:** Ready for Phase 89
+**Status:** Completed 2026-05-23
 **Phases:** 89-95
 **Granularity:** Standard
 **Requirements:** 48 mapped
@@ -34,13 +34,13 @@ The milestone also freezes a stricter `strategy-runtime-abi-v1.14` so determinis
 
 ## Phases
 
-- [ ] **Phase 89: Boundary Baseline and Scope Lock** - Developers can inspect the exact v1.14 starting boundary and non-goals before implementation.
-- [ ] **Phase 90: Generic Strategy Artifact Contract** - Developers can validate source-bearing Strategy artifacts and compatible revisions through spec-owned schemas.
-- [ ] **Phase 91: Generated Strategy Artifact Manifest** - Developers can generate parity-safe Strategy artifact manifests from TypeScript-owned libraries/templates.
-- [ ] **Phase 92: Runtime ABI v1.14 Contract** - Developers can validate strict method-specific runtime ABI envelopes and failure taxonomy.
-- [ ] **Phase 93: JS Runtime Adapter Conformance** - Developers can prove existing JS adapters conform to v1.14 ABI boundaries without moving execution into web/API/Go.
-- [ ] **Phase 94: Go Artifact Consumption and Fork Parity** - Users can fork Starter/Advanced Strategies through Go-owned routes from generated artifacts with TypeScript-oracle parity.
-- [ ] **Phase 95: Privacy, Realism, Topology, and Promotion Gate** - Developers can prove privacy, board realism, topology, no-fallback, and final promotion/defer decisions across v1.14 surfaces.
+- [x] **Phase 89: Boundary Baseline and Scope Lock** - Developers can inspect the exact v1.14 starting boundary and non-goals before implementation.
+- [x] **Phase 90: Generic Strategy Artifact Contract** - Developers can validate source-bearing Strategy artifacts and compatible revisions through spec-owned schemas.
+- [x] **Phase 91: Generated Strategy Artifact Manifest** - Developers can generate parity-safe Strategy artifact manifests from TypeScript-owned libraries/templates.
+- [x] **Phase 92: Runtime ABI v1.14 Contract** - Developers can validate strict method-specific runtime ABI envelopes and failure taxonomy.
+- [x] **Phase 93: JS Runtime Adapter Conformance** - Developers can prove existing JS adapters conform to v1.14 ABI boundaries without moving execution into web/API/Go.
+- [x] **Phase 94: Go Artifact Consumption and Fork Parity** - Users can fork Starter/Advanced Strategies through Go-owned routes from generated artifacts with TypeScript-oracle parity.
+- [x] **Phase 95: Privacy, Realism, Topology, and Promotion Gate** - Developers can prove privacy, board realism, topology, no-fallback, and final promotion/defer decisions across v1.14 surfaces.
 
 ## Phase Details
 
@@ -56,7 +56,7 @@ The milestone also freezes a stricter `strategy-runtime-abi-v1.14` so determinis
 3. Developer can verify explicit non-goals prevent Go/web/API Strategy execution, Node `vm` security boundary use, counted non-JS play, sandbox promotion, Go migrations, full replay projection, owner-debug replay migration, Workshop runtime ownership, and job claiming/completion migration.
 4. Developer can verify baseline evidence records `strict_offenses=0`, `report_only_offenses=29`, v1.13 selected route ownership, and current topology/monitor gaps.
 
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 ### Phase 90: Generic Strategy Artifact Contract
 
@@ -70,7 +70,7 @@ The milestone also freezes a stricter `strategy-runtime-abi-v1.14` so determinis
 3. Developer can verify existing StrategyRevision consumers remain backward-compatible while generic lineage and artifact metadata become available.
 4. Developer can run valid/invalid artifact fixture tests covering public-safe summaries, built-in forkable source, owner-private source, and unsupported runtime/language examples.
 
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 ### Phase 91: Generated Strategy Artifact Manifest
 
@@ -85,7 +85,7 @@ The milestone also freezes a stricter `strategy-runtime-abi-v1.14` so determinis
 4. Developer can verify Go consumes manifests as data without importing TypeScript modules or executing Strategy source.
 5. Developer can verify manifest privacy classification distinguishes built-in forkable source from owner-private source.
 
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 ### Phase 92: Runtime ABI v1.14 Contract
 
@@ -100,7 +100,7 @@ The milestone also freezes a stricter `strategy-runtime-abi-v1.14` so determinis
 4. Developer can verify runtime violations, system failures, public messages, and private diagnostics use one spec-owned taxonomy.
 5. Developer can run ABI fixtures for JS/TS counted runtime, experimental Python metadata, invalid language/adapter/package combinations, timeout, oversized output, malformed IPC, and redacted diagnostics.
 
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 ### Phase 93: JS Runtime Adapter Conformance
 
@@ -115,7 +115,7 @@ The milestone also freezes a stricter `strategy-runtime-abi-v1.14` so determinis
 4. Developer can run hostile/determinism probes for time, randomness, filesystem, network, environment, shell, dynamic code, stdout/stderr caps, memory/source/objective limits, and malformed output.
 5. Developer can verify executable runtime APIs remain absent from web/API and Go backend packages.
 
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 ### Phase 94: Go Artifact Consumption and Fork Parity
 
@@ -131,7 +131,7 @@ The milestone also freezes a stricter `strategy-runtime-abi-v1.14` so determinis
 5. Developer can verify manifest, schema, privacy, auth, stale-output, invalid-artifact, storage, topology, and no-fallback failures fail closed without silent TypeScript fallback.
 6. Developer can verify Go artifact/fork routes do not execute Strategy code, use Node `vm`, claim jobs, run Matches, build Chronicles, or classify runtime failures.
 
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 ### Phase 95: Privacy, Realism, Topology, and Promotion Gate
 
@@ -148,7 +148,7 @@ The milestone also freezes a stricter `strategy-runtime-abi-v1.14` so determinis
 6. Developer can verify boundary monitors fail on ABI drift, artifact manifest drift, adapter drift, privacy drift, unexpected Strategy execution, unsafe fallback, or runtime ownership creep.
 7. Developer can inspect a final v1.14 promotion decision for artifact manifests, ABI conformance, Go fork routes, privacy gates, replay realism evidence, and remaining deferred surfaces.
 
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 ## Progress
 
@@ -156,13 +156,13 @@ The milestone also freezes a stricter `strategy-runtime-abi-v1.14` so determinis
 
 | Phase | Plans Complete | Status | Completed |
 | --- | --- | --- | --- |
-| 89. Boundary Baseline and Scope Lock | 0/0 | Not started | — |
-| 90. Generic Strategy Artifact Contract | 0/0 | Not started | — |
-| 91. Generated Strategy Artifact Manifest | 0/0 | Not started | — |
-| 92. Runtime ABI v1.14 Contract | 0/0 | Not started | — |
-| 93. JS Runtime Adapter Conformance | 0/0 | Not started | — |
-| 94. Go Artifact Consumption and Fork Parity | 0/0 | Not started | — |
-| 95. Privacy, Realism, Topology, and Promotion Gate | 0/0 | Not started | — |
+| 89. Boundary Baseline and Scope Lock | 1/1 | Complete | 2026-05-23 |
+| 90. Generic Strategy Artifact Contract | 1/1 | Complete | 2026-05-23 |
+| 91. Generated Strategy Artifact Manifest | 1/1 | Complete | 2026-05-23 |
+| 92. Runtime ABI v1.14 Contract | 1/1 | Complete | 2026-05-23 |
+| 93. JS Runtime Adapter Conformance | 1/1 | Complete | 2026-05-23 |
+| 94. Go Artifact Consumption and Fork Parity | 1/1 | Complete | 2026-05-23 |
+| 95. Privacy, Realism, Topology, and Promotion Gate | 1/1 | Complete | 2026-05-23 |
 
 ## Requirement Coverage
 
@@ -176,17 +176,13 @@ The milestone also freezes a stricter `strategy-runtime-abi-v1.14` so determinis
 | GOART-01 through GOART-07 | Phase 94 | 7 |
 | GATE-01 through GATE-08 | Phase 95 | 8 |
 
-**Coverage:** 48/48 v1.14 requirements mapped.
+**Coverage:** 48/48 v1.14 requirements completed.
 **Unmapped requirements:** 0.
 **Starting phase:** 89.
 
 ## Next Up
 
-**Phase 89: Boundary Baseline and Scope Lock** - Rebaseline v1.13 ownership, artifact/template source, runtime ABI drift, privacy, topology, and replay realism before implementation.
-
-`$gsd-discuss-phase 89`
-
-Also available: `$gsd-plan-phase 89`
+Milestone audit and final verification are complete. v1.14 is ready for archive/next-milestone handoff.
 
 ---
-*Last updated: 2026-05-23 after v1.14 milestone initialization*
+*Last updated: 2026-05-23 after v1.14 milestone implementation*

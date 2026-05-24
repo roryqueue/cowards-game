@@ -2,31 +2,33 @@
 
 ## Current State
 
-**Shipped version:** v1.13 Go Backend Ownership Cutover on 2026-05-23
-**Current milestone:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract.
-**Status:** Planning complete; ready for Phase 89.
-**Last audit:** v1.13 milestone audit passed with accepted Starter/Advanced fork deferral.
+**Shipped version:** v1.14 Generic Strategy Artifact and Runtime Boundary Contract on 2026-05-23
+**Current milestone:** None; ready for next milestone.
+**Status:** v1.14 complete and verified.
+**Last audit:** v1.14 audit passed with artifact-backed Go fork promotion and deferred runtime migration.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for selected backend API routes, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. v1.14 will make Strategy source artifacts and runtime boundaries generic, manifest-backed, and parity-safe before Go owns fork/template behavior or any runtime architecture is promoted.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for selected backend API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. v1.14 made Strategy source artifacts and runtime boundaries generic, manifest-backed, and parity-safe without moving hostile Strategy execution into web/API/Go.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.14 Generic Strategy Artifact and Runtime Boundary Contract
+## Latest Shipped Milestone: v1.14 Generic Strategy Artifact and Runtime Boundary Contract
 
 **Goal:** Define and implement generic Strategy Artifact/Revision contracts and a strict runtime ABI boundary so Go can consume parity-safe Strategy templates/forks without executing hostile Strategy code, while public outputs, replay safety, schema validation, and deterministic engine boundaries remain hard gates.
 
-**Target features:**
-- Rebaseline v1.13 route/runtime/privacy state and lock explicit v1.14 non-goals before implementation.
-- Create a generic Strategy Artifact / Revision contract for user revisions, server-native templates, Starter and Advanced libraries, future language variants, runtime metadata, source hashes, validation, lineage, and immutable Match eligibility.
-- Generate parity-safe Strategy artifact manifests from TypeScript-owned Starter, Advanced, and Workshop template sources without hand-maintained Go copies.
-- Define `strategy-runtime-abi-v1.14` as the strict public interface between deterministic server/native orchestration and hostile Strategy runtime code.
-- Make JS runtime adapters conform to the v1.14 ABI or a single explicit bridge while keeping execution outside web/API/Go.
+**Delivered:**
+- Rebaselined v1.13 route/runtime/privacy state and locked explicit v1.14 non-goals before implementation.
+- Created generic Strategy Artifact / Revision contracts for user revisions, server-native templates, Starter and Advanced libraries, future language variants, runtime metadata, source hashes, validation, lineage, and immutable Match eligibility.
+- Generated parity-safe Strategy artifact manifests from TypeScript-owned Starter, Advanced, and Workshop template sources without hand-maintained Go copies.
+- Defined `strategy-runtime-abi-v1.14` as the strict public interface between deterministic server/native orchestration and hostile Strategy runtime code.
+- Made JS runtime adapters conform to the v1.14 ABI through a single explicit bridge while keeping execution outside web/API/Go.
 - Let Go consume generated artifacts for Starter/Advanced forks and lineage-preserving account saves without executing Strategy code.
-- Centralize public-output privacy rules and add repeatable live topology plus replay board realism evidence for Match/replay creation changes.
+- Centralized public-output privacy rules and added repeatable topology plus replay board realism evidence for Match/replay creation changes.
 
-## Latest Shipped Milestone: v1.13 Go Backend Ownership Cutover
+**Decision:** `promote-artifact-backed-go-forks-and-runtime-abi-v1.14`. Runtime/worker execution remains TypeScript worker-owned; Go consumes built-in Strategy artifacts as data only.
+
+## Previous Shipped Milestone: v1.13 Go Backend Ownership Cutover
 
 **Goal:** Perform a fast, decisive Go backend ownership cutover for normal product workflows, including live Go persistence, public reads, owner/account reads, auth/session mutations, account Strategy Revision writes/source retrieval, and exhibition creation, while keeping Strategy execution, worker orchestration, deterministic engine logic, and private replay internals out of Go ownership.
 

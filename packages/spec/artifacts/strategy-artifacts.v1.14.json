@@ -3,7 +3,7 @@
   "generatedBy": "scripts/generate-strategy-artifact-manifest.ts",
   "sourceOfTruth": "typescript-registries",
   "artifactCount": 23,
-  "contentHash": "sha256:54b502b1fd0a7cdd9734fd4046b1c39fd364a54391e01bb7250255503063cf74",
+  "contentHash": "sha256:c84a1d7b26e8c9d4a3b9fa55bab8a263f206af264689cb4acd35b08a83141af4",
   "artifacts": [
     {
       "id": "strategy-artifact:advanced:center-gravity",
@@ -83,7 +83,7 @@
         "derivedFrom": {
           "artifactId": "strategy-artifact:starter:centerline-bully",
           "kind": "starter",
-          "sourceHash": "c0462afc35863ae47e3cff9d4b2878a8aff1a282981f6c25ee4fb30afd02bece",
+          "sourceHash": "9d6f04a2520f1c5e406a49d6bad6200429b4b48481d55d23b97a2ac4e97c27c5",
           "label": "starter:centerline-bully"
         },
         "advancedLineage": {
@@ -195,7 +195,7 @@
         "derivedFrom": {
           "artifactId": "strategy-artifact:starter:escape-artist",
           "kind": "starter",
-          "sourceHash": "0fa96cb53ab429e1599feb0cdae182e7b1cb2981be4b49a60ae6b7a9b4db2455",
+          "sourceHash": "8c40a5163b2ce42cceda4ea864c5cd56b31311550e9b871d438aeae58b9667ad",
           "label": "starter:escape-artist"
         },
         "advancedLineage": {
@@ -307,7 +307,7 @@
         "derivedFrom": {
           "artifactId": "strategy-artifact:starter:corner-lurker",
           "kind": "starter",
-          "sourceHash": "32b7b1433098d58b03303c8fb64c5b0eddb70a04207ef47b1a2b280f9f4d3d54",
+          "sourceHash": "017f99e5ea2502eb6ba8bbf44e861fbb38b0092f93e7cf3a1c6859b385ce0916",
           "label": "starter:corner-lurker"
         },
         "advancedLineage": {
@@ -419,7 +419,7 @@
         "derivedFrom": {
           "artifactId": "strategy-artifact:starter:mirror-breaker",
           "kind": "starter",
-          "sourceHash": "13ca40eee8c359879ced75e99cec8135cfa8e8693ef759aa3c0948c07863b03d",
+          "sourceHash": "caf829a7338cef862e3eeac7ef6f527f251924688c470376453e2f7c458445e7",
           "label": "starter:mirror-breaker"
         },
         "advancedLineage": {
@@ -531,7 +531,7 @@
         "derivedFrom": {
           "artifactId": "strategy-artifact:starter:escape-artist",
           "kind": "starter",
-          "sourceHash": "4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224",
+          "sourceHash": "8c40a5163b2ce42cceda4ea864c5cd56b31311550e9b871d438aeae58b9667ad",
           "label": "starter:escape-artist"
         },
         "advancedLineage": {
@@ -643,7 +643,7 @@
         "derivedFrom": {
           "artifactId": "strategy-artifact:starter:mirror-breaker",
           "kind": "starter",
-          "sourceHash": "b0e6878325f869c56b1444905cb86051e5b8c65974294717bb41def92aa0e3e0",
+          "sourceHash": "caf829a7338cef862e3eeac7ef6f527f251924688c470376453e2f7c458445e7",
           "label": "starter:mirror-breaker"
         },
         "advancedLineage": {
@@ -755,7 +755,7 @@
         "derivedFrom": {
           "artifactId": "strategy-artifact:starter:center-turtle",
           "kind": "starter",
-          "sourceHash": "fb848a6651bf7f53056d3435cddd273ed3c12f0f6383d1202cc0cbadc8bff8b5",
+          "sourceHash": "659d6906c2857f7e0d60553ace1d58e84ac9fec5e5bd4bd2e695d7a0797423d0",
           "label": "starter:center-turtle"
         },
         "advancedLineage": {
@@ -867,7 +867,7 @@
         "derivedFrom": {
           "artifactId": "strategy-artifact:starter:trap-setter",
           "kind": "starter",
-          "sourceHash": "eff43a1b44f254a22726c5337608d7c64d25cc5e30800f00c2c63117789964ad",
+          "sourceHash": "7cc3d77b33d4a0be36b63145766789177ef561449741a9d8062d83849dafcee4",
           "label": "starter:trap-setter"
         },
         "advancedLineage": {
@@ -979,7 +979,7 @@
         "derivedFrom": {
           "artifactId": "strategy-artifact:starter:wall-press",
           "kind": "starter",
-          "sourceHash": "27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1",
+          "sourceHash": "5d8d25942b8c36ee938305c7b7cffeace1cd9a15d0377db1156cf9bc28c97762",
           "label": "starter:wall-press"
         },
         "advancedLineage": {
@@ -1090,7 +1090,7 @@
         "derivedFrom": {
           "artifactId": "strategy-artifact:starter:aggro-chaser",
           "kind": "starter",
-          "sourceHash": "02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37",
+          "sourceHash": "5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1",
           "label": "starter:aggro-chaser"
         },
         "advancedLineage": {

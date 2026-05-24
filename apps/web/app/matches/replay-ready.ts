@@ -11,6 +11,11 @@ import type {
   ChronicleEventType,
   ChroniclePublicEvent,
 } from "@cowards/spec"
+import {
+  BOTTOM_STARTING_POSITIONS,
+  INITIAL_BOUNDS,
+  TOP_STARTING_POSITIONS,
+} from "@cowards/spec"
 import type {
   GetMatchReplayOptions,
   ReplayFocusDto,
@@ -98,9 +103,75 @@ const isInsideBounds = (
   position.y >= bounds.minY &&
   position.y <= bounds.maxY
 
+const canonicalArenaVariantIds = new Set([
+  "arena:smoke:v1",
+  "arena:standard-cross:v1",
+  "arena:open-field:v1",
+])
+
+const samePosition = (
+  left: { x: number; y: number } | null | undefined,
+  right: { x: number; y: number },
+): boolean => left?.x === right.x && left.y === right.y
+
+const canonicalStartError = (
+  state: ReplayReadyDto["states"][number] | undefined,
+  arenaVariantId: string,
+): string | null => {
+  if (!state || !canonicalArenaVariantIds.has(arenaVariantId)) {
+    return null
+  }
+  const { bounds, soldiers } = state.board
+  if (
+    bounds.minX !== INITIAL_BOUNDS.minX ||
+    bounds.maxX !== INITIAL_BOUNDS.maxX ||
+    bounds.minY !== INITIAL_BOUNDS.minY ||
+    bounds.maxY !== INITIAL_BOUNDS.maxY
+  ) {
+    return "Replay board canonical Match start has non-canonical bounds."
+  }
+  const bottom = soldiers.filter((soldier) => soldier.ownerPlayerId === "bottom")
+  const top = soldiers.filter((soldier) => soldier.ownerPlayerId === "top")
+  if (bottom.length !== 8 || top.length !== 8 || soldiers.length !== 16) {
+    return "Replay board canonical Match start must contain 16 Soldiers."
+  }
+  for (const [index, position] of BOTTOM_STARTING_POSITIONS.entries()) {
+    const soldier = bottom.find(
+      (candidate) => candidate.id === `bottom-soldier-${index + 1}`,
+    )
+    if (
+      !soldier ||
+      soldier.status !== "ACTIVE" ||
+      soldier.facing !== "UP" ||
+      !samePosition(soldier.position, position)
+    ) {
+      return "Replay board canonical starting position mismatch."
+    }
+  }
+  for (const [index, position] of TOP_STARTING_POSITIONS.entries()) {
+    const soldier = top.find(
+      (candidate) => candidate.id === `top-soldier-${index + 1}`,
+    )
+    if (
+      !soldier ||
+      soldier.status !== "ACTIVE" ||
+      soldier.facing !== "DOWN" ||
+      !samePosition(soldier.position, position)
+    ) {
+      return "Replay board canonical starting position mismatch."
+    }
+  }
+  return null
+}
+
 const replayBoardRealismError = (
   states: ReplayReadyDto["states"],
+  arenaVariantId: string,
 ): string | null => {
+  const startError = canonicalStartError(states[0], arenaVariantId)
+  if (startError) {
+    return startError
+  }
   for (const state of states) {
     if (
       state.board.bounds.minX > state.board.bounds.maxX ||
@@ -350,7 +421,10 @@ export const buildReadyReplayFromChronicle = ({
         ? {}
         : { outcome: entry.state.outcome }),
     }))
-    const boardRealismError = replayBoardRealismError(states)
+    const boardRealismError = replayBoardRealismError(
+      states,
+      metadata.arenaVariantId,
+    )
     if (boardRealismError) {
       return projectionFailure(
         metadata.matchId,

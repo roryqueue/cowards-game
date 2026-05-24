@@ -772,6 +772,72 @@ describe("Coward's Game spec contracts", () => {
     expect(StrategyArtifactSchema.parse(artifact)).toEqual(artifact)
   })
 
+  it("StrategyArtifactSchema rejects forkable artifacts with broken source invariants", () => {
+    const source =
+      "export default { selectActivations() {}, soldierBrain() {} }"
+    const sourceBytes = new TextEncoder().encode(source).length
+    const sourceHash = "sha256:starter-artifact"
+    const baseArtifact = {
+      id: "strategy-artifact:starter:centerline-bully",
+      kind: "starter",
+      sourceVisibility: "built-in-forkable",
+      forkEligibility: { forkable: true },
+      source: {
+        text: source,
+        hash: sourceHash,
+        bytes: sourceBytes,
+        format: "typescript",
+        entrypoint: "default",
+      },
+      runtime: defaultRuntimeMetadata(),
+      engineCompatibility: {
+        spec: COMPATIBILITY_VERSIONS.spec,
+        engine: COMPATIBILITY_VERSIONS.engine,
+      },
+      validation: {
+        valid: true,
+        errors: [],
+        warnings: [],
+        sourceBytes,
+        forbiddenPatterns: [],
+        sourceHash,
+        runtimeVersion: COMPATIBILITY_VERSIONS.runtimeJs,
+        engineCompatibility: {
+          spec: COMPATIBILITY_VERSIONS.spec,
+          engine: COMPATIBILITY_VERSIONS.engine,
+        },
+      },
+      publicMetadata: { name: "Centerline Bully" },
+      lineage: {},
+      behaviorCompatibility: {
+        compatibilityKey: "key",
+        behaviorSignificantFields: ["sourceHash"],
+      },
+    }
+
+    expect(
+      StrategyArtifactSchema.safeParse({
+        ...baseArtifact,
+        source: { ...baseArtifact.source, text: undefined },
+      }).success,
+    ).toBe(false)
+    expect(
+      StrategyArtifactSchema.safeParse({
+        ...baseArtifact,
+        source: { ...baseArtifact.source, bytes: sourceBytes + 1 },
+      }).success,
+    ).toBe(false)
+    expect(
+      StrategyArtifactSchema.safeParse({
+        ...baseArtifact,
+        validation: {
+          ...baseArtifact.validation,
+          sourceHash: "sha256:different",
+        },
+      }).success,
+    ).toBe(false)
+  })
+
   it("StrategyArtifactPublicSummarySchema is source-safe by construction", () => {
     const summary = {
       id: "strategy-artifact:template:cautious",

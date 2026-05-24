@@ -141,8 +141,15 @@ const starterArtifact = (starter: StarterStrategySummary): StrategyArtifact =>
 
 const advancedArtifact = (
   advanced: AdvancedStrategySummary,
-): StrategyArtifact =>
-  commonArtifact({
+  startersById: Map<string, StarterStrategySummary>,
+): StrategyArtifact => {
+  const benchmarkStarter = startersById.get(advanced.benchmarkStarterId)
+  if (!benchmarkStarter) {
+    throw new Error(
+      `Advanced Strategy ${advanced.id} references missing Starter ${advanced.benchmarkStarterId}`,
+    )
+  }
+  return commonArtifact({
     id: `strategy-artifact:${advanced.id}`,
     kind: "advanced",
     source: advanced.source,
@@ -169,11 +176,12 @@ const advancedArtifact = (
       derivedFrom: {
         artifactId: `strategy-artifact:${advanced.benchmarkStarterId}`,
         kind: "starter",
-        sourceHash: advanced.sourceHash,
+        sourceHash: benchmarkStarter.sourceHash,
         label: advanced.benchmarkStarterId,
       },
     },
   })
+}
 
 const templateArtifact = (
   template: WorkshopTemplateSummary,
@@ -195,9 +203,13 @@ const templateArtifact = (
   })
 
 const buildManifest = () => {
+  const starters = listStarterStrategies()
+  const startersById = new Map(starters.map((starter) => [starter.id, starter]))
   const artifacts = [
-    ...listStarterStrategies().map(starterArtifact),
-    ...listAdvancedStrategies().map(advancedArtifact),
+    ...starters.map(starterArtifact),
+    ...listAdvancedStrategies().map((advanced) =>
+      advancedArtifact(advanced, startersById),
+    ),
     ...listWorkshopTemplates().map(templateArtifact),
   ].sort((left, right) => left.id.localeCompare(right.id))
   const contentHash = sha256(stableJson(artifacts))
@@ -212,6 +224,7 @@ const buildManifest = () => {
 }
 
 const assertNoOwnerPrivateSource = (manifest: ReturnType<typeof buildManifest>) => {
+  const artifactsById = new Map(manifest.artifacts.map((artifact) => [artifact.id, artifact]))
   for (const artifact of manifest.artifacts) {
     if (artifact.kind === "account-revision") {
       throw new Error("Generated built-in manifest must not contain account revisions")
@@ -221,6 +234,15 @@ const assertNoOwnerPrivateSource = (manifest: ReturnType<typeof buildManifest>) 
     }
     if (!artifact.forkEligibility.forkable) {
       throw new Error(`${artifact.id} is not fork eligible`)
+    }
+    if (artifact.lineage.derivedFrom) {
+      const parent = artifactsById.get(artifact.lineage.derivedFrom.artifactId)
+      if (!parent) {
+        throw new Error(`${artifact.id} references missing parent artifact`)
+      }
+      if (artifact.lineage.derivedFrom.sourceHash !== parent.source.hash) {
+        throw new Error(`${artifact.id} parent source hash drifted`)
+      }
     }
   }
 }
