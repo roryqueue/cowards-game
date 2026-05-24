@@ -62,6 +62,27 @@ func TestRuntimeServiceClientRejectsSourceMismatchBeforeTransport(t *testing.T) 
 	assertRuntimeServiceFailureSafe(t, failure)
 }
 
+func TestRuntimeServiceClientRejectsSourceByteMismatchBeforeTransport(t *testing.T) {
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		called = true
+	}))
+	defer server.Close()
+	request := validRuntimeServiceRequestForTest()
+	request.Strategies.Bottom.SourceBytes++
+	request.Strategies.Bottom.Validation["sourceBytes"] = request.Strategies.Bottom.SourceBytes
+	client := newRuntimeServiceClient(server.URL)
+
+	_, failure := client.executeMatch(context.Background(), request)
+	if failure == nil || failure.ErrorClass != "RuntimeServiceSourceMismatch" || failure.Retryable {
+		t.Fatalf("expected non-retryable source byte mismatch, got %+v", failure)
+	}
+	if called {
+		t.Fatal("client called runtime service after local source byte mismatch")
+	}
+	assertRuntimeServiceFailureSafe(t, failure)
+}
+
 func TestRuntimeServiceClientRejectsContractMismatchBeforeTransport(t *testing.T) {
 	called := false
 	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
@@ -134,6 +155,31 @@ func TestRuntimeServiceClientClassifiesTransportMalformedOversizedAndTimeout(t *
 	})
 }
 
+func TestRuntimeServiceClientRejectsRuntimeABIDriftInResponse(t *testing.T) {
+	request := validRuntimeServiceRequestForTest()
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writeRuntimeServiceTestJSON(t, writer, runtimeServiceResponse{
+			ContractVersion:   runtimeExecutionServiceVersion,
+			OK:                true,
+			Kind:              "executionResult",
+			RequestID:         request.RequestID,
+			MatchID:           request.Match.MatchID,
+			RuntimeABIVersion: "strategy-runtime-abi-v0",
+			Result: map[string]any{
+				"chronicle":  map[string]any{"id": "chronicle:test"},
+				"finalState": map[string]any{"matchId": request.Match.MatchID},
+			},
+		})
+	}))
+	defer server.Close()
+	client := newRuntimeServiceClient(server.URL)
+
+	_, failure := client.executeMatch(context.Background(), request)
+	if failure == nil || failure.ErrorClass != "RuntimeServiceContractMismatch" || !failure.Retryable {
+		t.Fatalf("expected retryable response ABI mismatch, got %+v", failure)
+	}
+}
+
 func TestRuntimeServiceClientSanitizesServiceFailure(t *testing.T) {
 	request := validRuntimeServiceRequestForTest()
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
@@ -153,9 +199,14 @@ func TestRuntimeServiceClientSanitizesServiceFailure(t *testing.T) {
 					"strategyExecutionAdapterId": "subprocess",
 					"stderr":                     "export default {}",
 					"hostPath":                   "/Users/secret/project",
+					"ownerDebug":                 "owner-only details",
+					"sessionId":                  "session-secret",
+					"database":                   "mysql://user:pass@localhost:3306/cowards",
+					"privateRuntimeInternals":    "hidden runtime state",
 					"strategyExecutionSystemFailureDetails": map[string]any{
-						"cause":  "bad json with export default strategyMemory",
-						"stderr": "private source",
+						"cause":      "bad json with export default strategyMemory",
+						"stderr":     "private source",
+						"ownerDebug": "nested owner debug",
 					},
 				},
 			},
@@ -217,7 +268,7 @@ func assertRuntimeServiceFailureSafe(t *testing.T, failure *runtimeServiceFailur
 	t.Helper()
 	text := runtimeServiceFailureJSONSafe(failure)
 	lower := strings.ToLower(text)
-	for _, forbidden := range []string{"export default", "stderr", "hostpath", "/users/secret", "strategy source", "strategymemory", "soldiermemory"} {
+	for _, forbidden := range []string{"export default", "stderr", "hostpath", "/users/secret", "strategy source", "strategymemory", "soldiermemory", "objectivepayload", "ownerdebug", "owner debug", "session", "token", "mysql://", "postgres://", "private runtime internals"} {
 		if strings.Contains(lower, forbidden) {
 			t.Fatalf("runtime service failure leaked %q in %s", forbidden, text)
 		}

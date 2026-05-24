@@ -7,6 +7,7 @@ import {
   findUnknownReportOnlyOffenses,
   runBoundaryMonitorChecks,
   validateV115LifecycleOwnershipManifest,
+  validateV116RuntimeServiceBoundaryArtifact,
 } from "./check-boundary-monitors.ts"
 
 const requiredV115PublicOutputForbidden = [
@@ -135,6 +136,14 @@ const createV115Manifest = () => ({
     ]),
 })
 
+const createV116RuntimeBoundaryArtifact = () =>
+  JSON.parse(
+    readFileSync(
+      ".planning/artifacts/v1.16-runtime-service-boundary.json",
+      "utf8",
+    ),
+  ) as Record<string, unknown>
+
 describe("boundary drift monitors", () => {
   afterEach(() => {
     vi.restoreAllMocks()
@@ -248,6 +257,50 @@ describe("boundary drift monitors", () => {
         ),
       }),
     ).toThrow(/matchCompletion missing mixed DB owner prohibition/)
+  })
+
+  it("validates the v1.16 runtime service boundary artifact contract", () => {
+    const artifact = createV116RuntimeBoundaryArtifact()
+
+    expect(validateV116RuntimeServiceBoundaryArtifact(artifact)).toContain(
+      "Strategy Execution Service / Runtime Broker",
+    )
+    expect(() =>
+      validateV116RuntimeServiceBoundaryArtifact({
+        ...artifact,
+        currentImplementation: {
+          ...(artifact.currentImplementation as Record<string, unknown>),
+          notBackend: false,
+        },
+      }),
+    ).toThrow(/not a backend/)
+    expect(() =>
+      validateV116RuntimeServiceBoundaryArtifact({
+        ...artifact,
+        runtimeAbi: {
+          ...(artifact.runtimeAbi as Record<string, unknown>),
+          strategyRuntimeAbiVersion: "strategy-runtime-abi-v0",
+        },
+      }),
+    ).toThrow(/runtime ABI/)
+    expect(() =>
+      validateV116RuntimeServiceBoundaryArtifact({
+        ...artifact,
+        failurePrivacy: {
+          ...(artifact.failurePrivacy as Record<string, unknown>),
+          privateDenylist: ["Strategy source"],
+        },
+      }),
+    ).toThrow(/denylist missing StrategyMemory/)
+    expect(() =>
+      validateV116RuntimeServiceBoundaryArtifact({
+        ...artifact,
+        nonPromotion: {
+          ...(artifact.nonPromotion as Record<string, unknown>),
+          nodeWasiAcceptedAsSandbox: true,
+        },
+      }),
+    ).toThrow(/node:wasi/)
   })
 
   it("passes the live repository monitor checks", async () => {
