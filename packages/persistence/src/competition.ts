@@ -506,7 +506,10 @@ export const buildPublicMatchSetResultDto = async (
     `,
     [matchSetId],
   )
-  const entrants = entrantsResult.rows.map((row) => row.snapshot)
+  const entrants = entrantsResult.rows.map((row) => ({
+    ...row.snapshot,
+    runtime: normalizeStrategyRuntimeMetadata(row.snapshot.runtime),
+  }))
   const entrantByRevision = new Map(
     entrants.map((entrant) => [entrant.strategyRevisionId, entrant]),
   )
