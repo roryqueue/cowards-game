@@ -6,6 +6,8 @@ import {
   checkRuntimeAdapterBridge,
   findUnknownReportOnlyOffenses,
   runBoundaryMonitorChecks,
+  selectedGoRouteManifest,
+  validateSelectedGoRouteManifest,
   validateV115LifecycleOwnershipManifest,
   validateV116RuntimeServiceBoundaryArtifact,
 } from "./check-boundary-monitors.ts"
@@ -171,8 +173,50 @@ describe("boundary drift monitors", () => {
 
   it("fails report-only baseline count drift", () => {
     expect(() =>
-      assertReportOnlyBoundaryOffenseCount(29, new Set(["one", "two"])),
+      assertReportOnlyBoundaryOffenseCount(22, new Set(["one", "two"])),
     ).toThrow(/report-only offense baseline drifted/)
+  })
+
+  it("validates the v1.16 selected Go route manifest contract", () => {
+    expect(validateSelectedGoRouteManifest(selectedGoRouteManifest)).toContain(
+      "v1.16 selected Go routes",
+    )
+    expect(selectedGoRouteManifest.schemaVersion).toBe(
+      "v1.16-selected-go-route-manifest",
+    )
+    expect(
+      selectedGoRouteManifest.routes.map((route) => route.routeId),
+    ).toEqual(
+      expect.arrayContaining([
+        "authSession",
+        "createSession",
+        "signUp",
+        "revokeSession",
+        "listStrategyRevisions",
+        "createStrategyRevision",
+        "getStrategyRevisionSource",
+        "forkStarterStrategy",
+        "forkAdvancedStrategy",
+        "createMatchSet",
+        "getPublicStrategyPage",
+        "getPublicPlayerPage",
+        "getPublicLadderSeason",
+        "getPublicMatchSetSummary",
+        "getPublicReplayMetadata",
+        "getPublicReplayEvidence",
+        "health",
+      ]),
+    )
+    expect(() =>
+      validateSelectedGoRouteManifest({
+        ...selectedGoRouteManifest,
+        routes: selectedGoRouteManifest.routes.map((route) =>
+          route.routeId === "createMatchSet"
+            ? { ...route, fallbackPolicy: "typescript_fallback_allowed" }
+            : route,
+        ),
+      }),
+    ).toThrow(/createMatchSet fallback policy/)
   })
 
   it("uses the canonical public DTO leak guard", () => {

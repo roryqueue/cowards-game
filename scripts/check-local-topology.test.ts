@@ -31,6 +31,7 @@ describe("local topology harness", () => {
         "--require-web",
         "--require-go",
         "--require-web-go-public-strategy-read",
+        "--require-v1-16-selected-go-pages",
         "--require-runtime-container",
         "--require-v1-15-lifecycle",
       ]),
@@ -39,6 +40,7 @@ describe("local topology harness", () => {
       requireWebPageSmoke: true,
       requireGo: true,
       requireWebGoPublicStrategyRead: true,
+      requireV116SelectedGoPages: true,
       requireRuntimeService: true,
       requireRuntimeContainer: true,
       requireV115Lifecycle: true,
@@ -279,6 +281,58 @@ describe("local topology harness", () => {
       required: true,
     })
     expect(pageSmoke?.detail).toContain("11 representative page types")
+  }, 30_000)
+
+  it("can require v1.16 selected Go page smoke without counting Workshop as Go-owned", async () => {
+    const seen: string[] = []
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input)
+      seen.push(url)
+      if (url.includes("/api/service/health")) {
+        return Response.json({ ok: true, service: "cowards-web" })
+      }
+      return new Response(
+        [
+          "Competitive account",
+          "Competitive Alpha",
+          "Player profile",
+          "Local Player",
+          "Public Strategy card",
+          "Go Parity Sentinel",
+          "Competition Trust Beta",
+          "Demo Trial Ladder",
+          "Smoke exhibition",
+          "Replay",
+          "golden:v1-7:match",
+        ].join(" "),
+        { status: 200 },
+      )
+    })
+
+    const checks = await evaluateLocalTopology({
+      webUrl: "http://localhost:3000",
+      goUrl: "http://127.0.0.1:8087",
+      runtimeServiceUrl: "http://127.0.0.1:3107",
+      requireWeb: true,
+      requireWebPageSmoke: false,
+      requireGo: true,
+      requireWebGoPublicStrategyRead: false,
+      requireRuntimeService: true,
+      requireRuntimeContainer: false,
+      requireV115Lifecycle: false,
+      requireV116SelectedGoPages: true,
+      json: false,
+    })
+    const selectedSmoke = checks.find(
+      (check) => check.name === "v1.16 selected Go page smoke",
+    )
+
+    expect(selectedSmoke).toMatchObject({
+      layer: "web_page_smoke",
+      ok: true,
+      required: true,
+    })
+    expect(seen.some((url) => url.includes("/workshop"))).toBe(false)
   }, 30_000)
 
   it("reports required live Go failures without leaking private diagnostics", async () => {
