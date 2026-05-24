@@ -30,6 +30,9 @@ export const publicMatchSetSummaryExample = firstExampleFor(
 export const publicReplayMetadataExample = firstExampleFor(
   "getPublicReplayMetadata",
 )
+export const publicReplayEvidenceExample = firstExampleFor(
+  "getPublicReplayEvidence",
+)
 export const listAnalyticsProfilesExample = firstExampleFor(
   "listAnalyticsProfiles",
 )
@@ -57,6 +60,7 @@ export const SERVICE_API_FIXTURES = {
   createMatchSetExample,
   publicMatchSetSummaryExample,
   publicReplayMetadataExample,
+  publicReplayEvidenceExample,
   listAnalyticsProfilesExample,
   createAnalyticsRunExample,
   analyticsRunSummaryExample,

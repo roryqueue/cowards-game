@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "v1.15-typescript-surface-labels",
+  "milestone": "v1.15",
+  "purpose": "Label remaining TypeScript and web surfaces after selected public evidence cutover.",
+  "allowedRoles": [
+    "frontend",
+    "parity_only",
+    "rollback_only",
+    "test_only",
+    "runtime_only",
+    "deferred"
+  ],
+  "selectedNormalGoWorkflows": [
+    "exhibition_create",
+    "public_matchset_summary",
+    "public_replay_metadata",
+    "public_replay_evidence"
+  ],
+  "surfaces": [
+    {
+      "surface": "apps/web/app/api/exhibitions/route.ts",
+      "role": "frontend",
+      "normalBackendOwner": "go_backend_when_selected",
+      "fallbackPolicy": "fail_closed_without_COWARDS_GO_BACKEND_URL_when_go_selected"
+    },
+    {
+      "surface": "apps/web/lib/public-go-read-client.ts",
+      "role": "frontend",
+      "normalBackendOwner": "go_backend_when_selected",
+      "fallbackPolicy": "schema_validated_no_fallback"
+    },
+    {
+      "surface": "apps/web/lib/public-service-adapter.ts",
+      "role": "frontend",
+      "normalBackendOwner": "go_backend_when_selected",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback"
+    },
+    {
+      "surface": "apps/web/app/matches/server.ts",
+      "role": "frontend",
+      "normalBackendOwner": "go_backend_public_replay_evidence_when_selected",
+      "fallbackPolicy": "go_selected_public_replay_evidence_fails_closed_without_go_url",
+      "deferredOwnerDebugBehavior": "owner_debug_replay_may_use_typescript_persistence_only_when explicitly requested by trusted server code"
+    },
+    {
+      "surface": "apps/web/app/matches/replay-ready.ts",
+      "role": "frontend",
+      "normalBackendOwner": "go_backend_public_evidence_source_when_selected",
+      "fallbackPolicy": "renders_schema_validated_public_evidence_only"
+    },
+    {
+      "surface": "packages/persistence/src/competition.ts",
+      "role": "parity_only",
+      "normalBackendOwner": "go_backend_for_selected_public_matchset_reads",
+      "fallbackPolicy": "typescript_reference_not_future_backend_path"
+    },
+    {
+      "surface": "packages/persistence/src/chronicle-store.ts",
+      "role": "parity_only",
+      "normalBackendOwner": "go_backend_for_chronicle_persistence_and_selected_public_replay_evidence",
+      "fallbackPolicy": "typescript_reference_or_owner_debug_deferred_only"
+    },
+    {
+      "surface": "apps/runtime-service",
+      "role": "runtime_only",
+      "normalBackendOwner": "typescript_runtime_service_only",
+      "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership"
+    },
+    {
+      "surface": "apps/web/app/workshop/server.ts",
+      "role": "deferred",
+      "normalBackendOwner": "typescript_web_api_until_future_workshop_migration",
+      "fallbackPolicy": "not_selected_for_v1.15_go_cutover"
+    },
+    {
+      "surface": "apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts",
+      "role": "deferred",
+      "normalBackendOwner": "typescript_web_api_until_future_governance_migration",
+      "fallbackPolicy": "not_selected_for_v1.15_go_cutover"
+    },
+    {
+      "surface": "apps/web/app/api/ladder/seasons/[seasonId]/schedule/route.ts",
+      "role": "deferred",
+      "normalBackendOwner": "typescript_web_api_until_future_ladder_mutation_migration",
+      "fallbackPolicy": "not_selected_for_v1.15_go_cutover"
+    },
+    {
+      "surface": "apps/web/app/api/test-support",
+      "role": "test_only",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "not_product_runtime"
+    }
+  ],
+  "privacyDefault": "public and service outputs must omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals"
+}

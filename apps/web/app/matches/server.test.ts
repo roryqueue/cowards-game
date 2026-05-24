@@ -1,12 +1,13 @@
 import {
   COMPATIBILITY_VERSIONS,
   SERVICE_API_VERSION,
-  type Chronicle,
+  type Chronicle, type PublicReplayEvidenceServiceDto,
 } from "@cowards/spec"
 import {
   createChronicleMetadata,
   type StoredChronicle,
 } from "@cowards/persistence"
+import { projectPublicChronicle } from "@cowards/replay"
 import { describe, expect, it, vi } from "vitest"
 import { isReplayFixtureMatch, replayFixtureMatchId } from "./replay-fixture.js"
 import { createMatchReplayServer } from "./server.js"
@@ -565,6 +566,71 @@ describe("Match replay server facade", () => {
     expect(serialized).not.toContain("PRIVATE_STRATEGY_MEMORY")
     expect(serialized).not.toContain("PRIVATE_AWARENESS_GRID")
     expect(serialized).not.toContain("PRIVATE_OWNER_DEBUG_EXPLANATION")
+  })
+
+  it("uses Go public replay evidence when selected without direct Chronicle reads", async () => {
+    const stored = createStoredChronicle()
+    const getByMatchId = vi.fn(async () => {
+      throw new Error("direct Chronicle store should not be used")
+    })
+    const { ownerPrivate: _ownerPrivate, ...projectedPublicChronicle } =
+      projectPublicChronicle(stored.artifact)
+    const evidence: PublicReplayEvidenceServiceDto = {
+      apiVersion: SERVICE_API_VERSION as typeof SERVICE_API_VERSION,
+      kind: "publicReplayEvidence",
+      matchId: "match:replay-test",
+      metadata: {
+        matchId: "match:replay-test",
+        chronicleId: stored.metadata.id,
+        hash: stored.metadata.hash,
+        schemaVersion: stored.metadata.schemaVersion,
+        eventCount: stored.metadata.eventCount,
+        snapshotCount: stored.metadata.snapshotCount,
+        outcome: stored.metadata.outcome,
+        bottomPlayerId: stored.metadata.bottomPlayerId,
+        topPlayerId: stored.metadata.topPlayerId,
+        arenaVariantId: stored.metadata.arenaVariantId,
+      },
+      projection: {
+        ...projectedPublicChronicle,
+        viewer: { access: "public" },
+      },
+    }
+    const evidenceClient = {
+      getPublicReplayEvidence: vi.fn(async () => evidence),
+    }
+    const server = createMatchReplayServer({
+      env: {
+        COWARDS_GO_PUBLIC_READS: "1",
+        COWARDS_GO_BACKEND_URL: "http://go.test",
+      },
+      publicReplayEvidenceClient: evidenceClient,
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({ getByMatchId }),
+    })
+
+    const response = await server.getMatchReplay("match:replay-test")
+
+    expect(response.status).toBe("ready")
+    expect(evidenceClient.getPublicReplayEvidence).toHaveBeenCalledWith(
+      "match:replay-test",
+    )
+    expect(getByMatchId).not.toHaveBeenCalled()
+    expect(JSON.stringify(response)).not.toContain("PRIVATE_STRATEGY_MEMORY")
+  })
+
+  it("fails closed when Go replay evidence is selected without a Go URL", async () => {
+    const server = createMatchReplayServer({
+      env: { COWARDS_GO_PUBLIC_READS: "1" },
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => createStoredChronicle(),
+      }),
+    })
+
+    await expect(server.getMatchReplay("match:replay-test")).rejects.toThrow(
+      "getPublicReplayEvidence Go ownership requires COWARDS_GO_BACKEND_URL",
+    )
   })
 
   it("keeps owner replay data unavailable unless trusted server code allows it", async () => {

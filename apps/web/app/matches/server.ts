@@ -8,10 +8,22 @@ import { createCowardsLocalService } from "@cowards/service"
 import type {
   MatchId,
   PlayerId,
+  PublicReplayEvidenceServiceDto,
   PublicReplayMetadataServiceDto,
 } from "@cowards/spec"
 import type { GetMatchReplayOptions, ReplayPageData } from "./types.js"
-import { buildReadyReplayFromStoredChronicle } from "./replay-ready.js"
+import {
+  buildReadyReplayFromPublicEvidence,
+  buildReadyReplayFromStoredChronicle,
+} from "./replay-ready.js"
+import {
+  createPublicGoReadClient,
+  type PublicGoReadClient,
+} from "../../lib/public-go-read-client.js"
+import {
+  resolvePublicReadRouteOwnership,
+  type PublicReadRouteOwnershipEnv,
+} from "../../lib/public-service-adapter.js"
 import {
   createReplayFixtureData,
   getReplayFixtureScenarioId,
@@ -37,6 +49,11 @@ export interface MatchReplayServerDeps {
     | ((pool: Queryable) => Pick<ChronicleStore, "getByMatchId">)
     | undefined
   resolveAuthorizedReplayOwners?: ResolveAuthorizedReplayOwners | undefined
+  env?: PublicReadRouteOwnershipEnv | undefined
+  publicReplayEvidenceClient?:
+    | Pick<PublicGoReadClient, "getPublicReplayEvidence">
+    | undefined
+  fetchImpl?: typeof fetch | undefined
 }
 
 const withDatabasePool: WithPool = async (fn) => {
@@ -98,6 +115,18 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
     createChronicleStore: ((pool: unknown) =>
       createStore(pool as Queryable)) as never,
   })
+  const env = deps.env ?? process.env
+  const publicReadOwnership = resolvePublicReadRouteOwnership(env)
+  const selectedPublicReplayEvidence =
+    publicReadOwnership.selectedRoutes.includes("getPublicReplayEvidence")
+  const publicReplayEvidenceClient =
+    deps.publicReplayEvidenceClient ??
+    (env.COWARDS_GO_BACKEND_URL
+      ? createPublicGoReadClient({
+          baseUrl: env.COWARDS_GO_BACKEND_URL,
+          ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+        })
+      : null)
 
   return {
     async getPublicReplayMetadata(
@@ -117,6 +146,30 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
           ...options,
           scenarioId: getReplayFixtureScenarioId(resolvedMatchId) ?? undefined,
         })
+      }
+      if (
+        selectedPublicReplayEvidence &&
+        options.allowOwnerDebug !== true &&
+        options.mode !== "owner"
+      ) {
+        if (!publicReplayEvidenceClient) {
+          throw new Error(
+            "getPublicReplayEvidence Go ownership requires COWARDS_GO_BACKEND_URL",
+          )
+        }
+        const evidence =
+          await publicReplayEvidenceClient.getPublicReplayEvidence(
+            resolvedMatchId,
+          )
+        return evidence === null
+          ? {
+              status: "unavailable",
+              matchId: resolvedMatchId,
+              reason: "missing-chronicle",
+              message:
+                "Replay unavailable: no public replay evidence is stored for this Match.",
+            }
+          : buildReadyReplayFromGoEvidence(evidence, options)
       }
 
       return withPool(async (pool) => {
@@ -153,6 +206,16 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
     },
   }
 }
+
+const buildReadyReplayFromGoEvidence = (
+  evidence: PublicReplayEvidenceServiceDto,
+  options: GetMatchReplayOptions,
+): ReplayPageData =>
+  buildReadyReplayFromPublicEvidence({
+    metadata: evidence.metadata,
+    projection: evidence.projection,
+    options,
+  })
 
 export const matchReplayServer = createMatchReplayServer()
 

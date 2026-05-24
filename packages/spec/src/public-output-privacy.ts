@@ -7,6 +7,7 @@ export const PUBLIC_OUTPUT_FORBIDDEN_FIELDS = [
   "objective",
   "objectivePayload",
   "ownerDebug",
+  "ownerPrivate",
   "exactAwarenessGrid",
   "awarenessGrid",
   "rawAwarenessGrid",

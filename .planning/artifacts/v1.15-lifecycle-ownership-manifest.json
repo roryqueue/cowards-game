@@ -255,11 +255,15 @@
       "codeReferences": [
         "apps/go-backend/live_backend.go",
         "apps/web/app/matches/server.ts",
+        "apps/web/app/matches/replay-ready.ts",
+        "apps/web/lib/public-go-read-client.ts",
         "apps/web/lib/public-service-adapter.ts"
       ],
       "evidenceRequired": [
         "schema",
         "privacy",
+        "go_public_replay_evidence_contract",
+        "selected_go_no_fallback",
         "browser_replay_realism",
         "no_direct_persistence_for_selected_normal_flow"
       ],

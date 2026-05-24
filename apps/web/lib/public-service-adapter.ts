@@ -22,6 +22,7 @@ export type PublicReadRouteId =
   | "getPublicPlayerPage"
   | "getPublicLadderSeason"
   | "getPublicMatchSetSummary"
+  | "getPublicReplayEvidence"
   | "getPublicReplayMetadata"
 
 export interface PublicReadRouteOwnership {
@@ -74,6 +75,7 @@ export const resolvePublicReadRouteOwnership = (
         "getPublicPlayerPage",
         "getPublicLadderSeason",
         "getPublicMatchSetSummary",
+        "getPublicReplayEvidence",
         "getPublicReplayMetadata",
       ]
     : env.COWARDS_GO_PUBLIC_STRATEGY_READS === "1"

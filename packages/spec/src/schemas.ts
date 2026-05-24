@@ -925,6 +925,7 @@ const SERVICE_SCHEMA_ROUTE_IDS = [
   "createMatchSet",
   "getPublicMatchSetSummary",
   "getPublicReplayMetadata",
+  "getPublicReplayEvidence",
   "listAnalyticsProfiles",
   "createAnalyticsRun",
   "getAnalyticsRunSummary",
@@ -1284,6 +1285,25 @@ export const PublicReplayMetadataServiceDtoSchema = z.object({
     topPlayerId: z.string().min(1),
     arenaVariantId: z.string().min(1),
   }),
+})
+
+export const PublicReplayEvidenceServiceDtoSchema = z.object({
+  apiVersion: z.literal(SERVICE_SCHEMA_API_VERSION),
+  kind: z.literal("publicReplayEvidence"),
+  matchId: z.string().min(1),
+  metadata: z.object({
+    matchId: z.string().min(1),
+    chronicleId: z.string().min(1),
+    hash: z.string().min(1),
+    schemaVersion: z.string().min(1),
+    eventCount: z.number().int().nonnegative(),
+    snapshotCount: z.number().int().nonnegative(),
+    outcome: JsonValueSchema,
+    bottomPlayerId: z.string().min(1),
+    topPlayerId: z.string().min(1),
+    arenaVariantId: z.string().min(1),
+  }),
+  projection: z.lazy(() => PublicChronicleProjectionSchema),
 })
 
 export const AnalyticsProfileServiceDtoSchema = z.object({
@@ -2079,3 +2099,11 @@ export const ChronicleProjectionSchema = z.object({
   ownerPrivate: ChronicleOwnerPrivateSectionSchema.optional(),
   integrity: ChronicleIntegritySchema.optional(),
 })
+
+export const PublicChronicleProjectionSchema = ChronicleProjectionSchema.omit({
+  ownerPrivate: true,
+})
+  .extend({
+    viewer: ChroniclePublicViewerSchema,
+  })
+  .strict()

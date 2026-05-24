@@ -1,6 +1,7 @@
 import type { z } from "zod"
 import type {
   JsonValue,
+  ChronicleProjection,
   MatchId,
   MatchSetId,
   StrategyId,
@@ -45,6 +46,7 @@ import {
   PublicMatchSetSummaryServiceDtoSchema,
   PublicLadderPageServiceDtoSchema,
   PublicPlayerPageServiceDtoSchema,
+  PublicReplayEvidenceServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
   RevokeSessionServiceDtoSchema,
@@ -367,6 +369,81 @@ export const SERVICE_API_ROUTES = {
       },
     ],
     fixtureRefs: ["publicReplayMetadataExample"],
+  },
+  getPublicReplayEvidence: {
+    id: "getPublicReplayEvidence",
+    operationId: "getPublicReplayEvidence",
+    method: "GET",
+    path: "/public/replays/{matchId}/evidence",
+    signature: "GET /public/replays/{matchId}/evidence",
+    authScope: "public",
+    privacyClass: "public",
+    request: request(MatchIdParamsSchema),
+    response: PublicReplayEvidenceServiceDtoSchema,
+    error: ServiceErrorDtoSchema,
+    examples: [
+      {
+        apiVersion: SERVICE_API_VERSION,
+        kind: "publicReplayEvidence",
+        matchId: "match:demo",
+        metadata: {
+          matchId: "match:demo",
+          chronicleId: "chronicle:demo",
+          hash: "chroniclehash-demo",
+          schemaVersion: "chronicle-v1.4",
+          eventCount: 1,
+          snapshotCount: 1,
+          outcome: { type: "DRAW" },
+          bottomPlayerId: "player:bottom",
+          topPlayerId: "player:top",
+          arenaVariantId: "arena:smoke:v1",
+        },
+        projection: {
+          schemaVersion: "chronicle-v1.4",
+          viewer: { access: "public" },
+          reproducibility: {
+            matchId: "match:demo",
+            seed: "seed:demo",
+            arenaVariantId: "arena:smoke:v1",
+            arenaVariantVersion: "arena-v1",
+            strategyRevisionIds: [
+              "strategy-revision:bottom",
+              "strategy-revision:top",
+            ],
+            versions: {
+              spec: "cowards-rules-v1.4",
+              engine: "0.1.4",
+              runtimeJs: "0.1.0",
+              chronicle: "chronicle-v1.4",
+              strategyRevision: "0.1.0",
+              arenaVariant: "arena-v1",
+            },
+          },
+          events: [
+            {
+              type: "MATCH_STARTED",
+              sequence: 0,
+              context: {},
+              payload: { matchId: "match:demo" },
+            },
+          ],
+          snapshots: [
+            {
+              kind: "TERMINAL",
+              sequence: 0,
+              context: {},
+              board: {
+                bounds: { minX: 0, maxX: 4, minY: 0, maxY: 4 },
+                soldiers: [],
+                terrainStones: [],
+              },
+              outcome: { type: "DRAW" },
+            },
+          ],
+        },
+      },
+    ],
+    fixtureRefs: ["publicReplayEvidenceExample"],
   },
   listAnalyticsProfiles: {
     id: "listAnalyticsProfiles",
@@ -809,6 +886,33 @@ export interface PublicReplayMetadataServiceDto {
     topPlayerId: string
     arenaVariantId: string
   }
+}
+
+export interface PublicReplayEvidenceServiceDto {
+  apiVersion: typeof SERVICE_API_VERSION
+  kind: "publicReplayEvidence"
+  matchId: MatchId
+  metadata: {
+    matchId: MatchId
+    chronicleId: string
+    hash: string
+    schemaVersion: string
+    eventCount: number
+    snapshotCount: number
+    outcome: JsonValue
+    bottomPlayerId: string
+    topPlayerId: string
+    arenaVariantId: string
+  }
+  projection: PublicChronicleProjection
+}
+
+export type PublicChronicleProjection = Omit<
+  ChronicleProjection,
+  "viewer" | "ownerPrivate"
+> & {
+  viewer: { access: "public" }
+  ownerPrivate?: never
 }
 
 export interface AnalyticsProfileServiceDto {

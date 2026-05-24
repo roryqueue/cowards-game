@@ -67,6 +67,7 @@ func (server *LiveServer) routes() http.Handler {
 	mux.HandleFunc("GET /public/ladders/{seasonId}", server.publicLadderPage)
 	mux.HandleFunc("GET /public/matchsets/{matchSetId}/summary", server.publicMatchSetSummary)
 	mux.HandleFunc("GET /public/replays/{matchId}/metadata", server.publicReplayMetadata)
+	mux.HandleFunc("GET /public/replays/{matchId}/evidence", server.publicReplayEvidence)
 	mux.HandleFunc("GET /auth/session", server.authSession)
 	mux.HandleFunc("POST /auth/session", server.signIn)
 	mux.HandleFunc("POST /auth/sign-up", server.signUp)
@@ -297,6 +298,20 @@ func (server *LiveServer) publicReplayMetadata(writer http.ResponseWriter, reque
 			"arenaVariantId": arenaVariantID,
 		},
 	})
+}
+
+func (server *LiveServer) publicReplayEvidence(writer http.ResponseWriter, request *http.Request) {
+	matchID := request.PathValue("matchId")
+	result, err := server.publicReplayEvidenceResult(request.Context(), matchID)
+	if err != nil {
+		writeStorageError(writer)
+		return
+	}
+	if result == nil {
+		writeServiceError(writer, http.StatusNotFound, "NOT_FOUND", "Replay evidence not found.")
+		return
+	}
+	writeJSONValue(writer, http.StatusOK, result)
 }
 
 func (server *LiveServer) signUp(writer http.ResponseWriter, request *http.Request) {
@@ -1233,6 +1248,130 @@ func (server *LiveServer) publicCompetitionMatchSetExists(ctx context.Context, m
 		return false, err
 	}
 	return competitionPresetID != nil && *competitionPresetID != "", nil
+}
+
+func (server *LiveServer) publicReplayEvidenceResult(ctx context.Context, matchID string) (map[string]any, error) {
+	resolvedMatchID := decodePathValue(matchID)
+	var row struct {
+		chronicleID    string
+		schemaVersion  string
+		hash           string
+		outcome        []byte
+		eventCount     int
+		snapshotCount  int
+		bottomPlayerID string
+		topPlayerID    string
+		arenaVariantID string
+		artifact       []byte
+	}
+	err := server.pool.QueryRow(ctx, `
+		select id, schema_version, hash, outcome, event_count, snapshot_count,
+		       bottom_player_id, top_player_id, arena_variant_id, artifact
+		from chronicles
+		where match_id = $1
+	`, resolvedMatchID).Scan(&row.chronicleID, &row.schemaVersion, &row.hash, &row.outcome, &row.eventCount, &row.snapshotCount, &row.bottomPlayerID, &row.topPlayerID, &row.arenaVariantID, &row.artifact)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var artifact map[string]any
+	if err := json.Unmarshal(row.artifact, &artifact); err != nil {
+		return nil, err
+	}
+	var outcome any
+	if err := json.Unmarshal(row.outcome, &outcome); err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"apiVersion": serviceAPIVersion,
+		"kind":       "publicReplayEvidence",
+		"matchId":    resolvedMatchID,
+		"metadata": map[string]any{
+			"matchId":        resolvedMatchID,
+			"chronicleId":    row.chronicleID,
+			"hash":           row.hash,
+			"schemaVersion":  row.schemaVersion,
+			"eventCount":     row.eventCount,
+			"snapshotCount":  row.snapshotCount,
+			"outcome":        outcome,
+			"bottomPlayerId": row.bottomPlayerID,
+			"topPlayerId":    row.topPlayerID,
+			"arenaVariantId": row.arenaVariantID,
+		},
+		"projection": publicReplayProjectionFromChronicle(artifact),
+	}, nil
+}
+
+func publicReplayProjectionFromChronicle(chronicle map[string]any) map[string]any {
+	return map[string]any{
+		"schemaVersion":   stringValue(chronicle, "schemaVersion"),
+		"viewer":          map[string]any{"access": "public"},
+		"reproducibility": sanitizePublicReplayJSON(chronicle["reproducibility"]),
+		"events":          publicReplayEvents(sliceValue(chronicle, "events")),
+		"snapshots":       sanitizePublicReplayJSON(sliceValue(chronicle, "snapshots")),
+	}
+}
+
+func publicReplayEvents(events []any) []map[string]any {
+	projected := []map[string]any{}
+	for _, event := range events {
+		row, ok := event.(map[string]any)
+		if !ok {
+			continue
+		}
+		projected = append(projected, map[string]any{
+			"type":     stringValue(row, "type"),
+			"sequence": runtimeServiceIntValue(row, "sequence"),
+			"context":  sanitizePublicReplayJSON(row["context"]),
+			"payload":  publicReplayEventPayload(row),
+		})
+	}
+	return projected
+}
+
+func publicReplayEventPayload(event map[string]any) any {
+	payload := mapValue(event, "payload")
+	if stringValue(event, "type") != "RUNTIME_VIOLATION" {
+		return sanitizePublicReplayJSON(payload)
+	}
+	result := map[string]any{}
+	for _, key := range []string{"type", "category", "playerId", "ownerPlayerId", "soldierId"} {
+		if value := stringValue(payload, key); value != "" {
+			result[key] = value
+		}
+	}
+	return result
+}
+
+func sanitizePublicReplayJSON(value any) any {
+	switch typed := value.(type) {
+	case []any:
+		items := make([]any, 0, len(typed))
+		for _, item := range typed {
+			items = append(items, sanitizePublicReplayJSON(item))
+		}
+		return items
+	case map[string]any:
+		result := map[string]any{}
+		for key, item := range typed {
+			if forbiddenPublicOutputKey(key) || key == "privateRef" {
+				continue
+			}
+			result[key] = sanitizePublicReplayJSON(item)
+		}
+		return result
+	case string:
+		for _, marker := range publicOutputForbiddenMarkers {
+			if strings.Contains(typed, marker) {
+				return "[redacted]"
+			}
+		}
+		return typed
+	default:
+		return typed
+	}
 }
 
 func (server *LiveServer) matchSetEntrants(ctx context.Context, matchSetID string) ([]map[string]any, error) {

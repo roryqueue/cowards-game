@@ -2,6 +2,7 @@ import {
   PublicLadderPageServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
   PublicPlayerPageServiceDtoSchema,
+  PublicReplayEvidenceServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
   ServiceErrorDtoSchema,
@@ -11,6 +12,7 @@ import {
   type PublicLadderPageServiceDto,
   type PublicMatchSetSummaryServiceDto,
   type PublicPlayerPageServiceDto,
+  type PublicReplayEvidenceServiceDto,
   type PublicReplayMetadataServiceDto,
   type PublicStrategyPageServiceDto,
   type ServiceErrorDto,
@@ -32,6 +34,7 @@ export interface PublicGoReadFailureDiagnostic {
     | "getPublicPlayerPage"
     | "getPublicLadderSeason"
     | "getPublicMatchSetSummary"
+    | "getPublicReplayEvidence"
     | "getPublicReplayMetadata"
   selectedBackend: "go"
   status: number | null
@@ -76,6 +79,9 @@ export interface PublicGoReadClient {
   getPublicReplayMetadata(
     matchId: MatchId,
   ): Promise<PublicReplayMetadataServiceDto | null>
+  getPublicReplayEvidence(
+    matchId: MatchId,
+  ): Promise<PublicReplayEvidenceServiceDto | null>
 }
 
 const durationBucket = (
@@ -362,6 +368,28 @@ export const createPublicGoReadClient = ({
     }
   }
 
+  const assertReplayMatchIdentity = (
+    routeId: "getPublicReplayMetadata" | "getPublicReplayEvidence",
+    actual: { matchId: MatchId; metadata: { matchId: MatchId } },
+    expected: MatchId,
+    status: number,
+    startedAt: number,
+    endedAt: number,
+  ): void => {
+    if (actual.matchId !== expected || actual.metadata.matchId !== expected) {
+      throw new PublicGoReadError(
+        "Go public replay read returned divergent Match id",
+        makeDiagnostic(
+          routeId,
+          "go_body_divergent",
+          status,
+          startedAt,
+          endedAt,
+        ),
+      )
+    }
+  }
+
   return {
     async getPublicStrategyPage(strategyId) {
       return (await requestPublicDto({
@@ -453,7 +481,33 @@ export const createPublicGoReadClient = ({
         path: `/public/replays/${encodeURIComponent(matchId)}/metadata`,
         schema:
           PublicReplayMetadataServiceDtoSchema as PublicSchema<PublicReplayMetadataServiceDto>,
+        validate: (metadata, status, startedAt, endedAt) =>
+          assertReplayMatchIdentity(
+            "getPublicReplayMetadata",
+            metadata,
+            matchId,
+            status,
+            startedAt,
+            endedAt,
+          ),
       })) as PublicReplayMetadataServiceDto | null
+    },
+    async getPublicReplayEvidence(matchId) {
+      return (await requestPublicDto({
+        routeId: "getPublicReplayEvidence",
+        path: `/public/replays/${encodeURIComponent(matchId)}/evidence`,
+        schema:
+          PublicReplayEvidenceServiceDtoSchema as PublicSchema<PublicReplayEvidenceServiceDto>,
+        validate: (evidence, status, startedAt, endedAt) =>
+          assertReplayMatchIdentity(
+            "getPublicReplayEvidence",
+            evidence,
+            matchId,
+            status,
+            startedAt,
+            endedAt,
+          ),
+      })) as PublicReplayEvidenceServiceDto | null
     },
   }
 }

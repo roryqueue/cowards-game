@@ -71,6 +71,9 @@ const createGoClientStub = (
   getPublicReplayMetadata: async () => {
     throw new Error("unexpected getPublicReplayMetadata Go call")
   },
+  getPublicReplayEvidence: async () => {
+    throw new Error("unexpected getPublicReplayEvidence Go call")
+  },
   ...overrides,
 })
 
@@ -223,6 +226,7 @@ describe("public read route ownership", () => {
       "getPublicPlayerPage",
       "getPublicLadderSeason",
       "getPublicMatchSetSummary",
+      "getPublicReplayEvidence",
       "getPublicReplayMetadata",
     ])
   })

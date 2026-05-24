@@ -10,6 +10,7 @@ import type {
   ChronicleEvent,
   ChronicleEventType,
   ChroniclePublicEvent,
+  ChronicleProjection,
 } from "@cowards/spec"
 import {
   BOTTOM_STARTING_POSITIONS,
@@ -352,6 +353,12 @@ export interface BuildReadyReplayFromChronicleInput {
   options?: GetMatchReplayOptions | undefined
 }
 
+export interface BuildReadyReplayFromPublicEvidenceInput {
+  projection: ChronicleProjection
+  metadata: ReplayMetadataDto
+  options?: GetMatchReplayOptions | undefined
+}
+
 export const trustedOwnerReplayOptions = (
   metadata: ReplayMetadataDto,
   options: GetMatchReplayOptions = {},
@@ -501,4 +508,58 @@ export const buildReadyReplayFromStoredChronicle = (
       authorizedRequestedOwners,
     ),
   })
+}
+
+export const buildReadyReplayFromPublicEvidence = ({
+  projection,
+  metadata,
+  options = {},
+}: BuildReadyReplayFromPublicEvidenceInput): ReplayPageData => {
+  try {
+    const states = projection.snapshots.map((snapshot) => ({
+      sequence: snapshot.sequence,
+      board: snapshot.board,
+      ...(snapshot.outcome === undefined ? {} : { outcome: snapshot.outcome }),
+    }))
+    const boardRealismError = replayBoardRealismError(
+      states,
+      metadata.arenaVariantId,
+    )
+    if (boardRealismError) {
+      return projectionFailure(
+        metadata.matchId,
+        boardRealismError,
+        "validation",
+      )
+    }
+    const timeline = projection.events.map((event) => ({
+      sequence: event.sequence,
+      type: event.type,
+      round: event.context.roundNumber,
+      activation: event.context.activationIndex,
+      cycle: event.context.cycleIndex,
+      label: eventLabel(event),
+      privacy: "public" as const,
+      context: event.context,
+      payload: event.payload,
+    }))
+    const focus = resolveReplayFocus(timeline, options.focus)
+    return {
+      status: "ready",
+      mode: "public",
+      metadata,
+      projection,
+      timeline,
+      states,
+      initialSequence: focus.initialSequence,
+      ...(focus.focus === undefined ? {} : { focus: focus.focus }),
+    } satisfies ReplayReadyDto
+  } catch (error) {
+    return projectionFailure(
+      metadata.matchId,
+      error instanceof Error
+        ? error.message
+        : "Public replay evidence projection failed.",
+    )
+  }
 }

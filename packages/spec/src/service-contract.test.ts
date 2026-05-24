@@ -10,8 +10,10 @@ import {
   PublicLadderPageServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
   PublicPlayerPageServiceDtoSchema,
+  PublicReplayEvidenceServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicStrategyPageServiceDtoSchema,
+  ServiceApiRouteIdSchema,
 } from "./schemas.js"
 import { SERVICE_API_FIXTURES } from "./service-fixtures.js"
 
@@ -77,6 +79,7 @@ describe("service contract metadata", () => {
   it("declares complete route metadata and resolvable fixture refs", () => {
     for (const [routeId, route] of Object.entries(SERVICE_API_ROUTES)) {
       expect(route.id).toBe(routeId)
+      expect(() => ServiceApiRouteIdSchema.parse(routeId)).not.toThrow()
       expect(route.operationId).toMatch(/^[a-z][A-Za-z0-9]+$/)
       expect(["GET", "POST", "DELETE"]).toContain(route.method)
       expect(route.path).toMatch(/^\//)
@@ -118,6 +121,7 @@ describe("service contract metadata", () => {
       PublicMatchSetSummaryServiceDtoSchema,
       PublicLadderPageServiceDtoSchema,
       PublicPlayerPageServiceDtoSchema,
+      PublicReplayEvidenceServiceDtoSchema,
       PublicReplayMetadataServiceDtoSchema,
       PublicStrategyPageServiceDtoSchema,
     ]) {

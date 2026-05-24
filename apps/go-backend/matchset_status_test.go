@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -183,6 +184,42 @@ func TestGoMatchSetStatusIntegration(t *testing.T) {
 		matchSets, ok := result["matchSets"].([]map[string]any)
 		if !ok || len(matchSets) != 1 || matchSets[0]["countedStatus"] != "counted" {
 			t.Fatalf("expected counted ladder MatchSet, got %+v", result["matchSets"])
+		}
+	})
+
+	t.Run("public replay evidence projects Chronicle without private sections", func(t *testing.T) {
+		prefix := "phase101-replay-evidence"
+		cleanupPhase97Rows(t, ctx, pool, prefix)
+		defer cleanupPhase97Rows(t, ctx, pool, prefix)
+		ids := seedPhase97MatchJob(t, ctx, pool, prefix, 3, "queued", 0, nil)
+		chronicle := completionChronicleForTest(ids.matchID)
+		chronicle["private"] = map[string]any{
+			"byPlayerId": map[string]any{
+				"player:bottom:" + prefix: map[string]any{
+					"strategyMemory": "PRIVATE_STRATEGY_MEMORY",
+				},
+			},
+		}
+		insertPhase101ChronicleArtifact(t, ctx, pool, chronicle)
+
+		result, err := (&LiveServer{pool: pool}).publicReplayEvidenceResult(ctx, ids.matchID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result == nil || stringValue(result, "kind") != "publicReplayEvidence" {
+			t.Fatalf("unexpected public replay evidence result: %+v", result)
+		}
+		if err := validateNoPrivateKeys(result, "$"); err != nil {
+			t.Fatalf("public replay evidence leaked private fields: %v", err)
+		}
+		serialized, err := json.Marshal(result)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, forbidden := range []string{"strategyMemory", "PRIVATE_STRATEGY_MEMORY", "privateRef", "ownerDebug"} {
+			if strings.Contains(string(serialized), forbidden) {
+				t.Fatalf("public replay evidence leaked %s: %s", forbidden, string(serialized))
+			}
 		}
 	})
 }
@@ -471,6 +508,33 @@ func insertPhase100ChronicleRow(t *testing.T, ctx context.Context, pool *pgxpool
 		from matches m
 		where m.id = $3
 	`, "chronicle:"+matchID+":"+suffix, "hash:"+matchID+":"+suffix, matchID); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func insertPhase101ChronicleArtifact(t *testing.T, ctx context.Context, pool *pgxpool.Pool, chronicle map[string]any) {
+	t.Helper()
+	metadata, err := createGoChronicleMetadata(chronicle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	artifact, err := json.Marshal(chronicle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outcome, err := json.Marshal(metadata.Outcome)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `
+		insert into chronicles (
+		  id, match_id, schema_version, hash, outcome, event_count,
+		  snapshot_count, bottom_player_id, top_player_id,
+		  bottom_strategy_revision_id, top_strategy_revision_id,
+		  arena_variant_id, artifact
+		)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, metadata.ID, metadata.MatchID, metadata.SchemaVersion, metadata.Hash, outcome, metadata.EventCount, metadata.SnapshotCount, metadata.BottomPlayerID, metadata.TopPlayerID, metadata.BottomStrategyRevisionID, metadata.TopStrategyRevisionID, metadata.ArenaVariantID, artifact); err != nil {
 		t.Fatal(err)
 	}
 }

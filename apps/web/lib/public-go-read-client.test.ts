@@ -4,11 +4,13 @@ import {
   publicLadderPageExample,
   publicMatchSetSummaryExample,
   publicPlayerPageExample,
+  publicReplayEvidenceExample,
   publicReplayMetadataExample,
   publicStrategyPageExample,
   type PublicLadderPageServiceDto,
   type PublicMatchSetSummaryServiceDto,
   type PublicPlayerPageServiceDto,
+  type PublicReplayEvidenceServiceDto,
   type PublicReplayMetadataServiceDto,
   type PublicStrategyPageServiceDto,
 } from "@cowards/spec"
@@ -35,6 +37,8 @@ const publicMatchSetSummary =
   publicMatchSetSummaryExample as PublicMatchSetSummaryServiceDto
 const publicReplayMetadata =
   publicReplayMetadataExample as PublicReplayMetadataServiceDto
+const publicReplayEvidence =
+  publicReplayEvidenceExample as PublicReplayEvidenceServiceDto
 
 describe("createPublicGoReadClient", () => {
   it("parses public Strategy pages through the canonical schema", async () => {
@@ -79,11 +83,20 @@ describe("createPublicGoReadClient", () => {
         matchId: "match:demo",
       },
     }
+    const encodedReplayEvidence: PublicReplayEvidenceServiceDto = {
+      ...publicReplayEvidence,
+      matchId: "match:demo",
+      metadata: {
+        ...publicReplayEvidence.metadata,
+        matchId: "match:demo",
+      },
+    }
     const responses = new Map<string, unknown>([
       ["/public/players/demo-player", encodedPlayerPage],
       ["/public/ladders/ladder-season%3Ademo", encodedLadderPage],
       ["/public/matchsets/match-set%3Ademo/summary", encodedMatchSetSummary],
       ["/public/replays/match%3Ademo/metadata", encodedReplayMetadata],
+      ["/public/replays/match%3Ademo/evidence", encodedReplayEvidence],
     ])
     const client = createPublicGoReadClient({
       baseUrl: "http://go.local",
@@ -110,11 +123,15 @@ describe("createPublicGoReadClient", () => {
     await expect(client.getPublicReplayMetadata("match:demo")).resolves.toEqual(
       encodedReplayMetadata,
     )
+    await expect(client.getPublicReplayEvidence("match:demo")).resolves.toEqual(
+      encodedReplayEvidence,
+    )
     expect(requests).toEqual([
       "/public/players/demo-player",
       "/public/ladders/ladder-season%3Ademo",
       "/public/matchsets/match-set%3Ademo/summary",
       "/public/replays/match%3Ademo/metadata",
+      "/public/replays/match%3Ademo/evidence",
     ])
   })
 
@@ -130,6 +147,82 @@ describe("createPublicGoReadClient", () => {
       diagnostic: {
         routeId: "getPublicReplayMetadata",
         failureClass: "go_non_json",
+      },
+    })
+  })
+
+  it("rejects replay evidence with owner-private projection data", async () => {
+    const leakedEvidence = {
+      ...publicReplayEvidence,
+      matchId: "match:demo",
+      metadata: {
+        ...publicReplayEvidence.metadata,
+        matchId: "match:demo",
+      },
+      projection: {
+        ...publicReplayEvidence.projection,
+        ownerPrivate: {
+          playerId: "player:bottom",
+          data: { strategyMemory: "PRIVATE_STRATEGY_MEMORY" },
+        },
+      },
+    }
+    const client = createPublicGoReadClient({
+      baseUrl: "http://go.local",
+      fetchImpl: async () => jsonResponse(leakedEvidence),
+    })
+
+    await expect(
+      client.getPublicReplayEvidence("match:demo"),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        routeId: "getPublicReplayEvidence",
+        failureClass: "go_privacy_violation",
+      },
+    })
+  })
+
+  it("rejects replay reads whose returned Match id differs from the route", async () => {
+    const mismatchedMetadata: PublicReplayMetadataServiceDto = {
+      ...publicReplayMetadata,
+      matchId: "match:other",
+      metadata: {
+        ...publicReplayMetadata.metadata,
+        matchId: "match:demo",
+      },
+    }
+    const mismatchedEvidence: PublicReplayEvidenceServiceDto = {
+      ...publicReplayEvidence,
+      matchId: "match:demo",
+      metadata: {
+        ...publicReplayEvidence.metadata,
+        matchId: "match:other",
+      },
+    }
+
+    const metadataClient = createPublicGoReadClient({
+      baseUrl: "http://go.local",
+      fetchImpl: async () => jsonResponse(mismatchedMetadata),
+    })
+    await expect(
+      metadataClient.getPublicReplayMetadata("match:demo"),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        routeId: "getPublicReplayMetadata",
+        failureClass: "go_body_divergent",
+      },
+    })
+
+    const evidenceClient = createPublicGoReadClient({
+      baseUrl: "http://go.local",
+      fetchImpl: async () => jsonResponse(mismatchedEvidence),
+    })
+    await expect(
+      evidenceClient.getPublicReplayEvidence("match:demo"),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        routeId: "getPublicReplayEvidence",
+        failureClass: "go_body_divergent",
       },
     })
   })
