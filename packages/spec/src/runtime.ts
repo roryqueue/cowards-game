@@ -326,7 +326,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "The promoted language runs only inside a production-owned hostile-code isolation boundary.",
     currentStatus:
-      "The Python subprocess host is not a production hostile-code sandbox.",
+      "Worker-thread, subprocess, container-subprocess, WASM/WASI, and component-model candidates are readiness labels only; Node node:wasi is not accepted as an untrusted Strategy sandbox.",
     promotionGate:
       "Runtime isolation promotion criteria must pass before non-JS counted play.",
   },
@@ -494,6 +494,7 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     requiredCapabilities: [],
     notes: [
       "Dev/test only; not public counted MatchSet or analytics evidence.",
+      "WASM/WASI/component-model are future evaluation paths, not v1.16 promotion paths.",
     ],
   },
 ] as const satisfies readonly StrategyRuntimeAdapterRecord[]
@@ -505,7 +506,7 @@ export const assertNonJsRuntimeGuardrails = (): void => {
   for (const language of STRATEGY_LANGUAGE_REGISTRY) {
     const isExperimental = experimental.has(language.id)
     if (isExperimental && language.enabledForNormalPlay) {
-      throw new Error(`${language.id} must remain experimental in v1.9`)
+      throw new Error(`${language.id} must remain experimental in v1.16`)
     }
   }
   for (const adapter of STRATEGY_RUNTIME_ADAPTER_REGISTRY) {
@@ -522,12 +523,12 @@ export const assertNonJsRuntimeGuardrails = (): void => {
       adapter.isolationPromotionState !== "evidence-only"
     ) {
       throw new Error(
-        `${adapter.id} must remain experimental and non-counted in v1.9`,
+        `${adapter.id} must remain experimental and non-counted in v1.16`,
       )
     }
   }
   if (NON_JS_RUNTIME_SUPPORT_POLICY.publicLanguagePickerAllowed !== false) {
-    throw new Error("Public non-JS language picker is not allowed in v1.9")
+    throw new Error("Public non-JS language picker is not allowed in v1.16")
   }
   const requiredCriteria = new Set([
     "deterministic-language-semantics",

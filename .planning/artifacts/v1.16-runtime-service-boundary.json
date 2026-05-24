@@ -1,0 +1,138 @@
+{
+  "schemaVersion": "v1.16-runtime-service-boundary",
+  "strategyExecutionService": {
+    "publicName": "Strategy Execution Service / Runtime Broker",
+    "purpose": "Broker-ready public execution contract for hostile Strategy execution behind schema-validated runtime envelopes.",
+    "futureBrokerReady": true,
+    "notImplementedInV116": "The language-neutral Runtime Broker is not built in v1.16."
+  },
+  "currentImplementation": {
+    "label": "isolated JS/TS runtime service",
+    "package": "apps/runtime-service",
+    "role": "current-http-json-binding",
+    "notBackend": true,
+    "notFinalRuntimeBroker": true,
+    "allowedRuntimeAdapters": [
+      "runtime-js-worker-thread",
+      "runtime-js-subprocess",
+      "runtime-js-container-subprocess"
+    ]
+  },
+  "transport": {
+    "currentBinding": "HTTP+JSON",
+    "endpoint": "POST /execute-match",
+    "healthEndpoint": "GET /health",
+    "transportNeutralContract": true,
+    "replacementPolicy": "Future brokers may front or replace this binding without changing Go orchestration, persistence, scoring, or public evidence ownership."
+  },
+  "runtimeAbi": {
+    "serviceContractVersion": "runtime-execution-service-v1.15",
+    "strategyRuntimeAbiVersion": "strategy-runtime-abi-v1.14",
+    "requestSchema": "RuntimeExecutionServiceRequestSchema",
+    "responseSchema": "RuntimeExecutionServiceResponseSchema",
+    "languageSpecificShortcutsAllowed": false,
+    "futureLanguageRuntimeRequirement": "Every counted language runtime must implement the same JSON/runtime ABI with schema-validated request and response envelopes."
+  },
+  "authority": {
+    "allowed": [
+      "validate-runtime-execution-service-request",
+      "execute-js-ts-strategy-through-runtime-abi",
+      "return-internal-runtime-result-to-go",
+      "return-redacted-schema-valid-system-failure"
+    ],
+    "disallowed": [
+      "claim-jobs",
+      "complete-matches",
+      "persist-chronicles",
+      "refresh-matchset-scoring",
+      "serve-product-api-routes",
+      "read-web-session-state",
+      "deliver-public-evidence",
+      "fallback-to-retired-typescript-backend"
+    ],
+    "goOwnedAfterRuntime": [
+      "Match orchestration",
+      "Chronicle persistence handoff",
+      "MatchSet scoring and status refresh",
+      "public replay and evidence projection"
+    ]
+  },
+  "submissionArtifactPolicy": {
+    "validateWherePractical": true,
+    "compileOrTranspileWherePractical": true,
+    "hashSource": true,
+    "sizeCheckSource": true,
+    "packageImmutableRevisionForMatch": true,
+    "executeImmutableRevisionsOnly": true,
+    "goAndWebApiMayImportEvaluateTranspileOrExecuteStrategySource": false
+  },
+  "failurePrivacy": {
+    "schemaValidatedFailures": true,
+    "failClosedOn": [
+      "malformed request",
+      "ABI drift",
+      "timeout",
+      "invalid output",
+      "execution crash",
+      "oversized payload",
+      "source hash mismatch",
+      "source byte mismatch",
+      "unsafe diagnostics"
+    ],
+    "privateDenylist": [
+      "Strategy source",
+      "StrategyMemory",
+      "SoldierMemory",
+      "objective payloads",
+      "owner debug",
+      "raw Awareness Grid",
+      "stack traces",
+      "stderr",
+      "sessions",
+      "tokens",
+      "DB DSNs",
+      "host paths",
+      "private runtime internals"
+    ],
+    "successResultPrivacy": "internal_runtime_result"
+  },
+  "noFallback": {
+    "runtimeFailureMayFallbackToRetiredTypeScriptBackend": false,
+    "goMustClassifyRuntimeFailure": true,
+    "webApiMayExecuteStrategySourceOnFailure": false
+  },
+  "nonPromotion": {
+    "workerThreadPromotedAsProductionSandbox": false,
+    "subprocessPromotedAsProductionSandbox": false,
+    "containerSubprocessPromotedAsProductionSandbox": false,
+    "wasmWasiComponentModelPromoted": false,
+    "nodeWasiAcceptedAsSandbox": false,
+    "countedNonJsPlayPromoted": false,
+    "productionSandboxReplacementPromoted": false
+  },
+  "decisionCoverage": [
+    "D-01",
+    "D-02",
+    "D-03",
+    "D-04",
+    "D-05",
+    "D-06",
+    "D-07",
+    "D-08",
+    "D-09",
+    "D-10",
+    "D-11",
+    "D-12",
+    "D-13",
+    "D-14",
+    "D-15",
+    "D-16",
+    "D-17",
+    "D-18"
+  ],
+  "publicArtifactPolicy": {
+    "safeForReview": true,
+    "containsRealTokensDsnsOrHostSecrets": false,
+    "privateStrategyMaterialIncluded": false
+  }
+}
