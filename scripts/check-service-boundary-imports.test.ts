@@ -9,6 +9,7 @@ const strictFiles = [
   "apps/web/app/api/matchsets/[matchSetId]/route.ts",
   "apps/web/app/matchsets/[matchSetId]/page.tsx",
   "apps/web/app/api/replays/[matchId]/metadata/route.ts",
+  "apps/web/app/matches/[matchId]/replay/page.tsx",
   "apps/web/app/strategies/[strategyId]/page.tsx",
   "apps/web/app/players/[handle]/page.tsx",
   "apps/web/app/ladder/[seasonId]/page.tsx",
@@ -137,6 +138,34 @@ describe("service boundary import guard", () => {
         path: "apps/web/lib/unsafe-helper.ts",
         line: 1,
         pattern: "@cowards/persistence",
+      },
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
+  it("checks the selected replay page dependency chain strictly", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    for (const file of strictFiles) {
+      writeRepoFile(repoRoot, file, "export const ok = true\n")
+    }
+    writeRepoFile(
+      repoRoot,
+      "apps/web/app/matches/[matchId]/replay/page.tsx",
+      "import { getMatchReplay } from '../../server.js'\nexport const Page = getMatchReplay\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/web/app/matches/server.ts",
+      "import { runWorkerOnce } from '@cowards/worker'\nexport const getMatchReplay = runWorkerOnce\n",
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.strictOffenses).toEqual([
+      {
+        path: "apps/web/app/matches/server.ts",
+        line: 1,
+        pattern: "@cowards/worker",
       },
     ])
     expect(result.exitCode).toBe(1)

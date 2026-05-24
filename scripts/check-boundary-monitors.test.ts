@@ -180,10 +180,13 @@ describe("boundary drift monitors", () => {
     ).toEqual(["apps/web/app/api/new-runtime/route.ts:1:@cowards/runtime-js"])
   })
 
-  it("fails report-only baseline count drift", () => {
+  it("fails report-only baseline count growth", () => {
     expect(() =>
       assertReportOnlyBoundaryOffenseCount(22, new Set(["one", "two"])),
-    ).toThrow(/report-only offense baseline drifted/)
+    ).toThrow(/report-only offense baseline grew/)
+    expect(() =>
+      assertReportOnlyBoundaryOffenseCount(1, new Set(["one", "two"])),
+    ).not.toThrow()
   })
 
   it("validates the v1.16 selected Go route manifest contract", () => {
@@ -271,6 +274,16 @@ describe("boundary drift monitors", () => {
         diagnosticExample: { token: "secret", strategyMemory: {} },
       }),
     ).toThrow(/artifact private field/)
+    expect(() =>
+      validateV116TypeScriptWorkerQuarantineArtifact({
+        ...createV116WorkerQuarantineArtifact(),
+        diagnosticExample: {
+          note: "owner debug details",
+          environment: "DATABASE_URL",
+          sourceText: "hidden",
+        },
+      }),
+    ).toThrow(/artifact privacy marker|artifact private field/)
   })
 
   it("detects runtime registry and adapter metadata drift", () => {

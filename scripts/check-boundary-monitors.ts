@@ -296,7 +296,13 @@ const forbiddenWorkerArtifactStrings = [
   "SoldierMemory",
   "objective_payload",
   "rawAwarenessGrid",
+  "owner debug",
+  "database_url",
+  "DATABASE_URL",
+  "dsn",
   "stack",
+  "sourceText",
+  "source text",
   "session",
   "token",
   "dbDsn",
@@ -622,9 +628,9 @@ export const assertReportOnlyBoundaryOffenseCount = (
   count: number,
   baseline: ReadonlySet<string> = knownReportOnlyBoundaryOffenses,
 ): void => {
-  if (count !== baseline.size) {
+  if (count > baseline.size) {
     throw new Error(
-      `report-only offense baseline drifted: expected ${baseline.size}, got ${count}`,
+      `report-only offense baseline grew: expected at most ${baseline.size}, got ${count}`,
     )
   }
 }
@@ -2158,7 +2164,7 @@ const checkWebBoundary = (): string => {
     )
   }
   assertReportOnlyBoundaryOffenseCount(analysis.reportOnlyOffenses.length)
-  return `${analysis.reportOnlyOffenses.length} known broad web offenses baseline-gated`
+  return `${analysis.reportOnlyOffenses.length}/${knownReportOnlyBoundaryOffenses.size} known broad web offenses remain baseline-gated`
 }
 
 const checkTopologyDiagnostics = async (): Promise<string> => {

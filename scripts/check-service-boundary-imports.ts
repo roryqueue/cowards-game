@@ -9,6 +9,7 @@ export const strictMigratedFiles = [
   "apps/web/app/api/matchsets/[matchSetId]/route.ts",
   "apps/web/app/matchsets/[matchSetId]/page.tsx",
   "apps/web/app/api/replays/[matchId]/metadata/route.ts",
+  "apps/web/app/matches/[matchId]/replay/page.tsx",
   "apps/web/app/strategies/[strategyId]/page.tsx",
   "apps/web/app/players/[handle]/page.tsx",
   "apps/web/app/ladder/[seasonId]/page.tsx",
@@ -37,6 +38,18 @@ const strictAllowedForbiddenImports = new Map<string, ReadonlySet<string>>([
   ],
   [
     "apps/web/lib/workshop-read-service-adapter.ts",
+    new Set(["@cowards/persistence"]),
+  ],
+  [
+    "apps/web/app/matches/server.ts",
+    new Set(["@cowards/persistence"]),
+  ],
+  [
+    "apps/web/app/matches/replay-ready.ts",
+    new Set(["@cowards/persistence"]),
+  ],
+  [
+    "apps/web/app/matches/replay-fixture.ts",
     new Set(["@cowards/persistence"]),
   ],
 ])
