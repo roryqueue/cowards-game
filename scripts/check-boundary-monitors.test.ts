@@ -237,6 +237,15 @@ describe("boundary drift monitors", () => {
         ),
       }),
     ).toThrow(/createSession selected Next route\/page missing boundary token/)
+    expect(() =>
+      validateSelectedGoRouteManifest({
+        ...selectedGoRouteManifest,
+        routes: selectedGoRouteManifest.routes.concat({
+          ...selectedGoRouteManifest.routes[0]!,
+          routeId: "unexpectedRoute",
+        }),
+      }),
+    ).toThrow(/unexpected route unexpectedRoute/)
   })
 
   it("uses the canonical public DTO leak guard", () => {

@@ -101,6 +101,7 @@ const localCommands = [
   "pnpm topology:check -- --require-v1-15-lifecycle --json",
   "COWARDS_GO_PUBLIC_STRATEGY_READS=1 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 pnpm --filter @cowards/web dev",
   "pnpm topology:check -- --require-web-go-public-strategy-read --web-url http://localhost:3000",
+  "pnpm e2e:visual",
 ] as const
 
 const sensitiveQueryKeys = new Set([
@@ -539,6 +540,26 @@ const checkPublicReplayEvidenceRealism = (value: unknown): void => {
       throw new Error("public replay evidence has out-of-bounds terrain")
     }
   }
+}
+
+const validateRenderedReplayBoardSmokeHarness = (): string => {
+  const source = readFileSync(
+    path.join(repoRoot, "apps/web/e2e/replay.visual.spec.ts"),
+    "utf8",
+  )
+  for (const required of [
+    "Replay board canvas",
+    "canvas.screenshot",
+    "nonblankPixels",
+    "leftInkPixels",
+    "rightInkPixels",
+    "toHaveScreenshot",
+  ]) {
+    if (!source.includes(required)) {
+      throw new Error(`rendered replay board visual smoke missing ${required}`)
+    }
+  }
+  return "rendered replay board visual smoke harness checks canvas pixels and snapshots"
 }
 
 const checkPublicPayload = (value: unknown): string => {
@@ -1282,7 +1303,9 @@ export const evaluateLocalTopology = async (
               replayRoute.samplePath,
             )
             checkPublicReplayEvidenceRealism(evidence)
-            return `${v116SelectedGoPageTargets.length} v1.16 selected Go pages loaded at ${sanitizeDiagnosticUrl(webUrl)} with replay board realism checked; Workshop is deferred/load-only`
+            const renderedReplayHarness =
+              validateRenderedReplayBoardSmokeHarness()
+            return `${v116SelectedGoPageTargets.length} v1.16 selected Go pages loaded at ${sanitizeDiagnosticUrl(webUrl)} with replay board realism checked; ${renderedReplayHarness}; Workshop is deferred/load-only`
           },
         ),
       )

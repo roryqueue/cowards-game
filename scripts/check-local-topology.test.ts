@@ -368,6 +368,9 @@ describe("local topology harness", () => {
       required: true,
     })
     expect(selectedSmoke?.detail).toContain("replay board realism checked")
+    expect(selectedSmoke?.detail).toContain(
+      "rendered replay board visual smoke harness checks canvas pixels",
+    )
     expect(seen.some((url) => url.includes("/workshop"))).toBe(false)
   }, 30_000)
 

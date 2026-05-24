@@ -832,6 +832,11 @@ export const validateSelectedGoRouteManifest = (
       throw new Error(`v1.16 selected Go route manifest missing ${routeId}`)
     }
   }
+  for (const routeId of routeIds) {
+    if (!requiredRouteIds.has(routeId)) {
+      throw new Error(`v1.16 selected Go route manifest has unexpected route ${routeId}`)
+    }
+  }
   if (routeIds.size !== manifest.routes.length) {
     throw new Error("v1.16 selected Go route manifest has duplicate route ids")
   }
