@@ -6,6 +6,10 @@ import type {
   StrategyRevisionId,
   UserId,
 } from "./types.js"
+import {
+  PUBLIC_OUTPUT_FORBIDDEN_FIELDS,
+  assertPublicOutputLeakSafe,
+} from "./public-output-privacy.js"
 
 export const ANALYTICS_PROFILE_SCHEMA_VERSION = "analytics-profile-v1.6"
 export const ANALYTICS_RUN_SCHEMA_VERSION = "analytics-run-v1.6"
@@ -60,31 +64,7 @@ export const ANALYTICS_COMPATIBILITY_MISMATCH_CODES = [
 export type AnalyticsCompatibilityMismatchCode =
   (typeof ANALYTICS_COMPATIBILITY_MISMATCH_CODES)[number]
 
-export const ANALYTICS_FORBIDDEN_PUBLIC_KEYS = [
-  "source",
-  "strategyMemory",
-  "soldierMemory",
-  "objective",
-  "objectivePayload",
-  "ownerDebug",
-  "privateRuntime",
-  "privateError",
-  "rawRuntimeDetails",
-  "awarenessGrid",
-  "stack",
-  "stackTrace",
-  "session",
-  "password",
-  "passwordHash",
-  "token",
-] as const
-
-const normalizeAnalyticsKey = (key: string): string =>
-  key.toLowerCase().replaceAll(/[^a-z0-9]/g, "")
-
-const forbiddenNormalizedAnalyticsKeys = new Set(
-  ANALYTICS_FORBIDDEN_PUBLIC_KEYS.map(normalizeAnalyticsKey),
-)
+export const ANALYTICS_FORBIDDEN_PUBLIC_KEYS = PUBLIC_OUTPUT_FORBIDDEN_FIELDS
 
 export interface AnalyticsStrategySnapshot {
   revisionId: StrategyRevisionId
@@ -281,27 +261,5 @@ export const deriveAnalyticsEvidenceBand = (input: {
 }
 
 export const assertAnalyticsPublicSummaryLeakSafe = (value: unknown): void => {
-  const forbidden = new Set<string>(ANALYTICS_FORBIDDEN_PUBLIC_KEYS)
-  const visit = (node: unknown, path: string): void => {
-    if (Array.isArray(node)) {
-      node.forEach((item, index) => visit(item, `${path}[${index}]`))
-      return
-    }
-    if (node === null || typeof node !== "object") {
-      return
-    }
-    for (const [key, entryValue] of Object.entries(
-      node as Record<string, unknown>,
-    )) {
-      if (
-        forbidden.has(key) ||
-        forbiddenNormalizedAnalyticsKeys.has(normalizeAnalyticsKey(key))
-      ) {
-        throw new Error(`Analytics summary leaks private field: ${path}.${key}`)
-      }
-      visit(entryValue, `${path}.${key}`)
-    }
-  }
-
-  visit(value, "$")
+  assertPublicOutputLeakSafe(value, "Analytics summary")
 }

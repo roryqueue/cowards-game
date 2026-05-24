@@ -58,6 +58,7 @@ import {
   StrategyRevisionSubmissionServiceDtoSchema,
   StrategyIdParamsSchema,
 } from "./schemas.js"
+import { assertPublicOutputLeakSafe } from "./public-output-privacy.js"
 
 export const SERVICE_API_VERSION = "service-api-v1.8"
 
@@ -899,53 +900,5 @@ export interface PublicStrategyPageServiceDto extends Omit<
 }
 
 export const assertPublicServiceDtoLeakSafe = (value: unknown): void => {
-  const forbidden = new Set([
-    "source",
-    "strategySource",
-    "strategyMemory",
-    "soldierMemory",
-    "objective",
-    "objectivePayload",
-    "ownerDebug",
-    "exactAwarenessGrid",
-    "awarenessGrid",
-    "rawRuntimeDetails",
-    "privateRuntime",
-    "privateDiagnostics",
-    "stack",
-    "stackTrace",
-    "stderr",
-    "password",
-    "passwordHash",
-    "token",
-    "tokens",
-    "session",
-    "sessions",
-    "hostPath",
-    "hostPaths",
-    "runtimeInternal",
-    "runtimeInternals",
-    "privateRuntimeInternal",
-    "privateRuntimeInternals",
-  ])
-  const visit = (node: unknown, path: string): void => {
-    if (Array.isArray(node)) {
-      node.forEach((item, index) => visit(item, `${path}[${index}]`))
-      return
-    }
-    if (node === null || typeof node !== "object") {
-      return
-    }
-    for (const [key, entryValue] of Object.entries(
-      node as Record<string, unknown>,
-    )) {
-      if (forbidden.has(key)) {
-        throw new Error(
-          `Public service DTO leaks private field: ${path}.${key}`,
-        )
-      }
-      visit(entryValue, `${path}.${key}`)
-    }
-  }
-  visit(value, "$")
+  assertPublicOutputLeakSafe(value, "Public service DTO")
 }

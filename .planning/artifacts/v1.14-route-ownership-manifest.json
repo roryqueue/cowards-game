@@ -1,0 +1,551 @@
+{
+  "schemaVersion": "v1.14-route-ownership-manifest",
+  "milestone": "v1.14",
+  "decision": "artifact-backed-go-forks-with-runtime-boundary",
+  "mode": "selected-route-family",
+  "typeScriptRole": "parity_oracle_and_strategy_runtime_worker_until_later_migration",
+  "selectedRouteFamilies": [
+    "public_read",
+    "session",
+    "account_revision",
+    "mutation",
+    "artifact_fork"
+  ],
+  "allowedPromotionStates": [
+    "go_primary",
+    "typescript_primary",
+    "typescript_reference",
+    "worker_owned",
+    "deferred",
+    "blocked",
+    "rolled_back",
+    "evidence_only"
+  ],
+  "routes": [
+    {
+      "routeId": "getPublicStrategyPage",
+      "method": "GET",
+      "path": "/public/strategies/{strategyId}",
+      "routeFamily": "public_read",
+      "authScope": "public",
+      "privacyClass": "public",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_service",
+      "diagnosticsClass": "public_go_read",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "live_dto",
+        "schema",
+        "privacy",
+        "parity",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "strategy_source",
+        "memory",
+        "objective_payloads",
+        "owner_debug",
+        "raw_replay",
+        "go_writes",
+        "runtime_execution"
+      ]
+    },
+    {
+      "routeId": "getPublicPlayerPage",
+      "method": "GET",
+      "path": "/public/players/{handle}",
+      "routeFamily": "public_read",
+      "authScope": "public",
+      "privacyClass": "public",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_service",
+      "diagnosticsClass": "public_go_read",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "live_dto",
+        "schema",
+        "privacy",
+        "parity",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "strategy_source",
+        "memory",
+        "objective_payloads",
+        "owner_debug",
+        "raw_replay",
+        "go_writes",
+        "runtime_execution"
+      ]
+    },
+    {
+      "routeId": "getPublicLadderSeason",
+      "method": "GET",
+      "path": "/public/ladders/{seasonId}",
+      "routeFamily": "public_read",
+      "authScope": "public",
+      "privacyClass": "public",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_service",
+      "diagnosticsClass": "public_go_read",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "live_dto",
+        "schema",
+        "privacy",
+        "parity",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "strategy_source",
+        "memory",
+        "objective_payloads",
+        "owner_debug",
+        "raw_replay",
+        "go_writes",
+        "runtime_execution"
+      ]
+    },
+    {
+      "routeId": "getPublicMatchSetSummary",
+      "method": "GET",
+      "path": "/public/matchsets/{matchSetId}/summary",
+      "routeFamily": "public_read",
+      "authScope": "public",
+      "privacyClass": "public",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_service",
+      "diagnosticsClass": "public_go_read",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "live_dto",
+        "schema",
+        "privacy",
+        "parity",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "strategy_source",
+        "memory",
+        "objective_payloads",
+        "owner_debug",
+        "raw_replay",
+        "go_writes",
+        "runtime_execution"
+      ]
+    },
+    {
+      "routeId": "getPublicReplayMetadata",
+      "method": "GET",
+      "path": "/public/replays/{matchId}/metadata",
+      "routeFamily": "public_read",
+      "authScope": "public",
+      "privacyClass": "public",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_service",
+      "diagnosticsClass": "public_go_read",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "live_dto",
+        "schema",
+        "privacy",
+        "parity",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "strategy_source",
+        "memory",
+        "objective_payloads",
+        "owner_debug",
+        "raw_awareness_grid",
+        "full_replay_projection",
+        "runtime_execution"
+      ]
+    },
+    {
+      "routeId": "authSession",
+      "method": "GET",
+      "path": "/auth/session",
+      "routeFamily": "session",
+      "authScope": "session",
+      "privacyClass": "owner",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_web_api",
+      "diagnosticsClass": "token_safe_go_auth",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "cookie_contract",
+        "token_safety",
+        "schema",
+        "privacy",
+        "parity",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "raw_token",
+        "token_hash",
+        "password_hash",
+        "cookie_value",
+        "strategy_source",
+        "runtime_execution"
+      ]
+    },
+    {
+      "routeId": "createSession",
+      "method": "POST",
+      "path": "/auth/session",
+      "routeFamily": "session",
+      "authScope": "public",
+      "privacyClass": "owner",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_web_api",
+      "diagnosticsClass": "token_safe_go_auth",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "cookie_contract",
+        "token_safety",
+        "schema",
+        "privacy",
+        "parity",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "raw_token",
+        "token_hash",
+        "password_hash",
+        "cookie_value",
+        "strategy_source",
+        "runtime_execution"
+      ]
+    },
+    {
+      "routeId": "signUp",
+      "method": "POST",
+      "path": "/auth/sign-up",
+      "routeFamily": "session",
+      "authScope": "public",
+      "privacyClass": "owner",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_web_api",
+      "diagnosticsClass": "token_safe_go_auth",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "cookie_contract",
+        "token_safety",
+        "privacy",
+        "parity",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "raw_token",
+        "token_hash",
+        "password_hash",
+        "cookie_value",
+        "strategy_source",
+        "runtime_execution"
+      ]
+    },
+    {
+      "routeId": "revokeSession",
+      "method": "DELETE",
+      "path": "/auth/session",
+      "routeFamily": "session",
+      "authScope": "session",
+      "privacyClass": "owner",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_web_api",
+      "diagnosticsClass": "token_safe_go_auth",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "cookie_contract",
+        "token_safety",
+        "schema",
+        "privacy",
+        "parity",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "raw_token",
+        "token_hash",
+        "password_hash",
+        "cookie_value",
+        "strategy_source",
+        "runtime_execution"
+      ]
+    },
+    {
+      "routeId": "listStrategyRevisions",
+      "method": "GET",
+      "path": "/account/strategy-revisions",
+      "routeFamily": "account_revision",
+      "authScope": "owner",
+      "privacyClass": "owner",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_service",
+      "diagnosticsClass": "owner_safe_go_account",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "source_free_list",
+        "schema",
+        "privacy",
+        "parity",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "strategy_source",
+        "raw_token",
+        "token_hash",
+        "password_hash",
+        "runtime_execution"
+      ]
+    },
+    {
+      "routeId": "getStrategyRevisionSource",
+      "method": "GET",
+      "path": "/account/strategy-revisions/{strategyRevisionId}/source",
+      "routeFamily": "account_revision",
+      "authScope": "owner",
+      "privacyClass": "owner_private_source",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_web_api",
+      "diagnosticsClass": "owner_private_go_source",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "owner_only",
+        "no_store",
+        "privacy",
+        "parity",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "public_source_output",
+        "monitor_source_output",
+        "strategy_execution",
+        "node_vm",
+        "raw_token"
+      ]
+    },
+    {
+      "routeId": "createStrategyRevision",
+      "method": "POST",
+      "path": "/account/strategy-revisions",
+      "routeFamily": "account_revision",
+      "authScope": "owner",
+      "privacyClass": "owner",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_web_api",
+      "diagnosticsClass": "owner_safe_go_account_write",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "metadata_parity",
+        "no_execution",
+        "schema",
+        "privacy",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "strategy_execution",
+        "node_vm",
+        "public_source_output",
+        "raw_token"
+      ]
+    },
+    {
+      "routeId": "forkStarterStrategy",
+      "method": "POST",
+      "path": "/account/starter-forks",
+      "routeFamily": "artifact_fork",
+      "authScope": "owner",
+      "privacyClass": "owner",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_service",
+      "diagnosticsClass": "go_artifact_fork",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "schema",
+        "manifest_hash",
+        "lineage",
+        "privacy",
+        "no_fallback",
+        "go_tests",
+        "boundary_monitors"
+      ],
+      "disallowedScopes": [
+        "strategy_execution",
+        "node_vm_sandbox",
+        "runtime_in_web_or_go_process",
+        "owner_private_account_source",
+        "memory",
+        "objective_payloads",
+        "owner_debug",
+        "raw_replay"
+      ]
+    },
+    {
+      "routeId": "forkAdvancedStrategy",
+      "method": "POST",
+      "path": "/account/advanced-forks",
+      "routeFamily": "artifact_fork",
+      "authScope": "owner",
+      "privacyClass": "owner",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_service",
+      "diagnosticsClass": "go_artifact_fork",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "schema",
+        "manifest_hash",
+        "lineage",
+        "privacy",
+        "no_fallback",
+        "go_tests",
+        "boundary_monitors"
+      ],
+      "disallowedScopes": [
+        "strategy_execution",
+        "node_vm_sandbox",
+        "runtime_in_web_or_go_process",
+        "owner_private_account_source",
+        "memory",
+        "objective_payloads",
+        "owner_debug",
+        "raw_replay"
+      ]
+    },
+    {
+      "routeId": "createMatchSet",
+      "method": "POST",
+      "path": "/matchsets",
+      "routeFamily": "mutation",
+      "authScope": "owner",
+      "privacyClass": "owner",
+      "currentOwner": "go_backend",
+      "selectedOwner": "go_backend",
+      "fallbackPolicy": "no_fallback_when_go_selected",
+      "rollbackOwner": "typescript_web_api",
+      "diagnosticsClass": "owner_safe_go_mutation",
+      "promotionStatus": "go_primary",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "transactional_parity",
+        "worker_handoff",
+        "privacy",
+        "topology"
+      ],
+      "disallowedScopes": [
+        "strategy_execution",
+        "job_claiming",
+        "match_execution",
+        "chronicle_generation",
+        "runtime_failure_classification",
+        "raw_token"
+      ]
+    },
+    {
+      "routeId": "workerRuntime",
+      "method": "N/A",
+      "path": "TypeScript worker process",
+      "routeFamily": "worker_runtime",
+      "authScope": "internal",
+      "privacyClass": "private_runtime",
+      "currentOwner": "typescript_worker",
+      "selectedOwner": "typescript_worker",
+      "fallbackPolicy": "not_a_go_backend_route",
+      "rollbackOwner": "typescript_worker",
+      "diagnosticsClass": "worker_owned",
+      "promotionStatus": "worker_owned",
+      "blockedReasons": [],
+      "evidenceRequired": [
+        "explicit_non_goal"
+      ],
+      "disallowedScopes": [
+        "go_job_claiming",
+        "go_match_execution",
+        "go_chronicle_generation",
+        "go_strategy_execution"
+      ]
+    },
+    {
+      "routeId": "goOwnedMigrations",
+      "method": "N/A",
+      "path": "database migrations",
+      "routeFamily": "deferred",
+      "authScope": "internal",
+      "privacyClass": "private_operational",
+      "currentOwner": "typescript_preflight",
+      "selectedOwner": "typescript_preflight",
+      "fallbackPolicy": "deferred_to_future_milestone",
+      "rollbackOwner": "typescript_preflight",
+      "diagnosticsClass": "deferred",
+      "promotionStatus": "deferred",
+      "blockedReasons": [
+        "out_of_scope_v1.13"
+      ],
+      "evidenceRequired": [
+        "explicit_non_goal"
+      ],
+      "disallowedScopes": [
+        "go_schema_ownership"
+      ]
+    }
+  ],
+  "runtimeBoundary": {
+    "abiVersion": "strategy-runtime-abi-v1.14",
+    "publicInterface": "StrategyRuntimeRequestEnvelope/StrategyRuntimeResponseEnvelope",
+    "executionOwner": "runtime-js-worker-thread",
+    "explicitNonGoals": [
+      "Go executes Strategy code",
+      "web/api process executes hostile Strategy code",
+      "Node vm is treated as a sandbox"
+    ]
+  },
+  "strategyArtifacts": {
+    "manifestPath": "packages/spec/artifacts/strategy-artifacts.v1.14.json",
+    "schemaVersion": "strategy-artifact-manifest-v1.14",
+    "artifactCount": 23,
+    "sourceOfTruth": "typescript-registries",
+    "goConsumptionMode": "data_only_no_execution"
+  }
+}

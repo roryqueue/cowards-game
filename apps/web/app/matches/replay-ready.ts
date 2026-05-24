@@ -102,17 +102,41 @@ const replayBoardRealismError = (
   states: ReplayReadyDto["states"],
 ): string | null => {
   for (const state of states) {
+    if (
+      state.board.bounds.minX > state.board.bounds.maxX ||
+      state.board.bounds.minY > state.board.bounds.maxY
+    ) {
+      return `Replay board has invalid bounds at sequence ${state.sequence}.`
+    }
+    const visibleCells = new Map<string, string>()
     for (const soldier of state.board.soldiers) {
+      if (soldier.status === "FALLEN" && soldier.position) {
+        return `Replay board contains a visible fallen Soldier at sequence ${state.sequence}.`
+      }
+      if (soldier.status !== "FALLEN" && !soldier.position) {
+        return `Replay board contains a visible Soldier without a position at sequence ${state.sequence}.`
+      }
       if (
         soldier.position &&
         !isInsideBounds(soldier.position, state.board.bounds)
       ) {
         return `Replay board contains an out-of-bounds Soldier at sequence ${state.sequence}.`
       }
+      if (soldier.position) {
+        const cellKey = `${soldier.position.x}:${soldier.position.y}`
+        const previous = visibleCells.get(cellKey)
+        if (previous) {
+          return `Replay board contains overlapping visible pieces at sequence ${state.sequence}.`
+        }
+        visibleCells.set(cellKey, soldier.id)
+      }
     }
     for (const terrainStone of state.board.terrainStones) {
       if (!isInsideBounds(terrainStone, state.board.bounds)) {
         return `Replay board contains out-of-bounds terrain at sequence ${state.sequence}.`
+      }
+      if (visibleCells.has(`${terrainStone.x}:${terrainStone.y}`)) {
+        return `Replay board contains overlapping terrain and Soldier at sequence ${state.sequence}.`
       }
     }
   }

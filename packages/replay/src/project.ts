@@ -7,9 +7,10 @@ import type {
   JsonValue,
   PlayerId,
 } from "@cowards/spec"
-import { ChronicleSchema } from "@cowards/spec"
+import { ChronicleSchema, PUBLIC_OUTPUT_FORBIDDEN_FIELDS } from "@cowards/spec"
 
 const PRIVATE_PAYLOAD_KEYS = new Set([
+  ...PUBLIC_OUTPUT_FORBIDDEN_FIELDS,
   "awarenessGrid",
   "byPlayerId",
   "debug",

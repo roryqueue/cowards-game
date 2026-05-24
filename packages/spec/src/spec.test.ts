@@ -16,6 +16,7 @@ import {
   SERVICE_API_ROUTES,
   SERVICE_API_VERSION,
 } from "./service.js"
+import { assertPublicOutputLeakSafe } from "./public-output-privacy.js"
 import {
   ActionSchema,
   AnalyticsGauntletRunSummarySchema,
@@ -153,6 +154,15 @@ describe("Coward's Game spec contracts", () => {
         },
       }),
     ).toThrow(/private field/)
+  })
+
+  it("public output leak guard catches normalized fields and private markers", () => {
+    expect(() =>
+      assertPublicOutputLeakSafe({ nested: { StackTrace: "private" } }),
+    ).toThrow(/private field/)
+    expect(() =>
+      assertPublicOutputLeakSafe({ message: "failed with Bearer secret" }),
+    ).toThrow(/private marker/)
   })
 
   it("compatibility versions have exactly the core six keys", () => {

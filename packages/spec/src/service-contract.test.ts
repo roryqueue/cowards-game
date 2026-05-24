@@ -5,6 +5,7 @@ import {
   assertPublicServiceDtoLeakSafe,
   SERVICE_API_ROUTES,
 } from "./service.js"
+import { PUBLIC_OUTPUT_FORBIDDEN_FIELDS } from "./public-output-privacy.js"
 import {
   PublicLadderPageServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
@@ -14,33 +15,9 @@ import {
 } from "./schemas.js"
 import { SERVICE_API_FIXTURES } from "./service-fixtures.js"
 
-const forbiddenPublicPropertyNames = new Set([
-  "source",
-  "strategySource",
-  "strategyMemory",
-  "soldierMemory",
-  "objective",
-  "objectivePayload",
-  "ownerDebug",
-  "exactAwarenessGrid",
-  "awarenessGrid",
-  "rawRuntimeDetails",
-  "privateRuntime",
-  "privateDiagnostics",
-  "stack",
-  "stackTrace",
-  "stderr",
-  "session",
-  "sessions",
-  "token",
-  "tokens",
-  "hostPath",
-  "hostPaths",
-  "runtimeInternal",
-  "runtimeInternals",
-  "privateRuntimeInternal",
-  "privateRuntimeInternals",
-])
+const forbiddenPublicPropertyNames = new Set<string>(
+  PUBLIC_OUTPUT_FORBIDDEN_FIELDS,
+)
 
 const forbiddenPublicArtifactStrings = [
   "strategyMemory",

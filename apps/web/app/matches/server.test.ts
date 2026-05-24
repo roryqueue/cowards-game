@@ -320,6 +320,81 @@ describe("Match replay server facade", () => {
     expect(response.message).toContain("out-of-bounds Soldier")
   })
 
+  it("rejects replay boards with invalid bounds and overlapping visible pieces", async () => {
+    const cases = [
+      {
+        name: "invalid bounds",
+        expected: "invalid bounds",
+        mutate: (stored: StoredChronicle) => {
+          stored.artifact.snapshots = stored.artifact.snapshots.map(
+            (snapshot) => ({
+              ...snapshot,
+              board: {
+                ...snapshot.board,
+                bounds: { minX: 5, maxX: 4, minY: 0, maxY: 4 },
+              },
+            }),
+          )
+        },
+      },
+      {
+        name: "overlapping terrain and Soldier",
+        expected: "overlapping terrain and Soldier",
+        mutate: (stored: StoredChronicle) => {
+          stored.artifact.snapshots = stored.artifact.snapshots.map(
+            (snapshot) => ({
+              ...snapshot,
+              board: {
+                ...snapshot.board,
+                terrainStones: [{ x: 1, y: 10 }],
+              },
+            }),
+          )
+        },
+      },
+      {
+        name: "active Soldier without position",
+        expected: "visible Soldier without a position",
+        mutate: (stored: StoredChronicle) => {
+          stored.artifact.snapshots = stored.artifact.snapshots.map(
+            (snapshot) => ({
+              ...snapshot,
+              board: {
+                ...snapshot.board,
+                soldiers: snapshot.board.soldiers.map((soldier) => ({
+                  ...soldier,
+                  position: null,
+                })),
+              },
+            }),
+          )
+        },
+      },
+    ]
+
+    for (const testCase of cases) {
+      const stored = createStoredChronicle()
+      testCase.mutate(stored)
+      const server = createMatchReplayServer({
+        withPool: async (fn) => fn({} as never),
+        createChronicleStore: () => ({
+          getByMatchId: async () => stored,
+        }),
+      })
+
+      const response = await server.getMatchReplay(
+        `match:replay-test:${testCase.name}`,
+      )
+
+      expect(response.status).toBe("unavailable")
+      if (response.status !== "unavailable") {
+        continue
+      }
+      expect(response.reason).toBe("invalid-chronicle")
+      expect(response.message).toContain(testCase.expected)
+    }
+  })
+
   it("decodes URL-encoded persisted Match ids before Chronicle lookup", async () => {
     const stored = createStoredChronicle()
     const seen: string[] = []

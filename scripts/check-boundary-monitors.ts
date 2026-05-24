@@ -96,6 +96,7 @@ interface V113RouteOwnershipEntry {
     | "public_read"
     | "session"
     | "account_revision"
+    | "artifact_fork"
     | "mutation"
     | "worker_runtime"
     | "deferred"
@@ -121,13 +122,27 @@ interface V113RouteOwnershipEntry {
 }
 
 interface V113RouteOwnershipManifest {
-  schemaVersion: "v1.13-route-ownership-manifest"
-  milestone: "v1.13"
-  decision: "aggressive-go-backend-cutover"
+  schemaVersion:
+    | "v1.13-route-ownership-manifest"
+    | "v1.14-route-ownership-manifest"
+  milestone: "v1.13" | "v1.14"
+  decision:
+    | "aggressive-go-backend-cutover"
+    | "artifact-backed-go-forks-with-runtime-boundary"
   typeScriptRole: string
   selectedRouteFamilies: readonly string[]
   allowedPromotionStates: readonly string[]
   routes: readonly V113RouteOwnershipEntry[]
+  runtimeBoundary?: {
+    abiVersion: string
+    executionOwner: string
+    explicitNonGoals: readonly string[]
+  }
+  strategyArtifacts?: {
+    schemaVersion: string
+    artifactCount: number
+    goConsumptionMode: string
+  }
 }
 
 const repoRoot = path.resolve(
@@ -144,6 +159,8 @@ const goPromotionManifestPath =
   ".planning/artifacts/v1.12-route-ownership-manifest.json"
 const v113RouteOwnershipManifestPath =
   ".planning/artifacts/v1.13-route-ownership-manifest.json"
+const v114RouteOwnershipManifestPath =
+  ".planning/artifacts/v1.14-route-ownership-manifest.json"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/account/advanced-forks/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
@@ -569,6 +586,75 @@ const checkV113RouteOwnershipManifest = (): string => {
   return `${manifest.routes.length} v1.13 ownership entries checked`
 }
 
+const checkV114RouteOwnershipManifest = (): string => {
+  const manifest = readJson<V113RouteOwnershipManifest>(
+    v114RouteOwnershipManifestPath,
+  )
+  if (manifest.schemaVersion !== "v1.14-route-ownership-manifest") {
+    throw new Error("v1.14 ownership manifest schema version drifted")
+  }
+  if (manifest.milestone !== "v1.14") {
+    throw new Error(`v1.14 manifest milestone drifted to ${manifest.milestone}`)
+  }
+  if (manifest.decision !== "artifact-backed-go-forks-with-runtime-boundary") {
+    throw new Error("v1.14 manifest decision drifted")
+  }
+  if (
+    manifest.typeScriptRole !==
+    "parity_oracle_and_strategy_runtime_worker_until_later_migration"
+  ) {
+    throw new Error("v1.14 TypeScript role drifted")
+  }
+  if (manifest.runtimeBoundary?.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION) {
+    throw new Error("v1.14 runtime boundary ABI drifted")
+  }
+  if (
+    manifest.runtimeBoundary?.explicitNonGoals.some((goal) =>
+      /Go executes Strategy code|Node vm/.test(goal),
+    ) !== true
+  ) {
+    throw new Error("v1.14 runtime boundary non-goals drifted")
+  }
+  if (
+    manifest.strategyArtifacts?.schemaVersion !==
+      "strategy-artifact-manifest-v1.14" ||
+    manifest.strategyArtifacts.artifactCount !== 23 ||
+    manifest.strategyArtifacts.goConsumptionMode !== "data_only_no_execution"
+  ) {
+    throw new Error("v1.14 Strategy Artifact manifest metadata drifted")
+  }
+  const forkRoutes = manifest.routes.filter(
+    (entry) =>
+      entry.routeId === "forkStarterStrategy" ||
+      entry.routeId === "forkAdvancedStrategy",
+  )
+  if (forkRoutes.length !== 2) {
+    throw new Error("v1.14 fork route ownership entries missing")
+  }
+  for (const entry of forkRoutes) {
+    if (
+      entry.routeFamily !== "artifact_fork" ||
+      entry.selectedOwner !== "go_backend" ||
+      entry.promotionStatus !== "go_primary" ||
+      entry.blockedReasons.length !== 0 ||
+      entry.fallbackPolicy !== "no_fallback_when_go_selected"
+    ) {
+      throw new Error(`${entry.routeId} v1.14 ownership metadata drifted`)
+    }
+    for (const scope of [
+      "strategy_execution",
+      "node_vm_sandbox",
+      "runtime_in_web_or_go_process",
+      "owner_private_account_source",
+    ]) {
+      if (!entry.disallowedScopes.includes(scope)) {
+        throw new Error(`${entry.routeId} missing disallowed scope ${scope}`)
+      }
+    }
+  }
+  return `${manifest.routes.length} v1.14 ownership entries checked; fork routes promoted`
+}
+
 export const checkRuntimeAdapterBridge = (
   bridge: RuntimeAdapterBridge,
 ): string => {
@@ -800,6 +886,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("go_promotion", "v1.13 route ownership manifest", () =>
     checkV113RouteOwnershipManifest(),
+  ),
+  await check("go_promotion", "v1.14 route ownership manifest", () =>
+    checkV114RouteOwnershipManifest(),
   ),
   await check("topology", "static topology diagnostics", () =>
     checkTopologyDiagnostics(),

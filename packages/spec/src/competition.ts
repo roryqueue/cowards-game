@@ -7,6 +7,7 @@ import type {
   UserId,
 } from "./types.js"
 import type { StrategyRuntimeMetadata } from "./runtime.js"
+import { assertPublicOutputLeakSafe } from "./public-output-privacy.js"
 
 export const COMPETITION_PRESET_IDS = [
   "smoke-exhibition-v1",
@@ -346,41 +347,6 @@ export interface PublicMatchSetResultDto {
   metadata?: JsonValue | undefined
 }
 
-const forbiddenPublicResultKeys = new Set([
-  "source",
-  "strategyMemory",
-  "soldierMemory",
-  "objective",
-  "ownerDebug",
-  "privateRuntime",
-  "privateError",
-  "awarenessGrid",
-  "session",
-  "password",
-  "passwordHash",
-  "token",
-])
-
 export const assertPublicMatchSetResultLeakSafe = (value: unknown): void => {
-  const visit = (node: unknown, path: string): void => {
-    if (Array.isArray(node)) {
-      node.forEach((item, index) => visit(item, `${path}[${index}]`))
-      return
-    }
-    if (node === null || typeof node !== "object") {
-      return
-    }
-    for (const [key, entryValue] of Object.entries(
-      node as Record<string, unknown>,
-    )) {
-      if (forbiddenPublicResultKeys.has(key)) {
-        throw new Error(
-          `Public MatchSet result leaks private field: ${path}.${key}`,
-        )
-      }
-      visit(entryValue, `${path}.${key}`)
-    }
-  }
-
-  visit(value, "$")
+  assertPublicOutputLeakSafe(value, "Public MatchSet result")
 }
