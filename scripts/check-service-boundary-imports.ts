@@ -54,6 +54,25 @@ const strictAllowedForbiddenImports = new Map<string, ReadonlySet<string>>([
   ],
 ])
 
+const strictAllowedPersistenceSources = new Map<string, ReadonlySet<string>>([
+  [
+    "apps/web/app/matches/server.ts",
+    new Set([
+      "@cowards/persistence/db",
+      "@cowards/persistence/quarantine-lifecycle",
+      "@cowards/persistence/repositories",
+    ]),
+  ],
+  [
+    "apps/web/app/matches/replay-ready.ts",
+    new Set(["@cowards/persistence/quarantine-lifecycle"]),
+  ],
+  [
+    "apps/web/app/matches/replay-fixture.ts",
+    new Set(["@cowards/persistence/quarantine-lifecycle"]),
+  ],
+])
+
 const forbiddenPatterns = [
   "@cowards/persistence",
   "@cowards/worker",
@@ -281,6 +300,28 @@ const findOffenses = (
       return extractImportLikeStatements(repoPath, sourceText).flatMap(
         (statement) => {
           const pattern = matchedPattern(statement)
+          const allowedPersistenceSources =
+            options.allowedForbiddenImports?.get(repoPath)?.has(
+              "@cowards/persistence",
+            ) === true
+              ? strictAllowedPersistenceSources.get(repoPath)
+              : undefined
+          if (
+            pattern === "@cowards/persistence" &&
+            allowedPersistenceSources !== undefined &&
+            !allowedPersistenceSources.has(statement.source ?? "")
+          ) {
+            const offense: ServiceBoundaryOffense = {
+              path: repoPath,
+              line: statement.line,
+              pattern,
+            }
+            Object.defineProperty(offense, "statementText", {
+              value: statement.text.replace(/\s+/g, " ").trim(),
+              enumerable: false,
+            })
+            return [offense]
+          }
           if (
             pattern &&
             options.allowedForbiddenImports?.get(repoPath)?.has(pattern)

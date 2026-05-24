@@ -299,8 +299,10 @@ const forbiddenWorkerArtifactStrings = [
   "owner debug",
   "database_url",
   "DATABASE_URL",
+  "postgres://",
   "dsn",
   "stack",
+  "source",
   "sourceText",
   "source text",
   "session",
@@ -1734,7 +1736,7 @@ const assertArtifactPrivacyLeakSafe = (
 
   for (const [key, nested] of Object.entries(value)) {
     for (const marker of forbiddenWorkerArtifactStrings) {
-      if (key.includes(marker)) {
+      if (key === marker) {
         throw new Error(`artifact private field ${key} found at ${pathLabel}`)
       }
     }

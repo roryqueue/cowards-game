@@ -171,6 +171,61 @@ describe("service boundary import guard", () => {
     expect(result.exitCode).toBe(1)
   })
 
+  it("fails selected replay helpers on non-quarantine persistence imports", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    for (const file of strictFiles) {
+      writeRepoFile(repoRoot, file, "export const ok = true\n")
+    }
+    writeRepoFile(
+      repoRoot,
+      "apps/web/app/matches/[matchId]/replay/page.tsx",
+      "import { getMatchReplay } from '../../server.js'\nexport const Page = getMatchReplay\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/web/app/matches/server.ts",
+      "import { buildPublicMatchSetResultDto } from '@cowards/persistence/competition'\nexport const getMatchReplay = buildPublicMatchSetResultDto\n",
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.strictOffenses).toEqual([
+      {
+        path: "apps/web/app/matches/server.ts",
+        line: 1,
+        pattern: "@cowards/persistence",
+      },
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
+  it("allows selected replay helpers only on explicit quarantine persistence imports", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    for (const file of strictFiles) {
+      writeRepoFile(repoRoot, file, "export const ok = true\n")
+    }
+    writeRepoFile(
+      repoRoot,
+      "apps/web/app/matches/[matchId]/replay/page.tsx",
+      "import { getMatchReplay } from '../../server.js'\nexport const Page = getMatchReplay\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/web/app/matches/server.ts",
+      [
+        "import { createDatabasePool } from '@cowards/persistence/db'",
+        "import { createPostgresChronicleStore } from '@cowards/persistence/quarantine-lifecycle'",
+        "import type { Queryable } from '@cowards/persistence/repositories'",
+        "export const getMatchReplay = () => [createDatabasePool, createPostgresChronicleStore]",
+      ].join("\n"),
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.strictOffenses).toEqual([])
+    expect(result.exitCode).toBe(0)
+  })
+
   it("allows the approved public service adapter to own local persistence bridging", () => {
     repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
     for (const file of strictFiles) {
