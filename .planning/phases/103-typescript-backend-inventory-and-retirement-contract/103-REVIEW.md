@@ -1,6 +1,7 @@
 ---
 phase: 103-typescript-backend-inventory-and-retirement-contract
 reviewed: 2026-05-24T17:20:01Z
+re_reviewed: 2026-05-24T17:26:15Z
 depth: deep
 files_reviewed: 7
 files_reviewed_list:
@@ -12,25 +13,48 @@ files_reviewed_list:
   - .planning/phases/103-typescript-backend-inventory-and-retirement-contract/103-VALIDATION.md
   - .planning/phases/103-typescript-backend-inventory-and-retirement-contract/103-SUMMARY.md
 findings:
+  critical: 0
+  warning: 0
+  info: 0
+  total: 0
+original_findings:
   critical: 3
   warning: 1
   info: 0
   total: 4
-status: issues_found
+status: clean
+re_review_status: clean
 ---
 
 # Phase 103: Code Review Report
 
 **Reviewed:** 2026-05-24T17:20:01Z
+**Re-reviewed:** 2026-05-24T17:26:15Z
 **Depth:** deep
 **Files Reviewed:** 7
-**Status:** issues_found
+**Status:** clean
 
 ## Summary
 
-Reviewed the Phase 103 scanner, tests, package scripts, generated inventory artifacts, validation notes, and summary against the Phase 103 PLAN/CONTEXT/RESEARCH. The inventory/checker is current and tests pass, but the implementation accepts incorrect classifications for DB-backed TypeScript service adapters, misses HTTP methods on re-export-only Next routes, and records a token value in the phase summary.
+Original review identified four issues in the Phase 103 scanner, tests, package scripts, generated inventory artifacts, validation notes, and summary. Scoped re-review on 2026-05-24 found all four prior findings resolved, with no new obvious regression in the reviewed inventory script, test, package script wiring, or generated artifacts. Original findings are retained below for historical context.
 
-## Blockers
+## Re-review
+
+**Status:** clean
+
+### Prior Findings
+
+- **BL-01 resolved:** `apps/web/lib/workshop-analytics-service-adapter.ts` and `apps/web/lib/workshop-read-service-adapter.ts` now render as `deferred` in `.planning/artifacts/v1.16-typescript-backend-inventory.md:216` and `:218`, and the JSON records `usesDatabase: true`, one persistence import, and one service import for each adapter.
+- **BL-02 resolved:** `extractRouteMethods` now reads named `ExportDeclaration` route methods, and the generated matrix captures `POST`, `GET`, and `POST` for `apps/web/app/api/workshop/submit/route.ts`, `apps/web/app/api/workshop/test/[matchSetId]/route.ts`, and `apps/web/app/api/workshop/test/route.ts` at `.planning/artifacts/v1.16-typescript-backend-inventory.md:75-77`.
+- **BL-03 resolved:** `103-SUMMARY.md:94` now uses `COWARDS_GO_BACKEND_OWNER_TOKENS=<redacted>`, and the Phase 103 token-value scan did not find token assignments with unredacted values.
+- **WR-01 resolved:** `package.json:26` now wires `pnpm typescript-backend:inventory:check` into `boundary:monitors`.
+
+### Verification
+
+- `pnpm exec vitest run scripts/generate-typescript-backend-inventory.test.ts` passed: 1 file, 7 tests.
+- `pnpm typescript-backend:inventory:check` passed: TypeScript backend inventory artifacts are current.
+
+## Original Blockers (Resolved In Re-review)
 
 ### BL-01: DB-backed Workshop adapters are accepted as `frontend-only`
 
@@ -56,7 +80,7 @@ Reviewed the Phase 103 scanner, tests, package scripts, generated inventory arti
 
 **Fix:** Replace the value with a placeholder, for example `COWARDS_GO_BACKEND_OWNER_TOKENS=<redacted>`, or omit the command. Add a privacy scan over Phase 103 artifacts that fails on token/session env assignments such as `TOKEN(S)?=.*`.
 
-## Warnings
+## Original Warnings (Resolved In Re-review)
 
 ### WR-01: Stale inventory check is not wired into the normal monitor gate
 
