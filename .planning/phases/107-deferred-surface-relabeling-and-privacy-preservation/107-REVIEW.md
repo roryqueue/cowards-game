@@ -1,10 +1,14 @@
 ---
 phase: 107-deferred-surface-relabeling-and-privacy-preservation
-reviewed: 2026-05-24T22:18:06Z
+reviewed: 2026-05-24T22:24:23Z
 depth: deep
-re_review_of_commit: 9c86a392434cc5216267a41643a9f59db7faceab
-files_reviewed: 13
+re_review_of_commits:
+  - 9c86a392434cc5216267a41643a9f59db7faceab
+  - 1d1f4a810c6ec3abcc1a4b86439db350fc95ccaa
+files_reviewed: 14
 files_reviewed_list:
+  - .planning/artifacts/v1.16-final-typescript-surface-labels.json
+  - .planning/artifacts/v1.16-final-typescript-surface-labels.md
   - .planning/artifacts/v1.16-typescript-backend-inventory.json
   - apps/web/app/matches/[matchId]/replay/page.tsx
   - apps/web/app/matches/[matchId]/replay/owner-debug.ts
@@ -14,83 +18,58 @@ files_reviewed_list:
   - apps/web/app/matches/types.ts
   - apps/web/app/workshop/workshop-client-state.ts
   - apps/web/e2e/workshop-to-replay.spec.ts
-  - packages/spec/src/public-output-privacy.ts
   - scripts/check-boundary-monitors.test.ts
   - scripts/check-boundary-monitors.ts
   - scripts/generate-typescript-surface-labels.ts
 findings:
-  critical: 1
+  critical: 0
   warning: 1
   info: 0
-  total: 2
+  total: 1
 status: issues_found
 ---
 
-# Phase 107: Focused Code Re-review Report
+# Phase 107: Second Focused Code Re-review Report
 
-**Reviewed:** 2026-05-24T22:18:06Z
+**Reviewed:** 2026-05-24T22:24:23Z
 **Depth:** deep
-**Commit Reviewed:** `9c86a392434cc5216267a41643a9f59db7faceab`
-**Files Reviewed:** 13
+**Commits Reviewed:** `9c86a392434cc5216267a41643a9f59db7faceab`, `1d1f4a810c6ec3abcc1a4b86439db350fc95ccaa`
+**Files Reviewed:** 14
 **Status:** issues_found
 
 ## Summary
 
-Focused re-review of commit `9c86a39` against the three prior findings in `107-REVIEW.md`: owner-debug requester authorization, exact final label inventory path coverage, and shareable artifact/privacy scanning beyond the synthetic `publicOutputExample`.
+Focused re-review of the two Phase 107 fix commits against the current `107-REVIEW.md` findings.
 
-The exact final label inventory coverage blocker is resolved: `validateV116FinalTypeScriptSurfaceLabels` now builds an inventory path set, rejects non-inventory final rows, rejects missing inventory rows, and has a regression test that swaps a real path for `apps/web/app/not-in-inventory.ts`.
+The owner-debug blocker is resolved. The real replay page still calls `resolveOwnerDebugReplayOptions(resolvedSearchParams)` (`apps/web/app/matches/[matchId]/replay/page.tsx:58-60`), and that resolver now reads the trusted server-side `COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID` (`apps/web/app/matches/[matchId]/replay/owner-debug.ts:32-41`). It returns owner-debug options only when the debug env gate is enabled, the public query explicitly requests owner debug, the query owner id matches the server-side requester id, and `getMatchReplay` then rechecks `allowOwnerDebug`, the owner-debug env gate, requester presence, and requester/owner equality before bypassing public replay evidence (`apps/web/app/matches/server.ts:177-183`). The previous public-query-only requester path is gone; mismatched or missing requester identity fails closed to normal public replay behavior.
 
-The owner-debug fix is secure in the narrow server-unit path because missing or mismatched `currentRequesterPlayerId` now fails closed. However, the real replay page still never derives or passes a requester identity, so the Workshop owner-debug link path that the product/e2e expects can no longer produce owner-debug data. The privacy monitor also still does not scan every shareable row/markdown field; for example, a forbidden marker in `privacyClass` passes validation.
+The exact final-label inventory path coverage remains resolved. `validateV116FinalTypeScriptSurfaceLabels` builds a source inventory path set, rejects any final label path not present in that inventory, rejects duplicate final paths, checks final row count, and checks that every inventory path is represented (`scripts/check-boundary-monitors.ts:1917-1925`, `scripts/check-boundary-monitors.ts:1973-1990`, `scripts/check-boundary-monitors.ts:2088-2091`). Manual probes confirmed fake paths and dropped inventory coverage throw.
+
+The shareable label privacy scan is improved but still incomplete. It now scans `surfaceLabel`, `capabilityGroup`, `owner`, `reason`, `risk`, `privacyClass`, `gate`, `futureMigration`, `monitorStatus`, and `selectedNormalJustification` (`scripts/check-boundary-monitors.ts:2063-2078`), so the specifically rechecked `privacyClass`, `gate`, and `reason` leaks are covered. However, not every markdown-rendered/shareable field is scanned; a forbidden marker in a non-selected row's markdown-rendered `taxonomyRole` still passes validation, and JSON-shareable `publicOutputPrivacy` also passes.
 
 Validation run during re-review:
 
-- `pnpm exec vitest run scripts/check-boundary-monitors.test.ts apps/web/app/matches/server.test.ts 'apps/web/app/matches/[matchId]/replay/owner-debug.test.ts'` - passed, 42 tests.
+- `pnpm exec vitest run scripts/check-boundary-monitors.test.ts apps/web/app/matches/server.test.ts 'apps/web/app/matches/[matchId]/replay/owner-debug.test.ts'` - passed, 43 tests.
 - `pnpm typescript-surface-labels:check` - passed.
 - `pnpm exec tsx scripts/check-boundary-monitors.ts` - passed, including `surface_labels`.
-- Manual negative probe: mutating the in-memory final labels artifact to set `surfaces[0].privacyClass = "DATABASE_URL"` still returned `PASSED`.
-
-## Critical Issues
-
-### CR-01: BLOCKER - Owner-Debug Requester Binding Is Not Wired Into The Real Replay Page
-
-**File:** `apps/web/app/matches/[matchId]/replay/page.tsx:58`
-
-**Issue:** Commit `9c86a39` makes `getMatchReplay` require `options.currentRequesterPlayerId` before owner-debug can be authorized (`apps/web/app/matches/server.ts:177-182`) and passes that value into the authorization resolver (`apps/web/app/matches/server.ts:221-225`). That is a correct fail-closed server guard, but the actual replay page still calls `getMatchReplay` with only `resolveOwnerDebugReplayOptions(resolvedSearchParams)` and focus options. `resolveOwnerDebugReplayOptions` only returns `allowOwnerDebug` and `requestedOwnerPlayerId` (`apps/web/app/matches/[matchId]/replay/owner-debug.ts:37-40`), so the real page path never supplies `currentRequesterPlayerId`.
-
-This means the security issue is avoided by making owner-debug unreachable through the normal persisted replay page rather than by binding it to a real authenticated requester. That breaks the Workshop owner-debug flow that still emits `?ownerDebug=1&ownerPlayerId=player:workshop-local` links (`apps/web/app/workshop/workshop-client-state.ts:170-174`) and whose e2e expects the clicked replay to show the `Owner debug` status (`apps/web/e2e/workshop-to-replay.spec.ts:121-124`).
-
-**Fix:** Derive a trusted requester identity at the page/server boundary, pass it as `currentRequesterPlayerId`, and cover the real page path with tests. Do not derive it from public query params.
-
-```typescript
-const ownerOptions = resolveOwnerDebugReplayOptions(resolvedSearchParams)
-const currentRequesterPlayerId =
-  ownerOptions === undefined
-    ? undefined
-    : await resolveTrustedReplayRequesterPlayerId({
-        matchId: resolvedParams.matchId,
-        requestedOwnerPlayerId: ownerOptions.requestedOwnerPlayerId,
-      })
-
-const data = await getMatchReplay(resolvedParams.matchId, {
-  ...ownerOptions,
-  ...(currentRequesterPlayerId ? { currentRequesterPlayerId } : {}),
-  focus: resolveReplayFocus(resolvedSearchParams),
-})
-```
-
-Add an integration/page-level regression that clicks or renders the real Workshop owner-debug replay path and asserts owner data appears only when the trusted requester resolves to the requested owner.
+- Manual negative probes:
+  - `fake-path` threw `final label path apps/web/app/not-in-inventory.ts is not in source inventory`.
+  - `missing-path-via-drop` threw `source inventory count drifted`.
+  - `reason-leak`, `privacyClass-leak`, and `gate-leak` all threw `public output/shareable label leak`.
+  - `taxonomyRole-leak` on a non-selected row returned `PASSED`.
+  - `publicOutputPrivacy-leak` returned `PASSED`.
 
 ## Warnings
 
-### WR-01: WARNING - Shareable Label Privacy Scan Still Misses Public Artifact Fields
+### WR-01: WARNING - Shareable Label Privacy Scan Still Misses Rendered And JSON Fields
 
-**File:** `scripts/check-boundary-monitors.ts:2061`
+**File:** `scripts/check-boundary-monitors.ts:2064`
 
-**Issue:** The monitor now scans several label row fields with `assertPublicOutputLeakSafe`, but it omits other shareable fields that are rendered into the markdown artifact, including `privacyClass` (`scripts/generate-typescript-surface-labels.ts:674`). During re-review, mutating the in-memory final labels artifact to set `surfaces[0].privacyClass = "DATABASE_URL"` still passed `validateV116FinalTypeScriptSurfaceLabels`.
+**Issue:** Commit `1d1f4a8` fixes the concrete `privacyClass` gap from the prior re-review and also covers `gate` and `reason`, but the monitor still does not scan every shareable final-label field written to the JSON or markdown artifacts. `renderFinalTypeScriptSurfaceLabelsMarkdown` renders `taxonomyRole` into the markdown table (`scripts/generate-typescript-surface-labels.ts:674`), but `validateV116FinalTypeScriptSurfaceLabels` omits `taxonomyRole` from the `assertPublicOutputLeakSafe` payload (`scripts/check-boundary-monitors.ts:2064-2078`). A manual probe changing a non-selected row's `taxonomyRole` to `DATABASE_URL` passed validation. The same probe against JSON-shareable `publicOutputPrivacy` also passed.
 
-That leaves a gap in the prior privacy finding: the monitor is no longer limited to synthetic `publicOutputExample`, but it still does not prove the complete shareable JSON/markdown label surface is free of forbidden private markers.
+This leaves the prior privacy finding partially open: the monitor now proves the named fields `privacyClass`, `gate`, and `reason` are safe, but it still does not prove the complete shareable JSON/markdown label surface is free of forbidden private markers.
 
-**Fix:** Scan every shareable final-label field that is written to JSON or markdown, with explicit allowlisting only for intentional policy vocabulary. At minimum, include `privacyClass`, `surfaceLabel`, `capabilityGroup`, `publicOutputPrivacy`, and the markdown-rendered row payload, or centralize the scan by building the exact markdown row object and validating it before rendering.
+**Fix:** Scan the exact row object used for shareable JSON/markdown output, with explicit exclusions only for non-string booleans and tightly enumerated policy fields. At minimum, add `path`, `taxonomyRole`, and `publicOutputPrivacy` to the public-output leak check, and add regression tests for a non-selected-row `taxonomyRole` leak and a `publicOutputPrivacy` leak.
 
 ```typescript
 assertPublicOutputLeakSafe(
@@ -99,14 +78,13 @@ assertPublicOutputLeakSafe(
     taxonomyRole: surface.taxonomyRole,
     surfaceLabel: surface.surfaceLabel,
     capabilityGroup: surface.capabilityGroup,
-    selectedNormal: surface.selectedNormal,
+    owner: surface.owner,
+    reason: surface.reason,
+    risk: surface.risk,
     privacyClass: surface.privacyClass,
     gate: surface.gate,
     futureMigration: surface.futureMigration,
     monitorStatus: surface.monitorStatus,
-    owner: surface.owner,
-    reason: surface.reason,
-    risk: surface.risk,
     publicOutputPrivacy: surface.publicOutputPrivacy,
     selectedNormalJustification: surface.selectedNormalJustification,
   },
@@ -114,14 +92,14 @@ assertPublicOutputLeakSafe(
 )
 ```
 
-Add a regression test that mutates `privacyClass` or another markdown-rendered field to a forbidden marker and expects validation to throw.
-
 ## Resolved Prior Findings
 
-- **CR-02 resolved:** exact final label inventory coverage now compares final paths with inventory paths in both directions and rejects swapped fake paths.
+- **CR-01 resolved:** the real replay page now receives owner-debug requester identity from server-side `COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID`; no public query parameter can supply `currentRequesterPlayerId`, missing/mismatched requester identity fails closed, and owner-debug remains behind the debug env/query gate plus persisted owner authorization.
+- **CR-02 remains resolved:** exact final-label inventory path coverage rejects fake final paths and missing inventory paths.
+- **WR-01 partially resolved:** `privacyClass`, `gate`, and `reason` are now scanned, but the warning remains because not all rendered/shareable label fields are covered.
 
 ---
 
-_Reviewed: 2026-05-24T22:18:06Z_
+_Reviewed: 2026-05-24T22:24:23Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
