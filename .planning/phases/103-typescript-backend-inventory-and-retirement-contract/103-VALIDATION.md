@@ -58,3 +58,31 @@ Expected downstream use:
 ## Out of Scope Confirmation
 
 The future language-neutral Strategy Execution Service / Runtime Broker remains out of scope. Phase 103 names broker-ready fields only. JS/TS Strategy support remains only through the isolated runtime service and runtime adapter roles, not through Go, web/API, or a normal TypeScript backend.
+
+## Final Nyquist Validation
+
+**Audited:** 2026-05-24
+
+### Result
+
+PARTIAL - BASE-01, BASE-02, BASE-03, BASE-05, and BASE-06 have executable validation coverage, but BASE-04 has a blocker.
+
+### Additional Behavioral Coverage Added
+
+| Requirement | Test | Result |
+| --- | --- | --- |
+| BASE-01 | Committed v1.16 artifact surface paths match regenerated scanner output and include route, worker, runtime-service, persistence, and service module kinds. | green |
+| BASE-03, BASE-05, BASE-06 | Committed v1.16 artifact records v1.15 Go baseline artifacts/capabilities, non-goals, no-normal-TypeScript-backend policy, no Go/web Strategy execution, no Node `vm`/`node:wasi` sandbox promotion, and forbidden public-output markers. | green |
+| BASE-04 | Committed v1.16 artifact must not label runtime persistence-backed surfaces as `frontend-only`. | BLOCKER: `apps/web/app/matches/replay-fixture.ts` is labeled `frontend-only` while importing runtime `@cowards/persistence/chronicle-store`. |
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `pnpm exec vitest run scripts/generate-typescript-backend-inventory.test.ts` | failed: 9 passed, 1 failed. The failing BASE-04 test reports `apps/web/app/matches/replay-fixture.ts`. |
+| `pnpm typescript-backend:inventory:check` | passed: artifacts are current. |
+| `pnpm boundary:imports` | passed with `strict_offenses=0 report_only_offenses=29`; report-only output includes `apps/web/app/matches/replay-fixture.ts:6 forbidden @cowards/persistence`. |
+
+### Escalation
+
+BASE-04 remains unfilled. The artifact currently documents a replay fixture path with a runtime persistence import as `frontend-only`, which weakens the retirement contract because fixture/persistence behavior is not distinguishable from frontend-only support in the machine-readable manifest. Implementation/artifact classification should be corrected in a follow-up by relabeling `apps/web/app/matches/replay-fixture.ts` to an explicit non-normal role such as `fixture-only` or another justified allowed role, then regenerating the v1.16 inventory artifacts and rerunning the Phase 103 tests.

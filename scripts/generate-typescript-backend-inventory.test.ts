@@ -283,7 +283,8 @@ describe("TypeScript backend inventory generator", () => {
           {
             ...inventory.surfaces.find(
               (surface) =>
-                surface.path === "apps/web/lib/workshop-read-service-adapter.ts",
+                surface.path ===
+                "apps/web/lib/workshop-read-service-adapter.ts",
             )!,
             role: "frontend-only",
           },
@@ -447,5 +448,114 @@ describe("TypeScript backend inventory generator", () => {
         sourceRefs: expect.any(Array),
       }),
     )
+  })
+
+  it("keeps the committed v1.16 artifact synchronized with every scanner root for BASE-01", () => {
+    const inventory = JSON.parse(
+      readFileSync(
+        ".planning/artifacts/v1.16-typescript-backend-inventory.json",
+        "utf8",
+      ),
+    ) as TypeScriptBackendInventory
+    const generated = generateTypeScriptBackendInventory()
+
+    expect(inventory.surfaces.map((surface) => surface.path).sort()).toEqual(
+      generated.surfaces.map((surface) => surface.path).sort(),
+    )
+    expect(inventory.surfaces.length).toBeGreaterThan(0)
+    expect(
+      inventory.surfaces.some((surface) => surface.kind === "next-api-route"),
+    ).toBe(true)
+    expect(
+      inventory.surfaces.some((surface) => surface.kind === "worker-module"),
+    ).toBe(true)
+    expect(
+      inventory.surfaces.some(
+        (surface) => surface.kind === "runtime-service-module",
+      ),
+    ).toBe(true)
+    expect(
+      inventory.surfaces.some(
+        (surface) => surface.kind === "persistence-module",
+      ),
+    ).toBe(true)
+    expect(
+      inventory.surfaces.some((surface) => surface.kind === "service-module"),
+    ).toBe(true)
+  })
+
+  it("keeps the committed v1.16 artifact on the BASE-03, BASE-05, and BASE-06 contract", () => {
+    const inventory = JSON.parse(
+      readFileSync(
+        ".planning/artifacts/v1.16-typescript-backend-inventory.json",
+        "utf8",
+      ),
+    ) as TypeScriptBackendInventory
+
+    expect(inventory.baselineReferences.goBackendBaselineArtifacts).toEqual(
+      expect.arrayContaining([
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-failure-drills.json",
+        ".planning/artifacts/v1.15-promotion-decision.md",
+        ".planning/artifacts/v1.15-boundary-baseline.md",
+      ]),
+    )
+    expect(inventory.baselineReferences.goBackendBaselineCapabilities).toEqual(
+      expect.arrayContaining([
+        "normal orchestration",
+        "persistence-facing API behavior",
+        "Match lifecycle",
+        "Chronicle persistence handoff",
+        "MatchSet scoring/status refresh",
+        "selected exhibition creation",
+        "public MatchSet summary",
+        "public replay metadata",
+        "selected public replay evidence",
+      ]),
+    )
+    expect(inventory.globalPolicies).toMatchObject({
+      normalTypeScriptBackendAllowed: false,
+      goExecutesStrategyCode: false,
+      webExecutesStrategyCode: false,
+      nodeVmSecurityBoundaryAllowed: false,
+      nodeWasiUntrustedSandboxAllowed: false,
+      productionSandboxReplacementInScope: false,
+      runtimeBrokerImplementationInScope: false,
+      countedNonJsPlayInScope: false,
+      goMigrationSchemaOwnershipInScope: false,
+      cloudDeploymentInScope: false,
+    })
+    expect(inventory.globalPolicies.publicOutputForbiddenByDefault).toEqual(
+      expect.arrayContaining([
+        "Strategy source",
+        "StrategyMemory",
+        "SoldierMemory",
+        "objective payloads",
+        "tokens",
+        "DB DSNs",
+      ]),
+    )
+  })
+
+  it("does not label runtime persistence imports as frontend-only for BASE-04", () => {
+    const inventory = JSON.parse(
+      readFileSync(
+        ".planning/artifacts/v1.16-typescript-backend-inventory.json",
+        "utf8",
+      ),
+    ) as TypeScriptBackendInventory
+
+    const frontendRowsWithRuntimePersistenceImports = inventory.surfaces
+      .filter((surface) => surface.role === "frontend-only")
+      .filter((surface) =>
+        surface.persistenceImports.some(
+          (entry) => !entry.statementText.trimStart().startsWith("import type"),
+        ),
+      )
+      .map((surface) => surface.path)
+
+    expect(frontendRowsWithRuntimePersistenceImports).toEqual([])
   })
 })
