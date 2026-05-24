@@ -1,137 +1,76 @@
 ---
 phase: 105-web-api-go-only-cutover-and-fallback-removal
-reviewed: 2026-05-24T19:31:52Z
+reviewed: 2026-05-24T19:44:45Z
 depth: standard
-files_reviewed: 28
+re_review_of: a76d9a151b305feefe0e373b6d2df97a9811ce63
+files_reviewed: 13
 files_reviewed_list:
-  - .planning/artifacts/v1.16-selected-go-route-manifest.json
-  - .planning/artifacts/v1.16-selected-go-route-manifest.md
-  - apps/go-backend/live_backend.go
-  - apps/go-backend/main_test.go
-  - apps/web/app/api/account/advanced-forks/route.ts
-  - apps/web/app/api/account/revisions/[revisionId]/source/route.ts
-  - apps/web/app/api/account/revisions/route.ts
-  - apps/web/app/api/account/starter-forks/route.ts
-  - apps/web/app/api/auth/session/route.ts
-  - apps/web/app/api/auth/sign-in/route.ts
-  - apps/web/app/api/auth/sign-out/route.ts
-  - apps/web/app/api/auth/sign-up/route.ts
-  - apps/web/app/api/exhibitions/route.ts
-  - apps/web/app/api/replays/[matchId]/metadata/route.ts
+  - apps/web/app/api/service/health/route.test.ts
   - apps/web/app/api/service/health/route.ts
   - apps/web/app/matches/server.test.ts
   - apps/web/app/matches/server.ts
-  - apps/web/lib/account-revision-write-boundary.ts
   - apps/web/lib/account-service-adapter.test.ts
   - apps/web/lib/account-service-adapter.ts
-  - apps/web/lib/account-service-boundary.ts
-  - apps/web/lib/go-backend-service-client.ts
-  - apps/web/lib/public-go-read-client.ts
   - apps/web/lib/public-service-adapter.test.ts
   - apps/web/lib/public-service-adapter.ts
   - apps/web/lib/public-service-boundary.ts
+  - scripts/check-boundary-monitors.test.ts
   - scripts/check-boundary-monitors.ts
+  - scripts/check-local-topology.test.ts
   - scripts/check-local-topology.ts
 findings:
-  critical: 2
-  warning: 3
+  critical: 0
+  warning: 2
   info: 0
-  total: 5
+  total: 2
 status: issues_found
 ---
 
-# Phase 105: Code Review Report
+# Phase 105: Code Review Re-review Report
 
-**Reviewed:** 2026-05-24T19:31:52Z
+**Reviewed:** 2026-05-24T19:44:45Z
 **Depth:** standard
-**Files Reviewed:** 28
+**Fix Commit:** `a76d9a151b305feefe0e373b6d2df97a9811ce63`
+**Files Reviewed:** 13
 **Status:** issues_found
 
 ## Summary
 
-Reviewed Phase 105 commits `997098e..2397324` on top of `cef207e`, with emphasis on Go-only selected-route behavior, fallback removal, privacy, cookie handling, manifest drift, and page-smoke realism. The main cutover removes many selected API imports correctly, but strict no-TypeScript mode and route-scoped public ownership are inconsistent enough to allow silent TypeScript fallback or accidental broader public-read migration.
+Re-reviewed Phase 105 after fix commit `a76d9a1`. The two prior blockers are resolved: `COWARDS_NO_TYPESCRIPT_BACKEND=1` now selects Go ownership for account/public reads and replay evidence, and the legacy strategy-only public flag no longer routes unrelated public read methods through Go. The classified health failure warning is also resolved.
 
-## Critical Issues
+Two warnings remain. The route manifest monitor still does not prove selected Next routes import the intended Go/public replay boundaries, and replay realism smoke still validates only DTO evidence/Soldier bounds rather than rendered replay board realism, terrain bounds, or canonical starts.
 
-### CR-01: BLOCKER - Strict no-TypeScript mode still falls back to TypeScript account and replay backends
+## Resolved Prior Findings
 
-**File:** `apps/web/lib/account-service-adapter.ts:34`
-
-**Issue:** `/api/service/health` treats `COWARDS_NO_TYPESCRIPT_BACKEND=1` as strict Go mode, but the account and public ownership predicates do not. With `COWARDS_NO_TYPESCRIPT_BACKEND=1` and `COWARDS_GO_BACKEND_URL` set, `/api/auth/session` and `/api/account/revisions` still call `createCowardsLocalService()` unless `COWARDS_GO_BACKEND_OWNER=go` or route-specific flags are also set. `apps/web/app/matches/server.ts:122` has the same gap for public replay metadata/evidence, so strict no-TypeScript mode can still read the private Chronicle store for public replay.
-
-**Fix:**
-```typescript
-export interface GoBackendOwnershipEnv {
-  COWARDS_NO_TYPESCRIPT_BACKEND?: string | undefined
-}
-
-const isStrictNoTypescriptBackend = (env: GoBackendOwnershipEnv): boolean =>
-  env.COWARDS_NO_TYPESCRIPT_BACKEND === "1"
-
-export const isGoAuthSessionSelected = (env = process.env): boolean =>
-  isStrictNoTypescriptBackend(env) ||
-  env.COWARDS_GO_BACKEND_OWNER === "go" ||
-  env.COWARDS_GO_AUTH_SESSION === "1"
-
-export const isGoAccountRevisionsSelected = (env = process.env): boolean =>
-  isStrictNoTypescriptBackend(env) ||
-  env.COWARDS_GO_BACKEND_OWNER === "go" ||
-  env.COWARDS_GO_ACCOUNT_REVISIONS === "1"
-```
-
-Apply the same strict predicate to public read ownership, replay metadata/evidence selection, forks, and exhibitions. Add tests that `COWARDS_NO_TYPESCRIPT_BACKEND=1` rejects missing Go URL and never constructs local service or Chronicle store.
-
-### CR-02: BLOCKER - Strategy-only public read flag migrates every public read route to Go
-
-**File:** `apps/web/lib/public-service-adapter.ts:72`
-
-**Issue:** `resolvePublicReadRouteOwnership()` says `COWARDS_GO_PUBLIC_STRATEGY_READS=1` selects only `getPublicStrategyPage`, but `createPublicReadService()` ignores `selectedRoutes` and routes player, ladder, MatchSet, and replay metadata reads to Go as well. The test at `apps/web/lib/public-service-adapter.test.ts:101` locks in the accidental broad migration. This violates the Phase 105 scope guard against accidental broader ladder/public migration and makes a legacy strategy-only rollout flag change unrelated pages.
-
-**Fix:**
-```typescript
-const ownership = resolvePublicReadRouteOwnership(env)
-const selected = (routeId: PublicReadRouteId) =>
-  ownership.selectedRoutes.includes(routeId)
-
-async getPublicLadderSeason(seasonId) {
-  if (!selected("getPublicLadderSeason")) {
-    return explicitNonNormalPublicReadFallback.getPublicLadderSeason(seasonId)
-  }
-  return requireGoClient("getPublicLadderSeason", selectedGoClient)
-    .getPublicLadderSeason(seasonId)
-}
-```
-
-Alternatively remove the strategy-only flag entirely and make `COWARDS_GO_PUBLIC_READS=1` or `COWARDS_GO_BACKEND_OWNER=go` the only public-read cutover switches. Update the route-scoped test so non-selected public routes cannot be reached through the strategy-only flag.
+- **CR-01 resolved:** `apps/web/lib/account-service-adapter.ts` now treats `COWARDS_NO_TYPESCRIPT_BACKEND=1` as strict selected Go mode for auth/session, account revisions, forks, and exhibitions. `apps/web/lib/public-service-adapter.ts` and `apps/web/app/matches/server.ts` now include strict no-TypeScript mode in public replay selection, with tests covering fail-closed behavior without Chronicle reads.
+- **CR-02 resolved:** `apps/web/lib/public-service-adapter.ts` now checks `selectedRoutes` before dispatching public read methods. The strategy-only switch calls only `getPublicStrategyPage`; unrelated public read methods reject before hitting the Go client.
+- **WR-01 resolved:** `/api/service/health` now classifies missing URL, stopped Go, and non-JSON Go health failures as redacted 503 responses, with focused tests.
 
 ## Warnings
 
-### WR-01: WARNING - Stopped-Go health proxy errors are unclassified
+### WR-01: WARNING - Manifest drift monitor still does not verify selected routes use the intended adapter boundary
 
-**File:** `apps/web/app/api/service/health/route.ts:13`
+**File:** `scripts/check-boundary-monitors.ts:862`
 
-**Issue:** The selected manifest declares health stopped-Go behavior as `fail_closed_classified`, but the health route directly awaits `fetch()` and `response.json()` without a `try/catch`. If Go is stopped or returns non-JSON, the route throws through Next.js instead of returning a redacted classified 503 body.
+**Issue:** The fix adds Next route/page existence checks and forbidden-import checks for API routes, but it still does not require the expected Go/public boundary token for each selected route. Non-API public pages only need to exist, and API routes can pass as long as they avoid forbidden imports. A selected Next route could be reverted to a placeholder, wrong boundary, or stale non-Go implementation without tripping `validateSelectedGoRouteManifest()`.
 
-**Fix:** Wrap the proxy fetch and JSON parse in a catch that returns a stable public response, for example `{ ok: false, service: "go-backend", error: "go_backend_unavailable" }` with status 503. Add stopped-Go and non-JSON tests for strict Go/no-TypeScript health mode.
+**Fix:** Add per-route expected boundary assertions after resolving `nextFile`. For example, require account/auth/exhibition API routes to contain `requireSelectedGoBackendClient` or the account boundary, public page/API routes to contain `public-service-boundary`, and replay pages to contain `getMatchReplay`/`apps/web/app/matches/server` as appropriate. Add negative tests that mutate a manifest route to an existing but wrong file and that mock a selected file without its expected boundary token.
 
-### WR-02: WARNING - Selected route manifest validation does not validate Next path drift
+### WR-02: WARNING - Replay page smoke still does not cover rendered board realism
 
-**File:** `scripts/check-boundary-monitors.ts:858`
+**File:** `scripts/check-local-topology.ts:450`
 
-**Issue:** `validateSelectedGoRouteManifest()` validates Go `mux.HandleFunc` registrations, but it never verifies that each `nextPath` in `.planning/artifacts/v1.16-selected-go-route-manifest.json:16` maps to an existing Next route/page or still imports the intended Go adapter boundary. A stale `nextPath` or reverted Next adapter can pass the manifest check.
+**Issue:** `checkPublicReplayEvidenceRealism()` validates the public replay evidence schema, first snapshot bounds, and visible Soldier positions, but it does not verify terrain positions, canonical arena starts, or the rendered replay board/page. The v1.16 page smoke at `scripts/check-local-topology.ts:1225` still fetches replay HTML by static text markers and separately checks the Go evidence endpoint, so a clipped/off-screen or incorrectly rendered replay board can pass.
 
-**Fix:** Convert each manifest `nextPath` to its expected App Router file path (`app/api/.../route.ts`, `app/.../page.tsx`, or the replay server boundary) and assert it exists. For selected API adapters, also assert no forbidden imports and require the expected Go/public-service boundary token.
+**Fix:** Extend the strict selected Go smoke to assert the replay projection and rendered page together. At minimum, check terrain coordinates inside declared bounds, canonical arena starting Soldier positions for the golden replay, and rendered board evidence from the replay page rather than only HTML text. Prefer a browser/rendered assertion or a stable server-rendered board marker that proves cells/pieces are in bounds.
 
-### WR-03: WARNING - v1.16 page smoke does not check replay board realism
+## Verification
 
-**File:** `scripts/check-local-topology.ts:421`
-
-**Issue:** The new v1.16 selected Go page smoke fetches HTML and checks text only. It does not validate visible Soldier/terrain coordinates, board bounds, canonical starting positions, or that the replay board is actually plausible and unclipped. That misses the project-required replay/Match creation realism checks for this phase's replay and exhibition cutover.
-
-**Fix:** Extend the strict selected Go smoke with a browser/rendered replay assertion or a shared replay DTO realism check. At minimum, for the public replay target, verify projected board dimensions, all visible Soldier and terrain positions are within declared bounds, canonical arena starts are present, and the rendered board contains in-bounds cells/pieces rather than only matching static text.
+- `pnpm exec vitest run apps/web/lib/account-service-adapter.test.ts apps/web/lib/public-service-adapter.test.ts apps/web/app/api/service/health/route.test.ts apps/web/app/matches/server.test.ts scripts/check-boundary-monitors.test.ts scripts/check-local-topology.test.ts` passed: 6 files, 61 tests.
+- `pnpm boundary:monitors` passed.
 
 ---
 
-_Reviewed: 2026-05-24T19:31:52Z_
+_Reviewed: 2026-05-24T19:44:45Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
