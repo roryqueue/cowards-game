@@ -12,16 +12,16 @@
 - [ ] **BASE-02**: Developer can inspect a v1.16 ownership manifest that defines allowed TypeScript roles as frontend, runtime-only, parity-only, rollback-only, test-only, fixture-only, or deferred, with no normal TypeScript backend role.
 - [ ] **BASE-03**: Developer can verify v1.15 Go ownership behavior is treated as the backend baseline for orchestration, persistence-facing API behavior, Match lifecycle, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence.
 - [ ] **BASE-04**: Developer can verify TypeScript service/backend behavior is documented only as parity oracle, test fixture source, rollback reference, frontend support, or isolated runtime service where still needed.
-- [ ] **BASE-05**: Developer can verify explicit v1.16 non-goals exclude replacing JS/TS Strategy support, promoting non-JS counted play, production sandbox replacement, Go/web/API Strategy execution, Node `vm` security-boundary use, Go migration/schema ownership, durable ratings, official tournaments, custom arenas, marketplace work, or cloud deployment work.
+- [ ] **BASE-05**: Developer can verify explicit v1.16 non-goals exclude replacing JS/TS Strategy support, building the future Runtime Broker, promoting WASM/WASI or non-JS counted play, production sandbox replacement, Go/web/API Strategy execution, Node `vm` security-boundary use, Node `node:wasi` as an untrusted-code sandbox, Go migration/schema ownership, durable ratings, official tournaments, custom arenas, marketplace work, or cloud deployment work.
 - [ ] **BASE-06**: Developer can verify the v1.16 baseline preserves deterministic engine purity, Strategy Revision immutability, schema validation, replay/public-output privacy, owner-source privacy, hostile-code isolation, rollback clarity, and no silent fallback.
 
 ### Runtime Service Boundary
 
-- [ ] **RT-01**: Developer can inspect the final v1.16 runtime service boundary as a broker-ready, language-neutral contract, including transport contract, runtime ABI use, source package policy, execution limits, timeouts, diagnostics, logs, crash semantics, replay privacy, and no-fallback behavior.
+- [ ] **RT-01**: Developer can inspect the final v1.16 runtime service boundary as a broker-ready, language-neutral **Strategy Execution Service** / **Runtime Broker** contract, including transport contract, runtime ABI use, JSON/schema-validated envelopes, source package policy, execution limits, timeouts, diagnostics, logs, crash semantics, replay privacy, and no-fallback behavior.
 - [ ] **RT-02**: Developer can verify JS/TS Strategy execution remains supported only inside the isolated runtime service or its explicit runtime adapter boundary.
 - [ ] **RT-03**: Developer can verify the runtime service does not claim jobs, complete Matches, persist Chronicles, refresh MatchSet scoring, serve normal product API routes, access web/API request state, or act as a backend fallback.
-- [ ] **RT-04**: Developer can verify Go invokes runtime execution exclusively through `runtime-execution-service-v1.15` and `strategy-runtime-abi-v1.14` or a documented compatible successor whose request/response shape can be fronted by a future language-neutral runtime broker.
-- [ ] **RT-05**: Developer can verify runtime service request and response schemas reject ABI drift, malformed inputs, source hash/byte mismatches, oversized payloads, timeout failures, invalid outputs, unsafe diagnostics, and private output leaks.
+- [ ] **RT-04**: Developer can verify Go invokes runtime execution exclusively through `runtime-execution-service-v1.15` and `strategy-runtime-abi-v1.14` or a documented compatible successor whose JSON request/response shape can be implemented by every language runtime and fronted by a future language-neutral Runtime Broker.
+- [ ] **RT-05**: Developer can verify runtime service request and response schemas reject ABI drift, malformed inputs, source hash/byte mismatches, oversized payloads, timeout failures, invalid outputs, unsafe diagnostics, and private output leaks, and that Strategy Revision submission performs compile, validation, or artifact packaging checks where practical before immutable Match execution.
 - [ ] **RT-06**: Developer can verify Go and web/API processes do not import, evaluate, transpile, or execute Strategy source and do not use Node `vm` as a hostile-code security boundary.
 - [ ] **RT-07**: Developer can verify runtime readiness labels for worker-thread, subprocess, container-subprocess, and non-JS candidates remain explicit and do not silently promote production hostile-code isolation or counted non-JS play.
 
@@ -79,9 +79,10 @@
 
 ### Runtime And Sandbox
 
-- **RTP-01**: Developer can implement or promote a language-neutral runtime broker, or replace the JS/TS runtime service with another production runtime host, only after parity, isolation, observability, package policy, diagnostics redaction, no-fallback, and rollback evidence are complete.
+- **RTP-01**: Developer can implement or promote a language-neutral Strategy Execution Service / Runtime Broker, or replace the JS/TS runtime service with another production runtime host, only after parity, isolation, observability, package policy, diagnostics redaction, no-fallback, and rollback evidence are complete.
 - **RTP-02**: Developer can promote a production hostile-code isolation boundary after live container/microVM/resource/filesystem/network evidence and operational rollback criteria pass.
 - **RTP-03**: User can submit counted non-JS Strategy Revisions only after sandbox, package policy, Workshop UX, docs, compatibility, privacy, and rollback criteria are satisfied.
+- **RTP-04**: Developer can evaluate WASM/WASI/component-model runtime hosting as a long-term unifying path for some languages while proving deterministic execution, capability sandboxing, resource limits, compilation provenance, and host-runtime security instead of assuming WASI is sufficient by itself.
 
 ### Product And Operations
 
@@ -98,6 +99,9 @@
 | Executing Strategy code in Go or web/API | Violates hostile-code isolation and deterministic boundary constraints. |
 | Node `vm` as a security boundary | Explicitly prohibited and not suitable for hostile code isolation. |
 | Production sandbox replacement | v1.16 preserves the existing runtime service boundary; sandbox promotion is separate. |
+| Building the Strategy Execution Service / Runtime Broker | v1.16 shapes the contract so a broker can front or replace the TypeScript runtime service later; it does not implement the broker. |
+| Promoting WASM/WASI/component-model runtime hosting | Strong long-term candidate for some languages, especially with deterministic fuel and sandbox guidance, but not a silver bullet and not promoted in v1.16. |
+| Node `node:wasi` for untrusted code | Node's WASI implementation is not accepted as a hostile Strategy sandbox. |
 | Counted non-JS MatchSets, ladders, or gauntlets by default | Requires separate product, sandbox, package, compatibility, and rollback work. |
 | Go-owned migrations/schema ownership | Separate operational rollback risk. |
 | Durable ratings, official tournaments, custom arenas, monetization, or marketplace work | Not part of TypeScript backend retirement. |
