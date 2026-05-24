@@ -57,7 +57,7 @@ describe("final v1.16 TypeScript surface labels", () => {
         .filter((surface) => surface.path.includes("workshop"))
         .map((surface) => surface.surfaceLabel),
     )
-    expect(workshopLabels).toEqual(
+    expect([...workshopLabels]).toEqual(
       expect.arrayContaining([
         "deferred-workshop-validation",
         "deferred-workshop-private-source",

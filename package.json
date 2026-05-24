@@ -17,6 +17,8 @@
     "go:parity": "pnpm exec tsx scripts/generate-go-parity-fixtures.ts --check && cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./...",
     "typescript-backend:inventory": "pnpm exec tsx scripts/generate-typescript-backend-inventory.ts --write",
     "typescript-backend:inventory:check": "pnpm exec tsx scripts/generate-typescript-backend-inventory.ts --check",
+    "typescript-surface-labels": "pnpm exec tsx scripts/generate-typescript-surface-labels.ts --write",
+    "typescript-surface-labels:check": "pnpm exec tsx scripts/generate-typescript-surface-labels.ts --check",
     "strategy-artifacts:generate": "pnpm exec tsx scripts/generate-strategy-artifact-manifest.ts",
     "strategy-artifacts:check": "pnpm exec tsx scripts/generate-strategy-artifact-manifest.ts --check",
     "sandbox:evaluate": "pnpm exec tsx scripts/evaluate-runtime-sandbox.ts",
