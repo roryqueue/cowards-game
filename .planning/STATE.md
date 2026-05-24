@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: Runtime Isolation and TypeScript Backend Retirement
 status: planning
-stopped_at: Phase 106 discussion complete; ready for Phase 107 discussion
-last_updated: "2026-05-24T17:35:00.000Z"
+stopped_at: Phase 107 discussion complete; ready for Phase 108 discussion
+last_updated: "2026-05-24T17:45:00.000Z"
 last_activity: 2026-05-24 - Milestone v1.16 started
 progress:
   total_phases: 7
@@ -24,7 +24,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-24)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 107 - Deferred Surface Relabeling and Privacy Preservation.
+**Current focus:** Phase 108 - No-TypeScript-Backend Topology and Monitor Gate.
 **Latest shipped milestone:** v1.15 Go Backend Ownership Completion
 **Active milestone:** v1.16 Runtime Isolation and TypeScript Backend Retirement
 **Requirements:** .planning/REQUIREMENTS.md
@@ -32,10 +32,10 @@ See: .planning/PROJECT.md (updated 2026-05-24)
 
 ## Current Position
 
-Phase: 107 - Deferred Surface Relabeling and Privacy Preservation
+Phase: 108 - No-TypeScript-Backend Topology and Monitor Gate
 Plan: Not started
 Status: Discussing phase context
-Last activity: 2026-05-24 - Phase 106 discussion captured TypeScript worker and persistence quarantine decisions
+Last activity: 2026-05-24 - Phase 107 discussion captured deferred surface labeling and privacy preservation decisions
 
 ## Workflow Settings
 
@@ -92,7 +92,7 @@ v1.16 goal:
 
 ## Next Todos
 
-- Run `$gsd-discuss-phase 107` to clarify deferred surface relabeling and privacy preservation.
+- Run `$gsd-discuss-phase 108` to clarify no-TypeScript-backend topology and monitor gates.
 - Run `$gsd-plan-phase 103` after milestone discussion sequencing completes or when ready to plan Phase 103.
 
 ## Blockers/Concerns
