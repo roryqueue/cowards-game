@@ -227,6 +227,16 @@ describe("boundary drift monitors", () => {
         ),
       }),
     ).toThrow(/authSession missing Next route\/page/)
+    expect(() =>
+      validateSelectedGoRouteManifest({
+        ...selectedGoRouteManifest,
+        routes: selectedGoRouteManifest.routes.map((route) =>
+          route.routeId === "createSession"
+            ? { ...route, nextPath: "/api/auth/session" }
+            : route,
+        ),
+      }),
+    ).toThrow(/createSession selected Next route\/page missing boundary token/)
   })
 
   it("uses the canonical public DTO leak guard", () => {

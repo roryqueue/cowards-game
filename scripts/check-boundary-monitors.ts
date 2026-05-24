@@ -400,7 +400,7 @@ export const selectedGoRouteManifest: SelectedGoRouteManifest = {
       routeFamily: "account_revision",
       method: "POST",
       goPath: "/account/strategy-revisions",
-      nextPath: "/api/account/revisions",
+      nextPath: "/api/account/revisions/save",
       authScope: "session",
       privacyClass: "session",
       selectedNormal: true,
@@ -878,6 +878,14 @@ export const validateSelectedGoRouteManifest = (
         }
       }
     }
+    for (const expected of selectedGoRouteBoundaryTokens(route.routeId)) {
+      const source = readFileSync(path.join(repoRoot, nextFile), "utf8")
+      if (!source.includes(expected)) {
+        throw new Error(
+          `${route.routeId} selected Next route/page missing boundary token ${expected}`,
+        )
+      }
+    }
     assertMonitorPublicPayload({
       routeId: route.routeId,
       routeFamily: route.routeFamily,
@@ -914,6 +922,47 @@ const selectedGoRouteNextFile = (nextPath: string): string => {
     return path.join("apps/web/app", relative, "route.ts")
   }
   return path.join("apps/web/app", relative, "page.tsx")
+}
+
+const selectedGoRouteBoundaryTokens = (routeId: string): readonly string[] => {
+  switch (routeId) {
+    case "health":
+      return ["COWARDS_NO_TYPESCRIPT_BACKEND", "go_backend_unavailable"]
+    case "authSession":
+      return ["getAccountSession"]
+    case "createSession":
+      return ["requireSelectedGoBackendClient", "createSession"]
+    case "signUp":
+      return ["requireSelectedGoBackendClient", "createAccount"]
+    case "revokeSession":
+      return ["requireSelectedGoBackendClient", "revokeSession"]
+    case "listStrategyRevisions":
+      return ["listAccountReadRevisions"]
+    case "createStrategyRevision":
+      return ["saveAccountRevisionFromRequest"]
+    case "getStrategyRevisionSource":
+      return ["requireSelectedGoBackendClient", "getStrategyRevisionSource"]
+    case "forkStarterStrategy":
+      return ["requireSelectedGoBackendClient", "forkStarterStrategy"]
+    case "forkAdvancedStrategy":
+      return ["requireSelectedGoBackendClient", "forkAdvancedStrategy"]
+    case "createMatchSet":
+      return ["requireSelectedGoBackendClient", "createMatchSet"]
+    case "getPublicStrategyPage":
+      return ["getPublicStrategyCard"]
+    case "getPublicPlayerPage":
+      return ["getPublicPlayerProfile"]
+    case "getPublicLadderSeason":
+      return ["getPublicLadderSeason"]
+    case "getPublicMatchSetSummary":
+      return ["getPublicMatchSetResult"]
+    case "getPublicReplayMetadata":
+      return ["getPublicReplayMetadata"]
+    case "getPublicReplayEvidence":
+      return ["getMatchReplay"]
+    default:
+      return []
+  }
 }
 
 const checkSelectedGoRouteManifest = (): string => {

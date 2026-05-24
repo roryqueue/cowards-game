@@ -474,10 +474,25 @@ const checkPublicReplayEvidenceRealism = (value: unknown): void => {
     "soldiers",
     "public replay board",
   )
-  if (soldiers.length < 2) {
-    throw new Error("public replay evidence has too few visible Soldiers")
+  const terrainStones = requireRecordArray(
+    board,
+    "terrainStones",
+    "public replay board",
+  )
+  if (soldiers.length !== 16) {
+    throw new Error("public replay evidence canonical start must have 16 Soldiers")
   }
+  let bottomCount = 0
+  let topCount = 0
   for (const soldier of soldiers) {
+    const id = requireString(soldier, "id", "public replay Soldier")
+    const owner = requireString(
+      soldier,
+      "ownerPlayerId",
+      "public replay Soldier",
+    )
+    const facing = requireString(soldier, "facing", "public replay Soldier")
+    const status = requireString(soldier, "status", "public replay Soldier")
     const position = asRecord(
       soldier.position,
       "public replay Soldier position",
@@ -486,6 +501,42 @@ const checkPublicReplayEvidenceRealism = (value: unknown): void => {
     const y = requireNumber(position, "y", "public replay Soldier position")
     if (x < minX || x > maxX || y < minY || y > maxY) {
       throw new Error("public replay evidence has out-of-bounds Soldiers")
+    }
+    if (owner === "bottom") {
+      bottomCount += 1
+      const expectedIndex = Number(id.replace("bottom-soldier-", ""))
+      if (
+        !Number.isInteger(expectedIndex) ||
+        x !== expectedIndex + 1 ||
+        y !== maxY ||
+        facing !== "UP" ||
+        status !== "ACTIVE"
+      ) {
+        throw new Error("public replay evidence bottom canonical start drifted")
+      }
+    }
+    if (owner === "top") {
+      topCount += 1
+      const expectedIndex = Number(id.replace("top-soldier-", ""))
+      if (
+        !Number.isInteger(expectedIndex) ||
+        x !== expectedIndex + 1 ||
+        y !== minY ||
+        facing !== "DOWN" ||
+        status !== "ACTIVE"
+      ) {
+        throw new Error("public replay evidence top canonical start drifted")
+      }
+    }
+  }
+  if (bottomCount !== 8 || topCount !== 8) {
+    throw new Error("public replay evidence canonical start must have 8 Soldiers per side")
+  }
+  for (const terrainStone of terrainStones) {
+    const x = requireNumber(terrainStone, "x", "public replay terrain")
+    const y = requireNumber(terrainStone, "y", "public replay terrain")
+    if (x < minX || x > maxX || y < minY || y > maxY) {
+      throw new Error("public replay evidence has out-of-bounds terrain")
     }
   }
 }
