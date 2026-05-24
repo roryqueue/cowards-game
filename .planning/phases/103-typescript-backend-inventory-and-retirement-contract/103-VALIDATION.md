@@ -65,7 +65,7 @@ The future language-neutral Strategy Execution Service / Runtime Broker remains 
 
 ### Result
 
-PARTIAL - BASE-01, BASE-02, BASE-03, BASE-05, and BASE-06 have executable validation coverage, but BASE-04 has a blocker.
+PASS - BASE-01 through BASE-06 now have executable validation coverage.
 
 ### Additional Behavioral Coverage Added
 
@@ -73,16 +73,16 @@ PARTIAL - BASE-01, BASE-02, BASE-03, BASE-05, and BASE-06 have executable valida
 | --- | --- | --- |
 | BASE-01 | Committed v1.16 artifact surface paths match regenerated scanner output and include route, worker, runtime-service, persistence, and service module kinds. | green |
 | BASE-03, BASE-05, BASE-06 | Committed v1.16 artifact records v1.15 Go baseline artifacts/capabilities, non-goals, no-normal-TypeScript-backend policy, no Go/web Strategy execution, no Node `vm`/`node:wasi` sandbox promotion, and forbidden public-output markers. | green |
-| BASE-04 | Committed v1.16 artifact must not label runtime persistence-backed surfaces as `frontend-only`. | BLOCKER: `apps/web/app/matches/replay-fixture.ts` is labeled `frontend-only` while importing runtime `@cowards/persistence/chronicle-store`. |
+| BASE-04 | Committed v1.16 artifact must not label runtime persistence-backed surfaces as `frontend-only`. | green: `apps/web/app/matches/replay-fixture.ts` is labeled `fixture-only` while retaining its Chronicle metadata import evidence. |
 
 ### Commands Run
 
 | Command | Result |
 | --- | --- |
-| `pnpm exec vitest run scripts/generate-typescript-backend-inventory.test.ts` | failed: 9 passed, 1 failed. The failing BASE-04 test reports `apps/web/app/matches/replay-fixture.ts`. |
+| `pnpm exec vitest run scripts/generate-typescript-backend-inventory.test.ts` | passed: 10 tests. |
 | `pnpm typescript-backend:inventory:check` | passed: artifacts are current. |
 | `pnpm boundary:imports` | passed with `strict_offenses=0 report_only_offenses=29`; report-only output includes `apps/web/app/matches/replay-fixture.ts:6 forbidden @cowards/persistence`. |
 
-### Escalation
+### Gap Closure
 
-BASE-04 remains unfilled. The artifact currently documents a replay fixture path with a runtime persistence import as `frontend-only`, which weakens the retirement contract because fixture/persistence behavior is not distinguishable from frontend-only support in the machine-readable manifest. Implementation/artifact classification should be corrected in a follow-up by relabeling `apps/web/app/matches/replay-fixture.ts` to an explicit non-normal role such as `fixture-only` or another justified allowed role, then regenerating the v1.16 inventory artifacts and rerunning the Phase 103 tests.
+The initial Nyquist audit found that `apps/web/app/matches/replay-fixture.ts` was labeled `frontend-only` despite importing Chronicle metadata helpers. That gap was fixed by classifying the path as `fixture-only`, regenerating the v1.16 JSON/markdown inventory artifacts, and adding committed-artifact coverage to prevent regression.
