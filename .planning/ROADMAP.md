@@ -26,7 +26,7 @@
 
 ## Active Milestone: v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
 
-**Status:** In progress - phases 132-137 complete
+**Status:** In progress - phases 132-138 complete
 **Phases:** 132-139
 **Granularity:** Standard
 **Requirements:** 50/50 mapped
@@ -54,7 +54,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 - [x] **Phase 135: Timeout, Latency, and Reliability Budget Model** - Document, test, and measure Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
 - [x] **Phase 136: Exhibition Execution Stabilization and Retry Semantics** - Stabilize Python exhibition execution where practical and make retry/no-retry semantics explicit and safe.
 - [x] **Phase 137: Degraded-State UX and Public-Safe Reliability Evidence** - Improve user-facing running, slow, degraded, timeout, strategy-failed, and system-failed states in MatchSet/replay evidence.
-- [ ] **Phase 138: Signed-In Reliability Proof and JS/TS Regression Gate** - Run a realistic signed-in proof with one JS/TS and two Python revisions, mixed and Python-vs-Python exhibitions, candidate evidence, privacy checks, and JS/TS regression checks.
+- [x] **Phase 138: Signed-In Reliability Proof and JS/TS Regression Gate** - Run a realistic signed-in proof with one JS/TS and two Python revisions, mixed and Python-vs-Python exhibitions, candidate evidence, privacy checks, and JS/TS regression checks.
 - [ ] **Phase 139: Promotion Decision, Audit, Archive, and Tag** - Verify, audit, document promotion decisions, archive v1.20, remove active requirements, commit, and tag `v1.20`.
 
 ## Phase Details
@@ -161,7 +161,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 5. User can open MatchSet result and replay evidence with labels, reliability evidence, candidate lane evidence, degraded/timeout wording where applicable, and plausible board state.
 6. Developer can verify public outputs are private-data safe and contain no silent fallback, ownership drift, Python counted eligibility, or JS/TS regression.
 
-**Plans:** 0 planned
+**Plans:** 1 complete
 
 ### Phase 139: Promotion Decision, Audit, Archive, and Tag
 
@@ -190,7 +190,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 | 135. Timeout, Latency, and Reliability Budget Model | 1/1 | Complete | 2026-05-25 |
 | 136. Exhibition Execution Stabilization and Retry Semantics | 1/1 | Complete | 2026-05-25 |
 | 137. Degraded-State UX and Public-Safe Reliability Evidence | 1/1 | Complete | 2026-05-25 |
-| 138. Signed-In Reliability Proof and JS/TS Regression Gate | 0/0 | Not Started | - |
+| 138. Signed-In Reliability Proof and JS/TS Regression Gate | 1/1 | Complete | 2026-05-25 |
 | 139. Promotion Decision, Audit, Archive, and Tag | 0/0 | Not Started | - |
 
 ## Requirement Coverage
@@ -211,11 +211,11 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 
 ## Next Up
 
-Phase 138: Signed-In Reliability Proof and JS/TS Regression Gate.
+Phase 139: Promotion Decision, Audit, Archive, and Tag.
 
-`$gsd-plan-phase 138`
+`$gsd-plan-phase 139`
 
-After Phase 138 has a verified plan: `$gsd-execute-phase 138`
+After Phase 139 has a verified plan: `$gsd-execute-phase 139`
 
 ---
 *Created: 2026-05-25 for v1.20 milestone initialization*

@@ -1,0 +1,537 @@
+{
+  "schemaVersion": "v1.20-signed-in-reliability-proof",
+  "generatedAt": "2026-05-25T17:59:24.569Z",
+  "boundedRepeatCount": 3,
+  "accounts": [
+    {
+      "handle": "v120-mplia8kt-1",
+      "signupMs": 197
+    },
+    {
+      "handle": "v120-mplia8kt-2",
+      "signupMs": 103
+    },
+    {
+      "handle": "v120-mplia8kt-3",
+      "signupMs": 99
+    }
+  ],
+  "revisions": [
+    {
+      "jsTs": "strategy-revision:b195d86e506e8db705e08af929d27155149f4c0219bc95e0fb2e8bd641c3b2a2",
+      "python": [
+        "strategy-revision:15279d13725bc654c4e56406a4c5b8a738f4552068c6beafbf0563620f34f18d",
+        "strategy-revision:60d76a83c9157c77968ba74e1e6362f6fbe003a4c4626d6635e03331f58f05b0"
+      ]
+    },
+    {
+      "jsTs": "strategy-revision:dbb8c89aa98ac85f773d7334c714701cf7c79a514cdcb54badb973604ce97cf7",
+      "python": [
+        "strategy-revision:b727ae261ff886d30e9c030fabe876982805add04e4a970f9a6aa9368873c0e0",
+        "strategy-revision:5b36503b4d36f092122893f48827b08d4da7b072212bbb682105dd6b1bf74867"
+      ]
+    },
+    {
+      "jsTs": "strategy-revision:4e8ca40d348303b7f1a5bb047f77e1b07062a563e8c0e3517f35697b59897abc",
+      "python": [
+        "strategy-revision:e4f04cc7cdac97ebb95d3033d3fc3bff19c04786b7c5148792ed2db52f1898f7",
+        "strategy-revision:ecc732baaa4a30a1fc420654a8d758add3cb4fc824eae343ab4aa08750d12933"
+      ]
+    }
+  ],
+  "cycles": [
+    {
+      "cycle": 1,
+      "account": {
+        "handle": "v120-mplia8kt-1",
+        "signupMs": 197
+      },
+      "revisions": {
+        "jsTs": "strategy-revision:b195d86e506e8db705e08af929d27155149f4c0219bc95e0fb2e8bd641c3b2a2",
+        "python": [
+          "strategy-revision:15279d13725bc654c4e56406a4c5b8a738f4552068c6beafbf0563620f34f18d",
+          "strategy-revision:60d76a83c9157c77968ba74e1e6362f6fbe003a4c4626d6635e03331f58f05b0"
+        ]
+      },
+      "createMs": 138,
+      "workerMs": 58831,
+      "settleMs": 32912,
+      "workerStatuses": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "extraSettleWorkerStatuses": [],
+      "exhibitions": [
+        {
+          "matchSetId": "match-set:exhibition:YdxKyHY0mwuY_ALVNFS14A",
+          "status": "queued",
+          "matchCount": 2,
+          "matchup": "js-ts-vs-python",
+          "observedStatus": "complete",
+          "observedMatchStatuses": [
+            "complete",
+            "complete"
+          ],
+          "resultPageMs": 4210,
+          "replayPageMs": 3620,
+          "resultBodyLength": 2517,
+          "replayBodyLength": 10441
+        },
+        {
+          "matchSetId": "match-set:exhibition:6OJOx5euEJR8RdvZra15fw",
+          "status": "queued",
+          "matchCount": 2,
+          "matchup": "python-vs-python",
+          "observedStatus": "complete",
+          "observedMatchStatuses": [
+            "complete",
+            "complete"
+          ],
+          "resultPageMs": 486,
+          "replayPageMs": 4092,
+          "resultBodyLength": 2623,
+          "replayBodyLength": 18734
+        }
+      ]
+    },
+    {
+      "cycle": 2,
+      "account": {
+        "handle": "v120-mplia8kt-2",
+        "signupMs": 103
+      },
+      "revisions": {
+        "jsTs": "strategy-revision:dbb8c89aa98ac85f773d7334c714701cf7c79a514cdcb54badb973604ce97cf7",
+        "python": [
+          "strategy-revision:b727ae261ff886d30e9c030fabe876982805add04e4a970f9a6aa9368873c0e0",
+          "strategy-revision:5b36503b4d36f092122893f48827b08d4da7b072212bbb682105dd6b1bf74867"
+        ]
+      },
+      "createMs": 52,
+      "workerMs": 59286,
+      "settleMs": 30804,
+      "workerStatuses": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "extraSettleWorkerStatuses": [],
+      "exhibitions": [
+        {
+          "matchSetId": "match-set:exhibition:ZDqYJJiwlHfOl8A7XEAzBw",
+          "status": "queued",
+          "matchCount": 2,
+          "matchup": "js-ts-vs-python",
+          "observedStatus": "complete",
+          "observedMatchStatuses": [
+            "complete",
+            "complete"
+          ],
+          "resultPageMs": 276,
+          "replayPageMs": 1624,
+          "resultBodyLength": 2517,
+          "replayBodyLength": 10441
+        },
+        {
+          "matchSetId": "match-set:exhibition:YpqIp6-1uR_fHWek-QbHnw",
+          "status": "queued",
+          "matchCount": 2,
+          "matchup": "python-vs-python",
+          "observedStatus": "complete",
+          "observedMatchStatuses": [
+            "complete",
+            "complete"
+          ],
+          "resultPageMs": 430,
+          "replayPageMs": 3885,
+          "resultBodyLength": 2623,
+          "replayBodyLength": 18734
+        }
+      ]
+    },
+    {
+      "cycle": 3,
+      "account": {
+        "handle": "v120-mplia8kt-3",
+        "signupMs": 99
+      },
+      "revisions": {
+        "jsTs": "strategy-revision:4e8ca40d348303b7f1a5bb047f77e1b07062a563e8c0e3517f35697b59897abc",
+        "python": [
+          "strategy-revision:e4f04cc7cdac97ebb95d3033d3fc3bff19c04786b7c5148792ed2db52f1898f7",
+          "strategy-revision:ecc732baaa4a30a1fc420654a8d758add3cb4fc824eae343ab4aa08750d12933"
+        ]
+      },
+      "createMs": 71,
+      "workerMs": 58257,
+      "settleMs": 31007,
+      "workerStatuses": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "extraSettleWorkerStatuses": [],
+      "exhibitions": [
+        {
+          "matchSetId": "match-set:exhibition:K2FemWmUPa6h-EjdwVKDAw",
+          "status": "queued",
+          "matchCount": 2,
+          "matchup": "js-ts-vs-python",
+          "observedStatus": "complete",
+          "observedMatchStatuses": [
+            "complete",
+            "complete"
+          ],
+          "resultPageMs": 496,
+          "replayPageMs": 522,
+          "resultBodyLength": 2518,
+          "replayBodyLength": 10242
+        },
+        {
+          "matchSetId": "match-set:exhibition:2qwulUN44iL2420cGDfHxw",
+          "status": "queued",
+          "matchCount": 2,
+          "matchup": "python-vs-python",
+          "observedStatus": "complete",
+          "observedMatchStatuses": [
+            "complete",
+            "complete"
+          ],
+          "resultPageMs": 462,
+          "replayPageMs": 683,
+          "resultBodyLength": 2623,
+          "replayBodyLength": 18734
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "matchSetCount": 6,
+    "workerIterations": 18,
+    "privateMarkerScanPassed": true,
+    "jsTsRegressionChecked": true,
+    "pythonVsPythonChecked": true,
+    "mixedJsTsVsPythonChecked": true
+  },
+  "runtimePath": "web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> selected runtime implementation",
+  "runtimeServiceAdapterEvidence": "container-subprocess",
+  "candidateEvidence": {
+    "containerReadiness": {
+      "abiVersion": "strategy-runtime-abi-v1.14",
+      "baseline": {
+        "archivedArtifactsPreserved": [
+          ".planning/artifacts/v1.19-runtime-isolation-readiness.json",
+          ".planning/artifacts/v1.19-runtime-isolation-readiness.md",
+          ".planning/artifacts/v1.19-exhibition-beta-proof.json",
+          ".planning/artifacts/v1.19-promotion-decision.md"
+        ],
+        "jsTsCountedPathIntact": true,
+        "priorMilestone": "v1.19",
+        "pythonStatus": "non-counted exhibition beta only",
+        "topology": "web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s)"
+      },
+      "candidateComparison": [
+        {
+          "containment": "Host subprocess baseline; process boundary without container filesystem/network controls.",
+          "evidenceKindCounts": {
+            "failed": 0,
+            "live": 20,
+            "passed": 24,
+            "preflight": 1,
+            "skipped": 0,
+            "synthetic": 3
+          },
+          "id": "host-subprocess",
+          "mode": "executable",
+          "status": "passed"
+        },
+        {
+          "containment": "Docker/runc container subprocess; requests no network, read-only root, tmpfs scratch, dropped capabilities, no-new-privileges, PID, memory, and CPU controls.",
+          "evidenceKindCounts": {
+            "failed": 0,
+            "live": 20,
+            "passed": 24,
+            "preflight": 1,
+            "skipped": 0,
+            "synthetic": 3
+          },
+          "id": "container-subprocess",
+          "mode": "optional-executable",
+          "status": "passed"
+        }
+      ],
+      "candidatePreflight": {
+        "configuredPrimaryCandidate": "container-subprocess",
+        "containerImage": "node:24-alpine",
+        "dockerAvailable": true,
+        "dockerRuntimes": [
+          "io.containerd.runc.v2",
+          "runc"
+        ],
+        "executedCandidate": "container-subprocess",
+        "imageAvailable": true,
+        "lane": "container-required",
+        "runscDockerRuntimeAvailable": false,
+        "runscEvidence": "fail-loud host runtime preflight: runsc is not installed as an executable Docker runtime",
+        "runscOnPath": false
+      },
+      "candidates": [
+        {
+          "countedResultsAllowed": true,
+          "doesNotProve": "Production sandbox certification, counted Python eligibility, or broad multi-language support.",
+          "id": "worker-thread-baseline",
+          "label": "Worker-thread baseline",
+          "mode": "executable",
+          "proves": "Probe behavior matched the current runtime ABI expectations for this local lane.",
+          "specReadiness": "local-dev-fallback",
+          "status": "passed",
+          "summary": {
+            "failed": 0,
+            "live": 20,
+            "passed": 24,
+            "preflight": 1,
+            "skipped": 0,
+            "synthetic": 3
+          },
+          "supportedLocally": true
+        },
+        {
+          "countedResultsAllowed": true,
+          "doesNotProve": "Production sandbox certification, counted Python eligibility, or broad multi-language support.",
+          "id": "host-subprocess",
+          "label": "Host subprocess",
+          "mode": "executable",
+          "proves": "Probe behavior matched the current runtime ABI expectations for this local lane.",
+          "specReadiness": "prototype",
+          "status": "passed",
+          "summary": {
+            "failed": 0,
+            "live": 20,
+            "passed": 24,
+            "preflight": 1,
+            "skipped": 0,
+            "synthetic": 3
+          },
+          "supportedLocally": true
+        },
+        {
+          "countedResultsAllowed": false,
+          "doesNotProve": "Production sandbox certification, counted Python eligibility, or broad multi-language support.",
+          "id": "container-subprocess",
+          "label": "Container subprocess",
+          "mode": "optional-executable",
+          "proves": "Probe behavior matched the current runtime ABI expectations for this local lane.",
+          "specReadiness": "production-candidate",
+          "status": "passed",
+          "summary": {
+            "failed": 0,
+            "live": 20,
+            "passed": 24,
+            "preflight": 1,
+            "skipped": 0,
+            "synthetic": 3
+          },
+          "supportedLocally": true
+        },
+        {
+          "countedResultsAllowed": false,
+          "doesNotProve": "Production sandbox certification, counted Python eligibility, or broad multi-language support.",
+          "id": "python-subprocess-experimental",
+          "label": "Python subprocess experimental",
+          "mode": "experimental-evidence",
+          "proves": "Unavailable or unsupported locally; no live proof is claimed.",
+          "specReadiness": "experimental",
+          "status": "skipped",
+          "summary": {
+            "failed": 0,
+            "live": 0,
+            "passed": 0,
+            "preflight": 0,
+            "skipped": 24,
+            "synthetic": 24
+          },
+          "supportedLocally": false
+        },
+        {
+          "doesNotProve": "Production sandbox certification, counted Python eligibility, or broad multi-language support.",
+          "id": "deno-permissions",
+          "label": "Deno-style permissions",
+          "mode": "tradeoff-only",
+          "proves": "Unavailable or unsupported locally; no live proof is claimed.",
+          "status": "skipped",
+          "summary": {
+            "failed": 0,
+            "live": 0,
+            "passed": 0,
+            "preflight": 0,
+            "skipped": 24,
+            "synthetic": 24
+          },
+          "supportedLocally": false
+        },
+        {
+          "doesNotProve": "Production sandbox certification, counted Python eligibility, or broad multi-language support.",
+          "id": "wasm-wasi",
+          "label": "WASM/WASI",
+          "mode": "tradeoff-only",
+          "proves": "Unavailable or unsupported locally; no live proof is claimed.",
+          "status": "skipped",
+          "summary": {
+            "failed": 0,
+            "live": 0,
+            "passed": 0,
+            "preflight": 0,
+            "skipped": 24,
+            "synthetic": 24
+          },
+          "supportedLocally": false
+        },
+        {
+          "doesNotProve": "Production sandbox certification, counted Python eligibility, or broad multi-language support.",
+          "id": "gvisor-runsc",
+          "label": "gVisor/runsc",
+          "mode": "tradeoff-only",
+          "proves": "Unavailable or unsupported locally; no live proof is claimed.",
+          "status": "skipped",
+          "summary": {
+            "failed": 0,
+            "live": 0,
+            "passed": 0,
+            "preflight": 0,
+            "skipped": 24,
+            "synthetic": 24
+          },
+          "supportedLocally": false
+        },
+        {
+          "doesNotProve": "Production sandbox certification, counted Python eligibility, or broad multi-language support.",
+          "id": "microvm-firecracker",
+          "label": "MicroVM",
+          "mode": "tradeoff-only",
+          "proves": "Unavailable or unsupported locally; no live proof is claimed.",
+          "status": "skipped",
+          "summary": {
+            "failed": 0,
+            "live": 0,
+            "passed": 0,
+            "preflight": 0,
+            "skipped": 24,
+            "synthetic": 24
+          },
+          "supportedLocally": false
+        }
+      ],
+      "containerControlEvidence": {
+        "candidateId": "container-subprocess",
+        "controlEvidenceKind": "adapter argv and metadata request; not kernel-level production sandbox certification",
+        "evidenceKindCounts": {
+          "failed": 0,
+          "live": 20,
+          "passed": 24,
+          "preflight": 1,
+          "skipped": 0,
+          "synthetic": 3
+        },
+        "noShell": true,
+        "requestedControls": {
+          "environment": "minimal",
+          "execArgv": "empty",
+          "filesystem": "read-only-root",
+          "network": "disabled",
+          "outputByteLimit": true,
+          "resourceLimits": [
+            "docker --network none",
+            "docker --read-only",
+            "docker --tmpfs /tmp:rw,noexec,nosuid,size=16m",
+            "docker --memory 64m",
+            "docker --cpus 0.5",
+            "docker --pids-limit 64",
+            "docker --cap-drop ALL"
+          ],
+          "shell": "disabled",
+          "stderrBytes": 65536,
+          "stdoutBytes": 262144,
+          "timeout": true,
+          "timeoutMs": 50
+        },
+        "status": "passed",
+        "strictIpc": "schema-validated JSON IPC over stdin/stdout"
+      },
+      "generatedAt": "2026-05-25T00:00:00.000Z",
+      "noCandidatePromoted": true,
+      "noFallbackDrills": [
+        {
+          "expectedFailureMode": "Go orchestration reports runtime-service failure without executing Strategy code in web/API/Go.",
+          "id": "stopped-runtime-service",
+          "label": "Runtime service stopped"
+        },
+        {
+          "expectedFailureMode": "Python exhibition beta fails closed without substituting JS/TS or in-process execution.",
+          "id": "stopped-python-runtime",
+          "label": "Python runtime stopped"
+        },
+        {
+          "expectedFailureMode": "Strict candidate commands exit non-zero and name the unavailable candidate.",
+          "id": "runsc-unavailable",
+          "label": "gVisor/runsc unavailable"
+        },
+        {
+          "expectedFailureMode": "Strict container evidence exits non-zero or records non-promotion without subprocess substitution.",
+          "id": "docker-or-image-unavailable",
+          "label": "Docker or image unavailable"
+        },
+        {
+          "expectedFailureMode": "Check commands reject stale JSON or Markdown readiness evidence.",
+          "id": "stale-artifacts",
+          "label": "Stale artifacts"
+        },
+        {
+          "expectedFailureMode": "Monitors reject evidence that claims a required lane while the required candidate was skipped.",
+          "id": "silent-substitution",
+          "label": "Silent substitution"
+        }
+      ],
+      "promotionAllowed": false,
+      "readinessLanes": [
+        {
+          "command": "pnpm sandbox:evaluate && pnpm sandbox:evaluate:check",
+          "id": "default-readiness",
+          "label": "Default readiness lane",
+          "requiredForDefaultMilestonePass": true,
+          "unavailableBehavior": "Hardened subprocess evidence is required; Docker and runsc candidates may record unavailable state."
+        },
+        {
+          "command": "pnpm sandbox:evaluate:container",
+          "id": "container-required",
+          "label": "Container required lane",
+          "requiredForDefaultMilestonePass": false,
+          "unavailableBehavior": "Fails loudly when container evidence is requested but Docker/container execution is unavailable or skipped."
+        },
+        {
+          "command": "pnpm sandbox:evaluate:runsc",
+          "id": "runsc-required",
+          "label": "gVisor/runsc required lane",
+          "requiredForDefaultMilestonePass": false,
+          "unavailableBehavior": "Fails loudly when runsc evidence is requested but runsc is unavailable or no runsc probe adapter exists; no subprocess or Docker substitution is accepted."
+        }
+      ],
+      "schemaVersion": "v1.20-runtime-sandbox-candidate-readiness",
+      "status": "evidence_only_not_promoted"
+    },
+    "runscFailLoud": "runsc remains a strict fail-loud host-runtime preflight unless genuinely available."
+  },
+  "promotionDecision": {
+    "pythonStatus": "non-counted exhibition beta only",
+    "runtimeIsolationStatus": "readiness evidence only; no production sandbox certification"
+  }
+}

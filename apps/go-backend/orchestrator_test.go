@@ -125,6 +125,18 @@ func TestGoMatchOrchestratorIntegration(t *testing.T) {
 	}
 }
 
+func TestMatchJobLeaseForRuntimeServiceBudget(t *testing.T) {
+	t.Setenv("COWARDS_RUNTIME_SERVICE_HTTP_TIMEOUT_MS", "90000")
+	if got := matchJobLeaseForRuntimeService(); got != 95*time.Second {
+		t.Fatalf("expected runtime-service lease to cover HTTP timeout plus grace, got %s", got)
+	}
+
+	t.Setenv("COWARDS_RUNTIME_SERVICE_HTTP_TIMEOUT_MS", "1000")
+	if got := matchJobLeaseForRuntimeService(); got != defaultMatchJobLease {
+		t.Fatalf("expected runtime-service lease to preserve default minimum, got %s", got)
+	}
+}
+
 func TestStrategyFailureRevisionIDFromChronicle(t *testing.T) {
 	artifact, err := json.Marshal(map[string]any{
 		"events": []any{

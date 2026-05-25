@@ -14,6 +14,7 @@ import (
 const (
 	defaultGoOrchestratorWorkerID     = "go-backend:orchestrator:v1.15"
 	defaultGoOrchestratorPollInterval = 2 * time.Second
+	runtimeServiceLeaseGrace          = 5 * time.Second
 )
 
 type goMatchOrchestrator struct {
@@ -85,6 +86,7 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 	claimed, err := orchestrator.lifecycle.claimNextMatchJob(ctx, claimMatchJobInput{
 		WorkerID: workerID,
 		MatchIDs: matchIDs,
+		Lease:    matchJobLeaseForRuntimeService(),
 	})
 	if err != nil {
 		return nil, err
@@ -137,6 +139,14 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		MatchID:     completed.MatchID,
 		ChronicleID: completed.ChronicleID,
 	}, nil
+}
+
+func matchJobLeaseForRuntimeService() time.Duration {
+	lease := runtimeServiceHTTPTimeout() + runtimeServiceLeaseGrace
+	if lease < defaultMatchJobLease {
+		return defaultMatchJobLease
+	}
+	return lease
 }
 
 func buildRuntimeServiceRequestForClaimedMatch(ctx context.Context, pool *pgxpool.Pool, matchID string, jobID string) (*runtimeServiceRequest, error) {

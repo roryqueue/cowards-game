@@ -64,13 +64,13 @@
 
 ### Signed-In Reliability Proof
 
-- [ ] **PROOF-01**: User can create or sign into a local account.
-- [ ] **PROOF-02**: User can create and save one JS/TS Strategy Revision.
-- [ ] **PROOF-03**: User can create and save two Python Strategy Revisions.
-- [ ] **PROOF-04**: User can create non-counted mixed JS/TS-vs-Python and Python-vs-Python exhibition MatchSets.
-- [ ] **PROOF-05**: Developer can verify Match execution flows through Go -> Runtime Broker/runtime-service -> selected runtime implementation(s), including the selected candidate lane where required.
-- [ ] **PROOF-06**: User can open MatchSet result and replay evidence and verify labels, reliability evidence, candidate lane evidence, degraded/timeout wording where applicable, and plausible board state.
-- [ ] **PROOF-07**: Developer can verify the proof public outputs remain private-data safe and contain no silent fallback, ownership drift, Python counted eligibility, or JS/TS regression.
+- [x] **PROOF-01**: User can create or sign into a local account.
+- [x] **PROOF-02**: User can create and save one JS/TS Strategy Revision.
+- [x] **PROOF-03**: User can create and save two Python Strategy Revisions.
+- [x] **PROOF-04**: User can create non-counted mixed JS/TS-vs-Python and Python-vs-Python exhibition MatchSets.
+- [x] **PROOF-05**: Developer can verify Match execution flows through Go -> Runtime Broker/runtime-service -> selected runtime implementation(s), including the selected candidate lane where required.
+- [x] **PROOF-06**: User can open MatchSet result and replay evidence and verify labels, reliability evidence, candidate lane evidence, degraded/timeout wording where applicable, and plausible board state.
+- [x] **PROOF-07**: Developer can verify the proof public outputs remain private-data safe and contain no silent fallback, ownership drift, Python counted eligibility, or JS/TS regression.
 
 ### Completion And Promotion
 
@@ -147,13 +147,13 @@
 | UX-04 | Phase 137 | Complete |
 | UX-05 | Phase 137 | Complete |
 | UX-06 | Phase 137 | Complete |
-| PROOF-01 | Phase 138 | Pending |
-| PROOF-02 | Phase 138 | Pending |
-| PROOF-03 | Phase 138 | Pending |
-| PROOF-04 | Phase 138 | Pending |
-| PROOF-05 | Phase 138 | Pending |
-| PROOF-06 | Phase 138 | Pending |
-| PROOF-07 | Phase 138 | Pending |
+| PROOF-01 | Phase 138 | Complete |
+| PROOF-02 | Phase 138 | Complete |
+| PROOF-03 | Phase 138 | Complete |
+| PROOF-04 | Phase 138 | Complete |
+| PROOF-05 | Phase 138 | Complete |
+| PROOF-06 | Phase 138 | Complete |
+| PROOF-07 | Phase 138 | Complete |
 | EXIT-01 | Phase 139 | Pending |
 | EXIT-02 | Phase 139 | Pending |
 | EXIT-03 | Phase 139 | Pending |

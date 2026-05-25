@@ -267,6 +267,10 @@ const v120HostileProbeMarkdownPath =
   ".planning/artifacts/v1.20-hostile-probe-no-fallback-evidence.md"
 const v120ContainerHostileProbeArtifactPath =
   ".planning/artifacts/v1.20-hostile-probe-no-fallback-evidence.container.json"
+const v120SignedInReliabilityProofArtifactPath =
+  ".planning/artifacts/v1.20-signed-in-reliability-proof.json"
+const v120SignedInReliabilityProofMarkdownPath =
+  ".planning/artifacts/v1.20-signed-in-reliability-proof.md"
 const goPromotionManifestPath =
   ".planning/artifacts/v1.12-route-ownership-manifest.json"
 const v113RouteOwnershipManifestPath =
@@ -3010,6 +3014,16 @@ const checkRuntimeIsolationReadiness = (): string => {
     generatedAt?: unknown
     lanes?: unknown
   }>(v120ContainerHostileProbeArtifactPath)
+  const signedInProof = readJson<{
+    schemaVersion?: unknown
+    boundedRepeatCount?: unknown
+    cycles?: unknown
+    totals?: unknown
+    runtimePath?: unknown
+    runtimeServiceAdapterEvidence?: unknown
+    candidateEvidence?: unknown
+    promotionDecision?: unknown
+  }>(v120SignedInReliabilityProofArtifactPath)
   const markdown = readFileSync(
     path.join(repoRoot, v120ReadinessMarkdownPath),
     "utf8",
@@ -3024,6 +3038,10 @@ const checkRuntimeIsolationReadiness = (): string => {
   )
   const hostileProbeMarkdown = readFileSync(
     path.join(repoRoot, v120HostileProbeMarkdownPath),
+    "utf8",
+  )
+  const signedInProofMarkdown = readFileSync(
+    path.join(repoRoot, v120SignedInReliabilityProofMarkdownPath),
     "utf8",
   )
   assertSandboxEvaluationPublicSafe(report)
@@ -3107,6 +3125,9 @@ const checkRuntimeIsolationReadiness = (): string => {
   ) {
     throw new Error("v1.20 container hostile probe schema drifted")
   }
+  if (signedInProof.schemaVersion !== "v1.20-signed-in-reliability-proof") {
+    throw new Error("v1.20 signed-in reliability proof schema drifted")
+  }
   if (hostileProbeEvidence.generatedAt !== report.generatedAt) {
     throw new Error("v1.20 hostile probe artifact is stale against base report")
   }
@@ -3116,6 +3137,120 @@ const checkRuntimeIsolationReadiness = (): string => {
     throw new Error(
       "v1.20 container hostile probe artifact is stale against container report",
     )
+  }
+  const proofTotals = signedInProof.totals as
+    | {
+        matchSetCount?: unknown
+        workerIterations?: unknown
+        privateMarkerScanPassed?: unknown
+        jsTsRegressionChecked?: unknown
+        pythonVsPythonChecked?: unknown
+        mixedJsTsVsPythonChecked?: unknown
+      }
+    | undefined
+  if (
+    signedInProof.boundedRepeatCount !== 3 ||
+    proofTotals?.matchSetCount !== 6 ||
+    proofTotals.privateMarkerScanPassed !== true ||
+    proofTotals.jsTsRegressionChecked !== true ||
+    proofTotals.pythonVsPythonChecked !== true ||
+    proofTotals.mixedJsTsVsPythonChecked !== true ||
+    typeof proofTotals.workerIterations !== "number" ||
+    proofTotals.workerIterations < 18 ||
+    proofTotals.workerIterations > 54
+  ) {
+    throw new Error("v1.20 signed-in reliability proof totals drifted")
+  }
+  if (
+    typeof signedInProof.runtimePath !== "string" ||
+    !signedInProof.runtimePath.includes("Go backend") ||
+    !signedInProof.runtimePath.includes("Runtime Broker") ||
+    signedInProof.runtimeServiceAdapterEvidence !== "container-subprocess"
+  ) {
+    throw new Error("v1.20 signed-in proof runtime path evidence drifted")
+  }
+  const proofPromotion = signedInProof.promotionDecision as
+    | { pythonStatus?: unknown; runtimeIsolationStatus?: unknown }
+    | undefined
+  if (
+    proofPromotion?.pythonStatus !== "non-counted exhibition beta only" ||
+    typeof proofPromotion.runtimeIsolationStatus !== "string" ||
+    !proofPromotion.runtimeIsolationStatus.includes(
+      "no production sandbox certification",
+    )
+  ) {
+    throw new Error("v1.20 signed-in proof promotion decision drifted")
+  }
+  const proofCandidateEvidence = signedInProof.candidateEvidence as
+    | {
+        containerReadiness?: { schemaVersion?: unknown }
+        runscFailLoud?: unknown
+      }
+    | undefined
+  if (
+    proofCandidateEvidence?.containerReadiness?.schemaVersion !==
+      "v1.20-runtime-sandbox-candidate-readiness" ||
+    typeof proofCandidateEvidence.runscFailLoud !== "string" ||
+    !proofCandidateEvidence.runscFailLoud.includes("fail-loud")
+  ) {
+    throw new Error("v1.20 signed-in proof candidate evidence drifted")
+  }
+  const proofCycles = signedInProof.cycles as
+    | {
+        cycle?: unknown
+        settleMs?: unknown
+        workerStatuses?: unknown
+        exhibitions?: unknown
+      }[]
+    | undefined
+  if (!Array.isArray(proofCycles) || proofCycles.length !== 3) {
+    throw new Error("v1.20 signed-in proof cycle count drifted")
+  }
+  for (const cycle of proofCycles) {
+    if (
+      typeof cycle.cycle !== "number" ||
+      typeof cycle.settleMs !== "number" ||
+      cycle.settleMs <= 0 ||
+      cycle.settleMs > 180_000 ||
+      !Array.isArray(cycle.workerStatuses)
+    ) {
+      throw new Error("v1.20 signed-in proof cycle timing drifted")
+    }
+    const exhibitions = cycle.exhibitions as
+      | {
+          matchup?: unknown
+          matchSetId?: unknown
+          observedStatus?: unknown
+          observedMatchStatuses?: unknown
+          resultPageMs?: unknown
+          replayPageMs?: unknown
+        }[]
+      | undefined
+    if (!Array.isArray(exhibitions) || exhibitions.length !== 2) {
+      throw new Error("v1.20 signed-in proof exhibition count drifted")
+    }
+    const matchups = new Set(exhibitions.map((exhibition) => exhibition.matchup))
+    for (const matchup of ["js-ts-vs-python", "python-vs-python"]) {
+      if (!matchups.has(matchup)) {
+        throw new Error(`v1.20 signed-in proof missing ${matchup}`)
+      }
+    }
+    for (const exhibition of exhibitions) {
+      if (
+        typeof exhibition.matchSetId !== "string" ||
+        exhibition.observedStatus !== "complete" ||
+        !Array.isArray(exhibition.observedMatchStatuses) ||
+        exhibition.observedMatchStatuses.some(
+          (status) => status !== "complete",
+        ) ||
+        typeof exhibition.resultPageMs !== "number" ||
+        exhibition.resultPageMs <= 0 ||
+        typeof exhibition.replayPageMs !== "number" ||
+        exhibition.replayPageMs <= 0
+      ) {
+        throw new Error("v1.20 signed-in proof exhibition evidence drifted")
+      }
+    }
   }
   const lanes = stringArray(
     (readiness.readinessLanes as { id?: unknown }[] | undefined)?.map(
@@ -3368,6 +3503,39 @@ const checkRuntimeIsolationReadiness = (): string => {
     if (!hostileProbeMarkdown.includes(required)) {
       throw new Error(`v1.20 hostile evidence markdown missing ${required}`)
     }
+  }
+  for (const required of [
+    "Observed Exhibitions",
+    "js-ts-vs-python",
+    "python-vs-python",
+    "non-counted exhibition beta only",
+    "no production sandbox certification",
+  ]) {
+    if (!signedInProofMarkdown.includes(required)) {
+      throw new Error(`v1.20 signed-in proof markdown missing ${required}`)
+    }
+  }
+  const orchestratorSource = readFileSync(
+    path.join(repoRoot, "apps/go-backend/orchestrator.go"),
+    "utf8",
+  )
+  const orchestratorTestSource = readFileSync(
+    path.join(repoRoot, "apps/go-backend/orchestrator_test.go"),
+    "utf8",
+  )
+  for (const required of [
+    "runtimeServiceLeaseGrace",
+    "matchJobLeaseForRuntimeService()",
+    "Lease:    matchJobLeaseForRuntimeService()",
+  ]) {
+    if (!orchestratorSource.includes(required)) {
+      throw new Error(`v1.20 Go runtime lease source missing ${required}`)
+    }
+  }
+  if (
+    !orchestratorTestSource.includes("TestMatchJobLeaseForRuntimeServiceBudget")
+  ) {
+    throw new Error("v1.20 Go runtime lease test is missing")
   }
   const container = report.candidates.find(
     (candidate) => candidate.id === "container-subprocess",
