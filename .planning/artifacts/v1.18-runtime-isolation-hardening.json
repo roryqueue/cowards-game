@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "v1.18-runtime-isolation-hardening",
+  "milestone": "v1.18",
+  "pythonLaunch": {
+    "executable": "python3",
+    "isolatedMode": true,
+    "emptyEnvironment": true,
+    "shell": false,
+    "host": "packages/runtime-python/src/python_runtime_host.py"
+  },
+  "failureTaxonomy": [
+    "TIMEOUT",
+    "STDIO_CAP_EXCEEDED",
+    "SUBPROCESS_EXIT",
+    "SUBPROCESS_SIGNAL",
+    "MALFORMED_IPC",
+    "SPAWN_FAILED"
+  ],
+  "productionSandboxCertified": false,
+  "fallbackAllowed": false,
+  "verification": [
+    "pnpm --filter @cowards/runtime-python test",
+    "pnpm --filter @cowards/runtime-python typecheck",
+    "pnpm exec tsx scripts/check-boundary-monitors.ts"
+  ]
+}

@@ -2,53 +2,53 @@
 gsd_state_version: 1.0
 milestone: v1.18
 milestone_name: Runtime Isolation and Multi-Language Exhibition Beta
-status: planning
-stopped_at: phase contexts materialized
+status: shipped
+stopped_at: milestone archived and tagged
 last_updated: "2026-05-25T00:00:00.000-04:00"
-last_activity: 2026-05-25 - Materialized v1.18 requirements, roadmap, and phase contexts
+last_activity: 2026-05-25 - Shipped v1.18 runtime isolation and multi-language exhibition beta
 progress:
   total_phases: 7
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 7
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.18 planning
+**Status:** v1.18 shipped and archived
 
 ## Project Reference
 
 See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Latest shipped milestone:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
-**Active milestone:** v1.18 Runtime Isolation and Multi-Language Exhibition Beta
-**Requirements:** `.planning/REQUIREMENTS.md`
+**Latest shipped milestone:** v1.18 Runtime Isolation and Multi-Language Exhibition Beta
+**Active milestone:** None
+**Requirements:** Archived at `.planning/milestones/v1.18-REQUIREMENTS.md`
 **Roadmap:** `.planning/ROADMAP.md`
 
 ## Current Position
 
-Phase: 117 Isolation Baseline and Threat Model
-Plan: -
-Status: Context gathered; ready for planning
-Last activity: 2026-05-25 - v1.18 planning artifacts materialized
+Phase: 123 Final Evidence, Promotion Decision, and Archive Gate
+Plan: 123-01
+Status: Complete
+Last activity: 2026-05-25 - v1.18 archive, audit, proof, and tag complete
 
 ## Latest Milestone Result
 
-Python is now an experimental end-to-end Strategy language through the Strategy Execution Service / Runtime Broker contract while preserving the v1.16 backend-retirement boundary. Python remains runtime-only and non-counted.
+v1.18 strengthened runtime isolation evidence and promoted Python only to non-counted exhibition beta. A signed-in local proof created JS/TS and Python account-owned Strategy Revisions, ran a non-counted exhibition through Go -> runtime-service -> runtime implementation, and opened public-safe replay evidence with zero runtime violations.
 
 ## Active Milestone Goal
 
-Strengthen the runtime isolation boundary and prove it with a signed-in non-counted multi-language exhibition beta while preserving v1.17's broker/runtime-only contract.
+No active milestone. Start the next milestone with `$gsd-new-milestone`.
 
 ## Active Constraints
 
 - Normal topology remains `web frontend -> Go backend -> isolated runtime service(s)`.
 - JS/TS Strategy support remains intact through the existing isolated runtime service.
-- Python is moving toward non-counted exhibition beta only, while remaining runtime-only, non-ranked, and non-counted in v1.18 planning.
+- Python is non-counted exhibition beta only, while remaining runtime-only, non-ranked, and non-counted.
 - Engine logic remains pure, deterministic, serializable, and side-effect free.
 - Strategy code does not execute in the web/API process or Go backend, and Node `vm` is not used as a hostile-code security boundary.
 - Strategy Revisions are immutable once submitted for Match or MatchSet play.
@@ -68,4 +68,4 @@ Strengthen the runtime isolation boundary and prove it with a signed-in non-coun
 
 ## Operator Next Steps
 
-Run `$gsd-plan-phase 117` to create an executable plan for Isolation Baseline and Threat Model.
+Run `$gsd-new-milestone` to start the next milestone. `.planning/REQUIREMENTS.md` is intentionally absent after v1.18 closure.

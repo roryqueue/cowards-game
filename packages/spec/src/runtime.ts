@@ -318,7 +318,9 @@ export const STRATEGY_LANGUAGE_REGISTRY = [
     label: "Python",
     version: "3.9",
     enabledForNormalPlay: false,
-    notes: ["Experimental v1.7 ABI spike only; not public counted play."],
+    notes: [
+      "Non-counted exhibition beta through the runtime broker only; not ranked or counted play.",
+    ],
   },
 ] as const satisfies readonly StrategyLanguageRecord[]
 
@@ -507,8 +509,11 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
       "non-js-promotion-criteria",
       "production-sandbox-required",
       "package-policy-required",
+      "signed-in-exhibition-proof",
+      "hostile-probe-evidence",
     ],
-    isolationBoundary: "Local subprocess spike for ABI parity only.",
+    isolationBoundary:
+      "Hardened local subprocess evidence for non-counted exhibition beta; not production hostile-code isolation.",
     limits: {
       ...DEFAULT_RUNTIME_LIMITS,
       filesystem: "none",
@@ -517,8 +522,8 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     },
     requiredCapabilities: [],
     notes: [
-      "Dev/test only; not public counted MatchSet or analytics evidence.",
-      "WASM/WASI/component-model are future evaluation paths, not v1.16 promotion paths.",
+      "Non-counted exhibition beta only; not public counted MatchSet, ranked ladder, or analytics evidence.",
+      "WASM/WASI/component-model are future evaluation paths, not v1.18 promotion paths.",
     ],
   },
 ] as const satisfies readonly StrategyRuntimeAdapterRecord[]
@@ -643,9 +648,9 @@ export const STRATEGY_RUNTIME_PRODUCT_VALIDATION_MESSAGES = {
     code: "NON_COUNTED_RUNTIME",
     message: "Strategy runtime is experimental and not counted-play eligible.",
     constraint:
-      "Counted MatchSets, ladders, and gauntlets require a registered counted runtime.",
+      "Counted MatchSets, ladders, and gauntlets require a registered counted runtime. Python is limited to non-counted exhibition beta in v1.18.",
     remediation:
-      "Use the JS/TS runtime for counted play or keep this revision experimental.",
+      "Use the JS/TS runtime for counted play or keep this revision in non-counted exhibition beta.",
     reference: "runtime/counting",
   },
 } as const satisfies Record<
@@ -939,7 +944,9 @@ export const describeStrategyRuntimeProductSemantics = (
     adapter?.enabledForNormalPlay === false
   const warnings = [
     ...(experimental
-      ? ["Experimental runtime; not eligible for counted play by default."]
+      ? [
+          "Non-counted exhibition beta runtime; not eligible for ranked or counted play.",
+        ]
       : []),
     ...(runtime.package.mode === "declared"
       ? ["Declared package metadata is not supported for counted play in v1.8."]

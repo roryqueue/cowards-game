@@ -73,6 +73,7 @@ export interface GoBackendServiceClient {
     input: {
       strategyId?: string | undefined
       source: unknown
+      sourceFormat?: unknown
       label?: unknown
       notes?: unknown
       starterId?: unknown

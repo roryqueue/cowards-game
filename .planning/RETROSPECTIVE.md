@@ -1,5 +1,44 @@
 # Retrospective
 
+## Milestone: v1.18 — Runtime Isolation and Multi-Language Exhibition Beta
+
+**Shipped:** 2026-05-25
+**Phases:** 7 | **Plans:** 7
+
+### What Was Built
+
+- A v1.18 threat model and promotion split: Python exhibition beta readiness versus production sandbox certification.
+- Hardened Python runtime launch and failure behavior with isolated-mode host flags, empty environment, no shell, output caps, deterministic timeout/crash/malformed IPC classification, and stronger cleanup semantics.
+- Python AST/compile validation with public-safe diagnostics that do not execute Strategy behavior in web/API/Go.
+- Account-owned immutable Python Strategy Revision saves with runtime metadata and non-counted exhibition beta eligibility.
+- A signed-in local exhibition proof covering account creation, JS/TS revision save, Python revision save, non-counted MatchSet creation, Go -> runtime-service -> runtime execution, result page, replay page, and public-output privacy.
+- v1.18 monitor gates for baseline drift, runtime isolation source drift, proof artifact drift, Python execution boundary drift, backend ownership creep, privacy leaks, premature counted eligibility, and JS/TS regression safety.
+
+### What Worked
+
+- The live signed-in proof caught integration issues that unit tests could not: lost `sourceFormat`, an invalid counted reason enum, missing public counted evidence, and too-tight runtime timeout defaults.
+- Keeping the product claim narrow made the implementation honest: Python is useful in exhibitions without pretending the local subprocess boundary is a production sandbox.
+- The existing v1.17 Runtime Broker contract held up; v1.18 mostly strengthened evidence and product flow rather than moving Strategy execution into unsafe layers.
+
+### What Was Inefficient
+
+- Strict live topology for old parity fixture ids does not line up with the live DB account proof; the distinction needed explicit documentation.
+- Next/Turbopack exposed a path-conversion issue in validation host loading that package tests did not see.
+- The final proof had to run more than once because early runs completed with runtime violations before the timeout was adjusted.
+
+### Patterns Established
+
+- Signed-in product proofs should be milestone gates for user-facing runtime promotions.
+- Runtime validation and execution imports must remain separate and side-effect-light.
+- Public MatchSet pages should expose enough safe counted/non-counted metadata for proof and audit without leaking private Strategy or runtime details.
+- Runtime isolation milestones should separate hardening evidence from production sandbox certification in every user-facing and planning artifact.
+
+### Key Lessons
+
+- A realistic multi-language proof is less about syntax support and more about preserving ownership, eligibility, privacy, and no-fallback boundaries end to end.
+- Timeout budgets need to be realistic enough to avoid turning healthy exhibition Matches into fake runtime failures, while still preserving deterministic caps and failure taxonomy.
+- Archive/audit work should record incompatible verification modes rather than force one topology command to mean both fixture-mode parity and live account proof.
+
 ## Milestone: v1.17 — Python Strategy Runtime Pilot and Broker Contract Hardening
 
 **Implemented:** 2026-05-24

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "v1.18-isolation-baseline",
+  "milestone": "v1.18",
+  "generatedBy": "manual-gsd-phase-117",
+  "baselineInheritedFrom": "v1.17",
+  "normalTopology": "web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s)",
+  "strategyExecutionOutsideRuntimeBoundaryAllowed": false,
+  "productionSandboxCertified": false,
+  "pythonCountedEligible": false,
+  "pythonRankedEligible": false,
+  "silentFallbackAllowed": false,
+  "jsTsSupportMustRemainIntact": true,
+  "pythonProductStatus": "non-counted-exhibition-beta-candidate",
+  "threatCategories": [
+    "filesystem",
+    "network",
+    "package-import",
+    "shell-process",
+    "environment",
+    "memory-output",
+    "timeout",
+    "crash-malformed-ipc",
+    "stderr-stack-path-redaction",
+    "public-output-privacy"
+  ],
+  "promotionGates": {
+    "pythonExhibitionBeta": "signed-in-proof-and-monitors",
+    "productionSandboxCertification": "out-of-scope-evidence-only",
+    "pythonCountedPlay": "future-milestone-only"
+  },
+  "authority": {
+    "go": [
+      "orchestration",
+      "persistence-facing backend behavior",
+      "Match lifecycle",
+      "scoring",
+      "public evidence"
+    ],
+    "runtimeService": [
+      "schema-validated runtime ABI envelopes",
+      "registered runtime implementation selection",
+      "hostile Strategy execution dispatch"
+    ],
+    "pythonRuntime": [
+      "non-counted exhibition beta Strategy method execution only",
+      "no backend ownership",
+      "no route ownership",
+      "no persistence ownership",
+      "no job lifecycle ownership",
+      "no scoring ownership",
+      "no public evidence ownership"
+    ]
+  }
+}

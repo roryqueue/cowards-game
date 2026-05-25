@@ -22,11 +22,20 @@ import {
   type RuntimeResult,
   type StrategyRuntime,
 } from "@cowards/engine"
+import {
+  PYTHON_RUNTIME_ENVIRONMENT,
+  PYTHON_RUNTIME_EXECUTABLE,
+  pythonIsolatedHostArgs,
+} from "./python-host-config.js"
 import { pythonExperimentalRuntimeMetadata } from "./metadata.js"
 
 const hostPath = fileURLToPath(
   new URL("./python_runtime_host.py", import.meta.url),
 )
+export { PYTHON_RUNTIME_ENVIRONMENT, PYTHON_RUNTIME_EXECUTABLE }
+export const pythonRuntimeHostArgs = (): readonly string[] => [
+  ...pythonIsolatedHostArgs(hostPath),
+]
 
 export { pythonExperimentalRuntimeMetadata }
 
@@ -72,15 +81,29 @@ export const runPythonStrategyMethod = async (
   }
 
   return new Promise((resolve) => {
-    const child = spawn("python3", [hostPath], {
+    let settled = false
+    let stdioCapExceeded: "stdout" | "stderr" | null = null
+    let timeout: ReturnType<typeof setTimeout> | null = null
+    const finish = (envelope: StrategyRuntimeResponseEnvelope): void => {
+      if (settled) {
+        return
+      }
+      settled = true
+      if (timeout !== null) {
+        clearTimeout(timeout)
+      }
+      resolve(envelope)
+    }
+    const child = spawn(PYTHON_RUNTIME_EXECUTABLE, pythonRuntimeHostArgs(), {
       stdio: ["pipe", "pipe", "pipe"],
-      env: {},
+      env: PYTHON_RUNTIME_ENVIRONMENT,
+      shell: false,
     })
     let stdout = ""
     let stderr = ""
-    const timeout = setTimeout(() => {
+    timeout = setTimeout(() => {
       child.kill("SIGKILL")
-      resolve({
+      finish({
         ok: false,
         abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
         failureKind: "runtimeViolation",
@@ -101,6 +124,7 @@ export const runPythonStrategyMethod = async (
         Buffer.byteLength(stdout) >
         (request.stdoutBytes ?? runtime.limits.stdoutBytes)
       ) {
+        stdioCapExceeded = "stdout"
         child.kill("SIGKILL")
       }
     })
@@ -110,12 +134,12 @@ export const runPythonStrategyMethod = async (
         Buffer.byteLength(stderr) >
         (request.stderrBytes ?? runtime.limits.stderrBytes)
       ) {
+        stdioCapExceeded = "stderr"
         child.kill("SIGKILL")
       }
     })
     child.on("error", (error) => {
-      clearTimeout(timeout)
-      resolve({
+      finish({
         ok: false,
         abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
         failureKind: "systemFailure",
@@ -128,9 +152,25 @@ export const runPythonStrategyMethod = async (
       })
     })
     child.on("close", (code, signal) => {
-      clearTimeout(timeout)
+      if (settled) {
+        return
+      }
+      if (stdioCapExceeded) {
+        finish({
+          ok: false,
+          abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+          failureKind: "systemFailure",
+          systemFailure: {
+            code: "STDIO_CAP_EXCEEDED",
+            message: `Python runtime exceeded ${stdioCapExceeded} byte cap.`,
+            publicMessage: "Runtime system failure.",
+            privateDiagnostics: { stderr },
+          },
+        })
+        return
+      }
       if (code !== 0) {
-        resolve({
+        finish({
           ok: false,
           abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
           failureKind: "systemFailure",
@@ -144,13 +184,13 @@ export const runPythonStrategyMethod = async (
         return
       }
       try {
-        resolve(
+        finish(
           StrategyRuntimeResponseEnvelopeSchema.parse(
             JSON.parse(stdout),
           ) as StrategyRuntimeResponseEnvelope,
         )
       } catch (error) {
-        resolve({
+        finish({
           ok: false,
           abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
           failureKind: "systemFailure",
@@ -183,10 +223,11 @@ export const runPythonStrategyMethodSync = (
     source: sourceEnvelopeFor(request.sourceText, request.sourceHash, runtime),
     input: request.input,
   }
-  const result = spawnSync("python3", [hostPath], {
+  const result = spawnSync(PYTHON_RUNTIME_EXECUTABLE, pythonRuntimeHostArgs(), {
     input: JSON.stringify(envelope),
     encoding: "utf8",
-    env: {},
+    env: PYTHON_RUNTIME_ENVIRONMENT,
+    shell: false,
     timeout: request.timeoutMs ?? runtime.limits.timeoutMs,
     maxBuffer:
       (request.stdoutBytes ?? runtime.limits.stdoutBytes) +
@@ -194,15 +235,17 @@ export const runPythonStrategyMethodSync = (
   })
   const stderr = result.stderr ?? ""
   if (result.error) {
+    const isTimeout =
+      result.error.message.includes("ETIMEDOUT") ||
+      result.error.name === "TimeoutError"
+    const isStdioCap =
+      result.error.message.includes("maxBuffer") ||
+      result.error.message.includes("ENOBUFS")
     return {
       ok: false,
       abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-      failureKind:
-        result.error.message.includes("ETIMEDOUT") ||
-        result.error.name === "TimeoutError"
-          ? "runtimeViolation"
-          : "systemFailure",
-      ...(result.error.message.includes("ETIMEDOUT")
+      failureKind: isTimeout ? "runtimeViolation" : "systemFailure",
+      ...(isTimeout
         ? {
             violation: {
               code: "TIMEOUT",
@@ -211,14 +254,23 @@ export const runPythonStrategyMethodSync = (
               privateDiagnostics: { stderr },
             },
           }
-        : {
-            systemFailure: {
-              code: "SPAWN_FAILED",
-              message: "Python runtime failed to start.",
-              publicMessage: "Runtime system failure.",
-              privateDiagnostics: { stderr },
-            },
-          }),
+        : isStdioCap
+          ? {
+              systemFailure: {
+                code: "STDIO_CAP_EXCEEDED",
+                message: "Python runtime exceeded stdio byte cap.",
+                publicMessage: "Runtime system failure.",
+                privateDiagnostics: { stderr },
+              },
+            }
+          : {
+              systemFailure: {
+                code: "SPAWN_FAILED",
+                message: "Python runtime failed to start.",
+                publicMessage: "Runtime system failure.",
+                privateDiagnostics: { stderr },
+              },
+            }),
     } as StrategyRuntimeResponseEnvelope
   }
   if (result.status !== 0) {

@@ -2,20 +2,23 @@
 
 ## Current State
 
-**Shipped version:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening on 2026-05-24
-**Current milestone:** v1.18 Runtime Isolation and Multi-Language Exhibition Beta
-**Status:** Planning phase contexts for v1.18.
-**Last audit:** v1.17 audit passed with Python promoted only as an experimental runtime path behind the Runtime Broker contract.
+**Shipped version:** v1.18 Runtime Isolation and Multi-Language Exhibition Beta on 2026-05-25
+**Current milestone:** None - ready for next milestone.
+**Status:** v1.18 shipped and archived.
+**Last audit:** v1.18 audit passed with Python promoted only to non-counted exhibition beta and runtime isolation kept as readiness evidence.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the isolated TypeScript runtime service boundary.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.18 Runtime Isolation and Multi-Language Exhibition Beta
+## Latest Shipped Milestone: v1.18 Runtime Isolation and Multi-Language Exhibition Beta
 
 **Goal:** Strengthen the runtime isolation boundary and prove it with a signed-in non-counted multi-language exhibition beta while preserving v1.17's broker/runtime-only contract.
+**Decision:** `promote-python-non-counted-exhibition-beta`
+**Archives:** `.planning/milestones/v1.18-ROADMAP.md`, `.planning/milestones/v1.18-REQUIREMENTS.md`, `.planning/milestones/v1.18-phases/`
+**Audit:** `.planning/milestones/v1.18-MILESTONE-AUDIT.md`
 
 **Target features:**
 - Baseline v1.17 runtime behavior, define an exhibition-beta hostile Strategy threat model, and separate isolation readiness evidence from production sandbox certification.
@@ -28,7 +31,9 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 **Key context:** v1.18 starts from the v1.17 baseline. Normal topology remains `web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s)`. Python must not become a backend, route owner, persistence owner, job lifecycle owner, Match completion owner, scoring owner, public evidence owner, ranked/counted language, arbitrary package runtime, or silent fallback path.
 
-## Latest Shipped Milestone: v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
+**Implemented:** Python can now be saved as an account-owned immutable Strategy Revision, selected for signed-in non-counted exhibition beta MatchSets, executed through Go -> runtime-service -> runtime implementation, and replayed through public-safe evidence. Runtime hardening adds isolated Python host launch flags, empty environment, no shell, deterministic timeout/output/crash classification, AST/compile validation, stronger monitors, and proof artifacts. Runtime isolation remains readiness evidence only, not production sandbox certification.
+
+## Previous Shipped Milestone: v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
 
 **Goal:** Make Python an experimental end-to-end Strategy language through the language-neutral Strategy Execution Service / Runtime Broker contract while preserving the v1.16 backend-retirement boundary.
 **Decision:** `promote-python-experimental-runtime-path-only`
@@ -405,12 +410,20 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.16-REQUIREMENTS.md`
 - `.planning/milestones/v1.16-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.16-phases/`
+- `.planning/milestones/v1.17-ROADMAP.md`
+- `.planning/milestones/v1.17-REQUIREMENTS.md`
+- `.planning/milestones/v1.17-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.17-phases/`
+- `.planning/milestones/v1.18-ROADMAP.md`
+- `.planning/milestones/v1.18-REQUIREMENTS.md`
+- `.planning/milestones/v1.18-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.18-phases/`
 
 ## Out of Scope Until Replanned
 
 - Durable all-time ratings, permanent Elo/Glicko contracts, ranked prize ladders, public tournaments, and broad spectator/community surfaces beyond profiles, public Strategy cards, standings, results, and replay links.
 - Randomized arena generation and custom user-created maps.
-- Full production multi-language runtime support beyond experimental non-JS semantics and runtime boundary prototypes.
+- Full production multi-language runtime support beyond Python non-counted exhibition beta and runtime boundary readiness evidence.
 - Unbounded backend rewrite, job claiming/completion, Match execution, Chronicle generation, or migration of orchestration before Go API ownership, parity, and worker handoff boundaries are proven.
 - Enterprise-grade authentication features such as email verification, password reset, OAuth, organizations, and account recovery.
 - Live model inference or live human control during Matches.

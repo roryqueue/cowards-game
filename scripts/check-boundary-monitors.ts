@@ -2709,6 +2709,220 @@ const checkRuntimeBrokerRegistryArtifact = (): string => {
   return `${artifact.entries.length} v1.17 runtime broker registry entries checked`
 }
 
+const checkV118IsolationBaselineArtifact = (): string => {
+  const artifact = readJson<{
+    schemaVersion?: unknown
+    milestone?: unknown
+    baselineInheritedFrom?: unknown
+    normalTopology?: unknown
+    productionSandboxCertified?: unknown
+    pythonCountedEligible?: unknown
+    pythonRankedEligible?: unknown
+    silentFallbackAllowed?: unknown
+    threatCategories?: unknown
+    promotionGates?: unknown
+  }>(".planning/artifacts/v1.18-isolation-baseline.json")
+  if (artifact.schemaVersion !== "v1.18-isolation-baseline") {
+    throw new Error("v1.18 isolation baseline schema drifted")
+  }
+  if (
+    artifact.milestone !== "v1.18" ||
+    artifact.baselineInheritedFrom !== "v1.17"
+  ) {
+    throw new Error("v1.18 isolation baseline must inherit from v1.17")
+  }
+  if (
+    artifact.normalTopology !==
+    "web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s)"
+  ) {
+    throw new Error("v1.18 normal topology drifted")
+  }
+  for (const [field, value] of [
+    ["productionSandboxCertified", artifact.productionSandboxCertified],
+    ["pythonCountedEligible", artifact.pythonCountedEligible],
+    ["pythonRankedEligible", artifact.pythonRankedEligible],
+    ["silentFallbackAllowed", artifact.silentFallbackAllowed],
+  ]) {
+    if (value !== false) {
+      throw new Error(`v1.18 isolation baseline ${field} must be false`)
+    }
+  }
+  const threats = new Set(
+    stringArray(artifact.threatCategories, "v1.18 threatCategories"),
+  )
+  for (const required of [
+    "filesystem",
+    "network",
+    "package-import",
+    "shell-process",
+    "environment",
+    "memory-output",
+    "timeout",
+    "crash-malformed-ipc",
+    "stderr-stack-path-redaction",
+    "public-output-privacy",
+  ]) {
+    if (!threats.has(required)) {
+      throw new Error(`v1.18 isolation baseline missing threat ${required}`)
+    }
+  }
+  const gates = requireRecord(artifact.promotionGates, "v1.18 promotionGates")
+  if (
+    gates.pythonExhibitionBeta !== "signed-in-proof-and-monitors" ||
+    gates.productionSandboxCertification !== "out-of-scope-evidence-only"
+  ) {
+    throw new Error("v1.18 promotion gates drifted")
+  }
+  const markdown = readFileSync(
+    path.join(repoRoot, ".planning/artifacts/v1.18-isolation-baseline.md"),
+    "utf8",
+  )
+  for (const required of [
+    "non-counted exhibition beta",
+    "not production sandbox certification",
+    "no silent fallback",
+    "JS/TS support remains intact",
+  ]) {
+    if (!markdown.includes(required)) {
+      throw new Error(`v1.18 isolation baseline markdown missing ${required}`)
+    }
+  }
+  return `${threats.size} v1.18 threat categories and promotion gates checked`
+}
+
+const checkV118RuntimeIsolationSources = (): string => {
+  const runtimeHostConfig = readFileSync(
+    path.join(repoRoot, "packages/runtime-python/src/python-host-config.ts"),
+    "utf8",
+  )
+  const adapter = readFileSync(
+    path.join(
+      repoRoot,
+      "packages/runtime-python/src/python-subprocess-adapter.ts",
+    ),
+    "utf8",
+  )
+  const validation = readFileSync(
+    path.join(repoRoot, "packages/runtime-python/src/validation.ts"),
+    "utf8",
+  )
+  const validationHost = readFileSync(
+    path.join(
+      repoRoot,
+      "packages/runtime-python/src/python_validation_host.py",
+    ),
+    "utf8",
+  )
+  const goBackend = readFileSync(
+    path.join(repoRoot, "apps/go-backend/live_backend.go"),
+    "utf8",
+  )
+  const workshop = readFileSync(
+    path.join(repoRoot, "apps/web/app/workshop/workshop-client.tsx"),
+    "utf8",
+  )
+  const proof = readFileSync(
+    path.join(repoRoot, "apps/web/e2e/v1-18-exhibition-proof.spec.ts"),
+    "utf8",
+  )
+
+  for (const [label, text, markers] of [
+    [
+      "python host config",
+      runtimeHostConfig,
+      ["Object.freeze({})", '"-I"', "pythonIsolatedHostArgs"],
+    ],
+    [
+      "python adapter",
+      adapter,
+      ["shell: false", "STDIO_CAP_EXCEEDED", "MALFORMED_IPC"],
+    ],
+    [
+      "python validation",
+      validation,
+      ["python_validation_host.py", "spawnSync", "NON_COUNTED_RUNTIME"],
+    ],
+    [
+      "python validation host",
+      validationHost,
+      ["ast.parse", "compile(tree", "visit_Import"],
+    ],
+    [
+      "Go Python revision metadata",
+      goBackend,
+      ["SourceFormat", "pythonRuntimeMetadata", "validatePythonSourceMetadata"],
+    ],
+    [
+      "web Python label",
+      workshop,
+      ["PY beta", "non-counted exhibition beta", "sourceFormat"],
+    ],
+    [
+      "signed-in exhibition proof",
+      proof,
+      ["RUN_V1_18_PROOF", 'sourceFormat: "python"', "run-once", "Replay"],
+    ],
+  ] as const) {
+    for (const marker of markers) {
+      if (!text.includes(marker)) {
+        throw new Error(`${label} missing v1.18 marker ${marker}`)
+      }
+    }
+  }
+  return "v1.18 runtime hardening, validation, account revision, label, and proof sources checked"
+}
+
+const checkV118ExhibitionProofArtifact = (): string => {
+  const artifact = readJson<{
+    schemaVersion?: unknown
+    matchSetId?: unknown
+    matchIds?: unknown
+    flow?: unknown
+    runtimeViolations?: unknown
+    boardVisible?: unknown
+    publicPrivateLeakMarkers?: unknown
+  }>(".planning/artifacts/v1.18-exhibition-beta-proof.json")
+  if (artifact.schemaVersion !== "v1.18-exhibition-beta-proof") {
+    throw new Error("v1.18 exhibition proof schema drifted")
+  }
+  if (
+    typeof artifact.matchSetId !== "string" ||
+    !artifact.matchSetId.startsWith("match-set:exhibition:")
+  ) {
+    throw new Error("v1.18 exhibition proof missing MatchSet id")
+  }
+  if (stringArray(artifact.matchIds, "v1.18 proof matchIds").length < 2) {
+    throw new Error("v1.18 exhibition proof must include at least two Matches")
+  }
+  const flow = new Set(stringArray(artifact.flow, "v1.18 proof flow"))
+  for (const required of [
+    "sign-up",
+    "save-js-ts-account-revision",
+    "save-python-account-revision",
+    "create-non-counted-exhibition",
+    "execute-through-go-runtime-service-runtime-implementation",
+    "open-replay-evidence",
+  ]) {
+    if (!flow.has(required)) {
+      throw new Error(`v1.18 exhibition proof missing flow step ${required}`)
+    }
+  }
+  if (artifact.runtimeViolations !== 0 || artifact.boardVisible !== true) {
+    throw new Error(
+      "v1.18 exhibition proof must be realistic and replay-visible",
+    )
+  }
+  if (
+    stringArray(
+      artifact.publicPrivateLeakMarkers,
+      "v1.18 proof publicPrivateLeakMarkers",
+    ).length !== 0
+  ) {
+    throw new Error("v1.18 exhibition proof leaked private markers")
+  }
+  return `${stringArray(artifact.matchIds, "v1.18 proof matchIds").length} v1.18 proof Matches checked`
+}
+
 const checkNonJsRuntimeGuardrails = (): string => {
   assertNonJsRuntimeGuardrails()
   if (NON_JS_RUNTIME_SUPPORT_POLICY.publicLanguagePickerAllowed !== false) {
@@ -2803,6 +3017,15 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("runtime_adapter", "v1.17 runtime broker registry artifact", () =>
     checkRuntimeBrokerRegistryArtifact(),
+  ),
+  await check("runtime_adapter", "v1.18 isolation baseline artifact", () =>
+    checkV118IsolationBaselineArtifact(),
+  ),
+  await check("runtime_isolation", "v1.18 runtime isolation sources", () =>
+    checkV118RuntimeIsolationSources(),
+  ),
+  await check("runtime_isolation", "v1.18 exhibition proof artifact", () =>
+    checkV118ExhibitionProofArtifact(),
   ),
   await check(
     "runtime_adapter",

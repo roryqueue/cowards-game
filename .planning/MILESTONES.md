@@ -1,5 +1,52 @@
 # Milestones
 
+## v1.18 Runtime Isolation and Multi-Language Exhibition Beta (Shipped: 2026-05-25)
+
+**Status:** Shipped 2026-05-25
+**Phases:** 7
+**Phase range:** 117-123
+**Plans:** 7/7 complete
+**Requirements:** 40/40 complete
+**Audit:** .planning/milestones/v1.18-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.18-ROADMAP.md, .planning/milestones/v1.18-REQUIREMENTS.md, .planning/milestones/v1.18-phases/
+**Decision:** `promote-python-non-counted-exhibition-beta`
+
+**Key accomplishments:**
+
+- Established v1.17 as the broker/runtime floor and documented an exhibition-beta hostile Strategy threat model.
+- Hardened Python subprocess launch and failure behavior with isolated-mode host launch, empty environment, no shell, deterministic caps, timeout, malformed IPC, crash, and cleanup classification.
+- Replaced heuristic Python validation with a Python AST/compile host and public-safe diagnostics.
+- Made Python saveable as account-owned immutable Strategy Revisions with runtime metadata and non-counted exhibition beta eligibility.
+- Added a signed-in local proof that saves JS/TS and Python revisions, creates a non-counted exhibition, executes through Go -> runtime-service -> runtime implementation, and opens replay evidence.
+- Extended boundary monitors and proof artifacts for v1.18 baseline, runtime isolation sources, signed-in proof evidence, ownership boundaries, privacy, no-fallback behavior, and JS/TS regression safety.
+
+### Delivered
+
+- JS/TS Strategy support remains intact through the existing broker/runtime ABI.
+- Python is promoted only to non-counted exhibition beta.
+- Runtime isolation evidence is stronger and monitored, but remains readiness evidence rather than production sandbox certification.
+- Public proof outputs are private-data safe and the final proof MatchSet completed with zero runtime violations.
+
+### Completed Phases
+
+| Phase | Name |
+| --- | --- |
+| 117 | Isolation Baseline and Threat Model - Complete |
+| 118 | Runtime Resource and Process Hardening - Complete |
+| 119 | Python Validation and Public-Safe Diagnostics - Complete |
+| 120 | Exhibition Beta Revision and Eligibility Model - Complete |
+| 121 | Signed-In Multi-Language Exhibition Proof - Complete |
+| 122 | Topology, Monitors, Hostile Probes, and Privacy Gate - Complete |
+| 123 | Final Evidence, Promotion Decision, and Archive Gate - Complete |
+
+### Active Constraints
+
+- Python remains runtime-only, non-ranked, non-counted, and ineligible for ladder/ranked/counted play.
+- No arbitrary package installs or PyPI support.
+- No production sandbox claim from v1.18 evidence.
+- No Strategy execution in web/API/Go and no silent fallback when runtime-service or Python runtime is stopped.
+- Public outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, package paths, and private runtime internals by default.
+
 ## v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening (Shipped: 2026-05-24)
 
 **Status:** Shipped 2026-05-24

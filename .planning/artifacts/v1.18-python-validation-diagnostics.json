@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "v1.18-python-validation-diagnostics",
+  "milestone": "v1.18",
+  "validationHost": "packages/runtime-python/src/python_validation_host.py",
+  "usesAstParse": true,
+  "usesCompile": true,
+  "executesStrategyBehavior": false,
+  "publicSafeDiagnostics": true,
+  "packagePolicy": "self-contained-source-only",
+  "forbidden": [
+    "imports",
+    "dynamic execution",
+    "filesystem",
+    "network",
+    "process",
+    "environment",
+    "package paths"
+  ]
+}

@@ -12,6 +12,7 @@ export async function saveAccountRevisionFromRequest(
     "account revisions",
   ).createStrategyRevision(await getAccountSessionId(), {
     source: body.source,
+    sourceFormat: body.sourceFormat === "python" ? "python" : "typescript",
     label: body.label,
     notes: body.notes,
     starterId: body.starterId,

@@ -265,7 +265,7 @@ func runtimeServiceCompletionPayload(response *runtimeServiceResponse) (map[stri
 
 func defaultRuntimeServiceLimits() map[string]any {
 	return map[string]any{
-		"timeoutMs":             250,
+		"timeoutMs":             1000,
 		"stdoutBytes":           32768,
 		"stderrBytes":           65536,
 		"sourceBytes":           65536,

@@ -512,12 +512,13 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 		return
 	}
 	var body struct {
-		StrategyID string `json:"strategyId"`
-		Source     string `json:"source"`
-		Label      string `json:"label"`
-		Notes      string `json:"notes"`
-		StarterID  string `json:"starterId"`
-		AdvancedID string `json:"advancedId"`
+		StrategyID   string `json:"strategyId"`
+		Source       string `json:"source"`
+		SourceFormat string `json:"sourceFormat"`
+		Label        string `json:"label"`
+		Notes        string `json:"notes"`
+		StarterID    string `json:"starterId"`
+		AdvancedID   string `json:"advancedId"`
 	}
 	if !decodeBody(writer, request, &body) {
 		return
@@ -528,6 +529,11 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 		Source:     body.Source,
 		Label:      body.Label,
 		Notes:      body.Notes,
+	}
+	if body.SourceFormat == "python" {
+		input.Runtime = pythonRuntimeMetadata()
+		input.Validation = validatePythonSourceMetadata(body.Source)
+		input.Metadata = map[string]any{"tags": []string{"python", "non-counted", "exhibition-beta"}}
 	}
 	if artifact, ok := server.matchSubmittedArtifact(body.Source, body.StarterID, "starter"); ok {
 		input.applyArtifact(artifact)
@@ -1217,15 +1223,17 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 	if _, _, err := newMatchSetStatusService(server.pool).refreshMatchSetStatus(ctx, matchSetID); err != nil {
 		return nil, err
 	}
-	var status string
+	var status, countedStatus string
 	var competitionPresetID, competitionPresetVersion, scoringPolicyVersion, visibility *string
+	var countedReason, countedExplanation *string
 	var scoringRaw []byte
 	err := server.pool.QueryRow(ctx, `
 		select status, competition_preset_id, competition_preset_version,
-		       scoring_policy_version, visibility, scoring
+		       scoring_policy_version, visibility, scoring,
+		       counted_status, public_counted_reason, public_counted_explanation
 		from match_sets
 		where id = $1
-	`, matchSetID).Scan(&status, &competitionPresetID, &competitionPresetVersion, &scoringPolicyVersion, &visibility, &scoringRaw)
+	`, matchSetID).Scan(&status, &competitionPresetID, &competitionPresetVersion, &scoringPolicyVersion, &visibility, &scoringRaw, &countedStatus, &countedReason, &countedExplanation)
 	if errors.Is(err, pgx.ErrNoRows) || competitionPresetID == nil {
 		return nil, nil
 	}
@@ -1260,6 +1268,11 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 		"entrants":  entrants,
 		"standings": standingsFromScoring(scoringRaw, entrants),
 		"matches":   matches,
+		"metadata": map[string]any{
+			"countedStatus":     countedStatus,
+			"publicReason":      countedReason,
+			"publicExplanation": countedExplanation,
+		},
 		"provenance": map[string]any{
 			"matchSetId":           matchSetID,
 			"presetId":             *competitionPresetID,
@@ -2143,10 +2156,77 @@ func defaultRuntimeMetadata() map[string]any {
 	}
 }
 
+func pythonRuntimeMetadata() map[string]any {
+	return map[string]any{
+		"abiVersion": "strategy-runtime-abi-v1.14",
+		"language": map[string]any{
+			"id":      "python",
+			"version": "3.9",
+		},
+		"adapter": map[string]any{
+			"id":      "runtime-python-subprocess-experimental",
+			"version": "0.1.0-experimental",
+		},
+		"package": map[string]any{
+			"mode":       "none",
+			"entrypoint": "module",
+		},
+		"requiredCapabilities": []string{},
+		"limits": map[string]any{
+			"timeoutMs":             1000,
+			"stdoutBytes":           262144,
+			"stderrBytes":           65536,
+			"sourceBytes":           strategySourceBytes,
+			"strategyMemoryBytes":   32768,
+			"soldierMemoryBytes":    2048,
+			"objectivePayloadBytes": 1024,
+			"environment":           "empty",
+			"filesystem":            "none",
+			"network":               "disabled",
+			"shell":                 "disabled",
+			"packagePolicy":         "none",
+		},
+	}
+}
+
 func engineCompatibility() map[string]any {
 	return map[string]any{
 		"spec":   "cowards-rules-v1.4",
 		"engine": "0.1.4",
+	}
+}
+
+func validatePythonSourceMetadata(source string) map[string]any {
+	errors := []map[string]any{}
+	forbidden := []string{}
+	if len([]byte(source)) > strategySourceBytes {
+		errors = append(errors, validationIssue("SOURCE_TOO_LARGE", "Strategy source is too large."))
+	}
+	for _, marker := range []string{"import ", "from ", "__import__", "open(", "exec(", "eval(", "compile(", "globals(", "locals(", "getattr(", "setattr(", "__", "socket", "subprocess", "pathlib", "site-packages"} {
+		if strings.Contains(source, marker) {
+			code := "FORBIDDEN_PATTERN"
+			if strings.Contains(marker, "import") {
+				code = "IMPORT_NOT_ALLOWED"
+			}
+			forbidden = append(forbidden, strings.TrimSpace(marker))
+			errors = append(errors, validationIssue(code, "Python Strategy source uses a forbidden capability."))
+		}
+	}
+	if !strings.Contains(source, "def select_activations") {
+		errors = append(errors, validationIssue("MISSING_SELECT_ACTIVATIONS", "Python Strategy must define select_activations(input)."))
+	}
+	if !strings.Contains(source, "def soldier_brain") {
+		errors = append(errors, validationIssue("MISSING_SOLDIER_BRAIN", "Python Strategy must define soldier_brain(input)."))
+	}
+	return map[string]any{
+		"valid":               len(errors) == 0,
+		"errors":              errors,
+		"warnings":            []map[string]any{validationIssue("NON_COUNTED_RUNTIME", "Python is non-counted exhibition beta and not ranked/counted eligible.")},
+		"sourceBytes":         len([]byte(source)),
+		"forbiddenPatterns":   forbidden,
+		"sourceHash":          hashString(source),
+		"runtimeVersion":      "0.1.0-experimental",
+		"engineCompatibility": engineCompatibility(),
 	}
 }
 
@@ -2185,7 +2265,33 @@ func validationIssue(code string, message string) map[string]any {
 }
 
 func runtimeSemantics(runtime map[string]any) map[string]any {
+	language := mapValue(runtime, "language")
+	adapter := mapValue(runtime, "adapter")
+	languageID := stringValue(language, "id")
+	adapterID := stringValue(adapter, "id")
+	if languageID == "python" {
+		return map[string]any{
+			"languageId":           "python",
+			"adapterId":            adapterID,
+			"languageLabel":        "Python",
+			"adapterLabel":         "Python subprocess experimental",
+			"readiness":            "experimental",
+			"readinessLabel":       "Experimental",
+			"experimental":         true,
+			"countedPlayEligible":  false,
+			"countedPlayLabel":     "Not counted",
+			"countedPlayReason":    "Strategy runtime is experimental and not counted-play eligible.",
+			"sourcePolicyLabel":    "Self-contained Strategy source",
+			"packagePolicyLabel":   "No packages",
+			"docsReference":        "runtime/languages",
+			"examplesReference":    "examples/python-exhibition-beta",
+			"warnings":             []string{"Python is non-counted exhibition beta and not ranked/counted eligible."},
+			"validationIssueCodes": []string{"NON_COUNTED_RUNTIME"},
+		}
+	}
 	return map[string]any{
+		"languageId":           "typescript",
+		"adapterId":            "runtime-js-worker-thread",
 		"languageLabel":        "TypeScript",
 		"adapterLabel":         "runtime-js worker thread",
 		"readiness":            "local-dev-fallback",
@@ -2272,7 +2378,7 @@ func exhibitionCountedReason(counted bool) *string {
 	if counted {
 		return nil
 	}
-	reason := "experimental_runtime"
+	reason := "non_counted"
 	return &reason
 }
 
@@ -2280,7 +2386,7 @@ func exhibitionCountedExplanation(counted bool) *string {
 	if counted {
 		return nil
 	}
-	explanation := "Python Strategy runtime evidence is experimental and non-counted in v1.17."
+	explanation := "Python Strategy runtime evidence is non-counted exhibition beta in v1.18."
 	return &explanation
 }
 

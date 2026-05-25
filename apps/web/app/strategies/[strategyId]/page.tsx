@@ -7,6 +7,15 @@ import {
 
 export const dynamic = "force-dynamic"
 
+const runtimeDisplayLabel = (runtimeSemantics: {
+  languageId: string
+  languageLabel: string
+  adapterLabel: string
+}) =>
+  runtimeSemantics.languageId === "python"
+    ? `${runtimeSemantics.languageLabel} / ${runtimeSemantics.adapterLabel} / non-counted exhibition beta`
+    : `${runtimeSemantics.languageLabel} / ${runtimeSemantics.adapterLabel}`
+
 export default async function StrategyCardPage({
   params,
 }: {
@@ -77,7 +86,7 @@ export default async function StrategyCardPage({
           <dd>{strategy.sourceHash}</dd>
           <dt>runtime</dt>
           <dd>
-            {runtimeSemantics.languageLabel} / {runtimeSemantics.adapterLabel}{" "}
+            {runtimeDisplayLabel(runtimeSemantics)}{" "}
             {strategy.runtime.adapter.version}
           </dd>
           <dt>packages</dt>

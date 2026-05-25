@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
 import {
   createPythonRuntimeFromRevision,
+  PYTHON_RUNTIME_ENVIRONMENT,
   pythonExperimentalRuntimeMetadata,
+  pythonRuntimeHostArgs,
   runPythonStrategyMethod,
   runPythonStrategyMethodSync,
 } from "./python-subprocess-adapter.js"
@@ -69,6 +71,16 @@ describe("Python experimental subprocess Strategy ABI", () => {
     expect(metadata.limits.network).toBe("disabled")
   })
 
+  it("launches Python with isolated-mode host args and an empty environment", () => {
+    expect(pythonRuntimeHostArgs()).toEqual(
+      expect.arrayContaining([
+        "-I",
+        expect.stringContaining("python_runtime_host.py"),
+      ]),
+    )
+    expect(PYTHON_RUNTIME_ENVIRONMENT).toEqual({})
+  })
+
   it("validates Python source without accepting imports or missing methods", () => {
     const invalid = validatePythonStrategySource("import os\n")
 
@@ -80,6 +92,20 @@ describe("Python experimental subprocess Strategy ABI", () => {
       "MISSING_SELECT_ACTIVATIONS",
     )
     expect(JSON.stringify(invalid)).not.toContain("Traceback")
+  })
+
+  it("uses AST/compile validation with public-safe diagnostics", () => {
+    const invalid = validatePythonStrategySource(
+      'def select_activations(input):\n    return {"activationOrders": [}\n',
+    )
+
+    expect(invalid.valid).toBe(false)
+    expect(invalid.errors.map((issue) => issue.code)).toContain(
+      "TRANSPILE_FAILED",
+    )
+    expect(JSON.stringify(invalid)).not.toContain("return {")
+    expect(JSON.stringify(invalid)).not.toContain("Traceback")
+    expect(JSON.stringify(invalid)).not.toContain("python_validation_host.py")
   })
 
   it("runs synchronously for the runtime-service broker adapter", () => {
@@ -135,5 +161,41 @@ describe("Python experimental subprocess Strategy ABI", () => {
     })
 
     expect(response.ok).toBe(false)
+    expect(response.ok ? undefined : response.failureKind).toBe(
+      "runtimeViolation",
+    )
+  })
+
+  it("maps stdio flood to a deterministic system failure", () => {
+    const source = `${pythonSource}\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": {"flood": "x" * 200000}}\n`
+    const revision = buildPythonStrategyRevision({ source })
+    const response = runPythonStrategyMethodSync({
+      sourceText: revision.source,
+      sourceHash: revision.sourceHash,
+      methodName: "soldierBrain",
+      input: {
+        self: {
+          id: "soldier:1",
+          ownerPlayerId: "player:bottom",
+          status: "ACTIVE",
+          position: { x: 0, y: 0 },
+          facing: "UP",
+          lastSuccessfulMoveDirection: null,
+        },
+        awarenessGrid: { cells: [] },
+        cycleIndex: 0,
+        maxCycles: 12,
+        soldierMemory: {},
+      },
+      stdoutBytes: 64,
+    })
+
+    expect(response.ok).toBe(false)
+    expect(response.ok ? undefined : response.failureKind).toBe("systemFailure")
+    expect(
+      response.ok || response.failureKind !== "systemFailure"
+        ? undefined
+        : response.systemFailure.code,
+    ).toBe("STDIO_CAP_EXCEEDED")
   })
 })

@@ -16,6 +16,11 @@ interface ExhibitionClientProps {
   revisions: AccountReadRevisionSummary[]
 }
 
+const runtimeDisplayLabel = (revision: AccountReadRevisionSummary) =>
+  revision.runtimeSemantics.languageId === "python"
+    ? `${revision.runtimeSemantics.languageLabel} · non-counted exhibition beta`
+    : `${revision.runtimeSemantics.languageLabel} · ${revision.runtimeSemantics.countedPlayLabel}`
+
 export function ExhibitionClient({
   presets,
   revisions,
@@ -154,8 +159,8 @@ export function ExhibitionClient({
         </div>
         {!counted ? (
           <p className="workshop-muted">
-            Unranked exhibitions may include experimental Python revisions and
-            are marked non-counted.
+            Unranked exhibitions may include Python non-counted exhibition beta
+            revisions and are marked non-counted.
           </p>
         ) : null}
 
@@ -180,8 +185,7 @@ export function ExhibitionClient({
                     <small>
                       {revision.sourceHash.slice(0, 10)} ·{" "}
                       {revision.sourceBytes} bytes ·{" "}
-                      {revision.runtimeSemantics.languageLabel} ·{" "}
-                      {revision.runtimeSemantics.countedPlayLabel} ·{" "}
+                      {runtimeDisplayLabel(revision)} ·{" "}
                       {new Date(revision.createdAt).toLocaleString()}
                     </small>
                     {!selectable &&

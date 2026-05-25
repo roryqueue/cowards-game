@@ -40,6 +40,12 @@ const replaceDraftCopy =
   "Replace draft: this will overwrite the current unsaved source with the selected template."
 const invalidSubmitBlockedReason =
   "Resolve validation errors before submitting."
+const runtimeDisplayLabel = (revision: {
+  sourceFormat?: string | undefined
+}) =>
+  revision.sourceFormat === "python"
+    ? "Python · non-counted exhibition beta"
+    : null
 
 export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const firstTemplate = initialData.templates[0]
@@ -320,6 +326,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           source,
+          sourceFormat,
           label,
           notes,
           ...(selectedStarterMatchesDraft && selectedStarter
@@ -742,7 +749,8 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                       {revision.sourceHash.slice(0, 10)} ·{" "}
                       {revision.sourceBytes} bytes ·{" "}
                       {revision.valid ? "valid" : "invalid"} ·{" "}
-                      {formatUsedInMatches(revision)}
+                      {runtimeDisplayLabel(revision) ??
+                        formatUsedInMatches(revision)}
                     </p>
                     <button
                       type="button"
@@ -809,9 +817,15 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 type="button"
                 onClick={() => setSourceFormat("python")}
               >
-                PY
+                PY beta
               </button>
             </div>
+            {sourceFormat === "python" ? (
+              <p className="workshop-muted">
+                Python is non-counted exhibition beta and runs only through the
+                Runtime Broker.
+              </p>
+            ) : null}
             <StrategySourceEditor
               language={sourceFormat}
               value={source}

@@ -7,6 +7,17 @@ import { isGoBackendServiceUnavailableError } from "../../lib/go-backend-service
 
 export const dynamic = "force-dynamic"
 
+const runtimeDisplayLabel = (revision: {
+  runtimeSemantics: {
+    languageId: string
+    languageLabel: string
+    countedPlayLabel: string
+  }
+}) =>
+  revision.runtimeSemantics.languageId === "python"
+    ? `${revision.runtimeSemantics.languageLabel} · non-counted exhibition beta`
+    : `${revision.runtimeSemantics.languageLabel} · ${revision.runtimeSemantics.countedPlayLabel}`
+
 export default async function AccountPage() {
   let accountUnavailable = false
   let revisionsUnavailable = false
@@ -92,10 +103,7 @@ export default async function AccountPage() {
                     <span title={revision.id}>{revision.label}</span>
                     <span>{revision.sourceHash.slice(0, 10)}</span>
                     <span>{revision.valid ? "valid" : "invalid"}</span>
-                    <span>
-                      {revision.runtimeSemantics.languageLabel} ·{" "}
-                      {revision.runtimeSemantics.countedPlayLabel}
-                    </span>
+                    <span>{runtimeDisplayLabel(revision)}</span>
                     <a
                       href={`/api/account/revisions/${encodeURIComponent(
                         revision.id,

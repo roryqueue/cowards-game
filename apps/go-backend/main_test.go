@@ -221,6 +221,52 @@ func TestPublicRuntimeMetadataOmitsPrivateLimits(t *testing.T) {
 	}
 }
 
+func TestPythonAccountRevisionMetadataIsNonCountedExhibitionBeta(t *testing.T) {
+	source := `
+def select_activations(input):
+    return {"activationOrders": [], "strategyMemory": input["strategyMemory"]}
+
+def soldier_brain(input):
+    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": input["soldierMemory"]}
+`
+	runtime := pythonRuntimeMetadata()
+	validation := validatePythonSourceMetadata(source)
+	semantics := runtimeSemantics(runtime)
+
+	if stringValue(mapValue(runtime, "language"), "id") != "python" {
+		t.Fatalf("python runtime metadata did not preserve language id")
+	}
+	if !boolValue(validation, "valid") {
+		t.Fatalf("valid Python source should be accepted for non-counted exhibition beta: %+v", validation)
+	}
+	if semantics["languageId"] != "python" || semantics["countedPlayEligible"] != false {
+		t.Fatalf("Python runtime semantics must stay non-counted exhibition beta: %+v", semantics)
+	}
+	if !runtimeAllowsNonCountedExhibition(runtime) || runtimeAllowsCountedPlay(runtime) {
+		t.Fatalf("Python runtime eligibility gate drifted")
+	}
+}
+
+func TestPythonAccountRevisionValidationRejectsBackendEscapeMarkers(t *testing.T) {
+	validation := validatePythonSourceMetadata("import os\ndef select_activations(input):\n    return {}\n")
+	if boolValue(validation, "valid") {
+		t.Fatalf("Python validation accepted import escape marker")
+	}
+	errors, ok := validation["errors"].([]map[string]any)
+	if !ok || len(errors) == 0 {
+		t.Fatalf("Python validation did not return structured errors: %+v", validation)
+	}
+	found := false
+	for _, item := range errors {
+		if item["code"] == "IMPORT_NOT_ALLOWED" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("Python validation did not report IMPORT_NOT_ALLOWED: %+v", errors)
+	}
+}
+
 func TestPublicReadRoutesDecodeIdentifiersWithoutCrossRouteFallback(t *testing.T) {
 	tests := []struct {
 		name          string
