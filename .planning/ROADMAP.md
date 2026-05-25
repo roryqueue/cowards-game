@@ -26,7 +26,7 @@
 
 ## Active Milestone: v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
 
-**Status:** Planning
+**Status:** Planning - discussion/context complete
 **Phases:** 132-139
 **Granularity:** Standard
 **Requirements:** 50/50 mapped
@@ -213,9 +213,9 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 
 Phase 132: v1.20 Baseline, Candidate Decision, and Budget Contract.
 
-`$gsd-discuss-phase 132`
+`$gsd-plan-phase 132`
 
-Also available: `$gsd-plan-phase 132`
+After Phase 132 has a verified plan: `$gsd-execute-phase 132`
 
 ---
 *Created: 2026-05-25 for v1.20 milestone initialization*

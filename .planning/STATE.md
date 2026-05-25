@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.20
 milestone_name: Runtime Sandbox Candidate and Exhibition Reliability Proof
 status: planning
-stopped_at: defining requirements and roadmap
+stopped_at: phase discussion context complete
 last_updated: "2026-05-25T00:00:00.000-04:00"
-last_activity: 2026-05-25 - Started v1.20 milestone with Docker/container candidate lane and exhibition reliability focus
+last_activity: 2026-05-25 - Completed v1.20 discussion/context docs for phases 132-139
 progress:
   total_phases: 8
   completed_phases: 0
@@ -17,7 +17,7 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.20 planning initialized
+**Status:** v1.20 phase discussion complete
 
 ## Project Reference
 
@@ -33,8 +33,8 @@ See: `.planning/PROJECT.md`
 
 Phase: Not started (Phase 132 next)
 Plan: -
-Status: Defining requirements and roadmap
-Last activity: 2026-05-25 - Milestone v1.20 started
+Status: Ready to plan Phase 132
+Last activity: 2026-05-25 - Phase discussion/context package created for Phases 132-139
 
 ## Current Milestone Goal
 
@@ -78,4 +78,4 @@ The v1.19 proof also found and fixed two reliability/privacy gaps: runtime-servi
 
 ## Operator Next Steps
 
-Start Phase 132 with `$gsd-discuss-phase 132` or `$gsd-plan-phase 132`.
+Plan Phase 132 with `$gsd-plan-phase 132`, then execute planned work with `$gsd-execute-phase 132`.
