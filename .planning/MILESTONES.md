@@ -2,10 +2,10 @@
 
 ## v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof (Active)
 
-**Status:** Discussion/context complete 2026-05-25
+**Status:** In progress - phases 132-136 complete 2026-05-25
 **Phases:** 8
 **Phase range:** 132-139
-**Plans:** 3/3 complete
+**Plans:** 5/5 complete
 **Discussion Context:** Phases 132-139 ready for planning
 **Requirements:** 50/50 mapped
 **Research:** .planning/research/v1.20-SUMMARY.md

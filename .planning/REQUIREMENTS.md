@@ -36,22 +36,22 @@
 
 ### Timeout, Latency, And Reliability Budgets
 
-- [ ] **BUDGET-01**: Developer can inspect the configured deterministic per-Strategy execution caps for JS/TS and Python and verify they are not loosened to hide latency.
-- [ ] **BUDGET-02**: Developer can inspect whole-Match execution timeout behavior separately from per-Strategy call timeouts.
-- [ ] **BUDGET-03**: Developer can inspect MatchSet/job orchestration timeout and retry budgets for queued, running, completed, degraded, strategy-failed, and system-failed states.
-- [ ] **BUDGET-04**: Developer can inspect runtime-service HTTP timeout behavior and verify Go reports runtime-service timeouts without executing Strategy code or silently falling back.
-- [ ] **BUDGET-05**: Developer can inspect browser proof timeout budgets and verify they are bounded and justified by measured local proof behavior.
-- [ ] **BUDGET-06**: Developer can measure JS/TS-vs-Python and Python-vs-Python exhibition MatchSet latency with bounded repeat counts and recorded local environment metadata.
-- [ ] **BUDGET-07**: Developer can inspect latency evidence that separates cold-start, per-call runtime, whole-Match, job orchestration, result page, and replay page timings where practical.
+- [x] **BUDGET-01**: Developer can inspect the configured deterministic per-Strategy execution caps for JS/TS and Python and verify they are not loosened to hide latency.
+- [x] **BUDGET-02**: Developer can inspect whole-Match execution timeout behavior separately from per-Strategy call timeouts.
+- [x] **BUDGET-03**: Developer can inspect MatchSet/job orchestration timeout and retry budgets for queued, running, completed, degraded, strategy-failed, and system-failed states.
+- [x] **BUDGET-04**: Developer can inspect runtime-service HTTP timeout behavior and verify Go reports runtime-service timeouts without executing Strategy code or silently falling back.
+- [x] **BUDGET-05**: Developer can inspect browser proof timeout budgets and verify they are bounded and justified by measured local proof behavior.
+- [x] **BUDGET-06**: Developer can measure JS/TS-vs-Python and Python-vs-Python exhibition MatchSet latency with bounded repeat counts and recorded local environment metadata.
+- [x] **BUDGET-07**: Developer can inspect latency evidence that separates cold-start, per-call runtime, whole-Match, job orchestration, result page, and replay page timings where practical.
 
 ### Exhibition Execution Reliability And Retry Semantics
 
-- [ ] **REL-01**: User can create repeated signed-in non-counted exhibition MatchSets involving Python without spurious runtime-service timeouts under the documented local proof budget.
-- [ ] **REL-02**: Developer can verify Python exhibition latency is reduced or stabilized where practical without weakening deterministic Strategy caps, schema validation, or runtime isolation boundaries.
-- [ ] **REL-03**: Developer can verify Strategy-caused runtime violations are not blindly retried as system failures.
-- [ ] **REL-04**: Developer can verify retryable runtime-service, Docker/container, or orchestration system failures are classified separately from player-caused Strategy failures.
-- [ ] **REL-05**: Developer can verify MatchSet completion, scoring, public status refresh, and replay availability remain Go-owned across success, degraded, timeout, and failure paths.
-- [ ] **REL-06**: Developer can verify JS/TS validation, runtime execution, counted eligibility, exhibition creation, result evidence, and replay safety remain intact.
+- [x] **REL-01**: User can create repeated signed-in non-counted exhibition MatchSets involving Python without spurious runtime-service timeouts under the documented local proof budget.
+- [x] **REL-02**: Developer can verify Python exhibition latency is reduced or stabilized where practical without weakening deterministic Strategy caps, schema validation, or runtime isolation boundaries.
+- [x] **REL-03**: Developer can verify Strategy-caused runtime violations are not blindly retried as system failures.
+- [x] **REL-04**: Developer can verify retryable runtime-service, Docker/container, or orchestration system failures are classified separately from player-caused Strategy failures.
+- [x] **REL-05**: Developer can verify MatchSet completion, scoring, public status refresh, and replay availability remain Go-owned across success, degraded, timeout, and failure paths.
+- [x] **REL-06**: Developer can verify JS/TS validation, runtime execution, counted eligibility, exhibition creation, result evidence, and replay safety remain intact.
 
 ### Degraded-State UX And Public-Safe Evidence
 
@@ -128,19 +128,19 @@
 | PROBE-05 | Phase 134 | Complete |
 | PROBE-06 | Phase 134 | Complete |
 | PROBE-07 | Phase 134 | Complete |
-| BUDGET-01 | Phase 135 | Pending |
-| BUDGET-02 | Phase 135 | Pending |
-| BUDGET-03 | Phase 135 | Pending |
-| BUDGET-04 | Phase 135 | Pending |
-| BUDGET-05 | Phase 135 | Pending |
-| BUDGET-06 | Phase 135 | Pending |
-| BUDGET-07 | Phase 135 | Pending |
-| REL-01 | Phase 136 | Pending |
-| REL-02 | Phase 136 | Pending |
-| REL-03 | Phase 136 | Pending |
-| REL-04 | Phase 136 | Pending |
-| REL-05 | Phase 136 | Pending |
-| REL-06 | Phase 136 | Pending |
+| BUDGET-01 | Phase 135 | Complete |
+| BUDGET-02 | Phase 135 | Complete |
+| BUDGET-03 | Phase 135 | Complete |
+| BUDGET-04 | Phase 135 | Complete |
+| BUDGET-05 | Phase 135 | Complete |
+| BUDGET-06 | Phase 135 | Complete |
+| BUDGET-07 | Phase 135 | Complete |
+| REL-01 | Phase 136 | Complete |
+| REL-02 | Phase 136 | Complete |
+| REL-03 | Phase 136 | Complete |
+| REL-04 | Phase 136 | Complete |
+| REL-05 | Phase 136 | Complete |
+| REL-06 | Phase 136 | Complete |
 | UX-01 | Phase 137 | Pending |
 | UX-02 | Phase 137 | Pending |
 | UX-03 | Phase 137 | Pending |

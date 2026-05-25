@@ -1,0 +1,53 @@
+{
+  "deterministicStrategyCapsPreserved": true,
+  "generatedAt": "2026-05-25T00:00:00.000Z",
+  "internalRuntimeAdapterFailureCodes": [
+    "SPAWN_FAILED",
+    "STDIO_CAP_EXCEEDED",
+    "SUBPROCESS_SIGNAL",
+    "SUBPROCESS_EXIT",
+    "MALFORMED_IPC"
+  ],
+  "internalRuntimeAdapterFailureHandling": "Internal adapter system failure codes are not Go retry classes by name; runtime-service-visible failures surface as EXECUTION_EXCEPTION or RuntimeServiceMalformedResponse, while Python adapter system failures may complete as Match runtime-violation outcomes.",
+  "jsTsSupportPreserved": true,
+  "nonRetryableFailures": [
+    "RuntimeServiceRequestEncode",
+    "RuntimeServiceRequestCreate",
+    "RuntimeServiceContractMismatch(request/local validation)",
+    "RuntimeServiceSourceMismatch",
+    "MALFORMED_REQUEST",
+    "SOURCE_HASH_MISMATCH",
+    "SOURCE_BYTES_MISMATCH",
+    "UNSUPPORTED_RUNTIME_ADAPTER",
+    "Strategy runtime violation",
+    "invalid Strategy output",
+    "validation failure",
+    "non-counted eligibility violation"
+  ],
+  "ownership": {
+    "matchCompletionOwner": "Go backend",
+    "publicEvidenceOwner": "Go backend/web public DTOs",
+    "pythonOwnsBackendBehavior": false,
+    "retryPolicyOwner": "Go backend job lifecycle",
+    "runtimeServiceOwner": "hostile Strategy execution through schema-validated ABI envelopes",
+    "scoringOwner": "Go backend"
+  },
+  "playerCausedFailuresAreNotBlindlyRetried": true,
+  "productionSandboxCertification": false,
+  "productionSandboxPromoted": false,
+  "publicEvidencePrivateDataSafe": true,
+  "pythonCountedEligibility": false,
+  "pythonStatus": "non-counted exhibition beta only",
+  "retryableSystemFailures": [
+    "RuntimeServiceStopped",
+    "RuntimeServiceTimeout",
+    "RuntimeServiceTransport",
+    "RuntimeServiceRead",
+    "RuntimeServiceOversizedResponse",
+    "RuntimeServiceMalformedResponse",
+    "RuntimeServiceContractMismatch(response-side)",
+    "EXECUTION_EXCEPTION",
+    "RESPONSE_SCHEMA_INVALID"
+  ],
+  "schemaVersion": "v1.20-exhibition-reliability-retry-semantics"
+}

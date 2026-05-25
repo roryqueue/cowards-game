@@ -26,7 +26,7 @@
 
 ## Active Milestone: v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
 
-**Status:** Planning - discussion/context complete
+**Status:** In progress - phases 132-136 complete
 **Phases:** 132-139
 **Granularity:** Standard
 **Requirements:** 50/50 mapped
@@ -51,8 +51,8 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 - [x] **Phase 132: v1.20 Baseline, Candidate Decision, and Budget Contract** - Lock v1.19 as the baseline, select Docker/container subprocess as the primary executable candidate, keep runsc fail-loud, and define layered timeout/reliability budgets.
 - [x] **Phase 133: Executable Container Runtime Candidate Lane** - Make the Docker/container subprocess lane run real candidate evidence and produce honest machine-readable and human-readable artifacts.
 - [x] **Phase 134: Hostile Probe and No-Fallback Parity Across Subprocess and Container** - Run probe parity and no-fallback drills across hardened subprocess and container lanes where practical, with strict privacy redaction and monitors.
-- [ ] **Phase 135: Timeout, Latency, and Reliability Budget Model** - Document, test, and measure Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
-- [ ] **Phase 136: Exhibition Execution Stabilization and Retry Semantics** - Stabilize Python exhibition execution where practical and make retry/no-retry semantics explicit and safe.
+- [x] **Phase 135: Timeout, Latency, and Reliability Budget Model** - Document, test, and measure Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
+- [x] **Phase 136: Exhibition Execution Stabilization and Retry Semantics** - Stabilize Python exhibition execution where practical and make retry/no-retry semantics explicit and safe.
 - [ ] **Phase 137: Degraded-State UX and Public-Safe Reliability Evidence** - Improve user-facing running, slow, degraded, timeout, strategy-failed, and system-failed states in MatchSet/replay evidence.
 - [ ] **Phase 138: Signed-In Reliability Proof and JS/TS Regression Gate** - Run a realistic signed-in proof with one JS/TS and two Python revisions, mixed and Python-vs-Python exhibitions, candidate evidence, privacy checks, and JS/TS regression checks.
 - [ ] **Phase 139: Promotion Decision, Audit, Archive, and Tag** - Verify, audit, document promotion decisions, archive v1.20, remove active requirements, commit, and tag `v1.20`.
@@ -114,7 +114,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 3. Developer can measure JS/TS-vs-Python and Python-vs-Python exhibition MatchSet latency with bounded repeat counts.
 4. Developer can inspect latency evidence that separates cold-start, runtime call, whole-Match, orchestration, result page, and replay page timings where practical.
 
-**Plans:** 0 planned
+**Plans:** 1 complete
 
 ### Phase 136: Exhibition Execution Stabilization and Retry Semantics
 
@@ -130,7 +130,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 5. Developer can verify Go-owned completion, scoring, status refresh, and replay availability across success, degraded, timeout, and failure paths.
 6. Developer can verify JS/TS support remains intact.
 
-**Plans:** 0 planned
+**Plans:** 1 complete
 
 ### Phase 137: Degraded-State UX and Public-Safe Reliability Evidence
 
@@ -187,8 +187,8 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 | 132. v1.20 Baseline, Candidate Decision, and Budget Contract | 1/1 | Complete | 2026-05-25 |
 | 133. Executable Container Runtime Candidate Lane | 1/1 | Complete | 2026-05-25 |
 | 134. Hostile Probe and No-Fallback Parity Across Subprocess and Container | 1/1 | Complete | 2026-05-25 |
-| 135. Timeout, Latency, and Reliability Budget Model | 0/0 | Not Started | - |
-| 136. Exhibition Execution Stabilization and Retry Semantics | 0/0 | Not Started | - |
+| 135. Timeout, Latency, and Reliability Budget Model | 1/1 | Complete | 2026-05-25 |
+| 136. Exhibition Execution Stabilization and Retry Semantics | 1/1 | Complete | 2026-05-25 |
 | 137. Degraded-State UX and Public-Safe Reliability Evidence | 0/0 | Not Started | - |
 | 138. Signed-In Reliability Proof and JS/TS Regression Gate | 0/0 | Not Started | - |
 | 139. Promotion Decision, Audit, Archive, and Tag | 0/0 | Not Started | - |
@@ -211,11 +211,11 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 
 ## Next Up
 
-Phase 135: Timeout, Latency, and Reliability Budget Model.
+Phase 137: Degraded-State UX and Public-Safe Reliability Evidence.
 
-`$gsd-plan-phase 135`
+`$gsd-plan-phase 137`
 
-After Phase 135 has a verified plan: `$gsd-execute-phase 135`
+After Phase 137 has a verified plan and UI contract: `$gsd-ui-phase 137`, then `$gsd-execute-phase 137`
 
 ---
 *Created: 2026-05-25 for v1.20 milestone initialization*

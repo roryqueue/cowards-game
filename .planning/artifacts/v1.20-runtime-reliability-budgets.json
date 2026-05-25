@@ -3,9 +3,12 @@
   "budgets": [
     {
       "adjustableInV120": false,
-      "defaultBudgetMs": 500,
+      "defaultBudgetMs": 1000,
       "evidence": "Uses existing deterministic per-call runtime timeout/cap behavior; not loosened for Python exhibition latency.",
       "id": "strategy-call",
+      "measurementSegments": [
+        "per-call-runtime"
+      ],
       "owner": "runtime-service adapter",
       "scope": "Single Strategy method call inside the selected runtime implementation."
     },
@@ -14,6 +17,10 @@
       "defaultBudgetMs": 90000,
       "evidence": "v1.19 proved whole-Match Python exhibitions need a larger outer HTTP budget than individual Strategy calls.",
       "id": "match-execution",
+      "measurementSegments": [
+        "whole-match",
+        "per-call-runtime"
+      ],
       "owner": "Go Match lifecycle plus runtime-service",
       "scope": "Whole Match execution through runtime-service, including repeated Strategy calls."
     },
@@ -22,6 +29,9 @@
       "defaultBudgetMs": 180000,
       "evidence": "Used to distinguish queued/running/slow/degraded states from runtime Strategy violations.",
       "id": "matchset-job-orchestration",
+      "measurementSegments": [
+        "job-orchestration"
+      ],
       "owner": "Go job lifecycle",
       "scope": "Bounded local proof window for MatchSet jobs, retries, status refresh, and replay availability."
     },
@@ -30,6 +40,9 @@
       "defaultBudgetMs": 90000,
       "evidence": "Backed by COWARDS_RUNTIME_SERVICE_HTTP_TIMEOUT_MS and classified as retryable system failure on timeout.",
       "id": "runtime-service-http",
+      "measurementSegments": [
+        "whole-match"
+      ],
       "owner": "Go runtime service client",
       "scope": "HTTP request from Go backend to runtime-service for one Match."
     },
@@ -38,11 +51,38 @@
       "defaultBudgetMs": 360000,
       "evidence": "v1.20 proof remains bounded to three cycles and is not a stress test.",
       "id": "browser-proof",
+      "measurementSegments": [
+        "result-page",
+        "replay-page"
+      ],
       "owner": "Playwright proof",
       "scope": "Bounded signed-in browser proof covering account, revisions, exhibitions, result, and replay pages."
     }
   ],
   "deterministicStrategyCapsPreserved": true,
   "generatedAt": "2026-05-25T00:00:00.000Z",
+  "measurementPlan": {
+    "boundedRepeatCount": 3,
+    "localEnvironmentMetadata": [
+      "runtime adapter ids",
+      "language ids",
+      "Docker/container candidate lane status",
+      "runtime-service HTTP timeout",
+      "browser proof timeout"
+    ],
+    "matchups": [
+      "js-ts-vs-python",
+      "python-vs-python"
+    ],
+    "stressTest": false,
+    "timingSegments": [
+      "cold-start",
+      "per-call-runtime",
+      "whole-match",
+      "job-orchestration",
+      "result-page",
+      "replay-page"
+    ]
+  },
   "schemaVersion": "v1.20-runtime-reliability-budgets"
 }

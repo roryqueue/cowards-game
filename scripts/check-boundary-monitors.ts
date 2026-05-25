@@ -257,6 +257,10 @@ const v120BudgetArtifactPath =
   ".planning/artifacts/v1.20-runtime-reliability-budgets.json"
 const v120BudgetMarkdownPath =
   ".planning/artifacts/v1.20-runtime-reliability-budgets.md"
+const v120RetryArtifactPath =
+  ".planning/artifacts/v1.20-exhibition-reliability-retry-semantics.json"
+const v120RetryMarkdownPath =
+  ".planning/artifacts/v1.20-exhibition-reliability-retry-semantics.md"
 const v120HostileProbeArtifactPath =
   ".planning/artifacts/v1.20-hostile-probe-no-fallback-evidence.json"
 const v120HostileProbeMarkdownPath =
@@ -2975,8 +2979,25 @@ const checkRuntimeIsolationReadiness = (): string => {
   const budgets = readJson<{
     schemaVersion?: unknown
     deterministicStrategyCapsPreserved?: unknown
+    measurementPlan?: unknown
     budgets?: unknown
   }>(v120BudgetArtifactPath)
+  const retrySemantics = readJson<{
+    schemaVersion?: unknown
+    playerCausedFailuresAreNotBlindlyRetried?: unknown
+    deterministicStrategyCapsPreserved?: unknown
+    jsTsSupportPreserved?: unknown
+    pythonStatus?: unknown
+    pythonCountedEligibility?: unknown
+    publicEvidencePrivateDataSafe?: unknown
+    productionSandboxCertification?: unknown
+    productionSandboxPromoted?: unknown
+    retryableSystemFailures?: unknown
+    internalRuntimeAdapterFailureCodes?: unknown
+    internalRuntimeAdapterFailureHandling?: unknown
+    nonRetryableFailures?: unknown
+    ownership?: unknown
+  }>(v120RetryArtifactPath)
   const hostileProbeEvidence = readJson<{
     schemaVersion?: unknown
     generatedAt?: unknown
@@ -2995,6 +3016,10 @@ const checkRuntimeIsolationReadiness = (): string => {
   )
   const budgetMarkdown = readFileSync(
     path.join(repoRoot, v120BudgetMarkdownPath),
+    "utf8",
+  )
+  const retryMarkdown = readFileSync(
+    path.join(repoRoot, v120RetryMarkdownPath),
     "utf8",
   )
   const hostileProbeMarkdown = readFileSync(
@@ -3036,6 +3061,39 @@ const checkRuntimeIsolationReadiness = (): string => {
     budgets.deterministicStrategyCapsPreserved !== true
   ) {
     throw new Error("v1.20 runtime reliability budget schema drifted")
+  }
+  if (
+    retrySemantics.schemaVersion !==
+      "v1.20-exhibition-reliability-retry-semantics" ||
+    retrySemantics.playerCausedFailuresAreNotBlindlyRetried !== true ||
+    retrySemantics.deterministicStrategyCapsPreserved !== true ||
+    retrySemantics.jsTsSupportPreserved !== true ||
+    retrySemantics.pythonStatus !== "non-counted exhibition beta only" ||
+    retrySemantics.pythonCountedEligibility !== false ||
+    retrySemantics.publicEvidencePrivateDataSafe !== true ||
+    retrySemantics.productionSandboxCertification !== false ||
+    retrySemantics.productionSandboxPromoted !== false
+  ) {
+    throw new Error("v1.20 retry semantics schema drifted")
+  }
+  const retryOwnership = retrySemantics.ownership as
+    | {
+        retryPolicyOwner?: unknown
+        matchCompletionOwner?: unknown
+        scoringOwner?: unknown
+        publicEvidenceOwner?: unknown
+        pythonOwnsBackendBehavior?: unknown
+      }
+    | undefined
+  if (
+    retryOwnership?.retryPolicyOwner !== "Go backend job lifecycle" ||
+    retryOwnership.matchCompletionOwner !== "Go backend" ||
+    retryOwnership.scoringOwner !== "Go backend" ||
+    retryOwnership.pythonOwnsBackendBehavior !== false ||
+    typeof retryOwnership.publicEvidenceOwner !== "string" ||
+    !retryOwnership.publicEvidenceOwner.includes("Go backend")
+  ) {
+    throw new Error("v1.20 retry ownership guardrails drifted")
   }
   if (
     hostileProbeEvidence.schemaVersion !==
@@ -3089,6 +3147,120 @@ const checkRuntimeIsolationReadiness = (): string => {
   ]) {
     if (!budgetIds.includes(budget)) {
       throw new Error(`v1.20 reliability budgets missing ${budget}`)
+    }
+  }
+  const budgetEntries = budgets.budgets as
+    | { id?: unknown; defaultBudgetMs?: unknown; adjustableInV120?: unknown }[]
+    | undefined
+  const strategyCallBudget = budgetEntries?.find(
+    (budget) => budget.id === "strategy-call",
+  )
+  if (
+    strategyCallBudget?.defaultBudgetMs !== 1000 ||
+    strategyCallBudget.adjustableInV120 !== false
+  ) {
+    throw new Error("v1.20 Strategy call budget drifted")
+  }
+  const measurementPlan = budgets.measurementPlan as
+    | {
+        boundedRepeatCount?: unknown
+        matchups?: unknown
+        timingSegments?: unknown
+        stressTest?: unknown
+      }
+    | undefined
+  if (
+    measurementPlan?.boundedRepeatCount !== 3 ||
+    measurementPlan.stressTest !== false
+  ) {
+    throw new Error("v1.20 reliability measurement plan drifted")
+  }
+  const timingSegments = stringArray(
+    measurementPlan?.timingSegments ?? [],
+    "v1.20 timing segments",
+  )
+  for (const segment of [
+    "cold-start",
+    "per-call-runtime",
+    "whole-match",
+    "job-orchestration",
+    "result-page",
+    "replay-page",
+  ]) {
+    if (!timingSegments.includes(segment)) {
+      throw new Error(`v1.20 reliability missing timing segment ${segment}`)
+    }
+  }
+  const retryable = stringArray(
+    retrySemantics.retryableSystemFailures ?? [],
+    "v1.20 retryable failures",
+  )
+  const nonRetryable = stringArray(
+    retrySemantics.nonRetryableFailures ?? [],
+    "v1.20 non-retryable failures",
+  )
+  const internalAdapterFailureCodes = stringArray(
+    retrySemantics.internalRuntimeAdapterFailureCodes ?? [],
+    "v1.20 internal adapter failure codes",
+  )
+  for (const failure of [
+    "RuntimeServiceStopped",
+    "RuntimeServiceTimeout",
+    "RuntimeServiceTransport",
+    "RuntimeServiceRead",
+    "RuntimeServiceOversizedResponse",
+    "RuntimeServiceMalformedResponse",
+    "RuntimeServiceContractMismatch(response-side)",
+    "EXECUTION_EXCEPTION",
+    "RESPONSE_SCHEMA_INVALID",
+  ]) {
+    if (!retryable.includes(failure)) {
+      throw new Error(`v1.20 retry semantics missing retryable ${failure}`)
+    }
+  }
+  for (const failure of [
+    "SPAWN_FAILED",
+    "STDIO_CAP_EXCEEDED",
+    "SUBPROCESS_SIGNAL",
+    "SUBPROCESS_EXIT",
+    "MALFORMED_IPC",
+  ]) {
+    if (retryable.includes(failure)) {
+      throw new Error(
+        `v1.20 retry semantics must not list internal adapter code ${failure} as a Go retry class`,
+      )
+    }
+    if (!internalAdapterFailureCodes.includes(failure)) {
+      throw new Error(
+        `v1.20 retry semantics missing internal adapter code ${failure}`,
+      )
+    }
+  }
+  if (
+    typeof retrySemantics.internalRuntimeAdapterFailureHandling !== "string" ||
+    !retrySemantics.internalRuntimeAdapterFailureHandling.includes(
+      "not Go retry classes by name",
+    ) ||
+    !retrySemantics.internalRuntimeAdapterFailureHandling.includes(
+      "EXECUTION_EXCEPTION",
+    )
+  ) {
+    throw new Error("v1.20 internal adapter failure handling drifted")
+  }
+  for (const failure of [
+    "RuntimeServiceRequestEncode",
+    "RuntimeServiceRequestCreate",
+    "RuntimeServiceContractMismatch(request/local validation)",
+    "Strategy runtime violation",
+    "invalid Strategy output",
+    "RuntimeServiceSourceMismatch",
+    "MALFORMED_REQUEST",
+    "SOURCE_HASH_MISMATCH",
+    "SOURCE_BYTES_MISMATCH",
+    "UNSUPPORTED_RUNTIME_ADAPTER",
+  ]) {
+    if (!nonRetryable.includes(failure)) {
+      throw new Error(`v1.20 retry semantics missing non-retryable ${failure}`)
     }
   }
   const drills = stringArray(
@@ -3165,9 +3337,27 @@ const checkRuntimeIsolationReadiness = (): string => {
     "strategy-call",
     "runtime-service-http",
     "browser-proof",
+    "Timing segments",
   ]) {
     if (!budgetMarkdown.includes(required)) {
       throw new Error(`v1.20 reliability budget markdown missing ${required}`)
+    }
+  }
+  for (const required of [
+    "Strategy runtime violations are not blindly retried.",
+    "RuntimeServiceTimeout",
+    "RuntimeServiceContractMismatch(response-side)",
+    "RuntimeServiceContractMismatch(request/local validation)",
+    "Internal Adapter Failure Codes",
+    "not Go retry classes by name",
+    "Python counted eligibility remains false.",
+    "Public evidence remains private-data safe.",
+    "Python remains non-counted exhibition beta only.",
+    "no production sandbox certification",
+    "Runtime sandbox production promotion remains false.",
+  ]) {
+    if (!retryMarkdown.includes(required)) {
+      throw new Error(`v1.20 retry semantics markdown missing ${required}`)
     }
   }
   for (const required of [

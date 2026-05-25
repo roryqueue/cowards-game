@@ -38,6 +38,14 @@ const budgetMarkdownPath = path.join(
   repoRoot,
   ".planning/artifacts/v1.20-runtime-reliability-budgets.md",
 )
+const retryJsonPath = path.join(
+  repoRoot,
+  ".planning/artifacts/v1.20-exhibition-reliability-retry-semantics.json",
+)
+const retryMarkdownPath = path.join(
+  repoRoot,
+  ".planning/artifacts/v1.20-exhibition-reliability-retry-semantics.md",
+)
 const hostileProbeJsonPath = path.join(
   repoRoot,
   `.planning/artifacts/v1.20-hostile-probe-no-fallback-evidence${artifactSuffix}.json`,
@@ -320,16 +328,37 @@ const budgetArtifact = (report: ReturnType<typeof evaluateRuntimeSandboxes>) =>
     budgetPolicy:
       "Outer runtime-service, job, MatchSet, and browser proof budgets may be tuned from evidence; deterministic per-Strategy caps remain unchanged.",
     deterministicStrategyCapsPreserved: true,
+    measurementPlan: {
+      boundedRepeatCount: 3,
+      matchups: ["js-ts-vs-python", "python-vs-python"],
+      localEnvironmentMetadata: [
+        "runtime adapter ids",
+        "language ids",
+        "Docker/container candidate lane status",
+        "runtime-service HTTP timeout",
+        "browser proof timeout",
+      ],
+      timingSegments: [
+        "cold-start",
+        "per-call-runtime",
+        "whole-match",
+        "job-orchestration",
+        "result-page",
+        "replay-page",
+      ],
+      stressTest: false,
+    },
     budgets: [
       {
         id: "strategy-call",
         owner: "runtime-service adapter",
-        defaultBudgetMs: 500,
+        defaultBudgetMs: 1_000,
         scope:
           "Single Strategy method call inside the selected runtime implementation.",
         adjustableInV120: false,
         evidence:
           "Uses existing deterministic per-call runtime timeout/cap behavior; not loosened for Python exhibition latency.",
+        measurementSegments: ["per-call-runtime"],
       },
       {
         id: "match-execution",
@@ -340,6 +369,7 @@ const budgetArtifact = (report: ReturnType<typeof evaluateRuntimeSandboxes>) =>
         adjustableInV120: true,
         evidence:
           "v1.19 proved whole-Match Python exhibitions need a larger outer HTTP budget than individual Strategy calls.",
+        measurementSegments: ["whole-match", "per-call-runtime"],
       },
       {
         id: "matchset-job-orchestration",
@@ -350,6 +380,7 @@ const budgetArtifact = (report: ReturnType<typeof evaluateRuntimeSandboxes>) =>
         adjustableInV120: true,
         evidence:
           "Used to distinguish queued/running/slow/degraded states from runtime Strategy violations.",
+        measurementSegments: ["job-orchestration"],
       },
       {
         id: "runtime-service-http",
@@ -359,6 +390,7 @@ const budgetArtifact = (report: ReturnType<typeof evaluateRuntimeSandboxes>) =>
         adjustableInV120: true,
         evidence:
           "Backed by COWARDS_RUNTIME_SERVICE_HTTP_TIMEOUT_MS and classified as retryable system failure on timeout.",
+        measurementSegments: ["whole-match"],
       },
       {
         id: "browser-proof",
@@ -369,6 +401,7 @@ const budgetArtifact = (report: ReturnType<typeof evaluateRuntimeSandboxes>) =>
         adjustableInV120: true,
         evidence:
           "v1.20 proof remains bounded to three cycles and is not a stress test.",
+        measurementSegments: ["result-page", "replay-page"],
       },
     ],
   }) as const
@@ -384,12 +417,125 @@ const budgetMarkdown = (
     "",
     `Policy: ${artifact.budgetPolicy}`,
     "",
+    "## Measurement Plan",
+    "",
+    `- Bounded repeat count: ${artifact.measurementPlan.boundedRepeatCount}.`,
+    `- Matchups: ${artifact.measurementPlan.matchups.join(", ")}.`,
+    `- Timing segments: ${artifact.measurementPlan.timingSegments.join(", ")}.`,
+    `- Stress test: ${artifact.measurementPlan.stressTest ? "yes" : "no"}.`,
+    "",
     "| Budget | Owner | Default | Adjustable in v1.20 | Scope |",
     "|---|---|---:|---:|---|",
     ...artifact.budgets.map(
       (budget) =>
         `| ${budget.id} | ${budget.owner} | ${budget.defaultBudgetMs} ms | ${budget.adjustableInV120 ? "yes" : "no"} | ${budget.scope} |`,
     ),
+    "",
+  ]
+  return `${lines.join("\n")}\n`
+}
+
+const retryArtifact = (report: ReturnType<typeof evaluateRuntimeSandboxes>) =>
+  ({
+    schemaVersion: "v1.20-exhibition-reliability-retry-semantics",
+    generatedAt: report.generatedAt,
+    ownership: {
+      retryPolicyOwner: "Go backend job lifecycle",
+      matchCompletionOwner: "Go backend",
+      scoringOwner: "Go backend",
+      publicEvidenceOwner: "Go backend/web public DTOs",
+      runtimeServiceOwner:
+        "hostile Strategy execution through schema-validated ABI envelopes",
+      pythonOwnsBackendBehavior: false,
+    },
+    publicEvidencePrivateDataSafe: true,
+    retryableSystemFailures: [
+      "RuntimeServiceStopped",
+      "RuntimeServiceTimeout",
+      "RuntimeServiceTransport",
+      "RuntimeServiceRead",
+      "RuntimeServiceOversizedResponse",
+      "RuntimeServiceMalformedResponse",
+      "RuntimeServiceContractMismatch(response-side)",
+      "EXECUTION_EXCEPTION",
+      "RESPONSE_SCHEMA_INVALID",
+    ],
+    internalRuntimeAdapterFailureCodes: [
+      "SPAWN_FAILED",
+      "STDIO_CAP_EXCEEDED",
+      "SUBPROCESS_SIGNAL",
+      "SUBPROCESS_EXIT",
+      "MALFORMED_IPC",
+    ],
+    internalRuntimeAdapterFailureHandling:
+      "Internal adapter system failure codes are not Go retry classes by name; runtime-service-visible failures surface as EXECUTION_EXCEPTION or RuntimeServiceMalformedResponse, while Python adapter system failures may complete as Match runtime-violation outcomes.",
+    nonRetryableFailures: [
+      "RuntimeServiceRequestEncode",
+      "RuntimeServiceRequestCreate",
+      "RuntimeServiceContractMismatch(request/local validation)",
+      "RuntimeServiceSourceMismatch",
+      "MALFORMED_REQUEST",
+      "SOURCE_HASH_MISMATCH",
+      "SOURCE_BYTES_MISMATCH",
+      "UNSUPPORTED_RUNTIME_ADAPTER",
+      "Strategy runtime violation",
+      "invalid Strategy output",
+      "validation failure",
+      "non-counted eligibility violation",
+    ],
+    playerCausedFailuresAreNotBlindlyRetried: true,
+    deterministicStrategyCapsPreserved: true,
+    jsTsSupportPreserved: true,
+    pythonStatus: "non-counted exhibition beta only",
+    pythonCountedEligibility: false,
+    productionSandboxCertification: false,
+    productionSandboxPromoted: false,
+  }) as const
+
+const retryMarkdown = (
+  report: ReturnType<typeof evaluateRuntimeSandboxes>,
+): string => {
+  const artifact = retryArtifact(report)
+  const lines = [
+    "# v1.20 Exhibition Reliability Retry Semantics",
+    "",
+    `Generated: ${artifact.generatedAt}`,
+    "",
+    "## Ownership",
+    "",
+    `- Retry policy owner: ${artifact.ownership.retryPolicyOwner}.`,
+    `- Match completion owner: ${artifact.ownership.matchCompletionOwner}.`,
+    `- Scoring owner: ${artifact.ownership.scoringOwner}.`,
+    `- Public evidence owner: ${artifact.ownership.publicEvidenceOwner}.`,
+    `- Runtime service owner: ${artifact.ownership.runtimeServiceOwner}.`,
+    "- Python owns backend behavior: no.",
+    "",
+    "## Retryable System Failures",
+    "",
+    ...artifact.retryableSystemFailures.map((failure) => `- ${failure}`),
+    "",
+    "## Internal Adapter Failure Codes",
+    "",
+    ...artifact.internalRuntimeAdapterFailureCodes.map(
+      (failure) => `- ${failure}`,
+    ),
+    "",
+    artifact.internalRuntimeAdapterFailureHandling,
+    "",
+    "## Non-Retryable Failures",
+    "",
+    ...artifact.nonRetryableFailures.map((failure) => `- ${failure}`),
+    "",
+    "## Guardrails",
+    "",
+    "- Strategy runtime violations are not blindly retried.",
+    "- Deterministic per-Strategy caps are preserved.",
+    "- JS/TS support remains intact.",
+    "- Python remains non-counted exhibition beta only.",
+    "- Python counted eligibility remains false.",
+    "- Public evidence remains private-data safe.",
+    "- Runtime isolation remains readiness evidence only; no production sandbox certification.",
+    "- Runtime sandbox production promotion remains false.",
     "",
   ]
   return `${lines.join("\n")}\n`
@@ -502,6 +648,8 @@ const nextReadinessJson = serialize(readinessArtifact(report))
 const nextReadinessMarkdown = readinessMarkdown(report)
 const nextBudgetJson = serialize(budgetArtifact(report))
 const nextBudgetMarkdown = budgetMarkdown(report)
+const nextRetryJson = serialize(retryArtifact(report))
+const nextRetryMarkdown = retryMarkdown(report)
 const nextHostileProbeJson = serialize(hostileProbeArtifact(report))
 const nextHostileProbeMarkdown = hostileProbeMarkdown(report)
 
@@ -548,6 +696,18 @@ if (checkMode) {
       "v1.20 runtime reliability budget Markdown artifact is stale; run pnpm sandbox:evaluate",
     )
   }
+  const currentRetryJson = readFileSync(retryJsonPath, "utf8")
+  if (currentRetryJson !== nextRetryJson) {
+    throw new Error(
+      "v1.20 exhibition reliability retry semantics JSON artifact is stale; run pnpm sandbox:evaluate",
+    )
+  }
+  const currentRetryMarkdown = readFileSync(retryMarkdownPath, "utf8")
+  if (currentRetryMarkdown !== nextRetryMarkdown) {
+    throw new Error(
+      "v1.20 exhibition reliability retry semantics Markdown artifact is stale; run pnpm sandbox:evaluate",
+    )
+  }
   const currentHostileProbeJson = readFileSync(hostileProbeJsonPath, "utf8")
   if (currentHostileProbeJson !== nextHostileProbeJson) {
     throw new Error(
@@ -570,6 +730,8 @@ if (checkMode) {
   writeFileSync(readinessMarkdownPath, nextReadinessMarkdown)
   writeFileSync(budgetJsonPath, nextBudgetJson)
   writeFileSync(budgetMarkdownPath, nextBudgetMarkdown)
+  writeFileSync(retryJsonPath, nextRetryJson)
+  writeFileSync(retryMarkdownPath, nextRetryMarkdown)
   writeFileSync(hostileProbeJsonPath, nextHostileProbeJson)
   writeFileSync(hostileProbeMarkdownPath, nextHostileProbeMarkdown)
 }
