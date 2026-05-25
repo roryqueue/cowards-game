@@ -38,7 +38,7 @@ describe("reliability evidence copy", () => {
     expect(rowValue(rows, "status")).not.toContain("Python")
     expect(rowValue(rows, "retry policy")).toContain("Go-owned orchestration")
     expect(rowValue(rows, "timeout budget")).toContain("1000 ms")
-    expect(rowValue(rows, "proof limits")).toContain("three bounded cycles")
+    expect(rowValue(rows, "proof limits")).toContain("bounded cycles")
   })
 
   it("keeps JS/TS-only running copy runtime neutral", () => {

@@ -9,9 +9,9 @@ import { GET } from "./route.js"
 describe("replay fixture test-support route", () => {
   it("is unavailable outside test/playwright or explicit fixture gates", async () => {
     expect(isReplayFixtureEnabled({ NODE_ENV: "development" })).toBe(false)
-    expect(isReplayFixtureEnabled({ COWARDS_ENABLE_REPLAY_FIXTURES: "1" })).toBe(
-      true,
-    )
+    expect(
+      isReplayFixtureEnabled({ COWARDS_ENABLE_REPLAY_FIXTURES: "1" }),
+    ).toBe(true)
 
     const response = await GET(
       new Request("http://local.test/api/test-support/replay-fixture"),

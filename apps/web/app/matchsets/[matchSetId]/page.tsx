@@ -29,10 +29,18 @@ const runtimeLabel = (entrant: {
     package: { mode: string }
   }
 }): string => {
-  const language =
-    entrant.runtime.language.id === "python"
-      ? "Python · non-counted exhibition beta"
-      : "JS/TS"
+  const language = (() => {
+    switch (entrant.runtime.language.id) {
+      case "python":
+        return "Python · non-counted exhibition beta"
+      case "rust":
+        return "Rust · non-counted exhibition alpha"
+      case "zig":
+        return "Zig · gated stretch"
+      default:
+        return "JS/TS"
+    }
+  })()
   return `${language} · ${entrant.runtime.adapter.id}`
 }
 
@@ -71,12 +79,12 @@ export default async function MatchSetResultPage({
           reviewStatus?: string
         })
       : {}
-  const hasPythonEntrant = result.entrants.some(
-    (entrant) => entrant.runtime.language.id === "python",
+  const hasNonCountedEntrant = result.entrants.some((entrant) =>
+    ["python", "rust", "zig"].includes(entrant.runtime.language.id),
   )
   const evidenceStatus =
     governance.countedStatus ??
-    (hasPythonEntrant ? "non-counted exhibition beta" : "public exhibition")
+    (hasNonCountedEntrant ? "non-counted exhibition" : "public exhibition")
   const entrantRuntimeLabels = result.entrants.map(runtimeLabel)
   const evidenceRows = matchSetEvidenceRows(result, entrantRuntimeLabels)
 

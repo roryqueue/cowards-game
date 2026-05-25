@@ -77,7 +77,8 @@ export const getReplayFixtureScenarioId = (
 export const isReplayFixtureMatch = (
   matchId: string,
   env: ReplayFixtureEnv = process.env,
-): boolean => isReplayFixtureEnabled(env) && getReplayFixtureScenarioId(matchId) !== null
+): boolean =>
+  isReplayFixtureEnabled(env) && getReplayFixtureScenarioId(matchId) !== null
 
 export const createReplayFixtureCatalog =
   (): ReplayFixtureScenarioCatalogEntry[] =>

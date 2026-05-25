@@ -1,7 +1,8 @@
 import {
   COMPATIBILITY_VERSIONS,
   SERVICE_API_VERSION,
-  type Chronicle, type PublicReplayEvidenceServiceDto,
+  type Chronicle,
+  type PublicReplayEvidenceServiceDto,
 } from "@cowards/spec"
 import {
   createChronicleMetadata,
@@ -484,7 +485,9 @@ describe("Match replay server facade", () => {
         COWARDS_GO_BACKEND_URL: "http://go.test",
       },
       fetchImpl: vi.fn(async (url) => {
-        expect(String(url)).toBe("http://go.test/public/replays/match%3Areplay-test/metadata")
+        expect(String(url)).toBe(
+          "http://go.test/public/replays/match%3Areplay-test/metadata",
+        )
         return Response.json({
           apiVersion: SERVICE_API_VERSION,
           kind: "publicReplayMetadata",

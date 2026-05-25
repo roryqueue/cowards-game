@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import {
   buildStrategyRevision,
   validateStrategySource,
@@ -141,6 +141,34 @@ def soldier_brain(input):
     }
 `.trim()
 
+export const rustWasiTacticalStarterSource = `
+use std::io::{self, Read};
+
+fn first_active_soldier_id(input: &str) -> Option<&str> {
+    let soldiers_start = input.find("\\"mySoldiers\\":[")?;
+    let soldiers = &input[soldiers_start..];
+    let id_start = soldiers.find("\\"id\\":\\"")? + "\\"id\\":\\"".len();
+    let after_id = &soldiers[id_start..];
+    let id_end = after_id.find('"')?;
+    Some(&after_id[..id_end])
+}
+
+fn main() {
+    let mut input = String::new();
+    let _ = io::stdin().read_to_string(&mut input);
+    if input.contains("\\"methodName\\":\\"soldierBrain\\"") {
+        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"action":{{"type":"TURN_TO_STONE"}},"soldierMemory":null}}}}"#);
+    } else if let Some(soldier_id) = first_active_soldier_id(&input) {
+        println!(
+            r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[{{"soldierId":"{}","objective":{{"stance":"stone"}}}}],"strategyMemory":null}}}}"#,
+            soldier_id
+        );
+    } else {
+        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
+    }
+}
+`.trim()
+
 const cautiousOpponentRevision = buildStrategyRevision({
   source: cautiousSource,
   strategyId: "strategy:cautious",
@@ -207,6 +235,7 @@ export interface WorkshopTemplateSummary {
     | "template:reckless"
     | "template:sentinel"
     | "template:python-tactical"
+    | "template:rust-wasi-tactical"
   label: string
   sourceFormat: StrategyArtifactSourceFormat
   experimental?: boolean | undefined
@@ -345,6 +374,15 @@ export const listWorkshopTemplates = (): WorkshopTemplateSummary[] => [
     countedPlayEligible: false,
     source: pythonTacticalStarterSource,
     validation: validatePythonStrategySource(pythonTacticalStarterSource),
+  },
+  {
+    id: "template:rust-wasi-tactical",
+    label: "Rust WASI tactical starter",
+    sourceFormat: "rust",
+    experimental: true,
+    countedPlayEligible: false,
+    source: rustWasiTacticalStarterSource,
+    validation: validateWorkshopSource(rustWasiTacticalStarterSource, "rust"),
   },
 ]
 
@@ -631,7 +669,9 @@ const sample = <T extends Omit<WorkshopSampleSummary, "validation">>(
   validation:
     input.sourceFormat === "python"
       ? validatePythonStrategySource(input.source)
-      : validateStrategySource(input.source),
+      : input.sourceFormat === "rust"
+        ? validateWorkshopSource(input.source, "rust")
+        : validateStrategySource(input.source),
 })
 
 export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
@@ -696,6 +736,16 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     source: pythonBackstabLaneSampleSource,
   }),
   sample({
+    id: "sample:rust-wasi-stone",
+    label: "Rust WASI stone",
+    sampleKind: "starter",
+    description:
+      "A safe Rust WASI alpha sample using the stdin/stdout JSON envelope.",
+    categories: ["Rust alpha", "WASM/WASI"],
+    sourceFormat: "rust",
+    source: rustWasiTacticalStarterSource,
+  }),
+  sample({
     id: "sample:failure-forbidden-clock",
     label: "Failure: forbidden clock",
     sampleKind: "failure-mode",
@@ -746,10 +796,50 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
 export const validateWorkshopSource = (
   source: string,
   sourceFormat: StrategyArtifactSourceFormat = "typescript",
-): StrategyRevisionValidationReport =>
-  sourceFormat === "python"
-    ? validatePythonStrategySource(source)
-    : validateStrategySource(source)
+): StrategyRevisionValidationReport => {
+  if (sourceFormat === "python") {
+    return validatePythonStrategySource(source)
+  }
+  if (sourceFormat === "rust") {
+    const sourceBytes = new TextEncoder().encode(source).length
+    const sourceHash = createHash("sha256").update(source).digest("hex")
+    const valid =
+      source.length > 0 &&
+      source.includes("fn main") &&
+      !source.includes("include_str!") &&
+      !source.includes("include_bytes!")
+    return {
+      valid,
+      errors: valid
+        ? []
+        : [
+            {
+              code: "TRANSPILE_FAILED",
+              severity: "error",
+              message:
+                "Rust WASM/WASI validation requires the runtime-service compile boundary.",
+            },
+          ],
+      warnings: [
+        {
+          code: "NON_COUNTED_RUNTIME",
+          severity: "warning",
+          message:
+            "Rust WASM/WASI is non-counted exhibition alpha and must be compiled by runtime-service before save.",
+        },
+      ],
+      sourceBytes,
+      forbiddenPatterns: [],
+      sourceHash,
+      runtimeVersion: "0.1.0-alpha",
+      engineCompatibility: {
+        spec: "cowards-rules-v1.4",
+        engine: "engine-v1",
+      },
+    }
+  }
+  return validateStrategySource(source)
+}
 
 export const ensureWorkshopSeed = async (pool: Pool): Promise<void> => {
   const seed = createDevelopmentSeedData()
@@ -801,7 +891,13 @@ export const listWorkshopRevisions = async (
     sourceHash: row.source_hash,
     sourceBytes: row.source_bytes,
     sourceFormat:
-      row.runtime.language.id === "python" ? "python" : "typescript",
+      row.runtime.language.id === "python"
+        ? "python"
+        : row.runtime.language.id === "rust"
+          ? "rust"
+          : row.runtime.language.id === "zig"
+            ? "zig"
+            : "typescript",
     valid: row.validation.valid,
     validation: row.validation,
     metadata: row.metadata,
@@ -836,16 +932,23 @@ export const getWorkshopRevisionSource = async (
 export const buildWorkshopRevision = (input: {
   source: string
   sourceFormat?: StrategyArtifactSourceFormat | undefined
+  runtime?: StrategyRevision["runtime"] | undefined
+  validation?: StrategyRevisionValidationReport | undefined
+  engineCompatibility?: StrategyRevision["engineCompatibility"] | undefined
+  metadata?: StrategyRevision["metadata"] | undefined
   label?: string | undefined
   notes?: string | undefined
 }): StrategyRevision => {
   const metadata = {
     createdBy: WORKSHOP_USER_ID,
+    ...(input.metadata ?? {}),
     ...(input.label ? { label: input.label } : {}),
     ...(input.notes ? { notes: input.notes } : {}),
     ...(input.sourceFormat === "python"
       ? { tags: ["python", "experimental", "non-counted"] }
-      : {}),
+      : input.sourceFormat === "rust"
+        ? { tags: ["rust", "wasm-wasi", "experimental", "non-counted"] }
+        : {}),
   }
   if (input.sourceFormat === "python") {
     return buildPythonStrategyRevision({
@@ -853,6 +956,24 @@ export const buildWorkshopRevision = (input: {
       strategyId: WORKSHOP_STRATEGY_ID,
       metadata,
     })
+  }
+  if (input.sourceFormat === "rust") {
+    if (!input.runtime || !input.validation || !input.engineCompatibility) {
+      throw new WorkshopInputError(
+        "Rust Workshop revisions require runtime-service validation and artifact metadata.",
+      )
+    }
+    return {
+      id: `strategy-revision:workshop:rust:${input.validation.sourceHash}` as StrategyRevisionId,
+      strategyId: WORKSHOP_STRATEGY_ID,
+      source: input.source,
+      sourceHash: input.validation.sourceHash,
+      sourceBytes: input.validation.sourceBytes,
+      runtime: input.runtime,
+      engineCompatibility: input.engineCompatibility,
+      validation: input.validation,
+      metadata,
+    }
   }
   return buildStrategyRevision({
     source: input.source,

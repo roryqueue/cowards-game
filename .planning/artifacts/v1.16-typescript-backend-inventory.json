@@ -1885,6 +1885,11 @@
         },
         {
           "line": 2,
+          "source": "../../../workshop/server.js",
+          "statementText": "import { isStorageUnavailableError } from \"../../../workshop/server.js\""
+        },
+        {
+          "line": 3,
           "source": "../../../workshop/types.js",
           "statementText": "import type {\n  WorkshopErrorResponse,\n  WorkshopSubmitRequest,\n} from \"../../../workshop/types.js\""
         }
@@ -5052,7 +5057,7 @@
       ],
       "localBackendImports": [],
       "usesDatabase": false,
-      "claimsJobs": true,
+      "claimsJobs": false,
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": false,
@@ -5409,7 +5414,7 @@
         {
           "line": 1,
           "source": "node:crypto",
-          "statementText": "import { randomUUID } from \"node:crypto\""
+          "statementText": "import { createHash, randomUUID } from \"node:crypto\""
         },
         {
           "line": 11,
@@ -6709,22 +6714,27 @@
         {
           "line": 11,
           "source": "./container-subprocess-adapter.js",
-          "statementText": "import {\n  containerSubprocessStrategyExecutionAdapterMetadata,\n  createContainerSubprocessStrategyExecutionAdapter,\n} from \"./container-subprocess-adapter.js\""
+          "statementText": "import {\n  DEFAULT_CONTAINER_SUBPROCESS_IMAGE,\n  containerSubprocessStrategyExecutionAdapterMetadata,\n  createContainerSubprocessStrategyExecutionAdapter,\n} from \"./container-subprocess-adapter.js\""
         },
         {
-          "line": 15,
+          "line": 16,
           "source": "./adapter.js",
           "statementText": "import type {\n  StrategyExecutionAdapter,\n  StrategyExecutionAdapterMetadata,\n  StrategyMethodName,\n} from \"./adapter.js\""
         },
         {
-          "line": 20,
+          "line": 21,
           "source": "./subprocess-ipc.js",
           "statementText": "import { SubprocessSystemFailure } from \"./subprocess-ipc.js\""
         },
         {
-          "line": 21,
+          "line": 22,
           "source": "./transpile.js",
           "statementText": "import { transpileStrategySource } from \"./transpile.js\""
+        },
+        {
+          "line": 24,
+          "source": "./container-subprocess-adapter.js",
+          "statementText": "export { DEFAULT_CONTAINER_SUBPROCESS_IMAGE } from \"./container-subprocess-adapter.js\""
         },
         {
           "line": 8,
@@ -7556,11 +7566,16 @@
         },
         {
           "line": 14,
+          "source": "@cowards/runtime-wasm-wasi",
+          "statementText": "import { buildRustStrategyRevision } from \"@cowards/runtime-wasm-wasi\""
+        },
+        {
+          "line": 15,
           "source": "./execute-match.js",
           "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
         },
         {
-          "line": 15,
+          "line": 16,
           "source": "./runtime-config.js",
           "statementText": "import {\n  createRuntimeServiceConfig,\n  RuntimeServiceConfigError,\n} from \"./runtime-config.js\""
         },
@@ -7637,55 +7652,70 @@
       "imports": [
         {
           "line": 1,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
-          "line": 13,
+          "line": 15,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 14,
+          "line": 16,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
         },
         {
-          "line": 15,
+          "line": 17,
           "source": "@cowards/runtime-python",
           "statementText": "import { createPythonRuntimeFromRevision } from \"@cowards/runtime-python\""
         },
         {
-          "line": 16,
+          "line": 18,
+          "source": "@cowards/runtime-wasm-wasi",
+          "statementText": "import { createWasmWasiRuntimeFromRevision } from \"@cowards/runtime-wasm-wasi\""
+        },
+        {
+          "line": 19,
           "source": "@cowards/replay",
           "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
         },
         {
-          "line": 17,
+          "line": 2,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
+          "line": 20,
           "source": "@cowards/engine",
           "statementText": "import {\n  violation,\n  type RunMatchInput,\n  type StrategyRuntime,\n} from \"@cowards/engine\""
         },
         {
-          "line": 22,
+          "line": 25,
           "source": "./runtime-config.js",
           "statementText": "import type { RuntimeServiceConfig } from \"./runtime-config.js\""
         },
         {
-          "line": 23,
+          "line": 26,
           "source": "./redaction.js",
           "statementText": "import { publicSystemFailureMessage, redactedDiagnostics } from \"./redaction.js\""
+        },
+        {
+          "line": 3,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type StrategyRevision,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 13,
+          "line": 15,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 14,
+          "line": 16,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
         }
@@ -8013,7 +8043,7 @@
       "runtimeImports": [],
       "localBackendImports": [],
       "usesDatabase": false,
-      "claimsJobs": true,
+      "claimsJobs": false,
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": true,
@@ -8059,11 +8089,16 @@
         },
         {
           "line": 14,
+          "source": "@cowards/runtime-wasm-wasi/validation",
+          "statementText": "import {\n  buildRustStrategyRevision,\n  validateRustStrategySource,\n} from \"@cowards/runtime-wasm-wasi/validation\""
+        },
+        {
+          "line": 18,
           "source": "./runtime-config.js",
           "statementText": "import {\n  createRuntimeServiceConfig,\n  type RuntimeServiceConfig,\n} from \"./runtime-config.js\""
         },
         {
-          "line": 18,
+          "line": 22,
           "source": "./execute-match.js",
           "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
         },
@@ -9702,19 +9737,19 @@
       "goRouteIds": [],
       "imports": [
         {
-          "line": 18,
+          "line": 19,
           "source": "./replay-board.js",
           "statementText": "import { ReplayBoard } from \"./replay-board.js\""
         },
         {
-          "line": 19,
+          "line": 20,
           "source": "./replay-playback.js",
           "statementText": "import {\n  defaultReplaySpeed,\n  getPlaybackIntervalMs,\n  replaySpeedOptions,\n  type ReplaySpeedValue,\n} from \"./replay-playback.js\""
         },
         {
           "line": 3,
           "source": "react",
-          "statementText": "import { useEffect, useMemo, useState } from \"react\""
+          "statementText": "import { Fragment, useEffect, useMemo, useState } from \"react\""
         },
         {
           "line": 4,
@@ -9723,6 +9758,11 @@
         },
         {
           "line": 5,
+          "source": "../../../matchsets/evidence-copy.js",
+          "statementText": "import { replayEvidenceRows } from \"../../../matchsets/evidence-copy.js\""
+        },
+        {
+          "line": 6,
           "source": "./replay-state.js",
           "statementText": "import {\n  canShowOwnerDebug,\n  formatTimelinePosition,\n  getCurrentPositionSummary,\n  getEventInspector,\n  getInitialReplaySequence,\n  getOwnerAwarenessGridInspection,\n  getSoldierInactivityExplanation,\n  getSoldierInspector,\n  getTimelineEntryAt,\n  groupTimelineEntries,\n  stepReplayIndex,\n} from \"./replay-state.js\""
         }
@@ -10289,37 +10329,37 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import {\n  COMPATIBILITY_VERSIONS,\n  SERVICE_API_VERSION,\n  type Chronicle, type PublicReplayEvidenceServiceDto,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  COMPATIBILITY_VERSIONS,\n  SERVICE_API_VERSION,\n  type Chronicle,\n  type PublicReplayEvidenceServiceDto,\n} from \"@cowards/spec\""
         },
         {
-          "line": 10,
+          "line": 11,
           "source": "@cowards/replay",
           "statementText": "import { projectPublicChronicle } from \"@cowards/replay\""
         },
         {
-          "line": 11,
+          "line": 12,
           "source": "vitest",
           "statementText": "import { describe, expect, it, vi } from \"vitest\""
         },
         {
-          "line": 12,
+          "line": 13,
           "source": "./replay-fixture.js",
           "statementText": "import { isReplayFixtureMatch, replayFixtureMatchId } from \"./replay-fixture.js\""
         },
         {
-          "line": 13,
+          "line": 14,
           "source": "./server.js",
           "statementText": "import { createMatchReplayServer } from \"./server.js\""
         },
         {
-          "line": 6,
+          "line": 7,
           "source": "@cowards/persistence/quarantine-lifecycle",
           "statementText": "import {\n  createChronicleMetadata,\n  type StoredChronicle,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         }
       ],
       "persistenceImports": [
         {
-          "line": 6,
+          "line": 7,
           "source": "@cowards/persistence/quarantine-lifecycle",
           "statementText": "import {\n  createChronicleMetadata,\n  type StoredChronicle,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         }
@@ -10433,13 +10473,23 @@
       "imports": [
         {
           "line": 1,
+          "source": "react",
+          "statementText": "import { Fragment } from \"react\""
+        },
+        {
+          "line": 2,
           "source": "@cowards/spec",
           "statementText": "import type { MatchSetId } from \"@cowards/spec\""
         },
         {
-          "line": 2,
+          "line": 3,
           "source": "../../../lib/public-service-boundary.js",
           "statementText": "import { getPublicMatchSetResult } from \"../../../lib/public-service-boundary.js\""
+        },
+        {
+          "line": 4,
+          "source": "../evidence-copy.js",
+          "statementText": "import {\n  matchSetEvidenceRows,\n  publicPrivacyProvenanceCue,\n  statusChipClass,\n} from \"../evidence-copy.js\""
         }
       ],
       "persistenceImports": [],
@@ -10471,6 +10521,126 @@
           "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
+    },
+    {
+      "id": "apps-web-app-matchsets-evidence-copy-test",
+      "path": "apps/web/app/matchsets/evidence-copy.test.ts",
+      "kind": "web-frontend-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import type { PublicMatchSetResultDto } from \"@cowards/spec\""
+        },
+        {
+          "line": 3,
+          "source": "../matches/types.js",
+          "statementText": "import type { ReplayReadyDto } from \"../matches/types.js\""
+        },
+        {
+          "line": 4,
+          "source": "./evidence-copy.js",
+          "statementText": "import {\n  matchSetEvidenceRows,\n  publicPrivacyProvenanceCue,\n  publicReliabilityPrivacyCue,\n  replayEvidenceRows,\n  statusChipClass,\n} from \"./evidence-copy.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": true,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/matchsets/evidence-copy.test.ts"
+      ],
+      "scannerFindings": []
+    },
+    {
+      "id": "apps-web-app-matchsets-evidence-copy",
+      "path": "apps/web/app/matchsets/evidence-copy.ts",
+      "kind": "web-frontend-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "private-or-owner-scoped",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "@cowards/spec",
+          "statementText": "import type {\n  PublicMatchEvidenceDto,\n  PublicMatchSetResultDto,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 5,
+          "source": "../matches/types.js",
+          "statementText": "import type { ReplayReadyDto } from \"../matches/types.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": true,
+      "servesPublicEvidence": true,
+      "executesStrategy": false,
+      "ownerDebugAccess": true,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/matchsets/evidence-copy.ts"
+      ],
+      "scannerFindings": []
     },
     {
       "id": "apps-web-app-page",
@@ -11429,12 +11599,12 @@
       "goRouteIds": [],
       "imports": [
         {
-          "line": 12,
+          "line": 15,
           "source": "./heatmap-client.js",
           "statementText": "import { WorkshopHeatmap } from \"./heatmap-client.js\""
         },
         {
-          "line": 13,
+          "line": 16,
           "source": "./workshop-client-state.js",
           "statementText": "import {\n  canSubmitRevision,\n  canOpenReplay,\n  canOpenOwnerReplay,\n  formatMatchOutcome,\n  formatUsedInMatches,\n  formatValidationIssueGuidance,\n  formatValidationIssueHeading,\n  getReplayHref,\n  getOwnerReplayHref,\n  getDraftStatusClass,\n  getDraftStatusLabel,\n  getReplayAvailability,\n  getSampleChipLabels,\n  getTestStatusCopy,\n  getSubmitBlockedReason,\n  groupWorkshopSamples,\n  isTerminalTestStatus,\n  prependRevision,\n  validationStateFromReport,\n} from \"./workshop-client-state.js\""
         },
@@ -11446,15 +11616,15 @@
         {
           "line": 4,
           "source": "@cowards/spec",
-          "statementText": "import type { StrategyRevisionValidationReport } from \"@cowards/spec\""
+          "statementText": "import type {\n  StrategyArtifactSourceFormat,\n  StrategyRevisionValidationReport,\n} from \"@cowards/spec\""
         },
         {
-          "line": 5,
+          "line": 8,
           "source": "./monaco-editor.js",
           "statementText": "import { StrategySourceEditor } from \"./monaco-editor.js\""
         },
         {
-          "line": 6,
+          "line": 9,
           "source": "./types.js",
           "statementText": "import type {\n  WorkshopSampleSummary,\n  WorkshopInitialData,\n  WorkshopTemplateSummary,\n  WorkshopTestSummary,\n} from \"./types.js\""
         }
@@ -13089,74 +13259,89 @@
           "statementText": "import { readFileSync } from \"node:fs\""
         },
         {
-          "line": 12,
+          "line": 10,
+          "source": "@cowards/runtime-js/worker",
+          "statementText": "import {\n  SubprocessSystemFailure,\n  type StrategyExecutionRequest,\n} from \"@cowards/runtime-js/worker\""
+        },
+        {
+          "line": 14,
           "source": "@cowards/spec",
           "statementText": "import { fixtures } from \"@cowards/spec\""
         },
         {
-          "line": 13,
+          "line": 15,
           "source": "@cowards/spec",
           "statementText": "import type { ArenaVariant, MatchId, StrategyRevision } from \"@cowards/spec\""
         },
         {
-          "line": 14,
+          "line": 16,
           "source": "./runner.js",
           "statementText": "import type { WorkerRunnerDependencies } from \"./runner.js\""
         },
         {
-          "line": 15,
+          "line": 17,
           "source": "./runner.js",
           "statementText": "import {\n  assertTypeScriptWorkerEntrypointAllowed,\n  assertTypeScriptWorkerJobOwnershipAllowed,\n  createClaimedMatchJobForTest,\n  createSideDispatchRuntime,\n  createTypeScriptWorkerJobOwnershipConfig,\n  formatTypeScriptWorkerOwnershipLogLine,\n  loadRunMatchInput,\n  runWorkerOnce,\n  TypeScriptWorkerOwnershipError,\n} from \"./runner.js\""
         },
         {
           "line": 2,
-          "source": "vitest",
-          "statementText": "import { beforeEach, describe, expect, it, vi } from \"vitest\""
+          "source": "node:url",
+          "statementText": "import { fileURLToPath } from \"node:url\""
         },
         {
-          "line": 26,
+          "line": 28,
           "source": "./runtime-config.js",
           "statementText": "import {\n  createWorkerRuntimeConfig,\n  formatWorkerRuntimeConfigLogLines,\n  WorkerRuntimeConfigError,\n  type WorkerRuntimeConfig,\n} from \"./runtime-config.js\""
         },
         {
           "line": 3,
+          "source": "vitest",
+          "statementText": "import { beforeEach, describe, expect, it, vi } from \"vitest\""
+        },
+        {
+          "line": 4,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 4,
+          "line": 5,
           "source": "@cowards/engine",
           "statementText": "import type { StrategyRuntime } from \"@cowards/engine\""
         },
         {
-          "line": 5,
+          "line": 6,
           "source": "@cowards/persistence/repositories",
           "statementText": "import { createRepositories } from \"@cowards/persistence/repositories\""
         },
         {
-          "line": 6,
+          "line": 7,
+          "source": "@cowards/persistence/repositories",
+          "statementText": "import type * as PersistenceRepositories from \"@cowards/persistence/repositories\""
+        },
+        {
+          "line": 8,
           "source": "@cowards/persistence/quarantine-lifecycle",
           "statementText": "import type * as PersistenceQuarantine from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
-          "line": 7,
+          "line": 9,
           "source": "@cowards/runtime-js",
           "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
-        },
-        {
-          "line": 8,
-          "source": "@cowards/runtime-js/worker",
-          "statementText": "import {\n  SubprocessSystemFailure,\n  type StrategyExecutionRequest,\n} from \"@cowards/runtime-js/worker\""
         }
       ],
       "persistenceImports": [
         {
-          "line": 5,
+          "line": 6,
           "source": "@cowards/persistence/repositories",
           "statementText": "import { createRepositories } from \"@cowards/persistence/repositories\""
         },
         {
-          "line": 6,
+          "line": 7,
+          "source": "@cowards/persistence/repositories",
+          "statementText": "import type * as PersistenceRepositories from \"@cowards/persistence/repositories\""
+        },
+        {
+          "line": 8,
           "source": "@cowards/persistence/quarantine-lifecycle",
           "statementText": "import type * as PersistenceQuarantine from \"@cowards/persistence/quarantine-lifecycle\""
         }
@@ -13164,14 +13349,14 @@
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 7,
-          "source": "@cowards/runtime-js",
-          "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
-        },
-        {
-          "line": 8,
+          "line": 10,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import {\n  SubprocessSystemFailure,\n  type StrategyExecutionRequest,\n} from \"@cowards/runtime-js/worker\""
+        },
+        {
+          "line": 9,
+          "source": "@cowards/runtime-js",
+          "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
         }
       ],
       "localBackendImports": [
@@ -13198,11 +13383,11 @@
       "scannerFindings": [
         {
           "code": "persistence_import",
-          "detail": "@cowards/persistence/repositories, @cowards/persistence/quarantine-lifecycle"
+          "detail": "@cowards/persistence/repositories, @cowards/persistence/repositories, @cowards/persistence/quarantine-lifecycle"
         },
         {
           "code": "runtime_import",
-          "detail": "@cowards/runtime-js, @cowards/runtime-js/worker"
+          "detail": "@cowards/runtime-js/worker, @cowards/runtime-js"
         },
         {
           "code": "local_backend_import_chain",

@@ -8,6 +8,7 @@
     { "path": "packages/engine" },
     { "path": "packages/runtime-js" },
     { "path": "packages/runtime-python" },
+    { "path": "packages/runtime-wasm-wasi" },
     { "path": "packages/replay" },
     { "path": "packages/persistence" },
     { "path": "packages/service" },

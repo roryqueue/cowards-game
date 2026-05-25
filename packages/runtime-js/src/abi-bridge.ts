@@ -12,8 +12,7 @@ import type {
 } from "./adapter.js"
 import { hashStrategySource } from "./hash.js"
 
-export interface ExecuteStrategyRuntimeAbiBridgeInput
-  extends StrategyExecutionAdapterOptions {
+export interface ExecuteStrategyRuntimeAbiBridgeInput extends StrategyExecutionAdapterOptions {
   adapter: StrategyExecutionAdapter
   revision: StrategyRevision
   executableSource: string
@@ -36,6 +35,15 @@ export const executeStrategyRuntimeAbiV114 = (
     },
     input: input.input,
   })
+  if (request.source.text === undefined) {
+    return {
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "Strategy Revision failed ABI source validation",
+      },
+    }
+  }
   if (
     hashStrategySource(request.source.text) !== request.source.hash ||
     new TextEncoder().encode(request.source.text).length !==

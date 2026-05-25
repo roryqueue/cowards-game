@@ -930,7 +930,6 @@ const createSurface = (
   const retirementAction = retirementActionFor(role)
   const claimsJobs = containsAny(sourceText, [
     "claimNextMatchJob",
-    "claim",
     "lease",
     "heartbeat",
   ])
@@ -951,14 +950,17 @@ const createSurface = (
     "matchset-status",
     "scoring",
   ])
+  const mentionsPublicEvidence = containsAny(sourceText, [
+    "public replay",
+    "publicEvidence",
+    "getPublicReplay",
+  ])
   const servesPublicEvidence =
     routeFamily === "public-replay" ||
     routeFamily === "public-matchset" ||
-    containsAny(sourceText, [
-      "public replay",
-      "publicEvidence",
-      "getPublicReplay",
-    ])
+    (role !== "runtime-service" &&
+      role !== "runtime-adapter" &&
+      mentionsPublicEvidence)
   const executesStrategy =
     runtimeImports.length > 0 ||
     containsAny(sourceText, [

@@ -44,7 +44,9 @@ describe("/api/service/health", () => {
   it("classifies stopped Go backend failures", async () => {
     process.env.COWARDS_NO_TYPESCRIPT_BACKEND = "1"
     process.env.COWARDS_GO_BACKEND_URL = "http://go.test"
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("connect ECONNREFUSED"))
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new Error("connect ECONNREFUSED"),
+    )
 
     const response = await GET()
     const body = (await response.json()) as Record<string, unknown>

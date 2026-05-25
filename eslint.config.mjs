@@ -96,6 +96,7 @@ export default [
     languageOptions: {
       globals: {
         fetch: "readonly",
+        performance: "readonly",
         window: "readonly",
       },
     },
@@ -110,6 +111,14 @@ export default [
           ],
         },
       ],
+    },
+  },
+  {
+    files: ["apps/runtime-service/src/**/*.test.ts"],
+    languageOptions: {
+      globals: {
+        fetch: "readonly",
+      },
     },
   },
   {

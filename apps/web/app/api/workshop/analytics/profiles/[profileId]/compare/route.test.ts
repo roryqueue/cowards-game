@@ -80,6 +80,8 @@ describe("Workshop analytics compare route", () => {
     expect(storageUnavailableBody).toEqual({
       error: "Storage is unavailable; start local services and retry.",
     })
-    expect(() => assertPublicOutputLeakSafe(storageUnavailableBody)).not.toThrow()
+    expect(() =>
+      assertPublicOutputLeakSafe(storageUnavailableBody),
+    ).not.toThrow()
   })
 })

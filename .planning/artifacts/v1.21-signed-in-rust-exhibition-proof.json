@@ -1,0 +1,310 @@
+{
+  "schemaVersion": "v1.21-signed-in-rust-exhibition-proof",
+  "generatedAt": "2026-05-25T21:17:12.300Z",
+  "boundedRepeatCount": 2,
+  "accounts": [
+    {
+      "handle": "v121-mplpi9u8-1",
+      "signupMs": 84
+    },
+    {
+      "handle": "v121-mplpi9u8-2",
+      "signupMs": 124
+    }
+  ],
+  "revisions": [
+    {
+      "jsTs": "strategy-revision:0dcd961d624cda2c747873b41a0a60f1732f1f2a735918f1912469d73ae77289",
+      "rust": [
+        "strategy-revision:17351f80d6d2dc1e901ee7756ec0d6b6dc1c16a5927f7b02df5215e7bf1195bb",
+        "strategy-revision:b32c0c0e0cb79677b8cf63861c2f90c3f6dda1d2719f9f2c55653376551a71f5"
+      ]
+    },
+    {
+      "jsTs": "strategy-revision:d0a9adf3f1c805d58f620b3e9dc136526f58003147fae9f0baff4ead37f24706",
+      "rust": [
+        "strategy-revision:26aad5508b511b42d306d277d5ae90e1e31714a7ed224ab739242e7ecc4c708f",
+        "strategy-revision:8384a46455a4979efd9eaf47d7e0dabf27f184431baec55eb689c9ecb322e2ca"
+      ]
+    }
+  ],
+  "cycles": [
+    {
+      "cycle": 1,
+      "account": {
+        "handle": "v121-mplpi9u8-1",
+        "signupMs": 84
+      },
+      "revisions": {
+        "jsTs": "strategy-revision:0dcd961d624cda2c747873b41a0a60f1732f1f2a735918f1912469d73ae77289",
+        "rust": [
+          "strategy-revision:17351f80d6d2dc1e901ee7756ec0d6b6dc1c16a5927f7b02df5215e7bf1195bb",
+          "strategy-revision:b32c0c0e0cb79677b8cf63861c2f90c3f6dda1d2719f9f2c55653376551a71f5"
+        ]
+      },
+      "createMs": 529,
+      "workerMs": 4238,
+      "settleMs": 2263,
+      "workerStatuses": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "extraSettleWorkerStatuses": [],
+      "exhibitions": [
+        {
+          "matchSetId": "match-set:exhibition:u0cILcRTVytgoZlewgwgGw",
+          "status": "queued",
+          "matchCount": 2,
+          "matchup": "js-ts-vs-rust",
+          "observedStatus": "complete",
+          "observedMatchStatuses": [
+            "complete",
+            "complete"
+          ],
+          "resultPageMs": 4096,
+          "replayPageMs": 2515,
+          "resultBodyLength": 2510,
+          "replayBodyLength": 5294
+        },
+        {
+          "matchSetId": "match-set:exhibition:UfdVECe4gVXDD6X0VRiOGg",
+          "status": "queued",
+          "matchCount": 2,
+          "matchup": "rust-vs-rust",
+          "observedStatus": "complete",
+          "observedMatchStatuses": [
+            "complete",
+            "complete"
+          ],
+          "resultPageMs": 703,
+          "replayPageMs": 246,
+          "resultBodyLength": 2562,
+          "replayBodyLength": 3413
+        }
+      ]
+    },
+    {
+      "cycle": 2,
+      "account": {
+        "handle": "v121-mplpi9u8-2",
+        "signupMs": 124
+      },
+      "revisions": {
+        "jsTs": "strategy-revision:d0a9adf3f1c805d58f620b3e9dc136526f58003147fae9f0baff4ead37f24706",
+        "rust": [
+          "strategy-revision:26aad5508b511b42d306d277d5ae90e1e31714a7ed224ab739242e7ecc4c708f",
+          "strategy-revision:8384a46455a4979efd9eaf47d7e0dabf27f184431baec55eb689c9ecb322e2ca"
+        ]
+      },
+      "createMs": 167,
+      "workerMs": 3740,
+      "settleMs": 2103,
+      "workerStatuses": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "extraSettleWorkerStatuses": [],
+      "exhibitions": [
+        {
+          "matchSetId": "match-set:exhibition:kkk2p9cmPAC5SyRutrzrLw",
+          "status": "queued",
+          "matchCount": 2,
+          "matchup": "js-ts-vs-rust",
+          "observedStatus": "complete",
+          "observedMatchStatuses": [
+            "complete",
+            "complete"
+          ],
+          "resultPageMs": 225,
+          "replayPageMs": 296,
+          "resultBodyLength": 2510,
+          "replayBodyLength": 5294
+        },
+        {
+          "matchSetId": "match-set:exhibition:5XRIWPL82B06Okt4CwYB5w",
+          "status": "queued",
+          "matchCount": 2,
+          "matchup": "rust-vs-rust",
+          "observedStatus": "complete",
+          "observedMatchStatuses": [
+            "complete",
+            "complete"
+          ],
+          "resultPageMs": 365,
+          "replayPageMs": 240,
+          "resultBodyLength": 2562,
+          "replayBodyLength": 3413
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "matchSetCount": 4,
+    "workerIterations": 8,
+    "privateMarkerScanPassed": true,
+    "jsTsRegressionChecked": true,
+    "rustVsRustChecked": true,
+    "mixedJsTsVsRustChecked": true
+  },
+  "runtimePath": "web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> WASM/WASI runtime implementation -> Wasmtime -> immutable Rust WASM artifact",
+  "runtimeServiceAdapterEvidence": "subprocess",
+  "candidateEvidence": {
+    "wasmWasiProbes": {
+      "abi": "WASI Preview 1 stdin/stdout JSON envelope",
+      "countedEligibility": false,
+      "generatedAt": "2026-05-25T00:00:00.000Z",
+      "milestone": "v1.21",
+      "probes": [
+        {
+          "expectation": "Rust source compiles to wasm32-wasip1 artifact metadata",
+          "id": "rust-compile-valid-artifact",
+          "layer": "compile",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "WASI Preview 1 stdin/stdout envelope returns activation orders",
+          "id": "select-activations-json-envelope",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "WASI Preview 1 stdin/stdout envelope returns soldier action",
+          "id": "soldier-brain-json-envelope",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "validation denies std::fs",
+          "id": "filesystem-denied-validation",
+          "layer": "compile",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "validation denies std::net",
+          "id": "network-denied-validation",
+          "layer": "compile",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "validation denies std::time",
+          "id": "clock-denied-validation",
+          "layer": "compile",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "validation denies extern crate",
+          "id": "random-package-denied-validation",
+          "layer": "compile",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "validation denies env::var",
+          "id": "env-token-denied-validation",
+          "layer": "compile",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "runtime reports MALFORMED_IPC",
+          "id": "malformed-json-result",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "runtime adapter reports INVALID_OUTPUT",
+          "id": "invalid-action-schema",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "runtime reports THROWN_EXCEPTION",
+          "id": "panic-trap-abort",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "runtime reports THROWN_EXCEPTION",
+          "id": "infinite-loop-fuel-trap",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "runtime reports STDIO_CAP_EXCEEDED",
+          "id": "oversized-stdout",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "runtime reports THROWN_EXCEPTION",
+          "id": "memory-growth-cap",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "runtime refuses artifact hash mismatch without source fallback",
+          "id": "stale-artifact-hash",
+          "layer": "artifact",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        }
+      ],
+      "promotionClaim": "candidate-readiness evidence only; not production sandbox certification",
+      "runtimeLane": "runtime-wasm-wasi-wasmtime-preview1",
+      "schemaVersion": "v1.21-wasm-wasi-hostile-probe-evidence",
+      "sourceLeakCheck": "artifact stores private source separately; public evidence records statuses and hashes only",
+      "summary": {
+        "fail": 0,
+        "pass": 15
+      }
+    },
+    "zigReadiness": {
+      "evidence": {
+        "message": "Zig toolchain unavailable; Zig remains fail-loud non-promoted.",
+        "ok": false,
+        "target": "wasm32-wasi",
+        "zigVersion": null
+      },
+      "generatedAt": "2026-05-25T00:00:00.000Z",
+      "milestone": "v1.21",
+      "promotionAllowed": false,
+      "schemaVersion": "v1.21-zig-readiness-evidence"
+    }
+  },
+  "promotionDecision": {
+    "rustStatus": "non-counted exhibition alpha only",
+    "wasmWasiStatus": "runtime candidate evidence only; no production sandbox certification",
+    "zigStatus": "fail-loud unavailable unless readiness proof passes"
+  }
+}

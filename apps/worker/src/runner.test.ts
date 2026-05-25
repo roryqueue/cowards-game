@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { Pool } from "pg"
 import type { StrategyRuntime } from "@cowards/engine"
 import { createRepositories } from "@cowards/persistence/repositories"
+import type * as PersistenceRepositories from "@cowards/persistence/repositories"
 import type * as PersistenceQuarantine from "@cowards/persistence/quarantine-lifecycle"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import {
@@ -36,14 +38,14 @@ vi.mock("@cowards/persistence/quarantine-lifecycle", async (importOriginal) => {
 })
 
 vi.mock("@cowards/persistence/repositories", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@cowards/persistence/repositories")>()
+  const actual = await importOriginal<typeof PersistenceRepositories>()
   return {
     ...actual,
     createRepositories: vi.fn(),
   }
 })
 
+const __dirname = fileURLToPath(new URL(".", import.meta.url))
 const pool = {} as Pool
 const explicitTestJobOwnership = {
   lifecycleOwner: "go",
@@ -340,7 +342,7 @@ describe("worker runner", () => {
   })
 
   it("imports lifecycle persistence helpers through the explicit quarantine subpath", () => {
-    const source = readFileSync("apps/worker/src/runner.ts", "utf8")
+    const source = readFileSync(`${__dirname}/runner.ts`, "utf8")
 
     expect(source).toContain("@cowards/persistence/quarantine-lifecycle")
     const rootImportBlocks = source.match(

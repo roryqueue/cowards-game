@@ -258,6 +258,40 @@ export interface StrategyRevisionMetadata {
         sourceHash: string
       }
     | undefined
+  compiledArtifact?: CompiledStrategyArtifact | undefined
+}
+
+export type CompiledStrategyArtifactFormat = "wasm"
+export type CompiledStrategyArtifactValidationStatus = "valid" | "invalid"
+export type WasiProfile = "preview1"
+export type WasmAbiEnvelope = "stdin-stdout-json"
+
+export interface CompiledStrategyArtifactToolchainEvidence {
+  language: "rust" | "zig"
+  compiler: string
+  compilerVersion: string
+  targetTriple: string
+  commandSummary: string
+}
+
+export interface CompiledStrategyArtifact {
+  format: CompiledStrategyArtifactFormat
+  hash: string
+  bytes: number
+  bytesBase64?: string | undefined
+  sourceHash: string
+  wasiProfile: WasiProfile
+  targetTriple: string
+  abiEnvelope: WasmAbiEnvelope
+  abiVersion: string
+  validationStatus: CompiledStrategyArtifactValidationStatus
+  createdAt: string
+  toolchain: CompiledStrategyArtifactToolchainEvidence
+  publicEvidence: {
+    label: string
+    nonCounted: true
+    sandboxClaim: "candidate-readiness-only"
+  }
 }
 
 export interface StrategyRevision {
@@ -291,6 +325,8 @@ export type StrategyArtifactSourceFormat =
   | "javascript"
   | "typescript"
   | "python"
+  | "rust"
+  | "zig"
 
 export interface StrategyArtifactForkEligibility {
   forkable: boolean
@@ -357,6 +393,7 @@ export interface StrategyArtifact {
   publicMetadata: StrategyArtifactPublicMetadata
   lineage: StrategyArtifactLineage
   immutableEligibility?: StrategyArtifactEligibilitySnapshot | undefined
+  compiledArtifact?: CompiledStrategyArtifact | undefined
   behaviorCompatibility: {
     compatibilityKey: string
     behaviorSignificantFields: string[]
@@ -380,6 +417,7 @@ export interface StrategyArtifactPublicSummary {
   publicMetadata: StrategyArtifactPublicMetadata
   lineage: StrategyArtifactLineage
   immutableEligibility?: StrategyArtifactEligibilitySnapshot | undefined
+  compiledArtifact?: Omit<CompiledStrategyArtifact, "bytesBase64"> | undefined
 }
 
 export type ChronicleEventType =

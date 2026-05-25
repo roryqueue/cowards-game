@@ -12,12 +12,16 @@ import {
   type RuntimeExecutionServiceResponse,
 } from "@cowards/spec"
 import {
+  buildRustStrategyRevision,
+  validateRustStrategySource,
+} from "@cowards/runtime-wasm-wasi/validation"
+import {
   createRuntimeServiceConfig,
   type RuntimeServiceConfig,
 } from "./runtime-config.js"
 import { executeRuntimeServiceRequest } from "./execute-match.js"
 
-const DEFAULT_BODY_LIMIT_BYTES = 512 * 1024
+const DEFAULT_BODY_LIMIT_BYTES = 8 * 1024 * 1024
 
 export interface RuntimeExecutionHttpServerOptions {
   runtimeConfig?: RuntimeServiceConfig | undefined
@@ -68,6 +72,50 @@ const malformedRequestResponse = (
     },
   }) as RuntimeExecutionServiceResponse
 
+const validateStrategyRequest = (rawRequest: unknown) => {
+  const body =
+    rawRequest !== null && typeof rawRequest === "object"
+      ? (rawRequest as Record<string, unknown>)
+      : {}
+  if (body.sourceFormat !== "rust" || typeof body.source !== "string") {
+    return {
+      ok: false,
+      kind: "strategyValidation",
+      sourceFormat: body.sourceFormat,
+      error: "Rust source is required for runtime-service validation.",
+    }
+  }
+  const validation = validateRustStrategySource(body.source)
+  if (!validation.valid) {
+    return {
+      ok: false,
+      kind: "strategyValidation",
+      sourceFormat: "rust",
+      validation,
+    }
+  }
+  const revision = buildRustStrategyRevision({
+    source: body.source,
+    ...(typeof body.strategyId === "string" && body.strategyId.trim().length > 0
+      ? { strategyId: body.strategyId }
+      : {}),
+    metadata: {
+      tags: ["rust", "wasm-wasi", "non-counted", "exhibition-alpha"],
+    },
+  })
+  return {
+    ok: true,
+    kind: "strategyValidation",
+    sourceFormat: "rust",
+    runtime: revision.runtime,
+    validation: revision.validation,
+    engineCompatibility: revision.engineCompatibility,
+    metadata: revision.metadata,
+    sourceHash: revision.sourceHash,
+    sourceBytes: revision.sourceBytes,
+  }
+}
+
 export const createRuntimeExecutionHttpHandler = (
   options: RuntimeExecutionHttpServerOptions = {},
 ) => {
@@ -95,6 +143,25 @@ export const createRuntimeExecutionHttpHandler = (
         runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
         adapter: runtimeConfig.metadata.id,
       })
+      return
+    }
+
+    if (request.method === "POST" && request.url === "/validate-strategy") {
+      try {
+        const body = await readBody(request, bodyLimitBytes)
+        const rawRequest = JSON.parse(body) as unknown
+        const result = validateStrategyRequest(rawRequest)
+        writeJson(response, result.ok ? 200 : 422, result)
+      } catch (error) {
+        writeJson(response, 400, {
+          ok: false,
+          kind: "strategyValidation",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Strategy validation request was malformed.",
+        })
+      }
       return
     }
 

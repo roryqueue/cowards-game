@@ -98,6 +98,30 @@
       "readiness": "experimental",
       "enabledForNormalPlay": false,
       "countedResultsAllowed": false
+    },
+    {
+      "languageId": "rust",
+      "languageVersion": "1.95.0-wasm32-wasip1",
+      "runtimeTarget": "runtime-wasm-wasi",
+      "adapterId": "runtime-wasm-wasi-wasmtime-preview1",
+      "adapterVersion": "0.1.0-alpha",
+      "abiVersion": "strategy-runtime-abi-v1.14",
+      "packagePolicy": "none",
+      "readiness": "experimental",
+      "enabledForNormalPlay": false,
+      "countedResultsAllowed": false
+    },
+    {
+      "languageId": "zig",
+      "languageVersion": "0.16.0-wasm32-wasi",
+      "runtimeTarget": "runtime-wasm-wasi",
+      "adapterId": "runtime-wasm-wasi-wasmtime-preview1",
+      "adapterVersion": "0.1.0-alpha",
+      "abiVersion": "strategy-runtime-abi-v1.14",
+      "packagePolicy": "none",
+      "readiness": "experimental",
+      "enabledForNormalPlay": false,
+      "countedResultsAllowed": false
     }
   ],
   "authority": {
@@ -120,6 +144,13 @@
       "no filesystem",
       "no network",
       "no package install",
+      "no backend ownership"
+    ],
+    "wasmWasiRuntime": [
+      "candidate-readiness Strategy method execution only",
+      "immutable WASM artifact execution",
+      "stdin/stdout JSON ABI envelope",
+      "no counted or ranked eligibility",
       "no backend ownership"
     ]
   }

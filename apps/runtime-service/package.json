@@ -16,6 +16,7 @@
     "@cowards/replay": "workspace:*",
     "@cowards/runtime-js": "workspace:*",
     "@cowards/runtime-python": "workspace:*",
+    "@cowards/runtime-wasm-wasi": "workspace:*",
     "@cowards/spec": "workspace:*"
   },
   "devDependencies": {

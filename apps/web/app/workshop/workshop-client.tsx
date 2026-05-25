@@ -1,7 +1,10 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import type { StrategyRevisionValidationReport } from "@cowards/spec"
+import type {
+  StrategyArtifactSourceFormat,
+  StrategyRevisionValidationReport,
+} from "@cowards/spec"
 import { StrategySourceEditor } from "./monaco-editor.js"
 import type {
   WorkshopSampleSummary,
@@ -45,7 +48,19 @@ const runtimeDisplayLabel = (revision: {
 }) =>
   revision.sourceFormat === "python"
     ? "Python · non-counted exhibition beta"
-    : null
+    : revision.sourceFormat === "rust"
+      ? "Rust · non-counted exhibition alpha"
+      : null
+
+type WorkshopEditorSourceFormat = Extract<
+  StrategyArtifactSourceFormat,
+  "typescript" | "python" | "rust"
+>
+
+const normalizeEditorSourceFormat = (
+  value: string | undefined,
+): WorkshopEditorSourceFormat =>
+  value === "python" ? "python" : value === "rust" ? "rust" : "typescript"
 
 export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const firstTemplate = initialData.templates[0]
@@ -58,8 +73,8 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const [source, setSource] = useState(
     firstTemplate?.source ?? initialData.templateSource,
   )
-  const [sourceFormat, setSourceFormat] = useState<"typescript" | "python">(
-    firstTemplate?.sourceFormat === "python" ? "python" : "typescript",
+  const [sourceFormat, setSourceFormat] = useState<WorkshopEditorSourceFormat>(
+    normalizeEditorSourceFormat(firstTemplate?.sourceFormat),
   )
   const [isDirty, setIsDirty] = useState(false)
   const [validation, setValidation] =
@@ -69,9 +84,10 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const [validationSource, setValidationSource] = useState(
     firstTemplate?.source ?? initialData.templateSource,
   )
-  const [validationSourceFormat, setValidationSourceFormat] = useState<
-    "typescript" | "python"
-  >(firstTemplate?.sourceFormat === "python" ? "python" : "typescript")
+  const [validationSourceFormat, setValidationSourceFormat] =
+    useState<WorkshopEditorSourceFormat>(
+      normalizeEditorSourceFormat(firstTemplate?.sourceFormat),
+    )
   const [checking, setChecking] = useState(false)
   const [label, setLabel] = useState("Workshop revision")
   const [notes, setNotes] = useState("")
@@ -201,14 +217,12 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSelectedTemplateId(template.id)
     setSelectedStarterId("")
     setSelectedSampleId("")
-    setSourceFormat(
-      template.sourceFormat === "python" ? "python" : "typescript",
-    )
+    setSourceFormat(normalizeEditorSourceFormat(template.sourceFormat))
     setSource(template.source)
     setValidation(template.validation)
     setValidationSource(template.source)
     setValidationSourceFormat(
-      template.sourceFormat === "python" ? "python" : "typescript",
+      normalizeEditorSourceFormat(template.sourceFormat),
     )
     setIsDirty(false)
   }
@@ -259,13 +273,11 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSelectedStarterId("")
     setSelectedAdvancedId("")
     setSelectedSampleId(sample.id)
-    setSourceFormat(sample.sourceFormat === "python" ? "python" : "typescript")
+    setSourceFormat(normalizeEditorSourceFormat(sample.sourceFormat))
     setSource(sample.source)
     setValidation(sample.validation)
     setValidationSource(sample.source)
-    setValidationSourceFormat(
-      sample.sourceFormat === "python" ? "python" : "typescript",
-    )
+    setValidationSourceFormat(normalizeEditorSourceFormat(sample.sourceFormat))
     setIsDirty(false)
   }
 
@@ -415,18 +427,16 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     }
     setSource(body.source)
     setSourceFormat(
-      revisions.find((revision) => revision.id === revisionId)?.sourceFormat ===
-        "python"
-        ? "python"
-        : "typescript",
+      normalizeEditorSourceFormat(
+        revisions.find((revision) => revision.id === revisionId)?.sourceFormat,
+      ),
     )
     setValidation(null)
     setValidationSource("")
     setValidationSourceFormat(
-      revisions.find((revision) => revision.id === revisionId)?.sourceFormat ===
-        "python"
-        ? "python"
-        : "typescript",
+      normalizeEditorSourceFormat(
+        revisions.find((revision) => revision.id === revisionId)?.sourceFormat,
+      ),
     )
     setIsDirty(true)
   }
@@ -654,7 +664,9 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                   <span>{template.label}</span>
                   {template.experimental ? (
                     <span className="workshop-chip warning">
-                      Python experimental
+                      {template.sourceFormat === "rust"
+                        ? "Rust alpha"
+                        : "Python experimental"}
                     </span>
                   ) : null}
                 </button>
@@ -819,11 +831,19 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
               >
                 PY beta
               </button>
+              <button
+                className={sourceFormat === "rust" ? "active" : ""}
+                type="button"
+                onClick={() => setSourceFormat("rust")}
+              >
+                Rust alpha
+              </button>
             </div>
-            {sourceFormat === "python" ? (
+            {sourceFormat === "python" || sourceFormat === "rust" ? (
               <p className="workshop-muted">
-                Python is non-counted exhibition beta and runs only through the
-                Runtime Broker.
+                {sourceFormat === "python"
+                  ? "Python is non-counted exhibition beta and runs only through the Runtime Broker."
+                  : "Rust is non-counted exhibition alpha and executes immutable WASM/WASI artifacts through the Runtime Broker."}
               </p>
             ) : null}
             <StrategySourceEditor

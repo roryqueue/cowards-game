@@ -48,9 +48,36 @@ create table strategy_revisions (
   engine_compatibility jsonb not null,
   validation jsonb not null,
   metadata jsonb not null default '{}'::jsonb,
+  compiled_artifact jsonb,
   locked_at timestamptz,
   created_at timestamptz not null default now()
 );
+
+create function prevent_locked_strategy_revision_content_update()
+returns trigger
+language plpgsql
+as $$
+begin
+  if old.locked_at is not null and (
+    old.source is distinct from new.source or
+    old.source_hash is distinct from new.source_hash or
+    old.source_bytes is distinct from new.source_bytes or
+    old.runtime is distinct from new.runtime or
+    old.engine_compatibility is distinct from new.engine_compatibility or
+    old.validation is distinct from new.validation or
+    old.metadata is distinct from new.metadata or
+    old.compiled_artifact is distinct from new.compiled_artifact
+  ) then
+    raise exception 'locked Strategy Revision content is immutable';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger strategy_revisions_locked_content_immutable
+before update on strategy_revisions
+for each row
+execute function prevent_locked_strategy_revision_content_update();
 
 create table arena_variants (
   id text primary key,

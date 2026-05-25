@@ -1,10 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { assertPublicOutputLeakSafe } from "../packages/spec/src/public-output-privacy.ts"
@@ -183,7 +178,9 @@ const countBy = <T>(
     const key = select(value)
     counts[key] = (counts[key] ?? 0) + 1
   }
-  return Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)))
+  return Object.fromEntries(
+    Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)),
+  )
 }
 
 const idFor = (repoPath: string): string =>
@@ -221,7 +218,8 @@ const classifyWorkshopLabel = (repoPath: string): string => {
   if (repoPath.includes("/analytics/profiles/route.ts")) {
     return "deferred-workshop-profile-save"
   }
-  if (repoPath.includes("/analytics/")) return "deferred-workshop-analytics-rerun"
+  if (repoPath.includes("/analytics/"))
+    return "deferred-workshop-analytics-rerun"
   if (
     repoPath.includes("/workshop/evidence/") ||
     repoPath.includes("heatmap") ||
@@ -254,8 +252,7 @@ const classifySurface = (
     return {
       surfaceLabel: classifyWorkshopLabel(repoPath),
       capabilityGroup: "Workshop",
-      gate:
-        "deferred Workshop owner/session/local gate; private revision text and diagnostics are not public output",
+      gate: "deferred Workshop owner/session/local gate; private revision text and diagnostics are not public output",
       futureMigration:
         "Future Go Workshop migration may select validation, private revision, test launch, analytics rerun, profile save, export, or runtime support one slice at a time.",
       privacyClass: repoPath.includes("source")
@@ -264,7 +261,8 @@ const classifySurface = (
       publicOutputPrivacy: "owner-private",
       noPublicFallback: true,
       selectedNormal: false,
-      selectedNormalJustification: "Deferred Workshop behavior is not selected normal backend traffic.",
+      selectedNormalJustification:
+        "Deferred Workshop behavior is not selected normal backend traffic.",
       monitorStatus: "phase-107-monitor-enforced",
     }
   }
@@ -277,7 +275,8 @@ const classifySurface = (
       surfaceLabel: "deferred-ladder-mutation",
       capabilityGroup: "ladder",
       gate: "deferred ladder owner/session/admin gate; no selected normal TypeScript mutation ownership",
-      futureMigration: "Future Go ladder mutation and scheduling migration target.",
+      futureMigration:
+        "Future Go ladder mutation and scheduling migration target.",
       privacyClass: "session-or-public-redacted",
       publicOutputPrivacy: "not-public-output",
       noPublicFallback: true,
@@ -296,7 +295,8 @@ const classifySurface = (
       publicOutputPrivacy: "not-public-output",
       noPublicFallback: true,
       selectedNormal: false,
-      selectedNormalJustification: "Governance/admin mutation remains deferred.",
+      selectedNormalJustification:
+        "Governance/admin mutation remains deferred.",
       monitorStatus: "phase-107-monitor-enforced",
     }
   }
@@ -304,15 +304,15 @@ const classifySurface = (
     return {
       surfaceLabel: "private-owner-debug-replay",
       capabilityGroup: "owner-debug",
-      gate:
-        "requires PLAYWRIGHT_TEST=1, NODE_ENV=test, or COWARDS_ENABLE_OWNER_DEBUG_REPLAY=1 plus ownerDebug/debug query, COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID, and persisted owner authorization",
+      gate: "requires PLAYWRIGHT_TEST=1, NODE_ENV=test, or COWARDS_ENABLE_OWNER_DEBUG_REPLAY=1 plus ownerDebug/debug query, COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID, and persisted owner authorization",
       futureMigration:
         "Future Go owner-debug replay projection migration; public replay evidence must not fallback to this path.",
       privacyClass: "owner-private-replay-debug",
       publicOutputPrivacy: "owner-private",
       noPublicFallback: true,
       selectedNormal: false,
-      selectedNormalJustification: "Owner-debug replay is private/deferred and never public evidence fallback.",
+      selectedNormalJustification:
+        "Owner-debug replay is private/deferred and never public evidence fallback.",
       monitorStatus: "phase-107-monitor-enforced",
     }
   }
@@ -321,12 +321,14 @@ const classifySurface = (
       surfaceLabel: "test-support-route",
       capabilityGroup: "test-support",
       gate: "PLAYWRIGHT_TEST=1 or NODE_ENV=test test-support route gate; 404 in normal product runtime",
-      futureMigration: "Keep only for automated tests; delete when external verification no longer needs it.",
+      futureMigration:
+        "Keep only for automated tests; delete when external verification no longer needs it.",
       privacyClass: "test-diagnostics-redacted",
       publicOutputPrivacy: "not-public-output",
       noPublicFallback: true,
       selectedNormal: false,
-      selectedNormalJustification: "Test-support routes cannot serve normal product runtime traffic.",
+      selectedNormalJustification:
+        "Test-support routes cannot serve normal product runtime traffic.",
       monitorStatus: "phase-107-monitor-enforced",
     }
   }
@@ -335,12 +337,14 @@ const classifySurface = (
       surfaceLabel: "fixture-only",
       capabilityGroup: "fixture",
       gate: "PLAYWRIGHT_TEST=1, NODE_ENV=test, or explicit fixture env gate; no development-mode product traffic",
-      futureMigration: "Keep as local fixture support only; delete when replay/page smoke no longer needs it.",
+      futureMigration:
+        "Keep as local fixture support only; delete when replay/page smoke no longer needs it.",
       privacyClass: "fixture-public-redacted",
       publicOutputPrivacy: "not-public-output",
       noPublicFallback: true,
       selectedNormal: false,
-      selectedNormalJustification: "Fixtures are local/test support, not normal runtime.",
+      selectedNormalJustification:
+        "Fixtures are local/test support, not normal runtime.",
       monitorStatus: "phase-107-monitor-enforced",
     }
   }
@@ -349,12 +353,14 @@ const classifySurface = (
       surfaceLabel: "parity-reference",
       capabilityGroup: "parity",
       gate: "parity fixture generation or monitor-only reference gate",
-      futureMigration: "Delete or further quarantine after Go parity evidence no longer depends on TypeScript reference output.",
+      futureMigration:
+        "Delete or further quarantine after Go parity evidence no longer depends on TypeScript reference output.",
       privacyClass: "parity-reference-not-public",
       publicOutputPrivacy: "not-public-output",
       noPublicFallback: true,
       selectedNormal: false,
-      selectedNormalJustification: "Parity reference code is not normal product backend traffic.",
+      selectedNormalJustification:
+        "Parity reference code is not normal product backend traffic.",
       monitorStatus: "phase-107-monitor-enforced",
     }
   }
@@ -363,12 +369,14 @@ const classifySurface = (
       surfaceLabel: "rollback-only",
       capabilityGroup: "rollback",
       gate: "explicit rollback operator gate with single Go or TypeScript lifecycle owner",
-      futureMigration: "Delete or keep quarantined after no-TypeScript-backend topology reaches strict closure.",
+      futureMigration:
+        "Delete or keep quarantined after no-TypeScript-backend topology reaches strict closure.",
       privacyClass: "rollback-diagnostics-redacted",
       publicOutputPrivacy: "not-public-output",
       noPublicFallback: true,
       selectedNormal: false,
-      selectedNormalJustification: "Rollback paths require operator selection and cannot be mixed with Go normal ownership.",
+      selectedNormalJustification:
+        "Rollback paths require operator selection and cannot be mixed with Go normal ownership.",
       monitorStatus: "phase-107-monitor-enforced",
     }
   }
@@ -377,12 +385,14 @@ const classifySurface = (
       surfaceLabel: "quarantined-lifecycle",
       capabilityGroup: "rollback",
       gate: "quarantine subpath import gate; absent from normal persistence root",
-      futureMigration: "Delete or narrow after all rollback and replay-owner debug dependencies are retired.",
+      futureMigration:
+        "Delete or narrow after all rollback and replay-owner debug dependencies are retired.",
       privacyClass: "quarantined-private",
       publicOutputPrivacy: "not-public-output",
       noPublicFallback: true,
       selectedNormal: false,
-      selectedNormalJustification: "Quarantined lifecycle code is not normal product backend traffic.",
+      selectedNormalJustification:
+        "Quarantined lifecycle code is not normal product backend traffic.",
       monitorStatus: "phase-107-monitor-enforced",
     }
   }
@@ -391,12 +401,14 @@ const classifySurface = (
       surfaceLabel: "runtime-service-execution-boundary",
       capabilityGroup: "runtime-service",
       gate: "runtime-execution-service-v1.15 schema, DB-free boundary, and no backend authority",
-      futureMigration: "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker.",
+      futureMigration:
+        "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker.",
       privacyClass: "internal-runtime-redacted",
       publicOutputPrivacy: "not-public-output",
       noPublicFallback: true,
       selectedNormal: true,
-      selectedNormalJustification: "Allowed selected TypeScript role is isolated runtime execution service with no backend authority.",
+      selectedNormalJustification:
+        "Allowed selected TypeScript role is isolated runtime execution service with no backend authority.",
       monitorStatus: "phase-107-monitor-enforced",
     }
   }
@@ -405,12 +417,14 @@ const classifySurface = (
       surfaceLabel: "runtime-adapter-execution-boundary",
       capabilityGroup: "runtime-adapter",
       gate: "strategy-runtime-abi-v1.14 adapter contract within isolated runtime boundary",
-      futureMigration: "May be fronted by a future Runtime Broker while preserving ABI envelopes.",
+      futureMigration:
+        "May be fronted by a future Runtime Broker while preserving ABI envelopes.",
       privacyClass: "internal-runtime-redacted",
       publicOutputPrivacy: "not-public-output",
       noPublicFallback: true,
       selectedNormal: true,
-      selectedNormalJustification: "Allowed selected TypeScript role is runtime adapter code inside the execution boundary.",
+      selectedNormalJustification:
+        "Allowed selected TypeScript role is runtime adapter code inside the execution boundary.",
       monitorStatus: "phase-107-monitor-enforced",
     }
   }
@@ -424,7 +438,8 @@ const classifySurface = (
       publicOutputPrivacy: "not-public-output",
       noPublicFallback: true,
       selectedNormal: false,
-      selectedNormalJustification: "Tests cannot serve product runtime traffic.",
+      selectedNormalJustification:
+        "Tests cannot serve product runtime traffic.",
       monitorStatus: "phase-107-monitor-enforced",
     }
   }
@@ -456,12 +471,15 @@ const classifySurface = (
     }
   }
   return {
-    surfaceLabel: repoPath.includes("/api/account/revisions") && repoPath.includes("/source/")
-      ? "frontend-go-private-source-adapter"
-      : "frontend-go-adapter",
+    surfaceLabel:
+      repoPath.includes("/api/account/revisions") &&
+      repoPath.includes("/source/")
+        ? "frontend-go-private-source-adapter"
+        : "frontend-go-adapter",
     capabilityGroup: "frontend-only",
     gate: "selected Go adapter/schema validation/no TypeScript backend fallback gate",
-    futureMigration: "Keep as frontend or Go adapter only; remove any future local backend fallback drift.",
+    futureMigration:
+      "Keep as frontend or Go adapter only; remove any future local backend fallback drift.",
     privacyClass: repoPath.includes("/source/")
       ? "owner-private-source-through-go"
       : "frontend-public-or-session-redacted",
@@ -470,7 +488,8 @@ const classifySurface = (
       : "public-redacted",
     noPublicFallback: true,
     selectedNormal: true,
-    selectedNormalJustification: "Allowed selected TypeScript role is frontend or Go adapter with no backend authority.",
+    selectedNormalJustification:
+      "Allowed selected TypeScript role is frontend or Go adapter with no backend authority.",
     monitorStatus: "phase-107-monitor-enforced",
   }
 }
@@ -500,7 +519,10 @@ const createFinalRow = (
     capabilityGroup: label.capabilityGroup,
     owner: surface.owner || "phase_107_surface_owner",
     reason: `${surface.reason} Phase 107 final label: ${label.selectedNormalJustification}`,
-    risk: label.surfaceLabel === "frontend-go-adapter" ? surface.risk : `${surface.risk}; ${label.selectedNormalJustification}`,
+    risk:
+      label.surfaceLabel === "frontend-go-adapter"
+        ? surface.risk
+        : `${surface.risk}; ${label.selectedNormalJustification}`,
     privacyClass: label.privacyClass,
     gate: label.gate,
     futureMigration: label.futureMigration,
@@ -546,7 +568,9 @@ export const generateFinalTypeScriptSurfaceLabels = (
   }
   const errors = validateFinalTypeScriptSurfaceLabels(artifact)
   if (errors.length > 0) {
-    throw new Error(`Invalid final TypeScript surface labels:\n${errors.join("\n")}`)
+    throw new Error(
+      `Invalid final TypeScript surface labels:\n${errors.join("\n")}`,
+    )
   }
   return artifact
 }
@@ -556,7 +580,9 @@ export const validateFinalTypeScriptSurfaceLabels = (
 ): readonly string[] => {
   const errors: string[] = []
   if (artifact.schemaVersion !== finalTypeScriptSurfaceLabelSchemaVersion) {
-    errors.push(`schemaVersion must be ${finalTypeScriptSurfaceLabelSchemaVersion}`)
+    errors.push(
+      `schemaVersion must be ${finalTypeScriptSurfaceLabelSchemaVersion}`,
+    )
   }
   if (artifact.globalPolicies.normalTypeScriptBackendAllowed !== false) {
     errors.push("normal TypeScript backend must not be allowed")
@@ -586,7 +612,9 @@ export const validateFinalTypeScriptSurfaceLabels = (
     }
     paths.add(surface.path)
     if (surface.taxonomyRole.includes("backend")) {
-      errors.push(`${surface.path} claims normal TypeScript backend taxonomy role`)
+      errors.push(
+        `${surface.path} claims normal TypeScript backend taxonomy role`,
+      )
     }
     if (surface.normalBackendAuthority !== false) {
       errors.push(`${surface.path} must not claim normal backend authority`)
@@ -613,17 +641,19 @@ export const validateFinalTypeScriptSurfaceLabels = (
     }
     if (
       surface.selectedNormal &&
-      ![
-        "frontend-only",
-        "runtime-service",
-        "runtime-adapter",
-      ].includes(surface.taxonomyRole)
+      !["frontend-only", "runtime-service", "runtime-adapter"].includes(
+        surface.taxonomyRole,
+      )
     ) {
-      errors.push(`${surface.path} selectedNormal is not allowed for ${surface.taxonomyRole}`)
+      errors.push(
+        `${surface.path} selectedNormal is not allowed for ${surface.taxonomyRole}`,
+      )
     }
     if (
       surface.surfaceLabel === "private-owner-debug-replay" &&
-      !/PLAYWRIGHT_TEST|NODE_ENV=test|COWARDS_ENABLE_OWNER_DEBUG_REPLAY/.test(surface.gate)
+      !/PLAYWRIGHT_TEST|NODE_ENV=test|COWARDS_ENABLE_OWNER_DEBUG_REPLAY/.test(
+        surface.gate,
+      )
     ) {
       errors.push(`${surface.path} owner-debug label missing enablement gate`)
     }
@@ -632,18 +662,24 @@ export const validateFinalTypeScriptSurfaceLabels = (
       !/authorization|owner/.test(surface.gate) &&
       !/authorization|owner/.test(surface.futureMigration)
     ) {
-      errors.push(`${surface.path} owner-debug label missing owner authorization`)
+      errors.push(
+        `${surface.path} owner-debug label missing owner authorization`,
+      )
     }
     if (
       surface.surfaceLabel === "private-owner-debug-replay" &&
       surface.noPublicFallback !== true
     ) {
-      errors.push(`${surface.path} owner-debug label allows public evidence fallback`)
+      errors.push(
+        `${surface.path} owner-debug label allows public evidence fallback`,
+      )
     }
     if (
       (surface.surfaceLabel === "test-support-route" ||
         surface.surfaceLabel === "fixture-only") &&
-      !/PLAYWRIGHT_TEST|NODE_ENV=test|fixture|Vitest|Playwright/.test(surface.gate)
+      !/PLAYWRIGHT_TEST|NODE_ENV=test|fixture|Vitest|Playwright/.test(
+        surface.gate,
+      )
     ) {
       errors.push(`${surface.path} test/fixture label missing test gate`)
     }
@@ -663,7 +699,9 @@ export const validateFinalTypeScriptSurfaceLabels = (
   return errors
 }
 
-const markdownEscape = (value: string | boolean | readonly string[]): string => {
+const markdownEscape = (
+  value: string | boolean | readonly string[],
+): string => {
   const text = Array.isArray(value) ? value.join(", ") : String(value)
   return text.replaceAll("|", "\\|").replaceAll("\n", " ")
 }
@@ -726,7 +764,10 @@ export const writeFinalTypeScriptSurfaceLabelArtifacts = (
   mkdirSync(path.dirname(jsonPath), { recursive: true })
   mkdirSync(path.dirname(markdownPath), { recursive: true })
   writeFileSync(jsonPath, renderFinalTypeScriptSurfaceLabelsJson(artifact))
-  writeFileSync(markdownPath, renderFinalTypeScriptSurfaceLabelsMarkdown(artifact))
+  writeFileSync(
+    markdownPath,
+    renderFinalTypeScriptSurfaceLabelsMarkdown(artifact),
+  )
   return artifact
 }
 
@@ -737,7 +778,10 @@ export const checkFinalTypeScriptSurfaceLabelArtifacts = (
   const artifact = generateFinalTypeScriptSurfaceLabels({ repoRoot: root })
   const checks = [
     [artifactPaths.json, renderFinalTypeScriptSurfaceLabelsJson(artifact)],
-    [artifactPaths.markdown, renderFinalTypeScriptSurfaceLabelsMarkdown(artifact)],
+    [
+      artifactPaths.markdown,
+      renderFinalTypeScriptSurfaceLabelsMarkdown(artifact),
+    ],
   ] as const
   const failures: string[] = []
   for (const [relativePath, expected] of checks) {
@@ -777,7 +821,9 @@ const runCli = () => {
     return
   }
   process.stdout.write(
-    renderFinalTypeScriptSurfaceLabelsJson(generateFinalTypeScriptSurfaceLabels()),
+    renderFinalTypeScriptSurfaceLabelsJson(
+      generateFinalTypeScriptSurfaceLabels(),
+    ),
   )
 }
 

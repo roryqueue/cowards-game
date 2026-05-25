@@ -308,7 +308,7 @@ export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/competitive/server.ts:43:@cowards/persistence:import { findStarterStrategy } from "@cowards/persistence/starter-strategies"',
   'apps/web/app/matches/replay-fixture.ts:6:@cowards/persistence:import { createChronicleMetadata } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/replay-ready.ts:7:@cowards/persistence:import type { StoredChronicle } from "@cowards/persistence/quarantine-lifecycle"',
-  'apps/web/app/matches/server.test.ts:6:@cowards/persistence:import { createChronicleMetadata, type StoredChronicle, } from "@cowards/persistence/quarantine-lifecycle"',
+  'apps/web/app/matches/server.test.ts:7:@cowards/persistence:import { createChronicleMetadata, type StoredChronicle, } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/server.ts:1:@cowards/persistence:import { createDatabasePool } from "@cowards/persistence/db"',
   'apps/web/app/matches/server.ts:2:@cowards/persistence:import { createPostgresChronicleStore, type ChronicleMetadata, type ChronicleStore, } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/server.ts:7:@cowards/persistence:import type { Queryable } from "@cowards/persistence/repositories"',
@@ -3229,7 +3229,9 @@ const checkRuntimeIsolationReadiness = (): string => {
     if (!Array.isArray(exhibitions) || exhibitions.length !== 2) {
       throw new Error("v1.20 signed-in proof exhibition count drifted")
     }
-    const matchups = new Set(exhibitions.map((exhibition) => exhibition.matchup))
+    const matchups = new Set(
+      exhibitions.map((exhibition) => exhibition.matchup),
+    )
     for (const matchup of ["js-ts-vs-python", "python-vs-python"]) {
       if (!matchups.has(matchup)) {
         throw new Error(`v1.20 signed-in proof missing ${matchup}`)

@@ -16,7 +16,7 @@ export const reliabilityBudgetCue =
   "Strategy calls keep the 1000 ms deterministic cap; Match/runtime-service and proof budgets are outer reliability windows."
 
 export const candidateLaneCue =
-  "Docker/container is v1.20 readiness evidence, not production sandbox certification."
+  "Docker/container is v1.20 readiness evidence; WASM/WASI is v1.21 runtime-candidate evidence. Neither is production sandbox certification."
 
 const matchReasonLabel = (
   reason: PublicMatchEvidenceDto["publicReason"],
@@ -109,8 +109,7 @@ export const matchSetEvidenceRows = (
   { label: "candidate lane", value: candidateLaneCue },
   {
     label: "proof limits",
-    value:
-      "v1.20 signed-in reliability proof uses three bounded cycles, not a stress test.",
+    value: "Signed-in reliability proofs use bounded cycles, not stress tests.",
   },
   { label: "entrants", value: entrantRuntimeLabels.join(", ") },
   { label: "privacy", value: publicReliabilityPrivacyCue },

@@ -731,6 +731,43 @@
 - Sessions: one extended v1.15 thread with research, phase execution, code review, audit-fix, Docker retest, browser repair, page-smoke hardening, and archive pass.
 - Notable: the highest-signal final checks were the milestone audit, live local topology, browser page inspection, and Docker/OrbStack retest.
 
+## Milestone: v1.21 — WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
+
+**Shipped:** 2026-05-25
+**Phases:** 8 | **Plans:** 8
+
+### What Was Built
+
+- A WASI Preview 1 stdin/stdout JSON runtime lane using Wasmtime from runtime-service.
+- Rust source validation/compile that produces immutable WASM artifact metadata for Strategy Revisions.
+- Rust Workshop/account/exhibition/result/replay labels and safe starter samples.
+- WASM/WASI hostile probes, no-fallback checks, artifact integrity checks, public-safe redaction evidence, and Zig fail-loud readiness artifacts.
+- A signed-in two-cycle Rust proof covering JS/TS-vs-Rust and Rust-vs-Rust non-counted exhibitions.
+
+### What Worked
+
+- The live proof found real product gaps after automated gates passed: blank `strategyId` handling in runtime-service validation and Rust label assumptions on Account/MatchSet pages.
+- Keeping Rust compile/validation in runtime-service preserved the Go/web/API hostile-code boundary while still letting Go orchestrate saves and Matches.
+- The immutable artifact contract made no-silent-fallback checks concrete: missing or stale artifact metadata stops before source execution.
+
+### What Was Inefficient
+
+- Rust std-based WASM artifacts are large enough that validation responses are several megabytes; acceptable for alpha proof, but worth optimizing before beta.
+- The first proof command accidentally let mobile run too; the final proof is desktop-only and bounded.
+- GSD archive completion still requires manual doc updates around active requirements and phase archives.
+
+### Key Lessons
+
+- Live signed-in proof is not paperwork. It caught boundary/UX bugs that unit, type, and monitor gates did not.
+- Public evidence copy should branch by language family rather than treating every non-Python runtime as JS/TS.
+- Empty optional ids should be normalized at service boundaries before building immutable metadata.
+
+### Cost Observations
+
+- Model mix: GPT-5 Codex with subagent review support.
+- Sessions: one extended v1.21 thread with research, discussion context, implementation, subagent code review, audit-fix, live proof, and archive pass.
+- Notable: the highest-signal checks were subagent review plus the final live signed-in Rust proof.
+
 ## Cross-Milestone Trends
 
 | Trend | Observation |

@@ -26,6 +26,7 @@ import (
 const sessionCookieName = "cowards_session"
 const sessionDuration = 30 * 24 * time.Hour
 const strategySourceBytes = 64 * 1024
+const strategyWasmArtifactBytes = 4 * 1024 * 1024
 const exhibitionRateLimit = 5
 const exhibitionRateLimitWindow = time.Hour
 
@@ -523,6 +524,13 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 	if !decodeBody(writer, request, &body) {
 		return
 	}
+	if body.SourceFormat == "" {
+		body.SourceFormat = "typescript"
+	}
+	if body.SourceFormat != "typescript" && body.SourceFormat != "python" && body.SourceFormat != "rust" {
+		writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Unsupported Strategy source format.")
+		return
+	}
 	input := accountRevisionInsert{
 		UserID:     user.ID,
 		StrategyID: body.StrategyID,
@@ -534,6 +542,23 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 		input.Runtime = pythonRuntimeMetadata()
 		input.Validation = validatePythonSourceMetadata(body.Source)
 		input.Metadata = map[string]any{"tags": []string{"python", "non-counted", "exhibition-beta"}}
+	}
+	if body.SourceFormat == "rust" {
+		validation, failure := server.orchestrator.runtime.validateStrategy(request.Context(), "rust", body.Source, body.StrategyID)
+		if failure != nil {
+			writeServiceError(writer, http.StatusServiceUnavailable, "RUNTIME_SERVICE_UNAVAILABLE", fmt.Sprintf("Rust validation requires the runtime execution service: %s %s.", failure.Code, failure.ErrorMessage))
+			return
+		}
+		if !validation.OK {
+			input.Runtime = rustWasmRuntimeMetadata()
+			input.Validation = validation.Validation
+			input.Metadata = map[string]any{"tags": []string{"rust", "wasm-wasi", "non-counted", "exhibition-alpha"}}
+		} else {
+			input.Runtime = validation.Runtime
+			input.Validation = validation.Validation
+			input.EngineCompatibility = validation.EngineCompatibility
+			input.Metadata = validation.Metadata
+		}
 	}
 	if artifact, ok := server.matchSubmittedArtifact(body.Source, body.StarterID, "starter"); ok {
 		input.applyArtifact(artifact)
@@ -1729,11 +1754,11 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, input accou
 	if _, err := tx.Exec(ctx, `
 		insert into strategy_revisions (
 			id, strategy_id, source, source_hash, source_bytes,
-			runtime, engine_compatibility, validation, metadata
+			runtime, engine_compatibility, validation, metadata, compiled_artifact
 		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		on conflict (id) do nothing
-	`, revisionID, strategyID, source, sourceHash, sourceBytes, runtime, engine, validation, metadata); err != nil {
+	`, revisionID, strategyID, source, sourceHash, sourceBytes, runtime, engine, validation, metadata, mapValue(metadata, "compiledArtifact")); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -2189,6 +2214,39 @@ func pythonRuntimeMetadata() map[string]any {
 	}
 }
 
+func rustWasmRuntimeMetadata() map[string]any {
+	return map[string]any{
+		"abiVersion": "strategy-runtime-abi-v1.14",
+		"language": map[string]any{
+			"id":      "rust",
+			"version": "1.95.0-wasm32-wasip1",
+		},
+		"adapter": map[string]any{
+			"id":      "runtime-wasm-wasi-wasmtime-preview1",
+			"version": "0.1.0-alpha",
+		},
+		"package": map[string]any{
+			"mode":       "none",
+			"entrypoint": "_start",
+		},
+		"requiredCapabilities": []string{},
+		"limits": map[string]any{
+			"timeoutMs":             1000,
+			"stdoutBytes":           262144,
+			"stderrBytes":           65536,
+			"sourceBytes":           strategySourceBytes,
+			"strategyMemoryBytes":   32768,
+			"soldierMemoryBytes":    2048,
+			"objectivePayloadBytes": 1024,
+			"environment":           "empty",
+			"filesystem":            "none",
+			"network":               "disabled",
+			"shell":                 "disabled",
+			"packagePolicy":         "none",
+		},
+	}
+}
+
 func engineCompatibility() map[string]any {
 	return map[string]any{
 		"spec":   "cowards-rules-v1.4",
@@ -2232,6 +2290,7 @@ func validatePythonSourceMetadata(source string) map[string]any {
 
 func validateSourceMetadata(source string) map[string]any {
 	errors := []map[string]any{}
+	forbidden := []string{}
 	if len([]byte(source)) > strategySourceBytes {
 		errors = append(errors, validationIssue("SOURCE_TOO_LARGE", "Strategy source is too large."))
 	}
@@ -2244,12 +2303,18 @@ func validateSourceMetadata(source string) map[string]any {
 	if !strings.Contains(source, "soldierBrain") {
 		errors = append(errors, validationIssue("MISSING_SOLDIER_BRAIN", "Strategy source must define soldierBrain."))
 	}
+	for _, marker := range []string{"Date.now", "Math.random", "fetch(", "XMLHttpRequest", "WebSocket", "localStorage", "sessionStorage", "indexedDB", "process.", "require(", "import(", "node:", "fs.", "fs/", "net.", "child_process", "crypto.random", "performance.now"} {
+		if strings.Contains(source, marker) {
+			forbidden = append(forbidden, marker)
+			errors = append(errors, validationIssue("FORBIDDEN_PATTERN", "Strategy source uses a forbidden capability."))
+		}
+	}
 	return map[string]any{
 		"valid":               len(errors) == 0,
 		"errors":              errors,
 		"warnings":            []map[string]any{},
 		"sourceBytes":         len([]byte(source)),
-		"forbiddenPatterns":   []string{},
+		"forbiddenPatterns":   forbidden,
 		"sourceHash":          hashString(source),
 		"runtimeVersion":      "0.1.0",
 		"engineCompatibility": engineCompatibility(),
@@ -2286,6 +2351,46 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"docsReference":        "runtime/languages",
 			"examplesReference":    "examples/python-exhibition-beta",
 			"warnings":             []string{"Python is non-counted exhibition beta and not ranked/counted eligible."},
+			"validationIssueCodes": []string{"NON_COUNTED_RUNTIME"},
+		}
+	}
+	if languageID == "rust" {
+		return map[string]any{
+			"languageId":           "rust",
+			"adapterId":            adapterID,
+			"languageLabel":        "Rust",
+			"adapterLabel":         "WASM/WASI Wasmtime Preview 1",
+			"readiness":            "experimental",
+			"readinessLabel":       "Experimental",
+			"experimental":         true,
+			"countedPlayEligible":  false,
+			"countedPlayLabel":     "Not counted",
+			"countedPlayReason":    "Strategy runtime is non-counted exhibition alpha and not counted-play eligible.",
+			"sourcePolicyLabel":    "Self-contained Rust source compiled to immutable WASM artifact",
+			"packagePolicyLabel":   "No packages",
+			"docsReference":        "runtime/languages",
+			"examplesReference":    "examples/rust-wasi-exhibition-alpha",
+			"warnings":             []string{"Rust WASM/WASI is non-counted exhibition alpha and not ranked/counted eligible."},
+			"validationIssueCodes": []string{"NON_COUNTED_RUNTIME"},
+		}
+	}
+	if languageID == "zig" {
+		return map[string]any{
+			"languageId":           "zig",
+			"adapterId":            adapterID,
+			"languageLabel":        "Zig",
+			"adapterLabel":         "WASM/WASI Wasmtime Preview 1",
+			"readiness":            "experimental",
+			"readinessLabel":       "Experimental",
+			"experimental":         true,
+			"countedPlayEligible":  false,
+			"countedPlayLabel":     "Not counted",
+			"countedPlayReason":    "Zig is a gated WASM/WASI stretch target and not counted-play eligible.",
+			"sourcePolicyLabel":    "Self-contained Zig source compiled to immutable WASM artifact",
+			"packagePolicyLabel":   "No packages",
+			"docsReference":        "runtime/languages",
+			"examplesReference":    "examples/zig-wasi-stretch",
+			"warnings":             []string{"Zig is unavailable unless readiness proof passes loudly; never ranked/counted eligible in v1.21."},
 			"validationIssueCodes": []string{"NON_COUNTED_RUNTIME"},
 		}
 	}
@@ -2363,6 +2468,9 @@ func runtimeAllowsNonCountedExhibition(runtime map[string]any) bool {
 	}
 	if languageID == "python" {
 		return adapterID == "runtime-python-subprocess-experimental"
+	}
+	if languageID == "rust" || languageID == "zig" {
+		return adapterID == "runtime-wasm-wasi-wasmtime-preview1"
 	}
 	return runtimeAllowsCountedPlay(runtime)
 }

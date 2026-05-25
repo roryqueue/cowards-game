@@ -1,0 +1,136 @@
+{
+  "abi": "WASI Preview 1 stdin/stdout JSON envelope",
+  "countedEligibility": false,
+  "generatedAt": "2026-05-25T00:00:00.000Z",
+  "milestone": "v1.21",
+  "probes": [
+    {
+      "expectation": "Rust source compiles to wasm32-wasip1 artifact metadata",
+      "id": "rust-compile-valid-artifact",
+      "layer": "compile",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "WASI Preview 1 stdin/stdout envelope returns activation orders",
+      "id": "select-activations-json-envelope",
+      "layer": "execute",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "WASI Preview 1 stdin/stdout envelope returns soldier action",
+      "id": "soldier-brain-json-envelope",
+      "layer": "execute",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "validation denies std::fs",
+      "id": "filesystem-denied-validation",
+      "layer": "compile",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "validation denies std::net",
+      "id": "network-denied-validation",
+      "layer": "compile",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "validation denies std::time",
+      "id": "clock-denied-validation",
+      "layer": "compile",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "validation denies extern crate",
+      "id": "random-package-denied-validation",
+      "layer": "compile",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "validation denies env::var",
+      "id": "env-token-denied-validation",
+      "layer": "compile",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "runtime reports MALFORMED_IPC",
+      "id": "malformed-json-result",
+      "layer": "execute",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "runtime adapter reports INVALID_OUTPUT",
+      "id": "invalid-action-schema",
+      "layer": "execute",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "runtime reports THROWN_EXCEPTION",
+      "id": "panic-trap-abort",
+      "layer": "execute",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "runtime reports THROWN_EXCEPTION",
+      "id": "infinite-loop-fuel-trap",
+      "layer": "execute",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "runtime reports STDIO_CAP_EXCEEDED",
+      "id": "oversized-stdout",
+      "layer": "execute",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "runtime reports THROWN_EXCEPTION",
+      "id": "memory-growth-cap",
+      "layer": "execute",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "runtime refuses artifact hash mismatch without source fallback",
+      "id": "stale-artifact-hash",
+      "layer": "artifact",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    }
+  ],
+  "promotionClaim": "candidate-readiness evidence only; not production sandbox certification",
+  "runtimeLane": "runtime-wasm-wasi-wasmtime-preview1",
+  "schemaVersion": "v1.21-wasm-wasi-hostile-probe-evidence",
+  "sourceLeakCheck": "artifact stores private source separately; public evidence records statuses and hashes only",
+  "summary": {
+    "fail": 0,
+    "pass": 15
+  }
+}

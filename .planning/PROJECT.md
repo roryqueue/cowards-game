@@ -2,18 +2,18 @@
 
 ## Current State
 
-**Shipped version:** v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof on 2026-05-25
-**Current milestone:** v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
-**Status:** v1.21 planning initialized.
-**Last audit:** v1.20 audit passed with Python kept as non-counted exhibition beta and runtime isolation kept as readiness evidence only.
+**Shipped version:** v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha on 2026-05-25
+**Current milestone:** None active. v1.21 archived; next milestone requirements should be created fresh.
+**Status:** v1.21 complete and ready for the next milestone.
+**Last audit:** v1.21 audit passed with Rust/WASM kept as non-counted exhibition alpha and WASM/WASI kept as runtime-candidate evidence only.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. v1.21 now investigates WASM/WASI as the next serious immutable multi-language runtime path, with Rust targeted as a non-counted exhibition alpha and Zig treated as a gated stretch target.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, an executable Rust WASM/WASI runtime-candidate lane for non-counted exhibition alpha, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a serious immutable multi-language runtime candidate, but not production sandbox certification or counted/ranked support.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
+## Latest Shipped Milestone: v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
 
 **Goal:** Make WASM/WASI the next serious multi-language Strategy runtime candidate by proving an immutable Rust WASM artifact path end to end for non-counted exhibition alpha, while keeping JS/TS counted support and all runtime boundaries intact.
 
@@ -27,9 +27,11 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - Run realistic signed-in non-counted proof with one JS/TS Strategy Revision, one Rust Strategy Revision compiled to immutable WASM, Rust-vs-Rust and JS/TS-vs-Rust exhibitions, optional Zig proof if available, result/replay evidence, replay plausibility, public-safe evidence, no silent fallback, and JS/TS regression checks.
 - Close with explicit conservative promotion decisions: no Rust/Zig/WASM ranked, ladder, counted, gauntlet, broad production multi-language, or production sandbox promotion unless evidence genuinely supports it.
 
-**Key context:** Local tooling is favorable for an executable candidate: Rust `wasm32-wasip1` target, Zig `wasm32-wasi` target support, Wasmtime, and `wasm-tools` are available. The milestone should use that evidence ambitiously without turning local alpha proof into production sandbox certification.
+**Key context:** Local tooling supported the executable Rust candidate: Rust `wasm32-wasip1`, Wasmtime, and WASM probing were available. Zig was recorded as fail-loud unavailable in the final readiness evidence. The milestone uses this evidence ambitiously without turning local alpha proof into production sandbox certification.
 
-## Latest Shipped Milestone: v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
+**Implemented:** v1.21 adds a WASI Preview 1 stdin/stdout JSON runtime lane, Rust runtime-service compile/validation into immutable WASM artifact metadata, Wasmtime execution through the Strategy Execution Service / Runtime Broker, Rust Workshop/account/exhibition/result labels, 15/15 WASM/WASI hostile probes, fail-loud Zig readiness evidence, and a two-cycle signed-in proof covering JS/TS-vs-Rust and Rust-vs-Rust non-counted exhibitions. Rust/WASM remains non-counted exhibition alpha only, Zig remains unavailable/non-promoted, and WASM/WASI remains candidate evidence only.
+
+## Previous Shipped Milestone: v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
 
 **Goal:** Make the Docker/container subprocess runtime candidate executable and honestly testable while improving Python non-counted exhibition beta reliability, latency, timeout behavior, degraded-state UX, and signed-in proof evidence.
 
@@ -531,7 +533,7 @@ Planning archives live under `.planning/milestones/`:
 | Keep Python exhibition beta honest and understandable | v1.19 improved runtime isolation readiness evidence and user trust cues without turning Python into counted play or overclaiming production sandbox certification. | ✓ Implemented in v1.19 |
 | Make the container candidate executable before stronger claims | v1.20 preferred the locally available Docker/container subprocess candidate for real executable evidence, while gVisor/runsc remained fail-loud because it was unavailable. | ✓ Implemented in v1.20 |
 | Separate timeout budgets by layer | v1.19 showed whole-Match service timeout is different from per-Strategy caps; v1.20 made Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets explicit. | ✓ Implemented in v1.20 |
-| Use WASI Preview 1 for the first immutable WASM Strategy proof | v1.21 should prefer the simplest executable multi-language path: WASI Preview 1 stdin/stdout JSON envelopes through Wasmtime, with direct exports and component model documented as future evolution rather than forced into the first proof. | — Pending |
+| Use WASI Preview 1 for the first immutable WASM Strategy proof | v1.21 preferred the simplest executable multi-language path: WASI Preview 1 stdin/stdout JSON envelopes through Wasmtime, with direct exports and component model documented as future evolution rather than forced into the first proof. | ✓ Implemented in v1.21 |
 | Treat Rust WASM as exhibition alpha until proof matures | Rust can prove the immutable WASM artifact direction, but counted/ranked/ladder promotion requires separate sandbox, determinism, toolchain, artifact, replay, privacy, rollback, abuse, and operational evidence. | — Pending |
 
 ## Constraints
@@ -553,4 +555,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-25 after starting v1.21 milestone*
+*Last updated: 2026-05-25 after completing v1.21 milestone*

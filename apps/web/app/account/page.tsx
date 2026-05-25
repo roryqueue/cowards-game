@@ -16,7 +16,11 @@ const runtimeDisplayLabel = (revision: {
 }) =>
   revision.runtimeSemantics.languageId === "python"
     ? `${revision.runtimeSemantics.languageLabel} · non-counted exhibition beta`
-    : `${revision.runtimeSemantics.languageLabel} · ${revision.runtimeSemantics.countedPlayLabel}`
+    : revision.runtimeSemantics.languageId === "rust"
+      ? `${revision.runtimeSemantics.languageLabel} · non-counted exhibition alpha`
+      : revision.runtimeSemantics.languageId === "zig"
+        ? `${revision.runtimeSemantics.languageLabel} · gated stretch`
+        : `${revision.runtimeSemantics.languageLabel} · ${revision.runtimeSemantics.countedPlayLabel}`
 
 export default async function AccountPage() {
   let accountUnavailable = false

@@ -1,5 +1,48 @@
 # Milestones
 
+## v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha (Shipped: 2026-05-25)
+
+**Status:** Shipped 2026-05-25
+**Phases:** 8
+**Phase range:** 140-147
+**Plans:** 8/8 complete
+**Discussion Context:** Phases 140-147 ready for planning and execution
+**Requirements:** 59/59 complete
+**Research:** .planning/research/v1.21-SUMMARY.md
+**Roadmap:** .planning/milestones/v1.21-ROADMAP.md
+**Decision baseline:** Rust/WASM is non-counted exhibition alpha only; WASM/WASI is runtime-candidate evidence only; Zig is fail-loud unavailable unless future readiness proof passes.
+**Audit:** .planning/milestones/v1.21-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.21-ROADMAP.md, .planning/milestones/v1.21-REQUIREMENTS.md, .planning/milestones/v1.21-phases/
+
+**Goal:** Make WASM/WASI the next serious immutable multi-language Strategy runtime candidate, prove Rust end to end through non-counted exhibitions, and keep promotion claims conservative.
+
+**Target features:**
+
+- Add a WASI Preview 1 stdin/stdout JSON ABI lane behind the existing Strategy Execution Service / Runtime Broker.
+- Compile Rust Strategy source in runtime-service validation into immutable WASM artifact metadata and bytes.
+- Execute Rust Strategy Revisions through Wasmtime from runtime-service, not from web/API/Go.
+- Add Rust Workshop/account/exhibition/result/replay labels and safe starter samples.
+- Probe WASM/WASI hostile capabilities, determinism risks, output caps, artifact integrity, privacy, and no-fallback behavior.
+- Treat Zig as a fail-loud stretch target and avoid exposing it as working when readiness evidence is unavailable.
+- Run a two-cycle signed-in proof covering JS/TS-vs-Rust and Rust-vs-Rust non-counted exhibitions.
+
+### Delivered
+
+- Rust can be saved as non-counted exhibition alpha through runtime-service compile/validation, with immutable WASM artifact metadata on the Strategy Revision.
+- Match execution uses the artifact-backed WASM/WASI runtime lane through Wasmtime and the broker/runtime-service boundary.
+- Public result and replay pages show Rust/WASM evidence without exposing source, memory, objectives, raw diagnostics, host paths, env, tokens, DB DSNs, or private runtime internals.
+- WASM/WASI hostile probes pass 15/15; Zig readiness records fail-loud unavailable.
+- Signed-in proof completed two bounded cycles and four MatchSets: JS/TS-vs-Rust and Rust-vs-Rust in each cycle.
+- JS/TS remains the counted Strategy path; Python remains non-counted exhibition beta.
+
+### Active Constraints
+
+- Rust, Zig, and WASM/WASI are not ranked, ladder, counted, gauntlet, broad production multi-language support, or production sandbox certification.
+- Go owns orchestration, persistence-facing backend behavior, Match lifecycle, scoring, public evidence, retry policy, and promotion decisions.
+- Strategy code does not execute in web/API/Go.
+- Rust/Zig do not become backend owners, persistence owners, or silent fallback paths.
+- No arbitrary Cargo or Zig package install support is exposed as a product feature.
+
 ## v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof (Shipped: 2026-05-25)
 
 **Status:** Shipped 2026-05-25

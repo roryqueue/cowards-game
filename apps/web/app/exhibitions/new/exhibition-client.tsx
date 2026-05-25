@@ -19,7 +19,11 @@ interface ExhibitionClientProps {
 const runtimeDisplayLabel = (revision: AccountReadRevisionSummary) =>
   revision.runtimeSemantics.languageId === "python"
     ? `${revision.runtimeSemantics.languageLabel} · non-counted exhibition beta`
-    : `${revision.runtimeSemantics.languageLabel} · ${revision.runtimeSemantics.countedPlayLabel}`
+    : revision.runtimeSemantics.languageId === "rust"
+      ? `${revision.runtimeSemantics.languageLabel} · non-counted exhibition alpha`
+      : revision.runtimeSemantics.languageId === "zig"
+        ? `${revision.runtimeSemantics.languageLabel} · gated stretch`
+        : `${revision.runtimeSemantics.languageLabel} · ${revision.runtimeSemantics.countedPlayLabel}`
 
 export function ExhibitionClient({
   presets,
@@ -159,8 +163,8 @@ export function ExhibitionClient({
         </div>
         {!counted ? (
           <p className="workshop-muted">
-            Unranked exhibitions may include Python non-counted exhibition beta
-            revisions and are marked non-counted.
+            Unranked exhibitions may include Python beta or Rust alpha revisions
+            and are marked non-counted.
           </p>
         ) : null}
 

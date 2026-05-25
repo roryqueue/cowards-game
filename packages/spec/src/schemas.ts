@@ -14,6 +14,7 @@ import {
   SOLDIER_MEMORY_BYTES,
   STRATEGY_MEMORY_BYTES,
   STRATEGY_SOURCE_BYTES,
+  STRATEGY_WASM_ARTIFACT_BYTES,
 } from "./constants.js"
 import {
   RUNTIME_VIOLATION_TYPES,
@@ -537,35 +538,59 @@ export const StrategyRuntimeResponseEnvelopeSchema = z.union([
   StrategyRuntimeSystemFailureEnvelopeSchema,
 ])
 
-export const StrategyRuntimeRequestEnvelopeSchema = z.discriminatedUnion(
+const StrategyRuntimeRequestSourceSchema = z.object({
+  text: z.string().min(1).optional(),
+  hash: z.string().min(1),
+  bytes: z.number().int().min(0),
+  entrypoint: z.string().min(1),
+})
+
+const StrategyRuntimeRequestEnvelopeBaseSchema = z.discriminatedUnion(
   "methodName",
   [
     z.object({
       abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
       methodName: z.literal("selectActivations"),
       runtime: StrategyRuntimeMetadataSchema,
-      source: z.object({
-        text: z.string().min(1),
-        hash: z.string().min(1),
-        bytes: z.number().int().min(0),
-        entrypoint: z.string().min(1),
-      }),
+      source: StrategyRuntimeRequestSourceSchema,
       input: StrategyInputSchema,
     }),
     z.object({
       abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
       methodName: z.literal("soldierBrain"),
       runtime: StrategyRuntimeMetadataSchema,
-      source: z.object({
-        text: z.string().min(1),
-        hash: z.string().min(1),
-        bytes: z.number().int().min(0),
-        entrypoint: z.string().min(1),
-      }),
+      source: StrategyRuntimeRequestSourceSchema,
       input: SoldierBrainInputSchema,
     }),
   ],
 )
+
+export const StrategyRuntimeRequestEnvelopeSchema =
+  StrategyRuntimeRequestEnvelopeBaseSchema.superRefine((value, ctx) => {
+    const envelope = value as {
+      runtime?: { adapter?: { id?: unknown } }
+      source?: { text?: unknown }
+    }
+    const adapterId = envelope.runtime?.adapter?.id
+    const hasSourceText =
+      typeof envelope.source?.text === "string" &&
+      envelope.source.text.length > 0
+    if (adapterId === "runtime-wasm-wasi-wasmtime-preview1" && hasSourceText) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["source", "text"],
+        message:
+          "WASM/WASI artifact-backed runtime envelopes must not include Strategy source text.",
+      })
+    }
+    if (adapterId !== "runtime-wasm-wasi-wasmtime-preview1" && !hasSourceText) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["source", "text"],
+        message: "Inline-source runtimes require Strategy source text.",
+      })
+    }
+  })
 
 const addStrategySourceIdentityChecks = <T extends z.ZodType>(schema: T) =>
   schema.superRefine((value, ctx) => {
@@ -688,29 +713,116 @@ export const StrategyRevisionMetadataSchema = z.object({
       sourceHash: z.string().min(1),
     })
     .optional(),
+  compiledArtifact: z.lazy(() => CompiledStrategyArtifactSchema).optional(),
 })
 
-export const StrategyRevisionSchema = z.object({
-  id: z.string().min(1),
-  strategyId: z.string().min(1).optional(),
-  source: z
-    .string()
-    .min(1)
-    .refine(
-      (source) =>
-        new TextEncoder().encode(source).length <= STRATEGY_SOURCE_BYTES,
-      "Strategy source exceeds 64KB",
-    ),
-  sourceHash: z.string().min(1),
-  sourceBytes: z.number().int().min(0).max(STRATEGY_SOURCE_BYTES),
-  runtime: StrategyRuntimeMetadataSchema,
-  engineCompatibility: z.object({
-    spec: z.string().min(1),
-    engine: z.string().min(1),
-  }),
-  validation: StrategyRevisionValidationReportSchema,
-  metadata: StrategyRevisionMetadataSchema,
+export const CompiledStrategyArtifactToolchainEvidenceSchema = z.object({
+  language: z.enum(["rust", "zig"]),
+  compiler: z.string().min(1),
+  compilerVersion: z.string().min(1),
+  targetTriple: z.string().min(1),
+  commandSummary: z.string().min(1),
 })
+
+export const CompiledStrategyArtifactSchema = z.object({
+  format: z.literal("wasm"),
+  hash: z.string().min(1),
+  bytes: z.number().int().positive().max(STRATEGY_WASM_ARTIFACT_BYTES),
+  bytesBase64: z.string().min(1).optional(),
+  sourceHash: z.string().min(1),
+  wasiProfile: z.literal("preview1"),
+  targetTriple: z.string().min(1),
+  abiEnvelope: z.literal("stdin-stdout-json"),
+  abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
+  validationStatus: z.enum(["valid", "invalid"]),
+  createdAt: z.string().min(1),
+  toolchain: CompiledStrategyArtifactToolchainEvidenceSchema,
+  publicEvidence: z.object({
+    label: z.string().min(1),
+    nonCounted: z.literal(true),
+    sandboxClaim: z.literal("candidate-readiness-only"),
+  }),
+})
+
+const CompiledStrategyArtifactPublicSchema =
+  CompiledStrategyArtifactSchema.omit({
+    bytesBase64: true,
+  })
+
+export const StrategyRevisionSchema = z
+  .object({
+    id: z.string().min(1),
+    strategyId: z.string().min(1).optional(),
+    source: z
+      .string()
+      .min(1)
+      .refine(
+        (source) =>
+          new TextEncoder().encode(source).length <= STRATEGY_SOURCE_BYTES,
+        "Strategy source exceeds 64KB",
+      ),
+    sourceHash: z.string().min(1),
+    sourceBytes: z.number().int().min(0).max(STRATEGY_SOURCE_BYTES),
+    runtime: StrategyRuntimeMetadataSchema,
+    engineCompatibility: z.object({
+      spec: z.string().min(1),
+      engine: z.string().min(1),
+    }),
+    validation: StrategyRevisionValidationReportSchema,
+    metadata: StrategyRevisionMetadataSchema,
+  })
+  .superRefine((revision, ctx) => {
+    const artifact = revision.metadata.compiledArtifact
+    const isWasmWasi =
+      revision.runtime.adapter.id === "runtime-wasm-wasi-wasmtime-preview1"
+    if (isWasmWasi && artifact === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["metadata", "compiledArtifact"],
+        message:
+          "WASM/WASI Strategy Revisions require immutable compiled artifact metadata",
+      })
+    }
+    if (isWasmWasi && artifact?.validationStatus !== "valid") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["metadata", "compiledArtifact", "validationStatus"],
+        message: "WASM/WASI compiled artifacts must be valid before execution",
+      })
+    }
+    if (isWasmWasi && artifact?.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["metadata", "compiledArtifact", "abiVersion"],
+        message: "WASM/WASI compiled artifact ABI version must match runtime",
+      })
+    }
+    if (isWasmWasi && artifact?.targetTriple !== "wasm32-wasip1") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["metadata", "compiledArtifact", "targetTriple"],
+        message: "Rust WASM/WASI artifacts must target wasm32-wasip1",
+      })
+    }
+    if (artifact !== undefined && artifact.sourceHash !== revision.sourceHash) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["metadata", "compiledArtifact", "sourceHash"],
+        message:
+          "compiled artifact source hash must match Strategy Revision source hash",
+      })
+    }
+    if (
+      artifact !== undefined &&
+      artifact.toolchain.language !== revision.runtime.language.id
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["metadata", "compiledArtifact", "toolchain", "language"],
+        message: "compiled artifact language must match runtime language",
+      })
+    }
+  })
 
 export const StrategyArtifactKindSchema = z.enum([
   "account-revision",
@@ -730,6 +842,8 @@ export const StrategyArtifactSourceFormatSchema = z.enum([
   "javascript",
   "typescript",
   "python",
+  "rust",
+  "zig",
 ])
 
 export const StrategyArtifactForkEligibilitySchema = z.object({
@@ -809,6 +923,7 @@ export const StrategyArtifactSchema = z
     publicMetadata: StrategyArtifactPublicMetadataSchema,
     lineage: StrategyArtifactLineageSchema,
     immutableEligibility: StrategyArtifactEligibilitySnapshotSchema.optional(),
+    compiledArtifact: CompiledStrategyArtifactSchema.optional(),
     behaviorCompatibility: z.object({
       compatibilityKey: z.string().min(1),
       behaviorSignificantFields: z.array(z.string().min(1)),
@@ -881,6 +996,16 @@ export const StrategyArtifactSchema = z
         message: "artifact eligibility source hash must match source hash",
       })
     }
+    if (
+      artifact.compiledArtifact &&
+      artifact.compiledArtifact.sourceHash !== artifact.source.hash
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["compiledArtifact", "sourceHash"],
+        message: "compiled artifact source hash must match source hash",
+      })
+    }
   })
 
 export const StrategyArtifactPublicSummarySchema = z
@@ -904,6 +1029,7 @@ export const StrategyArtifactPublicSummarySchema = z
     publicMetadata: StrategyArtifactPublicMetadataSchema,
     lineage: StrategyArtifactLineageSchema,
     immutableEligibility: StrategyArtifactEligibilitySnapshotSchema.optional(),
+    compiledArtifact: CompiledStrategyArtifactPublicSchema.optional(),
   })
   .strict()
 

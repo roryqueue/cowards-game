@@ -162,6 +162,7 @@ describe("Workshop service contracts", () => {
       "Reckless",
       "Sentinel",
       "Python tactical starter",
+      "Rust WASI tactical starter",
     ])
     expect(
       listWorkshopTemplates().every((template) => template.validation.valid),
@@ -425,6 +426,7 @@ describe("Workshop service contracts", () => {
       "sample:python-screen-and-stone",
       "sample:python-push-pressure",
       "sample:python-backstab-lane",
+      "sample:rust-wasi-stone",
     ])
     expect(starters.map((sample) => sample.label)).toEqual([
       "Basic advance and turn",
@@ -434,6 +436,7 @@ describe("Workshop service contracts", () => {
       "Python screen and stone",
       "Python push pressure",
       "Python backstab lane",
+      "Rust WASI stone",
     ])
     expect(starters.map((sample) => sample.categories[0])).toEqual([
       "Movement",
@@ -443,6 +446,7 @@ describe("Workshop service contracts", () => {
       "Python beta",
       "Python beta",
       "Python beta",
+      "Rust alpha",
     ])
     expect(starters.every((sample) => sample.validation.valid)).toBe(true)
     expect(
@@ -464,6 +468,11 @@ describe("Workshop service contracts", () => {
       "sample:python-push-pressure",
       "sample:python-backstab-lane",
     ])
+    expect(
+      starters
+        .filter((sample) => sample.sourceFormat === "rust")
+        .map((sample) => sample.id),
+    ).toEqual(["sample:rust-wasi-stone"])
   })
 
   it("ships intentional failure-mode samples with explicit expectations", () => {

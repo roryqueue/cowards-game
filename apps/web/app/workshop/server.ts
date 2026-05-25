@@ -68,7 +68,13 @@ const revisionToSummary = (
     sourceHash: revision.sourceHash,
     sourceBytes: revision.sourceBytes,
     sourceFormat:
-      revision.runtime.language.id === "python" ? "python" : "typescript",
+      revision.runtime.language.id === "python"
+        ? "python"
+        : revision.runtime.language.id === "rust"
+          ? "rust"
+          : revision.runtime.language.id === "zig"
+            ? "zig"
+            : "typescript",
     valid: revision.validation.valid,
     validation: revision.validation,
     metadata: revision.metadata,
@@ -121,10 +127,9 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
     async submitSource(
       request: WorkshopSubmitRequest,
     ): Promise<WorkshopSubmitResponse> {
-      const validation = validateWorkshopSource(
-        request.source,
-        request.sourceFormat,
-      )
+      const validation =
+        request.validation ??
+        validateWorkshopSource(request.source, request.sourceFormat)
       if (!validation.valid) {
         return { ok: false, validation }
       }
@@ -132,6 +137,10 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
       const revision = buildWorkshopRevision({
         source: request.source,
         sourceFormat: request.sourceFormat,
+        runtime: request.runtime,
+        validation,
+        engineCompatibility: request.engineCompatibility,
+        metadata: request.metadata,
         label: normalizeOptionalText(request.label) ?? "Workshop revision",
         notes: normalizeOptionalText(request.notes),
       })

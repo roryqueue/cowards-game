@@ -38,7 +38,8 @@ const lockedAt = "2026-05-23T00:00:00.000Z"
 const sha256 = (value: string): string =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
 
-const stableJson = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`
+const stableJson = (value: unknown): string =>
+  `${JSON.stringify(value, null, 2)}\n`
 
 const runtime = defaultRuntimeMetadata("typescript")
 
@@ -223,11 +224,17 @@ const buildManifest = () => {
   }
 }
 
-const assertNoOwnerPrivateSource = (manifest: ReturnType<typeof buildManifest>) => {
-  const artifactsById = new Map(manifest.artifacts.map((artifact) => [artifact.id, artifact]))
+const assertNoOwnerPrivateSource = (
+  manifest: ReturnType<typeof buildManifest>,
+) => {
+  const artifactsById = new Map(
+    manifest.artifacts.map((artifact) => [artifact.id, artifact]),
+  )
   for (const artifact of manifest.artifacts) {
     if (artifact.kind === "account-revision") {
-      throw new Error("Generated built-in manifest must not contain account revisions")
+      throw new Error(
+        "Generated built-in manifest must not contain account revisions",
+      )
     }
     if (artifact.sourceVisibility !== "built-in-forkable") {
       throw new Error(`${artifact.id} is not explicitly built-in forkable`)

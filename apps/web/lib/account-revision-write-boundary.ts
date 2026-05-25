@@ -8,11 +8,19 @@ export async function saveAccountRevisionFromRequest(
   request: Request,
 ): Promise<Response> {
   const body = (await request.json()) as Record<string, unknown>
+  if (
+    body.sourceFormat !== undefined &&
+    body.sourceFormat !== "typescript" &&
+    body.sourceFormat !== "python" &&
+    body.sourceFormat !== "rust"
+  ) {
+    return Response.json({ error: "unsupported sourceFormat" }, { status: 400 })
+  }
   const created = await requireSelectedGoBackendClient(
     "account revisions",
   ).createStrategyRevision(await getAccountSessionId(), {
     source: body.source,
-    sourceFormat: body.sourceFormat === "python" ? "python" : "typescript",
+    sourceFormat: body.sourceFormat ?? "typescript",
     label: body.label,
     notes: body.notes,
     starterId: body.starterId,

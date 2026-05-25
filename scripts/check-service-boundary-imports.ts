@@ -40,18 +40,9 @@ const strictAllowedForbiddenImports = new Map<string, ReadonlySet<string>>([
     "apps/web/lib/workshop-read-service-adapter.ts",
     new Set(["@cowards/persistence"]),
   ],
-  [
-    "apps/web/app/matches/server.ts",
-    new Set(["@cowards/persistence"]),
-  ],
-  [
-    "apps/web/app/matches/replay-ready.ts",
-    new Set(["@cowards/persistence"]),
-  ],
-  [
-    "apps/web/app/matches/replay-fixture.ts",
-    new Set(["@cowards/persistence"]),
-  ],
+  ["apps/web/app/matches/server.ts", new Set(["@cowards/persistence"])],
+  ["apps/web/app/matches/replay-ready.ts", new Set(["@cowards/persistence"])],
+  ["apps/web/app/matches/replay-fixture.ts", new Set(["@cowards/persistence"])],
 ])
 
 const strictAllowedPersistenceSources = new Map<string, ReadonlySet<string>>([
@@ -301,9 +292,9 @@ const findOffenses = (
         (statement) => {
           const pattern = matchedPattern(statement)
           const allowedPersistenceSources =
-            options.allowedForbiddenImports?.get(repoPath)?.has(
-              "@cowards/persistence",
-            ) === true
+            options.allowedForbiddenImports
+              ?.get(repoPath)
+              ?.has("@cowards/persistence") === true
               ? strictAllowedPersistenceSources.get(repoPath)
               : undefined
           if (

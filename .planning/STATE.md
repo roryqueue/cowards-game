@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
-status: planning
-stopped_at: roadmap ready
+status: complete
+stopped_at: v1.21 complete; archive, commit, and tag ready
 last_updated: "2026-05-25T00:00:00.000-04:00"
-last_activity: 2026-05-25 - Milestone v1.21 requirements and roadmap created
+last_activity: 2026-05-25 - v1.21 WASM/WASI Rust runtime candidate completed with signed-in Rust proof, hostile probes, conservative promotion decision, and audit-clean gates
 progress:
   total_phases: 8
-  completed_phases: 0
+  completed_phases: 8
   total_plans: 8
-  completed_plans: 0
-  percent: 0
+  completed_plans: 8
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.21 planning
+**Status:** v1.21 complete
 
 ## Project Reference
 
@@ -25,16 +25,16 @@ See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Latest shipped milestone:** v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
-**Active milestone:** v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
-**Requirements:** `.planning/REQUIREMENTS.md`
-**Roadmap:** `.planning/ROADMAP.md`
+**Active milestone:** None. v1.21 is archived and next milestone requirements should be created fresh.
+**Requirements:** `.planning/milestones/v1.21-REQUIREMENTS.md` (archived)
+**Roadmap:** `.planning/ROADMAP.md` and `.planning/milestones/v1.21-ROADMAP.md`
 
 ## Current Position
 
-Phase: 140 - v1.21 Baseline, WASM/WASI ABI Decision, and Artifact Contract
-Plan: Not started
-Status: Ready for phase discussion/planning
-Last activity: 2026-05-25 - v1.21 requirements and roadmap created
+Phase: 147 - Promotion Decision, Audit, Archive, and Tag
+Plan: Implemented through audit gates
+Status: v1.21 implementation and proof complete; archive/tag pass in progress
+Last activity: 2026-05-25 - v1.21 code, probes, review remediation, signed-in Rust proof, test:fast, Go tests, and boundary monitors passed
 
 ## Active Milestone Goal
 
@@ -80,4 +80,4 @@ The v1.20 proof found and fixed a practical Go job lease bug: the previous lease
 
 ## Operator Next Steps
 
-Start Phase 140 with `$gsd-discuss-phase 140` or `$gsd-plan-phase 140`.
+Commit and tag `v1.21`. Relevant proof pages from the signed-in run: `/workshop`, `/exhibitions/new`, `/matchsets/match-set%3Aexhibition%3Akkk2p9cmPAC5SyRutrzrLw`, `/matchsets/match-set%3Aexhibition%3A5XRIWPL82B06Okt4CwYB5w`, and their Replay links.

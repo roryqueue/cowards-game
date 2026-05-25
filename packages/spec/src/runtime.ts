@@ -7,6 +7,8 @@ export const STRATEGY_LANGUAGE_IDS = [
   "javascript",
   "typescript",
   "python",
+  "rust",
+  "zig",
 ] as const
 
 export type StrategyLanguageId = (typeof STRATEGY_LANGUAGE_IDS)[number]
@@ -16,6 +18,7 @@ export const STRATEGY_RUNTIME_ADAPTER_IDS = [
   "runtime-js-subprocess",
   "runtime-js-container-subprocess",
   "runtime-python-subprocess-experimental",
+  "runtime-wasm-wasi-wasmtime-preview1",
 ] as const
 
 export type StrategyRuntimeAdapterId =
@@ -84,7 +87,7 @@ export interface StrategyRuntimeAdapterRecord {
   id: StrategyRuntimeAdapterId
   label: string
   version: string
-  runtimeTarget: "runtime-js" | "runtime-python"
+  runtimeTarget: "runtime-js" | "runtime-python" | "runtime-wasm-wasi"
   readiness: StrategyRuntimeReadiness
   supportedLanguageIds: StrategyLanguageId[]
   enabledForNormalPlay: boolean
@@ -128,6 +131,9 @@ export interface StrategyRuntimeCompatibilityKey {
   adapterVersion: string
   packageMode: StrategyPackageMetadata["mode"]
   sourceHash: string
+  artifactHash?: string | undefined
+  artifactTargetTriple?: string | undefined
+  artifactWasiProfile?: string | undefined
   specVersion: string
   engineVersion: string
   requiredCapabilities: string[]
@@ -143,7 +149,7 @@ export interface StrategyRuntimeRequestEnvelope<
   methodName: StrategyRuntimeMethodName
   runtime: StrategyRuntimeMetadata
   source: {
-    text: string
+    text?: string | undefined
     hash: string
     bytes: number
     entrypoint: string
@@ -322,12 +328,30 @@ export const STRATEGY_LANGUAGE_REGISTRY = [
       "Non-counted exhibition beta through the runtime broker only; not ranked or counted play.",
     ],
   },
+  {
+    id: "rust",
+    label: "Rust",
+    version: "1.95.0-wasm32-wasip1",
+    enabledForNormalPlay: false,
+    notes: [
+      "Non-counted exhibition alpha through immutable WASM/WASI artifacts only; not ranked or counted play.",
+    ],
+  },
+  {
+    id: "zig",
+    label: "Zig",
+    version: "0.16.0-wasm32-wasi",
+    enabledForNormalPlay: false,
+    notes: [
+      "Gated WASM/WASI stretch target; unavailable unless local compile/runtime proof passes loudly.",
+    ],
+  },
 ] as const satisfies readonly StrategyLanguageRecord[]
 
 export const NON_JS_RUNTIME_SUPPORT_POLICY = {
   status: "experimental-non-counted",
   productionSupportedLanguageIds: ["javascript", "typescript"],
-  experimentalLanguageIds: ["python"],
+  experimentalLanguageIds: ["python", "rust", "zig"],
   publicLanguagePickerAllowed: false,
   countedPlayRequiresProductionSupport: true,
 } as const satisfies NonJsRuntimeSupportPolicy
@@ -524,6 +548,42 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     notes: [
       "Non-counted exhibition beta only; not public counted MatchSet, ranked ladder, or analytics evidence.",
       "WASM/WASI/component-model are future evaluation paths, not v1.18 promotion paths.",
+    ],
+  },
+  {
+    id: "runtime-wasm-wasi-wasmtime-preview1",
+    label: "WASM/WASI Wasmtime Preview 1",
+    version: "0.1.0-alpha",
+    runtimeTarget: "runtime-wasm-wasi",
+    readiness: "experimental",
+    supportedLanguageIds: ["rust", "zig"],
+    enabledForNormalPlay: false,
+    countedResultsAllowed: false,
+    isolationPromotionState: "evidence-only",
+    isolationPromotionCriteria: [
+      "immutable-wasm-artifact",
+      "wasi-preview1-json-envelope",
+      "wasmtime-cli-preflight",
+      "fuel-timeout-evidence",
+      "filesystem-network-denial",
+      "redacted-diagnostics",
+      "signed-in-exhibition-proof",
+    ],
+    isolationBoundary:
+      "Wasmtime CLI subprocess candidate for immutable WASM/WASI non-counted exhibition alpha; not production hostile-code isolation certification.",
+    limits: {
+      ...DEFAULT_RUNTIME_LIMITS,
+      environment: "empty",
+      filesystem: "none",
+      network: "disabled",
+      stdoutBytes: 256 * 1024,
+      stderrBytes: 64 * 1024,
+    },
+    requiredCapabilities: [],
+    notes: [
+      "WASI Preview 1 stdin/stdout JSON envelope only.",
+      "Rust/Zig remain non-counted exhibition alpha/stretch; not ranked, ladder, gauntlet, counted, or broad production multi-language support.",
+      "Node node:wasi is not accepted as a hostile-code sandbox.",
     ],
   },
 ] as const satisfies readonly StrategyRuntimeAdapterRecord[]
@@ -945,7 +1005,9 @@ export const describeStrategyRuntimeProductSemantics = (
   const warnings = [
     ...(experimental
       ? [
-          "Non-counted exhibition beta runtime; not eligible for ranked or counted play.",
+          runtime.language.id === "rust" || runtime.language.id === "zig"
+            ? "Non-counted exhibition alpha WASM/WASI runtime; not eligible for ranked, ladder, gauntlet, or counted play."
+            : "Non-counted exhibition beta runtime; not eligible for ranked or counted play.",
         ]
       : []),
     ...(runtime.package.mode === "declared"
@@ -974,7 +1036,11 @@ export const describeStrategyRuntimeProductSemantics = (
     examplesReference:
       runtime.language.id === "python"
         ? "examples/python-experimental"
-        : "samples/minimal-strategy",
+        : runtime.language.id === "rust"
+          ? "examples/rust-wasi-exhibition-alpha"
+          : runtime.language.id === "zig"
+            ? "examples/zig-wasi-stretch"
+            : "samples/minimal-strategy",
     warnings,
     validationIssueCodes: issues.map(
       (issue) => issue.code as StrategyRuntimeProductValidationCode,
@@ -1015,6 +1081,9 @@ export const defaultRuntimeMetadata = (
 export const runtimeCompatibilityKey = (input: {
   runtime: StrategyRuntimeMetadata
   sourceHash: string
+  artifactHash?: string | undefined
+  artifactTargetTriple?: string | undefined
+  artifactWasiProfile?: string | undefined
   specVersion: string
   engineVersion: string
 }): StrategyRuntimeCompatibilityKey => ({
@@ -1025,6 +1094,15 @@ export const runtimeCompatibilityKey = (input: {
   adapterVersion: input.runtime.adapter.version,
   packageMode: input.runtime.package.mode,
   sourceHash: input.sourceHash,
+  ...(input.artifactHash === undefined
+    ? {}
+    : { artifactHash: input.artifactHash }),
+  ...(input.artifactTargetTriple === undefined
+    ? {}
+    : { artifactTargetTriple: input.artifactTargetTriple }),
+  ...(input.artifactWasiProfile === undefined
+    ? {}
+    : { artifactWasiProfile: input.artifactWasiProfile }),
   specVersion: input.specVersion,
   engineVersion: input.engineVersion,
   requiredCapabilities: [...input.runtime.requiredCapabilities].sort(),

@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer"
+import { createHash } from "node:crypto"
 import {
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
@@ -13,6 +15,7 @@ import {
 import { hashStrategySource } from "@cowards/runtime-js"
 import { createRuntimeFromRevision } from "@cowards/runtime-js/worker"
 import { createPythonRuntimeFromRevision } from "@cowards/runtime-python"
+import { createWasmWasiRuntimeFromRevision } from "@cowards/runtime-wasm-wasi"
 import { buildChronicleFromMatch } from "@cowards/replay"
 import {
   violation,
@@ -123,6 +126,78 @@ const validateRevisionSource = (
   return { ok: true }
 }
 
+const validateRevisionArtifact = (
+  slot: "bottom" | "top",
+  revision: StrategyRevision,
+):
+  | { ok: true }
+  | {
+      ok: false
+      diagnostics: Record<string, unknown>
+    } => {
+  if (revision.runtime.adapter.id !== "runtime-wasm-wasi-wasmtime-preview1") {
+    return { ok: true }
+  }
+  const artifact = revision.metadata.compiledArtifact
+  if (!artifact?.bytesBase64) {
+    return {
+      ok: false,
+      diagnostics: {
+        reason: "compiled-artifact-missing",
+        slot,
+        revisionId: revision.id,
+        languageId: revision.runtime.language.id,
+      },
+    }
+  }
+  if (
+    artifact.validationStatus !== "valid" ||
+    artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+    artifact.wasiProfile !== "preview1" ||
+    artifact.abiEnvelope !== "stdin-stdout-json" ||
+    artifact.targetTriple !== "wasm32-wasip1"
+  ) {
+    return {
+      ok: false,
+      diagnostics: {
+        reason: "compiled-artifact-metadata-invalid",
+        slot,
+        revisionId: revision.id,
+        languageId: revision.runtime.language.id,
+        validationStatus: artifact.validationStatus,
+        targetTriple: artifact.targetTriple,
+      },
+    }
+  }
+  const bytes = Buffer.from(artifact.bytesBase64, "base64")
+  const actualHash = createHash("sha256").update(bytes).digest("hex")
+  if (bytes.byteLength !== artifact.bytes || actualHash !== artifact.hash) {
+    return {
+      ok: false,
+      diagnostics: {
+        reason: "compiled-artifact-mismatch",
+        slot,
+        revisionId: revision.id,
+        declaredBytes: artifact.bytes,
+        actualBytes: bytes.byteLength,
+        declaredHash: artifact.hash,
+        actualHash,
+      },
+    }
+  }
+  if (artifact.sourceHash !== revision.sourceHash) {
+    return {
+      ok: false,
+      diagnostics: {
+        reason: "compiled-artifact-source-hash-mismatch",
+        slot,
+        revisionId: revision.id,
+      },
+    }
+  }
+  return { ok: true }
+}
+
 const createRuntimeForRevision = (
   revision: StrategyRevision,
   runtimeConfig: RuntimeServiceConfig,
@@ -150,6 +225,25 @@ const createRuntimeForRevision = (
     return {
       ok: true,
       runtime: createPythonRuntimeFromRevision(revision, {
+        timeoutMs: Math.min(
+          limits.timeoutMs,
+          revision.runtime.limits.timeoutMs,
+        ),
+        stdoutBytes: Math.min(
+          limits.stdoutBytes,
+          revision.runtime.limits.stdoutBytes,
+        ),
+        stderrBytes: Math.min(
+          limits.stderrBytes,
+          revision.runtime.limits.stderrBytes,
+        ),
+      }),
+    }
+  }
+  if (registryEntry.runtimeTarget === "runtime-wasm-wasi") {
+    return {
+      ok: true,
+      runtime: createWasmWasiRuntimeFromRevision(revision, {
         timeoutMs: Math.min(
           limits.timeoutMs,
           revision.runtime.limits.timeoutMs,
@@ -223,6 +317,20 @@ const executeParsedRequest = (
         message: "Runtime execution request failed source validation.",
         retryable: false,
         diagnostics: validation.diagnostics,
+      })
+    }
+    const artifactValidation = validateRevisionArtifact(
+      slot,
+      request.strategies[slot],
+    )
+    if (!artifactValidation.ok) {
+      return systemFailureResponse({
+        rawRequest: request,
+        code: "SOURCE_HASH_MISMATCH",
+        message:
+          "Runtime execution request failed immutable artifact validation.",
+        retryable: false,
+        diagnostics: artifactValidation.diagnostics,
       })
     }
   }

@@ -69,8 +69,7 @@ export const assertGoAccountForksCanReadBack = (
 export const isGoExhibitionsSelected = (
   env: GoBackendOwnershipEnv = process.env,
 ): boolean =>
-  isStrictNoTypeScriptBackendSelected(env) ||
-  env.COWARDS_GO_EXHIBITIONS === "1"
+  isStrictNoTypeScriptBackendSelected(env) || env.COWARDS_GO_EXHIBITIONS === "1"
 
 export const createSelectedGoBackendClient = (
   env: GoBackendOwnershipEnv = process.env,
@@ -103,9 +102,7 @@ export const createAccountReadService = ({
   env?: GoBackendOwnershipEnv | undefined
   goClient?: GoBackendServiceClient | null | undefined
 } = {}) => {
-  let localService:
-    | ReturnType<typeof createCowardsLocalService>
-    | undefined
+  let localService: ReturnType<typeof createCowardsLocalService> | undefined
   const getLocalService = (): ReturnType<typeof createCowardsLocalService> => {
     localService ??= createCowardsLocalService({
       withPool: withDatabasePool,

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -70,6 +71,19 @@ type runtimeServiceResponse struct {
 	RuntimeABIVersion string                 `json:"runtimeAbiVersion"`
 	Result            map[string]any         `json:"result,omitempty"`
 	SystemFailure     *runtimeServiceFailure `json:"systemFailure,omitempty"`
+}
+
+type runtimeServiceValidationResponse struct {
+	OK                  bool           `json:"ok"`
+	Kind                string         `json:"kind"`
+	SourceFormat        string         `json:"sourceFormat"`
+	Runtime             map[string]any `json:"runtime,omitempty"`
+	Validation          map[string]any `json:"validation,omitempty"`
+	EngineCompatibility map[string]any `json:"engineCompatibility,omitempty"`
+	Metadata            map[string]any `json:"metadata,omitempty"`
+	SourceHash          string         `json:"sourceHash,omitempty"`
+	SourceBytes         int            `json:"sourceBytes,omitempty"`
+	Error               string         `json:"error,omitempty"`
 }
 
 type runtimeServiceFailure struct {
@@ -161,6 +175,72 @@ func (client *runtimeServiceClient) executeMatch(ctx context.Context, request ru
 	return &decoded, nil
 }
 
+func (client *runtimeServiceClient) validateStrategy(ctx context.Context, sourceFormat string, source string, strategyID string) (*runtimeServiceValidationResponse, *runtimeServiceFailure) {
+	if sourceFormat != "rust" {
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service validation only supports Rust in v1.21", false, nil)
+	}
+	endpoint := client.endpoint
+	if endpoint == "" {
+		return nil, newRuntimeServiceFailure("RuntimeServiceStopped", "Runtime execution service endpoint is not configured", true, nil)
+	}
+	requestBody := map[string]any{
+		"sourceFormat": sourceFormat,
+		"source":       source,
+	}
+	if strings.TrimSpace(strategyID) != "" {
+		requestBody["strategyId"] = strategyID
+	}
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceRequestEncode", "Runtime service validation request could not be encoded", false, nil)
+	}
+	httpClient := client.httpClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"/validate-strategy", bytes.NewReader(body))
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceRequestCreate", "Runtime service validation request could not be created", false, nil)
+	}
+	httpRequest.Header.Set("content-type", "application/json")
+	response, err := httpClient.Do(httpRequest)
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceTransport", "Runtime execution service is unavailable", true, nil)
+	}
+	defer response.Body.Close()
+	maxBytes := client.maxResponseBytes
+	if maxBytes <= 0 {
+		maxBytes = defaultRuntimeServiceResponseBytes
+	}
+	payload, err := io.ReadAll(io.LimitReader(response.Body, maxBytes+1))
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceRead", "Runtime service validation response could not be read", true, map[string]any{"status": response.StatusCode})
+	}
+	if int64(len(payload)) > maxBytes {
+		return nil, newRuntimeServiceFailure("RuntimeServiceOversizedResponse", "Runtime service validation response exceeded the configured byte limit", true, map[string]any{"status": response.StatusCode, "capBytes": maxBytes})
+	}
+	var decoded runtimeServiceValidationResponse
+	if err := json.NewDecoder(bytes.NewReader(payload)).Decode(&decoded); err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service validation response was malformed", true, map[string]any{"actualBytes": len(payload)})
+	}
+	if decoded.Kind != "strategyValidation" || decoded.SourceFormat != "rust" {
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", fmt.Sprintf("Runtime service validation response contract is not supported: status=%d kind=%q sourceFormat=%q.", response.StatusCode, decoded.Kind, decoded.SourceFormat), true, map[string]any{
+			"status":       response.StatusCode,
+			"kind":         decoded.Kind,
+			"sourceFormat": decoded.SourceFormat,
+		})
+	}
+	if decoded.OK {
+		if decoded.Runtime == nil || decoded.Validation == nil || decoded.EngineCompatibility == nil || decoded.Metadata == nil || decoded.SourceHash == "" || decoded.SourceBytes <= 0 {
+			return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service validation success response was incomplete", true, nil)
+		}
+		if decoded.SourceHash != hashStrategySourceForGo(source) || decoded.SourceBytes != len([]byte(source)) {
+			return nil, newRuntimeServiceFailure("RuntimeServiceSourceMismatch", "Runtime service validation source identity mismatch", false, nil)
+		}
+	}
+	return &decoded, nil
+}
+
 func validateRuntimeServiceRequest(request runtimeServiceRequest) *runtimeServiceFailure {
 	if request.ContractVersion != runtimeExecutionServiceVersion || request.Kind != "executeMatch" || request.RequestID == "" {
 		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request contract is not supported", false, nil)
@@ -214,7 +294,45 @@ func validateRuntimeServiceStrategy(side string, revision runtimeServiceStrategy
 	if boolValue(revision.Validation, "valid") != true || stringValue(revision.Validation, "sourceHash") != revision.SourceHash || runtimeServiceIntValue(revision.Validation, "sourceBytes") != revision.SourceBytes {
 		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Strategy Revision validation metadata is incomplete", false, map[string]any{"side": side})
 	}
+	if runtimeAdapterID(revision.Runtime) == "runtime-wasm-wasi-wasmtime-preview1" {
+		if failure := validateRuntimeServiceCompiledArtifact(side, revision); failure != nil {
+			return failure
+		}
+	}
 	return nil
+}
+
+func validateRuntimeServiceCompiledArtifact(side string, revision runtimeServiceStrategyRevision) *runtimeServiceFailure {
+	artifact := mapValue(revision.Metadata, "compiledArtifact")
+	if artifact == nil {
+		return newRuntimeServiceFailure("RuntimeServiceSourceMismatch", "WASM/WASI Strategy Revision is missing immutable artifact metadata", false, map[string]any{"side": side})
+	}
+	if stringValue(artifact, "format") != "wasm" || stringValue(artifact, "wasiProfile") != "preview1" || stringValue(artifact, "abiEnvelope") != "stdin-stdout-json" || stringValue(artifact, "validationStatus") != "valid" || stringValue(artifact, "abiVersion") != strategyRuntimeABIVersion || stringValue(artifact, "targetTriple") != "wasm32-wasip1" {
+		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "WASM/WASI artifact metadata is incomplete", false, map[string]any{"side": side})
+	}
+	if stringValue(artifact, "sourceHash") != revision.SourceHash {
+		return newRuntimeServiceFailure("RuntimeServiceSourceMismatch", "WASM/WASI artifact source hash mismatch", false, map[string]any{"side": side})
+	}
+	raw := stringValue(artifact, "bytesBase64")
+	if raw == "" {
+		return newRuntimeServiceFailure("RuntimeServiceSourceMismatch", "WASM/WASI artifact bytes are missing", false, map[string]any{"side": side})
+	}
+	decoded, err := base64.StdEncoding.DecodeString(raw)
+	if err != nil {
+		return newRuntimeServiceFailure("RuntimeServiceSourceMismatch", "WASM/WASI artifact bytes are malformed", false, map[string]any{"side": side})
+	}
+	if len(decoded) != runtimeServiceIntValue(artifact, "bytes") {
+		return newRuntimeServiceFailure("RuntimeServiceSourceMismatch", "WASM/WASI artifact byte count mismatch", false, map[string]any{"side": side})
+	}
+	sum := sha256.Sum256(decoded)
+	if hex.EncodeToString(sum[:]) != stringValue(artifact, "hash") {
+		return newRuntimeServiceFailure("RuntimeServiceSourceMismatch", "WASM/WASI artifact hash mismatch", false, map[string]any{"side": side})
+	}
+	return nil
+}
+
+func runtimeAdapterID(runtime map[string]any) string {
+	return stringValue(mapValue(runtime, "adapter"), "id")
 }
 
 func runtimeBrokerMetadataIsRegistered(runtime map[string]any) bool {
@@ -235,6 +353,10 @@ func runtimeBrokerMetadataIsRegistered(runtime map[string]any) bool {
 	case languageID == "typescript" && languageVersion == "0.1.0" && adapterID == "runtime-js-worker-thread" && adapterVersion == "0.1.0" && packageMode == "none":
 		return true
 	case languageID == "python" && languageVersion == "3.9" && adapterID == "runtime-python-subprocess-experimental" && adapterVersion == "0.1.0-experimental" && packageMode == "none":
+		return true
+	case languageID == "rust" && languageVersion == "1.95.0-wasm32-wasip1" && adapterID == "runtime-wasm-wasi-wasmtime-preview1" && adapterVersion == "0.1.0-alpha" && packageMode == "none":
+		return true
+	case languageID == "zig" && languageVersion == "0.16.0-wasm32-wasi" && adapterID == "runtime-wasm-wasi-wasmtime-preview1" && adapterVersion == "0.1.0-alpha" && packageMode == "none":
 		return true
 	default:
 		return false
@@ -376,6 +498,18 @@ func redactRuntimeServiceDetailStrings(details map[string]any) map[string]any {
 			redacted[key] = redactRuntimeServiceMessage(typed)
 		case map[string]any:
 			redacted[key] = redactRuntimeServiceDetailStrings(typed)
+		case []any:
+			redactedValues := make([]any, 0, len(typed))
+			for _, entry := range typed {
+				if text, ok := entry.(string); ok {
+					redactedValues = append(redactedValues, redactRuntimeServiceMessage(text))
+				} else if nested, ok := entry.(map[string]any); ok {
+					redactedValues = append(redactedValues, redactRuntimeServiceDetailStrings(nested))
+				} else {
+					redactedValues = append(redactedValues, entry)
+				}
+			}
+			redacted[key] = redactedValues
 		default:
 			redacted[key] = typed
 		}

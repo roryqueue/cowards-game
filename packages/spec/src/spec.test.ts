@@ -336,7 +336,7 @@ describe("Coward's Game spec contracts", () => {
     expect(() => assertNonJsRuntimeGuardrails()).not.toThrow()
     expect(NON_JS_RUNTIME_SUPPORT_POLICY).toMatchObject({
       status: "experimental-non-counted",
-      experimentalLanguageIds: ["python"],
+      experimentalLanguageIds: ["python", "rust", "zig"],
       publicLanguagePickerAllowed: false,
     })
     expect(
@@ -390,6 +390,13 @@ describe("Coward's Game spec contracts", () => {
           enabledForNormalPlay: false,
           countedResultsAllowed: false,
         }),
+        expect.objectContaining({
+          languageId: "rust",
+          runtimeTarget: "runtime-wasm-wasi",
+          adapterId: "runtime-wasm-wasi-wasmtime-preview1",
+          enabledForNormalPlay: false,
+          countedResultsAllowed: false,
+        }),
       ]),
     )
     expect(validateRuntimeBrokerRegistryMatch(pythonRuntime)).toHaveLength(0)
@@ -399,6 +406,39 @@ describe("Coward's Game spec contracts", () => {
         adapter: { ...pythonRuntime.adapter, version: "drifted" },
       }).map((issue) => issue.code),
     ).toContain("INCOMPATIBLE_ADAPTER")
+  })
+
+  it("WASM/WASI Rust metadata stays non-counted and artifact-backed", () => {
+    const wasmLimits =
+      STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
+        (adapter) => adapter.id === "runtime-wasm-wasi-wasmtime-preview1",
+      )?.limits ?? defaultRuntimeMetadata().limits
+    const rustRuntime = {
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      language: { id: "rust", version: "1.95.0-wasm32-wasip1" },
+      adapter: {
+        id: "runtime-wasm-wasi-wasmtime-preview1",
+        version: "0.1.0-alpha",
+      },
+      package: { mode: "none", entrypoint: "_start" },
+      requiredCapabilities: [],
+      limits: wasmLimits,
+    }
+
+    expect(validateRuntimeBrokerRegistryMatch(rustRuntime)).toHaveLength(0)
+    expect(evaluateStrategyRuntimeCountedEligibility(rustRuntime)).toEqual({
+      ok: false,
+      code: "NON_COUNTED_RUNTIME",
+      publicMessage:
+        "Strategy runtime is experimental and not counted-play eligible.",
+    })
+    expect(describeStrategyRuntimeProductSemantics(rustRuntime)).toMatchObject({
+      languageLabel: "Rust",
+      adapterLabel: "WASM/WASI Wasmtime Preview 1",
+      countedPlayEligible: false,
+      countedPlayLabel: "Not counted",
+      examplesReference: "examples/rust-wasi-exhibition-alpha",
+    })
   })
 
   it("runtime policy validation exposes Phase 54 stable issue codes", () => {
@@ -751,6 +791,85 @@ describe("Coward's Game spec contracts", () => {
     }
 
     expect(StrategyRevisionSchema.parse(revision)).toEqual(revision)
+  })
+
+  it("StrategyRevisionSchema requires immutable compiled artifacts for WASM/WASI", () => {
+    const source = "fn main() {}"
+    const sourceHash = "sha256:rust-source"
+    const runtime = {
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      language: { id: "rust", version: "1.95.0-wasm32-wasip1" },
+      adapter: {
+        id: "runtime-wasm-wasi-wasmtime-preview1",
+        version: "0.1.0-alpha",
+      },
+      package: { mode: "none", entrypoint: "_start" },
+      requiredCapabilities: [],
+      limits:
+        STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
+          (adapter) => adapter.id === "runtime-wasm-wasi-wasmtime-preview1",
+        )?.limits ?? defaultRuntimeMetadata().limits,
+    }
+    const revision = {
+      id: "strategy-revision:rust-wasi",
+      source,
+      sourceHash,
+      sourceBytes: new TextEncoder().encode(source).length,
+      runtime,
+      engineCompatibility: {
+        spec: COMPATIBILITY_VERSIONS.spec,
+        engine: COMPATIBILITY_VERSIONS.engine,
+      },
+      validation: {
+        valid: true,
+        errors: [],
+        warnings: [],
+        sourceBytes: new TextEncoder().encode(source).length,
+        forbiddenPatterns: [],
+        sourceHash,
+        runtimeVersion: "0.1.0-alpha",
+        engineCompatibility: {
+          spec: COMPATIBILITY_VERSIONS.spec,
+          engine: COMPATIBILITY_VERSIONS.engine,
+        },
+      },
+      metadata: {},
+    }
+
+    expect(StrategyRevisionSchema.safeParse(revision).success).toBe(false)
+    expect(
+      StrategyRevisionSchema.parse({
+        ...revision,
+        metadata: {
+          compiledArtifact: {
+            format: "wasm",
+            hash: "sha256:artifact",
+            bytes: 128,
+            bytesBase64: "AGFzbQ==",
+            sourceHash,
+            wasiProfile: "preview1",
+            targetTriple: "wasm32-wasip1",
+            abiEnvelope: "stdin-stdout-json",
+            abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+            validationStatus: "valid",
+            createdAt: "1970-01-01T00:00:00.000Z",
+            toolchain: {
+              language: "rust",
+              compiler: "rustc",
+              compilerVersion: "rustc fixture",
+              targetTriple: "wasm32-wasip1",
+              commandSummary:
+                "rustc --target wasm32-wasip1 -O strategy.rs -o strategy.wasm",
+            },
+            publicEvidence: {
+              label: "Rust WASM/WASI non-counted exhibition alpha",
+              nonCounted: true,
+              sandboxClaim: "candidate-readiness-only",
+            },
+          },
+        },
+      }).metadata.compiledArtifact?.hash,
+    ).toBe("sha256:artifact")
   })
 
   it("StrategyArtifactSchema accepts built-in forkable artifacts with generic and legacy lineage", () => {

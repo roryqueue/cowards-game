@@ -106,7 +106,8 @@
                                 "runtime-js-worker-thread",
                                 "runtime-js-subprocess",
                                 "runtime-js-container-subprocess",
-                                "runtime-python-subprocess-experimental"
+                                "runtime-python-subprocess-experimental",
+                                "runtime-wasm-wasi-wasmtime-preview1"
                               ],
                               "type": "string"
                             },
@@ -128,7 +129,9 @@
                               "enum": [
                                 "javascript",
                                 "typescript",
-                                "python"
+                                "python",
+                                "rust",
+                                "zig"
                               ],
                               "type": "string"
                             },
@@ -722,7 +725,8 @@
                                 "runtime-js-worker-thread",
                                 "runtime-js-subprocess",
                                 "runtime-js-container-subprocess",
-                                "runtime-python-subprocess-experimental"
+                                "runtime-python-subprocess-experimental",
+                                "runtime-wasm-wasi-wasmtime-preview1"
                               ],
                               "type": "string"
                             },
@@ -744,7 +748,9 @@
                               "enum": [
                                 "javascript",
                                 "typescript",
-                                "python"
+                                "python",
+                                "rust",
+                                "zig"
                               ],
                               "type": "string"
                             },
@@ -1496,7 +1502,8 @@
                                 "runtime-js-worker-thread",
                                 "runtime-js-subprocess",
                                 "runtime-js-container-subprocess",
-                                "runtime-python-subprocess-experimental"
+                                "runtime-python-subprocess-experimental",
+                                "runtime-wasm-wasi-wasmtime-preview1"
                               ],
                               "type": "string"
                             },
@@ -1518,7 +1525,9 @@
                               "enum": [
                                 "javascript",
                                 "typescript",
-                                "python"
+                                "python",
+                                "rust",
+                                "zig"
                               ],
                               "type": "string"
                             },
@@ -2566,7 +2575,8 @@
                               "runtime-js-worker-thread",
                               "runtime-js-subprocess",
                               "runtime-js-container-subprocess",
-                              "runtime-python-subprocess-experimental"
+                              "runtime-python-subprocess-experimental",
+                              "runtime-wasm-wasi-wasmtime-preview1"
                             ],
                             "type": "string"
                           },
@@ -2588,7 +2598,9 @@
                             "enum": [
                               "javascript",
                               "typescript",
-                              "python"
+                              "python",
+                              "rust",
+                              "zig"
                             ],
                             "type": "string"
                           },

@@ -11,6 +11,7 @@ import {
 } from "@cowards/spec"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import { buildPythonStrategyRevision } from "@cowards/runtime-python"
+import { buildRustStrategyRevision } from "@cowards/runtime-wasm-wasi"
 import { executeRuntimeServiceRequest } from "./execute-match.js"
 import {
   createRuntimeServiceConfig,
@@ -73,6 +74,34 @@ def soldier_brain(input):
         "action": {"type": "TURN_TO_STONE"},
         "soldierMemory": input["soldierMemory"],
     }
+`
+
+const rustWasiSource = `
+use std::io::{self, Read};
+
+fn first_active_soldier_id(input: &str) -> Option<&str> {
+    let soldiers_start = input.find("\\"mySoldiers\\":[")?;
+    let soldiers = &input[soldiers_start..];
+    let id_start = soldiers.find("\\"id\\":\\"")? + "\\"id\\":\\"".len();
+    let after_id = &soldiers[id_start..];
+    let id_end = after_id.find('"')?;
+    Some(&after_id[..id_end])
+}
+
+fn main() {
+    let mut input = String::new();
+    let _ = io::stdin().read_to_string(&mut input);
+    if input.contains("\\"methodName\\":\\"soldierBrain\\"") {
+        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"action":{{"type":"TURN_TO_STONE"}},"soldierMemory":null}}}}"#);
+    } else if let Some(soldier_id) = first_active_soldier_id(&input) {
+        println!(
+            r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[{{"soldierId":"{}","objective":{{"stance":"stone"}}}}],"strategyMemory":null}}}}"#,
+            soldier_id
+        );
+    } else {
+        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
+    }
+}
 `
 
 const requestFor = (
@@ -211,6 +240,51 @@ describe("runtime execution service", () => {
       "match:runtime-service-test",
     )
     expect(response.result.runtimeViolationEventCount).toBe(0)
+  })
+
+  it("executes Rust WASM artifacts through Wasmtime without source fallback", () => {
+    const rustRevision = buildRustStrategyRevision({
+      source: rustWasiSource,
+      strategyId: "strategy:rust-wasi",
+    })
+    const response = executeRuntimeServiceRequest(
+      requestFor({ bottom: rustRevision, top: rustRevision }),
+      runtimeConfig,
+    )
+
+    expect(response.ok).toBe(true)
+    if (!response.ok) {
+      throw new Error(response.systemFailure.message)
+    }
+    expect(response.result.finalState.matchId).toBe(
+      "match:runtime-service-test",
+    )
+    expect(response.result.runtimeViolationEventCount).toBe(0)
+  })
+
+  it("fails closed when a Rust WASM artifact is missing", () => {
+    const rustRevision = buildRustStrategyRevision({
+      source: rustWasiSource,
+      strategyId: "strategy:rust-wasi",
+    })
+    const brokenRevision: StrategyRevision = {
+      ...rustRevision,
+      metadata: {
+        ...rustRevision.metadata,
+        compiledArtifact: undefined,
+      },
+    }
+    const response = executeRuntimeServiceRequest(
+      requestFor({ bottom: brokenRevision }),
+      runtimeConfig,
+    )
+
+    expect(response.ok).toBe(false)
+    if (response.ok) {
+      throw new Error("expected missing artifact to fail")
+    }
+    expect(response.systemFailure.code).toBe("MALFORMED_REQUEST")
+    expect(stringify(response)).not.toContain(rustWasiSource.trim())
   })
 
   it("fails closed when broker registry metadata drifts", () => {

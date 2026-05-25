@@ -10,7 +10,10 @@ import {
 } from "./generate-typescript-surface-labels.ts"
 
 const inventory = JSON.parse(
-  readFileSync(".planning/artifacts/v1.16-typescript-backend-inventory.json", "utf8"),
+  readFileSync(
+    ".planning/artifacts/v1.16-typescript-backend-inventory.json",
+    "utf8",
+  ),
 ) as { surfaces: Array<{ path: string; role: string }> }
 
 describe("final v1.16 TypeScript surface labels", () => {
@@ -82,7 +85,9 @@ describe("final v1.16 TypeScript surface labels", () => {
 
   it("labels ladder, governance, owner-debug, test, fixture, parity, rollback, runtime, and frontend groups", () => {
     const labels = generateFinalTypeScriptSurfaceLabels()
-    const surfaceLabels = new Set(labels.surfaces.map((surface) => surface.surfaceLabel))
+    const surfaceLabels = new Set(
+      labels.surfaces.map((surface) => surface.surfaceLabel),
+    )
     for (const expected of [
       "deferred-ladder-mutation",
       "deferred-governance-admin-mutation",
@@ -168,26 +173,28 @@ describe("final v1.16 TypeScript surface labels", () => {
       ],
     ] as const
 
-    const mismatches = expected.flatMap(([path, surfaceLabel, capabilityGroup]) => {
-      const actual = labelsByPath.get(path)
-      const actualSummary = {
-        taxonomyRole: actual?.taxonomyRole,
-        surfaceLabel: actual?.surfaceLabel,
-        capabilityGroup: actual?.capabilityGroup,
-        selectedNormal: actual?.selectedNormal,
-        normalBackendAuthority: actual?.normalBackendAuthority,
-      }
-      const expectedSummary = {
-        taxonomyRole: "deferred",
-        surfaceLabel,
-        capabilityGroup,
-        selectedNormal: false,
-        normalBackendAuthority: false,
-      }
-      return JSON.stringify(actualSummary) === JSON.stringify(expectedSummary)
-        ? []
-        : [{ path, expected: expectedSummary, actual: actualSummary }]
-    })
+    const mismatches = expected.flatMap(
+      ([path, surfaceLabel, capabilityGroup]) => {
+        const actual = labelsByPath.get(path)
+        const actualSummary = {
+          taxonomyRole: actual?.taxonomyRole,
+          surfaceLabel: actual?.surfaceLabel,
+          capabilityGroup: actual?.capabilityGroup,
+          selectedNormal: actual?.selectedNormal,
+          normalBackendAuthority: actual?.normalBackendAuthority,
+        }
+        const expectedSummary = {
+          taxonomyRole: "deferred",
+          surfaceLabel,
+          capabilityGroup,
+          selectedNormal: false,
+          normalBackendAuthority: false,
+        }
+        return JSON.stringify(actualSummary) === JSON.stringify(expectedSummary)
+          ? []
+          : [{ path, expected: expectedSummary, actual: actualSummary }]
+      },
+    )
 
     expect(mismatches).toEqual([])
   })
@@ -217,7 +224,9 @@ describe("final v1.16 TypeScript surface labels", () => {
     }
 
     const markdown = renderFinalTypeScriptSurfaceLabelsMarkdown(labels)
-    expect(() => assertPublicOutputLeakSafe(markdown, "final label markdown")).not.toThrow()
+    expect(() =>
+      assertPublicOutputLeakSafe(markdown, "final label markdown"),
+    ).not.toThrow()
     for (const forbidden of [
       "DATABASE_URL",
       "postgres://",
@@ -267,11 +276,17 @@ describe("final v1.16 TypeScript surface labels", () => {
     ).toContainEqual(expect.stringMatching(/public output leak/))
 
     expect(checkFinalTypeScriptSurfaceLabelArtifacts()).toEqual([])
-    expect(readFileSync(".planning/artifacts/v1.16-final-typescript-surface-labels.json", "utf8")).toBe(
-      renderFinalTypeScriptSurfaceLabelsJson(labels),
-    )
-    expect(readFileSync(".planning/artifacts/v1.16-final-typescript-surface-labels.md", "utf8")).toBe(
-      renderFinalTypeScriptSurfaceLabelsMarkdown(labels),
-    )
+    expect(
+      readFileSync(
+        ".planning/artifacts/v1.16-final-typescript-surface-labels.json",
+        "utf8",
+      ),
+    ).toBe(renderFinalTypeScriptSurfaceLabelsJson(labels))
+    expect(
+      readFileSync(
+        ".planning/artifacts/v1.16-final-typescript-surface-labels.md",
+        "utf8",
+      ),
+    ).toBe(renderFinalTypeScriptSurfaceLabelsMarkdown(labels))
   })
 })

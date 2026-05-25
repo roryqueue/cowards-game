@@ -92,8 +92,7 @@ describe("Phase 105 selected Go API route behavior", () => {
   it("forwards Go auth cookies for sign-in/sign-up and clears through Go sign-out", async () => {
     mocks.goClient.createSession.mockResolvedValue({
       body: authSessionBody,
-      setCookie:
-        "cowards_session=session%3Ago; Path=/; HttpOnly; SameSite=Lax",
+      setCookie: "cowards_session=session%3Ago; Path=/; HttpOnly; SameSite=Lax",
     })
     mocks.goClient.createAccount.mockResolvedValue({
       body: authSessionBody,

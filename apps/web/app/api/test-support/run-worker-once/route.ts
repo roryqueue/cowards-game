@@ -126,7 +126,8 @@ const trimDiagnostic = (value: unknown): string | undefined => {
   if (trimmed.length === 0) {
     return undefined
   }
-  const privateMarker = /stack|stderr|token|session|database_url|postgres:|postgresql:|strategy|memory|objective|owner.?debug|awareness|source|host path/i
+  const privateMarker =
+    /stack|stderr|token|session|database_url|postgres:|postgresql:|strategy|memory|objective|owner.?debug|awareness|source|host path/i
   if (privateMarker.test(trimmed)) {
     return "redacted diagnostic omitted"
   }
@@ -143,7 +144,8 @@ const workerFailurePayload = (error: unknown): Record<string, unknown> => {
   return {
     error:
       error instanceof Error
-        ? (trimDiagnostic(error.message) ?? "Worker test-support execution failed.")
+        ? (trimDiagnostic(error.message) ??
+          "Worker test-support execution failed.")
         : "Worker test-support execution failed.",
     layer: "worker_execution" satisfies WorkerFailureLayer,
     status: "service_unavailable",

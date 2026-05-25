@@ -18,6 +18,7 @@ export const REVISION_CONTENT_COLUMNS = [
   "runtime",
   "engine_compatibility",
   "validation",
+  "compiled_artifact",
 ] as const
 
 export const assertCanUpdateStrategyRevisionContent = (input: {
@@ -80,9 +81,9 @@ export const createRepositories = (db: Queryable) => ({
       `
         insert into strategy_revisions (
           id, strategy_id, source, source_hash, source_bytes, runtime,
-          engine_compatibility, validation, metadata
+          engine_compatibility, validation, metadata, compiled_artifact
         )
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         on conflict (id) do nothing
       `,
       [
@@ -95,6 +96,7 @@ export const createRepositories = (db: Queryable) => ({
         revision.engineCompatibility,
         revision.validation,
         revision.metadata,
+        revision.metadata.compiledArtifact ?? null,
       ],
     )
   },
@@ -112,6 +114,9 @@ export const createRepositories = (db: Queryable) => ({
       engine_compatibility: StrategyRevision["engineCompatibility"]
       validation: StrategyRevision["validation"]
       metadata: StrategyRevision["metadata"]
+      compiled_artifact: NonNullable<
+        StrategyRevision["metadata"]["compiledArtifact"]
+      > | null
     }>("select * from strategy_revisions where id = $1", [id])
     const row = result.rows[0]
     if (!row) {
@@ -126,7 +131,12 @@ export const createRepositories = (db: Queryable) => ({
       runtime: normalizeStrategyRuntimeMetadata(row.runtime),
       engineCompatibility: row.engine_compatibility,
       validation: row.validation,
-      metadata: row.metadata,
+      metadata: {
+        ...row.metadata,
+        ...(row.compiled_artifact === null
+          ? {}
+          : { compiledArtifact: row.compiled_artifact }),
+      },
     }
   },
 

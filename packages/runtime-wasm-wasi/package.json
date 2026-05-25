@@ -1,0 +1,25 @@
+{
+  "name": "@cowards/runtime-wasm-wasi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./validation": "./src/validation.ts"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "eslint .",
+    "typecheck": "tsc -b",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@cowards/engine": "workspace:*",
+    "@cowards/spec": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1"
+  }
+}

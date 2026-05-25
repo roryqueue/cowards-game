@@ -156,7 +156,9 @@ const accountRevision = {
   valid: true,
   runtime,
   runtimeSemantics: {
+    languageId: "typescript",
     languageLabel: "TypeScript",
+    adapterId: "runtime-js-worker-thread",
     adapterLabel: "Worker thread",
     readiness: "production",
     readinessLabel: "Production",

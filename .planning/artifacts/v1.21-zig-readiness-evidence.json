@@ -1,0 +1,12 @@
+{
+  "evidence": {
+    "message": "Zig toolchain unavailable; Zig remains fail-loud non-promoted.",
+    "ok": false,
+    "target": "wasm32-wasi",
+    "zigVersion": null
+  },
+  "generatedAt": "2026-05-25T00:00:00.000Z",
+  "milestone": "v1.21",
+  "promotionAllowed": false,
+  "schemaVersion": "v1.21-zig-readiness-evidence"
+}

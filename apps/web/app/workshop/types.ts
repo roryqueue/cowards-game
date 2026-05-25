@@ -49,6 +49,7 @@ export interface WorkshopTemplateSummary {
     | "template:reckless"
     | "template:sentinel"
     | "template:python-tactical"
+    | "template:rust-wasi-tactical"
   label: string
   sourceFormat: StrategyArtifactSourceFormat
   experimental?: boolean | undefined
@@ -120,6 +121,10 @@ export type WorkshopInitialData = WorkshopSnapshot & {
 export interface WorkshopSubmitRequest {
   source: string
   sourceFormat?: StrategyArtifactSourceFormat | undefined
+  runtime?: StrategyRevision["runtime"] | undefined
+  validation?: StrategyRevisionValidationReport | undefined
+  engineCompatibility?: StrategyRevision["engineCompatibility"] | undefined
+  metadata?: StrategyRevision["metadata"] | undefined
   label?: string | undefined
   notes?: string | undefined
 }
