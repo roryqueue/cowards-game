@@ -155,6 +155,23 @@ func TestRuntimeServiceClientClassifiesTransportMalformedOversizedAndTimeout(t *
 	})
 }
 
+func TestRuntimeServiceClientHTTPTimeoutDefaultAndOverride(t *testing.T) {
+	t.Setenv("COWARDS_RUNTIME_SERVICE_HTTP_TIMEOUT_MS", "")
+	if got := runtimeServiceHTTPTimeout(); got != defaultRuntimeServiceHTTPTimeout {
+		t.Fatalf("expected default runtime service timeout %s, got %s", defaultRuntimeServiceHTTPTimeout, got)
+	}
+
+	t.Setenv("COWARDS_RUNTIME_SERVICE_HTTP_TIMEOUT_MS", "1234")
+	if got := runtimeServiceHTTPTimeout(); got != 1234*time.Millisecond {
+		t.Fatalf("expected configured runtime service timeout, got %s", got)
+	}
+
+	t.Setenv("COWARDS_RUNTIME_SERVICE_HTTP_TIMEOUT_MS", "-1")
+	if got := runtimeServiceHTTPTimeout(); got != defaultRuntimeServiceHTTPTimeout {
+		t.Fatalf("expected invalid configured timeout to fall back, got %s", got)
+	}
+}
+
 func TestRuntimeServiceClientRejectsRuntimeABIDriftInResponse(t *testing.T) {
 	request := validRuntimeServiceRequestForTest()
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {

@@ -245,6 +245,10 @@ const openApiArtifactPath =
 const goFixtureDir = "apps/go-backend/testdata/service-fixtures"
 const sandboxEvaluationArtifactPath =
   ".planning/artifacts/runtime-sandbox-evaluation.json"
+const v119ReadinessArtifactPath =
+  ".planning/artifacts/v1.19-runtime-isolation-readiness.json"
+const v119ReadinessMarkdownPath =
+  ".planning/artifacts/v1.19-runtime-isolation-readiness.md"
 const goPromotionManifestPath =
   ".planning/artifacts/v1.12-route-ownership-manifest.json"
 const v113RouteOwnershipManifestPath =
@@ -2935,8 +2939,66 @@ const checkRuntimeIsolationReadiness = (): string => {
   const report = readJson<SandboxEvaluationReport>(
     sandboxEvaluationArtifactPath,
   )
+  const readiness = readJson<{
+    schemaVersion?: unknown
+    promotionAllowed?: unknown
+    readinessLanes?: unknown
+    noFallbackDrills?: unknown
+    candidates?: unknown
+  }>(v119ReadinessArtifactPath)
+  const markdown = readFileSync(
+    path.join(repoRoot, v119ReadinessMarkdownPath),
+    "utf8",
+  )
   assertSandboxEvaluationPublicSafe(report)
   assertRuntimeIsolationReadinessGuardrails(report)
+  if (readiness.schemaVersion !== "v1.19-runtime-isolation-readiness") {
+    throw new Error("v1.19 runtime readiness schema drifted")
+  }
+  if (readiness.promotionAllowed !== false) {
+    throw new Error("v1.19 runtime readiness must not promote sandbox status")
+  }
+  const lanes = stringArray(
+    (readiness.readinessLanes as { id?: unknown }[] | undefined)?.map(
+      (lane) => lane.id,
+    ) ?? [],
+    "v1.19 readiness lanes",
+  )
+  for (const lane of [
+    "default-readiness",
+    "container-required",
+    "runsc-required",
+  ]) {
+    if (!lanes.includes(lane)) {
+      throw new Error(`v1.19 readiness missing lane ${lane}`)
+    }
+  }
+  const drills = stringArray(
+    (readiness.noFallbackDrills as { id?: unknown }[] | undefined)?.map(
+      (drill) => drill.id,
+    ) ?? [],
+    "v1.19 no-fallback drills",
+  )
+  for (const drill of [
+    "stopped-runtime-service",
+    "stopped-python-runtime",
+    "container-runsc-unavailable",
+    "stale-artifacts",
+    "silent-substitution",
+  ]) {
+    if (!drills.includes(drill)) {
+      throw new Error(`v1.19 readiness missing drill ${drill}`)
+    }
+  }
+  for (const required of [
+    "No candidate is promoted to production sandbox certification.",
+    "Python remains non-counted exhibition beta only.",
+    "gVisor/runsc required lane",
+  ]) {
+    if (!markdown.includes(required)) {
+      throw new Error(`v1.19 readiness markdown missing ${required}`)
+    }
+  }
   const container = report.candidates.find(
     (candidate) => candidate.id === "container-subprocess",
   )
@@ -2946,14 +3008,67 @@ const checkRuntimeIsolationReadiness = (): string => {
     )
   }
   if (container.status === "passed") {
-    return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked with live container evidence`
+    return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked with live container evidence and ${lanes.length} v1.19 readiness lanes`
   }
   if (container.status !== "skipped") {
     throw new Error(
       `container subprocess candidate has unexpected status ${container.status}`,
     )
   }
-  return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked; container evidence remains required before promotion`
+  return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked; container evidence remains required before promotion; ${lanes.length} v1.19 readiness lanes checked`
+}
+
+const checkV119ExhibitionTrustSources = (): string => {
+  const sources = [
+    {
+      label: "MatchSet evidence panel",
+      path: "apps/web/app/matchsets/[matchSetId]/page.tsx",
+      markers: [
+        'data-testid="matchset-evidence-panel"',
+        "Python · non-counted exhibition beta",
+        "Public runtime labels below; execution-path proof is gated.",
+      ],
+    },
+    {
+      label: "Replay evidence panel",
+      path: "apps/web/app/matches/[matchId]/replay/replay-client.tsx",
+      markers: [
+        'data-testid="replay-evidence-panel"',
+        "Execution-path proof is gated outside this replay DTO.",
+        "private code, memory, diagnostics excluded",
+      ],
+    },
+    {
+      label: "Python sample catalog",
+      path: "packages/persistence/src/workshop.ts",
+      markers: [
+        "sample:python-screen-and-stone",
+        "sample:python-push-pressure",
+        "sample:python-backstab-lane",
+      ],
+    },
+    {
+      label: "v1.19 signed-in proof",
+      path: "apps/web/e2e/v1-19-exhibition-proof.spec.ts",
+      markers: [
+        "RUN_V1_19_PROOF",
+        "v1.19 JS/TS proof revision",
+        "v1.19 Python screen beta revision",
+        "v1.19 Python pressure beta revision",
+        "matchset-evidence-panel",
+        "replay-evidence-panel",
+      ],
+    },
+  ]
+  for (const source of sources) {
+    const content = readFileSync(path.join(repoRoot, source.path), "utf8")
+    for (const marker of source.markers) {
+      if (!content.includes(marker)) {
+        throw new Error(`${source.label} missing v1.19 marker ${marker}`)
+      }
+    }
+  }
+  return `${sources.length} v1.19 exhibition trust source surfaces checked`
 }
 
 const checkWebBoundary = (): string => {
@@ -3057,6 +3172,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
     "runtime_isolation",
     "runtime isolation readiness guardrails",
     () => checkRuntimeIsolationReadiness(),
+  ),
+  await check("runtime_isolation", "v1.19 exhibition trust sources", () =>
+    checkV119ExhibitionTrustSources(),
   ),
   await check("non_js_runtime", "experimental non-JS guardrails", () =>
     checkNonJsRuntimeGuardrails(),

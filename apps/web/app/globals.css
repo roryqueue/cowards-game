@@ -1049,6 +1049,18 @@ textarea {
   padding: 10px;
 }
 
+.evidence-panel,
+.replay-evidence-panel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-secondary);
+  padding: 10px;
+}
+
+.evidence-panel {
+  margin-top: 12px;
+}
+
 .entrant-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

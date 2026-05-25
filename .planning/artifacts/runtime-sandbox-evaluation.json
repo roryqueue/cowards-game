@@ -32,7 +32,8 @@
           "passed": true,
           "probeId": "time-date-now",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "determinism"
         },
         {
           "category": "determinism",
@@ -41,7 +42,8 @@
           "passed": true,
           "probeId": "random-math",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "determinism"
         },
         {
           "category": "capability",
@@ -50,7 +52,8 @@
           "passed": true,
           "probeId": "filesystem-require",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "filesystem"
         },
         {
           "category": "capability",
@@ -59,7 +62,8 @@
           "passed": true,
           "probeId": "network-fetch",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "network"
         },
         {
           "category": "capability",
@@ -68,7 +72,8 @@
           "passed": true,
           "probeId": "process-env",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "environment"
         },
         {
           "category": "capability",
@@ -77,7 +82,8 @@
           "passed": true,
           "probeId": "shell-child-process",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "process_shell"
         },
         {
           "category": "capability",
@@ -86,7 +92,8 @@
           "passed": true,
           "probeId": "dynamic-code",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "dynamic_execution"
         },
         {
           "category": "resource",
@@ -95,7 +102,8 @@
           "passed": true,
           "probeId": "timeout-loop",
           "publicMessage": "Runtime violation: TIMEOUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "timeout"
         },
         {
           "category": "resource",
@@ -104,7 +112,8 @@
           "passed": true,
           "probeId": "oversized-output",
           "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -113,7 +122,8 @@
           "passed": true,
           "probeId": "stdout-cap",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -122,7 +132,8 @@
           "passed": true,
           "probeId": "stderr-cap",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "diagnostic_redaction"
         },
         {
           "category": "resource",
@@ -131,7 +142,8 @@
           "passed": true,
           "probeId": "memory-pressure",
           "publicMessage": "Runtime violation: TIMEOUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -140,7 +152,8 @@
           "passed": true,
           "probeId": "strategy-memory-limit",
           "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -149,7 +162,8 @@
           "passed": true,
           "probeId": "soldier-memory-limit",
           "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -158,7 +172,8 @@
           "passed": true,
           "probeId": "objective-size-limit",
           "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "resource",
@@ -167,7 +182,28 @@
           "passed": true,
           "probeId": "source-byte-limit",
           "publicMessage": "Runtime violation: SOURCE_TOO_LARGE",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "source_size"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "package import access",
+          "passed": true,
+          "probeId": "package-require",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation",
+          "taxonomy": "imports_packages"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "host path read attempt",
+          "passed": true,
+          "probeId": "host-path-read",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation",
+          "taxonomy": "host_paths"
         },
         {
           "category": "ipc",
@@ -176,7 +212,8 @@
           "passed": true,
           "probeId": "malformed-ipc-request",
           "publicMessage": "System failure: MALFORMED_IPC",
-          "resultKind": "systemFailure"
+          "resultKind": "systemFailure",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -185,7 +222,8 @@
           "passed": true,
           "probeId": "malformed-ipc-response",
           "publicMessage": "System failure: MALFORMED_IPC",
-          "resultKind": "systemFailure"
+          "resultKind": "systemFailure",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -194,7 +232,18 @@
           "passed": true,
           "probeId": "subprocess-crash",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "process_shell"
+        },
+        {
+          "category": "ipc",
+          "code": "ADAPTER_CRASH",
+          "label": "adapter crash classification",
+          "passed": true,
+          "probeId": "adapter-crash",
+          "publicMessage": "System failure: ADAPTER_CRASH",
+          "resultKind": "systemFailure",
+          "taxonomy": "crash"
         },
         {
           "category": "schema",
@@ -203,7 +252,8 @@
           "passed": true,
           "probeId": "invalid-output",
           "publicMessage": "Runtime violation: INVALID_OUTPUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "exception",
@@ -212,7 +262,8 @@
           "passed": true,
           "probeId": "thrown-exception",
           "publicMessage": "Runtime violation: THROWN_EXCEPTION",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "crash"
         }
       ],
       "specAdapterId": "runtime-js-worker-thread",
@@ -220,9 +271,10 @@
       "status": "passed",
       "summary": {
         "failed": 0,
-        "passed": 21,
+        "passed": 24,
         "skipped": 0
       },
+      "supportedLocally": true,
       "tradeoffs": {
         "adapterMetadataImplications": "Remains the default counted JS/TS adapter and local-dev fallback.",
         "containmentGaps": [
@@ -231,7 +283,7 @@
         ],
         "deterministicExecutionRisk": "Harness blocks common nondeterministic APIs, but this is not a security boundary.",
         "developerErgonomics": "Always available in local Node development.",
-        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "noPromotionDecision": "Evaluation-only readiness evidence in v1.19; not promoted to production hostile-code isolation or new counted-play eligibility.",
         "resourceLimitNotes": "Uses worker timeout, V8 resourceLimits, and output byte caps.",
         "unresolvedProductionRisks": [
           "Not acceptable as final public hostile Strategy isolation."
@@ -268,7 +320,8 @@
           "passed": true,
           "probeId": "time-date-now",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "determinism"
         },
         {
           "category": "determinism",
@@ -277,7 +330,8 @@
           "passed": true,
           "probeId": "random-math",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "determinism"
         },
         {
           "category": "capability",
@@ -286,7 +340,8 @@
           "passed": true,
           "probeId": "filesystem-require",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "filesystem"
         },
         {
           "category": "capability",
@@ -295,7 +350,8 @@
           "passed": true,
           "probeId": "network-fetch",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "network"
         },
         {
           "category": "capability",
@@ -304,7 +360,8 @@
           "passed": true,
           "probeId": "process-env",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "environment"
         },
         {
           "category": "capability",
@@ -313,7 +370,8 @@
           "passed": true,
           "probeId": "shell-child-process",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "process_shell"
         },
         {
           "category": "capability",
@@ -322,7 +380,8 @@
           "passed": true,
           "probeId": "dynamic-code",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "dynamic_execution"
         },
         {
           "category": "resource",
@@ -331,7 +390,8 @@
           "passed": true,
           "probeId": "timeout-loop",
           "publicMessage": "Runtime violation: TIMEOUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "timeout"
         },
         {
           "category": "resource",
@@ -340,7 +400,8 @@
           "passed": true,
           "probeId": "oversized-output",
           "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -349,7 +410,8 @@
           "passed": true,
           "probeId": "stdout-cap",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -358,7 +420,8 @@
           "passed": true,
           "probeId": "stderr-cap",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "diagnostic_redaction"
         },
         {
           "category": "resource",
@@ -367,7 +430,8 @@
           "passed": true,
           "probeId": "memory-pressure",
           "publicMessage": "Runtime violation: TIMEOUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -376,7 +440,8 @@
           "passed": true,
           "probeId": "strategy-memory-limit",
           "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -385,7 +450,8 @@
           "passed": true,
           "probeId": "soldier-memory-limit",
           "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -394,7 +460,8 @@
           "passed": true,
           "probeId": "objective-size-limit",
           "publicMessage": "Runtime violation: OVERSIZED_OUTPUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "resource",
@@ -403,7 +470,28 @@
           "passed": true,
           "probeId": "source-byte-limit",
           "publicMessage": "Runtime violation: SOURCE_TOO_LARGE",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "source_size"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "package import access",
+          "passed": true,
+          "probeId": "package-require",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation",
+          "taxonomy": "imports_packages"
+        },
+        {
+          "category": "capability",
+          "code": "FORBIDDEN_CAPABILITY",
+          "label": "host path read attempt",
+          "passed": true,
+          "probeId": "host-path-read",
+          "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
+          "resultKind": "runtimeViolation",
+          "taxonomy": "host_paths"
         },
         {
           "category": "ipc",
@@ -412,7 +500,8 @@
           "passed": true,
           "probeId": "malformed-ipc-request",
           "publicMessage": "System failure: MALFORMED_IPC",
-          "resultKind": "systemFailure"
+          "resultKind": "systemFailure",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -421,7 +510,8 @@
           "passed": true,
           "probeId": "malformed-ipc-response",
           "publicMessage": "System failure: MALFORMED_IPC",
-          "resultKind": "systemFailure"
+          "resultKind": "systemFailure",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -430,7 +520,18 @@
           "passed": true,
           "probeId": "subprocess-crash",
           "publicMessage": "Runtime violation: FORBIDDEN_CAPABILITY",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "process_shell"
+        },
+        {
+          "category": "ipc",
+          "code": "ADAPTER_CRASH",
+          "label": "adapter crash classification",
+          "passed": true,
+          "probeId": "adapter-crash",
+          "publicMessage": "System failure: ADAPTER_CRASH",
+          "resultKind": "systemFailure",
+          "taxonomy": "crash"
         },
         {
           "category": "schema",
@@ -439,7 +540,8 @@
           "passed": true,
           "probeId": "invalid-output",
           "publicMessage": "Runtime violation: INVALID_OUTPUT",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "exception",
@@ -448,7 +550,8 @@
           "passed": true,
           "probeId": "thrown-exception",
           "publicMessage": "Runtime violation: THROWN_EXCEPTION",
-          "resultKind": "runtimeViolation"
+          "resultKind": "runtimeViolation",
+          "taxonomy": "crash"
         }
       ],
       "specAdapterId": "runtime-js-subprocess",
@@ -456,9 +559,10 @@
       "status": "passed",
       "summary": {
         "failed": 0,
-        "passed": 21,
+        "passed": 24,
         "skipped": 0
       },
+      "supportedLocally": true,
       "tradeoffs": {
         "adapterMetadataImplications": "Prototype adapter remains opt-in and should not become default.",
         "containmentGaps": [
@@ -466,7 +570,7 @@
         ],
         "deterministicExecutionRisk": "Same JS harness restrictions as worker-thread, with stronger process failure taxonomy.",
         "developerErgonomics": "Runs anywhere Node subprocess spawning works.",
-        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "noPromotionDecision": "Evaluation-only readiness evidence in v1.19; not promoted to production hostile-code isolation or new counted-play eligibility.",
         "resourceLimitNotes": "Uses spawn timeout plus stdout/stderr byte caps.",
         "unresolvedProductionRisks": [
           "Needs OS/container sandboxing before hostile public use."
@@ -511,7 +615,8 @@
           "passed": true,
           "probeId": "time-date-now",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
         },
         {
           "category": "determinism",
@@ -520,7 +625,8 @@
           "passed": true,
           "probeId": "random-math",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
         },
         {
           "category": "capability",
@@ -529,7 +635,8 @@
           "passed": true,
           "probeId": "filesystem-require",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "filesystem"
         },
         {
           "category": "capability",
@@ -538,7 +645,8 @@
           "passed": true,
           "probeId": "network-fetch",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "network"
         },
         {
           "category": "capability",
@@ -547,7 +655,8 @@
           "passed": true,
           "probeId": "process-env",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "environment"
         },
         {
           "category": "capability",
@@ -556,7 +665,8 @@
           "passed": true,
           "probeId": "shell-child-process",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
         },
         {
           "category": "capability",
@@ -565,7 +675,8 @@
           "passed": true,
           "probeId": "dynamic-code",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "dynamic_execution"
         },
         {
           "category": "resource",
@@ -574,7 +685,8 @@
           "passed": true,
           "probeId": "timeout-loop",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "timeout"
         },
         {
           "category": "resource",
@@ -583,7 +695,8 @@
           "passed": true,
           "probeId": "oversized-output",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -592,7 +705,8 @@
           "passed": true,
           "probeId": "stdout-cap",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -601,7 +715,8 @@
           "passed": true,
           "probeId": "stderr-cap",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "diagnostic_redaction"
         },
         {
           "category": "resource",
@@ -610,7 +725,8 @@
           "passed": true,
           "probeId": "memory-pressure",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -619,7 +735,8 @@
           "passed": true,
           "probeId": "strategy-memory-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -628,7 +745,8 @@
           "passed": true,
           "probeId": "soldier-memory-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -637,7 +755,8 @@
           "passed": true,
           "probeId": "objective-size-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "resource",
@@ -646,7 +765,28 @@
           "passed": true,
           "probeId": "source-byte-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "source_size"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "package import access",
+          "passed": true,
+          "probeId": "package-require",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "imports_packages"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "host path read attempt",
+          "passed": true,
+          "probeId": "host-path-read",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "host_paths"
         },
         {
           "category": "ipc",
@@ -655,7 +795,8 @@
           "passed": true,
           "probeId": "malformed-ipc-request",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -664,7 +805,8 @@
           "passed": true,
           "probeId": "malformed-ipc-response",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -673,7 +815,18 @@
           "passed": true,
           "probeId": "subprocess-crash",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "adapter crash classification",
+          "passed": true,
+          "probeId": "adapter-crash",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "crash"
         },
         {
           "category": "schema",
@@ -682,7 +835,8 @@
           "passed": true,
           "probeId": "invalid-output",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "exception",
@@ -691,7 +845,8 @@
           "passed": true,
           "probeId": "thrown-exception",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "crash"
         }
       ],
       "skipReason": "Optional executable candidate unavailable locally.",
@@ -701,16 +856,17 @@
       "summary": {
         "failed": 0,
         "passed": 0,
-        "skipped": 21
+        "skipped": 24
       },
+      "supportedLocally": false,
       "tradeoffs": {
-        "adapterMetadataImplications": "Production-candidate label stays candidate-only in v1.8.",
+        "adapterMetadataImplications": "Production-candidate label stays candidate-only in v1.19.",
         "containmentGaps": [
           "Depends on Docker daemon, runtime configuration, image provenance, and host kernel controls."
         ],
         "deterministicExecutionRisk": "Reuses the JS harness and adds network/filesystem/container controls.",
         "developerErgonomics": "Repeatable when Docker and node image are available; otherwise skipped.",
-        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "noPromotionDecision": "Evaluation-only readiness evidence in v1.19; not promoted to production hostile-code isolation or new counted-play eligibility.",
         "resourceLimitNotes": "Docker args request no network, read-only root, tmpfs, memory, CPU, PID cap, dropped capabilities, and no-new-privileges.",
         "unresolvedProductionRisks": [
           "Needs image pinning, deployment hardening, abuse review, and kernel/runtime validation."
@@ -722,7 +878,7 @@
       "id": "python-subprocess-experimental",
       "label": "Python subprocess experimental",
       "metadata": {
-        "isolationBoundary": "No executable adapter in v1.8.",
+        "isolationBoundary": "No executable adapter in v1.19.",
         "runtimeControls": null
       },
       "mode": "experimental-evidence",
@@ -734,7 +890,8 @@
           "passed": true,
           "probeId": "time-date-now",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
         },
         {
           "category": "determinism",
@@ -743,7 +900,8 @@
           "passed": true,
           "probeId": "random-math",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
         },
         {
           "category": "capability",
@@ -752,7 +910,8 @@
           "passed": true,
           "probeId": "filesystem-require",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "filesystem"
         },
         {
           "category": "capability",
@@ -761,7 +920,8 @@
           "passed": true,
           "probeId": "network-fetch",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "network"
         },
         {
           "category": "capability",
@@ -770,7 +930,8 @@
           "passed": true,
           "probeId": "process-env",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "environment"
         },
         {
           "category": "capability",
@@ -779,7 +940,8 @@
           "passed": true,
           "probeId": "shell-child-process",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
         },
         {
           "category": "capability",
@@ -788,7 +950,8 @@
           "passed": true,
           "probeId": "dynamic-code",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "dynamic_execution"
         },
         {
           "category": "resource",
@@ -797,7 +960,8 @@
           "passed": true,
           "probeId": "timeout-loop",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "timeout"
         },
         {
           "category": "resource",
@@ -806,7 +970,8 @@
           "passed": true,
           "probeId": "oversized-output",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -815,7 +980,8 @@
           "passed": true,
           "probeId": "stdout-cap",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -824,7 +990,8 @@
           "passed": true,
           "probeId": "stderr-cap",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "diagnostic_redaction"
         },
         {
           "category": "resource",
@@ -833,7 +1000,8 @@
           "passed": true,
           "probeId": "memory-pressure",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -842,7 +1010,8 @@
           "passed": true,
           "probeId": "strategy-memory-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -851,7 +1020,8 @@
           "passed": true,
           "probeId": "soldier-memory-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -860,7 +1030,8 @@
           "passed": true,
           "probeId": "objective-size-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "resource",
@@ -869,7 +1040,28 @@
           "passed": true,
           "probeId": "source-byte-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "source_size"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "package import access",
+          "passed": true,
+          "probeId": "package-require",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "imports_packages"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "host path read attempt",
+          "passed": true,
+          "probeId": "host-path-read",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "host_paths"
         },
         {
           "category": "ipc",
@@ -878,7 +1070,8 @@
           "passed": true,
           "probeId": "malformed-ipc-request",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -887,7 +1080,8 @@
           "passed": true,
           "probeId": "malformed-ipc-response",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -896,7 +1090,18 @@
           "passed": true,
           "probeId": "subprocess-crash",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "adapter crash classification",
+          "passed": true,
+          "probeId": "adapter-crash",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "crash"
         },
         {
           "category": "schema",
@@ -905,7 +1110,8 @@
           "passed": true,
           "probeId": "invalid-output",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "exception",
@@ -914,7 +1120,8 @@
           "passed": true,
           "probeId": "thrown-exception",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "crash"
         }
       ],
       "specAdapterId": "runtime-python-subprocess-experimental",
@@ -923,8 +1130,9 @@
       "summary": {
         "failed": 0,
         "passed": 0,
-        "skipped": 21
+        "skipped": 24
       },
+      "supportedLocally": false,
       "tradeoffs": {
         "adapterMetadataImplications": "Registry remains disabled for normal play and counted results.",
         "containmentGaps": [
@@ -932,7 +1140,7 @@
         ],
         "deterministicExecutionRisk": "Requires separate Python capability and package policy hardening.",
         "developerErgonomics": "Requires local python3.",
-        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "noPromotionDecision": "Evaluation-only readiness evidence in v1.19; not promoted to production hostile-code isolation or new counted-play eligibility.",
         "resourceLimitNotes": "Existing adapter has timeout and empty env but no production sandbox certification.",
         "unresolvedProductionRisks": [
           "Needs Phase 54 semantics and future sandbox proof before any promotion."
@@ -943,7 +1151,7 @@
       "id": "deno-permissions",
       "label": "Deno-style permissions",
       "metadata": {
-        "isolationBoundary": "No executable adapter in v1.8.",
+        "isolationBoundary": "No executable adapter in v1.19.",
         "runtimeControls": null
       },
       "mode": "tradeoff-only",
@@ -955,7 +1163,8 @@
           "passed": true,
           "probeId": "time-date-now",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
         },
         {
           "category": "determinism",
@@ -964,7 +1173,8 @@
           "passed": true,
           "probeId": "random-math",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
         },
         {
           "category": "capability",
@@ -973,7 +1183,8 @@
           "passed": true,
           "probeId": "filesystem-require",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "filesystem"
         },
         {
           "category": "capability",
@@ -982,7 +1193,8 @@
           "passed": true,
           "probeId": "network-fetch",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "network"
         },
         {
           "category": "capability",
@@ -991,7 +1203,8 @@
           "passed": true,
           "probeId": "process-env",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "environment"
         },
         {
           "category": "capability",
@@ -1000,7 +1213,8 @@
           "passed": true,
           "probeId": "shell-child-process",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
         },
         {
           "category": "capability",
@@ -1009,7 +1223,8 @@
           "passed": true,
           "probeId": "dynamic-code",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "dynamic_execution"
         },
         {
           "category": "resource",
@@ -1018,7 +1233,8 @@
           "passed": true,
           "probeId": "timeout-loop",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "timeout"
         },
         {
           "category": "resource",
@@ -1027,7 +1243,8 @@
           "passed": true,
           "probeId": "oversized-output",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -1036,7 +1253,8 @@
           "passed": true,
           "probeId": "stdout-cap",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -1045,7 +1263,8 @@
           "passed": true,
           "probeId": "stderr-cap",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "diagnostic_redaction"
         },
         {
           "category": "resource",
@@ -1054,7 +1273,8 @@
           "passed": true,
           "probeId": "memory-pressure",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -1063,7 +1283,8 @@
           "passed": true,
           "probeId": "strategy-memory-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -1072,7 +1293,8 @@
           "passed": true,
           "probeId": "soldier-memory-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -1081,7 +1303,8 @@
           "passed": true,
           "probeId": "objective-size-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "resource",
@@ -1090,7 +1313,28 @@
           "passed": true,
           "probeId": "source-byte-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "source_size"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "package import access",
+          "passed": true,
+          "probeId": "package-require",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "imports_packages"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "host path read attempt",
+          "passed": true,
+          "probeId": "host-path-read",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "host_paths"
         },
         {
           "category": "ipc",
@@ -1099,7 +1343,8 @@
           "passed": true,
           "probeId": "malformed-ipc-request",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -1108,7 +1353,8 @@
           "passed": true,
           "probeId": "malformed-ipc-response",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -1117,7 +1363,18 @@
           "passed": true,
           "probeId": "subprocess-crash",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "adapter crash classification",
+          "passed": true,
+          "probeId": "adapter-crash",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "crash"
         },
         {
           "category": "schema",
@@ -1126,7 +1383,8 @@
           "passed": true,
           "probeId": "invalid-output",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "exception",
@@ -1135,15 +1393,17 @@
           "passed": true,
           "probeId": "thrown-exception",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "crash"
         }
       ],
       "status": "skipped",
       "summary": {
         "failed": 0,
         "passed": 0,
-        "skipped": 21
+        "skipped": 24
       },
+      "supportedLocally": false,
       "tradeoffs": {
         "adapterMetadataImplications": "Would require new registry id and product semantics.",
         "containmentGaps": [
@@ -1151,7 +1411,7 @@
         ],
         "deterministicExecutionRisk": "Permissions help deny host APIs but do not replace deterministic runtime design.",
         "developerErgonomics": "Would add a new runtime dependency and adapter.",
-        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "noPromotionDecision": "Evaluation-only readiness evidence in v1.19; not promoted to production hostile-code isolation or new counted-play eligibility.",
         "resourceLimitNotes": "Needs separate CPU/memory/startup controls.",
         "unresolvedProductionRisks": [
           "Permission bypass and dependency policy review."
@@ -1162,7 +1422,7 @@
       "id": "wasm-wasi",
       "label": "WASM/WASI",
       "metadata": {
-        "isolationBoundary": "No executable adapter in v1.8.",
+        "isolationBoundary": "No executable adapter in v1.19.",
         "runtimeControls": null
       },
       "mode": "tradeoff-only",
@@ -1174,7 +1434,8 @@
           "passed": true,
           "probeId": "time-date-now",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
         },
         {
           "category": "determinism",
@@ -1183,7 +1444,8 @@
           "passed": true,
           "probeId": "random-math",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
         },
         {
           "category": "capability",
@@ -1192,7 +1454,8 @@
           "passed": true,
           "probeId": "filesystem-require",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "filesystem"
         },
         {
           "category": "capability",
@@ -1201,7 +1464,8 @@
           "passed": true,
           "probeId": "network-fetch",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "network"
         },
         {
           "category": "capability",
@@ -1210,7 +1474,8 @@
           "passed": true,
           "probeId": "process-env",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "environment"
         },
         {
           "category": "capability",
@@ -1219,7 +1484,8 @@
           "passed": true,
           "probeId": "shell-child-process",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
         },
         {
           "category": "capability",
@@ -1228,7 +1494,8 @@
           "passed": true,
           "probeId": "dynamic-code",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "dynamic_execution"
         },
         {
           "category": "resource",
@@ -1237,7 +1504,8 @@
           "passed": true,
           "probeId": "timeout-loop",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "timeout"
         },
         {
           "category": "resource",
@@ -1246,7 +1514,8 @@
           "passed": true,
           "probeId": "oversized-output",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -1255,7 +1524,8 @@
           "passed": true,
           "probeId": "stdout-cap",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -1264,7 +1534,8 @@
           "passed": true,
           "probeId": "stderr-cap",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "diagnostic_redaction"
         },
         {
           "category": "resource",
@@ -1273,7 +1544,8 @@
           "passed": true,
           "probeId": "memory-pressure",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -1282,7 +1554,8 @@
           "passed": true,
           "probeId": "strategy-memory-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -1291,7 +1564,8 @@
           "passed": true,
           "probeId": "soldier-memory-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -1300,7 +1574,8 @@
           "passed": true,
           "probeId": "objective-size-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "resource",
@@ -1309,7 +1584,28 @@
           "passed": true,
           "probeId": "source-byte-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "source_size"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "package import access",
+          "passed": true,
+          "probeId": "package-require",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "imports_packages"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "host path read attempt",
+          "passed": true,
+          "probeId": "host-path-read",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "host_paths"
         },
         {
           "category": "ipc",
@@ -1318,7 +1614,8 @@
           "passed": true,
           "probeId": "malformed-ipc-request",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -1327,7 +1624,8 @@
           "passed": true,
           "probeId": "malformed-ipc-response",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -1336,7 +1634,18 @@
           "passed": true,
           "probeId": "subprocess-crash",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "adapter crash classification",
+          "passed": true,
+          "probeId": "adapter-crash",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "crash"
         },
         {
           "category": "schema",
@@ -1345,7 +1654,8 @@
           "passed": true,
           "probeId": "invalid-output",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "exception",
@@ -1354,15 +1664,17 @@
           "passed": true,
           "probeId": "thrown-exception",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "crash"
         }
       ],
       "status": "skipped",
       "summary": {
         "failed": 0,
         "passed": 0,
-        "skipped": 21
+        "skipped": 24
       },
+      "supportedLocally": false,
       "tradeoffs": {
         "adapterMetadataImplications": "Would require ABI/package model changes.",
         "containmentGaps": [
@@ -1370,7 +1682,7 @@
         ],
         "deterministicExecutionRisk": "Can improve capability shape but needs fuel/epoch/time/memory policy.",
         "developerErgonomics": "Higher authoring and compilation burden.",
-        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "noPromotionDecision": "Evaluation-only readiness evidence in v1.19; not promoted to production hostile-code isolation or new counted-play eligibility.",
         "resourceLimitNotes": "Wasmtime-style limiting requires host integration.",
         "unresolvedProductionRisks": [
           "Language support, package, and determinism gaps."
@@ -1381,7 +1693,7 @@
       "id": "gvisor-runsc",
       "label": "gVisor/runsc",
       "metadata": {
-        "isolationBoundary": "No executable adapter in v1.8.",
+        "isolationBoundary": "No executable adapter in v1.19.",
         "runtimeControls": null
       },
       "mode": "tradeoff-only",
@@ -1393,7 +1705,8 @@
           "passed": true,
           "probeId": "time-date-now",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
         },
         {
           "category": "determinism",
@@ -1402,7 +1715,8 @@
           "passed": true,
           "probeId": "random-math",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
         },
         {
           "category": "capability",
@@ -1411,7 +1725,8 @@
           "passed": true,
           "probeId": "filesystem-require",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "filesystem"
         },
         {
           "category": "capability",
@@ -1420,7 +1735,8 @@
           "passed": true,
           "probeId": "network-fetch",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "network"
         },
         {
           "category": "capability",
@@ -1429,7 +1745,8 @@
           "passed": true,
           "probeId": "process-env",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "environment"
         },
         {
           "category": "capability",
@@ -1438,7 +1755,8 @@
           "passed": true,
           "probeId": "shell-child-process",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
         },
         {
           "category": "capability",
@@ -1447,7 +1765,8 @@
           "passed": true,
           "probeId": "dynamic-code",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "dynamic_execution"
         },
         {
           "category": "resource",
@@ -1456,7 +1775,8 @@
           "passed": true,
           "probeId": "timeout-loop",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "timeout"
         },
         {
           "category": "resource",
@@ -1465,7 +1785,8 @@
           "passed": true,
           "probeId": "oversized-output",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -1474,7 +1795,8 @@
           "passed": true,
           "probeId": "stdout-cap",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -1483,7 +1805,8 @@
           "passed": true,
           "probeId": "stderr-cap",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "diagnostic_redaction"
         },
         {
           "category": "resource",
@@ -1492,7 +1815,8 @@
           "passed": true,
           "probeId": "memory-pressure",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -1501,7 +1825,8 @@
           "passed": true,
           "probeId": "strategy-memory-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -1510,7 +1835,8 @@
           "passed": true,
           "probeId": "soldier-memory-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -1519,7 +1845,8 @@
           "passed": true,
           "probeId": "objective-size-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "resource",
@@ -1528,7 +1855,28 @@
           "passed": true,
           "probeId": "source-byte-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "source_size"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "package import access",
+          "passed": true,
+          "probeId": "package-require",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "imports_packages"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "host path read attempt",
+          "passed": true,
+          "probeId": "host-path-read",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "host_paths"
         },
         {
           "category": "ipc",
@@ -1537,7 +1885,8 @@
           "passed": true,
           "probeId": "malformed-ipc-request",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -1546,7 +1895,8 @@
           "passed": true,
           "probeId": "malformed-ipc-response",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -1555,7 +1905,18 @@
           "passed": true,
           "probeId": "subprocess-crash",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "adapter crash classification",
+          "passed": true,
+          "probeId": "adapter-crash",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "crash"
         },
         {
           "category": "schema",
@@ -1564,7 +1925,8 @@
           "passed": true,
           "probeId": "invalid-output",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "exception",
@@ -1573,23 +1935,25 @@
           "passed": true,
           "probeId": "thrown-exception",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "crash"
         }
       ],
       "status": "skipped",
       "summary": {
         "failed": 0,
         "passed": 0,
-        "skipped": 21
+        "skipped": 24
       },
+      "supportedLocally": false,
       "tradeoffs": {
         "adapterMetadataImplications": "Could harden container-subprocess in a future milestone.",
         "containmentGaps": [
-          "No local runsc; requires container runtime integration."
+          "Requires runsc plus container runtime integration before probes can be counted as live execution evidence."
         ],
         "deterministicExecutionRisk": "Improves syscall isolation but does not define Strategy determinism.",
         "developerErgonomics": "Operational dependency beyond local repo scripts.",
-        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "noPromotionDecision": "Evaluation-only readiness evidence in v1.19; not promoted to production hostile-code isolation or new counted-play eligibility.",
         "resourceLimitNotes": "Would inherit container resource policy plus runsc overhead.",
         "unresolvedProductionRisks": [
           "Deployment, performance, and compatibility review."
@@ -1600,7 +1964,7 @@
       "id": "microvm-firecracker",
       "label": "MicroVM",
       "metadata": {
-        "isolationBoundary": "No executable adapter in v1.8.",
+        "isolationBoundary": "No executable adapter in v1.19.",
         "runtimeControls": null
       },
       "mode": "tradeoff-only",
@@ -1612,7 +1976,8 @@
           "passed": true,
           "probeId": "time-date-now",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
         },
         {
           "category": "determinism",
@@ -1621,7 +1986,8 @@
           "passed": true,
           "probeId": "random-math",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
         },
         {
           "category": "capability",
@@ -1630,7 +1996,8 @@
           "passed": true,
           "probeId": "filesystem-require",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "filesystem"
         },
         {
           "category": "capability",
@@ -1639,7 +2006,8 @@
           "passed": true,
           "probeId": "network-fetch",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "network"
         },
         {
           "category": "capability",
@@ -1648,7 +2016,8 @@
           "passed": true,
           "probeId": "process-env",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "environment"
         },
         {
           "category": "capability",
@@ -1657,7 +2026,8 @@
           "passed": true,
           "probeId": "shell-child-process",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
         },
         {
           "category": "capability",
@@ -1666,7 +2036,8 @@
           "passed": true,
           "probeId": "dynamic-code",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "dynamic_execution"
         },
         {
           "category": "resource",
@@ -1675,7 +2046,8 @@
           "passed": true,
           "probeId": "timeout-loop",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "timeout"
         },
         {
           "category": "resource",
@@ -1684,7 +2056,8 @@
           "passed": true,
           "probeId": "oversized-output",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -1693,7 +2066,8 @@
           "passed": true,
           "probeId": "stdout-cap",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
         },
         {
           "category": "resource",
@@ -1702,7 +2076,8 @@
           "passed": true,
           "probeId": "stderr-cap",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "diagnostic_redaction"
         },
         {
           "category": "resource",
@@ -1711,7 +2086,8 @@
           "passed": true,
           "probeId": "memory-pressure",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -1720,7 +2096,8 @@
           "passed": true,
           "probeId": "strategy-memory-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -1729,7 +2106,8 @@
           "passed": true,
           "probeId": "soldier-memory-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
         },
         {
           "category": "resource",
@@ -1738,7 +2116,8 @@
           "passed": true,
           "probeId": "objective-size-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "resource",
@@ -1747,7 +2126,28 @@
           "passed": true,
           "probeId": "source-byte-limit",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "source_size"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "package import access",
+          "passed": true,
+          "probeId": "package-require",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "imports_packages"
+        },
+        {
+          "category": "capability",
+          "code": "SKIPPED",
+          "label": "host path read attempt",
+          "passed": true,
+          "probeId": "host-path-read",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "host_paths"
         },
         {
           "category": "ipc",
@@ -1756,7 +2156,8 @@
           "passed": true,
           "probeId": "malformed-ipc-request",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -1765,7 +2166,8 @@
           "passed": true,
           "probeId": "malformed-ipc-response",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
         },
         {
           "category": "ipc",
@@ -1774,7 +2176,18 @@
           "passed": true,
           "probeId": "subprocess-crash",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
+        },
+        {
+          "category": "ipc",
+          "code": "SKIPPED",
+          "label": "adapter crash classification",
+          "passed": true,
+          "probeId": "adapter-crash",
+          "publicMessage": "Probe skipped for this candidate.",
+          "resultKind": "skipped",
+          "taxonomy": "crash"
         },
         {
           "category": "schema",
@@ -1783,7 +2196,8 @@
           "passed": true,
           "probeId": "invalid-output",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
         },
         {
           "category": "exception",
@@ -1792,23 +2206,25 @@
           "passed": true,
           "probeId": "thrown-exception",
           "publicMessage": "Probe skipped for this candidate.",
-          "resultKind": "skipped"
+          "resultKind": "skipped",
+          "taxonomy": "crash"
         }
       ],
       "status": "skipped",
       "summary": {
         "failed": 0,
         "passed": 0,
-        "skipped": 21
+        "skipped": 24
       },
+      "supportedLocally": false,
       "tradeoffs": {
         "adapterMetadataImplications": "Future production runtime architecture decision.",
         "containmentGaps": [
           "No local microVM toolchain; high operations setup."
         ],
         "deterministicExecutionRisk": "Strong isolation does not automatically solve deterministic execution.",
-        "developerErgonomics": "Too heavy for default local v1.8 workflow.",
-        "noPromotionDecision": "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility.",
+        "developerErgonomics": "Too heavy for default local v1.19 workflow.",
+        "noPromotionDecision": "Evaluation-only readiness evidence in v1.19; not promoted to production hostile-code isolation or new counted-play eligibility.",
         "resourceLimitNotes": "Needs jailer/cgroup/kernel/image lifecycle controls.",
         "unresolvedProductionRisks": [
           "Fleet operations, cold start, and image security."
@@ -1817,7 +2233,7 @@
     }
   ],
   "countedMatchDefaultsUnchanged": true,
-  "generatedAt": "2026-05-22T00:00:00.000Z",
+  "generatedAt": "2026-05-25T00:00:00.000Z",
   "noCandidatePromoted": true,
   "publicSafe": true,
   "runtimeIsolationReadiness": {
@@ -1930,8 +2346,58 @@
         "publicBehavior": "Degraded/non-counted without private stream or host detail."
       }
     ],
+    "noFallbackDrills": [
+      {
+        "expectedFailureMode": "Go orchestration reports runtime-service failure without executing Strategy code in web/API/Go.",
+        "id": "stopped-runtime-service",
+        "label": "Runtime service stopped"
+      },
+      {
+        "expectedFailureMode": "Python exhibition beta fails closed without substituting JS/TS or in-process execution.",
+        "id": "stopped-python-runtime",
+        "label": "Python runtime stopped"
+      },
+      {
+        "expectedFailureMode": "Strict candidate commands exit non-zero and name the unavailable candidate.",
+        "id": "container-runsc-unavailable",
+        "label": "Container/runsc unavailable"
+      },
+      {
+        "expectedFailureMode": "Check commands reject stale JSON or Markdown readiness evidence.",
+        "id": "stale-artifacts",
+        "label": "Stale artifacts"
+      },
+      {
+        "expectedFailureMode": "Monitors reject evidence that claims a required lane while the required candidate was skipped.",
+        "id": "silent-substitution",
+        "label": "Silent substitution"
+      }
+    ],
     "noSilentFallback": true,
     "promotionAllowed": false,
+    "readinessLanes": [
+      {
+        "command": "pnpm sandbox:evaluate && pnpm sandbox:evaluate:check",
+        "id": "default-readiness",
+        "label": "Default readiness lane",
+        "requiredForDefaultMilestonePass": true,
+        "unavailableBehavior": "Hardened subprocess evidence is required; Docker and runsc candidates may record unavailable state."
+      },
+      {
+        "command": "pnpm sandbox:evaluate:container",
+        "id": "container-required",
+        "label": "Container required lane",
+        "requiredForDefaultMilestonePass": false,
+        "unavailableBehavior": "Fails loudly when container evidence is requested but Docker/container execution is unavailable or skipped."
+      },
+      {
+        "command": "pnpm sandbox:evaluate:runsc",
+        "id": "runsc-required",
+        "label": "gVisor/runsc required lane",
+        "requiredForDefaultMilestonePass": false,
+        "unavailableBehavior": "Fails loudly when runsc evidence is requested but runsc is unavailable or no runsc probe adapter exists; no subprocess or Docker substitution is accepted."
+      }
+    ],
     "redactedDiagnostics": {
       "publicDiagnosticRule": "Runtime readiness diagnostics expose only stable ids, public codes, readiness, limit categories, and redacted failure summaries.",
       "publicOutputsMustOmit": [
@@ -1951,6 +2417,7 @@
     "requiredLiveCandidate": "container-subprocess",
     "requiredVerificationCommands": [
       "pnpm sandbox:evaluate:container",
+      "pnpm sandbox:evaluate:runsc",
       "pnpm sandbox:evaluate:check",
       "pnpm topology:check -- --require-runtime-container",
       "pnpm boundary:monitors"
@@ -1958,5 +2425,5 @@
     "selectedCandidate": "container-subprocess",
     "status": "evidence_only_not_promoted"
   },
-  "schemaVersion": "runtime-sandbox-evaluation-v1.8"
+  "schemaVersion": "runtime-sandbox-evaluation-v1.19"
 }

@@ -422,18 +422,27 @@ describe("Workshop service contracts", () => {
       "sample:push-setup",
       "sample:backstab-setup",
       "sample:stoning-blocking",
+      "sample:python-screen-and-stone",
+      "sample:python-push-pressure",
+      "sample:python-backstab-lane",
     ])
     expect(starters.map((sample) => sample.label)).toEqual([
       "Basic advance and turn",
       "Push setup",
       "Backstab setup",
       "Stone and blocking",
+      "Python screen and stone",
+      "Python push pressure",
+      "Python backstab lane",
     ])
     expect(starters.map((sample) => sample.categories[0])).toEqual([
       "Movement",
       "Push",
       "Backstab",
       "Stone",
+      "Python beta",
+      "Python beta",
+      "Python beta",
     ])
     expect(starters.every((sample) => sample.validation.valid)).toBe(true)
     expect(
@@ -446,6 +455,15 @@ describe("Workshop service contracts", () => {
           sample.expectedRuntimeViolationType === undefined,
       ),
     ).toBe(true)
+    expect(
+      starters
+        .filter((sample) => sample.sourceFormat === "python")
+        .map((sample) => sample.id),
+    ).toEqual([
+      "sample:python-screen-and-stone",
+      "sample:python-push-pressure",
+      "sample:python-backstab-lane",
+    ])
   })
 
   it("ships intentional failure-mode samples with explicit expectations", () => {

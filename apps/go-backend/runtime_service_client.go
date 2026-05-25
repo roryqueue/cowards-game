@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -18,6 +20,7 @@ import (
 const runtimeExecutionServiceVersion = "runtime-execution-service-v1.15"
 const strategyRuntimeABIVersion = "strategy-runtime-abi-v1.14"
 const defaultRuntimeServiceResponseBytes = 8 * 1024 * 1024
+const defaultRuntimeServiceHTTPTimeout = 90 * time.Second
 
 type runtimeServiceClient struct {
 	endpoint         string
@@ -82,10 +85,22 @@ func newRuntimeServiceClient(endpoint string) *runtimeServiceClient {
 	return &runtimeServiceClient{
 		endpoint: strings.TrimRight(endpoint, "/"),
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: runtimeServiceHTTPTimeout(),
 		},
 		maxResponseBytes: defaultRuntimeServiceResponseBytes,
 	}
+}
+
+func runtimeServiceHTTPTimeout() time.Duration {
+	raw := strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SERVICE_HTTP_TIMEOUT_MS"))
+	if raw == "" {
+		return defaultRuntimeServiceHTTPTimeout
+	}
+	timeoutMs, err := strconv.Atoi(raw)
+	if err != nil || timeoutMs <= 0 {
+		return defaultRuntimeServiceHTTPTimeout
+	}
+	return time.Duration(timeoutMs) * time.Millisecond
 }
 
 func (client *runtimeServiceClient) executeMatch(ctx context.Context, request runtimeServiceRequest) (*runtimeServiceResponse, *runtimeServiceFailure) {

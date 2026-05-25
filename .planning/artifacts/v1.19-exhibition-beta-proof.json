@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "v1.19-exhibition-beta-proof",
+  "milestone": "v1.19",
+  "status": "passed",
+  "runAt": "2026-05-25T11:08:22-04:00",
+  "command": "RUN_V1_19_PROOF=1 PLAYWRIGHT_TEST=1 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 COWARDS_GO_BACKEND_INTERNAL_TOKEN=v119-proof-token pnpm e2e v1-19-exhibition-proof.spec.ts --project=desktop --workers=1",
+  "environment": {
+    "webUrl": "http://localhost:3000",
+    "goBackendUrl": "http://127.0.0.1:8087",
+    "runtimeServiceUrl": "http://127.0.0.1:3107",
+    "goOrchestration": "manual-run-once",
+    "runtimeServiceHttpTimeoutMs": 90000
+  },
+  "account": {
+    "handle": "v119-mplcarjr",
+    "revisionShape": {
+      "typescript": 1,
+      "python": 2
+    }
+  },
+  "matchSets": [
+    {
+      "id": "match-set:exhibition:_JTOe4q1029KVGVggWhSSg",
+      "status": "complete",
+      "countedStatus": "non_counted",
+      "entrants": ["typescript", "python"],
+      "url": "http://localhost:3000/matchsets/match-set%3Aexhibition%3A_JTOe4q1029KVGVggWhSSg",
+      "matches": [
+        "match:match-set:exhibition:_JTOe4q1029KVGVggWhSSg:0",
+        "match:match-set:exhibition:_JTOe4q1029KVGVggWhSSg:1"
+      ]
+    },
+    {
+      "id": "match-set:exhibition:h7g6X6EjzIkHhAJKGQmSMg",
+      "status": "complete",
+      "countedStatus": "non_counted",
+      "entrants": ["python", "python"],
+      "url": "http://localhost:3000/matchsets/match-set%3Aexhibition%3Ah7g6X6EjzIkHhAJKGQmSMg",
+      "matches": [
+        "match:match-set:exhibition:h7g6X6EjzIkHhAJKGQmSMg:0",
+        "match:match-set:exhibition:h7g6X6EjzIkHhAJKGQmSMg:1"
+      ]
+    }
+  ],
+  "assertions": {
+    "signedInAccountCreated": true,
+    "jsTsRevisionSaved": true,
+    "twoPythonRevisionsSaved": true,
+    "mixedExhibitionComplete": true,
+    "pythonVsPythonExhibitionComplete": true,
+    "matchSetEvidencePanelVisible": true,
+    "replayEvidencePanelVisible": true,
+    "privateLeakMarkersAbsent": true,
+    "silentFallbackAbsent": true,
+    "jsTsRegressionCovered": true
+  },
+  "promotionDecision": {
+    "pythonStatus": "non-counted exhibition beta",
+    "runtimeIsolationStatus": "readiness evidence only",
+    "productionSandboxCertification": false
+  }
+}

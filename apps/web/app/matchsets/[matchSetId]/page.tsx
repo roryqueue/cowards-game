@@ -16,6 +16,23 @@ const resultCopy = (status: string): string => {
   }
 }
 
+const runtimeLabel = (entrant: {
+  runtime: {
+    language: { id: string }
+    adapter: { id: string }
+    package: { mode: string }
+  }
+}): string => {
+  const language =
+    entrant.runtime.language.id === "python"
+      ? "Python · non-counted exhibition beta"
+      : "JS/TS"
+  return `${language} · ${entrant.runtime.adapter.id}`
+}
+
+const publicPrivacyExclusionCue =
+  "private code, memory, objectives, diagnostics"
+
 export default async function MatchSetResultPage({
   params,
 }: {
@@ -51,6 +68,12 @@ export default async function MatchSetResultPage({
           reviewStatus?: string
         })
       : {}
+  const hasPythonEntrant = result.entrants.some(
+    (entrant) => entrant.runtime.language.id === "python",
+  )
+  const evidenceStatus =
+    governance.countedStatus ??
+    (hasPythonEntrant ? "non-counted exhibition beta" : "public exhibition")
 
   return (
     <main className="app-page">
@@ -79,6 +102,25 @@ export default async function MatchSetResultPage({
         {governance.publicExplanation ? (
           <p className="workshop-muted">{governance.publicExplanation}</p>
         ) : null}
+
+        <section
+          className="evidence-panel"
+          aria-label="MatchSet evidence"
+          data-testid="matchset-evidence-panel"
+        >
+          <div className="app-section-header compact">
+            <h2>Evidence</h2>
+            <span className="workshop-chip">{evidenceStatus}</span>
+          </div>
+          <dl className="details-grid">
+            <dt>runtime evidence</dt>
+            <dd>Public runtime labels below; execution-path proof is gated.</dd>
+            <dt>entrants</dt>
+            <dd>{result.entrants.map(runtimeLabel).join(", ")}</dd>
+            <dt>public proof excludes</dt>
+            <dd>{publicPrivacyExclusionCue}</dd>
+          </dl>
+        </section>
 
         <div className="app-section-header compact">
           <h2>Standings</h2>
@@ -135,6 +177,8 @@ export default async function MatchSetResultPage({
                 <dd>{entrant.strategyRevisionId}</dd>
                 <dt>hash</dt>
                 <dd>{entrant.shortHash}</dd>
+                <dt>runtime</dt>
+                <dd>{runtimeLabel(entrant)}</dd>
                 <dt>locked</dt>
                 <dd>{new Date(entrant.lockedAt).toLocaleString()}</dd>
               </dl>
@@ -190,7 +234,7 @@ export default async function MatchSetResultPage({
               {result.provenance.chronicleHashes.join(", ") || "none yet"}
             </dd>
             <dt>private fields excluded</dt>
-            <dd>{result.publication.privateFieldsExcluded.join(", ")}</dd>
+            <dd>{publicPrivacyExclusionCue}</dd>
           </dl>
         </details>
       </section>

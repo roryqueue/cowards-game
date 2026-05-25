@@ -538,6 +538,92 @@ export default {
 }
 `.trim()
 
+const pythonScreenAndStoneSampleSource = `
+def select_activations(input):
+    active = [soldier for soldier in input["mySoldiers"] if soldier["status"] == "ACTIVE"]
+    orders = []
+    for soldier in active[: input["activationCount"]]:
+        orders.append({"soldierId": soldier["id"], "objective": {"role": "screen"}})
+    return {"activationOrders": orders, "strategyMemory": input["strategyMemory"]}
+
+
+def soldier_brain(input):
+    adjacent_enemy = False
+    for cell in input["awarenessGrid"]["cells"]:
+        if cell["contents"] == "ENEMY_ACTIVE":
+            if (cell["dx"] == 0 and (cell["dy"] == -1 or cell["dy"] == 1)) or (
+                cell["dy"] == 0 and (cell["dx"] == -1 or cell["dx"] == 1)
+            ):
+                adjacent_enemy = True
+    if adjacent_enemy:
+        action = {"type": "TURN_TO_STONE"}
+    else:
+        action = {"type": "TURN", "direction": input["self"]["facing"] or "UP"}
+    return {"action": action, "soldierMemory": input["soldierMemory"]}
+`.trim()
+
+const pythonPushPressureSampleSource = `
+def direction_to_enemy(cell, fallback):
+    if cell["dy"] < 0:
+        return "UP"
+    if cell["dy"] > 0:
+        return "DOWN"
+    if cell["dx"] > 0:
+        return "RIGHT"
+    if cell["dx"] < 0:
+        return "LEFT"
+    return fallback
+
+
+def select_activations(input):
+    active = [soldier for soldier in input["mySoldiers"] if soldier["status"] == "ACTIVE"]
+    orders = []
+    for soldier in active[: input["activationCount"]]:
+        orders.append({"soldierId": soldier["id"], "objective": {"role": "pressure"}})
+    return {"activationOrders": orders, "strategyMemory": input["strategyMemory"]}
+
+
+def soldier_brain(input):
+    direction = input["self"]["facing"] or "UP"
+    for cell in input["awarenessGrid"]["cells"]:
+        if cell["contents"] == "ENEMY_ACTIVE":
+            direction = direction_to_enemy(cell, direction)
+            break
+    if input["cycleIndex"] == 0:
+        action = {"type": "TURN", "direction": direction}
+    else:
+        action = {"type": "MOVE", "direction": direction}
+    return {"action": action, "soldierMemory": input["soldierMemory"]}
+`.trim()
+
+const pythonBackstabLaneSampleSource = `
+def select_activations(input):
+    active = [soldier for soldier in input["mySoldiers"] if soldier["status"] == "ACTIVE"]
+    ordered = []
+    for soldier in active:
+        if soldier["lastSuccessfulMoveDirection"]:
+            ordered.append(soldier)
+    for soldier in active:
+        if not soldier["lastSuccessfulMoveDirection"]:
+            ordered.append(soldier)
+    return {
+        "activationOrders": [
+            {"soldierId": soldier["id"], "objective": {"role": "lane", "lastMove": soldier["lastSuccessfulMoveDirection"]}}
+            for soldier in ordered[: input["activationCount"]]
+        ],
+        "strategyMemory": input["strategyMemory"],
+    }
+
+
+def soldier_brain(input):
+    direction = input["self"]["lastSuccessfulMoveDirection"] or input["self"]["facing"] or "UP"
+    if input["cycleIndex"] == 0:
+        action = {"type": "TURN", "direction": direction}
+    else:
+        action = {"type": "MOVE", "direction": direction}
+    return {"action": action, "soldierMemory": input["soldierMemory"]}
+`.trim()
+
 const sample = <T extends Omit<WorkshopSampleSummary, "validation">>(
   input: T,
 ): T & { validation: StrategyRevisionValidationReport } => ({
@@ -581,6 +667,33 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     description: "Uses STONE to create blocking pressure.",
     categories: ["Stone"],
     source: stoningBlockingSampleSource,
+  }),
+  sample({
+    id: "sample:python-screen-and-stone",
+    label: "Python screen and stone",
+    sampleKind: "starter",
+    description: "A safe Python beta screen that stones adjacent pressure.",
+    categories: ["Python beta", "Stone"],
+    sourceFormat: "python",
+    source: pythonScreenAndStoneSampleSource,
+  }),
+  sample({
+    id: "sample:python-push-pressure",
+    label: "Python push pressure",
+    sampleKind: "starter",
+    description: "Faces visible threats, then advances to set up Push lanes.",
+    categories: ["Python beta", "Push"],
+    sourceFormat: "python",
+    source: pythonPushPressureSampleSource,
+  }),
+  sample({
+    id: "sample:python-backstab-lane",
+    label: "Python backstab lane",
+    sampleKind: "starter",
+    description: "Prioritizes movers and keeps lane direction stable.",
+    categories: ["Python beta", "Backstab"],
+    sourceFormat: "python",
+    source: pythonBackstabLaneSampleSource,
   }),
   sample({
     id: "sample:failure-forbidden-clock",

@@ -2,10 +2,10 @@
 
 ## Current State
 
-**Shipped version:** v1.18 Runtime Isolation and Multi-Language Exhibition Beta on 2026-05-25
-**Current milestone:** v1.19 Runtime Isolation Readiness and Exhibition Beta Trust.
-**Status:** v1.19 requirements and roadmap initialized.
-**Last audit:** v1.18 audit passed with Python promoted only to non-counted exhibition beta and runtime isolation kept as readiness evidence.
+**Shipped version:** v1.19 Runtime Isolation Readiness and Exhibition Beta Trust on 2026-05-25
+**Current milestone:** none active.
+**Status:** v1.19 complete, archived, and tagged.
+**Last audit:** v1.19 audit passed with Python kept as non-counted exhibition beta and runtime isolation kept as readiness evidence only.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. v1.19 strengthens the honesty and depth of runtime isolation readiness evidence while making the Python non-counted exhibition beta easier for signed-in users to trust.
 
@@ -13,9 +13,12 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.19 Runtime Isolation Readiness and Exhibition Beta Trust
+## Latest Shipped Milestone: v1.19 Runtime Isolation Readiness and Exhibition Beta Trust
 
 **Goal:** Strengthen runtime isolation readiness evidence while making Python non-counted exhibition beta clearer, safer, and more trustworthy for signed-in users.
+**Decision:** `keep-python-non-counted-exhibition-beta-runtime-isolation-readiness-only`
+**Archives:** `.planning/milestones/v1.19-ROADMAP.md`, `.planning/milestones/v1.19-REQUIREMENTS.md`, `.planning/milestones/v1.19-phases/`
+**Audit:** `.planning/milestones/v1.19-MILESTONE-AUDIT.md`
 
 **Target features:**
 - Rebaseline v1.18 as the floor and define honest subprocess, container, and gVisor/runsc-style runtime isolation candidate contracts.
@@ -28,7 +31,9 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 **Key context:** v1.19 starts from the v1.18 baseline. Normal topology remains `web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s)`. Strategy code must not execute in web/API/Go. Python must not become ranked, ladder-counted, broadly production multi-language support, arbitrary package install support, backend owner, route owner, persistence owner, job lifecycle owner, Match completion owner, scoring owner, public evidence owner, or silent fallback path.
 
-## Latest Shipped Milestone: v1.18 Runtime Isolation and Multi-Language Exhibition Beta
+**Implemented:** v1.19 adds a unified hostile probe taxonomy, monitor-readable readiness lanes, explicit no-fallback drills, deterministic runsc/container strict-lane behavior, compact Python exhibition beta labels, credible safe Python samples, public-safe MatchSet/replay Evidence panels, a signed-in JS/TS-plus-two-Python proof, and a final promotion decision that keeps Python non-counted and runtime isolation as readiness evidence only. The live proof caught and fixed two practical gaps: runtime-service HTTP timeout was too low for Python subprocess exhibition Matches, and public evidence copy exposed internal private-field names.
+
+## Previous Shipped Milestone: v1.18 Runtime Isolation and Multi-Language Exhibition Beta
 
 **Goal:** Strengthen the runtime isolation boundary and prove it with a signed-in non-counted multi-language exhibition beta while preserving v1.17's broker/runtime-only contract.
 **Decision:** `promote-python-non-counted-exhibition-beta`

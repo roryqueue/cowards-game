@@ -21,7 +21,7 @@ import { SubprocessSystemFailure } from "./subprocess-ipc.js"
 import { transpileStrategySource } from "./transpile.js"
 
 export const SANDBOX_EVALUATION_VERSION =
-  "runtime-sandbox-evaluation-v1.8" as const
+  "runtime-sandbox-evaluation-v1.19" as const
 
 const DEFAULT_SANDBOX_PROBE_TIMEOUT_MS = 500
 
@@ -38,6 +38,24 @@ export type SandboxResultKind =
   | "runtimeViolation"
   | "systemFailure"
   | "skipped"
+
+export type SandboxProbeTaxonomy =
+  | "determinism"
+  | "filesystem"
+  | "host_paths"
+  | "network"
+  | "process_shell"
+  | "imports_packages"
+  | "dynamic_execution"
+  | "environment"
+  | "output_pressure"
+  | "memory_pressure"
+  | "timeout"
+  | "crash"
+  | "malformed_ipc"
+  | "diagnostic_redaction"
+  | "schema_invalid_output"
+  | "source_size"
 
 export interface SandboxProbe {
   id: string
@@ -90,6 +108,7 @@ export interface SandboxProbeResult {
   probeId: string
   label: string
   category: SandboxProbe["category"]
+  taxonomy: SandboxProbeTaxonomy
   resultKind: SandboxResultKind
   code: string
   publicMessage: string
@@ -101,6 +120,7 @@ export interface SandboxCandidateEvaluation {
   label: string
   mode: SandboxCandidateMode
   status: SandboxCandidateStatus
+  supportedLocally: boolean
   executableAdapterId?: string | undefined
   specAdapterId?: StrategyRuntimeAdapterId | undefined
   specReadiness?: string | undefined
@@ -162,6 +182,18 @@ export interface RuntimeIsolationReadiness {
   noSilentFallback: true
   requiredLiveCandidate: "container-subprocess"
   requiredVerificationCommands: readonly string[]
+  readinessLanes: readonly {
+    id: string
+    label: string
+    requiredForDefaultMilestonePass: boolean
+    command: string
+    unavailableBehavior: string
+  }[]
+  noFallbackDrills: readonly {
+    id: string
+    label: string
+    expectedFailureMode: string
+  }[]
   criteria: readonly RuntimeIsolationPromotionCriterion[]
   failureTaxonomy: readonly RuntimeIsolationFailureTaxonomyEntry[]
   redactedDiagnostics: {
@@ -419,6 +451,28 @@ while (true) {
     expected: { kind: "runtimeViolation", codes: ["SOURCE_TOO_LARGE"] },
   },
   {
+    id: "package-require",
+    label: "package import access",
+    category: "capability",
+    methodName: "selectActivations",
+    source: sourceWithSelectBody(`
+require("left-pad")
+return { activationOrders: [], strategyMemory: {} }
+`),
+    expected: { kind: "runtimeViolation", codes: ["FORBIDDEN_CAPABILITY"] },
+  },
+  {
+    id: "host-path-read",
+    label: "host path read attempt",
+    category: "capability",
+    methodName: "selectActivations",
+    source: sourceWithSelectBody(`
+require("node:fs").readFileSync("/Users/example/private.txt", "utf8")
+return { activationOrders: [], strategyMemory: {} }
+`),
+    expected: { kind: "runtimeViolation", codes: ["FORBIDDEN_CAPABILITY"] },
+  },
+  {
     id: "malformed-ipc-request",
     label: "malformed IPC request",
     category: "ipc",
@@ -444,6 +498,14 @@ process.exit(42)
 return { activationOrders: [], strategyMemory: {} }
 `),
     expected: { kind: "runtimeViolation", codes: ["FORBIDDEN_CAPABILITY"] },
+  },
+  {
+    id: "adapter-crash",
+    label: "adapter crash classification",
+    category: "ipc",
+    methodName: "selectActivations",
+    source: validSelectionSource,
+    expected: { kind: "systemFailure", codes: ["ADAPTER_CRASH"] },
   },
   {
     id: "invalid-output",
@@ -516,7 +578,7 @@ const specAdapter = (id: StrategyRuntimeAdapterId) =>
   STRATEGY_RUNTIME_ADAPTER_REGISTRY.find((candidate) => candidate.id === id)
 
 const noPromotion =
-  "Evaluation-only in v1.8; not promoted to production hostile-code isolation or new counted-play eligibility."
+  "Evaluation-only readiness evidence in v1.19; not promoted to production hostile-code isolation or new counted-play eligibility."
 
 export const RUNTIME_ISOLATION_READINESS: RuntimeIsolationReadiness = {
   status: "evidence_only_not_promoted",
@@ -526,9 +588,68 @@ export const RUNTIME_ISOLATION_READINESS: RuntimeIsolationReadiness = {
   requiredLiveCandidate: "container-subprocess",
   requiredVerificationCommands: [
     "pnpm sandbox:evaluate:container",
+    "pnpm sandbox:evaluate:runsc",
     "pnpm sandbox:evaluate:check",
     "pnpm topology:check -- --require-runtime-container",
     "pnpm boundary:monitors",
+  ],
+  readinessLanes: [
+    {
+      id: "default-readiness",
+      label: "Default readiness lane",
+      requiredForDefaultMilestonePass: true,
+      command: "pnpm sandbox:evaluate && pnpm sandbox:evaluate:check",
+      unavailableBehavior:
+        "Hardened subprocess evidence is required; Docker and runsc candidates may record unavailable state.",
+    },
+    {
+      id: "container-required",
+      label: "Container required lane",
+      requiredForDefaultMilestonePass: false,
+      command: "pnpm sandbox:evaluate:container",
+      unavailableBehavior:
+        "Fails loudly when container evidence is requested but Docker/container execution is unavailable or skipped.",
+    },
+    {
+      id: "runsc-required",
+      label: "gVisor/runsc required lane",
+      requiredForDefaultMilestonePass: false,
+      command: "pnpm sandbox:evaluate:runsc",
+      unavailableBehavior:
+        "Fails loudly when runsc evidence is requested but runsc is unavailable or no runsc probe adapter exists; no subprocess or Docker substitution is accepted.",
+    },
+  ],
+  noFallbackDrills: [
+    {
+      id: "stopped-runtime-service",
+      label: "Runtime service stopped",
+      expectedFailureMode:
+        "Go orchestration reports runtime-service failure without executing Strategy code in web/API/Go.",
+    },
+    {
+      id: "stopped-python-runtime",
+      label: "Python runtime stopped",
+      expectedFailureMode:
+        "Python exhibition beta fails closed without substituting JS/TS or in-process execution.",
+    },
+    {
+      id: "container-runsc-unavailable",
+      label: "Container/runsc unavailable",
+      expectedFailureMode:
+        "Strict candidate commands exit non-zero and name the unavailable candidate.",
+    },
+    {
+      id: "stale-artifacts",
+      label: "Stale artifacts",
+      expectedFailureMode:
+        "Check commands reject stale JSON or Markdown readiness evidence.",
+    },
+    {
+      id: "silent-substitution",
+      label: "Silent substitution",
+      expectedFailureMode:
+        "Monitors reject evidence that claims a required lane while the required candidate was skipped.",
+    },
   ],
   criteria: [
     {
@@ -752,7 +873,7 @@ export const SANDBOX_CANDIDATES: readonly SandboxCandidateDefinition[] = [
     developerErgonomics:
       "Repeatable when Docker and node image are available; otherwise skipped.",
     adapterMetadataImplications:
-      "Production-candidate label stays candidate-only in v1.8.",
+      "Production-candidate label stays candidate-only in v1.19.",
     unresolvedProductionRisks: [
       "Needs image pinning, deployment hardening, abuse review, and kernel/runtime validation.",
     ],
@@ -824,7 +945,7 @@ export const SANDBOX_CANDIDATES: readonly SandboxCandidateDefinition[] = [
     supportedLocally: false,
     noPromotionDecision: noPromotion,
     containmentGaps: [
-      "No local runsc; requires container runtime integration.",
+      "Requires runsc plus container runtime integration before probes can be counted as live execution evidence.",
     ],
     deterministicExecutionRisk:
       "Improves syscall isolation but does not define Strategy determinism.",
@@ -847,7 +968,7 @@ export const SANDBOX_CANDIDATES: readonly SandboxCandidateDefinition[] = [
     deterministicExecutionRisk:
       "Strong isolation does not automatically solve deterministic execution.",
     resourceLimitNotes: "Needs jailer/cgroup/kernel/image lifecycle controls.",
-    developerErgonomics: "Too heavy for default local v1.8 workflow.",
+    developerErgonomics: "Too heavy for default local v1.19 workflow.",
     adapterMetadataImplications:
       "Future production runtime architecture decision.",
     unresolvedProductionRisks: [
@@ -866,6 +987,53 @@ export const sandboxEvaluationPublicForbiddenMarkers = [
   "sourceText",
   "privateDiagnostics",
 ] as const
+
+export const sandboxProbeTaxonomy = (
+  probe: Pick<SandboxProbe, "id" | "category">,
+): SandboxProbeTaxonomy => {
+  switch (probe.id) {
+    case "filesystem-require":
+      return "filesystem"
+    case "network-fetch":
+      return "network"
+    case "process-env":
+      return "environment"
+    case "shell-child-process":
+      return "process_shell"
+    case "dynamic-code":
+      return "dynamic_execution"
+    case "timeout-loop":
+      return "timeout"
+    case "oversized-output":
+    case "stdout-cap":
+      return "output_pressure"
+    case "stderr-cap":
+      return "diagnostic_redaction"
+    case "memory-pressure":
+    case "strategy-memory-limit":
+    case "soldier-memory-limit":
+      return "memory_pressure"
+    case "source-byte-limit":
+      return "source_size"
+    case "package-require":
+      return "imports_packages"
+    case "host-path-read":
+      return "host_paths"
+    case "malformed-ipc-request":
+    case "malformed-ipc-response":
+      return "malformed_ipc"
+    case "subprocess-crash":
+      return "process_shell"
+    case "adapter-crash":
+    case "thrown-exception":
+      return "crash"
+    case "invalid-output":
+    case "objective-size-limit":
+      return "schema_invalid_output"
+    default:
+      return probe.category === "determinism" ? "determinism" : "host_paths"
+  }
+}
 
 const compileProbe = (probe: SandboxProbe): string => {
   if (probe.id === "source-byte-limit") {
@@ -892,6 +1060,7 @@ const normalizeProbeSuccess = (
       probeId: probe.id,
       label: probe.label,
       category: probe.category,
+      taxonomy: sandboxProbeTaxonomy(probe),
       resultKind: "success",
       code,
       publicMessage: "Probe returned a Strategy result.",
@@ -909,6 +1078,7 @@ const normalizeProbeSuccess = (
     probeId: probe.id,
     label: probe.label,
     category: probe.category,
+    taxonomy: sandboxProbeTaxonomy(probe),
     resultKind: "runtimeViolation",
     code,
     publicMessage: `Runtime violation: ${code}`,
@@ -926,6 +1096,7 @@ const syntheticProbeResult = (
   probeId: probe.id,
   label: probe.label,
   category: probe.category,
+  taxonomy: sandboxProbeTaxonomy(probe),
   resultKind,
   code,
   publicMessage:
@@ -951,6 +1122,9 @@ const executeProbe = (
   if (probe.id === "malformed-ipc-response") {
     return syntheticProbeResult(probe, "MALFORMED_IPC", "systemFailure")
   }
+  if (probe.id === "adapter-crash") {
+    return syntheticProbeResult(probe, "ADAPTER_CRASH", "systemFailure")
+  }
   try {
     const result: RuntimeResult<unknown> = adapter.execute({
       source: compileProbe(probe),
@@ -975,6 +1149,7 @@ const executeProbe = (
       probeId: probe.id,
       label: probe.label,
       category: probe.category,
+      taxonomy: sandboxProbeTaxonomy(probe),
       resultKind: "runtimeViolation",
       code,
       publicMessage: `Runtime violation: ${code}`,
@@ -992,6 +1167,7 @@ const executeProbe = (
       probeId: probe.id,
       label: probe.label,
       category: probe.category,
+      taxonomy: sandboxProbeTaxonomy(probe),
       resultKind: "systemFailure",
       code,
       publicMessage: `System failure: ${code}`,
@@ -1006,6 +1182,7 @@ const skippedProbe = (probe: SandboxProbe): SandboxProbeResult => ({
   probeId: probe.id,
   label: probe.label,
   category: probe.category,
+  taxonomy: sandboxProbeTaxonomy(probe),
   resultKind: "skipped",
   code: "SKIPPED",
   publicMessage: "Probe skipped for this candidate.",
@@ -1050,6 +1227,7 @@ export const evaluateSandboxCandidate = (
     label: candidate.label,
     mode: candidate.mode,
     status: shouldRun ? (failed === 0 ? "passed" : "failed") : "skipped",
+    supportedLocally: candidate.availability?.() ?? candidate.supportedLocally,
     ...(candidate.executableAdapterId === undefined
       ? {}
       : { executableAdapterId: candidate.executableAdapterId }),
@@ -1064,7 +1242,7 @@ export const evaluateSandboxCandidate = (
         }),
     metadata: {
       isolationBoundary:
-        metadata?.isolationBoundary ?? "No executable adapter in v1.8.",
+        metadata?.isolationBoundary ?? "No executable adapter in v1.19.",
       runtimeControls: metadata?.runtimeControls ?? null,
     },
     ...(candidate.mode === "optional-executable" && !shouldRun
@@ -1093,7 +1271,7 @@ export const evaluateRuntimeSandboxes = (
 ): SandboxEvaluationReport => ({
   schemaVersion: SANDBOX_EVALUATION_VERSION,
   abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-  generatedAt: "2026-05-22T00:00:00.000Z",
+  generatedAt: "2026-05-25T00:00:00.000Z",
   countedMatchDefaultsUnchanged: true,
   noCandidatePromoted: true,
   publicSafe: true,
@@ -1152,6 +1330,45 @@ export const assertRuntimeIsolationReadinessGuardrails = (
   if (requiredCriteria.size > 0) {
     throw new Error(
       `Runtime isolation readiness missing criteria: ${[...requiredCriteria].join(", ")}`,
+    )
+  }
+  const requiredTaxonomy = new Set<SandboxProbeTaxonomy>([
+    "filesystem",
+    "host_paths",
+    "network",
+    "process_shell",
+    "imports_packages",
+    "dynamic_execution",
+    "environment",
+    "output_pressure",
+    "memory_pressure",
+    "timeout",
+    "crash",
+    "malformed_ipc",
+    "diagnostic_redaction",
+    "schema_invalid_output",
+  ])
+  for (const probe of SANDBOX_PROBES) {
+    requiredTaxonomy.delete(sandboxProbeTaxonomy(probe))
+  }
+  if (requiredTaxonomy.size > 0) {
+    throw new Error(
+      `Runtime isolation readiness missing probe taxonomy: ${[...requiredTaxonomy].join(", ")}`,
+    )
+  }
+  const requiredDrills = new Set([
+    "stopped-runtime-service",
+    "stopped-python-runtime",
+    "container-runsc-unavailable",
+    "stale-artifacts",
+    "silent-substitution",
+  ])
+  for (const drill of readiness.noFallbackDrills) {
+    requiredDrills.delete(drill.id)
+  }
+  if (requiredDrills.size > 0) {
+    throw new Error(
+      `Runtime isolation readiness missing no-fallback drills: ${[...requiredDrills].join(", ")}`,
     )
   }
 }

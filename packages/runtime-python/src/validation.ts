@@ -205,7 +205,7 @@ export const validatePythonStrategySource = (
         message:
           "Python is a non-counted exhibition beta runtime and not ranked/counted eligible.",
         constraint:
-          "Python may run only in non-counted Workshop or exhibition beta proof paths in v1.18.",
+          "Python may run only in non-counted Workshop or exhibition beta proof paths.",
         remediation: "Use JS/TS for counted play.",
         reference: "runtime/counting",
       },

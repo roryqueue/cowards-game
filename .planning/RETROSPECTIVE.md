@@ -1,5 +1,44 @@
 # Retrospective
 
+## Milestone: v1.19 — Runtime Isolation Readiness and Exhibition Beta Trust
+
+**Shipped:** 2026-05-25
+**Phases:** 8 | **Plans:** 8
+
+### What Was Built
+
+- Runtime isolation readiness lanes that distinguish default subprocess evidence, required live proof, skipped/unsupported candidates, and production sandbox certification.
+- A unified hostile probe matrix spanning JS/TS and Python runtime candidates, with explicit no-fallback drills and deterministic strict-lane behavior for Docker/container and runsc-style candidates.
+- v1.19 runtime readiness artifacts in JSON and Markdown, plus boundary monitor checks for candidate evidence drift, production overclaiming, unsupported candidate mislabeling, ownership creep, privacy leaks, and JS/TS regression.
+- Python exhibition beta UX improvements: compact persistent labels, clearer validation language, and three credible safe Python sample Strategies.
+- Public-safe MatchSet and replay Evidence panels that explain non-counted status, runtime labels, and privacy exclusions without exposing Strategy source, memory, diagnostics, paths, or private runtime internals.
+- A signed-in local proof with one JS/TS revision and two Python revisions, covering mixed JS/TS-vs-Python and Python-vs-Python non-counted exhibitions through Go -> runtime-service -> isolated runtime implementations.
+
+### What Worked
+
+- The live signed-in proof was worth the time: it caught a too-short Go runtime-service HTTP timeout and public Evidence copy that leaked internal private-field names.
+- Splitting default monitors from strict candidate commands kept normal local verification usable while preserving fail-loud evidence lanes for stronger candidates.
+- Keeping execution-path UI claims modest avoided overclaiming DTO evidence; public pages now describe runtime labels and gated proof limits honestly.
+
+### What Was Inefficient
+
+- Python subprocess exhibition Matches are slower than JS/TS because runtime-service invokes Python through process isolation per Strategy call; proof timeouts needed to reflect whole-Match cost rather than per-call Strategy timeout.
+- The first proof run competed with Go background orchestration. Disabling background orchestration for proof mode made job processing deterministic.
+- Some GSD artifacts had to be materialized manually because `gsd-sdk query` was unavailable in this checkout.
+
+### Patterns Established
+
+- Runtime isolation milestones should keep a machine-readable readiness artifact and a human-readable report in lockstep.
+- Public privacy copy should use product categories, not internal field names, even when saying those fields are excluded.
+- Signed-in proof artifacts should record concrete MatchSet ids, public links, command, account shape, and promotion stance.
+- Strict sandbox candidate commands should fail loudly on unavailable or unimplemented proof rather than passing on binary availability.
+
+### Key Lessons
+
+- A realistic beta-trust proof is an integration test of evidence language as much as runtime behavior.
+- Whole-Match service timeouts are a separate budget from per-Strategy execution caps.
+- Honest sandbox claims need multiple lanes: what passed locally, what was skipped or unavailable, what would be required for promotion, and what remains explicitly out of scope.
+
 ## Milestone: v1.18 — Runtime Isolation and Multi-Language Exhibition Beta
 
 **Shipped:** 2026-05-25

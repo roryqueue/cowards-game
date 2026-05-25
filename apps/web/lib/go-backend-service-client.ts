@@ -148,7 +148,7 @@ export const isGoBackendServiceUnavailableError = (
 
 export const createGoBackendServiceClient = ({
   baseUrl,
-  timeoutMs = 1_000,
+  timeoutMs = 5_000,
   fetchImpl = fetch,
 }: GoBackendServiceClientOptions): GoBackendServiceClient => {
   const resolvedBaseUrl = new URL(baseUrl)

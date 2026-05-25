@@ -23,6 +23,7 @@
     "strategy-artifacts:check": "pnpm exec tsx scripts/generate-strategy-artifact-manifest.ts --check",
     "sandbox:evaluate": "pnpm exec tsx scripts/evaluate-runtime-sandbox.ts",
     "sandbox:evaluate:container": "COWARDS_RUN_CONTAINER_SANDBOX=1 pnpm exec tsx scripts/evaluate-runtime-sandbox.ts --require-container",
+    "sandbox:evaluate:runsc": "pnpm exec tsx scripts/evaluate-runtime-sandbox.ts --require-runsc",
     "sandbox:evaluate:check": "pnpm exec tsx scripts/evaluate-runtime-sandbox.ts --check",
     "topology:check": "pnpm exec tsx scripts/check-local-topology.ts",
     "boundary:monitors": "pnpm contract:check && pnpm contract:lint && pnpm boundary:imports && pnpm typescript-backend:inventory:check && pnpm go:parity && pnpm sandbox:evaluate:check && pnpm topology:check && pnpm exec tsx scripts/check-boundary-monitors.ts",

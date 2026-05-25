@@ -2386,7 +2386,7 @@ func exhibitionCountedExplanation(counted bool) *string {
 	if counted {
 		return nil
 	}
-	explanation := "Python Strategy runtime evidence is non-counted exhibition beta in v1.18."
+	explanation := "Python Strategy runtime evidence is non-counted exhibition beta."
 	return &explanation
 }
 

@@ -1,5 +1,54 @@
 # Milestones
 
+## v1.19 Runtime Isolation Readiness and Exhibition Beta Trust (Shipped: 2026-05-25)
+
+**Status:** Shipped 2026-05-25
+**Phases:** 8
+**Phase range:** 124-131
+**Plans:** 8/8 complete
+**Requirements:** 48/48 complete
+**Audit:** .planning/milestones/v1.19-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.19-ROADMAP.md, .planning/milestones/v1.19-REQUIREMENTS.md, .planning/milestones/v1.19-phases/
+**Decision:** `keep-python-non-counted-exhibition-beta-runtime-isolation-readiness-only`
+
+**Key accomplishments:**
+
+- Promoted runtime isolation evidence into explicit readiness lanes with deterministic subprocess evidence and fail-loud container/runsc strict commands.
+- Expanded hostile probe coverage into one taxonomy spanning filesystem, host paths, network, process/shell, imports/packages, environment, output/memory pressure, timeout, crash, malformed IPC, redaction, schema-invalid output, and no-fallback drills.
+- Added monitor gates for readiness artifact drift, production overclaiming, unsupported candidate mislabeling, source-boundary drift, public privacy leaks, and JS/TS regression safety.
+- Improved Python exhibition beta trust with compact persistent labels, safer validation copy, three credible safe Python samples, and public-safe MatchSet/replay Evidence panels.
+- Ran a signed-in proof that created one JS/TS and two Python revisions, completed mixed JS/TS-vs-Python and Python-vs-Python non-counted exhibitions, and opened result/replay evidence through the live Go/runtime-service path.
+- Fixed proof-discovered gaps in runtime-service HTTP timeout budgeting and public privacy wording.
+
+### Delivered
+
+- JS/TS Strategy support remains intact through the existing broker/runtime ABI.
+- Python remains non-counted exhibition beta only.
+- Runtime isolation remains readiness evidence only, not production sandbox certification.
+- Public proof outputs are private-data safe and avoid internal private-field names.
+- Docker/container and gVisor/runsc-style evidence lanes fail loudly when required evidence is unavailable or unimplemented.
+
+### Completed Phases
+
+| Phase | Name |
+| --- | --- |
+| 124 | Isolation Readiness Baseline and Candidate Contract - Complete |
+| 125 | Hostile Probe Matrix Expansion - Complete |
+| 126 | Candidate Execution Evidence - Complete |
+| 127 | Runtime Evidence Monitors and Drift Gates - Complete |
+| 128 | Python Exhibition Beta UX Trust - Complete |
+| 129 | MatchSet Result and Replay Trust Cues - Complete |
+| 130 | Signed-In End-to-End Proof and JS/TS Regression Gate - Complete |
+| 131 | Promotion Decision and Archive Gate - Complete |
+
+### Active Constraints
+
+- Python remains runtime-only, non-ranked, non-counted, and ineligible for ladder/ranked/counted play.
+- No arbitrary package installs or PyPI support.
+- No production sandbox claim from v1.19 evidence.
+- No Strategy execution in web/API/Go and no silent fallback when runtime-service, Python runtime, or strict candidates are unavailable.
+- Public outputs omit private Strategy data, private runtime diagnostics, host/package paths, DB/session/token details, and internal runtime fields by default.
+
 ## v1.18 Runtime Isolation and Multi-Language Exhibition Beta (Shipped: 2026-05-25)
 
 **Status:** Shipped 2026-05-25

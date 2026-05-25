@@ -118,6 +118,21 @@ export function ReplayClient({ data }: ReplayClientProps) {
           <p className="replay-mono" title={data.metadata.matchId}>
             {shortId(data.metadata.matchId)}
           </p>
+          <section
+            className="replay-evidence-panel"
+            aria-label="Replay evidence"
+            data-testid="replay-evidence-panel"
+          >
+            <p className="replay-label">Evidence</p>
+            <dl className="replay-details-grid">
+              <dt>status</dt>
+              <dd>public replay proof</dd>
+              <dt>runtime evidence</dt>
+              <dd>Execution-path proof is gated outside this replay DTO.</dd>
+              <dt>privacy</dt>
+              <dd>private code, memory, diagnostics excluded</dd>
+            </dl>
+          </section>
           <p className="replay-label">Outcome</p>
           <p>{summary.outcome}</p>
           <p className="replay-label">Events</p>
