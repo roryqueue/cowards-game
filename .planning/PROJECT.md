@@ -462,4 +462,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-24 after starting v1.17 milestone*
+*Last updated: 2026-05-24 after completing v1.17 milestone*
