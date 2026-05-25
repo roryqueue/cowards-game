@@ -1,37 +1,41 @@
-# Stack Research: v1.17 Python Strategy Runtime Pilot
+# Stack Research: v1.21 WASM/WASI Multi-Language Runtime Candidate
 
 **Project:** Coward's Game
-**Milestone:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
-**Researched:** 2026-05-24
+**Milestone:** v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
+**Researched:** 2026-05-25
 
 ## Stack Additions
 
-- Keep the existing normal product stack: Next.js web frontend, Go backend, PostgreSQL, TypeScript spec/contracts, isolated runtime service, and existing JS/TS runtime implementation.
-- Promote the existing Strategy Execution Service / Runtime Broker naming into concrete spec artifacts, registry metadata, health metadata, monitor checks, and runtime implementation selection.
-- Use the existing `packages/runtime-python` spike as a starting point only. It currently proves method-level Python ABI execution but is not a full Match runtime-service path and is not a production sandbox.
-- Keep Python self-contained source only. Do not add PyPI install support, dependency resolution, native module support, or package build/install steps.
-- Use Python parse/compile checks where practical for submission validation. Official Python docs note that AST parsing and compilation are separate steps, so validation should not treat `ast.parse` alone as full executable validation.
-- Use subprocess timeout and isolated/safe-path interpreter flags as defense-in-depth for the experimental host, while explicitly documenting that subprocess plus interpreter flags is not production hostile-code isolation.
+- Preserve the normal product topology: Next.js web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s).
+- Add a `runtime-wasm-wasi` broker/runtime target or equivalent registry entry that remains runtime-only and non-counted.
+- Use WASI Preview 1 as the first executable ABI lane: compiled module reads a schema-validated JSON request from stdin and writes a schema-validated JSON response to stdout.
+- Use Wasmtime as the local runtime candidate because it is installed locally (`wasmtime 45.0.0`) and supports WASI execution, fuel, timeout, memory/resource options, and deterministic execution controls.
+- Use Rust `wasm32-wasip1` as the first net-new language target. Local tooling is available: `rustc 1.95.0`, `cargo 1.95.0`, `rustup`, and installed target `wasm32-wasip1`.
+- Use `wasm-tools 1.250.0` for artifact inspection/hash/readiness checks where useful.
+- Treat Zig as a gated stretch target. Local `zig 0.16.0` is available and official Zig docs show `wasm32-wasi` build support, but v1.21 should require compile/runtime evidence before claiming Zig support.
 
 ## Stack Non-Additions
 
-- No Python backend service.
-- No Python persistence owner, route owner, job owner, scoring owner, public evidence owner, or fallback owner.
-- No production sandbox promotion.
-- No WASM/WASI/component-model promotion.
-- No arbitrary package manager or PyPI support.
-- No JS/TS runtime replacement.
+- No Rust, Zig, or WASM backend service.
+- No Go/web/API Strategy execution.
+- No Node `node:wasi` sandbox promotion.
+- No production sandbox certification from local Wasmtime evidence alone.
+- No arbitrary Cargo/Zig package installation as a product feature.
+- No direct-export or component-model Strategy ABI promotion unless explicitly proven and replanned.
+- No ranked, ladder, counted, gauntlet, or broad production multi-language support for Rust/Zig/WASM.
 
-## Integration Points
+## Evidence Sources
 
-- `packages/spec/src/runtime.ts` for runtime registry, language metadata, eligibility, validation messages, and compatibility keys.
-- `packages/spec/src/runtime-execution-service.ts` for broker contract, request/response schema metadata, failure taxonomy, authority policy, and health metadata.
-- `apps/runtime-service/src/execute-match.ts` for moving from JS/TS-specific runtime construction to registry-selected runtime implementations.
-- `packages/runtime-python` for experimental Python adapter/host hardening and full Strategy method coverage.
-- `apps/go-backend/runtime_service_client.go` for schema and metadata validation without Python execution.
-- Workshop routes and DTOs for experimental author/validate/submit proof, while keeping backend ownership boundaries explicit.
-- `scripts/check-boundary-monitors.ts` and `scripts/check-local-topology.ts` for registry, ABI, ownership, privacy, and topology gates.
+- Rust `wasm32-wasip1` docs: https://doc.rust-lang.org/stable/rustc/platform-support/wasm32-wasip1.html
+- WASI interfaces overview: https://wasi.dev/interfaces
+- Wasmtime interruption/fuel docs: https://docs.wasmtime.dev/examples-interrupting-wasm.html
+- Wasmtime WASI context docs: https://docs.wasmtime.dev/api/wasmtime_wasi/struct.WasiCtxBuilder.html
+- Zig WASI docs: https://ziglang.org/documentation/master/#WASI
+- Node WASI warning: https://nodejs.org/api/wasi.html
 
 ## Recommended Stack Direction
 
-Broker first. Define the runtime registry and contract before expanding Python execution. Then thread Python through artifact metadata, validation, runtime-service execution, Go non-counted MatchSet creation, and Workshop proof. This keeps the v1.16 boundary legible and gives monitors exact artifacts to police.
+Use a conservative, executable lane first: WASI Preview 1 stdin/stdout JSON through Wasmtime. That path is less elegant than direct exports or WIT/component model, but it minimizes ABI complexity, works with Rust today, gives Zig a realistic stretch path, and lets hostile/determinism probes target concrete behavior.
+
+---
+*Research written: 2026-05-25*

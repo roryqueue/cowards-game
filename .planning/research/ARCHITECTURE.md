@@ -1,55 +1,68 @@
-# Architecture Research: v1.17 Python Strategy Runtime Pilot
+# Architecture Research: v1.21 WASM/WASI Multi-Language Runtime Candidate
 
 **Project:** Coward's Game
-**Milestone:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
-**Researched:** 2026-05-24
+**Milestone:** v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
+**Researched:** 2026-05-25
 
-## Existing Baseline
+## Recommended Architecture
 
-v1.16 promoted the normal topology:
+v1.21 should add WASM/WASI as a runtime-service implementation lane, not as a backend language and not as a replacement for Go orchestration. The end-to-end target flow is:
 
-```text
-web frontend -> Go backend -> isolated JS/TS Strategy runtime service
-```
+`signed-in user -> web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> runtime-wasm-wasi implementation -> Wasmtime -> immutable Rust WASM artifact`
 
-TypeScript remains accepted only as frontend, isolated JS/TS runtime service, runtime adapter support, parity/test/fixture/rollback support, quarantined lifecycle code, or explicitly deferred product surfaces. Go owns normal backend orchestration, persistence-facing API behavior, Match lifecycle, Chronicle persistence handoff, MatchSet scoring/status refresh, and selected public evidence delivery.
+## ABI Choice
 
-## Target v1.17 Shape
+Use WASI Preview 1 stdin/stdout JSON envelopes for v1.21.
 
-```text
-web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation
-                                                              |-> JS/TS runtime implementation
-                                                              |-> Python experimental implementation
-```
+Why:
+- Rust `wasm32-wasip1` is locally installed and officially supported as a Rust target.
+- WASI 0.1/P1 remains more widely supported among runtimes than component model P2 for simple command-style execution.
+- JSON envelopes reuse the existing runtime ABI validation mindset.
+- Stdin/stdout is simple to prove with malformed JSON, oversized output, timeout/fuel, and no-fallback probes.
 
-The Runtime Broker may still be implemented inside the existing runtime service process during v1.17, but the contract should be concrete enough that a future broker can front or replace it without changing Go orchestration, persistence, scoring, or public evidence semantics.
+Tradeoffs:
+- Stdin/stdout is process-style and less elegant than direct exports.
+- Direct exports would require guest memory allocation/marshalling design.
+- Component model/WIT is the long-term interop direction, but introduces more toolchain and binding risk than this milestone needs.
 
-## New Or Modified Components
+## Integration Points
 
-- Runtime registry artifact: machine-readable registry for JS/TS and Python implementations.
-- Broker contract metadata: interface, health, selection, versioning, authority, package policy, and failure taxonomy.
-- Strategy artifact schemas: source format expands beyond JS/TS and includes Python compile/package/eligibility metadata.
-- Python validation path: parse/compile/policy checks with public-safe diagnostics.
-- Python runtime implementation: hardened experimental subprocess host behind the runtime ABI.
-- Runtime service selector: chooses JS/TS or Python implementation from runtime metadata and registry.
-- Go client hardening: accepts Python metadata only through schemas and rejects counted/ranked eligibility.
-- Workshop proof path: Python Starter Strategy and non-counted MatchSet/replay proof.
-- Monitors/topology: fail on registry drift, ABI drift, Python execution outside runtime boundary, backend ownership creep, leaks, and premature counted eligibility.
+- `packages/spec/src/runtime.ts`: add language/runtime ids, metadata, eligibility, limits, compatibility keys, and non-counted semantics.
+- `packages/spec/src/schemas.ts` and `packages/spec/src/types.ts`: add source/artifact formats and immutable artifact fields if current Strategy Revision shape needs extension.
+- New runtime package or module such as `packages/runtime-wasm-wasi`: validation, compile/preflight, metadata, artifact hashing, Wasmtime runner, failure taxonomy, and tests.
+- `apps/runtime-service/src/runtime-config.ts` and `apps/runtime-service/src/execute-match.ts`: select WASM/WASI runtime implementation behind the broker without changing Go ownership.
+- `apps/web/app/workshop/*`: gated Rust author/save UI and safe samples, with non-counted exhibition alpha copy.
+- `apps/go-backend/*`: preserve runtime-service-only execution, validate runtime metadata/artifact hashes, create non-counted exhibitions, and keep public evidence Go-owned.
+- `scripts/check-boundary-monitors.ts` and topology/sandbox scripts: add WASM/WASI registry, no-fallback, privacy, artifact, and production-claim monitors.
+
+## Artifact Contract
+
+Rust and optional Zig Strategy Revisions should carry:
+- Source hash and source bytes for owner-private source.
+- WASM artifact hash, bytes, target triple, WASI profile, and compile evidence.
+- Runtime adapter id/version and ABI envelope id/version.
+- Toolchain identity and compile command summary.
+- Immutable eligibility snapshot used for Match execution.
+- Public-safe semantics indicating non-counted exhibition alpha/beta only.
+
+## Runtime Controls
+
+Wasmtime execution should start with:
+- No inherited env.
+- No preopened host directories by default.
+- Network disabled/not inherited.
+- Deterministic fuel and bounded timeout behavior.
+- Memory/table/instance/resource limits where practical.
+- Output byte caps and schema validation.
+- Redacted diagnostics.
 
 ## Build Order
 
-1. Baseline and broker/registry contract.
-2. Artifact metadata and eligibility.
-3. Python submission validation.
-4. Python runtime execution behind ABI.
-5. Go non-counted orchestration and eligibility.
-6. Workshop Starter Strategy and replay proof.
-7. Final monitors, topology, privacy, and promotion gate.
+1. Register and specify the WASM/WASI candidate lane and ABI.
+2. Prove local Rust compile/artifact flow before Workshop product UI.
+3. Implement runtime-service execution against immutable WASM artifacts.
+4. Add hostile/determinism probes and monitor gates.
+5. Add signed-in product proof and conservative promotion decision.
 
-## Boundary Rules
-
-- Runtime implementation may execute Strategy code only behind the runtime ABI.
-- Go may orchestrate and validate metadata, but not execute Strategy source.
-- Web/API may author, submit, and display safe metadata, but not execute Strategy source.
-- Public outputs must be projections, not runtime internals.
-- Python failures must be visible as classified runtime/system failures, not masked by fallback.
+---
+*Research written: 2026-05-25*

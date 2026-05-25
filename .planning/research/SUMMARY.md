@@ -1,83 +1,73 @@
 # Project Research Summary
 
 **Project:** Coward's Game
-**Milestone:** v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
-**Domain:** Docker/container runtime candidate execution, fail-loud gVisor/runsc readiness, hostile Strategy probes, timeout budgets, Python exhibition beta reliability, degraded-state UX, public-safe proof evidence
+**Milestone:** v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
+**Domain:** WASM/WASI runtime candidate execution, immutable compiled Strategy artifacts, Rust non-counted exhibition alpha, Zig stretch readiness, hostile/determinism probes, signed-in public-safe proof evidence
 **Researched:** 2026-05-25
-**Confidence:** High for repo-local v1.19 baseline, Docker availability, and container adapter fit; medium for final latency improvements until measured in the target local stack; low for gVisor/runsc executable proof because `runsc` is not currently installed.
+**Confidence:** High for local Rust/Wasmtime feasibility; medium for full end-to-end Rust product proof until implemented; medium for Zig because local tooling exists but the shared ABI still needs proof; low for counted/ranked promotion because v1.21 intentionally does not target it.
 
 ## Executive Summary
 
-v1.20 should build directly on v1.19 instead of reopening the Python promotion question. Python is already non-counted exhibition beta, JS/TS remains the counted Strategy path, and the Strategy Execution Service / Runtime Broker boundary is the only place hostile Strategy execution belongs.
+v1.21 should make WASM/WASI the next serious multi-language runtime candidate without overclaiming. The shortest honest executable path is WASI Preview 1 stdin/stdout JSON envelopes through Wasmtime, with Rust as the first net-new compiled language and Zig as a gated stretch target. Direct exports and the component model remain important future directions, but they add memory-marshalling and WIT/tooling complexity that would distract from proving immutable artifacts, hostile-code boundaries, replay safety, and signed-in exhibition evidence.
 
-The best stronger runtime candidate for this machine is Docker/container subprocess. Docker is locally available (`29.4.0`), the repo already has a `container-subprocess` adapter, and the Docker lane can provide real executable evidence for read-only root filesystem, network denial, tmpfs write space, dropped capabilities, PID/memory/CPU limits, no shell, strict IPC, and no-fallback behavior. gVisor/runsc remains relevant as a stronger future candidate, but `runsc` is not currently installed, so v1.20 should keep it fail-loud rather than pretending availability.
-
-The product reliability side should convert the v1.19 proof discoveries into explicit budgets and evidence. Per-Strategy deterministic caps, whole-Match execution time, MatchSet/job orchestration time, runtime-service HTTP timeout, and browser proof timeout are separate budgets and should be documented, tested, and surfaced where useful. Python exhibition beta can become more trustworthy by measuring JS/TS-vs-Python and Python-vs-Python MatchSets, stabilizing avoidable latency, making slow/running/degraded/timeout states legible, and proving private-data-safe result/replay evidence under signed-in use.
+Local tooling supports a real proof: Rust `wasm32-wasip1` is installed, Zig is installed, Wasmtime is installed, and `wasm-tools` is installed. That means v1.21 can aim for an end-to-end Rust alpha rather than a paper design. The milestone should still remain conservative: JS/TS stays the counted Strategy path, Python stays non-counted exhibition beta, Rust/WASM can at most become non-counted exhibition alpha/beta, and Zig should either pass the same ABI proof or fail loudly.
 
 ## Stack Findings
 
-- Preserve the v1.19 topology: web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s).
-- Docker `run` supports the controls this repo already requests for the container candidate: `--network none`, `--read-only`, `--tmpfs`, `--memory`, `--cpus`, `--pids-limit`, `--cap-drop`, and `--security-opt no-new-privileges`.
-- Docker documentation is explicit that privileged containers are not secure sandboxes; v1.20 should avoid privileged execution and should not call container evidence production sandbox certification.
-- Docker Engine security guidance supports reducing Linux capabilities and avoiding unnecessary privileges, which aligns with the candidate controls already in `container-subprocess-adapter.ts`.
-- gVisor/runsc can run Docker containers with `--runtime=runsc` when installed and configured, and gVisor's architecture uses a userspace application kernel to interpose system calls. That is a stronger isolation story than ordinary Docker, but it is not locally available right now.
-- Node child process controls remain relevant for subprocess and container adapter behavior: timeout, stdio/maxBuffer, environment, shell disabled, and child process lifecycle classification.
+- Rust `wasm32-wasip1` is a practical first target. Rust docs describe it as a WebAssembly compilation target for WASI Preview 1, with `rustup target add wasm32-wasip1` as the normal install path and `rustc --target wasm32-wasip1` as the build path.
+- WASI docs identify WASI 0.2/component model as the future, but also say WASI 0.1/P1 support is more widespread among runtimes and widely used today.
+- Wasmtime supports fuel and interruption mechanisms; fuel is deterministic for the same program and input when other nondeterminism is absent.
+- Wasmtime exposes WASI context controls for stdin/stdout/env/preopens and broader resource configuration.
+- Zig docs show first-class WASI compilation using `zig build-exe ... -target wasm32-wasi`, but v1.21 should prove the Coward's Game ABI before claiming Zig execution.
+- Node `node:wasi` documentation warns that Node's threat model does not provide secure sandboxing like some WASI runtimes; it must remain forbidden as a hostile-code sandbox claim.
 
 ## Feature Findings
 
-- Table stakes are: v1.20 baseline/decision contract, executable Docker/container candidate lane, hostile probe parity against subprocess and container, no-fallback drills, timeout/reliability budget model, latency measurement, degraded UX and public-safe evidence, signed-in proof, JS/TS regression protection, and explicit promotion decisions.
-- The primary implementation should make `pnpm sandbox:evaluate:container` and related artifacts more than availability documentation: it should run the hostile matrix under the real container adapter when Docker is available, record timing/failure taxonomy, and fail loudly when required evidence is missing.
-- The gVisor/runsc lane should remain strict: if `runsc` is unavailable or no runsc adapter exists, the command should fail and produce a non-promotion record rather than substituting subprocess or Docker evidence.
-- Python exhibition beta reliability should be measured at the product level, not only per runtime call. The proof should include mixed JS/TS-vs-Python and Python-vs-Python MatchSets because v1.19 showed whole-Match cost is what users experience.
-- Retry semantics must be explicit and safe: Strategy-caused runtime violations should not become blind retries; retryable system/runtime-service failures should be distinguishable from player-caused failures and from operator/degraded states.
-- Public evidence should describe status categories and evidence limits without exposing Strategy source, private memories, objectives, stderr, stack traces, host paths, package paths, tokens, DB DSNs, sessions, or private runtime internals.
+- Table stakes are: WASM/WASI candidate contract, immutable artifact model, Rust compile/validation path, Rust runtime-service execution, Rust non-counted exhibition labels, hostile/determinism probes, Zig gated stretch readiness, signed-in proof, JS/TS regression safety, public privacy safety, and explicit conservative promotion decisions.
+- The first ABI should be WASI Preview 1 stdin/stdout JSON envelope because it is executable now and can reuse schema validation, output caps, malformed JSON probes, and no-fallback drills.
+- Rust Strategy Revisions need metadata that separates owner-private source from immutable Match artifact: source hash/bytes, artifact hash/bytes, target triple, WASI profile, compile/toolchain evidence, runtime adapter metadata, validation status, and non-counted eligibility.
+- Match execution must use immutable artifact bytes/hash, not mutable source.
+- Zig should use the same ABI only if compile/runtime evidence passes. Otherwise, write fail-loud readiness artifacts and do not substitute Rust/JS/TS behavior.
 
 ## Architecture Findings
 
-- Runtime candidate selection must remain exact-match and fail-closed through the Runtime Broker registry and ABI metadata.
-- Candidate lane artifacts should be both machine-readable and human-readable so boundary monitors can reject stale, skipped, silently substituted, or overclaimed evidence.
-- Runtime service and Go orchestration should keep ownership separation: Go owns lifecycle, persistence-facing behavior, scoring, public evidence, and promotion decisions; runtime service owns hostile Strategy execution only through ABI envelopes and registered implementations.
-- Timeout budgets should be represented as named layers, not one global constant:
-  - Strategy call budget: deterministic per-call cap enforced by runtime adapter.
-  - Match execution budget: bounded cost for all Strategy calls needed to complete one Match.
-  - MatchSet/job orchestration budget: bounded queue/run-once/job lifecycle time.
-  - Runtime-service HTTP budget: Go client transport timeout for a whole runtime-service request.
-  - Browser proof budget: Playwright/user-proof allowance that includes service startup and UI navigation.
-- Topology and proof checks should distinguish fixture-mode parity from live signed-in proof data to avoid false confidence.
-- Monitoring should extend existing `pnpm boundary:monitors`, `pnpm sandbox:evaluate:*`, and topology scripts rather than adding a parallel governance system.
+- Runtime-service should become the owner of WASM/WASI execution, while Go remains owner of orchestration, persistence-facing behavior, Match lifecycle, scoring, retry policy, public evidence, and promotion decisions.
+- The runtime registry should select WASM/WASI by exact language/runtime/adapter/ABI/artifact/package match and fail closed on mismatch.
+- Public output should expose language/runtime labels, non-counted status, hashes, and evidence summaries only. It must not expose source, StrategyMemory, SoldierMemory, objective payloads, stderr, stack, host paths, env, tokens, DB DSNs, package paths, artifact internals, or private runtime internals.
+- Hostile probes should cover filesystem/preopen denial, network denial, clock/time/random denial, memory caps/growth, fuel/timeout, trap/panic/abort, malformed JSON/ABI result, oversized stdout/stderr/result, invalid actions/schema, package/import/toolchain drift, no-fallback, and redaction.
 
 ## Watch Out For
 
-- Do not execute Python or JS/TS Strategy code in web/API/Go.
-- Do not let Python own backend routes, persistence, job lifecycle, Match completion, scoring, public evidence, retry policy, or fallback behavior.
-- Do not let stronger candidate evidence regress JS/TS counted support.
-- Do not call Docker/container evidence production sandbox certification.
-- Do not treat `runsc` as passed when it is unavailable or when no runsc adapter executes the hostile matrix.
-- Do not allow arbitrary PyPI/package installs.
-- Do not accept stopped runtime service, stopped Python runtime, skipped container, skipped runsc, stale artifacts, or silent substitution as passing evidence.
-- Do not run unbounded local stress tests; use bounded repeated proof and latency measurement.
+- Do not promote Rust/Zig/WASM to ranked, ladder, counted, gauntlet, broad production multi-language support, or production sandbox certification.
+- Do not execute Strategy code in web/API/Go.
+- Do not use mutable source for Match execution when a WASM artifact contract exists.
+- Do not accept Node `node:wasi` as an untrusted-code sandbox.
+- Do not let Rust/Zig own backend routes, persistence, job lifecycle, Match completion, scoring, public evidence, retry policy, or fallback behavior.
+- Do not silently skip Zig or substitute another language when Zig evidence is unavailable.
+- Do not run unbounded local stress tests.
 - Do not expose private Strategy data or private runtime diagnostics in public MatchSet or replay evidence.
 
 ## Recommended Phase Structure
 
-1. Phase 132: v1.20 Baseline, Candidate Decision, and Budget Contract.
-2. Phase 133: Executable Container Runtime Candidate Lane.
-3. Phase 134: Hostile Probe and No-Fallback Parity Across Subprocess and Container.
-4. Phase 135: Timeout, Latency, and Reliability Budget Model.
-5. Phase 136: Exhibition Execution Stabilization and Retry Semantics.
-6. Phase 137: Degraded-State UX and Public-Safe Reliability Evidence.
-7. Phase 138: Signed-In Reliability Proof and JS/TS Regression Gate.
-8. Phase 139: Promotion Decision, Audit, Archive, and Tag.
+1. Phase 140: v1.21 Baseline, WASM/WASI ABI Decision, and Artifact Contract.
+2. Phase 141: Rust Compile Validation and Immutable WASM Artifact Pipeline.
+3. Phase 142: WASM/WASI Runtime Broker Execution Lane.
+4. Phase 143: Rust Workshop UX, Samples, and Non-Counted Exhibition Eligibility.
+5. Phase 144: WASM/WASI Hostile Probe and Determinism Evidence.
+6. Phase 145: Zig Stretch Readiness and Optional Shared-ABI Proof.
+7. Phase 146: Signed-In Rust Exhibition Proof and JS/TS Regression Gate.
+8. Phase 147: Promotion Decision, Audit, Archive, and Tag.
 
 ## Sources Consulted
 
-- Repo-local planning archive through v1.19, especially `.planning/milestones/v1.19-*` and `.planning/artifacts/v1.19-*`.
-- Repo-local runtime and monitor code: `packages/runtime-js/src/sandbox-evaluation.ts`, `packages/runtime-js/src/container-subprocess-adapter.ts`, `scripts/evaluate-runtime-sandbox.ts`, `apps/runtime-service/src/runtime-config.ts`, `apps/go-backend/runtime_service_client.go`, and `apps/web/e2e/v1-19-exhibition-proof.spec.ts`.
-- Docker run CLI reference for read-only filesystem, tmpfs, memory, CPU, PID, capability, and network controls: https://docs.docker.com/reference/cli/docker/container/run
-- Docker Engine security guidance for capability reduction and avoiding privileged containers: https://docs.docker.com/engine/security/
-- gVisor Docker quick start for `--runtime=runsc` usage when installed: https://gvisor.dev/docs/user_guide/quick_start/docker/
-- gVisor overview and architecture guide for userspace-kernel sandbox framing: https://gvisor.dev/docs/ and https://gvisor.dev/docs/architecture_guide/intro/
-- Node child process documentation for process timeout, stdio buffering, shell, environment, and sync child process behavior: https://nodejs.org/api/child_process.html
+- Repo-local planning archive through v1.20, especially `.planning/milestones/v1.20-*` and `.planning/artifacts/v1.20-*`.
+- Repo-local runtime and monitor code: `packages/spec/src/runtime.ts`, `packages/spec/src/runtime-execution-service.ts`, `apps/runtime-service/src/runtime-config.ts`, `apps/runtime-service/src/execute-match.ts`, `packages/runtime-python`, `packages/runtime-js/src/sandbox-evaluation.ts`, and `scripts/check-boundary-monitors.ts`.
+- Rust `wasm32-wasip1` docs: https://doc.rust-lang.org/stable/rustc/platform-support/wasm32-wasip1.html
+- WASI interfaces overview: https://wasi.dev/interfaces
+- Wasmtime interruption/fuel docs: https://docs.wasmtime.dev/examples-interrupting-wasm.html
+- Wasmtime WASI context docs: https://docs.wasmtime.dev/api/wasmtime_wasi/struct.WasiCtxBuilder.html
+- Zig WASI docs: https://ziglang.org/documentation/master/#WASI
+- Node WASI warning: https://nodejs.org/api/wasi.html
 
 ---
 *Research summary written: 2026-05-25*

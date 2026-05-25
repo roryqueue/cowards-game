@@ -1,54 +1,64 @@
-# Feature Research: v1.17 Python Strategy Runtime Pilot
+# Feature Research: v1.21 WASM/WASI Multi-Language Runtime Candidate
 
 **Project:** Coward's Game
-**Milestone:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
-**Researched:** 2026-05-24
+**Milestone:** v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
+**Researched:** 2026-05-25
 
 ## Table Stakes
 
-### Broker Contract
+### WASM/WASI Candidate Contract
 
-- Runtime registry lists supported implementations and their exact authority.
-- Runtime service validates request and response envelopes consistently for JS/TS and Python.
-- Unknown runtime target, ABI drift, stale registry, or unavailable implementation fails closed.
-- Runtime service health identifies itself as runtime-only, not backend authority.
+- WASM/WASI runtime target is registered behind the Strategy Execution Service / Runtime Broker.
+- Runtime selection is exact-match and fail-closed on ABI, language, adapter, artifact hash, package policy, or version mismatch.
+- WASI Preview 1 stdin/stdout JSON is documented as the v1.21 executable ABI.
+- Direct exports and component model are documented as future ABI candidates, not v1.21 product claims.
 
-### Artifact Metadata
+### Immutable Artifact Model
 
-- Strategy Revisions and Strategy Artifacts carry language id/version, runtime target, adapter version, source format, package policy, compile metadata, validation status, artifact hash, and eligibility flags.
-- Public summaries show only source-safe language/runtime labels.
-- Compatibility keys include language/runtime/package/compile dimensions.
+- Rust Strategy source validates/compiles into an immutable WASM artifact at submission or explicit local compile proof time.
+- Match execution uses artifact bytes/hash/metadata, not mutable source.
+- Artifact metadata includes language id/version, runtime target, adapter version, WASI profile, ABI envelope version, compile command/toolchain evidence, artifact hash, validation status, and non-counted eligibility.
+- Public summaries expose safe labels and hashes only, not source, memory, stderr, stack, host paths, env, package paths, or private runtime internals.
 
-### Python Validation
+### Rust Exhibition Alpha
 
-- Workshop can validate and submit Python source in an explicitly experimental path.
-- Validation catches syntax/compile errors, missing required functions, forbidden capabilities/imports, unsupported package metadata, and source limits.
-- Diagnostics are public-safe and do not echo private source, stack, stderr, host paths, env, tokens, DB DSNs, package paths, or private runtime internals.
+- User can create/save one Rust Strategy Revision as non-counted exhibition alpha.
+- User can choose safe starter Rust samples.
+- Runtime-service can execute Rust WASM through the same Match execution boundary as other runtimes.
+- JS/TS-vs-Rust and Rust-vs-Rust non-counted exhibitions can complete and open result/replay evidence.
 
-### Python Execution
+### Zig Stretch
 
-- Python execution happens only behind the runtime ABI and runtime service/broker boundary.
-- Python supports the canonical Strategy methods needed for full Match execution.
-- Timeouts, crashes, malformed IPC, invalid output, oversized payloads, stderr/stack, and forbidden capability behavior map to the existing failure taxonomy.
-- Python runtime has no DB, route, job lifecycle, Match completion, Chronicle persistence, MatchSet scoring, or public evidence authority.
+- Developer can run a Zig readiness/preflight command.
+- If local compile/runtime proof passes, Zig can use the same WASI Preview 1 JSON ABI and non-counted exhibition semantics.
+- If tooling or ABI proof fails, artifacts record fail-loud unavailable/non-promotion evidence.
 
-### Non-Counted Proof
+### Hostile And Determinism Probes
 
-- Python can be run in a non-counted Workshop or exhibition-style MatchSet.
-- Result and replay surfaces label Python as experimental and non-counted.
-- Ranked/ladder/counted gates continue to reject Python.
-- Replay board realism checks prove visible Soldiers and terrain are in bounds.
+- Filesystem/preopen denial, network denial, clock/time/random denial, memory growth/caps, fuel/timeout, trap/panic/abort, malformed JSON/ABI result, oversized stdout/stderr/result, invalid actions/schema, toolchain drift, package/import drift, no-fallback, and privacy redaction are covered where practical.
+- Wasmtime deterministic fuel is preferred over wall-time-only timeout claims for deterministic execution evidence.
+- Runtime failures distinguish Strategy violations from system failures and retry/no-retry behavior.
+
+### Signed-In Proof
+
+- Proof creates/signs into a local account.
+- Proof saves one JS/TS Strategy Revision and one Rust Strategy Revision compiled to immutable WASM.
+- Proof creates non-counted JS/TS-vs-Rust and Rust-vs-Rust exhibitions, optionally Rust-vs-Zig if Zig passes.
+- Proof verifies Go -> Runtime Broker/runtime-service -> WASM/WASI runtime implementation, result/replay labels, replay plausibility, public-safe evidence, no silent fallback, and JS/TS regression safety.
 
 ## Differentiators
 
-- A real Python Starter Strategy gives the milestone a user-facing proof instead of only contract work.
-- Runtime registry drift monitors make the future broker contract auditable.
-- Non-counted MatchSet evidence proves end-to-end flow while preserving competitive integrity.
+- Immutable WASM artifacts become the long-term product direction for compiled languages.
+- Rust gives the first serious compiled-language proof without creating a bespoke runtime per language.
+- Zig stretch can validate whether the ABI is genuinely language-neutral rather than Rust-shaped.
 
 ## Anti-Features
 
-- Python should not appear as a normal public counted language.
-- Python should not silently fall back to JS/TS execution.
-- Python should not create a new backend or worker ownership path.
-- Python should not install packages or access filesystem/network/shell capabilities.
-- Python validation should not execute Strategy logic in web/API/Go.
+- Rust/Zig/WASM must not appear as counted/ranked/ladder-capable.
+- Wasmtime or WASI evidence must not be described as production sandbox certification.
+- Node `node:wasi` must not be accepted as the runtime sandbox.
+- Runtime-service cannot silently fall back to JS/TS or Python when WASM/WASI fails.
+- Go cannot compile or execute Strategy source as backend behavior.
+
+---
+*Research written: 2026-05-25*
