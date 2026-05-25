@@ -50,6 +50,7 @@ export interface WorkshopTemplateSummary {
     | "template:sentinel"
     | "template:python-tactical"
     | "template:rust-wasi-tactical"
+    | "template:zig-wasi-tactical"
   label: string
   sourceFormat: StrategyArtifactSourceFormat
   experimental?: boolean | undefined

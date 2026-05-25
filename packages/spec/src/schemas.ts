@@ -797,11 +797,13 @@ export const StrategyRevisionSchema = z
         message: "WASM/WASI compiled artifact ABI version must match runtime",
       })
     }
-    if (isWasmWasi && artifact?.targetTriple !== "wasm32-wasip1") {
+    const expectedWasmTarget =
+      revision.runtime.language.id === "zig" ? "wasm32-wasi" : "wasm32-wasip1"
+    if (isWasmWasi && artifact?.targetTriple !== expectedWasmTarget) {
       ctx.addIssue({
         code: "custom",
         path: ["metadata", "compiledArtifact", "targetTriple"],
-        message: "Rust WASM/WASI artifacts must target wasm32-wasip1",
+        message: `WASM/WASI artifacts for ${revision.runtime.language.id} must target ${expectedWasmTarget}`,
       })
     }
     if (artifact !== undefined && artifact.sourceHash !== revision.sourceHash) {

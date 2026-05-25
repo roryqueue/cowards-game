@@ -3,9 +3,12 @@ import { writeFileSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
+  buildZigStrategyRevision,
   buildRustStrategyRevision,
+  compileZigWasmArtifact,
   compileRustWasmArtifact,
   validateRustStrategySource,
+  validateZigStrategySource,
   zigReadinessEvidence,
 } from "../packages/runtime-wasm-wasi/src/validation.ts"
 import {
@@ -19,19 +22,27 @@ const repoRoot = path.resolve(__dirname, "..")
 const checkMode = process.argv.includes("--check")
 const artifactPath = path.join(
   repoRoot,
-  ".planning/artifacts/v1.21-wasm-wasi-hostile-probe-evidence.json",
+  ".planning/artifacts/v1.22-wasm-wasi-hardening-evidence.json",
 )
 const markdownPath = path.join(
   repoRoot,
-  ".planning/artifacts/v1.21-wasm-wasi-hostile-probe-evidence.md",
+  ".planning/artifacts/v1.22-wasm-wasi-hardening-evidence.md",
 )
 const zigArtifactPath = path.join(
   repoRoot,
-  ".planning/artifacts/v1.21-zig-readiness-evidence.json",
+  ".planning/artifacts/v1.22-zig-readiness-evidence.json",
 )
 const zigMarkdownPath = path.join(
   repoRoot,
-  ".planning/artifacts/v1.21-zig-readiness-evidence.md",
+  ".planning/artifacts/v1.22-zig-readiness-evidence.md",
+)
+const abiDecisionPath = path.join(
+  repoRoot,
+  ".planning/artifacts/v1.22-abi-evolution-decision.md",
+)
+const promotionDecisionPath = path.join(
+  repoRoot,
+  ".planning/artifacts/v1.22-promotion-decision.md",
 )
 
 type ProbeStatus = "pass" | "fail"
@@ -87,6 +98,50 @@ fn main() {
         );
     } else {
         println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
+    }
+}
+`
+
+const zigSource = `
+const Iovec = extern struct { buf: [*]u8, buf_len: usize };
+const Ciovec = extern struct { buf: [*]const u8, buf_len: usize };
+
+extern "wasi_snapshot_preview1" fn fd_read(u32, *const Iovec, usize, *usize) u16;
+extern "wasi_snapshot_preview1" fn fd_write(u32, *const Ciovec, usize, *usize) u16;
+
+fn contains(haystack: []const u8, needle: []const u8) bool {
+    if (needle.len == 0) return true;
+    if (haystack.len < needle.len) return false;
+    var index: usize = 0;
+    while (index <= haystack.len - needle.len) : (index += 1) {
+        var matched = true;
+        var offset: usize = 0;
+        while (offset < needle.len) : (offset += 1) {
+            if (haystack[index + offset] != needle[offset]) {
+                matched = false;
+                break;
+            }
+        }
+        if (matched) return true;
+    }
+    return false;
+}
+
+fn writeAll(bytes: []const u8) void {
+    var written: usize = 0;
+    var iov = Ciovec{ .buf = bytes.ptr, .buf_len = bytes.len };
+    _ = fd_write(1, &iov, 1, &written);
+}
+
+export fn _start() void {
+    var input_buf: [16384]u8 = undefined;
+    var iov = Iovec{ .buf = &input_buf, .buf_len = input_buf.len };
+    var nread: usize = 0;
+    _ = fd_read(0, &iov, 1, &nread);
+    if (contains(input_buf[0..nread], "\\"methodName\\":\\"soldierBrain\\"")) {
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
+    } else {
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
     }
 }
 `
@@ -260,7 +315,11 @@ fn main() {
 
 const buildReport = () => {
   const compiled = compileRustWasmArtifact(rustSource)
+  const compiledZig = compileZigWasmArtifact(zigSource)
   const revision = buildRustStrategyRevision({ source: rustSource })
+  const zigRevision = compiledZig.ok
+    ? buildZigStrategyRevision({ source: zigSource })
+    : null
   const selectResponse = runWasmWasiStrategyMethodSync({
     revision,
     methodName: "selectActivations",
@@ -294,6 +353,17 @@ const buildReport = () => {
     methodName: "soldierBrain",
     input: soldierBrainInput,
   })
+  const zigSoldierResponse =
+    zigRevision === null
+      ? null
+      : runWasmWasiStrategyMethodSync({
+          revision: zigRevision,
+          methodName: "soldierBrain",
+          input: soldierBrainInput,
+          timeoutMs: 1_000,
+          stdoutBytes: 32 * 1024,
+          stderrBytes: 32 * 1024,
+        })
   const probes: WasmWasiProbeResult[] = [
     runProbe(
       "rust-compile-valid-artifact",
@@ -318,6 +388,46 @@ const buildReport = () => {
         soldierResponse.ok &&
         (soldierResponse.value as { action?: { type?: string } }).action
           ?.type === "TURN_TO_STONE",
+    ),
+    runProbe(
+      "zig-toolchain-path-aware-preflight",
+      "Zig binary/version/target preflight uses PATH-aware detection",
+      () => {
+        const evidence = zigReadinessEvidence()
+        return evidence.ok && evidence.compileProof && evidence.runtimeProof
+      },
+      "preflight",
+    ),
+    runProbe(
+      "zig-compile-valid-artifact",
+      "Zig no-std source compiles to wasm32-wasi artifact metadata",
+      () =>
+        compiledZig.ok &&
+        compiledZig.artifact?.format === "wasm" &&
+        compiledZig.artifact.targetTriple === "wasm32-wasi",
+      "compile",
+    ),
+    runProbe(
+      "zig-soldier-brain-json-envelope",
+      "Zig WASI Preview 1 stdin/stdout envelope returns soldier action",
+      () =>
+        zigSoldierResponse !== null &&
+        zigSoldierResponse.ok &&
+        (zigSoldierResponse.value as { action?: { type?: string } }).action
+          ?.type === "TURN_TO_STONE",
+    ),
+    runProbe(
+      "zig-std-host-capability-denied",
+      "Zig std-backed host capability starter is rejected before exposure",
+      () => {
+        const report = validateZigStrategySource(
+          `${zigSource}\nconst std = @import("std");`,
+        )
+        return (
+          !report.valid && report.forbiddenPatterns.includes('@import("std")')
+        )
+      },
+      "compile",
     ),
     validationDenialProbe(
       "filesystem-denied-validation",
@@ -385,8 +495,8 @@ const buildReport = () => {
   ]
 
   return {
-    schemaVersion: "v1.21-wasm-wasi-hostile-probe-evidence",
-    milestone: "v1.21",
+    schemaVersion: "v1.22-wasm-wasi-hardening-evidence",
+    milestone: "v1.22",
     generatedAt: "2026-05-25T00:00:00.000Z",
     runtimeLane: "runtime-wasm-wasi-wasmtime-preview1",
     abi: "WASI Preview 1 stdin/stdout JSON envelope",
@@ -410,7 +520,7 @@ const buildMarkdown = (report: ReturnType<typeof buildReport>): string => {
         `| ${probe.id} | ${probe.layer} | ${probe.status} | ${probe.observed} |`,
     )
     .join("\n")
-  return `# v1.21 WASM/WASI Hostile Probe Evidence
+  return `# v1.22 WASM/WASI Runtime Hardening Evidence
 
 Status: ${report.summary.fail === 0 ? "PASS" : "FAIL"}
 
@@ -424,24 +534,54 @@ ${rows}
 
 const buildZigMarkdown = (
   evidence: ReturnType<typeof zigReadinessEvidence>,
-): string => `# v1.21 Zig Readiness Evidence
+): string => `# v1.22 Zig Readiness Evidence
 
-Status: ${evidence.ok ? "TOOLCHAIN DETECTED, NOT PROMOTED" : "UNAVAILABLE"}
+Status: ${evidence.ok ? "COMPILE/RUNTIME PROOF PASSED, NON-COUNTED ALPHA ONLY" : "UNAVAILABLE"}
 
 Target: ${evidence.target}
+Artifact hash: ${evidence.artifactHash ?? "none"}
+Resolved path: ${evidence.resolvedPath ?? "none"}
 
 ${evidence.message}
 
-Zig remains a stretch path. It must not be exposed as working unless the shared compile/artifact/runtime proof passes explicitly.
+Zig remains non-counted exhibition alpha. It must not be counted, ranked, ladder, gauntlet, or production-sandbox promoted in v1.22.
+`
+
+const abiDecisionMarkdown = `# v1.22 ABI Evolution Decision
+
+Decision: keep WASI Preview 1 stdin/stdout JSON as the only candidate execution path for v1.22 and defer ABI migration to v1.23+.
+
+Current path: Preview 1 stdin/stdout JSON is plain, schema-validatable, compiler-agnostic, easy to cap, and already preserves the Go/runtime-service ownership boundary.
+
+Direct exports: attractive for lower overhead and simpler stdout parsing, but it requires a stricter memory ABI, string/buffer ownership rules, canonical allocation contracts, and per-language glue. No v1.22 proof is strong enough to move execution to direct exports.
+
+Component model/WIT: best long-term shape for typed host/guest contracts, but toolchain maturity and language support need a separate milestone. It should remain a research candidate, not a hidden runtime path.
+
+Recommendation for v1.23: stay on stdin/stdout JSON unless a dedicated direct-export or component-model proof demonstrates deterministic memory ownership, schema validation, resource caps, and parity for Rust plus Zig without disrupting JS/TS counted play.
+`
+
+const promotionDecisionMarkdown = `# v1.22 Promotion Decision
+
+Decision: no Rust, Zig, or WASM/WASI counted, ranked, ladder, gauntlet, or production-sandbox promotion.
+
+Rust remains non-counted exhibition alpha. It continues to compile to immutable WASM/WASI artifacts and execute through runtime-service/Runtime Broker/Wasmtime.
+
+Zig is exposed only as non-counted exhibition alpha when v1.22 readiness evidence shows binary detection, wasm32-wasi artifact compile, Wasmtime execution, and ABI-valid Match behavior. If any proof fails in a target environment, Zig must fail loud and remain unavailable there.
+
+Python remains non-counted exhibition beta. JS/TS remains the counted Strategy path. Go continues to own orchestration, persistence-facing backend behavior, Match lifecycle, scoring, public evidence, retry policy, and promotion decisions.
+
+Sandbox language: v1.22 improves candidate-readiness evidence only. It is not production sandbox certification.
 `
 
 const report = buildReport()
+const zigEvidence = zigReadinessEvidence()
 const zig = {
-  schemaVersion: "v1.21-zig-readiness-evidence",
-  milestone: "v1.21",
+  schemaVersion: "v1.22-zig-readiness-evidence",
+  milestone: "v1.22",
   generatedAt: "2026-05-25T00:00:00.000Z",
-  promotionAllowed: false,
-  evidence: zigReadinessEvidence(),
+  countedPromotionAllowed: false,
+  exhibitionAlphaAllowed: zigEvidence.ok,
+  evidence: zigEvidence,
 } as const
 const reportJson = serialize(report)
 const reportMarkdown = buildMarkdown(report)
@@ -453,11 +593,15 @@ if (checkMode) {
   const currentReportMarkdown = readFileSync(markdownPath, "utf8")
   const currentZigJson = readFileSync(zigArtifactPath, "utf8")
   const currentZigMarkdown = readFileSync(zigMarkdownPath, "utf8")
+  const currentAbiDecision = readFileSync(abiDecisionPath, "utf8")
+  const currentPromotionDecision = readFileSync(promotionDecisionPath, "utf8")
   if (
     currentReportJson !== reportJson ||
     currentReportMarkdown !== reportMarkdown ||
     currentZigJson !== zigJson ||
-    currentZigMarkdown !== zigMarkdown
+    currentZigMarkdown !== zigMarkdown ||
+    currentAbiDecision !== abiDecisionMarkdown ||
+    currentPromotionDecision !== promotionDecisionMarkdown
   ) {
     throw new Error(
       "WASM/WASI evidence artifacts are stale; run pnpm wasm-wasi:evaluate",
@@ -468,6 +612,8 @@ if (checkMode) {
   writeFileSync(markdownPath, reportMarkdown)
   writeFileSync(zigArtifactPath, zigJson)
   writeFileSync(zigMarkdownPath, zigMarkdown)
+  writeFileSync(abiDecisionPath, abiDecisionMarkdown)
+  writeFileSync(promotionDecisionPath, promotionDecisionMarkdown)
 }
 
 if (report.summary.fail > 0) {

@@ -150,12 +150,14 @@ const validateRevisionArtifact = (
       },
     }
   }
+  const expectedTargetTriple =
+    revision.runtime.language.id === "zig" ? "wasm32-wasi" : "wasm32-wasip1"
   if (
     artifact.validationStatus !== "valid" ||
     artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
     artifact.wasiProfile !== "preview1" ||
     artifact.abiEnvelope !== "stdin-stdout-json" ||
-    artifact.targetTriple !== "wasm32-wasip1"
+    artifact.targetTriple !== expectedTargetTriple
   ) {
     return {
       ok: false,

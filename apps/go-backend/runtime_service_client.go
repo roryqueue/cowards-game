@@ -176,8 +176,8 @@ func (client *runtimeServiceClient) executeMatch(ctx context.Context, request ru
 }
 
 func (client *runtimeServiceClient) validateStrategy(ctx context.Context, sourceFormat string, source string, strategyID string) (*runtimeServiceValidationResponse, *runtimeServiceFailure) {
-	if sourceFormat != "rust" {
-		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service validation only supports Rust in v1.21", false, nil)
+	if sourceFormat != "rust" && sourceFormat != "zig" {
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service validation only supports Rust and Zig WASM/WASI sources in v1.22", false, nil)
 	}
 	endpoint := client.endpoint
 	if endpoint == "" {
@@ -223,7 +223,7 @@ func (client *runtimeServiceClient) validateStrategy(ctx context.Context, source
 	if err := json.NewDecoder(bytes.NewReader(payload)).Decode(&decoded); err != nil {
 		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service validation response was malformed", true, map[string]any{"actualBytes": len(payload)})
 	}
-	if decoded.Kind != "strategyValidation" || decoded.SourceFormat != "rust" {
+	if decoded.Kind != "strategyValidation" || decoded.SourceFormat != sourceFormat {
 		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", fmt.Sprintf("Runtime service validation response contract is not supported: status=%d kind=%q sourceFormat=%q.", response.StatusCode, decoded.Kind, decoded.SourceFormat), true, map[string]any{
 			"status":       response.StatusCode,
 			"kind":         decoded.Kind,
@@ -307,7 +307,11 @@ func validateRuntimeServiceCompiledArtifact(side string, revision runtimeService
 	if artifact == nil {
 		return newRuntimeServiceFailure("RuntimeServiceSourceMismatch", "WASM/WASI Strategy Revision is missing immutable artifact metadata", false, map[string]any{"side": side})
 	}
-	if stringValue(artifact, "format") != "wasm" || stringValue(artifact, "wasiProfile") != "preview1" || stringValue(artifact, "abiEnvelope") != "stdin-stdout-json" || stringValue(artifact, "validationStatus") != "valid" || stringValue(artifact, "abiVersion") != strategyRuntimeABIVersion || stringValue(artifact, "targetTriple") != "wasm32-wasip1" {
+	expectedTargetTriple := "wasm32-wasip1"
+	if stringValue(mapValue(revision.Runtime, "language"), "id") == "zig" {
+		expectedTargetTriple = "wasm32-wasi"
+	}
+	if stringValue(artifact, "format") != "wasm" || stringValue(artifact, "wasiProfile") != "preview1" || stringValue(artifact, "abiEnvelope") != "stdin-stdout-json" || stringValue(artifact, "validationStatus") != "valid" || stringValue(artifact, "abiVersion") != strategyRuntimeABIVersion || stringValue(artifact, "targetTriple") != expectedTargetTriple {
 		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "WASM/WASI artifact metadata is incomplete", false, map[string]any{"side": side})
 	}
 	if stringValue(artifact, "sourceHash") != revision.SourceHash {

@@ -12,7 +12,9 @@ import {
   type RuntimeExecutionServiceResponse,
 } from "@cowards/spec"
 import {
+  buildZigStrategyRevision,
   buildRustStrategyRevision,
+  validateZigStrategySource,
   validateRustStrategySource,
 } from "@cowards/runtime-wasm-wasi/validation"
 import {
@@ -77,36 +79,48 @@ const validateStrategyRequest = (rawRequest: unknown) => {
     rawRequest !== null && typeof rawRequest === "object"
       ? (rawRequest as Record<string, unknown>)
       : {}
-  if (body.sourceFormat !== "rust" || typeof body.source !== "string") {
+  if (
+    (body.sourceFormat !== "rust" && body.sourceFormat !== "zig") ||
+    typeof body.source !== "string"
+  ) {
     return {
       ok: false,
       kind: "strategyValidation",
       sourceFormat: body.sourceFormat,
-      error: "Rust source is required for runtime-service validation.",
+      error:
+        "Rust or Zig source is required for runtime-service WASM/WASI validation.",
     }
   }
-  const validation = validateRustStrategySource(body.source)
+  const sourceFormat = body.sourceFormat
+  const validation =
+    sourceFormat === "zig"
+      ? validateZigStrategySource(body.source)
+      : validateRustStrategySource(body.source)
   if (!validation.valid) {
     return {
       ok: false,
       kind: "strategyValidation",
-      sourceFormat: "rust",
+      sourceFormat,
       validation,
     }
   }
-  const revision = buildRustStrategyRevision({
+  const revisionBuilder =
+    sourceFormat === "zig"
+      ? buildZigStrategyRevision
+      : buildRustStrategyRevision
+  const revision = revisionBuilder({
     source: body.source,
     ...(typeof body.strategyId === "string" && body.strategyId.trim().length > 0
       ? { strategyId: body.strategyId }
       : {}),
     metadata: {
-      tags: ["rust", "wasm-wasi", "non-counted", "exhibition-alpha"],
+      tags: [sourceFormat, "wasm-wasi", "non-counted", "exhibition-alpha"],
     },
   })
   return {
     ok: true,
     kind: "strategyValidation",
-    sourceFormat: "rust",
+    sourceFormat,
     runtime: revision.runtime,
     validation: revision.validation,
     engineCompatibility: revision.engineCompatibility,

@@ -9,6 +9,7 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_SOURCE_BYTES,
   STRATEGY_WASM_ARTIFACT_BYTES,
+  StrategyRuntimeResponseEnvelopeSchema,
   StrategyRevisionSchema,
   runtimeCompatibilityKey,
   type CompiledStrategyArtifact,
@@ -235,6 +236,206 @@ const rustcVersion = (): string => {
     : "rustc unavailable"
 }
 
+const zigVersion = (): string => {
+  const result = spawnSync("zig", ["version"], {
+    encoding: "utf8",
+    shell: false,
+    env: { PATH: process.env.PATH ?? "" },
+    timeout: 1_000,
+    maxBuffer: 32 * 1024,
+  })
+  return result.status === 0
+    ? `zig ${(result.stdout ?? "").trim()}`
+    : "zig unavailable"
+}
+
+const zigForbiddenPatterns = [
+  { pattern: '@import("std")', regex: /@import\s*\(\s*"std"\s*\)/ },
+  { pattern: "std.fs.cwd", regex: /\bstd\.fs\.cwd\b/ },
+  { pattern: "std.fs.open", regex: /\bstd\.fs\.[A-Za-z0-9_]*open\b/ },
+  { pattern: "std.net", regex: /\bstd\.net\b/ },
+  { pattern: "std.time", regex: /\bstd\.time\b/ },
+  { pattern: "std.crypto.random", regex: /\bstd\.crypto\.random\b/ },
+  { pattern: "std.process.args", regex: /\bstd\.process\.args\b/ },
+  { pattern: "std.process.getEnv", regex: /\bstd\.process\.getEnv\b/ },
+  { pattern: "@embedFile", regex: /@embedFile\s*\(/ },
+] as const
+
+const zigSourceGate = (
+  source: string,
+): {
+  errors: StrategyRevisionValidationIssue[]
+  forbiddenPatterns: string[]
+  sourceHash: string
+  sourceBytes: number
+} => {
+  const sourceHash = hashSource(source)
+  const sourceBytes = Buffer.byteLength(source)
+  const errors: StrategyRevisionValidationIssue[] = []
+  const forbiddenPatterns: string[] = []
+  if (sourceBytes > STRATEGY_SOURCE_BYTES) {
+    errors.push(
+      issue(
+        "SOURCE_TOO_LARGE",
+        `Zig Strategy source exceeds ${STRATEGY_SOURCE_BYTES} bytes`,
+        {
+          constraint: `Zig Strategy source must be ${STRATEGY_SOURCE_BYTES} bytes or less.`,
+          remediation: "Remove unused helper code or comments.",
+          reference: "runtime/limits",
+        },
+      ),
+    )
+  }
+  if (
+    !/\bpub\s+fn\s+main\s*\(/.test(source) &&
+    !/\bexport\s+fn\s+_start\s*\(/.test(source)
+  ) {
+    errors.push(
+      issue(
+        "MISSING_SELECT_ACTIVATIONS",
+        "Zig WASI Strategy must provide export fn _start() or pub fn main() for stdin/stdout JSON envelope.",
+        {
+          constraint:
+            "Zig WASI Preview 1 executable Strategies must read stdin and write one JSON runtime envelope to stdout.",
+          remediation: "Use the Zig WASI starter sample as the baseline.",
+          reference: "examples/zig-wasi-exhibition-alpha",
+        },
+      ),
+    )
+  }
+  for (const forbidden of zigForbiddenPatterns) {
+    if (forbidden.regex.test(source)) {
+      forbiddenPatterns.push(forbidden.pattern)
+      errors.push(
+        issue(
+          "FORBIDDEN_PATTERN",
+          `Zig Strategy source contains forbidden capability: ${forbidden.pattern}`,
+          {
+            pattern: forbidden.pattern,
+            constraint:
+              "Zig WASI Strategies must be self-contained and cannot use host filesystem, network, time, randomness, process, or embed-file capabilities.",
+            remediation: `Remove ${forbidden.pattern} and use only Strategy input data.`,
+            reference: "runtime/capabilities",
+          },
+        ),
+      )
+    }
+  }
+  return { errors, forbiddenPatterns, sourceHash, sourceBytes }
+}
+
+export const compileZigWasmArtifact = (source: string): WasmCompileResult => {
+  const gate = zigSourceGate(source)
+  if (gate.errors.length > 0) {
+    return {
+      ok: false,
+      errors: gate.errors,
+      forbiddenPatterns: gate.forbiddenPatterns,
+    }
+  }
+  const dir = mkdtempSync(join(tmpdir(), "cowards-zig-wasi-"))
+  const sourcePath = join(dir, "strategy.zig")
+  const artifactPath = join(dir, "strategy.wasm")
+  const localCachePath = join(dir, "zig-cache")
+  const globalCachePath = join(dir, "zig-global-cache")
+  try {
+    writeFileSync(sourcePath, source, "utf8")
+    const result = spawnSync(
+      "zig",
+      [
+        "build-exe",
+        sourcePath,
+        "-target",
+        "wasm32-wasi",
+        "-O",
+        "ReleaseSmall",
+        "--cache-dir",
+        localCachePath,
+        "--global-cache-dir",
+        globalCachePath,
+        `-femit-bin=${artifactPath}`,
+      ],
+      {
+        encoding: "utf8",
+        shell: false,
+        env: { PATH: process.env.PATH ?? "" },
+        timeout: 10_000,
+        maxBuffer: 256 * 1024,
+      },
+    )
+    if (result.error || result.status !== 0) {
+      return {
+        ok: false,
+        forbiddenPatterns: gate.forbiddenPatterns,
+        errors: [
+          issue("TRANSPILE_FAILED", "Zig WASI compile failed closed.", {
+            constraint:
+              "Zig source must compile to wasm32-wasi with the local Zig toolchain.",
+            remediation:
+              "Fix the Zig syntax or use the Zig WASI starter sample.",
+            reference: "examples/zig-wasi-exhibition-alpha",
+          }),
+        ],
+      }
+    }
+    const artifactBytes = readFileSync(artifactPath)
+    const importErrors = validateWasmWasiImports(artifactBytes)
+    if (importErrors.length > 0) {
+      return {
+        ok: false,
+        forbiddenPatterns: gate.forbiddenPatterns,
+        errors: importErrors,
+      }
+    }
+    if (artifactBytes.byteLength > STRATEGY_WASM_ARTIFACT_BYTES) {
+      return {
+        ok: false,
+        forbiddenPatterns: gate.forbiddenPatterns,
+        errors: [
+          issue(
+            "SOURCE_TOO_LARGE",
+            "Compiled Zig WASM artifact exceeds the artifact byte cap.",
+            {
+              constraint: `Compiled WASM artifacts must be ${STRATEGY_WASM_ARTIFACT_BYTES} bytes or less.`,
+              remediation: "Reduce the Strategy or compile helper footprint.",
+              reference: "runtime/limits",
+            },
+          ),
+        ],
+      }
+    }
+    const artifact: CompiledStrategyArtifact = {
+      format: "wasm",
+      hash: hashBytes(artifactBytes),
+      bytes: artifactBytes.byteLength,
+      bytesBase64: artifactBytes.toString("base64"),
+      sourceHash: gate.sourceHash,
+      wasiProfile: "preview1",
+      targetTriple: "wasm32-wasi",
+      abiEnvelope: "stdin-stdout-json",
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      validationStatus: "valid",
+      createdAt: new Date(0).toISOString(),
+      toolchain: {
+        language: "zig",
+        compiler: "zig",
+        compilerVersion: zigVersion(),
+        targetTriple: "wasm32-wasi",
+        commandSummary:
+          "zig build-exe strategy.zig -target wasm32-wasi -O ReleaseSmall --cache-dir <temp> --global-cache-dir <temp> -femit-bin=strategy.wasm",
+      },
+      publicEvidence: {
+        label: "Zig WASM/WASI non-counted exhibition alpha",
+        nonCounted: true,
+        sandboxClaim: "candidate-readiness-only",
+      },
+    }
+    return { ok: true, artifact, errors: [], forbiddenPatterns: [] }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
 export const compileRustWasmArtifact = (source: string): WasmCompileResult => {
   const sourceHash = hashSource(source)
   const sourceBytes = Buffer.byteLength(source)
@@ -337,7 +538,7 @@ export const compileRustWasmArtifact = (source: string): WasmCompileResult => {
         errors: [
           issue(
             "SOURCE_TOO_LARGE",
-            "Compiled Rust WASM artifact exceeds the v1.21 artifact byte cap.",
+            "Compiled Rust WASM artifact exceeds the artifact byte cap.",
             {
               constraint: `Compiled WASM artifacts must be ${STRATEGY_WASM_ARTIFACT_BYTES} bytes or less.`,
               remediation: "Reduce the Strategy or compile helper footprint.",
@@ -458,18 +659,114 @@ export const buildRustStrategyRevision = (input: {
   })
 }
 
+const zigValidationFromCompile = (
+  source: string,
+  compiled: WasmCompileResult,
+): StrategyRevisionValidationReport => {
+  const gate = zigSourceGate(source)
+  return {
+    valid: compiled.ok,
+    errors: compiled.errors,
+    warnings: [
+      {
+        code: "NON_COUNTED_RUNTIME",
+        severity: "warning",
+        message:
+          "Zig WASM/WASI is a non-counted exhibition alpha runtime and not ranked/counted eligible.",
+        constraint:
+          "Zig may run only in non-counted exhibition alpha proof paths.",
+        remediation: "Use JS/TS for counted play.",
+        reference: "runtime/counting",
+      },
+    ],
+    sourceBytes: gate.sourceBytes,
+    forbiddenPatterns: compiled.forbiddenPatterns,
+    sourceHash: gate.sourceHash,
+    runtimeVersion: wasmWasiRuntimeMetadata("zig").adapter.version,
+    engineCompatibility: {
+      spec: COMPATIBILITY_VERSIONS.spec,
+      engine: COMPATIBILITY_VERSIONS.engine,
+    },
+  }
+}
+
+export const validateZigStrategySource = (
+  source: string,
+): StrategyRevisionValidationReport =>
+  zigValidationFromCompile(source, compileZigWasmArtifact(source))
+
+export const buildZigStrategyRevision = (input: {
+  source: string
+  strategyId?: string | undefined
+  metadata?: StrategyRevisionMetadata | undefined
+}): StrategyRevision => {
+  const runtime = wasmWasiRuntimeMetadata("zig")
+  const compiled = compileZigWasmArtifact(input.source)
+  const validation = zigValidationFromCompile(input.source, compiled)
+  if (!compiled.ok || !compiled.artifact) {
+    throw new Error(
+      "Cannot build Zig WASM Strategy Revision from invalid source",
+    )
+  }
+  const compatibility = runtimeCompatibilityKey({
+    runtime,
+    sourceHash: validation.sourceHash,
+    artifactHash: compiled.artifact.hash,
+    artifactTargetTriple: compiled.artifact.targetTriple,
+    artifactWasiProfile: compiled.artifact.wasiProfile,
+    specVersion: COMPATIBILITY_VERSIONS.spec,
+    engineVersion: COMPATIBILITY_VERSIONS.engine,
+  })
+  const compatibilityHash = createHash("sha256")
+    .update(JSON.stringify(compatibility))
+    .digest("hex")
+  return StrategyRevisionSchema.parse({
+    id: `strategy-revision:zig-wasi:${validation.sourceHash}:${compatibilityHash.slice(0, 16)}`,
+    ...(input.strategyId === undefined ? {} : { strategyId: input.strategyId }),
+    source: input.source,
+    sourceHash: validation.sourceHash,
+    sourceBytes: validation.sourceBytes,
+    runtime,
+    engineCompatibility: validation.engineCompatibility,
+    validation,
+    metadata: {
+      ...(input.metadata ?? {}),
+      tags: [
+        ...new Set([
+          ...(input.metadata?.tags ?? []),
+          "zig",
+          "wasm-wasi",
+          "non-counted",
+        ]),
+      ],
+      compiledArtifact: compiled.artifact,
+    },
+  })
+}
+
 export interface ZigReadinessEvidence {
   ok: boolean
   zigVersion: string | null
   target: "wasm32-wasi"
+  compileProof: boolean
+  runtimeProof: boolean
+  artifactHash: string | null
+  resolvedPath: string | null
   message: string
 }
 
 export const zigReadinessEvidence = (): ZigReadinessEvidence => {
+  const pathResult = spawnSync("sh", ["-lc", "command -v zig"], {
+    encoding: "utf8",
+    shell: false,
+    env: { PATH: process.env.PATH ?? "" },
+    timeout: 1_000,
+    maxBuffer: 32 * 1024,
+  })
   const result = spawnSync("zig", ["version"], {
     encoding: "utf8",
     shell: false,
-    env: {},
+    env: { PATH: process.env.PATH ?? "" },
     timeout: 1_000,
     maxBuffer: 32 * 1024,
   })
@@ -478,14 +775,142 @@ export const zigReadinessEvidence = (): ZigReadinessEvidence => {
       ok: false,
       zigVersion: null,
       target: "wasm32-wasi",
+      compileProof: false,
+      runtimeProof: false,
+      artifactHash: null,
+      resolvedPath: null,
       message: "Zig toolchain unavailable; Zig remains fail-loud non-promoted.",
     }
   }
+  const source = `
+const Iovec = extern struct { buf: [*]u8, buf_len: usize };
+const Ciovec = extern struct { buf: [*]const u8, buf_len: usize };
+
+extern "wasi_snapshot_preview1" fn fd_read(u32, *const Iovec, usize, *usize) u16;
+extern "wasi_snapshot_preview1" fn fd_write(u32, *const Ciovec, usize, *usize) u16;
+
+fn contains(haystack: []const u8, needle: []const u8) bool {
+    if (needle.len == 0) return true;
+    if (haystack.len < needle.len) return false;
+    var index: usize = 0;
+    while (index <= haystack.len - needle.len) : (index += 1) {
+        var matched = true;
+        var offset: usize = 0;
+        while (offset < needle.len) : (offset += 1) {
+            if (haystack[index + offset] != needle[offset]) {
+                matched = false;
+                break;
+            }
+        }
+        if (matched) return true;
+    }
+    return false;
+}
+
+fn writeAll(bytes: []const u8) void {
+    var written: usize = 0;
+    var iov = Ciovec{ .buf = bytes.ptr, .buf_len = bytes.len };
+    _ = fd_write(1, &iov, 1, &written);
+}
+
+export fn _start() void {
+    var input_buf: [16384]u8 = undefined;
+    var iov = Iovec{ .buf = &input_buf, .buf_len = input_buf.len };
+    var nread: usize = 0;
+    _ = fd_read(0, &iov, 1, &nread);
+    if (contains(input_buf[0..nread], "\\"methodName\\":\\"soldierBrain\\"")) {
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
+    } else {
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
+    }
+}
+`
+  const compiled = compileZigWasmArtifact(source)
+  const runtimeProof = (() => {
+    if (!compiled.ok || compiled.artifact?.bytesBase64 === undefined) {
+      return false
+    }
+    const wasmtimePathResult = spawnSync("sh", ["-lc", "command -v wasmtime"], {
+      encoding: "utf8",
+      shell: false,
+      env: { PATH: process.env.PATH ?? "" },
+      timeout: 1_000,
+      maxBuffer: 32 * 1024,
+    })
+    const wasmtimePath =
+      wasmtimePathResult.status === 0
+        ? (wasmtimePathResult.stdout ?? "").trim()
+        : ""
+    if (wasmtimePath.length === 0) {
+      return false
+    }
+    const dir = mkdtempSync(join(tmpdir(), "cowards-zig-wasi-proof-"))
+    const artifactPath = join(dir, "strategy.wasm")
+    try {
+      writeFileSync(
+        artifactPath,
+        Buffer.from(compiled.artifact.bytesBase64, "base64"),
+      )
+      const result = spawnSync(
+        wasmtimePath,
+        [
+          "run",
+          "-W",
+          "fuel=10000000",
+          "-W",
+          "timeout=1000ms",
+          "-W",
+          "max-memory-size=67108864",
+          "-W",
+          "max-wasm-stack=1048576",
+          "-W",
+          "trap-on-grow-failure=y",
+          artifactPath,
+        ],
+        {
+          input: JSON.stringify({
+            abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+            methodName: "soldierBrain",
+            runtime: wasmWasiRuntimeMetadata("zig"),
+            source: {
+              hash: compiled.artifact.sourceHash,
+              bytes: Buffer.byteLength(source),
+              entrypoint: "_start",
+            },
+            input: {},
+          }),
+          encoding: "utf8",
+          env: {},
+          shell: false,
+          timeout: 1_250,
+          maxBuffer: 64 * 1024,
+        },
+      )
+      if (result.error || result.status !== 0) {
+        return false
+      }
+      const parsed = StrategyRuntimeResponseEnvelopeSchema.safeParse(
+        JSON.parse(result.stdout ?? ""),
+      )
+      return parsed.success && parsed.data.ok === true
+    } catch {
+      return false
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })()
   return {
-    ok: true,
+    ok: compiled.ok && runtimeProof,
     zigVersion: (result.stdout ?? "").trim(),
     target: "wasm32-wasi",
+    compileProof: compiled.ok,
+    runtimeProof,
+    artifactHash: compiled.artifact?.hash ?? null,
+    resolvedPath:
+      pathResult.status === 0 ? (pathResult.stdout ?? "").trim() : null,
     message:
-      "Zig toolchain detected. v1.21 still requires shared ABI compile/runtime proof before exposing Zig as working.",
+      compiled.ok && runtimeProof
+        ? "Zig toolchain, target, compile artifact, and WASI Preview 1 ABI proof passed; Zig may be exposed only as non-counted exhibition alpha."
+        : "Zig toolchain detected but compile/runtime proof failed; Zig remains fail-loud non-promoted.",
   }
 }

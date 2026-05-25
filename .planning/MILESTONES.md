@@ -1,5 +1,38 @@
 # Milestones
 
+## v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening (Shipped: 2026-05-25)
+
+**Status:** Shipped 2026-05-25
+**Phases:** 8
+**Phase range:** 148-155
+**Plans:** 8/8 complete
+**Discussion Context:** `.planning/milestones/v1.22-DISCUSSION-LOG.md`
+**Requirements:** 16/16 complete
+**Research:** `.planning/research/v1.22-SUMMARY.md`
+**Roadmap:** `.planning/milestones/v1.22-ROADMAP.md`
+**Decision baseline:** Zig is non-counted exhibition alpha only after compile/artifact/runtime/ABI proof; Rust remains non-counted alpha; WASM/WASI remains candidate-readiness evidence only.
+**Audit:** `.planning/milestones/v1.22-MILESTONE-AUDIT.md`
+**Archives:** `.planning/milestones/v1.22-ROADMAP.md`, `.planning/milestones/v1.22-REQUIREMENTS.md`, `.planning/milestones/v1.22-phases/`
+
+**Goal:** Make WASM/WASI a more serious multi-compiler Strategy runtime platform by combining Zig artifact alpha proof, runtime hardening evidence, and ABI evolution research without overclaiming promotion or sandbox certification.
+
+**Delivered:**
+
+- Zig is detected through PATH-aware preflight and compiles a no-std `wasm32-wasi` Strategy to immutable WASM artifact metadata.
+- Zig executes through runtime-service / Runtime Broker / Wasmtime using the existing Preview 1 stdin/stdout JSON envelope.
+- Workshop and account save paths route Zig validation through runtime-service and label Zig as non-counted exhibition alpha only.
+- Artifact validation is language-aware: Rust uses `wasm32-wasip1`; Zig uses `wasm32-wasi`.
+- WASM/WASI hardening evidence passes 19/19 probes.
+- ABI evolution decision keeps Preview 1 stdin/stdout JSON as the only v1.22 execution path and defers direct exports/component model/WIT.
+- Promotion decision keeps JS/TS counted, Python beta, Rust alpha, Zig alpha, and no production sandbox certification.
+
+### Active Constraints
+
+- Rust, Zig, and WASM/WASI are not ranked, ladder, counted, gauntlet, broad production multi-language support, or production sandbox certification.
+- Go owns orchestration, persistence-facing backend behavior, Match lifecycle, scoring, public evidence, retry policy, and promotion decisions.
+- Strategy code does not execute in web/API/Go.
+- Zig no-std alpha is intentionally narrow until a future milestone proves safer ergonomic bindings.
+
 ## v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha (Shipped: 2026-05-25)
 
 **Status:** Shipped 2026-05-25

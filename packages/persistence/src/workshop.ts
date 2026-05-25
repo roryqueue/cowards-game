@@ -169,6 +169,50 @@ fn main() {
 }
 `.trim()
 
+export const zigWasiTacticalStarterSource = `
+const Iovec = extern struct { buf: [*]u8, buf_len: usize };
+const Ciovec = extern struct { buf: [*]const u8, buf_len: usize };
+
+extern "wasi_snapshot_preview1" fn fd_read(u32, *const Iovec, usize, *usize) u16;
+extern "wasi_snapshot_preview1" fn fd_write(u32, *const Ciovec, usize, *usize) u16;
+
+fn contains(haystack: []const u8, needle: []const u8) bool {
+    if (needle.len == 0) return true;
+    if (haystack.len < needle.len) return false;
+    var index: usize = 0;
+    while (index <= haystack.len - needle.len) : (index += 1) {
+        var matched = true;
+        var offset: usize = 0;
+        while (offset < needle.len) : (offset += 1) {
+            if (haystack[index + offset] != needle[offset]) {
+                matched = false;
+                break;
+            }
+        }
+        if (matched) return true;
+    }
+    return false;
+}
+
+fn writeAll(bytes: []const u8) void {
+    var written: usize = 0;
+    var iov = Ciovec{ .buf = bytes.ptr, .buf_len = bytes.len };
+    _ = fd_write(1, &iov, 1, &written);
+}
+
+export fn _start() void {
+    var input_buf: [16384]u8 = undefined;
+    var iov = Iovec{ .buf = &input_buf, .buf_len = input_buf.len };
+    var nread: usize = 0;
+    _ = fd_read(0, &iov, 1, &nread);
+    if (contains(input_buf[0..nread], "\\"methodName\\":\\"soldierBrain\\"")) {
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
+    } else {
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
+    }
+}
+`.trim()
+
 const cautiousOpponentRevision = buildStrategyRevision({
   source: cautiousSource,
   strategyId: "strategy:cautious",
@@ -236,6 +280,7 @@ export interface WorkshopTemplateSummary {
     | "template:sentinel"
     | "template:python-tactical"
     | "template:rust-wasi-tactical"
+    | "template:zig-wasi-tactical"
   label: string
   sourceFormat: StrategyArtifactSourceFormat
   experimental?: boolean | undefined
@@ -383,6 +428,15 @@ export const listWorkshopTemplates = (): WorkshopTemplateSummary[] => [
     countedPlayEligible: false,
     source: rustWasiTacticalStarterSource,
     validation: validateWorkshopSource(rustWasiTacticalStarterSource, "rust"),
+  },
+  {
+    id: "template:zig-wasi-tactical",
+    label: "Zig WASI tactical starter",
+    sourceFormat: "zig",
+    experimental: true,
+    countedPlayEligible: false,
+    source: zigWasiTacticalStarterSource,
+    validation: validateWorkshopSource(zigWasiTacticalStarterSource, "zig"),
   },
 ]
 
@@ -669,8 +723,8 @@ const sample = <T extends Omit<WorkshopSampleSummary, "validation">>(
   validation:
     input.sourceFormat === "python"
       ? validatePythonStrategySource(input.source)
-      : input.sourceFormat === "rust"
-        ? validateWorkshopSource(input.source, "rust")
+      : input.sourceFormat === "rust" || input.sourceFormat === "zig"
+        ? validateWorkshopSource(input.source, input.sourceFormat)
         : validateStrategySource(input.source),
 })
 
@@ -746,6 +800,16 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     source: rustWasiTacticalStarterSource,
   }),
   sample({
+    id: "sample:zig-wasi-stone",
+    label: "Zig WASI stone",
+    sampleKind: "starter",
+    description:
+      "A safe no-std Zig WASI alpha sample using direct Preview 1 fd_read/fd_write imports.",
+    categories: ["Zig alpha", "WASM/WASI"],
+    sourceFormat: "zig",
+    source: zigWasiTacticalStarterSource,
+  }),
+  sample({
     id: "sample:failure-forbidden-clock",
     label: "Failure: forbidden clock",
     sampleKind: "failure-mode",
@@ -800,12 +864,18 @@ export const validateWorkshopSource = (
   if (sourceFormat === "python") {
     return validatePythonStrategySource(source)
   }
-  if (sourceFormat === "rust") {
+  if (sourceFormat === "rust" || sourceFormat === "zig") {
     const sourceBytes = new TextEncoder().encode(source).length
     const sourceHash = createHash("sha256").update(source).digest("hex")
+    const label = sourceFormat === "zig" ? "Zig" : "Rust"
+    const entrypointOk =
+      sourceFormat === "zig"
+        ? source.includes("_start")
+        : source.includes("fn main")
     const valid =
       source.length > 0 &&
-      source.includes("fn main") &&
+      entrypointOk &&
+      !(sourceFormat === "zig" && source.includes('@import("std")')) &&
       !source.includes("include_str!") &&
       !source.includes("include_bytes!")
     return {
@@ -816,16 +886,14 @@ export const validateWorkshopSource = (
             {
               code: "TRANSPILE_FAILED",
               severity: "error",
-              message:
-                "Rust WASM/WASI validation requires the runtime-service compile boundary.",
+              message: `${label} WASM/WASI validation requires the runtime-service compile boundary.`,
             },
           ],
       warnings: [
         {
           code: "NON_COUNTED_RUNTIME",
           severity: "warning",
-          message:
-            "Rust WASM/WASI is non-counted exhibition alpha and must be compiled by runtime-service before save.",
+          message: `${label} WASM/WASI is non-counted exhibition alpha and must be compiled by runtime-service before save.`,
         },
       ],
       sourceBytes,
@@ -946,8 +1014,15 @@ export const buildWorkshopRevision = (input: {
     ...(input.notes ? { notes: input.notes } : {}),
     ...(input.sourceFormat === "python"
       ? { tags: ["python", "experimental", "non-counted"] }
-      : input.sourceFormat === "rust"
-        ? { tags: ["rust", "wasm-wasi", "experimental", "non-counted"] }
+      : input.sourceFormat === "rust" || input.sourceFormat === "zig"
+        ? {
+            tags: [
+              input.sourceFormat,
+              "wasm-wasi",
+              "experimental",
+              "non-counted",
+            ],
+          }
         : {}),
   }
   if (input.sourceFormat === "python") {
@@ -957,14 +1032,14 @@ export const buildWorkshopRevision = (input: {
       metadata,
     })
   }
-  if (input.sourceFormat === "rust") {
+  if (input.sourceFormat === "rust" || input.sourceFormat === "zig") {
     if (!input.runtime || !input.validation || !input.engineCompatibility) {
       throw new WorkshopInputError(
-        "Rust Workshop revisions require runtime-service validation and artifact metadata.",
+        "WASM/WASI Workshop revisions require runtime-service validation and artifact metadata.",
       )
     }
     return {
-      id: `strategy-revision:workshop:rust:${input.validation.sourceHash}` as StrategyRevisionId,
+      id: `strategy-revision:workshop:${input.sourceFormat}:${input.validation.sourceHash}` as StrategyRevisionId,
       strategyId: WORKSHOP_STRATEGY_ID,
       source: input.source,
       sourceHash: input.validation.sourceHash,

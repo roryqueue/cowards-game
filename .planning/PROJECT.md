@@ -2,18 +2,33 @@
 
 ## Current State
 
-**Shipped version:** v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha on 2026-05-25
-**Current milestone:** None active. v1.21 archived; next milestone requirements should be created fresh.
-**Status:** v1.21 complete and ready for the next milestone.
-**Last audit:** v1.21 audit passed with Rust/WASM kept as non-counted exhibition alpha and WASM/WASI kept as runtime-candidate evidence only.
+**Shipped version:** v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening on 2026-05-25
+**Current milestone:** None active. v1.22 archived; next milestone requirements should be created fresh.
+**Status:** v1.22 complete and ready for the next milestone.
+**Last audit:** v1.22 audit passed with Zig exposed only as non-counted exhibition alpha after compile/runtime/ABI proof and WASM/WASI kept as runtime-candidate hardening evidence only.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, an executable Rust WASM/WASI runtime-candidate lane for non-counted exhibition alpha, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a serious immutable multi-language runtime candidate, but not production sandbox certification or counted/ranked support.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI runtime-candidate lanes for non-counted exhibition alpha, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Latest Shipped Milestone: v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
+## Latest Shipped Milestone: v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening
+
+**Goal:** Make WASM/WASI a more serious multi-compiler Strategy runtime platform by combining Zig artifact alpha proof, runtime hardening evidence, and ABI evolution research while keeping all promotion claims conservative.
+
+**Target features:**
+- Treat v1.21 as the baseline and preserve Rust WASM execution, JS/TS counted Strategy support, Python non-counted exhibition beta, Go/runtime-service ownership boundaries, public replay privacy, and no silent fallback.
+- Fix Zig preflight/toolchain detection, prove `wasm32-wasi` compile into immutable artifact metadata, and execute Zig only through runtime-service / Runtime Broker / Wasmtime.
+- Expose safe no-std Zig Workshop samples and non-counted alpha labels only after compile, artifact, runtime, and ABI proof pass.
+- Harden WASM/WASI evidence for timeout/fuel, memory caps, stdio/result caps, malformed JSON, invalid schema, trap/panic/abort, hash mismatch, missing/stale artifacts, forbidden capabilities, no inherited env/preopens/network, and public-safe diagnostics.
+- Document artifact retention, hash verification, rollback, and compatibility metadata.
+- Compare Preview 1 stdin/stdout JSON, direct exports, and component model/WIT; keep JSON stdin/stdout as the only v1.22 execution ABI.
+- Close with explicit promotion decisions: no Rust/Zig/WASM counted, ranked, ladder, gauntlet, broad production multi-language, or production sandbox promotion.
+
+**Implemented:** v1.22 fixes Zig detection, adds no-std Zig `wasm32-wasi` compile/validation into immutable WASM artifact metadata, executes Zig artifacts through Wasmtime behind runtime-service, adds Zig Workshop/account validation/save support and labels, strengthens language-aware artifact validation, emits 19/19 WASM/WASI hardening probes, writes ABI and promotion decision records, and keeps JS/TS counted while Python remains exhibition beta and Rust/Zig remain non-counted exhibition alpha only.
+
+## Previous Shipped Milestone: v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
 
 **Goal:** Make WASM/WASI the next serious multi-language Strategy runtime candidate by proving an immutable Rust WASM artifact path end to end for non-counted exhibition alpha, while keeping JS/TS counted support and all runtime boundaries intact.
 

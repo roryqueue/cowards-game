@@ -527,7 +527,7 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 	if body.SourceFormat == "" {
 		body.SourceFormat = "typescript"
 	}
-	if body.SourceFormat != "typescript" && body.SourceFormat != "python" && body.SourceFormat != "rust" {
+	if body.SourceFormat != "typescript" && body.SourceFormat != "python" && body.SourceFormat != "rust" && body.SourceFormat != "zig" {
 		writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Unsupported Strategy source format.")
 		return
 	}
@@ -543,16 +543,20 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 		input.Validation = validatePythonSourceMetadata(body.Source)
 		input.Metadata = map[string]any{"tags": []string{"python", "non-counted", "exhibition-beta"}}
 	}
-	if body.SourceFormat == "rust" {
-		validation, failure := server.orchestrator.runtime.validateStrategy(request.Context(), "rust", body.Source, body.StrategyID)
+	if body.SourceFormat == "rust" || body.SourceFormat == "zig" {
+		languageLabel := "Rust"
+		if body.SourceFormat == "zig" {
+			languageLabel = "Zig"
+		}
+		validation, failure := server.orchestrator.runtime.validateStrategy(request.Context(), body.SourceFormat, body.Source, body.StrategyID)
 		if failure != nil {
-			writeServiceError(writer, http.StatusServiceUnavailable, "RUNTIME_SERVICE_UNAVAILABLE", fmt.Sprintf("Rust validation requires the runtime execution service: %s %s.", failure.Code, failure.ErrorMessage))
+			writeServiceError(writer, http.StatusServiceUnavailable, "RUNTIME_SERVICE_UNAVAILABLE", fmt.Sprintf("%s validation requires the runtime execution service: %s %s.", languageLabel, failure.Code, failure.ErrorMessage))
 			return
 		}
 		if !validation.OK {
-			input.Runtime = rustWasmRuntimeMetadata()
+			input.Runtime = wasmWasiRuntimeMetadata(body.SourceFormat)
 			input.Validation = validation.Validation
-			input.Metadata = map[string]any{"tags": []string{"rust", "wasm-wasi", "non-counted", "exhibition-alpha"}}
+			input.Metadata = map[string]any{"tags": []string{body.SourceFormat, "wasm-wasi", "non-counted", "exhibition-alpha"}}
 		} else {
 			input.Runtime = validation.Runtime
 			input.Validation = validation.Validation
@@ -2215,11 +2219,19 @@ func pythonRuntimeMetadata() map[string]any {
 }
 
 func rustWasmRuntimeMetadata() map[string]any {
+	return wasmWasiRuntimeMetadata("rust")
+}
+
+func wasmWasiRuntimeMetadata(languageID string) map[string]any {
+	languageVersion := "1.95.0-wasm32-wasip1"
+	if languageID == "zig" {
+		languageVersion = "0.16.0-wasm32-wasi"
+	}
 	return map[string]any{
 		"abiVersion": "strategy-runtime-abi-v1.14",
 		"language": map[string]any{
-			"id":      "rust",
-			"version": "1.95.0-wasm32-wasip1",
+			"id":      languageID,
+			"version": languageVersion,
 		},
 		"adapter": map[string]any{
 			"id":      "runtime-wasm-wasi-wasmtime-preview1",
@@ -2390,7 +2402,7 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"packagePolicyLabel":   "No packages",
 			"docsReference":        "runtime/languages",
 			"examplesReference":    "examples/zig-wasi-stretch",
-			"warnings":             []string{"Zig is unavailable unless readiness proof passes loudly; never ranked/counted eligible in v1.21."},
+			"warnings":             []string{"Zig WASM/WASI is non-counted exhibition alpha only after compile, artifact, Wasmtime, and ABI proof; never ranked/counted eligible in v1.22."},
 			"validationIssueCodes": []string{"NON_COUNTED_RUNTIME"},
 		}
 	}

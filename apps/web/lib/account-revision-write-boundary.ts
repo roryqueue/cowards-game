@@ -12,7 +12,8 @@ export async function saveAccountRevisionFromRequest(
     body.sourceFormat !== undefined &&
     body.sourceFormat !== "typescript" &&
     body.sourceFormat !== "python" &&
-    body.sourceFormat !== "rust"
+    body.sourceFormat !== "rust" &&
+    body.sourceFormat !== "zig"
   ) {
     return Response.json({ error: "unsupported sourceFormat" }, { status: 400 })
   }

@@ -1,8 +1,12 @@
 import type { WorkshopErrorResponse } from "../../../workshop/types.js"
 import { workshopServer } from "../../../workshop/server.js"
 
-const runtimeServiceValidateRust = async (source: string) => {
+const runtimeServiceValidateWasmWasi = async (
+  sourceFormat: "rust" | "zig",
+  source: string,
+) => {
   const endpoint = process.env.COWARDS_RUNTIME_SERVICE_URL?.replace(/\/$/, "")
+  const label = sourceFormat === "zig" ? "Zig" : "Rust"
   if (!endpoint) {
     return {
       ok: false,
@@ -12,8 +16,7 @@ const runtimeServiceValidateRust = async (source: string) => {
           {
             code: "TRANSPILE_FAILED",
             severity: "error",
-            message:
-              "Rust WASM/WASI validation requires COWARDS_RUNTIME_SERVICE_URL.",
+            message: `${label} WASM/WASI validation requires COWARDS_RUNTIME_SERVICE_URL.`,
           },
         ],
         warnings: [],
@@ -31,7 +34,7 @@ const runtimeServiceValidateRust = async (source: string) => {
   const response = await fetch(`${endpoint}/validate-strategy`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ sourceFormat: "rust", source }),
+    body: JSON.stringify({ sourceFormat, source }),
   })
   return (await response.json()) as { validation?: unknown }
 }
@@ -49,7 +52,8 @@ export async function POST(request: Request): Promise<Response> {
     body.sourceFormat !== undefined &&
     body.sourceFormat !== "typescript" &&
     body.sourceFormat !== "python" &&
-    body.sourceFormat !== "rust"
+    body.sourceFormat !== "rust" &&
+    body.sourceFormat !== "zig"
   ) {
     return Response.json(
       { error: "unsupported sourceFormat" } satisfies WorkshopErrorResponse,
@@ -59,8 +63,11 @@ export async function POST(request: Request): Promise<Response> {
 
   const sourceFormat = body.sourceFormat ?? "typescript"
 
-  if (sourceFormat === "rust") {
-    const result = await runtimeServiceValidateRust(body.source)
+  if (sourceFormat === "rust" || sourceFormat === "zig") {
+    const result = await runtimeServiceValidateWasmWasi(
+      sourceFormat,
+      body.source,
+    )
     return Response.json({ validation: result.validation })
   }
 

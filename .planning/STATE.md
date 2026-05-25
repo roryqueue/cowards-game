@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.21
-milestone_name: WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
+milestone: v1.22
+milestone_name: WASM/WASI Multi-Compiler Alpha and Runtime Hardening
 status: complete
-stopped_at: v1.21 complete; archive, commit, and tag ready
+stopped_at: v1.22 complete; archive, commit, and tag ready
 last_updated: "2026-05-25T00:00:00.000-04:00"
-last_activity: 2026-05-25 - v1.21 WASM/WASI Rust runtime candidate completed with signed-in Rust proof, hostile probes, conservative promotion decision, and audit-clean gates
+last_activity: 2026-05-25 - v1.22 Zig proof, WASM/WASI hardening evidence, ABI decision, promotion decision, and audit gates completed
 progress:
   total_phases: 8
   completed_phases: 8
@@ -17,67 +17,55 @@ progress:
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.21 complete
+**Status:** v1.22 complete
 
 ## Project Reference
 
 See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Latest shipped milestone:** v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
-**Active milestone:** None. v1.21 is archived and next milestone requirements should be created fresh.
-**Requirements:** `.planning/milestones/v1.21-REQUIREMENTS.md` (archived)
-**Roadmap:** `.planning/ROADMAP.md` and `.planning/milestones/v1.21-ROADMAP.md`
+**Latest shipped milestone:** v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening
+**Active milestone:** None. v1.22 is archived and next milestone requirements should be created fresh.
+**Requirements:** `.planning/milestones/v1.22-REQUIREMENTS.md` (archived)
+**Roadmap:** `.planning/ROADMAP.md` and `.planning/milestones/v1.22-ROADMAP.md`
 
 ## Current Position
 
-Phase: 147 - Promotion Decision, Audit, Archive, and Tag
+Phase: 155 - Promotion Decision, Audit, Archive, and Tag
 Plan: Implemented through audit gates
-Status: v1.21 implementation and proof complete; archive/tag pass in progress
-Last activity: 2026-05-25 - v1.21 code, probes, review remediation, signed-in Rust proof, test:fast, Go tests, and boundary monitors passed
+Status: v1.22 implementation and proof complete; archive/tag pass in progress
+Last activity: 2026-05-25 - Zig no-std compile/runtime proof, v1.22 WASM/WASI hardening probes, Workshop/account Zig alpha wiring, ABI decision, lint/typecheck/runtime tests passed
 
 ## Active Milestone Goal
 
-v1.21 makes WASM/WASI the next serious immutable multi-language Strategy runtime candidate. The milestone targets Rust as the first net-new compiled language end to end, using a WASI Preview 1 stdin/stdout JSON envelope for the first executable ABI and treating Zig as a gated stretch target if local tooling and architecture evidence pass loudly.
-
-## Baseline From v1.20
-
-v1.20 completed, archived, and tagged `v1.20`. It added strict executable Docker/container subprocess evidence, hostile probe/no-fallback parity, runtime reliability budgets, public-safe degraded-state evidence panels, a three-cycle signed-in reliability proof, and a final promotion decision that keeps Python non-counted and runtime isolation readiness-only.
-
-The v1.20 proof found and fixed a practical Go job lease bug: the previous lease was shorter than the runtime-service HTTP budget, so long Python-vs-Python Matches could degrade after lease expiry.
+v1.22 makes WASM/WASI a more serious multi-compiler Strategy runtime candidate. Zig is available only as non-counted exhibition alpha when local proof passes; Rust remains non-counted exhibition alpha; WASM/WASI hardening evidence remains candidate-readiness only.
 
 ## Active Constraints
 
 - Normal topology remains `web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s)`.
-- JS/TS Strategy support remains intact through the existing isolated runtime service and remains the counted Strategy path.
+- JS/TS remains the counted Strategy path.
 - Python remains non-counted exhibition beta only.
-- Rust/WASM may become non-counted exhibition alpha/beta only if evidence passes; Rust, Zig, and WASM/WASI are not ranked, ladder, counted, gauntlet, or broad production multi-language support in v1.21.
-- Engine logic remains pure, deterministic, serializable, and side-effect free.
-- Strategy code does not execute in the web/API process or Go backend, and Node `vm` or Node `node:wasi` must not be treated as a hostile-code security boundary.
-- Match execution must use immutable Strategy artifacts. Rust and optional Zig Matches must execute immutable WASM artifacts, not mutable source.
-- Strategy Revisions are immutable once submitted for Match or MatchSet play.
-- Public replay and MatchSet output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, package paths, artifact internals, or private runtime internals by default.
-- Runtime service owns hostile Strategy execution only through schema-validated ABI envelopes and registered runtime implementations.
-- Go remains owner of orchestration, persistence-facing behavior, Match lifecycle, scoring, public evidence, retry policy, and promotion decisions.
-- WASM/WASI runtime evidence must distinguish executable candidate proof from production sandbox certification.
-- Zig must fail loudly when local toolchain, compile, runtime, ABI, or proof evidence is unavailable; no silent substitution with Rust or JS/TS.
-- No arbitrary package installs are allowed as a product feature.
-- No unbounded local stress tests are allowed; proof must use bounded, repeatable workloads.
-- `pnpm boundary:monitors` must stay synchronized with runtime ABI artifacts, runtime registry artifacts, topology evidence, language metadata, artifact evidence, privacy checks, and ownership changes.
+- Rust and Zig WASM/WASI remain non-counted exhibition alpha only.
+- No Rust, Zig, Python, or TypeScript backend ownership creep.
+- Strategy code does not execute in web/API/Go.
+- Match execution uses immutable Strategy artifacts and schema-validated ABI envelopes.
+- Public replay and MatchSet output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw diagnostics, host paths, env values, tokens, DB DSNs, or private runtime internals by default.
+- WASM/WASI runtime evidence is not production sandbox certification.
+- Zig must fail loudly when toolchain, compile, runtime, ABI, or artifact proof is unavailable.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 | --- | --- | --- | --- |
-| runtime | Rust ranked/ladder/counted eligibility | Deferred | v1.21 |
-| runtime | Zig ranked/ladder/counted eligibility | Deferred | v1.21 |
-| runtime | WASM/WASI production sandbox certification | Deferred | v1.21 |
-| runtime | Component-model Strategy ABI promotion | Deferred | v1.21 |
-| runtime | Direct-export Strategy ABI promotion | Deferred | v1.21 |
-| runtime | Arbitrary Cargo/Zig package install support | Deferred | v1.21 |
-| product | Broad production multi-language marketplace | Deferred | v1.21 |
-| ops | Cloud deployment, Kubernetes, service mesh, or production observability stack | Deferred | v1.21 |
+| runtime | Rust ranked/ladder/counted eligibility | Deferred | v1.22 |
+| runtime | Zig ranked/ladder/counted eligibility | Deferred | v1.22 |
+| runtime | WASM/WASI production sandbox certification | Deferred | v1.22 |
+| runtime | Component-model Strategy ABI promotion | Deferred | v1.22 |
+| runtime | Direct-export Strategy ABI promotion | Deferred | v1.22 |
+| runtime | Ergonomic Zig std-backed Strategy bindings | Deferred | v1.22 |
+| runtime | Arbitrary Cargo/Zig package install support | Deferred | v1.22 |
+| product | Broad production multi-language marketplace | Deferred | v1.22 |
 
 ## Operator Next Steps
 
-Commit and tag `v1.21`. Relevant proof pages from the signed-in run: `/workshop`, `/exhibitions/new`, `/matchsets/match-set%3Aexhibition%3Akkk2p9cmPAC5SyRutrzrLw`, `/matchsets/match-set%3Aexhibition%3A5XRIWPL82B06Okt4CwYB5w`, and their Replay links.
+Commit and tag `v1.22`. Relevant pages after starting the local app: `/workshop`, `/exhibitions/new`, public MatchSet result pages, and replay pages.

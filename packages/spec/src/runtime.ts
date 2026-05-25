@@ -343,7 +343,7 @@ export const STRATEGY_LANGUAGE_REGISTRY = [
     version: "0.16.0-wasm32-wasi",
     enabledForNormalPlay: false,
     notes: [
-      "Gated WASM/WASI stretch target; unavailable unless local compile/runtime proof passes loudly.",
+      "Non-counted exhibition alpha only when local Zig compile, artifact, Wasmtime, and ABI proof pass loudly.",
     ],
   },
 ] as const satisfies readonly StrategyLanguageRecord[]

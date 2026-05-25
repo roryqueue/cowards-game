@@ -5,7 +5,7 @@
   "generatedAt": "2026-05-24",
   "generatedBy": "scripts/generate-typescript-surface-labels.ts",
   "sourceInventoryPath": ".planning/artifacts/v1.16-typescript-backend-inventory.json",
-  "sourceInventorySurfaceCount": 187,
+  "sourceInventorySurfaceCount": 188,
   "globalPolicies": {
     "normalTypeScriptBackendAllowed": false,
     "publicOutputPrivacyRequired": true,
@@ -14,7 +14,7 @@
     "testSupportNormalProductTrafficAllowed": false
   },
   "roleCounts": {
-    "deferred": 44,
+    "deferred": 45,
     "fixture-only": 3,
     "frontend-only": 45,
     "parity-only": 16,
@@ -35,7 +35,7 @@
     "runtime-adapter": 18,
     "runtime-service": 5,
     "test-support": 35,
-    "Workshop": 41
+    "Workshop": 42
   },
   "publicOutputForbiddenMarkers": [
     "strategyMemory",
@@ -5034,6 +5034,37 @@
         "path": "apps/web/app/workshop/monaco-editor.tsx",
         "taxonomyRole": "deferred",
         "surfaceLabel": "deferred-workshop-private-source",
+        "capabilityGroup": "Workshop",
+        "selectedNormal": false,
+        "noPublicFallback": true
+      }
+    },
+    {
+      "id": "apps-web-app-workshop-page",
+      "path": "apps/web/app/workshop/page.tsx",
+      "kind": "web-frontend-module",
+      "taxonomyRole": "deferred",
+      "surfaceLabel": "deferred-workshop-ui",
+      "capabilityGroup": "Workshop",
+      "owner": "future_phase_owner",
+      "reason": "workshop TypeScript behavior is intentionally deferred for a later v1.16 phase and must not become silent fallback. Phase 107 final label: Deferred Workshop behavior is not selected normal backend traffic.",
+      "risk": "deferred workshop path masking missing Go ownership or leaking private data; Deferred Workshop behavior is not selected normal backend traffic.",
+      "privacyClass": "owner-private-workshop",
+      "gate": "deferred Workshop owner/session/local gate; private revision text and diagnostics are not public output",
+      "futureMigration": "Future Go Workshop migration may select validation, private revision, test launch, analytics rerun, profile save, export, or runtime support one slice at a time.",
+      "monitorStatus": "phase-107-monitor-enforced",
+      "selectedNormal": false,
+      "selectedNormalJustification": "Deferred Workshop behavior is not selected normal backend traffic.",
+      "publicOutputPrivacy": "owner-private",
+      "noPublicFallback": true,
+      "normalBackendAuthority": false,
+      "routeMethods": [],
+      "routeFamily": "workshop",
+      "sourceInventoryRole": "deferred",
+      "publicOutputExample": {
+        "path": "apps/web/app/workshop/page.tsx",
+        "taxonomyRole": "deferred",
+        "surfaceLabel": "deferred-workshop-ui",
         "capabilityGroup": "Workshop",
         "selectedNormal": false,
         "noPublicFallback": true

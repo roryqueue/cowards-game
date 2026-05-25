@@ -35,7 +35,7 @@ const Editor = browserDynamic<MonacoEditorProps>(
 export interface StrategySourceEditorProps {
   value: string
   onChange: (value: string) => void
-  language?: "typescript" | "python" | "rust" | undefined
+  language?: "typescript" | "python" | "rust" | "zig" | undefined
   disabled?: boolean | undefined
 }
 
@@ -45,11 +45,13 @@ export function StrategySourceEditor({
   language = "typescript",
   disabled,
 }: StrategySourceEditorProps) {
+  const editorLanguage = language === "zig" ? "rust" : language
+
   return (
     <div className="editor-frame">
       <Editor
         height="100%"
-        language={language}
+        language={editorLanguage}
         theme="vs-dark"
         value={value}
         onChange={(nextValue: string | undefined) => onChange(nextValue ?? "")}

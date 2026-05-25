@@ -5,19 +5,21 @@ import type {
   WorkshopSubmitRequest,
 } from "../../../workshop/types.js"
 
-const runtimeServiceValidateRust = async (
+const runtimeServiceValidateWasmWasi = async (
+  sourceFormat: "rust" | "zig",
   source: string,
 ): Promise<Partial<WorkshopSubmitRequest> | { error: string }> => {
   const endpoint = process.env.COWARDS_RUNTIME_SERVICE_URL?.replace(/\/$/, "")
+  const label = sourceFormat === "zig" ? "Zig" : "Rust"
   if (!endpoint) {
     return {
-      error: "Rust WASM/WASI submission requires runtime-service validation.",
+      error: `${label} WASM/WASI submission requires runtime-service validation.`,
     }
   }
   const response = await fetch(`${endpoint}/validate-strategy`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ sourceFormat: "rust", source }),
+    body: JSON.stringify({ sourceFormat, source }),
   })
   const result = (await response.json()) as Record<string, unknown>
   if (!response.ok || result.ok !== true) {
@@ -52,7 +54,8 @@ export async function POST(request: Request): Promise<Response> {
     body.sourceFormat !== undefined &&
     body.sourceFormat !== "typescript" &&
     body.sourceFormat !== "python" &&
-    body.sourceFormat !== "rust"
+    body.sourceFormat !== "rust" &&
+    body.sourceFormat !== "zig"
   ) {
     return Response.json(
       { error: "unsupported sourceFormat" } satisfies WorkshopErrorResponse,
@@ -62,7 +65,9 @@ export async function POST(request: Request): Promise<Response> {
 
   const sourceFormat = body.sourceFormat ?? "typescript"
   const runtimeValidation =
-    sourceFormat === "rust" ? await runtimeServiceValidateRust(body.source) : {}
+    sourceFormat === "rust" || sourceFormat === "zig"
+      ? await runtimeServiceValidateWasmWasi(sourceFormat, body.source)
+      : {}
   if ("error" in runtimeValidation) {
     return Response.json(
       { error: runtimeValidation.error } satisfies WorkshopErrorResponse,

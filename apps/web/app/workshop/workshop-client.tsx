@@ -50,17 +50,25 @@ const runtimeDisplayLabel = (revision: {
     ? "Python · non-counted exhibition beta"
     : revision.sourceFormat === "rust"
       ? "Rust · non-counted exhibition alpha"
-      : null
+      : revision.sourceFormat === "zig"
+        ? "Zig · non-counted exhibition alpha"
+        : null
 
 type WorkshopEditorSourceFormat = Extract<
   StrategyArtifactSourceFormat,
-  "typescript" | "python" | "rust"
+  "typescript" | "python" | "rust" | "zig"
 >
 
 const normalizeEditorSourceFormat = (
   value: string | undefined,
 ): WorkshopEditorSourceFormat =>
-  value === "python" ? "python" : value === "rust" ? "rust" : "typescript"
+  value === "python"
+    ? "python"
+    : value === "rust"
+      ? "rust"
+      : value === "zig"
+        ? "zig"
+        : "typescript"
 
 export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const firstTemplate = initialData.templates[0]
@@ -666,7 +674,9 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                     <span className="workshop-chip warning">
                       {template.sourceFormat === "rust"
                         ? "Rust alpha"
-                        : "Python experimental"}
+                        : template.sourceFormat === "zig"
+                          ? "Zig alpha"
+                          : "Python experimental"}
                     </span>
                   ) : null}
                 </button>
@@ -838,12 +848,23 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
               >
                 Rust alpha
               </button>
+              <button
+                className={sourceFormat === "zig" ? "active" : ""}
+                type="button"
+                onClick={() => setSourceFormat("zig")}
+              >
+                Zig alpha
+              </button>
             </div>
-            {sourceFormat === "python" || sourceFormat === "rust" ? (
+            {sourceFormat === "python" ||
+            sourceFormat === "rust" ||
+            sourceFormat === "zig" ? (
               <p className="workshop-muted">
                 {sourceFormat === "python"
                   ? "Python is non-counted exhibition beta and runs only through the Runtime Broker."
-                  : "Rust is non-counted exhibition alpha and executes immutable WASM/WASI artifacts through the Runtime Broker."}
+                  : sourceFormat === "rust"
+                    ? "Rust is non-counted exhibition alpha and executes immutable WASM/WASI artifacts through the Runtime Broker."
+                    : "Zig is non-counted exhibition alpha only after no-std WASI Preview 1 compile, artifact, and Wasmtime ABI proof."}
               </p>
             ) : null}
             <StrategySourceEditor

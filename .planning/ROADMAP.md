@@ -24,12 +24,13 @@
 - [x] **v1.19 Runtime Isolation Readiness and Exhibition Beta Trust** - Phases 124-131, shipped 2026-05-25. See `.planning/milestones/v1.19-ROADMAP.md`.
 - [x] **v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof** - Phases 132-139, shipped 2026-05-25. See `.planning/milestones/v1.20-ROADMAP.md`.
 - [x] **v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha** - Phases 140-147, shipped 2026-05-25. See `.planning/milestones/v1.21-ROADMAP.md`.
+- [x] **v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening** - Phases 148-155, shipped 2026-05-25. See `.planning/milestones/v1.22-ROADMAP.md`.
 
 ## Active Milestone
 
-None. v1.21 is shipped and archived. Start the next milestone with `$gsd-new-milestone` so fresh active requirements are created.
+None. v1.22 is shipped and archived. Start the next milestone with `$gsd-new-milestone` so fresh active requirements are created.
 
 ## Next Up
 
 - Create a fresh `.planning/REQUIREMENTS.md` through `$gsd-new-milestone`.
-- Continue from Phase 148 or the next roadmap range selected during milestone planning.
+- Continue from Phase 156 or the next roadmap range selected during milestone planning.

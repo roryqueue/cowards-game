@@ -11,7 +11,10 @@ import {
 } from "@cowards/spec"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import { buildPythonStrategyRevision } from "@cowards/runtime-python"
-import { buildRustStrategyRevision } from "@cowards/runtime-wasm-wasi"
+import {
+  buildRustStrategyRevision,
+  buildZigStrategyRevision,
+} from "@cowards/runtime-wasm-wasi"
 import { executeRuntimeServiceRequest } from "./execute-match.js"
 import {
   createRuntimeServiceConfig,
@@ -100,6 +103,50 @@ fn main() {
         );
     } else {
         println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
+    }
+}
+`
+
+const zigWasiSource = `
+const Iovec = extern struct { buf: [*]u8, buf_len: usize };
+const Ciovec = extern struct { buf: [*]const u8, buf_len: usize };
+
+extern "wasi_snapshot_preview1" fn fd_read(u32, *const Iovec, usize, *usize) u16;
+extern "wasi_snapshot_preview1" fn fd_write(u32, *const Ciovec, usize, *usize) u16;
+
+fn contains(haystack: []const u8, needle: []const u8) bool {
+    if (needle.len == 0) return true;
+    if (haystack.len < needle.len) return false;
+    var index: usize = 0;
+    while (index <= haystack.len - needle.len) : (index += 1) {
+        var matched = true;
+        var offset: usize = 0;
+        while (offset < needle.len) : (offset += 1) {
+            if (haystack[index + offset] != needle[offset]) {
+                matched = false;
+                break;
+            }
+        }
+        if (matched) return true;
+    }
+    return false;
+}
+
+fn writeAll(bytes: []const u8) void {
+    var written: usize = 0;
+    var iov = Ciovec{ .buf = bytes.ptr, .buf_len = bytes.len };
+    _ = fd_write(1, &iov, 1, &written);
+}
+
+export fn _start() void {
+    var input_buf: [16384]u8 = undefined;
+    var iov = Iovec{ .buf = &input_buf, .buf_len = input_buf.len };
+    var nread: usize = 0;
+    _ = fd_read(0, &iov, 1, &nread);
+    if (contains(input_buf[0..nread], "\\"methodName\\":\\"soldierBrain\\"")) {
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
+    } else {
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
     }
 }
 `
@@ -261,6 +308,26 @@ describe("runtime execution service", () => {
     )
     expect(response.result.runtimeViolationEventCount).toBe(0)
   })
+
+  it("executes Zig WASM artifacts through Wasmtime after compile+run proof", () => {
+    const zigRevision = buildZigStrategyRevision({
+      source: zigWasiSource,
+      strategyId: "strategy:zig-wasi",
+    })
+    const response = executeRuntimeServiceRequest(
+      requestFor({ bottom: zigRevision, top: zigRevision }),
+      runtimeConfig,
+    )
+
+    expect(response.ok).toBe(true)
+    if (!response.ok) {
+      throw new Error(response.systemFailure.message)
+    }
+    expect(response.result.finalState.matchId).toBe(
+      "match:runtime-service-test",
+    )
+    expect(response.result.runtimeViolationEventCount).toBe(0)
+  }, 20_000)
 
   it("fails closed when a Rust WASM artifact is missing", () => {
     const rustRevision = buildRustStrategyRevision({

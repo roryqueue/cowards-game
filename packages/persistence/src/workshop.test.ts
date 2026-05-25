@@ -163,6 +163,7 @@ describe("Workshop service contracts", () => {
       "Sentinel",
       "Python tactical starter",
       "Rust WASI tactical starter",
+      "Zig WASI tactical starter",
     ])
     expect(
       listWorkshopTemplates().every((template) => template.validation.valid),
@@ -427,6 +428,7 @@ describe("Workshop service contracts", () => {
       "sample:python-push-pressure",
       "sample:python-backstab-lane",
       "sample:rust-wasi-stone",
+      "sample:zig-wasi-stone",
     ])
     expect(starters.map((sample) => sample.label)).toEqual([
       "Basic advance and turn",
@@ -437,6 +439,7 @@ describe("Workshop service contracts", () => {
       "Python push pressure",
       "Python backstab lane",
       "Rust WASI stone",
+      "Zig WASI stone",
     ])
     expect(starters.map((sample) => sample.categories[0])).toEqual([
       "Movement",
@@ -447,6 +450,7 @@ describe("Workshop service contracts", () => {
       "Python beta",
       "Python beta",
       "Rust alpha",
+      "Zig alpha",
     ])
     expect(starters.every((sample) => sample.validation.valid)).toBe(true)
     expect(

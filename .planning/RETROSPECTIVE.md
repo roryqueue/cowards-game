@@ -1,5 +1,43 @@
 # Retrospective
 
+## Milestone: v1.22 — WASM/WASI Multi-Compiler Alpha and Runtime Hardening
+
+**Shipped:** 2026-05-25
+**Phases:** 8 | **Plans:** 8
+
+### What Was Built
+
+- Zig no-std `wasm32-wasi` compile proof into immutable WASM artifact metadata.
+- Zig execution through runtime-service / Runtime Broker / Wasmtime using the same Preview 1 stdin/stdout JSON ABI as Rust.
+- Workshop and account save support for Zig non-counted exhibition alpha, gated behind runtime-service validation.
+- Language-aware artifact validation for Rust `wasm32-wasip1` and Zig `wasm32-wasi`.
+- v1.22 WASM/WASI hardening evidence with 19 passing probes.
+- ABI evolution and promotion decision artifacts that keep claims conservative.
+
+### What Worked
+
+- The local Zig toolchain was available; v1.21's fail-loud result was a preflight environment problem, not missing tooling.
+- A no-std Zig starter gave a clean import surface with only `fd_read` and `fd_write`.
+- Reusing the existing artifact and stdin/stdout JSON envelope let Zig land without moving Strategy execution into web/API/Go.
+
+### What Was Inefficient
+
+- Zig compilation needs explicit cache directories when the environment is intentionally minimal.
+- The first Zig proof crossed Vitest's default five-second timeout, so proof tests now use explicit larger timeouts.
+- Planning artifacts still required manual materialization because the local `gsd-sdk query` path was unavailable.
+
+### Patterns Established
+
+- Compiler preflight should distinguish command discovery from Strategy execution environment.
+- Multi-compiler artifact metadata must be language-aware, especially target triples.
+- Zig ergonomics should not outrun the proof gate; std-backed helpers need a future capability audit.
+
+### Key Lessons
+
+- "Unavailable" evidence can hide an environment bug; fail-loud artifacts should include enough detail to distinguish no binary from no PATH.
+- A tiny proof can be better than a comfortable sample when the comfortable sample imports unsafe host capabilities.
+- ABI evolution is worth studying, but runtime ABI changes need their own proof milestone.
+
 ## Milestone: v1.20 — Runtime Sandbox Candidate and Exhibition Reliability Proof
 
 **Shipped:** 2026-05-25

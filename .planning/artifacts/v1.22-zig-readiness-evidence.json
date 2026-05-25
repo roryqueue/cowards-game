@@ -1,0 +1,17 @@
+{
+  "countedPromotionAllowed": false,
+  "evidence": {
+    "artifactHash": "8d77e42ca5b0599568ba8ed5d9ca9f150fce82ead5fe1088b39b2538758b395c",
+    "compileProof": true,
+    "message": "Zig toolchain, target, compile artifact, and WASI Preview 1 ABI proof passed; Zig may be exposed only as non-counted exhibition alpha.",
+    "ok": true,
+    "resolvedPath": "/usr/local/bin/zig",
+    "runtimeProof": true,
+    "target": "wasm32-wasi",
+    "zigVersion": "0.16.0"
+  },
+  "exhibitionAlphaAllowed": true,
+  "generatedAt": "2026-05-25T00:00:00.000Z",
+  "milestone": "v1.22",
+  "schemaVersion": "v1.22-zig-readiness-evidence"
+}
