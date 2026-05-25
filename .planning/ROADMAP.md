@@ -20,169 +20,175 @@
 - [x] **v1.15 Go Backend Ownership Completion** - Phases 96-102, shipped 2026-05-24 with Go backend ownership completion and strict topology/monitor/page-smoke gates. See `.planning/milestones/v1.15-ROADMAP.md`.
 - [x] **v1.16 Runtime Isolation and TypeScript Backend Retirement** - Phases 103-109, shipped 2026-05-24 with no normal TypeScript backend except frontend plus isolated JS/TS Strategy runtime service. See `.planning/milestones/v1.16-ROADMAP.md`.
 - [x] **v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening** - Phases 110-116, shipped 2026-05-24. See `.planning/milestones/v1.17-ROADMAP.md`.
+- [ ] **v1.18 Runtime Isolation and Multi-Language Exhibition Beta** - Phases 117-123, active.
 
-## Latest Milestone: v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
+## Latest Milestone: v1.18 Runtime Isolation and Multi-Language Exhibition Beta
 
-**Status:** Shipped 2026-05-24
-**Phases:** 110-116
+**Status:** Planning
+**Phases:** 117-123
 **Granularity:** Standard
-**Requirements:** 52/52 mapped
+**Requirements:** 40/40 mapped
 **Research:** `.planning/research/SUMMARY.md`
 
 ## Overview
 
-v1.17 makes Python an experimental end-to-end Strategy language through the Strategy Execution Service / Runtime Broker contract. The milestone uses v1.16 as the backend-retirement baseline: normal topology remains `web frontend -> Go backend -> isolated runtime service(s)`, JS/TS support remains intact, and Python stays runtime-only, non-counted, and non-ranked.
+v1.18 strengthens the runtime isolation boundary while using a signed-in non-counted multi-language exhibition beta as the user-facing proof. The milestone uses v1.17 as the baseline: normal topology remains `web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s)`, JS/TS support remains intact, and Python remains runtime-only, non-ranked, and non-counted.
 
 The target flow is:
 
-`web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated JS/TS or Python runtime implementation`
+`signed-in user -> web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated JS/TS or Python runtime implementation -> Go-owned public replay evidence`
 
-Python may be authored, submitted, validated, executed, and replayed only through schema-validated runtime ABI envelopes and non-counted Workshop or exhibition-style MatchSets. Python must not become a backend, persistence owner, route owner, job lifecycle owner, public evidence owner, or silent fallback path.
+Python may be saved as an account-owned immutable Strategy Revision and selected for non-counted exhibition beta MatchSets only where the runtime, eligibility, topology, monitor, and public-output privacy gates pass. Python must not become a backend, persistence owner, route owner, job lifecycle owner, Match completion owner, scoring owner, public evidence owner, ranked/counted language, package-install path, production sandbox claim, or silent fallback path.
 
 ## Phases
 
-- [x] **Phase 110: Broker Registry Baseline and Contract Hardening** - Developers can inspect the v1.17 baseline and a concrete Runtime Broker registry contract before Python runtime expansion begins.
-- [x] **Phase 111: Strategy Artifact Language Metadata and Eligibility** - Developers can represent JS/TS and Python Strategy Revisions as immutable artifacts with language/runtime/package/validation/eligibility metadata.
-- [x] **Phase 112: Python Submission Validation and Diagnostics** - Users can submit Python source to an experimental Workshop path and receive public-safe parse/compile/package diagnostics without executing Strategy logic in web/API/Go.
-- [x] **Phase 113: Python Runtime Execution Behind Broker ABI** - Developers can execute Python Strategies only through the runtime service/runtime ABI with JS/TS parity for schemas, timeouts, invalid output, failures, redaction, and authority limits.
-- [x] **Phase 114: Go Orchestration and Non-Counted Eligibility** - Go can invoke registered Python runtime metadata through the runtime service envelope while rejecting Python from counted/ranked gates and preserving no-fallback behavior.
-- [x] **Phase 115: Python Starter Strategy and Replay Proof** - Users can load a Python Starter Strategy, validate and submit it, run it in a non-counted MatchSet, and inspect replay evidence.
-- [x] **Phase 116: Topology, Monitors, Privacy, and Promotion Gate** - Developers can run final topology, monitor, privacy, page-smoke, replay, and audit gates proving Python is runtime-only and non-counted.
+- [ ] **Phase 117: Isolation Baseline and Threat Model** - Establish v1.17 as the floor, document current isolation behavior, and define v1.18 threat model/promotion gates.
+- [ ] **Phase 118: Runtime Resource and Process Hardening** - Harden subprocess/container candidate behavior for timeout, caps, crash, lifecycle, filesystem/network/package escape, and no-fallback drills.
+- [ ] **Phase 119: Python Validation and Public-Safe Diagnostics** - Replace heuristic Python validation with AST/compile validation where practical and normalize diagnostics.
+- [ ] **Phase 120: Exhibition Beta Revision and Eligibility Model** - Make Python saveable as account-owned immutable non-counted exhibition beta revisions without weakening JS/TS counted play.
+- [ ] **Phase 121: Signed-In Multi-Language Exhibition Proof** - Run the required local signed-in JS/TS plus Python exhibition flow through Go -> Runtime Broker -> runtime implementation -> replay.
+- [ ] **Phase 122: Topology, Monitors, Hostile Probes, and Privacy Gate** - Extend monitors/topology/probes/privacy checks so isolation, ownership, fallback, and leak regressions fail loudly.
+- [ ] **Phase 123: Final Evidence, Promotion Decision, and Archive Gate** - Verify, audit, document promotion decisions, archive v1.18, remove active requirements, and tag `v1.18`.
 
 ## Phase Details
 
-### Phase 110: Broker Registry Baseline and Contract Hardening
+### Phase 117: Isolation Baseline and Threat Model
 
-**Goal:** Developers can inspect the v1.17 baseline and a concrete Strategy Execution Service / Runtime Broker registry contract before Python runtime expansion begins.
-**Depends on:** Phase 109
-**Requirements:** BASE-01, BASE-02, BASE-03, BASE-04, BASE-05, BROKER-01, BROKER-02, BROKER-03, BROKER-04, BROKER-05, BROKER-06
+**Goal:** Establish v1.17 as the floor, document current isolation behavior, and define v1.18 threat model/promotion gates.
+**Depends on:** Phase 116
+**Requirements:** BASE-01, BASE-02, BASE-03, BASE-04, BASE-05
 
 **Success Criteria:**
-1. Developer can inspect a v1.17 baseline artifact proving v1.16 remains the backend-retirement floor.
-2. Developer can inspect a runtime registry contract for JS/TS and Python with adapter metadata, limits, package policy, readiness, counted eligibility, and health metadata.
-3. Developer can verify Go/web/API do not execute Strategy source and route execution only through schema-validated runtime execution envelopes.
-4. Developer can run contract and monitor tests that fail on ABI drift, unknown runtime targets, registry drift, or runtime authority creep.
+1. Developer can inspect a v1.18 baseline artifact proving v1.17 remains the runtime/broker floor.
+2. Developer can inspect an exhibition-beta hostile Strategy threat model covering filesystem, network, package/import, shell/process, environment, memory/output, timeout, crash, stderr/stack/path, and public-output leak risks.
+3. Developer can inspect promotion criteria that distinguish non-counted exhibition beta readiness from production sandbox certification.
+4. Developer can verify JS/TS support remains intact and Python remains runtime-only/non-counted/non-ranked.
 
 **Plans:** 1 plan
 
-### Phase 111: Strategy Artifact Language Metadata and Eligibility
+### Phase 118: Runtime Resource and Process Hardening
 
-**Goal:** Developers can represent Python Strategy Revisions as immutable artifacts without weakening JS/TS artifact, source privacy, or counted eligibility semantics.
-**Depends on:** Phase 110
-**Requirements:** ART-01, ART-02, ART-03, ART-04, ART-05
+**Goal:** Harden subprocess/container candidate behavior for timeout, caps, crash, lifecycle, filesystem/network/package escape, and no-fallback drills.
+**Depends on:** Phase 117
+**Requirements:** ISO-01, ISO-02, ISO-03, ISO-04, ISO-05
 
 **Success Criteria:**
-1. Developer can inspect schemas and generated artifacts that support Python source format, language version, runtime target, package metadata, compile metadata, validation status, artifact hash, and eligibility flags.
-2. Developer can verify behavior compatibility keys include language/runtime/package/compile metadata.
-3. Developer can verify public summaries expose only safe labels and never expose source, memory, objective, stderr, stack, host path, package path, token, DB DSN, or private runtime data.
-4. Developer can verify Python artifacts are non-counted while JS/TS counted eligibility remains intact.
+1. Developer can inspect hardened Python subprocess launch behavior, including no shell, empty environment, isolated/safe-path flags where practical, and deterministic runtime metadata.
+2. Developer can verify timeouts, stdout/stderr/output caps, malformed IPC, crash, signal, and cleanup classify deterministically.
+3. Developer can run filesystem, network, shell, import/package, environment, host path, and package escape probes.
+4. Developer can inspect container/gVisor-style evidence as readiness evidence without production counted-play promotion.
+5. Developer can verify stopped runtime service and stopped Python runtime fail closed without silent fallback.
 
 **Plans:** 1 plan
 
-### Phase 112: Python Submission Validation and Diagnostics
+### Phase 119: Python Validation and Public-Safe Diagnostics
 
-**Goal:** Users can validate and submit Python source as experimental Strategy Revision material with public-safe diagnostics and no web/API/Go execution.
-**Depends on:** Phase 111
-**Requirements:** PYVAL-01, PYVAL-02, PYVAL-03, PYVAL-04, PYVAL-05, PYVAL-06
+**Goal:** Replace heuristic Python validation with AST/compile validation where practical and normalize diagnostics.
+**Depends on:** Phase 118
+**Requirements:** PYVAL-01, PYVAL-02, PYVAL-03, PYVAL-04, PYVAL-05
 
 **Success Criteria:**
-1. User can choose or submit Python source through an explicitly experimental Workshop path.
-2. User receives diagnostics for parse errors, compile errors, missing Strategy functions, forbidden imports/capabilities, unsupported package metadata, and source size.
-3. Developer can verify validation uses parse/compile checks where practical and does not run Strategy logic in web/API/Go.
-4. Developer can verify diagnostics and invalid validation reports are public-safe and do not echo private source, stack, stderr, host path, environment, token, DB DSN, or private runtime internals.
+1. User can validate Python with real AST/compile checks where practical.
+2. User receives public-safe syntax, compile, missing-function, forbidden-capability, package-policy, size, and metadata diagnostics.
+3. Developer can verify validation never executes Strategy behavior in web/API/Go.
+4. Developer can verify diagnostics omit source, memory, objectives, stderr, stack, host paths, package paths, env, tokens, DB DSNs, and private runtime internals.
+5. Developer can verify Python package policy remains self-contained source only.
 
 **Plans:** 1 plan
 
-### Phase 113: Python Runtime Execution Behind Broker ABI
+### Phase 120: Exhibition Beta Revision and Eligibility Model
 
-**Goal:** Developers can execute Python Strategies only as a registered runtime implementation behind the runtime service/runtime ABI.
-**Depends on:** Phase 112
-**Requirements:** PYRUN-01, PYRUN-02, PYRUN-03, PYRUN-04, PYRUN-05, PYRUN-06, PYRUN-07
+**Goal:** Make Python saveable as account-owned immutable non-counted exhibition beta revisions without weakening JS/TS counted play.
+**Depends on:** Phase 119
+**Requirements:** BETA-01, BETA-02, BETA-03, BETA-04, BETA-05
 
 **Success Criteria:**
-1. Developer can run Python Strategy methods needed for a full Match through the same runtime execution service envelope family as JS/TS.
-2. Developer can verify Python invalid output, timeout, crash, subprocess exit/signal, malformed IPC, oversized output, forbidden capability, stderr, and stack behavior map to the broker failure taxonomy.
-3. Developer can verify Python runtime code has no filesystem, network, package install, shell, database, job lifecycle, Match completion, Chronicle persistence, scoring, route, or public evidence authority.
-4. Developer can verify successful Python execution returns internal runtime results only and Go remains the owner of orchestration, persistence, scoring, and public replay/evidence.
+1. User can save Python as an account-owned immutable Strategy Revision where practical.
+2. Developer can verify Python revisions carry language/runtime/adapter/package/validation/artifact hash metadata and non-counted eligibility.
+3. User-facing labels clearly say Python is non-counted exhibition beta.
+4. Developer can verify counted/ranked/ladder/gauntlet gates reject Python while JS/TS counted eligibility remains intact.
+5. Developer can verify public summaries expose safe language/runtime labels without private Strategy or runtime leaks.
 
 **Plans:** 1 plan
 
-### Phase 114: Go Orchestration and Non-Counted Eligibility
+### Phase 121: Signed-In Multi-Language Exhibition Proof
 
-**Goal:** Go can invoke Python only through schema-validated runtime service envelopes and keeps Python out of counted/ranked paths.
-**Depends on:** Phase 113
-**Requirements:** GO-01, GO-02, GO-03, GO-04, GO-05
+**Goal:** Run the required local signed-in JS/TS plus Python exhibition flow through Go -> Runtime Broker -> runtime implementation -> replay.
+**Depends on:** Phase 120
+**Requirements:** PROOF-01, PROOF-02, PROOF-03, PROOF-04, PROOF-05, PROOF-06, PROOF-07, PROOF-08
 
 **Success Criteria:**
-1. Developer can verify Go accepts Python runtime metadata only when it matches the registered broker/runtime ABI contract.
-2. Developer can verify Go rejects Python for ranked ladder, counted MatchSet, counted gauntlet, and normal counted eligibility paths.
-3. User can create a non-counted Workshop or exhibition-style MatchSet with a valid Python Strategy Revision.
-4. Developer can verify stopped Python runtime, stopped runtime service, registry mismatch, and unsupported artifact failures fail closed without TypeScript backend, Go execution, or JS/TS fallback execution.
+1. User can create or sign into a local account.
+2. User can create/save JS/TS and Python Strategy Revisions.
+3. User can create a non-counted exhibition MatchSet using Python against JS/TS or Python.
+4. Developer can verify Match execution flows through Go -> Runtime Broker -> isolated runtime implementation.
+5. User can open replay evidence for the MatchSet with plausible in-bounds board state.
+6. Developer can verify public outputs for the proof are private-data safe.
 
 **Plans:** 1 plan
 
-### Phase 115: Python Starter Strategy and Replay Proof
+### Phase 122: Topology, Monitors, Hostile Probes, and Privacy Gate
 
-**Goal:** Users can exercise a visible Python proof point from Workshop authoring through replay evidence.
-**Depends on:** Phase 114
-**Requirements:** PROOF-01, PROOF-02, PROOF-03, PROOF-04, PROOF-05, PROOF-06
+**Goal:** Extend monitors/topology/probes/privacy checks so isolation, ownership, fallback, and leak regressions fail loudly.
+**Depends on:** Phase 121
+**Requirements:** MON-01, MON-02, MON-03, MON-04, MON-05, MON-06, MON-07
 
 **Success Criteria:**
-1. User can load a small Python Starter Strategy with experimental and non-counted labels.
-2. User can validate and submit the Python Starter Strategy as an immutable artifact with Python runtime metadata.
-3. User can run the Python Strategy in a non-counted MatchSet against an approved JS/TS or fixture opponent.
-4. User can open replay evidence showing a plausible full Match start with in-bounds visible Soldiers and terrain.
-5. Developer can run an end-to-end proof command or page smoke covering edit -> validate -> submit -> create MatchSet -> execute through runtime service -> replay.
+1. Developer can run monitors that fail on runtime ABI drift, runtime registry drift, broker contract drift, sandbox authority drift, and Python execution outside the runtime boundary.
+2. Developer can run monitors that fail on backend ownership creep, route ownership creep, persistence access, job lifecycle ownership, scoring ownership, public evidence ownership, or silent fallback.
+3. Developer can run hostile probes for filesystem, network, package/import, shell, environment, process, memory/output, timeout, crash, and malformed IPC behavior.
+4. Developer can run privacy checks for source/memory/objective/stderr/stack/path/token/private-runtime leaks.
+5. Developer can run JS/TS regression tests and page smoke for Workshop, exhibition creation, MatchSet result, and replay evidence.
 
 **Plans:** 1 plan
 
-### Phase 116: Topology, Monitors, Privacy, and Promotion Gate
+### Phase 123: Final Evidence, Promotion Decision, and Archive Gate
 
-**Goal:** Developers can prove v1.17 achieved Python runtime-only support without backend ownership creep, privacy leaks, registry drift, or counted eligibility promotion.
-**Depends on:** Phase 115
-**Requirements:** GATE-01, GATE-02, GATE-03, GATE-04, GATE-05, GATE-06, GATE-07, EXIT-01, EXIT-02, EXIT-03, EXIT-04, EXIT-05
+**Goal:** Verify, audit, document promotion decisions, archive v1.18, remove active requirements, and tag `v1.18`.
+**Depends on:** Phase 122
+**Requirements:** EXIT-01, EXIT-02, EXIT-03, EXIT-04, EXIT-05
 
 **Success Criteria:**
-1. Developer can run topology checks proving normal topology remains web frontend -> Go backend -> isolated runtime service(s), with Python only behind the broker/runtime boundary.
-2. Developer can run monitors that fail on ABI drift, runtime registry drift, broker contract drift, Go client drift, stale generated artifacts, Python execution outside runtime service, backend ownership creep, route ownership creep, persistence access, job lifecycle ownership, scoring, public evidence delivery, or silent fallback.
-3. Developer can run public-output privacy checks and browser/page smoke for Python Workshop and replay proof.
-4. Developer can inspect final v1.17 artifacts and promotion decision showing Python remains experimental, runtime-only, and non-counted.
-5. Developer can complete v1.17 archive, remove active requirements, update state docs, and tag `v1.17`.
+1. Developer can inspect v1.18 artifacts for baseline, threat model, isolation evidence, validation policy, exhibition beta evidence, topology, monitors, privacy, and proof results.
+2. Developer can inspect a promotion decision stating Python is promoted only to non-counted exhibition beta.
+3. Developer can inspect a promotion decision stating runtime isolation is readiness evidence only unless production-grade proof genuinely passes.
+4. Developer can run final verification across spec/contracts, runtime-python, runtime-service, Go backend, web, topology, boundary monitors, privacy, and browser proof.
+5. Developer can archive requirements/roadmap/phases, remove active `.planning/REQUIREMENTS.md`, update PROJECT/STATE/MILESTONES/RETROSPECTIVE, and tag `v1.18`.
 
 **Plans:** 1 plan
 
 ## Progress
 
-**Execution Order:** Phase 110 -> Phase 111 -> Phase 112 -> Phase 113 -> Phase 114 -> Phase 115 -> Phase 116
+**Execution Order:** Phase 117 -> Phase 118 -> Phase 119 -> Phase 120 -> Phase 121 -> Phase 122 -> Phase 123
 
 | Phase | Plans Complete | Status | Completed |
 | --- | --- | --- | --- |
-| 110. Broker Registry Baseline and Contract Hardening | 1/1 | Complete | 2026-05-24 |
-| 111. Strategy Artifact Language Metadata and Eligibility | 1/1 | Complete | 2026-05-24 |
-| 112. Python Submission Validation and Diagnostics | 1/1 | Complete | 2026-05-24 |
-| 113. Python Runtime Execution Behind Broker ABI | 1/1 | Complete | 2026-05-24 |
-| 114. Go Orchestration and Non-Counted Eligibility | 1/1 | Complete | 2026-05-24 |
-| 115. Python Starter Strategy and Replay Proof | 1/1 | Complete | 2026-05-24 |
-| 116. Topology, Monitors, Privacy, and Promotion Gate | 1/1 | Complete | 2026-05-24 |
+| 117. Isolation Baseline and Threat Model | 0/1 | Ready for planning | - |
+| 118. Runtime Resource and Process Hardening | 0/1 | Pending | - |
+| 119. Python Validation and Public-Safe Diagnostics | 0/1 | Pending | - |
+| 120. Exhibition Beta Revision and Eligibility Model | 0/1 | Pending | - |
+| 121. Signed-In Multi-Language Exhibition Proof | 0/1 | Pending | - |
+| 122. Topology, Monitors, Hostile Probes, and Privacy Gate | 0/1 | Pending | - |
+| 123. Final Evidence, Promotion Decision, and Archive Gate | 0/1 | Pending | - |
 
 ## Requirement Coverage
 
 | Requirement Group | Phase | Count |
 | --- | --- | ---: |
-| BASE-01 through BASE-05, BROKER-01 through BROKER-06 | Phase 110 | 11 |
-| ART-01 through ART-05 | Phase 111 | 5 |
-| PYVAL-01 through PYVAL-06 | Phase 112 | 6 |
-| PYRUN-01 through PYRUN-07 | Phase 113 | 7 |
-| GO-01 through GO-05 | Phase 114 | 5 |
-| PROOF-01 through PROOF-06 | Phase 115 | 6 |
-| GATE-01 through GATE-07, EXIT-01 through EXIT-05 | Phase 116 | 12 |
+| BASE-01 through BASE-05 | Phase 117 | 5 |
+| ISO-01 through ISO-05 | Phase 118 | 5 |
+| PYVAL-01 through PYVAL-05 | Phase 119 | 5 |
+| BETA-01 through BETA-05 | Phase 120 | 5 |
+| PROOF-01 through PROOF-08 | Phase 121 | 8 |
+| MON-01 through MON-07 | Phase 122 | 7 |
+| EXIT-01 through EXIT-05 | Phase 123 | 5 |
 
-**Coverage:** 52/52 v1.17 requirements mapped.
+**Coverage:** 40/40 v1.18 requirements mapped.
 **Unmapped requirements:** 0.
 
 ## Next Up
 
-Start a fresh milestone with `$gsd-new-milestone`; `.planning/REQUIREMENTS.md` is intentionally absent after milestone close.
+Run `$gsd-plan-phase 117` to create an executable plan for Isolation Baseline and Threat Model.
 
 ---
-*Created: 2026-05-24 for v1.17 milestone initialization*
+*Created: 2026-05-25 for v1.18 milestone initialization*

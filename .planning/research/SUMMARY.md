@@ -1,61 +1,65 @@
 # Project Research Summary
 
 **Project:** Coward's Game
-**Milestone:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
-**Domain:** Runtime Broker contract, experimental Python Strategy runtime, immutable Strategy artifacts, non-counted MatchSet proof, topology and privacy hardening
-**Researched:** 2026-05-24
-**Confidence:** High for repo-local baseline and required boundary shape; medium for final Python runtime mechanics until Phase 113 validates hostile-code and runtime failure behavior in code.
+**Milestone:** v1.18 Runtime Isolation and Multi-Language Exhibition Beta
+**Domain:** Runtime isolation hardening, Python non-counted exhibition beta, signed-in multi-language exhibition proof, broker topology and privacy monitors
+**Researched:** 2026-05-25
+**Confidence:** High for repo-local baseline and phase structure; medium for final isolation claims until v1.18 hostile probes and local live proof are implemented.
 
 ## Executive Summary
 
-v1.17 should make Python a real experimental end-to-end Strategy language without weakening the v1.16 backend-retirement boundary. The safest path is broker first: define a concrete Strategy Execution Service / Runtime Broker registry contract, harden Strategy artifact metadata, add Python validation, then execute Python only behind the same runtime ABI envelope family that JS/TS uses today.
+v1.18 should strengthen the runtime isolation boundary without overclaiming production sandbox certification. The recommended path is to treat v1.17 as the floor, harden Python subprocess behavior, collect container/gVisor-style readiness evidence, replace heuristic Python validation with real AST/compile validation where practical, and prove the user-facing value through a signed-in non-counted exhibition beta flow.
 
-The repo already contains `packages/runtime-python`, but it is a method-level spike rather than a full Match runtime-service path. It should be hardened and routed through the runtime service registry, not promoted directly. Python must remain non-counted and non-ranked, with a Workshop or exhibition-style proof point plus replay evidence.
+The user-facing proof should be strict: local account, JS/TS Strategy Revision, Python Strategy Revision, non-counted exhibition MatchSet, Go -> Runtime Broker -> isolated runtime execution, and replay evidence with public-safe outputs. Python may promote from experimental proof to non-counted exhibition beta only if these gates pass; ranked/counted eligibility, arbitrary package installs, and production sandbox certification remain out of scope.
 
 ## Stack Findings
 
-- Keep Next.js, Go, PostgreSQL, TypeScript spec/contracts, and the existing runtime service.
-- Add no new backend, queue, persistence owner, package manager, production sandbox, service mesh, or cloud deployment layer.
-- Promote broker metadata and runtime registry artifacts in `@cowards/spec` before routing Python.
-- Use existing Python subprocess code only as a starting point; treat subprocess and interpreter flags as defense-in-depth, not sandbox promotion.
-- Python official documentation supports separate parse/compile validation and subprocess timeout handling; Python security guidance also points to isolated/safe-path modes such as `-I`, `-P`, and `PYTHONSAFEPATH`, which are hardening knobs rather than a full untrusted-code boundary.
+- Preserve the v1.17 topology: web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s).
+- Keep Go as orchestration, persistence-facing backend, Match lifecycle, scoring, and public evidence owner.
+- Keep hostile Strategy execution inside runtime implementation boundaries reached only through schema-validated ABI envelopes.
+- Python interpreter flags such as isolated mode and safe path behavior are useful hardening knobs, but not sufficient as a standalone hostile-code sandbox.
+- Node child process timeout/output controls and Docker/gVisor-style container controls can provide readiness evidence, but v1.18 should avoid production sandbox claims unless evidence genuinely supports them.
 
 ## Feature Findings
 
-- Table stakes are runtime registry, language/runtime artifact metadata, Python parse/compile/package validation, Python execution through the broker ABI, non-counted Go orchestration, Workshop Starter proof, replay evidence, and strict monitors.
-- A Python Starter Strategy is the right proof point because it exercises authoring, validation, immutable artifact creation, runtime execution, MatchSet status, public labels, and replay projection without claiming ranked readiness.
-- Python eligibility must remain non-counted by default, and counted/ranked paths must fail closed.
+- Table stakes are baseline/threat model, process/resource hardening, real Python validation, immutable account-owned non-counted Python revisions, signed-in exhibition proof, monitor/probe/privacy gates, and final promotion decision.
+- The signed-in exhibition flow closes the main v1.17 residual gap: browser-authenticated non-counted exhibition submission was deferred.
+- "Non-counted exhibition beta" is the right product label because it communicates user-facing availability without implying ranked/counted support.
 
 ## Architecture Findings
 
-- v1.17 target topology is `web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation`.
-- The broker may initially live inside the current runtime service process, but the interface should be concrete enough to front or replace current implementation later.
-- Runtime implementation selection should be data-driven by registry metadata and schema-validated runtime metadata, not hard-coded to JS/TS.
-- Go remains orchestration owner; runtime service remains execution owner; public replay/evidence remains a Go/public projection concern.
+- Runtime selection should remain exact-match and fail-closed through the Runtime Broker registry and runtime ABI metadata.
+- Validation and execution import surfaces must remain separated so validation paths do not pull runtime execution adapters into Next/web evaluation.
+- Topology and boundary monitors should extend existing scripts rather than introduce a separate governance system.
+- Replay/public evidence remains a public projection concern and must not expose source, StrategyMemory, SoldierMemory, objectives, stderr, stack, host paths, package paths, tokens, DB DSNs, or private runtime internals.
 
 ## Watch Out For
 
-- Do not execute Python in Go or web/API.
-- Do not let Python become a backend, persistence owner, route owner, job owner, Match completion owner, Chronicle persistence owner, scoring owner, or public evidence owner.
-- Do not allow silent fallback to JS/TS, TypeScript backend, or Go execution.
-- Do not expose source, StrategyMemory, SoldierMemory, objectives, owner debug, raw Awareness Grid, stderr, stack, host paths, package paths, tokens, DB DSNs, or private runtime internals in public outputs.
-- Do not promote Python to counted/ranked play or production sandbox status.
+- Do not execute Python or JS/TS Strategy code in web/API/Go.
+- Do not let Python own backend routes, persistence, job lifecycle, Match completion, scoring, public evidence, or fallback behavior.
+- Do not allow JS/TS regressions while hardening Python.
+- Do not turn container/gVisor evidence into a production sandbox claim prematurely.
+- Do not permit arbitrary PyPI/package installs.
+- Do not accept stopped runtime service or stopped Python runtime behavior that silently falls back.
 
 ## Recommended Phase Structure
 
-1. Phase 110: Broker Registry Baseline and Contract Hardening.
-2. Phase 111: Strategy Artifact Language Metadata and Eligibility.
-3. Phase 112: Python Submission Validation and Diagnostics.
-4. Phase 113: Python Runtime Execution Behind Broker ABI.
-5. Phase 114: Go Orchestration and Non-Counted Eligibility.
-6. Phase 115: Python Starter Strategy and Replay Proof.
-7. Phase 116: Topology, Monitors, Privacy, and Promotion Gate.
+1. Phase 117: Isolation Baseline and Threat Model.
+2. Phase 118: Runtime Resource and Process Hardening.
+3. Phase 119: Python Validation and Public-Safe Diagnostics.
+4. Phase 120: Exhibition Beta Revision and Eligibility Model.
+5. Phase 121: Signed-In Multi-Language Exhibition Proof.
+6. Phase 122: Topology, Monitors, Hostile Probes, and Privacy Gate.
+7. Phase 123: Final Evidence, Promotion Decision, and Archive Gate.
 
 ## Sources Consulted
 
-- Repo-local planning archive through v1.16, especially `.planning/milestones/v1.16-*` and `.planning/artifacts/v1.16-*`.
-- Repo-local runtime/spec code: `packages/spec/src/runtime.ts`, `packages/spec/src/runtime-execution-service.ts`, `apps/runtime-service/src/execute-match.ts`, `packages/runtime-python`, and `apps/go-backend/runtime_service_client.go`.
-- Python official docs for `ast`, `py_compile`, `subprocess`, and security considerations.
+- Repo-local planning archive through v1.17, especially `.planning/milestones/v1.17-*` and `.planning/artifacts/v1.17-*`.
+- Repo-local runtime/spec code: `packages/runtime-python`, `apps/runtime-service`, `apps/go-backend/runtime_service_client.go`, `scripts/check-boundary-monitors.ts`, and `scripts/check-local-topology.ts`.
+- Python command-line documentation for isolated mode and safe path behavior: https://docs.python.org/3.9/using/cmdline.html
+- Node child process documentation for process lifecycle, timeout, and stdio behavior: https://nodejs.org/api/child_process.html
+- Docker run documentation for read-only filesystems, capabilities, security options, memory, PID, and network controls: https://docs.docker.com/reference/cli/docker/container/run
+- gVisor overview for container sandbox candidate framing: https://gvisor.dev/docs/
 
 ---
-*Research summary written: 2026-05-24*
+*Research summary written: 2026-05-25*

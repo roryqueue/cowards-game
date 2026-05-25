@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening on 2026-05-24
-**Current milestone:** None - start the next milestone with `$gsd-new-milestone`.
-**Status:** v1.17 archived.
+**Current milestone:** v1.18 Runtime Isolation and Multi-Language Exhibition Beta
+**Status:** Planning phase contexts for v1.18.
 **Last audit:** v1.17 audit passed with Python promoted only as an experimental runtime path behind the Runtime Broker contract.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the isolated TypeScript runtime service boundary.
@@ -12,6 +12,21 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.18 Runtime Isolation and Multi-Language Exhibition Beta
+
+**Goal:** Strengthen the runtime isolation boundary and prove it with a signed-in non-counted multi-language exhibition beta while preserving v1.17's broker/runtime-only contract.
+
+**Target features:**
+- Baseline v1.17 runtime behavior, define an exhibition-beta hostile Strategy threat model, and separate isolation readiness evidence from production sandbox certification.
+- Harden Python subprocess/resource/process behavior and collect container/gVisor-style readiness evidence without promoting production counted play.
+- Replace heuristic Python validation with real AST/compile validation where practical and public-safe diagnostics.
+- Represent Python as account-owned immutable Strategy Revisions for non-counted exhibition beta while keeping JS/TS counted support intact.
+- Run a signed-in local exhibition proof: account, JS/TS revision, Python revision, non-counted MatchSet, Go -> Runtime Broker -> isolated runtime execution, and replay evidence.
+- Extend topology, monitors, hostile probes, privacy checks, and no-fallback drills so isolation regressions fail loudly.
+- Close with explicit promotion decisions: Python may become non-counted exhibition beta; runtime isolation remains readiness evidence unless production-grade proof genuinely passes.
+
+**Key context:** v1.18 starts from the v1.17 baseline. Normal topology remains `web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s)`. Python must not become a backend, route owner, persistence owner, job lifecycle owner, Match completion owner, scoring owner, public evidence owner, ranked/counted language, arbitrary package runtime, or silent fallback path.
 
 ## Latest Shipped Milestone: v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
 
