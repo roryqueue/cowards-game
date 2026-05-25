@@ -3,15 +3,31 @@
 ## Current State
 
 **Shipped version:** v1.19 Runtime Isolation Readiness and Exhibition Beta Trust on 2026-05-25
-**Current milestone:** none active.
-**Status:** v1.19 complete, archived, and tagged.
+**Current milestone:** v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof.
+**Status:** v1.20 planning initialized; requirements and roadmap active.
 **Last audit:** v1.19 audit passed with Python kept as non-counted exhibition beta and runtime isolation kept as readiness evidence only.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. v1.19 strengthens the honesty and depth of runtime isolation readiness evidence while making the Python non-counted exhibition beta easier for signed-in users to trust.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. v1.20 aims to make one stronger runtime isolation candidate executable and honestly testable while making Python non-counted exhibition beta reliability, latency, timeout behavior, degraded-state UX, and proof evidence realistic enough for repeated signed-in use.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
+
+**Goal:** Make the Docker/container subprocess runtime candidate executable and honestly testable while improving Python non-counted exhibition beta reliability, latency, timeout behavior, degraded-state UX, and signed-in proof evidence.
+
+**Target features:**
+- Treat v1.19 as the baseline and preserve the normal topology: web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s).
+- Select Docker/container subprocess as the primary stronger sandbox candidate lane because Docker is locally available, while keeping gVisor/runsc strict lanes fail-loud unless `runsc` is genuinely installed and executable.
+- Implement real executable candidate evidence for the container lane, including hostile probes, resource/IPC behavior, no-fallback drills, public-safe diagnostics, and clear non-promotion language.
+- Define timeout budgets separately for per-Strategy runtime calls, whole-Match execution, MatchSet/job orchestration, runtime-service HTTP calls, and browser proof runs.
+- Measure JS/TS-vs-Python and Python-vs-Python exhibition MatchSet latency and stabilize or reduce Python exhibition latency where practical without weakening deterministic per-Strategy caps.
+- Make running, slow, degraded, timeout, retry/no-retry, and failed runtime states understandable in UI and public-safe evidence.
+- Run a realistic signed-in proof that creates one JS/TS revision, two Python revisions, mixed JS/TS-vs-Python and Python-vs-Python non-counted exhibition MatchSets, result/replay evidence, candidate-lane evidence, degraded/timeout wording checks, private-data safety checks, no-fallback checks, and JS/TS regression checks.
+- Close with explicit promotion decisions: Python remains non-counted exhibition beta; runtime isolation remains readiness evidence unless the stronger candidate evidence genuinely supports a stronger claim.
+
+**Key context:** v1.20 starts from the v1.19 proof. Python is already non-counted exhibition beta, JS/TS remains the counted Strategy path, Go owns orchestration and public evidence, and hostile Strategy execution remains only behind schema-validated ABI envelopes and registered runtime implementations. Docker/container evidence may become a stronger executable candidate lane, but this milestone must not overclaim production sandbox certification.
 
 ## Latest Shipped Milestone: v1.19 Runtime Isolation Readiness and Exhibition Beta Trust
 
@@ -438,6 +454,10 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.18-REQUIREMENTS.md`
 - `.planning/milestones/v1.18-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.18-phases/`
+- `.planning/milestones/v1.19-ROADMAP.md`
+- `.planning/milestones/v1.19-REQUIREMENTS.md`
+- `.planning/milestones/v1.19-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.19-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -490,7 +510,9 @@ Planning archives live under `.planning/milestones/`:
 | Retire TypeScript backend, not JS/TS Strategy support | v1.16 removed or quarantined TypeScript service/backend ownership while preserving the isolated JS/TS runtime service as hostile-code execution infrastructure invoked by Go through a broker-ready, language-neutral ABI contract. | ✓ Implemented in v1.16 |
 | Name the future execution abstraction now | The current TypeScript runtime service conforms to a future **Strategy Execution Service** / **Runtime Broker** contract so later language-host replacement does not rewrite Go orchestration. | ✓ Implemented in v1.16 |
 | Make Python prove the broker before product promotion | v1.17 should add Python only as an experimental runtime implementation behind the Strategy Execution Service / Runtime Broker contract, with non-counted proof and strict monitor gates before any ranked or production sandbox claims. | ✓ Implemented in v1.17 |
-| Keep Python exhibition beta honest and understandable | v1.19 should improve runtime isolation readiness evidence and user trust cues without turning Python into counted play or overclaiming production sandbox certification. | — Pending |
+| Keep Python exhibition beta honest and understandable | v1.19 improved runtime isolation readiness evidence and user trust cues without turning Python into counted play or overclaiming production sandbox certification. | ✓ Implemented in v1.19 |
+| Make the container candidate executable before stronger claims | v1.20 should prefer the locally available Docker/container subprocess candidate for real executable evidence, while gVisor/runsc remains fail-loud unless installed and proven. | — Pending |
+| Separate timeout budgets by layer | v1.19 showed whole-Match service timeout is different from per-Strategy caps; v1.20 should make Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets explicit. | — Pending |
 
 ## Constraints
 
@@ -511,4 +533,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-25 after starting v1.19 milestone*
+*Last updated: 2026-05-25 after starting v1.20 milestone*

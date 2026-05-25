@@ -1,23 +1,23 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.19
-milestone_name: Runtime Isolation Readiness and Exhibition Beta Trust
-status: shipped
-stopped_at: v1.19 archived and tagged
+milestone: v1.20
+milestone_name: Runtime Sandbox Candidate and Exhibition Reliability Proof
+status: planning
+stopped_at: defining requirements and roadmap
 last_updated: "2026-05-25T00:00:00.000-04:00"
-last_activity: 2026-05-25 - Completed v1.19 with live signed-in proof, audit, archive, and tag
+last_activity: 2026-05-25 - Started v1.20 milestone with Docker/container candidate lane and exhibition reliability focus
 progress:
   total_phases: 8
-  completed_phases: 8
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.19 complete and archived
+**Status:** v1.20 planning initialized
 
 ## Project Reference
 
@@ -25,26 +25,28 @@ See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Latest shipped milestone:** v1.19 Runtime Isolation Readiness and Exhibition Beta Trust
-**Active milestone:** none
-**Requirements:** archived at `.planning/milestones/v1.19-REQUIREMENTS.md`
+**Active milestone:** v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
+**Requirements:** `.planning/REQUIREMENTS.md`
 **Roadmap:** `.planning/ROADMAP.md`
 
 ## Current Position
 
-Phase: 131 Promotion Decision and Archive Gate
-Plan: complete
-Status: v1.19 shipped
-Last activity: 2026-05-25 - v1.19 proof, audit, archive, and tag completed
+Phase: Not started (Phase 132 next)
+Plan: -
+Status: Defining requirements and roadmap
+Last activity: 2026-05-25 - Milestone v1.20 started
 
-## Latest Milestone Result
+## Current Milestone Goal
 
-v1.19 strengthened runtime isolation readiness evidence with monitor-readable readiness lanes, a unified hostile probe taxonomy, explicit no-fallback drills, stricter candidate evidence commands, and honest container/runsc availability behavior. It also made Python exhibition beta trust clearer with compact labels, safe tactical Python samples, public-safe MatchSet/replay Evidence panels, and a signed-in proof that saved one JS/TS and two Python revisions, completed mixed and Python-vs-Python non-counted exhibitions, and opened replay evidence without private leak markers.
+v1.20 combines two next frontiers from v1.19: make one stronger runtime isolation candidate executable and honestly testable, and make Python non-counted exhibition beta reliability, latency, timeout behavior, degraded-state UX, and proof evidence realistic enough for repeated signed-in use.
 
-Python remains non-counted exhibition beta. Runtime isolation remains readiness evidence only, not production sandbox certification.
+The selected primary stronger candidate lane is Docker/container subprocess because Docker is locally available and the repo already has a `container-subprocess` adapter. gVisor/runsc remains a strict fail-loud lane unless `runsc` becomes genuinely available and executable in the local environment.
 
-## Previous Milestone Result
+## Baseline From v1.19
 
-v1.18 strengthened runtime isolation evidence and promoted Python only to non-counted exhibition beta. A signed-in local proof created JS/TS and Python account-owned Strategy Revisions, ran a non-counted exhibition through Go -> runtime-service -> runtime implementation, and opened public-safe replay evidence with zero runtime violations.
+v1.19 completed, archived, and tagged `v1.19`. It added monitor-readable readiness lanes, a unified hostile probe taxonomy, explicit no-fallback drills, compact Python exhibition beta labels, safe tactical Python samples, public-safe MatchSet/replay Evidence panels, a signed-in proof with one JS/TS and two Python revisions, mixed and Python-vs-Python non-counted exhibition proof, and explicit promotion decisions.
+
+The v1.19 proof also found and fixed two reliability/privacy gaps: runtime-service HTTP timeout was too low for Python subprocess exhibition Matches, and public evidence copy exposed internal private-field names.
 
 ## Active Constraints
 
@@ -56,20 +58,24 @@ v1.18 strengthened runtime isolation evidence and promoted Python only to non-co
 - Strategy Revisions are immutable once submitted for Match or MatchSet play.
 - Public replay and MatchSet output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, package paths, or private runtime internals by default.
 - Runtime isolation evidence must distinguish readiness evidence from production sandbox certification.
-- Required candidate evidence and no-fallback drills must fail loudly on skipped candidates, stale artifacts, stopped runtime services, unavailable Python runtime, or silent substitution.
+- Required candidate evidence and no-fallback drills must fail loudly on skipped candidates, stale artifacts, stopped runtime services, unavailable Python runtime, unavailable container/runtime candidate, unavailable runsc candidate, or silent substitution.
+- Python must not own backend routes, persistence, job lifecycle, Match completion, scoring, public evidence, retry policy, or fallback behavior.
+- No arbitrary PyPI/package installs are allowed.
+- No unbounded local stress tests are allowed; latency and reliability proof must use bounded, repeatable workloads.
 - `pnpm boundary:monitors` must stay synchronized with Go route manifests, runtime ABI artifacts, runtime registry artifacts, topology evidence, surface labels, fixture gates, runtime isolation candidate evidence, and ownership changes.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 | --- | --- | --- | --- |
-| runtime | Production hostile-code sandbox promotion | Deferred | v1.19 |
-| runtime | Python ranked/ladder counted eligibility | Deferred | v1.19 |
-| runtime | Arbitrary PyPI/package install support | Deferred | v1.19 |
-| runtime | Broad WASM/WASI/component-model promotion | Deferred | v1.19 |
-| product | Broad multi-language product support beyond Python exhibition beta | Deferred | v1.19 |
-| ops | Cloud deployment, Kubernetes, service mesh, or production observability stack | Deferred | v1.19 |
+| runtime | Production hostile-code sandbox promotion | Deferred | v1.20 |
+| runtime | Python ranked/ladder counted eligibility | Deferred | v1.20 |
+| runtime | Arbitrary PyPI/package install support | Deferred | v1.20 |
+| runtime | gVisor/runsc promotion without local executable proof | Deferred | v1.20 |
+| runtime | Broad WASM/WASI/component-model promotion | Deferred | v1.20 |
+| product | Broad multi-language product support beyond Python exhibition beta | Deferred | v1.20 |
+| ops | Cloud deployment, Kubernetes, service mesh, or production observability stack | Deferred | v1.20 |
 
 ## Operator Next Steps
 
-Start the next milestone with `$gsd-new-milestone` when ready.
+Start Phase 132 with `$gsd-discuss-phase 132` or `$gsd-plan-phase 132`.

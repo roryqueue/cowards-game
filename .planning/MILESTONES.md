@@ -1,5 +1,37 @@
 # Milestones
 
+## v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof (Active)
+
+**Status:** Planning started 2026-05-25
+**Phases:** 8
+**Phase range:** 132-139
+**Plans:** 0/0 planned
+**Requirements:** 50/50 mapped
+**Research:** .planning/research/v1.20-SUMMARY.md
+**Roadmap:** .planning/ROADMAP.md
+**Decision baseline:** Docker/container subprocess is the primary executable stronger runtime candidate lane; gVisor/runsc remains fail-loud unless genuinely available and executable.
+
+**Goal:** Make one stronger runtime isolation candidate executable and honestly testable while improving Python non-counted exhibition beta reliability, latency, timeout behavior, degraded-state UX, and signed-in proof evidence.
+
+**Target features:**
+
+- Preserve v1.19's topology, ownership, privacy, Python non-counted exhibition beta status, and runtime-isolation-readiness-only claim.
+- Implement executable Docker/container subprocess candidate evidence with hostile probes, no-fallback drills, resource/IPC evidence, and public-safe diagnostics.
+- Keep gVisor/runsc strict evidence lanes fail-loud when `runsc` is unavailable or no adapter executes probes.
+- Define separate timeout budgets for Strategy call, Match execution, MatchSet/job orchestration, runtime-service HTTP, and browser proof.
+- Measure mixed JS/TS-vs-Python and Python-vs-Python exhibition latency with bounded repeated local proof.
+- Stabilize Python exhibition reliability where practical while preserving deterministic per-Strategy caps and schema validation.
+- Improve slow/running/degraded/timeout/failed UX and public-safe evidence.
+- Run a realistic signed-in proof with one JS/TS revision, two Python revisions, mixed and Python-vs-Python exhibitions, result/replay evidence, private-data safety, no-fallback checks, candidate lane evidence, and JS/TS regression safety.
+
+### Active Constraints
+
+- Python remains runtime-only, non-ranked, non-counted, and ineligible for ladder/ranked/counted play.
+- No arbitrary package installs or PyPI support.
+- No production sandbox claim from Docker/container evidence unless the proof genuinely supports it.
+- No Strategy execution in web/API/Go and no silent fallback when runtime-service, Python runtime, Docker/container, or strict candidates are unavailable.
+- Public outputs omit private Strategy data, private runtime diagnostics, host/package paths, DB/session/token details, and private runtime internals by default.
+
 ## v1.19 Runtime Isolation Readiness and Exhibition Beta Trust (Shipped: 2026-05-25)
 
 **Status:** Shipped 2026-05-25
