@@ -25,12 +25,143 @@
 - [x] **v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof** - Phases 132-139, shipped 2026-05-25. See `.planning/milestones/v1.20-ROADMAP.md`.
 - [x] **v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha** - Phases 140-147, shipped 2026-05-25. See `.planning/milestones/v1.21-ROADMAP.md`.
 - [x] **v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening** - Phases 148-155, shipped 2026-05-25. See `.planning/milestones/v1.22-ROADMAP.md`.
+- [ ] **v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness** - Phases 156-163, active. Requirements: `.planning/REQUIREMENTS.md`.
 
 ## Active Milestone
 
-None. v1.22 is shipped and archived. Start the next milestone with `$gsd-new-milestone` so fresh active requirements are created.
+**v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness**
+
+**Goal:** Attempt to promote Rust and Zig from non-counted exhibition alpha to non-counted exhibition beta, gated by real signed-in multi-compiler proof, runtime hardening evidence, Zig ergonomics, ABI evidence, privacy, and conservative split-capable promotion decisions.
+
+## Phase Overview
+
+| Phase | Name | Goal | Requirements | Success Criteria |
+| --- | --- | --- | --- | --- |
+| 156 | Baseline, Beta Criteria, and Regression Floor | Define the v1.22 floor and explicit Rust/Zig beta gates before implementation. | BASE-01..BASE-06 | 5 |
+| 157 | Zig Ergonomics and Safe Helper/Starter Layer | Improve Zig authoring only where helper import/capability evidence stays safe. | ERG-01..ERG-05 | 5 |
+| 158 | Rust/Zig Beta Readiness Hardening Gates | Rerun and strengthen compiler/runtime hardening evidence for Rust and Zig. | HARD-01..HARD-06 | 5 |
+| 159 | ABI Proof Spike: JSON vs Direct Exports vs Component Model/WIT | Compare ABI candidates without silently changing the active execution path. | ABI-01..ABI-06 | 5 |
+| 160 | Signed-In Multi-Compiler Proof | Save JS/TS, Rust, and Zig revisions and run required non-counted exhibitions. | PROOF-01..PROOF-07 | 5 |
+| 161 | Workshop/Exhibition/Result/Replay Beta UX Labels and Privacy Review | Ensure UX labels, public evidence, replay plausibility, and privacy match actual promotion state. | UX-01..UX-05 | 5 |
+| 162 | Boundary Monitors, No-Fallback Drills, and Artifact Compatibility Evidence | Make boundary, no-fallback, artifact compatibility, and public-safe evidence fail loud. | MON-01..MON-05 | 5 |
+| 163 | Promotion Decision, Audit, Archive, Commit, and Tag | Decide Rust/Zig promotion outcome and close the milestone honestly. | DEC-01..DEC-04 | 5 |
+
+## Phase Details
+
+### Phase 156: Baseline, Beta Criteria, and Regression Floor
+
+**Goal:** Define the v1.22 floor and explicit Rust/Zig beta gates before implementation.
+
+**Requirements:** BASE-01, BASE-02, BASE-03, BASE-04, BASE-05, BASE-06
+
+**Success criteria:**
+1. v1.22 Rust/Zig/WASM/WASI evidence is summarized as the regression floor.
+2. Rust/Zig beta criteria are written as non-counted exhibition beta criteria only.
+3. Split promotion outcomes are explicit and accepted.
+4. JS/TS counted support and Python beta status are protected by regression gates.
+5. Planning docs reject counted/ranked/ladder/gauntlet/sandbox overclaims.
+
+### Phase 157: Zig Ergonomics and Safe Helper/Starter Layer
+
+**Goal:** Improve Zig authoring only where helper import/capability evidence stays safe.
+
+**Requirements:** ERG-01, ERG-02, ERG-03, ERG-04, ERG-05
+
+**Success criteria:**
+1. Zig helper or starter layer is easier to author than the v1.22 proof.
+2. Helper import/capability evidence is generated and inspectable.
+3. Forbidden capability imports fail loud before exposure.
+4. Workshop copy remains honest about Zig limitations and non-counted status.
+5. Zig can remain alpha if ergonomics evidence is weaker than Rust.
+
+### Phase 158: Rust/Zig Beta Readiness Hardening Gates
+
+**Goal:** Rerun and strengthen compiler/runtime hardening evidence for Rust and Zig.
+
+**Requirements:** HARD-01, HARD-02, HARD-03, HARD-04, HARD-05, HARD-06
+
+**Success criteria:**
+1. Rust compile/artifact/runtime evidence passes or fails loud.
+2. Zig compile/artifact/runtime evidence passes or fails loud.
+3. Hardening probes cover timeout, memory, caps, malformed output, schema, traps, stale, and missing artifact paths.
+4. Strategy failures and system failures remain distinct.
+5. Evidence language stays candidate/beta readiness only.
+
+### Phase 159: ABI Proof Spike: JSON vs Direct Exports vs Component Model/WIT
+
+**Goal:** Compare ABI candidates without silently changing the active execution path.
+
+**Requirements:** ABI-01, ABI-02, ABI-03, ABI-04, ABI-05, ABI-06
+
+**Success criteria:**
+1. Preview 1 JSON evidence is current and tied to the active execution path.
+2. Direct exports produce proof or a fail-loud non-promotion decision.
+3. Component model/WIT produces proof or a fail-loud non-promotion decision.
+4. No spike ABI becomes Match execution without explicit approval.
+5. ABI compatibility and rollback notes are written.
+
+### Phase 160: Signed-In Multi-Compiler Proof
+
+**Goal:** Save JS/TS, Rust, and Zig revisions and run required non-counted exhibitions.
+
+**Requirements:** PROOF-01, PROOF-02, PROOF-03, PROOF-04, PROOF-05, PROOF-06, PROOF-07
+
+**Success criteria:**
+1. Signed-in account saves one JS/TS, one Rust, and one Zig Strategy Revision.
+2. Saved Rust and Zig revisions use immutable artifact metadata for Match execution.
+3. JS/TS-vs-Rust and Rust-vs-Rust non-counted exhibitions complete.
+4. Rust-vs-Zig and Zig-vs-Zig non-counted exhibitions complete or fail loud with promotion blocked.
+5. MatchSet result and replay pages open for proof evidence.
+
+### Phase 161: Workshop/Exhibition/Result/Replay Beta UX Labels and Privacy Review
+
+**Goal:** Ensure UX labels, public evidence, replay plausibility, and privacy match actual promotion state.
+
+**Requirements:** UX-01, UX-02, UX-03, UX-04, UX-05
+
+**Success criteria:**
+1. Workshop, account save, exhibition creation, results, and replay labels match actual Rust/Zig promotion state.
+2. Counted/ranked/ladder/gauntlet paths exclude Rust/Zig.
+3. Public result evidence is understandable and source-free.
+4. Replay board starts are plausible and in bounds.
+5. Privacy scans find no private Strategy or runtime data leaks in public pages.
+
+### Phase 162: Boundary Monitors, No-Fallback Drills, and Artifact Compatibility Evidence
+
+**Goal:** Make boundary, no-fallback, artifact compatibility, and public-safe evidence fail loud.
+
+**Requirements:** MON-01, MON-02, MON-03, MON-04, MON-05
+
+**Success criteria:**
+1. Boundary monitors catch backend ownership creep.
+2. Boundary monitors catch Strategy execution in web/API/Go.
+3. No-fallback drills block stopped, unavailable, stale, or mismatched Rust/Zig runtime paths.
+4. Artifact compatibility evidence records target, WASI, ABI, toolchain, hash, size, status, retention, and rollback.
+5. Monitor artifacts are public-safe.
+
+### Phase 163: Promotion Decision, Audit, Archive, Commit, and Tag
+
+**Goal:** Decide Rust/Zig promotion outcome and close the milestone honestly.
+
+**Requirements:** DEC-01, DEC-02, DEC-03, DEC-04
+
+**Success criteria:**
+1. Final promotion decision chooses one allowed split outcome.
+2. Decision preserves JS/TS counted support and Python non-counted exhibition beta.
+3. Audit verifies requirements, code review, UI/privacy review, signed-in proof, replay plausibility, and evidence gates.
+4. Planning artifacts are archived and active requirements are removed at milestone close.
+5. Commit and tag evidence is recorded.
+
+## Coverage
+
+- v1 requirements: 44 total
+- Mapped to phases: 44
+- Unmapped: 0
 
 ## Next Up
 
-- Create a fresh `.planning/REQUIREMENTS.md` through `$gsd-new-milestone`.
-- Continue from Phase 156 or the next roadmap range selected during milestone planning.
+- `$gsd-discuss-phase 156` - gather context and clarify the baseline/beta criteria approach.
+- `$gsd-plan-phase 156` - create the executable Phase 156 plan.
+
+---
+*Roadmap created: 2026-05-25 for v1.23 milestone initialization*
