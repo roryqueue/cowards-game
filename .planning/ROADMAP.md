@@ -23,197 +23,179 @@
 - [x] **v1.18 Runtime Isolation and Multi-Language Exhibition Beta** - Phases 117-123, shipped 2026-05-25. See `.planning/milestones/v1.18-ROADMAP.md`.
 - [x] **v1.19 Runtime Isolation Readiness and Exhibition Beta Trust** - Phases 124-131, shipped 2026-05-25. See `.planning/milestones/v1.19-ROADMAP.md`.
 - [x] **v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof** - Phases 132-139, shipped 2026-05-25. See `.planning/milestones/v1.20-ROADMAP.md`.
+- [ ] **v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha** - Phases 140-147, active.
 
-## Completed Milestone: v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
+## Active Milestone: v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
 
-**Status:** Complete - shipped 2026-05-25
-**Phases:** 132-139
+**Status:** Planning complete - ready for Phase 140
+**Phases:** 140-147
 **Granularity:** Standard
-**Requirements:** 50/50 mapped
-**Research:** `.planning/research/SUMMARY.md`, `.planning/research/v1.20-SUMMARY.md`
+**Requirements:** 59/59 mapped
+**Research:** `.planning/research/SUMMARY.md`, `.planning/research/v1.21-SUMMARY.md`
 
 ## Overview
 
-v1.20 starts from v1.19's signed-in proof and honesty contract. Python remains non-counted exhibition beta, JS/TS remains the counted Strategy path, Go owns normal backend orchestration and public evidence, and hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker ABI.
+v1.21 starts from v1.20's runtime boundary, reliability, and honesty baseline. JS/TS remains the counted Strategy path. Python remains non-counted exhibition beta. Go remains owner of orchestration, persistence-facing behavior, Match lifecycle, scoring, retry policy, public evidence, and promotion decisions. Hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker and registered runtime implementations.
 
-The primary stronger sandbox candidate lane is Docker/container subprocess because Docker is locally available and the repo already has a `container-subprocess` adapter. v1.20 should make that lane executable, testable, and monitored with real evidence. gVisor/runsc remains relevant but must fail loudly unless `runsc` is installed and a real adapter executes probes.
-
-The product reliability goal is to make repeated signed-in Python exhibition beta use understandable and trustworthy. The milestone must define layered timeout budgets, measure mixed JS/TS-vs-Python and Python-vs-Python latency, stabilize avoidable latency where practical, clarify degraded/timeout/retry states, and prove public MatchSet/replay evidence remains private-data safe.
+The new candidate lane is WASM/WASI. The first executable ABI is WASI Preview 1 stdin/stdout JSON envelopes through Wasmtime because local Rust `wasm32-wasip1`, Wasmtime, `wasm-tools`, and Zig tooling are available. Rust is the first net-new compiled language targeted for end-to-end non-counted exhibition alpha. Zig is a gated stretch target: it must either pass the same compile/runtime/ABI proof or produce fail-loud non-promotion evidence.
 
 Target flow:
 
-`signed-in user -> web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> selected JS/TS or Python runtime implementation -> Go-owned MatchSet and replay evidence`
+`signed-in user -> web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> WASM/WASI runtime implementation -> Wasmtime -> immutable Rust WASM artifact`
 
-v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-install, broad production multi-language, or backend ownership. Runtime isolation evidence must remain honestly scoped as readiness evidence unless stronger proof genuinely passes.
+v1.21 must not promote Rust, Zig, or WASM/WASI to ranked, ladder, counted, gauntlet, broad production multi-language support, or production sandbox certification.
 
 ## Phases
 
-- [x] **Phase 132: v1.20 Baseline, Candidate Decision, and Budget Contract** - Lock v1.19 as the baseline, select Docker/container subprocess as the primary executable candidate, keep runsc fail-loud, and define layered timeout/reliability budgets.
-- [x] **Phase 133: Executable Container Runtime Candidate Lane** - Make the Docker/container subprocess lane run real candidate evidence and produce honest machine-readable and human-readable artifacts.
-- [x] **Phase 134: Hostile Probe and No-Fallback Parity Across Subprocess and Container** - Run probe parity and no-fallback drills across hardened subprocess and container lanes where practical, with strict privacy redaction and monitors.
-- [x] **Phase 135: Timeout, Latency, and Reliability Budget Model** - Document, test, and measure Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
-- [x] **Phase 136: Exhibition Execution Stabilization and Retry Semantics** - Stabilize Python exhibition execution where practical and make retry/no-retry semantics explicit and safe.
-- [x] **Phase 137: Degraded-State UX and Public-Safe Reliability Evidence** - Improve user-facing running, slow, degraded, timeout, strategy-failed, and system-failed states in MatchSet/replay evidence.
-- [x] **Phase 138: Signed-In Reliability Proof and JS/TS Regression Gate** - Run a realistic signed-in proof with one JS/TS and two Python revisions, mixed and Python-vs-Python exhibitions, candidate evidence, privacy checks, and JS/TS regression checks.
-- [x] **Phase 139: Promotion Decision, Audit, Archive, and Tag** - Verify, audit, document promotion decisions, archive v1.20, remove active requirements, commit, and tag `v1.20`.
+- [ ] **Phase 140: v1.21 Baseline, WASM/WASI ABI Decision, and Artifact Contract** - Lock v1.20 as the floor, define the WASI Preview 1 JSON ABI decision, and specify immutable artifact and promotion gates.
+- [ ] **Phase 141: Rust Compile Validation and Immutable WASM Artifact Pipeline** - Build the Rust source-to-WASM validation/compile path and artifact metadata without making Match execution depend on mutable source.
+- [ ] **Phase 142: WASM/WASI Runtime Broker Execution Lane** - Execute Rust WASM artifacts through runtime-service/Wasmtime behind the broker and preserve Go ownership boundaries.
+- [ ] **Phase 143: Rust Workshop UX, Samples, and Exhibition Eligibility** - Add safe Rust samples, save/validation UX, non-counted labels, and JS/TS regression safety.
+- [ ] **Phase 144: WASM/WASI Hostile Probe and Determinism Evidence** - Add capability, determinism, resource, malformed ABI, privacy, no-fallback, and monitor evidence for the WASM/WASI lane.
+- [ ] **Phase 145: Zig Stretch Readiness and Optional Shared-ABI Proof** - Run fail-loud Zig preflight and, only if evidence passes, prove optional Zig through the same WASI JSON ABI.
+- [ ] **Phase 146: Signed-In Rust Exhibition Proof and JS/TS Regression Gate** - Run realistic signed-in non-counted JS/TS-vs-Rust and Rust-vs-Rust proof with result/replay evidence.
+- [ ] **Phase 147: Promotion Decision, Audit, Archive, and Tag** - Verify, audit, document conservative promotion decisions, archive v1.21, remove active requirements, commit, and tag `v1.21`.
 
 ## Phase Details
 
-### Phase 132: v1.20 Baseline, Candidate Decision, and Budget Contract
+### Phase 140: v1.21 Baseline, WASM/WASI ABI Decision, and Artifact Contract
 
-**Goal:** Lock v1.19 as the baseline, select Docker/container subprocess as the primary executable candidate, keep runsc fail-loud, and define layered timeout/reliability budgets.
-**Depends on:** Phase 131
-**Requirements:** BASE-01, BASE-02, BASE-03, BASE-04, BASE-05
-
-**Success Criteria:**
-1. Developer can inspect a v1.20 baseline artifact proving v1.19 remains the topology, eligibility, privacy, and evidence floor.
-2. Developer can inspect a candidate decision that selects Docker/container subprocess as the primary executable lane and explains why runsc remains fail-loud.
-3. Developer can inspect a timeout/reliability budget contract separating Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
-4. Developer can verify Python remains non-counted exhibition beta and JS/TS remains the counted Strategy path.
-
-**Plans:** 1 complete
-
-### Phase 133: Executable Container Runtime Candidate Lane
-
-**Goal:** Make the Docker/container subprocess lane run real candidate evidence and produce honest machine-readable and human-readable artifacts.
-**Depends on:** Phase 132
-**Requirements:** CAND-01, CAND-02, CAND-03, CAND-04, CAND-05, CAND-06, CAND-07
+**Goal:** Lock v1.20 as the floor, define the WASI Preview 1 JSON ABI decision, and specify immutable artifact and promotion gates.
+**Depends on:** Phase 139
+**Requirements:** BASE-01, BASE-02, BASE-03, BASE-04, BASE-05, WASM-01, WASM-02, WASM-03
 
 **Success Criteria:**
-1. Developer can run the container candidate lane against the real container adapter when Docker is available.
-2. Developer can inspect evidence for network denial, read-only root, tmpfs scratch, dropped capabilities, no-new-privileges, PID/memory/CPU controls, no shell, and strict IPC.
-3. Developer can inspect preflight/failure taxonomy for Docker unavailable, image unavailable, daemon failure, unsupported controls, adapter failure, Strategy violation, and system failure.
-4. Developer can compare subprocess and container candidate evidence without production sandbox overclaiming.
-5. Developer can run strict container and runsc commands that fail loudly when evidence is missing, unavailable, or substituted.
+1. Developer can inspect a v1.21 baseline artifact proving v1.20 remains the topology, eligibility, privacy, runtime isolation, and proof floor.
+2. Developer can inspect an ABI decision that selects WASI Preview 1 stdin/stdout JSON envelopes and documents direct exports/component model as future ABI candidates.
+3. Developer can inspect runtime registry and artifact contract updates for WASM/WASI without counted/ranked promotion.
+4. Developer can verify the milestone excludes Rust/Zig backend ownership, Go/web/API Strategy execution, Node `node:wasi` sandbox promotion, arbitrary package installs, silent fallback, and production sandbox certification.
 
-**Plans:** 1 complete
+### Phase 141: Rust Compile Validation and Immutable WASM Artifact Pipeline
 
-### Phase 134: Hostile Probe and No-Fallback Parity Across Subprocess and Container
-
-**Goal:** Run probe parity and no-fallback drills across hardened subprocess and container lanes where practical, with strict privacy redaction and monitors.
-**Depends on:** Phase 133
-**Requirements:** PROBE-01, PROBE-02, PROBE-03, PROBE-04, PROBE-05, PROBE-06, PROBE-07
+**Goal:** Build the Rust source-to-WASM validation/compile path and artifact metadata without making Match execution depend on mutable source.
+**Depends on:** Phase 140
+**Requirements:** ART-01, ART-02, ART-03, ART-04, ART-05, ART-06, ART-07, RUST-04
 
 **Success Criteria:**
-1. Developer can run filesystem, host-path, network, process, shell, import, package, environment, output, memory, timeout, crash, malformed IPC, stderr, stack, and schema probes across relevant lanes.
-2. Developer can verify diagnostics redact source, memory, objectives, streams, host/package paths, environment values, tokens, DB DSNs, sessions, and private runtime internals.
-3. Developer can run no-fallback drills for stopped runtime-service, stopped Python runtime, Docker/image unavailable, runsc unavailable, stale artifacts, and candidate substitution.
-4. Developer can run monitors that fail on runtime ABI, registry, broker, candidate evidence, production-claim, backend ownership, privacy, and JS/TS regression drift.
+1. User can submit or locally prove Rust source compilation to an immutable `.wasm` artifact with source hash, artifact hash, bytes, target, toolchain, and validation metadata.
+2. Developer can verify Match eligibility references immutable artifact bytes/hash/metadata rather than mutable source.
+3. Developer can verify source edits after submission do not mutate eligible Rust artifacts or Match execution input.
+4. Developer can inspect fail-closed behavior for stale, missing, oversized, malformed, unsupported, or hash-mismatched artifacts.
 
-**Plans:** 1 complete
+### Phase 142: WASM/WASI Runtime Broker Execution Lane
 
-### Phase 135: Timeout, Latency, and Reliability Budget Model
-
-**Goal:** Document, test, and measure Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
-**Depends on:** Phase 134
-**Requirements:** BUDGET-01, BUDGET-02, BUDGET-03, BUDGET-04, BUDGET-05, BUDGET-06, BUDGET-07
+**Goal:** Execute Rust WASM artifacts through runtime-service/Wasmtime behind the broker and preserve Go ownership boundaries.
+**Depends on:** Phase 141
+**Requirements:** WASM-04, WASM-05, RUST-05, EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, EXEC-06, EXEC-07
 
 **Success Criteria:**
-1. Developer can inspect named timeout budgets for Strategy call, Match execution, MatchSet/job orchestration, runtime-service HTTP, and browser proof.
-2. Developer can verify deterministic per-Strategy caps are preserved and not loosened to hide latency.
-3. Developer can measure JS/TS-vs-Python and Python-vs-Python exhibition MatchSet latency with bounded repeat counts.
-4. Developer can inspect latency evidence that separates cold-start, runtime call, whole-Match, orchestration, result page, and replay page timings where practical.
+1. Runtime service can execute Rust WASM Strategy calls with schema-validated WASI stdin/stdout envelopes through Wasmtime.
+2. Developer can verify malformed ABI output, invalid actions, panics/traps, timeouts/fuel exhaustion, and memory failures classify safely.
+3. Developer can verify Go never compiles or executes Rust Strategy code and remains owner of lifecycle, scoring, retry policy, and public evidence.
+4. Developer can run Rust-vs-Rust and JS/TS-vs-Rust non-counted Match execution through runtime-service.
+5. Developer can inspect fail-closed public-safe diagnostics for stopped runtime-service, missing Wasmtime, missing artifact, stale artifact, unsupported adapter, and malformed runtime response.
 
-**Plans:** 1 complete
+### Phase 143: Rust Workshop UX, Samples, and Exhibition Eligibility
 
-### Phase 136: Exhibition Execution Stabilization and Retry Semantics
-
-**Goal:** Stabilize Python exhibition execution where practical and make retry/no-retry semantics explicit and safe.
-**Depends on:** Phase 135
-**Requirements:** REL-01, REL-02, REL-03, REL-04, REL-05, REL-06
-
-**Success Criteria:**
-1. User can create repeated signed-in Python exhibition MatchSets without spurious runtime-service timeouts under the documented proof budget.
-2. Developer can inspect concrete latency stabilization or reduction work where practical.
-3. Developer can verify Strategy-caused runtime violations are not blindly retried.
-4. Developer can verify retryable system/runtime-service/container failures are classified separately from player-caused failures.
-5. Developer can verify Go-owned completion, scoring, status refresh, and replay availability across success, degraded, timeout, and failure paths.
-6. Developer can verify JS/TS support remains intact.
-
-**Plans:** 1 complete
-
-### Phase 137: Degraded-State UX and Public-Safe Reliability Evidence
-
-**Goal:** Improve user-facing running, slow, degraded, timeout, strategy-failed, and system-failed states in MatchSet/replay evidence.
-**Depends on:** Phase 136
-**Requirements:** UX-01, UX-02, UX-03, UX-04, UX-05, UX-06
+**Goal:** Add safe Rust samples, save/validation UX, non-counted labels, and JS/TS regression safety.
+**Depends on:** Phase 142
+**Requirements:** RUST-01, RUST-02, RUST-03, RUST-06, RUST-07
 
 **Success Criteria:**
-1. User can understand queued, running, slow, completed, degraded, timed out, strategy-failed, and system-failed exhibition states.
-2. User can see retry/no-retry wording that distinguishes Strategy errors from retryable system/runtime-service/container failures.
-3. User can inspect public-safe result evidence with runtime labels, non-counted status, timeout budget cues, candidate lane evidence, and evidence limits.
-4. User can inspect replay evidence with non-counted exhibition beta cues, degraded/timeout context when applicable, and plausible in-bounds board state.
-5. Developer can verify public evidence and owner-source privacy remain safe across state variants.
+1. User can choose safe starter Rust Strategy samples and save a Rust Strategy Revision as non-counted exhibition alpha.
+2. User receives public-safe Rust validation/compile diagnostics without source, stderr, stack, host path, env, package path, or private runtime internals in public output.
+3. User-facing labels consistently describe Rust as non-counted exhibition alpha/beta.
+4. Developer can verify JS/TS validation, counted eligibility, exhibition creation, result evidence, and replay safety remain intact.
 
-**Plans:** 1 complete
+### Phase 144: WASM/WASI Hostile Probe and Determinism Evidence
 
-### Phase 138: Signed-In Reliability Proof and JS/TS Regression Gate
-
-**Goal:** Run a realistic signed-in proof with one JS/TS and two Python revisions, mixed and Python-vs-Python exhibitions, candidate evidence, privacy checks, and JS/TS regression checks.
-**Depends on:** Phase 137
-**Requirements:** PROOF-01, PROOF-02, PROOF-03, PROOF-04, PROOF-05, PROOF-06, PROOF-07
+**Goal:** Add capability, determinism, resource, malformed ABI, privacy, no-fallback, and monitor evidence for the WASM/WASI lane.
+**Depends on:** Phase 143
+**Requirements:** WASM-06, PROBE-01, PROBE-02, PROBE-03, PROBE-04, PROBE-05, PROBE-06, PROBE-07, PROBE-08
 
 **Success Criteria:**
-1. User can create or sign into a local account.
-2. User can create and save one JS/TS and two Python Strategy Revisions.
-3. User can create non-counted mixed JS/TS-vs-Python and Python-vs-Python exhibition MatchSets.
-4. Developer can verify execution flows through Go -> Runtime Broker/runtime-service -> selected runtime implementation(s), including required candidate evidence where applicable.
-5. User can open MatchSet result and replay evidence with labels, reliability evidence, candidate lane evidence, degraded/timeout wording where applicable, and plausible board state.
-6. Developer can verify public outputs are private-data safe and contain no silent fallback, ownership drift, Python counted eligibility, or JS/TS regression.
+1. Developer can run WASM/WASI probes for filesystem/preopens, host paths, package paths, network, clock/time, random, env, args, memory, fuel, timeout, stack, trap, panic, abort, malformed ABI, oversized output, invalid actions, and schema-invalid results.
+2. Developer can verify diagnostics redact source, memories, objectives, streams, stacks, host/package/artifact paths, env values, tokens, DB DSNs, sessions, and private runtime internals.
+3. Developer can run no-fallback drills for missing Wasmtime, unsupported WASI profile, missing artifact, artifact hash mismatch, stale metadata, stopped runtime-service, and Zig unavailable.
+4. Developer can run monitors that fail on WASM/WASI registry drift, ABI drift, Node `node:wasi` promotion, production-claim drift, backend ownership creep, and JS/TS regression.
 
-**Plans:** 1 complete
+### Phase 145: Zig Stretch Readiness and Optional Shared-ABI Proof
 
-### Phase 139: Promotion Decision, Audit, Archive, and Tag
-
-**Goal:** Verify, audit, document promotion decisions, archive v1.20, remove active requirements, commit, and tag `v1.20`.
-**Depends on:** Phase 138
-**Requirements:** EXIT-01, EXIT-02, EXIT-03, EXIT-04, EXIT-05
+**Goal:** Run fail-loud Zig preflight and, only if evidence passes, prove optional Zig through the same WASI JSON ABI.
+**Depends on:** Phase 144
+**Requirements:** ZIG-01, ZIG-02, ZIG-03, ZIG-04, ZIG-05
 
 **Success Criteria:**
-1. Developer can inspect v1.20 artifacts for baseline, candidate decision, executable container evidence, runsc fail-loud evidence, hostile probes, no-fallback drills, timeout budgets, latency measurements, degraded UX, public evidence, signed-in proof, and privacy checks.
-2. Developer can inspect a promotion decision stating Python remains non-counted exhibition beta.
-3. Developer can inspect a promotion decision stating runtime isolation remains readiness evidence unless stronger production-grade proof genuinely passes.
-4. Developer can run final verification across runtime-python, runtime-js/runtime-service, spec/contracts, Go backend, web, topology, boundary monitors, privacy, container candidate evidence, JS/TS regression, and signed-in browser proof.
-5. Developer can archive requirements/roadmap/phases, remove active `.planning/REQUIREMENTS.md`, update PROJECT/STATE/MILESTONES/RETROSPECTIVE, audit cleanly, commit, and tag `v1.20`.
+1. Developer can inspect Zig preflight evidence for version, target availability, compile command, artifact hash, and runtime outcome.
+2. Developer can inspect fail-loud readiness evidence when Zig compile, target, runtime, ABI, or proof evidence is unavailable.
+3. If Zig proof passes, user can save a Zig Strategy Revision as non-counted exhibition alpha using the same immutable artifact contract.
+4. If Zig proof passes, developer can run optional Rust-vs-Zig or Zig-vs-Zig non-counted exhibition proof.
+5. Developer can verify Zig never silently substitutes Rust, JS/TS, or Python behavior and never claims counted/ranked/production support.
 
-**Plans:** 1 complete
+### Phase 146: Signed-In Rust Exhibition Proof and JS/TS Regression Gate
+
+**Goal:** Run realistic signed-in non-counted JS/TS-vs-Rust and Rust-vs-Rust proof with result/replay evidence.
+**Depends on:** Phase 145
+**Requirements:** PROOF-01, PROOF-02, PROOF-03, PROOF-04, PROOF-05, PROOF-06, PROOF-07, PROOF-08
+
+**Success Criteria:**
+1. User can create or sign into a local account, save one JS/TS revision, and save one Rust revision compiled to immutable WASM.
+2. User can optionally save one Zig revision only if Zig readiness proof passes.
+3. User can create non-counted JS/TS-vs-Rust and Rust-vs-Rust exhibitions, and optional Rust-vs-Zig when available.
+4. Developer can verify execution flows through Go -> Runtime Broker/runtime-service -> selected WASM/WASI runtime implementation with no silent fallback.
+5. User can open MatchSet result and replay evidence with labels, artifact evidence, timeout/fuel evidence, plausible in-bounds board state, and private-data-safe public output.
+6. Developer can verify no Rust/Zig counted eligibility, no JS/TS regression, and no private-data leakage.
+
+### Phase 147: Promotion Decision, Audit, Archive, and Tag
+
+**Goal:** Verify, audit, document conservative promotion decisions, archive v1.21, remove active requirements, commit, and tag `v1.21`.
+**Depends on:** Phase 146
+**Requirements:** EXIT-01, EXIT-02, EXIT-03, EXIT-04, EXIT-05, EXIT-06
+
+**Success Criteria:**
+1. Developer can inspect final v1.21 artifacts for baseline, ABI decision, Rust artifact contract, runtime evidence, probes, Zig readiness, signed-in proof, privacy, replay plausibility, no-fallback, and JS/TS regression.
+2. Developer can inspect a promotion decision stating Rust/WASM remains non-counted exhibition alpha/beta.
+3. Developer can inspect a promotion decision stating Zig is either non-counted stretch with proof or fail-loud unavailable/non-promoted.
+4. Developer can inspect a promotion decision stating WASM/WASI remains candidate/readiness evidence, not production sandbox certification.
+5. Developer can run final verification across spec/contracts, runtime-js/runtime-service, runtime-wasm-wasi, optional Zig proof, Go backend, web, topology, boundary monitors, privacy, JS/TS regression, and signed-in browser proof.
+6. Developer can archive requirements/roadmap/phases, remove active `.planning/REQUIREMENTS.md`, update PROJECT/STATE/MILESTONES/RETROSPECTIVE, audit cleanly, commit, and tag `v1.21`.
 
 ## Progress
 
-**Execution Order:** Phase 132 -> Phase 133 -> Phase 134 -> Phase 135 -> Phase 136 -> Phase 137 -> Phase 138 -> Phase 139
+**Execution Order:** Phase 140 -> Phase 141 -> Phase 142 -> Phase 143 -> Phase 144 -> Phase 145 -> Phase 146 -> Phase 147
 
 | Phase | Plans Complete | Status | Completed |
 | --- | --- | --- | --- |
-| 132. v1.20 Baseline, Candidate Decision, and Budget Contract | 1/1 | Complete | 2026-05-25 |
-| 133. Executable Container Runtime Candidate Lane | 1/1 | Complete | 2026-05-25 |
-| 134. Hostile Probe and No-Fallback Parity Across Subprocess and Container | 1/1 | Complete | 2026-05-25 |
-| 135. Timeout, Latency, and Reliability Budget Model | 1/1 | Complete | 2026-05-25 |
-| 136. Exhibition Execution Stabilization and Retry Semantics | 1/1 | Complete | 2026-05-25 |
-| 137. Degraded-State UX and Public-Safe Reliability Evidence | 1/1 | Complete | 2026-05-25 |
-| 138. Signed-In Reliability Proof and JS/TS Regression Gate | 1/1 | Complete | 2026-05-25 |
-| 139. Promotion Decision, Audit, Archive, and Tag | 1/1 | Complete | 2026-05-25 |
+| 140. v1.21 Baseline, WASM/WASI ABI Decision, and Artifact Contract | 0/1 | Not Started | - |
+| 141. Rust Compile Validation and Immutable WASM Artifact Pipeline | 0/1 | Not Started | - |
+| 142. WASM/WASI Runtime Broker Execution Lane | 0/1 | Not Started | - |
+| 143. Rust Workshop UX, Samples, and Exhibition Eligibility | 0/1 | Not Started | - |
+| 144. WASM/WASI Hostile Probe and Determinism Evidence | 0/1 | Not Started | - |
+| 145. Zig Stretch Readiness and Optional Shared-ABI Proof | 0/1 | Not Started | - |
+| 146. Signed-In Rust Exhibition Proof and JS/TS Regression Gate | 0/1 | Not Started | - |
+| 147. Promotion Decision, Audit, Archive, and Tag | 0/1 | Not Started | - |
 
 ## Requirement Coverage
 
 | Requirement Group | Phase | Count |
 | --- | --- | ---: |
-| BASE-01 through BASE-05 | Phase 132 | 5 |
-| CAND-01 through CAND-07 | Phase 133 | 7 |
-| PROBE-01 through PROBE-07 | Phase 134 | 7 |
-| BUDGET-01 through BUDGET-07 | Phase 135 | 7 |
-| REL-01 through REL-06 | Phase 136 | 6 |
-| UX-01 through UX-06 | Phase 137 | 6 |
-| PROOF-01 through PROOF-07 | Phase 138 | 7 |
-| EXIT-01 through EXIT-05 | Phase 139 | 5 |
+| BASE-01 through BASE-05, WASM-01 through WASM-03 | Phase 140 | 8 |
+| ART-01 through ART-07, RUST-04 | Phase 141 | 8 |
+| WASM-04 through WASM-05, RUST-05, EXEC-01 through EXEC-07 | Phase 142 | 10 |
+| RUST-01 through RUST-03, RUST-06 through RUST-07 | Phase 143 | 5 |
+| WASM-06, PROBE-01 through PROBE-08 | Phase 144 | 9 |
+| ZIG-01 through ZIG-05 | Phase 145 | 5 |
+| PROOF-01 through PROOF-08 | Phase 146 | 8 |
+| EXIT-01 through EXIT-06 | Phase 147 | 6 |
 
-**Coverage:** 50/50 v1.20 requirements mapped.
+**Coverage:** 59/59 v1.21 requirements mapped.
 **Unmapped requirements:** 0.
 
 ## Next Up
 
-v1.20 is complete. Start the next milestone with `$gsd-new-milestone`.
+**Phase 140: v1.21 Baseline, WASM/WASI ABI Decision, and Artifact Contract** - Lock v1.20 as the floor, define the WASI Preview 1 JSON ABI decision, and specify immutable artifact and promotion gates.
 
-Active `.planning/REQUIREMENTS.md` is intentionally removed at milestone close.
+Start with `$gsd-discuss-phase 140` or `$gsd-plan-phase 140`.
 
 ---
-*Created: 2026-05-25 for v1.20 milestone initialization*
+*Created: 2026-05-25 for v1.21 milestone initialization*

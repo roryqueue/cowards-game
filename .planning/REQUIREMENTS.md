@@ -126,11 +126,70 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
+| BASE-01 | Phase 140 | Pending |
+| BASE-02 | Phase 140 | Pending |
+| BASE-03 | Phase 140 | Pending |
+| BASE-04 | Phase 140 | Pending |
+| BASE-05 | Phase 140 | Pending |
+| WASM-01 | Phase 140 | Pending |
+| WASM-02 | Phase 140 | Pending |
+| WASM-03 | Phase 140 | Pending |
+| ART-01 | Phase 141 | Pending |
+| ART-02 | Phase 141 | Pending |
+| ART-03 | Phase 141 | Pending |
+| ART-04 | Phase 141 | Pending |
+| ART-05 | Phase 141 | Pending |
+| ART-06 | Phase 141 | Pending |
+| ART-07 | Phase 141 | Pending |
+| RUST-04 | Phase 141 | Pending |
+| WASM-04 | Phase 142 | Pending |
+| WASM-05 | Phase 142 | Pending |
+| RUST-05 | Phase 142 | Pending |
+| EXEC-01 | Phase 142 | Pending |
+| EXEC-02 | Phase 142 | Pending |
+| EXEC-03 | Phase 142 | Pending |
+| EXEC-04 | Phase 142 | Pending |
+| EXEC-05 | Phase 142 | Pending |
+| EXEC-06 | Phase 142 | Pending |
+| EXEC-07 | Phase 142 | Pending |
+| RUST-01 | Phase 143 | Pending |
+| RUST-02 | Phase 143 | Pending |
+| RUST-03 | Phase 143 | Pending |
+| RUST-06 | Phase 143 | Pending |
+| RUST-07 | Phase 143 | Pending |
+| WASM-06 | Phase 144 | Pending |
+| PROBE-01 | Phase 144 | Pending |
+| PROBE-02 | Phase 144 | Pending |
+| PROBE-03 | Phase 144 | Pending |
+| PROBE-04 | Phase 144 | Pending |
+| PROBE-05 | Phase 144 | Pending |
+| PROBE-06 | Phase 144 | Pending |
+| PROBE-07 | Phase 144 | Pending |
+| PROBE-08 | Phase 144 | Pending |
+| ZIG-01 | Phase 145 | Pending |
+| ZIG-02 | Phase 145 | Pending |
+| ZIG-03 | Phase 145 | Pending |
+| ZIG-04 | Phase 145 | Pending |
+| ZIG-05 | Phase 145 | Pending |
+| PROOF-01 | Phase 146 | Pending |
+| PROOF-02 | Phase 146 | Pending |
+| PROOF-03 | Phase 146 | Pending |
+| PROOF-04 | Phase 146 | Pending |
+| PROOF-05 | Phase 146 | Pending |
+| PROOF-06 | Phase 146 | Pending |
+| PROOF-07 | Phase 146 | Pending |
+| PROOF-08 | Phase 146 | Pending |
+| EXIT-01 | Phase 147 | Pending |
+| EXIT-02 | Phase 147 | Pending |
+| EXIT-03 | Phase 147 | Pending |
+| EXIT-04 | Phase 147 | Pending |
+| EXIT-05 | Phase 147 | Pending |
+| EXIT-06 | Phase 147 | Pending |
 
 **Coverage:**
 - v1 requirements: 59 total
-- Mapped to phases: 0
-- Unmapped: 59
+- Mapped to phases: 59
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-25*

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
 status: planning
-stopped_at: milestone planning initialized
+stopped_at: roadmap ready
 last_updated: "2026-05-25T00:00:00.000-04:00"
-last_activity: 2026-05-25 - Milestone v1.21 started
+last_activity: 2026-05-25 - Milestone v1.21 requirements and roadmap created
 progress:
-  total_phases: 0
+  total_phases: 8
   completed_phases: 0
-  total_plans: 0
+  total_plans: 8
   completed_plans: 0
   percent: 0
 ---
@@ -26,15 +26,15 @@ See: `.planning/PROJECT.md`
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Latest shipped milestone:** v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
 **Active milestone:** v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
-**Requirements:** being defined at `.planning/REQUIREMENTS.md`
-**Roadmap:** being defined at `.planning/ROADMAP.md`
+**Requirements:** `.planning/REQUIREMENTS.md`
+**Roadmap:** `.planning/ROADMAP.md`
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: -
-Status: Defining requirements
-Last activity: 2026-05-25 - Milestone v1.21 started
+Phase: 140 - v1.21 Baseline, WASM/WASI ABI Decision, and Artifact Contract
+Plan: Not started
+Status: Ready for phase discussion/planning
+Last activity: 2026-05-25 - v1.21 requirements and roadmap created
 
 ## Active Milestone Goal
 
@@ -80,4 +80,4 @@ The v1.20 proof found and fixed a practical Go job lease bug: the previous lease
 
 ## Operator Next Steps
 
-Finish `$gsd-new-milestone` by creating active requirements and a roadmap. Then start the first v1.21 phase with `$gsd-discuss-phase 140` or `$gsd-plan-phase 140`.
+Start Phase 140 with `$gsd-discuss-phase 140` or `$gsd-plan-phase 140`.
