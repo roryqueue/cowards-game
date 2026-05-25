@@ -3482,16 +3482,21 @@ const checkV119ExhibitionTrustSources = (): string => {
       markers: [
         'data-testid="matchset-evidence-panel"',
         "Python · non-counted exhibition beta",
-        "Public runtime labels below; execution-path proof is gated.",
+        "matchSetEvidenceRows",
       ],
     },
     {
       label: "Replay evidence panel",
       path: "apps/web/app/matches/[matchId]/replay/replay-client.tsx",
+      markers: ['data-testid="replay-evidence-panel"', "replayEvidenceRows"],
+    },
+    {
+      label: "Reliability evidence copy",
+      path: "apps/web/app/matchsets/evidence-copy.ts",
       markers: [
-        'data-testid="replay-evidence-panel"',
-        "Execution-path proof is gated outside this replay DTO.",
-        "private code, memory, diagnostics excluded",
+        "Public runtime labels below; execution-path proof is gated.",
+        "Replay DTO shows public outcome evidence, not runtime internals.",
+        "runtime internals excluded",
       ],
     },
     {

@@ -26,7 +26,7 @@
 
 ## Active Milestone: v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
 
-**Status:** In progress - phases 132-136 complete
+**Status:** In progress - phases 132-137 complete
 **Phases:** 132-139
 **Granularity:** Standard
 **Requirements:** 50/50 mapped
@@ -53,7 +53,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 - [x] **Phase 134: Hostile Probe and No-Fallback Parity Across Subprocess and Container** - Run probe parity and no-fallback drills across hardened subprocess and container lanes where practical, with strict privacy redaction and monitors.
 - [x] **Phase 135: Timeout, Latency, and Reliability Budget Model** - Document, test, and measure Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
 - [x] **Phase 136: Exhibition Execution Stabilization and Retry Semantics** - Stabilize Python exhibition execution where practical and make retry/no-retry semantics explicit and safe.
-- [ ] **Phase 137: Degraded-State UX and Public-Safe Reliability Evidence** - Improve user-facing running, slow, degraded, timeout, strategy-failed, and system-failed states in MatchSet/replay evidence.
+- [x] **Phase 137: Degraded-State UX and Public-Safe Reliability Evidence** - Improve user-facing running, slow, degraded, timeout, strategy-failed, and system-failed states in MatchSet/replay evidence.
 - [ ] **Phase 138: Signed-In Reliability Proof and JS/TS Regression Gate** - Run a realistic signed-in proof with one JS/TS and two Python revisions, mixed and Python-vs-Python exhibitions, candidate evidence, privacy checks, and JS/TS regression checks.
 - [ ] **Phase 139: Promotion Decision, Audit, Archive, and Tag** - Verify, audit, document promotion decisions, archive v1.20, remove active requirements, commit, and tag `v1.20`.
 
@@ -145,7 +145,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 4. User can inspect replay evidence with non-counted exhibition beta cues, degraded/timeout context when applicable, and plausible in-bounds board state.
 5. Developer can verify public evidence and owner-source privacy remain safe across state variants.
 
-**Plans:** 0 planned
+**Plans:** 1 complete
 
 ### Phase 138: Signed-In Reliability Proof and JS/TS Regression Gate
 
@@ -189,7 +189,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 | 134. Hostile Probe and No-Fallback Parity Across Subprocess and Container | 1/1 | Complete | 2026-05-25 |
 | 135. Timeout, Latency, and Reliability Budget Model | 1/1 | Complete | 2026-05-25 |
 | 136. Exhibition Execution Stabilization and Retry Semantics | 1/1 | Complete | 2026-05-25 |
-| 137. Degraded-State UX and Public-Safe Reliability Evidence | 0/0 | Not Started | - |
+| 137. Degraded-State UX and Public-Safe Reliability Evidence | 1/1 | Complete | 2026-05-25 |
 | 138. Signed-In Reliability Proof and JS/TS Regression Gate | 0/0 | Not Started | - |
 | 139. Promotion Decision, Audit, Archive, and Tag | 0/0 | Not Started | - |
 
@@ -211,11 +211,11 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 
 ## Next Up
 
-Phase 137: Degraded-State UX and Public-Safe Reliability Evidence.
+Phase 138: Signed-In Reliability Proof and JS/TS Regression Gate.
 
-`$gsd-plan-phase 137`
+`$gsd-plan-phase 138`
 
-After Phase 137 has a verified plan and UI contract: `$gsd-ui-phase 137`, then `$gsd-execute-phase 137`
+After Phase 138 has a verified plan: `$gsd-execute-phase 138`
 
 ---
 *Created: 2026-05-25 for v1.20 milestone initialization*

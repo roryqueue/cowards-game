@@ -1,5 +1,11 @@
+import { Fragment } from "react"
 import type { MatchSetId } from "@cowards/spec"
 import { getPublicMatchSetResult } from "../../../lib/public-service-boundary.js"
+import {
+  matchSetEvidenceRows,
+  publicPrivacyProvenanceCue,
+  statusChipClass,
+} from "../evidence-copy.js"
 
 export const dynamic = "force-dynamic"
 
@@ -29,9 +35,6 @@ const runtimeLabel = (entrant: {
       : "JS/TS"
   return `${language} · ${entrant.runtime.adapter.id}`
 }
-
-const publicPrivacyExclusionCue =
-  "private code, memory, objectives, diagnostics"
 
 export default async function MatchSetResultPage({
   params,
@@ -74,6 +77,8 @@ export default async function MatchSetResultPage({
   const evidenceStatus =
     governance.countedStatus ??
     (hasPythonEntrant ? "non-counted exhibition beta" : "public exhibition")
+  const entrantRuntimeLabels = result.entrants.map(runtimeLabel)
+  const evidenceRows = matchSetEvidenceRows(result, entrantRuntimeLabels)
 
   return (
     <main className="app-page">
@@ -91,7 +96,9 @@ export default async function MatchSetResultPage({
         </div>
 
         <div className="status-strip">
-          <span className="workshop-chip valid">{result.status}</span>
+          <span className={`workshop-chip ${statusChipClass(result.status)}`}>
+            {result.status}
+          </span>
           <span>{resultCopy(result.status)}</span>
           {governance.countedStatus ? (
             <span>{governance.countedStatus}</span>
@@ -113,12 +120,12 @@ export default async function MatchSetResultPage({
             <span className="workshop-chip">{evidenceStatus}</span>
           </div>
           <dl className="details-grid">
-            <dt>runtime evidence</dt>
-            <dd>Public runtime labels below; execution-path proof is gated.</dd>
-            <dt>entrants</dt>
-            <dd>{result.entrants.map(runtimeLabel).join(", ")}</dd>
-            <dt>public proof excludes</dt>
-            <dd>{publicPrivacyExclusionCue}</dd>
+            {evidenceRows.map((row) => (
+              <Fragment key={row.label}>
+                <dt>{row.label}</dt>
+                <dd>{row.value}</dd>
+              </Fragment>
+            ))}
           </dl>
         </section>
 
@@ -234,7 +241,7 @@ export default async function MatchSetResultPage({
               {result.provenance.chronicleHashes.join(", ") || "none yet"}
             </dd>
             <dt>private fields excluded</dt>
-            <dd>{publicPrivacyExclusionCue}</dd>
+            <dd>{publicPrivacyProvenanceCue}</dd>
           </dl>
         </details>
       </section>

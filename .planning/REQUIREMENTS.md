@@ -55,12 +55,12 @@
 
 ### Degraded-State UX And Public-Safe Evidence
 
-- [ ] **UX-01**: User can understand when a Python exhibition MatchSet is queued, running, slow, completed, degraded, timed out, strategy-failed, or system-failed.
-- [ ] **UX-02**: User can see retry/no-retry wording that distinguishes Strategy errors from retryable system/runtime-service/container failures.
-- [ ] **UX-03**: User can open MatchSet result evidence and see safe language/runtime labels, non-counted status, timeout budget cues, candidate lane evidence, and evidence limits.
-- [ ] **UX-04**: User can open replay evidence and see non-counted exhibition beta cues, degraded/timeout context when applicable, and plausible in-bounds board state.
-- [ ] **UX-05**: Developer can verify public MatchSet/replay outputs remain private-data safe across success, running, degraded, timeout, strategy-failed, and system-failed outcomes.
-- [ ] **UX-06**: Developer can verify owner-source privacy remains intact for account-owned JS/TS and Python revisions.
+- [x] **UX-01**: User can understand when a Python exhibition MatchSet is queued, running, slow, completed, degraded, timed out, strategy-failed, or system-failed.
+- [x] **UX-02**: User can see retry/no-retry wording that distinguishes Strategy errors from retryable system/runtime-service/container failures.
+- [x] **UX-03**: User can open MatchSet result evidence and see safe language/runtime labels, non-counted status, timeout budget cues, candidate lane evidence, and evidence limits.
+- [x] **UX-04**: User can open replay evidence and see non-counted exhibition beta cues, degraded/timeout context when applicable, and plausible in-bounds board state.
+- [x] **UX-05**: Developer can verify public MatchSet/replay outputs remain private-data safe across success, running, degraded, timeout, strategy-failed, and system-failed outcomes.
+- [x] **UX-06**: Developer can verify owner-source privacy remains intact for account-owned JS/TS and Python revisions.
 
 ### Signed-In Reliability Proof
 
@@ -141,12 +141,12 @@
 | REL-04 | Phase 136 | Complete |
 | REL-05 | Phase 136 | Complete |
 | REL-06 | Phase 136 | Complete |
-| UX-01 | Phase 137 | Pending |
-| UX-02 | Phase 137 | Pending |
-| UX-03 | Phase 137 | Pending |
-| UX-04 | Phase 137 | Pending |
-| UX-05 | Phase 137 | Pending |
-| UX-06 | Phase 137 | Pending |
+| UX-01 | Phase 137 | Complete |
+| UX-02 | Phase 137 | Complete |
+| UX-03 | Phase 137 | Complete |
+| UX-04 | Phase 137 | Complete |
+| UX-05 | Phase 137 | Complete |
+| UX-06 | Phase 137 | Complete |
 | PROOF-01 | Phase 138 | Pending |
 | PROOF-02 | Phase 138 | Pending |
 | PROOF-03 | Phase 138 | Pending |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.20
 milestone_name: Runtime Sandbox Candidate and Exhibition Reliability Proof
 status: in_progress
-stopped_at: phase 136 complete
+stopped_at: phase 137 complete
 last_updated: "2026-05-25T00:00:00.000-04:00"
-last_activity: 2026-05-25 - Completed v1.20 phases 135 and 136 reliability budget and retry semantics evidence
+last_activity: 2026-05-25 - Completed v1.20 Phase 137 degraded-state UX and public-safe reliability evidence
 progress:
   total_phases: 8
-  completed_phases: 5
-  total_plans: 5
-  completed_plans: 5
-  percent: 63
+  completed_phases: 6
+  total_plans: 6
+  completed_plans: 6
+  percent: 75
 ---
 
 # State: Coward's Game
@@ -31,10 +31,10 @@ See: `.planning/PROJECT.md`
 
 ## Current Position
 
-Phase: 136 complete (Phase 137 next)
-Plan: 136-PLAN.md complete
-Status: Ready to plan Phase 137
-Last activity: 2026-05-25 - Phases 135 and 136 reliability budget and retry semantics evidence completed
+Phase: 137 complete (Phase 138 next)
+Plan: 137-PLAN.md complete
+Status: Ready to plan Phase 138
+Last activity: 2026-05-25 - Phase 137 degraded-state UX and public-safe reliability evidence completed
 
 ## Current Milestone Goal
 
@@ -78,4 +78,4 @@ The v1.19 proof also found and fixed two reliability/privacy gaps: runtime-servi
 
 ## Operator Next Steps
 
-Plan Phase 137 with `$gsd-plan-phase 137`, add a UI contract with `$gsd-ui-phase 137`, then execute planned work with `$gsd-execute-phase 137`.
+Plan Phase 138 with `$gsd-plan-phase 138`, then execute the signed-in reliability proof with `$gsd-execute-phase 138`.

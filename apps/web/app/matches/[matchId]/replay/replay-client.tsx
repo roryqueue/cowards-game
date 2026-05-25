@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useState } from "react"
 import type { ReplayReadyDto } from "../../types.js"
+import { replayEvidenceRows } from "../../../matchsets/evidence-copy.js"
 import {
   canShowOwnerDebug,
   formatTimelinePosition,
@@ -74,6 +75,7 @@ export function ReplayClient({ data }: ReplayClientProps) {
   const playbackIntervalMs = getPlaybackIntervalMs(playbackSpeed)
   const ownerDebugAvailable = canShowOwnerDebug(data)
   const statusLabel = data.mode === "owner" ? "Owner debug" : "Public view"
+  const evidenceRows = replayEvidenceRows(data)
 
   useEffect(() => {
     if (!playing) {
@@ -125,12 +127,12 @@ export function ReplayClient({ data }: ReplayClientProps) {
           >
             <p className="replay-label">Evidence</p>
             <dl className="replay-details-grid">
-              <dt>status</dt>
-              <dd>public replay proof</dd>
-              <dt>runtime evidence</dt>
-              <dd>Execution-path proof is gated outside this replay DTO.</dd>
-              <dt>privacy</dt>
-              <dd>private code, memory, diagnostics excluded</dd>
+              {evidenceRows.map((row) => (
+                <Fragment key={row.label}>
+                  <dt>{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </Fragment>
+              ))}
             </dl>
           </section>
           <p className="replay-label">Outcome</p>
