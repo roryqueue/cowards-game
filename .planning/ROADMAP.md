@@ -21,174 +21,192 @@
 - [x] **v1.16 Runtime Isolation and TypeScript Backend Retirement** - Phases 103-109, shipped 2026-05-24 with no normal TypeScript backend except frontend plus isolated JS/TS Strategy runtime service. See `.planning/milestones/v1.16-ROADMAP.md`.
 - [x] **v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening** - Phases 110-116, shipped 2026-05-24. See `.planning/milestones/v1.17-ROADMAP.md`.
 - [x] **v1.18 Runtime Isolation and Multi-Language Exhibition Beta** - Phases 117-123, shipped 2026-05-25. See `.planning/milestones/v1.18-ROADMAP.md`.
+- [ ] **v1.19 Runtime Isolation Readiness and Exhibition Beta Trust** - Phases 124-131, active.
 
-## Latest Milestone: v1.18 Runtime Isolation and Multi-Language Exhibition Beta
+## Active Milestone: v1.19 Runtime Isolation Readiness and Exhibition Beta Trust
 
-**Status:** Shipped 2026-05-25
-**Phases:** 117-123
+**Status:** Planning
+**Phases:** 124-131
 **Granularity:** Standard
-**Requirements:** 40/40 mapped
-**Research:** `.planning/research/SUMMARY.md`
+**Requirements:** 48/48 mapped
+**Research:** `.planning/research/SUMMARY.md`, `.planning/research/v1.19-SUMMARY.md`
 
 ## Overview
 
-v1.18 strengthens the runtime isolation boundary while using a signed-in non-counted multi-language exhibition beta as the user-facing proof. The milestone uses v1.17 as the baseline: normal topology remains `web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s)`, JS/TS support remains intact, and Python remains runtime-only, non-ranked, and non-counted.
+v1.19 strengthens runtime isolation readiness evidence while making the Python non-counted exhibition beta clearer and more trustworthy for signed-in users. The milestone treats v1.18 as the baseline: Python is already non-counted exhibition beta, JS/TS support remains intact, Go owns normal backend orchestration and public evidence, and hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker ABI.
 
-The target flow is:
+The target flow remains:
 
-`signed-in user -> web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated JS/TS or Python runtime implementation -> Go-owned public replay evidence`
+`signed-in user -> web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated JS/TS or Python runtime implementation -> Go-owned public MatchSet and replay evidence`
 
-Python may be saved as an account-owned immutable Strategy Revision and selected for non-counted exhibition beta MatchSets only where the runtime, eligibility, topology, monitor, and public-output privacy gates pass. Python must not become a backend, persistence owner, route owner, job lifecycle owner, Match completion owner, scoring owner, public evidence owner, ranked/counted language, package-install path, production sandbox claim, or silent fallback path.
+v1.19 must not promote Python to ranked, ladder, counted, gauntlet, package-install, broad production multi-language, or backend ownership. Runtime isolation evidence must remain honestly scoped as readiness evidence unless stronger proof genuinely passes.
 
 ## Phases
 
-- [x] **Phase 117: Isolation Baseline and Threat Model** - Establish v1.17 as the floor, document current isolation behavior, and define v1.18 threat model/promotion gates.
-- [x] **Phase 118: Runtime Resource and Process Hardening** - Harden subprocess/container candidate behavior for timeout, caps, crash, lifecycle, filesystem/network/package escape, and no-fallback drills.
-- [x] **Phase 119: Python Validation and Public-Safe Diagnostics** - Replace heuristic Python validation with AST/compile validation where practical and normalize diagnostics.
-- [x] **Phase 120: Exhibition Beta Revision and Eligibility Model** - Make Python saveable as account-owned immutable non-counted exhibition beta revisions without weakening JS/TS counted play.
-- [x] **Phase 121: Signed-In Multi-Language Exhibition Proof** - Run the required local signed-in JS/TS plus Python exhibition flow through Go -> Runtime Broker -> runtime implementation -> replay.
-- [x] **Phase 122: Topology, Monitors, Hostile Probes, and Privacy Gate** - Extend monitors/topology/probes/privacy checks so isolation, ownership, fallback, and leak regressions fail loudly.
-- [x] **Phase 123: Final Evidence, Promotion Decision, and Archive Gate** - Verify, audit, document promotion decisions, archive v1.18, remove active requirements, and tag `v1.18`.
+- [ ] **Phase 124: Isolation Readiness Baseline and Candidate Contract** - Rebaseline v1.18 as the floor and define honest subprocess/container/gVisor-style candidate contracts.
+- [ ] **Phase 125: Hostile Probe Matrix Expansion** - Expand realistic hostile probes and no-fallback drills across runtime candidate behavior.
+- [ ] **Phase 126: Candidate Execution Evidence** - Run hardened subprocess evidence and practical container/gVisor-style evidence with fail-loud required lanes.
+- [ ] **Phase 127: Runtime Evidence Monitors and Drift Gates** - Extend monitors for candidate evidence, runtime ABI, no-fallback, ownership, privacy, topology, and JS/TS regression safety.
+- [ ] **Phase 128: Python Exhibition Beta UX Trust** - Improve Python exhibition creation, labels, validation messages, sample Strategies, and eligibility explanations.
+- [ ] **Phase 129: MatchSet Result and Replay Trust Cues** - Improve public-safe result and replay evidence for non-counted Python exhibition beta.
+- [ ] **Phase 130: Signed-In End-to-End Proof and JS/TS Regression Gate** - Run a realistic signed-in JS/TS plus Python exhibition proof through Go -> Runtime Broker -> runtime implementation -> result/replay.
+- [ ] **Phase 131: Promotion Decision and Archive Gate** - Verify, audit, document promotion decisions, archive v1.19, remove active requirements, and tag `v1.19`.
 
 ## Phase Details
 
-### Phase 117: Isolation Baseline and Threat Model
+### Phase 124: Isolation Readiness Baseline and Candidate Contract
 
-**Goal:** Establish v1.17 as the floor, document current isolation behavior, and define v1.18 threat model/promotion gates.
-**Depends on:** Phase 116
+**Goal:** Rebaseline v1.18 as the floor and define honest subprocess/container/gVisor-style candidate contracts.
+**Depends on:** Phase 123
 **Requirements:** BASE-01, BASE-02, BASE-03, BASE-04, BASE-05
 
 **Success Criteria:**
-1. Developer can inspect a v1.18 baseline artifact proving v1.17 remains the runtime/broker floor.
-2. Developer can inspect an exhibition-beta hostile Strategy threat model covering filesystem, network, package/import, shell/process, environment, memory/output, timeout, crash, stderr/stack/path, and public-output leak risks.
-3. Developer can inspect promotion criteria that distinguish non-counted exhibition beta readiness from production sandbox certification.
-4. Developer can verify JS/TS support remains intact and Python remains runtime-only/non-counted/non-ranked.
+1. Developer can inspect a v1.19 baseline artifact proving v1.18 remains the topology, eligibility, and evidence floor.
+2. Developer can inspect a candidate contract comparing hardened subprocess, normal container, and gVisor/runsc-style runtime isolation candidates.
+3. Developer can inspect an evidence taxonomy separating readiness evidence, required live proof, skipped/unsupported candidate state, and production certification.
+4. Developer can verify JS/TS remains intact and Python remains runtime-only, non-counted, non-ranked, and exhibition beta only.
 
-**Plans:** 1 plan
+**Plans:** 0 planned
 
-### Phase 118: Runtime Resource and Process Hardening
+### Phase 125: Hostile Probe Matrix Expansion
 
-**Goal:** Harden subprocess/container candidate behavior for timeout, caps, crash, lifecycle, filesystem/network/package escape, and no-fallback drills.
-**Depends on:** Phase 117
-**Requirements:** ISO-01, ISO-02, ISO-03, ISO-04, ISO-05
-
-**Success Criteria:**
-1. Developer can inspect hardened Python subprocess launch behavior, including no shell, empty environment, isolated/safe-path flags where practical, and deterministic runtime metadata.
-2. Developer can verify timeouts, stdout/stderr/output caps, malformed IPC, crash, signal, and cleanup classify deterministically.
-3. Developer can run filesystem, network, shell, import/package, environment, host path, and package escape probes.
-4. Developer can inspect container/gVisor-style evidence as readiness evidence without production counted-play promotion.
-5. Developer can verify stopped runtime service and stopped Python runtime fail closed without silent fallback.
-
-**Plans:** 1 plan
-
-### Phase 119: Python Validation and Public-Safe Diagnostics
-
-**Goal:** Replace heuristic Python validation with AST/compile validation where practical and normalize diagnostics.
-**Depends on:** Phase 118
-**Requirements:** PYVAL-01, PYVAL-02, PYVAL-03, PYVAL-04, PYVAL-05
+**Goal:** Expand realistic hostile probes and no-fallback drills across runtime candidate behavior.
+**Depends on:** Phase 124
+**Requirements:** PROBE-01, PROBE-02, PROBE-03, PROBE-04, PROBE-05, PROBE-06, PROBE-07
 
 **Success Criteria:**
-1. User can validate Python with real AST/compile checks where practical.
-2. User receives public-safe syntax, compile, missing-function, forbidden-capability, package-policy, size, and metadata diagnostics.
-3. Developer can verify validation never executes Strategy behavior in web/API/Go.
-4. Developer can verify diagnostics omit source, memory, objectives, stderr, stack, host paths, package paths, env, tokens, DB DSNs, and private runtime internals.
-5. Developer can verify Python package policy remains self-contained source only.
+1. Developer can run filesystem, host-path, network, DNS, socket, shell, process, import, package, dynamic-code, environment, token, DB DSN, output, memory, timeout, crash, malformed IPC, stderr, stack, and schema probes.
+2. Developer can verify public diagnostics redact source, memory, objectives, stderr, stacks, host paths, package paths, environment, tokens, DB DSNs, sessions, and private runtime internals.
+3. Developer can run no-fallback drills for stopped runtime-service, stopped Python runtime, and unavailable stronger candidates.
+4. Developer can verify probe failures map to deterministic runtime/system failure taxonomy.
 
-**Plans:** 1 plan
+**Plans:** 0 planned
 
-### Phase 120: Exhibition Beta Revision and Eligibility Model
+### Phase 126: Candidate Execution Evidence
 
-**Goal:** Make Python saveable as account-owned immutable non-counted exhibition beta revisions without weakening JS/TS counted play.
-**Depends on:** Phase 119
-**Requirements:** BETA-01, BETA-02, BETA-03, BETA-04, BETA-05
+**Goal:** Run hardened subprocess evidence and practical container/gVisor-style evidence with fail-loud required lanes.
+**Depends on:** Phase 125
+**Requirements:** CAND-01, CAND-02, CAND-03, CAND-04, CAND-05, CAND-06
 
 **Success Criteria:**
-1. User can save Python as an account-owned immutable Strategy Revision where practical.
-2. Developer can verify Python revisions carry language/runtime/adapter/package/validation/artifact hash metadata and non-counted eligibility.
-3. User-facing labels clearly say Python is non-counted exhibition beta.
-4. Developer can verify counted/ranked/ladder/gauntlet gates reject Python while JS/TS counted eligibility remains intact.
-5. Developer can verify public summaries expose safe language/runtime labels without private Strategy or runtime leaks.
+1. Developer can inspect hardened subprocess evidence for launch hardening, failure taxonomy, cleanup, and no-fallback behavior.
+2. Developer can inspect container candidate evidence for filesystem, network, tmpfs, capability, PID, memory, CPU, launch, and unsupported-runtime behavior.
+3. Developer can inspect gVisor/runsc-style evidence for local availability, OCI compatibility, expected isolation benefits, overhead, compatibility limits, and unsupported-runtime behavior.
+4. Developer can run required candidate evidence lanes that fail when evidence is skipped, stale, unavailable, or silently substituted.
+5. Developer can inspect a candidate comparison that states what each candidate proves and does not prove.
 
-**Plans:** 1 plan
+**Plans:** 0 planned
 
-### Phase 121: Signed-In Multi-Language Exhibition Proof
+### Phase 127: Runtime Evidence Monitors and Drift Gates
 
-**Goal:** Run the required local signed-in JS/TS plus Python exhibition flow through Go -> Runtime Broker -> runtime implementation -> replay.
-**Depends on:** Phase 120
+**Goal:** Extend monitors for candidate evidence, runtime ABI, no-fallback, ownership, privacy, topology, and JS/TS regression safety.
+**Depends on:** Phase 126
+**Requirements:** MON-01, MON-02, MON-03, MON-04, MON-05, MON-06
+
+**Success Criteria:**
+1. Developer can run monitors that fail on runtime ABI, registry, broker, schema, candidate evidence, sandbox authority, and production-claim drift.
+2. Developer can run monitors that fail on Python execution outside the runtime boundary and on backend ownership creep.
+3. Developer can run privacy monitors across public MatchSet/replay evidence and runtime diagnostics.
+4. Developer can run JS/TS regression tests proving validation, runtime execution, counted eligibility, MatchSet results, and replay safety remain intact.
+5. Developer can run topology checks that distinguish fixture-mode parity from live signed-in proof data.
+
+**Plans:** 0 planned
+
+### Phase 128: Python Exhibition Beta UX Trust
+
+**Goal:** Improve Python exhibition creation, labels, validation messages, sample Strategies, and eligibility explanations.
+**Depends on:** Phase 127
+**Requirements:** BETA-01, BETA-02, BETA-03, BETA-04, BETA-05, BETA-06
+
+**Success Criteria:**
+1. User can see "non-counted exhibition beta" labels anywhere Python Strategy creation, selection, validation, MatchSet creation, result, or replay evidence appears.
+2. User receives actionable public-safe validation messages for unsupported Python capabilities, imports, packages, size, syntax, compile, and metadata failures.
+3. User can choose credible sample Python Strategies that stay within safe Strategy API behavior.
+4. Developer can verify Python immutable revision metadata and eligibility flags are preserved for MatchSet entries.
+5. Developer can verify JS/TS authoring, validation, counted eligibility, and exhibition behavior remain unchanged.
+
+**Plans:** 0 planned
+
+### Phase 129: MatchSet Result and Replay Trust Cues
+
+**Goal:** Improve public-safe result and replay evidence for non-counted Python exhibition beta.
+**Depends on:** Phase 128
+**Requirements:** EVID-01, EVID-02, EVID-03, EVID-04, EVID-05
+
+**Success Criteria:**
+1. User can open a Python exhibition MatchSet result and understand language/runtime path, non-counted status, and evidence limits.
+2. User can open replay evidence and see clear trust cues without private Strategy or runtime internals.
+3. Developer can verify public evidence remains private-data safe across success, runtime violation, degraded, and system-failed outcomes.
+4. Developer can verify owner-source privacy remains intact for JS/TS and Python account revisions.
+5. Developer can verify replay board state remains plausible and in bounds.
+
+**Plans:** 0 planned
+
+### Phase 130: Signed-In End-to-End Proof and JS/TS Regression Gate
+
+**Goal:** Run a realistic signed-in JS/TS plus Python exhibition proof through Go -> Runtime Broker -> runtime implementation -> result/replay.
+**Depends on:** Phase 129
 **Requirements:** PROOF-01, PROOF-02, PROOF-03, PROOF-04, PROOF-05, PROOF-06, PROOF-07, PROOF-08
 
 **Success Criteria:**
 1. User can create or sign into a local account.
-2. User can create/save JS/TS and Python Strategy Revisions.
+2. User can create and save JS/TS and Python Strategy Revisions.
 3. User can create a non-counted exhibition MatchSet using Python against JS/TS or Python.
 4. Developer can verify Match execution flows through Go -> Runtime Broker -> isolated runtime implementation.
-5. User can open replay evidence for the MatchSet with plausible in-bounds board state.
-6. Developer can verify public outputs for the proof are private-data safe.
+5. User can open MatchSet result and replay evidence with clear non-counted exhibition beta labels and trust cues.
+6. Developer can verify public outputs are private-data safe and contain no fallback, ownership, or JS/TS regression failures.
 
-**Plans:** 1 plan
+**Plans:** 0 planned
 
-### Phase 122: Topology, Monitors, Hostile Probes, and Privacy Gate
+### Phase 131: Promotion Decision and Archive Gate
 
-**Goal:** Extend monitors/topology/probes/privacy checks so isolation, ownership, fallback, and leak regressions fail loudly.
-**Depends on:** Phase 121
-**Requirements:** MON-01, MON-02, MON-03, MON-04, MON-05, MON-06, MON-07
-
-**Success Criteria:**
-1. Developer can run monitors that fail on runtime ABI drift, runtime registry drift, broker contract drift, sandbox authority drift, and Python execution outside the runtime boundary.
-2. Developer can run monitors that fail on backend ownership creep, route ownership creep, persistence access, job lifecycle ownership, scoring ownership, public evidence ownership, or silent fallback.
-3. Developer can run hostile probes for filesystem, network, package/import, shell, environment, process, memory/output, timeout, crash, and malformed IPC behavior.
-4. Developer can run privacy checks for source/memory/objective/stderr/stack/path/token/private-runtime leaks.
-5. Developer can run JS/TS regression tests and page smoke for Workshop, exhibition creation, MatchSet result, and replay evidence.
-
-**Plans:** 1 plan
-
-### Phase 123: Final Evidence, Promotion Decision, and Archive Gate
-
-**Goal:** Verify, audit, document promotion decisions, archive v1.18, remove active requirements, and tag `v1.18`.
-**Depends on:** Phase 122
+**Goal:** Verify, audit, document promotion decisions, archive v1.19, remove active requirements, and tag `v1.19`.
+**Depends on:** Phase 130
 **Requirements:** EXIT-01, EXIT-02, EXIT-03, EXIT-04, EXIT-05
 
 **Success Criteria:**
-1. Developer can inspect v1.18 artifacts for baseline, threat model, isolation evidence, validation policy, exhibition beta evidence, topology, monitors, privacy, and proof results.
-2. Developer can inspect a promotion decision stating Python is promoted only to non-counted exhibition beta.
-3. Developer can inspect a promotion decision stating runtime isolation is readiness evidence only unless production-grade proof genuinely passes.
-4. Developer can run final verification across spec/contracts, runtime-python, runtime-service, Go backend, web, topology, boundary monitors, privacy, and browser proof.
-5. Developer can archive requirements/roadmap/phases, remove active `.planning/REQUIREMENTS.md`, update PROJECT/STATE/MILESTONES/RETROSPECTIVE, and tag `v1.18`.
+1. Developer can inspect v1.19 artifacts for baseline, candidate comparison, hostile probes, candidate evidence, monitors, beta trust, public evidence, signed-in proof, and privacy checks.
+2. Developer can inspect a promotion decision stating Python remains non-counted exhibition beta.
+3. Developer can inspect a promotion decision stating runtime isolation remains readiness evidence unless stronger production-grade proof genuinely passes.
+4. Developer can run final verification across runtime-python, runtime-js/runtime-service, spec/contracts, Go backend, web, topology, boundary monitors, privacy, JS/TS regression, and signed-in browser proof.
+5. Developer can archive requirements/roadmap/phases, remove active `.planning/REQUIREMENTS.md`, update PROJECT/STATE/MILESTONES/RETROSPECTIVE, and tag `v1.19`.
 
-**Plans:** 1 plan
+**Plans:** 0 planned
 
 ## Progress
 
-**Execution Order:** Phase 117 -> Phase 118 -> Phase 119 -> Phase 120 -> Phase 121 -> Phase 122 -> Phase 123
+**Execution Order:** Phase 124 -> Phase 125 -> Phase 126 -> Phase 127 -> Phase 128 -> Phase 129 -> Phase 130 -> Phase 131
 
 | Phase | Plans Complete | Status | Completed |
 | --- | --- | --- | --- |
-| 117. Isolation Baseline and Threat Model | 1/1 | Complete | 2026-05-25 |
-| 118. Runtime Resource and Process Hardening | 1/1 | Complete | 2026-05-25 |
-| 119. Python Validation and Public-Safe Diagnostics | 1/1 | Complete | 2026-05-25 |
-| 120. Exhibition Beta Revision and Eligibility Model | 1/1 | Complete | 2026-05-25 |
-| 121. Signed-In Multi-Language Exhibition Proof | 1/1 | Complete | 2026-05-25 |
-| 122. Topology, Monitors, Hostile Probes, and Privacy Gate | 1/1 | Complete | 2026-05-25 |
-| 123. Final Evidence, Promotion Decision, and Archive Gate | 1/1 | Complete | 2026-05-25 |
+| 124. Isolation Readiness Baseline and Candidate Contract | 0/0 | Pending | — |
+| 125. Hostile Probe Matrix Expansion | 0/0 | Pending | — |
+| 126. Candidate Execution Evidence | 0/0 | Pending | — |
+| 127. Runtime Evidence Monitors and Drift Gates | 0/0 | Pending | — |
+| 128. Python Exhibition Beta UX Trust | 0/0 | Pending | — |
+| 129. MatchSet Result and Replay Trust Cues | 0/0 | Pending | — |
+| 130. Signed-In End-to-End Proof and JS/TS Regression Gate | 0/0 | Pending | — |
+| 131. Promotion Decision and Archive Gate | 0/0 | Pending | — |
 
 ## Requirement Coverage
 
 | Requirement Group | Phase | Count |
 | --- | --- | ---: |
-| BASE-01 through BASE-05 | Phase 117 | 5 |
-| ISO-01 through ISO-05 | Phase 118 | 5 |
-| PYVAL-01 through PYVAL-05 | Phase 119 | 5 |
-| BETA-01 through BETA-05 | Phase 120 | 5 |
-| PROOF-01 through PROOF-08 | Phase 121 | 8 |
-| MON-01 through MON-07 | Phase 122 | 7 |
-| EXIT-01 through EXIT-05 | Phase 123 | 5 |
+| BASE-01 through BASE-05 | Phase 124 | 5 |
+| PROBE-01 through PROBE-07 | Phase 125 | 7 |
+| CAND-01 through CAND-06 | Phase 126 | 6 |
+| MON-01 through MON-06 | Phase 127 | 6 |
+| BETA-01 through BETA-06 | Phase 128 | 6 |
+| EVID-01 through EVID-05 | Phase 129 | 5 |
+| PROOF-01 through PROOF-08 | Phase 130 | 8 |
+| EXIT-01 through EXIT-05 | Phase 131 | 5 |
 
-**Coverage:** 40/40 v1.18 requirements mapped.
+**Coverage:** 48/48 v1.19 requirements mapped.
 **Unmapped requirements:** 0.
 
 ## Next Up
 
-Start a fresh milestone with `$gsd-new-milestone`; `.planning/REQUIREMENTS.md` is intentionally absent after milestone close.
+Start Phase 124 with `$gsd-discuss-phase 124` or plan directly with `$gsd-plan-phase 124`.
 
 ---
-*Created: 2026-05-25 for v1.18 milestone initialization*
+*Created: 2026-05-25 for v1.19 milestone initialization*
