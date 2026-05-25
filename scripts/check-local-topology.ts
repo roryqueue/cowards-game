@@ -87,6 +87,10 @@ const privateMarkers = [
   "process.env",
   "stack trace",
   "stderr",
+  "Traceback",
+  "site-packages",
+  "python_runtime_host.py",
+  "packagePath",
 ] as const
 
 const localCommands = [
@@ -499,18 +503,16 @@ const checkPublicReplayEvidenceRealism = (value: unknown): void => {
   if (minX > maxX || minY > maxY) {
     throw new Error("public replay evidence has invalid board bounds")
   }
-  const soldiers = requireRecordArray(
-    board,
-    "soldiers",
-    "public replay board",
-  )
+  const soldiers = requireRecordArray(board, "soldiers", "public replay board")
   const terrainStones = requireRecordArray(
     board,
     "terrainStones",
     "public replay board",
   )
   if (soldiers.length !== 16) {
-    throw new Error("public replay evidence canonical start must have 16 Soldiers")
+    throw new Error(
+      "public replay evidence canonical start must have 16 Soldiers",
+    )
   }
   let bottomCount = 0
   let topCount = 0
@@ -560,7 +562,9 @@ const checkPublicReplayEvidenceRealism = (value: unknown): void => {
     }
   }
   if (bottomCount !== 8 || topCount !== 8) {
-    throw new Error("public replay evidence canonical start must have 8 Soldiers per side")
+    throw new Error(
+      "public replay evidence canonical start must have 8 Soldiers per side",
+    )
   }
   for (const terrainStone of terrainStones) {
     const x = requireNumber(terrainStone, "x", "public replay terrain")
@@ -1031,7 +1035,9 @@ export const validateV116NoTypeScriptBackendTopologyArtifact = (
     "v1.16 topology",
   )
   requireStringSetIncludes(
-    linkedArtifacts.map((item) => requireString(item, "path", "linkedArtifact")),
+    linkedArtifacts.map((item) =>
+      requireString(item, "path", "linkedArtifact"),
+    ),
     [
       v116SelectedGoRouteManifestPath,
       v116RuntimeServiceBoundaryArtifactPath,
@@ -1096,7 +1102,10 @@ const validateV116NoTypeScriptBackendRuntimeContracts = (): string => {
     readJson<unknown>(v116TypeScriptWorkerQuarantineArtifactPath),
     v116TypeScriptWorkerQuarantineArtifactPath,
   )
-  const workerPolicies = asRecord(worker.globalPolicies, "worker.globalPolicies")
+  const workerPolicies = asRecord(
+    worker.globalPolicies,
+    "worker.globalPolicies",
+  )
   if (
     requireBoolean(
       workerPolicies,

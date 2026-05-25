@@ -10,7 +10,9 @@ export async function POST(request: Request): Promise<Response> {
     )
   }
 
+  const sourceFormat = body.sourceFormat === "python" ? "python" : "typescript"
+
   return Response.json({
-    validation: workshopServer.validateSource(body.source),
+    validation: workshopServer.validateSource(body.source, sourceFormat),
   })
 }

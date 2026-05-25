@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import {
   publicStrategyPageExample,
@@ -12,6 +14,10 @@ import type { PublicGoReadClient } from "./public-go-read-client.js"
 
 const publicStrategyPage =
   publicStrategyPageExample as PublicStrategyPageServiceDto
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+)
 
 const createGoClientStub = (
   overrides: Partial<PublicGoReadClient>,
@@ -79,7 +85,10 @@ describe("public read route ownership", () => {
   })
 
   it("keeps selected public adapters free of direct session persistence", () => {
-    const source = readFileSync("apps/web/lib/public-service-adapter.ts", "utf8")
+    const source = readFileSync(
+      path.join(repoRoot, "apps/web/lib/public-service-adapter.ts"),
+      "utf8",
+    )
 
     expect(source).not.toContain("@cowards/persistence/auth")
     expect(source).not.toContain("getSession(")
@@ -132,15 +141,15 @@ describe("public read route ownership", () => {
     await expect(
       service.getPublicMatchSetSummary("match-set:demo"),
     ).rejects.toThrow("getPublicMatchSetSummary is not selected")
-    await expect(
-      service.getPublicReplayMetadata("match:demo"),
-    ).rejects.toThrow("getPublicReplayMetadata is not selected")
+    await expect(service.getPublicReplayMetadata("match:demo")).rejects.toThrow(
+      "getPublicReplayMetadata is not selected",
+    )
     await expect(service.getPublicPlayerPage("local")).rejects.toThrow(
       "getPublicPlayerPage is not selected",
     )
-    await expect(
-      service.getPublicLadderSeason("season:demo"),
-    ).rejects.toThrow("getPublicLadderSeason is not selected")
+    await expect(service.getPublicLadderSeason("season:demo")).rejects.toThrow(
+      "getPublicLadderSeason is not selected",
+    )
 
     expect(goCalls).toEqual(["strategy:strategy:demo"])
     expect(

@@ -1,5 +1,42 @@
 # Retrospective
 
+## Milestone: v1.17 — Python Strategy Runtime Pilot and Broker Contract Hardening
+
+**Implemented:** 2026-05-24
+**Phases:** 7 | **Plans:** 7
+
+### What Was Built
+
+- A concrete Runtime Broker registry contract with exact language/runtime/adapter/ABI/package matching.
+- Experimental Python Strategy metadata, validation, immutable revision construction, and Workshop source-format UI.
+- Python subprocess execution behind the runtime-service ABI with schema-validated JSON envelopes and engine-compatible runtime integration.
+- Go/runtime-service hardening so Go validates registered runtime metadata and Python remains non-counted.
+- Boundary monitors for v1.17 registry drift, Python execution outside the runtime boundary, privacy markers, backend ownership creep, and premature counted eligibility.
+
+### What Worked
+
+- Browser smoke caught a real import-boundary issue: validation code was accidentally pulling runtime execution adapter code into Next page evaluation.
+- Runtime-service tests caught a weak Python proof fixture that produced invalid activation orders.
+- Keeping Python non-counted simplified the product proof while preserving JS/TS counted behavior.
+
+### What Was Inefficient
+
+- The Python validation path is intentionally conservative and static; it does not yet run a separate Python `ast.parse`/compile host.
+- In-app browser screenshot capture timed out, so UI proof used DOM/page-state checks instead of saved screenshots.
+- Account-authenticated exhibition browser submission was not exercised manually in the smoke environment.
+
+### Patterns Established
+
+- Runtime metadata must live in side-effect-light modules so validation imports cannot drag execution adapters into web/API code.
+- Broker registry artifacts should be checked against the spec registry, not only maintained as prose.
+- Runtime proof fixtures should assert zero runtime violations and use realistic Strategy output envelopes.
+
+### Key Lessons
+
+- A second language runtime mostly stresses packaging boundaries before it stresses game logic.
+- Validation and execution must remain separate import surfaces.
+- Non-counted experimental support is useful only if all public labels, monitors, and Go gates agree.
+
 ## Milestone: v1.16 — Runtime Isolation and TypeScript Backend Retirement
 
 **Shipped:** 2026-05-24

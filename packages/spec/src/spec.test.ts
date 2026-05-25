@@ -50,10 +50,13 @@ import {
   assertNonJsRuntimeGuardrails,
   NON_JS_RUNTIME_PROMOTION_CRITERIA,
   NON_JS_RUNTIME_SUPPORT_POLICY,
+  RUNTIME_BROKER_REGISTRY,
+  RUNTIME_BROKER_REGISTRY_VERSION,
   STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
   runtimeCompatibilityKey,
+  validateRuntimeBrokerRegistryMatch,
   validateStrategyRuntimeMetadataPolicy,
 } from "./runtime.js"
 import {
@@ -351,6 +354,51 @@ describe("Coward's Game spec contracts", () => {
         "deprecation-policy",
       ]),
     )
+  })
+
+  it("v1.17 runtime broker registry uses exact metadata and keeps Python non-counted", () => {
+    const jsRuntime = defaultRuntimeMetadata()
+    const pythonRuntime = {
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      language: { id: "python", version: "3.9" },
+      adapter: {
+        id: "runtime-python-subprocess-experimental",
+        version: "0.1.0-experimental",
+      },
+      package: { mode: "none", entrypoint: "module" },
+      requiredCapabilities: [],
+      limits:
+        STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
+          (adapter) => adapter.id === "runtime-python-subprocess-experimental",
+        )?.limits ?? jsRuntime.limits,
+    }
+
+    expect(RUNTIME_BROKER_REGISTRY_VERSION).toBe(
+      "runtime-broker-registry-v1.17",
+    )
+    expect(RUNTIME_BROKER_REGISTRY).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          languageId: "typescript",
+          runtimeTarget: "runtime-js",
+          countedResultsAllowed: true,
+        }),
+        expect.objectContaining({
+          languageId: "python",
+          runtimeTarget: "runtime-python",
+          adapterId: "runtime-python-subprocess-experimental",
+          enabledForNormalPlay: false,
+          countedResultsAllowed: false,
+        }),
+      ]),
+    )
+    expect(validateRuntimeBrokerRegistryMatch(pythonRuntime)).toHaveLength(0)
+    expect(
+      validateRuntimeBrokerRegistryMatch({
+        ...pythonRuntime,
+        adapter: { ...pythonRuntime.adapter, version: "drifted" },
+      }).map((issue) => issue.code),
+    ).toContain("INCOMPATIBLE_ADAPTER")
   })
 
   it("runtime policy validation exposes Phase 54 stable issue codes", () => {
@@ -727,7 +775,7 @@ describe("Coward's Game spec contracts", () => {
         text: source,
         hash: sourceHash,
         bytes: new TextEncoder().encode(source).length,
-        format: "typescript",
+        format: "python",
         entrypoint: "default",
       },
       runtime,

@@ -22,6 +22,7 @@ export function ExhibitionClient({
 }: ExhibitionClientProps) {
   const [presetId, setPresetId] = useState(presets[0]?.id ?? "")
   const [selectedRevisionIds, setSelectedRevisionIds] = useState<string[]>([])
+  const [counted, setCounted] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
 
@@ -32,7 +33,9 @@ export function ExhibitionClient({
   const validRevisions = revisions.filter((revision) => revision.valid)
   const selectableRevisionIds = new Set(
     validRevisions
-      .filter((revision) => revision.runtimeSemantics.countedPlayEligible)
+      .filter((revision) =>
+        counted ? revision.runtimeSemantics.countedPlayEligible : true,
+      )
       .map((revision) => revision.id),
   )
   const canSubmit =
@@ -65,7 +68,11 @@ export function ExhibitionClient({
       const response = await fetch("/api/exhibitions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ presetId, revisionIds: selectedRevisionIds }),
+        body: JSON.stringify({
+          presetId,
+          revisionIds: selectedRevisionIds,
+          counted,
+        }),
       })
       const body = (await response.json()) as {
         matchSetId?: string
@@ -114,6 +121,41 @@ export function ExhibitionClient({
           <p className="workshop-muted">
             {selectedPreset.description} Select {selectedPreset.minEntrants}-
             {selectedPreset.maxEntrants} owned revisions.
+          </p>
+        ) : null}
+
+        <div className="segmented-control" aria-label="Exhibition counting">
+          <button
+            className={counted ? "active" : ""}
+            type="button"
+            onClick={() => {
+              setCounted(true)
+              setSelectedRevisionIds((current) =>
+                current.filter((revisionId) =>
+                  validRevisions
+                    .filter(
+                      (revision) =>
+                        revision.runtimeSemantics.countedPlayEligible,
+                    )
+                    .some((revision) => revision.id === revisionId),
+                ),
+              )
+            }}
+          >
+            Counted
+          </button>
+          <button
+            className={!counted ? "active" : ""}
+            type="button"
+            onClick={() => setCounted(false)}
+          >
+            Unranked
+          </button>
+        </div>
+        {!counted ? (
+          <p className="workshop-muted">
+            Unranked exhibitions may include experimental Python revisions and
+            are marked non-counted.
           </p>
         ) : null}
 

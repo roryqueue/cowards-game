@@ -14,7 +14,7 @@ importers:
       '@playwright/test':
         specifier: ^1.60.0
         version: 1.60.0
-      "@redocly/cli":
+      '@redocly/cli':
         specifier: 2.31.4
         version: 2.31.4(@opentelemetry/api@1.9.1)(core-js@3.49.0)
       '@types/node':
@@ -56,6 +56,9 @@ importers:
       '@cowards/runtime-js':
         specifier: workspace:*
         version: link:../../packages/runtime-js
+      '@cowards/runtime-python':
+        specifier: workspace:*
+        version: link:../../packages/runtime-python
       '@cowards/spec':
         specifier: workspace:*
         version: link:../../packages/spec
@@ -179,6 +182,9 @@ importers:
       '@cowards/runtime-js':
         specifier: workspace:*
         version: link:../runtime-js
+      '@cowards/runtime-python':
+        specifier: workspace:*
+        version: link:../runtime-python
       '@cowards/spec':
         specifier: workspace:*
         version: link:../spec
@@ -223,6 +229,9 @@ importers:
 
   packages/runtime-python:
     dependencies:
+      '@cowards/engine':
+        specifier: workspace:*
+        version: link:../engine
       '@cowards/spec':
         specifier: workspace:*
         version: link:../spec

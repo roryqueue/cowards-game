@@ -178,6 +178,7 @@ describe("Strategy Workshop validation helpers", () => {
       strategyId: "strategy:local-workshop",
       sourceHash: "abcdef123456",
       sourceBytes: 123,
+      sourceFormat: "typescript" as const,
       valid: true,
       validation: {
         valid: true,

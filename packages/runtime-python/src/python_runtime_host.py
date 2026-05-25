@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import hashlib
 import sys
 
 ABI_VERSION = "strategy-runtime-abi-v1.14"
@@ -34,14 +35,34 @@ def main():
         )
         return 0
 
-    source = envelope["source"]["text"]
+    source_info = envelope["source"]
+    source = source_info["text"]
+    actual_hash = hashlib.sha256(source.encode("utf-8")).hexdigest()
+    if actual_hash != source_info["hash"] or len(source.encode("utf-8")) != source_info["bytes"]:
+        print(
+            json.dumps(
+                failure(
+                    "runtimeViolation",
+                    "INVALID_OUTPUT",
+                    "Python Strategy source identity mismatch.",
+                    "Strategy returned an invalid result.",
+                )
+            )
+        )
+        return 0
     namespace = {}
     safe_builtins = {
+        "abs": abs,
+        "bool": bool,
         "dict": dict,
         "enumerate": enumerate,
+        "int": int,
         "len": len,
         "list": list,
+        "max": max,
+        "min": min,
         "range": range,
+        "round": round,
         "str": str,
         "sum": sum,
     }

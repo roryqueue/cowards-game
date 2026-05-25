@@ -10,6 +10,7 @@ import {
   type StrategyRevision,
 } from "@cowards/spec"
 import { buildStrategyRevision } from "@cowards/runtime-js"
+import { buildPythonStrategyRevision } from "@cowards/runtime-python"
 import { executeRuntimeServiceRequest } from "./execute-match.js"
 import {
   createRuntimeServiceConfig,
@@ -55,6 +56,25 @@ export default {
 }
 `
 
+const pythonTacticalSource = `
+def select_activations(input):
+    active = [soldier for soldier in input["mySoldiers"] if soldier["status"] == "ACTIVE"]
+    return {
+        "activationOrders": [
+            {"soldierId": soldier["id"], "objective": {"stance": "hold"}}
+            for soldier in active[: input["activationCount"]]
+        ],
+        "strategyMemory": input["strategyMemory"],
+    }
+
+
+def soldier_brain(input):
+    return {
+        "action": {"type": "TURN_TO_STONE"},
+        "soldierMemory": input["soldierMemory"],
+    }
+`
+
 const requestFor = (
   input: {
     bottom?: StrategyRevision | undefined
@@ -90,7 +110,7 @@ const requestFor = (
     strategies: { bottom, top },
     limits: {
       ...DEFAULT_RUNTIME_LIMITS,
-      timeoutMs: 250,
+      timeoutMs: DEFAULT_RUNTIME_LIMITS.timeoutMs,
       stdoutBytes: 32 * 1024,
     },
   }
@@ -171,6 +191,54 @@ describe("runtime execution service", () => {
         (event) => event.type === "RUNTIME_VIOLATION",
       ),
     ).toBe(true)
+  })
+
+  it("executes a Python Strategy through broker selection without JS fallback", () => {
+    const pythonRevision = buildPythonStrategyRevision({
+      source: pythonTacticalSource,
+      strategyId: "strategy:python",
+    })
+    const response = executeRuntimeServiceRequest(
+      requestFor({ bottom: pythonRevision }),
+      runtimeConfig,
+    )
+
+    expect(response.ok).toBe(true)
+    if (!response.ok) {
+      throw new Error(response.systemFailure.message)
+    }
+    expect(response.result.finalState.matchId).toBe(
+      "match:runtime-service-test",
+    )
+    expect(response.result.runtimeViolationEventCount).toBe(0)
+  })
+
+  it("fails closed when broker registry metadata drifts", () => {
+    const pythonRevision = buildPythonStrategyRevision({
+      source: pythonTacticalSource,
+      strategyId: "strategy:python",
+    })
+    const driftedRevision: StrategyRevision = {
+      ...pythonRevision,
+      runtime: {
+        ...pythonRevision.runtime,
+        adapter: {
+          ...pythonRevision.runtime.adapter,
+          version: "0.0.0-drifted",
+        },
+      },
+    }
+    const response = executeRuntimeServiceRequest(
+      requestFor({ bottom: driftedRevision }),
+      runtimeConfig,
+    )
+
+    expect(response.ok).toBe(false)
+    if (response.ok) {
+      throw new Error("expected registry drift to fail")
+    }
+    expect(response.systemFailure.code).toBe("UNSUPPORTED_RUNTIME_ADAPTER")
+    expect(stringify(response)).not.toContain("def select_activations")
   })
 
   it("returns a redacted systemFailure for malformed requests", () => {
@@ -345,9 +413,7 @@ describe("runtime execution service", () => {
       "governance",
       "session",
     ]) {
-      expect(importLines.join("\n")).not.toContain(
-        forbiddenImportOrDependency,
-      )
+      expect(importLines.join("\n")).not.toContain(forbiddenImportOrDependency)
       expect(dependencyNames).not.toContain(forbiddenImportOrDependency)
     }
     for (const forbiddenAuthority of [

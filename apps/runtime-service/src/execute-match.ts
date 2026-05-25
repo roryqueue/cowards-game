@@ -2,6 +2,7 @@ import {
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
+  findRuntimeBrokerRegistryEntry,
   type MatchId,
   type PlayerId,
   type RuntimeExecutionServiceRequest,
@@ -11,6 +12,7 @@ import {
 } from "@cowards/spec"
 import { hashStrategySource } from "@cowards/runtime-js"
 import { createRuntimeFromRevision } from "@cowards/runtime-js/worker"
+import { createPythonRuntimeFromRevision } from "@cowards/runtime-python"
 import { buildChronicleFromMatch } from "@cowards/replay"
 import {
   violation,
@@ -121,6 +123,58 @@ const validateRevisionSource = (
   return { ok: true }
 }
 
+const createRuntimeForRevision = (
+  revision: StrategyRevision,
+  runtimeConfig: RuntimeServiceConfig,
+  limits: RuntimeExecutionServiceRequest["limits"],
+):
+  | { ok: true; runtime: StrategyRuntime }
+  | {
+      ok: false
+      diagnostics: Record<string, unknown>
+    } => {
+  const registryEntry = findRuntimeBrokerRegistryEntry(revision.runtime)
+  if (!registryEntry) {
+    return {
+      ok: false,
+      diagnostics: {
+        reason: "runtime-registry-mismatch",
+        revisionId: revision.id,
+        languageId: revision.runtime.language.id,
+        adapterId: revision.runtime.adapter.id,
+        adapterVersion: revision.runtime.adapter.version,
+      },
+    }
+  }
+  if (registryEntry.runtimeTarget === "runtime-python") {
+    return {
+      ok: true,
+      runtime: createPythonRuntimeFromRevision(revision, {
+        timeoutMs: Math.min(
+          limits.timeoutMs,
+          revision.runtime.limits.timeoutMs,
+        ),
+        stdoutBytes: Math.min(
+          limits.stdoutBytes,
+          revision.runtime.limits.stdoutBytes,
+        ),
+        stderrBytes: Math.min(
+          limits.stderrBytes,
+          revision.runtime.limits.stderrBytes,
+        ),
+      }),
+    }
+  }
+  return {
+    ok: true,
+    runtime: createRuntimeFromRevision(revision, {
+      adapter: runtimeConfig.adapter,
+      timeoutMs: limits.timeoutMs,
+      outputByteLimit: limits.stdoutBytes,
+    }),
+  }
+}
+
 export const createSideDispatchRuntime = (
   bottomRuntime: StrategyRuntime,
   topRuntime: StrategyRuntime,
@@ -173,22 +227,44 @@ const executeParsedRequest = (
     }
   }
 
-  const bottomRuntime = createRuntimeFromRevision(request.strategies.bottom, {
-    adapter: runtimeConfig.adapter,
-    timeoutMs: request.limits.timeoutMs,
-    outputByteLimit: request.limits.stdoutBytes,
-  })
-  const topRuntime = createRuntimeFromRevision(request.strategies.top, {
-    adapter: runtimeConfig.adapter,
-    timeoutMs: request.limits.timeoutMs,
-    outputByteLimit: request.limits.stdoutBytes,
-  })
+  const bottomRuntime = createRuntimeForRevision(
+    request.strategies.bottom,
+    runtimeConfig,
+    request.limits,
+  )
+  if (!bottomRuntime.ok) {
+    return systemFailureResponse({
+      rawRequest: request,
+      code: "UNSUPPORTED_RUNTIME_ADAPTER",
+      message: "Runtime broker could not select a bottom Strategy runtime.",
+      retryable: false,
+      diagnostics: bottomRuntime.diagnostics,
+    })
+  }
+  const topRuntime = createRuntimeForRevision(
+    request.strategies.top,
+    runtimeConfig,
+    request.limits,
+  )
+  if (!topRuntime.ok) {
+    return systemFailureResponse({
+      rawRequest: request,
+      code: "UNSUPPORTED_RUNTIME_ADAPTER",
+      message: "Runtime broker could not select a top Strategy runtime.",
+      retryable: false,
+      diagnostics: topRuntime.diagnostics,
+    })
+  }
   const runMatchInput: RunMatchInput = {
     ...request.match,
-    runtime: createSideDispatchRuntime(bottomRuntime, topRuntime, {
-      bottomPlayerId: request.match.bottomPlayerId,
-      topPlayerId: request.match.topPlayerId,
-    }),
+    runtime: createSideDispatchRuntime(
+      bottomRuntime.runtime,
+      topRuntime.runtime,
+      {
+        bottomPlayerId: request.match.bottomPlayerId,
+        topPlayerId: request.match.topPlayerId,
+      },
+    ),
   }
   const result = dependencies.buildChronicleFromMatch(runMatchInput)
   const response = {

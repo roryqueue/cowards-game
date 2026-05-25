@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "runtime-broker-registry-v1.17",
+  "generatedBy": "manual-gsd-phase-110",
+  "baseline": {
+    "inheritsFrom": "v1.16",
+    "normalTopology": "web frontend -> Go backend -> isolated runtime service(s)",
+    "pythonBackendOwner": false,
+    "typescriptBackendFallback": false
+  },
+  "contract": {
+    "publicName": "Strategy Execution Service / Runtime Broker",
+    "runtimeExecutionServiceVersion": "runtime-execution-service-v1.15",
+    "strategyRuntimeAbiVersion": "strategy-runtime-abi-v1.14",
+    "selectionPolicy": "exact-language-runtime-adapter-abi-package-match",
+    "fallbackPolicy": "fail-closed-no-js-ts-or-go-fallback"
+  },
+  "entries": [
+    {
+      "languageId": "javascript",
+      "languageVersion": "0.1.0",
+      "runtimeTarget": "runtime-js",
+      "adapterId": "runtime-js-worker-thread",
+      "adapterVersion": "0.1.0",
+      "abiVersion": "strategy-runtime-abi-v1.14",
+      "packagePolicy": "none",
+      "readiness": "local-dev-fallback",
+      "enabledForNormalPlay": true,
+      "countedResultsAllowed": true
+    },
+    {
+      "languageId": "typescript",
+      "languageVersion": "0.1.0",
+      "runtimeTarget": "runtime-js",
+      "adapterId": "runtime-js-worker-thread",
+      "adapterVersion": "0.1.0",
+      "abiVersion": "strategy-runtime-abi-v1.14",
+      "packagePolicy": "none",
+      "readiness": "local-dev-fallback",
+      "enabledForNormalPlay": true,
+      "countedResultsAllowed": true
+    },
+    {
+      "languageId": "javascript",
+      "languageVersion": "0.1.0",
+      "runtimeTarget": "runtime-js",
+      "adapterId": "runtime-js-subprocess",
+      "adapterVersion": "0.1.0",
+      "abiVersion": "strategy-runtime-abi-v1.14",
+      "packagePolicy": "none",
+      "readiness": "prototype",
+      "enabledForNormalPlay": true,
+      "countedResultsAllowed": true
+    },
+    {
+      "languageId": "typescript",
+      "languageVersion": "0.1.0",
+      "runtimeTarget": "runtime-js",
+      "adapterId": "runtime-js-subprocess",
+      "adapterVersion": "0.1.0",
+      "abiVersion": "strategy-runtime-abi-v1.14",
+      "packagePolicy": "none",
+      "readiness": "prototype",
+      "enabledForNormalPlay": true,
+      "countedResultsAllowed": true
+    },
+    {
+      "languageId": "javascript",
+      "languageVersion": "0.1.0",
+      "runtimeTarget": "runtime-js",
+      "adapterId": "runtime-js-container-subprocess",
+      "adapterVersion": "0.1.0",
+      "abiVersion": "strategy-runtime-abi-v1.14",
+      "packagePolicy": "none",
+      "readiness": "production-candidate",
+      "enabledForNormalPlay": false,
+      "countedResultsAllowed": false
+    },
+    {
+      "languageId": "typescript",
+      "languageVersion": "0.1.0",
+      "runtimeTarget": "runtime-js",
+      "adapterId": "runtime-js-container-subprocess",
+      "adapterVersion": "0.1.0",
+      "abiVersion": "strategy-runtime-abi-v1.14",
+      "packagePolicy": "none",
+      "readiness": "production-candidate",
+      "enabledForNormalPlay": false,
+      "countedResultsAllowed": false
+    },
+    {
+      "languageId": "python",
+      "languageVersion": "3.9",
+      "runtimeTarget": "runtime-python",
+      "adapterId": "runtime-python-subprocess-experimental",
+      "adapterVersion": "0.1.0-experimental",
+      "abiVersion": "strategy-runtime-abi-v1.14",
+      "packagePolicy": "none",
+      "readiness": "experimental",
+      "enabledForNormalPlay": false,
+      "countedResultsAllowed": false
+    }
+  ],
+  "authority": {
+    "go": [
+      "Match orchestration",
+      "runtime-service envelope invocation",
+      "Match completion",
+      "Chronicle persistence handoff",
+      "MatchSet scoring",
+      "public evidence delivery"
+    ],
+    "runtimeService": [
+      "schema-validate runtime execution envelope",
+      "select registered runtime implementation",
+      "execute Strategy methods through runtime ABI",
+      "return internal runtime result or redacted failure"
+    ],
+    "pythonRuntime": [
+      "experimental Strategy method execution only",
+      "no filesystem",
+      "no network",
+      "no package install",
+      "no backend ownership"
+    ]
+  }
+}

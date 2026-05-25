@@ -190,6 +190,9 @@ func validateRuntimeServiceStrategy(side string, revision runtimeServiceStrategy
 	if stringValue(revision.Runtime, "abiVersion") != strategyRuntimeABIVersion || !hasMap(revision.Runtime, "language") || !hasMap(revision.Runtime, "adapter") || !hasMap(revision.Runtime, "limits") {
 		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Strategy Revision runtime metadata is incomplete", false, map[string]any{"side": side})
 	}
+	if !runtimeBrokerMetadataIsRegistered(revision.Runtime) {
+		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Strategy Revision runtime metadata is not registered", false, map[string]any{"side": side})
+	}
 	if stringValue(revision.EngineCompatibility, "spec") == "" || stringValue(revision.EngineCompatibility, "engine") == "" {
 		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Strategy Revision engine compatibility is incomplete", false, map[string]any{"side": side})
 	}
@@ -197,6 +200,30 @@ func validateRuntimeServiceStrategy(side string, revision runtimeServiceStrategy
 		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Strategy Revision validation metadata is incomplete", false, map[string]any{"side": side})
 	}
 	return nil
+}
+
+func runtimeBrokerMetadataIsRegistered(runtime map[string]any) bool {
+	language := mapValue(runtime, "language")
+	adapter := mapValue(runtime, "adapter")
+	pkg := mapValue(runtime, "package")
+	languageID := stringValue(language, "id")
+	languageVersion := stringValue(language, "version")
+	adapterID := stringValue(adapter, "id")
+	adapterVersion := stringValue(adapter, "version")
+	packageMode := stringValue(pkg, "mode")
+	if packageMode == "" {
+		packageMode = "none"
+	}
+	switch {
+	case languageID == "javascript" && languageVersion == "0.1.0" && adapterID == "runtime-js-worker-thread" && adapterVersion == "0.1.0" && packageMode == "none":
+		return true
+	case languageID == "typescript" && languageVersion == "0.1.0" && adapterID == "runtime-js-worker-thread" && adapterVersion == "0.1.0" && packageMode == "none":
+		return true
+	case languageID == "python" && languageVersion == "3.9" && adapterID == "runtime-python-subprocess-experimental" && adapterVersion == "0.1.0-experimental" && packageMode == "none":
+		return true
+	default:
+		return false
+	}
 }
 
 func validateRuntimeServiceResponse(request runtimeServiceRequest, response *runtimeServiceResponse) *runtimeServiceFailure {

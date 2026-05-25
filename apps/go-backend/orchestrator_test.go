@@ -38,7 +38,7 @@ func TestGoMatchOrchestratorIntegration(t *testing.T) {
 		now:               func() time.Time { return time.Date(2026, 5, 24, 1, 20, 0, 0, time.UTC) },
 		strategyArtifacts: map[string]strategyArtifact{},
 	}
-	created, err := liveServer.createExhibitionMatchSet(ctx, userID, "smoke-exhibition-v1", revisionIDs)
+	created, err := liveServer.createExhibitionMatchSet(ctx, userID, "smoke-exhibition-v1", revisionIDs, true)
 	if err != nil {
 		t.Fatal(err)
 	}

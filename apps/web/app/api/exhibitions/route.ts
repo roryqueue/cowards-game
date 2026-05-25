@@ -11,7 +11,7 @@ export async function POST(request: Request): Promise<Response> {
     const revisionIds = Array.isArray(body.revisionIds)
       ? body.revisionIds.filter(
           (revisionId): revisionId is StrategyRevisionId =>
-          typeof revisionId === "string",
+            typeof revisionId === "string",
         )
       : []
     const result = await requireSelectedGoBackendClient(
@@ -19,6 +19,7 @@ export async function POST(request: Request): Promise<Response> {
     ).createMatchSet(await getAccountSessionId(), {
       presetId: body.presetId,
       revisionIds,
+      ...(body.counted === false ? { counted: false } : {}),
     })
     return Response.json(
       {

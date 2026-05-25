@@ -31,6 +31,9 @@ export const PUBLIC_OUTPUT_FORBIDDEN_FIELDS = [
   "sessionId",
   "hostPath",
   "hostPaths",
+  "packagePath",
+  "packagePaths",
+  "pythonRuntime",
   "databaseUrl",
   "databaseURL",
   "dbDsn",
@@ -50,6 +53,10 @@ export const PUBLIC_OUTPUT_FORBIDDEN_MARKERS = [
   "postgresql://",
   "Bearer ",
   "stack trace",
+  "Traceback",
+  "site-packages",
+  'File "',
+  "/python_runtime_host.py",
 ] as const
 
 export const normalizePublicOutputKey = (key: string): string =>

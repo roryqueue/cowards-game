@@ -67,6 +67,8 @@ const revisionToSummary = (
     createdBy: revision.metadata.createdBy,
     sourceHash: revision.sourceHash,
     sourceBytes: revision.sourceBytes,
+    sourceFormat:
+      revision.runtime.language.id === "python" ? "python" : "typescript",
     valid: revision.validation.valid,
     validation: revision.validation,
     metadata: revision.metadata,
@@ -111,18 +113,25 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
   return {
     getInitialData: loadInitialData,
 
-    validateSource: (source: string) => validateWorkshopSource(source),
+    validateSource: (
+      source: string,
+      sourceFormat: WorkshopSubmitRequest["sourceFormat"] = "typescript",
+    ) => validateWorkshopSource(source, sourceFormat),
 
     async submitSource(
       request: WorkshopSubmitRequest,
     ): Promise<WorkshopSubmitResponse> {
-      const validation = validateWorkshopSource(request.source)
+      const validation = validateWorkshopSource(
+        request.source,
+        request.sourceFormat,
+      )
       if (!validation.valid) {
         return { ok: false, validation }
       }
 
       const revision = buildWorkshopRevision({
         source: request.source,
+        sourceFormat: request.sourceFormat,
         label: normalizeOptionalText(request.label) ?? "Workshop revision",
         notes: normalizeOptionalText(request.notes),
       })

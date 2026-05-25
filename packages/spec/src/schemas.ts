@@ -640,6 +640,8 @@ export const StrategyRevisionValidationIssueSchema = z.object({
   severity: StrategyRevisionValidationSeveritySchema,
   message: z.string().min(1),
   pattern: z.string().min(1).optional(),
+  line: z.number().int().positive().optional(),
+  column: z.number().int().nonnegative().optional(),
   constraint: z.string().min(1).optional(),
   remediation: z.string().min(1).optional(),
   reference: z.string().min(1).optional(),
@@ -727,6 +729,7 @@ export const StrategyArtifactSourceVisibilitySchema = z.enum([
 export const StrategyArtifactSourceFormatSchema = z.enum([
   "javascript",
   "typescript",
+  "python",
 ])
 
 export const StrategyArtifactForkEligibilitySchema = z.object({
@@ -790,6 +793,7 @@ export const StrategyArtifactSourceSchema = z.object({
 export const StrategyArtifactSchema = z
   .object({
     id: z.string().min(1),
+    artifactHash: z.string().min(1).optional(),
     revisionId: z.string().min(1).optional(),
     strategyId: z.string().min(1).optional(),
     kind: StrategyArtifactKindSchema,
@@ -882,6 +886,7 @@ export const StrategyArtifactSchema = z
 export const StrategyArtifactPublicSummarySchema = z
   .object({
     id: z.string().min(1),
+    artifactHash: z.string().min(1).optional(),
     revisionId: z.string().min(1).optional(),
     strategyId: z.string().min(1).optional(),
     kind: StrategyArtifactKindSchema,
@@ -1021,6 +1026,8 @@ export const StrategyRevisionSummaryServiceDtoSchema = z.object({
   sourceHash: z.string().min(1),
   sourceBytes: z.number().int().min(0),
   runtimeSemantics: z.object({
+    languageId: StrategyLanguageIdSchema,
+    adapterId: StrategyRuntimeAdapterIdSchema,
     languageLabel: z.string().min(1),
     adapterLabel: z.string().min(1),
     readiness: z.string().min(1),

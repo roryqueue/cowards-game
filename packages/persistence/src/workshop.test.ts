@@ -161,10 +161,21 @@ describe("Workshop service contracts", () => {
       "Cautious",
       "Reckless",
       "Sentinel",
+      "Python tactical starter",
     ])
     expect(
       listWorkshopTemplates().every((template) => template.validation.valid),
     ).toBe(true)
+    expect(
+      listWorkshopTemplates().find(
+        (template) => template.sourceFormat === "python",
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        experimental: true,
+        countedPlayEligible: false,
+      }),
+    )
   })
 
   it("ships the full v1.4 Starter Strategy Library as distinct playable doctrines", () => {

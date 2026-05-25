@@ -4,6 +4,10 @@ import {
   validateStrategySource,
   type StrategyRevisionValidationReport,
 } from "@cowards/runtime-js"
+import {
+  buildPythonStrategyRevision,
+  validatePythonStrategySource,
+} from "@cowards/runtime-python/validation"
 import type {
   MatchId,
   MatchSetId,
@@ -13,6 +17,7 @@ import type {
   StrategyRevision,
   StrategyRevisionValidationCode,
   StrategyRevisionId,
+  StrategyArtifactSourceFormat,
 } from "@cowards/spec"
 import type { Pool } from "pg"
 import { withTransaction } from "./db.js"
@@ -96,6 +101,46 @@ export default {
 }
 `.trim()
 
+export const pythonTacticalStarterSource = `
+def select_activations(input):
+    active = [soldier for soldier in input["mySoldiers"] if soldier["status"] == "ACTIVE"]
+    orders = []
+    for soldier in active[: input["activationCount"]]:
+        orders.append({"soldierId": soldier["id"], "objective": {"stance": "probe"}})
+    return {
+        "activationOrders": orders,
+        "strategyMemory": input["strategyMemory"],
+    }
+
+
+def soldier_brain(input):
+    enemy = None
+    for cell in input["awarenessGrid"]["cells"]:
+        if cell["contents"] == "ENEMY_ACTIVE":
+            enemy = cell
+            break
+    if enemy is not None:
+        if enemy["dy"] < 0:
+            direction = "UP"
+        elif enemy["dy"] > 0:
+            direction = "DOWN"
+        elif enemy["dx"] > 0:
+            direction = "RIGHT"
+        elif enemy["dx"] < 0:
+            direction = "LEFT"
+        else:
+            direction = input["self"]["facing"] or "UP"
+        action = {"type": "TURN", "direction": direction}
+    elif input["cycleIndex"] == 0:
+        action = {"type": "MOVE", "direction": input["self"]["facing"] or "UP"}
+    else:
+        action = {"type": "TURN_TO_STONE"}
+    return {
+        "action": action,
+        "soldierMemory": input["soldierMemory"],
+    }
+`.trim()
+
 const cautiousOpponentRevision = buildStrategyRevision({
   source: cautiousSource,
   strategyId: "strategy:cautious",
@@ -133,6 +178,7 @@ export interface WorkshopRevisionSummary {
   createdBy?: string | undefined
   sourceHash: string
   sourceBytes: number
+  sourceFormat: StrategyArtifactSourceFormat
   valid: boolean
   validation: StrategyRevisionValidationReport
   metadata: StrategyRevision["metadata"]
@@ -156,8 +202,15 @@ export interface WorkshopOpponentSummary {
 }
 
 export interface WorkshopTemplateSummary {
-  id: "template:cautious" | "template:reckless" | "template:sentinel"
+  id:
+    | "template:cautious"
+    | "template:reckless"
+    | "template:sentinel"
+    | "template:python-tactical"
   label: string
+  sourceFormat: StrategyArtifactSourceFormat
+  experimental?: boolean | undefined
+  countedPlayEligible?: boolean | undefined
   source: string
   validation: StrategyRevisionValidationReport
 }
@@ -167,6 +220,7 @@ interface WorkshopSampleBase {
   label: string
   description: string
   categories: string[]
+  sourceFormat?: StrategyArtifactSourceFormat | undefined
   source: string
   validation: StrategyRevisionValidationReport
 }
@@ -216,6 +270,7 @@ export const LIST_WORKSHOP_REVISIONS_SQL = `
     sr.strategy_id,
     sr.source_hash,
     sr.source_bytes,
+    sr.runtime,
     sr.validation,
     sr.metadata,
     sr.created_at,
@@ -264,20 +319,32 @@ export const listWorkshopTemplates = (): WorkshopTemplateSummary[] => [
   {
     id: "template:cautious",
     label: "Cautious",
+    sourceFormat: "typescript",
     source: cautiousSource,
     validation: validateStrategySource(cautiousSource),
   },
   {
     id: "template:reckless",
     label: "Reckless",
+    sourceFormat: "typescript",
     source: recklessSource,
     validation: validateStrategySource(recklessSource),
   },
   {
     id: "template:sentinel",
     label: "Sentinel",
+    sourceFormat: "typescript",
     source: sentinelSource,
     validation: validateStrategySource(sentinelSource),
+  },
+  {
+    id: "template:python-tactical",
+    label: "Python tactical starter",
+    sourceFormat: "python",
+    experimental: true,
+    countedPlayEligible: false,
+    source: pythonTacticalStarterSource,
+    validation: validatePythonStrategySource(pythonTacticalStarterSource),
   },
 ]
 
@@ -475,7 +542,10 @@ const sample = <T extends Omit<WorkshopSampleSummary, "validation">>(
   input: T,
 ): T & { validation: StrategyRevisionValidationReport } => ({
   ...input,
-  validation: validateStrategySource(input.source),
+  validation:
+    input.sourceFormat === "python"
+      ? validatePythonStrategySource(input.source)
+      : validateStrategySource(input.source),
 })
 
 export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
@@ -562,7 +632,11 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
 
 export const validateWorkshopSource = (
   source: string,
-): StrategyRevisionValidationReport => validateStrategySource(source)
+  sourceFormat: StrategyArtifactSourceFormat = "typescript",
+): StrategyRevisionValidationReport =>
+  sourceFormat === "python"
+    ? validatePythonStrategySource(source)
+    : validateStrategySource(source)
 
 export const ensureWorkshopSeed = async (pool: Pool): Promise<void> => {
   const seed = createDevelopmentSeedData()
@@ -598,6 +672,7 @@ export const listWorkshopRevisions = async (
     strategy_id: StrategyId
     source_hash: string
     source_bytes: number
+    runtime: StrategyRevision["runtime"]
     validation: StrategyRevisionValidationReport
     metadata: StrategyRevision["metadata"]
     created_at: Date
@@ -612,6 +687,8 @@ export const listWorkshopRevisions = async (
     createdBy: row.metadata.createdBy,
     sourceHash: row.source_hash,
     sourceBytes: row.source_bytes,
+    sourceFormat:
+      row.runtime.language.id === "python" ? "python" : "typescript",
     valid: row.validation.valid,
     validation: row.validation,
     metadata: row.metadata,
@@ -645,18 +722,31 @@ export const getWorkshopRevisionSource = async (
 
 export const buildWorkshopRevision = (input: {
   source: string
+  sourceFormat?: StrategyArtifactSourceFormat | undefined
   label?: string | undefined
   notes?: string | undefined
-}): StrategyRevision =>
-  buildStrategyRevision({
+}): StrategyRevision => {
+  const metadata = {
+    createdBy: WORKSHOP_USER_ID,
+    ...(input.label ? { label: input.label } : {}),
+    ...(input.notes ? { notes: input.notes } : {}),
+    ...(input.sourceFormat === "python"
+      ? { tags: ["python", "experimental", "non-counted"] }
+      : {}),
+  }
+  if (input.sourceFormat === "python") {
+    return buildPythonStrategyRevision({
+      source: input.source,
+      strategyId: WORKSHOP_STRATEGY_ID,
+      metadata,
+    })
+  }
+  return buildStrategyRevision({
     source: input.source,
     strategyId: WORKSHOP_STRATEGY_ID,
-    metadata: {
-      createdBy: WORKSHOP_USER_ID,
-      ...(input.label ? { label: input.label } : {}),
-      ...(input.notes ? { notes: input.notes } : {}),
-    },
+    metadata,
   })
+}
 
 const createWorkshopMatchSetId = (): MatchSetId =>
   `${WORKSHOP_MATCH_SET_PREFIX}${randomUUID()}` as MatchSetId

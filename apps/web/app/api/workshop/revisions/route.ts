@@ -22,6 +22,9 @@ export async function POST(request: Request): Promise<Response> {
   try {
     response = await workshopServer.submitSource({
       source: body.source,
+      ...(body.sourceFormat === "python"
+        ? { sourceFormat: "python" as const }
+        : {}),
       ...(typeof body.label === "string" ? { label: body.label } : {}),
       ...(typeof body.notes === "string" ? { notes: body.notes } : {}),
     } satisfies WorkshopSubmitRequest)

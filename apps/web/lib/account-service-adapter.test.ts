@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => {
@@ -29,6 +31,11 @@ import {
   isGoExhibitionsSelected,
   isGoAccountForksSelected,
 } from "./account-service-adapter.js"
+
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+)
 
 describe("account service adapter ownership gates", () => {
   it("selects all Phase 105 account route families when backend owner is Go", () => {
@@ -84,14 +91,19 @@ describe("account service adapter ownership gates", () => {
       })),
     }
     const service = createAccountReadService({
-      env: { COWARDS_GO_BACKEND_OWNER: "go", COWARDS_GO_BACKEND_URL: "http://go.test" },
+      env: {
+        COWARDS_GO_BACKEND_OWNER: "go",
+        COWARDS_GO_BACKEND_URL: "http://go.test",
+      },
       goClient: goClient as never,
     })
 
     await expect(service.getAuthSession("session-1")).resolves.toMatchObject({
       kind: "authSession",
     })
-    await expect(service.listStrategyRevisions("session-1")).resolves.toMatchObject({
+    await expect(
+      service.listStrategyRevisions("session-1"),
+    ).resolves.toMatchObject({
       kind: "strategyRevisionList",
     })
 
@@ -142,7 +154,7 @@ describe("account service adapter ownership gates", () => {
     ]
 
     for (const file of selectedFiles) {
-      const source = readFileSync(file, "utf8")
+      const source = readFileSync(path.join(repoRoot, file), "utf8")
       for (const token of forbidden) {
         expect(source, `${file} must not contain ${token}`).not.toContain(token)
       }

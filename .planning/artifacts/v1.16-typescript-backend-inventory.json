@@ -5412,19 +5412,9 @@
           "statementText": "import { randomUUID } from \"node:crypto\""
         },
         {
-          "line": 17,
-          "source": "pg",
-          "statementText": "import type { Pool } from \"pg\""
-        },
-        {
-          "line": 18,
-          "source": "./db.js",
-          "statementText": "import { withTransaction } from \"./db.js\""
-        },
-        {
-          "line": 19,
-          "source": "./matchset-service.js",
-          "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
+          "line": 11,
+          "source": "@cowards/spec",
+          "statementText": "import type {\n  MatchId,\n  MatchSetId,\n  PlayerId,\n  RuntimeViolationType,\n  StrategyId,\n  StrategyRevision,\n  StrategyRevisionValidationCode,\n  StrategyRevisionId,\n  StrategyArtifactSourceFormat,\n} from \"@cowards/spec\""
         },
         {
           "line": 2,
@@ -5432,54 +5422,69 @@
           "statementText": "import {\n  buildStrategyRevision,\n  validateStrategySource,\n  type StrategyRevisionValidationReport,\n} from \"@cowards/runtime-js\""
         },
         {
-          "line": 20,
+          "line": 22,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
+        },
+        {
+          "line": 23,
+          "source": "./db.js",
+          "statementText": "import { withTransaction } from \"./db.js\""
+        },
+        {
+          "line": 24,
+          "source": "./matchset-service.js",
+          "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
+        },
+        {
+          "line": 25,
           "source": "./matchset-service.js",
           "statementText": "import { generatePresetMatrix } from \"./matchset-service.js\""
         },
         {
-          "line": 21,
+          "line": 26,
           "source": "./matchset-status.js",
           "statementText": "import {\n  listMatchStatusesForSet,\n  type MatchSetMatchSummary,\n  refreshMatchSetStatus,\n} from \"./matchset-status.js\""
         },
         {
-          "line": 26,
+          "line": 31,
           "source": "./presets.js",
           "statementText": "import { getMatchSetPreset, type MatchSetPresetId } from \"./presets.js\""
         },
         {
-          "line": 27,
+          "line": 32,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 28,
+          "line": 33,
           "source": "./advanced-strategies.js",
           "statementText": "import {\n  listAdvancedStrategies,\n  type AdvancedStrategySummary,\n} from \"./advanced-strategies.js\""
         },
         {
-          "line": 32,
+          "line": 37,
           "source": "./starter-strategies.js",
           "statementText": "import {\n  listStarterStrategies,\n  type StarterStrategySummary,\n} from \"./starter-strategies.js\""
         },
         {
-          "line": 36,
+          "line": 41,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetScore } from \"./scoring.js\""
         },
         {
-          "line": 37,
+          "line": 42,
           "source": "./seed.js",
           "statementText": "import {\n  cautiousSource,\n  createDevelopmentSeedData,\n  recklessSource,\n} from \"./seed.js\""
         },
         {
-          "line": 42,
+          "line": 47,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
         {
           "line": 7,
-          "source": "@cowards/spec",
-          "statementText": "import type {\n  MatchId,\n  MatchSetId,\n  PlayerId,\n  RuntimeViolationType,\n  StrategyId,\n  StrategyRevision,\n  StrategyRevisionValidationCode,\n  StrategyRevisionId,\n} from \"@cowards/spec\""
+          "source": "@cowards/runtime-python/validation",
+          "statementText": "import {\n  buildPythonStrategyRevision,\n  validatePythonStrategySource,\n} from \"@cowards/runtime-python/validation\""
         }
       ],
       "persistenceImports": [],
@@ -7546,11 +7551,16 @@
         },
         {
           "line": 13,
+          "source": "@cowards/runtime-python",
+          "statementText": "import { buildPythonStrategyRevision } from \"@cowards/runtime-python\""
+        },
+        {
+          "line": 14,
           "source": "./execute-match.js",
           "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
         },
         {
-          "line": 14,
+          "line": 15,
           "source": "./runtime-config.js",
           "statementText": "import {\n  createRuntimeServiceConfig,\n  RuntimeServiceConfigError,\n} from \"./runtime-config.js\""
         },
@@ -7628,35 +7638,40 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type StrategyRevision,\n} from \"@cowards/spec\""
         },
         {
-          "line": 12,
+          "line": 13,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 13,
+          "line": 14,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
         },
         {
-          "line": 14,
+          "line": 15,
+          "source": "@cowards/runtime-python",
+          "statementText": "import { createPythonRuntimeFromRevision } from \"@cowards/runtime-python\""
+        },
+        {
+          "line": 16,
           "source": "@cowards/replay",
           "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
         },
         {
-          "line": 15,
+          "line": 17,
           "source": "@cowards/engine",
           "statementText": "import {\n  violation,\n  type RunMatchInput,\n  type StrategyRuntime,\n} from \"@cowards/engine\""
         },
         {
-          "line": 20,
+          "line": 22,
           "source": "./runtime-config.js",
           "statementText": "import type { RuntimeServiceConfig } from \"./runtime-config.js\""
         },
         {
-          "line": 21,
+          "line": 23,
           "source": "./redaction.js",
           "statementText": "import { publicSystemFailureMessage, redactedDiagnostics } from \"./redaction.js\""
         }
@@ -7665,12 +7680,12 @@
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 12,
+          "line": 13,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 13,
+          "line": 14,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
         }
@@ -11246,7 +11261,7 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import type {\n  MatchSetId,\n  RuntimeViolationType,\n  StrategyRevision,\n  StrategyRevisionId,\n  StrategyRevisionValidationCode,\n  StrategyRevisionValidationReport,\n  WorkshopAnalyticsSnapshot,\n  WorkshopTestSummary,\n} from \"@cowards/spec\""
+          "statementText": "import type {\n  MatchSetId,\n  RuntimeViolationType,\n  StrategyRevision,\n  StrategyRevisionId,\n  StrategyArtifactSourceFormat,\n  StrategyRevisionValidationCode,\n  StrategyRevisionValidationReport,\n  WorkshopAnalyticsSnapshot,\n  WorkshopTestSummary,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -11557,13 +11572,23 @@
         },
         {
           "line": 2,
-          "source": "vitest",
-          "statementText": "import { describe, expect, it, vi } from \"vitest\""
+          "source": "node:path",
+          "statementText": "import path from \"node:path\""
         },
         {
-          "line": 24,
+          "line": 26,
           "source": "./account-service-adapter.js",
           "statementText": "import {\n  assertGoAccountForksCanReadBack,\n  createAccountReadService,\n  isGoAccountRevisionsSelected,\n  isGoAuthSessionSelected,\n  isGoExhibitionsSelected,\n  isGoAccountForksSelected,\n} from \"./account-service-adapter.js\""
+        },
+        {
+          "line": 3,
+          "source": "node:url",
+          "statementText": "import { fileURLToPath } from \"node:url\""
+        },
+        {
+          "line": 4,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it, vi } from \"vitest\""
         }
       ],
       "persistenceImports": [],
@@ -12034,22 +12059,32 @@
           "statementText": "import { readFileSync } from \"node:fs\""
         },
         {
-          "line": 11,
+          "line": 13,
           "source": "./public-go-read-client.js",
           "statementText": "import type { PublicGoReadClient } from \"./public-go-read-client.js\""
         },
         {
           "line": 2,
+          "source": "node:path",
+          "statementText": "import path from \"node:path\""
+        },
+        {
+          "line": 3,
+          "source": "node:url",
+          "statementText": "import { fileURLToPath } from \"node:url\""
+        },
+        {
+          "line": 4,
           "source": "vitest",
           "statementText": "import { describe, expect, it } from \"vitest\""
         },
         {
-          "line": 3,
+          "line": 5,
           "source": "@cowards/spec",
           "statementText": "import {\n  publicStrategyPageExample,\n  type PublicStrategyPageServiceDto,\n} from \"@cowards/spec\""
         },
         {
-          "line": 7,
+          "line": 9,
           "source": "./public-service-adapter.js",
           "statementText": "import {\n  createPublicReadService,\n  resolvePublicReadRouteOwnership,\n} from \"./public-service-adapter.js\""
         }

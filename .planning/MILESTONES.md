@@ -1,5 +1,51 @@
 # Milestones
 
+## v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening (Shipped: 2026-05-24)
+
+**Status:** Shipped 2026-05-24
+**Phases:** 7
+**Phase range:** 110-116
+**Plans:** 7/7 complete
+**Requirements:** 52/52 complete
+**Audit:** .planning/milestones/v1.17-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.17-ROADMAP.md, .planning/milestones/v1.17-REQUIREMENTS.md, .planning/milestones/v1.17-phases/
+**Decision:** `promote-python-experimental-runtime-path-only`
+
+**Key accomplishments:**
+
+- Added a concrete Runtime Broker registry contract covering JS/TS runtime targets and the experimental Python runtime target.
+- Added Python Strategy Revision metadata, validation, immutable revision construction, Workshop source-format selection, and public-safe diagnostics.
+- Added Python subprocess runtime execution behind the runtime-service ABI with schema-validated envelopes and engine-compatible synchronous runtime integration.
+- Kept Go as Match orchestrator and Python as non-counted runtime implementation only.
+- Added a Python tactical starter proof through Workshop and runtime-service Match execution evidence.
+- Extended boundary monitors and public-output privacy checks for runtime registry drift, Python execution outside the runtime boundary, Python privacy markers, and premature counted eligibility.
+
+### Delivered
+
+- JS/TS Strategy support remains intact through the existing isolated runtime service.
+- Python can be represented, validated, submitted, and executed as an experimental Strategy language behind the same broker/ABI contract.
+- Python is not a backend, persistence owner, route owner, job lifecycle owner, Match completion owner, scoring owner, public evidence owner, or silent fallback path.
+- Python remains non-counted and out of ranked/ladder play.
+
+### Completed Phases
+
+| Phase | Name |
+| --- | --- |
+| 110 | Broker Registry Baseline and Contract Hardening - Complete |
+| 111 | Strategy Artifact Language Metadata and Eligibility - Complete |
+| 112 | Python Submission Validation and Diagnostics - Complete |
+| 113 | Python Runtime Execution Behind Broker ABI - Complete |
+| 114 | Go Orchestration and Non-Counted Eligibility - Complete |
+| 115 | Python Starter Strategy and Replay Proof - Complete |
+| 116 | Topology, Monitors, Privacy, and Promotion Gate - Complete |
+
+### Active Constraints
+
+- Normal topology remains `web frontend -> Go backend -> isolated runtime service(s)`.
+- Strategy code does not execute in web/API/Go processes.
+- Python is experimental and non-counted until a future production sandbox/package/determinism/privacy promotion milestone.
+- Public outputs omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, stack, stderr, host paths, package paths, tokens, DB DSNs, and private runtime internals by default.
+
 ## v1.16 Runtime Isolation and TypeScript Backend Retirement (Shipped: 2026-05-24)
 
 **Status:** Shipped 2026-05-24

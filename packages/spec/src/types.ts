@@ -215,6 +215,8 @@ export interface StrategyRevisionValidationIssue {
   severity: StrategyRevisionValidationSeverity
   message: string
   pattern?: string | undefined
+  line?: number | undefined
+  column?: number | undefined
   constraint?: string | undefined
   remediation?: string | undefined
   reference?: string | undefined
@@ -285,7 +287,10 @@ export type StrategyArtifactSourceVisibility =
   | "built-in-forkable"
   | "public-summary-only"
 
-export type StrategyArtifactSourceFormat = "javascript" | "typescript"
+export type StrategyArtifactSourceFormat =
+  | "javascript"
+  | "typescript"
+  | "python"
 
 export interface StrategyArtifactForkEligibility {
   forkable: boolean
@@ -339,6 +344,7 @@ export interface StrategyArtifactSource {
 
 export interface StrategyArtifact {
   id: string
+  artifactHash?: string | undefined
   revisionId?: StrategyRevisionId | undefined
   strategyId?: StrategyId | undefined
   kind: StrategyArtifactKind
@@ -359,6 +365,7 @@ export interface StrategyArtifact {
 
 export interface StrategyArtifactPublicSummary {
   id: string
+  artifactHash?: string | undefined
   revisionId?: StrategyRevisionId | undefined
   strategyId?: StrategyId | undefined
   kind: StrategyArtifactKind

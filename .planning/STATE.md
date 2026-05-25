@@ -2,43 +2,43 @@
 gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: Python Strategy Runtime Pilot and Broker Contract Hardening
-status: planning
-stopped_at: defining requirements and roadmap
-last_updated: "2026-05-24T00:00:00.000-04:00"
-last_activity: 2026-05-24 - Milestone v1.17 started
+status: archived
+stopped_at: ready for next milestone
+last_updated: "2026-05-24T21:30:00.000-04:00"
+last_activity: 2026-05-24 - Archived v1.17 Python runtime pilot and broker hardening
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 7
   total_plans: 7
-  completed_plans: 0
-  percent: 0
+  completed_plans: 7
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** Planning v1.17
+**Status:** v1.17 archived
 
 ## Project Reference
 
 See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Latest shipped milestone:** v1.16 Runtime Isolation and TypeScript Backend Retirement
-**Active milestone:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
-**Requirements:** `.planning/REQUIREMENTS.md`
+**Latest shipped milestone:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
+**Active milestone:** None
+**Requirements:** none active; archived at `.planning/milestones/v1.17-REQUIREMENTS.md`
 **Roadmap:** `.planning/ROADMAP.md`
 
 ## Current Position
 
-Phase: 110 - Broker Registry Baseline and Contract Hardening
+Phase: -
 Plan: -
-Status: Defining requirements and preparing Phase 110
-Last activity: 2026-05-24 - Milestone v1.17 started
+Status: Ready for next milestone
+Last activity: 2026-05-24 - v1.17 archived after audit and verification
 
-## Active Milestone Goal
+## Latest Milestone Result
 
-Make Python an experimental end-to-end Strategy language through the Strategy Execution Service / Runtime Broker contract while preserving the v1.16 backend-retirement boundary.
+Python is now an experimental end-to-end Strategy language through the Strategy Execution Service / Runtime Broker contract while preserving the v1.16 backend-retirement boundary. Python remains runtime-only and non-counted.
 
 ## Active Constraints
 
@@ -64,4 +64,4 @@ Make Python an experimental end-to-end Strategy language through the Strategy Ex
 
 ## Operator Next Steps
 
-Start Phase 110 with `$gsd-discuss-phase 110` or `$gsd-plan-phase 110`.
+Start the next milestone with `$gsd-new-milestone`; `.planning/REQUIREMENTS.md` is intentionally absent after v1.17 archive.

@@ -706,6 +706,7 @@ func (server *LiveServer) createExhibition(writer http.ResponseWriter, request *
 		PresetID           string   `json:"presetId"`
 		RevisionIDs        []string `json:"revisionIds"`
 		EntrantRevisionIDs []string `json:"entrantRevisionIds"`
+		Counted            *bool    `json:"counted"`
 	}
 	if !decodeBody(writer, request, &body) {
 		return
@@ -714,7 +715,11 @@ func (server *LiveServer) createExhibition(writer http.ResponseWriter, request *
 	if len(revisionIDs) == 0 {
 		revisionIDs = body.RevisionIDs
 	}
-	result, err := server.createExhibitionMatchSet(request.Context(), user.ID, body.PresetID, revisionIDs)
+	counted := true
+	if body.Counted != nil {
+		counted = *body.Counted
+	}
+	result, err := server.createExhibitionMatchSet(request.Context(), user.ID, body.PresetID, revisionIDs, counted)
 	if err != nil {
 		if errors.Is(err, errRateLimited) {
 			writeServiceError(writer, http.StatusTooManyRequests, "VALIDATION_FAILED", "Too many exhibition creates. Retry later.")
@@ -1728,7 +1733,7 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, input accou
 	}, nil
 }
 
-func (server *LiveServer) createExhibitionMatchSet(ctx context.Context, userID string, presetID string, revisionIDs []string) (map[string]any, error) {
+func (server *LiveServer) createExhibitionMatchSet(ctx context.Context, userID string, presetID string, revisionIDs []string, counted bool) (map[string]any, error) {
 	matchSetPresetID, err := competitionMatchSetPresetID(presetID)
 	if err != nil || len(revisionIDs) < 2 || len(revisionIDs) > 8 {
 		return nil, errors.New("invalid exhibition input")
@@ -1742,7 +1747,7 @@ func (server *LiveServer) createExhibitionMatchSet(ctx context.Context, userID s
 	}
 	now := server.now()
 	matchSetID := "match-set:exhibition:" + randomID()
-	entrants, err := server.loadOwnedEntrants(ctx, userID, revisionIDs, now)
+	entrants, err := server.loadOwnedEntrants(ctx, userID, revisionIDs, now, counted)
 	if err != nil {
 		return nil, err
 	}
@@ -1785,15 +1790,17 @@ func (server *LiveServer) createExhibitionMatchSet(ctx context.Context, userID s
 		insert into match_sets (
 			id, status, preset_id, preset_version, matrix, creator_user_id,
 			competition_preset_id, competition_preset_version, scoring_policy_version,
-			visibility, entrant_snapshot_set, publication_policy, duplicate_key, locked_at
+			visibility, entrant_snapshot_set, publication_policy, duplicate_key,
+			counted_status, public_counted_reason, public_counted_explanation,
+			locked_at
 		)
 		values ($1, 'pending', $2, 'v1', $3, $4, $5, 'v1',
-		        'exhibition-points-v1:v1', 'public', $6, $7, $8, $9)
+		        'exhibition-points-v1:v1', 'public', $6, $7, $8, $9, $10, $11, $12)
 	`, matchSetID, matchSetPresetID, matches, userID, presetID, entrants, map[string]any{
 		"publicResults":               true,
 		"publicReplayEvidence":        true,
 		"excludesPrivateStrategyData": true,
-	}, duplicateKey, now); err != nil {
+	}, duplicateKey, exhibitionCountedStatus(counted), exhibitionCountedReason(counted), exhibitionCountedExplanation(counted), now); err != nil {
 		return nil, err
 	}
 	for _, entrant := range entrants {
@@ -1849,7 +1856,7 @@ func (server *LiveServer) createExhibitionMatchSet(ctx context.Context, userID s
 	}, nil
 }
 
-func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, revisionIDs []string, lockedAt time.Time) ([]map[string]any, error) {
+func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, revisionIDs []string, lockedAt time.Time, counted bool) ([]map[string]any, error) {
 	rows, err := server.pool.Query(ctx, `
 		select sr.id, sr.source_hash, sr.source_bytes, sr.runtime,
 		       sr.engine_compatibility, sr.validation, sr.metadata,
@@ -1876,8 +1883,11 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, 
 			return nil, errors.New("invalid revision")
 		}
 		runtime := jsonMap(runtimeRaw)
-		if !runtimeAllowsCountedPlay(runtime) {
+		if counted && !runtimeAllowsCountedPlay(runtime) {
 			return nil, errors.New("runtime is not counted-play eligible")
+		}
+		if !counted && !runtimeAllowsNonCountedExhibition(runtime) {
+			return nil, errors.New("runtime is not eligible for non-counted exhibition")
 		}
 		metadata := jsonMap(metadataRaw)
 		label := stringValue(metadata, "label")
@@ -2228,6 +2238,50 @@ func runtimeAllowsCountedPlay(runtime map[string]any) bool {
 		return false
 	}
 	return len(stringSliceFromAny(runtime["requiredCapabilities"])) == 0
+}
+
+func runtimeAllowsNonCountedExhibition(runtime map[string]any) bool {
+	if stringValue(runtime, "abiVersion") != "strategy-runtime-abi-v1.14" {
+		return false
+	}
+	language := mapValue(runtime, "language")
+	adapter := mapValue(runtime, "adapter")
+	packageMetadata := mapValue(runtime, "package")
+	languageID := stringValue(language, "id")
+	adapterID := stringValue(adapter, "id")
+	if stringValue(packageMetadata, "mode") != "none" {
+		return false
+	}
+	if len(stringSliceFromAny(runtime["requiredCapabilities"])) != 0 {
+		return false
+	}
+	if languageID == "python" {
+		return adapterID == "runtime-python-subprocess-experimental"
+	}
+	return runtimeAllowsCountedPlay(runtime)
+}
+
+func exhibitionCountedStatus(counted bool) string {
+	if counted {
+		return "pending"
+	}
+	return "non_counted"
+}
+
+func exhibitionCountedReason(counted bool) *string {
+	if counted {
+		return nil
+	}
+	reason := "experimental_runtime"
+	return &reason
+}
+
+func exhibitionCountedExplanation(counted bool) *string {
+	if counted {
+		return nil
+	}
+	explanation := "Python Strategy runtime evidence is experimental and non-counted in v1.17."
+	return &explanation
 }
 
 func competitionMatchSetPresetID(presetID string) (string, error) {

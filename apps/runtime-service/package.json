@@ -15,6 +15,7 @@
     "@cowards/engine": "workspace:*",
     "@cowards/replay": "workspace:*",
     "@cowards/runtime-js": "workspace:*",
+    "@cowards/runtime-python": "workspace:*",
     "@cowards/spec": "workspace:*"
   },
   "devDependencies": {

@@ -169,7 +169,7 @@ func TestGoMatchSetStatusIntegration(t *testing.T) {
 		result, err := (&LiveServer{
 			pool: pool,
 			now:  func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
-		}).createExhibitionMatchSet(ctx, userID, "smoke-exhibition-v1", revisionIDs)
+		}).createExhibitionMatchSet(ctx, userID, "smoke-exhibition-v1", revisionIDs, true)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -3,6 +3,7 @@ import type {
   RuntimeViolationType,
   StrategyRevision,
   StrategyRevisionId,
+  StrategyArtifactSourceFormat,
   StrategyRevisionValidationCode,
   StrategyRevisionValidationReport,
   WorkshopAnalyticsSnapshot,
@@ -19,6 +20,7 @@ export interface WorkshopRevisionSummary {
   createdBy?: string | undefined
   sourceHash: string
   sourceBytes: number
+  sourceFormat: StrategyArtifactSourceFormat
   valid: boolean
   validation: StrategyRevisionValidationReport
   metadata: StrategyRevision["metadata"]
@@ -42,8 +44,15 @@ export interface WorkshopOpponentSummary {
 }
 
 export interface WorkshopTemplateSummary {
-  id: "template:cautious" | "template:reckless" | "template:sentinel"
+  id:
+    | "template:cautious"
+    | "template:reckless"
+    | "template:sentinel"
+    | "template:python-tactical"
   label: string
+  sourceFormat: StrategyArtifactSourceFormat
+  experimental?: boolean | undefined
+  countedPlayEligible?: boolean | undefined
   source: string
   validation: StrategyRevisionValidationReport
 }
@@ -53,6 +62,7 @@ interface WorkshopSampleBase {
   label: string
   description: string
   categories: string[]
+  sourceFormat?: StrategyArtifactSourceFormat | undefined
   source: string
   validation: StrategyRevisionValidationReport
 }
@@ -109,6 +119,7 @@ export type WorkshopInitialData = WorkshopSnapshot & {
 
 export interface WorkshopSubmitRequest {
   source: string
+  sourceFormat?: StrategyArtifactSourceFormat | undefined
   label?: string | undefined
   notes?: string | undefined
 }

@@ -93,7 +93,7 @@ export interface GoBackendServiceClient {
   ): Promise<StrategyRevisionSubmissionServiceDto>
   createMatchSet(
     sessionId: string,
-    input: { presetId: unknown; revisionIds: unknown },
+    input: { presetId: unknown; revisionIds: unknown; counted?: boolean },
   ): Promise<CreateMatchSetServiceDto>
 }
 
@@ -335,6 +335,7 @@ export const createGoBackendServiceClient = ({
           entrantRevisionIds: Array.isArray(input.revisionIds)
             ? input.revisionIds
             : [],
+          counted: input.counted !== false,
         },
       })
       return result.body!

@@ -33,6 +33,9 @@ import {
   getStrategyRuntimeAdapterRecord,
   NON_JS_RUNTIME_PROMOTION_CRITERIA,
   NON_JS_RUNTIME_SUPPORT_POLICY,
+  RUNTIME_BROKER_REGISTRY,
+  RUNTIME_BROKER_REGISTRY_VERSION,
+  validateRuntimeBrokerRegistryMatch,
   type StrategyRuntimeAdapterId,
 } from "../packages/spec/src/index.ts"
 
@@ -260,6 +263,8 @@ const v116FinalTypeScriptSurfaceLabelsPath =
   ".planning/artifacts/v1.16-final-typescript-surface-labels.json"
 const v116TypeScriptBackendInventoryPath =
   ".planning/artifacts/v1.16-typescript-backend-inventory.json"
+const v117RuntimeBrokerRegistryArtifactPath =
+  ".planning/artifacts/v1.17-runtime-broker-registry.json"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
@@ -587,11 +592,11 @@ export const selectedGoRouteManifest: SelectedGoRouteManifest = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
 
-const stringArray = (
-  value: unknown,
-  field: string,
-): readonly string[] => {
-  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+const stringArray = (value: unknown, field: string): readonly string[] => {
+  if (
+    !Array.isArray(value) ||
+    value.some((entry) => typeof entry !== "string")
+  ) {
     throw new Error(`${field} must be a string array`)
   }
   return value as string[]
@@ -877,7 +882,9 @@ export const validateSelectedGoRouteManifest = (
   }
   for (const routeId of routeIds) {
     if (!requiredRouteIds.has(routeId)) {
-      throw new Error(`v1.16 selected Go route manifest has unexpected route ${routeId}`)
+      throw new Error(
+        `v1.16 selected Go route manifest has unexpected route ${routeId}`,
+      )
     }
   }
   if (routeIds.size !== manifest.routes.length) {
@@ -957,8 +964,12 @@ export const validateSelectedGoRouteManifest = (
     "migrations",
     "runtime service replacement",
   ]) {
-    if (!manifest.explicitlyOutOfScope.some((item) => item.includes(excluded))) {
-      throw new Error(`v1.16 selected Go route manifest missing out-of-scope ${excluded}`)
+    if (
+      !manifest.explicitlyOutOfScope.some((item) => item.includes(excluded))
+    ) {
+      throw new Error(
+        `v1.16 selected Go route manifest missing out-of-scope ${excluded}`,
+      )
     }
   }
   return `${manifest.routes.length} v1.16 selected Go routes checked`
@@ -1382,13 +1393,17 @@ const forbiddenRuntimeServiceAuthorityMarkers = [
 
 const forbiddenStrategyExecutionOutsideBoundaryMarkers = [
   "@cowards/runtime-js/worker",
+  "@cowards/runtime-python",
   "createRuntimeFromRevision",
+  "createPythonRuntimeFromRevision",
+  "runPythonStrategyMethod",
+  "python_runtime_host.py",
   "runtimeJsWorkerEntrypoint",
   "node:vm",
   "node:wasi",
-  "from \"vm\"",
+  'from "vm"',
   "from 'vm'",
-  "require(\"vm\")",
+  'require("vm")',
   "require('vm')",
 ] as const
 
@@ -1615,9 +1630,7 @@ export const validateV116RuntimeServiceBoundaryArtifact = (
   }
 
   const runtimeAbi = requireRecord(root.runtimeAbi, "runtimeAbi")
-  if (
-    runtimeAbi.serviceContractVersion !== RUNTIME_EXECUTION_SERVICE_VERSION
-  ) {
+  if (runtimeAbi.serviceContractVersion !== RUNTIME_EXECUTION_SERVICE_VERSION) {
     throw new Error("runtime execution service contract version drifted")
   }
   if (runtimeAbi.strategyRuntimeAbiVersion !== STRATEGY_RUNTIME_ABI_VERSION) {
@@ -1987,7 +2000,9 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
     throw new Error("public output privacy must remain required")
   }
   if (policies.ownerDebugPublicEvidenceFallbackAllowed !== false) {
-    throw new Error("owner-debug public evidence fallback must remain forbidden")
+    throw new Error(
+      "owner-debug public evidence fallback must remain forbidden",
+    )
   }
   if (policies.testSupportNormalProductTrafficAllowed !== false) {
     throw new Error("test-support normal product traffic must remain forbidden")
@@ -2013,9 +2028,15 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
     throw new Error("source inventory count drifted")
   }
 
-  const capabilityGroups = requireRecord(root.capabilityGroups, "capabilityGroups")
+  const capabilityGroups = requireRecord(
+    root.capabilityGroups,
+    "capabilityGroups",
+  )
   for (const group of requiredFinalLabelCapabilityGroups) {
-    if (typeof capabilityGroups[group] !== "number" || capabilityGroups[group] <= 0) {
+    if (
+      typeof capabilityGroups[group] !== "number" ||
+      capabilityGroups[group] <= 0
+    ) {
       throw new Error(`missing capability group ${group}`)
     }
   }
@@ -2026,7 +2047,10 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
     }
   }
 
-  const decisions = stringArray(root.phase107DecisionCoverage, "phase107DecisionCoverage")
+  const decisions = stringArray(
+    root.phase107DecisionCoverage,
+    "phase107DecisionCoverage",
+  )
   for (const decision of [
     "D-01",
     "D-02",
@@ -2069,12 +2093,16 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
     }
     seen.add(pathValue)
     if (!inventoryPaths.has(pathValue)) {
-      throw new Error(`final label path ${pathValue} is not in source inventory`)
+      throw new Error(
+        `final label path ${pathValue} is not in source inventory`,
+      )
     }
     if (typeof taxonomyRole !== "string") {
       throw new Error(`${pathValue} missing taxonomy role`)
     }
-    if (!(requiredFinalLabelRoles as readonly string[]).includes(taxonomyRole)) {
+    if (
+      !(requiredFinalLabelRoles as readonly string[]).includes(taxonomyRole)
+    ) {
       throw new Error(`${pathValue} has invalid taxonomyRole ${taxonomyRole}`)
     }
     if (taxonomyRole.includes("backend")) {
@@ -2091,7 +2119,9 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
       throw new Error(`${pathValue} missing capabilityGroup`)
     }
     if (typeof capabilityGroups[capabilityGroup] !== "number") {
-      throw new Error(`${pathValue} has invalid capabilityGroup ${capabilityGroup}`)
+      throw new Error(
+        `${pathValue} has invalid capabilityGroup ${capabilityGroup}`,
+      )
     }
     for (const field of [
       "owner",
@@ -2102,7 +2132,10 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
       "futureMigration",
       "monitorStatus",
     ]) {
-      if (typeof surface[field] !== "string" || surface[field].trim().length === 0) {
+      if (
+        typeof surface[field] !== "string" ||
+        surface[field].trim().length === 0
+      ) {
         throw new Error(`${pathValue} missing ${field}`)
       }
     }
@@ -2135,7 +2168,9 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
       taxonomyRole !== "runtime-service" &&
       taxonomyRole !== "runtime-adapter"
     ) {
-      throw new Error(`${pathValue} selectedNormal is not allowed for ${taxonomyRole}`)
+      throw new Error(
+        `${pathValue} selectedNormal is not allowed for ${taxonomyRole}`,
+      )
     }
     if (surface.normalBackendAuthority !== false) {
       throw new Error(`${pathValue} must not claim backend authority`)
@@ -2153,28 +2188,51 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
     }
     if (surfaceLabel === "private-owner-debug-replay") {
       const combined = `${surface.gate} ${surface.futureMigration} ${surface.selectedNormalJustification}`
-      if (!/PLAYWRIGHT_TEST|NODE_ENV=test|COWARDS_ENABLE_OWNER_DEBUG_REPLAY/.test(combined)) {
+      if (
+        !/PLAYWRIGHT_TEST|NODE_ENV=test|COWARDS_ENABLE_OWNER_DEBUG_REPLAY/.test(
+          combined,
+        )
+      ) {
         throw new Error(`${pathValue} owner-debug missing enablement gates`)
       }
       if (!/COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID/.test(combined)) {
-        throw new Error(`${pathValue} owner-debug missing requester identity gate`)
+        throw new Error(
+          `${pathValue} owner-debug missing requester identity gate`,
+        )
       }
-      if (!/owner authorization|persisted owner authorization|owner/.test(combined)) {
+      if (
+        !/owner authorization|persisted owner authorization|owner/.test(
+          combined,
+        )
+      ) {
         throw new Error(`${pathValue} owner-debug missing owner authorization`)
       }
-      if (!/fallback|public replay evidence|public evidence/.test(combined) || surface.noPublicFallback !== true) {
-        throw new Error(`${pathValue} owner-debug public fallback policy missing`)
+      if (
+        !/fallback|public replay evidence|public evidence/.test(combined) ||
+        surface.noPublicFallback !== true
+      ) {
+        throw new Error(
+          `${pathValue} owner-debug public fallback policy missing`,
+        )
       }
     }
     if (surfaceLabel === "test-support-route") {
       const gate = String(surface.gate)
-      if (!/PLAYWRIGHT_TEST|NODE_ENV=test|test-support/.test(gate) || !/404|normal product runtime/.test(gate)) {
+      if (
+        !/PLAYWRIGHT_TEST|NODE_ENV=test|test-support/.test(gate) ||
+        !/404|normal product runtime/.test(gate)
+      ) {
         throw new Error(`${pathValue} test-support gate is insufficient`)
       }
     }
     if (surfaceLabel === "fixture-only") {
       const gate = String(surface.gate)
-      if (!/PLAYWRIGHT_TEST|NODE_ENV=test|COWARDS_ENABLE_REPLAY_FIXTURES|fixture env gate/.test(gate) || !/normal product traffic|product traffic/.test(gate)) {
+      if (
+        !/PLAYWRIGHT_TEST|NODE_ENV=test|COWARDS_ENABLE_REPLAY_FIXTURES|fixture env gate/.test(
+          gate,
+        ) ||
+        !/normal product traffic|product traffic/.test(gate)
+      ) {
         throw new Error(`${pathValue} fixture gate is insufficient`)
       }
     }
@@ -2207,7 +2265,9 @@ export const validateV116FinalTypeScriptSurfaceLabels = (
   }
   for (const inventoryPath of inventoryPaths) {
     if (!seen.has(inventoryPath)) {
-      throw new Error(`source inventory path ${inventoryPath} missing final label`)
+      throw new Error(
+        `source inventory path ${inventoryPath} missing final label`,
+      )
     }
   }
 
@@ -2274,10 +2334,12 @@ const checkTypeScriptWorkerQuarantineSource = (): string => {
   }
   if (
     !runnerSource.includes("@cowards/persistence/quarantine-lifecycle") ||
-    runnerSource.includes('@cowards/persistence/jobs') ||
-    runnerSource.includes('@cowards/persistence/complete-match')
+    runnerSource.includes("@cowards/persistence/jobs") ||
+    runnerSource.includes("@cowards/persistence/complete-match")
   ) {
-    throw new Error("worker must import lifecycle helpers from quarantine subpath")
+    throw new Error(
+      "worker must import lifecycle helpers from quarantine subpath",
+    )
   }
   for (const symbol of [
     "jobs",
@@ -2294,7 +2356,7 @@ const checkTypeScriptWorkerQuarantineSource = (): string => {
   if (
     persistencePackage.exports?.["./chronicle-store"] !== undefined ||
     persistencePackage.exports?.["./quarantine-lifecycle"] !==
-    "./src/quarantine-lifecycle.ts"
+      "./src/quarantine-lifecycle.ts"
   ) {
     throw new Error("persistence package quarantine lifecycle export drifted")
   }
@@ -2302,7 +2364,9 @@ const checkTypeScriptWorkerQuarantineSource = (): string => {
     !persistenceQuarantine.includes("createPostgresChronicleStore") ||
     !persistenceQuarantine.includes("createChronicleMetadata")
   ) {
-    throw new Error("Chronicle persistence must be exported only via quarantine")
+    throw new Error(
+      "Chronicle persistence must be exported only via quarantine",
+    )
   }
   if (
     !replayPageSource.includes('from "../../server.js"') ||
@@ -2358,14 +2422,19 @@ const checkRuntimeServiceProductionAuthority = (): string => {
 
   for (const marker of forbiddenRuntimeServiceAuthorityMarkers) {
     if (importText.includes(marker) || dependencyNames.has(marker)) {
-      throw new Error(`runtime service gained backend authority marker ${marker}`)
+      throw new Error(
+        `runtime service gained backend authority marker ${marker}`,
+      )
     }
   }
   for (const marker of forbiddenRuntimeServiceAuthorityMarkers.filter(
-    (marker) => marker !== "@cowards/persistence" && marker !== "@cowards/service",
+    (marker) =>
+      marker !== "@cowards/persistence" && marker !== "@cowards/service",
   )) {
     if (sourceText.includes(marker)) {
-      throw new Error(`runtime service source contains backend authority ${marker}`)
+      throw new Error(
+        `runtime service source contains backend authority ${marker}`,
+      )
     }
   }
   return `${sourceFiles.length} runtime-service production files checked`
@@ -2527,6 +2596,119 @@ const checkRuntimeAdapters = (): string => {
   return `${runtimeAdapterBridges.length} JS/TS adapters and Python experimental gate checked`
 }
 
+const brokerEntryKey = (entry: {
+  abiVersion: string
+  languageId: string
+  languageVersion: string
+  adapterId: string
+  adapterVersion: string
+  packagePolicy: string
+}): string =>
+  [
+    entry.abiVersion,
+    entry.languageId,
+    entry.languageVersion,
+    entry.adapterId,
+    entry.adapterVersion,
+    entry.packagePolicy,
+  ].join("|")
+
+const checkRuntimeBrokerRegistryArtifact = (): string => {
+  const artifact = readJson<{
+    schemaVersion?: unknown
+    baseline?: Record<string, unknown>
+    contract?: Record<string, unknown>
+    entries?: unknown
+  }>(v117RuntimeBrokerRegistryArtifactPath)
+  if (artifact.schemaVersion !== RUNTIME_BROKER_REGISTRY_VERSION) {
+    throw new Error("v1.17 runtime broker registry schema version drifted")
+  }
+  if (artifact.baseline?.pythonBackendOwner !== false) {
+    throw new Error("v1.17 registry must forbid Python backend ownership")
+  }
+  if (
+    artifact.contract?.strategyRuntimeAbiVersion !==
+      STRATEGY_RUNTIME_ABI_VERSION ||
+    artifact.contract?.selectionPolicy !==
+      "exact-language-runtime-adapter-abi-package-match" ||
+    artifact.contract?.fallbackPolicy !== "fail-closed-no-js-ts-or-go-fallback"
+  ) {
+    throw new Error("v1.17 runtime broker contract drifted")
+  }
+  if (!Array.isArray(artifact.entries)) {
+    throw new Error("v1.17 runtime broker registry entries missing")
+  }
+
+  const registryByKey = new Map(
+    RUNTIME_BROKER_REGISTRY.map((entry) => [brokerEntryKey(entry), entry]),
+  )
+  const artifactKeys = new Set<string>()
+  for (const rawEntry of artifact.entries) {
+    const entry = requireRecord(rawEntry, "v1.17 runtime broker entry")
+    const key = brokerEntryKey({
+      abiVersion: String(entry.abiVersion),
+      languageId: String(entry.languageId),
+      languageVersion: String(entry.languageVersion),
+      adapterId: String(entry.adapterId),
+      adapterVersion: String(entry.adapterVersion),
+      packagePolicy: String(entry.packagePolicy),
+    })
+    const registryEntry = registryByKey.get(key)
+    if (!registryEntry) {
+      throw new Error(`v1.17 runtime broker artifact has unknown entry ${key}`)
+    }
+    artifactKeys.add(key)
+    if (
+      entry.runtimeTarget !== registryEntry.runtimeTarget ||
+      entry.readiness !== registryEntry.readiness ||
+      entry.enabledForNormalPlay !== registryEntry.enabledForNormalPlay ||
+      entry.countedResultsAllowed !== registryEntry.countedResultsAllowed
+    ) {
+      throw new Error(`v1.17 runtime broker artifact drifted for ${key}`)
+    }
+    const issues = validateRuntimeBrokerRegistryMatch({
+      abiVersion: entry.abiVersion,
+      language: {
+        id: entry.languageId,
+        version: entry.languageVersion,
+      },
+      adapter: {
+        id: entry.adapterId,
+        version: entry.adapterVersion,
+      },
+      package: {
+        mode: entry.packagePolicy,
+        entrypoint: "default",
+      },
+      requiredCapabilities: [],
+      limits: registryEntry.limits,
+    })
+    if (issues.length > 0) {
+      throw new Error(`v1.17 runtime broker cannot validate ${key}`)
+    }
+  }
+
+  const missing = [...registryByKey.keys()].filter(
+    (key) => !artifactKeys.has(key),
+  )
+  if (missing.length > 0) {
+    throw new Error(
+      `v1.17 runtime broker artifact missing registry entries ${missing.join(", ")}`,
+    )
+  }
+  const pythonEntry = [...registryByKey.values()].find(
+    (entry) => entry.languageId === "python",
+  )
+  if (
+    !pythonEntry ||
+    pythonEntry.enabledForNormalPlay ||
+    pythonEntry.countedResultsAllowed
+  ) {
+    throw new Error("Python runtime broker entry must remain non-counted")
+  }
+  return `${artifact.entries.length} v1.17 runtime broker registry entries checked`
+}
+
 const checkNonJsRuntimeGuardrails = (): string => {
   assertNonJsRuntimeGuardrails()
   if (NON_JS_RUNTIME_SUPPORT_POLICY.publicLanguagePickerAllowed !== false) {
@@ -2619,6 +2801,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   await check("runtime_adapter", "runtime registry and adapter metadata", () =>
     checkRuntimeAdapters(),
   ),
+  await check("runtime_adapter", "v1.17 runtime broker registry artifact", () =>
+    checkRuntimeBrokerRegistryArtifact(),
+  ),
   await check(
     "runtime_adapter",
     "v1.16 runtime service boundary artifact",
@@ -2634,15 +2819,11 @@ export const runBoundaryMonitorChecks = async (): Promise<
     "TypeScript worker and lifecycle quarantine source",
     () => checkTypeScriptWorkerQuarantineSource(),
   ),
-  await check(
-    "surface_labels",
-    "v1.16 final TypeScript surface labels",
-    () => checkV116FinalTypeScriptSurfaceLabels(),
+  await check("surface_labels", "v1.16 final TypeScript surface labels", () =>
+    checkV116FinalTypeScriptSurfaceLabels(),
   ),
-  await check(
-    "runtime_adapter",
-    "runtime service production authority",
-    () => checkRuntimeServiceProductionAuthority(),
+  await check("runtime_adapter", "runtime service production authority", () =>
+    checkRuntimeServiceProductionAuthority(),
   ),
   await check(
     "runtime_adapter",

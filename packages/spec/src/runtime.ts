@@ -84,6 +84,7 @@ export interface StrategyRuntimeAdapterRecord {
   id: StrategyRuntimeAdapterId
   label: string
   version: string
+  runtimeTarget: "runtime-js" | "runtime-python"
   readiness: StrategyRuntimeReadiness
   supportedLanguageIds: StrategyLanguageId[]
   enabledForNormalPlay: boolean
@@ -210,6 +211,8 @@ export interface StrategyRuntimeCountedEligibility {
 }
 
 export interface StrategyRuntimeProductSemantics {
+  languageId: StrategyLanguageId
+  adapterId: StrategyRuntimeAdapterId
   languageLabel: string
   adapterLabel: string
   readiness: StrategyRuntimeReadiness | "unknown"
@@ -224,6 +227,23 @@ export interface StrategyRuntimeProductSemantics {
   examplesReference: string
   warnings: string[]
   validationIssueCodes: StrategyRuntimeProductValidationCode[]
+}
+
+export const RUNTIME_BROKER_REGISTRY_VERSION =
+  "runtime-broker-registry-v1.17" as const
+
+export interface RuntimeBrokerRegistryEntry {
+  languageId: StrategyLanguageId
+  languageVersion: string
+  runtimeTarget: StrategyRuntimeAdapterRecord["runtimeTarget"]
+  adapterId: StrategyRuntimeAdapterId
+  adapterVersion: string
+  abiVersion: typeof STRATEGY_RUNTIME_ABI_VERSION
+  packagePolicy: StrategyPackageMetadata["mode"]
+  readiness: StrategyRuntimeReadiness
+  enabledForNormalPlay: boolean
+  countedResultsAllowed: boolean
+  limits: StrategyRuntimeLimits
 }
 
 export interface StrategyRuntimeFailureDiagnostics {
@@ -405,6 +425,7 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     id: "runtime-js-worker-thread",
     label: "runtime-js worker thread",
     version: COMPATIBILITY_VERSIONS.runtimeJs,
+    runtimeTarget: "runtime-js",
     readiness: "local-dev-fallback",
     supportedLanguageIds: ["javascript", "typescript"],
     enabledForNormalPlay: true,
@@ -424,6 +445,7 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     id: "runtime-js-subprocess",
     label: "runtime-js subprocess",
     version: COMPATIBILITY_VERSIONS.runtimeJs,
+    runtimeTarget: "runtime-js",
     readiness: "prototype",
     supportedLanguageIds: ["javascript", "typescript"],
     enabledForNormalPlay: true,
@@ -444,6 +466,7 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     id: "runtime-js-container-subprocess",
     label: "runtime-js container subprocess",
     version: COMPATIBILITY_VERSIONS.runtimeJs,
+    runtimeTarget: "runtime-js",
     readiness: "production-candidate",
     supportedLanguageIds: ["javascript", "typescript"],
     enabledForNormalPlay: false,
@@ -474,6 +497,7 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     id: "runtime-python-subprocess-experimental",
     label: "Python subprocess experimental",
     version: "0.1.0-experimental",
+    runtimeTarget: "runtime-python",
     readiness: "experimental",
     supportedLanguageIds: ["python"],
     enabledForNormalPlay: false,
@@ -671,6 +695,72 @@ export const getStrategyRuntimeAdapterRecord = (
   STRATEGY_RUNTIME_ADAPTER_REGISTRY.find((candidate) => candidate.id === id) ??
   null
 
+export const RUNTIME_BROKER_REGISTRY =
+  STRATEGY_RUNTIME_ADAPTER_REGISTRY.flatMap(
+    (adapter): RuntimeBrokerRegistryEntry[] =>
+      adapter.supportedLanguageIds.map((languageId) => {
+        const language = getStrategyLanguageRecord(languageId)
+        if (!language) {
+          throw new Error(
+            `Runtime adapter ${adapter.id} references unknown language ${languageId}`,
+          )
+        }
+        return {
+          languageId: language.id,
+          languageVersion: language.version,
+          runtimeTarget: adapter.runtimeTarget,
+          adapterId: adapter.id,
+          adapterVersion: adapter.version,
+          abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+          packagePolicy: "none",
+          readiness: adapter.readiness,
+          enabledForNormalPlay:
+            language.enabledForNormalPlay && adapter.enabledForNormalPlay,
+          countedResultsAllowed: adapter.countedResultsAllowed,
+          limits: adapter.limits,
+        }
+      }),
+  ) as readonly RuntimeBrokerRegistryEntry[]
+
+export const findRuntimeBrokerRegistryEntry = (
+  runtime: StrategyRuntimeMetadata,
+): RuntimeBrokerRegistryEntry | null =>
+  RUNTIME_BROKER_REGISTRY.find(
+    (entry) =>
+      entry.abiVersion === runtime.abiVersion &&
+      entry.languageId === runtime.language.id &&
+      entry.languageVersion === runtime.language.version &&
+      entry.adapterId === runtime.adapter.id &&
+      entry.adapterVersion === runtime.adapter.version &&
+      entry.packagePolicy === runtime.package.mode,
+  ) ?? null
+
+export const validateRuntimeBrokerRegistryMatch = (
+  value: unknown,
+): StrategyRevisionValidationIssue[] => {
+  const raw = isRecord(value) ? value : null
+  const languageValue = isRecord(raw?.language) ? raw.language : null
+  const adapterValue = isRecord(raw?.adapter) ? raw.adapter : null
+  const packageValue = isRecord(raw?.package) ? raw.package : null
+  if (
+    raw?.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+    typeof languageValue?.id !== "string" ||
+    typeof languageValue?.version !== "string" ||
+    typeof adapterValue?.id !== "string" ||
+    typeof adapterValue?.version !== "string" ||
+    typeof packageValue?.mode !== "string"
+  ) {
+    return [productIssue("ABI_MISMATCH")]
+  }
+  const runtime = coerceStrategyRuntimeMetadata(value)
+  if (!runtime) {
+    return [productIssue("UNSUPPORTED_LANGUAGE")]
+  }
+  return findRuntimeBrokerRegistryEntry(runtime)
+    ? []
+    : [productIssue("INCOMPATIBLE_ADAPTER")]
+}
+
 const normalizePackageMetadata = (
   value: unknown,
 ): StrategyPackageMetadata | null => {
@@ -858,6 +948,8 @@ export const describeStrategyRuntimeProductSemantics = (
   ]
 
   return {
+    languageId: runtime.language.id,
+    adapterId: runtime.adapter.id,
     languageLabel: language?.label ?? runtime.language.id,
     adapterLabel: adapter?.label ?? runtime.adapter.id,
     readiness,

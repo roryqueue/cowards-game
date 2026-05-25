@@ -32,6 +32,7 @@
     "@cowards/map-configs": "workspace:*",
     "@cowards/replay": "workspace:*",
     "@cowards/runtime-js": "workspace:*",
+    "@cowards/runtime-python": "workspace:*",
     "@cowards/spec": "workspace:*",
     "dotenv": "^17.4.2",
     "pg": "^8.20.0"

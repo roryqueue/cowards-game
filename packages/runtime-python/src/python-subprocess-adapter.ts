@@ -1,65 +1,73 @@
 import { Buffer } from "node:buffer"
-import { spawn } from "node:child_process"
-import { readFileSync } from "node:fs"
+import { spawn, spawnSync } from "node:child_process"
+import { createHash } from "node:crypto"
 import { clearTimeout, setTimeout } from "node:timers"
 import { fileURLToPath } from "node:url"
 import {
+  SoldierBrainResultSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
-  STRATEGY_RUNTIME_ADAPTER_REGISTRY,
+  StrategyResultSchema,
+  StrategyRuntimeResponseEnvelopeSchema,
   type JsonValue,
+  type SoldierBrainResult,
   type StrategyRuntimeMetadata,
   type StrategyRuntimeMethodName,
   type StrategyRuntimeRequestEnvelope,
   type StrategyRuntimeResponseEnvelope,
+  type StrategyRevision,
+  type StrategyResult,
 } from "@cowards/spec"
+import {
+  success,
+  type RuntimeResult,
+  type StrategyRuntime,
+} from "@cowards/engine"
+import { pythonExperimentalRuntimeMetadata } from "./metadata.js"
 
 const hostPath = fileURLToPath(
   new URL("./python_runtime_host.py", import.meta.url),
 )
 
-export const pythonExperimentalRuntimeMetadata =
-  (): StrategyRuntimeMetadata => {
-    const adapter = STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
-      (candidate) => candidate.id === "runtime-python-subprocess-experimental",
-    )
-    if (!adapter) {
-      throw new Error("Python experimental runtime adapter is not registered.")
-    }
-    return {
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-      language: { id: "python", version: "3.9" },
-      adapter: { id: adapter.id, version: adapter.version },
-      package: { mode: "none", entrypoint: "module" },
-      requiredCapabilities: [],
-      limits: adapter.limits,
-    }
-  }
+export { pythonExperimentalRuntimeMetadata }
 
 export interface PythonStrategyRequestInput {
-  sourcePath?: string | undefined
   sourceText?: string | undefined
+  sourceHash?: string | undefined
   methodName: StrategyRuntimeMethodName
   input: JsonValue
   timeoutMs?: number | undefined
+  stdoutBytes?: number | undefined
+  stderrBytes?: number | undefined
 }
+
+const sourceEnvelopeFor = (
+  sourceText: string,
+  sourceHash: string,
+  runtime: StrategyRuntimeMetadata,
+) => ({
+  text: sourceText,
+  hash: sourceHash,
+  bytes: Buffer.byteLength(sourceText),
+  entrypoint: runtime.package.entrypoint,
+})
+
+const hashStrategySource = (source: string): string =>
+  createHash("sha256").update(source).digest("hex")
 
 export const runPythonStrategyMethod = async (
   request: PythonStrategyRequestInput,
 ): Promise<StrategyRuntimeResponseEnvelope> => {
   const runtime = pythonExperimentalRuntimeMetadata()
-  const sourceText =
-    request.sourceText ??
-    (request.sourcePath ? readFileSync(request.sourcePath, "utf8") : "")
+  const sourceText = request.sourceText ?? ""
   const envelope: StrategyRuntimeRequestEnvelope = {
     abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
     methodName: request.methodName,
     runtime,
-    source: {
-      text: sourceText,
-      hash: "experimental-python-source",
-      bytes: Buffer.byteLength(sourceText),
-      entrypoint: runtime.package.entrypoint,
-    },
+    source: sourceEnvelopeFor(
+      sourceText,
+      request.sourceHash ?? hashStrategySource(sourceText),
+      runtime,
+    ),
     input: request.input,
   }
 
@@ -89,9 +97,21 @@ export const runPythonStrategyMethod = async (
     child.stderr.setEncoding("utf8")
     child.stdout.on("data", (chunk) => {
       stdout += chunk
+      if (
+        Buffer.byteLength(stdout) >
+        (request.stdoutBytes ?? runtime.limits.stdoutBytes)
+      ) {
+        child.kill("SIGKILL")
+      }
     })
     child.stderr.on("data", (chunk) => {
       stderr += chunk
+      if (
+        Buffer.byteLength(stderr) >
+        (request.stderrBytes ?? runtime.limits.stderrBytes)
+      ) {
+        child.kill("SIGKILL")
+      }
     })
     child.on("error", (error) => {
       clearTimeout(timeout)
@@ -124,7 +144,11 @@ export const runPythonStrategyMethod = async (
         return
       }
       try {
-        resolve(JSON.parse(stdout) as StrategyRuntimeResponseEnvelope)
+        resolve(
+          StrategyRuntimeResponseEnvelopeSchema.parse(
+            JSON.parse(stdout),
+          ) as StrategyRuntimeResponseEnvelope,
+        )
       } catch (error) {
         resolve({
           ok: false,
@@ -142,3 +166,197 @@ export const runPythonStrategyMethod = async (
     child.stdin.end(JSON.stringify(envelope))
   })
 }
+
+export interface PythonStrategySyncRequestInput extends PythonStrategyRequestInput {
+  sourceText: string
+  sourceHash: string
+}
+
+export const runPythonStrategyMethodSync = (
+  request: PythonStrategySyncRequestInput,
+): StrategyRuntimeResponseEnvelope => {
+  const runtime = pythonExperimentalRuntimeMetadata()
+  const envelope: StrategyRuntimeRequestEnvelope = {
+    abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+    methodName: request.methodName,
+    runtime,
+    source: sourceEnvelopeFor(request.sourceText, request.sourceHash, runtime),
+    input: request.input,
+  }
+  const result = spawnSync("python3", [hostPath], {
+    input: JSON.stringify(envelope),
+    encoding: "utf8",
+    env: {},
+    timeout: request.timeoutMs ?? runtime.limits.timeoutMs,
+    maxBuffer:
+      (request.stdoutBytes ?? runtime.limits.stdoutBytes) +
+      (request.stderrBytes ?? runtime.limits.stderrBytes),
+  })
+  const stderr = result.stderr ?? ""
+  if (result.error) {
+    return {
+      ok: false,
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      failureKind:
+        result.error.message.includes("ETIMEDOUT") ||
+        result.error.name === "TimeoutError"
+          ? "runtimeViolation"
+          : "systemFailure",
+      ...(result.error.message.includes("ETIMEDOUT")
+        ? {
+            violation: {
+              code: "TIMEOUT",
+              message: "Python Strategy exceeded its timeout.",
+              publicMessage: "Strategy timed out.",
+              privateDiagnostics: { stderr },
+            },
+          }
+        : {
+            systemFailure: {
+              code: "SPAWN_FAILED",
+              message: "Python runtime failed to start.",
+              publicMessage: "Runtime system failure.",
+              privateDiagnostics: { stderr },
+            },
+          }),
+    } as StrategyRuntimeResponseEnvelope
+  }
+  if (result.status !== 0) {
+    return {
+      ok: false,
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      failureKind: result.signal ? "systemFailure" : "runtimeViolation",
+      ...(result.signal
+        ? {
+            systemFailure: {
+              code: "SUBPROCESS_SIGNAL",
+              message: "Python runtime stopped before producing a result.",
+              publicMessage: "Runtime system failure.",
+              privateDiagnostics: { stderr },
+            },
+          }
+        : {
+            violation: {
+              code: "THROWN_EXCEPTION",
+              message: "Python Strategy failed during execution.",
+              publicMessage: "Strategy threw an exception.",
+              privateDiagnostics: { stderr },
+            },
+          }),
+    } as StrategyRuntimeResponseEnvelope
+  }
+  try {
+    return StrategyRuntimeResponseEnvelopeSchema.parse(
+      JSON.parse(result.stdout ?? ""),
+    ) as StrategyRuntimeResponseEnvelope
+  } catch {
+    return {
+      ok: false,
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      failureKind: "systemFailure",
+      systemFailure: {
+        code: "MALFORMED_IPC",
+        message: "Python runtime produced malformed IPC.",
+        publicMessage: "Runtime system failure.",
+        privateDiagnostics: { stderr },
+      },
+    }
+  }
+}
+
+const normalizeStrategyOutput = (
+  envelope: StrategyRuntimeResponseEnvelope,
+): RuntimeResult<StrategyResult> => {
+  if (!envelope.ok) {
+    return {
+      ok: false,
+      violation: {
+        type:
+          envelope.failureKind === "runtimeViolation"
+            ? envelope.violation.code
+            : "THROWN_EXCEPTION",
+        message:
+          envelope.failureKind === "runtimeViolation"
+            ? envelope.violation.publicMessage
+            : envelope.systemFailure.publicMessage,
+      },
+    }
+  }
+  const parsed = StrategyResultSchema.safeParse(envelope.value)
+  return parsed.success
+    ? success(parsed.data as StrategyResult)
+    : {
+        ok: false,
+        violation: {
+          type: "INVALID_OUTPUT",
+          message:
+            "Python Strategy returned an invalid select_activations result.",
+        },
+      }
+}
+
+const normalizeSoldierBrainOutput = (
+  envelope: StrategyRuntimeResponseEnvelope,
+): RuntimeResult<SoldierBrainResult> => {
+  if (!envelope.ok) {
+    return {
+      ok: false,
+      violation: {
+        type:
+          envelope.failureKind === "runtimeViolation"
+            ? envelope.violation.code
+            : "THROWN_EXCEPTION",
+        message:
+          envelope.failureKind === "runtimeViolation"
+            ? envelope.violation.publicMessage
+            : envelope.systemFailure.publicMessage,
+      },
+    }
+  }
+  const parsed = SoldierBrainResultSchema.safeParse(envelope.value)
+  return parsed.success
+    ? success(parsed.data)
+    : {
+        ok: false,
+        violation: {
+          type: "INVALID_OUTPUT",
+          message: "Python Strategy returned an invalid soldier_brain result.",
+        },
+      }
+}
+
+export const createPythonRuntimeFromRevision = (
+  revision: StrategyRevision,
+  options: {
+    timeoutMs?: number | undefined
+    stdoutBytes?: number | undefined
+    stderrBytes?: number | undefined
+  } = {},
+): StrategyRuntime => ({
+  selectActivations(input) {
+    return normalizeStrategyOutput(
+      runPythonStrategyMethodSync({
+        sourceText: revision.source,
+        sourceHash: revision.sourceHash,
+        methodName: "selectActivations",
+        input: input as unknown as JsonValue,
+        timeoutMs: options.timeoutMs,
+        stdoutBytes: options.stdoutBytes,
+        stderrBytes: options.stderrBytes,
+      }),
+    )
+  },
+  runSoldierBrain(input) {
+    return normalizeSoldierBrainOutput(
+      runPythonStrategyMethodSync({
+        sourceText: revision.source,
+        sourceHash: revision.sourceHash,
+        methodName: "soldierBrain",
+        input: input as unknown as JsonValue,
+        timeoutMs: options.timeoutMs,
+        stdoutBytes: options.stdoutBytes,
+        stderrBytes: options.stderrBytes,
+      }),
+    )
+  },
+})

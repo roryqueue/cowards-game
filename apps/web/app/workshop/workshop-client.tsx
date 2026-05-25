@@ -52,6 +52,9 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const [source, setSource] = useState(
     firstTemplate?.source ?? initialData.templateSource,
   )
+  const [sourceFormat, setSourceFormat] = useState<"typescript" | "python">(
+    firstTemplate?.sourceFormat === "python" ? "python" : "typescript",
+  )
   const [isDirty, setIsDirty] = useState(false)
   const [validation, setValidation] =
     useState<StrategyRevisionValidationReport | null>(
@@ -60,6 +63,9 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   const [validationSource, setValidationSource] = useState(
     firstTemplate?.source ?? initialData.templateSource,
   )
+  const [validationSourceFormat, setValidationSourceFormat] = useState<
+    "typescript" | "python"
+  >(firstTemplate?.sourceFormat === "python" ? "python" : "typescript")
   const [checking, setChecking] = useState(false)
   const [label, setLabel] = useState("Workshop revision")
   const [notes, setNotes] = useState("")
@@ -111,7 +117,10 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     [initialData.samples],
   )
 
-  const currentValidation = validationSource === source ? validation : null
+  const currentValidation =
+    validationSource === source && validationSourceFormat === sourceFormat
+      ? validation
+      : null
   const draftState = validationStateFromReport(currentValidation, checking)
   const submitEnabled = canSubmitRevision({
     validation: currentValidation,
@@ -156,13 +165,14 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       const response = await fetch("/api/workshop/validate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ source: nextSource }),
+        body: JSON.stringify({ source: nextSource, sourceFormat }),
       })
       const body = (await response.json()) as {
         validation: StrategyRevisionValidationReport
       }
       setValidation(body.validation)
       setValidationSource(nextSource)
+      setValidationSourceFormat(sourceFormat)
     } finally {
       setChecking(false)
     }
@@ -176,7 +186,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       void validateSource(source)
     }, 500)
     return () => window.clearTimeout(timeout)
-  }, [source, isDirty])
+  }, [source, sourceFormat, isDirty])
 
   const applyTemplate = (template: WorkshopTemplateSummary) => {
     if (isDirty && !window.confirm(replaceDraftCopy)) {
@@ -185,9 +195,15 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSelectedTemplateId(template.id)
     setSelectedStarterId("")
     setSelectedSampleId("")
+    setSourceFormat(
+      template.sourceFormat === "python" ? "python" : "typescript",
+    )
     setSource(template.source)
     setValidation(template.validation)
     setValidationSource(template.source)
+    setValidationSourceFormat(
+      template.sourceFormat === "python" ? "python" : "typescript",
+    )
     setIsDirty(false)
   }
 
@@ -199,9 +215,11 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSelectedStarterId(starter.id)
     setSelectedAdvancedId("")
     setSelectedSampleId("")
+    setSourceFormat("typescript")
     setSource(starter.source)
     setValidation(starter.validation)
     setValidationSource(starter.source)
+    setValidationSourceFormat("typescript")
     setLabel(starter.name)
     setNotes(starter.description)
     setIsDirty(false)
@@ -217,9 +235,11 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSelectedStarterId("")
     setSelectedAdvancedId(advanced.id)
     setSelectedSampleId("")
+    setSourceFormat("typescript")
     setSource(advanced.source)
     setValidation(advanced.validation)
     setValidationSource(advanced.source)
+    setValidationSourceFormat("typescript")
     setLabel(advanced.name)
     setNotes(advanced.description)
     setIsDirty(false)
@@ -233,9 +253,13 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSelectedStarterId("")
     setSelectedAdvancedId("")
     setSelectedSampleId(sample.id)
+    setSourceFormat(sample.sourceFormat === "python" ? "python" : "typescript")
     setSource(sample.source)
     setValidation(sample.validation)
     setValidationSource(sample.source)
+    setValidationSourceFormat(
+      sample.sourceFormat === "python" ? "python" : "typescript",
+    )
     setIsDirty(false)
   }
 
@@ -245,6 +269,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSelectedAdvancedId("")
     setValidation(null)
     setValidationSource("")
+    setValidationSourceFormat(sourceFormat)
     setIsDirty(true)
   }
 
@@ -259,7 +284,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       const response = await fetch("/api/workshop/revisions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ source, label, notes }),
+        body: JSON.stringify({ source, sourceFormat, label, notes }),
       })
       const body = (await response.json()) as {
         error?: string
@@ -382,8 +407,20 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       return
     }
     setSource(body.source)
+    setSourceFormat(
+      revisions.find((revision) => revision.id === revisionId)?.sourceFormat ===
+        "python"
+        ? "python"
+        : "typescript",
+    )
     setValidation(null)
     setValidationSource("")
+    setValidationSourceFormat(
+      revisions.find((revision) => revision.id === revisionId)?.sourceFormat ===
+        "python"
+        ? "python"
+        : "typescript",
+    )
     setIsDirty(true)
   }
 
@@ -607,7 +644,12 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                   onClick={() => applyTemplate(template)}
                   type="button"
                 >
-                  {template.label}
+                  <span>{template.label}</span>
+                  {template.experimental ? (
+                    <span className="workshop-chip warning">
+                      Python experimental
+                    </span>
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -754,7 +796,27 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 Validate source
               </button>
             </div>
-            <StrategySourceEditor value={source} onChange={onSourceChange} />
+            <div className="segmented-control" aria-label="Strategy language">
+              <button
+                className={sourceFormat === "typescript" ? "active" : ""}
+                type="button"
+                onClick={() => setSourceFormat("typescript")}
+              >
+                TS
+              </button>
+              <button
+                className={sourceFormat === "python" ? "active" : ""}
+                type="button"
+                onClick={() => setSourceFormat("python")}
+              >
+                PY
+              </button>
+            </div>
+            <StrategySourceEditor
+              language={sourceFormat}
+              value={source}
+              onChange={onSourceChange}
+            />
           </section>
 
           <section className="workshop-panel workshop-validation-panel">
