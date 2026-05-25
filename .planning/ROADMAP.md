@@ -21,192 +21,201 @@
 - [x] **v1.16 Runtime Isolation and TypeScript Backend Retirement** - Phases 103-109, shipped 2026-05-24 with no normal TypeScript backend except frontend plus isolated JS/TS Strategy runtime service. See `.planning/milestones/v1.16-ROADMAP.md`.
 - [x] **v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening** - Phases 110-116, shipped 2026-05-24. See `.planning/milestones/v1.17-ROADMAP.md`.
 - [x] **v1.18 Runtime Isolation and Multi-Language Exhibition Beta** - Phases 117-123, shipped 2026-05-25. See `.planning/milestones/v1.18-ROADMAP.md`.
-- [ ] **v1.19 Runtime Isolation Readiness and Exhibition Beta Trust** - Phases 124-131, active.
+- [x] **v1.19 Runtime Isolation Readiness and Exhibition Beta Trust** - Phases 124-131, shipped 2026-05-25. See `.planning/milestones/v1.19-ROADMAP.md`.
+- [ ] **v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof** - Phases 132-139, active.
 
-## Active Milestone: v1.19 Runtime Isolation Readiness and Exhibition Beta Trust
+## Active Milestone: v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
 
 **Status:** Planning
-**Phases:** 124-131
+**Phases:** 132-139
 **Granularity:** Standard
-**Requirements:** 48/48 mapped
-**Research:** `.planning/research/SUMMARY.md`, `.planning/research/v1.19-SUMMARY.md`
+**Requirements:** 50/50 mapped
+**Research:** `.planning/research/SUMMARY.md`, `.planning/research/v1.20-SUMMARY.md`
 
 ## Overview
 
-v1.19 strengthens runtime isolation readiness evidence while making the Python non-counted exhibition beta clearer and more trustworthy for signed-in users. The milestone treats v1.18 as the baseline: Python is already non-counted exhibition beta, JS/TS support remains intact, Go owns normal backend orchestration and public evidence, and hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker ABI.
+v1.20 starts from v1.19's signed-in proof and honesty contract. Python remains non-counted exhibition beta, JS/TS remains the counted Strategy path, Go owns normal backend orchestration and public evidence, and hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker ABI.
 
-The target flow remains:
+The primary stronger sandbox candidate lane is Docker/container subprocess because Docker is locally available and the repo already has a `container-subprocess` adapter. v1.20 should make that lane executable, testable, and monitored with real evidence. gVisor/runsc remains relevant but must fail loudly unless `runsc` is installed and a real adapter executes probes.
 
-`signed-in user -> web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated JS/TS or Python runtime implementation -> Go-owned public MatchSet and replay evidence`
+The product reliability goal is to make repeated signed-in Python exhibition beta use understandable and trustworthy. The milestone must define layered timeout budgets, measure mixed JS/TS-vs-Python and Python-vs-Python latency, stabilize avoidable latency where practical, clarify degraded/timeout/retry states, and prove public MatchSet/replay evidence remains private-data safe.
 
-v1.19 must not promote Python to ranked, ladder, counted, gauntlet, package-install, broad production multi-language, or backend ownership. Runtime isolation evidence must remain honestly scoped as readiness evidence unless stronger proof genuinely passes.
+Target flow:
+
+`signed-in user -> web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> selected JS/TS or Python runtime implementation -> Go-owned MatchSet and replay evidence`
+
+v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-install, broad production multi-language, or backend ownership. Runtime isolation evidence must remain honestly scoped as readiness evidence unless stronger proof genuinely passes.
 
 ## Phases
 
-- [x] **Phase 124: Isolation Readiness Baseline and Candidate Contract** - Rebaseline v1.18 as the floor and define honest subprocess/container/gVisor-style candidate contracts.
-- [x] **Phase 125: Hostile Probe Matrix Expansion** - Expand realistic hostile probes and no-fallback drills across runtime candidate behavior.
-- [x] **Phase 126: Candidate Execution Evidence** - Run hardened subprocess evidence and practical container/gVisor-style evidence with fail-loud required lanes.
-- [x] **Phase 127: Runtime Evidence Monitors and Drift Gates** - Extend monitors for candidate evidence, runtime ABI, no-fallback, ownership, privacy, topology, and JS/TS regression safety.
-- [x] **Phase 128: Python Exhibition Beta UX Trust** - Improve Python exhibition creation, labels, validation messages, sample Strategies, and eligibility explanations.
-- [x] **Phase 129: MatchSet Result and Replay Trust Cues** - Improve public-safe result and replay evidence for non-counted Python exhibition beta.
-- [x] **Phase 130: Signed-In End-to-End Proof and JS/TS Regression Gate** - Run a realistic signed-in JS/TS plus Python exhibition proof through Go -> Runtime Broker -> runtime implementation -> result/replay.
-- [x] **Phase 131: Promotion Decision and Archive Gate** - Verify, audit, document promotion decisions, archive v1.19, remove active requirements, and tag `v1.19`.
+- [ ] **Phase 132: v1.20 Baseline, Candidate Decision, and Budget Contract** - Lock v1.19 as the baseline, select Docker/container subprocess as the primary executable candidate, keep runsc fail-loud, and define layered timeout/reliability budgets.
+- [ ] **Phase 133: Executable Container Runtime Candidate Lane** - Make the Docker/container subprocess lane run real candidate evidence and produce honest machine-readable and human-readable artifacts.
+- [ ] **Phase 134: Hostile Probe and No-Fallback Parity Across Subprocess and Container** - Run probe parity and no-fallback drills across hardened subprocess and container lanes where practical, with strict privacy redaction and monitors.
+- [ ] **Phase 135: Timeout, Latency, and Reliability Budget Model** - Document, test, and measure Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
+- [ ] **Phase 136: Exhibition Execution Stabilization and Retry Semantics** - Stabilize Python exhibition execution where practical and make retry/no-retry semantics explicit and safe.
+- [ ] **Phase 137: Degraded-State UX and Public-Safe Reliability Evidence** - Improve user-facing running, slow, degraded, timeout, strategy-failed, and system-failed states in MatchSet/replay evidence.
+- [ ] **Phase 138: Signed-In Reliability Proof and JS/TS Regression Gate** - Run a realistic signed-in proof with one JS/TS and two Python revisions, mixed and Python-vs-Python exhibitions, candidate evidence, privacy checks, and JS/TS regression checks.
+- [ ] **Phase 139: Promotion Decision, Audit, Archive, and Tag** - Verify, audit, document promotion decisions, archive v1.20, remove active requirements, commit, and tag `v1.20`.
 
 ## Phase Details
 
-### Phase 124: Isolation Readiness Baseline and Candidate Contract
+### Phase 132: v1.20 Baseline, Candidate Decision, and Budget Contract
 
-**Goal:** Rebaseline v1.18 as the floor and define honest subprocess/container/gVisor-style candidate contracts.
-**Depends on:** Phase 123
+**Goal:** Lock v1.19 as the baseline, select Docker/container subprocess as the primary executable candidate, keep runsc fail-loud, and define layered timeout/reliability budgets.
+**Depends on:** Phase 131
 **Requirements:** BASE-01, BASE-02, BASE-03, BASE-04, BASE-05
 
 **Success Criteria:**
-1. Developer can inspect a v1.19 baseline artifact proving v1.18 remains the topology, eligibility, and evidence floor.
-2. Developer can inspect a candidate contract comparing hardened subprocess, normal container, and gVisor/runsc-style runtime isolation candidates.
-3. Developer can inspect an evidence taxonomy separating readiness evidence, required live proof, skipped/unsupported candidate state, and production certification.
-4. Developer can verify JS/TS remains intact and Python remains runtime-only, non-counted, non-ranked, and exhibition beta only.
+1. Developer can inspect a v1.20 baseline artifact proving v1.19 remains the topology, eligibility, privacy, and evidence floor.
+2. Developer can inspect a candidate decision that selects Docker/container subprocess as the primary executable lane and explains why runsc remains fail-loud.
+3. Developer can inspect a timeout/reliability budget contract separating Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
+4. Developer can verify Python remains non-counted exhibition beta and JS/TS remains the counted Strategy path.
 
 **Plans:** 0 planned
 
-### Phase 125: Hostile Probe Matrix Expansion
+### Phase 133: Executable Container Runtime Candidate Lane
 
-**Goal:** Expand realistic hostile probes and no-fallback drills across runtime candidate behavior.
-**Depends on:** Phase 124
+**Goal:** Make the Docker/container subprocess lane run real candidate evidence and produce honest machine-readable and human-readable artifacts.
+**Depends on:** Phase 132
+**Requirements:** CAND-01, CAND-02, CAND-03, CAND-04, CAND-05, CAND-06, CAND-07
+
+**Success Criteria:**
+1. Developer can run the container candidate lane against the real container adapter when Docker is available.
+2. Developer can inspect evidence for network denial, read-only root, tmpfs scratch, dropped capabilities, no-new-privileges, PID/memory/CPU controls, no shell, and strict IPC.
+3. Developer can inspect preflight/failure taxonomy for Docker unavailable, image unavailable, daemon failure, unsupported controls, adapter failure, Strategy violation, and system failure.
+4. Developer can compare subprocess and container candidate evidence without production sandbox overclaiming.
+5. Developer can run strict container and runsc commands that fail loudly when evidence is missing, unavailable, or substituted.
+
+**Plans:** 0 planned
+
+### Phase 134: Hostile Probe and No-Fallback Parity Across Subprocess and Container
+
+**Goal:** Run probe parity and no-fallback drills across hardened subprocess and container lanes where practical, with strict privacy redaction and monitors.
+**Depends on:** Phase 133
 **Requirements:** PROBE-01, PROBE-02, PROBE-03, PROBE-04, PROBE-05, PROBE-06, PROBE-07
 
 **Success Criteria:**
-1. Developer can run filesystem, host-path, network, DNS, socket, shell, process, import, package, dynamic-code, environment, token, DB DSN, output, memory, timeout, crash, malformed IPC, stderr, stack, and schema probes.
-2. Developer can verify public diagnostics redact source, memory, objectives, stderr, stacks, host paths, package paths, environment, tokens, DB DSNs, sessions, and private runtime internals.
-3. Developer can run no-fallback drills for stopped runtime-service, stopped Python runtime, and unavailable stronger candidates.
-4. Developer can verify probe failures map to deterministic runtime/system failure taxonomy.
+1. Developer can run filesystem, host-path, network, process, shell, import, package, environment, output, memory, timeout, crash, malformed IPC, stderr, stack, and schema probes across relevant lanes.
+2. Developer can verify diagnostics redact source, memory, objectives, streams, host/package paths, environment values, tokens, DB DSNs, sessions, and private runtime internals.
+3. Developer can run no-fallback drills for stopped runtime-service, stopped Python runtime, Docker/image unavailable, runsc unavailable, stale artifacts, and candidate substitution.
+4. Developer can run monitors that fail on runtime ABI, registry, broker, candidate evidence, production-claim, backend ownership, privacy, and JS/TS regression drift.
 
 **Plans:** 0 planned
 
-### Phase 126: Candidate Execution Evidence
+### Phase 135: Timeout, Latency, and Reliability Budget Model
 
-**Goal:** Run hardened subprocess evidence and practical container/gVisor-style evidence with fail-loud required lanes.
-**Depends on:** Phase 125
-**Requirements:** CAND-01, CAND-02, CAND-03, CAND-04, CAND-05, CAND-06
+**Goal:** Document, test, and measure Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
+**Depends on:** Phase 134
+**Requirements:** BUDGET-01, BUDGET-02, BUDGET-03, BUDGET-04, BUDGET-05, BUDGET-06, BUDGET-07
 
 **Success Criteria:**
-1. Developer can inspect hardened subprocess evidence for launch hardening, failure taxonomy, cleanup, and no-fallback behavior.
-2. Developer can inspect container candidate evidence for filesystem, network, tmpfs, capability, PID, memory, CPU, launch, and unsupported-runtime behavior.
-3. Developer can inspect gVisor/runsc-style evidence for local availability, OCI compatibility, expected isolation benefits, overhead, compatibility limits, and unsupported-runtime behavior.
-4. Developer can run required candidate evidence lanes that fail when evidence is skipped, stale, unavailable, or silently substituted.
-5. Developer can inspect a candidate comparison that states what each candidate proves and does not prove.
+1. Developer can inspect named timeout budgets for Strategy call, Match execution, MatchSet/job orchestration, runtime-service HTTP, and browser proof.
+2. Developer can verify deterministic per-Strategy caps are preserved and not loosened to hide latency.
+3. Developer can measure JS/TS-vs-Python and Python-vs-Python exhibition MatchSet latency with bounded repeat counts.
+4. Developer can inspect latency evidence that separates cold-start, runtime call, whole-Match, orchestration, result page, and replay page timings where practical.
 
 **Plans:** 0 planned
 
-### Phase 127: Runtime Evidence Monitors and Drift Gates
+### Phase 136: Exhibition Execution Stabilization and Retry Semantics
 
-**Goal:** Extend monitors for candidate evidence, runtime ABI, no-fallback, ownership, privacy, topology, and JS/TS regression safety.
-**Depends on:** Phase 126
-**Requirements:** MON-01, MON-02, MON-03, MON-04, MON-05, MON-06
+**Goal:** Stabilize Python exhibition execution where practical and make retry/no-retry semantics explicit and safe.
+**Depends on:** Phase 135
+**Requirements:** REL-01, REL-02, REL-03, REL-04, REL-05, REL-06
 
 **Success Criteria:**
-1. Developer can run monitors that fail on runtime ABI, registry, broker, schema, candidate evidence, sandbox authority, and production-claim drift.
-2. Developer can run monitors that fail on Python execution outside the runtime boundary and on backend ownership creep.
-3. Developer can run privacy monitors across public MatchSet/replay evidence and runtime diagnostics.
-4. Developer can run JS/TS regression tests proving validation, runtime execution, counted eligibility, MatchSet results, and replay safety remain intact.
-5. Developer can run topology checks that distinguish fixture-mode parity from live signed-in proof data.
+1. User can create repeated signed-in Python exhibition MatchSets without spurious runtime-service timeouts under the documented proof budget.
+2. Developer can inspect concrete latency stabilization or reduction work where practical.
+3. Developer can verify Strategy-caused runtime violations are not blindly retried.
+4. Developer can verify retryable system/runtime-service/container failures are classified separately from player-caused failures.
+5. Developer can verify Go-owned completion, scoring, status refresh, and replay availability across success, degraded, timeout, and failure paths.
+6. Developer can verify JS/TS support remains intact.
 
 **Plans:** 0 planned
 
-### Phase 128: Python Exhibition Beta UX Trust
+### Phase 137: Degraded-State UX and Public-Safe Reliability Evidence
 
-**Goal:** Improve Python exhibition creation, labels, validation messages, sample Strategies, and eligibility explanations.
-**Depends on:** Phase 127
-**Requirements:** BETA-01, BETA-02, BETA-03, BETA-04, BETA-05, BETA-06
+**Goal:** Improve user-facing running, slow, degraded, timeout, strategy-failed, and system-failed states in MatchSet/replay evidence.
+**Depends on:** Phase 136
+**Requirements:** UX-01, UX-02, UX-03, UX-04, UX-05, UX-06
 
 **Success Criteria:**
-1. User can see "non-counted exhibition beta" labels anywhere Python Strategy creation, selection, validation, MatchSet creation, result, or replay evidence appears.
-2. User receives actionable public-safe validation messages for unsupported Python capabilities, imports, packages, size, syntax, compile, and metadata failures.
-3. User can choose credible sample Python Strategies that stay within safe Strategy API behavior.
-4. Developer can verify Python immutable revision metadata and eligibility flags are preserved for MatchSet entries.
-5. Developer can verify JS/TS authoring, validation, counted eligibility, and exhibition behavior remain unchanged.
+1. User can understand queued, running, slow, completed, degraded, timed out, strategy-failed, and system-failed exhibition states.
+2. User can see retry/no-retry wording that distinguishes Strategy errors from retryable system/runtime-service/container failures.
+3. User can inspect public-safe result evidence with runtime labels, non-counted status, timeout budget cues, candidate lane evidence, and evidence limits.
+4. User can inspect replay evidence with non-counted exhibition beta cues, degraded/timeout context when applicable, and plausible in-bounds board state.
+5. Developer can verify public evidence and owner-source privacy remain safe across state variants.
 
 **Plans:** 0 planned
 
-### Phase 129: MatchSet Result and Replay Trust Cues
+### Phase 138: Signed-In Reliability Proof and JS/TS Regression Gate
 
-**Goal:** Improve public-safe result and replay evidence for non-counted Python exhibition beta.
-**Depends on:** Phase 128
-**Requirements:** EVID-01, EVID-02, EVID-03, EVID-04, EVID-05
-
-**Success Criteria:**
-1. User can open a Python exhibition MatchSet result and understand language/runtime path, non-counted status, and evidence limits.
-2. User can open replay evidence and see clear trust cues without private Strategy or runtime internals.
-3. Developer can verify public evidence remains private-data safe across success, runtime violation, degraded, and system-failed outcomes.
-4. Developer can verify owner-source privacy remains intact for JS/TS and Python account revisions.
-5. Developer can verify replay board state remains plausible and in bounds.
-
-**Plans:** 0 planned
-
-### Phase 130: Signed-In End-to-End Proof and JS/TS Regression Gate
-
-**Goal:** Run a realistic signed-in JS/TS plus Python exhibition proof through Go -> Runtime Broker -> runtime implementation -> result/replay.
-**Depends on:** Phase 129
-**Requirements:** PROOF-01, PROOF-02, PROOF-03, PROOF-04, PROOF-05, PROOF-06, PROOF-07, PROOF-08
+**Goal:** Run a realistic signed-in proof with one JS/TS and two Python revisions, mixed and Python-vs-Python exhibitions, candidate evidence, privacy checks, and JS/TS regression checks.
+**Depends on:** Phase 137
+**Requirements:** PROOF-01, PROOF-02, PROOF-03, PROOF-04, PROOF-05, PROOF-06, PROOF-07
 
 **Success Criteria:**
 1. User can create or sign into a local account.
-2. User can create and save JS/TS and Python Strategy Revisions.
-3. User can create a non-counted exhibition MatchSet using Python against JS/TS or Python.
-4. Developer can verify Match execution flows through Go -> Runtime Broker -> isolated runtime implementation.
-5. User can open MatchSet result and replay evidence with clear non-counted exhibition beta labels and trust cues.
-6. Developer can verify public outputs are private-data safe and contain no fallback, ownership, or JS/TS regression failures.
+2. User can create and save one JS/TS and two Python Strategy Revisions.
+3. User can create non-counted mixed JS/TS-vs-Python and Python-vs-Python exhibition MatchSets.
+4. Developer can verify execution flows through Go -> Runtime Broker/runtime-service -> selected runtime implementation(s), including required candidate evidence where applicable.
+5. User can open MatchSet result and replay evidence with labels, reliability evidence, candidate lane evidence, degraded/timeout wording where applicable, and plausible board state.
+6. Developer can verify public outputs are private-data safe and contain no silent fallback, ownership drift, Python counted eligibility, or JS/TS regression.
 
 **Plans:** 0 planned
 
-### Phase 131: Promotion Decision and Archive Gate
+### Phase 139: Promotion Decision, Audit, Archive, and Tag
 
-**Goal:** Verify, audit, document promotion decisions, archive v1.19, remove active requirements, and tag `v1.19`.
-**Depends on:** Phase 130
+**Goal:** Verify, audit, document promotion decisions, archive v1.20, remove active requirements, commit, and tag `v1.20`.
+**Depends on:** Phase 138
 **Requirements:** EXIT-01, EXIT-02, EXIT-03, EXIT-04, EXIT-05
 
 **Success Criteria:**
-1. Developer can inspect v1.19 artifacts for baseline, candidate comparison, hostile probes, candidate evidence, monitors, beta trust, public evidence, signed-in proof, and privacy checks.
+1. Developer can inspect v1.20 artifacts for baseline, candidate decision, executable container evidence, runsc fail-loud evidence, hostile probes, no-fallback drills, timeout budgets, latency measurements, degraded UX, public evidence, signed-in proof, and privacy checks.
 2. Developer can inspect a promotion decision stating Python remains non-counted exhibition beta.
 3. Developer can inspect a promotion decision stating runtime isolation remains readiness evidence unless stronger production-grade proof genuinely passes.
-4. Developer can run final verification across runtime-python, runtime-js/runtime-service, spec/contracts, Go backend, web, topology, boundary monitors, privacy, JS/TS regression, and signed-in browser proof.
-5. Developer can archive requirements/roadmap/phases, remove active `.planning/REQUIREMENTS.md`, update PROJECT/STATE/MILESTONES/RETROSPECTIVE, and tag `v1.19`.
+4. Developer can run final verification across runtime-python, runtime-js/runtime-service, spec/contracts, Go backend, web, topology, boundary monitors, privacy, container candidate evidence, JS/TS regression, and signed-in browser proof.
+5. Developer can archive requirements/roadmap/phases, remove active `.planning/REQUIREMENTS.md`, update PROJECT/STATE/MILESTONES/RETROSPECTIVE, audit cleanly, commit, and tag `v1.20`.
 
 **Plans:** 0 planned
 
 ## Progress
 
-**Execution Order:** Phase 124 -> Phase 125 -> Phase 126 -> Phase 127 -> Phase 128 -> Phase 129 -> Phase 130 -> Phase 131
+**Execution Order:** Phase 132 -> Phase 133 -> Phase 134 -> Phase 135 -> Phase 136 -> Phase 137 -> Phase 138 -> Phase 139
 
 | Phase | Plans Complete | Status | Completed |
 | --- | --- | --- | --- |
-| 124. Isolation Readiness Baseline and Candidate Contract | 1/1 | Complete | 2026-05-25 |
-| 125. Hostile Probe Matrix Expansion | 1/1 | Complete | 2026-05-25 |
-| 126. Candidate Execution Evidence | 1/1 | Complete | 2026-05-25 |
-| 127. Runtime Evidence Monitors and Drift Gates | 1/1 | Complete | 2026-05-25 |
-| 128. Python Exhibition Beta UX Trust | 1/1 | Complete | 2026-05-25 |
-| 129. MatchSet Result and Replay Trust Cues | 1/1 | Complete | 2026-05-25 |
-| 130. Signed-In End-to-End Proof and JS/TS Regression Gate | 1/1 | Complete | 2026-05-25 |
-| 131. Promotion Decision and Archive Gate | 1/1 | Complete | 2026-05-25 |
+| 132. v1.20 Baseline, Candidate Decision, and Budget Contract | 0/0 | Not Started | - |
+| 133. Executable Container Runtime Candidate Lane | 0/0 | Not Started | - |
+| 134. Hostile Probe and No-Fallback Parity Across Subprocess and Container | 0/0 | Not Started | - |
+| 135. Timeout, Latency, and Reliability Budget Model | 0/0 | Not Started | - |
+| 136. Exhibition Execution Stabilization and Retry Semantics | 0/0 | Not Started | - |
+| 137. Degraded-State UX and Public-Safe Reliability Evidence | 0/0 | Not Started | - |
+| 138. Signed-In Reliability Proof and JS/TS Regression Gate | 0/0 | Not Started | - |
+| 139. Promotion Decision, Audit, Archive, and Tag | 0/0 | Not Started | - |
 
 ## Requirement Coverage
 
 | Requirement Group | Phase | Count |
 | --- | --- | ---: |
-| BASE-01 through BASE-05 | Phase 124 | 5 |
-| PROBE-01 through PROBE-07 | Phase 125 | 7 |
-| CAND-01 through CAND-06 | Phase 126 | 6 |
-| MON-01 through MON-06 | Phase 127 | 6 |
-| BETA-01 through BETA-06 | Phase 128 | 6 |
-| EVID-01 through EVID-05 | Phase 129 | 5 |
-| PROOF-01 through PROOF-08 | Phase 130 | 8 |
-| EXIT-01 through EXIT-05 | Phase 131 | 5 |
+| BASE-01 through BASE-05 | Phase 132 | 5 |
+| CAND-01 through CAND-07 | Phase 133 | 7 |
+| PROBE-01 through PROBE-07 | Phase 134 | 7 |
+| BUDGET-01 through BUDGET-07 | Phase 135 | 7 |
+| REL-01 through REL-06 | Phase 136 | 6 |
+| UX-01 through UX-06 | Phase 137 | 6 |
+| PROOF-01 through PROOF-07 | Phase 138 | 7 |
+| EXIT-01 through EXIT-05 | Phase 139 | 5 |
 
-**Coverage:** 48/48 v1.19 requirements mapped.
+**Coverage:** 50/50 v1.20 requirements mapped.
 **Unmapped requirements:** 0.
 
 ## Next Up
 
-v1.19 is complete and archived under `.planning/milestones/`.
+Phase 132: v1.20 Baseline, Candidate Decision, and Budget Contract.
+
+`$gsd-discuss-phase 132`
+
+Also available: `$gsd-plan-phase 132`
 
 ---
-*Created: 2026-05-25 for v1.19 milestone initialization*
+*Created: 2026-05-25 for v1.20 milestone initialization*
