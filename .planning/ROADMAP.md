@@ -48,7 +48,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 
 ## Phases
 
-- [ ] **Phase 132: v1.20 Baseline, Candidate Decision, and Budget Contract** - Lock v1.19 as the baseline, select Docker/container subprocess as the primary executable candidate, keep runsc fail-loud, and define layered timeout/reliability budgets.
+- [x] **Phase 132: v1.20 Baseline, Candidate Decision, and Budget Contract** - Lock v1.19 as the baseline, select Docker/container subprocess as the primary executable candidate, keep runsc fail-loud, and define layered timeout/reliability budgets.
 - [ ] **Phase 133: Executable Container Runtime Candidate Lane** - Make the Docker/container subprocess lane run real candidate evidence and produce honest machine-readable and human-readable artifacts.
 - [ ] **Phase 134: Hostile Probe and No-Fallback Parity Across Subprocess and Container** - Run probe parity and no-fallback drills across hardened subprocess and container lanes where practical, with strict privacy redaction and monitors.
 - [ ] **Phase 135: Timeout, Latency, and Reliability Budget Model** - Document, test, and measure Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
@@ -71,7 +71,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 3. Developer can inspect a timeout/reliability budget contract separating Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
 4. Developer can verify Python remains non-counted exhibition beta and JS/TS remains the counted Strategy path.
 
-**Plans:** 0 planned
+**Plans:** 1 complete
 
 ### Phase 133: Executable Container Runtime Candidate Lane
 
@@ -184,7 +184,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 
 | Phase | Plans Complete | Status | Completed |
 | --- | --- | --- | --- |
-| 132. v1.20 Baseline, Candidate Decision, and Budget Contract | 0/0 | Not Started | - |
+| 132. v1.20 Baseline, Candidate Decision, and Budget Contract | 1/1 | Complete | 2026-05-25 |
 | 133. Executable Container Runtime Candidate Lane | 0/0 | Not Started | - |
 | 134. Hostile Probe and No-Fallback Parity Across Subprocess and Container | 0/0 | Not Started | - |
 | 135. Timeout, Latency, and Reliability Budget Model | 0/0 | Not Started | - |
@@ -211,11 +211,11 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 
 ## Next Up
 
-Phase 132: v1.20 Baseline, Candidate Decision, and Budget Contract.
+Phase 133: Executable Container Runtime Candidate Lane.
 
-`$gsd-plan-phase 132`
+`$gsd-plan-phase 133`
 
-After Phase 132 has a verified plan: `$gsd-execute-phase 132`
+After Phase 133 has a verified plan: `$gsd-execute-phase 133`
 
 ---
 *Created: 2026-05-25 for v1.20 milestone initialization*

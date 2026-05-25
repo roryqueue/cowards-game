@@ -245,10 +245,14 @@ const openApiArtifactPath =
 const goFixtureDir = "apps/go-backend/testdata/service-fixtures"
 const sandboxEvaluationArtifactPath =
   ".planning/artifacts/runtime-sandbox-evaluation.json"
-const v119ReadinessArtifactPath =
-  ".planning/artifacts/v1.19-runtime-isolation-readiness.json"
-const v119ReadinessMarkdownPath =
-  ".planning/artifacts/v1.19-runtime-isolation-readiness.md"
+const v120ReadinessArtifactPath =
+  ".planning/artifacts/v1.20-runtime-sandbox-candidate-readiness.json"
+const v120ReadinessMarkdownPath =
+  ".planning/artifacts/v1.20-runtime-sandbox-candidate-readiness.md"
+const v120BudgetArtifactPath =
+  ".planning/artifacts/v1.20-runtime-reliability-budgets.json"
+const v120BudgetMarkdownPath =
+  ".planning/artifacts/v1.20-runtime-reliability-budgets.md"
 const goPromotionManifestPath =
   ".planning/artifacts/v1.12-route-ownership-manifest.json"
 const v113RouteOwnershipManifestPath =
@@ -2945,24 +2949,39 @@ const checkRuntimeIsolationReadiness = (): string => {
     readinessLanes?: unknown
     noFallbackDrills?: unknown
     candidates?: unknown
-  }>(v119ReadinessArtifactPath)
+  }>(v120ReadinessArtifactPath)
+  const budgets = readJson<{
+    schemaVersion?: unknown
+    deterministicStrategyCapsPreserved?: unknown
+    budgets?: unknown
+  }>(v120BudgetArtifactPath)
   const markdown = readFileSync(
-    path.join(repoRoot, v119ReadinessMarkdownPath),
+    path.join(repoRoot, v120ReadinessMarkdownPath),
+    "utf8",
+  )
+  const budgetMarkdown = readFileSync(
+    path.join(repoRoot, v120BudgetMarkdownPath),
     "utf8",
   )
   assertSandboxEvaluationPublicSafe(report)
   assertRuntimeIsolationReadinessGuardrails(report)
-  if (readiness.schemaVersion !== "v1.19-runtime-isolation-readiness") {
-    throw new Error("v1.19 runtime readiness schema drifted")
+  if (readiness.schemaVersion !== "v1.20-runtime-sandbox-candidate-readiness") {
+    throw new Error("v1.20 runtime candidate readiness schema drifted")
   }
   if (readiness.promotionAllowed !== false) {
-    throw new Error("v1.19 runtime readiness must not promote sandbox status")
+    throw new Error("v1.20 runtime readiness must not promote sandbox status")
+  }
+  if (
+    budgets.schemaVersion !== "v1.20-runtime-reliability-budgets" ||
+    budgets.deterministicStrategyCapsPreserved !== true
+  ) {
+    throw new Error("v1.20 runtime reliability budget schema drifted")
   }
   const lanes = stringArray(
     (readiness.readinessLanes as { id?: unknown }[] | undefined)?.map(
       (lane) => lane.id,
     ) ?? [],
-    "v1.19 readiness lanes",
+    "v1.20 readiness lanes",
   )
   for (const lane of [
     "default-readiness",
@@ -2970,14 +2989,31 @@ const checkRuntimeIsolationReadiness = (): string => {
     "runsc-required",
   ]) {
     if (!lanes.includes(lane)) {
-      throw new Error(`v1.19 readiness missing lane ${lane}`)
+      throw new Error(`v1.20 readiness missing lane ${lane}`)
+    }
+  }
+  const budgetIds = stringArray(
+    (budgets.budgets as { id?: unknown }[] | undefined)?.map(
+      (budget) => budget.id,
+    ) ?? [],
+    "v1.20 runtime reliability budgets",
+  )
+  for (const budget of [
+    "strategy-call",
+    "match-execution",
+    "matchset-job-orchestration",
+    "runtime-service-http",
+    "browser-proof",
+  ]) {
+    if (!budgetIds.includes(budget)) {
+      throw new Error(`v1.20 reliability budgets missing ${budget}`)
     }
   }
   const drills = stringArray(
     (readiness.noFallbackDrills as { id?: unknown }[] | undefined)?.map(
       (drill) => drill.id,
     ) ?? [],
-    "v1.19 no-fallback drills",
+    "v1.20 no-fallback drills",
   )
   for (const drill of [
     "stopped-runtime-service",
@@ -2987,16 +3023,26 @@ const checkRuntimeIsolationReadiness = (): string => {
     "silent-substitution",
   ]) {
     if (!drills.includes(drill)) {
-      throw new Error(`v1.19 readiness missing drill ${drill}`)
+      throw new Error(`v1.20 readiness missing drill ${drill}`)
     }
   }
   for (const required of [
     "No candidate is promoted to production sandbox certification.",
     "Python remains non-counted exhibition beta only.",
     "gVisor/runsc required lane",
+    "Docker/runc container subprocess is the selected executable candidate",
   ]) {
     if (!markdown.includes(required)) {
-      throw new Error(`v1.19 readiness markdown missing ${required}`)
+      throw new Error(`v1.20 readiness markdown missing ${required}`)
+    }
+  }
+  for (const required of [
+    "strategy-call",
+    "runtime-service-http",
+    "browser-proof",
+  ]) {
+    if (!budgetMarkdown.includes(required)) {
+      throw new Error(`v1.20 reliability budget markdown missing ${required}`)
     }
   }
   const container = report.candidates.find(
@@ -3008,14 +3054,14 @@ const checkRuntimeIsolationReadiness = (): string => {
     )
   }
   if (container.status === "passed") {
-    return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked with live container evidence and ${lanes.length} v1.19 readiness lanes`
+    return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked with live container evidence, ${lanes.length} v1.20 readiness lanes, and ${budgetIds.length} reliability budgets`
   }
   if (container.status !== "skipped") {
     throw new Error(
       `container subprocess candidate has unexpected status ${container.status}`,
     )
   }
-  return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked; container evidence remains required before promotion; ${lanes.length} v1.19 readiness lanes checked`
+  return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked; container evidence remains required before promotion; ${lanes.length} v1.20 readiness lanes and ${budgetIds.length} reliability budgets checked`
 }
 
 const checkV119ExhibitionTrustSources = (): string => {

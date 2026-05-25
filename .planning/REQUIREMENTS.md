@@ -8,11 +8,11 @@
 
 ### Baseline, Candidate Decision, And Budget Contract
 
-- [ ] **BASE-01**: Developer can inspect a v1.20 baseline that treats v1.19 as the floor and preserves normal topology: web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementations.
-- [ ] **BASE-02**: Developer can inspect a candidate decision that selects Docker/container subprocess as the primary executable stronger lane because Docker is locally available.
-- [ ] **BASE-03**: Developer can inspect a fail-loud gVisor/runsc decision that records `runsc` as unavailable unless it is genuinely installed and executing probes.
-- [ ] **BASE-04**: Developer can inspect a timeout budget contract separating Strategy call, Match execution, MatchSet/job orchestration, runtime-service HTTP, and browser proof budgets.
-- [ ] **BASE-05**: Developer can verify the milestone excludes Python counted play, arbitrary packages, Python backend ownership, silent fallback, unbounded local stress tests, and production sandbox certification unless evidence genuinely supports it.
+- [x] **BASE-01**: Developer can inspect a v1.20 baseline that treats v1.19 as the floor and preserves normal topology: web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementations.
+- [x] **BASE-02**: Developer can inspect a candidate decision that selects Docker/container subprocess as the primary executable stronger lane because Docker is locally available.
+- [x] **BASE-03**: Developer can inspect a fail-loud gVisor/runsc decision that records `runsc` as unavailable unless it is genuinely installed and executing probes.
+- [x] **BASE-04**: Developer can inspect a timeout budget contract separating Strategy call, Match execution, MatchSet/job orchestration, runtime-service HTTP, and browser proof budgets.
+- [x] **BASE-05**: Developer can verify the milestone excludes Python counted play, arbitrary packages, Python backend ownership, silent fallback, unbounded local stress tests, and production sandbox certification unless evidence genuinely supports it.
 
 ### Executable Container Candidate Lane
 
@@ -109,11 +109,11 @@
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| BASE-01 | Phase 132 | Pending |
-| BASE-02 | Phase 132 | Pending |
-| BASE-03 | Phase 132 | Pending |
-| BASE-04 | Phase 132 | Pending |
-| BASE-05 | Phase 132 | Pending |
+| BASE-01 | Phase 132 | Complete |
+| BASE-02 | Phase 132 | Complete |
+| BASE-03 | Phase 132 | Complete |
+| BASE-04 | Phase 132 | Complete |
+| BASE-05 | Phase 132 | Complete |
 | CAND-01 | Phase 133 | Pending |
 | CAND-02 | Phase 133 | Pending |
 | CAND-03 | Phase 133 | Pending |

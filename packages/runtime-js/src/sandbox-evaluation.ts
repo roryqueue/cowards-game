@@ -9,6 +9,7 @@ import type { RuntimeResult } from "@cowards/engine"
 import { createWorkerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
 import { createSubprocessStrategyExecutionAdapter } from "./subprocess-adapter.js"
 import {
+  DEFAULT_CONTAINER_SUBPROCESS_IMAGE,
   containerSubprocessStrategyExecutionAdapterMetadata,
   createContainerSubprocessStrategyExecutionAdapter,
 } from "./container-subprocess-adapter.js"
@@ -20,8 +21,10 @@ import type {
 import { SubprocessSystemFailure } from "./subprocess-ipc.js"
 import { transpileStrategySource } from "./transpile.js"
 
+export { DEFAULT_CONTAINER_SUBPROCESS_IMAGE } from "./container-subprocess-adapter.js"
+
 export const SANDBOX_EVALUATION_VERSION =
-  "runtime-sandbox-evaluation-v1.19" as const
+  "runtime-sandbox-evaluation-v1.20" as const
 
 const DEFAULT_SANDBOX_PROBE_TIMEOUT_MS = 500
 
@@ -38,6 +41,8 @@ export type SandboxResultKind =
   | "runtimeViolation"
   | "systemFailure"
   | "skipped"
+
+export type SandboxProbeEvidenceKind = "live" | "preflight" | "synthetic"
 
 export type SandboxProbeTaxonomy =
   | "determinism"
@@ -113,6 +118,7 @@ export interface SandboxProbeResult {
   code: string
   publicMessage: string
   passed: boolean
+  evidenceKind: SandboxProbeEvidenceKind
 }
 
 export interface SandboxCandidateEvaluation {
@@ -135,6 +141,9 @@ export interface SandboxCandidateEvaluation {
     passed: number
     failed: number
     skipped: number
+    live: number
+    synthetic: number
+    preflight: number
   }
   tradeoffs: {
     noPromotionDecision: string
@@ -372,7 +381,7 @@ return { activationOrders: [], strategyMemory: {} }
   },
   {
     id: "stdout-cap",
-    label: "output stream cap",
+    label: "console output capability block",
     category: "resource",
     methodName: "selectActivations",
     source: sourceWithSelectBody(`
@@ -386,7 +395,7 @@ return { activationOrders: [], strategyMemory: {} }
   },
   {
     id: "stderr-cap",
-    label: "diagnostic stream cap",
+    label: "console diagnostic capability block",
     category: "resource",
     methodName: "selectActivations",
     source: sourceWithSelectBody(`
@@ -578,7 +587,7 @@ const specAdapter = (id: StrategyRuntimeAdapterId) =>
   STRATEGY_RUNTIME_ADAPTER_REGISTRY.find((candidate) => candidate.id === id)
 
 const noPromotion =
-  "Evaluation-only readiness evidence in v1.19; not promoted to production hostile-code isolation or new counted-play eligibility."
+  "Evaluation-only readiness evidence in v1.20; not promoted to production hostile-code isolation or new counted-play eligibility."
 
 export const RUNTIME_ISOLATION_READINESS: RuntimeIsolationReadiness = {
   status: "evidence_only_not_promoted",
@@ -873,11 +882,16 @@ export const SANDBOX_CANDIDATES: readonly SandboxCandidateDefinition[] = [
     developerErgonomics:
       "Repeatable when Docker and node image are available; otherwise skipped.",
     adapterMetadataImplications:
-      "Production-candidate label stays candidate-only in v1.19.",
+      "Production-candidate label stays candidate-only in v1.20.",
     unresolvedProductionRisks: [
       "Needs image pinning, deployment hardening, abuse review, and kernel/runtime validation.",
     ],
-    createAdapter: () => createContainerSubprocessStrategyExecutionAdapter(),
+    createAdapter: () =>
+      createContainerSubprocessStrategyExecutionAdapter({
+        image:
+          process.env.COWARDS_CONTAINER_SANDBOX_IMAGE ??
+          DEFAULT_CONTAINER_SUBPROCESS_IMAGE,
+      }),
     availability: () => process.env.COWARDS_RUN_CONTAINER_SANDBOX === "1",
   },
   {
@@ -968,7 +982,7 @@ export const SANDBOX_CANDIDATES: readonly SandboxCandidateDefinition[] = [
     deterministicExecutionRisk:
       "Strong isolation does not automatically solve deterministic execution.",
     resourceLimitNotes: "Needs jailer/cgroup/kernel/image lifecycle controls.",
-    developerErgonomics: "Too heavy for default local v1.19 workflow.",
+    developerErgonomics: "Too heavy for default local v1.20 workflow.",
     adapterMetadataImplications:
       "Future production runtime architecture decision.",
     unresolvedProductionRisks: [
@@ -1067,6 +1081,7 @@ const normalizeProbeSuccess = (
       passed:
         probe.expected.kind === "success" &&
         probe.expected.codes.includes(code),
+      evidenceKind: "live",
     }
   }
 
@@ -1085,6 +1100,7 @@ const normalizeProbeSuccess = (
     passed:
       probe.expected.kind === "runtimeViolation" &&
       probe.expected.codes.includes(code),
+    evidenceKind: "live",
   }
 }
 
@@ -1092,6 +1108,7 @@ const syntheticProbeResult = (
   probe: SandboxProbe,
   code: string,
   resultKind: SandboxResultKind,
+  evidenceKind: Exclude<SandboxProbeEvidenceKind, "live"> = "synthetic",
 ): SandboxProbeResult => ({
   probeId: probe.id,
   label: probe.label,
@@ -1105,6 +1122,7 @@ const syntheticProbeResult = (
       : `Runtime violation: ${code}`,
   passed:
     probe.expected.kind === resultKind && probe.expected.codes.includes(code),
+  evidenceKind,
 })
 
 export interface SandboxEvaluationOptions {
@@ -1156,10 +1174,16 @@ const executeProbe = (
       passed:
         probe.expected.kind === "runtimeViolation" &&
         probe.expected.codes.includes(code),
+      evidenceKind: "live",
     }
   } catch (error) {
     if (error instanceof Error && error.message === "SOURCE_TOO_LARGE") {
-      return syntheticProbeResult(probe, "SOURCE_TOO_LARGE", "runtimeViolation")
+      return syntheticProbeResult(
+        probe,
+        "SOURCE_TOO_LARGE",
+        "runtimeViolation",
+        "preflight",
+      )
     }
     const code =
       error instanceof SubprocessSystemFailure ? error.code : "SYSTEM_FAILURE"
@@ -1174,6 +1198,7 @@ const executeProbe = (
       passed:
         probe.expected.kind === "systemFailure" &&
         probe.expected.codes.includes(code),
+      evidenceKind: "live",
     }
   }
 }
@@ -1187,6 +1212,7 @@ const skippedProbe = (probe: SandboxProbe): SandboxProbeResult => ({
   code: "SKIPPED",
   publicMessage: "Probe skipped for this candidate.",
   passed: true,
+  evidenceKind: "synthetic",
 })
 
 const candidateMetadata = (candidate: SandboxCandidateDefinition) => {
@@ -1221,6 +1247,13 @@ export const evaluateSandboxCandidate = (
   const skipped = probes.filter(
     (probe) => probe.resultKind === "skipped",
   ).length
+  const live = probes.filter((probe) => probe.evidenceKind === "live").length
+  const synthetic = probes.filter(
+    (probe) => probe.evidenceKind === "synthetic",
+  ).length
+  const preflight = probes.filter(
+    (probe) => probe.evidenceKind === "preflight",
+  ).length
 
   return {
     id: candidate.id,
@@ -1242,7 +1275,7 @@ export const evaluateSandboxCandidate = (
         }),
     metadata: {
       isolationBoundary:
-        metadata?.isolationBoundary ?? "No executable adapter in v1.19.",
+        metadata?.isolationBoundary ?? "No executable adapter in v1.20.",
       runtimeControls: metadata?.runtimeControls ?? null,
     },
     ...(candidate.mode === "optional-executable" && !shouldRun
@@ -1253,6 +1286,9 @@ export const evaluateSandboxCandidate = (
       passed: probes.length - failed - skipped,
       failed,
       skipped,
+      live,
+      synthetic,
+      preflight,
     },
     tradeoffs: {
       noPromotionDecision: candidate.noPromotionDecision,

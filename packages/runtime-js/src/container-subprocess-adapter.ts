@@ -38,6 +38,8 @@ export interface ContainerSubprocessStrategyExecutionAdapterOptions {
   pidsLimit?: number | undefined
 }
 
+export const DEFAULT_CONTAINER_SUBPROCESS_IMAGE = "node:24-alpine" as const
+
 export const containerSubprocessStrategyExecutionAdapterMetadata: StrategyExecutionAdapterMetadata =
   {
     id: "container-subprocess",
@@ -142,7 +144,7 @@ export const createContainerSubprocessStrategyExecutionAdapter = (
 ): StrategyExecutionAdapter => {
   const spawn = options.spawnSync ?? spawnSync
   const dockerPath = options.dockerPath ?? "docker"
-  const image = options.image ?? "node:24-alpine"
+  const image = options.image ?? DEFAULT_CONTAINER_SUBPROCESS_IMAGE
   assertSafeDockerImage(image)
   const harnessSource = options.harnessSource ?? SUBPROCESS_HARNESS_SOURCE
   const stderrBytes = options.stderrBytes ?? SUBPROCESS_STDERR_BYTES

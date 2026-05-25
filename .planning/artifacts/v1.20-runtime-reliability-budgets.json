@@ -1,0 +1,48 @@
+{
+  "budgetPolicy": "Outer runtime-service, job, MatchSet, and browser proof budgets may be tuned from evidence; deterministic per-Strategy caps remain unchanged.",
+  "budgets": [
+    {
+      "adjustableInV120": false,
+      "defaultBudgetMs": 500,
+      "evidence": "Uses existing deterministic per-call runtime timeout/cap behavior; not loosened for Python exhibition latency.",
+      "id": "strategy-call",
+      "owner": "runtime-service adapter",
+      "scope": "Single Strategy method call inside the selected runtime implementation."
+    },
+    {
+      "adjustableInV120": true,
+      "defaultBudgetMs": 90000,
+      "evidence": "v1.19 proved whole-Match Python exhibitions need a larger outer HTTP budget than individual Strategy calls.",
+      "id": "match-execution",
+      "owner": "Go Match lifecycle plus runtime-service",
+      "scope": "Whole Match execution through runtime-service, including repeated Strategy calls."
+    },
+    {
+      "adjustableInV120": true,
+      "defaultBudgetMs": 180000,
+      "evidence": "Used to distinguish queued/running/slow/degraded states from runtime Strategy violations.",
+      "id": "matchset-job-orchestration",
+      "owner": "Go job lifecycle",
+      "scope": "Bounded local proof window for MatchSet jobs, retries, status refresh, and replay availability."
+    },
+    {
+      "adjustableInV120": true,
+      "defaultBudgetMs": 90000,
+      "evidence": "Backed by COWARDS_RUNTIME_SERVICE_HTTP_TIMEOUT_MS and classified as retryable system failure on timeout.",
+      "id": "runtime-service-http",
+      "owner": "Go runtime service client",
+      "scope": "HTTP request from Go backend to runtime-service for one Match."
+    },
+    {
+      "adjustableInV120": true,
+      "defaultBudgetMs": 360000,
+      "evidence": "v1.20 proof remains bounded to three cycles and is not a stress test.",
+      "id": "browser-proof",
+      "owner": "Playwright proof",
+      "scope": "Bounded signed-in browser proof covering account, revisions, exhibitions, result, and replay pages."
+    }
+  ],
+  "deterministicStrategyCapsPreserved": true,
+  "generatedAt": "2026-05-25T00:00:00.000Z",
+  "schemaVersion": "v1.20-runtime-reliability-budgets"
+}
