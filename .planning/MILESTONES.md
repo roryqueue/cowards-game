@@ -1,16 +1,18 @@
 # Milestones
 
-## v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof (Active)
+## v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof (Shipped: 2026-05-25)
 
-**Status:** In progress - phases 132-138 complete 2026-05-25
+**Status:** Shipped 2026-05-25
 **Phases:** 8
 **Phase range:** 132-139
-**Plans:** 7/7 complete
+**Plans:** 8/8 complete
 **Discussion Context:** Phases 132-139 ready for planning
-**Requirements:** 50/50 mapped
+**Requirements:** 50/50 complete
 **Research:** .planning/research/v1.20-SUMMARY.md
-**Roadmap:** .planning/ROADMAP.md
+**Roadmap:** .planning/milestones/v1.20-ROADMAP.md
 **Decision baseline:** Docker/container subprocess is the primary executable stronger runtime candidate lane; gVisor/runsc remains fail-loud unless genuinely available and executable.
+**Audit:** .planning/milestones/v1.20-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.20-ROADMAP.md, .planning/milestones/v1.20-REQUIREMENTS.md, .planning/milestones/v1.20-phases/
 
 **Goal:** Make one stronger runtime isolation candidate executable and honestly testable while improving Python non-counted exhibition beta reliability, latency, timeout behavior, degraded-state UX, and signed-in proof evidence.
 
@@ -24,6 +26,16 @@
 - Stabilize Python exhibition reliability where practical while preserving deterministic per-Strategy caps and schema validation.
 - Improve slow/running/degraded/timeout/failed UX and public-safe evidence.
 - Run a realistic signed-in proof with one JS/TS revision, two Python revisions, mixed and Python-vs-Python exhibitions, result/replay evidence, private-data safety, no-fallback checks, candidate lane evidence, and JS/TS regression safety.
+
+### Delivered
+
+- Docker/container subprocess strict evidence passed locally with the `node:24-alpine` container lane.
+- Hostile probes and no-fallback drills cover subprocess plus container candidate evidence where practical.
+- Runtime reliability budgets are documented and monitored without loosening deterministic per-Strategy caps.
+- Public MatchSet/replay evidence explains running, slow, degraded, timeout, strategy-failed, and system-failed states with privacy-safe copy.
+- Signed-in proof completed three bounded cycles with one JS/TS and two Python revisions per cycle, mixed JS/TS-vs-Python and Python-vs-Python exhibitions, result/replay evidence, and private-marker scans.
+- Go job lease now aligns with the runtime-service HTTP timeout plus grace, fixing a proof-discovered Python-vs-Python reliability issue.
+- Python remains non-counted exhibition beta only; runtime isolation remains readiness evidence only.
 
 ### Active Constraints
 

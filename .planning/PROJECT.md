@@ -2,18 +2,18 @@
 
 ## Current State
 
-**Shipped version:** v1.19 Runtime Isolation Readiness and Exhibition Beta Trust on 2026-05-25
-**Current milestone:** v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof.
-**Status:** v1.20 planning initialized; requirements and roadmap active.
-**Last audit:** v1.19 audit passed with Python kept as non-counted exhibition beta and runtime isolation kept as readiness evidence only.
+**Shipped version:** v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof on 2026-05-25
+**Current milestone:** None. Ready for next milestone planning.
+**Status:** v1.20 shipped, archived, and tagged.
+**Last audit:** v1.20 audit passed with Python kept as non-counted exhibition beta and runtime isolation kept as readiness evidence only.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. v1.20 aims to make one stronger runtime isolation candidate executable and honestly testable while making Python non-counted exhibition beta reliability, latency, timeout behavior, degraded-state UX, and proof evidence realistic enough for repeated signed-in use.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. v1.20 made one stronger runtime isolation candidate executable and honestly testable while improving Python non-counted exhibition beta reliability, timeout behavior, degraded-state UX, and repeated signed-in proof evidence.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
+## Latest Shipped Milestone: v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
 
 **Goal:** Make the Docker/container subprocess runtime candidate executable and honestly testable while improving Python non-counted exhibition beta reliability, latency, timeout behavior, degraded-state UX, and signed-in proof evidence.
 
@@ -29,7 +29,9 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 **Key context:** v1.20 starts from the v1.19 proof. Python is already non-counted exhibition beta, JS/TS remains the counted Strategy path, Go owns orchestration and public evidence, and hostile Strategy execution remains only behind schema-validated ABI envelopes and registered runtime implementations. Docker/container evidence may become a stronger executable candidate lane, but this milestone must not overclaim production sandbox certification.
 
-## Latest Shipped Milestone: v1.19 Runtime Isolation Readiness and Exhibition Beta Trust
+**Implemented:** v1.20 adds strict executable Docker/container subprocess evidence, hostile probe/no-fallback parity, v1.20 reliability budget artifacts, public-safe degraded-state evidence panels, a three-cycle signed-in reliability proof, and a final promotion decision that keeps Python non-counted and runtime isolation readiness-only. The live proof caught and fixed a practical Go job lease bug: the previous lease was shorter than the runtime-service HTTP budget, so long Python-vs-Python Matches could degrade after lease expiry.
+
+## Previous Shipped Milestone: v1.19 Runtime Isolation Readiness and Exhibition Beta Trust
 
 **Goal:** Strengthen runtime isolation readiness evidence while making Python non-counted exhibition beta clearer, safer, and more trustworthy for signed-in users.
 **Decision:** `keep-python-non-counted-exhibition-beta-runtime-isolation-readiness-only`

@@ -1,5 +1,45 @@
 # Retrospective
 
+## Milestone: v1.20 — Runtime Sandbox Candidate and Exhibition Reliability Proof
+
+**Shipped:** 2026-05-25
+**Phases:** 8 | **Plans:** 8
+
+### What Was Built
+
+- v1.20-specific runtime sandbox readiness, hostile probe/no-fallback, reliability budget, retry semantics, signed-in proof, and promotion decision artifacts.
+- An executable Docker/runc `container-subprocess` candidate evidence lane with strict fail-loud behavior when required evidence is unavailable or substituted.
+- Hostile probe and no-fallback parity across hardened subprocess and container lanes where practical, with privacy-redacted artifacts and monitor drift gates.
+- Reliability budgets for Strategy calls, whole Matches, MatchSet/job orchestration, runtime-service HTTP, and browser proof runs.
+- Public-safe MatchSet and replay evidence copy for queued/running/slow, complete, degraded, timeout, strategy-failed, system-failed, blocked, invalid-result, and no-result states.
+- A three-cycle signed-in proof that creates account-owned JS/TS and Python revisions, executes mixed JS/TS-vs-Python and Python-vs-Python non-counted exhibitions, opens result/replay evidence, scans public pages for private markers, and records observed timings.
+
+### What Worked
+
+- The stricter signed-in proof caught a real backend reliability issue: Go's job lease was shorter than the runtime-service HTTP budget. Aligning the lease with the runtime budget fixed Python-vs-Python degradation without loosening per-Strategy caps.
+- Keeping candidate evidence in v1.20-specific artifacts made it possible to preserve v1.19 as an archived baseline while still advancing the sandbox story.
+- Enhancing existing evidence panels kept the UX compact and helped avoid new privacy surfaces.
+- The fail-loud `runsc` lane stayed honest: unavailable host runtime means non-promotion, not a hidden pass.
+
+### What Was Inefficient
+
+- The proof needed several iterations because creation-time MatchSet status, replay-visible partial completion, active duplicate exhibition guardrails, and job lease expiry were all different failure shapes.
+- Python-vs-Python exhibition proof is still slow enough that browser proof budgets need to be explicit and generous.
+- Planning artifacts still had to be maintained manually because the local `gsd-sdk query` interface was unavailable.
+
+### Patterns Established
+
+- Signed-in proof artifacts should record observed terminal public DTO status, not only creation responses.
+- Runtime-service HTTP, Match job lease, MatchSet orchestration, and browser proof budgets must be aligned as separate layers.
+- Stronger sandbox candidate evidence should state what it proves, what it does not prove, and what would be required for production promotion.
+- Public evidence should describe categories and limits without raw diagnostics or private runtime internals.
+
+### Key Lessons
+
+- Realistic reliability proof is a bug finder, not just a checkbox. The most important v1.20 fix came from a live Python-vs-Python proof.
+- A container lane can be valuable readiness evidence while still falling short of production sandbox certification.
+- Bounded repeated proof gives better signal than a single happy path, but must respect product guardrails like duplicate exhibition prevention.
+
 ## Milestone: v1.19 — Runtime Isolation Readiness and Exhibition Beta Trust
 
 **Shipped:** 2026-05-25

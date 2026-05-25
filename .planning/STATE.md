@@ -2,43 +2,43 @@
 gsd_state_version: 1.0
 milestone: v1.20
 milestone_name: Runtime Sandbox Candidate and Exhibition Reliability Proof
-status: in_progress
-stopped_at: phase 138 complete
+status: complete
+stopped_at: milestone archived
 last_updated: "2026-05-25T00:00:00.000-04:00"
-last_activity: 2026-05-25 - Completed v1.20 Phase 138 signed-in reliability proof and JS/TS regression gate
+last_activity: 2026-05-25 - Completed, audited, archived, committed, and tagged v1.20
 progress:
   total_phases: 8
-  completed_phases: 7
-  total_plans: 7
-  completed_plans: 7
-  percent: 88
+  completed_phases: 8
+  total_plans: 8
+  completed_plans: 8
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.20 in progress
+**Status:** v1.20 complete
 
 ## Project Reference
 
 See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Latest shipped milestone:** v1.19 Runtime Isolation Readiness and Exhibition Beta Trust
-**Active milestone:** v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
-**Requirements:** `.planning/REQUIREMENTS.md`
+**Latest shipped milestone:** v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
+**Active milestone:** None
+**Requirements:** archived at `.planning/milestones/v1.20-REQUIREMENTS.md`
 **Roadmap:** `.planning/ROADMAP.md`
 
 ## Current Position
 
-Phase: 138 complete (Phase 139 next)
-Plan: 138-PLAN.md complete
-Status: Ready to plan Phase 139
-Last activity: 2026-05-25 - Phase 138 signed-in reliability proof and JS/TS regression gate completed
+Phase: v1.20 complete
+Plan: all v1.20 plans complete
+Status: Ready for next milestone
+Last activity: 2026-05-25 - v1.20 promotion decision, audit, archive, and tag completed
 
-## Current Milestone Goal
+## Completed Milestone Goal
 
-v1.20 combines two next frontiers from v1.19: make one stronger runtime isolation candidate executable and honestly testable, and make Python non-counted exhibition beta reliability, latency, timeout behavior, degraded-state UX, and proof evidence realistic enough for repeated signed-in use.
+v1.20 combined two next frontiers from v1.19: making one stronger runtime isolation candidate executable and honestly testable, and making Python non-counted exhibition beta reliability, latency, timeout behavior, degraded-state UX, and proof evidence realistic enough for repeated signed-in use.
 
 The selected primary stronger candidate lane is Docker/container subprocess because Docker is locally available and the repo already has a `container-subprocess` adapter. gVisor/runsc remains a strict fail-loud lane unless `runsc` becomes genuinely available and executable in the local environment.
 
@@ -78,4 +78,4 @@ The v1.19 proof also found and fixed two reliability/privacy gaps: runtime-servi
 
 ## Operator Next Steps
 
-Plan Phase 139 with `$gsd-plan-phase 139`, then execute promotion decision, audit, archive, and tag with `$gsd-execute-phase 139`.
+Start a fresh milestone with `$gsd-new-milestone`. Active `.planning/REQUIREMENTS.md` is intentionally absent after v1.20 closure.
