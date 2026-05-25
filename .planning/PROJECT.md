@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening on 2026-05-25
-**Current milestone:** None active. v1.22 archived; next milestone requirements should be created fresh.
-**Status:** v1.22 complete and ready for the next milestone.
+**Current milestone:** v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
+**Status:** Planning active. v1.23 will attempt non-counted exhibition beta promotion for Rust and/or Zig only if signed-in multi-compiler proof, runtime hardening evidence, Zig ergonomics, ABI evidence, privacy, and no-fallback gates pass.
 **Last audit:** v1.22 audit passed with Zig exposed only as non-counted exhibition alpha after compile/runtime/ABI proof and WASM/WASI kept as runtime-candidate hardening evidence only.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI runtime-candidate lanes for non-counted exhibition alpha, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
@@ -12,6 +12,20 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
+
+**Goal:** Attempt to promote Rust and Zig from non-counted exhibition alpha to non-counted exhibition beta, gated by real signed-in multi-compiler proof, runtime hardening evidence, Zig ergonomics, ABI evidence, and conservative promotion decisions.
+
+**Target features:**
+- Establish the v1.22 floor: JS/TS remains counted, Python remains non-counted exhibition beta, Rust/Zig remain non-counted exhibition alpha until v1.23 gates pass, Go owns orchestration and promotion decisions, and runtime-service owns hostile Strategy execution only behind schema-validated ABI envelopes.
+- Define beta criteria and regression gates for Rust/Zig WASM/WASI that require immutable artifact execution, runtime hardening evidence, public-safe diagnostics, replay plausibility, privacy checks, and no silent fallback.
+- Improve Zig ergonomics through safe helper or starter layers only when capability audits prove the resulting WASI imports stay inside the allowed lane.
+- Harden Rust/Zig beta readiness with multi-compiler runtime probes, artifact compatibility evidence, rollback clarity, and boundary monitors.
+- Spike ABI options across Preview 1 stdin/stdout JSON, direct exports, and component model/WIT without changing the execution ABI unless evidence genuinely supports a future migration.
+- Run signed-in non-counted exhibitions for JS/TS-vs-Rust, Rust-vs-Rust, Rust-vs-Zig, and Zig-vs-Zig, then open MatchSet result and replay pages for public-safe evidence.
+- Review Workshop, exhibition, result, and replay labels so any beta language is clearly non-counted exhibition beta and private Strategy source, memory, objective payloads, and runtime internals stay hidden by default.
+- Close with an explicit split-capable promotion decision: Rust beta / Zig alpha, both beta, neither beta, or both remain alpha.
 
 ## Latest Shipped Milestone: v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening
 
@@ -550,6 +564,8 @@ Planning archives live under `.planning/milestones/`:
 | Separate timeout budgets by layer | v1.19 showed whole-Match service timeout is different from per-Strategy caps; v1.20 made Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets explicit. | ✓ Implemented in v1.20 |
 | Use WASI Preview 1 for the first immutable WASM Strategy proof | v1.21 preferred the simplest executable multi-language path: WASI Preview 1 stdin/stdout JSON envelopes through Wasmtime, with direct exports and component model documented as future evolution rather than forced into the first proof. | ✓ Implemented in v1.21 |
 | Treat Rust WASM as exhibition alpha until proof matures | Rust can prove the immutable WASM artifact direction, but counted/ranked/ladder promotion requires separate sandbox, determinism, toolchain, artifact, replay, privacy, rollback, abuse, and operational evidence. | — Pending |
+| Treat Rust/Zig beta as non-counted exhibition beta only | v1.23 may improve the product label for Rust and/or Zig, but any promotion must remain outside counted, ranked, ladder, gauntlet, broad production multi-language, and production sandbox claims. | — Pending |
+| Keep ABI evolution evidence separate from execution-path promotion | Direct exports and component model/WIT are important candidates, but v1.23 should not silently replace the Preview 1 stdin/stdout JSON runtime path without deterministic memory ownership, schema validation, resource caps, parity, and rollback evidence. | — Pending |
 
 ## Constraints
 
@@ -570,4 +586,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-25 after completing v1.21 milestone*
+*Last updated: 2026-05-25 after starting v1.23 milestone*
