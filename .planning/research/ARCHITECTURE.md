@@ -1,53 +1,55 @@
-# Architecture Research: v1.15 Go Backend Ownership Completion
+# Architecture Research: v1.17 Python Strategy Runtime Pilot
 
 **Project:** Coward's Game
-**Milestone:** v1.15 Go Backend Ownership Completion
+**Milestone:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
 **Researched:** 2026-05-24
 
-## Proposed Ownership Flow
+## Existing Baseline
 
-`Web frontend -> Go backend -> TypeScript runtime execution service -> Go persistence -> Go public evidence`
+v1.16 promoted the normal topology:
 
-Go should own normal backend lifecycle and persistence-facing behavior. TypeScript should remain:
+```text
+web frontend -> Go backend -> isolated JS/TS Strategy runtime service
+```
 
-- frontend implementation,
-- service/parity oracle where needed,
-- isolated JS/TS Strategy runtime worker/service behind `strategy-runtime-abi-v1.14`.
+TypeScript remains accepted only as frontend, isolated JS/TS runtime service, runtime adapter support, parity/test/fixture/rollback support, quarantined lifecycle code, or explicitly deferred product surfaces. Go owns normal backend orchestration, persistence-facing API behavior, Match lifecycle, Chronicle persistence handoff, MatchSet scoring/status refresh, and selected public evidence delivery.
 
-The key architectural move is to prevent the TypeScript worker from owning normal DB claim/completion writes while still letting the TypeScript runtime execute hostile Strategy code outside Go and web/API.
+## Target v1.17 Shape
 
-## Integration Contracts
+```text
+web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation
+                                                              |-> JS/TS runtime implementation
+                                                              |-> Python experimental implementation
+```
 
-- **Route ownership manifest v1.15:** add lifecycle surfaces for job claim/lease, Match completion, Chronicle persistence, MatchSet scoring completion, runtime execution handoff, public evidence, rollback, and no-fallback behavior.
-- **Internal execution contract:** versioned Go-to-TypeScript request/response envelope. Request includes Match id, seed, arena, bottom/top player ids, source/hash/bytes/runtime metadata, and runtime adapter selection. Response includes Chronicle, final-state completion fields, runtime/system failure taxonomy, and redacted diagnostics.
-- **Go persistence contracts:** port or mirror `claimNextMatchJob`, `recordAttemptFailure`, `completeMatch`, `deriveMatchCompletionFields`, `createChronicleMetadata`, `scoreMatchSet`, and `refreshMatchSetStatus` with TypeScript parity fixtures.
-- **Public evidence contract:** Go public outputs must use spec-owned schemas and public privacy checks. Raw Chronicle/private projection output must not be exposed by default.
+The Runtime Broker may still be implemented inside the existing runtime service process during v1.17, but the contract should be concrete enough that a future broker can front or replace it without changing Go orchestration, persistence, scoring, or public evidence semantics.
+
+## New Or Modified Components
+
+- Runtime registry artifact: machine-readable registry for JS/TS and Python implementations.
+- Broker contract metadata: interface, health, selection, versioning, authority, package policy, and failure taxonomy.
+- Strategy artifact schemas: source format expands beyond JS/TS and includes Python compile/package/eligibility metadata.
+- Python validation path: parse/compile/policy checks with public-safe diagnostics.
+- Python runtime implementation: hardened experimental subprocess host behind the runtime ABI.
+- Runtime service selector: chooses JS/TS or Python implementation from runtime metadata and registry.
+- Go client hardening: accepts Python metadata only through schemas and rejects counted/ranked eligibility.
+- Workshop proof path: Python Starter Strategy and non-counted MatchSet/replay proof.
+- Monitors/topology: fail on registry drift, ABI drift, Python execution outside runtime boundary, backend ownership creep, leaks, and premature counted eligibility.
 
 ## Build Order
 
-1. Baseline v1.15 ownership and freeze non-goals.
-2. Implement Go job lifecycle primitives with TypeScript parity tests.
-3. Build the TypeScript stateless execution service while preserving the v1.14 runtime ABI.
-4. Wire Go orchestration to claim jobs, call execution, persist Chronicles, and complete Matches transactionally.
-5. Port MatchSet scoring/status completion to Go.
-6. Cut public evidence/replay-facing web paths to Go-owned contracts where practical.
-7. Add topology, monitor, privacy, board realism, stopped-service, no-fallback, and rollback evidence.
+1. Baseline and broker/registry contract.
+2. Artifact metadata and eligibility.
+3. Python submission validation.
+4. Python runtime execution behind ABI.
+5. Go non-counted orchestration and eligibility.
+6. Workshop Starter Strategy and replay proof.
+7. Final monitors, topology, privacy, and promotion gate.
 
-## Rollback And No-Fallback Shape
+## Boundary Rules
 
-- Use explicit owner switches such as `COWARDS_MATCH_ORCHESTRATOR_OWNER=go|typescript`.
-- Do not run Go and TypeScript DB-claiming workers against the same normal queue.
-- When Go is selected, TypeScript DB persistence fallback is an error, not a hidden rescue path.
-- Runtime service outage is recorded by Go as retryable system failure or failed system after exhaustion.
-- Runtime violations remain gameplay results in valid Chronicles, not system failures.
-- Rollback should stop the Go orchestrator, switch ownership back to TypeScript, and start the legacy TS worker deliberately.
-
-## Likely Phase Boundaries
-
-1. Boundary baseline and contracts.
-2. Go job lifecycle primitives.
-3. TypeScript stateless execution service.
-4. Go Match orchestration and Chronicle persistence.
-5. Go MatchSet scoring completion.
-6. Go public evidence delivery and web cutover.
-7. Promotion, topology, monitors, no-fallback, and rollback gate.
+- Runtime implementation may execute Strategy code only behind the runtime ABI.
+- Go may orchestrate and validate metadata, but not execute Strategy source.
+- Web/API may author, submit, and display safe metadata, but not execute Strategy source.
+- Public outputs must be projections, not runtime internals.
+- Python failures must be visible as classified runtime/system failures, not masked by fallback.

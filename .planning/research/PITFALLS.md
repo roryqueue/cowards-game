@@ -1,46 +1,59 @@
-# Pitfalls Research: v1.15 Go Backend Ownership Completion
+# Pitfalls Research: v1.17 Python Strategy Runtime Pilot
 
 **Project:** Coward's Game
-**Milestone:** v1.15 Go Backend Ownership Completion
+**Milestone:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
 **Researched:** 2026-05-24
 
-## Likely Mistakes
+## Common Pitfalls
 
-- Promoting `createMatchSet` without promoting downstream lifecycle ownership. v1.14 made Go own exhibition creation, but still deferred job claiming, Match execution, Chronicle generation, and runtime failure classification.
-- Imperfect job semantics port. Go must preserve `FOR UPDATE SKIP LOCKED`, lease tokens, attempt numbering, expired-running reclaim, retry exhaustion, and Match/job status updates.
-- Breaking idempotent completion. Duplicate completion should be accepted only when the Match is already complete and an existing Chronicle row exists.
-- Scoring drift. Go must match TypeScript behavior for degraded/system failure, strategy failure penalties, W-L-D, survivor/survival-turn tie-breakers, and stable ordering.
-- Treating Go orchestration as permission to execute Strategy source. Go is a coordinator and persistence owner, not a hostile-code host.
-- Returning raw Chronicles or private replay data as public evidence.
-- Relabeling worker-thread/subprocess runtime evidence as production sandbox promotion.
-- Allowing silent TypeScript backend fallback to hide Go lifecycle failure.
+### Treating Python Subprocess As A Sandbox
 
-## Privacy And Determinism Hazards
+Subprocess execution, timeout APIs, and Python isolated/safe-path flags are useful hardening tools, but they are not a production hostile-code sandbox. v1.17 should keep Python experimental and non-counted.
 
-- Public/service/Go/topology/monitor output must omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, and private runtime internals.
-- Runtime ABI handoff must preserve original revision source/hash metadata and must not trust transpiled executable source as the only identity input.
-- Go may use time/randomness for sessions, leases, ids, and submission events, but never for engine outcomes, Chronicle content hashes, scoring inputs, or replay reconstruction.
-- Board realism checks must remain part of any replay or Match creation change.
+**Prevention:** Mark Python runtime isolation promotion state as evidence-only; keep production sandbox promotion out of scope; add monitors that fail if Python claims counted eligibility.
 
-## Rollback Hazards
+### Building Python Directly Into Go Or Web
 
-- Mixed Go and TypeScript DB workers can double-claim or double-complete jobs.
-- Partial rollback can strand `running` jobs, expired leases, incomplete Chronicles, and MatchSets stuck `running`.
-- A stopped TypeScript runtime service should produce explicit Go-owned retry/system-failure behavior, not TypeScript persistence fallback.
-- A stopped Go backend should make selected web workflows fail closed without switching to TypeScript service internals.
+Python validation or execution inside Go or Next.js would violate the v1.16 boundary and make hostile code easier to route around the broker.
 
-## Evidence Gaps To Close
+**Prevention:** Require validation to be parse/compile/policy only where run outside runtime; execute Strategy methods only inside runtime implementation; add source import/execution monitors.
 
-- Add lifecycle topology evidence: create MatchSet through Go, claim/execute through runtime boundary, persist Chronicle, refresh scoring, render public MatchSet and replay.
-- Add monitor coverage for Go job SQL semantics, lease expiry, retry exhaustion, lifecycle manifest drift, MatchSet scoring parity, runtime ABI drift, and no-fallback behavior.
-- Add Go DB-backed integration tests for queue claim, expired lease reclaim, completion idempotency, Chronicle uniqueness, scoring completion, and stopped-runtime classification.
+### Letting Runtime Service Become A Backend
 
-## Prevention By Phase
+A language runtime can accidentally gain backend authority by reading DB state, claiming jobs, persisting Chronicles, refreshing scoring, or serving public evidence.
 
-1. Baseline ownership and non-goals before implementation.
-2. Port job lifecycle semantics with parity tests before orchestration.
-3. Build runtime execution service as stateless/persistence-free before Go invokes it.
-4. Persist only validated Chronicles and enforce idempotency.
-5. Port scoring with golden parity before public standings depend on Go.
-6. Serve public evidence only through privacy and board-realism gates.
-7. Require live topology, stopped-service, rollback, privacy, and monitor evidence before promotion.
+**Prevention:** Carry v1.16 authority policy forward; extend runtime registry and topology monitors; reject filesystem/network/database/job/route imports from runtime implementations.
+
+### Silent Fallback
+
+If Python fails and the system falls back to JS/TS, TypeScript backend, or Go execution, evidence becomes untrustworthy.
+
+**Prevention:** Fail closed on stopped runtime, unknown adapter, unsupported artifact, ABI drift, malformed response, and registry mismatch.
+
+### Privacy Leaks In Diagnostics
+
+Python exceptions often contain stack frames, file paths, stderr, source snippets, package paths, and environment hints.
+
+**Prevention:** Redact diagnostics by default and scan public outputs for source, memories, objectives, owner debug, stack, stderr, paths, tokens, DB DSNs, package paths, and runtime internals.
+
+### Premature Product Promotion
+
+A public language picker or counted eligibility label could imply Python is production-supported.
+
+**Prevention:** Use experimental/non-counted labels; scope proof to Workshop or exhibition-style MatchSets; keep ranked/ladder gates closed.
+
+### Artifact Identity Drift
+
+If language/runtime/package/compile metadata is not in hashes and compatibility keys, Python and JS/TS artifacts may compare incorrectly.
+
+**Prevention:** Include behavior-significant metadata in immutable artifact hashes and runtime compatibility keys.
+
+## Phase Placement
+
+- Pitfalls around broker drift belong in Phase 110.
+- Artifact identity pitfalls belong in Phase 111.
+- Validation and diagnostics pitfalls belong in Phase 112.
+- Execution and sandbox pitfalls belong in Phase 113.
+- Counted eligibility and fallback pitfalls belong in Phase 114.
+- User proof and replay realism pitfalls belong in Phase 115.
+- Cross-cutting monitor/privacy pitfalls belong in Phase 116.

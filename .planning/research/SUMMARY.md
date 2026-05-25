@@ -1,68 +1,61 @@
 # Project Research Summary
 
 **Project:** Coward's Game
-**Milestone:** v1.16 Runtime Isolation and TypeScript Backend Retirement
-**Domain:** TypeScript backend retirement, isolated JS/TS Strategy runtime service boundary, Go-owned backend topology, no-fallback enforcement
+**Milestone:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
+**Domain:** Runtime Broker contract, experimental Python Strategy runtime, immutable Strategy artifacts, non-counted MatchSet proof, topology and privacy hardening
 **Researched:** 2026-05-24
-**Confidence:** High for repo-local TypeScript surface inventory, v1.15 topology/monitor behavior, and immediate cleanup targets; medium for exact deletion order until Phase 103 rebaselines drift.
+**Confidence:** High for repo-local baseline and required boundary shape; medium for final Python runtime mechanics until Phase 113 validates hostile-code and runtime failure behavior in code.
 
 ## Executive Summary
 
-v1.16 should finish the TypeScript backend retirement started in v1.13-v1.15 by narrowing TypeScript to two legitimate normal roles: frontend code and the isolated JS/TS Strategy runtime service. Go is now the backend baseline for normal orchestration, persistence-facing API behavior, Match lifecycle, Chronicle persistence handoff, MatchSet scoring completion, and public evidence delivery.
+v1.17 should make Python a real experimental end-to-end Strategy language without weakening the v1.16 backend-retirement boundary. The safest path is broker first: define a concrete Strategy Execution Service / Runtime Broker registry contract, harden Strategy artifact metadata, add Python validation, then execute Python only behind the same runtime ABI envelope family that JS/TS uses today.
 
-The remaining risk is not that TypeScript still exists. It is that TypeScript still contains service facades, Next.js API routes, worker entrypoints, and persistence modules that can behave like a backend through direct database access, job claiming, MatchSet creation, Chronicle persistence, lazy scoring refresh, public DTO assembly, or silent fallback. v1.16 should delete, quarantine, or explicitly relabel those paths while preserving JS/TS Strategy execution through `runtime-execution-service-v1.15` and `strategy-runtime-abi-v1.14`.
+The repo already contains `packages/runtime-python`, but it is a method-level spike rather than a full Match runtime-service path. It should be hardened and routed through the runtime service registry, not promoted directly. Python must remain non-counted and non-ranked, with a Workshop or exhibition-style proof point plus replay evidence.
 
 ## Stack Findings
 
-- Keep the existing stack: Next.js frontend, Go backend, PostgreSQL, TypeScript spec/contracts, TypeScript runtime service, runtime-js adapters, and current topology/monitor scripts.
-- Do not add a new runtime language host, broker, queue, sandbox replacement, cloud deployment layer, or service mesh.
-- Keep `apps/runtime-service` as the JS/TS Strategy execution boundary, provided it stays DB-free and owns no normal job lifecycle, persistence, scoring, public API, or fallback behavior.
-- Shape the runtime execution contract as if a language-neutral **Strategy Execution Service** / **Runtime Broker** will front or replace the current TypeScript runtime service soon; broker implementation remains out of v1.16 scope.
-- Require every future language runtime to implement the same JSON/runtime ABI and schema-validated envelopes.
-- Compile, validate, or package Strategy Revision artifacts at submission where practical, then execute immutable artifacts during Matches.
-- Treat WASM/WASI/component-model as a strong long-term unifying path for some languages, especially with deterministic fuel and sandbox guidance, but not as a silver bullet and not through Node `node:wasi` for hostile code.
-- Treat `@cowards/service`, TypeScript persistence lifecycle code, and `apps/worker` as parity, rollback, test, fixture, or deferred surfaces after explicit relabeling.
-- Extend monitors and topology from v1.15 so page smoke and no-TypeScript-backend operation are closure gates, not optional evidence.
+- Keep Next.js, Go, PostgreSQL, TypeScript spec/contracts, and the existing runtime service.
+- Add no new backend, queue, persistence owner, package manager, production sandbox, service mesh, or cloud deployment layer.
+- Promote broker metadata and runtime registry artifacts in `@cowards/spec` before routing Python.
+- Use existing Python subprocess code only as a starting point; treat subprocess and interpreter flags as defense-in-depth, not sandbox promotion.
+- Python official documentation supports separate parse/compile validation and subprocess timeout handling; Python security guidance also points to isolated/safe-path modes such as `-I`, `-P`, and `PYTHONSAFEPATH`, which are hardening knobs rather than a full untrusted-code boundary.
 
-## Surface Inventory Findings
+## Feature Findings
 
-### Clean Runtime-Only Surfaces
+- Table stakes are runtime registry, language/runtime artifact metadata, Python parse/compile/package validation, Python execution through the broker ABI, non-counted Go orchestration, Workshop Starter proof, replay evidence, and strict monitors.
+- A Python Starter Strategy is the right proof point because it exercises authoring, validation, immutable artifact creation, runtime execution, MatchSet status, public labels, and replay projection without claiming ranked readiness.
+- Python eligibility must remain non-counted by default, and counted/ranked paths must fail closed.
 
-- `apps/runtime-service/src/server.ts` exposes `/health` and `/execute-match`, with no DB ownership.
-- `apps/runtime-service/src/execute-match.ts` validates runtime service requests, source hashes/bytes, executes JS/TS Strategy code through runtime-js, and returns internal runtime results.
-- `packages/runtime-js/src/executor.ts` and `packages/runtime-js/src/abi-bridge.ts` remain the JS/TS Strategy execution implementation and ABI bridge.
+## Architecture Findings
 
-### TypeScript Backend Retirement Targets
-
-- `apps/web/app/competitive/server.ts` imports persistence modules for auth, account revisions, competition, ladder, governance, Starter/Advanced artifacts, and `@cowards/service`.
-- `apps/web/app/matches/server.ts` still has direct Chronicle store and persistence-backed replay paths for non-Go public evidence and owner-debug replay.
-- `apps/web/app/workshop/server.ts` imports Workshop and analytics persistence directly.
-- `apps/web/lib/account-service-adapter.ts` and `apps/web/lib/public-service-adapter.ts` retain persistence-backed TypeScript service fallback paths.
-- `apps/worker/src/index.ts` and `apps/worker/src/runner.ts` still provide a DB-owning job claim/completion worker, guarded but present.
-- `packages/persistence/src/jobs.ts`, `complete-match.ts`, `chronicle-store.ts`, `matchset-status.ts`, `match-service.ts`, `matchset-service.ts`, and `competition.ts` retain lifecycle, completion, Chronicle, scoring, and MatchSet creation code that must not be normal backend after v1.15.
-
-### Deferred Or Explicitly Labeled Surfaces
-
-- Workshop validation/test/rerun/profile/export flows remain significant TypeScript-backed product surfaces and should be labeled deferred unless migrated.
-- Ladder scheduling and governance/admin mutations remain deferred unless selected for Go migration.
-- Owner-debug replay may need TypeScript/private Chronicle access until a later Go owner-debug replay migration, but it must stay explicit and private.
-- Test-support routes and fixture generators should remain test/parity-only and fail outside test environments.
+- v1.17 target topology is `web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation`.
+- The broker may initially live inside the current runtime service process, but the interface should be concrete enough to front or replace current implementation later.
+- Runtime implementation selection should be data-driven by registry metadata and schema-validated runtime metadata, not hard-coded to JS/TS.
+- Go remains orchestration owner; runtime service remains execution owner; public replay/evidence remains a Go/public projection concern.
 
 ## Watch Out For
 
-- Do not execute Strategy code in Go or web/API processes.
-- Do not use Node `vm` as a security boundary.
-- Do not remove JS/TS Strategy support; keep it only inside the isolated runtime service boundary.
-- Do not let the runtime service become a backend by claiming jobs, writing Chronicles, refreshing scoring, serving public evidence, or accessing DB/network/filesystem beyond its execution contract.
-- Do not allow TypeScript service fallback to mask missing Go routes, stopped Go, stopped runtime service, schema drift, privacy drift, or page-load failures.
-- Do not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, DB DSNs, host paths, or private runtime internals in public outputs.
+- Do not execute Python in Go or web/API.
+- Do not let Python become a backend, persistence owner, route owner, job owner, Match completion owner, Chronicle persistence owner, scoring owner, or public evidence owner.
+- Do not allow silent fallback to JS/TS, TypeScript backend, or Go execution.
+- Do not expose source, StrategyMemory, SoldierMemory, objectives, owner debug, raw Awareness Grid, stderr, stack, host paths, package paths, tokens, DB DSNs, or private runtime internals in public outputs.
+- Do not promote Python to counted/ranked play or production sandbox status.
 
 ## Recommended Phase Structure
 
-1. Phase 103: TypeScript Backend Inventory and Retirement Contract.
-2. Phase 104: Isolated Runtime Service Boundary Hardening.
-3. Phase 105: Web/API Go-Only Cutover and Fallback Removal.
-4. Phase 106: TypeScript Worker and Persistence Quarantine.
-5. Phase 107: Deferred Surface Relabeling and Privacy Preservation.
-6. Phase 108: No-TypeScript-Backend Topology and Monitor Gate.
-7. Phase 109: Milestone Verification, Deletion Audit, and Promotion Decision.
+1. Phase 110: Broker Registry Baseline and Contract Hardening.
+2. Phase 111: Strategy Artifact Language Metadata and Eligibility.
+3. Phase 112: Python Submission Validation and Diagnostics.
+4. Phase 113: Python Runtime Execution Behind Broker ABI.
+5. Phase 114: Go Orchestration and Non-Counted Eligibility.
+6. Phase 115: Python Starter Strategy and Replay Proof.
+7. Phase 116: Topology, Monitors, Privacy, and Promotion Gate.
+
+## Sources Consulted
+
+- Repo-local planning archive through v1.16, especially `.planning/milestones/v1.16-*` and `.planning/artifacts/v1.16-*`.
+- Repo-local runtime/spec code: `packages/spec/src/runtime.ts`, `packages/spec/src/runtime-execution-service.ts`, `apps/runtime-service/src/execute-match.ts`, `packages/runtime-python`, and `apps/go-backend/runtime_service_client.go`.
+- Python official docs for `ast`, `py_compile`, `subprocess`, and security considerations.
+
+---
+*Research summary written: 2026-05-24*

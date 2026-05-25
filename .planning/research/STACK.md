@@ -1,56 +1,37 @@
-# Stack Research: v1.15 Go Backend Ownership Completion
+# Stack Research: v1.17 Python Strategy Runtime Pilot
 
 **Project:** Coward's Game
-**Milestone:** v1.15 Go Backend Ownership Completion
+**Milestone:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
 **Researched:** 2026-05-24
-**Confidence:** High for current ownership map and local code paths; medium for exact implementation shape until Phase 96 rebaselines drift.
 
-## Current Ownership Map
+## Stack Additions
 
-| Area | Current owner | Stack/code |
-| --- | --- | --- |
-| Frontend UI | TypeScript | Next/React in `apps/web`, with Pixi replay and Monaco Workshop surfaces. |
-| Service contracts | TypeScript canonical | `@cowards/spec`, `service-api-v1.8`, Zod schemas, OpenAPI artifacts. |
-| Go backend | Partial primary | Go `net/http`, `pgx/v5`, live PostgreSQL mode in `apps/go-backend/live_backend.go`. |
-| Public reads | Go primary when selected | Public Strategy, player, ladder, MatchSet summary, and replay metadata routes. |
-| Auth/account/revisions/forks | Go primary when selected | Session, account revision list/source/create/save, Starter/Advanced forks through generated v1.14 artifacts. |
-| Exhibition creation | Go primary when selected | Go inserts MatchSets, entrants, Matches, and `match_jobs`. |
-| Job claiming/completion | TypeScript-owned | `apps/worker/src/runner.ts`, `packages/persistence/src/jobs.ts`, `complete-match.ts`. |
-| Engine/Chronicle build | TypeScript-owned | `@cowards/engine` and `@cowards/replay`; TypeScript remains the parity oracle. |
-| Chronicle persistence | TypeScript-owned | `createPostgresChronicleStore` and `completeMatch`. |
-| MatchSet scoring completion | TypeScript-owned | `refreshMatchSetStatus` and `scoreMatchSet`. |
-| Public replay page data | TypeScript-owned | `apps/web/app/matches/server.ts` opens persistence/Chronicle paths directly. |
-| Strategy runtime | TypeScript-owned | `@cowards/runtime-js` behind `strategy-runtime-abi-v1.14`; not a production sandbox replacement. |
+- Keep the existing normal product stack: Next.js web frontend, Go backend, PostgreSQL, TypeScript spec/contracts, isolated runtime service, and existing JS/TS runtime implementation.
+- Promote the existing Strategy Execution Service / Runtime Broker naming into concrete spec artifacts, registry metadata, health metadata, monitor checks, and runtime implementation selection.
+- Use the existing `packages/runtime-python` spike as a starting point only. It currently proves method-level Python ABI execution but is not a full Match runtime-service path and is not a production sandbox.
+- Keep Python self-contained source only. Do not add PyPI install support, dependency resolution, native module support, or package build/install steps.
+- Use Python parse/compile checks where practical for submission validation. Official Python docs note that AST parsing and compilation are separate steps, so validation should not treat `ast.parse` alone as full executable validation.
+- Use subprocess timeout and isolated/safe-path interpreter flags as defense-in-depth for the experimental host, while explicitly documenting that subprocess plus interpreter flags is not production hostile-code isolation.
 
-## Needed Stack Changes
+## Stack Non-Additions
 
-- Keep the existing stack: Go + PostgreSQL + TypeScript runtime ABI. Do not add Redis, BullMQ, Kafka, NATS, Kubernetes, service mesh, or a cloud observability stack for this milestone.
-- Add Go orchestration code for job claim, lease, failure, retry, completion, Chronicle insert, and MatchSet scoring.
-- Refactor or wrap the TypeScript worker into a stateless execution/runtime service path so Go owns persistence and lifecycle state while TypeScript executes Strategy code behind the v1.14 ABI.
-- Extend Go public evidence delivery beyond metadata so normal public MatchSet/replay workflows do not need TypeScript service fallback when Go is selected.
-- Expand topology and boundary monitors from selected-route reads to full lifecycle evidence.
+- No Python backend service.
+- No Python persistence owner, route owner, job owner, scoring owner, public evidence owner, or fallback owner.
+- No production sandbox promotion.
+- No WASM/WASI/component-model promotion.
+- No arbitrary package manager or PyPI support.
+- No JS/TS runtime replacement.
 
-## Existing Evidence Hooks
+## Integration Points
 
-- `pnpm boundary:monitors`
-- `pnpm topology:check`
-- `pnpm preflight -- --skip-web`
-- `pnpm strategy-artifacts:check`
-- `pnpm go:parity`
-- `cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./...`
-- `pnpm --filter @cowards/worker test`
-- `pnpm --filter @cowards/web test -- server.test.ts replay-board.test.ts`
-- Service-backed Playwright flows can validate web -> backend -> worker -> replay behavior when local services are running.
+- `packages/spec/src/runtime.ts` for runtime registry, language metadata, eligibility, validation messages, and compatibility keys.
+- `packages/spec/src/runtime-execution-service.ts` for broker contract, request/response schema metadata, failure taxonomy, authority policy, and health metadata.
+- `apps/runtime-service/src/execute-match.ts` for moving from JS/TS-specific runtime construction to registry-selected runtime implementations.
+- `packages/runtime-python` for experimental Python adapter/host hardening and full Strategy method coverage.
+- `apps/go-backend/runtime_service_client.go` for schema and metadata validation without Python execution.
+- Workshop routes and DTOs for experimental author/validate/submit proof, while keeping backend ownership boundaries explicit.
+- `scripts/check-boundary-monitors.ts` and `scripts/check-local-topology.ts` for registry, ABI, ownership, privacy, and topology gates.
 
-## Likely Code Paths
+## Recommended Stack Direction
 
-- Primary implementation: `apps/go-backend/live_backend.go`, new Go files under `apps/go-backend/`, `apps/worker/src/runner.ts`, `apps/worker/src/index.ts`, `apps/web/lib/go-backend-service-client.ts`, `apps/web/lib/public-service-adapter.ts`, `apps/web/lib/account-service-adapter.ts`, `apps/web/app/matches/server.ts`, `packages/spec/src/service.ts`, monitor/topology scripts.
-- Parity/reference: `packages/persistence/src/jobs.ts`, `packages/persistence/src/complete-match.ts`, `packages/persistence/src/chronicle-store.ts`, `packages/persistence/src/matchset-status.ts`, `packages/persistence/src/scoring.ts`, `packages/replay/src/project.ts`, `packages/runtime-js/src/abi-bridge.ts`.
-
-## Do Not Add
-
-- No Strategy execution in Go or web/API.
-- No Node `vm` security-boundary use.
-- No production sandbox replacement or final TypeScript runtime retirement.
-- No silent TypeScript backend fallback when Go is selected.
-- No public output containing Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, or private runtime internals.
+Broker first. Define the runtime registry and contract before expanding Python execution. Then thread Python through artifact metadata, validation, runtime-service execution, Go non-counted MatchSet creation, and Workshop proof. This keeps the v1.16 boundary legible and gives monitors exact artifacts to police.

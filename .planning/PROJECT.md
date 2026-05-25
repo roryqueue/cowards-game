@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.16 Runtime Isolation and TypeScript Backend Retirement on 2026-05-24
-**Current milestone:** None; start the next cycle with `$gsd-new-milestone`.
-**Status:** Between milestones after v1.16 archive/tag.
+**Current milestone:** v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
+**Status:** Planning v1.17 requirements and roadmap.
 **Last audit:** v1.16 audit passed with no normal TypeScript backend except frontend plus isolated JS/TS Strategy runtime service.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, experimental non-JS product semantics, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the isolated TypeScript runtime service boundary.
@@ -12,6 +12,20 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.17 Python Strategy Runtime Pilot and Broker Contract Hardening
+
+**Goal:** Make Python an experimental end-to-end Strategy language through the language-neutral Strategy Execution Service / Runtime Broker contract while preserving the v1.16 backend-retirement boundary.
+
+**Target features:**
+- Promote the Runtime Broker idea from naming to a concrete interface, registry, artifact, and monitor contract.
+- Harden Strategy Revision and Strategy Artifact language/runtime metadata so immutable artifacts carry language id/version, runtime target, package/compile metadata, validation status, artifact hash, and Match eligibility flags.
+- Add Python submission-time validation with parse/compile checks, package policy enforcement, immutable artifact creation, and public-safe diagnostics.
+- Execute Python Strategies only through the same runtime service/runtime ABI envelopes as JS/TS, with matching timeout, invalid output, crash, oversized payload, stderr/stack redaction, and privacy behavior.
+- Provide a user-facing Python Starter Strategy proof that can be authored, submitted, validated, run in a non-counted Workshop or exhibition-style MatchSet, and replayed.
+- Extend topology, registry, monitor, page-smoke, and privacy gates so Python remains a runtime implementation only, not a backend, persistence owner, route owner, or counted/ranked fallback.
+
+**Key context:** v1.17 starts from the v1.16 baseline: normal topology remains `web frontend -> Go backend -> isolated runtime service(s)`. JS/TS Strategy support must remain intact through the existing isolated runtime service. Python may become an experimental second runtime path behind the Runtime Broker contract, but it must not become a backend, route owner, persistence owner, silent fallback path, production sandbox promotion, or ranked/ladder counted language.
 
 ## Latest Shipped Milestone: v1.16 Runtime Isolation and TypeScript Backend Retirement
 
@@ -367,6 +381,10 @@ Planning archives live under `.planning/milestones/`:
 - `.planning/milestones/v1.15-REQUIREMENTS.md`
 - `.planning/milestones/v1.15-MILESTONE-AUDIT.md`
 - `.planning/milestones/v1.15-phases/`
+- `.planning/milestones/v1.16-ROADMAP.md`
+- `.planning/milestones/v1.16-REQUIREMENTS.md`
+- `.planning/milestones/v1.16-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.16-phases/`
 
 ## Out of Scope Until Replanned
 
@@ -418,6 +436,7 @@ Planning archives live under `.planning/milestones/`:
 | Require representative page smoke before milestone closure | The v1.15 close loop found a public player page hard error after backend promotion; topology now smokes major page shapes before milestone completion. | ✓ Good |
 | Retire TypeScript backend, not JS/TS Strategy support | v1.16 removed or quarantined TypeScript service/backend ownership while preserving the isolated JS/TS runtime service as hostile-code execution infrastructure invoked by Go through a broker-ready, language-neutral ABI contract. | ✓ Implemented in v1.16 |
 | Name the future execution abstraction now | The current TypeScript runtime service conforms to a future **Strategy Execution Service** / **Runtime Broker** contract so later language-host replacement does not rewrite Go orchestration. | ✓ Implemented in v1.16 |
+| Make Python prove the broker before product promotion | v1.17 should add Python only as an experimental runtime implementation behind the Strategy Execution Service / Runtime Broker contract, with non-counted proof and strict monitor gates before any ranked or production sandbox claims. | — Pending |
 
 ## Constraints
 
@@ -438,4 +457,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-24 after archiving v1.16 milestone*
+*Last updated: 2026-05-24 after starting v1.17 milestone*
