@@ -1,23 +1,23 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.20
-milestone_name: Runtime Sandbox Candidate and Exhibition Reliability Proof
-status: complete
-stopped_at: milestone archived
+milestone: v1.21
+milestone_name: WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
+status: planning
+stopped_at: milestone planning initialized
 last_updated: "2026-05-25T00:00:00.000-04:00"
-last_activity: 2026-05-25 - Completed, audited, archived, committed, and tagged v1.20
+last_activity: 2026-05-25 - Milestone v1.21 started
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.20 complete
+**Status:** v1.21 planning
 
 ## Project Reference
 
@@ -25,57 +25,59 @@ See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Latest shipped milestone:** v1.20 Runtime Sandbox Candidate and Exhibition Reliability Proof
-**Active milestone:** None
-**Requirements:** archived at `.planning/milestones/v1.20-REQUIREMENTS.md`
-**Roadmap:** `.planning/ROADMAP.md`
+**Active milestone:** v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
+**Requirements:** being defined at `.planning/REQUIREMENTS.md`
+**Roadmap:** being defined at `.planning/ROADMAP.md`
 
 ## Current Position
 
-Phase: v1.20 complete
-Plan: all v1.20 plans complete
-Status: Ready for next milestone
-Last activity: 2026-05-25 - v1.20 promotion decision, audit, archive, and tag completed
+Phase: Not started (defining requirements)
+Plan: -
+Status: Defining requirements
+Last activity: 2026-05-25 - Milestone v1.21 started
 
-## Completed Milestone Goal
+## Active Milestone Goal
 
-v1.20 combined two next frontiers from v1.19: making one stronger runtime isolation candidate executable and honestly testable, and making Python non-counted exhibition beta reliability, latency, timeout behavior, degraded-state UX, and proof evidence realistic enough for repeated signed-in use.
+v1.21 makes WASM/WASI the next serious immutable multi-language Strategy runtime candidate. The milestone targets Rust as the first net-new compiled language end to end, using a WASI Preview 1 stdin/stdout JSON envelope for the first executable ABI and treating Zig as a gated stretch target if local tooling and architecture evidence pass loudly.
 
-The selected primary stronger candidate lane is Docker/container subprocess because Docker is locally available and the repo already has a `container-subprocess` adapter. gVisor/runsc remains a strict fail-loud lane unless `runsc` becomes genuinely available and executable in the local environment.
+## Baseline From v1.20
 
-## Baseline From v1.19
+v1.20 completed, archived, and tagged `v1.20`. It added strict executable Docker/container subprocess evidence, hostile probe/no-fallback parity, runtime reliability budgets, public-safe degraded-state evidence panels, a three-cycle signed-in reliability proof, and a final promotion decision that keeps Python non-counted and runtime isolation readiness-only.
 
-v1.19 completed, archived, and tagged `v1.19`. It added monitor-readable readiness lanes, a unified hostile probe taxonomy, explicit no-fallback drills, compact Python exhibition beta labels, safe tactical Python samples, public-safe MatchSet/replay Evidence panels, a signed-in proof with one JS/TS and two Python revisions, mixed and Python-vs-Python non-counted exhibition proof, and explicit promotion decisions.
-
-The v1.19 proof also found and fixed two reliability/privacy gaps: runtime-service HTTP timeout was too low for Python subprocess exhibition Matches, and public evidence copy exposed internal private-field names.
+The v1.20 proof found and fixed a practical Go job lease bug: the previous lease was shorter than the runtime-service HTTP budget, so long Python-vs-Python Matches could degrade after lease expiry.
 
 ## Active Constraints
 
 - Normal topology remains `web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s)`.
 - JS/TS Strategy support remains intact through the existing isolated runtime service and remains the counted Strategy path.
-- Python is non-counted exhibition beta only, while remaining runtime-only, non-ranked, and non-counted.
+- Python remains non-counted exhibition beta only.
+- Rust/WASM may become non-counted exhibition alpha/beta only if evidence passes; Rust, Zig, and WASM/WASI are not ranked, ladder, counted, gauntlet, or broad production multi-language support in v1.21.
 - Engine logic remains pure, deterministic, serializable, and side-effect free.
-- Strategy code does not execute in the web/API process or Go backend, and Node `vm` is not used as a hostile-code security boundary.
+- Strategy code does not execute in the web/API process or Go backend, and Node `vm` or Node `node:wasi` must not be treated as a hostile-code security boundary.
+- Match execution must use immutable Strategy artifacts. Rust and optional Zig Matches must execute immutable WASM artifacts, not mutable source.
 - Strategy Revisions are immutable once submitted for Match or MatchSet play.
-- Public replay and MatchSet output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, package paths, or private runtime internals by default.
-- Runtime isolation evidence must distinguish readiness evidence from production sandbox certification.
-- Required candidate evidence and no-fallback drills must fail loudly on skipped candidates, stale artifacts, stopped runtime services, unavailable Python runtime, unavailable container/runtime candidate, unavailable runsc candidate, or silent substitution.
-- Python must not own backend routes, persistence, job lifecycle, Match completion, scoring, public evidence, retry policy, or fallback behavior.
-- No arbitrary PyPI/package installs are allowed.
-- No unbounded local stress tests are allowed; latency and reliability proof must use bounded, repeatable workloads.
-- `pnpm boundary:monitors` must stay synchronized with Go route manifests, runtime ABI artifacts, runtime registry artifacts, topology evidence, surface labels, fixture gates, runtime isolation candidate evidence, and ownership changes.
+- Public replay and MatchSet output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, stderr, sessions, tokens, host paths, DB DSNs, package paths, artifact internals, or private runtime internals by default.
+- Runtime service owns hostile Strategy execution only through schema-validated ABI envelopes and registered runtime implementations.
+- Go remains owner of orchestration, persistence-facing behavior, Match lifecycle, scoring, public evidence, retry policy, and promotion decisions.
+- WASM/WASI runtime evidence must distinguish executable candidate proof from production sandbox certification.
+- Zig must fail loudly when local toolchain, compile, runtime, ABI, or proof evidence is unavailable; no silent substitution with Rust or JS/TS.
+- No arbitrary package installs are allowed as a product feature.
+- No unbounded local stress tests are allowed; proof must use bounded, repeatable workloads.
+- `pnpm boundary:monitors` must stay synchronized with runtime ABI artifacts, runtime registry artifacts, topology evidence, language metadata, artifact evidence, privacy checks, and ownership changes.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 | --- | --- | --- | --- |
-| runtime | Production hostile-code sandbox promotion | Deferred | v1.20 |
-| runtime | Python ranked/ladder counted eligibility | Deferred | v1.20 |
-| runtime | Arbitrary PyPI/package install support | Deferred | v1.20 |
-| runtime | gVisor/runsc promotion without local executable proof | Deferred | v1.20 |
-| runtime | Broad WASM/WASI/component-model promotion | Deferred | v1.20 |
-| product | Broad multi-language product support beyond Python exhibition beta | Deferred | v1.20 |
-| ops | Cloud deployment, Kubernetes, service mesh, or production observability stack | Deferred | v1.20 |
+| runtime | Rust ranked/ladder/counted eligibility | Deferred | v1.21 |
+| runtime | Zig ranked/ladder/counted eligibility | Deferred | v1.21 |
+| runtime | WASM/WASI production sandbox certification | Deferred | v1.21 |
+| runtime | Component-model Strategy ABI promotion | Deferred | v1.21 |
+| runtime | Direct-export Strategy ABI promotion | Deferred | v1.21 |
+| runtime | Arbitrary Cargo/Zig package install support | Deferred | v1.21 |
+| product | Broad production multi-language marketplace | Deferred | v1.21 |
+| ops | Cloud deployment, Kubernetes, service mesh, or production observability stack | Deferred | v1.21 |
 
 ## Operator Next Steps
 
-Start a fresh milestone with `$gsd-new-milestone`. Active `.planning/REQUIREMENTS.md` is intentionally absent after v1.20 closure.
+Finish `$gsd-new-milestone` by creating active requirements and a roadmap. Then start the first v1.21 phase with `$gsd-discuss-phase 140` or `$gsd-plan-phase 140`.
