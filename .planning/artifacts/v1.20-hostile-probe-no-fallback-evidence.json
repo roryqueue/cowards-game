@@ -1,0 +1,498 @@
+{
+  "candidatePreflight": {
+    "configuredPrimaryCandidate": "container-subprocess",
+    "containerImage": "node:24-alpine",
+    "dockerAvailable": "not-evaluated",
+    "dockerRuntimes": [],
+    "executedCandidate": "host-subprocess",
+    "imageAvailable": "not-evaluated",
+    "lane": "default-readiness",
+    "runscDockerRuntimeAvailable": "not-evaluated",
+    "runscEvidence": "not evaluated in default readiness; strict runsc command fails loudly when unavailable",
+    "runscOnPath": "not-evaluated"
+  },
+  "generatedAt": "2026-05-25T00:00:00.000Z",
+  "lanes": [
+    {
+      "id": "host-subprocess",
+      "label": "Host subprocess",
+      "probes": [
+        {
+          "code": "FORBIDDEN_CAPABILITY",
+          "evidenceKind": "live",
+          "id": "time-date-now",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "determinism"
+        },
+        {
+          "code": "FORBIDDEN_CAPABILITY",
+          "evidenceKind": "live",
+          "id": "random-math",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "determinism"
+        },
+        {
+          "code": "FORBIDDEN_CAPABILITY",
+          "evidenceKind": "live",
+          "id": "filesystem-require",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "filesystem"
+        },
+        {
+          "code": "FORBIDDEN_CAPABILITY",
+          "evidenceKind": "live",
+          "id": "network-fetch",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "network"
+        },
+        {
+          "code": "FORBIDDEN_CAPABILITY",
+          "evidenceKind": "live",
+          "id": "process-env",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "environment"
+        },
+        {
+          "code": "FORBIDDEN_CAPABILITY",
+          "evidenceKind": "live",
+          "id": "shell-child-process",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "process_shell"
+        },
+        {
+          "code": "FORBIDDEN_CAPABILITY",
+          "evidenceKind": "live",
+          "id": "dynamic-code",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "dynamic_execution"
+        },
+        {
+          "code": "TIMEOUT",
+          "evidenceKind": "live",
+          "id": "timeout-loop",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "timeout"
+        },
+        {
+          "code": "OVERSIZED_OUTPUT",
+          "evidenceKind": "live",
+          "id": "oversized-output",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "output_pressure"
+        },
+        {
+          "code": "FORBIDDEN_CAPABILITY",
+          "evidenceKind": "live",
+          "id": "stdout-cap",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "output_pressure"
+        },
+        {
+          "code": "FORBIDDEN_CAPABILITY",
+          "evidenceKind": "live",
+          "id": "stderr-cap",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "diagnostic_redaction"
+        },
+        {
+          "code": "TIMEOUT",
+          "evidenceKind": "live",
+          "id": "memory-pressure",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "memory_pressure"
+        },
+        {
+          "code": "OVERSIZED_OUTPUT",
+          "evidenceKind": "live",
+          "id": "strategy-memory-limit",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "memory_pressure"
+        },
+        {
+          "code": "OVERSIZED_OUTPUT",
+          "evidenceKind": "live",
+          "id": "soldier-memory-limit",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "memory_pressure"
+        },
+        {
+          "code": "OVERSIZED_OUTPUT",
+          "evidenceKind": "live",
+          "id": "objective-size-limit",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "schema_invalid_output"
+        },
+        {
+          "code": "SOURCE_TOO_LARGE",
+          "evidenceKind": "preflight",
+          "id": "source-byte-limit",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "source_size"
+        },
+        {
+          "code": "FORBIDDEN_CAPABILITY",
+          "evidenceKind": "live",
+          "id": "package-require",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "imports_packages"
+        },
+        {
+          "code": "FORBIDDEN_CAPABILITY",
+          "evidenceKind": "live",
+          "id": "host-path-read",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "host_paths"
+        },
+        {
+          "code": "MALFORMED_IPC",
+          "evidenceKind": "synthetic",
+          "id": "malformed-ipc-request",
+          "passed": true,
+          "resultKind": "systemFailure",
+          "taxonomy": "malformed_ipc"
+        },
+        {
+          "code": "MALFORMED_IPC",
+          "evidenceKind": "synthetic",
+          "id": "malformed-ipc-response",
+          "passed": true,
+          "resultKind": "systemFailure",
+          "taxonomy": "malformed_ipc"
+        },
+        {
+          "code": "FORBIDDEN_CAPABILITY",
+          "evidenceKind": "live",
+          "id": "subprocess-crash",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "process_shell"
+        },
+        {
+          "code": "ADAPTER_CRASH",
+          "evidenceKind": "synthetic",
+          "id": "adapter-crash",
+          "passed": true,
+          "resultKind": "systemFailure",
+          "taxonomy": "crash"
+        },
+        {
+          "code": "INVALID_OUTPUT",
+          "evidenceKind": "live",
+          "id": "invalid-output",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "schema_invalid_output"
+        },
+        {
+          "code": "THROWN_EXCEPTION",
+          "evidenceKind": "live",
+          "id": "thrown-exception",
+          "passed": true,
+          "resultKind": "runtimeViolation",
+          "taxonomy": "crash"
+        }
+      ],
+      "status": "passed",
+      "summary": {
+        "failed": 0,
+        "live": 20,
+        "passed": 24,
+        "preflight": 1,
+        "skipped": 0,
+        "synthetic": 3
+      },
+      "supportedLocally": true
+    },
+    {
+      "id": "container-subprocess",
+      "label": "Container subprocess",
+      "probes": [
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "time-date-now",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "random-math",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "determinism"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "filesystem-require",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "filesystem"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "network-fetch",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "network"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "process-env",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "environment"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "shell-child-process",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "dynamic-code",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "dynamic_execution"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "timeout-loop",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "timeout"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "oversized-output",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "stdout-cap",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "output_pressure"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "stderr-cap",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "diagnostic_redaction"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "memory-pressure",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "strategy-memory-limit",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "soldier-memory-limit",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "memory_pressure"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "objective-size-limit",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "source-byte-limit",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "source_size"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "package-require",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "imports_packages"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "host-path-read",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "host_paths"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "malformed-ipc-request",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "malformed-ipc-response",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "malformed_ipc"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "subprocess-crash",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "process_shell"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "adapter-crash",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "crash"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "invalid-output",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "schema_invalid_output"
+        },
+        {
+          "code": "SKIPPED",
+          "evidenceKind": "synthetic",
+          "id": "thrown-exception",
+          "passed": true,
+          "resultKind": "skipped",
+          "taxonomy": "crash"
+        }
+      ],
+      "status": "skipped",
+      "summary": {
+        "failed": 0,
+        "live": 0,
+        "passed": 0,
+        "preflight": 0,
+        "skipped": 24,
+        "synthetic": 24
+      },
+      "supportedLocally": false
+    }
+  ],
+  "noFallbackDrills": [
+    {
+      "expectedFailureMode": "Go orchestration reports runtime-service failure without executing Strategy code in web/API/Go.",
+      "id": "stopped-runtime-service",
+      "label": "Runtime service stopped"
+    },
+    {
+      "expectedFailureMode": "Python exhibition beta fails closed without substituting JS/TS or in-process execution.",
+      "id": "stopped-python-runtime",
+      "label": "Python runtime stopped"
+    },
+    {
+      "expectedFailureMode": "Strict candidate commands exit non-zero and name the unavailable candidate.",
+      "id": "runsc-unavailable",
+      "label": "gVisor/runsc unavailable"
+    },
+    {
+      "expectedFailureMode": "Strict container evidence exits non-zero or records non-promotion without subprocess substitution.",
+      "id": "docker-or-image-unavailable",
+      "label": "Docker or image unavailable"
+    },
+    {
+      "expectedFailureMode": "Check commands reject stale JSON or Markdown readiness evidence.",
+      "id": "stale-artifacts",
+      "label": "Stale artifacts"
+    },
+    {
+      "expectedFailureMode": "Monitors reject evidence that claims a required lane while the required candidate was skipped.",
+      "id": "silent-substitution",
+      "label": "Silent substitution"
+    },
+    {
+      "expectedFailureMode": "Container-required evidence exits non-zero or records non-promotion; no subprocess substitution.",
+      "id": "docker-unavailable",
+      "label": "Docker unavailable"
+    },
+    {
+      "expectedFailureMode": "Strict container lane fails before proof; no mutable hidden pull or candidate substitution.",
+      "id": "container-image-unavailable",
+      "label": "Container image unavailable"
+    },
+    {
+      "expectedFailureMode": "Required container evidence cannot be satisfied by worker-thread, host subprocess, stale artifact, or runsc documentation.",
+      "id": "candidate-substitution",
+      "label": "Candidate substitution"
+    }
+  ],
+  "promotionDecision": "No production sandbox certification; Python remains non-counted exhibition beta.",
+  "redaction": {
+    "publicDiagnosticRule": "Runtime readiness diagnostics expose only stable ids, public codes, readiness, limit categories, and redacted failure summaries.",
+    "publicOutputsMustOmit": [
+      "submitted source text",
+      "private strategy memory data",
+      "private soldier memory data",
+      "private objective data",
+      "raw board-observation data",
+      "stream content",
+      "stack traces",
+      "sessions",
+      "tokens",
+      "host paths",
+      "private runtime internals"
+    ]
+  },
+  "schemaVersion": "v1.20-hostile-probe-no-fallback-evidence"
+}

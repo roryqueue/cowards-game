@@ -49,8 +49,8 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 ## Phases
 
 - [x] **Phase 132: v1.20 Baseline, Candidate Decision, and Budget Contract** - Lock v1.19 as the baseline, select Docker/container subprocess as the primary executable candidate, keep runsc fail-loud, and define layered timeout/reliability budgets.
-- [ ] **Phase 133: Executable Container Runtime Candidate Lane** - Make the Docker/container subprocess lane run real candidate evidence and produce honest machine-readable and human-readable artifacts.
-- [ ] **Phase 134: Hostile Probe and No-Fallback Parity Across Subprocess and Container** - Run probe parity and no-fallback drills across hardened subprocess and container lanes where practical, with strict privacy redaction and monitors.
+- [x] **Phase 133: Executable Container Runtime Candidate Lane** - Make the Docker/container subprocess lane run real candidate evidence and produce honest machine-readable and human-readable artifacts.
+- [x] **Phase 134: Hostile Probe and No-Fallback Parity Across Subprocess and Container** - Run probe parity and no-fallback drills across hardened subprocess and container lanes where practical, with strict privacy redaction and monitors.
 - [ ] **Phase 135: Timeout, Latency, and Reliability Budget Model** - Document, test, and measure Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets.
 - [ ] **Phase 136: Exhibition Execution Stabilization and Retry Semantics** - Stabilize Python exhibition execution where practical and make retry/no-retry semantics explicit and safe.
 - [ ] **Phase 137: Degraded-State UX and Public-Safe Reliability Evidence** - Improve user-facing running, slow, degraded, timeout, strategy-failed, and system-failed states in MatchSet/replay evidence.
@@ -86,7 +86,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 4. Developer can compare subprocess and container candidate evidence without production sandbox overclaiming.
 5. Developer can run strict container and runsc commands that fail loudly when evidence is missing, unavailable, or substituted.
 
-**Plans:** 0 planned
+**Plans:** 1 complete
 
 ### Phase 134: Hostile Probe and No-Fallback Parity Across Subprocess and Container
 
@@ -100,7 +100,7 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 3. Developer can run no-fallback drills for stopped runtime-service, stopped Python runtime, Docker/image unavailable, runsc unavailable, stale artifacts, and candidate substitution.
 4. Developer can run monitors that fail on runtime ABI, registry, broker, candidate evidence, production-claim, backend ownership, privacy, and JS/TS regression drift.
 
-**Plans:** 0 planned
+**Plans:** 1 complete
 
 ### Phase 135: Timeout, Latency, and Reliability Budget Model
 
@@ -185,8 +185,8 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 | Phase | Plans Complete | Status | Completed |
 | --- | --- | --- | --- |
 | 132. v1.20 Baseline, Candidate Decision, and Budget Contract | 1/1 | Complete | 2026-05-25 |
-| 133. Executable Container Runtime Candidate Lane | 0/0 | Not Started | - |
-| 134. Hostile Probe and No-Fallback Parity Across Subprocess and Container | 0/0 | Not Started | - |
+| 133. Executable Container Runtime Candidate Lane | 1/1 | Complete | 2026-05-25 |
+| 134. Hostile Probe and No-Fallback Parity Across Subprocess and Container | 1/1 | Complete | 2026-05-25 |
 | 135. Timeout, Latency, and Reliability Budget Model | 0/0 | Not Started | - |
 | 136. Exhibition Execution Stabilization and Retry Semantics | 0/0 | Not Started | - |
 | 137. Degraded-State UX and Public-Safe Reliability Evidence | 0/0 | Not Started | - |
@@ -211,11 +211,11 @@ v1.20 must not promote Python to ranked, ladder, counted, gauntlet, package-inst
 
 ## Next Up
 
-Phase 133: Executable Container Runtime Candidate Lane.
+Phase 135: Timeout, Latency, and Reliability Budget Model.
 
-`$gsd-plan-phase 133`
+`$gsd-plan-phase 135`
 
-After Phase 133 has a verified plan: `$gsd-execute-phase 133`
+After Phase 135 has a verified plan: `$gsd-execute-phase 135`
 
 ---
 *Created: 2026-05-25 for v1.20 milestone initialization*

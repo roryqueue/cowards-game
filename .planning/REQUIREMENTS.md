@@ -16,23 +16,23 @@
 
 ### Executable Container Candidate Lane
 
-- [ ] **CAND-01**: Developer can run an executable Docker/container subprocess candidate lane that executes the hostile probe matrix under the real container adapter when Docker is available.
-- [ ] **CAND-02**: Developer can inspect container evidence for `--network none`, read-only root filesystem, tmpfs scratch, dropped capabilities, no-new-privileges, PID limits, memory limits, CPU limits, no shell, and strict JSON IPC.
-- [ ] **CAND-03**: Developer can inspect container preflight evidence that distinguishes Docker unavailable, image unavailable, daemon failure, unsupported resource controls, adapter failure, Strategy violation, and system failure.
-- [ ] **CAND-04**: Developer can compare hardened subprocess and container candidate evidence side by side, including latency, pass/fail/skip counts, failure taxonomy, and non-promotion limits.
-- [ ] **CAND-05**: Developer can require container evidence in a command lane that fails loudly if the candidate is skipped, stale, unavailable, or silently substituted.
-- [ ] **CAND-06**: Developer can inspect gVisor/runsc strict-lane evidence that fails loudly when `runsc` is unavailable or no runsc adapter executes probes.
-- [ ] **CAND-07**: Developer can verify candidate artifacts and public language never claim production sandbox certification from Docker/container evidence alone.
+- [x] **CAND-01**: Developer can run an executable Docker/container subprocess candidate lane that executes the hostile probe matrix under the real container adapter when Docker is available.
+- [x] **CAND-02**: Developer can inspect container evidence for `--network none`, read-only root filesystem, tmpfs scratch, dropped capabilities, no-new-privileges, PID limits, memory limits, CPU limits, no shell, and strict JSON IPC.
+- [x] **CAND-03**: Developer can inspect container preflight evidence that distinguishes Docker unavailable, image unavailable, daemon failure, unsupported resource controls, adapter failure, Strategy violation, and system failure.
+- [x] **CAND-04**: Developer can compare hardened subprocess and container candidate evidence side by side, including latency, pass/fail/skip counts, failure taxonomy, and non-promotion limits.
+- [x] **CAND-05**: Developer can require container evidence in a command lane that fails loudly if the candidate is skipped, stale, unavailable, or silently substituted.
+- [x] **CAND-06**: Developer can inspect gVisor/runsc strict-lane evidence that fails loudly when `runsc` is unavailable or no runsc adapter executes probes.
+- [x] **CAND-07**: Developer can verify candidate artifacts and public language never claim production sandbox certification from Docker/container evidence alone.
 
 ### Hostile Probe And No-Fallback Parity
 
-- [ ] **PROBE-01**: Developer can run filesystem, host-path, read-only-root, tmpfs/write, and package-path probes across hardened subprocess and container lanes where practical.
-- [ ] **PROBE-02**: Developer can run network, DNS, socket, localhost, metadata IP, and proxy probes against container lanes that claim network denial.
-- [ ] **PROBE-03**: Developer can run process, shell, subprocess, fork, signal, environment, token, DB DSN, and local secret probes without executing Strategy code in web/API/Go.
-- [ ] **PROBE-04**: Developer can run import, package, dynamic-code, source-size, output-pressure, memory-pressure, timeout, crash, malformed IPC, stderr, stack, and schema-invalid output probes with deterministic failure taxonomy.
-- [ ] **PROBE-05**: Developer can verify public diagnostics redact source, memory, objectives, stderr, stacks, host paths, package paths, environment values, tokens, DB DSNs, sessions, and private runtime internals.
-- [ ] **PROBE-06**: Developer can run no-fallback drills for stopped runtime-service, stopped Python runtime, Docker unavailable, container image unavailable, runsc unavailable, stale artifacts, and candidate substitution.
-- [ ] **PROBE-07**: Developer can run monitors that fail on runtime ABI drift, registry drift, broker selection drift, candidate evidence drift, production overclaiming, backend ownership creep, and JS/TS regression.
+- [x] **PROBE-01**: Developer can run filesystem, host-path, read-only-root, tmpfs/write, and package-path probes across hardened subprocess and container lanes where practical.
+- [x] **PROBE-02**: Developer can run network, DNS, socket, localhost, metadata IP, and proxy probes against container lanes that claim network denial.
+- [x] **PROBE-03**: Developer can run process, shell, subprocess, fork, signal, environment, token, DB DSN, and local secret probes without executing Strategy code in web/API/Go.
+- [x] **PROBE-04**: Developer can run import, package, dynamic-code, source-size, output-pressure, memory-pressure, timeout, crash, malformed IPC, stderr, stack, and schema-invalid output probes with deterministic failure taxonomy.
+- [x] **PROBE-05**: Developer can verify public diagnostics redact source, memory, objectives, stderr, stacks, host paths, package paths, environment values, tokens, DB DSNs, sessions, and private runtime internals.
+- [x] **PROBE-06**: Developer can run no-fallback drills for stopped runtime-service, stopped Python runtime, Docker unavailable, container image unavailable, runsc unavailable, stale artifacts, and candidate substitution.
+- [x] **PROBE-07**: Developer can run monitors that fail on runtime ABI drift, registry drift, broker selection drift, candidate evidence drift, production overclaiming, backend ownership creep, and JS/TS regression.
 
 ### Timeout, Latency, And Reliability Budgets
 
@@ -114,20 +114,20 @@
 | BASE-03 | Phase 132 | Complete |
 | BASE-04 | Phase 132 | Complete |
 | BASE-05 | Phase 132 | Complete |
-| CAND-01 | Phase 133 | Pending |
-| CAND-02 | Phase 133 | Pending |
-| CAND-03 | Phase 133 | Pending |
-| CAND-04 | Phase 133 | Pending |
-| CAND-05 | Phase 133 | Pending |
-| CAND-06 | Phase 133 | Pending |
-| CAND-07 | Phase 133 | Pending |
-| PROBE-01 | Phase 134 | Pending |
-| PROBE-02 | Phase 134 | Pending |
-| PROBE-03 | Phase 134 | Pending |
-| PROBE-04 | Phase 134 | Pending |
-| PROBE-05 | Phase 134 | Pending |
-| PROBE-06 | Phase 134 | Pending |
-| PROBE-07 | Phase 134 | Pending |
+| CAND-01 | Phase 133 | Complete |
+| CAND-02 | Phase 133 | Complete |
+| CAND-03 | Phase 133 | Complete |
+| CAND-04 | Phase 133 | Complete |
+| CAND-05 | Phase 133 | Complete |
+| CAND-06 | Phase 133 | Complete |
+| CAND-07 | Phase 133 | Complete |
+| PROBE-01 | Phase 134 | Complete |
+| PROBE-02 | Phase 134 | Complete |
+| PROBE-03 | Phase 134 | Complete |
+| PROBE-04 | Phase 134 | Complete |
+| PROBE-05 | Phase 134 | Complete |
+| PROBE-06 | Phase 134 | Complete |
+| PROBE-07 | Phase 134 | Complete |
 | BUDGET-01 | Phase 135 | Pending |
 | BUDGET-02 | Phase 135 | Pending |
 | BUDGET-03 | Phase 135 | Pending |

@@ -245,14 +245,24 @@ const openApiArtifactPath =
 const goFixtureDir = "apps/go-backend/testdata/service-fixtures"
 const sandboxEvaluationArtifactPath =
   ".planning/artifacts/runtime-sandbox-evaluation.json"
+const sandboxEvaluationContainerArtifactPath =
+  ".planning/artifacts/runtime-sandbox-evaluation.container.json"
 const v120ReadinessArtifactPath =
   ".planning/artifacts/v1.20-runtime-sandbox-candidate-readiness.json"
 const v120ReadinessMarkdownPath =
   ".planning/artifacts/v1.20-runtime-sandbox-candidate-readiness.md"
+const v120ContainerReadinessArtifactPath =
+  ".planning/artifacts/v1.20-runtime-sandbox-candidate-readiness.container.json"
 const v120BudgetArtifactPath =
   ".planning/artifacts/v1.20-runtime-reliability-budgets.json"
 const v120BudgetMarkdownPath =
   ".planning/artifacts/v1.20-runtime-reliability-budgets.md"
+const v120HostileProbeArtifactPath =
+  ".planning/artifacts/v1.20-hostile-probe-no-fallback-evidence.json"
+const v120HostileProbeMarkdownPath =
+  ".planning/artifacts/v1.20-hostile-probe-no-fallback-evidence.md"
+const v120ContainerHostileProbeArtifactPath =
+  ".planning/artifacts/v1.20-hostile-probe-no-fallback-evidence.container.json"
 const goPromotionManifestPath =
   ".planning/artifacts/v1.12-route-ownership-manifest.json"
 const v113RouteOwnershipManifestPath =
@@ -2943,18 +2953,42 @@ const checkRuntimeIsolationReadiness = (): string => {
   const report = readJson<SandboxEvaluationReport>(
     sandboxEvaluationArtifactPath,
   )
+  const containerReport = readJson<SandboxEvaluationReport>(
+    sandboxEvaluationContainerArtifactPath,
+  )
   const readiness = readJson<{
     schemaVersion?: unknown
+    generatedAt?: unknown
+    abiVersion?: unknown
     promotionAllowed?: unknown
     readinessLanes?: unknown
     noFallbackDrills?: unknown
     candidates?: unknown
   }>(v120ReadinessArtifactPath)
+  const containerReadiness = readJson<{
+    schemaVersion?: unknown
+    generatedAt?: unknown
+    abiVersion?: unknown
+    candidates?: unknown
+    containerControlEvidence?: unknown
+  }>(v120ContainerReadinessArtifactPath)
   const budgets = readJson<{
     schemaVersion?: unknown
     deterministicStrategyCapsPreserved?: unknown
     budgets?: unknown
   }>(v120BudgetArtifactPath)
+  const hostileProbeEvidence = readJson<{
+    schemaVersion?: unknown
+    generatedAt?: unknown
+    lanes?: unknown
+    noFallbackDrills?: unknown
+    redaction?: unknown
+  }>(v120HostileProbeArtifactPath)
+  const containerHostileProbeEvidence = readJson<{
+    schemaVersion?: unknown
+    generatedAt?: unknown
+    lanes?: unknown
+  }>(v120ContainerHostileProbeArtifactPath)
   const markdown = readFileSync(
     path.join(repoRoot, v120ReadinessMarkdownPath),
     "utf8",
@@ -2963,10 +2997,36 @@ const checkRuntimeIsolationReadiness = (): string => {
     path.join(repoRoot, v120BudgetMarkdownPath),
     "utf8",
   )
+  const hostileProbeMarkdown = readFileSync(
+    path.join(repoRoot, v120HostileProbeMarkdownPath),
+    "utf8",
+  )
   assertSandboxEvaluationPublicSafe(report)
   assertRuntimeIsolationReadinessGuardrails(report)
+  assertSandboxEvaluationPublicSafe(containerReport)
+  assertRuntimeIsolationReadinessGuardrails(containerReport)
   if (readiness.schemaVersion !== "v1.20-runtime-sandbox-candidate-readiness") {
     throw new Error("v1.20 runtime candidate readiness schema drifted")
+  }
+  if (
+    containerReadiness.schemaVersion !==
+    "v1.20-runtime-sandbox-candidate-readiness"
+  ) {
+    throw new Error("v1.20 container readiness schema drifted")
+  }
+  if (
+    readiness.generatedAt !== report.generatedAt ||
+    readiness.abiVersion !== report.abiVersion
+  ) {
+    throw new Error("v1.20 readiness artifact is stale against base report")
+  }
+  if (
+    containerReadiness.generatedAt !== containerReport.generatedAt ||
+    containerReadiness.abiVersion !== containerReport.abiVersion
+  ) {
+    throw new Error(
+      "v1.20 container readiness artifact is stale against container report",
+    )
   }
   if (readiness.promotionAllowed !== false) {
     throw new Error("v1.20 runtime readiness must not promote sandbox status")
@@ -2976,6 +3036,28 @@ const checkRuntimeIsolationReadiness = (): string => {
     budgets.deterministicStrategyCapsPreserved !== true
   ) {
     throw new Error("v1.20 runtime reliability budget schema drifted")
+  }
+  if (
+    hostileProbeEvidence.schemaVersion !==
+    "v1.20-hostile-probe-no-fallback-evidence"
+  ) {
+    throw new Error("v1.20 hostile probe/no-fallback schema drifted")
+  }
+  if (
+    containerHostileProbeEvidence.schemaVersion !==
+    "v1.20-hostile-probe-no-fallback-evidence"
+  ) {
+    throw new Error("v1.20 container hostile probe schema drifted")
+  }
+  if (hostileProbeEvidence.generatedAt !== report.generatedAt) {
+    throw new Error("v1.20 hostile probe artifact is stale against base report")
+  }
+  if (
+    containerHostileProbeEvidence.generatedAt !== containerReport.generatedAt
+  ) {
+    throw new Error(
+      "v1.20 container hostile probe artifact is stale against container report",
+    )
   }
   const lanes = stringArray(
     (readiness.readinessLanes as { id?: unknown }[] | undefined)?.map(
@@ -3018,12 +3100,55 @@ const checkRuntimeIsolationReadiness = (): string => {
   for (const drill of [
     "stopped-runtime-service",
     "stopped-python-runtime",
-    "container-runsc-unavailable",
+    "runsc-unavailable",
+    "docker-or-image-unavailable",
     "stale-artifacts",
     "silent-substitution",
   ]) {
     if (!drills.includes(drill)) {
       throw new Error(`v1.20 readiness missing drill ${drill}`)
+    }
+  }
+  const hostileLanes = stringArray(
+    (hostileProbeEvidence.lanes as { id?: unknown }[] | undefined)?.map(
+      (lane) => lane.id,
+    ) ?? [],
+    "v1.20 hostile probe lanes",
+  )
+  for (const lane of ["host-subprocess", "container-subprocess"]) {
+    if (!hostileLanes.includes(lane)) {
+      throw new Error(`v1.20 hostile probe evidence missing lane ${lane}`)
+    }
+  }
+  const containerHostileLanes = stringArray(
+    (
+      containerHostileProbeEvidence.lanes as
+        | { id?: unknown; status?: unknown; summary?: unknown }[]
+        | undefined
+    )?.map((lane) => lane.id) ?? [],
+    "v1.20 container hostile probe lanes",
+  )
+  for (const lane of ["host-subprocess", "container-subprocess"]) {
+    if (!containerHostileLanes.includes(lane)) {
+      throw new Error(
+        `v1.20 container hostile probe evidence missing lane ${lane}`,
+      )
+    }
+  }
+  const hostileDrills = stringArray(
+    (
+      hostileProbeEvidence.noFallbackDrills as { id?: unknown }[] | undefined
+    )?.map((drill) => drill.id) ?? [],
+    "v1.20 hostile no-fallback drills",
+  )
+  for (const drill of [
+    "docker-unavailable",
+    "container-image-unavailable",
+    "runsc-unavailable",
+    "candidate-substitution",
+  ]) {
+    if (!hostileDrills.includes(drill)) {
+      throw new Error(`v1.20 hostile evidence missing drill ${drill}`)
     }
   }
   for (const required of [
@@ -3045,7 +3170,19 @@ const checkRuntimeIsolationReadiness = (): string => {
       throw new Error(`v1.20 reliability budget markdown missing ${required}`)
     }
   }
+  for (const required of [
+    "Lane Parity",
+    "candidate-substitution",
+    "No production sandbox certification",
+  ]) {
+    if (!hostileProbeMarkdown.includes(required)) {
+      throw new Error(`v1.20 hostile evidence markdown missing ${required}`)
+    }
+  }
   const container = report.candidates.find(
+    (candidate) => candidate.id === "container-subprocess",
+  )
+  const strictContainer = containerReport.candidates.find(
     (candidate) => candidate.id === "container-subprocess",
   )
   if (!container) {
@@ -3053,15 +3190,98 @@ const checkRuntimeIsolationReadiness = (): string => {
       "container subprocess candidate missing from sandbox report",
     )
   }
-  if (container.status === "passed") {
-    return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked with live container evidence, ${lanes.length} v1.20 readiness lanes, and ${budgetIds.length} reliability budgets`
+  if (!strictContainer) {
+    throw new Error("container subprocess candidate missing from strict report")
   }
-  if (container.status !== "skipped") {
+  const readinessContainer = (
+    readiness.candidates as
+      | {
+          id?: unknown
+          status?: unknown
+          supportedLocally?: unknown
+          summary?: unknown
+        }[]
+      | undefined
+  )?.find((candidate) => candidate.id === "container-subprocess")
+  const strictReadinessContainer = (
+    containerReadiness.candidates as
+      | {
+          id?: unknown
+          status?: unknown
+          supportedLocally?: unknown
+          summary?: unknown
+        }[]
+      | undefined
+  )?.find((candidate) => candidate.id === "container-subprocess")
+  const baseHostileContainer = (
+    hostileProbeEvidence.lanes as
+      | { id?: unknown; status?: unknown; summary?: unknown }[]
+      | undefined
+  )?.find((lane) => lane.id === "container-subprocess")
+  const strictHostileContainer = (
+    containerHostileProbeEvidence.lanes as
+      | { id?: unknown; status?: unknown; summary?: unknown }[]
+      | undefined
+  )?.find((lane) => lane.id === "container-subprocess")
+  const assertCandidateMatches = (
+    label: string,
+    reportCandidate: typeof container,
+    derivative:
+      | { status?: unknown; supportedLocally?: unknown; summary?: unknown }
+      | undefined,
+  ): void => {
+    if (!derivative) {
+      throw new Error(`${label} missing derivative container candidate`)
+    }
+    if (
+      derivative.status !== reportCandidate.status ||
+      derivative.supportedLocally !== reportCandidate.supportedLocally ||
+      JSON.stringify(derivative.summary) !==
+        JSON.stringify(reportCandidate.summary)
+    ) {
+      throw new Error(`${label} derivative container candidate is stale`)
+    }
+  }
+  const assertHostileLaneMatches = (
+    label: string,
+    reportCandidate: typeof container,
+    lane: { status?: unknown; summary?: unknown } | undefined,
+  ): void => {
+    if (!lane) {
+      throw new Error(`${label} missing hostile container lane`)
+    }
+    if (
+      lane.status !== reportCandidate.status ||
+      JSON.stringify(lane.summary) !== JSON.stringify(reportCandidate.summary)
+    ) {
+      throw new Error(`${label} hostile container lane is stale`)
+    }
+  }
+  assertCandidateMatches("base readiness", container, readinessContainer)
+  assertCandidateMatches(
+    "strict readiness",
+    strictContainer,
+    strictReadinessContainer,
+  )
+  assertHostileLaneMatches(
+    "base hostile evidence",
+    container,
+    baseHostileContainer,
+  )
+  assertHostileLaneMatches(
+    "strict hostile evidence",
+    strictContainer,
+    strictHostileContainer,
+  )
+  if (strictContainer.status === "passed") {
+    return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked with strict live container evidence, ${lanes.length} v1.20 readiness lanes, ${budgetIds.length} reliability budgets, and ${hostileLanes.length}/${containerHostileLanes.length} hostile probe lanes`
+  }
+  if (container.status !== "skipped" || strictContainer.status !== "skipped") {
     throw new Error(
-      `container subprocess candidate has unexpected status ${container.status}`,
+      `container subprocess candidate has unexpected status base=${container.status} strict=${strictContainer.status}`,
     )
   }
-  return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked; container evidence remains required before promotion; ${lanes.length} v1.20 readiness lanes and ${budgetIds.length} reliability budgets checked`
+  return `${report.runtimeIsolationReadiness.criteria.length} runtime isolation criteria checked; container evidence remains required before promotion; ${lanes.length} v1.20 readiness lanes, ${budgetIds.length} reliability budgets, and ${hostileLanes.length} hostile probe lanes checked`
 }
 
 const checkV119ExhibitionTrustSources = (): string => {

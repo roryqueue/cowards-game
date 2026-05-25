@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.20
 milestone_name: Runtime Sandbox Candidate and Exhibition Reliability Proof
 status: planning
-stopped_at: phase 132 complete
+stopped_at: phase 134 complete
 last_updated: "2026-05-25T00:00:00.000-04:00"
 last_activity: 2026-05-25 - Completed v1.20 discussion/context docs for phases 132-139
 progress:
   total_phases: 8
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 12
+  completed_phases: 3
+  total_plans: 3
+  completed_plans: 3
+  percent: 38
 ---
 
 # State: Coward's Game
@@ -31,10 +31,10 @@ See: `.planning/PROJECT.md`
 
 ## Current Position
 
-Phase: 132 complete (Phase 133 next)
-Plan: 132-PLAN.md complete
-Status: Ready to plan Phase 133
-Last activity: 2026-05-25 - Phase 132 baseline, candidate, and budget contract completed
+Phase: 134 complete (Phase 135 next)
+Plan: 134-PLAN.md complete
+Status: Ready to plan Phase 135
+Last activity: 2026-05-25 - Phases 133 and 134 executable container and hostile probe evidence completed
 
 ## Current Milestone Goal
 
@@ -78,4 +78,4 @@ The v1.19 proof also found and fixed two reliability/privacy gaps: runtime-servi
 
 ## Operator Next Steps
 
-Plan Phase 133 with `$gsd-plan-phase 133`, then execute planned work with `$gsd-execute-phase 133`.
+Plan Phase 135 with `$gsd-plan-phase 135`, then execute planned work with `$gsd-execute-phase 135`.

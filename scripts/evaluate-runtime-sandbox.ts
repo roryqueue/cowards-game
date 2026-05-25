@@ -12,17 +12,23 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, "..")
+const checkMode = process.argv.includes("--check")
+const requireContainer = process.argv.includes("--require-container")
+const requireRunsc = process.argv.includes("--require-runsc")
+const containerMode =
+  requireContainer || process.env.COWARDS_RUN_CONTAINER_SANDBOX === "1"
+const artifactSuffix = containerMode ? ".container" : ""
 const artifactPath = path.join(
   repoRoot,
-  ".planning/artifacts/runtime-sandbox-evaluation.json",
+  `.planning/artifacts/runtime-sandbox-evaluation${artifactSuffix}.json`,
 )
 const readinessJsonPath = path.join(
   repoRoot,
-  ".planning/artifacts/v1.20-runtime-sandbox-candidate-readiness.json",
+  `.planning/artifacts/v1.20-runtime-sandbox-candidate-readiness${artifactSuffix}.json`,
 )
 const readinessMarkdownPath = path.join(
   repoRoot,
-  ".planning/artifacts/v1.20-runtime-sandbox-candidate-readiness.md",
+  `.planning/artifacts/v1.20-runtime-sandbox-candidate-readiness${artifactSuffix}.md`,
 )
 const budgetJsonPath = path.join(
   repoRoot,
@@ -31,6 +37,14 @@ const budgetJsonPath = path.join(
 const budgetMarkdownPath = path.join(
   repoRoot,
   ".planning/artifacts/v1.20-runtime-reliability-budgets.md",
+)
+const hostileProbeJsonPath = path.join(
+  repoRoot,
+  `.planning/artifacts/v1.20-hostile-probe-no-fallback-evidence${artifactSuffix}.json`,
+)
+const hostileProbeMarkdownPath = path.join(
+  repoRoot,
+  `.planning/artifacts/v1.20-hostile-probe-no-fallback-evidence${artifactSuffix}.md`,
 )
 const staleMessage =
   "Runtime sandbox evaluation artifact is stale; run pnpm sandbox:evaluate"
@@ -91,23 +105,49 @@ const dockerRuntimeNames = (): readonly string[] => {
   }
 }
 
+type PreflightValue = boolean | "not-evaluated"
+
+const formatPreflightValue = (value: PreflightValue): string =>
+  value === "not-evaluated"
+    ? "not evaluated in this lane"
+    : value
+      ? "yes"
+      : "no"
+
 const candidatePreflight = () => {
-  const dockerAvailable = commandAvailable("docker")
   const containerImage =
     process.env.COWARDS_CONTAINER_SANDBOX_IMAGE ??
     DEFAULT_CONTAINER_SUBPROCESS_IMAGE
+  if (!containerMode) {
+    return {
+      lane: "default-readiness",
+      dockerAvailable: "not-evaluated" as const,
+      containerImage,
+      imageAvailable: "not-evaluated" as const,
+      dockerRuntimes: [] as readonly string[],
+      runscOnPath: "not-evaluated" as const,
+      runscDockerRuntimeAvailable: "not-evaluated" as const,
+      configuredPrimaryCandidate: "container-subprocess",
+      executedCandidate: "host-subprocess",
+      runscEvidence:
+        "not evaluated in default readiness; strict runsc command fails loudly when unavailable",
+    } as const
+  }
+  const dockerAvailable = commandAvailable("docker")
   const imageAvailable = dockerAvailable && dockerImageAvailable(containerImage)
   const runtimes = dockerAvailable ? dockerRuntimeNames() : []
   const runscOnPath = commandAvailable("runsc")
   const runscDockerRuntimeAvailable = runtimes.includes("runsc")
   return {
+    lane: "container-required",
     dockerAvailable,
     containerImage,
     imageAvailable,
     dockerRuntimes: runtimes,
     runscOnPath,
     runscDockerRuntimeAvailable,
-    selectedExecutableCandidate:
+    configuredPrimaryCandidate: "container-subprocess",
+    executedCandidate:
       dockerAvailable && imageAvailable
         ? "container-subprocess"
         : "host-subprocess",
@@ -119,18 +159,17 @@ const candidatePreflight = () => {
 }
 
 const preflight = candidatePreflight()
-if (
-  !process.env.COWARDS_RUN_CONTAINER_SANDBOX &&
-  preflight.dockerAvailable &&
-  preflight.imageAvailable
-) {
-  process.env.COWARDS_RUN_CONTAINER_SANDBOX = "1"
-}
 
 const readinessArtifact = (
   report: ReturnType<typeof evaluateRuntimeSandboxes>,
-) =>
-  ({
+) => {
+  const container = report.candidates.find(
+    (candidate) => candidate.id === "container-subprocess",
+  )
+  const hostSubprocess = report.candidates.find(
+    (candidate) => candidate.id === "host-subprocess",
+  )
+  return {
     schemaVersion: "v1.20-runtime-sandbox-candidate-readiness",
     generatedAt: report.generatedAt,
     abiVersion: report.abiVersion,
@@ -148,6 +187,42 @@ const readinessArtifact = (
       pythonStatus: "non-counted exhibition beta only",
     },
     candidatePreflight: preflight,
+    containerControlEvidence: {
+      candidateId: "container-subprocess",
+      status: container?.status ?? "skipped",
+      requestedControls: container?.metadata.runtimeControls ?? null,
+      controlEvidenceKind:
+        "adapter argv and metadata request; not kernel-level production sandbox certification",
+      strictIpc: "schema-validated JSON IPC over stdin/stdout",
+      noShell: container?.metadata.runtimeControls?.shell === "disabled",
+      evidenceKindCounts: container?.summary ?? null,
+    },
+    candidateComparison: [
+      ...(hostSubprocess
+        ? [
+            {
+              id: hostSubprocess.id,
+              status: hostSubprocess.status,
+              mode: hostSubprocess.mode,
+              evidenceKindCounts: hostSubprocess.summary,
+              containment:
+                "Host subprocess baseline; process boundary without container filesystem/network controls.",
+            },
+          ]
+        : []),
+      ...(container
+        ? [
+            {
+              id: container.id,
+              status: container.status,
+              mode: container.mode,
+              evidenceKindCounts: container.summary,
+              containment:
+                "Docker/runc container subprocess; requests no network, read-only root, tmpfs scratch, dropped capabilities, no-new-privileges, PID, memory, and CPU controls.",
+            },
+          ]
+        : []),
+    ],
     status: report.runtimeIsolationReadiness.status,
     noCandidatePromoted: report.noCandidatePromoted,
     promotionAllowed: report.runtimeIsolationReadiness.promotionAllowed,
@@ -171,7 +246,8 @@ const readinessArtifact = (
       doesNotProve:
         "Production sandbox certification, counted Python eligibility, or broad multi-language support.",
     })),
-  }) as const
+  } as const
+}
 
 const readinessMarkdown = (
   report: ReturnType<typeof evaluateRuntimeSandboxes>,
@@ -199,11 +275,14 @@ const readinessMarkdown = (
     "",
     "## Candidate Preflight",
     "",
-    `- Docker available: ${artifact.candidatePreflight.dockerAvailable ? "yes" : "no"}.`,
-    `- Container image \`${artifact.candidatePreflight.containerImage}\` available: ${artifact.candidatePreflight.imageAvailable ? "yes" : "no"}.`,
+    `- Lane: ${artifact.candidatePreflight.lane}.`,
+    `- Configured primary candidate: ${artifact.candidatePreflight.configuredPrimaryCandidate}.`,
+    `- Executed candidate: ${artifact.candidatePreflight.executedCandidate}.`,
+    `- Docker available: ${formatPreflightValue(artifact.candidatePreflight.dockerAvailable)}.`,
+    `- Container image \`${artifact.candidatePreflight.containerImage}\` available: ${formatPreflightValue(artifact.candidatePreflight.imageAvailable)}.`,
     `- Docker runtimes: ${artifact.candidatePreflight.dockerRuntimes.join(", ") || "none detected"}.`,
-    `- runsc on PATH: ${artifact.candidatePreflight.runscOnPath ? "yes" : "no"}.`,
-    `- runsc Docker runtime: ${artifact.candidatePreflight.runscDockerRuntimeAvailable ? "yes" : "no"}.`,
+    `- runsc on PATH: ${formatPreflightValue(artifact.candidatePreflight.runscOnPath)}.`,
+    `- runsc Docker runtime: ${formatPreflightValue(artifact.candidatePreflight.runscDockerRuntimeAvailable)}.`,
     `- runsc evidence: ${artifact.candidatePreflight.runscEvidence}.`,
     "",
     "## Readiness Lanes",
@@ -217,11 +296,11 @@ const readinessMarkdown = (
     "",
     "## Candidate Evidence",
     "",
-    "| Candidate | Mode | Status | Local support | Proves | Does not prove |",
-    "|---|---|---|---:|---|---|",
+    "| Candidate | Mode | Status | Local support | Live | Preflight | Synthetic | Proves | Does not prove |",
+    "|---|---|---|---:|---:|---:|---:|---|---|",
     ...artifact.candidates.map(
       (candidate) =>
-        `| ${candidate.label} | ${candidate.mode} | ${candidate.status} | ${candidate.supportedLocally ? "yes" : "no"} | ${candidate.proves} | ${candidate.doesNotProve} |`,
+        `| ${candidate.label} | ${candidate.mode} | ${candidate.status} | ${candidate.supportedLocally ? "yes" : "no"} | ${candidate.summary.live ?? 0} | ${candidate.summary.preflight ?? 0} | ${candidate.summary.synthetic ?? 0} | ${candidate.proves} | ${candidate.doesNotProve} |`,
     ),
     "",
     "## Explicit No-Fallback Drills",
@@ -316,17 +395,115 @@ const budgetMarkdown = (
   return `${lines.join("\n")}\n`
 }
 
+const hostileProbeArtifact = (
+  report: ReturnType<typeof evaluateRuntimeSandboxes>,
+) => {
+  const lanes = report.candidates
+    .filter((candidate) =>
+      ["host-subprocess", "container-subprocess"].includes(candidate.id),
+    )
+    .map((candidate) => ({
+      id: candidate.id,
+      label: candidate.label,
+      status: candidate.status,
+      supportedLocally: candidate.supportedLocally,
+      summary: candidate.summary,
+      probes: candidate.probes.map((probe) => ({
+        id: probe.probeId,
+        taxonomy: probe.taxonomy,
+        resultKind: probe.resultKind,
+        code: probe.code,
+        passed: probe.passed,
+        evidenceKind: probe.evidenceKind,
+      })),
+    }))
+  return {
+    schemaVersion: "v1.20-hostile-probe-no-fallback-evidence",
+    generatedAt: report.generatedAt,
+    candidatePreflight: preflight,
+    lanes,
+    noFallbackDrills: [
+      ...report.runtimeIsolationReadiness.noFallbackDrills,
+      {
+        id: "docker-unavailable",
+        label: "Docker unavailable",
+        expectedFailureMode:
+          "Container-required evidence exits non-zero or records non-promotion; no subprocess substitution.",
+      },
+      {
+        id: "container-image-unavailable",
+        label: "Container image unavailable",
+        expectedFailureMode:
+          "Strict container lane fails before proof; no mutable hidden pull or candidate substitution.",
+      },
+      {
+        id: "candidate-substitution",
+        label: "Candidate substitution",
+        expectedFailureMode:
+          "Required container evidence cannot be satisfied by worker-thread, host subprocess, stale artifact, or runsc documentation.",
+      },
+    ],
+    redaction: {
+      publicOutputsMustOmit:
+        report.runtimeIsolationReadiness.redactedDiagnostics
+          .publicOutputsMustOmit,
+      publicDiagnosticRule:
+        report.runtimeIsolationReadiness.redactedDiagnostics
+          .publicDiagnosticRule,
+    },
+    promotionDecision:
+      "No production sandbox certification; Python remains non-counted exhibition beta.",
+  } as const
+}
+
+const hostileProbeMarkdown = (
+  report: ReturnType<typeof evaluateRuntimeSandboxes>,
+): string => {
+  const artifact = hostileProbeArtifact(report)
+  const lines = [
+    "# v1.20 Hostile Probe and No-Fallback Evidence",
+    "",
+    `Generated: ${artifact.generatedAt}`,
+    "",
+    "## Lane Parity",
+    "",
+    "| Lane | Status | Live | Preflight | Synthetic | Failed | Skipped |",
+    "|---|---|---:|---:|---:|---:|---:|",
+    ...artifact.lanes.map(
+      (lane) =>
+        `| ${lane.label} | ${lane.status} | ${lane.summary.live} | ${lane.summary.preflight} | ${lane.summary.synthetic} | ${lane.summary.failed} | ${lane.summary.skipped} |`,
+    ),
+    "",
+    "## No-Fallback Drills",
+    "",
+    ...artifact.noFallbackDrills.map(
+      (drill) => `- ${drill.id}: ${drill.expectedFailureMode}`,
+    ),
+    "",
+    "## Public Redaction",
+    "",
+    `Rule: ${artifact.redaction.publicDiagnosticRule}`,
+    "",
+    ...artifact.redaction.publicOutputsMustOmit.map((item) => `- ${item}`),
+    "",
+    "## Promotion Decision",
+    "",
+    artifact.promotionDecision,
+    "",
+  ]
+  return `${lines.join("\n")}\n`
+}
+
 const report = evaluateRuntimeSandboxes({ defaultProbeTimeoutMs: 5_000 })
 assertSandboxEvaluationPublicSafe(report)
 
-const checkMode = process.argv.includes("--check")
-const requireContainer = process.argv.includes("--require-container")
-const requireRunsc = process.argv.includes("--require-runsc")
 const next = serialize(report)
 const nextReadinessJson = serialize(readinessArtifact(report))
 const nextReadinessMarkdown = readinessMarkdown(report)
 const nextBudgetJson = serialize(budgetArtifact(report))
 const nextBudgetMarkdown = budgetMarkdown(report)
+const nextHostileProbeJson = serialize(hostileProbeArtifact(report))
+const nextHostileProbeMarkdown = hostileProbeMarkdown(report)
 
 if (requireContainer) {
   assertRequiredSandboxCandidatesPassed(report, ["container-subprocess"])
@@ -371,6 +548,21 @@ if (checkMode) {
       "v1.20 runtime reliability budget Markdown artifact is stale; run pnpm sandbox:evaluate",
     )
   }
+  const currentHostileProbeJson = readFileSync(hostileProbeJsonPath, "utf8")
+  if (currentHostileProbeJson !== nextHostileProbeJson) {
+    throw new Error(
+      "v1.20 hostile probe/no-fallback JSON artifact is stale; run pnpm sandbox:evaluate",
+    )
+  }
+  const currentHostileProbeMarkdown = readFileSync(
+    hostileProbeMarkdownPath,
+    "utf8",
+  )
+  if (currentHostileProbeMarkdown !== nextHostileProbeMarkdown) {
+    throw new Error(
+      "v1.20 hostile probe/no-fallback Markdown artifact is stale; run pnpm sandbox:evaluate",
+    )
+  }
 } else {
   mkdirSync(path.dirname(artifactPath), { recursive: true })
   writeFileSync(artifactPath, next)
@@ -378,4 +570,6 @@ if (checkMode) {
   writeFileSync(readinessMarkdownPath, nextReadinessMarkdown)
   writeFileSync(budgetJsonPath, nextBudgetJson)
   writeFileSync(budgetMarkdownPath, nextBudgetMarkdown)
+  writeFileSync(hostileProbeJsonPath, nextHostileProbeJson)
+  writeFileSync(hostileProbeMarkdownPath, nextHostileProbeMarkdown)
 }

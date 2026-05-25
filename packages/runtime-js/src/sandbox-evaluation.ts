@@ -642,10 +642,16 @@ export const RUNTIME_ISOLATION_READINESS: RuntimeIsolationReadiness = {
         "Python exhibition beta fails closed without substituting JS/TS or in-process execution.",
     },
     {
-      id: "container-runsc-unavailable",
-      label: "Container/runsc unavailable",
+      id: "runsc-unavailable",
+      label: "gVisor/runsc unavailable",
       expectedFailureMode:
         "Strict candidate commands exit non-zero and name the unavailable candidate.",
+    },
+    {
+      id: "docker-or-image-unavailable",
+      label: "Docker or image unavailable",
+      expectedFailureMode:
+        "Strict container evidence exits non-zero or records non-promotion without subprocess substitution.",
     },
     {
       id: "stale-artifacts",
@@ -995,11 +1001,23 @@ export const sandboxEvaluationPublicForbiddenMarkers = [
   "export default",
   "StrategyMemory",
   "SoldierMemory",
+  "strategyMemory",
+  "soldierMemory",
   "objective payload",
+  "objectivePayload",
+  "awarenessGrid",
   "hostPath",
   "process.env",
   "sourceText",
   "privateDiagnostics",
+  "rawRuntimeDetails",
+  "privateRuntime",
+  "runtimeInternals",
+  "Traceback",
+  "stderr:",
+  "stack:",
+  "sessionId",
+  "accessToken",
 ] as const
 
 export const sandboxProbeTaxonomy = (
@@ -1395,7 +1413,8 @@ export const assertRuntimeIsolationReadinessGuardrails = (
   const requiredDrills = new Set([
     "stopped-runtime-service",
     "stopped-python-runtime",
-    "container-runsc-unavailable",
+    "runsc-unavailable",
+    "docker-or-image-unavailable",
     "stale-artifacts",
     "silent-substitution",
   ])

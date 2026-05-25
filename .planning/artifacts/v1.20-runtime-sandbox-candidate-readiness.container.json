@@ -31,28 +31,31 @@
       "containment": "Docker/runc container subprocess; requests no network, read-only root, tmpfs scratch, dropped capabilities, no-new-privileges, PID, memory, and CPU controls.",
       "evidenceKindCounts": {
         "failed": 0,
-        "live": 0,
-        "passed": 0,
-        "preflight": 0,
-        "skipped": 24,
-        "synthetic": 24
+        "live": 20,
+        "passed": 24,
+        "preflight": 1,
+        "skipped": 0,
+        "synthetic": 3
       },
       "id": "container-subprocess",
       "mode": "optional-executable",
-      "status": "skipped"
+      "status": "passed"
     }
   ],
   "candidatePreflight": {
     "configuredPrimaryCandidate": "container-subprocess",
     "containerImage": "node:24-alpine",
-    "dockerAvailable": "not-evaluated",
-    "dockerRuntimes": [],
-    "executedCandidate": "host-subprocess",
-    "imageAvailable": "not-evaluated",
-    "lane": "default-readiness",
-    "runscDockerRuntimeAvailable": "not-evaluated",
-    "runscEvidence": "not evaluated in default readiness; strict runsc command fails loudly when unavailable",
-    "runscOnPath": "not-evaluated"
+    "dockerAvailable": true,
+    "dockerRuntimes": [
+      "io.containerd.runc.v2",
+      "runc"
+    ],
+    "executedCandidate": "container-subprocess",
+    "imageAvailable": true,
+    "lane": "container-required",
+    "runscDockerRuntimeAvailable": false,
+    "runscEvidence": "fail-loud host runtime preflight: runsc is not installed as an executable Docker runtime",
+    "runscOnPath": false
   },
   "candidates": [
     {
@@ -99,18 +102,18 @@
       "id": "container-subprocess",
       "label": "Container subprocess",
       "mode": "optional-executable",
-      "proves": "Unavailable or unsupported locally; no live proof is claimed.",
+      "proves": "Probe behavior matched the current runtime ABI expectations for this local lane.",
       "specReadiness": "production-candidate",
-      "status": "skipped",
+      "status": "passed",
       "summary": {
         "failed": 0,
-        "live": 0,
-        "passed": 0,
-        "preflight": 0,
-        "skipped": 24,
-        "synthetic": 24
+        "live": 20,
+        "passed": 24,
+        "preflight": 1,
+        "skipped": 0,
+        "synthetic": 3
       },
-      "supportedLocally": false
+      "supportedLocally": true
     },
     {
       "countedResultsAllowed": false,
@@ -205,11 +208,11 @@
     "controlEvidenceKind": "adapter argv and metadata request; not kernel-level production sandbox certification",
     "evidenceKindCounts": {
       "failed": 0,
-      "live": 0,
-      "passed": 0,
-      "preflight": 0,
-      "skipped": 24,
-      "synthetic": 24
+      "live": 20,
+      "passed": 24,
+      "preflight": 1,
+      "skipped": 0,
+      "synthetic": 3
     },
     "noShell": true,
     "requestedControls": {
@@ -233,7 +236,7 @@
       "timeout": true,
       "timeoutMs": 50
     },
-    "status": "skipped",
+    "status": "passed",
     "strictIpc": "schema-validated JSON IPC over stdin/stdout"
   },
   "generatedAt": "2026-05-25T00:00:00.000Z",
