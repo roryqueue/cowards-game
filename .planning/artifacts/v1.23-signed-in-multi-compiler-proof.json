@@ -1,0 +1,401 @@
+{
+  "schemaVersion": "v1.23-signed-in-multi-compiler-proof",
+  "generatedAt": "2026-05-26T00:31:24.867Z",
+  "account": {
+    "handle": "v123-mplwg1at",
+    "signupMs": 97
+  },
+  "revisions": {
+    "jsTs": "strategy-revision:36a4f78acba6702ff88b8c33c91c38575694c349a1e5e53d53b2a219c95db824",
+    "rustPrimary": "strategy-revision:32ff7b05b0032cc7a06756e906b30e24ba782d07e8a6a18c384c0f38b51c76e9",
+    "zigPrimary": "strategy-revision:3bed7f0cedce59a6b4abd1b62e4b2ebd8b20f2688268392d516eddcb54be872a",
+    "rustCompanion": "strategy-revision:025452e5de78eb00571a26f1049f883de41b15bb566c6ff8cc51d43cec9271ee",
+    "zigCompanion": "strategy-revision:bf39ea6f576abc826d3d0c95288784474b1dd75b7b7e4f47155f32991c8e6519",
+    "note": "The user-facing gate requires at least one saved JS/TS, Rust, and Zig revision. Same-language exhibitions require distinct revision ids, so companion Rust/Zig revisions are recorded."
+  },
+  "createMs": 326,
+  "workerMs": 6876,
+  "settleMs": 82,
+  "workerStatuses": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "exhibitions": [
+    {
+      "matchSetId": "match-set:exhibition:Zp1cNo7JqF5nIZfqxRGGag",
+      "status": "queued",
+      "matchCount": 2,
+      "matchup": "js-ts-vs-rust",
+      "observedStatus": "complete",
+      "observedMatchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "resultPageMs": 308,
+      "replayPageMs": 424,
+      "resultBodyLength": 2530,
+      "replayBodyLength": 5314
+    },
+    {
+      "matchSetId": "match-set:exhibition:5jEof6Ap-pUMo0N4q1zKUA",
+      "status": "queued",
+      "matchCount": 2,
+      "matchup": "rust-vs-rust",
+      "observedStatus": "complete",
+      "observedMatchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "resultPageMs": 508,
+      "replayPageMs": 416,
+      "resultBodyLength": 2558,
+      "replayBodyLength": 4269
+    },
+    {
+      "matchSetId": "match-set:exhibition:DDvx43JabvPd2Uw3P9368A",
+      "status": "queued",
+      "matchCount": 2,
+      "matchup": "rust-vs-zig",
+      "observedStatus": "complete",
+      "observedMatchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "resultPageMs": 644,
+      "replayPageMs": 294,
+      "resultBodyLength": 2540,
+      "replayBodyLength": 3730
+    },
+    {
+      "matchSetId": "match-set:exhibition:1uWr3YTQY0IWkJtFsqfjLg",
+      "status": "queued",
+      "matchCount": 2,
+      "matchup": "zig-vs-zig",
+      "observedStatus": "complete",
+      "observedMatchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "resultPageMs": 543,
+      "replayPageMs": 332,
+      "resultBodyLength": 2546,
+      "replayBodyLength": 4269
+    }
+  ],
+  "totals": {
+    "matchSetCount": 4,
+    "workerIterations": 6,
+    "privateMarkerScanPassed": true,
+    "jsTsRegressionChecked": true,
+    "rustVsRustChecked": true,
+    "rustVsZigChecked": true,
+    "zigVsZigChecked": true
+  },
+  "runtimePath": "web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> WASM/WASI runtime implementation -> Wasmtime -> immutable Rust/Zig WASM artifacts",
+  "runtimeServiceAdapterEvidence": "worker-thread-local-proof",
+  "candidateEvidence": {
+    "wasmWasiBetaReadiness": {
+      "abi": "WASI Preview 1 stdin/stdout JSON envelope",
+      "artifactMetadata": {
+        "rust": {
+          "abiEnvelope": "stdin-stdout-json",
+          "abiVersion": "strategy-runtime-abi-v1.14",
+          "bytes": 2028192,
+          "createdAt": "1970-01-01T00:00:00.000Z",
+          "format": "wasm",
+          "hash": "d445ebe7c9a6d6f9e21440d6f8d6b3d36bf4c29554b35d77f3faf7a9aba963b1",
+          "publicEvidence": {
+            "label": "Rust WASM/WASI non-counted exhibition beta",
+            "nonCounted": true,
+            "sandboxClaim": "candidate-readiness-only"
+          },
+          "sourceHash": "f4436e4494d2eeed63bc7b58e1a6113962af518488c6e63f46a4f3e8fd501a80",
+          "targetTriple": "wasm32-wasip1",
+          "toolchain": {
+            "commandSummary": "rustc --target wasm32-wasip1 -O strategy.rs -o strategy.wasm",
+            "compiler": "rustc",
+            "compilerVersion": "rustc 1.95.0 (59807616e 2026-04-14)",
+            "language": "rust",
+            "targetTriple": "wasm32-wasip1"
+          },
+          "validationStatus": "valid",
+          "wasiProfile": "preview1"
+        },
+        "zig": {
+          "abiEnvelope": "stdin-stdout-json",
+          "abiVersion": "strategy-runtime-abi-v1.14",
+          "bytes": 772,
+          "createdAt": "1970-01-01T00:00:00.000Z",
+          "format": "wasm",
+          "hash": "39b801f500a5e50f2a9ef513d7e9a015c663b28cddbf7be88a0b383f972c81e0",
+          "publicEvidence": {
+            "label": "Zig WASM/WASI non-counted exhibition beta",
+            "nonCounted": true,
+            "sandboxClaim": "candidate-readiness-only"
+          },
+          "sourceHash": "7936fabf142c84aca4f00d279aa313e14d42a2aac76820d7cfe65faaa2f5e532",
+          "targetTriple": "wasm32-wasi",
+          "toolchain": {
+            "commandSummary": "zig build-exe strategy.zig -target wasm32-wasi -O ReleaseSmall --cache-dir <temp> --global-cache-dir <temp> -femit-bin=strategy.wasm",
+            "compiler": "zig",
+            "compilerVersion": "zig 0.16.0",
+            "language": "zig",
+            "targetTriple": "wasm32-wasi"
+          },
+          "validationStatus": "valid",
+          "wasiProfile": "preview1"
+        }
+      },
+      "countedEligibility": false,
+      "generatedAt": "2026-05-25T00:00:00.000Z",
+      "jsTsStatus": "counted Strategy path preserved; regression checked by proof/test gates",
+      "milestone": "v1.23",
+      "probes": [
+        {
+          "expectation": "Rust/Zig beta criteria preserve non-counted exhibition-only support",
+          "id": "criteria-beta-is-non-counted-only",
+          "layer": "criteria",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Rust compiles to immutable wasm32-wasip1 artifact metadata",
+          "id": "rust-compile-valid-artifact",
+          "layer": "compile",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Zig helper compiles to immutable wasm32-wasi artifact metadata",
+          "id": "zig-helper-compile-valid-artifact",
+          "layer": "compile",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Zig helper imports only fd_read/fd_write from WASI Preview 1",
+          "id": "zig-helper-imports-fd-only",
+          "layer": "validation",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Rust Preview 1 JSON envelope returns activation orders",
+          "id": "rust-select-activations-json-envelope",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Zig Preview 1 JSON envelope returns a soldier action",
+          "id": "zig-soldier-brain-json-envelope",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Rust filesystem source fails before artifact exposure",
+          "id": "rust-filesystem-denied-validation",
+          "layer": "validation",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Zig std-backed helper fails before artifact exposure",
+          "id": "zig-std-denied-validation",
+          "layer": "validation",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Malformed stdout is classified as system IPC failure",
+          "id": "malformed-json-result",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Invalid Strategy action is classified separately from system failure",
+          "id": "invalid-action-schema",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Trap/panic/abort is classified as Strategy runtime violation",
+          "id": "panic-trap-abort",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Fuel/timeout terminates infinite loops",
+          "id": "infinite-loop-timeout",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Oversized stdout is capped without exposing raw streams",
+          "id": "oversized-stdout-cap",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Memory growth cap terminates runaway allocation",
+          "id": "memory-growth-cap",
+          "layer": "execute",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Rust stale artifact hash fails without source fallback",
+          "id": "rust-stale-artifact-hash",
+          "layer": "artifact",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Zig missing artifact bytes fails without source fallback",
+          "id": "zig-missing-artifact-bytes",
+          "layer": "artifact",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "Target triple mismatch fails closed",
+          "id": "artifact-target-mismatch",
+          "layer": "artifact",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        },
+        {
+          "expectation": "ABI envelope mismatch fails closed",
+          "id": "artifact-abi-mismatch",
+          "layer": "abi",
+          "observed": "matched expectation",
+          "publicSafe": true,
+          "status": "pass"
+        }
+      ],
+      "promotionClaim": "non-counted exhibition beta readiness only; not counted play and not production sandbox certification",
+      "pythonStatus": "non-counted exhibition beta preserved",
+      "runtimeLane": "runtime-wasm-wasi-wasmtime-preview1",
+      "schemaVersion": "v1.23-wasm-wasi-beta-readiness-evidence",
+      "summary": {
+        "fail": 0,
+        "pass": 18
+      },
+      "zigHelper": {
+        "forbiddenStdValidation": {
+          "engineCompatibility": {
+            "engine": "0.1.4",
+            "spec": "cowards-rules-v1.4"
+          },
+          "errors": [
+            {
+              "code": "FORBIDDEN_PATTERN",
+              "constraint": "Zig WASI Strategies must be self-contained and cannot use host filesystem, network, time, randomness, process, or embed-file capabilities.",
+              "message": "Zig Strategy source contains forbidden capability: @import(\"std\")",
+              "pattern": "@import(\"std\")",
+              "reference": "runtime/capabilities",
+              "remediation": "Remove @import(\"std\") and use only Strategy input data.",
+              "severity": "error"
+            }
+          ],
+          "forbiddenPatterns": [
+            "@import(\"std\")"
+          ],
+          "runtimeVersion": "0.1.0-alpha",
+          "sourceBytes": 2187,
+          "sourceHash": "93e9038a3a3be37be68763c307aebca249746e25a78f3ff5c155f9ba75cfad78",
+          "valid": false,
+          "warnings": [
+            {
+              "code": "NON_COUNTED_RUNTIME",
+              "constraint": "Zig may run only in non-counted exhibition beta proof paths.",
+              "message": "Zig WASM/WASI is a non-counted exhibition beta runtime and not ranked/counted eligible.",
+              "reference": "runtime/counting",
+              "remediation": "Use JS/TS for counted play.",
+              "severity": "warning"
+            }
+          ]
+        },
+        "importAudit": [
+          {
+            "kind": 0,
+            "module": "wasi_snapshot_preview1",
+            "name": "fd_read"
+          },
+          {
+            "kind": 0,
+            "module": "wasi_snapshot_preview1",
+            "name": "fd_write"
+          }
+        ],
+        "sourceBytes": 2159
+      },
+      "zigReadiness": {
+        "artifactHash": "8d77e42ca5b0599568ba8ed5d9ca9f150fce82ead5fe1088b39b2538758b395c",
+        "compileProof": true,
+        "message": "Zig toolchain, target, compile artifact, and WASI Preview 1 ABI proof passed; Zig may be exposed only as non-counted exhibition beta after v1.23 signed-in proof and promotion gates pass.",
+        "ok": true,
+        "resolvedPath": "/usr/local/bin/zig",
+        "runtimeProof": true,
+        "target": "wasm32-wasi",
+        "zigVersion": "0.16.0"
+      }
+    },
+    "abiReadiness": {
+      "activeExecutionAbi": "wasi-preview1-stdin-stdout-json",
+      "activePathDecision": "Keep WASI Preview 1 stdin/stdout JSON as the only v1.23 Match execution path.",
+      "componentModelWit": {
+        "reason": "WIT world shape, Zig support, Wasmtime host integration, typed caps, and compatibility migration remain future work.",
+        "status": "not-promoted"
+      },
+      "directExports": {
+        "reason": "Memory ownership, allocation/free ABI, caps, and Rust/Zig glue parity require a dedicated future migration milestone.",
+        "status": "not-promoted"
+      },
+      "milestone": "v1.23",
+      "preview1Json": {
+        "evidence": [
+          "schema validated runtime envelopes",
+          "stdio/result caps",
+          "malformed JSON failure probe",
+          "Rust/Zig immutable artifact parity"
+        ],
+        "status": "active"
+      },
+      "rollback": "Existing artifacts declare abiEnvelope=stdin-stdout-json and are rejected if metadata drifts.",
+      "schemaVersion": "v1.23-abi-readiness-evidence"
+    }
+  },
+  "promotionDecision": {
+    "rustStatus": "non-counted exhibition beta only",
+    "zigStatus": "non-counted exhibition beta only",
+    "wasmWasiStatus": "runtime beta-readiness evidence only; no production sandbox certification"
+  }
+}

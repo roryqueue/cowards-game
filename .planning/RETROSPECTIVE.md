@@ -1,5 +1,44 @@
 # Retrospective
 
+## Milestone: v1.23 — WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
+
+**Shipped:** 2026-05-25
+**Phases:** 8 | **Plans:** 8
+
+### What Was Built
+
+- Rust and Zig were promoted to non-counted exhibition beta only.
+- v1.23 beta criteria, ABI readiness, Zig helper capability, no-fallback, artifact compatibility, signed-in proof, and promotion decision artifacts.
+- A safer no-std Zig starter/helper layer with small parsing/output helpers and an audited WASI import surface.
+- v1.23 WASM/WASI beta readiness evaluator with 18 passing probes.
+- Centralized runtime label helpers for Workshop, account, exhibition, MatchSet result, and replay surfaces.
+- A signed-in JS/TS/Rust/Zig proof covering all required exhibition MatchSet shapes.
+- Boundary monitor coverage for v1.23 beta readiness artifacts and refreshed TypeScript surface labels.
+
+### What Worked
+
+- The live proof completed all four required MatchSet shapes and gave concrete result/replay links for audit.
+- Reusing Preview 1 stdin/stdout JSON avoided risky ABI churn while still improving readiness evidence.
+- Centralized labels reduced scattered Rust/Zig wording and made beta limits clearer.
+
+### What Was Inefficient
+
+- Zig compile validation is slow enough that the selected Go backend write timeout needed to be larger than the old generic 5s service-client budget.
+- The first proof created invalid replay evidence because some proof Strategies never ordered activations. The proof now activates a Soldier so public Chronicles are realistic.
+- Adding one frontend helper required regenerating older TypeScript inventory/surface-label artifacts before boundary monitors could pass.
+
+### Patterns Established
+
+- Signed-in multi-compiler proof should save compiled revisions sequentially unless concurrency itself is being tested.
+- Proof Strategies must be replay-realistic, not merely validation-minimal.
+- Runtime language labels should be centralized and fed into monitors when promotion language changes.
+
+### Key Lessons
+
+- "Beta" language needs as much evidence discipline as runtime code. The narrow non-counted exhibition beta claim held because proof, labels, monitors, and promotion docs all said the same thing.
+- ABI stability is a strength here: direct exports and component model/WIT remain promising, but not free.
+- Public replay realism is a promotion gate, not a cosmetic afterthought.
+
 ## Milestone: v1.22 — WASM/WASI Multi-Compiler Alpha and Runtime Hardening
 
 **Shipped:** 2026-05-25

@@ -574,7 +574,13 @@ Sandbox language: v1.22 improves candidate-readiness evidence only. It is not pr
 `
 
 const report = buildReport()
-const zigEvidence = zigReadinessEvidence()
+const rawZigEvidence = zigReadinessEvidence()
+const zigEvidence = {
+  ...rawZigEvidence,
+  message: rawZigEvidence.ok
+    ? "Zig toolchain, target, compile artifact, and WASI Preview 1 ABI proof passed; Zig may be exposed only as non-counted exhibition alpha."
+    : rawZigEvidence.message,
+}
 const zig = {
   schemaVersion: "v1.22-zig-readiness-evidence",
   milestone: "v1.22",

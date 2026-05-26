@@ -2,51 +2,51 @@
 gsd_state_version: 1.0
 milestone: v1.23
 milestone_name: WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
-status: planning
-stopped_at: v1.23 milestone initialized; Phase 156 ready for discussion
-last_updated: "2026-05-25T00:00:00.000-04:00"
-last_activity: 2026-05-25 - Milestone v1.23 started with research, requirements, and roadmap for Rust/Zig non-counted exhibition beta readiness
+status: complete
+stopped_at: v1.23 shipped, archived, committed, and tagged
+last_updated: "2026-05-25T21:00:00.000-04:00"
+last_activity: 2026-05-25 - Milestone v1.23 completed with Rust/Zig non-counted exhibition beta promotion
 progress:
   total_phases: 8
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 8
+  total_plans: 8
+  completed_plans: 8
+  percent: 100
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.23 planning active
+**Status:** v1.23 shipped
 
 ## Project Reference
 
 See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Latest shipped milestone:** v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening
-**Active milestone:** v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
-**Requirements:** `.planning/REQUIREMENTS.md`
+**Latest shipped milestone:** v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
+**Active milestone:** none
+**Requirements:** archived at `.planning/milestones/v1.23-REQUIREMENTS.md`
 **Roadmap:** `.planning/ROADMAP.md`
 **Research:** `.planning/research/SUMMARY.md` and `.planning/research/v1.23-SUMMARY.md`
 
 ## Current Position
 
-Phase: Not started (defining Phase 156 approach)
-Plan: —
-Status: Defining requirements and roadmap complete
-Last activity: 2026-05-25 - Milestone v1.23 started
+Phase: 163 complete
+Plan: 8/8 complete
+Status: v1.23 archived and ready for next milestone initialization
+Last activity: 2026-05-25 - Milestone v1.23 shipped
 
 ## Active Milestone Goal
 
-v1.23 attempts to promote Rust and Zig from non-counted exhibition alpha to non-counted exhibition beta only if real signed-in multi-compiler proof, runtime hardening evidence, Zig ergonomics, ABI evidence, privacy, replay plausibility, no-fallback behavior, and JS/TS regression safety pass.
+v1.23 promoted Rust and Zig from non-counted exhibition alpha to non-counted exhibition beta only after real signed-in multi-compiler proof, runtime hardening evidence, Zig ergonomics, ABI evidence, privacy, replay plausibility, no-fallback behavior, and JS/TS regression safety passed.
 
 ## Active Constraints
 
 - "Beta" means non-counted exhibition beta only.
 - JS/TS remains the counted Strategy path.
 - Python remains non-counted exhibition beta.
-- Rust and Zig remain non-counted exhibition alpha until v1.23 gates pass.
+- Rust and Zig are non-counted exhibition beta only after v1.23 gates passed.
 - No Rust, Zig, Python, WASM/WASI, or TypeScript counted/ranked/ladder/gauntlet promotion in this milestone.
 - No production sandbox certification claim.
 - Normal topology remains `web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s)`.
@@ -72,4 +72,4 @@ v1.23 attempts to promote Rust and Zig from non-counted exhibition alpha to non-
 
 ## Operator Next Steps
 
-Start Phase 156 with `$gsd-discuss-phase 156` or `$gsd-plan-phase 156`. The first phase should lock beta criteria, v1.22 regression evidence, split promotion outcomes, JS/TS counted regression gates, and Python beta preservation before implementation changes begin.
+Start a fresh milestone with `$gsd-new-milestone`. Active `.planning/REQUIREMENTS.md` is intentionally absent after v1.23 closure.

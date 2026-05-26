@@ -8410,6 +8410,11 @@
           "line": 6,
           "source": "../../lib/go-backend-service-client.js",
           "statementText": "import { isGoBackendServiceUnavailableError } from \"../../lib/go-backend-service-client.js\""
+        },
+        {
+          "line": 7,
+          "source": "../../lib/runtime-labels.js",
+          "statementText": "import { runtimeExhibitionStatusLabel } from \"../../lib/runtime-labels.js\""
         }
       ],
       "persistenceImports": [],
@@ -9006,6 +9011,11 @@
           "line": 4,
           "source": "../../../lib/account-service-boundary.js",
           "statementText": "import type { AccountReadRevisionSummary } from \"../../../lib/account-service-boundary.js\""
+        },
+        {
+          "line": 5,
+          "source": "../../../lib/runtime-labels.js",
+          "statementText": "import { runtimeExhibitionStatusLabel } from \"../../../lib/runtime-labels.js\""
         }
       ],
       "persistenceImports": [],
@@ -10490,6 +10500,11 @@
           "line": 4,
           "source": "../evidence-copy.js",
           "statementText": "import {\n  matchSetEvidenceRows,\n  publicPrivacyProvenanceCue,\n  statusChipClass,\n} from \"../evidence-copy.js\""
+        },
+        {
+          "line": 9,
+          "source": "../../../lib/runtime-labels.js",
+          "statementText": "import { runtimeExhibitionStatusLabel } from \"../../../lib/runtime-labels.js\""
         }
       ],
       "persistenceImports": [],
@@ -11676,6 +11691,11 @@
           "statementText": "import { useEffect, useMemo, useState } from \"react\""
         },
         {
+          "line": 37,
+          "source": "../../lib/runtime-labels.js",
+          "statementText": "import {\n  sourceFormatExhibitionLabel,\n  sourceFormatRuntimeCue,\n  sourceFormatShortLabel,\n} from \"../../lib/runtime-labels.js\""
+        },
+        {
           "line": 4,
           "source": "@cowards/spec",
           "statementText": "import type {\n  StrategyArtifactSourceFormat,\n  StrategyRevisionValidationReport,\n} from \"@cowards/spec\""
@@ -12489,6 +12509,56 @@
           "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
+    },
+    {
+      "id": "apps-web-lib-runtime-labels",
+      "path": "apps/web/lib/runtime-labels.ts",
+      "kind": "web-lib-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "@cowards/spec",
+          "statementText": "import type { StrategyArtifactSourceFormat } from \"@cowards/spec\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/lib/runtime-labels.ts"
+      ],
+      "scannerFindings": []
     },
     {
       "id": "apps-web-lib-storage-unavailable-error",

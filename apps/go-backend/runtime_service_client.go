@@ -177,7 +177,7 @@ func (client *runtimeServiceClient) executeMatch(ctx context.Context, request ru
 
 func (client *runtimeServiceClient) validateStrategy(ctx context.Context, sourceFormat string, source string, strategyID string) (*runtimeServiceValidationResponse, *runtimeServiceFailure) {
 	if sourceFormat != "rust" && sourceFormat != "zig" {
-		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service validation only supports Rust and Zig WASM/WASI sources in v1.22", false, nil)
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service validation only supports Rust and Zig WASM/WASI sources in v1.23", false, nil)
 	}
 	endpoint := client.endpoint
 	if endpoint == "" {

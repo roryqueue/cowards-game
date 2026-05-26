@@ -334,7 +334,7 @@ export const STRATEGY_LANGUAGE_REGISTRY = [
     version: "1.95.0-wasm32-wasip1",
     enabledForNormalPlay: false,
     notes: [
-      "Non-counted exhibition alpha through immutable WASM/WASI artifacts only; not ranked or counted play.",
+      "Non-counted exhibition beta through immutable WASM/WASI artifacts only; not ranked or counted play.",
     ],
   },
   {
@@ -343,7 +343,7 @@ export const STRATEGY_LANGUAGE_REGISTRY = [
     version: "0.16.0-wasm32-wasi",
     enabledForNormalPlay: false,
     notes: [
-      "Non-counted exhibition alpha only when local Zig compile, artifact, Wasmtime, and ABI proof pass loudly.",
+      "Non-counted exhibition beta only when local Zig compile, artifact, Wasmtime, ABI proof, and signed-in proof pass loudly.",
     ],
   },
 ] as const satisfies readonly StrategyLanguageRecord[]
@@ -570,7 +570,7 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
       "signed-in-exhibition-proof",
     ],
     isolationBoundary:
-      "Wasmtime CLI subprocess candidate for immutable WASM/WASI non-counted exhibition alpha; not production hostile-code isolation certification.",
+      "Wasmtime CLI subprocess candidate for immutable WASM/WASI non-counted exhibition beta; not production hostile-code isolation certification.",
     limits: {
       ...DEFAULT_RUNTIME_LIMITS,
       environment: "empty",
@@ -582,7 +582,7 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     requiredCapabilities: [],
     notes: [
       "WASI Preview 1 stdin/stdout JSON envelope only.",
-      "Rust/Zig remain non-counted exhibition alpha/stretch; not ranked, ladder, gauntlet, counted, or broad production multi-language support.",
+      "Rust/Zig remain non-counted exhibition beta only; not ranked, ladder, gauntlet, counted, or broad production multi-language support.",
       "Node node:wasi is not accepted as a hostile-code sandbox.",
     ],
   },
@@ -1006,7 +1006,7 @@ export const describeStrategyRuntimeProductSemantics = (
     ...(experimental
       ? [
           runtime.language.id === "rust" || runtime.language.id === "zig"
-            ? "Non-counted exhibition alpha WASM/WASI runtime; not eligible for ranked, ladder, gauntlet, or counted play."
+            ? "Non-counted exhibition beta WASM/WASI runtime; not eligible for ranked, ladder, gauntlet, or counted play."
             : "Non-counted exhibition beta runtime; not eligible for ranked or counted play.",
         ]
       : []),
@@ -1037,9 +1037,9 @@ export const describeStrategyRuntimeProductSemantics = (
       runtime.language.id === "python"
         ? "examples/python-experimental"
         : runtime.language.id === "rust"
-          ? "examples/rust-wasi-exhibition-alpha"
+          ? "examples/rust-wasi-exhibition-beta"
           : runtime.language.id === "zig"
-            ? "examples/zig-wasi-stretch"
+            ? "examples/zig-wasi-exhibition-beta"
             : "samples/minimal-strategy",
     warnings,
     validationIssueCodes: issues.map(

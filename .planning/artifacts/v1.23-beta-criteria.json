@@ -1,0 +1,31 @@
+{
+  "allowedOutcomes": [
+    "rust-beta-zig-alpha",
+    "both-beta",
+    "neither-beta",
+    "both-remain-alpha"
+  ],
+  "betaMeans": "non-counted exhibition beta only",
+  "forbiddenClaims": [
+    "counted Rust/Zig/WASM support",
+    "ranked Rust/Zig/WASM support",
+    "ladder Rust/Zig/WASM support",
+    "gauntlet Rust/Zig/WASM support",
+    "production sandbox certification",
+    "Rust/Zig/Python/TypeScript backend ownership"
+  ],
+  "mandatoryGates": [
+    "signed-in JS/TS Rust Zig proof",
+    "immutable WASM/WASI artifact execution",
+    "Rust and Zig hardening probes",
+    "Zig helper import audit",
+    "Preview 1 stdin/stdout JSON ABI evidence",
+    "public-safe diagnostics and privacy scan",
+    "replay plausibility",
+    "no silent fallback",
+    "JS/TS counted regression safety",
+    "Python non-counted exhibition beta preservation"
+  ],
+  "milestone": "v1.23",
+  "schemaVersion": "v1.23-beta-criteria"
+}

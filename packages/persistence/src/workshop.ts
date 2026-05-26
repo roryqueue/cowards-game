@@ -176,9 +176,37 @@ const Ciovec = extern struct { buf: [*]const u8, buf_len: usize };
 extern "wasi_snapshot_preview1" fn fd_read(u32, *const Iovec, usize, *usize) u16;
 extern "wasi_snapshot_preview1" fn fd_write(u32, *const Ciovec, usize, *usize) u16;
 
-fn contains(haystack: []const u8, needle: []const u8) bool {
-    if (needle.len == 0) return true;
-    if (haystack.len < needle.len) return false;
+const StrategyInput = struct {
+    bytes: []const u8,
+
+    fn contains(self: StrategyInput, needle: []const u8) bool {
+        return containsBytes(self.bytes, needle);
+    }
+
+    fn methodIs(self: StrategyInput, method: []const u8) bool {
+        return self.contains(method);
+    }
+
+    fn firstActiveSoldierId(self: StrategyInput) ?[]const u8 {
+        const soldiers_marker = "\\"mySoldiers\\":[";
+        const id_marker = "\\"id\\":\\"";
+        const soldiers_start = indexOfBytes(self.bytes, soldiers_marker) orelse return null;
+        const soldiers = self.bytes[soldiers_start..];
+        const id_start_relative = indexOfBytes(soldiers, id_marker) orelse return null;
+        const id_start = id_start_relative + id_marker.len;
+        const after_id = soldiers[id_start..];
+        const id_end = indexOfBytes(after_id, "\\"") orelse return null;
+        return after_id[0..id_end];
+    }
+};
+
+fn containsBytes(haystack: []const u8, needle: []const u8) bool {
+    return indexOfBytes(haystack, needle) != null;
+}
+
+fn indexOfBytes(haystack: []const u8, needle: []const u8) ?usize {
+    if (needle.len == 0) return 0;
+    if (haystack.len < needle.len) return null;
     var index: usize = 0;
     while (index <= haystack.len - needle.len) : (index += 1) {
         var matched = true;
@@ -189,9 +217,9 @@ fn contains(haystack: []const u8, needle: []const u8) bool {
                 break;
             }
         }
-        if (matched) return true;
+        if (matched) return index;
     }
-    return false;
+    return null;
 }
 
 fn writeAll(bytes: []const u8) void {
@@ -200,15 +228,34 @@ fn writeAll(bytes: []const u8) void {
     _ = fd_write(1, &iov, 1, &written);
 }
 
+fn writeSoldierAction(action_json: []const u8) void {
+    writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"action\\":");
+    writeAll(action_json);
+    writeAll(",\\"soldierMemory\\":null}}\\n");
+}
+
+fn writeEmptyActivations() void {
+    writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
+}
+
+fn writeActivation(soldier_id: []const u8) void {
+    writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[{\\"soldierId\\":\\"");
+    writeAll(soldier_id);
+    writeAll("\\",\\"objective\\":{\\"stance\\":\\"stone\\"}}],\\"strategyMemory\\":null}}\\n");
+}
+
 export fn _start() void {
     var input_buf: [16384]u8 = undefined;
     var iov = Iovec{ .buf = &input_buf, .buf_len = input_buf.len };
     var nread: usize = 0;
     _ = fd_read(0, &iov, 1, &nread);
-    if (contains(input_buf[0..nread], "\\"methodName\\":\\"soldierBrain\\"")) {
-        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
+    const input = StrategyInput{ .bytes = input_buf[0..nread] };
+    if (input.methodIs("\\"methodName\\":\\"soldierBrain\\"")) {
+        writeSoldierAction("{\\"type\\":\\"TURN_TO_STONE\\"}");
+    } else if (input.firstActiveSoldierId()) |soldier_id| {
+        writeActivation(soldier_id);
     } else {
-        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
+        writeEmptyActivations();
     }
 }
 `.trim()
@@ -794,8 +841,8 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     label: "Rust WASI stone",
     sampleKind: "starter",
     description:
-      "A safe Rust WASI alpha sample using the stdin/stdout JSON envelope.",
-    categories: ["Rust alpha", "WASM/WASI"],
+      "A safe Rust WASI beta sample using the stdin/stdout JSON envelope.",
+    categories: ["Rust beta", "WASM/WASI"],
     sourceFormat: "rust",
     source: rustWasiTacticalStarterSource,
   }),
@@ -804,8 +851,8 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     label: "Zig WASI stone",
     sampleKind: "starter",
     description:
-      "A safe no-std Zig WASI alpha sample using direct Preview 1 fd_read/fd_write imports.",
-    categories: ["Zig alpha", "WASM/WASI"],
+      "A safe no-std Zig WASI beta helper sample for the Preview 1 JSON envelope.",
+    categories: ["Zig beta", "WASM/WASI"],
     sourceFormat: "zig",
     source: zigWasiTacticalStarterSource,
   }),
@@ -893,7 +940,7 @@ export const validateWorkshopSource = (
         {
           code: "NON_COUNTED_RUNTIME",
           severity: "warning",
-          message: `${label} WASM/WASI is non-counted exhibition alpha and must be compiled by runtime-service before save.`,
+          message: `${label} WASM/WASI is non-counted exhibition beta and must be compiled by runtime-service before save.`,
         },
       ],
       sourceBytes,

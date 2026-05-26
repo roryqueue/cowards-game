@@ -2,18 +2,18 @@
 
 ## Current State
 
-**Shipped version:** v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening on 2026-05-25
-**Current milestone:** v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
-**Status:** Planning active. v1.23 will attempt non-counted exhibition beta promotion for Rust and/or Zig only if signed-in multi-compiler proof, runtime hardening evidence, Zig ergonomics, ABI evidence, privacy, and no-fallback gates pass.
-**Last audit:** v1.22 audit passed with Zig exposed only as non-counted exhibition alpha after compile/runtime/ABI proof and WASM/WASI kept as runtime-candidate hardening evidence only.
+**Shipped version:** v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness on 2026-05-25
+**Current milestone:** none active
+**Status:** v1.23 shipped. Rust and Zig are promoted to non-counted exhibition beta only after signed-in multi-compiler proof, runtime hardening evidence, Zig ergonomics, ABI evidence, privacy checks, replay plausibility, and no-fallback gates passed.
+**Last audit:** v1.23 audit passed with Rust/Zig promoted only to non-counted exhibition beta, JS/TS preserved as the counted Strategy path, Python preserved as non-counted exhibition beta, and WASM/WASI kept as readiness evidence rather than production sandbox certification.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI runtime-candidate lanes for non-counted exhibition alpha, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
+## Latest Shipped Milestone: v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
 
 **Goal:** Attempt to promote Rust and Zig from non-counted exhibition alpha to non-counted exhibition beta, gated by real signed-in multi-compiler proof, runtime hardening evidence, Zig ergonomics, ABI evidence, and conservative promotion decisions.
 
@@ -27,7 +27,9 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - Review Workshop, exhibition, result, and replay labels so any beta language is clearly non-counted exhibition beta and private Strategy source, memory, objective payloads, and runtime internals stay hidden by default.
 - Close with an explicit split-capable promotion decision: Rust beta / Zig alpha, both beta, neither beta, or both remain alpha.
 
-## Latest Shipped Milestone: v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening
+**Implemented:** v1.23 promotes Rust and Zig to non-counted exhibition beta only. The milestone adds a v1.23 beta criteria artifact, a safer no-std Zig helper/starter layer, 18/18 beta readiness probes, ABI readiness evidence that keeps Preview 1 stdin/stdout JSON as the active path, signed-in JS/TS/Rust/Zig multi-compiler proof, centralized non-counted exhibition beta labels, no-fallback and compatibility evidence, refreshed boundary monitors, and a final promotion decision preserving JS/TS counted support, Python beta, Go ownership, runtime-service hostile-code isolation, and no production sandbox claim.
+
+## Previous Shipped Milestone: v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening
 
 **Goal:** Make WASM/WASI a more serious multi-compiler Strategy runtime platform by combining Zig artifact alpha proof, runtime hardening evidence, and ABI evolution research while keeping all promotion claims conservative.
 

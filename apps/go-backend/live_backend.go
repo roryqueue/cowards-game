@@ -2377,12 +2377,12 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"experimental":         true,
 			"countedPlayEligible":  false,
 			"countedPlayLabel":     "Not counted",
-			"countedPlayReason":    "Strategy runtime is non-counted exhibition alpha and not counted-play eligible.",
+			"countedPlayReason":    "Strategy runtime is non-counted exhibition beta and not counted-play eligible.",
 			"sourcePolicyLabel":    "Self-contained Rust source compiled to immutable WASM artifact",
 			"packagePolicyLabel":   "No packages",
 			"docsReference":        "runtime/languages",
-			"examplesReference":    "examples/rust-wasi-exhibition-alpha",
-			"warnings":             []string{"Rust WASM/WASI is non-counted exhibition alpha and not ranked/counted eligible."},
+			"examplesReference":    "examples/rust-wasi-exhibition-beta",
+			"warnings":             []string{"Rust WASM/WASI is non-counted exhibition beta and not ranked/counted eligible."},
 			"validationIssueCodes": []string{"NON_COUNTED_RUNTIME"},
 		}
 	}
@@ -2397,12 +2397,12 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"experimental":         true,
 			"countedPlayEligible":  false,
 			"countedPlayLabel":     "Not counted",
-			"countedPlayReason":    "Zig is a gated WASM/WASI stretch target and not counted-play eligible.",
+			"countedPlayReason":    "Zig WASM/WASI is non-counted exhibition beta and not counted-play eligible.",
 			"sourcePolicyLabel":    "Self-contained Zig source compiled to immutable WASM artifact",
 			"packagePolicyLabel":   "No packages",
 			"docsReference":        "runtime/languages",
-			"examplesReference":    "examples/zig-wasi-stretch",
-			"warnings":             []string{"Zig WASM/WASI is non-counted exhibition alpha only after compile, artifact, Wasmtime, and ABI proof; never ranked/counted eligible in v1.22."},
+			"examplesReference":    "examples/zig-wasi-exhibition-beta",
+			"warnings":             []string{"Zig WASM/WASI is non-counted exhibition beta only after compile, artifact, Wasmtime, ABI, and signed-in proof; never ranked/counted eligible in v1.23."},
 			"validationIssueCodes": []string{"NON_COUNTED_RUNTIME"},
 		}
 	}

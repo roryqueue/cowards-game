@@ -1,5 +1,38 @@
 # Milestones
 
+## v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness (Shipped: 2026-05-25)
+
+**Status:** Shipped 2026-05-25
+**Phases:** 8
+**Phase range:** 156-163
+**Plans:** 8/8 complete
+**Requirements:** 44/44 complete
+**Research:** `.planning/research/v1.23-SUMMARY.md`
+**Roadmap:** `.planning/milestones/v1.23-ROADMAP.md`
+**Decision:** Rust and Zig are promoted to non-counted exhibition beta only.
+**Audit:** `.planning/milestones/v1.23-MILESTONE-AUDIT.md`
+**Archives:** `.planning/milestones/v1.23-ROADMAP.md`, `.planning/milestones/v1.23-REQUIREMENTS.md`, `.planning/milestones/v1.23-phases/`
+
+**Goal:** Attempt to promote Rust and Zig from non-counted exhibition alpha to non-counted exhibition beta with real signed-in multi-compiler proof, runtime hardening evidence, Zig ergonomics, ABI evidence, privacy, and conservative split-capable promotion decisions.
+
+**Delivered:**
+
+- Rust and Zig are labeled and exposed as non-counted exhibition beta only.
+- v1.23 beta criteria, ABI readiness, Zig helper capability, beta readiness, no-fallback, compatibility, proof, and promotion-decision artifacts were written.
+- Zig starter ergonomics improved while retaining the safe no-std WASI Preview 1 `fd_read`/`fd_write` import surface.
+- WASM/WASI beta readiness probes pass 18/18 and the v1.22 hardening floor still passes 19/19.
+- Signed-in proof completed JS/TS-vs-Rust, Rust-vs-Rust, Rust-vs-Zig, and Zig-vs-Zig exhibitions.
+- Result and replay pages were checked for labels, replay plausibility, and public-output privacy.
+- Boundary monitors were refreshed for the new runtime labels and v1.23 beta readiness artifacts.
+
+### Active Constraints
+
+- JS/TS remains the only counted Strategy path.
+- Python remains non-counted exhibition beta.
+- Rust, Zig, and WASM/WASI are not ranked, ladder, counted, gauntlet, broad production multi-language support, or production sandbox certification.
+- Preview 1 stdin/stdout JSON remains the only active WASM/WASI execution ABI.
+- Strategy code does not execute in web/API/Go.
+
 ## v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening (Shipped: 2026-05-25)
 
 **Status:** Shipped 2026-05-25

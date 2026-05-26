@@ -6,6 +6,7 @@ import {
   publicPrivacyProvenanceCue,
   statusChipClass,
 } from "../evidence-copy.js"
+import { runtimeExhibitionStatusLabel } from "../../../lib/runtime-labels.js"
 
 export const dynamic = "force-dynamic"
 
@@ -30,16 +31,18 @@ const runtimeLabel = (entrant: {
   }
 }): string => {
   const language = (() => {
-    switch (entrant.runtime.language.id) {
-      case "python":
-        return "Python · non-counted exhibition beta"
-      case "rust":
-        return "Rust · non-counted exhibition alpha"
-      case "zig":
-        return "Zig · gated stretch"
-      default:
-        return "JS/TS"
-    }
+    return runtimeExhibitionStatusLabel({
+      languageId: entrant.runtime.language.id,
+      languageLabel:
+        entrant.runtime.language.id === "python"
+          ? "Python"
+          : entrant.runtime.language.id === "rust"
+            ? "Rust"
+            : entrant.runtime.language.id === "zig"
+              ? "Zig"
+              : "JS/TS",
+      countedPlayLabel: "Counted eligible",
+    })
   })()
   return `${language} · ${entrant.runtime.adapter.id}`
 }

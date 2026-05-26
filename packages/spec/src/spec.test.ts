@@ -437,7 +437,7 @@ describe("Coward's Game spec contracts", () => {
       adapterLabel: "WASM/WASI Wasmtime Preview 1",
       countedPlayEligible: false,
       countedPlayLabel: "Not counted",
-      examplesReference: "examples/rust-wasi-exhibition-alpha",
+      examplesReference: "examples/rust-wasi-exhibition-beta",
     })
   })
 
@@ -862,7 +862,7 @@ describe("Coward's Game spec contracts", () => {
                 "rustc --target wasm32-wasip1 -O strategy.rs -o strategy.wasm",
             },
             publicEvidence: {
-              label: "Rust WASM/WASI non-counted exhibition alpha",
+              label: "Rust WASM/WASI non-counted exhibition beta",
               nonCounted: true,
               sandboxClaim: "candidate-readiness-only",
             },

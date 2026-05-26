@@ -4,6 +4,7 @@ import {
 } from "../../lib/account-service-boundary.js"
 import { CompetitiveInputError } from "../../lib/competitive-errors.js"
 import { isGoBackendServiceUnavailableError } from "../../lib/go-backend-service-client.js"
+import { runtimeExhibitionStatusLabel } from "../../lib/runtime-labels.js"
 
 export const dynamic = "force-dynamic"
 
@@ -13,14 +14,7 @@ const runtimeDisplayLabel = (revision: {
     languageLabel: string
     countedPlayLabel: string
   }
-}) =>
-  revision.runtimeSemantics.languageId === "python"
-    ? `${revision.runtimeSemantics.languageLabel} · non-counted exhibition beta`
-    : revision.runtimeSemantics.languageId === "rust"
-      ? `${revision.runtimeSemantics.languageLabel} · non-counted exhibition alpha`
-      : revision.runtimeSemantics.languageId === "zig"
-        ? `${revision.runtimeSemantics.languageLabel} · gated stretch`
-        : `${revision.runtimeSemantics.languageLabel} · ${revision.runtimeSemantics.countedPlayLabel}`
+}) => runtimeExhibitionStatusLabel(revision.runtimeSemantics)
 
 export default async function AccountPage() {
   let accountUnavailable = false

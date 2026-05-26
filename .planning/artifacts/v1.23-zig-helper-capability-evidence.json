@@ -1,0 +1,49 @@
+{
+  "forbiddenStdValidation": {
+    "engineCompatibility": {
+      "engine": "0.1.4",
+      "spec": "cowards-rules-v1.4"
+    },
+    "errors": [
+      {
+        "code": "FORBIDDEN_PATTERN",
+        "constraint": "Zig WASI Strategies must be self-contained and cannot use host filesystem, network, time, randomness, process, or embed-file capabilities.",
+        "message": "Zig Strategy source contains forbidden capability: @import(\"std\")",
+        "pattern": "@import(\"std\")",
+        "reference": "runtime/capabilities",
+        "remediation": "Remove @import(\"std\") and use only Strategy input data.",
+        "severity": "error"
+      }
+    ],
+    "forbiddenPatterns": [
+      "@import(\"std\")"
+    ],
+    "runtimeVersion": "0.1.0-alpha",
+    "sourceBytes": 2187,
+    "sourceHash": "93e9038a3a3be37be68763c307aebca249746e25a78f3ff5c155f9ba75cfad78",
+    "valid": false,
+    "warnings": [
+      {
+        "code": "NON_COUNTED_RUNTIME",
+        "constraint": "Zig may run only in non-counted exhibition beta proof paths.",
+        "message": "Zig WASM/WASI is a non-counted exhibition beta runtime and not ranked/counted eligible.",
+        "reference": "runtime/counting",
+        "remediation": "Use JS/TS for counted play.",
+        "severity": "warning"
+      }
+    ]
+  },
+  "importAudit": [
+    {
+      "kind": 0,
+      "module": "wasi_snapshot_preview1",
+      "name": "fd_read"
+    },
+    {
+      "kind": 0,
+      "module": "wasi_snapshot_preview1",
+      "name": "fd_write"
+    }
+  ],
+  "sourceBytes": 2159
+}

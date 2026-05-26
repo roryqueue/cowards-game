@@ -1,0 +1,33 @@
+{
+  "activeAbiEnvelope": "stdin-stdout-json",
+  "artifacts": [
+    {
+      "abiEnvelope": "stdin-stdout-json",
+      "abiVersion": "strategy-runtime-abi-v1.14",
+      "bytes": 2028192,
+      "hash": "b35a5526c52c38f1763f335c61558fe0550d022f9391dcad83e086115b2093ee",
+      "language": "rust",
+      "sourceHash": "f4436e4494d2eeed63bc7b58e1a6113962af518488c6e63f46a4f3e8fd501a80",
+      "targetTriple": "wasm32-wasip1",
+      "toolchainVersion": "rustc 1.95.0 (59807616e 2026-04-14)",
+      "validationStatus": "valid",
+      "wasiProfile": "preview1"
+    },
+    {
+      "abiEnvelope": "stdin-stdout-json",
+      "abiVersion": "strategy-runtime-abi-v1.14",
+      "bytes": 772,
+      "hash": "39b801f500a5e50f2a9ef513d7e9a015c663b28cddbf7be88a0b383f972c81e0",
+      "language": "zig",
+      "sourceHash": "7936fabf142c84aca4f00d279aa313e14d42a2aac76820d7cfe65faaa2f5e532",
+      "targetTriple": "wasm32-wasi",
+      "toolchainVersion": "zig 0.16.0",
+      "validationStatus": "valid",
+      "wasiProfile": "preview1"
+    }
+  ],
+  "milestone": "v1.23",
+  "retentionPolicy": "v1.21/v1.22 artifacts remain historical evidence; v1.23 submissions carry regenerated artifact metadata and compatibility keys.",
+  "rollback": "Operators can revert Rust/Zig to non-counted exhibition alpha or disable runtime-service validation without substituting source execution.",
+  "schemaVersion": "v1.23-artifact-compatibility-evidence"
+}

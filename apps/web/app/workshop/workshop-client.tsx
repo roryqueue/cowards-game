@@ -34,6 +34,11 @@ import {
   prependRevision,
   validationStateFromReport,
 } from "./workshop-client-state.js"
+import {
+  sourceFormatExhibitionLabel,
+  sourceFormatRuntimeCue,
+  sourceFormatShortLabel,
+} from "../../lib/runtime-labels.js"
 
 export interface WorkshopClientProps {
   initialData: WorkshopInitialData
@@ -43,16 +48,8 @@ const replaceDraftCopy =
   "Replace draft: this will overwrite the current unsaved source with the selected template."
 const invalidSubmitBlockedReason =
   "Resolve validation errors before submitting."
-const runtimeDisplayLabel = (revision: {
-  sourceFormat?: string | undefined
-}) =>
-  revision.sourceFormat === "python"
-    ? "Python · non-counted exhibition beta"
-    : revision.sourceFormat === "rust"
-      ? "Rust · non-counted exhibition alpha"
-      : revision.sourceFormat === "zig"
-        ? "Zig · non-counted exhibition alpha"
-        : null
+const runtimeDisplayLabel = (revision: { sourceFormat?: string | undefined }) =>
+  sourceFormatExhibitionLabel(revision.sourceFormat)
 
 type WorkshopEditorSourceFormat = Extract<
   StrategyArtifactSourceFormat,
@@ -673,9 +670,9 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                   {template.experimental ? (
                     <span className="workshop-chip warning">
                       {template.sourceFormat === "rust"
-                        ? "Rust alpha"
+                        ? "Rust beta"
                         : template.sourceFormat === "zig"
-                          ? "Zig alpha"
+                          ? "Zig beta"
                           : "Python experimental"}
                     </span>
                   ) : null}
@@ -832,7 +829,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 type="button"
                 onClick={() => setSourceFormat("typescript")}
               >
-                TS
+                {sourceFormatShortLabel("typescript")}
               </button>
               <button
                 className={sourceFormat === "python" ? "active" : ""}
@@ -846,25 +843,21 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 type="button"
                 onClick={() => setSourceFormat("rust")}
               >
-                Rust alpha
+                {sourceFormatShortLabel("rust")}
               </button>
               <button
                 className={sourceFormat === "zig" ? "active" : ""}
                 type="button"
                 onClick={() => setSourceFormat("zig")}
               >
-                Zig alpha
+                {sourceFormatShortLabel("zig")}
               </button>
             </div>
             {sourceFormat === "python" ||
             sourceFormat === "rust" ||
             sourceFormat === "zig" ? (
               <p className="workshop-muted">
-                {sourceFormat === "python"
-                  ? "Python is non-counted exhibition beta and runs only through the Runtime Broker."
-                  : sourceFormat === "rust"
-                    ? "Rust is non-counted exhibition alpha and executes immutable WASM/WASI artifacts through the Runtime Broker."
-                    : "Zig is non-counted exhibition alpha only after no-std WASI Preview 1 compile, artifact, and Wasmtime ABI proof."}
+                {sourceFormatRuntimeCue(sourceFormat)}
               </p>
             ) : null}
             <StrategySourceEditor

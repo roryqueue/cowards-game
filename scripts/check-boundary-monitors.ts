@@ -2847,6 +2847,10 @@ const checkV118RuntimeIsolationSources = (): string => {
     path.join(repoRoot, "apps/web/app/workshop/workshop-client.tsx"),
     "utf8",
   )
+  const runtimeLabels = readFileSync(
+    path.join(repoRoot, "apps/web/lib/runtime-labels.ts"),
+    "utf8",
+  )
   const proof = readFileSync(
     path.join(repoRoot, "apps/web/e2e/v1-18-exhibition-proof.spec.ts"),
     "utf8",
@@ -2880,7 +2884,7 @@ const checkV118RuntimeIsolationSources = (): string => {
     ],
     [
       "web Python label",
-      workshop,
+      `${workshop}\n${runtimeLabels}`,
       ["PY beta", "non-counted exhibition beta", "sourceFormat"],
     ],
     [
@@ -3651,8 +3655,16 @@ const checkV119ExhibitionTrustSources = (): string => {
       path: "apps/web/app/matchsets/[matchSetId]/page.tsx",
       markers: [
         'data-testid="matchset-evidence-panel"',
-        "Python · non-counted exhibition beta",
         "matchSetEvidenceRows",
+      ],
+    },
+    {
+      label: "runtime label helper",
+      path: "apps/web/lib/runtime-labels.ts",
+      markers: [
+        "Python · non-counted exhibition beta",
+        "Rust · non-counted exhibition beta",
+        "Zig · non-counted exhibition beta",
       ],
     },
     {
@@ -3745,6 +3757,91 @@ const checkTopologyDiagnostics = async (): Promise<string> => {
     : `${checks.length} optional topology diagnostics checked; set COWARDS_REQUIRE_LIVE_TOPOLOGY=1 for live v1.16 strict mode`
 }
 
+const checkV123WasmWasiBetaReadinessArtifacts = (): string => {
+  const readiness = readJson<{
+    schemaVersion: string
+    milestone: string
+    countedEligibility: boolean
+    promotionClaim: string
+    summary: { pass: number; fail: number }
+    probes: readonly { id: string; status: string; publicSafe: boolean }[]
+  }>(".planning/artifacts/v1.23-wasm-wasi-beta-readiness-evidence.json")
+  if (
+    readiness.schemaVersion !== "v1.23-wasm-wasi-beta-readiness-evidence" ||
+    readiness.milestone !== "v1.23" ||
+    readiness.countedEligibility !== false ||
+    !readiness.promotionClaim.includes("non-counted exhibition beta") ||
+    readiness.summary.fail !== 0 ||
+    readiness.summary.pass < 18
+  ) {
+    throw new Error("v1.23 WASM/WASI readiness artifact drifted")
+  }
+  const requiredProbeIds = new Set([
+    "zig-helper-imports-fd-only",
+    "rust-stale-artifact-hash",
+    "zig-missing-artifact-bytes",
+    "artifact-target-mismatch",
+    "artifact-abi-mismatch",
+  ])
+  const observed = new Set(readiness.probes.map((probe) => probe.id))
+  for (const probeId of requiredProbeIds) {
+    if (!observed.has(probeId)) {
+      throw new Error(`v1.23 readiness artifact missing probe ${probeId}`)
+    }
+  }
+  if (readiness.probes.some((probe) => !probe.publicSafe)) {
+    throw new Error("v1.23 readiness artifact includes non-public-safe probe")
+  }
+
+  const compatibility = readJson<{
+    schemaVersion: string
+    activeAbiEnvelope: string
+    artifacts: readonly {
+      language: string
+      targetTriple: string
+      wasiProfile: string
+      abiEnvelope: string
+      validationStatus: string
+    }[]
+  }>(".planning/artifacts/v1.23-artifact-compatibility-evidence.json")
+  if (
+    compatibility.schemaVersion !== "v1.23-artifact-compatibility-evidence" ||
+    compatibility.activeAbiEnvelope !== "stdin-stdout-json" ||
+    compatibility.artifacts.length !== 2
+  ) {
+    throw new Error("v1.23 artifact compatibility evidence drifted")
+  }
+  for (const artifact of compatibility.artifacts) {
+    const expectedTarget =
+      artifact.language === "zig" ? "wasm32-wasi" : "wasm32-wasip1"
+    if (
+      artifact.targetTriple !== expectedTarget ||
+      artifact.wasiProfile !== "preview1" ||
+      artifact.abiEnvelope !== "stdin-stdout-json" ||
+      artifact.validationStatus !== "valid"
+    ) {
+      throw new Error(`v1.23 ${artifact.language} compatibility drifted`)
+    }
+  }
+
+  const abi = readJson<{
+    schemaVersion: string
+    activeExecutionAbi: string
+    directExports: { status: string }
+    componentModelWit: { status: string }
+  }>(".planning/artifacts/v1.23-abi-readiness-evidence.json")
+  if (
+    abi.schemaVersion !== "v1.23-abi-readiness-evidence" ||
+    abi.activeExecutionAbi !== "wasi-preview1-stdin-stdout-json" ||
+    abi.directExports.status !== "not-promoted" ||
+    abi.componentModelWit.status !== "not-promoted"
+  ) {
+    throw new Error("v1.23 ABI readiness evidence drifted")
+  }
+
+  return `${readiness.summary.pass} v1.23 WASM/WASI beta readiness probes checked`
+}
+
 export const runBoundaryMonitorChecks = async (): Promise<
   BoundaryMonitorCheck[]
 > => [
@@ -3763,6 +3860,11 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("runtime_adapter", "v1.17 runtime broker registry artifact", () =>
     checkRuntimeBrokerRegistryArtifact(),
+  ),
+  await check(
+    "runtime_adapter",
+    "v1.23 WASM/WASI beta readiness artifacts",
+    () => checkV123WasmWasiBetaReadinessArtifacts(),
   ),
   await check("runtime_adapter", "v1.18 isolation baseline artifact", () =>
     checkV118IsolationBaselineArtifact(),

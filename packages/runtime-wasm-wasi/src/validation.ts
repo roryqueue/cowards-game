@@ -298,7 +298,7 @@ const zigSourceGate = (
           constraint:
             "Zig WASI Preview 1 executable Strategies must read stdin and write one JSON runtime envelope to stdout.",
           remediation: "Use the Zig WASI starter sample as the baseline.",
-          reference: "examples/zig-wasi-exhibition-alpha",
+          reference: "examples/zig-wasi-exhibition-beta",
         },
       ),
     )
@@ -373,7 +373,7 @@ export const compileZigWasmArtifact = (source: string): WasmCompileResult => {
               "Zig source must compile to wasm32-wasi with the local Zig toolchain.",
             remediation:
               "Fix the Zig syntax or use the Zig WASI starter sample.",
-            reference: "examples/zig-wasi-exhibition-alpha",
+            reference: "examples/zig-wasi-exhibition-beta",
           }),
         ],
       }
@@ -425,7 +425,7 @@ export const compileZigWasmArtifact = (source: string): WasmCompileResult => {
           "zig build-exe strategy.zig -target wasm32-wasi -O ReleaseSmall --cache-dir <temp> --global-cache-dir <temp> -femit-bin=strategy.wasm",
       },
       publicEvidence: {
-        label: "Zig WASM/WASI non-counted exhibition alpha",
+        label: "Zig WASM/WASI non-counted exhibition beta",
         nonCounted: true,
         sandboxClaim: "candidate-readiness-only",
       },
@@ -464,7 +464,7 @@ export const compileRustWasmArtifact = (source: string): WasmCompileResult => {
           constraint:
             "Rust WASI Preview 1 executable Strategies must read stdin and write one JSON runtime envelope to stdout.",
           remediation: "Use the Rust WASI starter sample as the baseline.",
-          reference: "examples/rust-wasi-exhibition-alpha",
+          reference: "examples/rust-wasi-exhibition-beta",
         },
       ),
     )
@@ -517,7 +517,7 @@ export const compileRustWasmArtifact = (source: string): WasmCompileResult => {
               "Rust source must compile to wasm32-wasip1 with the local rustc toolchain.",
             remediation:
               "Fix the Rust syntax or use the Rust WASI starter sample.",
-            reference: "examples/rust-wasi-exhibition-alpha",
+            reference: "examples/rust-wasi-exhibition-beta",
           }),
         ],
       }
@@ -569,7 +569,7 @@ export const compileRustWasmArtifact = (source: string): WasmCompileResult => {
           "rustc --target wasm32-wasip1 -O strategy.rs -o strategy.wasm",
       },
       publicEvidence: {
-        label: "Rust WASM/WASI non-counted exhibition alpha",
+        label: "Rust WASM/WASI non-counted exhibition beta",
         nonCounted: true,
         sandboxClaim: "candidate-readiness-only",
       },
@@ -592,9 +592,9 @@ export const validateRustStrategySource = (
         code: "NON_COUNTED_RUNTIME",
         severity: "warning",
         message:
-          "Rust WASM/WASI is a non-counted exhibition alpha runtime and not ranked/counted eligible.",
+          "Rust WASM/WASI is a non-counted exhibition beta runtime and not ranked/counted eligible.",
         constraint:
-          "Rust may run only in non-counted exhibition alpha proof paths.",
+          "Rust may run only in non-counted exhibition beta proof paths.",
         remediation: "Use JS/TS for counted play.",
         reference: "runtime/counting",
       },
@@ -672,9 +672,9 @@ const zigValidationFromCompile = (
         code: "NON_COUNTED_RUNTIME",
         severity: "warning",
         message:
-          "Zig WASM/WASI is a non-counted exhibition alpha runtime and not ranked/counted eligible.",
+          "Zig WASM/WASI is a non-counted exhibition beta runtime and not ranked/counted eligible.",
         constraint:
-          "Zig may run only in non-counted exhibition alpha proof paths.",
+          "Zig may run only in non-counted exhibition beta proof paths.",
         remediation: "Use JS/TS for counted play.",
         reference: "runtime/counting",
       },
@@ -910,7 +910,7 @@ export fn _start() void {
       pathResult.status === 0 ? (pathResult.stdout ?? "").trim() : null,
     message:
       compiled.ok && runtimeProof
-        ? "Zig toolchain, target, compile artifact, and WASI Preview 1 ABI proof passed; Zig may be exposed only as non-counted exhibition alpha."
+        ? "Zig toolchain, target, compile artifact, and WASI Preview 1 ABI proof passed; Zig may be exposed only as non-counted exhibition beta after v1.23 signed-in proof and promotion gates pass."
         : "Zig toolchain detected but compile/runtime proof failed; Zig remains fail-loud non-promoted.",
   }
 }

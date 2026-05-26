@@ -114,7 +114,7 @@ const validateStrategyRequest = (rawRequest: unknown) => {
       ? { strategyId: body.strategyId }
       : {}),
     metadata: {
-      tags: [sourceFormat, "wasm-wasi", "non-counted", "exhibition-alpha"],
+      tags: [sourceFormat, "wasm-wasi", "non-counted", "exhibition-beta"],
     },
   })
   return {

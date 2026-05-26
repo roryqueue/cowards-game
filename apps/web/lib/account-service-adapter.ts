@@ -29,6 +29,7 @@ export interface GoBackendOwnershipEnv extends Record<
   COWARDS_GO_ACCOUNT_FORKS?: string | undefined
   COWARDS_GO_EXHIBITIONS?: string | undefined
   COWARDS_GO_BACKEND_URL?: string | undefined
+  COWARDS_GO_BACKEND_SERVICE_TIMEOUT_MS?: string | undefined
   COWARDS_NO_TYPESCRIPT_BACKEND?: string | undefined
 }
 
@@ -71,6 +72,16 @@ export const isGoExhibitionsSelected = (
 ): boolean =>
   isStrictNoTypeScriptBackendSelected(env) || env.COWARDS_GO_EXHIBITIONS === "1"
 
+const selectedGoBackendTimeoutMs = (
+  env: GoBackendOwnershipEnv = process.env,
+): number => {
+  const parsed = Number.parseInt(
+    env.COWARDS_GO_BACKEND_SERVICE_TIMEOUT_MS ?? "",
+    10,
+  )
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 30_000
+}
+
 export const createSelectedGoBackendClient = (
   env: GoBackendOwnershipEnv = process.env,
   fetchImpl?: typeof fetch,
@@ -78,6 +89,7 @@ export const createSelectedGoBackendClient = (
   env.COWARDS_GO_BACKEND_URL
     ? createGoBackendServiceClient({
         baseUrl: env.COWARDS_GO_BACKEND_URL,
+        timeoutMs: selectedGoBackendTimeoutMs(env),
         ...(fetchImpl ? { fetchImpl } : {}),
       })
     : null

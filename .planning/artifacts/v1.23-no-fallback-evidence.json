@@ -1,0 +1,39 @@
+{
+  "milestone": "v1.23",
+  "policy": "Stopped, unavailable, stale, missing, mismatched, or unregistered Rust/Zig runtime paths fail loud and never substitute JS/TS, Rust, source execution, stale artifacts, or in-process execution.",
+  "probes": [
+    {
+      "expectation": "Rust stale artifact hash fails without source fallback",
+      "id": "rust-stale-artifact-hash",
+      "layer": "artifact",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "Zig missing artifact bytes fails without source fallback",
+      "id": "zig-missing-artifact-bytes",
+      "layer": "artifact",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "Target triple mismatch fails closed",
+      "id": "artifact-target-mismatch",
+      "layer": "artifact",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "expectation": "ABI envelope mismatch fails closed",
+      "id": "artifact-abi-mismatch",
+      "layer": "abi",
+      "observed": "matched expectation",
+      "publicSafe": true,
+      "status": "pass"
+    }
+  ],
+  "schemaVersion": "v1.23-no-fallback-evidence"
+}

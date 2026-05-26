@@ -1,0 +1,24 @@
+{
+  "activeExecutionAbi": "wasi-preview1-stdin-stdout-json",
+  "activePathDecision": "Keep WASI Preview 1 stdin/stdout JSON as the only v1.23 Match execution path.",
+  "componentModelWit": {
+    "reason": "WIT world shape, Zig support, Wasmtime host integration, typed caps, and compatibility migration remain future work.",
+    "status": "not-promoted"
+  },
+  "directExports": {
+    "reason": "Memory ownership, allocation/free ABI, caps, and Rust/Zig glue parity require a dedicated future migration milestone.",
+    "status": "not-promoted"
+  },
+  "milestone": "v1.23",
+  "preview1Json": {
+    "evidence": [
+      "schema validated runtime envelopes",
+      "stdio/result caps",
+      "malformed JSON failure probe",
+      "Rust/Zig immutable artifact parity"
+    ],
+    "status": "active"
+  },
+  "rollback": "Existing artifacts declare abiEnvelope=stdin-stdout-json and are rejected if metadata drifts.",
+  "schemaVersion": "v1.23-abi-readiness-evidence"
+}
