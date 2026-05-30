@@ -1,23 +1,23 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: none
-status: complete
-stopped_at: v1.24 shipped
-last_updated: "2026-05-30T15:45:00.000-04:00"
-last_activity: 2026-05-30 - v1.24 Runtime Abuse Lab and ABI Future-Proofing shipped
+milestone: v1.25
+milestone_name: Match Execution Interface Freeze and Parallel App/Execution Contract
+status: planning
+stopped_at: null
+last_updated: "2026-05-30T16:45:00.000-04:00"
+last_activity: 2026-05-30 - Milestone v1.25 started
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 10
-  completed_plans: 10
-  percent: 100
+  total_phases: 9
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
 
 **Initialized:** 2026-05-16
-**Status:** v1.24 shipped; no active milestone
+**Status:** v1.25 planning active
 
 ## Project Reference
 
@@ -25,16 +25,20 @@ See: .planning/PROJECT.md
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Latest shipped milestone:** v1.24 Runtime Abuse Lab and ABI Future-Proofing
-**Active milestone:** none
-**Requirements:** absent until next milestone
+**Active milestone:** v1.25 Match Execution Interface Freeze and Parallel App/Execution Contract
+**Requirements:** .planning/REQUIREMENTS.md
 **Roadmap:** .planning/ROADMAP.md
 
 ## Current Position
 
-Phase: none
+Phase: Not started (defining requirements)
 Plan: -
-Status: Ready for next milestone
-Last activity: 2026-05-30 - v1.24 shipped after audit fix and live regression proof
+Status: Defining requirements
+Last activity: 2026-05-30 - Milestone v1.25 started
+
+## v1.25 Intent
+
+Freeze app-facing Match execution lifecycle states, DTOs, public/private evidence surfaces, fixtures, adapters, and drift monitors so Match execution internals and result/replay/app UX can move in parallel without compromising deterministic engine boundaries, Go/runtime-service ownership, public-output privacy, or runtime eligibility claims.
 
 ## v1.24 Outcome
 
@@ -55,4 +59,4 @@ Readiness evidence only. No production sandbox certification. JS/TS remains coun
 
 ## Operator Next Steps
 
-Start the next milestone with $gsd-new-milestone.
+Start Phase 174 with `$gsd-discuss-phase 174`.

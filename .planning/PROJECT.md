@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.24 Runtime Abuse Lab and ABI Future-Proofing on 2026-05-30
-**Current milestone:** None active; `.planning/REQUIREMENTS.md` is absent until the next `$gsd-new-milestone`.
-**Status:** v1.24 shipped with runtime abuse evidence, a production-sandbox readiness matrix, ABI future-path non-promotion spikes, and live multi-runtime regression proof.
+**Current milestone:** v1.25 Match Execution Interface Freeze and Parallel App/Execution Contract
+**Status:** v1.25 planning active. The milestone freezes app-facing Match execution lifecycle states, DTO schemas, fixtures, public/private evidence boundaries, adapters, and drift monitors so execution internals and app/result/replay UX can proceed in parallel.
 **Last audit:** v1.24 audit passed after fixing no-fallback claim overreach, monitor strictness, Markdown privacy scanning, WASM non-proof classification, and signed-in proof harness drift.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
@@ -12,6 +12,21 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.25 Match Execution Interface Freeze and Parallel App/Execution Contract
+
+**Goal:** Establish a firm, versioned, tested boundary between Match execution and the app around it, so execution internals and app/result/replay UX can iterate in parallel with confidence.
+
+**Target features:**
+- Inventory current MatchSet/result/replay/evidence DTOs, Go/backend outputs, service schemas, page adapters, fixtures, and app dependencies on execution internals.
+- Define canonical Match and MatchSet lifecycle states and transitions, including queued, accepted, running, complete, failed, degraded, unavailable, retryable, and non-retryable semantics.
+- Publish versioned app-facing DTO schemas for MatchSet summary, Match result, replay metadata, replay evidence, runtime evidence, failure evidence, and public/private evidence splits.
+- Commit fixture and golden scenarios for complete, running, queued, strategy failure, system failure, timeout, unavailable runtime, malformed runtime result, stale artifact, and public-safe replay.
+- Add contract tests and drift monitors proving Go/backend/service outputs match schemas and app pages render each fixture without private fields or execution internals.
+- Add a fixture-backed app/test adapter so result and replay UI work can continue without live Match execution services.
+- Run fixture-mode proof and signed-in live proof, then publish a boundary freeze decision stating what is stable and what remains intentionally unstable.
+
+**Non-goals:** No new language promotion, no production sandbox certification, no direct-export or Component Model/WIT execution ABI migration, no broad ranking/ladder expansion, no counted non-JS play, and no Strategy execution in web/API/Go.
 
 ## Latest Shipped Milestone: v1.24 Runtime Abuse Lab and ABI Future-Proofing
 
@@ -581,11 +596,12 @@ Planning archives live under `.planning/milestones/`:
 | Make the container candidate executable before stronger claims | v1.20 preferred the locally available Docker/container subprocess candidate for real executable evidence, while gVisor/runsc remained fail-loud because it was unavailable. | ✓ Implemented in v1.20 |
 | Separate timeout budgets by layer | v1.19 showed whole-Match service timeout is different from per-Strategy caps; v1.20 made Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets explicit. | ✓ Implemented in v1.20 |
 | Use WASI Preview 1 for the first immutable WASM Strategy proof | v1.21 preferred the simplest executable multi-language path: WASI Preview 1 stdin/stdout JSON envelopes through Wasmtime, with direct exports and component model documented as future evolution rather than forced into the first proof. | ✓ Implemented in v1.21 |
-| Treat Rust WASM as exhibition alpha until proof matures | Rust can prove the immutable WASM artifact direction, but counted/ranked/ladder promotion requires separate sandbox, determinism, toolchain, artifact, replay, privacy, rollback, abuse, and operational evidence. | — Pending |
+| Treat Rust WASM as exhibition alpha until proof matures | Rust can prove the immutable WASM artifact direction, but counted/ranked/ladder promotion requires separate sandbox, determinism, toolchain, artifact, replay, privacy, rollback, abuse, and operational evidence. | ✓ Superseded by v1.23 non-counted exhibition beta |
 | Treat Rust/Zig beta as non-counted exhibition beta only | v1.23 improved the product label for Rust and Zig, but promotion remains outside counted, ranked, ladder, gauntlet, broad production multi-language, and production sandbox claims. | ✓ Implemented in v1.23 |
 | Keep ABI evolution evidence separate from execution-path promotion | Direct exports and component model/WIT are important candidates, but v1.23 did not replace the Preview 1 stdin/stdout JSON runtime path without deterministic memory ownership, schema validation, resource caps, parity, and rollback evidence. | ✓ Implemented in v1.23 |
-| Treat runtime abuse evidence as claim calibration | v1.24 should expand hostile probes and sandbox-readiness evidence without turning readiness matrices into production sandbox certification or non-JS counted promotion. | — Pending |
-| Require explicit ABI migration criteria before replacement | Direct exports and Component Model/WIT can become future paths only after parity, compatibility, rollback, caps, schema, privacy, and no-fallback evidence support a separate promotion decision. | — Pending |
+| Treat runtime abuse evidence as claim calibration | v1.24 expanded hostile probes and sandbox-readiness evidence without turning readiness matrices into production sandbox certification or non-JS counted promotion. | ✓ Implemented in v1.24 |
+| Require explicit ABI migration criteria before replacement | Direct exports and Component Model/WIT can become future paths only after parity, compatibility, rollback, caps, schema, privacy, and no-fallback evidence support a separate promotion decision. | ✓ Implemented in v1.24 |
+| Freeze app-facing Match execution interfaces before parallelizing execution and UX work | v1.25 should make lifecycle, DTO, evidence, fixture, adapter, and monitor contracts stable enough for app/result/replay work to proceed without coupling to execution internals. | — Pending |
 
 ## Constraints
 
@@ -606,4 +622,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-30 after starting v1.24 milestone*
+*Last updated: 2026-05-30 after starting v1.25 milestone*
