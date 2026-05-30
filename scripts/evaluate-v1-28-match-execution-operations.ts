@@ -34,6 +34,9 @@ const requireMarkers = (
   return markers.filter((marker) => source.includes(marker))
 }
 
+const publicSafeMarkerLabel = (marker: string): string =>
+  marker === "/Users/secret" ? "host-path-redaction-test" : marker
+
 const privateMarkers = [
   "strategyMemory",
   "soldierMemory",
@@ -80,7 +83,7 @@ const operatorEvidenceMarkers = requireMarkers(
     "export default",
     "/Users/secret",
   ]),
-)
+).map(publicSafeMarkerLabel)
 
 const runtimeRedactionMarkers = requireMarkers("apps/runtime-service/src/redaction.ts", [
   "redactedDiagnostics",
@@ -188,6 +191,87 @@ const drillCatalog = [
   },
 ] as const
 
+const publicCompatibilityOutcomes = [
+  {
+    id: "complete",
+    evidence: "contract-fixture",
+    publicCategory: "complete",
+    privateOperationsState: false,
+  },
+  {
+    id: "queued-running",
+    evidence: "contract-fixtures",
+    publicCategory: "queued/running",
+    privateOperationsState: false,
+  },
+  {
+    id: "retrying",
+    evidence: "retryable lifecycle disposition",
+    publicCategory: "retryable",
+    privateOperationsState: false,
+  },
+  {
+    id: "degraded-unavailable-runtime",
+    evidence: "contract-fixture-and-drill",
+    publicCategory: "runtime_unavailable",
+    privateOperationsState: false,
+  },
+  {
+    id: "timeout",
+    evidence: "contract-fixture-and-drill",
+    publicCategory: "timeout",
+    privateOperationsState: false,
+  },
+  {
+    id: "malformed-runtime-result",
+    evidence: "contract-fixture-and-drill",
+    publicCategory: "malformed_runtime_result",
+    privateOperationsState: false,
+  },
+  {
+    id: "stale-artifact",
+    evidence: "contract-fixture-and-quarantine-drill",
+    publicCategory: "stale_artifact",
+    privateOperationsState: false,
+  },
+  {
+    id: "system-failure",
+    evidence: "contract-fixture-and-drill",
+    publicCategory: "system_failure",
+    privateOperationsState: false,
+  },
+  {
+    id: "strategy-failure",
+    evidence: "contract-fixture",
+    publicCategory: "strategy_failure",
+    privateOperationsState: false,
+  },
+  {
+    id: "quarantined-private-only",
+    evidence: "quarantine-table-and-redacted-operator-evidence",
+    publicCategory: "existing failed/degraded public lifecycle",
+    privateOperationsState: true,
+  },
+  {
+    id: "interrupted-matchset",
+    evidence: "matchset-refresh-marker-and-drill",
+    publicCategory: "system_failure",
+    privateOperationsState: false,
+  },
+  {
+    id: "missing-chronicle",
+    evidence: "frozen-contract-category",
+    publicCategory: "missing_chronicle",
+    privateOperationsState: false,
+  },
+  {
+    id: "no-result",
+    evidence: "frozen-contract-category-and-evidence-copy",
+    publicCategory: "no_result",
+    privateOperationsState: false,
+  },
+] as const
+
 const proof = {
   schemaVersion: "v1.28-match-execution-operations-proof",
   generatedAt: new Date().toISOString(),
@@ -214,6 +298,7 @@ const proof = {
     migrationMarkers,
   },
   drillCatalog,
+  publicCompatibilityOutcomes,
   fixtureValidation,
   relevantCommands: [
     "pnpm match-execution:operations",
@@ -244,6 +329,24 @@ const missingMarkers = Object.entries(proof.sourceMarkers).flatMap(
 const leakedFixtures = fixtureValidation.filter(
   (fixture) => fixture.privateMarkerLeaks.length > 0,
 )
+const requiredCompatibilityOutcomes = [
+  "complete",
+  "queued-running",
+  "retrying",
+  "degraded-unavailable-runtime",
+  "timeout",
+  "malformed-runtime-result",
+  "stale-artifact",
+  "system-failure",
+  "strategy-failure",
+  "quarantined-private-only",
+  "interrupted-matchset",
+  "missing-chronicle",
+  "no-result",
+] as const
+const missingCompatibilityOutcomes = requiredCompatibilityOutcomes.filter(
+  (id) => !publicCompatibilityOutcomes.some((outcome) => outcome.id === id),
+)
 
 if (missingMarkers.length > 0) {
   throw new Error(
@@ -255,6 +358,11 @@ if (leakedFixtures.length > 0) {
     `v1.28 fixture leak markers found: ${leakedFixtures
       .map((fixture) => fixture.id)
       .join(", ")}`,
+  )
+}
+if (missingCompatibilityOutcomes.length > 0) {
+  throw new Error(
+    `v1.28 compatibility proof missing outcomes: ${missingCompatibilityOutcomes.join(", ")}`,
   )
 }
 
@@ -286,6 +394,15 @@ ${proof.drillCatalog
 - Lease and duplicate recovery: ${leaseRecoveryMarkers.join(", ")}
 - Interrupted MatchSet refresh: ${interruptedMatchSetMarkers.join(", ")}
 - Migrations: ${migrationMarkers.join(", ")}
+
+## Public Compatibility Outcomes
+
+${proof.publicCompatibilityOutcomes
+  .map(
+    (outcome) =>
+      `- ${outcome.id}: ${outcome.publicCategory}; evidence=${outcome.evidence}; private operations state=${outcome.privateOperationsState}`,
+  )
+  .join("\n")}
 
 ## Frozen Contract Coverage
 

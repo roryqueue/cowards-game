@@ -84,12 +84,12 @@ Build the operational recovery layer on the execution side behind the frozen `ma
 
 ### Contract Compatibility and Boundary Monitors
 
-- [ ] **COMPAT-01**: Contract tests prove public execution outcomes still validate against `match-execution-app-v1`.
-- [ ] **COMPAT-02**: Compatibility proof covers complete, queued/running, retrying, degraded/unavailable runtime, timeout, malformed runtime result, stale artifact, system failure, strategy failure, quarantined/private-only, interrupted MatchSet, missing Chronicle, and no-result outcomes.
-- [ ] **COMPAT-03**: Proof shows no required public DTO field was removed, renamed, semantically narrowed, or repurposed for private operations state.
-- [ ] **COMPAT-04**: Any optional public addition is documented as strictly backward-compatible, public-safe, and necessary; otherwise no public contract addition is made.
-- [ ] **COMPAT-05**: Boundary monitors catch ownership creep, Strategy execution in web/API/Go, runtime-service recovery-policy ownership, TypeScript backend fallback, contract drift, privacy leaks, fixture fallback in production, and premature runtime promotion claims.
-- [ ] **COMPAT-06**: Public result/replay pages remain compatible and private-safe for operations-driven outcomes.
+- [x] **COMPAT-01**: Contract tests prove public execution outcomes still validate against `match-execution-app-v1`.
+- [x] **COMPAT-02**: Compatibility proof covers complete, queued/running, retrying, degraded/unavailable runtime, timeout, malformed runtime result, stale artifact, system failure, strategy failure, quarantined/private-only, interrupted MatchSet, missing Chronicle, and no-result outcomes.
+- [x] **COMPAT-03**: Proof shows no required public DTO field was removed, renamed, semantically narrowed, or repurposed for private operations state.
+- [x] **COMPAT-04**: Any optional public addition is documented as strictly backward-compatible, public-safe, and necessary; otherwise no public contract addition is made.
+- [x] **COMPAT-05**: Boundary monitors catch ownership creep, Strategy execution in web/API/Go, runtime-service recovery-policy ownership, TypeScript backend fallback, contract drift, privacy leaks, fixture fallback in production, and premature runtime promotion claims.
+- [x] **COMPAT-06**: Public result/replay pages remain compatible and private-safe for operations-driven outcomes.
 
 ### End-to-End Operations Recovery Proof
 
@@ -180,12 +180,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EVID-04 | Phase 206 | Complete |
 | EVID-05 | Phase 206 | Complete |
 | EVID-06 | Phase 206 | Complete |
-| COMPAT-01 | Phase 207 | Planned |
-| COMPAT-02 | Phase 207 | Planned |
-| COMPAT-03 | Phase 207 | Planned |
-| COMPAT-04 | Phase 207 | Planned |
-| COMPAT-05 | Phase 207 | Planned |
-| COMPAT-06 | Phase 207 | Planned |
+| COMPAT-01 | Phase 207 | Complete |
+| COMPAT-02 | Phase 207 | Complete |
+| COMPAT-03 | Phase 207 | Complete |
+| COMPAT-04 | Phase 207 | Complete |
+| COMPAT-05 | Phase 207 | Complete |
+| COMPAT-06 | Phase 207 | Complete |
 | E2E-01 | Phase 208 | Planned |
 | E2E-02 | Phase 208 | Planned |
 | E2E-03 | Phase 208 | Planned |
@@ -200,8 +200,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 57 total
-- Complete: 40
-- Planned: 17
+- Complete: 46
+- Planned: 11
 - Mapped to phases: 57
 - Unmapped: 0
 

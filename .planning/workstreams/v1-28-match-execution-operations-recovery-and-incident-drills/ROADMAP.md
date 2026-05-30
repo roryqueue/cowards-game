@@ -23,7 +23,7 @@
 | 204 | Live Failure-Drill Harness | Build repeatable local drills across Postgres, Go backend, runtime-service/fakes, and browser proof. | DRILL-01..DRILL-07 | Complete |
 | 205 | Stale Lease, Duplicate Worker, and Interrupted MatchSet Recovery | Prove stale leases, duplicate workers, and interrupted MatchSets converge without double completion or stale scoring. | LEASE-01..LEASE-06 | Complete |
 | 206 | Operator Evidence and Redaction Hardening | Separate operator-only evidence from public evidence and harden redaction across artifacts and endpoints. | EVID-01..EVID-06 | Complete |
-| 207 | Contract Compatibility and Boundary Monitors | Prove every public outcome still validates against `match-execution-app-v1` and monitors catch boundary drift. | COMPAT-01..COMPAT-06 | 5 |
+| 207 | Contract Compatibility and Boundary Monitors | Prove every public outcome still validates against `match-execution-app-v1` and monitors catch boundary drift. | COMPAT-01..COMPAT-06 | Complete |
 | 208 | End-to-End Signed-In Operations Recovery Proof | Run signed-in local proof across counted JS/TS, beta regression lanes where available, operator recovery, public pages, and privacy scans. | E2E-01..E2E-06 | 5 |
 | 209 | Audit, Archive, Commit, and Tag | Review, validate, archive, commit, and tag v1.28. | CLOSE-01..CLOSE-05 | 5 |
 
@@ -149,18 +149,18 @@
 ## Coverage
 
 - v1 requirements: 57 total
-- Complete: 40
-- Planned: 17
+- Complete: 46
+- Planned: 11
 - Mapped to phases: 57
 - Unmapped: 0
 
 ## Next Up
 
-**Phase 207: Contract Compatibility and Boundary Monitors** - Prove every public outcome still validates against `match-execution-app-v1` and monitors catch boundary drift.
+**Phase 208: End-to-End Signed-In Operations Recovery Proof** - Run signed-in local proof across counted JS/TS, beta regression lanes where available, operator recovery, public pages, and privacy scans.
 
 Suggested next command:
 
-`$gsd-discuss-phase 207 --ws v1-28-match-execution-operations-recovery-and-incident-drills`
+`$gsd-discuss-phase 208 --ws v1-28-match-execution-operations-recovery-and-incident-drills`
 
 ---
 *Roadmap created: 2026-05-30 after v1.28 milestone initialization*

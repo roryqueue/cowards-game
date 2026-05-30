@@ -8103,6 +8103,11 @@
           "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
         },
         {
+          "line": 25,
+          "source": "./redaction.js",
+          "statementText": "import { redactedErrorMessage } from \"./redaction.js\""
+        },
+        {
           "line": 6,
           "source": "@cowards/spec",
           "statementText": "import {\n  RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,\n  RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,\n  RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type RuntimeExecutionServiceResponse,\n} from \"@cowards/spec\""

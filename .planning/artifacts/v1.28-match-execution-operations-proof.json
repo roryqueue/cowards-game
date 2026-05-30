@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1.28-match-execution-operations-proof",
-  "generatedAt": "2026-05-30T23:48:16.353Z",
+  "generatedAt": "2026-05-30T23:50:37.050Z",
   "contractVersion": "match-execution-app-v1",
   "publicContractChanged": false,
   "countedStrategyPath": "javascript-typescript",
@@ -38,7 +38,7 @@
       "operator evidence leaked",
       "quarantine evidence leaked",
       "export default",
-      "/Users/secret"
+      "host-path-redaction-test"
     ],
     "runtimeRedactionMarkers": [
       "redactedDiagnostics",
@@ -146,6 +146,86 @@
       ],
       "expectedPublicCategory": "system_failure",
       "recoveryControl": "matchset-refresh"
+    }
+  ],
+  "publicCompatibilityOutcomes": [
+    {
+      "id": "complete",
+      "evidence": "contract-fixture",
+      "publicCategory": "complete",
+      "privateOperationsState": false
+    },
+    {
+      "id": "queued-running",
+      "evidence": "contract-fixtures",
+      "publicCategory": "queued/running",
+      "privateOperationsState": false
+    },
+    {
+      "id": "retrying",
+      "evidence": "retryable lifecycle disposition",
+      "publicCategory": "retryable",
+      "privateOperationsState": false
+    },
+    {
+      "id": "degraded-unavailable-runtime",
+      "evidence": "contract-fixture-and-drill",
+      "publicCategory": "runtime_unavailable",
+      "privateOperationsState": false
+    },
+    {
+      "id": "timeout",
+      "evidence": "contract-fixture-and-drill",
+      "publicCategory": "timeout",
+      "privateOperationsState": false
+    },
+    {
+      "id": "malformed-runtime-result",
+      "evidence": "contract-fixture-and-drill",
+      "publicCategory": "malformed_runtime_result",
+      "privateOperationsState": false
+    },
+    {
+      "id": "stale-artifact",
+      "evidence": "contract-fixture-and-quarantine-drill",
+      "publicCategory": "stale_artifact",
+      "privateOperationsState": false
+    },
+    {
+      "id": "system-failure",
+      "evidence": "contract-fixture-and-drill",
+      "publicCategory": "system_failure",
+      "privateOperationsState": false
+    },
+    {
+      "id": "strategy-failure",
+      "evidence": "contract-fixture",
+      "publicCategory": "strategy_failure",
+      "privateOperationsState": false
+    },
+    {
+      "id": "quarantined-private-only",
+      "evidence": "quarantine-table-and-redacted-operator-evidence",
+      "publicCategory": "existing failed/degraded public lifecycle",
+      "privateOperationsState": true
+    },
+    {
+      "id": "interrupted-matchset",
+      "evidence": "matchset-refresh-marker-and-drill",
+      "publicCategory": "system_failure",
+      "privateOperationsState": false
+    },
+    {
+      "id": "missing-chronicle",
+      "evidence": "frozen-contract-category",
+      "publicCategory": "missing_chronicle",
+      "privateOperationsState": false
+    },
+    {
+      "id": "no-result",
+      "evidence": "frozen-contract-category-and-evidence-copy",
+      "publicCategory": "no_result",
+      "privateOperationsState": false
     }
   ],
   "fixtureValidation": [

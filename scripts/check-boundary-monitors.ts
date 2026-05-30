@@ -321,6 +321,10 @@ const v126MatchExecutionReliabilityProofPath =
   ".planning/artifacts/v1.26-match-execution-reliability-proof.json"
 const v126MatchExecutionReliabilityProofMarkdownPath =
   ".planning/artifacts/v1.26-match-execution-reliability-proof.md"
+const v128MatchExecutionOperationsProofPath =
+  ".planning/artifacts/v1.28-match-execution-operations-proof.json"
+const v128MatchExecutionOperationsProofMarkdownPath =
+  ".planning/artifacts/v1.28-match-execution-operations-proof.md"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
@@ -4388,6 +4392,175 @@ const checkV126MatchExecutionReliabilityProof = (): string => {
   return `${artifact.retryMatrix.length} retry rows, ${artifact.fixtureCoverage.length} fixture outcomes, ownership, privacy, and non-claims checked`
 }
 
+const checkV128MatchExecutionOperationsProof = (): string => {
+  const jsonPath = path.join(repoRoot, v128MatchExecutionOperationsProofPath)
+  const markdownPath = path.join(
+    repoRoot,
+    v128MatchExecutionOperationsProofMarkdownPath,
+  )
+  if (!existsSync(jsonPath) || !existsSync(markdownPath)) {
+    throw new Error("v1.28 operations proof artifacts are missing")
+  }
+
+  const artifact = readJson<{
+    schemaVersion: string
+    contractVersion: string
+    publicContractChanged: boolean
+    countedStrategyPath: string
+    nonCountedExhibitionBeta: readonly string[]
+    activeWasmWasiAbi: string
+    ownership: {
+      orchestration: string
+      recoveryPolicy: string
+      publicEvidence: string
+      hostileStrategyExecution: string
+      strategyExecutionInWebApiGo: boolean
+    }
+    sourceMarkers: Record<string, readonly string[]>
+    drillCatalog: readonly {
+      id: string
+      expectedPublicCategory: string
+      recoveryControl: string
+    }[]
+    publicCompatibilityOutcomes: readonly {
+      id: string
+      publicCategory: string
+      privateOperationsState: boolean
+    }[]
+    fixtureValidation: readonly {
+      id: string
+      contractVersion: string
+      privateMarkerLeaks: readonly string[]
+    }[]
+    relevantLocalPages: readonly string[]
+    nonClaims: readonly string[]
+  }>(v128MatchExecutionOperationsProofPath)
+
+  if (
+    artifact.schemaVersion !== "v1.28-match-execution-operations-proof" ||
+    artifact.contractVersion !== "match-execution-app-v1" ||
+    artifact.publicContractChanged
+  ) {
+    throw new Error("v1.28 operations proof drifted from frozen app contract")
+  }
+  if (
+    artifact.countedStrategyPath !== "javascript-typescript" ||
+    artifact.activeWasmWasiAbi !== "preview1-stdin-stdout-json" ||
+    artifact.ownership.orchestration !== "go" ||
+    artifact.ownership.recoveryPolicy !== "go" ||
+    artifact.ownership.publicEvidence !== "go" ||
+    artifact.ownership.hostileStrategyExecution !== "runtime-service" ||
+    artifact.ownership.strategyExecutionInWebApiGo !== false
+  ) {
+    throw new Error("v1.28 operations ownership or runtime eligibility drifted")
+  }
+  for (const language of ["python", "rust", "zig"]) {
+    if (!artifact.nonCountedExhibitionBeta.includes(language)) {
+      throw new Error(`v1.28 proof missing non-counted ${language} beta status`)
+    }
+  }
+
+  for (const markerGroup of [
+    "quarantineMarkers",
+    "recoveryMarkers",
+    "operatorEvidenceMarkers",
+    "runtimeRedactionMarkers",
+    "internalEndpointMarkers",
+    "leaseRecoveryMarkers",
+    "interruptedMatchSetMarkers",
+    "migrationMarkers",
+  ]) {
+    if ((artifact.sourceMarkers[markerGroup] ?? []).length === 0) {
+      throw new Error(`v1.28 operations proof missing ${markerGroup}`)
+    }
+  }
+
+  for (const drill of [
+    "stopped-runtime-service",
+    "malformed-envelope",
+    "timeout",
+    "stale-artifact",
+    "malformed-runtime-result",
+    "stale-lease-reclaim",
+    "duplicate-worker-convergence",
+    "interrupted-matchset-refresh",
+  ]) {
+    if (!artifact.drillCatalog.some((entry) => entry.id === drill)) {
+      throw new Error(`v1.28 operations proof missing drill ${drill}`)
+    }
+  }
+
+  for (const outcome of [
+    "complete",
+    "queued-running",
+    "retrying",
+    "degraded-unavailable-runtime",
+    "timeout",
+    "malformed-runtime-result",
+    "stale-artifact",
+    "system-failure",
+    "strategy-failure",
+    "quarantined-private-only",
+    "interrupted-matchset",
+    "missing-chronicle",
+    "no-result",
+  ]) {
+    if (
+      !artifact.publicCompatibilityOutcomes.some(
+        (entry) => entry.id === outcome,
+      )
+    ) {
+      throw new Error(`v1.28 compatibility proof missing ${outcome}`)
+    }
+  }
+  const leaked = artifact.fixtureValidation.filter(
+    (fixture) => fixture.privateMarkerLeaks.length > 0,
+  )
+  if (leaked.length > 0) {
+    throw new Error(
+      `v1.28 fixture privacy leaks: ${leaked.map((fixture) => fixture.id).join(", ")}`,
+    )
+  }
+  if (
+    artifact.fixtureValidation.some(
+      (fixture) => fixture.contractVersion !== "match-execution-app-v1",
+    )
+  ) {
+    throw new Error("v1.28 fixture validation left the frozen app contract")
+  }
+
+  for (const page of [
+    "matchsets/match-set%3Afixture%3Aunavailable-runtime",
+    "matchsets/match-set%3Afixture%3Astale-artifact",
+    "matchsets/match-set%3Afixture%3Amalformed-runtime-result",
+    "matches/match%3Afixture%3Apublic-safe-replay/replay",
+  ]) {
+    if (!artifact.relevantLocalPages.some((url) => url.includes(page))) {
+      throw new Error(`v1.28 public page proof missing ${page}`)
+    }
+  }
+  for (const nonClaim of [
+    "No public result/replay contract expansion",
+    "No public operations UI",
+    "No runtime promotion",
+    "No production sandbox certification",
+    "No direct-export ABI migration",
+    "No Component Model/WIT ABI migration",
+    "No counted non-JS play",
+  ]) {
+    if (!artifact.nonClaims.includes(nonClaim)) {
+      throw new Error(`v1.28 proof missing non-claim: ${nonClaim}`)
+    }
+  }
+
+  assertPublicOutputLeakSafe(
+    readFileSync(markdownPath, "utf8"),
+    v128MatchExecutionOperationsProofMarkdownPath,
+  )
+
+  return `${artifact.publicCompatibilityOutcomes.length} compatibility outcomes, ${artifact.drillCatalog.length} drills, ${artifact.fixtureValidation.length} frozen fixtures, ownership, privacy, and non-claims checked`
+}
+
 export const runBoundaryMonitorChecks = async (): Promise<
   BoundaryMonitorCheck[]
 > => [
@@ -4424,6 +4597,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("contract_drift", "v1.26 Match execution reliability proof", () =>
     checkV126MatchExecutionReliabilityProof(),
+  ),
+  await check("contract_drift", "v1.28 Match execution operations proof", () =>
+    checkV128MatchExecutionOperationsProof(),
   ),
   await check("runtime_adapter", "v1.18 isolation baseline artifact", () =>
     checkV118IsolationBaselineArtifact(),
