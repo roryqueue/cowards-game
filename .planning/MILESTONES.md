@@ -1,5 +1,37 @@
 # Milestones
 
+## v1.26 Match Execution Reliability, Retry Semantics, and Failure Drills (Shipped: 2026-05-30)
+
+**Status:** Shipped 2026-05-30
+**Phases:** 9
+**Phase range:** 183-191
+**Plans:** 9/9 complete
+**Requirements:** 55/55 complete
+**Research:** .planning/research/v1.26-SUMMARY.md
+**Roadmap:** .planning/milestones/v1.26-ROADMAP.md
+**Decision:** `match-execution-app-v1` remains frozen; no runtime promotion, production sandbox certification, counted non-JS play, direct-export ABI migration, or Component Model/WIT migration.
+**Audit:** .planning/milestones/v1.26-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.26-ROADMAP.md, .planning/milestones/v1.26-REQUIREMENTS.md, .planning/workstreams/v1-26-match-execution-reliability/phases/
+
+**Delivered:**
+
+- Go-owned retry/failure classification for runtime unavailable, timeout, malformed runtime result, stale artifact, and generic system failure categories.
+- Immediate terminal recording for post-claim request-build failures instead of waiting for stale lease recovery.
+- Public-safe MatchSet `matchExecution` metadata projection for live Go result summaries without changing `match-execution-app-v1`.
+- Runtime-service HTTP malformed-request redaction before system failure envelope creation.
+- v1.26 reliability proof artifacts and boundary monitor coverage for frozen contract, ownership, runtime eligibility, public privacy, and non-promotion claims.
+- Browser-verified local fixture pages for unavailable runtime, stale artifact, malformed runtime result, public-safe result, and replay evidence.
+
+### Active Constraints
+
+- `match-execution-app-v1` remains frozen.
+- JS/TS remains the only counted Strategy path.
+- Python, Rust, and Zig remain non-counted exhibition beta only.
+- Preview 1 stdin/stdout JSON remains the active WASM/WASI execution ABI.
+- Runtime-service internals, raw diagnostics, future ABI candidates, production sandbox claims, and non-JS counted eligibility remain intentionally unstable.
+- Strategy code does not execute in web/API/Go.
+
+
 ## v1.25 Match Execution Interface Freeze and Parallel App/Execution Contract (Shipped: 2026-05-30)
 
 **Status:** Shipped 2026-05-30

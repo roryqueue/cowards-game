@@ -97,16 +97,34 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 
 	request, err := buildRuntimeServiceRequestForClaimedMatch(ctx, orchestrator.lifecycle.pool, claimed.MatchID, claimed.JobID)
 	if err != nil {
-		return nil, err
+		status, recordErr := orchestrator.lifecycle.recordAttemptFailure(ctx, recordAttemptFailureInput{
+			JobID:        claimed.JobID,
+			LeaseToken:   claimed.LeaseToken,
+			ErrorClass:   "RuntimeServiceContractMismatch",
+			ErrorMessage: "Runtime service request could not be built from claimed Match input",
+			Retryable:    false,
+			Category:     matchFailureCategorySystemFailure,
+			Details: map[string]any{
+				"matchId":  claimed.MatchID,
+				"workerId": workerID,
+				"cause":    err.Error(),
+			},
+		})
+		if recordErr != nil {
+			return nil, recordErr
+		}
+		return &goMatchOrchestrationResult{Status: status, JobID: claimed.JobID, MatchID: claimed.MatchID}, nil
 	}
 	response, failure := orchestrator.runtime.executeMatch(ctx, *request)
 	if failure != nil {
+		classification := classifyMatchFailure(failure.Code, failure.Retryable, failure.Details)
 		status, err := orchestrator.lifecycle.recordAttemptFailure(ctx, recordAttemptFailureInput{
 			JobID:        claimed.JobID,
 			LeaseToken:   claimed.LeaseToken,
 			ErrorClass:   failure.Code,
 			ErrorMessage: failure.ErrorMessage,
 			Retryable:    failure.Retryable,
+			Category:     classification.Category,
 			Details: map[string]any{
 				"matchId":                               claimed.MatchID,
 				"workerId":                              workerID,

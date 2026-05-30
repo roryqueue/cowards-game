@@ -1277,6 +1277,18 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 	if err != nil {
 		return nil, err
 	}
+	matchExecutionMetadata, err := server.matchSetExecutionMetadata(ctx, matchSetID)
+	if err != nil {
+		return nil, err
+	}
+	metadata := map[string]any{
+		"countedStatus":     countedStatus,
+		"publicReason":      countedReason,
+		"publicExplanation": countedExplanation,
+	}
+	if len(matchExecutionMetadata) > 0 {
+		metadata["matchExecution"] = matchExecutionMetadata
+	}
 	return map[string]any{
 		"matchSetId": matchSetID,
 		"preset": map[string]any{
@@ -1297,11 +1309,7 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 		"entrants":  entrants,
 		"standings": standingsFromScoring(scoringRaw, entrants),
 		"matches":   matches,
-		"metadata": map[string]any{
-			"countedStatus":     countedStatus,
-			"publicReason":      countedReason,
-			"publicExplanation": countedExplanation,
-		},
+		"metadata":  metadata,
 		"provenance": map[string]any{
 			"matchSetId":           matchSetID,
 			"presetId":             *competitionPresetID,
@@ -1489,7 +1497,7 @@ func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID strin
 	}
 	rows, err := server.pool.Query(ctx, `
 		select m.id, m.status, m.bottom_strategy_revision_id, m.top_strategy_revision_id,
-		       m.arena_variant_id, c.hash
+		       m.arena_variant_id, m.failure_category, c.hash
 		from match_set_matches msm
 		join matches m on m.id = msm.match_id
 		left join chronicles c on c.match_id = m.id
@@ -1503,8 +1511,9 @@ func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID strin
 	matches := []map[string]any{}
 	for rows.Next() {
 		var matchID, status, bottomRevisionID, topRevisionID, arenaVariantID string
+		var failureCategory *string
 		var chronicleHash *string
-		if err := rows.Scan(&matchID, &status, &bottomRevisionID, &topRevisionID, &arenaVariantID, &chronicleHash); err != nil {
+		if err := rows.Scan(&matchID, &status, &bottomRevisionID, &topRevisionID, &arenaVariantID, &failureCategory, &chronicleHash); err != nil {
 			return nil, err
 		}
 		dto := map[string]any{
@@ -1521,11 +1530,37 @@ func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID strin
 			dto["chronicleHash"] = *chronicleHash
 		}
 		if status == matchStatusFailedSystem {
-			dto["publicReason"] = "system_failure"
+			dto["publicReason"] = publicReasonForMatchFailureCategory(valueOr(failureCategory, matchFailureCategorySystemFailure))
 		}
 		matches = append(matches, dto)
 	}
 	return matches, rows.Err()
+}
+
+func (server *LiveServer) matchSetExecutionMetadata(ctx context.Context, matchSetID string) (map[string]any, error) {
+	rows, err := server.pool.Query(ctx, `
+		select m.failure_category, m.status::text
+		from match_set_matches msm
+		join matches m on m.id = msm.match_id
+		where msm.match_set_id = $1
+		order by msm.matrix_index asc
+	`, matchSetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var category *string
+		var status string
+		if err := rows.Scan(&category, &status); err != nil {
+			return nil, err
+		}
+		if status == matchStatusFailedSystem && category != nil && *category != "" {
+			retryable := *category != matchFailureCategoryMalformedRuntimeResult && *category != matchFailureCategoryStaleArtifact
+			return matchExecutionMetadataForFailureCategory(*category, retryable), nil
+		}
+	}
+	return nil, rows.Err()
 }
 
 func (server *LiveServer) authenticatedUser(ctx context.Context, request *http.Request, updateLastSeen bool) (*publicUser, error) {

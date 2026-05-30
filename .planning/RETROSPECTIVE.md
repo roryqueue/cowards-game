@@ -1,5 +1,36 @@
 # Retrospective
 
+## Milestone: v1.26 — Match Execution Reliability, Retry Semantics, and Failure Drills
+
+**Shipped:** 2026-05-30
+**Phases:** 9 | **Plans:** 9
+
+### What Was Built
+
+- A Go-owned retry/failure classification layer for runtime unavailable, timeout, malformed runtime result, stale artifact, and generic system failure categories.
+- Public-safe execution metadata projection for live Go MatchSet summaries without changing `match-execution-app-v1`.
+- Immediate terminal handling for claimed jobs that cannot build a runtime-service request.
+- Runtime-service malformed HTTP error redaction before schema-valid system failure envelope creation.
+- v1.26 reliability proof artifacts, boundary monitor checks, browser fixture-page proof, validation, verify-work, and audit-fix artifacts.
+
+### What Worked
+
+- The frozen v1.25 contract was strong enough to absorb execution reliability hardening through metadata projection rather than a new public contract.
+- The most valuable implementation finding was mundane but real: claimed jobs could linger until lease expiry if request construction failed after claim.
+- Reusing fixture pages for unavailable, stale, malformed, and replay proof kept the milestone behind the interface while still giving realistic user-facing evidence.
+
+### What Was Inefficient
+
+- GSD workflow automation still required manual artifact synthesis in this runtime, especially for all-phase research/plan/review/validation/UAT docs.
+- Optional live Postgres integration tests remain gated by local environment, so the always-on proof leans on unit tests, fixture pages, and boundary monitors.
+
+### Key Lessons
+
+- Public reliability categories should be derived from Go-owned failure classification, not reconstructed ad hoc at page boundaries.
+- Runtime-service raw diagnostics should be redacted at the HTTP boundary as well as at Go persistence/public boundaries.
+- Contract-freeze milestones pay dividends: v1.26 hardened execution behavior without forcing app/result/replay UX expansion.
+
+
 ## Milestone: v1.23 — WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
 
 **Shipped:** 2026-05-25

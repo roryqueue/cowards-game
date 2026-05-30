@@ -1,0 +1,184 @@
+{
+  "schemaVersion": "v1.26-match-execution-reliability-proof",
+  "generatedAt": "2026-05-30T23:01:03.027Z",
+  "contractVersion": "match-execution-app-v1",
+  "noAppContractChange": true,
+  "countedStrategyPath": "javascript-typescript",
+  "nonCountedExhibitionBeta": [
+    "python",
+    "rust",
+    "zig"
+  ],
+  "activeWasmWasiAbi": "preview1-stdin-stdout-json",
+  "ownership": {
+    "orchestration": "go",
+    "publicEvidence": "go",
+    "hostileStrategyExecution": "runtime-service",
+    "strategyExecutionInWebApiGo": false
+  },
+  "sourceMarkers": {
+    "goRetryMarkers": [
+      "matchFailureCategoryRuntimeUnavailable",
+      "matchFailureCategoryTimeout",
+      "matchFailureCategoryMalformedRuntimeResult",
+      "matchFailureCategoryStaleArtifact",
+      "retryable",
+      "non_retryable"
+    ],
+    "goLifecycleMarkers": [
+      "recordAttemptFailure",
+      "RuntimeServiceContractMismatch",
+      "classifyMatchFailure"
+    ],
+    "publicProjectionMarkers": [
+      "matchSetExecutionMetadata",
+      "matchExecution",
+      "publicReasonForMatchFailureCategory"
+    ],
+    "runtimeServiceMarkers": [
+      "redactedErrorMessage",
+      "malformedRequestResponse"
+    ],
+    "runtimeEnvelopeMarkers": [
+      "RuntimeExecutionServiceResponseSchema.parse",
+      "RESPONSE_SCHEMA_INVALID",
+      "EXECUTION_EXCEPTION",
+      "validateRevisionArtifact"
+    ]
+  },
+  "retryMatrix": [
+    {
+      "failure": "runtime-service stopped/transport/read/oversized",
+      "retryable": true,
+      "publicCategory": "runtime_unavailable"
+    },
+    {
+      "failure": "runtime-service timeout",
+      "retryable": true,
+      "publicCategory": "timeout"
+    },
+    {
+      "failure": "runtime-service malformed HTTP/envelope response",
+      "retryable": true,
+      "publicCategory": "system_failure"
+    },
+    {
+      "failure": "malformed Strategy/runtime output",
+      "retryable": false,
+      "publicCategory": "malformed_runtime_result"
+    },
+    {
+      "failure": "source/artifact metadata mismatch",
+      "retryable": false,
+      "publicCategory": "stale_artifact"
+    }
+  ],
+  "fixtureCoverage": [
+    {
+      "id": "complete",
+      "present": true
+    },
+    {
+      "id": "running",
+      "present": true
+    },
+    {
+      "id": "queued",
+      "present": true
+    },
+    {
+      "id": "strategy-failure",
+      "present": true
+    },
+    {
+      "id": "system-failure",
+      "present": true
+    },
+    {
+      "id": "timeout",
+      "present": true
+    },
+    {
+      "id": "unavailable-runtime",
+      "present": true
+    },
+    {
+      "id": "malformed-runtime-result",
+      "present": true
+    },
+    {
+      "id": "stale-artifact",
+      "present": true
+    },
+    {
+      "id": "public-safe-replay",
+      "present": true
+    }
+  ],
+  "fixtureValidation": [
+    {
+      "id": "complete",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "running",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "queued",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "strategy-failure",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "system-failure",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "timeout",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "unavailable-runtime",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "malformed-runtime-result",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "stale-artifact",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "public-safe-replay",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    }
+  ],
+  "relevantPages": [
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Aunavailable-runtime",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Astale-artifact",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Amalformed-runtime-result",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Apublic-safe-replay",
+    "http://localhost:3000/matches/match%3Afixture%3Apublic-safe-replay/replay"
+  ],
+  "nonClaims": [
+    "No runtime promotion",
+    "No production sandbox certification",
+    "No direct-export ABI migration",
+    "No Component Model/WIT ABI migration",
+    "No counted non-JS play"
+  ]
+}

@@ -22,6 +22,7 @@ import {
   type RuntimeServiceConfig,
 } from "./runtime-config.js"
 import { executeRuntimeServiceRequest } from "./execute-match.js"
+import { redactedErrorMessage } from "./redaction.js"
 
 const DEFAULT_BODY_LIMIT_BYTES = 8 * 1024 * 1024
 
@@ -195,7 +196,7 @@ export const createRuntimeExecutionHttpHandler = (
         400,
         malformedRequestResponse(
           error instanceof Error
-            ? error.message
+            ? redactedErrorMessage(error)
             : "Runtime execution request was malformed.",
         ),
       )

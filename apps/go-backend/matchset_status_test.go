@@ -159,6 +159,50 @@ func TestGoMatchSetStatusIntegration(t *testing.T) {
 		assertPhase100MatchSetStored(t, ctx, pool, ids.matchSetID, matchSetStatusComplete, false, true)
 	})
 
+	t.Run("public MatchSet summary projects failure category metadata", func(t *testing.T) {
+		prefix := "phase126-public-failure-category"
+		cleanupPhase100Rows(t, ctx, pool, prefix)
+		defer cleanupPhase100Rows(t, ctx, pool, prefix)
+		ids := seedPhase100MatchSet(t, ctx, pool, prefix)
+		seedPhase100CompetitionEntrants(t, ctx, pool, ids)
+		if _, err := pool.Exec(ctx, `
+			update match_sets
+			set competition_preset_id = 'smoke-exhibition-v1',
+			    competition_preset_version = 'v1',
+			    scoring_policy_version = 'v1',
+			    visibility = 'public',
+			    status = 'degraded',
+			    scoring = null
+			where id = $1
+		`, ids.matchSetID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := pool.Exec(ctx, `
+			update matches
+			set status = 'failed_system',
+			    failure_category = $1,
+			    failure_message = 'immutable artifact mismatch',
+			    completed_at = now()
+			where id = $2
+		`, matchFailureCategoryStaleArtifact, ids.matchA); err != nil {
+			t.Fatal(err)
+		}
+
+		result, err := (&LiveServer{pool: pool}).publicMatchSetResult(ctx, ids.matchSetID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		metadata := mapValue(result, "metadata")
+		matchExecution := mapValue(metadata, "matchExecution")
+		if stringValue(matchExecution, "failureCategory") != matchFailureCategoryStaleArtifact || stringValue(matchExecution, "retryDisposition") != "non_retryable" || stringValue(matchExecution, "replayAvailability") != "stale" {
+			t.Fatalf("expected stale artifact match execution metadata, got %+v", matchExecution)
+		}
+		matches, ok := result["matches"].([]map[string]any)
+		if !ok || len(matches) == 0 || stringValue(matches[0], "publicReason") != "no_result" {
+			t.Fatalf("expected public no-result stale artifact Match reason, got %+v", result["matches"])
+		}
+	})
+
 	t.Run("creates Go-owned exhibition MatchSet with queued jobs", func(t *testing.T) {
 		prefix := "phase102-exhibition"
 		userID, revisionIDs := seedPhase102OwnedRevisions(t, ctx, pool, prefix)

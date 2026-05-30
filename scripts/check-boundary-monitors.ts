@@ -317,6 +317,10 @@ const v124SignedInLiveRegressionProofPath =
   ".planning/artifacts/v1.24-signed-in-live-regression-proof.json"
 const v124SignedInLiveRegressionProofMarkdownPath =
   ".planning/artifacts/v1.24-signed-in-live-regression-proof.md"
+const v126MatchExecutionReliabilityProofPath =
+  ".planning/artifacts/v1.26-match-execution-reliability-proof.json"
+const v126MatchExecutionReliabilityProofMarkdownPath =
+  ".planning/artifacts/v1.26-match-execution-reliability-proof.md"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
@@ -4290,6 +4294,100 @@ const checkV125MatchExecutionContractFreeze = (): string => {
   return `${requiredLifecycleMarkers.length} lifecycle markers, ${requiredFixtureScenarios.length} fixture scenarios, adapter gates, and app contract consumption checked`
 }
 
+const checkV126MatchExecutionReliabilityProof = (): string => {
+  const jsonPath = path.join(repoRoot, v126MatchExecutionReliabilityProofPath)
+  const markdownPath = path.join(
+    repoRoot,
+    v126MatchExecutionReliabilityProofMarkdownPath,
+  )
+  if (!existsSync(jsonPath) || !existsSync(markdownPath)) {
+    throw new Error("v1.26 reliability proof artifacts are missing")
+  }
+  const artifact = JSON.parse(readFileSync(jsonPath, "utf8")) as {
+    schemaVersion: string
+    contractVersion: string
+    noAppContractChange: boolean
+    countedStrategyPath: string
+    nonCountedExhibitionBeta: readonly string[]
+    activeWasmWasiAbi: string
+    ownership: {
+      orchestration: string
+      publicEvidence: string
+      hostileStrategyExecution: string
+      strategyExecutionInWebApiGo: boolean
+    }
+    retryMatrix: readonly {
+      failure: string
+      retryable: boolean
+      publicCategory: string
+    }[]
+    fixtureCoverage: readonly { id: string; present: boolean }[]
+    fixtureValidation: readonly {
+      id: string
+      privateMarkerLeaks: readonly string[]
+    }[]
+    nonClaims: readonly string[]
+  }
+  if (
+    artifact.schemaVersion !== "v1.26-match-execution-reliability-proof" ||
+    artifact.contractVersion !== "match-execution-app-v1" ||
+    !artifact.noAppContractChange
+  ) {
+    throw new Error(
+      "v1.26 reliability proof does not preserve frozen app contract",
+    )
+  }
+  if (
+    artifact.countedStrategyPath !== "javascript-typescript" ||
+    artifact.activeWasmWasiAbi !== "preview1-stdin-stdout-json" ||
+    artifact.ownership.orchestration !== "go" ||
+    artifact.ownership.hostileStrategyExecution !== "runtime-service" ||
+    artifact.ownership.strategyExecutionInWebApiGo !== false
+  ) {
+    throw new Error(
+      "v1.26 reliability proof changed execution ownership or runtime eligibility",
+    )
+  }
+  for (const language of ["python", "rust", "zig"]) {
+    if (!artifact.nonCountedExhibitionBeta.includes(language)) {
+      throw new Error(`v1.26 proof missing non-counted ${language} beta status`)
+    }
+  }
+  for (const category of [
+    "runtime_unavailable",
+    "timeout",
+    "malformed_runtime_result",
+    "stale_artifact",
+  ]) {
+    if (!artifact.retryMatrix.some((row) => row.publicCategory === category)) {
+      throw new Error(`v1.26 retry matrix missing ${category}`)
+    }
+  }
+  if (artifact.fixtureCoverage.some((fixture) => !fixture.present)) {
+    throw new Error("v1.26 proof has missing frozen contract fixtures")
+  }
+  const leaked = artifact.fixtureValidation.filter(
+    (fixture) => fixture.privateMarkerLeaks.length > 0,
+  )
+  if (leaked.length > 0) {
+    throw new Error(
+      `v1.26 fixture privacy leaks: ${leaked.map((fixture) => fixture.id).join(", ")}`,
+    )
+  }
+  for (const nonClaim of [
+    "No runtime promotion",
+    "No production sandbox certification",
+    "No direct-export ABI migration",
+    "No Component Model/WIT ABI migration",
+    "No counted non-JS play",
+  ]) {
+    if (!artifact.nonClaims.includes(nonClaim)) {
+      throw new Error(`v1.26 proof missing non-claim: ${nonClaim}`)
+    }
+  }
+  return `${artifact.retryMatrix.length} retry rows, ${artifact.fixtureCoverage.length} fixture outcomes, ownership, privacy, and non-claims checked`
+}
+
 export const runBoundaryMonitorChecks = async (): Promise<
   BoundaryMonitorCheck[]
 > => [
@@ -4323,6 +4421,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
     "contract_drift",
     "v1.25 Match execution app contract freeze",
     () => checkV125MatchExecutionContractFreeze(),
+  ),
+  await check("contract_drift", "v1.26 Match execution reliability proof", () =>
+    checkV126MatchExecutionReliabilityProof(),
   ),
   await check("runtime_adapter", "v1.18 isolation baseline artifact", () =>
     checkV118IsolationBaselineArtifact(),

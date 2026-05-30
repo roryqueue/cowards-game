@@ -65,6 +65,7 @@ type recordAttemptFailureInput struct {
 	ErrorClass   string
 	ErrorMessage string
 	Retryable    bool
+	Category     string
 	Details      map[string]any
 }
 
@@ -216,6 +217,10 @@ func (lifecycle *matchJobLifecycle) recordAttemptFailure(ctx context.Context, in
 	}
 
 	exhausted := shouldExhaustMatchJobRetries(row.attempts, row.maxAttempts, input.Retryable)
+	failureCategory := input.Category
+	if failureCategory == "" {
+		failureCategory = classifyMatchFailure(input.ErrorClass, input.Retryable, sanitizeMatchJobFailureDetails(input.Details)).Category
+	}
 	if _, err := tx.Exec(ctx, `
 		update match_job_attempts
 		set finished_at = now(),
@@ -242,11 +247,11 @@ func (lifecycle *matchJobLifecycle) recordAttemptFailure(ctx context.Context, in
 		if _, err := tx.Exec(ctx, `
 			update matches
 			set status = 'failed_system',
-			    failure_category = 'SYSTEM',
-			    failure_message = $1,
+			    failure_category = $1,
+			    failure_message = $2,
 			    completed_at = now()
-			where id = $2
-		`, input.ErrorMessage, row.matchID); err != nil {
+			where id = $3
+		`, failureCategory, input.ErrorMessage, row.matchID); err != nil {
 			return "", err
 		}
 		if err := refreshMatchSetsForMatchTx(ctx, tx, row.matchID); err != nil {
@@ -302,6 +307,9 @@ func sanitizeMatchJobFailureDetails(details map[string]any) map[string]any {
 		"streamName":                         {},
 		"actualBytes":                        {},
 		"capBytes":                           {},
+		"reason":                             {},
+		"slot":                               {},
+		"languageId":                         {},
 	}
 	safe := map[string]any{}
 	for key, value := range details {

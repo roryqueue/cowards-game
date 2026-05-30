@@ -27,6 +27,8 @@
     "wasm-wasi:beta-evaluate:check": "pnpm exec tsx scripts/evaluate-v1-23-wasm-wasi-beta.ts --check",
     "runtime-abuse:evaluate": "pnpm exec tsx scripts/evaluate-v1-24-runtime-abuse-lab.ts",
     "runtime-abuse:evaluate:check": "pnpm exec tsx scripts/evaluate-v1-24-runtime-abuse-lab.ts --check",
+    "match-execution:reliability": "pnpm exec tsx scripts/evaluate-v1-26-match-execution-reliability.ts",
+    "match-execution:reliability:check": "pnpm exec tsx scripts/evaluate-v1-26-match-execution-reliability.ts",
     "sandbox:evaluate": "pnpm exec tsx scripts/evaluate-runtime-sandbox.ts",
     "sandbox:evaluate:container": "COWARDS_RUN_CONTAINER_SANDBOX=1 pnpm exec tsx scripts/evaluate-runtime-sandbox.ts --require-container",
     "sandbox:evaluate:runsc": "pnpm exec tsx scripts/evaluate-runtime-sandbox.ts --require-runsc",

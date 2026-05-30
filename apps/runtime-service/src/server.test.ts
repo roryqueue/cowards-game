@@ -117,6 +117,8 @@ describe("runtime execution HTTP boundary", () => {
       })
       expect(JSON.stringify(body)).not.toContain("StrategyMemory")
       expect(JSON.stringify(body)).not.toContain("postgres://")
+      expect(JSON.stringify(body)).not.toContain("/Users/")
+      expect(JSON.stringify(body)).not.toContain("token=")
     }
   })
 })
