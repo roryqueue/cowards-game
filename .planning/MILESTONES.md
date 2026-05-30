@@ -11,7 +11,7 @@
 **Roadmap:** .planning/milestones/v1.26-ROADMAP.md
 **Decision:** `match-execution-app-v1` remains frozen; no runtime promotion, production sandbox certification, counted non-JS play, direct-export ABI migration, or Component Model/WIT migration.
 **Audit:** .planning/milestones/v1.26-MILESTONE-AUDIT.md
-**Archives:** .planning/milestones/v1.26-ROADMAP.md, .planning/milestones/v1.26-REQUIREMENTS.md, .planning/workstreams/v1-26-match-execution-reliability/phases/
+**Archives:** .planning/milestones/v1.26-ROADMAP.md, .planning/milestones/v1.26-REQUIREMENTS.md, .planning/milestones/ws-v1-26-match-execution-reliability-2026-05-30/phases/
 
 **Delivered:**
 
