@@ -72,6 +72,20 @@ const internalEndpointMarkers = requireMarkers("apps/go-backend/live_backend.go"
   "COWARDS_GO_BACKEND_INTERNAL_TOKEN",
 ])
 
+const leaseRecoveryMarkers = requireMarkers("apps/go-backend/job_lifecycle_test.go", [
+  "running unexpired job was double-claimed",
+  "expired lease can be reclaimed",
+  "expected invalid lease failure",
+  "duplicate idempotent recovery result",
+])
+
+const interruptedMatchSetMarkers = requireMarkers("apps/go-backend/matchset_status.go", [
+  "refreshMatchSetsForMatchTx",
+  "matchSetStatusRunning",
+  "matchSetStatusFailedSystem",
+  "matchSetStatusComplete",
+])
+
 const migrationMarkers = requireMarkers(
   "packages/persistence/migrations/0007_match_execution_operations.sql",
   ["match_execution_quarantines", "retry_exhausted", "non_retryable_terminal"],
@@ -132,6 +146,24 @@ const drillCatalog = [
     expectedPublicCategory: "malformed_runtime_result",
     recoveryControl: "quarantine-only",
   },
+  {
+    id: "stale-lease-reclaim",
+    topology: ["postgres", "go-backend"],
+    expectedPublicCategory: "system_failure",
+    recoveryControl: "lease-aware-claim",
+  },
+  {
+    id: "duplicate-worker-convergence",
+    topology: ["postgres", "go-backend"],
+    expectedPublicCategory: "system_failure",
+    recoveryControl: "skip-locked-and-idempotency",
+  },
+  {
+    id: "interrupted-matchset-refresh",
+    topology: ["postgres", "go-backend"],
+    expectedPublicCategory: "system_failure",
+    recoveryControl: "matchset-refresh",
+  },
 ] as const
 
 const proof = {
@@ -153,6 +185,8 @@ const proof = {
     quarantineMarkers,
     recoveryMarkers,
     internalEndpointMarkers,
+    leaseRecoveryMarkers,
+    interruptedMatchSetMarkers,
     migrationMarkers,
   },
   drillCatalog,
@@ -223,6 +257,8 @@ ${proof.drillCatalog
 - Quarantine: ${quarantineMarkers.join(", ")}
 - Recovery: ${recoveryMarkers.join(", ")}
 - Internal endpoints: ${internalEndpointMarkers.join(", ")}
+- Lease and duplicate recovery: ${leaseRecoveryMarkers.join(", ")}
+- Interrupted MatchSet refresh: ${interruptedMatchSetMarkers.join(", ")}
 - Migrations: ${migrationMarkers.join(", ")}
 
 ## Frozen Contract Coverage

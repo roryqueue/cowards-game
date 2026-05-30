@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1.28-match-execution-operations-proof",
-  "generatedAt": "2026-05-30T23:43:53.295Z",
+  "generatedAt": "2026-05-30T23:45:33.113Z",
   "contractVersion": "match-execution-app-v1",
   "publicContractChanged": false,
   "countedStrategyPath": "javascript-typescript",
@@ -35,6 +35,15 @@
       "/internal/match-execution/requeue",
       "/internal/match-execution/rerun",
       "COWARDS_GO_BACKEND_INTERNAL_TOKEN"
+    ],
+    "leaseRecoveryMarkers": [
+      "running unexpired job was double-claimed",
+      "expired lease can be reclaimed",
+      "expected invalid lease failure",
+      "duplicate idempotent recovery result"
+    ],
+    "interruptedMatchSetMarkers": [
+      "refreshMatchSetsForMatchTx"
     ],
     "migrationMarkers": [
       "match_execution_quarantines",
@@ -96,6 +105,33 @@
       ],
       "expectedPublicCategory": "malformed_runtime_result",
       "recoveryControl": "quarantine-only"
+    },
+    {
+      "id": "stale-lease-reclaim",
+      "topology": [
+        "postgres",
+        "go-backend"
+      ],
+      "expectedPublicCategory": "system_failure",
+      "recoveryControl": "lease-aware-claim"
+    },
+    {
+      "id": "duplicate-worker-convergence",
+      "topology": [
+        "postgres",
+        "go-backend"
+      ],
+      "expectedPublicCategory": "system_failure",
+      "recoveryControl": "skip-locked-and-idempotency"
+    },
+    {
+      "id": "interrupted-matchset-refresh",
+      "topology": [
+        "postgres",
+        "go-backend"
+      ],
+      "expectedPublicCategory": "system_failure",
+      "recoveryControl": "matchset-refresh"
     }
   ],
   "fixtureValidation": [

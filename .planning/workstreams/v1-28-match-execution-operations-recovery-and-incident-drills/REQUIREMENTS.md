@@ -66,12 +66,12 @@ Build the operational recovery layer on the execution side behind the frozen `ma
 
 ### Stale Lease, Duplicate Worker, and Interrupted MatchSet Recovery
 
-- [ ] **LEASE-01**: Stale lease recovery remains deterministic and prevents simultaneous active workers for the same unexpired execution job.
-- [ ] **LEASE-02**: Duplicate worker and duplicate recovery attempts converge without double completion, duplicate Chronicles, duplicate scoring, or misleading MatchSet state.
-- [ ] **LEASE-03**: Stale lease tokens cannot complete, fail, requeue, or quarantine a job after a newer lease or terminal state exists.
-- [ ] **LEASE-04**: Interrupted MatchSet execution can be detected and recovered or quarantined without losing completed Match evidence or marking incomplete evidence as complete.
-- [ ] **LEASE-05**: MatchSet status refresh remains idempotent across complete, retrying, quarantined, failed_system, no-result, and mixed interrupted states.
-- [ ] **LEASE-06**: Local Postgres integration tests or live drills prove stale lease reclaim, duplicate worker prevention, interrupted MatchSet recovery, and terminal-state convergence.
+- [x] **LEASE-01**: Stale lease recovery remains deterministic and prevents simultaneous active workers for the same unexpired execution job.
+- [x] **LEASE-02**: Duplicate worker and duplicate recovery attempts converge without double completion, duplicate Chronicles, duplicate scoring, or misleading MatchSet state.
+- [x] **LEASE-03**: Stale lease tokens cannot complete, fail, requeue, or quarantine a job after a newer lease or terminal state exists.
+- [x] **LEASE-04**: Interrupted MatchSet execution can be detected and recovered or quarantined without losing completed Match evidence or marking incomplete evidence as complete.
+- [x] **LEASE-05**: MatchSet status refresh remains idempotent across complete, retrying, quarantined, failed_system, no-result, and mixed interrupted states.
+- [x] **LEASE-06**: Local Postgres integration tests or live drills prove stale lease reclaim, duplicate worker prevention, interrupted MatchSet recovery, and terminal-state convergence.
 
 ### Operator Evidence and Redaction
 
@@ -168,12 +168,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DRILL-05 | Phase 204 | Complete |
 | DRILL-06 | Phase 204 | Complete |
 | DRILL-07 | Phase 204 | Complete |
-| LEASE-01 | Phase 205 | Planned |
-| LEASE-02 | Phase 205 | Planned |
-| LEASE-03 | Phase 205 | Planned |
-| LEASE-04 | Phase 205 | Planned |
-| LEASE-05 | Phase 205 | Planned |
-| LEASE-06 | Phase 205 | Planned |
+| LEASE-01 | Phase 205 | Complete |
+| LEASE-02 | Phase 205 | Complete |
+| LEASE-03 | Phase 205 | Complete |
+| LEASE-04 | Phase 205 | Complete |
+| LEASE-05 | Phase 205 | Complete |
+| LEASE-06 | Phase 205 | Complete |
 | EVID-01 | Phase 206 | Planned |
 | EVID-02 | Phase 206 | Planned |
 | EVID-03 | Phase 206 | Planned |
@@ -200,8 +200,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 57 total
-- Complete: 28
-- Planned: 29
+- Complete: 34
+- Planned: 23
 - Mapped to phases: 57
 - Unmapped: 0
 
