@@ -314,6 +314,106 @@ func TestMatchJobLifecycleIntegration(t *testing.T) {
 		assertPhase97Quarantine(t, ctx, pool, ids.jobID, matchExecutionQuarantineNonRetryable, matchFailureCategoryStaleArtifact, false, 1)
 	})
 
+	t.Run("operator recovery requeues eligible quarantine once with idempotency", func(t *testing.T) {
+		prefix := "phase97-recover-requeue"
+		cleanupPhase97Rows(t, ctx, pool, prefix)
+		defer cleanupPhase97Rows(t, ctx, pool, prefix)
+		ids := seedPhase97MatchJob(t, ctx, pool, prefix, 1, "queued", 0, nil)
+		lifecycle := newTestMatchJobLifecycle(pool, time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC), "lease:go:recover")
+		claimed, err := lifecycle.claimNextMatchJob(ctx, claimMatchJobInput{WorkerID: "worker:go:recover"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if claimed == nil {
+			t.Fatal("expected claimed job")
+		}
+		if _, err := lifecycle.recordAttemptFailure(ctx, recordAttemptFailureInput{
+			JobID:        claimed.JobID,
+			LeaseToken:   claimed.LeaseToken,
+			ErrorClass:   "RuntimeServiceStopped",
+			ErrorMessage: "runtime service unavailable",
+			Retryable:    true,
+			Category:     matchFailureCategoryRuntimeUnavailable,
+			Details:      map[string]any{"workerId": ids.workerID},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		service := newMatchExecutionRecoveryService(pool)
+		result, err := service.recoverJob(ctx, recoverMatchExecutionJobInput{
+			JobID:          ids.jobID,
+			OperatorID:     "operator:v1.28",
+			IdempotencyKey: "phase97-recover-requeue-key",
+			ActionType:     matchExecutionRecoveryActionRequeue,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Status != "applied" || result.MatchID != ids.matchID {
+			t.Fatalf("expected applied recovery for %s, got %+v", ids.matchID, result)
+		}
+		assertPhase97JobWithMax(t, ctx, pool, ids.jobID, "queued", 1, 2, "", "")
+		assertPhase97MatchStatus(t, ctx, pool, ids.matchID, "pending")
+		assertPhase97QuarantineStatus(t, ctx, pool, ids.jobID, "released")
+		assertPhase97OperatorActionCount(t, ctx, pool, ids.jobID, 1)
+
+		duplicate, err := service.recoverJob(ctx, recoverMatchExecutionJobInput{
+			JobID:          ids.jobID,
+			OperatorID:     "operator:v1.28",
+			IdempotencyKey: "phase97-recover-requeue-key",
+			ActionType:     matchExecutionRecoveryActionRequeue,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if duplicate.Status != "duplicate" {
+			t.Fatalf("expected duplicate idempotent recovery result, got %+v", duplicate)
+		}
+		assertPhase97JobWithMax(t, ctx, pool, ids.jobID, "queued", 1, 2, "", "")
+		assertPhase97OperatorActionCount(t, ctx, pool, ids.jobID, 1)
+	})
+
+	t.Run("operator recovery rejects stale artifact quarantine without source fallback", func(t *testing.T) {
+		prefix := "phase97-recover-stale"
+		cleanupPhase97Rows(t, ctx, pool, prefix)
+		defer cleanupPhase97Rows(t, ctx, pool, prefix)
+		ids := seedPhase97MatchJob(t, ctx, pool, prefix, 3, "queued", 0, nil)
+		lifecycle := newTestMatchJobLifecycle(pool, time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC), "lease:go:stale")
+		claimed, err := lifecycle.claimNextMatchJob(ctx, claimMatchJobInput{WorkerID: "worker:go:stale"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if claimed == nil {
+			t.Fatal("expected claimed job")
+		}
+		if _, err := lifecycle.recordAttemptFailure(ctx, recordAttemptFailureInput{
+			JobID:        claimed.JobID,
+			LeaseToken:   claimed.LeaseToken,
+			ErrorClass:   "RuntimeServiceSourceMismatch",
+			ErrorMessage: "WASM/WASI artifact source hash mismatch",
+			Retryable:    false,
+			Category:     matchFailureCategoryStaleArtifact,
+			Details:      map[string]any{"reason": "compiled-artifact-source-hash-mismatch"},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		service := newMatchExecutionRecoveryService(pool)
+		result, err := service.recoverJob(ctx, recoverMatchExecutionJobInput{
+			JobID:          ids.jobID,
+			OperatorID:     "operator:v1.28",
+			IdempotencyKey: "phase97-recover-stale-key",
+			ActionType:     matchExecutionRecoveryActionRerun,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Status != "rejected" || result.Reason != "failure_category_not_recoverable" {
+			t.Fatalf("expected stale artifact recovery rejection, got %+v", result)
+		}
+		assertPhase97JobWithMax(t, ctx, pool, ids.jobID, "failed_system", 1, 3, "worker:go:stale", "lease:go:stale")
+		assertPhase97QuarantineStatus(t, ctx, pool, ids.jobID, "active")
+		assertPhase97OperatorActionCount(t, ctx, pool, ids.jobID, 1)
+	})
+
 	t.Run("failure recording rejects terminal complete jobs", func(t *testing.T) {
 		prefix := "phase97-complete-stale"
 		cleanupPhase97Rows(t, ctx, pool, prefix)
@@ -486,6 +586,28 @@ func assertPhase97Job(t *testing.T, ctx context.Context, pool *pgxpool.Pool, job
 	}
 }
 
+func assertPhase97JobWithMax(t *testing.T, ctx context.Context, pool *pgxpool.Pool, jobID string, wantStatus string, wantAttempts int, wantMaxAttempts int, wantWorkerID string, wantLeaseToken string) {
+	t.Helper()
+	var status string
+	var attempts int
+	var maxAttempts int
+	var workerID *string
+	var leaseToken *string
+	if err := pool.QueryRow(ctx, `
+		select status::text, attempts, max_attempts, worker_id, lease_token
+		from match_jobs
+		where id = $1
+	`, jobID).Scan(&status, &attempts, &maxAttempts, &workerID, &leaseToken); err != nil {
+		t.Fatal(err)
+	}
+	if status != wantStatus || attempts != wantAttempts || maxAttempts != wantMaxAttempts {
+		t.Fatalf("unexpected job state status=%s attempts=%d max_attempts=%d", status, attempts, maxAttempts)
+	}
+	if stringPtrValue(workerID) != wantWorkerID || stringPtrValue(leaseToken) != wantLeaseToken {
+		t.Fatalf("unexpected lease owner worker=%q lease=%q", stringPtrValue(workerID), stringPtrValue(leaseToken))
+	}
+}
+
 func assertPhase97Attempt(t *testing.T, ctx context.Context, pool *pgxpool.Pool, jobID string, attempt int, wantStatus string) {
 	t.Helper()
 	var status string
@@ -547,6 +669,28 @@ func assertNoPhase97Quarantine(t *testing.T, ctx context.Context, pool *pgxpool.
 	}
 }
 
+func assertPhase97QuarantineStatus(t *testing.T, ctx context.Context, pool *pgxpool.Pool, jobID string, wantStatus string) {
+	t.Helper()
+	var status string
+	if err := pool.QueryRow(ctx, "select status from match_execution_quarantines where job_id = $1", jobID).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != wantStatus {
+		t.Fatalf("expected quarantine status %q, got %q", wantStatus, status)
+	}
+}
+
+func assertPhase97OperatorActionCount(t *testing.T, ctx context.Context, pool *pgxpool.Pool, jobID string, want int) {
+	t.Helper()
+	var count int
+	if err := pool.QueryRow(ctx, "select count(*) from match_execution_operator_actions where job_id = $1", jobID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != want {
+		t.Fatalf("expected %d operator actions for %s, got %d", want, jobID, count)
+	}
+}
+
 func stringPtrValue(value *string) string {
 	if value == nil {
 		return ""
@@ -568,6 +712,10 @@ func cleanupPhase97Rows(t *testing.T, ctx context.Context, pool *pgxpool.Pool, p
 		sql  string
 		args []any
 	}{
+		{
+			sql:  "delete from match_execution_operator_actions where job_id like $1 or match_id like $2",
+			args: []any{"match-job:" + prefix + "%", "match:" + prefix + "%"},
+		},
 		{
 			sql:  "delete from match_execution_quarantines where job_id like $1 or match_id like $2",
 			args: []any{"match-job:" + prefix + "%", "match:" + prefix + "%"},

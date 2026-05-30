@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "v1.28-internal-requeue-rerun-controls",
+  "generatedAt": "2026-05-30T23:59:30.000Z",
+  "milestone": "v1.28",
+  "phase": 203,
+  "contractVersion": "match-execution-app-v1",
+  "publicContractChanged": false,
+  "storage": {
+    "operatorActionsTable": "match_execution_operator_actions",
+    "migration": "packages/persistence/migrations/0008_match_execution_operator_actions.sql",
+    "idempotency": "unique(idempotency_key)",
+    "actionTypes": ["requeue", "rerun"]
+  },
+  "goImplementation": {
+    "recoveryService": "apps/go-backend/match_execution_recovery.go",
+    "internalEndpoints": [
+      "POST /internal/match-execution/requeue",
+      "POST /internal/match-execution/rerun"
+    ],
+    "tokenGate": "COWARDS_GO_BACKEND_INTERNAL_TOKEN",
+    "publicProductRoute": false
+  },
+  "guards": [
+    "requires active quarantine",
+    "requires failed_system job and Match",
+    "rejects existing Chronicles",
+    "rejects stale_artifact",
+    "rejects malformed_runtime_result",
+    "does not reset attempts",
+    "does not execute Strategy code in web/API/Go"
+  ],
+  "tests": [
+    {
+      "command": "cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./...",
+      "status": "passed"
+    },
+    {
+      "command": "pnpm --filter @cowards/persistence test",
+      "status": "passed"
+    }
+  ],
+  "requirementsCovered": [
+    "OPS-01",
+    "OPS-02",
+    "OPS-03",
+    "OPS-04",
+    "OPS-05",
+    "OPS-06",
+    "OPS-07",
+    "OPS-08"
+  ],
+  "nonClaims": [
+    "No public result/replay contract expansion",
+    "No replacement Match semantics",
+    "No source fallback",
+    "No runtime promotion",
+    "No production sandbox certification",
+    "No counted non-JS play"
+  ]
+}

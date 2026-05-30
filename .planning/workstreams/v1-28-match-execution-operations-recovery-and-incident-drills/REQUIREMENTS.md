@@ -45,14 +45,14 @@ Build the operational recovery layer on the execution side behind the frozen `ma
 
 ### Internal Requeue and Rerun Controls
 
-- [ ] **OPS-01**: Operator can deterministically requeue eligible failed or quarantined execution jobs through Go-owned internal controls only.
-- [ ] **OPS-02**: Operator can deterministically rerun eligible Matches or Match execution attempts without changing Match seed, arena, immutable Strategy Revisions, or immutable artifact metadata.
-- [ ] **OPS-03**: Recovery controls are guarded by internal/operator authorization and are unavailable through public web/API product routes.
-- [ ] **OPS-04**: Recovery controls cannot duplicate Match completion, Chronicle persistence, MatchSet scoring/status refresh, public evidence projection, or job attempts under repeated requests.
-- [ ] **OPS-05**: Recovery controls reject completed Matches with existing public Chronicles unless an explicit future replacement-Match design is introduced outside this milestone.
-- [ ] **OPS-06**: Recovery controls preserve the Go/runtime-service split: Go owns recovery policy, while runtime-service owns only hostile Strategy execution envelopes.
-- [ ] **OPS-07**: Recovery actions write private audit evidence with deterministic action IDs or idempotency keys and redacted input/output summaries.
-- [ ] **OPS-08**: Tests cover eligible requeue, ineligible completed Match, duplicate operator request, stale artifact no-source-fallback, and MatchSet refresh idempotency.
+- [x] **OPS-01**: Operator can deterministically requeue eligible failed or quarantined execution jobs through Go-owned internal controls only.
+- [x] **OPS-02**: Operator can deterministically rerun eligible Matches or Match execution attempts without changing Match seed, arena, immutable Strategy Revisions, or immutable artifact metadata.
+- [x] **OPS-03**: Recovery controls are guarded by internal/operator authorization and are unavailable through public web/API product routes.
+- [x] **OPS-04**: Recovery controls cannot duplicate Match completion, Chronicle persistence, MatchSet scoring/status refresh, public evidence projection, or job attempts under repeated requests.
+- [x] **OPS-05**: Recovery controls reject completed Matches with existing public Chronicles unless an explicit future replacement-Match design is introduced outside this milestone.
+- [x] **OPS-06**: Recovery controls preserve the Go/runtime-service split: Go owns recovery policy, while runtime-service owns only hostile Strategy execution envelopes.
+- [x] **OPS-07**: Recovery actions write private audit evidence with deterministic action IDs or idempotency keys and redacted input/output summaries.
+- [x] **OPS-08**: Tests cover eligible requeue, ineligible completed Match, duplicate operator request, stale artifact no-source-fallback, and MatchSet refresh idempotency.
 
 ### Live Failure-Drill Harness
 
@@ -153,14 +153,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QUAR-05 | Phase 202 | Complete |
 | QUAR-06 | Phase 202 | Complete |
 | QUAR-07 | Phase 202 | Complete |
-| OPS-01 | Phase 203 | Planned |
-| OPS-02 | Phase 203 | Planned |
-| OPS-03 | Phase 203 | Planned |
-| OPS-04 | Phase 203 | Planned |
-| OPS-05 | Phase 203 | Planned |
-| OPS-06 | Phase 203 | Planned |
-| OPS-07 | Phase 203 | Planned |
-| OPS-08 | Phase 203 | Planned |
+| OPS-01 | Phase 203 | Complete |
+| OPS-02 | Phase 203 | Complete |
+| OPS-03 | Phase 203 | Complete |
+| OPS-04 | Phase 203 | Complete |
+| OPS-05 | Phase 203 | Complete |
+| OPS-06 | Phase 203 | Complete |
+| OPS-07 | Phase 203 | Complete |
+| OPS-08 | Phase 203 | Complete |
 | DRILL-01 | Phase 204 | Planned |
 | DRILL-02 | Phase 204 | Planned |
 | DRILL-03 | Phase 204 | Planned |
@@ -200,8 +200,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 57 total
-- Complete: 13
-- Planned: 44
+- Complete: 21
+- Planned: 36
 - Mapped to phases: 57
 - Unmapped: 0
 

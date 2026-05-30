@@ -19,7 +19,7 @@
 | --- | --- | --- | --- | --- |
 | 201 | v1.26 Recovery Baseline and Operations Gap Inventory | Lock the v1.26 baseline, v1.28 non-goals, and current execution recovery gaps before implementation. | BASE-01..BASE-06 | Complete |
 | 202 | Dead-Letter and Quarantine Model | Add deterministic private dead-letter/quarantine semantics for exhausted and non-retryable execution jobs. | QUAR-01..QUAR-07 | Complete |
-| 203 | Internal Requeue and Rerun Controls | Add Go-owned operator recovery controls with idempotency guards and no duplicate public evidence. | OPS-01..OPS-08 | 5 |
+| 203 | Internal Requeue and Rerun Controls | Add Go-owned operator recovery controls with idempotency guards and no duplicate public evidence. | OPS-01..OPS-08 | Complete |
 | 204 | Live Failure-Drill Harness | Build repeatable local drills across Postgres, Go backend, runtime-service/fakes, and browser proof. | DRILL-01..DRILL-07 | 5 |
 | 205 | Stale Lease, Duplicate Worker, and Interrupted MatchSet Recovery | Prove stale leases, duplicate workers, and interrupted MatchSets converge without double completion or stale scoring. | LEASE-01..LEASE-06 | 5 |
 | 206 | Operator Evidence and Redaction Hardening | Separate operator-only evidence from public evidence and harden redaction across artifacts and endpoints. | EVID-01..EVID-06 | 5 |
@@ -149,18 +149,18 @@
 ## Coverage
 
 - v1 requirements: 57 total
-- Complete: 13
-- Planned: 44
+- Complete: 21
+- Planned: 36
 - Mapped to phases: 57
 - Unmapped: 0
 
 ## Next Up
 
-**Phase 203: Internal Requeue and Rerun Controls** - Add Go-owned operator recovery controls with idempotency guards and no duplicate public evidence.
+**Phase 204: Live Failure-Drill Harness** - Build repeatable local drills across Postgres, Go backend, runtime-service/fakes, and browser proof.
 
 Suggested next command:
 
-`$gsd-discuss-phase 203 --ws v1-28-match-execution-operations-recovery-and-incident-drills`
+`$gsd-discuss-phase 204 --ws v1-28-match-execution-operations-recovery-and-incident-drills`
 
 ---
 *Roadmap created: 2026-05-30 after v1.28 milestone initialization*

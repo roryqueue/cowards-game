@@ -100,6 +100,8 @@ func (server *LiveServer) routes() http.Handler {
 	mux.HandleFunc("POST /account/advanced-forks", server.forkAdvancedStrategy)
 	mux.HandleFunc("POST /matchsets", server.createExhibition)
 	mux.HandleFunc("POST /internal/match-jobs/run-once", server.runMatchJobOnce)
+	mux.HandleFunc("POST /internal/match-execution/requeue", server.requeueMatchExecutionJob)
+	mux.HandleFunc("POST /internal/match-execution/rerun", server.rerunMatchExecutionJob)
 	return mux
 }
 
@@ -116,6 +118,46 @@ func (server *LiveServer) runMatchJobOnce(writer http.ResponseWriter, request *h
 		return
 	}
 	writeGoOrchestrationResult(writer, http.StatusOK, result)
+}
+
+func (server *LiveServer) requeueMatchExecutionJob(writer http.ResponseWriter, request *http.Request) {
+	server.recoverMatchExecutionJob(writer, request, matchExecutionRecoveryActionRequeue)
+}
+
+func (server *LiveServer) rerunMatchExecutionJob(writer http.ResponseWriter, request *http.Request) {
+	server.recoverMatchExecutionJob(writer, request, matchExecutionRecoveryActionRerun)
+}
+
+func (server *LiveServer) recoverMatchExecutionJob(writer http.ResponseWriter, request *http.Request, actionType string) {
+	token := os.Getenv("COWARDS_GO_BACKEND_INTERNAL_TOKEN")
+	if token == "" || request.Header.Get("X-Cowards-Internal-Token") != token {
+		writeServiceError(writer, http.StatusForbidden, "FORBIDDEN", "Forbidden.")
+		return
+	}
+	var body struct {
+		JobID          string `json:"jobId"`
+		OperatorID     string `json:"operatorId"`
+		IdempotencyKey string `json:"idempotencyKey"`
+	}
+	if !decodeBody(writer, request, &body) {
+		return
+	}
+	service := newMatchExecutionRecoveryService(server.pool)
+	result, err := service.recoverJob(request.Context(), recoverMatchExecutionJobInput{
+		JobID:          body.JobID,
+		OperatorID:     body.OperatorID,
+		IdempotencyKey: body.IdempotencyKey,
+		ActionType:     actionType,
+	})
+	if err != nil {
+		writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Recovery request could not be applied.")
+		return
+	}
+	status := http.StatusOK
+	if result.Status == "rejected" {
+		status = http.StatusConflict
+	}
+	writeJSONValue(writer, status, result)
 }
 
 func (server *LiveServer) healthHandler(writer http.ResponseWriter, _ *http.Request) {
