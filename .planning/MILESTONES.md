@@ -1,5 +1,36 @@
 # Milestones
 
+## v1.25 Match Execution Interface Freeze and Parallel App/Execution Contract (Shipped: 2026-05-30)
+
+**Status:** Shipped 2026-05-30
+**Phases:** 9
+**Phase range:** 174-182
+**Plans:** 9/9 complete
+**Requirements:** 52/52 complete
+**Research:** .planning/research/v1.25-SUMMARY.md
+**Roadmap:** .planning/milestones/v1.25-ROADMAP.md
+**Decision:** `match-execution-app-v1` frozen for parallel app/execution work; no runtime promotion, production sandbox certification, or ABI migration.
+**Audit:** .planning/milestones/v1.25-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.25-ROADMAP.md, .planning/milestones/v1.25-REQUIREMENTS.md, .planning/milestones/v1.25-phases/
+
+**Delivered:**
+
+- Versioned `match-execution-app-v1` lifecycle, MatchSet/result, replay metadata/evidence, runtime evidence, failure evidence, and public/private evidence DTOs.
+- Fixture catalog covering complete, queued, running, strategy failure, system failure, timeout, unavailable runtime, malformed runtime result, stale artifact, and public-safe replay.
+- Test/dev-only fixture-backed adapter for result/replay work without live Match execution services.
+- Contract tests and boundary monitors for lifecycle vocabulary, DTO versions, fixture coverage, adapter gates, ownership boundaries, privacy, and production fallback prevention.
+- Result/replay page contract consumption and Playwright fixture proof with replay board realism checks.
+- Signed-in live regression proof across JS/TS counted support and non-counted Rust/Zig beta exhibitions.
+
+### Active Constraints
+
+- `match-execution-app-v1` is frozen unless a future milestone explicitly proves a backward-compatible addition or new version.
+- JS/TS remains the only counted Strategy path.
+- Python, Rust, and Zig remain non-counted exhibition beta only.
+- Preview 1 stdin/stdout JSON remains the active WASM/WASI execution ABI.
+- Runtime-service internals, raw diagnostics, owner/test-only debug payloads, future ABI candidates, production sandbox claims, and non-JS counted eligibility remain intentionally unstable.
+- Strategy code does not execute in web/API/Go.
+
 ## v1.24 Runtime Abuse Lab and ABI Future-Proofing (Shipped: 2026-05-30)
 
 **Status:** Shipped 2026-05-30

@@ -2,10 +2,10 @@
 
 ## Current State
 
-**Shipped version:** v1.24 Runtime Abuse Lab and ABI Future-Proofing on 2026-05-30
-**Current milestone:** v1.25 Match Execution Interface Freeze and Parallel App/Execution Contract
-**Status:** v1.25 planning active. The milestone freezes app-facing Match execution lifecycle states, DTO schemas, fixtures, public/private evidence boundaries, adapters, and drift monitors so execution internals and app/result/replay UX can proceed in parallel.
-**Last audit:** v1.24 audit passed after fixing no-fallback claim overreach, monitor strictness, Markdown privacy scanning, WASM non-proof classification, and signed-in proof harness drift.
+**Shipped version:** v1.25 Match Execution Interface Freeze and Parallel App/Execution Contract on 2026-05-30
+**Current milestone:** v1.26 Match Execution Reliability, Retry Semantics, and Failure Drills
+**Status:** v1.26 planning active in workstream `v1-26-match-execution-reliability`. The milestone hardens Go/runtime-service execution reliability behind the frozen `match-execution-app-v1` boundary without changing app-facing contracts unless a strictly backward-compatible addition is proven necessary.
+**Last audit:** v1.25 audit passed after freezing `match-execution-app-v1`, fixing fixture replay availability drift, blocked/stale lifecycle ambiguity, production fixture fallback risk, replay contract visibility, and fixture proof coverage.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
 
@@ -13,22 +13,32 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.25 Match Execution Interface Freeze and Parallel App/Execution Contract
+## Current Milestone: v1.26 Match Execution Reliability, Retry Semantics, and Failure Drills
+
+**Goal:** Harden the execution side behind the frozen `match-execution-app-v1` boundary so Go/runtime-service orchestration, retry classification, unavailable/degraded handling, malformed result handling, stale artifact detection, and live failure drills are deterministic, bounded, public-safe, and contract-compatible.
+
+**Target features:**
+- Rebaseline v1.25's frozen `match-execution-app-v1` surfaces and inventory execution-side drift risks without expanding result/replay UX.
+- Define Go-owned retry and non-retry lifecycle semantics that split transport/envelope failures from non-retryable Strategy output and stale artifact failures.
+- Add live stopped-runtime and unavailable-service drills that distinguish retryable unavailable behavior from terminal Strategy/runtime-output failures.
+- Add malformed runtime result and stale artifact drills that fail closed with public-safe evidence and no raw diagnostics.
+- Harden runtime-service system failure envelopes, redaction, and Go translation so private diagnostics stay private across persistence and public evidence.
+- Strengthen persistence/job lifecycle reliability and idempotency checks for retry, lease, stale completion, duplicate attempt, and MatchSet refresh paths.
+- Prove all public execution outcomes still validate against `match-execution-app-v1`, with no contract additions unless a backward-compatible necessity is documented.
+- Run signed-in local live proof for JS/TS counted execution and non-counted Python/Rust/Zig beta regression, opening result/replay pages and scanning for private-field leaks.
+- Close with boundary monitors, audit, archive, commit, and tag evidence preserving Go/runtime-service ownership and honest sandbox/runtime claims.
+
+**Non-goals:** No result/replay UX expansion beyond proof pages and compatibility evidence, no new language promotion, no production sandbox certification, no direct-export or Component Model/WIT ABI migration, no counted non-JS play, no Strategy execution in web/API/Go, and no public raw diagnostics or private runtime internals.
+
+## Latest Shipped Milestone: v1.25 Match Execution Interface Freeze and Parallel App/Execution Contract
 
 **Goal:** Establish a firm, versioned, tested boundary between Match execution and the app around it, so execution internals and app/result/replay UX can iterate in parallel with confidence.
 
-**Target features:**
-- Inventory current MatchSet/result/replay/evidence DTOs, Go/backend outputs, service schemas, page adapters, fixtures, and app dependencies on execution internals.
-- Define canonical Match and MatchSet lifecycle states and transitions, including queued, accepted, running, complete, failed, degraded, unavailable, retryable, and non-retryable semantics.
-- Publish versioned app-facing DTO schemas for MatchSet summary, Match result, replay metadata, replay evidence, runtime evidence, failure evidence, and public/private evidence splits.
-- Commit fixture and golden scenarios for complete, running, queued, strategy failure, system failure, timeout, unavailable runtime, malformed runtime result, stale artifact, and public-safe replay.
-- Add contract tests and drift monitors proving Go/backend/service outputs match schemas and app pages render each fixture without private fields or execution internals.
-- Add a fixture-backed app/test adapter so result and replay UI work can continue without live Match execution services.
-- Run fixture-mode proof and signed-in live proof, then publish a boundary freeze decision stating what is stable and what remains intentionally unstable.
+**Implemented:** v1.25 freezes `match-execution-app-v1` across lifecycle semantics, MatchSet/result DTOs, replay metadata/evidence DTOs, runtime/failure evidence categories, public/private evidence splits, fixture catalog scenarios, a test/dev-only fixture adapter, contract tests, drift monitors, Playwright fixture proof, and signed-in live regression. Runtime-service internals, Go retry implementation details, owner/test-only debug payloads, direct-export and Component Model/WIT candidates, production sandbox claims, and non-JS counted eligibility remain intentionally unstable and unpromoted.
 
-**Non-goals:** No new language promotion, no production sandbox certification, no direct-export or Component Model/WIT execution ABI migration, no broad ranking/ladder expansion, no counted non-JS play, and no Strategy execution in web/API/Go.
+**Decision:** Frozen for parallel app/execution work. v1.25 does not promote runtimes, certify production sandboxing, migrate the execution ABI, expand ranking/ladder behavior, or allow Strategy code execution in web/API/Go.
 
-## Latest Shipped Milestone: v1.24 Runtime Abuse Lab and ABI Future-Proofing
+## Previous Shipped Milestone: v1.24 Runtime Abuse Lab and ABI Future-Proofing
 
 **Goal:** Build a serious runtime abuse lab and production-sandbox readiness matrix across current Strategy runtime lanes, while spiking direct exports and Component Model/WIT as future ABI evidence without changing the active execution path.
 
@@ -601,7 +611,8 @@ Planning archives live under `.planning/milestones/`:
 | Keep ABI evolution evidence separate from execution-path promotion | Direct exports and component model/WIT are important candidates, but v1.23 did not replace the Preview 1 stdin/stdout JSON runtime path without deterministic memory ownership, schema validation, resource caps, parity, and rollback evidence. | ✓ Implemented in v1.23 |
 | Treat runtime abuse evidence as claim calibration | v1.24 expanded hostile probes and sandbox-readiness evidence without turning readiness matrices into production sandbox certification or non-JS counted promotion. | ✓ Implemented in v1.24 |
 | Require explicit ABI migration criteria before replacement | Direct exports and Component Model/WIT can become future paths only after parity, compatibility, rollback, caps, schema, privacy, and no-fallback evidence support a separate promotion decision. | ✓ Implemented in v1.24 |
-| Freeze app-facing Match execution interfaces before parallelizing execution and UX work | v1.25 should make lifecycle, DTO, evidence, fixture, adapter, and monitor contracts stable enough for app/result/replay work to proceed without coupling to execution internals. | — Pending |
+| Freeze app-facing Match execution interfaces before parallelizing execution and UX work | v1.25 made lifecycle, DTO, evidence, fixture, adapter, and monitor contracts stable enough for app/result/replay work to proceed without coupling to execution internals. | ✓ Implemented in v1.25 |
+| Harden execution reliability behind the frozen contract | v1.26 should improve Go/runtime-service retry classification, unavailable/degraded handling, malformed/stale failure drills, persistence idempotency, and public-safe evidence without changing `match-execution-app-v1` unless a backward-compatible addition is proven necessary. | — Pending |
 
 ## Constraints
 
@@ -622,4 +633,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-30 after starting v1.25 milestone*
+*Last updated: 2026-05-30 after starting v1.26 milestone*
