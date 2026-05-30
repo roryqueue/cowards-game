@@ -66,6 +66,28 @@ const recoveryMarkers = requireMarkers(
   ],
 )
 
+const operatorEvidenceMarkers = requireMarkers(
+  "apps/go-backend/match_execution_quarantine.go",
+  [
+    "sanitizeMatchExecutionOperatorEvidence",
+    "sanitizeMatchJobFailureDetails",
+    "allowedScalars",
+  ],
+).concat(
+  requireMarkers("apps/go-backend/job_lifecycle_test.go", [
+    "operator evidence leaked",
+    "quarantine evidence leaked",
+    "export default",
+    "/Users/secret",
+  ]),
+)
+
+const runtimeRedactionMarkers = requireMarkers("apps/runtime-service/src/redaction.ts", [
+  "redactedDiagnostics",
+  "SENSITIVE_PATTERNS",
+  "private\\s+runtime\\s+internals",
+])
+
 const internalEndpointMarkers = requireMarkers("apps/go-backend/live_backend.go", [
   "/internal/match-execution/requeue",
   "/internal/match-execution/rerun",
@@ -184,6 +206,8 @@ const proof = {
   sourceMarkers: {
     quarantineMarkers,
     recoveryMarkers,
+    operatorEvidenceMarkers,
+    runtimeRedactionMarkers,
     internalEndpointMarkers,
     leaseRecoveryMarkers,
     interruptedMatchSetMarkers,
@@ -256,6 +280,8 @@ ${proof.drillCatalog
 
 - Quarantine: ${quarantineMarkers.join(", ")}
 - Recovery: ${recoveryMarkers.join(", ")}
+- Operator evidence: ${operatorEvidenceMarkers.join(", ")}
+- Runtime redaction: ${runtimeRedactionMarkers.join(", ")}
 - Internal endpoints: ${internalEndpointMarkers.join(", ")}
 - Lease and duplicate recovery: ${leaseRecoveryMarkers.join(", ")}
 - Interrupted MatchSet refresh: ${interruptedMatchSetMarkers.join(", ")}

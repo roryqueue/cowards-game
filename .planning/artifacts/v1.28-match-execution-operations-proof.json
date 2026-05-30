@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1.28-match-execution-operations-proof",
-  "generatedAt": "2026-05-30T23:45:33.113Z",
+  "generatedAt": "2026-05-30T23:48:16.353Z",
   "contractVersion": "match-execution-app-v1",
   "publicContractChanged": false,
   "countedStrategyPath": "javascript-typescript",
@@ -30,6 +30,20 @@
       "canOperatorRecoverFailureCategory",
       "chronicle_exists",
       "failure_category_not_recoverable"
+    ],
+    "operatorEvidenceMarkers": [
+      "sanitizeMatchExecutionOperatorEvidence",
+      "sanitizeMatchJobFailureDetails",
+      "allowedScalars",
+      "operator evidence leaked",
+      "quarantine evidence leaked",
+      "export default",
+      "/Users/secret"
+    ],
+    "runtimeRedactionMarkers": [
+      "redactedDiagnostics",
+      "SENSITIVE_PATTERNS",
+      "private\\s+runtime\\s+internals"
     ],
     "internalEndpointMarkers": [
       "/internal/match-execution/requeue",

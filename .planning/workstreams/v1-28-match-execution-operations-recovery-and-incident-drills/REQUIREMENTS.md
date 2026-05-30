@@ -75,12 +75,12 @@ Build the operational recovery layer on the execution side behind the frozen `ma
 
 ### Operator Evidence and Redaction
 
-- [ ] **EVID-01**: Operator-only evidence distinguishes public evidence, private operator audit evidence, runtime-service internal diagnostics, and test-only fixture proof.
-- [ ] **EVID-02**: Operator-only evidence is available for internal recovery actions without becoming part of public result/replay DTOs.
-- [ ] **EVID-03**: Evidence redaction uses allowlisted scalar fields and removes Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, stderr, stacks, host paths, env values, tokens, DB details, package paths, and private runtime internals.
-- [ ] **EVID-04**: Runtime-service raw diagnostics remain redacted before Go persistence, operator artifacts, public evidence, and proof artifacts.
-- [ ] **EVID-05**: Private-marker scans cover public pages, public fixture/proof payloads, and operator evidence artifacts.
-- [ ] **EVID-06**: Boundary checks ensure operator endpoints and evidence cannot be served by public app routes or fixture fallback in production mode.
+- [x] **EVID-01**: Operator-only evidence distinguishes public evidence, private operator audit evidence, runtime-service internal diagnostics, and test-only fixture proof.
+- [x] **EVID-02**: Operator-only evidence is available for internal recovery actions without becoming part of public result/replay DTOs.
+- [x] **EVID-03**: Evidence redaction uses allowlisted scalar fields and removes Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, stderr, stacks, host paths, env values, tokens, DB details, package paths, and private runtime internals.
+- [x] **EVID-04**: Runtime-service raw diagnostics remain redacted before Go persistence, operator artifacts, public evidence, and proof artifacts.
+- [x] **EVID-05**: Private-marker scans cover public pages, public fixture/proof payloads, and operator evidence artifacts.
+- [x] **EVID-06**: Boundary checks ensure operator endpoints and evidence cannot be served by public app routes or fixture fallback in production mode.
 
 ### Contract Compatibility and Boundary Monitors
 
@@ -174,12 +174,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LEASE-04 | Phase 205 | Complete |
 | LEASE-05 | Phase 205 | Complete |
 | LEASE-06 | Phase 205 | Complete |
-| EVID-01 | Phase 206 | Planned |
-| EVID-02 | Phase 206 | Planned |
-| EVID-03 | Phase 206 | Planned |
-| EVID-04 | Phase 206 | Planned |
-| EVID-05 | Phase 206 | Planned |
-| EVID-06 | Phase 206 | Planned |
+| EVID-01 | Phase 206 | Complete |
+| EVID-02 | Phase 206 | Complete |
+| EVID-03 | Phase 206 | Complete |
+| EVID-04 | Phase 206 | Complete |
+| EVID-05 | Phase 206 | Complete |
+| EVID-06 | Phase 206 | Complete |
 | COMPAT-01 | Phase 207 | Planned |
 | COMPAT-02 | Phase 207 | Planned |
 | COMPAT-03 | Phase 207 | Planned |
@@ -200,8 +200,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 57 total
-- Complete: 34
-- Planned: 23
+- Complete: 40
+- Planned: 17
 - Mapped to phases: 57
 - Unmapped: 0
 
