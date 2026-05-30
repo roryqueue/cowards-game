@@ -1,0 +1,142 @@
+{
+  "schemaVersion": "v1.28-recovery-baseline-and-operations-gap-inventory",
+  "generatedAt": "2026-05-30T23:45:00.000Z",
+  "milestone": "v1.28",
+  "phase": 201,
+  "contractVersion": "match-execution-app-v1",
+  "baseline": {
+    "fromMilestone": "v1.26",
+    "v127Available": false,
+    "noPublicContractChangePlanned": true,
+    "countedStrategyPath": "javascript-typescript",
+    "nonCountedExhibitionBeta": ["python", "rust", "zig"],
+    "activeWasmWasiAbi": "preview1-stdin-stdout-json"
+  },
+  "ownership": {
+    "orchestration": "go",
+    "recoveryPolicy": "go",
+    "publicEvidence": "go",
+    "hostileStrategyExecution": "runtime-service",
+    "strategyExecutionInWebApiGo": false,
+    "typescriptLifecycleNormalOwner": false
+  },
+  "surfaces": [
+    {
+      "name": "Go orchestrator runOnce",
+      "path": "apps/go-backend/orchestrator.go",
+      "classification": "go_internal",
+      "notes": "Claims jobs, builds runtime-service requests, records failures, completes Matches."
+    },
+    {
+      "name": "Go job lifecycle",
+      "path": "apps/go-backend/job_lifecycle.go",
+      "classification": "go_internal",
+      "notes": "Owns claim, lease, heartbeat, retry queue, terminal failure, and failure detail sanitization."
+    },
+    {
+      "name": "Go completion service",
+      "path": "apps/go-backend/completion.go",
+      "classification": "go_internal",
+      "notes": "Owns Chronicle persistence handoff, Match completion, and MatchSet refresh under lease."
+    },
+    {
+      "name": "Go retry policy",
+      "path": "apps/go-backend/retry_policy.go",
+      "classification": "go_internal",
+      "notes": "Classifies runtime unavailable, timeout, malformed runtime result, stale artifact, and system failure categories."
+    },
+    {
+      "name": "Runtime-service client",
+      "path": "apps/go-backend/runtime_service_client.go",
+      "classification": "go_internal_boundary",
+      "notes": "Translates runtime-service HTTP, timeout, malformed, oversized, and contract failure shapes."
+    },
+    {
+      "name": "Runtime-service execute-match",
+      "path": "apps/runtime-service/src/execute-match.ts",
+      "classification": "runtime_service_internal",
+      "notes": "Owns hostile Strategy execution and schema-validated runtime envelopes only."
+    },
+    {
+      "name": "Runtime-service redaction",
+      "path": "apps/runtime-service/src/redaction.ts",
+      "classification": "runtime_service_internal",
+      "notes": "Redacts runtime diagnostics before envelopes leave the runtime boundary."
+    },
+    {
+      "name": "Public match execution contract",
+      "path": "packages/spec/src/match-execution-contract.ts",
+      "classification": "frozen_public_contract",
+      "notes": "Public compatibility target remains match-execution-app-v1."
+    },
+    {
+      "name": "v1.26 reliability proof",
+      "path": "scripts/evaluate-v1-26-match-execution-reliability.ts",
+      "classification": "proof_harness",
+      "notes": "Existing proof pattern for contract fixtures, privacy scans, markers, and non-claims."
+    }
+  ],
+  "gapInventory": [
+    {
+      "gap": "private_dead_letter_quarantine",
+      "phase": 202,
+      "summary": "No dedicated private operator quarantine model exists for exhausted and non-retryable execution jobs."
+    },
+    {
+      "gap": "deterministic_operator_requeue_rerun",
+      "phase": 203,
+      "summary": "Existing run-once supports execution, but explicit idempotent recovery controls are not modeled."
+    },
+    {
+      "gap": "live_operations_drill_harness",
+      "phase": 204,
+      "summary": "v1.26 proof covers reliability fixtures, but v1.28 needs stateful recovery drills across local topology."
+    },
+    {
+      "gap": "stale_lease_duplicate_worker_interrupted_matchset_recovery",
+      "phase": 205,
+      "summary": "Existing lifecycle tests cover basics; operator recovery needs convergence proof under manual and duplicate paths."
+    },
+    {
+      "gap": "operator_evidence_redaction",
+      "phase": 206,
+      "summary": "Public redaction exists, but private operator artifacts need their own allowlist and leak scans."
+    },
+    {
+      "gap": "operations_contract_monitoring",
+      "phase": 207,
+      "summary": "Boundary monitors need v1.28 proof checks for no contract drift, no ownership creep, and no leaks."
+    }
+  ],
+  "publicPrivacyForbiddenMarkers": [
+    "Strategy source",
+    "StrategyMemory",
+    "SoldierMemory",
+    "objective payload",
+    "raw diagnostics",
+    "host paths",
+    "env values",
+    "tokens",
+    "DB details",
+    "package paths",
+    "private runtime internals"
+  ],
+  "nonClaims": [
+    "No result/replay UX expansion",
+    "No public operations UI",
+    "No runtime promotion",
+    "No production sandbox certification",
+    "No direct-export ABI migration",
+    "No Component Model/WIT ABI migration",
+    "No counted non-JS play",
+    "No v1.27 dependency"
+  ],
+  "requirementsCovered": [
+    "BASE-01",
+    "BASE-02",
+    "BASE-03",
+    "BASE-04",
+    "BASE-05",
+    "BASE-06"
+  ]
+}

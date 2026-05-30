@@ -26,12 +26,12 @@ Build the operational recovery layer on the execution side behind the frozen `ma
 
 ### Baseline and Operations Gap Inventory
 
-- [ ] **BASE-01**: Operator can inspect a v1.26 recovery baseline that proves `match-execution-app-v1` remains the compatibility target for v1.28.
-- [ ] **BASE-02**: Operator can inspect an operations gap inventory covering Go job lifecycle, runtime-service envelopes, persistence state, public projection, internal run-once controls, drill scripts, and boundary monitors.
-- [ ] **BASE-03**: Inventory distinguishes public contract surfaces from Go internal recovery policy, runtime-service internals, private operator evidence, persistence internals, test-only fixtures, and intentionally unstable implementation details.
-- [ ] **BASE-04**: Inventory records all current terminal and retryable execution failure categories, including runtime unavailable, timeout, malformed runtime result, stale artifact, generic system failure, stale lease, duplicate worker, and interrupted MatchSet execution.
-- [ ] **BASE-05**: Inventory records whether any backward-compatible public DTO addition is necessary; default outcome is no `match-execution-app-v1` change.
-- [ ] **BASE-06**: Baseline artifacts explicitly preserve JS/TS counted status, Python/Rust/Zig non-counted beta status, Preview 1 JSON ABI status, Go/runtime-service ownership, public-output privacy, and v1.27 independence.
+- [x] **BASE-01**: Operator can inspect a v1.26 recovery baseline that proves `match-execution-app-v1` remains the compatibility target for v1.28.
+- [x] **BASE-02**: Operator can inspect an operations gap inventory covering Go job lifecycle, runtime-service envelopes, persistence state, public projection, internal run-once controls, drill scripts, and boundary monitors.
+- [x] **BASE-03**: Inventory distinguishes public contract surfaces from Go internal recovery policy, runtime-service internals, private operator evidence, persistence internals, test-only fixtures, and intentionally unstable implementation details.
+- [x] **BASE-04**: Inventory records all current terminal and retryable execution failure categories, including runtime unavailable, timeout, malformed runtime result, stale artifact, generic system failure, stale lease, duplicate worker, and interrupted MatchSet execution.
+- [x] **BASE-05**: Inventory records whether any backward-compatible public DTO addition is necessary; default outcome is no `match-execution-app-v1` change.
+- [x] **BASE-06**: Baseline artifacts explicitly preserve JS/TS counted status, Python/Rust/Zig non-counted beta status, Preview 1 JSON ABI status, Go/runtime-service ownership, public-output privacy, and v1.27 independence.
 
 ### Dead-Letter and Quarantine Model
 
@@ -140,12 +140,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| BASE-01 | Phase 201 | Planned |
-| BASE-02 | Phase 201 | Planned |
-| BASE-03 | Phase 201 | Planned |
-| BASE-04 | Phase 201 | Planned |
-| BASE-05 | Phase 201 | Planned |
-| BASE-06 | Phase 201 | Planned |
+| BASE-01 | Phase 201 | Complete |
+| BASE-02 | Phase 201 | Complete |
+| BASE-03 | Phase 201 | Complete |
+| BASE-04 | Phase 201 | Complete |
+| BASE-05 | Phase 201 | Complete |
+| BASE-06 | Phase 201 | Complete |
 | QUAR-01 | Phase 202 | Planned |
 | QUAR-02 | Phase 202 | Planned |
 | QUAR-03 | Phase 202 | Planned |
@@ -200,6 +200,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 57 total
+- Complete: 6
+- Planned: 51
 - Mapped to phases: 57
 - Unmapped: 0
 
