@@ -56,13 +56,13 @@ Build the operational recovery layer on the execution side behind the frozen `ma
 
 ### Live Failure-Drill Harness
 
-- [ ] **DRILL-01**: Local drill harness can exercise Go backend, runtime-service or fake runtime-service endpoint, local Postgres, and browser proof in a repeatable v1.28 command.
-- [ ] **DRILL-02**: Drill harness covers stopped runtime-service and unavailable runtime behavior without leaving orphaned running jobs or active stale leases.
-- [ ] **DRILL-03**: Drill harness covers malformed HTTP/envelope responses separately from malformed Strategy/runtime output.
-- [ ] **DRILL-04**: Drill harness covers stale artifact and timeout recovery paths without source fallback or public raw diagnostics.
-- [ ] **DRILL-05**: Drill harness records commands, service topology, seeded MatchSet or Match IDs, before/after job states, retry counts, public categories, private evidence paths, and cleanup status.
-- [ ] **DRILL-06**: Drill harness writes `.planning/artifacts/v1.28-match-execution-operations-proof.{json,md}` with schema version, contract version, ownership, non-claims, drill outcomes, and privacy scan results.
-- [ ] **DRILL-07**: Drill harness is deterministic enough for local repeat use and fails loudly when required local services or proof steps are unavailable.
+- [x] **DRILL-01**: Local drill harness can exercise Go backend, runtime-service or fake runtime-service endpoint, local Postgres, and browser proof in a repeatable v1.28 command.
+- [x] **DRILL-02**: Drill harness covers stopped runtime-service and unavailable runtime behavior without leaving orphaned running jobs or active stale leases.
+- [x] **DRILL-03**: Drill harness covers malformed HTTP/envelope responses separately from malformed Strategy/runtime output.
+- [x] **DRILL-04**: Drill harness covers stale artifact and timeout recovery paths without source fallback or public raw diagnostics.
+- [x] **DRILL-05**: Drill harness records commands, service topology, seeded MatchSet or Match IDs, before/after job states, retry counts, public categories, private evidence paths, and cleanup status.
+- [x] **DRILL-06**: Drill harness writes `.planning/artifacts/v1.28-match-execution-operations-proof.{json,md}` with schema version, contract version, ownership, non-claims, drill outcomes, and privacy scan results.
+- [x] **DRILL-07**: Drill harness is deterministic enough for local repeat use and fails loudly when required local services or proof steps are unavailable.
 
 ### Stale Lease, Duplicate Worker, and Interrupted MatchSet Recovery
 
@@ -161,13 +161,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPS-06 | Phase 203 | Complete |
 | OPS-07 | Phase 203 | Complete |
 | OPS-08 | Phase 203 | Complete |
-| DRILL-01 | Phase 204 | Planned |
-| DRILL-02 | Phase 204 | Planned |
-| DRILL-03 | Phase 204 | Planned |
-| DRILL-04 | Phase 204 | Planned |
-| DRILL-05 | Phase 204 | Planned |
-| DRILL-06 | Phase 204 | Planned |
-| DRILL-07 | Phase 204 | Planned |
+| DRILL-01 | Phase 204 | Complete |
+| DRILL-02 | Phase 204 | Complete |
+| DRILL-03 | Phase 204 | Complete |
+| DRILL-04 | Phase 204 | Complete |
+| DRILL-05 | Phase 204 | Complete |
+| DRILL-06 | Phase 204 | Complete |
+| DRILL-07 | Phase 204 | Complete |
 | LEASE-01 | Phase 205 | Planned |
 | LEASE-02 | Phase 205 | Planned |
 | LEASE-03 | Phase 205 | Planned |
@@ -200,8 +200,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 57 total
-- Complete: 21
-- Planned: 36
+- Complete: 28
+- Planned: 29
 - Mapped to phases: 57
 - Unmapped: 0
 

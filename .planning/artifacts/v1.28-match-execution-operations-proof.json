@@ -1,0 +1,174 @@
+{
+  "schemaVersion": "v1.28-match-execution-operations-proof",
+  "generatedAt": "2026-05-30T23:43:53.295Z",
+  "contractVersion": "match-execution-app-v1",
+  "publicContractChanged": false,
+  "countedStrategyPath": "javascript-typescript",
+  "nonCountedExhibitionBeta": [
+    "python",
+    "rust",
+    "zig"
+  ],
+  "activeWasmWasiAbi": "preview1-stdin-stdout-json",
+  "ownership": {
+    "orchestration": "go",
+    "recoveryPolicy": "go",
+    "publicEvidence": "go",
+    "hostileStrategyExecution": "runtime-service",
+    "strategyExecutionInWebApiGo": false
+  },
+  "sourceMarkers": {
+    "quarantineMarkers": [
+      "matchExecutionQuarantineRetryExhausted",
+      "matchExecutionQuarantineNonRetryable",
+      "sanitizeMatchExecutionOperatorEvidence",
+      "writeMatchExecutionQuarantineTx"
+    ],
+    "recoveryMarkers": [
+      "matchExecutionRecoveryActionRequeue",
+      "matchExecutionRecoveryActionRerun",
+      "canOperatorRecoverFailureCategory",
+      "chronicle_exists",
+      "failure_category_not_recoverable"
+    ],
+    "internalEndpointMarkers": [
+      "/internal/match-execution/requeue",
+      "/internal/match-execution/rerun",
+      "COWARDS_GO_BACKEND_INTERNAL_TOKEN"
+    ],
+    "migrationMarkers": [
+      "match_execution_quarantines",
+      "retry_exhausted",
+      "non_retryable_terminal",
+      "match_execution_operator_actions",
+      "idempotency_key",
+      "requeue",
+      "rerun"
+    ]
+  },
+  "drillCatalog": [
+    {
+      "id": "stopped-runtime-service",
+      "topology": [
+        "postgres",
+        "go-backend",
+        "runtime-service-unavailable"
+      ],
+      "expectedPublicCategory": "runtime_unavailable",
+      "recoveryControl": "requeue"
+    },
+    {
+      "id": "malformed-envelope",
+      "topology": [
+        "postgres",
+        "go-backend",
+        "fake-runtime-service"
+      ],
+      "expectedPublicCategory": "system_failure",
+      "recoveryControl": "requeue"
+    },
+    {
+      "id": "timeout",
+      "topology": [
+        "postgres",
+        "go-backend",
+        "runtime-service-timeout"
+      ],
+      "expectedPublicCategory": "timeout",
+      "recoveryControl": "requeue"
+    },
+    {
+      "id": "stale-artifact",
+      "topology": [
+        "postgres",
+        "go-backend",
+        "runtime-service"
+      ],
+      "expectedPublicCategory": "stale_artifact",
+      "recoveryControl": "quarantine-only"
+    },
+    {
+      "id": "malformed-runtime-result",
+      "topology": [
+        "postgres",
+        "go-backend",
+        "runtime-service"
+      ],
+      "expectedPublicCategory": "malformed_runtime_result",
+      "recoveryControl": "quarantine-only"
+    }
+  ],
+  "fixtureValidation": [
+    {
+      "id": "complete",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "running",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "queued",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "strategy-failure",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "system-failure",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "timeout",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "unavailable-runtime",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "malformed-runtime-result",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "stale-artifact",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    },
+    {
+      "id": "public-safe-replay",
+      "contractVersion": "match-execution-app-v1",
+      "privateMarkerLeaks": []
+    }
+  ],
+  "relevantCommands": [
+    "pnpm match-execution:operations",
+    "pnpm match-execution:operations:check",
+    "cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./...",
+    "pnpm --filter @cowards/persistence test"
+  ],
+  "relevantLocalPages": [
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Aunavailable-runtime",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Astale-artifact",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Amalformed-runtime-result",
+    "http://localhost:3000/matches/match%3Afixture%3Apublic-safe-replay/replay"
+  ],
+  "nonClaims": [
+    "No public result/replay contract expansion",
+    "No public operations UI",
+    "No runtime promotion",
+    "No production sandbox certification",
+    "No direct-export ABI migration",
+    "No Component Model/WIT ABI migration",
+    "No counted non-JS play"
+  ]
+}
