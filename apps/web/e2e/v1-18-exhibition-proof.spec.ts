@@ -129,7 +129,7 @@ test("signed-in Python exhibition beta produces replay-safe evidence", async ({
   await expect(
     page.getByRole("heading", { name: /Smoke exhibition/i }),
   ).toBeVisible()
-  await expect(page.getByText("non_counted")).toBeVisible()
+  await expect(page.getByText("non_counted").first()).toBeVisible()
   const replayLink = page.getByRole("link", { name: "Replay" }).first()
   await expect(replayLink).toBeVisible()
   await replayLink.click()

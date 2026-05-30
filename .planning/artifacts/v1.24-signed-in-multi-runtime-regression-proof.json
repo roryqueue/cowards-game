@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-05-30T00:00:00.000Z",
+  "jsTsCountedSupport": true,
+  "milestone": "v1.24",
+  "noFallbackEvidence": {
+    "localPolicyContract": true,
+    "malformedAndStaleArtifactFailClosed": true,
+    "overall": "readiness-only-not-a-production-sandbox-proof",
+    "stoppedRuntimeLiveDrill": "required before stronger unavailable-lane claims"
+  },
+  "proofKind": "local evidence plus signed-in proof contract; live browser proof must pass before milestone closure",
+  "publicPrivacy": "public evidence category scan required",
+  "pythonBetaSupport": true,
+  "replayPages": "required in Phase 172 live proof",
+  "replayPlausibility": "full Match start, in-bounds visible pieces, and nonblank board required",
+  "resultPages": "required in Phase 172 live proof",
+  "rustBetaSupport": true,
+  "schemaVersion": "v1.24-signed-in-multi-runtime-regression-proof",
+  "zigBetaSupport": true
+}

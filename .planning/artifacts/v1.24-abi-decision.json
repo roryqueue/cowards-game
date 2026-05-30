@@ -1,0 +1,21 @@
+{
+  "activeExecutionAbi": "wasi-preview1-stdin-stdout-json",
+  "componentModelWit": "not-promoted",
+  "decision": "keep-preview1-stdin-stdout-json-active",
+  "directExports": "not-promoted",
+  "failClosedMetadata": "Unknown, stale, mismatched, or unpromoted ABI metadata is ineligible for Match execution.",
+  "generatedAt": "2026-05-30T00:00:00.000Z",
+  "migrationCriteria": [
+    "Rust and Zig parity where applicable",
+    "schema or typed-contract validation",
+    "resource caps",
+    "public-safe privacy proof",
+    "replay compatibility",
+    "no-fallback drills",
+    "artifact coexistence and rollback",
+    "explicit future promotion decision"
+  ],
+  "milestone": "v1.24",
+  "ownership": "Go keeps orchestration and public decisions; runtime-service keeps hostile execution behind registered implementations.",
+  "schemaVersion": "v1.24-abi-decision"
+}

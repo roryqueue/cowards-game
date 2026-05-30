@@ -1,0 +1,28 @@
+{
+  "activeExecutionPathChanged": false,
+  "attemptedParity": {
+    "rust": "design-recorded-no-match-execution",
+    "zig": "design-recorded-no-match-execution"
+  },
+  "capsAndValidation": {
+    "memory": "requires dedicated host proof",
+    "privacy": "must preserve public-safe evidence before promotion",
+    "resultSize": "requires dedicated host proof",
+    "schemaValidation": "must reuse Strategy runtime schemas before promotion",
+    "timeoutFuel": "requires dedicated host proof"
+  },
+  "decision": "Direct exports are future ABI evidence only. They cannot become Match execution artifacts without a later explicit promotion decision.",
+  "generatedAt": "2026-05-30T00:00:00.000Z",
+  "memoryOwnership": {
+    "allocation": "unproven",
+    "encoding": "unproven",
+    "free": "unproven",
+    "inputBufferOwnership": "unproven",
+    "outputBufferOwnership": "unproven"
+  },
+  "milestone": "v1.24",
+  "proofKind": "fail-loud-non-promotion",
+  "rollback": "Existing artifacts remain Preview 1 stdin/stdout JSON and fail closed on mismatched ABI metadata.",
+  "schemaVersion": "v1.24-direct-export-abi-proof",
+  "status": "not-promoted"
+}

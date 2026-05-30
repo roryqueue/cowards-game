@@ -1,0 +1,32 @@
+{
+  "activeExecutionPathChanged": false,
+  "decision": "Component Model/WIT is future ABI evidence only. No WIT artifact is eligible for Match execution in v1.24.",
+  "generatedAt": "2026-05-30T00:00:00.000Z",
+  "milestone": "v1.24",
+  "minimalWorld": {
+    "functions": [
+      "select-activations",
+      "soldier-brain"
+    ],
+    "package": "cowards:strategy",
+    "payloadPolicy": "Typed WIT shape remains a candidate; current Match execution stays on schema-validated JSON envelopes.",
+    "world": "strategy"
+  },
+  "proofKind": "fail-loud-non-promotion",
+  "requiredBeforePromotion": [
+    "generated binding parity",
+    "Wasmtime component host integration",
+    "resource caps",
+    "schema or typed-contract validation",
+    "privacy proof",
+    "artifact compatibility",
+    "rollback and replay compatibility"
+  ],
+  "schemaVersion": "v1.24-component-model-wit-proof",
+  "status": "not-promoted",
+  "toolingStatus": {
+    "rust": "candidate future proof",
+    "wasmtimeHost": "candidate future proof",
+    "zig": "candidate future proof; parity not assumed"
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "commands": [
+    "RUN_V1_18_PROOF=1 PLAYWRIGHT_TEST=1 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 COWARDS_GO_BACKEND_INTERNAL_TOKEN=<redacted> pnpm exec playwright test --project=desktop --workers=1 v1-18-exhibition-proof.spec.ts",
+    "RUN_V1_23_PROOF=1 PLAYWRIGHT_TEST=1 COWARDS_GO_BACKEND_URL=http://127.0.0.1:8087 COWARDS_GO_BACKEND_INTERNAL_TOKEN=<redacted> COWARDS_RUNTIME_SERVICE_PROOF_ADAPTER=subprocess pnpm e2e:v1.23-proof"
+  ],
+  "exhibitions": [
+    {
+      "matchSetId": "match-set:exhibition:Kcw7WG98uHpbwL8qzx_ZYQ",
+      "matchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "matchup": "js-ts-vs-python",
+      "replayPath": "/matches/match%3Amatch-set%3Aexhibition%3AKcw7WG98uHpbwL8qzx_ZYQ%3A0/replay",
+      "resultPath": "/matchsets/match-set%3Aexhibition%3AKcw7WG98uHpbwL8qzx_ZYQ",
+      "status": "complete"
+    },
+    {
+      "matchSetId": "match-set:exhibition:YDJ6W6JofPnOUvbTuJxvPw",
+      "matchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "matchup": "js-ts-vs-rust",
+      "replayPath": "/matches/match%3Amatch-set%3Aexhibition%3AYDJ6W6JofPnOUvbTuJxvPw%3A0/replay",
+      "resultPath": "/matchsets/match-set%3Aexhibition%3AYDJ6W6JofPnOUvbTuJxvPw",
+      "status": "complete"
+    },
+    {
+      "matchSetId": "match-set:exhibition:896_6iKdr7stoq6SxT5wEQ",
+      "matchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "matchup": "rust-vs-rust",
+      "replayPath": "/matches/match%3Amatch-set%3Aexhibition%3A896_6iKdr7stoq6SxT5wEQ%3A0/replay",
+      "resultPath": "/matchsets/match-set%3Aexhibition%3A896_6iKdr7stoq6SxT5wEQ",
+      "status": "complete"
+    },
+    {
+      "matchSetId": "match-set:exhibition:0hnxJCjM6kGWTuL-12XrgQ",
+      "matchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "matchup": "rust-vs-zig",
+      "replayPath": "/matches/match%3Amatch-set%3Aexhibition%3A0hnxJCjM6kGWTuL-12XrgQ%3A0/replay",
+      "resultPath": "/matchsets/match-set%3Aexhibition%3A0hnxJCjM6kGWTuL-12XrgQ",
+      "status": "complete"
+    },
+    {
+      "matchSetId": "match-set:exhibition:mJaofv9WTkotkVkACzM1_Q",
+      "matchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "matchup": "zig-vs-zig",
+      "replayPath": "/matches/match%3Amatch-set%3Aexhibition%3AmJaofv9WTkotkVkACzM1_Q%3A0/replay",
+      "resultPath": "/matchsets/match-set%3Aexhibition%3AmJaofv9WTkotkVkACzM1_Q",
+      "status": "complete"
+    }
+  ],
+  "generatedAt": "2026-05-30T15:41:30.000Z",
+  "milestone": "v1.24",
+  "noFallbackEvidence": {
+    "malformedStaleAndCapabilityInvalid": "covered-by-v1.24-runtime-abuse-lab",
+    "stoppedUnavailableLane": "policy-and-topology-evidence-only",
+    "strongerClaimStatus": "not-promoted-to-production-sandbox-proof"
+  },
+  "privateMarkerScanPassed": true,
+  "replayPlausibilityChecked": true,
+  "resultPagesChecked": true,
+  "runtimeServiceAdapterEvidence": "subprocess",
+  "schemaVersion": "v1.24-signed-in-live-regression-proof",
+  "support": {
+    "jsTsCounted": true,
+    "pythonBeta": true,
+    "rustBeta": true,
+    "zigBeta": true
+  }
+}

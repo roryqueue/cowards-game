@@ -1,5 +1,35 @@
 # Milestones
 
+## v1.24 Runtime Abuse Lab and ABI Future-Proofing (Shipped: 2026-05-30)
+
+**Status:** Shipped 2026-05-30
+**Phases:** 10
+**Phase range:** 164-173
+**Plans:** 10/10 complete
+**Requirements:** 62/62 complete
+**Research:** .planning/research/v1.24-SUMMARY.md
+**Roadmap:** .planning/milestones/v1.24-ROADMAP.md
+**Decision:** Readiness evidence only; no production sandbox certification; no non-JS counted promotion; Preview 1 stdin/stdout JSON remains active.
+**Audit:** .planning/milestones/v1.24-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.24-ROADMAP.md, .planning/milestones/v1.24-REQUIREMENTS.md, .planning/milestones/v1.24-phases/
+
+**Delivered:**
+
+- Runtime abuse lab evidence across JS/TS, Python, Rust, Zig, and WASM/WASI with exact boundary monitor coverage.
+- Production-sandbox readiness matrix that states what each lane proves, does not prove, and needs for stronger claims.
+- Direct-export and Component Model/WIT proof spikes recorded as fail-loud non-promotions.
+- ABI decision keeps WASI Preview 1 stdin/stdout JSON active.
+- Live signed-in regression proof covers JS/TS counted support plus Python/Rust/Zig non-counted beta result and replay pages.
+- Public-safe evidence and monitor checks avoid private Strategy/runtime data exposure.
+
+### Active Constraints
+
+- JS/TS remains the only counted Strategy path.
+- Python, Rust, Zig, and WASM/WASI remain non-counted exhibition/readiness lanes only.
+- No production sandbox certification is claimed.
+- Strategy code does not execute in web/API/Go.
+- Direct exports and Component Model/WIT require future explicit promotion before Match execution.
+
 ## v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness (Shipped: 2026-05-25)
 
 **Status:** Shipped 2026-05-25

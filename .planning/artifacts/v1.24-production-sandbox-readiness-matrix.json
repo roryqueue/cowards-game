@@ -1,0 +1,93 @@
+{
+  "generatedAt": "2026-05-30T00:00:00.000Z",
+  "milestone": "v1.24",
+  "overallDecision": "Readiness evidence only. No production sandbox certification and no non-JS counted promotion.",
+  "publicSafe": true,
+  "rows": [
+    {
+      "doesNotProve": "Production hostile-code sandbox certification.",
+      "lane": "js-ts",
+      "probeCounts": {
+        "fail": 0,
+        "nonProof": 1,
+        "pass": 2
+      },
+      "promotionStatus": "counted baseline preserved; sandbox not certified",
+      "proves": "Counted JS/TS runtime path still executes and rejects invalid output.",
+      "strongerClaimGaps": "Production-owned isolation, operational abuse model, deployment proof, external review."
+    },
+    {
+      "doesNotProve": "Counted eligibility or production sandbox certification.",
+      "lane": "python",
+      "probeCounts": {
+        "fail": 0,
+        "nonProof": 1,
+        "pass": 2
+      },
+      "promotionStatus": "non-counted exhibition beta only",
+      "proves": "Python non-counted exhibition beta path remains isolated by policy and validation.",
+      "strongerClaimGaps": "Production sandbox, package policy, deterministic operational proof, no-fallback live drills."
+    },
+    {
+      "doesNotProve": "Production sandbox certification or counted Rust play.",
+      "lane": "rust-wasm-wasi",
+      "probeCounts": {
+        "fail": 0,
+        "nonProof": 0,
+        "pass": 4
+      },
+      "promotionStatus": "non-counted exhibition beta only",
+      "proves": "Rust immutable WASM/WASI Preview 1 evidence where local tools pass.",
+      "strongerClaimGaps": "Operational sandbox proof, deployment controls, direct/WIT migration proof, counted governance."
+    },
+    {
+      "doesNotProve": "Production sandbox certification or counted Zig play.",
+      "lane": "zig-wasm-wasi",
+      "probeCounts": {
+        "fail": 0,
+        "nonProof": 0,
+        "pass": 5
+      },
+      "promotionStatus": "non-counted exhibition beta only",
+      "proves": "Zig immutable WASM/WASI Preview 1 evidence where local tools pass.",
+      "strongerClaimGaps": "Operational sandbox proof, parity, deployment controls, direct/WIT migration proof, counted governance."
+    },
+    {
+      "doesNotProve": "Any replacement ABI is active.",
+      "lane": "wasm-wasi",
+      "probeCounts": {
+        "fail": 0,
+        "nonProof": 0,
+        "pass": 1
+      },
+      "promotionStatus": "active ABI remains Preview 1 stdin/stdout JSON",
+      "proves": "Preview 1 JSON metadata fails closed on ABI mismatch.",
+      "strongerClaimGaps": "Direct export or WIT promotion evidence, rollback, replay compatibility, production operations."
+    },
+    {
+      "doesNotProve": "Executable parity, memory safety, validation, or caps.",
+      "lane": "direct-exports",
+      "probeCounts": {
+        "fail": 0,
+        "nonProof": 1,
+        "pass": 0
+      },
+      "promotionStatus": "spike only; not active",
+      "proves": "Migration questions are identified.",
+      "strongerClaimGaps": "Memory ownership, buffers, caps, schema, privacy, Rust/Zig parity, rollback."
+    },
+    {
+      "doesNotProve": "Executable component parity or production readiness.",
+      "lane": "component-model-wit",
+      "probeCounts": {
+        "fail": 0,
+        "nonProof": 1,
+        "pass": 0
+      },
+      "promotionStatus": "spike only; not active",
+      "proves": "Minimal WIT world shape is documented as a candidate.",
+      "strongerClaimGaps": "Bindings, Wasmtime component host, caps, validation, privacy, parity, rollback."
+    }
+  ],
+  "schemaVersion": "v1.24-production-sandbox-readiness-matrix"
+}

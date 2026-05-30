@@ -2,10 +2,10 @@
 
 ## Current State
 
-**Shipped version:** v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness on 2026-05-25
-**Current milestone:** v1.24 Runtime Abuse Lab and ABI Future-Proofing
-**Status:** v1.24 planning started. The milestone will build a runtime abuse lab and production-sandbox readiness matrix across current runtime lanes while spiking direct exports and Component Model/WIT as future ABI paths only.
-**Last audit:** v1.23 audit passed with Rust/Zig promoted only to non-counted exhibition beta, JS/TS preserved as the counted Strategy path, Python preserved as non-counted exhibition beta, and WASM/WASI kept as readiness evidence rather than production sandbox certification.
+**Shipped version:** v1.24 Runtime Abuse Lab and ABI Future-Proofing on 2026-05-30
+**Current milestone:** None active; `.planning/REQUIREMENTS.md` is absent until the next `$gsd-new-milestone`.
+**Status:** v1.24 shipped with runtime abuse evidence, a production-sandbox readiness matrix, ABI future-path non-promotion spikes, and live multi-runtime regression proof.
+**Last audit:** v1.24 audit passed after fixing no-fallback claim overreach, monitor strictness, Markdown privacy scanning, WASM non-proof classification, and signed-in proof harness drift.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
 
@@ -13,9 +13,11 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.24 Runtime Abuse Lab and ABI Future-Proofing
+## Latest Shipped Milestone: v1.24 Runtime Abuse Lab and ABI Future-Proofing
 
 **Goal:** Build a serious runtime abuse lab and production-sandbox readiness matrix across current Strategy runtime lanes, while spiking direct exports and Component Model/WIT as future ABI evidence without changing the active execution path.
+
+**Implemented:** v1.24 adds a repeatable runtime abuse evaluator, public-safe readiness matrix, direct-export and Component Model/WIT non-promotion artifacts, a final ABI decision keeping Preview 1 stdin/stdout JSON active, stricter boundary monitors, and live signed-in regression proof across JS/TS, Python, Rust, and Zig. It deliberately does not certify a production sandbox or promote non-JS counted play.
 
 **Target features:**
 - Reuse v1.23 as the baseline and preserve JS/TS counted support, Python/Rust/Zig non-counted exhibition beta status, Go orchestration ownership, runtime-service hostile-code ownership, and public-output privacy.
@@ -27,7 +29,7 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - Rerun signed-in multi-runtime regression proof enough to show JS/TS counted support, Python beta, Rust beta, Zig beta, result pages, replay pages, public-safe evidence, and no private data leaks still work.
 - Close with explicit ABI, sandbox-readiness, rollback, and migration criteria decisions; do not certify production sandbox readiness or promote any non-JS counted path unless evidence genuinely supports it and says so.
 
-## Latest Shipped Milestone: v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
+## Previous Shipped Milestone: v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
 
 **Goal:** Attempt to promote Rust and Zig from non-counted exhibition alpha to non-counted exhibition beta, gated by real signed-in multi-compiler proof, runtime hardening evidence, Zig ergonomics, ABI evidence, and conservative promotion decisions.
 

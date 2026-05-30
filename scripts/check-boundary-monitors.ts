@@ -291,6 +291,32 @@ const v116TypeScriptBackendInventoryPath =
   ".planning/artifacts/v1.16-typescript-backend-inventory.json"
 const v117RuntimeBrokerRegistryArtifactPath =
   ".planning/artifacts/v1.17-runtime-broker-registry.json"
+const v124RuntimeAbuseLabEvidencePath =
+  ".planning/artifacts/v1.24-runtime-abuse-lab-evidence.json"
+const v124RuntimeAbuseLabEvidenceMarkdownPath =
+  ".planning/artifacts/v1.24-runtime-abuse-lab-evidence.md"
+const v124ReadinessMatrixPath =
+  ".planning/artifacts/v1.24-production-sandbox-readiness-matrix.json"
+const v124ReadinessMatrixMarkdownPath =
+  ".planning/artifacts/v1.24-production-sandbox-readiness-matrix.md"
+const v124DirectExportAbiProofPath =
+  ".planning/artifacts/v1.24-direct-export-abi-proof.json"
+const v124DirectExportAbiProofMarkdownPath =
+  ".planning/artifacts/v1.24-direct-export-abi-proof.md"
+const v124ComponentModelWitProofPath =
+  ".planning/artifacts/v1.24-component-model-wit-proof.json"
+const v124ComponentModelWitProofMarkdownPath =
+  ".planning/artifacts/v1.24-component-model-wit-proof.md"
+const v124AbiDecisionPath = ".planning/artifacts/v1.24-abi-decision.json"
+const v124AbiDecisionMarkdownPath = ".planning/artifacts/v1.24-abi-decision.md"
+const v124SignedInRegressionProofPath =
+  ".planning/artifacts/v1.24-signed-in-multi-runtime-regression-proof.json"
+const v124SignedInRegressionProofMarkdownPath =
+  ".planning/artifacts/v1.24-signed-in-multi-runtime-regression-proof.md"
+const v124SignedInLiveRegressionProofPath =
+  ".planning/artifacts/v1.24-signed-in-live-regression-proof.json"
+const v124SignedInLiveRegressionProofMarkdownPath =
+  ".planning/artifacts/v1.24-signed-in-live-regression-proof.md"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
@@ -3842,6 +3868,339 @@ const checkV123WasmWasiBetaReadinessArtifacts = (): string => {
   return `${readiness.summary.pass} v1.23 WASM/WASI beta readiness probes checked`
 }
 
+const checkV124RuntimeAbuseLabArtifacts = (): string => {
+  const abuse = readJson<{
+    schemaVersion: string
+    milestone: string
+    activeAbi: string
+    runtimeAbiVersion: string
+    summary: {
+      pass: number
+      fail: number
+      nonProof: number
+      publicSafe: boolean
+    }
+    probes: readonly {
+      id: string
+      status: string
+      layer: string
+      class: string
+      publicSafe: boolean
+    }[]
+  }>(v124RuntimeAbuseLabEvidencePath)
+  if (
+    abuse.schemaVersion !== "v1.24-runtime-abuse-lab-evidence" ||
+    abuse.milestone !== "v1.24" ||
+    abuse.activeAbi !== "wasi-preview1-stdin-stdout-json" ||
+    abuse.runtimeAbiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+    abuse.summary.fail !== 0 ||
+    abuse.summary.nonProof !== 2 ||
+    abuse.summary.publicSafe !== true ||
+    abuse.summary.pass !== 17 ||
+    abuse.probes.length !== 19
+  ) {
+    throw new Error("v1.24 runtime abuse lab evidence drifted")
+  }
+  const requiredProbeIds = new Map([
+    [
+      "claims-no-production-sandbox-certification",
+      { status: "pass", layer: "claims", class: "readiness-only" },
+    ],
+    [
+      "claims-no-non-js-counted-promotion",
+      { status: "pass", layer: "claims", class: "readiness-only" },
+    ],
+    [
+      "taxonomy-behavior-first",
+      { status: "pass", layer: "taxonomy", class: "readiness-only" },
+    ],
+    [
+      "js-ts-counted-runtime-still-executes",
+      { status: "pass", layer: "execute", class: "not-applicable" },
+    ],
+    [
+      "js-ts-invalid-output-classified",
+      { status: "pass", layer: "execute", class: "strategy-failure" },
+    ],
+    [
+      "js-ts-runtime-unavailable-no-go-execution",
+      { status: "non-proof", layer: "readiness", class: "unsupported-lane" },
+    ],
+    [
+      "python-beta-runtime-still-executes",
+      { status: "pass", layer: "execute", class: "not-applicable" },
+    ],
+    [
+      "python-import-denied-validation",
+      { status: "pass", layer: "validation", class: "strategy-failure" },
+    ],
+    [
+      "python-no-js-fallback-policy",
+      { status: "non-proof", layer: "readiness", class: "unsupported-lane" },
+    ],
+    [
+      "rust-compile-valid-artifact",
+      { status: "pass", layer: "artifact", class: "readiness-only" },
+    ],
+    [
+      "zig-compile-valid-artifact",
+      { status: "pass", layer: "artifact", class: "readiness-only" },
+    ],
+    [
+      "rust-preview1-json-executes",
+      { status: "pass", layer: "execute", class: "readiness-only" },
+    ],
+    [
+      "zig-preview1-json-executes",
+      { status: "pass", layer: "execute", class: "readiness-only" },
+    ],
+    [
+      "rust-filesystem-denied-validation",
+      { status: "pass", layer: "validation", class: "strategy-failure" },
+    ],
+    [
+      "zig-std-denied-validation",
+      { status: "pass", layer: "validation", class: "strategy-failure" },
+    ],
+    [
+      "zig-import-surface-fd-only",
+      { status: "pass", layer: "validation", class: "readiness-only" },
+    ],
+    [
+      "rust-stale-artifact-hash-fails-closed",
+      { status: "pass", layer: "artifact", class: "system-failure" },
+    ],
+    [
+      "zig-missing-artifact-bytes-fails-closed",
+      { status: "pass", layer: "artifact", class: "system-failure" },
+    ],
+    [
+      "artifact-abi-mismatch-fails-closed",
+      { status: "pass", layer: "abi", class: "system-failure" },
+    ],
+  ] as const)
+  const observed = new Map(abuse.probes.map((probe) => [probe.id, probe]))
+  for (const [probeId, expected] of requiredProbeIds) {
+    const probe = observed.get(probeId)
+    if (!probe) {
+      throw new Error(`v1.24 runtime abuse lab missing probe ${probeId}`)
+    }
+    if (
+      probe.status !== expected.status ||
+      probe.layer !== expected.layer ||
+      probe.class !== expected.class
+    ) {
+      throw new Error(`v1.24 runtime abuse lab probe drifted: ${probeId}`)
+    }
+  }
+  if (abuse.probes.some((probe) => !probe.publicSafe)) {
+    throw new Error("v1.24 runtime abuse lab includes non-public-safe probe")
+  }
+
+  const matrix = readJson<{
+    schemaVersion: string
+    milestone: string
+    overallDecision: string
+    publicSafe: boolean
+    rows: readonly {
+      lane: string
+      promotionStatus: string
+      probeCounts: { fail: number }
+    }[]
+  }>(v124ReadinessMatrixPath)
+  if (
+    matrix.schemaVersion !== "v1.24-production-sandbox-readiness-matrix" ||
+    matrix.milestone !== "v1.24" ||
+    !matrix.overallDecision.includes("No production sandbox certification") ||
+    !matrix.overallDecision.includes("no non-JS counted promotion") ||
+    matrix.publicSafe !== true ||
+    matrix.rows.some((row) => row.probeCounts.fail !== 0)
+  ) {
+    throw new Error("v1.24 production sandbox readiness matrix drifted")
+  }
+  const matrixLanes = new Set(matrix.rows.map((row) => row.lane))
+  for (const lane of [
+    "js-ts",
+    "python",
+    "rust-wasm-wasi",
+    "zig-wasm-wasi",
+    "direct-exports",
+    "component-model-wit",
+  ]) {
+    if (!matrixLanes.has(lane)) {
+      throw new Error(`v1.24 readiness matrix missing lane ${lane}`)
+    }
+  }
+
+  const direct = readJson<{
+    schemaVersion: string
+    milestone: string
+    status: string
+    activeExecutionPathChanged: boolean
+  }>(v124DirectExportAbiProofPath)
+  if (
+    direct.schemaVersion !== "v1.24-direct-export-abi-proof" ||
+    direct.milestone !== "v1.24" ||
+    direct.status !== "not-promoted" ||
+    direct.activeExecutionPathChanged !== false
+  ) {
+    throw new Error("v1.24 direct-export ABI proof drifted")
+  }
+
+  const wit = readJson<{
+    schemaVersion: string
+    milestone: string
+    status: string
+    activeExecutionPathChanged: boolean
+  }>(v124ComponentModelWitProofPath)
+  if (
+    wit.schemaVersion !== "v1.24-component-model-wit-proof" ||
+    wit.milestone !== "v1.24" ||
+    wit.status !== "not-promoted" ||
+    wit.activeExecutionPathChanged !== false
+  ) {
+    throw new Error("v1.24 Component Model/WIT proof drifted")
+  }
+
+  const abi = readJson<{
+    schemaVersion: string
+    milestone: string
+    activeExecutionAbi: string
+    decision: string
+    directExports: string
+    componentModelWit: string
+  }>(v124AbiDecisionPath)
+  if (
+    abi.schemaVersion !== "v1.24-abi-decision" ||
+    abi.milestone !== "v1.24" ||
+    abi.activeExecutionAbi !== "wasi-preview1-stdin-stdout-json" ||
+    abi.decision !== "keep-preview1-stdin-stdout-json-active" ||
+    abi.directExports !== "not-promoted" ||
+    abi.componentModelWit !== "not-promoted"
+  ) {
+    throw new Error("v1.24 ABI decision drifted")
+  }
+
+  const regression = readJson<{
+    schemaVersion: string
+    milestone: string
+    jsTsCountedSupport: boolean
+    pythonBetaSupport: boolean
+    rustBetaSupport: boolean
+    zigBetaSupport: boolean
+    noFallbackEvidence: {
+      localPolicyContract: boolean
+      malformedAndStaleArtifactFailClosed: boolean
+      stoppedRuntimeLiveDrill: string
+      overall: string
+    }
+  }>(v124SignedInRegressionProofPath)
+  if (
+    regression.schemaVersion !==
+      "v1.24-signed-in-multi-runtime-regression-proof" ||
+    regression.milestone !== "v1.24" ||
+    regression.jsTsCountedSupport !== true ||
+    regression.pythonBetaSupport !== true ||
+    regression.rustBetaSupport !== true ||
+    regression.zigBetaSupport !== true ||
+    regression.noFallbackEvidence.localPolicyContract !== true ||
+    regression.noFallbackEvidence.malformedAndStaleArtifactFailClosed !==
+      true ||
+    regression.noFallbackEvidence.stoppedRuntimeLiveDrill !==
+      "required before stronger unavailable-lane claims" ||
+    regression.noFallbackEvidence.overall !==
+      "readiness-only-not-a-production-sandbox-proof"
+  ) {
+    throw new Error("v1.24 signed-in multi-runtime regression proof drifted")
+  }
+
+  const liveRegression = readJson<{
+    schemaVersion: string
+    milestone: string
+    privateMarkerScanPassed: boolean
+    replayPlausibilityChecked: boolean
+    resultPagesChecked: boolean
+    support: {
+      jsTsCounted: boolean
+      pythonBeta: boolean
+      rustBeta: boolean
+      zigBeta: boolean
+    }
+    noFallbackEvidence: {
+      malformedStaleAndCapabilityInvalid: string
+      stoppedUnavailableLane: string
+      strongerClaimStatus: string
+    }
+    exhibitions: readonly {
+      matchup: string
+      status: string
+      matchStatuses: readonly string[]
+    }[]
+  }>(v124SignedInLiveRegressionProofPath)
+  if (
+    liveRegression.schemaVersion !== "v1.24-signed-in-live-regression-proof" ||
+    liveRegression.milestone !== "v1.24" ||
+    liveRegression.privateMarkerScanPassed !== true ||
+    liveRegression.replayPlausibilityChecked !== true ||
+    liveRegression.resultPagesChecked !== true ||
+    liveRegression.support.jsTsCounted !== true ||
+    liveRegression.support.pythonBeta !== true ||
+    liveRegression.support.rustBeta !== true ||
+    liveRegression.support.zigBeta !== true ||
+    liveRegression.noFallbackEvidence.malformedStaleAndCapabilityInvalid !==
+      "covered-by-v1.24-runtime-abuse-lab" ||
+    liveRegression.noFallbackEvidence.stoppedUnavailableLane !==
+      "policy-and-topology-evidence-only" ||
+    liveRegression.noFallbackEvidence.strongerClaimStatus !==
+      "not-promoted-to-production-sandbox-proof" ||
+    liveRegression.exhibitions.length !== 5 ||
+    liveRegression.exhibitions.some(
+      (exhibition) =>
+        exhibition.status !== "complete" ||
+        exhibition.matchStatuses.some((status) => status !== "complete"),
+    )
+  ) {
+    throw new Error("v1.24 signed-in live regression proof drifted")
+  }
+
+  for (const artifact of [
+    abuse,
+    matrix,
+    direct,
+    wit,
+    abi,
+    regression,
+    liveRegression,
+  ]) {
+    assertPublicOutputLeakSafe(artifact)
+    const serialized = JSON.stringify(artifact)
+    for (const marker of forbiddenWorkerArtifactStrings.filter(
+      (entry) => entry !== "source",
+    )) {
+      if (serialized.includes(marker)) {
+        throw new Error(`v1.24 artifact contains private marker ${marker}`)
+      }
+    }
+  }
+
+  for (const relativePath of [
+    v124RuntimeAbuseLabEvidenceMarkdownPath,
+    v124ReadinessMatrixMarkdownPath,
+    v124DirectExportAbiProofMarkdownPath,
+    v124ComponentModelWitProofMarkdownPath,
+    v124AbiDecisionMarkdownPath,
+    v124SignedInRegressionProofMarkdownPath,
+    v124SignedInLiveRegressionProofMarkdownPath,
+  ]) {
+    assertPublicOutputLeakSafe(
+      readFileSync(path.join(repoRoot, relativePath), "utf8"),
+      relativePath,
+    )
+  }
+
+  return `${abuse.summary.pass} v1.24 runtime abuse probes, ${abuse.summary.nonProof} explicit non-proofs, and ABI/live regression decisions checked`
+}
+
 export const runBoundaryMonitorChecks = async (): Promise<
   BoundaryMonitorCheck[]
 > => [
@@ -3865,6 +4224,11 @@ export const runBoundaryMonitorChecks = async (): Promise<
     "runtime_adapter",
     "v1.23 WASM/WASI beta readiness artifacts",
     () => checkV123WasmWasiBetaReadinessArtifacts(),
+  ),
+  await check(
+    "runtime_adapter",
+    "v1.24 runtime abuse lab and ABI future-path artifacts",
+    () => checkV124RuntimeAbuseLabArtifacts(),
   ),
   await check("runtime_adapter", "v1.18 isolation baseline artifact", () =>
     checkV118IsolationBaselineArtifact(),

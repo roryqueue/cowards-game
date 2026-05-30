@@ -26,21 +26,17 @@
 - [x] **v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha** - Phases 140-147, shipped 2026-05-25. See `.planning/milestones/v1.21-ROADMAP.md`.
 - [x] **v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening** - Phases 148-155, shipped 2026-05-25. See `.planning/milestones/v1.22-ROADMAP.md`.
 - [x] **v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness** - Phases 156-163, shipped 2026-05-25. See `.planning/milestones/v1.23-ROADMAP.md`.
-- [ ] **v1.24 Runtime Abuse Lab and ABI Future-Proofing** - Phases 164-173, active.
+- [x] **v1.24 Runtime Abuse Lab and ABI Future-Proofing** - Phases 164-173, shipped 2026-05-30. See `.planning/milestones/v1.24-ROADMAP.md`.
 
 ## Active Milestone
 
-**v1.24 Runtime Abuse Lab and ABI Future-Proofing**
-
-**Goal:** Build a serious runtime abuse lab and production-sandbox readiness matrix across current Strategy runtime lanes, while spiking direct exports and Component Model/WIT as future ABI paths without silently changing Match execution.
-
-**Decision baseline:** JS/TS remains counted. Python, Rust, and Zig remain non-counted exhibition beta. Preview 1 stdin/stdout JSON remains the active WASM/WASI execution ABI unless a future explicit decision promotes a replacement. No production sandbox certification is claimed unless final evidence explicitly supports it.
+None. Start the next milestone with `$gsd-new-milestone`; active `.planning/REQUIREMENTS.md` is intentionally absent after v1.24 completion.
 
 ## Latest Shipped Milestone
 
-**v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness**
+**v1.24 Runtime Abuse Lab and ABI Future-Proofing**
 
-**Decision:** Rust beta / Zig beta, both non-counted exhibition beta only.
+**Decision:** Readiness evidence only. No production sandbox certification. JS/TS remains counted; Python, Rust, and Zig remain non-counted exhibition beta. WASI Preview 1 stdin/stdout JSON remains the active WASM/WASI execution ABI; direct exports and Component Model/WIT are not promoted.
 
 ## Phase Overview
 
@@ -197,11 +193,7 @@
 
 ## Next Up
 
-**Phase 164: Baseline, Threat Model, and Claims Contract** - Define the v1.23 floor, hostile Strategy threat model, and allowed v1.24 claims before probes begin.
-
-`$gsd-discuss-phase 164`
-
-Also: `$gsd-plan-phase 164` - skip discussion, plan directly.
+Start the next milestone with `$gsd-new-milestone`.
 
 ---
-*Roadmap created: 2026-05-30 after v1.24 milestone initialization*
+*Last updated: 2026-05-30 after v1.24 completion*

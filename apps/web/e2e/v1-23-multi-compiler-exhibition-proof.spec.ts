@@ -272,7 +272,6 @@ const isUnsettled = (summary: PublicMatchSetSummary): boolean =>
   )
 
 const hasActiveRunningMatch = (summary: PublicMatchSetSummary): boolean =>
-  summary.status === "running" ||
   summary.matches.some((match) => match.status === "running")
 
 const settleExhibitions = async (

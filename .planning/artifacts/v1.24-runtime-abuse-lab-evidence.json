@@ -1,0 +1,278 @@
+{
+  "activeAbi": "wasi-preview1-stdin-stdout-json",
+  "adapterRegistry": [
+    {
+      "countedResultsAllowed": true,
+      "id": "runtime-js-worker-thread",
+      "isolationPromotionState": "evidence-only",
+      "readiness": "local-dev-fallback"
+    },
+    {
+      "countedResultsAllowed": true,
+      "id": "runtime-js-subprocess",
+      "isolationPromotionState": "evidence-only",
+      "readiness": "prototype"
+    },
+    {
+      "countedResultsAllowed": false,
+      "id": "runtime-js-container-subprocess",
+      "isolationPromotionState": "evidence-only",
+      "readiness": "production-candidate"
+    },
+    {
+      "countedResultsAllowed": false,
+      "id": "runtime-python-subprocess-experimental",
+      "isolationPromotionState": "evidence-only",
+      "readiness": "experimental"
+    },
+    {
+      "countedResultsAllowed": false,
+      "id": "runtime-wasm-wasi-wasmtime-preview1",
+      "isolationPromotionState": "evidence-only",
+      "readiness": "experimental"
+    }
+  ],
+  "generatedAt": "2026-05-30T00:00:00.000Z",
+  "languageRegistry": [
+    {
+      "enabledForNormalPlay": true,
+      "id": "javascript"
+    },
+    {
+      "enabledForNormalPlay": true,
+      "id": "typescript"
+    },
+    {
+      "enabledForNormalPlay": false,
+      "id": "python"
+    },
+    {
+      "enabledForNormalPlay": false,
+      "id": "rust"
+    },
+    {
+      "enabledForNormalPlay": false,
+      "id": "zig"
+    }
+  ],
+  "milestone": "v1.24",
+  "probes": [
+    {
+      "class": "readiness-only",
+      "expectation": "v1.24 does not certify production sandbox readiness by implication.",
+      "id": "claims-no-production-sandbox-certification",
+      "lane": "milestone",
+      "layer": "claims",
+      "observed": "claims contract says readiness evidence only",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "readiness-only",
+      "expectation": "v1.24 does not promote Python/Rust/Zig/WASM/WASI to counted play.",
+      "id": "claims-no-non-js-counted-promotion",
+      "lane": "milestone",
+      "layer": "claims",
+      "observed": "JS/TS counted baseline preserved",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "readiness-only",
+      "expectation": "Abuse lab is organized by behavior first, runtime lane second.",
+      "id": "taxonomy-behavior-first",
+      "lane": "milestone",
+      "layer": "taxonomy",
+      "observed": "schema records lane and layer separately",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "not-applicable",
+      "expectation": "JS/TS counted runtime returns valid Strategy output.",
+      "id": "js-ts-counted-runtime-still-executes",
+      "lane": "js-ts",
+      "layer": "execute",
+      "observed": "valid selectActivations result",
+      "promotionImpact": "JS/TS counted baseline preserved.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "strategy-failure",
+      "expectation": "Invalid JS/TS output is classified as a Strategy failure.",
+      "id": "js-ts-invalid-output-classified",
+      "lane": "js-ts",
+      "layer": "execute",
+      "observed": "INVALID_OUTPUT",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "unsupported-lane",
+      "expectation": "Stopped runtime-service must not move Strategy execution into web/API/Go.",
+      "id": "js-ts-runtime-unavailable-no-go-execution",
+      "lane": "js-ts",
+      "layer": "readiness",
+      "observed": "policy enforced by topology and runtime-service ownership checks",
+      "promotionImpact": "No promotion. This is fail-loud non-proof, not a sandbox pass.",
+      "publicSafe": true,
+      "status": "non-proof"
+    },
+    {
+      "class": "not-applicable",
+      "expectation": "Python beta runtime returns valid Strategy output.",
+      "id": "python-beta-runtime-still-executes",
+      "lane": "python",
+      "layer": "execute",
+      "observed": "valid soldier_brain result",
+      "promotionImpact": "Python remains non-counted exhibition beta.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "strategy-failure",
+      "expectation": "Python import/package attempts fail before execution.",
+      "id": "python-import-denied-validation",
+      "lane": "python",
+      "layer": "validation",
+      "observed": "import denied",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "unsupported-lane",
+      "expectation": "Python failure must not fall back to JS/TS, Go, or another runtime lane.",
+      "id": "python-no-js-fallback-policy",
+      "lane": "python",
+      "layer": "readiness",
+      "observed": "registered policy: non-counted beta runtime-only lane",
+      "promotionImpact": "No promotion. This is fail-loud non-proof, not a sandbox pass.",
+      "publicSafe": true,
+      "status": "non-proof"
+    },
+    {
+      "class": "readiness-only",
+      "expectation": "Rust compiles to immutable wasm32-wasip1 artifact metadata.",
+      "id": "rust-compile-valid-artifact",
+      "lane": "rust-wasm-wasi",
+      "layer": "artifact",
+      "observed": "wasm32-wasip1",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "readiness-only",
+      "expectation": "Zig compiles to immutable wasm32-wasi artifact metadata.",
+      "id": "zig-compile-valid-artifact",
+      "lane": "zig-wasm-wasi",
+      "layer": "artifact",
+      "observed": "wasm32-wasi",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "readiness-only",
+      "expectation": "Rust Preview 1 JSON path executes through Wasmtime.",
+      "id": "rust-preview1-json-executes",
+      "lane": "rust-wasm-wasi",
+      "layer": "execute",
+      "observed": "valid selectActivations result",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "readiness-only",
+      "expectation": "Zig Preview 1 JSON path executes through Wasmtime.",
+      "id": "zig-preview1-json-executes",
+      "lane": "zig-wasm-wasi",
+      "layer": "execute",
+      "observed": "valid soldierBrain result",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "strategy-failure",
+      "expectation": "Rust filesystem attempts fail before execution.",
+      "id": "rust-filesystem-denied-validation",
+      "lane": "rust-wasm-wasi",
+      "layer": "validation",
+      "observed": "std::fs denied",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "strategy-failure",
+      "expectation": "Zig std import attempts fail before execution.",
+      "id": "zig-std-denied-validation",
+      "lane": "zig-wasm-wasi",
+      "layer": "validation",
+      "observed": "std import denied",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "readiness-only",
+      "expectation": "Zig helper imports only fd_read/fd_write.",
+      "id": "zig-import-surface-fd-only",
+      "lane": "zig-wasm-wasi",
+      "layer": "validation",
+      "observed": "fd_read/fd_write only",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "system-failure",
+      "expectation": "Stale Rust artifact hash fails without alternate-lane fallback.",
+      "id": "rust-stale-artifact-hash-fails-closed",
+      "lane": "rust-wasm-wasi",
+      "layer": "artifact",
+      "observed": "MALFORMED_IPC",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "system-failure",
+      "expectation": "Missing Zig artifact bytes fails without alternate-lane fallback.",
+      "id": "zig-missing-artifact-bytes-fails-closed",
+      "lane": "zig-wasm-wasi",
+      "layer": "artifact",
+      "observed": "SPAWN_FAILED",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    },
+    {
+      "class": "system-failure",
+      "expectation": "ABI mismatch fails without alternate ABI fallback.",
+      "id": "artifact-abi-mismatch-fails-closed",
+      "lane": "wasm-wasi",
+      "layer": "abi",
+      "observed": "MALFORMED_IPC",
+      "promotionImpact": "No promotion; evidence remains readiness-only unless a final decision says otherwise.",
+      "publicSafe": true,
+      "status": "pass"
+    }
+  ],
+  "runtimeAbiVersion": "strategy-runtime-abi-v1.14",
+  "schemaVersion": "v1.24-runtime-abuse-lab-evidence",
+  "summary": {
+    "fail": 0,
+    "nonProof": 2,
+    "pass": 17,
+    "publicSafe": true
+  }
+}
