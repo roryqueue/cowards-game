@@ -629,6 +629,16 @@ export function ReplayBoard({
   const appRef = useRef<Application | null>(null)
   const frameRef = useRef(0)
   const renderLatestRef = useRef<(() => void) | null>(null)
+  const proofModel = buildReplayBoardModel(
+    data,
+    selectedSequence,
+    selectedSoldierId,
+  )
+  const proofDimensions = boardDimensions(proofModel)
+  const proofPositionStyle = (position: Position) => ({
+    left: `${((position.x - proofModel.arenaBounds.minX + 0.5) / proofDimensions.columns) * 100}%`,
+    top: `${((position.y - proofModel.arenaBounds.minY + 0.5) / proofDimensions.rows) * 100}%`,
+  })
 
   useEffect(() => {
     const host = hostRef.current
@@ -711,6 +721,26 @@ export function ReplayBoard({
       role="img"
     >
       <canvas aria-label="Replay board canvas" ref={canvasRef} />
+      <div aria-hidden="true" className="replay-board-proof-layer">
+        {proofModel.terrain.map((terrain) => (
+          <span
+            className="replay-board-proof-point terrain"
+            data-testid={`replay-board-proof-terrain-${terrain.position.x}-${terrain.position.y}`}
+            key={`terrain:${terrain.position.x}:${terrain.position.y}`}
+            style={proofPositionStyle(terrain.position)}
+          />
+        ))}
+        {proofModel.soldiers.map((soldier) =>
+          soldier.position ? (
+            <span
+              className="replay-board-proof-point soldier"
+              data-testid={`replay-board-proof-soldier-${soldier.id}`}
+              key={`soldier:${soldier.id}`}
+              style={proofPositionStyle(soldier.position)}
+            />
+          ) : null,
+        )}
+      </div>
       <p aria-live="polite" className="replay-board-status">
         Sequence {selectedSequence} · {selectedEvent.type}
       </p>

@@ -546,11 +546,19 @@ export const buildReadyReplayFromPublicEvidence = ({
       payload: event.payload,
     }))
     const focus = resolveReplayFocus(timeline, options.focus)
+    const clientContract = contract
+      ? {
+          contractVersion: contract.contractVersion,
+          kind: contract.kind,
+          matchId: contract.matchId,
+          lifecycle: contract.lifecycle,
+        }
+      : undefined
     return {
       status: "ready",
       mode: "public",
       metadata,
-      ...(contract === undefined ? {} : { contract }),
+      ...(clientContract === undefined ? {} : { contract: clientContract }),
       projection,
       timeline,
       states,
