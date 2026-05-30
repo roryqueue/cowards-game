@@ -334,7 +334,7 @@ export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/competitive/server.ts:43:@cowards/persistence:import { findStarterStrategy } from "@cowards/persistence/starter-strategies"',
   'apps/web/app/matches/replay-fixture.ts:6:@cowards/persistence:import { createChronicleMetadata } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/replay-ready.ts:7:@cowards/persistence:import type { StoredChronicle } from "@cowards/persistence/quarantine-lifecycle"',
-  'apps/web/app/matches/server.test.ts:7:@cowards/persistence:import { createChronicleMetadata, type StoredChronicle, } from "@cowards/persistence/quarantine-lifecycle"',
+  'apps/web/app/matches/server.test.ts:8:@cowards/persistence:import { createChronicleMetadata, type StoredChronicle, } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/server.ts:1:@cowards/persistence:import { createDatabasePool } from "@cowards/persistence/db"',
   'apps/web/app/matches/server.ts:2:@cowards/persistence:import { createPostgresChronicleStore, type ChronicleMetadata, type ChronicleStore, } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/server.ts:7:@cowards/persistence:import type { Queryable } from "@cowards/persistence/repositories"',
@@ -4201,6 +4201,95 @@ const checkV124RuntimeAbuseLabArtifacts = (): string => {
   return `${abuse.summary.pass} v1.24 runtime abuse probes, ${abuse.summary.nonProof} explicit non-proofs, and ABI/live regression decisions checked`
 }
 
+const checkV125MatchExecutionContractFreeze = (): string => {
+  const contractSource = readFileSync(
+    path.join(repoRoot, "packages/spec/src/match-execution-contract.ts"),
+    "utf8",
+  )
+  const adapterSource = readFileSync(
+    path.join(repoRoot, "apps/web/lib/match-execution-fixture-adapter.ts"),
+    "utf8",
+  )
+  const publicBoundarySource = readFileSync(
+    path.join(repoRoot, "apps/web/lib/public-service-boundary.ts"),
+    "utf8",
+  )
+  const evidenceCopySource = readFileSync(
+    path.join(repoRoot, "apps/web/app/matchsets/evidence-copy.ts"),
+    "utf8",
+  )
+  const requiredLifecycleMarkers = [
+    "match-execution-app-v1",
+    '"queued"',
+    '"accepted"',
+    '"running"',
+    '"complete"',
+    '"failed"',
+    '"degraded"',
+    '"unavailable"',
+    "retryDisposition",
+    "non_retryable",
+    "runtime_unavailable",
+    "malformed_runtime_result",
+    "stale_artifact",
+    "missing_chronicle",
+  ] as const
+  for (const marker of requiredLifecycleMarkers) {
+    if (!contractSource.includes(marker)) {
+      throw new Error(`v1.25 contract missing marker ${marker}`)
+    }
+  }
+
+  const requiredFixtureScenarios = [
+    "complete",
+    "running",
+    "queued",
+    "strategy-failure",
+    "system-failure",
+    "timeout",
+    "unavailable-runtime",
+    "malformed-runtime-result",
+    "stale-artifact",
+    "public-safe-replay",
+  ] as const
+  for (const scenario of requiredFixtureScenarios) {
+    if (!contractSource.includes(scenario)) {
+      throw new Error(`v1.25 fixture catalog missing ${scenario}`)
+    }
+  }
+
+  for (const marker of [
+    "PLAYWRIGHT_TEST",
+    "NODE_ENV",
+    "COWARDS_ENABLE_MATCH_EXECUTION_FIXTURES",
+  ]) {
+    if (!adapterSource.includes(marker)) {
+      throw new Error(`v1.25 fixture adapter missing gate ${marker}`)
+    }
+  }
+  if (!publicBoundarySource.includes("toMatchExecutionMatchSetSummaryV1")) {
+    throw new Error("v1.25 public boundary does not consume contract DTOs")
+  }
+  if (
+    !evidenceCopySource.includes("terminal partial public evidence") ||
+    !evidenceCopySource.includes("retryDisposition")
+  ) {
+    throw new Error("v1.25 result copy does not expose lifecycle semantics")
+  }
+
+  for (const marker of [
+    "StrategyMemory",
+    "SoldierMemory",
+    "raw diagnostics",
+    "private runtime internals",
+  ]) {
+    if (!contractSource.includes(marker)) {
+      throw new Error(`v1.25 privacy denylist missing ${marker}`)
+    }
+  }
+  return `${requiredLifecycleMarkers.length} lifecycle markers, ${requiredFixtureScenarios.length} fixture scenarios, adapter gates, and app contract consumption checked`
+}
+
 export const runBoundaryMonitorChecks = async (): Promise<
   BoundaryMonitorCheck[]
 > => [
@@ -4229,6 +4318,11 @@ export const runBoundaryMonitorChecks = async (): Promise<
     "runtime_adapter",
     "v1.24 runtime abuse lab and ABI future-path artifacts",
     () => checkV124RuntimeAbuseLabArtifacts(),
+  ),
+  await check(
+    "contract_drift",
+    "v1.25 Match execution app contract freeze",
+    () => checkV125MatchExecutionContractFreeze(),
   ),
   await check("runtime_adapter", "v1.18 isolation baseline artifact", () =>
     checkV118IsolationBaselineArtifact(),

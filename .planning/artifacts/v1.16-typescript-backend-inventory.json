@@ -10339,37 +10339,37 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import {\n  COMPATIBILITY_VERSIONS,\n  SERVICE_API_VERSION,\n  type Chronicle,\n  type PublicReplayEvidenceServiceDto,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  COMPATIBILITY_VERSIONS,\n  SERVICE_API_VERSION,\n  getMatchExecutionContractFixtureByMatchId,\n  type Chronicle,\n  type PublicReplayEvidenceServiceDto,\n} from \"@cowards/spec\""
         },
         {
-          "line": 11,
+          "line": 12,
           "source": "@cowards/replay",
           "statementText": "import { projectPublicChronicle } from \"@cowards/replay\""
         },
         {
-          "line": 12,
+          "line": 13,
           "source": "vitest",
           "statementText": "import { describe, expect, it, vi } from \"vitest\""
         },
         {
-          "line": 13,
+          "line": 14,
           "source": "./replay-fixture.js",
           "statementText": "import { isReplayFixtureMatch, replayFixtureMatchId } from \"./replay-fixture.js\""
         },
         {
-          "line": 14,
+          "line": 15,
           "source": "./server.js",
           "statementText": "import { createMatchReplayServer } from \"./server.js\""
         },
         {
-          "line": 7,
+          "line": 8,
           "source": "@cowards/persistence/quarantine-lifecycle",
           "statementText": "import {\n  createChronicleMetadata,\n  type StoredChronicle,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         }
       ],
       "persistenceImports": [
         {
-          "line": 7,
+          "line": 8,
           "source": "@cowards/persistence/quarantine-lifecycle",
           "statementText": "import {\n  createChronicleMetadata,\n  type StoredChronicle,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         }
@@ -10434,7 +10434,7 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import type {\n  AnalyticsReplayMomentType,\n  ChronicleEventContext,\n  ChronicleEventType,\n  ChronicleProjection,\n  FullBoardSnapshot,\n  JsonValue,\n  MatchId,\n  MatchOutcome,\n  PlayerId,\n  SoldierInactivityExplanationDto,\n} from \"@cowards/spec\""
+          "statementText": "import type {\n  AnalyticsReplayMomentType,\n  ChronicleEventContext,\n  ChronicleEventType,\n  ChronicleProjection,\n  FullBoardSnapshot,\n  JsonValue,\n  MatchId,\n  MatchExecutionReplayEvidenceV1,\n  MatchOutcome,\n  PlayerId,\n  SoldierInactivityExplanationDto,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -10626,10 +10626,10 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import type {\n  PublicMatchEvidenceDto,\n  PublicMatchSetResultDto,\n} from \"@cowards/spec\""
+          "statementText": "import type {\n  MatchExecutionLifecycleV1,\n  PublicMatchEvidenceDto,\n  PublicMatchSetResultDto,\n} from \"@cowards/spec\""
         },
         {
-          "line": 5,
+          "line": 6,
           "source": "../matches/types.js",
           "statementText": "import type { ReplayReadyDto } from \"../matches/types.js\""
         }
@@ -12175,6 +12175,116 @@
       "scannerFindings": []
     },
     {
+      "id": "apps-web-lib-match-execution-fixture-adapter-test",
+      "path": "apps/web/lib/match-execution-fixture-adapter.test.ts",
+      "kind": "web-lib-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "public-redacted",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  MATCH_EXECUTION_CONTRACT_FIXTURE_IDS_V1,\n  getMatchExecutionContractFixtureByMatchSetId,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 6,
+          "source": "./match-execution-fixture-adapter.js",
+          "statementText": "import {\n  createMatchExecutionFixturePublicReadClient,\n  isMatchExecutionFixtureEnabled,\n} from \"./match-execution-fixture-adapter.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": true,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/lib/match-execution-fixture-adapter.test.ts"
+      ],
+      "scannerFindings": []
+    },
+    {
+      "id": "apps-web-lib-match-execution-fixture-adapter",
+      "path": "apps/web/lib/match-execution-fixture-adapter.ts",
+      "kind": "web-lib-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "public-redacted",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  getMatchExecutionContractFixtureByMatchId,\n  getMatchExecutionContractFixtureByMatchSetId,\n  type MatchId,\n  type MatchSetId,\n  type PublicMatchSetSummaryServiceDto,\n  type PublicReplayEvidenceServiceDto,\n  type PublicReplayMetadataServiceDto,\n} from \"@cowards/spec\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": true,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/lib/match-execution-fixture-adapter.ts"
+      ],
+      "scannerFindings": []
+    },
+    {
       "id": "apps-web-lib-public-go-read-client-test",
       "path": "apps/web/lib/public-go-read-client.test.ts",
       "kind": "web-lib-module",
@@ -12311,7 +12421,12 @@
           "statementText": "import { readFileSync } from \"node:fs\""
         },
         {
-          "line": 13,
+          "line": 10,
+          "source": "./public-service-adapter.js",
+          "statementText": "import {\n  createPublicReadService,\n  resolvePublicReadRouteOwnership,\n} from \"./public-service-adapter.js\""
+        },
+        {
+          "line": 14,
           "source": "./public-go-read-client.js",
           "statementText": "import type { PublicGoReadClient } from \"./public-go-read-client.js\""
         },
@@ -12333,12 +12448,7 @@
         {
           "line": 5,
           "source": "@cowards/spec",
-          "statementText": "import {\n  publicStrategyPageExample,\n  type PublicStrategyPageServiceDto,\n} from \"@cowards/spec\""
-        },
-        {
-          "line": 9,
-          "source": "./public-service-adapter.js",
-          "statementText": "import {\n  createPublicReadService,\n  resolvePublicReadRouteOwnership,\n} from \"./public-service-adapter.js\""
+          "statementText": "import {\n  getMatchExecutionContractFixtureByMatchSetId,\n  publicStrategyPageExample,\n  type PublicStrategyPageServiceDto,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -12401,6 +12511,11 @@
           "line": 10,
           "source": "./go-backend-service-client.js",
           "statementText": "import { isGoBackendServiceUnavailableError } from \"./go-backend-service-client.js\""
+        },
+        {
+          "line": 11,
+          "source": "./match-execution-fixture-adapter.js",
+          "statementText": "import { createMatchExecutionFixturePublicReadClient } from \"./match-execution-fixture-adapter.js\""
         },
         {
           "line": 2,
@@ -12472,10 +12587,10 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import type {\n  MatchId,\n  MatchSetId,\n  PublicMatchSetResultDto,\n  PublicPlayerProfileDto,\n  PublicReplayMetadataServiceDto,\n  PublicStrategyCardDto,\n  PublicTrialLadderSeasonDto,\n  StrategyId,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  toMatchExecutionMatchSetSummaryV1,\n  type MatchExecutionMatchSetSummaryV1,\n  type MatchId,\n  type MatchSetId,\n  type PublicMatchSetResultDto,\n  type PublicPlayerProfileDto,\n  type PublicReplayMetadataServiceDto,\n  type PublicStrategyCardDto,\n  type PublicTrialLadderSeasonDto,\n  type StrategyId,\n} from \"@cowards/spec\""
         },
         {
-          "line": 11,
+          "line": 13,
           "source": "./public-service-adapter.js",
           "statementText": "import {\n  getCurrentPublicReadUser,\n  publicGoReadFailureDiagnostic,\n  publicReadService,\n  type PublicReadUser,\n} from \"./public-service-adapter.js\""
         }
@@ -13075,15 +13190,15 @@
         {
           "line": 14,
           "source": "@cowards/spec",
-          "statementText": "import { SERVICE_API_VERSION } from \"@cowards/spec\""
+          "statementText": "import {\n  SERVICE_API_VERSION,\n  toMatchExecutionReplayEvidenceV1,\n} from \"@cowards/spec\""
         },
         {
-          "line": 15,
+          "line": 18,
           "source": "./types.js",
           "statementText": "import type { GetMatchReplayOptions, ReplayPageData } from \"./types.js\""
         },
         {
-          "line": 16,
+          "line": 19,
           "source": "./replay-ready.js",
           "statementText": "import {\n  buildReadyReplayFromPublicEvidence,\n  buildReadyReplayFromStoredChronicle,\n} from \"./replay-ready.js\""
         },
@@ -13093,22 +13208,27 @@
           "statementText": "import {\n  createPostgresChronicleStore,\n  type ChronicleMetadata,\n  type ChronicleStore,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
-          "line": 20,
+          "line": 23,
           "source": "../../lib/public-go-read-client.js",
           "statementText": "import {\n  createPublicGoReadClient,\n  type PublicGoReadClient,\n} from \"../../lib/public-go-read-client.js\""
         },
         {
-          "line": 24,
+          "line": 27,
           "source": "../../lib/public-service-adapter.js",
           "statementText": "import {\n  resolvePublicReadRouteOwnership,\n  type PublicReadRouteOwnershipEnv,\n} from \"../../lib/public-service-adapter.js\""
         },
         {
-          "line": 28,
+          "line": 31,
+          "source": "../../lib/match-execution-fixture-adapter.js",
+          "statementText": "import { createMatchExecutionFixturePublicReadClient } from \"../../lib/match-execution-fixture-adapter.js\""
+        },
+        {
+          "line": 32,
           "source": "./replay-fixture.js",
           "statementText": "import {\n  createReplayFixtureData,\n  getReplayFixtureScenarioId,\n  isReplayFixtureMatch,\n} from \"./replay-fixture.js\""
         },
         {
-          "line": 51,
+          "line": 55,
           "source": "./types.js",
           "statementText": "export type { GetMatchReplayOptions } from \"./types.js\""
         },

@@ -11,7 +11,10 @@ import type {
   PublicReplayEvidenceServiceDto,
   PublicReplayMetadataServiceDto,
 } from "@cowards/spec"
-import { SERVICE_API_VERSION } from "@cowards/spec"
+import {
+  SERVICE_API_VERSION,
+  toMatchExecutionReplayEvidenceV1,
+} from "@cowards/spec"
 import type { GetMatchReplayOptions, ReplayPageData } from "./types.js"
 import {
   buildReadyReplayFromPublicEvidence,
@@ -25,6 +28,7 @@ import {
   resolvePublicReadRouteOwnership,
   type PublicReadRouteOwnershipEnv,
 } from "../../lib/public-service-adapter.js"
+import { createMatchExecutionFixturePublicReadClient } from "../../lib/match-execution-fixture-adapter.js"
 import {
   createReplayFixtureData,
   getReplayFixtureScenarioId,
@@ -141,12 +145,21 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
     deps.publicReplayReadClient ??
     deps.publicReplayEvidenceClient ??
     createdPublicReplayReadClient
+  const matchExecutionFixtureClient =
+    createMatchExecutionFixturePublicReadClient(env)
 
   return {
     async getPublicReplayMetadata(
       matchId: MatchId,
     ): Promise<PublicReplayMetadataServiceDto | null> {
       const resolvedMatchId = decodeMatchId(matchId)
+      const fixture =
+        await matchExecutionFixtureClient?.getPublicReplayMetadata(
+          resolvedMatchId,
+        )
+      if (fixture) {
+        return fixture
+      }
       if (selectedPublicReplayMetadata) {
         if (!publicReplayMetadataClient) {
           throw new Error(
@@ -173,6 +186,13 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
           ...options,
           scenarioId: getReplayFixtureScenarioId(resolvedMatchId) ?? undefined,
         })
+      }
+      const fixtureEvidence =
+        await matchExecutionFixtureClient?.getPublicReplayEvidence(
+          resolvedMatchId,
+        )
+      if (fixtureEvidence) {
+        return buildReadyReplayFromGoEvidence(fixtureEvidence, options)
       }
       const currentRequesterPlayerId = options.currentRequesterPlayerId
       const allowOwnerDebug =
@@ -261,6 +281,7 @@ const buildReadyReplayFromGoEvidence = (
 ): ReplayPageData =>
   buildReadyReplayFromPublicEvidence({
     metadata: evidence.metadata,
+    contract: toMatchExecutionReplayEvidenceV1(evidence),
     projection: evidence.projection,
     options,
   })

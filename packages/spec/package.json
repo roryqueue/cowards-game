@@ -14,7 +14,7 @@
     "contract:generate": "pnpm exec tsx scripts/generate-service-openapi.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run spec.test.ts service-contract.test.ts"
+    "test": "vitest run spec.test.ts service-contract.test.ts match-execution-contract.test.ts"
   },
   "dependencies": {
     "zod": "^4.4.3"

@@ -1057,6 +1057,19 @@ textarea {
   padding: 10px;
 }
 
+.replay-evidence-panel .replay-details-grid {
+  grid-template-columns: 1fr;
+  gap: 2px;
+}
+
+.replay-evidence-panel .replay-details-grid dt {
+  margin-top: 8px;
+}
+
+.replay-evidence-panel .replay-details-grid dt:first-child {
+  margin-top: 0;
+}
+
 .evidence-panel {
   margin-top: 12px;
 }

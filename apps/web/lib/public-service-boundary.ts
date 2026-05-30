@@ -1,12 +1,14 @@
-import type {
-  MatchId,
-  MatchSetId,
-  PublicMatchSetResultDto,
-  PublicPlayerProfileDto,
-  PublicReplayMetadataServiceDto,
-  PublicStrategyCardDto,
-  PublicTrialLadderSeasonDto,
-  StrategyId,
+import {
+  toMatchExecutionMatchSetSummaryV1,
+  type MatchExecutionMatchSetSummaryV1,
+  type MatchId,
+  type MatchSetId,
+  type PublicMatchSetResultDto,
+  type PublicPlayerProfileDto,
+  type PublicReplayMetadataServiceDto,
+  type PublicStrategyCardDto,
+  type PublicTrialLadderSeasonDto,
+  type StrategyId,
 } from "@cowards/spec"
 import {
   getCurrentPublicReadUser,
@@ -34,6 +36,8 @@ export interface PublicReadMatchSetResultDto extends Omit<
   PublicMatchSetResultDto,
   "entrants" | "matches"
 > {
+  contract: MatchExecutionMatchSetSummaryV1
+  lifecycle: MatchExecutionMatchSetSummaryV1["lifecycle"]
   currentUser: PublicReadUser | null
   entrants: PublicReadEntrantDto[]
   matches: PublicReadMatchLedgerRow[]
@@ -50,6 +54,7 @@ const decodePathId = <T extends string>(value: T): T => {
 const toPublicReadMatchSetResultDto = (
   result: PublicMatchSetResultDto,
   currentUser: PublicReadUser | null,
+  contract: MatchExecutionMatchSetSummaryV1,
 ): PublicReadMatchSetResultDto => {
   const entrantById = new Map(
     result.entrants.map((entrant) => [entrant.entrantId, entrant]),
@@ -83,6 +88,8 @@ const toPublicReadMatchSetResultDto = (
   })
   return {
     ...result,
+    contract,
+    lifecycle: contract.lifecycle,
     currentUser,
     entrants,
     matches,
@@ -97,7 +104,11 @@ export const getPublicMatchSetResult = async (
     getCurrentPublicReadUser(),
   ])
   return summary
-    ? toPublicReadMatchSetResultDto(summary.result, currentUser)
+    ? toPublicReadMatchSetResultDto(
+        summary.result,
+        currentUser,
+        toMatchExecutionMatchSetSummaryV1(summary),
+      )
     : null
 }
 

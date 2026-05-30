@@ -8,6 +8,7 @@ import {
 import { getAccountSession } from "./account-service-boundary.js"
 import { CompetitiveInputError } from "./competitive-errors.js"
 import { isGoBackendServiceUnavailableError } from "./go-backend-service-client.js"
+import { createMatchExecutionFixturePublicReadClient } from "./match-execution-fixture-adapter.js"
 
 export type PublicReadBackendOwner = "typescript" | "go"
 export type PublicReadRouteId =
@@ -151,9 +152,16 @@ export const createPublicReadService = ({
           ...(fetchImpl ? { fetchImpl } : {}),
         })
       : null)
+  const matchExecutionFixtureClient =
+    createMatchExecutionFixturePublicReadClient(env)
 
   return {
     async getPublicMatchSetSummary(matchSetId) {
+      const fixture =
+        await matchExecutionFixtureClient?.getPublicMatchSetSummary(matchSetId)
+      if (fixture) {
+        return fixture
+      }
       assertRouteGoSelected("getPublicMatchSetSummary", routeOwnership)
       return requireGoClient(
         "getPublicMatchSetSummary",
@@ -161,6 +169,11 @@ export const createPublicReadService = ({
       ).getPublicMatchSetSummary(matchSetId)
     },
     async getPublicReplayMetadata(matchId) {
+      const fixture =
+        await matchExecutionFixtureClient?.getPublicReplayMetadata(matchId)
+      if (fixture) {
+        return fixture
+      }
       assertRouteGoSelected("getPublicReplayMetadata", routeOwnership)
       return requireGoClient(
         "getPublicReplayMetadata",

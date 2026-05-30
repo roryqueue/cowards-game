@@ -3,6 +3,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import {
+  getMatchExecutionContractFixtureByMatchSetId,
   publicStrategyPageExample,
   type PublicStrategyPageServiceDto,
 } from "@cowards/spec"
@@ -261,6 +262,26 @@ describe("public read route ownership", () => {
       service.getPublicStrategyPage("strategy:demo"),
     ).rejects.toThrow(
       "getPublicStrategyPage Go ownership requires COWARDS_GO_BACKEND_URL",
+    )
+  })
+
+  it("serves explicit Match execution fixtures without requiring Go", async () => {
+    const service = createPublicReadService({
+      env: { COWARDS_ENABLE_MATCH_EXECUTION_FIXTURES: "1" },
+    })
+    const fixture = getMatchExecutionContractFixtureByMatchSetId(
+      "match-set:fixture:unavailable-runtime",
+    )
+
+    await expect(
+      service.getPublicMatchSetSummary(
+        "match-set%3Afixture%3Aunavailable-runtime",
+      ),
+    ).resolves.toEqual(fixture?.service.matchSetSummary)
+    await expect(
+      service.getPublicMatchSetSummary("match-set:unknown"),
+    ).rejects.toThrow(
+      "getPublicMatchSetSummary Go ownership requires COWARDS_GO_BACKEND_URL",
     )
   })
 })

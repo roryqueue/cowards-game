@@ -1,6 +1,7 @@
 import {
   COMPATIBILITY_VERSIONS,
   SERVICE_API_VERSION,
+  getMatchExecutionContractFixtureByMatchId,
   type Chronicle,
   type PublicReplayEvidenceServiceDto,
 } from "@cowards/spec"
@@ -552,6 +553,29 @@ describe("Match replay server facade", () => {
     await expect(
       server.getPublicReplayMetadata("match:missing"),
     ).resolves.toBeNull()
+  })
+
+  it("serves Match execution replay fixtures through the public adapter gate", async () => {
+    const server = createMatchReplayServer({
+      env: { COWARDS_ENABLE_MATCH_EXECUTION_FIXTURES: "1" },
+    })
+    const fixture = getMatchExecutionContractFixtureByMatchId(
+      "match:fixture:public-safe-replay",
+    )
+
+    await expect(
+      server.getPublicReplayMetadata("match%3Afixture%3Apublic-safe-replay"),
+    ).resolves.toEqual(fixture?.service.replayMetadata)
+
+    const replay = await server.getMatchReplay(
+      "match%3Afixture%3Apublic-safe-replay",
+    )
+    expect(replay.status).toBe("ready")
+    if (replay.status === "ready") {
+      expect(replay.metadata.matchId).toBe("match:fixture:public-safe-replay")
+      expect(replay.projection.viewer.access).toBe("public")
+      expect(replay.states[0]?.board.soldiers.length).toBe(2)
+    }
   })
 
   it("does not expose private Chronicle fields in public replay metadata", async () => {

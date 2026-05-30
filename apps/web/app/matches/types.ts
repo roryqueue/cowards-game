@@ -6,6 +6,7 @@ import type {
   FullBoardSnapshot,
   JsonValue,
   MatchId,
+  MatchExecutionReplayEvidenceV1,
   MatchOutcome,
   PlayerId,
   SoldierInactivityExplanationDto,
@@ -73,6 +74,7 @@ export interface ReplayReadyDto {
   status: "ready"
   mode: ReplayViewMode
   metadata: ReplayMetadataDto
+  contract?: MatchExecutionReplayEvidenceV1 | undefined
   projection: ChronicleProjection
   timeline: ReplayTimelineEntryDto[]
   states: ReplayStateDto[]

@@ -356,6 +356,7 @@ export interface BuildReadyReplayFromChronicleInput {
 export interface BuildReadyReplayFromPublicEvidenceInput {
   projection: ChronicleProjection
   metadata: ReplayMetadataDto
+  contract?: ReplayReadyDto["contract"] | undefined
   options?: GetMatchReplayOptions | undefined
 }
 
@@ -513,6 +514,7 @@ export const buildReadyReplayFromStoredChronicle = (
 export const buildReadyReplayFromPublicEvidence = ({
   projection,
   metadata,
+  contract,
   options = {},
 }: BuildReadyReplayFromPublicEvidenceInput): ReplayPageData => {
   try {
@@ -548,6 +550,7 @@ export const buildReadyReplayFromPublicEvidence = ({
       status: "ready",
       mode: "public",
       metadata,
+      ...(contract === undefined ? {} : { contract }),
       projection,
       timeline,
       states,

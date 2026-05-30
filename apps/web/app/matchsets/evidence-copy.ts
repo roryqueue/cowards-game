@@ -1,4 +1,5 @@
 import type {
+  MatchExecutionLifecycleV1,
   PublicMatchEvidenceDto,
   PublicMatchSetResultDto,
 } from "@cowards/spec"
@@ -35,18 +36,26 @@ const matchReasonLabel = (
   }
 }
 
-const statusLabel = (result: PublicMatchSetResultDto): string => {
-  if (result.status === "queued" || result.status === "accepted") {
+type PublicMatchSetEvidenceInput = PublicMatchSetResultDto & {
+  lifecycle?: MatchExecutionLifecycleV1 | undefined
+}
+
+const statusLabel = (result: PublicMatchSetEvidenceInput): string => {
+  const state = result.lifecycle?.state ?? result.status
+  if (state === "queued" || state === "accepted") {
     return "Queued; Go owns the job lifecycle until Matches start."
   }
-  if (result.status === "running") {
+  if (state === "running") {
     return "Running or slow; exhibition Matches remain bounded by outer MatchSet/job budgets."
   }
-  if (result.status === "complete") {
+  if (state === "complete") {
     return "Complete; scoring and replay publication are Go-owned."
   }
-  if (result.status === "degraded") {
-    return "Degraded; at least one Match produced public-safe partial or failure evidence."
+  if (state === "degraded") {
+    return "Degraded; terminal partial public evidence, not a counted clean outcome by default."
+  }
+  if (state === "unavailable") {
+    return "Unavailable; execution dependencies cannot currently provide public Match evidence."
   }
   return "Failed; public evidence is limited to safe status and reason categories."
 }
@@ -95,25 +104,41 @@ const matchStateSummary = (
 }
 
 export const matchSetEvidenceRows = (
-  result: PublicMatchSetResultDto,
+  result: PublicMatchSetEvidenceInput,
   entrantRuntimeLabels: readonly string[],
-): EvidenceRow[] => [
-  { label: "status", value: statusLabel(result) },
-  { label: "match states", value: matchStateSummary(result.matches) },
-  { label: "retry policy", value: retryPolicy(result.matches) },
-  { label: "timeout budget", value: reliabilityBudgetCue },
-  {
-    label: "runtime evidence",
-    value: "Public runtime labels below; execution-path proof is gated.",
-  },
-  { label: "candidate lane", value: candidateLaneCue },
-  {
-    label: "proof limits",
-    value: "Signed-in reliability proofs use bounded cycles, not stress tests.",
-  },
-  { label: "entrants", value: entrantRuntimeLabels.join(", ") },
-  { label: "privacy", value: publicReliabilityPrivacyCue },
-]
+): EvidenceRow[] => {
+  const lifecycle = result.lifecycle
+  return [
+    { label: "status", value: statusLabel(result) },
+    ...(lifecycle
+      ? [
+          {
+            label: "lifecycle",
+            value: `${lifecycle.state}; ${lifecycle.terminal ? "terminal" : "non-terminal"}; ${lifecycle.retryDisposition}`,
+          },
+          {
+            label: "availability",
+            value: `result: ${lifecycle.resultAvailability}; replay: ${lifecycle.replayAvailability}`,
+          },
+        ]
+      : []),
+    { label: "match states", value: matchStateSummary(result.matches) },
+    { label: "retry policy", value: retryPolicy(result.matches) },
+    { label: "timeout budget", value: reliabilityBudgetCue },
+    {
+      label: "runtime evidence",
+      value: "Public runtime labels below; execution-path proof is gated.",
+    },
+    { label: "candidate lane", value: candidateLaneCue },
+    {
+      label: "proof limits",
+      value:
+        "Signed-in reliability proofs use bounded cycles, not stress tests.",
+    },
+    { label: "entrants", value: entrantRuntimeLabels.join(", ") },
+    { label: "privacy", value: publicReliabilityPrivacyCue },
+  ]
+}
 
 export const publicPrivacyProvenanceCue =
   "source, private memory, objectives, owner debug data, raw diagnostics, and runtime internals"
@@ -132,6 +157,14 @@ export const replayEvidenceRows = (data: ReplayReadyDto): EvidenceRow[] => [
     label: "runtime evidence",
     value: "Replay DTO shows public outcome evidence, not runtime internals.",
   },
+  ...(data.contract
+    ? [
+        {
+          label: "lifecycle",
+          value: `${data.contract.lifecycle.state}; ${data.contract.lifecycle.retryDisposition}; replay: ${data.contract.lifecycle.replayAvailability}`,
+        },
+      ]
+    : []),
   { label: "privacy", value: publicReliabilityPrivacyCue },
 ]
 
