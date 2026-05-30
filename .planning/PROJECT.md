@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.26 Match Execution Reliability, Retry Semantics, and Failure Drills on 2026-05-30
-**Current milestone:** Awaiting next milestone
-**Status:** v1.26 shipped. Go/runtime-service execution reliability is hardened behind the frozen `match-execution-app-v1` boundary with no app-facing contract change.
+**Current milestone:** v1.28 Match Execution Operations, Recovery, and Incident Drills
+**Status:** v1.28 planning started in workstream `v1-28-match-execution-operations-recovery-and-incident-drills`. v1.26 shipped with Go/runtime-service execution reliability hardened behind the frozen `match-execution-app-v1` boundary with no app-facing contract change.
 **Last audit:** v1.26 audit passed after adding Go-owned retry/failure classification, public-safe execution metadata projection, post-claim request-build failure closure, runtime-service HTTP redaction, fixture/browser proof, and boundary monitor coverage.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
@@ -12,6 +12,18 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.28 Match Execution Operations, Recovery, and Incident Drills
+
+**Goal:** Build the operational recovery layer on the execution side behind the frozen `match-execution-app-v1` boundary so execution failures are recoverable, auditable, and drillable without expanding public result/replay contracts except for strictly backward-compatible additions proven necessary.
+
+**Target features:**
+- Dead-letter or quarantine exhausted and non-retryable execution jobs with deterministic, bounded, public-safe state.
+- Deterministic internal requeue and rerun controls for operator recovery only, with idempotency guards against duplicate Match completion, scoring, Chronicle persistence, or public evidence.
+- Live local failure-drill harness spanning Postgres, Go backend, runtime-service, and browser evidence.
+- Recovery drills for stopped runtime-service, unavailable runtime, malformed envelopes, stale artifacts, timeouts, stale leases, duplicate workers, and interrupted MatchSet execution.
+- Operator-only evidence and redaction hardening that keep raw diagnostics and private runtime details out of public result/replay outputs by default.
+- Contract compatibility proof against `match-execution-app-v1`, preserving JS/TS counted play, Python/Rust/Zig non-counted exhibition beta, and Preview 1 stdin/stdout JSON as the active WASM/WASI ABI.
 
 ## Latest Shipped Milestone: v1.26 Match Execution Reliability, Retry Semantics, and Failure Drills
 
@@ -632,4 +644,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-30 after shipping v1.26 milestone*
+*Last updated: 2026-05-30 after starting v1.28 milestone*
