@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness on 2026-05-25
-**Current milestone:** none active
-**Status:** v1.23 shipped. Rust and Zig are promoted to non-counted exhibition beta only after signed-in multi-compiler proof, runtime hardening evidence, Zig ergonomics, ABI evidence, privacy checks, replay plausibility, and no-fallback gates passed.
+**Current milestone:** v1.24 Runtime Abuse Lab and ABI Future-Proofing
+**Status:** v1.24 planning started. The milestone will build a runtime abuse lab and production-sandbox readiness matrix across current runtime lanes while spiking direct exports and Component Model/WIT as future ABI paths only.
 **Last audit:** v1.23 audit passed with Rust/Zig promoted only to non-counted exhibition beta, JS/TS preserved as the counted Strategy path, Python preserved as non-counted exhibition beta, and WASM/WASI kept as readiness evidence rather than production sandbox certification.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
@@ -12,6 +12,20 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.24 Runtime Abuse Lab and ABI Future-Proofing
+
+**Goal:** Build a serious runtime abuse lab and production-sandbox readiness matrix across current Strategy runtime lanes, while spiking direct exports and Component Model/WIT as future ABI evidence without changing the active execution path.
+
+**Target features:**
+- Reuse v1.23 as the baseline and preserve JS/TS counted support, Python/Rust/Zig non-counted exhibition beta status, Go orchestration ownership, runtime-service hostile-code ownership, and public-output privacy.
+- Define a runtime abuse threat model, claims contract, taxonomy, and evidence schema that distinguish Strategy failure, system failure, unsupported runtime lanes, sandbox readiness evidence, and actual production sandbox certification.
+- Run abuse probes across JS/TS, Python, Rust, and Zig where applicable, including stopped, stale, mismatched, malformed, unavailable, timeout, capability-invalid, oversized, crash/trap, and no-fallback cases.
+- Produce a public-safe production-sandbox readiness matrix that states what each runtime lane proves, does not prove, and would require before stronger sandbox claims.
+- Spike direct exports and Component Model/WIT with Rust/Zig parity where feasible; otherwise record fail-loud non-promotion evidence.
+- Keep WASI Preview 1 stdin/stdout JSON as the active WASM/WASI execution ABI unless an explicit future decision promotes a replacement.
+- Rerun signed-in multi-runtime regression proof enough to show JS/TS counted support, Python beta, Rust beta, Zig beta, result pages, replay pages, public-safe evidence, and no private data leaks still work.
+- Close with explicit ABI, sandbox-readiness, rollback, and migration criteria decisions; do not certify production sandbox readiness or promote any non-JS counted path unless evidence genuinely supports it and says so.
 
 ## Latest Shipped Milestone: v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness
 
@@ -566,8 +580,10 @@ Planning archives live under `.planning/milestones/`:
 | Separate timeout budgets by layer | v1.19 showed whole-Match service timeout is different from per-Strategy caps; v1.20 made Strategy call, Match, MatchSet/job, runtime-service HTTP, and browser proof budgets explicit. | ✓ Implemented in v1.20 |
 | Use WASI Preview 1 for the first immutable WASM Strategy proof | v1.21 preferred the simplest executable multi-language path: WASI Preview 1 stdin/stdout JSON envelopes through Wasmtime, with direct exports and component model documented as future evolution rather than forced into the first proof. | ✓ Implemented in v1.21 |
 | Treat Rust WASM as exhibition alpha until proof matures | Rust can prove the immutable WASM artifact direction, but counted/ranked/ladder promotion requires separate sandbox, determinism, toolchain, artifact, replay, privacy, rollback, abuse, and operational evidence. | — Pending |
-| Treat Rust/Zig beta as non-counted exhibition beta only | v1.23 may improve the product label for Rust and/or Zig, but any promotion must remain outside counted, ranked, ladder, gauntlet, broad production multi-language, and production sandbox claims. | — Pending |
-| Keep ABI evolution evidence separate from execution-path promotion | Direct exports and component model/WIT are important candidates, but v1.23 should not silently replace the Preview 1 stdin/stdout JSON runtime path without deterministic memory ownership, schema validation, resource caps, parity, and rollback evidence. | — Pending |
+| Treat Rust/Zig beta as non-counted exhibition beta only | v1.23 improved the product label for Rust and Zig, but promotion remains outside counted, ranked, ladder, gauntlet, broad production multi-language, and production sandbox claims. | ✓ Implemented in v1.23 |
+| Keep ABI evolution evidence separate from execution-path promotion | Direct exports and component model/WIT are important candidates, but v1.23 did not replace the Preview 1 stdin/stdout JSON runtime path without deterministic memory ownership, schema validation, resource caps, parity, and rollback evidence. | ✓ Implemented in v1.23 |
+| Treat runtime abuse evidence as claim calibration | v1.24 should expand hostile probes and sandbox-readiness evidence without turning readiness matrices into production sandbox certification or non-JS counted promotion. | — Pending |
+| Require explicit ABI migration criteria before replacement | Direct exports and Component Model/WIT can become future paths only after parity, compatibility, rollback, caps, schema, privacy, and no-fallback evidence support a separate promotion decision. | — Pending |
 
 ## Constraints
 
@@ -588,4 +604,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-25 after starting v1.23 milestone*
+*Last updated: 2026-05-30 after starting v1.24 milestone*

@@ -26,16 +26,19 @@
 - [x] **v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha** - Phases 140-147, shipped 2026-05-25. See `.planning/milestones/v1.21-ROADMAP.md`.
 - [x] **v1.22 WASM/WASI Multi-Compiler Alpha and Runtime Hardening** - Phases 148-155, shipped 2026-05-25. See `.planning/milestones/v1.22-ROADMAP.md`.
 - [x] **v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness** - Phases 156-163, shipped 2026-05-25. See `.planning/milestones/v1.23-ROADMAP.md`.
+- [ ] **v1.24 Runtime Abuse Lab and ABI Future-Proofing** - Phases 164-173, active.
 
 ## Active Milestone
 
-No active milestone. Start a fresh milestone with `$gsd-new-milestone`; `.planning/REQUIREMENTS.md` is intentionally removed at milestone close.
+**v1.24 Runtime Abuse Lab and ABI Future-Proofing**
+
+**Goal:** Build a serious runtime abuse lab and production-sandbox readiness matrix across current Strategy runtime lanes, while spiking direct exports and Component Model/WIT as future ABI paths without silently changing Match execution.
+
+**Decision baseline:** JS/TS remains counted. Python, Rust, and Zig remain non-counted exhibition beta. Preview 1 stdin/stdout JSON remains the active WASM/WASI execution ABI unless a future explicit decision promotes a replacement. No production sandbox certification is claimed unless final evidence explicitly supports it.
 
 ## Latest Shipped Milestone
 
 **v1.23 WASM/WASI Rust/Zig Exhibition Beta and ABI Readiness**
-
-**Goal:** Promote Rust and Zig to non-counted exhibition beta only if the signed-in multi-compiler proof, runtime hardening evidence, Zig ergonomics, ABI evidence, privacy, and no-fallback gates passed.
 
 **Decision:** Rust beta / Zig beta, both non-counted exhibition beta only.
 
@@ -43,130 +46,162 @@ No active milestone. Start a fresh milestone with `$gsd-new-milestone`; `.planni
 
 | Phase | Name | Goal | Requirements | Success Criteria |
 | --- | --- | --- | --- | --- |
-| 156 | Baseline, Beta Criteria, and Regression Floor | Define the v1.22 floor and explicit Rust/Zig beta gates before implementation. | BASE-01..BASE-06 | Complete |
-| 157 | Zig Ergonomics and Safe Helper/Starter Layer | Improve Zig authoring only where helper import/capability evidence stays safe. | ERG-01..ERG-05 | Complete |
-| 158 | Rust/Zig Beta Readiness Hardening Gates | Rerun and strengthen compiler/runtime hardening evidence for Rust and Zig. | HARD-01..HARD-06 | Complete |
-| 159 | ABI Proof Spike: JSON vs Direct Exports vs Component Model/WIT | Compare ABI candidates without silently changing the active execution path. | ABI-01..ABI-06 | Complete |
-| 160 | Signed-In Multi-Compiler Proof | Save JS/TS, Rust, and Zig revisions and run required non-counted exhibitions. | PROOF-01..PROOF-07 | Complete |
-| 161 | Workshop/Exhibition/Result/Replay Beta UX Labels and Privacy Review | Ensure UX labels, public evidence, replay plausibility, and privacy match actual promotion state. | UX-01..UX-05 | Complete |
-| 162 | Boundary Monitors, No-Fallback Drills, and Artifact Compatibility Evidence | Make boundary, no-fallback, artifact compatibility, and public-safe evidence fail loud. | MON-01..MON-05 | Complete |
-| 163 | Promotion Decision, Audit, Archive, Commit, and Tag | Decide Rust/Zig promotion outcome and close the milestone honestly. | DEC-01..DEC-04 | Complete |
+| 164 | Baseline, Threat Model, and Claims Contract | Define the v1.23 floor, hostile Strategy threat model, and allowed v1.24 claims before probes begin. | BASE-01..BASE-06 | 5 |
+| 165 | Runtime Abuse Taxonomy and Evidence Schema | Build the cross-runtime abuse taxonomy and public-safe evidence format. | LAB-01..LAB-06 | 5 |
+| 166 | JS/TS and Python Runtime Abuse Probes | Run and record abuse/no-fallback probes across JS/TS counted and Python beta lanes. | JSPY-01..JSPY-07 | 5 |
+| 167 | WASM/WASI Rust/Zig Abuse Probes | Run and record abuse/no-fallback probes across Rust/Zig WASM/WASI beta lanes. | WASM-01..WASM-07 | 5 |
+| 168 | Cross-Runtime Production-Sandbox Readiness Matrix | Produce a public-safe matrix of what each runtime lane proves, does not prove, and needs next. | MATRIX-01..MATRIX-05 | 5 |
+| 169 | Direct-Export ABI Proof Spike | Spike direct exports as a future ABI option without changing Match execution. | DEX-01..DEX-06 | 5 |
+| 170 | Component Model/WIT ABI Proof Spike | Spike Component Model/WIT as a future ABI option without changing Match execution. | WIT-01..WIT-06 | 5 |
+| 171 | ABI Decision, Rollback, and Migration Criteria | Decide active ABI status and write fail-closed migration/rollback criteria. | ABIDEC-01..ABIDEC-06 | 5 |
+| 172 | Signed-In Multi-Runtime Regression Proof and Public Replay/Privacy Review | Prove JS/TS counted support and Python/Rust/Zig beta regressions still work with public-safe result/replay evidence. | REG-01..REG-08 | 5 |
+| 173 | Audit, Archive, Commit, and Tag | Review, fix, decide claims, archive, commit, and tag v1.24. | CLOSE-01..CLOSE-05 | 5 |
 
 ## Phase Details
 
-### Phase 156: Baseline, Beta Criteria, and Regression Floor
+### Phase 164: Baseline, Threat Model, and Claims Contract
 
-**Goal:** Define the v1.22 floor and explicit Rust/Zig beta gates before implementation.
+**Goal:** Define the v1.23 floor, hostile Strategy threat model, and allowed v1.24 claims before probes begin.
 
 **Requirements:** BASE-01, BASE-02, BASE-03, BASE-04, BASE-05, BASE-06
 
 **Success criteria:**
-1. v1.22 Rust/Zig/WASM/WASI evidence is summarized as the regression floor.
-2. Rust/Zig beta criteria are written as non-counted exhibition beta criteria only.
-3. Split promotion outcomes are explicit and accepted.
-4. JS/TS counted support and Python beta status are protected by regression gates.
-5. Planning docs reject counted/ranked/ladder/gauntlet/sandbox overclaims.
+1. v1.23 proof, promotion, ABI, privacy, and no-fallback evidence is summarized as the v1.24 floor.
+2. Threat model covers hostile Strategy behavior across JS/TS, Python, Rust, Zig, and WASM/WASI lanes.
+3. Claims contract separates readiness evidence, non-counted exhibition beta, counted support, and production sandbox certification.
+4. Planning artifacts preserve JS/TS counted status and Python/Rust/Zig non-counted exhibition beta status.
+5. Go/runtime-service ownership and public-output privacy boundaries are explicitly protected.
 
-### Phase 157: Zig Ergonomics and Safe Helper/Starter Layer
+### Phase 165: Runtime Abuse Taxonomy and Evidence Schema
 
-**Goal:** Improve Zig authoring only where helper import/capability evidence stays safe.
+**Goal:** Build the cross-runtime abuse taxonomy and public-safe evidence format.
 
-**Requirements:** ERG-01, ERG-02, ERG-03, ERG-04, ERG-05
-
-**Success criteria:**
-1. Zig helper or starter layer is easier to author than the v1.22 proof.
-2. Helper import/capability evidence is generated and inspectable.
-3. Forbidden capability imports fail loud before exposure.
-4. Workshop copy remains honest about Zig limitations and non-counted status.
-5. Zig can remain alpha if ergonomics evidence is weaker than Rust.
-
-### Phase 158: Rust/Zig Beta Readiness Hardening Gates
-
-**Goal:** Rerun and strengthen compiler/runtime hardening evidence for Rust and Zig.
-
-**Requirements:** HARD-01, HARD-02, HARD-03, HARD-04, HARD-05, HARD-06
+**Requirements:** LAB-01, LAB-02, LAB-03, LAB-04, LAB-05, LAB-06
 
 **Success criteria:**
-1. Rust compile/artifact/runtime evidence passes or fails loud.
-2. Zig compile/artifact/runtime evidence passes or fails loud.
-3. Hardening probes cover timeout, memory, caps, malformed output, schema, traps, stale, and missing artifact paths.
-4. Strategy failures and system failures remain distinct.
-5. Evidence language stays candidate/beta readiness only.
+1. Taxonomy covers capability, resource, ABI, artifact, unavailable-lane, malformed-output, failure-class, and privacy probes.
+2. Evidence schema records expected/observed outcomes and promotion impact.
+3. Strategy failures and system failures are distinct in evidence.
+4. Unsupported or unavailable lanes fail loud instead of counting as sandbox passes.
+5. Evidence commands are local, repeatable, and public-safe by default.
 
-### Phase 159: ABI Proof Spike: JSON vs Direct Exports vs Component Model/WIT
+### Phase 166: JS/TS and Python Runtime Abuse Probes
 
-**Goal:** Compare ABI candidates without silently changing the active execution path.
+**Goal:** Run and record abuse/no-fallback probes across JS/TS counted and Python beta lanes.
 
-**Requirements:** ABI-01, ABI-02, ABI-03, ABI-04, ABI-05, ABI-06
-
-**Success criteria:**
-1. Preview 1 JSON evidence is current and tied to the active execution path.
-2. Direct exports produce proof or a fail-loud non-promotion decision.
-3. Component model/WIT produces proof or a fail-loud non-promotion decision.
-4. No spike ABI becomes Match execution without explicit approval.
-5. ABI compatibility and rollback notes are written.
-
-### Phase 160: Signed-In Multi-Compiler Proof
-
-**Goal:** Save JS/TS, Rust, and Zig revisions and run required non-counted exhibitions.
-
-**Requirements:** PROOF-01, PROOF-02, PROOF-03, PROOF-04, PROOF-05, PROOF-06, PROOF-07
+**Requirements:** JSPY-01, JSPY-02, JSPY-03, JSPY-04, JSPY-05, JSPY-06, JSPY-07
 
 **Success criteria:**
-1. Signed-in account saves one JS/TS, one Rust, and one Zig Strategy Revision.
-2. Saved Rust and Zig revisions use immutable artifact metadata for Match execution.
-3. JS/TS-vs-Rust and Rust-vs-Rust non-counted exhibitions complete.
-4. Rust-vs-Zig and Zig-vs-Zig non-counted exhibitions complete or fail loud with promotion blocked.
-5. MatchSet result and replay pages open for proof evidence.
+1. JS/TS abuse probes cover timeout, oversized output, malformed result, invalid schema/action, thrown error, unavailable runtime, and forbidden capabilities where applicable.
+2. Python abuse probes cover timeout, oversized output, malformed result, invalid schema/action, crash, unavailable runtime, and forbidden capabilities where applicable.
+3. JS/TS failures do not execute Strategy code in web/API/Go.
+4. Python failures do not fall back to JS/TS, Go source execution, or stale artifacts.
+5. Evidence preserves JS/TS counted semantics and Python non-counted exhibition beta semantics.
 
-### Phase 161: Workshop/Exhibition/Result/Replay Beta UX Labels and Privacy Review
+### Phase 167: WASM/WASI Rust/Zig Abuse Probes
 
-**Goal:** Ensure UX labels, public evidence, replay plausibility, and privacy match actual promotion state.
+**Goal:** Run and record abuse/no-fallback probes across Rust/Zig WASM/WASI beta lanes.
 
-**Requirements:** UX-01, UX-02, UX-03, UX-04, UX-05
-
-**Success criteria:**
-1. Workshop, account save, exhibition creation, results, and replay labels match actual Rust/Zig promotion state.
-2. Counted/ranked/ladder/gauntlet paths exclude Rust/Zig.
-3. Public result evidence is understandable and source-free.
-4. Replay board starts are plausible and in bounds.
-5. Privacy scans find no private Strategy or runtime data leaks in public pages.
-
-### Phase 162: Boundary Monitors, No-Fallback Drills, and Artifact Compatibility Evidence
-
-**Goal:** Make boundary, no-fallback, artifact compatibility, and public-safe evidence fail loud.
-
-**Requirements:** MON-01, MON-02, MON-03, MON-04, MON-05
+**Requirements:** WASM-01, WASM-02, WASM-03, WASM-04, WASM-05, WASM-06, WASM-07
 
 **Success criteria:**
-1. Boundary monitors catch backend ownership creep.
-2. Boundary monitors catch Strategy execution in web/API/Go.
-3. No-fallback drills block stopped, unavailable, stale, or mismatched Rust/Zig runtime paths.
-4. Artifact compatibility evidence records target, WASI, ABI, toolchain, hash, size, status, retention, and rollback.
-5. Monitor artifacts are public-safe.
+1. Rust probes cover timeout/fuel, memory, stdio/result cap, malformed JSON, invalid schema/action, panic/trap/abort, unavailable runtime, stale/missing/mismatched artifacts, and forbidden imports.
+2. Zig probes cover timeout/fuel, memory, stdio/result cap, malformed JSON, invalid schema/action, panic/trap/abort, unavailable runtime, stale/missing/mismatched artifacts, and forbidden imports.
+3. Runtime mismatch, ABI mismatch, and target mismatch fail closed.
+4. Rust/Zig failures do not fall back to JS/TS, Python, mutable source execution, stale artifacts, or alternate ABI execution.
+5. Evidence remains non-counted exhibition beta readiness evidence only.
 
-### Phase 163: Promotion Decision, Audit, Archive, Commit, and Tag
+### Phase 168: Cross-Runtime Production-Sandbox Readiness Matrix
 
-**Goal:** Decide Rust/Zig promotion outcome and close the milestone honestly.
+**Goal:** Produce a public-safe matrix of what each runtime lane proves, does not prove, and needs next.
 
-**Requirements:** DEC-01, DEC-02, DEC-03, DEC-04
+**Requirements:** MATRIX-01, MATRIX-02, MATRIX-03, MATRIX-04, MATRIX-05
 
 **Success criteria:**
-1. Final promotion decision chooses one allowed split outcome.
-2. Decision preserves JS/TS counted support and Python non-counted exhibition beta.
-3. Audit verifies requirements, code review, UI/privacy review, signed-in proof, replay plausibility, and evidence gates.
-4. Planning artifacts are archived and active requirements are removed at milestone close.
-5. Commit and tag evidence is recorded.
+1. Matrix covers JS/TS, Python, Rust, Zig, WASM/WASI, direct exports, and Component Model/WIT.
+2. Each lane states proven evidence, non-evidence, production certification gaps, and next required proof.
+3. Matrix distinguishes local, CI, signed-in, operational, deployment, and external-review evidence.
+4. Matrix records no-fallback status for unavailable, stale, mismatched, malformed, and capability-invalid paths.
+5. Public summaries omit private diagnostics, source, memory, objectives, host paths, env values, tokens, DB details, package paths, and private runtime internals.
+
+### Phase 169: Direct-Export ABI Proof Spike
+
+**Goal:** Spike direct exports as a future ABI option without changing Match execution.
+
+**Requirements:** DEX-01, DEX-02, DEX-03, DEX-04, DEX-05, DEX-06
+
+**Success criteria:**
+1. Direct-export proof or fail-loud non-promotion artifact exists.
+2. Proof records memory ownership, allocation/free, buffer passing, encoding, caps, schema validation, and failure behavior.
+3. Rust and Zig parity is attempted where feasible and non-parity is recorded honestly.
+4. Direct-export artifacts are ineligible for Match execution without future promotion.
+5. Compatibility and rollback impact against Preview 1 JSON artifacts is documented.
+
+### Phase 170: Component Model/WIT ABI Proof Spike
+
+**Goal:** Spike Component Model/WIT as a future ABI option without changing Match execution.
+
+**Requirements:** WIT-01, WIT-02, WIT-03, WIT-04, WIT-05, WIT-06
+
+**Success criteria:**
+1. Component Model/WIT proof or fail-loud non-promotion artifact exists.
+2. Minimal Strategy WIT world/interface shape and tooling status are recorded.
+3. Wasmtime host integration, import surface, caps, validation, trap handling, and privacy behavior are recorded.
+4. Rust and Zig parity is attempted where feasible and non-parity is recorded honestly.
+5. Component Model/WIT artifacts are ineligible for Match execution without future promotion.
+
+### Phase 171: ABI Decision, Rollback, and Migration Criteria
+
+**Goal:** Decide active ABI status and write fail-closed migration/rollback criteria.
+
+**Requirements:** ABIDEC-01, ABIDEC-02, ABIDEC-03, ABIDEC-04, ABIDEC-05, ABIDEC-06
+
+**Success criteria:**
+1. ABI decision explicitly keeps or changes the active WASM/WASI execution ABI.
+2. Decision explains why direct exports and Component Model/WIT are or are not promoted.
+3. Unknown, stale, mismatched, or unpromoted ABI metadata fails closed.
+4. Migration criteria cover compatibility, schema, caps, privacy, replay, no-fallback, rollback, and coexistence.
+5. Decision preserves Go/runtime-service ownership and prevents Strategy execution in web/API/Go.
+
+### Phase 172: Signed-In Multi-Runtime Regression Proof and Public Replay/Privacy Review
+
+**Goal:** Prove JS/TS counted support and Python/Rust/Zig beta regressions still work with public-safe result/replay evidence.
+
+**Requirements:** REG-01, REG-02, REG-03, REG-04, REG-05, REG-06, REG-07, REG-08
+
+**Success criteria:**
+1. Signed-in proof records JS/TS counted Strategy support.
+2. Signed-in proof records Python, Rust, and Zig non-counted exhibition beta support.
+3. Result pages show public-safe runtime/evidence labels.
+4. Replay pages show plausible full Match starts with in-bounds visible Soldiers and terrain.
+5. Privacy and no-fallback scans pass for public result/replay output.
+
+### Phase 173: Audit, Archive, Commit, and Tag
+
+**Goal:** Review, fix, decide claims, archive, commit, and tag v1.24.
+
+**Requirements:** CLOSE-01, CLOSE-02, CLOSE-03, CLOSE-04, CLOSE-05
+
+**Success criteria:**
+1. Code review verifies abuse-lab, ABI-spike, no-fallback, privacy, and boundary changes.
+2. Validation verifies all requirements, readiness evidence, ABI decision, signed-in proof, replay plausibility, and privacy gates.
+3. Final decision states whether production sandbox certification remains unclaimed or is explicitly supported by evidence.
+4. Final decision preserves JS/TS counted support and non-JS non-counted status unless evidence explicitly changes it.
+5. Planning artifacts are archived, active requirements are removed at milestone close, and commit/tag evidence is recorded.
 
 ## Coverage
 
-- v1 requirements: 44 total
-- Mapped to phases: 44
+- v1 requirements: 62 total
+- Mapped to phases: 62
 - Unmapped: 0
 
 ## Next Up
 
-- Start a fresh milestone with `$gsd-new-milestone`.
+**Phase 164: Baseline, Threat Model, and Claims Contract** - Define the v1.23 floor, hostile Strategy threat model, and allowed v1.24 claims before probes begin.
+
+`$gsd-discuss-phase 164`
+
+Also: `$gsd-plan-phase 164` - skip discussion, plan directly.
 
 ---
-*Roadmap archived: 2026-05-25 after v1.23 milestone completion*
+*Roadmap created: 2026-05-30 after v1.24 milestone initialization*
