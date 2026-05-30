@@ -35,13 +35,13 @@ Build the operational recovery layer on the execution side behind the frozen `ma
 
 ### Dead-Letter and Quarantine Model
 
-- [ ] **QUAR-01**: Go-owned execution lifecycle can place exhausted retryable jobs and immediate non-retryable execution jobs into a deterministic private dead-letter or quarantine model.
-- [ ] **QUAR-02**: Quarantine state is bounded, queryable by operators, and tied to existing Match, MatchJob, MatchJobAttempt, MatchSet, and failure category data.
-- [ ] **QUAR-03**: Quarantine does not create a new public result/replay lifecycle state or expose operator-only details through `match-execution-app-v1`.
-- [ ] **QUAR-04**: Non-retryable malformed Strategy/runtime output and stale artifact failures fail closed and do not silently source-fallback, rebuild mutable artifacts, or retry as generic unavailable runtime failures.
-- [ ] **QUAR-05**: Quarantine records include redacted, allowlisted private evidence only and exclude source, memories, objectives, raw diagnostics, host paths, env values, tokens, DB details, package paths, and private runtime internals.
-- [ ] **QUAR-06**: Quarantine model is transactional with terminal job state and MatchSet refresh so derived private evidence cannot drift from source-of-truth execution state.
-- [ ] **QUAR-07**: Tests cover exhausted retryable quarantine, immediate non-retryable quarantine, stale artifact quarantine, duplicate quarantine attempts, and public projection compatibility.
+- [x] **QUAR-01**: Go-owned execution lifecycle can place exhausted retryable jobs and immediate non-retryable execution jobs into a deterministic private dead-letter or quarantine model.
+- [x] **QUAR-02**: Quarantine state is bounded, queryable by operators, and tied to existing Match, MatchJob, MatchJobAttempt, MatchSet, and failure category data.
+- [x] **QUAR-03**: Quarantine does not create a new public result/replay lifecycle state or expose operator-only details through `match-execution-app-v1`.
+- [x] **QUAR-04**: Non-retryable malformed Strategy/runtime output and stale artifact failures fail closed and do not silently source-fallback, rebuild mutable artifacts, or retry as generic unavailable runtime failures.
+- [x] **QUAR-05**: Quarantine records include redacted, allowlisted private evidence only and exclude source, memories, objectives, raw diagnostics, host paths, env values, tokens, DB details, package paths, and private runtime internals.
+- [x] **QUAR-06**: Quarantine model is transactional with terminal job state and MatchSet refresh so derived private evidence cannot drift from source-of-truth execution state.
+- [x] **QUAR-07**: Tests cover exhausted retryable quarantine, immediate non-retryable quarantine, stale artifact quarantine, duplicate quarantine attempts, and public projection compatibility.
 
 ### Internal Requeue and Rerun Controls
 
@@ -146,13 +146,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BASE-04 | Phase 201 | Complete |
 | BASE-05 | Phase 201 | Complete |
 | BASE-06 | Phase 201 | Complete |
-| QUAR-01 | Phase 202 | Planned |
-| QUAR-02 | Phase 202 | Planned |
-| QUAR-03 | Phase 202 | Planned |
-| QUAR-04 | Phase 202 | Planned |
-| QUAR-05 | Phase 202 | Planned |
-| QUAR-06 | Phase 202 | Planned |
-| QUAR-07 | Phase 202 | Planned |
+| QUAR-01 | Phase 202 | Complete |
+| QUAR-02 | Phase 202 | Complete |
+| QUAR-03 | Phase 202 | Complete |
+| QUAR-04 | Phase 202 | Complete |
+| QUAR-05 | Phase 202 | Complete |
+| QUAR-06 | Phase 202 | Complete |
+| QUAR-07 | Phase 202 | Complete |
 | OPS-01 | Phase 203 | Planned |
 | OPS-02 | Phase 203 | Planned |
 | OPS-03 | Phase 203 | Planned |
@@ -200,8 +200,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 57 total
-- Complete: 6
-- Planned: 51
+- Complete: 13
+- Planned: 44
 - Mapped to phases: 57
 - Unmapped: 0
 

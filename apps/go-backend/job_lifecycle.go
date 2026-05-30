@@ -188,7 +188,8 @@ func (lifecycle *matchJobLifecycle) recordAttemptFailure(ctx context.Context, in
 	if lifecycle == nil || lifecycle.pool == nil {
 		return "", errors.New("match job lifecycle requires a database pool")
 	}
-	details, err := json.Marshal(sanitizeMatchJobFailureDetails(input.Details))
+	sanitizedDetails := sanitizeMatchJobFailureDetails(input.Details)
+	details, err := json.Marshal(sanitizedDetails)
 	if err != nil {
 		return "", fmt.Errorf("encode failure details: %w", err)
 	}
@@ -255,6 +256,9 @@ func (lifecycle *matchJobLifecycle) recordAttemptFailure(ctx context.Context, in
 			return "", err
 		}
 		if err := refreshMatchSetsForMatchTx(ctx, tx, row.matchID); err != nil {
+			return "", err
+		}
+		if err := writeMatchExecutionQuarantineTx(ctx, tx, input, row.attempts, row.maxAttempts, row.matchID, failureCategory, sanitizedDetails); err != nil {
 			return "", err
 		}
 		status = "failed_system"

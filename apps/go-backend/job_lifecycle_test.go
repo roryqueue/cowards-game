@@ -68,6 +68,44 @@ func TestSanitizeMatchJobFailureDetails(t *testing.T) {
 	}
 }
 
+func TestMatchExecutionQuarantineHelpers(t *testing.T) {
+	if got := quarantineReasonForAttempt(3, 3, true); got != matchExecutionQuarantineRetryExhausted {
+		t.Fatalf("expected retry exhausted reason, got %q", got)
+	}
+	if got := quarantineReasonForAttempt(1, 3, false); got != matchExecutionQuarantineNonRetryable {
+		t.Fatalf("expected non-retryable reason, got %q", got)
+	}
+	evidence := sanitizeMatchExecutionOperatorEvidence(map[string]any{
+		"errorClass":      "RuntimeServiceSourceMismatch",
+		"retryable":       false,
+		"attemptNumber":   1,
+		"maxAttempts":     3,
+		"failureCategory": matchFailureCategoryStaleArtifact,
+		"details": map[string]any{
+			"workerId": "worker:go",
+			"reason":   "compiled-artifact-source-hash-mismatch",
+			"source":   "export default {}",
+			"stderr":   "host path /Users/secret",
+		},
+		"leaseToken": "secret",
+	})
+	bytes, err := json.Marshal(evidence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(bytes)
+	for _, forbidden := range []string{"export default", "stderr", "/Users/secret", "leaseToken", "secret"} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("operator evidence leaked %q in %s", forbidden, text)
+		}
+	}
+	for _, required := range []string{"RuntimeServiceSourceMismatch", "compiled-artifact-source-hash-mismatch", matchFailureCategoryStaleArtifact} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("operator evidence omitted %q in %s", required, text)
+		}
+	}
+}
+
 func TestMatchJobLifecycleIntegration(t *testing.T) {
 	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
 	if databaseURL == "" {
@@ -193,6 +231,7 @@ func TestMatchJobLifecycleIntegration(t *testing.T) {
 		}
 		assertPhase97Job(t, ctx, pool, ids.jobID, "queued", 1, "", "")
 		assertPhase97Attempt(t, ctx, pool, ids.jobID, 1, "failed_system")
+		assertNoPhase97Quarantine(t, ctx, pool, ids.jobID)
 	})
 
 	t.Run("exhausted failure marks job and match failed_system", func(t *testing.T) {
@@ -224,6 +263,7 @@ func TestMatchJobLifecycleIntegration(t *testing.T) {
 		}
 		assertPhase97Job(t, ctx, pool, ids.jobID, "failed_system", 1, "worker:go:exhausted", "lease:go:exhausted")
 		assertPhase97MatchStatus(t, ctx, pool, ids.matchID, "failed_system")
+		assertPhase97Quarantine(t, ctx, pool, ids.jobID, matchExecutionQuarantineRetryExhausted, matchFailureCategorySystemFailure, true, 1)
 		if _, err := lifecycle.recordAttemptFailure(ctx, recordAttemptFailureInput{
 			JobID:        claimed.JobID,
 			LeaseToken:   claimed.LeaseToken,
@@ -235,6 +275,43 @@ func TestMatchJobLifecycleIntegration(t *testing.T) {
 		}
 		assertPhase97Job(t, ctx, pool, ids.jobID, "failed_system", 1, "worker:go:exhausted", "lease:go:exhausted")
 		assertPhase97MatchStatus(t, ctx, pool, ids.matchID, "failed_system")
+	})
+
+	t.Run("non retryable terminal failure is quarantined immediately with redacted evidence", func(t *testing.T) {
+		prefix := "phase97-nonretry-quarantine"
+		cleanupPhase97Rows(t, ctx, pool, prefix)
+		defer cleanupPhase97Rows(t, ctx, pool, prefix)
+		ids := seedPhase97MatchJob(t, ctx, pool, prefix, 3, "queued", 0, nil)
+		lifecycle := newTestMatchJobLifecycle(pool, time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC), "lease:go:nonretry")
+		claimed, err := lifecycle.claimNextMatchJob(ctx, claimMatchJobInput{WorkerID: "worker:go:nonretry"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if claimed == nil {
+			t.Fatal("expected claimed job")
+		}
+		status, err := lifecycle.recordAttemptFailure(ctx, recordAttemptFailureInput{
+			JobID:        claimed.JobID,
+			LeaseToken:   claimed.LeaseToken,
+			ErrorClass:   "RuntimeServiceSourceMismatch",
+			ErrorMessage: "WASM/WASI artifact source hash mismatch",
+			Retryable:    false,
+			Category:     matchFailureCategoryStaleArtifact,
+			Details: map[string]any{
+				"workerId": ids.workerID,
+				"reason":   "compiled-artifact-source-hash-mismatch",
+				"source":   "export default {}",
+				"stderr":   "host path /Users/secret",
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if status != "failed_system" {
+			t.Fatalf("expected failed_system, got %q", status)
+		}
+		assertPhase97Job(t, ctx, pool, ids.jobID, "failed_system", 1, "worker:go:nonretry", "lease:go:nonretry")
+		assertPhase97Quarantine(t, ctx, pool, ids.jobID, matchExecutionQuarantineNonRetryable, matchFailureCategoryStaleArtifact, false, 1)
 	})
 
 	t.Run("failure recording rejects terminal complete jobs", func(t *testing.T) {
@@ -434,6 +511,42 @@ func assertPhase97MatchStatus(t *testing.T, ctx context.Context, pool *pgxpool.P
 	}
 }
 
+func assertPhase97Quarantine(t *testing.T, ctx context.Context, pool *pgxpool.Pool, jobID string, wantReason string, wantCategory string, wantRetryable bool, wantAttempt int) {
+	t.Helper()
+	var reason string
+	var category string
+	var retryable bool
+	var attempt int
+	var evidence []byte
+	if err := pool.QueryRow(ctx, `
+		select reason, failure_category, retryable, attempt_number, operator_evidence
+		from match_execution_quarantines
+		where job_id = $1 and status = 'active'
+	`, jobID).Scan(&reason, &category, &retryable, &attempt, &evidence); err != nil {
+		t.Fatal(err)
+	}
+	if reason != wantReason || category != wantCategory || retryable != wantRetryable || attempt != wantAttempt {
+		t.Fatalf("unexpected quarantine reason=%q category=%q retryable=%v attempt=%d", reason, category, retryable, attempt)
+	}
+	text := string(evidence)
+	for _, forbidden := range []string{"export default", "stderr", "/Users/secret", "leaseToken", "host path"} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("quarantine evidence leaked %q in %s", forbidden, text)
+		}
+	}
+}
+
+func assertNoPhase97Quarantine(t *testing.T, ctx context.Context, pool *pgxpool.Pool, jobID string) {
+	t.Helper()
+	var count int
+	if err := pool.QueryRow(ctx, "select count(*) from match_execution_quarantines where job_id = $1", jobID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("expected no quarantine rows for %s, got %d", jobID, count)
+	}
+}
+
 func stringPtrValue(value *string) string {
 	if value == nil {
 		return ""
@@ -455,6 +568,10 @@ func cleanupPhase97Rows(t *testing.T, ctx context.Context, pool *pgxpool.Pool, p
 		sql  string
 		args []any
 	}{
+		{
+			sql:  "delete from match_execution_quarantines where job_id like $1 or match_id like $2",
+			args: []any{"match-job:" + prefix + "%", "match:" + prefix + "%"},
+		},
 		{
 			sql:  "delete from match_jobs where id like $1 or match_id like $2",
 			args: []any{"match-job:" + prefix + "%", "match:" + prefix + "%"},
