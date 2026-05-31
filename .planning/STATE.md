@@ -1,39 +1,46 @@
 ---
-milestone: v1.31
-milestone_name: Public Site Spine and Discovery Reads
-status: validating
-current_phase: 221
+milestone: v1.32
+milestone_name: Four-Language Production Strategy Support
+status: planning
+current_phase: null
 progress:
-  phases_total: 11
-  phases_complete: 11
-  requirements_total: 57
-  requirements_complete: 57
+  phases_total: 0
+  phases_complete: 0
+  requirements_total: 0
+  requirements_complete: 0
 ---
 
-# State: Coward's Game v1.31
+# State: Coward's Game v1.32
 
 ## Current Position
 
-Phase: 221 - Audit, Archive, Commit, and Tag
-Plan: Complete
-Status: Validation and audit passed; ready for commit/tag closure.
-Last activity: 2026-05-31 - v1.31 public site spine implemented, reviewed, visually checked, validated, and boundary-audited after merging `origin/main`.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-31 - Milestone v1.32 started
 
 ## Project Reference
 
 See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+**Current focus:** Four-language production Strategy support for JS/TS, Python, Rust, and Zig.
 
 ## Active Boundary Notes
 
-- New discovery reads are separate from `match-execution-app-v1`.
-- Do not add fields to existing public execution DTOs.
-- Do not change Go execution, runtime-service behavior, retry/recovery policy, quarantine, job lifecycle, MatchSet scoring, Chronicle persistence, internal operator controls, runtime promotion, ABI status, or counted language eligibility.
+- v1.32 intentionally reopens language eligibility and runtime/provider contract work, but changes must be explicit, justified, versioned or migrated where needed, tested, audited, and documented.
+- Do not make Python, Rust, or Zig "supported" by labels only. Promotion requires validation, runtime, conformance, Workshop, Account, entry, results, replay, public evidence, docs, and monitor coverage.
+- Strategy execution must remain behind runtime-service / Runtime Broker / language provider boundaries.
+- Do not execute Strategy code in web/API/Go.
+- If WASI Preview 1 stdin/stdout JSON remains the shared ABI, say so explicitly. If it changes, design and prove the migration.
 - Public output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads.
 
 ## Resume Notes
 
+- v1.31 Public Site Spine and Discovery Reads is shipped and archived in `.planning/MILESTONES.md`, `.planning/milestones/v1.31-ROADMAP.md`, `.planning/milestones/v1.31-REQUIREMENTS.md`, `.planning/milestones/v1.31-MILESTONE-AUDIT.md`, and `.planning/artifacts/v1.31-public-site-spine-proof.md`.
+- v1.32 starts from the v1.31 baseline where JS/TS is counted, Python/Rust/Zig are non-counted exhibition beta, and Preview 1 stdin/stdout JSON remains the active WASM/WASI ABI until an explicit migration decision changes it.
+- Core v1.32 question: What must be true before Python, Rust, and Zig can honestly be fully supported and counted alongside JS/TS, and what monitors prevent future drift?
+- Suggested roadmap begins at Phase 222 and continues through Phase 233.
 - Phase 211 artifacts:
   - `.planning/artifacts/v1.31-route-link-inventory.md`
   - `.planning/phases/211-route-and-link-inventory/211-CONTEXT.md`

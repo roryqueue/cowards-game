@@ -3,15 +3,29 @@
 ## Current State
 
 **Shipped version:** v1.31 Public Site Spine and Discovery Reads on 2026-05-31
-**Current milestone:** v1.31 Public Site Spine and Discovery Reads is complete pending commit/tag closure.
-**Status:** v1.31 turns the app into a navigable public competitive site with a public discovery hub, Watch hub, competition discovery/detail/entry spine, player and Strategy cross-links, and signed-in paths from Workshop to saved revisions, entry, results, and replay. New discovery reads are separate public/account-safe APIs and are explicitly not part of `match-execution-app-v1`.
+**Current milestone:** v1.32 Four-Language Production Strategy Support.
+**Status:** v1.32 begins the promotion of JS/TS, Python, Rust, and Zig into fully supported counted Strategy languages through one shared eligibility model, one shared runtime/provider contract, one shared conformance suite, and drift monitors that prevent product, runtime, public evidence, and documentation surfaces from diverging.
 **Last audit:** v1.31 audit passed after validating public discovery DTOs, site shell/navigation, public and signed-in entry routes, privacy scans, desktop/mobile journey proof, visual screenshots, boundary monitors, and no execution contract drift.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. v1.32 intentionally reopens language eligibility and runtime/provider contract work so JS/TS, Python, Rust, and Zig can be promoted only with explicit contracts, migrations, conformance proof, public-safe evidence, and production-grade drift prevention.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.32 Four-Language Production Strategy Support
+
+**Goal:** Promote JS/TS, Python, Rust, and Zig to fully supported counted Strategy languages with one shared eligibility model, one shared runtime/provider contract, one shared conformance suite, and strong drift prevention across Workshop, Account, competition entry, Match execution, results, replay, public evidence, docs, and monitors.
+
+**Target features:**
+- Inventory every current hardcoded or divergent JS/TS, Python, Rust, Zig, counted eligibility, alpha/beta/exhibition label, runtime adapter, validation, starter template, Workshop/account UI, competition entry, result/replay/public label, docs, and monitor surface.
+- Introduce or consolidate a canonical supported-language registry/provider model covering language id, display label, support status, counted eligibility, source/artifact policy, build/compile/package policy, runtime adapter/provider id, validation, limits, deterministic restrictions, starter templates, docs, Workshop/account labels, competition entry eligibility, public labels, privacy, and public-output rules.
+- Define and implement a shared `StrategyLanguageProvider` runtime/provider contract that keeps hostile Strategy execution behind runtime-service / Runtime Broker boundaries and makes any Preview 1 stdin/stdout JSON ABI decision explicit.
+- Promote Python, Rust, and Zig to production support only through validated runtime/provider paths, not labels alone.
+- Build a golden Strategy corpus in JS/TS, Python, Rust, and Zig plus a cross-language pairwise Match/MatchSet matrix.
+- Add shared invalid-output, timeout, oversized-output, forbidden-capability, memory-heavy, deterministic behavior, privacy parity, result/replay shape parity, and label/eligibility consistency checks.
+- Unify Workshop, Account, competition entry, Strategy cards, player pages, MatchSet results, replay, Learn/docs, public evidence, and signed-in proof around the shared supported-language model.
+- Add drift monitors that fail when app/product code directly special-cases `typescript`, `python`, `rust`, or `zig` outside approved language-provider/registry boundaries.
 
 ## Latest Shipped Milestone: v1.31 Public Site Spine and Discovery Reads
 
@@ -644,7 +658,7 @@ Planning archives live under `.planning/milestones/`:
 
 - Durable all-time ratings, permanent Elo/Glicko contracts, ranked prize ladders, public tournaments, and broad spectator/community surfaces beyond profiles, public Strategy cards, standings, results, and replay links.
 - Randomized arena generation and custom user-created maps.
-- Full production multi-language runtime support beyond Python non-counted exhibition beta and runtime boundary readiness evidence.
+- Unproven language promotion by labels alone, without runtime/provider contracts, conformance evidence, public-safe proof, signed-in proof, and drift monitors.
 - Unbounded backend rewrite, job claiming/completion, Match execution, Chronicle generation, or migration of orchestration before Go API ownership, parity, and worker handoff boundaries are proven.
 - Enterprise-grade authentication features such as email verification, password reset, OAuth, organizations, and account recovery.
 - Live model inference or live human control during Matches.
@@ -704,10 +718,13 @@ Planning archives live under `.planning/milestones/`:
 | Harden execution reliability behind the frozen contract | v1.26 improved Go/runtime-service retry classification, unavailable/degraded handling, malformed/stale failure drills, persistence idempotency, and public-safe evidence without changing `match-execution-app-v1`. | ✓ Implemented in v1.26 |
 | Build result/replay UX in front of the frozen Match execution app contract | v1.27 consumes `match-execution-app-v1` and fixtures as a stable app surface, improving public workbench UX without changing execution internals or promotion claims. | ✓ Implemented in v1.27 |
 | Keep discovery APIs separate from the frozen execution contract | v1.31 public discovery reads should aggregate and link public-safe pages without changing existing public execution DTOs or making `match-execution-app-v1` carry site navigation concerns. | — Pending |
+| Promote four supported Strategy languages through one shared model, not one-off labels | v1.32 intentionally reopens execution/runtime/language eligibility contracts, but changes must be explicit, versioned or migrated as needed, tested, audited, and kept behind the runtime-service / Runtime Broker boundary. | — Pending |
 
 ## Constraints
 
 The active constraints remain: deterministic engine behavior, engine purity, Strategy Revision immutability, hostile Strategy treatment, runtime isolation, memory/source/output limits, package boundaries, replay privacy, Chronicle compatibility, competitive integrity, Go-owned normal backend behavior, no silent TypeScript backend fallback, and representative page-load smoke for major page types.
+
+v1.32 may change execution DTOs, ABI details, service contracts, Match execution contracts, and counted language eligibility only when the change is intentional, justified, versioned or migrated appropriately, tested, and audited. Strategy execution must remain behind runtime-service / Runtime Broker / language provider boundaries, and public output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads.
 
 Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy/analytics surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, and private runtime internals by default. v1.5 created local example MatchSets and a completed example tournament for demonstration, and v1.6 created saved gauntlet analytics for study; neither establishes official public tournament operations or durable ratings.
 
@@ -724,4 +741,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-31 after starting v1.31 milestone*
+*Last updated: 2026-05-31 after starting v1.32 milestone*
