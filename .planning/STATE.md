@@ -2,22 +2,22 @@
 milestone: v1.32
 milestone_name: Four-Language Production Strategy Support
 status: planning
-current_phase: 223
+current_phase: 224
 progress:
   phases_total: 12
-  phases_complete: 1
+  phases_complete: 2
   requirements_total: 60
-  requirements_complete: 5
+  requirements_complete: 10
 ---
 
 # State: Coward's Game v1.32
 
 ## Current Position
 
-Phase: 223 - Unified Supported Language Registry and Eligibility Model
+Phase: 224 - StrategyLanguageProvider Runtime Contract
 Plan: Ready for planning
-Status: Phase 222 inventory complete; Phase 223 is next
-Last activity: 2026-05-31 - Phase 222 inventory completed and verified
+Status: Phase 223 registry model complete; Phase 224 is next
+Last activity: 2026-05-31 - Phase 223 supported-language registry implemented, reviewed, and verified
 
 ## Project Reference
 
@@ -42,7 +42,8 @@ See: `.planning/PROJECT.md`
 - Core v1.32 question: What must be true before Python, Rust, and Zig can honestly be fully supported and counted alongside JS/TS, and what monitors prevent future drift?
 - Roadmap begins at Phase 222 and continues through Phase 233.
 - Phase 222 completed the active language/runtime/eligibility/product/docs/monitor inventory in `.planning/artifacts/v1.32-language-surface-inventory.md`.
-- Phase 223 is next: establish one supported-language/provider registry as the active product semantics source.
+- Phase 223 added `SUPPORTED_STRATEGY_LANGUAGES` in `packages/spec/src/runtime.ts`, derived the legacy language registry from it, and moved web runtime labels onto spec-level language semantics.
+- Phase 224 is next: define the provider/runtime contract and ABI posture without moving Strategy execution into web/API/Go.
 - Context and discussion logs have been captured for all v1.32 phases:
   - Phase 222: Language Surface Inventory
   - Phase 223: Unified Supported Language Registry and Eligibility Model

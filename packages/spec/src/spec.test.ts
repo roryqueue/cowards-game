@@ -47,11 +47,14 @@ import {
   defaultRuntimeMetadata,
   describeStrategyRuntimeProductSemantics,
   evaluateStrategyRuntimeCountedEligibility,
+  getSupportedStrategyLanguageBySourceFormat,
+  getSupportedStrategyLanguageRecord,
   assertNonJsRuntimeGuardrails,
   NON_JS_RUNTIME_PROMOTION_CRITERIA,
   NON_JS_RUNTIME_SUPPORT_POLICY,
   RUNTIME_BROKER_REGISTRY,
   RUNTIME_BROKER_REGISTRY_VERSION,
+  SUPPORTED_STRATEGY_LANGUAGES,
   STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
@@ -354,6 +357,47 @@ describe("Coward's Game spec contracts", () => {
         "deprecation-policy",
       ]),
     )
+  })
+
+  it("v1.32 supported language registry is the product semantics source", () => {
+    expect(SUPPORTED_STRATEGY_LANGUAGES.map((language) => language.id)).toEqual(
+      ["javascript", "typescript", "python", "rust", "zig"],
+    )
+    for (const language of SUPPORTED_STRATEGY_LANGUAGES) {
+      expect(language.supportStatus).toBe("supported")
+      expect(language.providerId).toMatch(/^strategy-language-provider-/)
+      expect(language.publicLabel).toContain(language.label)
+      expect(language.docsReference).toMatch(/^runtime\/languages#/)
+      expect(language.examplesReference.length).toBeGreaterThan(0)
+      expect(language.deterministicRestrictions.length).toBeGreaterThan(0)
+      expect(language.privacyRules.join(" ")).toContain("Public evidence")
+      expect(
+        STRATEGY_RUNTIME_ADAPTER_REGISTRY.some(
+          (adapter) =>
+            adapter.id === language.defaultAdapterId &&
+            adapter.runtimeTarget === language.runtimeTarget &&
+            (adapter.supportedLanguageIds as readonly string[]).includes(
+              language.id,
+            ),
+        ),
+      ).toBe(true)
+      expect(getSupportedStrategyLanguageRecord(language.id)?.providerId).toBe(
+        language.providerId,
+      )
+      expect(
+        getSupportedStrategyLanguageBySourceFormat(language.sourceFormat)?.id,
+      ).toBe(language.id)
+    }
+    expect(
+      SUPPORTED_STRATEGY_LANGUAGES.filter(
+        (language) => language.countedEligibility === "eligible",
+      ).map((language) => language.id),
+    ).toEqual(["javascript", "typescript"])
+    expect(
+      SUPPORTED_STRATEGY_LANGUAGES.filter(
+        (language) => language.countedEligibility === "pending-evidence",
+      ).map((language) => language.id),
+    ).toEqual(["python", "rust", "zig"])
   })
 
   it("v1.17 runtime broker registry uses exact metadata and keeps Python non-counted", () => {

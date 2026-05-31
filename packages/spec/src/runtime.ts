@@ -1,4 +1,8 @@
-import type { JsonValue, StrategyRevisionValidationIssue } from "./types.js"
+import type {
+  JsonValue,
+  StrategyArtifactSourceFormat,
+  StrategyRevisionValidationIssue,
+} from "./types.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 
 export const STRATEGY_RUNTIME_ABI_VERSION = "strategy-runtime-abi-v1.14"
@@ -40,6 +44,44 @@ export interface StrategyLanguageRecord {
   label: string
   version: string
   enabledForNormalPlay: boolean
+  notes: string[]
+}
+
+export type SupportedStrategyLanguageProviderId =
+  | "strategy-language-provider-js-ts"
+  | "strategy-language-provider-python"
+  | "strategy-language-provider-rust-wasi"
+  | "strategy-language-provider-zig-wasi"
+
+export type SupportedStrategyLanguageCountedEligibility =
+  | "eligible"
+  | "pending-evidence"
+
+export interface SupportedStrategyLanguageRecord {
+  id: StrategyLanguageId
+  sourceFormat: StrategyArtifactSourceFormat
+  label: string
+  shortLabel: string
+  version: string
+  providerId: SupportedStrategyLanguageProviderId
+  runtimeTarget: StrategyRuntimeAdapterRecord["runtimeTarget"]
+  defaultAdapterId: StrategyRuntimeAdapterId
+  supportStatus: "supported"
+  promotionStatus: "complete" | "evidence-gated"
+  countedEligibility: SupportedStrategyLanguageCountedEligibility
+  entryEligibility: "counted" | "unranked-only"
+  enabledForNormalPlay: boolean
+  publicLabel: string
+  publicRuntimeCue: string
+  sourcePolicyLabel: string
+  artifactPolicyLabel: string
+  packagePolicyLabel: string
+  docsReference: string
+  examplesReference: string
+  validationBehavior: "runtime-js" | "python-host" | "wasm-wasi-compile"
+  buildBehavior: "transpile" | "source-only" | "compile-immutable-artifact"
+  deterministicRestrictions: string[]
+  privacyRules: string[]
   notes: string[]
 }
 
@@ -304,49 +346,184 @@ export const DEFAULT_RUNTIME_LIMITS: StrategyRuntimeLimits = {
   packagePolicy: "none",
 }
 
-export const STRATEGY_LANGUAGE_REGISTRY = [
+export const SUPPORTED_STRATEGY_LANGUAGES = [
   {
     id: "javascript",
+    sourceFormat: "javascript",
     label: "JavaScript",
+    shortLabel: "JS",
     version: COMPATIBILITY_VERSIONS.runtimeJs,
+    providerId: "strategy-language-provider-js-ts",
+    runtimeTarget: "runtime-js",
+    defaultAdapterId: "runtime-js-worker-thread",
+    supportStatus: "supported",
+    promotionStatus: "complete",
+    countedEligibility: "eligible",
+    entryEligibility: "counted",
     enabledForNormalPlay: true,
+    publicLabel: "JavaScript · Counted eligible",
+    publicRuntimeCue:
+      "JavaScript is supported for counted play through the Runtime Broker.",
+    sourcePolicyLabel: "Self-contained Strategy source",
+    artifactPolicyLabel: "Source revision",
+    packagePolicyLabel: "No packages",
+    docsReference: "runtime/languages#javascript",
+    examplesReference: "samples/minimal-strategy",
+    validationBehavior: "runtime-js",
+    buildBehavior: "source-only",
+    deterministicRestrictions: [
+      "No host filesystem, network, clock, random, process, or dynamic import capability.",
+    ],
+    privacyRules: [
+      "Public evidence omits Strategy source, StrategyMemory, SoldierMemory, and objective payloads by default.",
+    ],
     notes: ["Current fully enabled Strategy language through runtime-js."],
   },
   {
     id: "typescript",
+    sourceFormat: "typescript",
     label: "TypeScript",
+    shortLabel: "TS",
     version: COMPATIBILITY_VERSIONS.runtimeJs,
+    providerId: "strategy-language-provider-js-ts",
+    runtimeTarget: "runtime-js",
+    defaultAdapterId: "runtime-js-worker-thread",
+    supportStatus: "supported",
+    promotionStatus: "complete",
+    countedEligibility: "eligible",
+    entryEligibility: "counted",
     enabledForNormalPlay: true,
+    publicLabel: "TypeScript · Counted eligible",
+    publicRuntimeCue:
+      "TypeScript is supported for counted play through transpiled runtime-js execution.",
+    sourcePolicyLabel: "Self-contained Strategy source",
+    artifactPolicyLabel: "Transpiled source revision",
+    packagePolicyLabel: "No packages",
+    docsReference: "runtime/languages#typescript",
+    examplesReference: "samples/minimal-strategy",
+    validationBehavior: "runtime-js",
+    buildBehavior: "transpile",
+    deterministicRestrictions: [
+      "No host filesystem, network, clock, random, process, or dynamic import capability.",
+    ],
+    privacyRules: [
+      "Public evidence omits Strategy source, StrategyMemory, SoldierMemory, and objective payloads by default.",
+    ],
     notes: ["Transpiled to JavaScript before runtime-js execution."],
   },
   {
     id: "python",
+    sourceFormat: "python",
     label: "Python",
+    shortLabel: "PY beta",
     version: "3.9",
+    providerId: "strategy-language-provider-python",
+    runtimeTarget: "runtime-python",
+    defaultAdapterId: "runtime-python-subprocess-experimental",
+    supportStatus: "supported",
+    promotionStatus: "evidence-gated",
+    countedEligibility: "pending-evidence",
+    entryEligibility: "unranked-only",
     enabledForNormalPlay: false,
+    publicLabel: "Python · non-counted exhibition beta",
+    publicRuntimeCue:
+      "Python is non-counted exhibition beta and runs only through the Runtime Broker.",
+    sourcePolicyLabel: "Self-contained Strategy source",
+    artifactPolicyLabel: "Source revision",
+    packagePolicyLabel: "No packages",
+    docsReference: "runtime/languages#python",
+    examplesReference: "examples/python-exhibition-beta",
+    validationBehavior: "python-host",
+    buildBehavior: "source-only",
+    deterministicRestrictions: [
+      "No imports, filesystem, network, clock, random, eval, exec, or host process capability.",
+    ],
+    privacyRules: [
+      "Public evidence omits Strategy source, StrategyMemory, SoldierMemory, objective payloads, host paths, stderr, stack traces, and Python runtime internals by default.",
+    ],
     notes: [
-      "Non-counted exhibition beta through the runtime broker only; not ranked or counted play.",
+      "Evidence-gated for counted play through the Runtime Broker; current adapter remains non-counted until Phase 225 proof passes.",
     ],
   },
   {
     id: "rust",
+    sourceFormat: "rust",
     label: "Rust",
+    shortLabel: "Rust beta",
     version: "1.95.0-wasm32-wasip1",
+    providerId: "strategy-language-provider-rust-wasi",
+    runtimeTarget: "runtime-wasm-wasi",
+    defaultAdapterId: "runtime-wasm-wasi-wasmtime-preview1",
+    supportStatus: "supported",
+    promotionStatus: "evidence-gated",
+    countedEligibility: "pending-evidence",
+    entryEligibility: "unranked-only",
     enabledForNormalPlay: false,
+    publicLabel: "Rust · non-counted exhibition beta",
+    publicRuntimeCue:
+      "Rust is non-counted exhibition beta and executes immutable WASM/WASI artifacts through the Runtime Broker.",
+    sourcePolicyLabel: "Self-contained Strategy source",
+    artifactPolicyLabel: "Immutable WASM/WASI artifact",
+    packagePolicyLabel: "No packages",
+    docsReference: "runtime/languages#rust",
+    examplesReference: "examples/rust-wasi-exhibition-beta",
+    validationBehavior: "wasm-wasi-compile",
+    buildBehavior: "compile-immutable-artifact",
+    deterministicRestrictions: [
+      "No filesystem, network, clock, random, environment, external crate, or mutable-source fallback capability.",
+    ],
+    privacyRules: [
+      "Public evidence omits Strategy source, StrategyMemory, SoldierMemory, objective payloads, host paths, stderr, stack traces, and artifact bytes by default.",
+    ],
     notes: [
-      "Non-counted exhibition beta through immutable WASM/WASI artifacts only; not ranked or counted play.",
+      "Evidence-gated for counted play through immutable WASM/WASI artifacts; current adapter remains non-counted until Phase 226 proof passes.",
     ],
   },
   {
     id: "zig",
+    sourceFormat: "zig",
     label: "Zig",
+    shortLabel: "Zig beta",
     version: "0.16.0-wasm32-wasi",
+    providerId: "strategy-language-provider-zig-wasi",
+    runtimeTarget: "runtime-wasm-wasi",
+    defaultAdapterId: "runtime-wasm-wasi-wasmtime-preview1",
+    supportStatus: "supported",
+    promotionStatus: "evidence-gated",
+    countedEligibility: "pending-evidence",
+    entryEligibility: "unranked-only",
     enabledForNormalPlay: false,
+    publicLabel: "Zig · non-counted exhibition beta",
+    publicRuntimeCue:
+      "Zig is non-counted exhibition beta after no-std WASI Preview 1 compile, artifact, import audit, and Wasmtime ABI proof.",
+    sourcePolicyLabel: "Self-contained Strategy source",
+    artifactPolicyLabel: "Immutable WASM/WASI artifact",
+    packagePolicyLabel: "No packages",
+    docsReference: "runtime/languages#zig",
+    examplesReference: "examples/zig-wasi-exhibition-beta",
+    validationBehavior: "wasm-wasi-compile",
+    buildBehavior: "compile-immutable-artifact",
+    deterministicRestrictions: [
+      "No std import, filesystem, network, clock, random, environment, package import, or mutable-source fallback capability.",
+    ],
+    privacyRules: [
+      "Public evidence omits Strategy source, StrategyMemory, SoldierMemory, objective payloads, host paths, stderr, stack traces, and artifact bytes by default.",
+    ],
     notes: [
-      "Non-counted exhibition beta only when local Zig compile, artifact, Wasmtime, ABI proof, and signed-in proof pass loudly.",
+      "Evidence-gated for counted play through no-std WASM/WASI artifacts; current adapter remains non-counted until Phase 227 proof passes.",
     ],
   },
-] as const satisfies readonly StrategyLanguageRecord[]
+] as const satisfies readonly SupportedStrategyLanguageRecord[]
+
+export const STRATEGY_LANGUAGE_REGISTRY = SUPPORTED_STRATEGY_LANGUAGES.map(
+  (language): StrategyLanguageRecord => ({
+    id: language.id,
+    label: language.label,
+    version: language.version,
+    enabledForNormalPlay: language.enabledForNormalPlay,
+    notes: language.notes,
+  }),
+) as readonly StrategyLanguageRecord[]
 
 export const NON_JS_RUNTIME_SUPPORT_POLICY = {
   status: "experimental-non-counted",
@@ -754,6 +931,18 @@ export const getStrategyLanguageRecord = (
 ): StrategyLanguageRecord | null =>
   STRATEGY_LANGUAGE_REGISTRY.find((candidate) => candidate.id === id) ?? null
 
+export const getSupportedStrategyLanguageRecord = (
+  id: unknown,
+): SupportedStrategyLanguageRecord | null =>
+  SUPPORTED_STRATEGY_LANGUAGES.find((candidate) => candidate.id === id) ?? null
+
+export const getSupportedStrategyLanguageBySourceFormat = (
+  sourceFormat: unknown,
+): SupportedStrategyLanguageRecord | null =>
+  SUPPORTED_STRATEGY_LANGUAGES.find(
+    (candidate) => candidate.sourceFormat === sourceFormat,
+  ) ?? null
+
 export const getStrategyRuntimeAdapterRecord = (
   id: unknown,
 ): StrategyRuntimeAdapterRecord | null =>
@@ -994,6 +1183,9 @@ export const describeStrategyRuntimeProductSemantics = (
 ): StrategyRuntimeProductSemantics => {
   const runtime = normalizeStrategyRuntimeMetadata(value)
   const language = getStrategyLanguageRecord(runtime.language.id)
+  const supportedLanguage = getSupportedStrategyLanguageRecord(
+    runtime.language.id,
+  )
   const adapter = getStrategyRuntimeAdapterRecord(runtime.adapter.id)
   const eligibility = evaluateStrategyRuntimeCountedEligibility(value)
   const issues = validateStrategyRuntimeMetadataPolicy(value)
@@ -1019,7 +1211,8 @@ export const describeStrategyRuntimeProductSemantics = (
   return {
     languageId: runtime.language.id,
     adapterId: runtime.adapter.id,
-    languageLabel: language?.label ?? runtime.language.id,
+    languageLabel:
+      supportedLanguage?.label ?? language?.label ?? runtime.language.id,
     adapterLabel: adapter?.label ?? runtime.adapter.id,
     readiness,
     readinessLabel: readinessLabels[readiness],
@@ -1027,20 +1220,15 @@ export const describeStrategyRuntimeProductSemantics = (
     countedPlayEligible: eligibility.ok,
     countedPlayLabel: eligibility.ok ? "Counted eligible" : "Not counted",
     countedPlayReason: eligibility.publicMessage,
-    sourcePolicyLabel: "Self-contained Strategy source",
+    sourcePolicyLabel:
+      supportedLanguage?.sourcePolicyLabel ?? "Self-contained Strategy source",
     packagePolicyLabel:
       runtime.package.mode === "none"
-        ? "No packages"
+        ? (supportedLanguage?.packagePolicyLabel ?? "No packages")
         : "Declared packages experimental",
-    docsReference: "runtime/languages",
+    docsReference: supportedLanguage?.docsReference ?? "runtime/languages",
     examplesReference:
-      runtime.language.id === "python"
-        ? "examples/python-experimental"
-        : runtime.language.id === "rust"
-          ? "examples/rust-wasi-exhibition-beta"
-          : runtime.language.id === "zig"
-            ? "examples/zig-wasi-exhibition-beta"
-            : "samples/minimal-strategy",
+      supportedLanguage?.examplesReference ?? "samples/minimal-strategy",
     warnings,
     validationIssueCodes: issues.map(
       (issue) => issue.code as StrategyRuntimeProductValidationCode,
@@ -1054,11 +1242,11 @@ export const defaultRuntimeMetadata = (
     "javascript" | "typescript"
   > = "typescript",
 ): StrategyRuntimeMetadata => {
-  const adapter = STRATEGY_RUNTIME_ADAPTER_REGISTRY[0]
+  const adapter = STRATEGY_RUNTIME_ADAPTER_REGISTRY[0]!
   const language =
     STRATEGY_LANGUAGE_REGISTRY.find(
       (candidate) => candidate.id === languageId,
-    ) ?? STRATEGY_LANGUAGE_REGISTRY[1]
+    ) ?? STRATEGY_LANGUAGE_REGISTRY[1]!
   return {
     abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
     language: {
