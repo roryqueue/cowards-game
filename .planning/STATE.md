@@ -1,23 +1,23 @@
 ---
 milestone: v1.32
 milestone_name: Four-Language Production Strategy Support
-status: planning
-current_phase: 233
+status: complete
+current_phase: null
 progress:
   phases_total: 12
-  phases_complete: 11
+  phases_complete: 12
   requirements_total: 60
-  requirements_complete: 55
+  requirements_complete: 60
 ---
 
 # State: Coward's Game v1.32
 
 ## Current Position
 
-Phase: 233 - Audit, Archive, Commit, and Tag
-Plan: Ready for planning
-Status: Phase 232 live four-language signed-in proof complete; Phase 233 is next
-Last activity: 2026-05-31 - Phase 232 live signed-in proof passed for all six counted four-language pairings
+Phase: Complete
+Plan: v1.32 archive commit and tag
+Status: v1.32 Four-Language Production Strategy Support passed validation and audit
+Last activity: 2026-05-31 - Phase 233 audit/fix, archive, validation, and closure artifacts completed
 
 ## Project Reference
 
@@ -52,7 +52,8 @@ See: `.planning/PROJECT.md`
 - Phase 230 updated public evidence and Learn/docs to explain four-language provider-gated counted support, WASI Preview 1 artifact posture, no-fallback behavior, privacy exclusions, and sandbox non-claims.
 - Phase 231 converted stale non-promotion monitors into positive provider-backed counted support checks, added direct product language special-case drift detection, and extended service/public discovery runtime import boundaries to WASM/WASI.
 - Phase 232 completed the live local signed-in proof for TypeScript, Python, Rust, and Zig across six counted cross-language MatchSets. Evidence is in `.planning/artifacts/v1.32-four-language-signed-in-proof.md` and `.planning/artifacts/v1.32-four-language-signed-in-proof.json`.
-- Phase 233 is next: Audit, Archive, Commit, and Tag.
+- Phase 233 completed milestone validation, audit/fix, archive preparation, and final decision records.
+- v1.32 is ready for archive commit and tag.
 - Context and discussion logs have been captured for all v1.32 phases:
   - Phase 222: Language Surface Inventory
   - Phase 223: Unified Supported Language Registry and Eligibility Model

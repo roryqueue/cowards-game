@@ -2,10 +2,10 @@
 
 ## Current State
 
-**Shipped version:** v1.31 Public Site Spine and Discovery Reads on 2026-05-31
-**Current milestone:** v1.32 Four-Language Production Strategy Support.
-**Status:** v1.32 begins the promotion of JS/TS, Python, Rust, and Zig into fully supported counted Strategy languages through one shared eligibility model, one shared runtime/provider contract, one shared conformance suite, and drift monitors that prevent product, runtime, public evidence, and documentation surfaces from diverging.
-**Last audit:** v1.31 audit passed after validating public discovery DTOs, site shell/navigation, public and signed-in entry routes, privacy scans, desktop/mobile journey proof, visual screenshots, boundary monitors, and no execution contract drift.
+**Shipped version:** v1.32 Four-Language Production Strategy Support on 2026-05-31
+**Current milestone:** None active. Start the next cycle with `$gsd-new-milestone`.
+**Status:** TypeScript, Python, Rust, and Zig are supported counted Strategy languages through provider-gated runtime evidence, shared eligibility semantics, conformance proof, signed-in browser proof, public-safe result/replay evidence, and drift monitors.
+**Last audit:** v1.32 audit passed after validating provider contracts, language production paths, conformance matrix, public privacy scans, boundary monitors, live signed-in proof, replay board realism, and no Strategy execution in web/API/Go.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. v1.32 intentionally reopens language eligibility and runtime/provider contract work so JS/TS, Python, Rust, and Zig can be promoted only with explicit contracts, migrations, conformance proof, public-safe evidence, and production-grade drift prevention.
 
@@ -13,19 +13,21 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.32 Four-Language Production Strategy Support
+## Latest Shipped Milestone: v1.32 Four-Language Production Strategy Support
 
 **Goal:** Promote JS/TS, Python, Rust, and Zig to fully supported counted Strategy languages with one shared eligibility model, one shared runtime/provider contract, one shared conformance suite, and strong drift prevention across Workshop, Account, competition entry, Match execution, results, replay, public evidence, docs, and monitors.
 
-**Target features:**
-- Inventory every current hardcoded or divergent JS/TS, Python, Rust, Zig, counted eligibility, alpha/beta/exhibition label, runtime adapter, validation, starter template, Workshop/account UI, competition entry, result/replay/public label, docs, and monitor surface.
-- Introduce or consolidate a canonical supported-language registry/provider model covering language id, display label, support status, counted eligibility, source/artifact policy, build/compile/package policy, runtime adapter/provider id, validation, limits, deterministic restrictions, starter templates, docs, Workshop/account labels, competition entry eligibility, public labels, privacy, and public-output rules.
-- Define and implement a shared `StrategyLanguageProvider` runtime/provider contract that keeps hostile Strategy execution behind runtime-service / Runtime Broker boundaries and makes any Preview 1 stdin/stdout JSON ABI decision explicit.
-- Promote Python, Rust, and Zig to production support only through validated runtime/provider paths, not labels alone.
-- Build a golden Strategy corpus in JS/TS, Python, Rust, and Zig plus a cross-language pairwise Match/MatchSet matrix.
-- Add shared invalid-output, timeout, oversized-output, forbidden-capability, memory-heavy, deterministic behavior, privacy parity, result/replay shape parity, and label/eligibility consistency checks.
-- Unify Workshop, Account, competition entry, Strategy cards, player pages, MatchSet results, replay, Learn/docs, public evidence, and signed-in proof around the shared supported-language model.
-- Add drift monitors that fail when app/product code directly special-cases `typescript`, `python`, `rust`, or `zig` outside approved language-provider/registry boundaries.
+**Delivered:**
+- Canonical supported-language/provider model for TypeScript, Python, Rust, and Zig with counted eligibility, validation/build policy, runtime provider ids, limits, public labels, privacy rules, docs references, and proof requirements.
+- `StrategyLanguageProvider` contract and runtime-service provider validation that keep hostile Strategy execution behind runtime-service / Runtime Broker boundaries.
+- Python provider-gated counted support through constrained source validation and runtime execution.
+- Rust and Zig provider-gated counted support through immutable WASM/WASI Preview 1 stdin/stdout JSON artifact evidence.
+- Four-language golden corpus, conformance matrix, pairwise parity, public result/replay privacy checks, and no-fallback coverage.
+- Workshop, Account, competition entry, Strategy cards, player pages, MatchSet results, replay, Learn/docs, and public evidence unified around provider-derived language semantics.
+- Live signed-in proof for all six counted cross-language MatchSet pairings with public result/replay and board realism checks.
+- Drift monitors that block future direct language special-casing, stale non-promotion claims, ABI drift, privacy leaks, and Strategy execution boundary creep.
+
+**Non-goals:** No broad production sandbox certification; no Strategy execution in web/API/Go; no direct-export or Component Model/WIT ABI migration; no rich package ecosystem expansion; no durable permanent rating/governance expansion.
 
 ## Latest Shipped Milestone: v1.31 Public Site Spine and Discovery Reads
 
