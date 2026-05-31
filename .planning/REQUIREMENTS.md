@@ -1,171 +1,172 @@
-# Requirements: Coward's Game v1.31
+# Requirements: Coward's Game v1.32
 
 **Defined:** 2026-05-31
 **Core Value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
 ## Milestone Goal
 
-Make Coward's Game navigable as a public competitive site where non-users can land, discover recent public Matches, MatchSets, replay-ready evidence, active competitions, and player/Strategy pages, while signed-in users can move clearly from Workshop to saved revisions, competition entry, results, and replay.
+Promote JS/TS, Python, Rust, and Zig to fully supported counted Strategy languages with one shared eligibility model, one shared runtime/provider contract, one shared conformance suite, and strong drift prevention across Workshop, Account, competition entry, Match execution, results, replay, public evidence, docs, and monitors.
 
 ## Baseline
 
-- v1.29 is complete, committed, tagged, and merged into `origin/main`.
-- v1.27 Result and Replay Workbench is merged into `origin/main`.
-- `/` currently renders the Workshop, so there is no public front door.
-- Existing strong surfaces include `/workshop`, `/account`, `/matchsets/[matchSetId]`, `/matches/[matchId]/replay`, `/players/[handle]`, `/strategies/[strategyId]`, `/ladder/[seasonId]`, and `/exhibitions/new`.
-- Existing public reads cover individual object pages, not site-level discovery indexes.
-- New discovery reads must be separate from `match-execution-app-v1`.
+- v1.31 Public Site Spine and Discovery Reads is shipped and archived.
+- JS/TS is the counted Strategy path.
+- Python is non-counted exhibition beta through the runtime-service / Runtime Broker path.
+- Rust and Zig are non-counted exhibition beta through immutable WASM/WASI Preview 1 stdin/stdout JSON artifact evidence.
+- Runtime-service / Runtime Broker is the hostile Strategy execution boundary.
+- Go owns normal backend orchestration, Match lifecycle, scoring/status refresh, Chronicle persistence handoff, selected account reads, selected public reads, and public evidence.
+- `packages/spec/src/runtime.ts` already contains language ids, runtime adapter registry, runtime broker registry, product semantics, counted eligibility, limits, and non-JS promotion criteria.
+- Product surfaces still contain direct language/status branching and old non-counted labels.
+- Existing monitors intentionally preserve Python/Rust/Zig non-promotion and must be converted deliberately, not deleted casually.
 
 ## Hard Boundaries
 
-- Do not change, expand, rename, repurpose, or version-bump `match-execution-app-v1`.
-- Do not add fields to existing public execution DTOs.
-- New discovery DTOs/routes are allowed only as clearly separate public discovery APIs.
-- Do not change Go match execution, runtime-service behavior, retry/recovery policy, quarantine semantics, job lifecycle, MatchSet scoring, Chronicle persistence, internal operator controls, runtime promotion, ABI status, or counted-language eligibility.
-- Do not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads in public output.
-- JS/TS remains the only counted Strategy path. Python, Rust, and Zig remain non-counted exhibition beta only. Preview 1 stdin/stdout JSON remains the active WASM/WASI ABI.
+- Do not execute Strategy code in the web/API process.
+- Do not execute Strategy code in Go.
+- Do not use Node `vm` as a security boundary for hostile Strategy code.
+- Strategy execution must remain behind runtime-service / Runtime Broker / language provider boundaries.
+- Preserve deterministic Match execution and canonical terms: Soldier, Match, Phase, Round, Activation, Cycle, Action, Advance, STONE, FALLEN, Chronicle.
+- Public output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads.
+- Any execution DTO, ABI, service contract, Match execution contract, runtime eligibility, or counted eligibility change must be explicit, justified, versioned or migrated where needed, tested, audited, and documented.
+- If Preview 1 stdin/stdout JSON remains active, the decision must be stated explicitly. If it changes, migration, compatibility, rollback, and replay/public-evidence proof are required.
+- No language may become "supported" by labels alone. Promotion requires validation, runtime, conformance, Workshop, Account, entry, results, replay, public evidence, docs, signed-in proof, and monitor coverage.
 
 ## v1 Requirements
 
-### Route and Link Inventory
+### Language Surface Inventory
 
-- [x] **INV-01**: Operator can inspect a route inventory of current public, signed-in, auth, API, and test-support web routes.
-- [x] **INV-02**: Inventory identifies current navigation gaps, including `/` rendering Workshop and the absence of `/watch`, `/competitions`, `/competitions/[competitionId]`, `/competitions/[competitionId]/enter`, and `/learn`.
-- [x] **INV-03**: Inventory maps existing pages to current public-safe read sources and distinguishes individual object reads from new discovery/index reads.
-- [x] **INV-04**: Inventory records cross-link gaps between Workshop, account revisions, competitions, MatchSets, replays, players, Strategies, and learn/trust pages.
-- [x] **INV-05**: Inventory explicitly preserves the `match-execution-app-v1` boundary and states that discovery reads are separate APIs.
+- [ ] **INV-01**: Operator can inspect a complete inventory of active JS/TS, Python, Rust, Zig, source-format, runtime-adapter, counted-eligibility, alpha/beta/exhibition label, ABI, validation, starter/template, Workshop, Account, competition entry, result, replay, public evidence, docs, and monitor surfaces.
+- [ ] **INV-02**: Inventory classifies each surface as source of truth, active consumer, stale historical artifact, approved provider boundary, or drift risk.
+- [ ] **INV-03**: Inventory identifies every active product/UI/API code path that directly special-cases `typescript`, `python`, `rust`, or `zig` outside a shared registry/provider boundary.
+- [ ] **INV-04**: Inventory records every existing non-promotion monitor, non-counted assertion, exhibition beta label, and JS/TS-only counted gate that must be converted or preserved intentionally.
+- [ ] **INV-05**: Inventory states the Phase 222 answer to the core promotion question: what must be true before Python, Rust, and Zig can honestly be fully supported and counted alongside JS/TS, and what monitors prevent future drift.
 
-### Discovery Read Boundary
+### Supported Language Registry and Eligibility
 
-- [x] **DISC-01**: `getPublicHomeDiscovery` has a public-safe DTO contract separate from `match-execution-app-v1`.
-- [x] **DISC-02**: `getPublicWatchIndex` has a public-safe DTO contract for latest MatchSets, Matches, replay-ready evidence, and queued/running/degraded public states.
-- [x] **DISC-03**: `getPublicCompetitionIndex` has a public-safe DTO contract for active tournaments, ladders, exhibitions, and entry opportunities.
-- [x] **DISC-04**: `getPublicCompetitionDetail` has a public-safe DTO contract for entrants, standings, schedule/pods/bracket where applicable, MatchSets, and replay coverage.
-- [x] **DISC-05**: `getSignedInCompetitionEntryDashboard` has an account-safe DTO contract for eligible saved revisions and entry state without exposing Strategy source by default.
-- [x] **DISC-06**: Discovery DTO tests prove no existing public execution DTO fields are added, removed, renamed, or repurposed.
+- [ ] **LANG-01**: Developer can use one canonical supported-language registry for JS/TS, Python, Rust, and Zig that includes language id, display label, support status, counted eligibility, source/artifact policy, build/compile/package policy, runtime adapter/provider id, validation behavior, limits, deterministic restrictions, starter templates, docs references, public labels, privacy, and public-output rules.
+- [ ] **LANG-02**: Existing `STRATEGY_LANGUAGE_REGISTRY`, runtime adapter registry, runtime broker registry, product semantics, and counted eligibility logic are consolidated or bridged so there is one active source of truth for product language semantics.
+- [ ] **LANG-03**: Counted eligibility, competition entry eligibility, public labels, validation warnings/errors, and docs references are derived from the shared language model instead of ad hoc UI strings.
+- [ ] **LANG-04**: Historical non-JS runtime support policy and validation copy are migrated away from "experimental non-counted" as the active product truth while preserving historical evidence where appropriate.
+- [ ] **LANG-05**: Tests prove all four supported languages have complete registry records, provider ids, templates/docs references, limits, privacy rules, public labels, and counted eligibility semantics.
 
-### Global Site Shell
+### StrategyLanguageProvider Runtime Contract
 
-- [x] **SHELL-01**: Public pages share a global shell with stable navigation to Home, Watch, Competitions, Learn, Workshop, and Account.
-- [x] **SHELL-02**: `/workshop` becomes the canonical Workshop route while `/` becomes the public discovery hub.
-- [x] **SHELL-03**: Shell copy and navigation preserve canonical terms: Soldier, Match, Phase, Round, Activation, Cycle, Action, Advance, STONE, FALLEN, Chronicle.
-- [x] **SHELL-04**: Signed-in and anonymous users get clear account/workshop actions without exposing private Strategy data.
-- [x] **SHELL-05**: Shell tests prove primary routes render without relying on execution internals or live Strategy execution.
+- [ ] **PROV-01**: Developer can implement or consume a shared `StrategyLanguageProvider` contract, or equivalent provider abstraction, for validation, build/compile, artifact packaging, runtime adapter selection, execution compatibility, counted eligibility, public labels, private diagnostics, and evidence requirements.
+- [ ] **PROV-02**: Runtime-service / Runtime Broker routes validation and execution through provider-owned boundaries without moving hostile Strategy execution into web/API/Go.
+- [ ] **PROV-03**: Provider contract explicitly states whether WASI Preview 1 stdin/stdout JSON remains the active shared ABI, remains the Rust/Zig provider ABI, or is replaced by a versioned migration.
+- [ ] **PROV-04**: Provider contract validates runtime inputs/outputs with schemas and distinguishes Strategy failure from system failure for all four languages.
+- [ ] **PROV-05**: Contract, DTO, ABI, and Match execution changes are versioned or migration-documented, tested, and audited before any counted eligibility change depends on them.
 
-### Public Home Discovery Hub
+### Python Production Support Path
 
-- [x] **HOME-01**: Non-user can land at `/` and understand Coward's Game as a public competitive Strategy site.
-- [x] **HOME-02**: Home highlights recent public MatchSets, replay-ready evidence, active competitions, and notable player/Strategy links using `getPublicHomeDiscovery`.
-- [x] **HOME-03**: Home provides direct paths to `/watch`, `/competitions`, `/learn`, `/workshop`, and signed-in account actions.
-- [x] **HOME-04**: Home handles empty and unavailable discovery states without pretending execution data exists.
-- [x] **HOME-05**: Home output is public-safe and does not expose private Strategy or runtime/internal details.
+- [ ] **PY-01**: Python Strategy validation uses the shared provider model and enforces deterministic restrictions, forbidden capabilities, source limits, output limits, memory limits, timeout behavior, package policy, and public-safe diagnostics.
+- [ ] **PY-02**: Python Strategy execution remains behind runtime-service / Runtime Broker / Python provider boundaries and does not execute in web/API/Go.
+- [ ] **PY-03**: Python supports counted eligibility only after invalid output, timeout, oversized output, forbidden capability, memory-heavy output, deterministic behavior, runtime unavailable, malformed runtime result, no-fallback, and privacy tests pass.
+- [ ] **PY-04**: Workshop, Account, competition entry, MatchSet creation/execution, result pages, replay pages, public evidence, Learn/docs, and monitors all present Python as fully supported and counted through shared provider semantics.
+- [ ] **PY-05**: Signed-in proof creates, saves, enters, executes, views results, views replay, and scans public output for a counted Python Strategy Revision without private data leaks.
 
-### Watch Hub
+### Rust Production Support Path
 
-- [x] **WATCH-01**: `/watch` lists latest public MatchSets and Matches with replay availability and result-state cues.
-- [x] **WATCH-02**: Watch distinguishes replay-ready, queued, running, degraded, failed, stale, missing, and no-result public evidence states using existing public-safe status semantics.
-- [x] **WATCH-03**: Watch links to `/matchsets/[matchSetId]`, `/matches/[matchId]/replay`, player profiles, Strategy cards, and competition details where available.
-- [x] **WATCH-04**: Watch remains useful when no recent public evidence exists or public reads are temporarily unavailable.
-- [x] **WATCH-05**: Watch tests prove the page consumes discovery DTOs, not `match-execution-app-v1` DTO changes or execution internals.
+- [ ] **RUST-01**: Rust Strategy validation uses the shared provider model and enforces deterministic restrictions, forbidden capabilities, source limits, output limits, memory limits, timeout/fuel behavior, package/import policy, artifact policy, and public-safe diagnostics.
+- [ ] **RUST-02**: Rust build/compile produces immutable artifact metadata with toolchain version, target triple, WASI profile, ABI envelope, artifact hash, source hash, byte count, validation status, and compatibility data.
+- [ ] **RUST-03**: Rust Strategy execution remains behind runtime-service / Runtime Broker / Rust provider boundaries and does not execute mutable source or fallback JS/TS code.
+- [ ] **RUST-04**: Rust supports counted eligibility only after invalid output, timeout, oversized output, forbidden capability, memory-heavy output, deterministic behavior, stale/missing/mismatched artifact, runtime unavailable, malformed runtime result, no-fallback, and privacy tests pass.
+- [ ] **RUST-05**: Workshop, Account, competition entry, MatchSet creation/execution, result pages, replay pages, public evidence, Learn/docs, monitors, and signed-in proof present Rust as fully supported and counted through shared provider semantics.
 
-### Competition Hub and Detail
+### Zig Production Support Path
 
-- [x] **COMP-01**: `/competitions` shows active tournaments, ladders, exhibitions, entry opportunities, and public state labels.
-- [x] **COMP-02**: `/competitions/[competitionId]` shows entrants, standings, schedule/pods/bracket where applicable, MatchSets, and replay coverage.
-- [x] **COMP-03**: Competition detail links to results, replays, players, Strategies, and entry when the competition is open.
-- [x] **COMP-04**: Existing resettable trial ladder and exhibition concepts are represented without durable rating or production governance overclaims.
-- [x] **COMP-05**: Competition pages keep non-JS lanes labeled as non-counted exhibition beta only.
-- [x] **COMP-06**: Competition tests cover public empty/unavailable states and public-safe privacy scans.
+- [ ] **ZIG-01**: Zig Strategy validation uses the shared provider model and enforces deterministic restrictions, allowed import surface, no-std/helper policy, source limits, output limits, memory limits, timeout/fuel behavior, package/import policy, artifact policy, and public-safe diagnostics.
+- [ ] **ZIG-02**: Zig build/compile produces immutable artifact metadata with toolchain version, target triple, WASI profile, ABI envelope, allowed import audit, artifact hash, source hash, byte count, validation status, and compatibility data.
+- [ ] **ZIG-03**: Zig Strategy execution remains behind runtime-service / Runtime Broker / Zig provider boundaries and does not execute mutable source or fallback JS/TS code.
+- [ ] **ZIG-04**: Zig supports counted eligibility only after invalid output, timeout, oversized output, forbidden capability, memory-heavy output, deterministic behavior, missing/stale/mismatched artifact, disallowed import, runtime unavailable, malformed runtime result, no-fallback, and privacy tests pass.
+- [ ] **ZIG-05**: Workshop, Account, competition entry, MatchSet creation/execution, result pages, replay pages, public evidence, Learn/docs, monitors, and signed-in proof present Zig as fully supported and counted through shared provider semantics.
 
-### Signed-In Entry Spine
+### Golden Corpus and Parity Matrix
 
-- [x] **ENTRY-01**: `/competitions/[competitionId]/enter` requires sign-in and explains entry state clearly.
-- [x] **ENTRY-02**: Signed-in user can choose eligible saved Strategy Revisions from `getSignedInCompetitionEntryDashboard`.
-- [x] **ENTRY-03**: Entry flow links back to Workshop for drafting/saving, Account for revision management, competition detail for rules, and results/replay after entry.
-- [x] **ENTRY-04**: Entry dashboard distinguishes valid, invalid, stale, already-entered, and ineligible revisions without exposing source.
-- [x] **ENTRY-05**: Entry tests cover anonymous, signed-in empty, signed-in eligible, unavailable account read, and privacy-safe states.
+- [ ] **PAR-01**: Developer can run a golden Strategy corpus implemented equivalently in JS/TS, Python, Rust, and Zig.
+- [ ] **PAR-02**: Cross-language pairwise Match/MatchSet matrix covers JS/TS, Python, Rust, and Zig against each other and same-language mirrors.
+- [ ] **PAR-03**: Shared conformance tests cover invalid output, timeout, oversized output, forbidden capability, memory-heavy output, deterministic behavior, runtime unavailable, malformed runtime result, and no silent fallback.
+- [ ] **PAR-04**: Result and replay shape parity tests prove equivalent public-safe outcome/evidence structure across all four languages.
+- [ ] **PAR-05**: Privacy parity tests prove no four-language result, replay, public evidence, fixture, or proof artifact exposes private Strategy/runtime data by default.
 
-### Cross-Link Pass
+### Workshop, Account, and Competition Entry Unification
 
-- [x] **LINK-01**: Workshop links to saved revisions, Account, competition entry opportunities, and Learn.
-- [x] **LINK-02**: Account links saved revisions to Strategy cards, competition entry, MatchSet results, and replay evidence.
-- [x] **LINK-03**: MatchSet result pages link back to Watch, competition detail where known, player profiles, Strategy cards, and available replays.
-- [x] **LINK-04**: Replay pages link back to MatchSet result, Watch, player/Strategy pages where known, and Learn/trust explanation.
-- [x] **LINK-05**: Player and Strategy pages link to recent public results/replays and competition context without exposing source.
+- [ ] **PROD-01**: Workshop editor, language controls, templates, starter samples, validation copy, submit/save behavior, and runtime cues are driven by the shared language provider model.
+- [ ] **PROD-02**: Account revision lists and account-safe save/read flows show all four languages consistently without exposing Strategy source by default.
+- [ ] **PROD-03**: Competition entry and exhibition counted/unranked controls use shared counted eligibility so JS/TS, Python, Rust, and Zig can enter counted paths when provider proof passes.
+- [ ] **PROD-04**: Strategy cards, player pages, Watch/discovery reads, and competition pages use provider-derived public language labels and counted eligibility.
+- [ ] **PROD-05**: Product tests prove label and eligibility consistency across Workshop, Account, competition entry, Strategy cards, player pages, MatchSet results, replay, Learn/docs, and public discovery.
 
-### Privacy, Boundary, and Monitor Coverage
+### Result, Replay, Public Evidence, and Docs
 
-- [x] **SAFE-01**: Public discovery DTOs and rendered pages scan clean for all forbidden private markers.
-- [x] **SAFE-02**: Boundary monitors prove discovery APIs are not named, versioned, or validated as `match-execution-app-v1`.
-- [x] **SAFE-03**: Monitors prove no existing public execution DTO fields were added to satisfy discovery requirements.
-- [x] **SAFE-04**: Tests prove discovery reads do not execute Strategy code in web/API/Go and do not import runtime-service private internals.
-- [x] **SAFE-05**: Discovery proof preserves JS/TS counted status, non-JS exhibition beta labels, and Preview 1 JSON ABI status.
+- [ ] **EVID-01**: MatchSet result pages present language/provider evidence for all four languages without exposing private runtime details or Strategy internals.
+- [ ] **EVID-02**: Replay pages present language/provider evidence, replay availability, trust copy, and board realism for all four languages using public-safe projections.
+- [ ] **EVID-03**: Public evidence DTOs, fixtures, generated proof artifacts, and rendered pages scan clean for private Strategy/runtime markers across all four languages.
+- [ ] **EVID-04**: Learn/docs explain the four supported languages, provider boundaries, counted eligibility, ABI decision, deterministic restrictions, source/artifact policy, package policy, privacy rules, and no-fallback behavior.
+- [ ] **EVID-05**: Public docs and UI preserve canonical Coward's Game terminology and avoid overclaiming production sandbox certification where the evidence does not support it.
 
-### Journey Proof
+### Drift Monitors and Boundary Coverage
 
-- [x] **PROOF-01**: Browser proof covers anonymous public journey: `/` -> `/watch` -> MatchSet -> replay -> player/Strategy -> learn.
-- [x] **PROOF-02**: Browser proof covers competition journey: `/competitions` -> detail -> entry sign-in gate -> signed-in entry dashboard.
-- [x] **PROOF-03**: Browser proof covers signed-in build-to-compete journey: Workshop -> saved revision -> competition entry -> result -> replay.
-- [x] **PROOF-04**: Proof includes desktop and mobile checks with no overlapping navigation, cards, tables, buttons, or evidence text.
-- [x] **PROOF-05**: Proof artifacts record route coverage, discovery DTO names, privacy scan result, boundary result, and non-claims.
+- [ ] **MON-01**: Boundary monitors fail when active product code directly special-cases `typescript`, `python`, `rust`, or `zig` outside approved registry/provider/adapter boundaries.
+- [ ] **MON-02**: Existing non-promotion monitors are converted into positive four-language parity, counted eligibility, privacy, no-fallback, ABI, and provider-boundary monitors.
+- [ ] **MON-03**: Import monitors prove web/API/Go do not execute Strategy code and do not import runtime implementation internals except through approved service clients or schemas.
+- [ ] **MON-04**: Registry/provider monitors prove every supported language has templates, docs references, validation/build path, runtime provider id, limits, public labels, privacy policy, counted eligibility, and proof coverage.
+- [ ] **MON-05**: Contract monitors prove any execution DTO, service contract, ABI, or Match execution contract change is intentional, versioned or migrated where needed, and compatible with public result/replay privacy.
+
+### Live Four-Language Signed-In Proof
+
+- [ ] **PROOF-01**: Signed-in user can author or load valid JS/TS, Python, Rust, and Zig Strategy Revisions through Workshop or Account flows.
+- [ ] **PROOF-02**: Signed-in user can enter counted competition or MatchSet paths with all four languages using shared provider eligibility.
+- [ ] **PROOF-03**: Live execution completes a four-language proof matrix with public-safe MatchSet results and replay-ready evidence.
+- [ ] **PROOF-04**: Desktop and mobile browser proof confirms Workshop, Account, entry, result, replay, public evidence, and docs surfaces render without clipped, overlapping, or contradictory language labels.
+- [ ] **PROOF-05**: Proof artifact records language/provider ids, ABI decision, counted eligibility, pairwise matrix coverage, privacy scan result, boundary monitor result, board realism checks, and non-claims.
 
 ### Audit and Closure
 
-- [x] **CLOSE-01**: Code review covers site shell, public routes, discovery DTOs, cross-links, privacy, and boundary monitors.
-- [x] **CLOSE-02**: UI review verifies the public site feels like a competitive discovery experience, not a scattered tool collection.
-- [x] **CLOSE-03**: Validation verifies requirements, tests, route proof, privacy scans, browser proof, and no contract drift.
-- [x] **CLOSE-04**: Final decision states discovery APIs remain separate from `match-execution-app-v1`.
-- [x] **CLOSE-05**: Planning artifacts are archived, milestone audit passes, commit/tag evidence is recorded.
+- [ ] **CLOSE-01**: Code review covers registry/provider model, runtime-service contract, language production paths, conformance suite, product unification, public evidence, docs, privacy, and monitors.
+- [ ] **CLOSE-02**: Validation verifies requirements, tests, conformance matrix, public privacy scans, boundary monitors, browser proof, replay board realism, and no Strategy execution in web/API/Go.
+- [ ] **CLOSE-03**: Final decision records language promotion status for JS/TS, Python, Rust, and Zig and states the active ABI/service-contract posture.
+- [ ] **CLOSE-04**: Audit verifies no label-only promotion, no hidden JS/TS-only counted gate, no public private-data leak, and no unversioned execution/runtime contract drift.
+- [ ] **CLOSE-05**: Planning artifacts are archived, milestone audit passes, commits are complete, and tag evidence is recorded.
 
 ## Future Requirements
 
-### Public Discovery Follow-Up
+### Future Runtime and Competition Governance
 
-- **FUT-DISC-01**: Search, filters, pagination, alerts, and personalized recommendations can be added after the basic public discovery spine is proven.
-- **FUT-DISC-02**: Durable ranked seasons, permanent ratings, moderation workflows, and production tournament governance require a separate milestone.
-- **FUT-DISC-03**: Rich owner-only analytics or Strategy explanation must remain signed-in/private unless a future privacy design explicitly promotes a public-safe projection.
+- **FUT-RUN-01**: Durable all-time ratings, permanent Elo/Glicko, ranked prize ladders, production tournament governance, moderation workflows, and abuse response can be added after four-language counted support has operational proof.
+- **FUT-RUN-02**: Direct exports or Component Model/WIT can replace Preview 1 stdin/stdout JSON only after a separate migration proves parity, schema validation, caps, memory ownership, privacy, rollback, and replay compatibility.
+- **FUT-RUN-03**: Rich package/dependency ecosystems for Python, Rust, Zig, or JS/TS require separate supply-chain, reproducibility, native-code, and deterministic-build policies.
+- **FUT-RUN-04**: Stronger production sandbox certification requires explicit isolation claims, deployment controls, external review or equivalent evidence, and ongoing operations proof.
 
 ## Out of Scope
 
 | Feature | Reason |
 | --- | --- |
-| `match-execution-app-v1` version bump or DTO expansion | v1.31 adds separate discovery reads, not execution DTO changes. |
-| Go match execution changes | Site discovery can aggregate existing public projections without altering execution. |
-| Runtime-service behavior changes | Runtime-service remains hostile Strategy execution only behind ABI envelopes. |
-| Retry/recovery/quarantine/operator UI | These are private/internal execution operations, not public discovery content. |
-| MatchSet scoring or Chronicle persistence changes | Public discovery links to existing result/replay evidence and does not change scoring/storage. |
-| Counted non-JS play or runtime promotion | JS/TS remains counted; Python/Rust/Zig remain non-counted exhibition beta. |
-| Production sandbox certification | Navigation and public discovery do not prove hostile-code isolation. |
-| Strategy execution in web/API/Go | Hostile Strategy code must stay behind runtime-service / Runtime Broker boundaries. |
-| Strategy source or memory exposure | Public discovery must stay source-free and memory-free by default. |
+| Strategy execution in web/API/Go | Hostile Strategy code must remain behind runtime-service / Runtime Broker / provider boundaries. |
+| Node `vm` as a security boundary | It is not an acceptable sandbox for hostile Strategy code. |
+| Label-only language promotion | Full support requires provider, runtime, conformance, product, public evidence, docs, proof, and monitors. |
+| Unversioned execution/runtime contract drift | Any DTO, ABI, service, or Match execution contract change must be explicit, justified, tested, audited, and versioned or migrated where needed. |
+| Public Strategy source or memory exposure | Public outputs must remain source-free and memory-free by default. |
+| Silent JS/TS fallback for Python/Rust/Zig | Runtime failures must fail closed, not substitute another language path. |
+| Production sandbox overclaim without evidence | Counted support and sandbox certification are separate claims and both need evidence. |
+| Durable permanent rankings or tournament governance | Four-language counted support can prove eligibility without committing to long-term rating/governance systems. |
+| Package ecosystem expansion | Package/dependency policy is constrained to what the provider contract explicitly supports in this milestone. |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| INV-01 | Phase 211 | Complete |
-| INV-02 | Phase 211 | Complete |
-| INV-03 | Phase 211 | Complete |
-| INV-04 | Phase 211 | Complete |
-| INV-05 | Phase 211 | Complete |
-| DISC-01..DISC-06 | Phase 212 | Complete |
-| SHELL-01..SHELL-05 | Phase 213 | Complete |
-| HOME-01..HOME-05 | Phase 214 | Complete |
-| WATCH-01..WATCH-05 | Phase 215 | Complete |
-| COMP-01..COMP-06 | Phase 216 | Complete |
-| ENTRY-01..ENTRY-05 | Phase 217 | Complete |
-| LINK-01..LINK-05 | Phase 218 | Complete |
-| SAFE-01..SAFE-05 | Phase 219 | Complete |
-| PROOF-01..PROOF-05 | Phase 220 | Complete |
-| CLOSE-01..CLOSE-05 | Phase 221 | Complete |
+| TBD | TBD | Pending |
 
 **Coverage:**
-- v1 requirements: 57 total
-- Complete: 57
+- v1 requirements: 60 total
+- Complete: 0
 - Planned: 0
-- Mapped to phases: 57
-- Unmapped: 0
+- Mapped to phases: 0
+- Unmapped: 60
 
 ---
 *Requirements defined: 2026-05-31*
-*Last updated: 2026-05-31 after v1.31 validation and audit*
+*Last updated: 2026-05-31 after v1.32 research and scoping*
