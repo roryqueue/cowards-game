@@ -937,7 +937,7 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
       "signed-in-counted-proof",
     ],
     isolationBoundary:
-      "Wasmtime CLI subprocess candidate for immutable WASM/WASI non-counted exhibition beta; not production hostile-code isolation certification.",
+      "Wasmtime CLI subprocess candidate for immutable WASM/WASI provider-gated counted play; not broad hostile-code isolation certification.",
     limits: {
       ...DEFAULT_RUNTIME_LIMITS,
       environment: "empty",

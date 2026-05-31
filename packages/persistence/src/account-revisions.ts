@@ -1,4 +1,9 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto"
+import {
+  createHash,
+  createHmac,
+  randomUUID,
+  timingSafeEqual,
+} from "node:crypto"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import {
   describeStrategyRuntimeProductSemantics,
@@ -273,6 +278,12 @@ const rustProviderValidationMatches = (
     artifact.abiEnvelope !== "stdin-stdout-json" ||
     artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
     artifact.validationStatus !== "valid" ||
+    artifact.bytesBase64 === undefined ||
+    !artifactBytesMatch({
+      bytesBase64: artifact.bytesBase64,
+      hash: artifact.hash,
+      bytes: artifact.bytes,
+    }) ||
     validation.artifactHash !== artifact.hash ||
     validation.artifactBytes !== artifact.bytes
   ) {
@@ -287,6 +298,18 @@ const rustProviderValidationMatches = (
     artifactBytes: artifact.bytes,
   })
   return expected !== null && safeEqual(validation.proof, expected)
+}
+
+const artifactBytesMatch = (artifact: {
+  bytesBase64: string
+  hash: string
+  bytes: number
+}): boolean => {
+  const bytes = Buffer.from(artifact.bytesBase64, "base64")
+  return (
+    bytes.byteLength === artifact.bytes &&
+    createHash("sha256").update(bytes).digest("hex") === artifact.hash
+  )
 }
 
 const providerValidationSecret = (): string =>
