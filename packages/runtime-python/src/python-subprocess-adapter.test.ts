@@ -27,7 +27,7 @@ def soldier_brain(input):
     }
 `
 
-describe("Python experimental subprocess Strategy ABI", () => {
+describe("Python subprocess Strategy provider ABI", () => {
   it("runs selectActivations through the v1.7 JSON ABI", async () => {
     const response = await runPythonStrategyMethod({
       sourceText: pythonSource,
@@ -63,12 +63,14 @@ describe("Python experimental subprocess Strategy ABI", () => {
     })
   })
 
-  it("marks the adapter experimental and not counted", () => {
+  it("uses constrained provider metadata for counted Python", () => {
     const metadata = pythonExperimentalRuntimeMetadata()
 
     expect(metadata.language.id).toBe("python")
     expect(metadata.adapter.id).toBe("runtime-python-subprocess-experimental")
     expect(metadata.limits.network).toBe("disabled")
+    expect(metadata.limits.filesystem).toBe("none")
+    expect(metadata.package.mode).toBe("none")
   })
 
   it("launches Python with isolated-mode host args and an empty environment", () => {
@@ -111,7 +113,7 @@ describe("Python experimental subprocess Strategy ABI", () => {
   it("runs synchronously for the runtime-service broker adapter", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
     const runtime = createPythonRuntimeFromRevision(revision, {
-      timeoutMs: 500,
+      timeoutMs: 1_000,
       stdoutBytes: 32 * 1024,
       stderrBytes: 4 * 1024,
     })

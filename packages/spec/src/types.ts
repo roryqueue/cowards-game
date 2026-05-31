@@ -241,6 +241,15 @@ export interface StrategyRevisionMetadata {
   label?: string | undefined
   notes?: string | undefined
   tags?: string[] | undefined
+  providerValidation?:
+    | {
+        providerId: string
+        contractVersion: string
+        sourceHash: string
+        sourceBytes: number
+        proof: string
+      }
+    | undefined
   starterLineage?:
     | {
         starterId: string

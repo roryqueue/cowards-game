@@ -28,6 +28,10 @@
         "packages/persistence/src/workshop-analytics.ts"
       ],
       "@cowards/runtime-js": ["packages/runtime-js/src/index.ts"],
+      "@cowards/runtime-python": ["packages/runtime-python/src/index.ts"],
+      "@cowards/runtime-python/validation": [
+        "packages/runtime-python/src/validation.ts"
+      ],
       "@cowards/service": ["packages/service/src/index.ts"],
       "@cowards/spec": ["packages/spec/src/index.ts"]
     }

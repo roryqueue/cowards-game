@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { createHmac } from "node:crypto"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import {
   assertLadderEligibleRuntime,
@@ -6,6 +7,26 @@ import {
   DEFAULT_LADDER_TARGET_POD_SIZE,
   trialLadderStatusLabel,
 } from "./ladder.js"
+
+const TEST_PROVIDER_VALIDATION_SECRET =
+  "cowards-provider-validation-test-secret-v1.32"
+
+process.env.COWARDS_PROVIDER_VALIDATION_SECRET = TEST_PROVIDER_VALIDATION_SECRET
+
+const pythonProviderProof = (sourceHash: string, sourceBytes: number): string =>
+  `hmac-sha256:${createHmac(
+    "sha256",
+    TEST_PROVIDER_VALIDATION_SECRET,
+  )
+    .update(
+      [
+        "strategy-language-provider-python",
+        "strategy-language-provider-contract-v1.32",
+        sourceHash,
+        String(sourceBytes),
+      ].join("\n"),
+    )
+    .digest("hex")}`
 
 describe("trial ladder contracts", () => {
   it("uses resettable beta lifecycle labels without permanent rating language", () => {
@@ -26,12 +47,44 @@ describe("trial ladder contracts", () => {
     expect(() =>
       assertLadderEligibleRuntime({
         ...defaultRuntimeMetadata(),
-        language: { id: "python", version: "3.9" },
+        language: { id: "rust", version: "1.95.0-wasm32-wasip1" },
         adapter: {
-          id: "runtime-python-subprocess-experimental",
-          version: "0.1.0-experimental",
+          id: "runtime-wasm-wasi-wasmtime-preview1",
+          version: "0.1.0-alpha",
         },
       }),
     ).toThrow("experimental and not counted-play eligible")
+  })
+
+  it("requires provider provenance before counted Python trial ladder entry", () => {
+    const runtime = {
+      ...defaultRuntimeMetadata(),
+      language: { id: "python", version: "3.9" },
+      adapter: {
+        id: "runtime-python-subprocess-experimental",
+        version: "0.1.0-experimental",
+      },
+    }
+    const sourceHash = "python-source-hash"
+    const sourceBytes = 128
+
+    expect(() => assertLadderEligibleRuntime(runtime)).toThrow(
+      "provider-validated revision provenance",
+    )
+    expect(
+      assertLadderEligibleRuntime(runtime, {
+        sourceHash,
+        sourceBytes,
+        metadata: {
+          providerValidation: {
+            providerId: "strategy-language-provider-python",
+            contractVersion: "strategy-language-provider-contract-v1.32",
+            sourceHash,
+            sourceBytes,
+            proof: pythonProviderProof(sourceHash, sourceBytes),
+          },
+        },
+      }).language.id,
+    ).toBe("python")
   })
 })

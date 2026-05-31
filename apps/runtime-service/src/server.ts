@@ -3,6 +3,7 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http"
+import { createHmac } from "node:crypto"
 import {
   RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,
   RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,
@@ -18,6 +19,10 @@ import {
   validateZigStrategySource,
   validateRustStrategySource,
 } from "@cowards/runtime-wasm-wasi/validation"
+import {
+  buildPythonStrategyRevision,
+  validatePythonStrategySource,
+} from "@cowards/runtime-python/validation"
 import {
   createRuntimeServiceConfig,
   type RuntimeServiceConfig,
@@ -76,13 +81,39 @@ const malformedRequestResponse = (
     },
   }) as RuntimeExecutionServiceResponse
 
+const providerValidationSecret = (): string =>
+  process.env.COWARDS_PROVIDER_VALIDATION_SECRET?.trim() ?? ""
+
+const pythonProviderValidationProof = (input: {
+  providerId: string
+  contractVersion: string
+  sourceHash: string
+  sourceBytes: number
+}): string => {
+  const secret = providerValidationSecret()
+  if (!secret) {
+    throw new Error("Python provider validation signing secret is not configured.")
+  }
+  const payload = [
+    input.providerId,
+    input.contractVersion,
+    input.sourceHash,
+    String(input.sourceBytes),
+  ].join("\n")
+  return `hmac-sha256:${createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex")}`
+}
+
 const validateStrategyRequest = (rawRequest: unknown) => {
   const body =
     rawRequest !== null && typeof rawRequest === "object"
       ? (rawRequest as Record<string, unknown>)
       : {}
   if (
-    (body.sourceFormat !== "rust" && body.sourceFormat !== "zig") ||
+    (body.sourceFormat !== "python" &&
+      body.sourceFormat !== "rust" &&
+      body.sourceFormat !== "zig") ||
     typeof body.source !== "string"
   ) {
     return {
@@ -90,13 +121,15 @@ const validateStrategyRequest = (rawRequest: unknown) => {
       kind: "strategyValidation",
       sourceFormat: body.sourceFormat,
       error:
-        "Rust or Zig source is required for runtime-service WASM/WASI validation.",
+        "Python, Rust, or Zig source is required for runtime-service provider validation.",
     }
   }
   const sourceFormat = body.sourceFormat
   const provider = getStrategyLanguageProviderRecord(sourceFormat)
   const validation =
-    sourceFormat === "zig"
+    sourceFormat === "python"
+      ? validatePythonStrategySource(body.source)
+      : sourceFormat === "zig"
       ? validateZigStrategySource(body.source)
       : validateRustStrategySource(body.source)
   if (!validation.valid) {
@@ -108,17 +141,41 @@ const validateStrategyRequest = (rawRequest: unknown) => {
     }
   }
   const revisionBuilder =
-    sourceFormat === "zig"
+    sourceFormat === "python"
+      ? buildPythonStrategyRevision
+      : sourceFormat === "zig"
       ? buildZigStrategyRevision
       : buildRustStrategyRevision
+  const metadata =
+    sourceFormat === "python"
+      ? {
+          tags: ["python", "counted", "provider"],
+          providerValidation: {
+            providerId: "strategy-language-provider-python",
+            contractVersion:
+              provider?.contractVersion ??
+              "strategy-language-provider-contract-v1.32",
+            sourceHash: validation.sourceHash,
+            sourceBytes: validation.sourceBytes,
+            proof: pythonProviderValidationProof({
+              providerId: "strategy-language-provider-python",
+              contractVersion:
+                provider?.contractVersion ??
+                "strategy-language-provider-contract-v1.32",
+              sourceHash: validation.sourceHash,
+              sourceBytes: validation.sourceBytes,
+            }),
+          },
+        }
+      : {
+          tags: [sourceFormat, "wasm-wasi", "non-counted", "exhibition-beta"],
+        }
   const revision = revisionBuilder({
     source: body.source,
     ...(typeof body.strategyId === "string" && body.strategyId.trim().length > 0
       ? { strategyId: body.strategyId }
       : {}),
-    metadata: {
-      tags: [sourceFormat, "wasm-wasi", "non-counted", "exhibition-beta"],
-    },
+    metadata,
   })
   return {
     ok: true,
@@ -135,7 +192,7 @@ const validateStrategyRequest = (rawRequest: unknown) => {
     runtime: revision.runtime,
     validation: revision.validation,
     engineCompatibility: revision.engineCompatibility,
-    metadata: revision.metadata,
+    metadata,
     sourceHash: revision.sourceHash,
     sourceBytes: revision.sourceBytes,
   }

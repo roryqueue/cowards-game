@@ -673,7 +673,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                         ? "Rust beta"
                         : template.sourceFormat === "zig"
                           ? "Zig beta"
-                          : "Python experimental"}
+                          : "Experimental"}
                     </span>
                   ) : null}
                 </button>
@@ -836,7 +836,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 type="button"
                 onClick={() => setSourceFormat("python")}
               >
-                PY beta
+                {sourceFormatShortLabel("python")}
               </button>
               <button
                 className={sourceFormat === "rust" ? "active" : ""}
@@ -853,9 +853,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 {sourceFormatShortLabel("zig")}
               </button>
             </div>
-            {sourceFormat === "python" ||
-            sourceFormat === "rust" ||
-            sourceFormat === "zig" ? (
+            {sourceFormatRuntimeCue(sourceFormat) ? (
               <p className="workshop-muted">
                 {sourceFormatRuntimeCue(sourceFormat)}
               </p>

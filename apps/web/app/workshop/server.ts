@@ -133,6 +133,14 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
       if (!validation.valid) {
         return { ok: false, validation }
       }
+      if (
+        request.sourceFormat === "python" &&
+        request.runtimeServiceValidated !== true
+      ) {
+        throw new Error(
+          "Python Workshop revisions require runtime-service provider validation.",
+        )
+      }
 
       const revision = buildWorkshopRevision({
         source: request.source,
@@ -141,6 +149,7 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
         validation,
         engineCompatibility: request.engineCompatibility,
         metadata: request.metadata,
+        runtimeServiceValidated: request.runtimeServiceValidated,
         label: normalizeOptionalText(request.label) ?? "Workshop revision",
         notes: normalizeOptionalText(request.notes),
       })

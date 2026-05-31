@@ -10,6 +10,10 @@ import {
   validateStrategySource,
 } from "@cowards/runtime-js"
 import {
+  buildPythonStrategyRevision,
+  createPythonRuntimeFromRevision,
+} from "@cowards/runtime-python"
+import {
   INITIAL_BOUNDS,
   type SoldierBrainResult,
   type StrategyResult,
@@ -174,8 +178,8 @@ describe("Workshop service contracts", () => {
       ),
     ).toEqual(
       expect.objectContaining({
-        experimental: true,
-        countedPlayEligible: false,
+        experimental: false,
+        countedPlayEligible: true,
       }),
     )
   })
@@ -446,9 +450,9 @@ describe("Workshop service contracts", () => {
       "Push",
       "Backstab",
       "Stone",
-      "Python beta",
-      "Python beta",
-      "Python beta",
+      "Python",
+      "Python",
+      "Python",
       "Rust beta",
       "Zig beta",
     ])
@@ -478,6 +482,69 @@ describe("Workshop service contracts", () => {
         .map((sample) => sample.id),
     ).toEqual(["sample:rust-wasi-stone"])
   })
+
+  it("executes bundled Python starter samples through the Python provider runtime", () => {
+    const pythonSamples = listWorkshopSamples().filter(
+      (sample) => sample.sourceFormat === "python",
+    )
+
+    for (const sample of pythonSamples) {
+      const revision = buildPythonStrategyRevision({
+        source: sample.source,
+        strategyId: WORKSHOP_STRATEGY_ID,
+      })
+      const runtime = createPythonRuntimeFromRevision(revision)
+      const activation = runtime.selectActivations({
+        phaseNumber: 1,
+        roundNumber: 1,
+        activationCount: 1,
+        board: {
+          bounds: INITIAL_BOUNDS,
+          soldiers: [],
+          terrainStones: [],
+        },
+        mySoldiers: [
+          {
+            id: "soldier:sample",
+            ownerPlayerId: "player:workshop-local",
+            status: "ACTIVE",
+            position: { x: 0, y: 0 },
+            facing: "UP",
+            lastSuccessfulMoveDirection: null,
+          },
+        ],
+        enemySoldiers: [],
+        strategyMemory: {},
+      })
+      const brain = runtime.runSoldierBrain({
+        self: {
+          id: "soldier:sample",
+          ownerPlayerId: "player:workshop-local",
+          status: "ACTIVE",
+          position: { x: 0, y: 0 },
+          facing: "UP",
+          lastSuccessfulMoveDirection: null,
+        },
+        awarenessGrid: {
+          cells: [
+            {
+              dx: 1,
+              dy: 0,
+              absoluteX: 1,
+              absoluteY: 0,
+              contents: "ENEMY_ACTIVE",
+            },
+          ],
+        },
+        cycleIndex: 0,
+        maxCycles: 12,
+        soldierMemory: {},
+      })
+
+      expect(activation.ok, sample.id).toBe(true)
+      expect(brain.ok, sample.id).toBe(true)
+    }
+  }, 15_000)
 
   it("ships intentional failure-mode samples with explicit expectations", () => {
     const failureModes = listWorkshopSamples().filter(

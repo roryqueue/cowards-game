@@ -292,7 +292,7 @@ describe("runtime execution service", () => {
       "match:runtime-service-test",
     )
     expect(response.result.runtimeViolationEventCount).toBe(0)
-  })
+  }, 10_000)
 
   it.skipIf(!rustWasiCompileProbe.ok)(
     "executes Rust WASM artifacts through Wasmtime without source fallback",

@@ -174,8 +174,9 @@ export function ExhibitionClient({
         </div>
         {!counted ? (
           <p className="workshop-muted">
-            Unranked exhibitions may include Python, Rust, or Zig non-counted
-            exhibition beta revisions and are marked non-counted.
+            Unranked exhibitions may include any valid revision; Rust and Zig
+            remain non-counted exhibition beta until their provider evidence
+            passes.
           </p>
         ) : null}
 

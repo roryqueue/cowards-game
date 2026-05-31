@@ -7,19 +7,22 @@ import {
 } from "./runtime-labels.js"
 
 describe("runtime language labels", () => {
-  it("derives non-counted language labels from the supported language registry", () => {
+  it("derives language labels from the supported language registry", () => {
     expect(
       runtimeExhibitionStatusLabel({
         languageId: "python",
         languageLabel: "Python",
-        countedPlayLabel: "Not counted",
+        countedPlayLabel: "Counted eligible",
       }),
-    ).toBe("Python · non-counted exhibition beta")
+    ).toBe("Python · Counted eligible")
+    expect(sourceFormatExhibitionLabel("python")).toBeNull()
+    expect(sourceFormatShortLabel("python")).toBe("PY")
+    expect(sourceFormatRuntimeCue("python")).toBeNull()
     expect(sourceFormatExhibitionLabel("rust")).toBe(
       "Rust · non-counted exhibition beta",
     )
     expect(sourceFormatShortLabel("zig")).toBe("Zig beta")
-    expect(sourceFormatRuntimeCue("python")).toContain("Runtime Broker")
+    expect(sourceFormatRuntimeCue("rust")).toContain("Runtime Broker")
   })
 
   it("keeps TypeScript counted labels neutral", () => {

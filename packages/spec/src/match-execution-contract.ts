@@ -111,8 +111,8 @@ export const MatchExecutionLifecycleV1Schema = z.object({
 export const MatchExecutionRuntimeEvidenceV1Schema = z.object({
   runtimeLabels: z.array(z.string().min(1)),
   eligibility: z.object({
-    countedStrategyPath: z.literal("javascript-typescript"),
-    nonCountedExhibitionBeta: z.array(z.enum(["python", "rust", "zig"])),
+    countedStrategyPath: z.literal("javascript-typescript-python"),
+    nonCountedExhibitionBeta: z.array(z.enum(["rust", "zig"])),
     activeWasmWasiAbi: z.literal("preview1-stdin-stdout-json"),
   }),
   ownership: z.object({
@@ -423,8 +423,8 @@ export const createMatchExecutionRuntimeEvidenceV1 = (
           `${entrant.runtime.language.id}:${entrant.runtime.adapter.id}`,
       ) ?? [],
     eligibility: {
-      countedStrategyPath: "javascript-typescript",
-      nonCountedExhibitionBeta: ["python", "rust", "zig"],
+      countedStrategyPath: "javascript-typescript-python",
+      nonCountedExhibitionBeta: ["rust", "zig"],
       activeWasmWasiAbi: "preview1-stdin-stdout-json",
     },
     ownership: {

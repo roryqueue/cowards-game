@@ -11,13 +11,19 @@ import { runtimeExhibitionStatusLabel } from "../../../lib/runtime-labels.js"
 
 export const dynamic = "force-dynamic"
 
-const runtimeLabel = (entrant: {
+const runtimeLabel = (
+  entrant: {
   runtime: {
     language: { id: string }
     adapter: { id: string }
     package: { mode: string }
   }
-}): string => {
+},
+  nonCountedLanguages: ReadonlySet<string>,
+): string => {
+  const nonCountedByContract = nonCountedLanguages.has(
+    entrant.runtime.language.id,
+  )
   const language = (() => {
     return runtimeExhibitionStatusLabel({
       languageId: entrant.runtime.language.id,
@@ -29,7 +35,9 @@ const runtimeLabel = (entrant: {
             : entrant.runtime.language.id === "zig"
               ? "Zig"
               : "JS/TS",
-      countedPlayLabel: "Counted eligible",
+      countedPlayLabel: nonCountedByContract
+        ? "Not counted"
+        : "Counted eligible",
     })
   })()
   return `${language} · ${entrant.runtime.adapter.id}`
@@ -74,13 +82,23 @@ export default async function MatchSetResultPage({
           reviewStatus?: string
         })
       : {}
+  const nonCountedLanguages = new Set<string>(
+    result.contract.runtimeEvidence.eligibility.nonCountedExhibitionBeta,
+  )
+  if (governance.countedStatus === "non_counted") {
+    for (const entrant of result.entrants) {
+      nonCountedLanguages.add(entrant.runtime.language.id)
+    }
+  }
   const hasNonCountedEntrant = result.entrants.some((entrant) =>
-    ["python", "rust", "zig"].includes(entrant.runtime.language.id),
+    nonCountedLanguages.has(entrant.runtime.language.id),
   )
   const evidenceStatus =
     governance.countedStatus ??
     (hasNonCountedEntrant ? "non-counted exhibition" : "public exhibition")
-  const entrantRuntimeLabels = result.entrants.map(runtimeLabel)
+  const entrantRuntimeLabels = result.entrants.map((entrant) =>
+    runtimeLabel(entrant, nonCountedLanguages),
+  )
   const evidenceRows = matchSetEvidenceRows(result, entrantRuntimeLabels)
   const workbench = buildResultWorkbenchViewModel(result, entrantRuntimeLabels)
 
@@ -297,7 +315,7 @@ export default async function MatchSetResultPage({
                 <dt>hash</dt>
                 <dd>{entrant.shortHash}</dd>
                 <dt>runtime</dt>
-                <dd>{runtimeLabel(entrant)}</dd>
+                <dd>{runtimeLabel(entrant, nonCountedLanguages)}</dd>
                 <dt>locked</dt>
                 <dd>{new Date(entrant.lockedAt).toLocaleString()}</dd>
               </dl>

@@ -262,7 +262,7 @@ describe("Coward's Game spec contracts", () => {
     expect(RuntimeViolationUserGuidanceSchema.parse(guidance)).toEqual(guidance)
   })
 
-  it("runtime product semantics keep JS counted and Python experimental", () => {
+  it("runtime product semantics keep JS and Python counted while Rust/Zig stay evidence-gated", () => {
     const jsRuntime = defaultRuntimeMetadata()
     const pythonRuntime = {
       abiVersion: "strategy-runtime-abi-v1.14",
@@ -282,24 +282,34 @@ describe("Coward's Game spec contracts", () => {
       publicMessage: null,
     })
     expect(evaluateStrategyRuntimeCountedEligibility(pythonRuntime)).toEqual({
-      ok: false,
-      code: "NON_COUNTED_RUNTIME",
-      publicMessage:
-        "Strategy runtime is experimental and not counted-play eligible.",
+      ok: true,
+      code: null,
+      publicMessage: null,
     })
     expect(
       describeStrategyRuntimeProductSemantics(pythonRuntime),
     ).toMatchObject({
       languageLabel: "Python",
-      readinessLabel: "Experimental",
-      countedPlayLabel: "Not counted",
-      experimental: true,
+      readinessLabel: "Production candidate",
+      countedPlayLabel: "Counted eligible",
+      experimental: false,
     })
     expect(
       STRATEGY_RUNTIME_ADAPTER_REGISTRY.every(
-        (adapter) => adapter.isolationPromotionState === "evidence-only",
+        (adapter) =>
+          adapter.id === "runtime-python-subprocess-experimental" ||
+          adapter.isolationPromotionState === "evidence-only",
       ),
     ).toBe(true)
+    expect(
+      STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
+        (adapter) => adapter.id === "runtime-python-subprocess-experimental",
+      ),
+    ).toMatchObject({
+      enabledForNormalPlay: true,
+      countedResultsAllowed: true,
+      isolationPromotionState: "evidence-only",
+    })
     expect(
       STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
         (adapter) => adapter.id === "runtime-js-container-subprocess",
@@ -342,9 +352,10 @@ describe("Coward's Game spec contracts", () => {
     })
     expect(() => assertNonJsRuntimeGuardrails()).not.toThrow()
     expect(NON_JS_RUNTIME_SUPPORT_POLICY).toMatchObject({
-      status: "experimental-non-counted",
-      experimentalLanguageIds: ["python", "rust", "zig"],
-      publicLanguagePickerAllowed: false,
+      status: "partial-production-supported",
+      productionSupportedLanguageIds: ["javascript", "typescript", "python"],
+      experimentalLanguageIds: ["rust", "zig"],
+      publicLanguagePickerAllowed: true,
     })
     expect(
       NON_JS_RUNTIME_PROMOTION_CRITERIA.map((criterion) => criterion.id),
@@ -396,12 +407,12 @@ describe("Coward's Game spec contracts", () => {
       SUPPORTED_STRATEGY_LANGUAGES.filter(
         (language) => language.countedEligibility === "eligible",
       ).map((language) => language.id),
-    ).toEqual(["javascript", "typescript"])
+    ).toEqual(["javascript", "typescript", "python"])
     expect(
       SUPPORTED_STRATEGY_LANGUAGES.filter(
         (language) => language.countedEligibility === "pending-evidence",
       ).map((language) => language.id),
-    ).toEqual(["python", "rust", "zig"])
+    ).toEqual(["rust", "zig"])
   })
 
   it("v1.32 strategy language providers declare ABI and boundary posture", () => {
@@ -452,7 +463,7 @@ describe("Coward's Game spec contracts", () => {
     )
   })
 
-  it("v1.17 runtime broker registry uses exact metadata and keeps Python non-counted", () => {
+  it("v1.17 runtime broker registry uses exact metadata and promotes Python counted eligibility", () => {
     const jsRuntime = defaultRuntimeMetadata()
     const pythonRuntime = {
       abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
@@ -483,8 +494,8 @@ describe("Coward's Game spec contracts", () => {
           languageId: "python",
           runtimeTarget: "runtime-python",
           adapterId: "runtime-python-subprocess-experimental",
-          enabledForNormalPlay: false,
-          countedResultsAllowed: false,
+          enabledForNormalPlay: true,
+          countedResultsAllowed: true,
         }),
         expect.objectContaining({
           languageId: "rust",

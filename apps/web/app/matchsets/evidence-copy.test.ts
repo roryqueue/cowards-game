@@ -30,9 +30,7 @@ describe("reliability evidence copy", () => {
         status: "running",
         matches: [{ matchId: "match:1", status: "running" }] as never,
       }),
-      [
-        "Python · non-counted exhibition beta · runtime-python-subprocess-experimental",
-      ],
+      ["Python · Counted eligible · runtime-python-subprocess-experimental"],
     )
 
     expect(rowValue(rows, "status")).toContain("Running or slow")
@@ -81,9 +79,7 @@ describe("reliability evidence copy", () => {
           },
         ] as never,
       }),
-      [
-        "Python · non-counted exhibition beta · runtime-python-subprocess-experimental",
-      ],
+      ["Python · Counted eligible · runtime-python-subprocess-experimental"],
     )
 
     expect(rowValue(strategyRows, "match states")).toContain("strategy-failed")

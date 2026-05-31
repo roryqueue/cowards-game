@@ -8,6 +8,9 @@ import {
 import { createRuntimeServiceConfig } from "./runtime-config.js"
 import { createRuntimeExecutionHttpServer } from "./server.js"
 
+process.env.COWARDS_PROVIDER_VALIDATION_SECRET =
+  "cowards-provider-validation-test-secret-v1.32"
+
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
 })
@@ -73,6 +76,69 @@ describe("runtime execution HTTP boundary", () => {
       transportBinding: "HTTP+JSON",
       backendAuthority: false,
     })
+  })
+
+  it("validates Python through the provider validator instead of backend string scanning", async () => {
+    const server = await withServer(8 * 1024)
+    const validSource = `
+def select_activations(input):
+    return {"activationOrders": [], "strategyMemory": input["strategyMemory"]}
+
+def soldier_brain(input):
+    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": input["soldierMemory"]}
+`
+    const valid = await fetch(`${server.url}/validate-strategy`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sourceFormat: "python",
+        source: validSource,
+        strategyId: "strategy:python",
+      }),
+    })
+    const validBody = (await valid.json()) as Record<string, unknown>
+
+    expect(valid.status).toBe(200)
+    expect(validBody).toMatchObject({
+      ok: true,
+      kind: "strategyValidation",
+      sourceFormat: "python",
+      provider: {
+        id: "strategy-language-provider-python",
+      },
+      metadata: {
+        tags: ["python", "counted", "provider"],
+        providerValidation: {
+          providerId: "strategy-language-provider-python",
+          contractVersion: "strategy-language-provider-contract-v1.32",
+          sourceHash: expect.any(String),
+          sourceBytes: expect.any(Number),
+          proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
+        },
+      },
+    })
+    expect(JSON.stringify(validBody)).not.toContain("NON_COUNTED_RUNTIME")
+
+    const invalid = await fetch(`${server.url}/validate-strategy`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sourceFormat: "python",
+        source:
+          "# def select_activations(input): pass\n# def soldier_brain(input): pass\nimport\tos\n",
+      }),
+    })
+    const invalidBody = (await invalid.json()) as Record<string, unknown>
+
+    expect(invalid.status).toBe(422)
+    expect(invalidBody).toMatchObject({
+      ok: false,
+      kind: "strategyValidation",
+      sourceFormat: "python",
+    })
+    expect(JSON.stringify(invalidBody)).toContain("IMPORT_NOT_ALLOWED")
+    expect(JSON.stringify(invalidBody)).toContain("MISSING_SELECT_ACTIVATIONS")
+    expect(JSON.stringify(invalidBody)).not.toContain("python_validation_host.py")
   })
 
   it("exposes no product API routes outside health and execute-match", async () => {

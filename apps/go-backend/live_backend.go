@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -581,9 +582,21 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 		Notes:      body.Notes,
 	}
 	if body.SourceFormat == "python" {
-		input.Runtime = pythonRuntimeMetadata()
-		input.Validation = validatePythonSourceMetadata(body.Source)
-		input.Metadata = map[string]any{"tags": []string{"python", "non-counted", "exhibition-beta"}}
+		validation, failure := server.orchestrator.runtime.validateStrategy(request.Context(), body.SourceFormat, body.Source, body.StrategyID)
+		if failure != nil {
+			writeServiceError(writer, http.StatusServiceUnavailable, "RUNTIME_SERVICE_UNAVAILABLE", fmt.Sprintf("Python validation requires the runtime execution service: %s %s.", failure.Code, failure.ErrorMessage))
+			return
+		}
+		if !validation.OK {
+			input.Runtime = pythonRuntimeMetadata()
+			input.Validation = validation.Validation
+			input.Metadata = map[string]any{"tags": []string{"python", "provider", "invalid"}}
+		} else {
+			input.Runtime = validation.Runtime
+			input.Validation = validation.Validation
+			input.EngineCompatibility = validation.EngineCompatibility
+			input.Metadata = validation.Metadata
+		}
 	}
 	if body.SourceFormat == "rust" || body.SourceFormat == "zig" {
 		languageLabel := "Rust"
@@ -704,7 +717,7 @@ func (server *LiveServer) forkableStrategyArtifact(kind string, artifactID strin
 	if stringValue(artifact.Validation, "sourceHash") != artifact.Source.Hash || artifact.Source.Hash != hashString(artifact.Source.Text) {
 		return strategyArtifact{}, errors.New("strategy artifact source hash drift")
 	}
-	if !runtimeAllowsCountedPlay(artifact.Runtime) {
+	if !runtimeAllowsCountedPlay(artifact.Runtime, nil, "", 0) {
 		return strategyArtifact{}, errors.New("strategy artifact runtime is not counted-play eligible")
 	}
 	return artifact, nil
@@ -1726,7 +1739,7 @@ func (server *LiveServer) accountRevisionSummaries(ctx context.Context, userID s
 			"strategyRevisionId":  row.ID,
 			"sourceHash":          row.SourceHash,
 			"sourceBytes":         row.SourceBytes,
-			"runtimeSemantics":    runtimeSemantics(row.Runtime),
+			"runtimeSemantics":    runtimeSemanticsForRevision(row.Runtime, row.Metadata, row.SourceHash, row.SourceBytes),
 			"engineCompatibility": row.Engine,
 			"validationStatus":    validationStatus(row.Validation),
 			"createdAt":           row.CreatedAt.Format(time.RFC3339Nano),
@@ -2002,13 +2015,13 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, 
 			return nil, errors.New("invalid revision")
 		}
 		runtime := jsonMap(runtimeRaw)
-		if counted && !runtimeAllowsCountedPlay(runtime) {
+		metadata := jsonMap(metadataRaw)
+		if counted && !runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) {
 			return nil, errors.New("runtime is not counted-play eligible")
 		}
 		if !counted && !runtimeAllowsNonCountedExhibition(runtime) {
 			return nil, errors.New("runtime is not eligible for non-counted exhibition")
 		}
-		metadata := jsonMap(metadataRaw)
 		label := stringValue(metadata, "label")
 		if label == "" {
 			label = id
@@ -2343,40 +2356,6 @@ func engineCompatibility() map[string]any {
 	}
 }
 
-func validatePythonSourceMetadata(source string) map[string]any {
-	errors := []map[string]any{}
-	forbidden := []string{}
-	if len([]byte(source)) > strategySourceBytes {
-		errors = append(errors, validationIssue("SOURCE_TOO_LARGE", "Strategy source is too large."))
-	}
-	for _, marker := range []string{"import ", "from ", "__import__", "open(", "exec(", "eval(", "compile(", "globals(", "locals(", "getattr(", "setattr(", "__", "socket", "subprocess", "pathlib", "site-packages"} {
-		if strings.Contains(source, marker) {
-			code := "FORBIDDEN_PATTERN"
-			if strings.Contains(marker, "import") {
-				code = "IMPORT_NOT_ALLOWED"
-			}
-			forbidden = append(forbidden, strings.TrimSpace(marker))
-			errors = append(errors, validationIssue(code, "Python Strategy source uses a forbidden capability."))
-		}
-	}
-	if !strings.Contains(source, "def select_activations") {
-		errors = append(errors, validationIssue("MISSING_SELECT_ACTIVATIONS", "Python Strategy must define select_activations(input)."))
-	}
-	if !strings.Contains(source, "def soldier_brain") {
-		errors = append(errors, validationIssue("MISSING_SOLDIER_BRAIN", "Python Strategy must define soldier_brain(input)."))
-	}
-	return map[string]any{
-		"valid":               len(errors) == 0,
-		"errors":              errors,
-		"warnings":            []map[string]any{validationIssue("NON_COUNTED_RUNTIME", "Python is non-counted exhibition beta and not ranked/counted eligible.")},
-		"sourceBytes":         len([]byte(source)),
-		"forbiddenPatterns":   forbidden,
-		"sourceHash":          hashString(source),
-		"runtimeVersion":      "0.1.0-experimental",
-		"engineCompatibility": engineCompatibility(),
-	}
-}
-
 func validateSourceMetadata(source string) map[string]any {
 	errors := []map[string]any{}
 	forbidden := []string{}
@@ -2428,19 +2407,19 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"languageId":           "python",
 			"adapterId":            adapterID,
 			"languageLabel":        "Python",
-			"adapterLabel":         "Python subprocess experimental",
-			"readiness":            "experimental",
-			"readinessLabel":       "Experimental",
-			"experimental":         true,
-			"countedPlayEligible":  false,
-			"countedPlayLabel":     "Not counted",
-			"countedPlayReason":    "Strategy runtime is experimental and not counted-play eligible.",
+			"adapterLabel":         "Python subprocess provider",
+			"readiness":            "production-candidate",
+			"readinessLabel":       "Production candidate",
+			"experimental":         false,
+			"countedPlayEligible":  true,
+			"countedPlayLabel":     "Counted eligible",
+			"countedPlayReason":    nil,
 			"sourcePolicyLabel":    "Self-contained Strategy source",
 			"packagePolicyLabel":   "No packages",
 			"docsReference":        "runtime/languages",
-			"examplesReference":    "examples/python-exhibition-beta",
-			"warnings":             []string{"Python is non-counted exhibition beta and not ranked/counted eligible."},
-			"validationIssueCodes": []string{"NON_COUNTED_RUNTIME"},
+			"examplesReference":    "examples/python-strategy",
+			"warnings":             []string{},
+			"validationIssueCodes": []string{},
 		}
 	}
 	if languageID == "rust" {
@@ -2512,6 +2491,18 @@ func publicRuntimeMetadata(runtime map[string]any) map[string]any {
 	return publicRuntime
 }
 
+func runtimeSemanticsForRevision(runtime map[string]any, metadata map[string]any, sourceHash string, sourceBytes int) map[string]any {
+	semantics := runtimeSemantics(runtime)
+	if stringValue(mapValue(runtime, "language"), "id") != "python" ||
+		pythonProviderValidationMatches(metadata, sourceHash, sourceBytes) {
+		return semantics
+	}
+	semantics["countedPlayEligible"] = false
+	semantics["countedPlayLabel"] = "Not counted"
+	semantics["countedPlayReason"] = "Python counted play requires provider-validated revision provenance."
+	return semantics
+}
+
 func validationStatus(validation map[string]any) string {
 	if valid, ok := validation["valid"].(bool); ok && valid {
 		return "valid"
@@ -2519,7 +2510,7 @@ func validationStatus(validation map[string]any) string {
 	return "invalid"
 }
 
-func runtimeAllowsCountedPlay(runtime map[string]any) bool {
+func runtimeAllowsCountedPlay(runtime map[string]any, metadata map[string]any, sourceHash string, sourceBytes int) bool {
 	if stringValue(runtime, "abiVersion") != "strategy-runtime-abi-v1.14" {
 		return false
 	}
@@ -2528,16 +2519,61 @@ func runtimeAllowsCountedPlay(runtime map[string]any) bool {
 	packageMetadata := mapValue(runtime, "package")
 	languageID := stringValue(language, "id")
 	adapterID := stringValue(adapter, "id")
-	if languageID != "javascript" && languageID != "typescript" {
-		return false
-	}
-	if adapterID != "runtime-js-worker-thread" && adapterID != "runtime-js-subprocess" {
+	if languageID == "python" {
+		if adapterID != "runtime-python-subprocess-experimental" {
+			return false
+		}
+		if !pythonProviderValidationMatches(metadata, sourceHash, sourceBytes) {
+			return false
+		}
+	} else if languageID == "javascript" || languageID == "typescript" {
+		if adapterID != "runtime-js-worker-thread" && adapterID != "runtime-js-subprocess" {
+			return false
+		}
+	} else {
 		return false
 	}
 	if stringValue(packageMetadata, "mode") != "none" {
 		return false
 	}
 	return len(stringSliceFromAny(runtime["requiredCapabilities"])) == 0
+}
+
+func pythonProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int) bool {
+	if sourceHash == "" || sourceBytes <= 0 {
+		return false
+	}
+	providerValidation := mapValue(metadata, "providerValidation")
+	if stringValue(providerValidation, "providerId") != "strategy-language-provider-python" ||
+		stringValue(providerValidation, "contractVersion") != "strategy-language-provider-contract-v1.32" ||
+		stringValue(providerValidation, "sourceHash") != sourceHash ||
+		intValue(providerValidation, "sourceBytes") != sourceBytes {
+		return false
+	}
+	return subtle.ConstantTimeCompare(
+		[]byte(stringValue(providerValidation, "proof")),
+		[]byte(pythonProviderValidationProof(sourceHash, sourceBytes)),
+	) == 1
+}
+
+func providerValidationSecret() string {
+	return strings.TrimSpace(os.Getenv("COWARDS_PROVIDER_VALIDATION_SECRET"))
+}
+
+func pythonProviderValidationProof(sourceHash string, sourceBytes int) string {
+	secret := providerValidationSecret()
+	if secret == "" {
+		return ""
+	}
+	payload := strings.Join([]string{
+		"strategy-language-provider-python",
+		"strategy-language-provider-contract-v1.32",
+		sourceHash,
+		fmt.Sprintf("%d", sourceBytes),
+	}, "\n")
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write([]byte(payload))
+	return "hmac-sha256:" + hex.EncodeToString(mac.Sum(nil))
 }
 
 func runtimeAllowsNonCountedExhibition(runtime map[string]any) bool {
@@ -2561,7 +2597,7 @@ func runtimeAllowsNonCountedExhibition(runtime map[string]any) bool {
 	if languageID == "rust" || languageID == "zig" {
 		return adapterID == "runtime-wasm-wasi-wasmtime-preview1"
 	}
-	return runtimeAllowsCountedPlay(runtime)
+	return runtimeAllowsCountedPlay(runtime, nil, "", 0)
 }
 
 func exhibitionCountedStatus(counted bool) string {
@@ -2583,7 +2619,7 @@ func exhibitionCountedExplanation(counted bool) *string {
 	if counted {
 		return nil
 	}
-	explanation := "Python Strategy runtime evidence is non-counted exhibition beta."
+	explanation := "This MatchSet was explicitly created as non-counted exhibition evidence."
 	return &explanation
 }
 

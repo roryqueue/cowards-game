@@ -81,13 +81,13 @@ const validationIssueMetadata = (
         constraint: "Python Strategy API requires select_activations(input).",
         remediation:
           "Add select_activations that returns activationOrders and strategyMemory.",
-        reference: "examples/python-exhibition-beta",
+        reference: "examples/python-strategy",
       }
     case "MISSING_SOLDIER_BRAIN":
       return {
         constraint: "Python Strategy API requires soldier_brain(input).",
         remediation: "Add soldier_brain that returns action and soldierMemory.",
-        reference: "examples/python-exhibition-beta",
+        reference: "examples/python-strategy",
       }
     case "ASYNC_METHOD_NOT_ALLOWED":
       return {
@@ -99,7 +99,7 @@ const validationIssueMetadata = (
       return {
         constraint: "Python source must pass AST parse and compile checks.",
         remediation: "Fix the syntax near the reported location.",
-        reference: "examples/python-exhibition-beta",
+        reference: "examples/python-strategy",
       }
     default:
       return {
@@ -198,18 +198,7 @@ export const validatePythonStrategySource = (
   return {
     valid: errors.length === 0,
     errors,
-    warnings: [
-      {
-        code: "NON_COUNTED_RUNTIME",
-        severity: "warning",
-        message:
-          "Python is a non-counted exhibition beta runtime and not ranked/counted eligible.",
-        constraint:
-          "Python may run only in non-counted Workshop or exhibition beta proof paths.",
-        remediation: "Use JS/TS for counted play.",
-        reference: "runtime/counting",
-      },
-    ],
+    warnings: [],
     sourceBytes,
     forbiddenPatterns: [...forbidden].sort(),
     sourceHash,
@@ -237,6 +226,8 @@ export const buildPythonStrategyRevision = (input: {
   const compatibilityHash = createHash("sha256")
     .update(JSON.stringify(compatibility))
     .digest("hex")
+  const { providerValidation: _providerValidation, ...metadata } =
+    input.metadata ?? {}
 
   return StrategyRevisionSchema.parse({
     id: `strategy-revision:python:${validation.sourceHash}:${compatibilityHash.slice(0, 16)}`,
@@ -247,6 +238,6 @@ export const buildPythonStrategyRevision = (input: {
     runtime,
     engineCompatibility: validation.engineCompatibility,
     validation,
-    metadata: input.metadata ?? {},
+    metadata,
   })
 }

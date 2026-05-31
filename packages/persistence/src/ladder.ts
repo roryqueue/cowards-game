@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto"
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto"
 import {
   assertPublicMatchSetResultLeakSafe,
   EXHIBITION_SCORING_POLICY_V1,
@@ -34,6 +34,11 @@ export class LadderInputError extends Error {
 
 export const assertLadderEligibleRuntime = (
   runtime: unknown,
+  provenance: {
+    metadata?: unknown
+    sourceHash?: string
+    sourceBytes?: number
+  } = {},
 ): CompetitionEntrantSnapshot["runtime"] => {
   const eligibility = evaluateStrategyRuntimeCountedEligibility(runtime)
   if (!eligibility.ok) {
@@ -42,7 +47,94 @@ export const assertLadderEligibleRuntime = (
         "Strategy Revision runtime is not eligible for trial ladder entry.",
     )
   }
-  return normalizeStrategyRuntimeMetadata(runtime)
+  const normalized = normalizeStrategyRuntimeMetadata(runtime)
+  if (
+    normalized.language.id === "python" &&
+    !pythonProviderValidationMatches(
+      provenance.metadata,
+      provenance.sourceHash,
+      provenance.sourceBytes,
+    )
+  ) {
+    throw new LadderInputError(
+      "Python trial ladder entry requires provider-validated revision provenance.",
+    )
+  }
+  return normalized
+}
+
+const pythonProviderValidationMatches = (
+  metadata: unknown,
+  sourceHash: string | undefined,
+  sourceBytes: number | undefined,
+): boolean => {
+  if (
+    !sourceHash ||
+    sourceBytes === undefined ||
+    metadata === null ||
+    typeof metadata !== "object"
+  ) {
+    return false
+  }
+  const providerValidation = (metadata as { providerValidation?: unknown })
+    .providerValidation
+  if (
+    providerValidation === null ||
+    typeof providerValidation !== "object"
+  ) {
+    return false
+  }
+  const validation = providerValidation as Record<string, unknown>
+  if (
+    validation.providerId !== "strategy-language-provider-python" ||
+    validation.contractVersion !==
+      "strategy-language-provider-contract-v1.32" ||
+    validation.sourceHash !== sourceHash ||
+    validation.sourceBytes !== sourceBytes ||
+    typeof validation.proof !== "string"
+  ) {
+    return false
+  }
+  const expected = pythonProviderValidationProof({
+    providerId: validation.providerId,
+    contractVersion: validation.contractVersion,
+    sourceHash,
+    sourceBytes,
+  })
+  return expected !== null && safeEqual(validation.proof, expected)
+}
+
+const providerValidationSecret = (): string =>
+  process.env.COWARDS_PROVIDER_VALIDATION_SECRET?.trim() ?? ""
+
+const pythonProviderValidationProof = (input: {
+  providerId: string
+  contractVersion: string
+  sourceHash: string
+  sourceBytes: number
+}): string | null => {
+  const secret = providerValidationSecret()
+  if (!secret) {
+    return null
+  }
+  const payload = [
+    input.providerId,
+    input.contractVersion,
+    input.sourceHash,
+    String(input.sourceBytes),
+  ].join("\n")
+  return `hmac-sha256:${createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex")}`
+}
+
+const safeEqual = (left: string, right: string): boolean => {
+  const leftBuffer = Buffer.from(left)
+  const rightBuffer = Buffer.from(right)
+  return (
+    leftBuffer.length === rightBuffer.length &&
+    timingSafeEqual(leftBuffer, rightBuffer)
+  )
 }
 
 export const TRIAL_LADDER_PRESET_ID = "standard-exhibition-v1" as const
@@ -252,7 +344,11 @@ export const enterTrialLadderSeason = async (
       "Strategy Revision is not eligible for trial ladder entry.",
     )
   }
-  const runtime = assertLadderEligibleRuntime(row.runtime)
+  const runtime = assertLadderEligibleRuntime(row.runtime, {
+    metadata: row.metadata,
+    sourceHash: row.source_hash,
+    sourceBytes: row.source_bytes,
+  })
   const entryCount = await pool.query<{ count: number }>(
     "select count(*)::integer as count from trial_ladder_entries where season_id = $1",
     [input.seasonId],

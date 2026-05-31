@@ -1,13 +1,10 @@
-import { createHash, randomUUID } from "node:crypto"
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto"
 import {
   buildStrategyRevision,
   validateStrategySource,
   type StrategyRevisionValidationReport,
 } from "@cowards/runtime-js"
-import {
-  buildPythonStrategyRevision,
-  validatePythonStrategySource,
-} from "@cowards/runtime-python/validation"
+import { validatePythonStrategySource } from "@cowards/runtime-python/validation"
 import type {
   MatchId,
   MatchSetId,
@@ -462,8 +459,8 @@ export const listWorkshopTemplates = (): WorkshopTemplateSummary[] => [
     id: "template:python-tactical",
     label: "Python tactical starter",
     sourceFormat: "python",
-    experimental: true,
-    countedPlayEligible: false,
+    experimental: false,
+    countedPlayEligible: true,
     source: pythonTacticalStarterSource,
     validation: validatePythonStrategySource(pythonTacticalStarterSource),
   },
@@ -813,8 +810,8 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     id: "sample:python-screen-and-stone",
     label: "Python screen and stone",
     sampleKind: "starter",
-    description: "A safe Python beta screen that stones adjacent pressure.",
-    categories: ["Python beta", "Stone"],
+    description: "A constrained Python provider screen that stones adjacent pressure.",
+    categories: ["Python", "Stone"],
     sourceFormat: "python",
     source: pythonScreenAndStoneSampleSource,
   }),
@@ -823,7 +820,7 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     label: "Python push pressure",
     sampleKind: "starter",
     description: "Faces visible threats, then advances to set up Push lanes.",
-    categories: ["Python beta", "Push"],
+    categories: ["Python", "Push"],
     sourceFormat: "python",
     source: pythonPushPressureSampleSource,
   }),
@@ -832,7 +829,7 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     label: "Python backstab lane",
     sampleKind: "starter",
     description: "Prioritizes movers and keeps lane direction stable.",
-    categories: ["Python beta", "Backstab"],
+    categories: ["Python", "Backstab"],
     sourceFormat: "python",
     source: pythonBackstabLaneSampleSource,
   }),
@@ -1051,6 +1048,7 @@ export const buildWorkshopRevision = (input: {
   validation?: StrategyRevisionValidationReport | undefined
   engineCompatibility?: StrategyRevision["engineCompatibility"] | undefined
   metadata?: StrategyRevision["metadata"] | undefined
+  runtimeServiceValidated?: boolean | undefined
   label?: string | undefined
   notes?: string | undefined
 }): StrategyRevision => {
@@ -1060,7 +1058,7 @@ export const buildWorkshopRevision = (input: {
     ...(input.label ? { label: input.label } : {}),
     ...(input.notes ? { notes: input.notes } : {}),
     ...(input.sourceFormat === "python"
-      ? { tags: ["python", "experimental", "non-counted"] }
+      ? { tags: ["python", "counted", "provider"] }
       : input.sourceFormat === "rust" || input.sourceFormat === "zig"
         ? {
             tags: [
@@ -1073,11 +1071,35 @@ export const buildWorkshopRevision = (input: {
         : {}),
   }
   if (input.sourceFormat === "python") {
-    return buildPythonStrategyRevision({
-      source: input.source,
+    const sourceHash = createHash("sha256").update(input.source).digest("hex")
+    const sourceBytes = new TextEncoder().encode(input.source).length
+    if (
+      !input.runtimeServiceValidated ||
+      !input.runtime ||
+      !input.validation ||
+      !input.engineCompatibility ||
+      input.validation.sourceHash !== sourceHash ||
+      input.validation.sourceBytes !== sourceBytes ||
+      !pythonProviderValidationMatches(input.metadata, {
+        sourceHash,
+        sourceBytes,
+      })
+    ) {
+      throw new WorkshopInputError(
+        "Python Workshop revisions require runtime-service provider validation.",
+      )
+    }
+    return {
+      id: `strategy-revision:workshop:python:${sourceHash}` as StrategyRevisionId,
       strategyId: WORKSHOP_STRATEGY_ID,
+      source: input.source,
+      sourceHash,
+      sourceBytes,
+      runtime: input.runtime,
+      engineCompatibility: input.engineCompatibility,
+      validation: input.validation,
       metadata,
-    })
+    }
   }
   if (input.sourceFormat === "rust" || input.sourceFormat === "zig") {
     if (!input.runtime || !input.validation || !input.engineCompatibility) {
@@ -1102,6 +1124,62 @@ export const buildWorkshopRevision = (input: {
     strategyId: WORKSHOP_STRATEGY_ID,
     metadata,
   })
+}
+
+const pythonProviderValidationMatches = (
+  metadata: StrategyRevision["metadata"] | undefined,
+  source: { sourceHash: string; sourceBytes: number },
+): boolean => {
+  const validation = metadata?.providerValidation
+  if (
+    validation?.providerId !== "strategy-language-provider-python" ||
+    validation.contractVersion !==
+      "strategy-language-provider-contract-v1.32" ||
+    validation.sourceHash !== source.sourceHash ||
+    validation.sourceBytes !== source.sourceBytes
+  ) {
+    return false
+  }
+  const expected = pythonProviderValidationProof({
+    providerId: validation.providerId,
+    contractVersion: validation.contractVersion,
+    sourceHash: source.sourceHash,
+    sourceBytes: source.sourceBytes,
+  })
+  return expected !== null && safeEqual(validation.proof, expected)
+}
+
+const providerValidationSecret = (): string =>
+  process.env.COWARDS_PROVIDER_VALIDATION_SECRET?.trim() ?? ""
+
+const pythonProviderValidationProof = (input: {
+  providerId: string
+  contractVersion: string
+  sourceHash: string
+  sourceBytes: number
+}): string | null => {
+  const secret = providerValidationSecret()
+  if (!secret) {
+    return null
+  }
+  const payload = [
+    input.providerId,
+    input.contractVersion,
+    input.sourceHash,
+    String(input.sourceBytes),
+  ].join("\n")
+  return `hmac-sha256:${createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex")}`
+}
+
+const safeEqual = (left: string, right: string): boolean => {
+  const leftBuffer = Buffer.from(left)
+  const rightBuffer = Buffer.from(right)
+  return (
+    leftBuffer.length === rightBuffer.length &&
+    timingSafeEqual(leftBuffer, rightBuffer)
+  )
 }
 
 const createWorkshopMatchSetId = (): MatchSetId =>

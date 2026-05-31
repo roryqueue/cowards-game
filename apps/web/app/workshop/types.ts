@@ -126,6 +126,7 @@ export interface WorkshopSubmitRequest {
   validation?: StrategyRevisionValidationReport | undefined
   engineCompatibility?: StrategyRevision["engineCompatibility"] | undefined
   metadata?: StrategyRevision["metadata"] | undefined
+  runtimeServiceValidated?: boolean | undefined
   label?: string | undefined
   notes?: string | undefined
 }

@@ -117,10 +117,10 @@ export interface StrategyLanguageProviderRecord {
 }
 
 export interface NonJsRuntimeSupportPolicy {
-  status: "experimental-non-counted"
+  status: "experimental-non-counted" | "partial-production-supported"
   productionSupportedLanguageIds: readonly StrategyLanguageId[]
   experimentalLanguageIds: readonly StrategyLanguageId[]
-  publicLanguagePickerAllowed: false
+  publicLanguagePickerAllowed: boolean
   countedPlayRequiresProductionSupport: true
 }
 
@@ -446,24 +446,24 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
     id: "python",
     sourceFormat: "python",
     label: "Python",
-    shortLabel: "PY beta",
+    shortLabel: "PY",
     version: "3.9",
     providerId: "strategy-language-provider-python",
     runtimeTarget: "runtime-python",
     defaultAdapterId: "runtime-python-subprocess-experimental",
     supportStatus: "supported",
-    promotionStatus: "evidence-gated",
-    countedEligibility: "pending-evidence",
-    entryEligibility: "unranked-only",
-    enabledForNormalPlay: false,
-    publicLabel: "Python · non-counted exhibition beta",
+    promotionStatus: "complete",
+    countedEligibility: "eligible",
+    entryEligibility: "counted",
+    enabledForNormalPlay: true,
+    publicLabel: "Python · Counted eligible",
     publicRuntimeCue:
-      "Python is non-counted exhibition beta and runs only through the Runtime Broker.",
+      "Python is supported for counted play through the Runtime Broker's constrained Python provider.",
     sourcePolicyLabel: "Self-contained Strategy source",
     artifactPolicyLabel: "Source revision",
     packagePolicyLabel: "No packages",
     docsReference: "runtime/languages#python",
-    examplesReference: "examples/python-exhibition-beta",
+    examplesReference: "examples/python-strategy",
     validationBehavior: "python-host",
     buildBehavior: "source-only",
     deterministicRestrictions: [
@@ -473,7 +473,8 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
       "Public evidence omits Strategy source, StrategyMemory, SoldierMemory, objective payloads, host paths, stderr, stack traces, and Python runtime internals by default.",
     ],
     notes: [
-      "Evidence-gated for counted play through the Runtime Broker; current adapter remains non-counted until Phase 225 proof passes.",
+      "Counted play uses the constrained Runtime Broker provider with no imports, packages, filesystem, network, clock, random, dynamic execution, or host process capability.",
+      "The compatibility adapter id is retained from the beta path; counted eligibility is governed by the provider and registry evidence, not the legacy id text.",
     ],
   },
   {
@@ -616,6 +617,8 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
       "python-validation",
       "python-runtime-execution",
       "timeout-invalid-output-forbidden-capability",
+      "deterministic-repeated-execution",
+      "counted-eligibility",
       "no-js-fallback",
       "public-privacy-scan",
     ],
@@ -625,7 +628,7 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
       "runtime-output-schema-validation-required",
     ],
     migrationNotes: [
-      "Python remains source-backed JSON runtime metadata in Phase 224; counted promotion is deferred to Phase 225.",
+      "Python remains source-backed JSON runtime metadata in Phase 225; this promotion does not claim general package support or broad sandbox certification.",
     ],
   },
   {
@@ -699,10 +702,10 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
 ] as const satisfies readonly StrategyLanguageProviderRecord[]
 
 export const NON_JS_RUNTIME_SUPPORT_POLICY = {
-  status: "experimental-non-counted",
-  productionSupportedLanguageIds: ["javascript", "typescript"],
-  experimentalLanguageIds: ["python", "rust", "zig"],
-  publicLanguagePickerAllowed: false,
+  status: "partial-production-supported",
+  productionSupportedLanguageIds: ["javascript", "typescript", "python"],
+  experimentalLanguageIds: ["rust", "zig"],
+  publicLanguagePickerAllowed: true,
   countedPlayRequiresProductionSupport: true,
 } as const satisfies NonJsRuntimeSupportPolicy
 
@@ -712,7 +715,8 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     category: "determinism",
     requirement:
       "Language version, locale, hash behavior, clocks, randomness, IO, dynamic loading, memory, and output behavior are deterministic and documented.",
-    currentStatus: "Python is an experimental ABI proof, not certified.",
+    currentStatus:
+      "Python is promoted through the constrained provider path; Rust and Zig remain evidence-gated.",
     promotionGate:
       "Repeated local and CI evidence must prove deterministic behavior before counted eligibility.",
   },
@@ -722,7 +726,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "The promoted language runs only inside a production-owned hostile-code isolation boundary.",
     currentStatus:
-      "Worker-thread, subprocess, container-subprocess, WASM/WASI, and component-model candidates are readiness labels only; Node node:wasi is not accepted as an untrusted Strategy sandbox.",
+      "Python counted play uses the runtime-service provider boundary with import/package/host capability denial. Worker-thread, subprocess, container-subprocess, WASM/WASI, and component-model labels remain evidence terms; Node node:wasi is not accepted as an untrusted Strategy sandbox.",
     promotionGate:
       "Runtime isolation promotion criteria must pass before non-JS counted play.",
   },
@@ -742,7 +746,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "Workshop templates, examples, validation copy, documentation, and support matrix distinguish production-supported languages from experimental ones.",
     currentStatus:
-      "Product surfaces may show experimental labels, but no public language picker is allowed.",
+      "Product surfaces may show Python as counted eligible only when backed by provider registry evidence; Rust and Zig keep beta labels.",
     promotionGate:
       "A public picker can appear only after at least one non-JS runtime is production-supported.",
   },
@@ -762,7 +766,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "MatchSet, ladder, gauntlet, analytics, and public entry gates agree on counted eligibility.",
     currentStatus:
-      "Python remains disabled for normal play and not counted-play eligible.",
+      "Python is counted eligible through the provider registry; Rust and Zig remain disabled for normal counted play.",
     promotionGate:
       "All counted gates must fail closed unless production support is explicit.",
   },
@@ -781,7 +785,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     category: "rollback",
     requirement:
       "Operators can disable promoted non-JS counted play without silently reclassifying existing evidence.",
-    currentStatus: "No non-JS counted evidence exists.",
+    currentStatus: "Python counted evidence exists; Rust and Zig remain non-counted.",
     promotionGate:
       "Promotion requires rollback semantics for unsafe or nondeterministic runtimes.",
   },
@@ -790,7 +794,8 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     category: "deprecation",
     requirement:
       "Language/runtime deprecation rules explain compatibility, replayability, and future submission behavior.",
-    currentStatus: "Python is experimental and can remain non-counted.",
+    currentStatus:
+      "Python is counted provider-supported; Rust and Zig remain evidence-gated.",
     promotionGate:
       "A promoted runtime needs versioned deprecation and migration rules.",
   },
@@ -871,23 +876,25 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
   },
   {
     id: "runtime-python-subprocess-experimental",
-    label: "Python subprocess experimental",
+    label: "Python subprocess provider",
     version: "0.1.0-experimental",
     runtimeTarget: "runtime-python",
-    readiness: "experimental",
+    readiness: "production-candidate",
     supportedLanguageIds: ["python"],
-    enabledForNormalPlay: false,
-    countedResultsAllowed: false,
+    enabledForNormalPlay: true,
+    countedResultsAllowed: true,
     isolationPromotionState: "evidence-only",
     isolationPromotionCriteria: [
-      "non-js-promotion-criteria",
-      "production-sandbox-required",
-      "package-policy-required",
-      "signed-in-exhibition-proof",
-      "hostile-probe-evidence",
+      "runtime-service-boundary",
+      "python-ast-forbidden-capability-validation",
+      "isolated-python-host-args-empty-env",
+      "package-policy-none",
+      "timeout-invalid-output-oversized-output-evidence",
+      "no-js-fallback",
+      "public-privacy-scan",
     ],
     isolationBoundary:
-      "Hardened local subprocess evidence for non-counted exhibition beta; not production hostile-code isolation.",
+      "Runtime-service owned constrained Python subprocess provider with isolated host args, empty environment, no packages, and provider validation denying filesystem, network, import, dynamic execution, and process capabilities.",
     limits: {
       ...DEFAULT_RUNTIME_LIMITS,
       filesystem: "none",
@@ -896,8 +903,9 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     },
     requiredCapabilities: [],
     notes: [
-      "Non-counted exhibition beta only; not public counted MatchSet, ranked ladder, or analytics evidence.",
-      "WASM/WASI/component-model are future evaluation paths, not v1.18 promotion paths.",
+      "Counted provider path for self-contained Python source only; not general Python package support.",
+      "Compatibility id and version retain the beta-era string for existing metadata; registry eligibility is the source of truth.",
+      "This remains evidence-scoped counted support, not broad sandbox certification for arbitrary Python programs.",
     ],
   },
   {
@@ -945,7 +953,7 @@ export const assertNonJsRuntimeGuardrails = (): void => {
   for (const language of STRATEGY_LANGUAGE_REGISTRY) {
     const isExperimental = experimental.has(language.id)
     if (isExperimental && language.enabledForNormalPlay) {
-      throw new Error(`${language.id} must remain experimental in v1.16`)
+      throw new Error(`${language.id} must remain evidence-gated`)
     }
   }
   for (const adapter of STRATEGY_RUNTIME_ADAPTER_REGISTRY) {
@@ -962,12 +970,19 @@ export const assertNonJsRuntimeGuardrails = (): void => {
       adapter.isolationPromotionState !== "evidence-only"
     ) {
       throw new Error(
-        `${adapter.id} must remain experimental and non-counted in v1.16`,
+        `${adapter.id} must remain experimental and non-counted`,
       )
     }
   }
-  if (NON_JS_RUNTIME_SUPPORT_POLICY.publicLanguagePickerAllowed !== false) {
-    throw new Error("Public non-JS language picker is not allowed in v1.16")
+  if (
+    NON_JS_RUNTIME_SUPPORT_POLICY.publicLanguagePickerAllowed &&
+    NON_JS_RUNTIME_SUPPORT_POLICY.productionSupportedLanguageIds.every(
+      (languageId) => languageId === "javascript" || languageId === "typescript",
+    )
+  ) {
+    throw new Error(
+      "Public non-JS language picker requires a promoted non-JS provider",
+    )
   }
   const requiredCriteria = new Set([
     "deterministic-language-semantics",
@@ -1058,9 +1073,9 @@ export const STRATEGY_RUNTIME_PRODUCT_VALIDATION_MESSAGES = {
     code: "NON_COUNTED_RUNTIME",
     message: "Strategy runtime is experimental and not counted-play eligible.",
     constraint:
-      "Counted MatchSets, ladders, and gauntlets require a registered counted runtime. Python is limited to non-counted exhibition beta in v1.18.",
+      "Counted MatchSets, ladders, and gauntlets require a registered counted runtime.",
     remediation:
-      "Use the JS/TS runtime for counted play or keep this revision in non-counted exhibition beta.",
+      "Use JavaScript, TypeScript, Python, or another counted-eligible provider path.",
     reference: "runtime/counting",
   },
 } as const satisfies Record<

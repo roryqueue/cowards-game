@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto"
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import {
   describeStrategyRuntimeProductSemantics,
@@ -152,6 +152,9 @@ export const listAccountStrategyRevisions = async (
 
   return result.rows.map((row) => {
     const runtime = normalizeStrategyRuntimeMetadata(row.runtime)
+    const runtimeSemantics = describeStrategyRuntimeProductSemantics(
+      row.runtime,
+    )
     return {
       id: row.id,
       strategyId: row.strategy_id,
@@ -164,12 +167,102 @@ export const listAccountStrategyRevisions = async (
       sourceBytes: row.source_bytes,
       valid: row.validation.valid,
       runtime,
-      runtimeSemantics: describeStrategyRuntimeProductSemantics(row.runtime),
+      runtimeSemantics: provenanceAwareRuntimeSemantics(runtimeSemantics, {
+        metadata: row.metadata,
+        runtime,
+        sourceHash: row.source_hash,
+        sourceBytes: row.source_bytes,
+      }),
       engineCompatibility: row.engine_compatibility,
       createdAt: row.created_at.toISOString(),
       ...(row.locked_at ? { lockedAt: row.locked_at.toISOString() } : {}),
     }
   })
+}
+
+const provenanceAwareRuntimeSemantics = (
+  semantics: StrategyRuntimeProductSemantics,
+  revision: {
+    metadata: StrategyRevisionMetadata
+    runtime: StrategyRevision["runtime"]
+    sourceHash: string
+    sourceBytes: number
+  },
+): StrategyRuntimeProductSemantics => {
+  if (
+    revision.runtime.language.id !== "python" ||
+    pythonProviderValidationMatches(
+      revision.metadata,
+      revision.sourceHash,
+      revision.sourceBytes,
+    )
+  ) {
+    return semantics
+  }
+  return {
+    ...semantics,
+    countedPlayEligible: false,
+    countedPlayLabel: "Not counted",
+    countedPlayReason:
+      "Python counted play requires provider-validated revision provenance.",
+  }
+}
+
+const pythonProviderValidationMatches = (
+  metadata: StrategyRevisionMetadata,
+  sourceHash: string,
+  sourceBytes: number,
+): boolean => {
+  const validation = metadata.providerValidation
+  if (
+    validation?.providerId !== "strategy-language-provider-python" ||
+    validation.contractVersion !==
+      "strategy-language-provider-contract-v1.32" ||
+    validation.sourceHash !== sourceHash ||
+    validation.sourceBytes !== sourceBytes
+  ) {
+    return false
+  }
+  const expected = pythonProviderValidationProof({
+    providerId: validation.providerId,
+    contractVersion: validation.contractVersion,
+    sourceHash,
+    sourceBytes,
+  })
+  return expected !== null && safeEqual(validation.proof, expected)
+}
+
+const providerValidationSecret = (): string =>
+  process.env.COWARDS_PROVIDER_VALIDATION_SECRET?.trim() ?? ""
+
+const pythonProviderValidationProof = (input: {
+  providerId: string
+  contractVersion: string
+  sourceHash: string
+  sourceBytes: number
+}): string | null => {
+  const secret = providerValidationSecret()
+  if (!secret) {
+    return null
+  }
+  const payload = [
+    input.providerId,
+    input.contractVersion,
+    input.sourceHash,
+    String(input.sourceBytes),
+  ].join("\n")
+  return `hmac-sha256:${createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex")}`
+}
+
+const safeEqual = (left: string, right: string): boolean => {
+  const leftBuffer = Buffer.from(left)
+  const rightBuffer = Buffer.from(right)
+  return (
+    leftBuffer.length === rightBuffer.length &&
+    timingSafeEqual(leftBuffer, rightBuffer)
+  )
 }
 
 export const forkStarterStrategyToAccount = async (

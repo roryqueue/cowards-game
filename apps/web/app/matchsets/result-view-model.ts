@@ -3,6 +3,7 @@ import type {
   MatchExecutionLifecycleStateV1,
   MatchExecutionReplayAvailabilityV1,
 } from "@cowards/spec"
+import { describeStrategyRuntimeProductSemantics } from "@cowards/spec"
 import type { PublicReadMatchSetResultDto } from "../../lib/public-service-boundary.js"
 import {
   buildResultIntelligenceViewModel,
@@ -229,14 +230,32 @@ const formatEntrantRuntimeSummary = (
   result: PublicReadMatchSetResultDto,
   entrantRuntimeLabels: readonly string[],
 ): string => {
+  const storedCountedStatus =
+    result.metadata &&
+    typeof result.metadata === "object" &&
+    !Array.isArray(result.metadata) &&
+    "countedStatus" in result.metadata &&
+    typeof result.metadata.countedStatus === "string"
+      ? result.metadata.countedStatus
+      : null
+  const nonCountedLanguages = new Set<string>(
+    result.contract.runtimeEvidence.eligibility.nonCountedExhibitionBeta,
+  )
   const counted = result.entrants.filter(
-    (entrant) =>
-      entrant.runtime.language.id === "javascript" ||
-      entrant.runtime.language.id === "typescript",
+    (entrant) => {
+      if (storedCountedStatus === "non_counted") {
+        return false
+      }
+      return (
+        describeStrategyRuntimeProductSemantics(entrant.runtime)
+          .countedPlayEligible &&
+        !nonCountedLanguages.has(entrant.runtime.language.id)
+      )
+    },
   ).length
   const exhibition = result.entrants.length - counted
   return [
-    `${counted} counted JS/TS entrant${counted === 1 ? "" : "s"}`,
+    `${counted} counted entrant${counted === 1 ? "" : "s"}`,
     exhibition
       ? `${exhibition} non-counted exhibition beta entrant${exhibition === 1 ? "" : "s"}`
       : "no non-counted exhibition beta entrants",
@@ -340,7 +359,7 @@ export const buildResultWorkbenchViewModel = (
         title: "Runtime Eligibility",
         eyebrow: runtime.ownership.hostileStrategyExecution,
         summary: [
-          "JS/TS remains the counted Strategy path.",
+          "JS/TS and Python are counted Strategy paths.",
           `${runtime.eligibility.nonCountedExhibitionBeta.join(", ")} remain non-counted exhibition beta.`,
           "The app reads frozen public DTOs only.",
         ].join(" "),
