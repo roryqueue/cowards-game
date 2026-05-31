@@ -222,9 +222,9 @@ const expectPublicSafe = async (page: Page): Promise<number> => {
 }
 
 const expectNoHorizontalOverflow = async (page: Page): Promise<void> => {
-  const metrics = await page.evaluate(() => ({
-    scrollWidth: document.documentElement.scrollWidth,
-    innerWidth: window.innerWidth,
+  const metrics = await page.locator("html").evaluate((element) => ({
+    scrollWidth: element.scrollWidth,
+    innerWidth: element.ownerDocument.defaultView?.innerWidth ?? 0,
   }))
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.innerWidth + 2)
 }
