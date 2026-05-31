@@ -2,10 +2,10 @@
 
 ## Current State
 
-**Shipped version:** v1.29 Replay and Result Trust Polish on 2026-05-31
+**Shipped version:** v1.30 Match Intelligence Workbench Against Frozen Result and Replay Fixtures on 2026-05-31
 **Current milestone:** v1.31 Public Site Spine and Discovery Reads.
-**Status:** v1.31 is in planning/execution. The milestone turns the app into a navigable public competitive site with a public discovery hub, Watch hub, competition discovery/detail/entry spine, player and Strategy cross-links, and signed-in paths from Workshop to saved revisions, entry, results, and replay. New discovery reads are separate public/account-safe APIs and are explicitly not part of `match-execution-app-v1`.
-**Last audit:** v1.29 audit passed after validating public result/replay state coverage, privacy scans, board realism, public page proof, ready replay playback, and no contract drift.
+**Status:** v1.31 is in planning/execution after the merged v1.30 baseline. The milestone turns the app into a navigable public competitive site with a public discovery hub, Watch hub, competition discovery/detail/entry spine, player and Strategy cross-links, and signed-in paths from Workshop to saved revisions, entry, results, and replay. New discovery reads are separate public/account-safe APIs and are explicitly not part of `match-execution-app-v1`.
+**Last audit:** v1.30 audit passed after validating public result/replay intelligence coverage, privacy scans, board realism, desktop/mobile public page proof, proof artifacts, boundary monitors, and no contract drift.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
 
@@ -26,7 +26,21 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 **Non-goals:** No change, expansion, rename, repurpose, or version bump to `match-execution-app-v1`; no fields added to existing public execution DTOs; no Go match execution, runtime-service behavior, retry/recovery policy, quarantine semantics, job lifecycle, MatchSet scoring, Chronicle persistence, internal operator controls, runtime promotion, ABI migration, counted non-JS play, or Strategy execution in web/API/Go.
 
-## Latest Shipped Milestone: v1.29 Replay and Result Trust Polish
+## Latest Shipped Milestone: v1.30 Match Intelligence Workbench Against Frozen Result and Replay Fixtures
+
+**Goal:** Build a public-safe Match Intelligence Workbench that derives tactical summaries, timeline annotations, jump targets, comparison views, Soldier progression, board-control signals, terrain/STONE occupancy, and action/engagement summaries from frozen public result/replay DTOs and fixture-backed replay projections.
+
+**Delivered:**
+- Pure app-side intelligence derivation from public result DTOs, replay-ready DTOs, public Chronicle projection events, and public board states.
+- Result-page Match Intelligence summaries with evidence availability, confidence, entrant comparison rows, and replay jump-target states.
+- Replay timeline annotations, category filters, focus links, Soldier status, board-control, terrain/STONE, and action-mix tactical panels.
+- Honest queued/running/degraded/failed/unavailable/missing-Chronicle/no-result intelligence states.
+- Owner/test-only deeper analysis stayed gated and absent from default public output.
+- Desktop/mobile browser proof, replay visual proof, privacy scans, boundary monitors, and v1.30 proof artifacts.
+
+**Non-goals:** No `match-execution-app-v1` redesign or public DTO expansion, no live execution dependency for normal UI proof, no Go orchestration or runtime-service ownership creep, no AI coach or live model inference, no new language promotion, no production sandbox certification, no direct-export or Component Model/WIT ABI migration, no counted non-JS play, and no Strategy execution in web/API/Go.
+
+## Previous Shipped Milestone: v1.29 Replay and Result Trust Polish
 
 **Goal:** Improve the public result and replay experience so players can better understand completed, queued, running, degraded, failed, stale-artifact, unavailable-runtime, malformed-runtime-result, missing-Chronicle, and no-result states without changing the frozen execution/app contract.
 
@@ -54,6 +68,24 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - Signed-in proof creating a JS/TS Strategy Revision, executing a live Go operator requeue path, verifying duplicate idempotency, and scanning public result/replay pages for private markers.
 
 **Non-goals:** No public result/replay contract expansion, public operations UI, runtime promotion, production sandbox certification, ABI migration, counted non-JS play, v1.27 dependency, or Strategy execution in web/API/Go.
+
+## Completed Workstream Milestone: v1.30 Match Intelligence Workbench Against Frozen Result and Replay Fixtures
+
+**Workstream:** `.planning/workstreams/v1-30-match-intelligence-workbench/`
+
+**Goal:** Build a public-safe Match Intelligence Workbench that derives tactical summaries, timeline annotations, jump targets, comparison views, Soldier progression, board-control signals, terrain/stone occupancy, and action/engagement summaries from frozen public result/replay DTOs and fixture-backed replay projections.
+
+**Target features:**
+- Inventory public result/replay DTOs, fixture scenarios, replay-ready DTOs, and public Chronicle projection signals that can support deterministic intelligence.
+- Add an app-side fixture-backed intelligence derivation adapter with explicit confidence and "not enough public evidence" states.
+- Add result-page tactical summaries, comparison panels, turning-point previews, and low-signal intelligence states.
+- Add replay timeline annotations and jump targets using public sequence data and existing focus mechanics.
+- Add Soldier status progression, board-control, terrain/stone occupancy, action-mix, and engagement panels where public projection data supports them.
+- Preserve honest degraded, unavailable, queued, running, failed, no-result, and missing-Chronicle intelligence copy.
+- Keep owner/test-only deeper analysis gated and absent from default public output.
+- Run desktop/mobile fixture-backed visual proof, privacy audits, boundary monitors, and live signed-in compatibility proof where local services are available.
+
+**Non-goals:** No `match-execution-app-v1` redesign or default public DTO expansion, no live execution dependency for normal UI proof, no Go orchestration or runtime-service ownership creep, no AI coach or live model inference, no new language promotion, no production sandbox certification, no direct-export or Component Model/WIT ABI migration, no counted non-JS play, and no Strategy execution in web/API/Go.
 
 ## Previous Shipped Milestone: v1.26 Match Execution Reliability, Retry Semantics, and Failure Drills
 

@@ -145,6 +145,68 @@ export default async function MatchSetResultPage({
         </div>
 
         <section
+          className="match-intelligence-panel"
+          aria-label="Match intelligence summary"
+          data-testid="match-intelligence-panel"
+        >
+          <div className="app-section-header compact">
+            <div>
+              <p className="workshop-muted">
+                {workbench.intelligence.availability} evidence ·{" "}
+                {workbench.intelligence.confidence} confidence
+              </p>
+              <h2>Match Intelligence</h2>
+            </div>
+            <span className="workshop-chip">
+              {workbench.intelligence.availability}
+            </span>
+          </div>
+          <p>{workbench.intelligence.headline}</p>
+          <p className="workshop-muted">{workbench.intelligence.summary}</p>
+          <dl className="result-metric-grid">
+            {workbench.intelligence.metrics.map((metric) => (
+              <Fragment key={`intelligence:${metric.label}`}>
+                <dt>{metric.label}</dt>
+                <dd
+                  className={
+                    metric.tone ? `result-tone-${metric.tone}` : undefined
+                  }
+                >
+                  {metric.value}
+                </dd>
+              </Fragment>
+            ))}
+          </dl>
+          <div className="match-intelligence-comparison">
+            {workbench.intelligence.comparisonRows.map((row) => (
+              <article
+                className="match-intelligence-comparison-row"
+                key={row.label}
+              >
+                <strong>{row.label}</strong>
+                <span>{row.record}</span>
+                <span>{row.runtime}</span>
+                <small>{row.evidence}</small>
+              </article>
+            ))}
+          </div>
+          {workbench.intelligence.jumpTargets.length ? (
+            <div className="match-intelligence-jump-grid">
+              {workbench.intelligence.jumpTargets.map((target) => (
+                <a key={target.href} href={target.href}>
+                  {target.label}
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="workshop-muted">
+              No public replay jump targets are available for this MatchSet.
+            </p>
+          )}
+          <p className="workshop-muted">{workbench.intelligence.provenance}</p>
+        </section>
+
+        <section
           className="evidence-panel"
           aria-label="MatchSet evidence"
           data-testid="matchset-evidence-panel"
