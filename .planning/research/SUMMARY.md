@@ -1,97 +1,119 @@
-# v1.31 Research Summary
+# v1.32 Research Summary
 
 **Project:** Coward's Game
-**Milestone:** v1.31 Public Site Spine and Discovery Reads
-**Domain:** Public site navigation, discovery reads, Watch/competition hubs, signed-in entry spine, public-safe cross-linking, and boundary monitors separate from `match-execution-app-v1`
+**Milestone:** v1.32 Four-Language Production Strategy Support
+**Domain:** JS/TS, Python, Rust, and Zig Strategy language promotion, runtime/provider contracts, counted eligibility, conformance, product unification, public evidence, and drift monitors.
 **Researched:** 2026-05-31
-**Confidence:** High after implementation, validation, and audit.
+**Confidence:** High for current repo-local surface and milestone decomposition; medium for final runtime/ABI design until Phase 224 proves the provider contract and migration decision.
 
 ## Executive Summary
 
-Coward's Game now has strong individual product surfaces, but they are not arranged like a public competitive site. The root route renders Workshop directly, the global layout has no site shell, and public discovery relies on knowing object URLs such as MatchSet result pages, replay pages, player profiles, Strategy cards, and ladder detail pages.
+Coward's Game already contains real language/runtime lanes for JS/TS, Python, Rust, and Zig. The current product truth is still asymmetric: JS/TS is counted, Python is non-counted exhibition beta, Rust/Zig are non-counted WASM/WASI exhibition beta, and monitors actively preserve that non-promotion state.
 
-v1.31 added a public discovery spine without reopening the frozen execution/app contract. The delivered shape is a separate set of discovery reads: `getPublicHomeDiscovery`, `getPublicWatchIndex`, `getPublicCompetitionIndex`, `getPublicCompetitionDetail`, and `getSignedInCompetitionEntryDashboard`. These reads aggregate existing public-safe projections and canonical hrefs while avoiding any change to `match-execution-app-v1`.
+v1.32 should promote the four languages only by replacing that asymmetric model with a shared supported-language/provider contract and a conformance wall. The milestone should not start by flipping labels. It should start with a surface inventory, then establish a canonical registry/provider source of truth, then promote Python, Rust, and Zig through runtime-service/Runtime Broker boundaries with evidence parity.
 
-## Baseline Findings
+The core promotion question remains:
 
-- `/` currently imports `WorkshopClient` and `getWorkshopInitialData`, so anonymous visitors land in the Workshop instead of a public front door.
-- `/workshop` already exists and can become the canonical Workshop route.
-- Existing global layout only renders `{children}` and imports `globals.css`; it has no global navigation or public/signed-in shell.
-- Existing object pages:
-  - `/matchsets/[matchSetId]` consumes `getPublicMatchSetResult`.
-  - `/matches/[matchId]/replay` consumes replay metadata/evidence through `getMatchReplay`.
-  - `/players/[handle]` consumes `getPublicPlayerProfile`.
-  - `/strategies/[strategyId]` consumes `getPublicStrategyCard`.
-  - `/ladder/[seasonId]` consumes `getPublicLadderSeason`.
-  - `/account` consumes account-safe user/revision reads.
-  - `/exhibitions/new` is the existing signed-in exhibition entry page.
-- Missing desired routes: `/watch`, `/competitions`, `/competitions/[competitionId]`, `/competitions/[competitionId]/enter`, and `/learn`.
-- Existing public read route ownership already knows selected Go-backed public reads: Strategy, player, ladder, MatchSet summary, replay metadata, and replay evidence.
-- Existing service DTOs support individual public pages, but not discovery/index pages.
+> What must be true before Python, Rust, and Zig can honestly be fully supported and counted alongside JS/TS, and what monitors prevent future drift?
 
-## Recommended Scope
+## Stack Findings
 
-- Add discovery DTOs and routes in a new public discovery namespace or service module that is plainly separate from `match-execution-app-v1`.
-- Use canonical hrefs that point at existing object pages instead of embedding private or execution-internal payloads.
-- Move public landing content to `/`, keep Workshop at `/workshop`, and add a global shell that makes public/signed-in paths obvious.
-- Build Watch and competition hubs after the discovery contracts exist.
-- Add signed-in entry dashboard reads that list eligible saved revisions without Strategy source.
-- Extend privacy and boundary monitors to scan discovery DTOs, pages, and generated proof artifacts.
+- `packages/spec/src/runtime.ts` already has language ids, language registry, adapter registry, runtime metadata, runtime broker registry, product semantics, counted eligibility, limits, validation messages, and non-JS promotion criteria.
+- Existing registry semantics currently encode JS/TS as enabled/countable and Python/Rust/Zig as disabled/non-counted/evidence-only.
+- `packages/runtime-js`, `packages/runtime-python`, and `packages/runtime-wasm-wasi` provide the active runtime lanes.
+- `apps/runtime-service` is the right boundary for validation/execution provider behavior.
+- Go owns normal backend orchestration and public/account reads; Strategy execution must not move into Go.
+- Product surfaces still hardcode labels and source formats in `apps/web/lib/runtime-labels.ts`, Workshop, Account, exhibitions, competition entry, result/replay, public discovery, and tests.
+- `scripts/check-boundary-monitors.ts` currently has many negative assertions that must be deliberately converted into positive parity/boundary monitors.
+
+## Feature Table Stakes
+
+- Complete a language surface inventory before changing behavior.
+- Define a canonical `SUPPORTED_STRATEGY_LANGUAGES` / `StrategyLanguageProvider` model.
+- Make counted eligibility, source/artifact policy, build/compile/package policy, validation, runtime adapter/provider id, limits, docs/templates, public labels, privacy, and public-output rules provider-owned.
+- Keep hostile Strategy execution behind runtime-service / Runtime Broker.
+- Make the Preview 1 stdin/stdout JSON ABI decision explicit: preserve it deliberately or version/migrate it with rollback proof.
+- Promote Python, Rust, and Zig through runtime/provider evidence, not labels.
+- Build a four-language golden Strategy corpus and pairwise Match/MatchSet matrix.
+- Add invalid-output, timeout, oversized-output, forbidden-capability, memory-heavy, deterministic behavior, privacy parity, result/replay shape parity, and label/eligibility consistency tests.
+- Unify Workshop, Account, competition entry, Strategy cards, player pages, MatchSet results, replay, Learn/docs, and public discovery around shared provider semantics.
+- Add monitors that reject direct product-language special-casing outside approved provider/registry boundaries.
+
+## Architecture Direction
+
+Target flow:
+
+```text
+Product/UI/API surfaces
+  -> Supported language registry
+  -> StrategyLanguageProvider capability and eligibility API
+  -> runtime-service / Runtime Broker
+  -> language-specific runtime adapter
+  -> pure engine and Chronicle
+  -> public-safe result/replay projection
+```
+
+The provider model should preserve internal implementation differences while making product semantics shared. JS/TS may still use runtime-js, Python may use a Python provider, and Rust/Zig may use WASM/WASI providers, but Workshop/account/entry/result/replay/public evidence should not encode four separate product truths.
 
 ## Watch Outs
 
-- Do not reuse `match-execution-app-v1` naming, versioning, schemas, or DTOs for discovery reads.
-- Do not add fields to `PublicMatchSetResultDto`, replay metadata/evidence DTOs, or match-execution compatibility DTOs just to support index pages.
-- Do not surface quarantine, operator actions, recovery payloads, raw diagnostics, runtime-service internals, host paths, env values, DB details, tokens, package paths, Strategy source, StrategyMemory, SoldierMemory, or objective payloads.
-- Do not make Python/Rust/Zig look counted or ranked. They remain non-counted exhibition beta.
 - Do not execute Strategy code in web/API/Go.
-- Do not let the public shell become a landing-page-only veneer; the first screen should route to real public evidence.
+- Do not use Node `vm` as a security boundary.
+- Do not leak Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads.
+- Do not silently change `match-execution-app-v1`; if execution DTOs or contracts change, version or migrate them explicitly.
+- Do not delete non-promotion monitors without replacing them with parity and boundary monitors.
+- Do not let historical proof artifacts block promotion, but do keep them as evidence of the previous baseline.
+- Do not let direct language switches reappear in product code after the provider model lands.
 
 ## Recommended Phase Structure
 
-1. Phase 211: Route and Link Inventory.
-2. Phase 212: Discovery Read Requirements and Boundary Design.
-3. Phase 213: Global Site Shell and Navigation.
-4. Phase 214: Public Home Discovery Hub.
-5. Phase 215: Watch Hub.
-6. Phase 216: Competition Hub and Competition Detail.
-7. Phase 217: Signed-In Entry Spine.
-8. Phase 218: Cross-Link Pass Across Existing Object Pages.
-9. Phase 219: Privacy, Boundary, and Discovery Monitor Coverage.
-10. Phase 220: Public and Signed-In Journey Proof.
-11. Phase 221: Audit, Archive, Commit, and Tag.
+1. Phase 222: Language Surface Inventory.
+2. Phase 223: Unified Supported Language Registry and Eligibility Model.
+3. Phase 224: StrategyLanguageProvider Runtime Contract.
+4. Phase 225: Python Production Support Path.
+5. Phase 226: Rust Production Support Path.
+6. Phase 227: Zig Production Support Path.
+7. Phase 228: Cross-Language Golden Strategy Corpus and Parity Matrix.
+8. Phase 229: Workshop, Account, and Competition Entry Unification.
+9. Phase 230: Result, Replay, Public Evidence, and Docs Language Pass.
+10. Phase 231: Drift Monitors and Boundary Coverage.
+11. Phase 232: Live Four-Language Signed-In Proof.
+12. Phase 233: Audit, Archive, Commit, and Tag.
 
 ## Sources Consulted
 
 - `AGENTS.md`
 - `.planning/PROJECT.md`
 - `.planning/MILESTONES.md`
-- `.planning/research/SUMMARY.md`
-- `.planning/research/v1.29-SUMMARY.md`
-- `.planning/milestones/v1.29-MILESTONE-AUDIT.md`
-- `.planning/workstreams/v1-27-result-replay-workbench/REQUIREMENTS.md`
-- `.planning/workstreams/v1-27-result-replay-workbench/ROADMAP.md`
-- `.planning/workstreams/v1-27-result-replay-workbench/research/SUMMARY.md`
-- `.planning/workstreams/v1-29-replay-and-result-trust-polish/REQUIREMENTS.md`
-- `.planning/workstreams/v1-29-replay-and-result-trust-polish/ROADMAP.md`
-- `.planning/artifacts/v1.29-replay-result-trust-proof.md`
-- `apps/web/app/page.tsx`
-- `apps/web/app/layout.tsx`
-- `apps/web/app/workshop/page.tsx`
+- `.planning/REQUIREMENTS.md`
+- `.planning/ROADMAP.md`
+- `.planning/STATE.md`
+- `.planning/artifacts/v1.23-signed-in-multi-compiler-proof.md`
+- `.planning/artifacts/v1.24-production-sandbox-readiness-matrix.md`
+- `.planning/artifacts/v1.24-runtime-abuse-lab-evidence.md`
+- `.planning/artifacts/v1.24-signed-in-multi-runtime-regression-proof.md`
+- `.planning/artifacts/v1.25-match-execution-boundary-inventory.md`
+- `.planning/artifacts/v1.31-public-site-spine-proof.md`
+- `CowardsGameSpec_Full_Consolidated_v1.md`
+- `CowardsGame_Technical_Architecture_Spec_V1.md`
+- `packages/spec/src/runtime.ts`
+- `packages/spec/src/types.ts`
+- `packages/spec/src/runtime-execution-service.ts`
+- `packages/runtime-js/src/*`
+- `packages/runtime-python/src/*`
+- `packages/runtime-wasm-wasi/src/*`
+- `apps/runtime-service/src/*`
+- `packages/persistence/src/workshop.ts`
+- `apps/web/lib/runtime-labels.ts`
+- `apps/web/app/workshop/*`
 - `apps/web/app/account/page.tsx`
-- `apps/web/app/exhibitions/new/page.tsx`
-- `apps/web/app/ladder/[seasonId]/page.tsx`
-- `apps/web/app/matchsets/[matchSetId]/page.tsx`
-- `apps/web/app/matches/[matchId]/replay/page.tsx`
-- `apps/web/app/players/[handle]/page.tsx`
+- `apps/web/app/exhibitions/new/*`
+- `apps/web/app/competitions/[competitionId]/enter/page.tsx`
+- `apps/web/app/matchsets/*`
+- `apps/web/app/matches/[matchId]/replay/*`
 - `apps/web/app/strategies/[strategyId]/page.tsx`
-- `apps/web/lib/public-service-boundary.ts`
-- `apps/web/lib/public-service-adapter.ts`
-- `apps/web/lib/public-go-read-client.ts`
-- `packages/spec/src/competition.ts`
-- `packages/spec/src/service.ts`
-- `packages/service/src/index.ts`
-- `apps/go-backend/live_backend.go`
+- `apps/web/lib/public-discovery-service.ts`
+- `scripts/check-boundary-monitors.ts`
 
 ---
 *Research summary written: 2026-05-31*
