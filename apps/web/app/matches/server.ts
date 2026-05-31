@@ -13,9 +13,14 @@ import type {
 } from "@cowards/spec"
 import {
   SERVICE_API_VERSION,
+  type MatchExecutionLifecycleV1,
   toMatchExecutionReplayEvidenceV1,
 } from "@cowards/spec"
-import type { GetMatchReplayOptions, ReplayPageData } from "./types.js"
+import type {
+  GetMatchReplayOptions,
+  ReplayPageData,
+  ReplayUnavailableReason,
+} from "./types.js"
 import {
   buildReadyReplayFromPublicEvidence,
   buildReadyReplayFromStoredChronicle,
@@ -87,6 +92,92 @@ const decodeMatchId = (matchId: MatchId): MatchId => {
     return decodeURIComponent(matchId) as MatchId
   } catch {
     return matchId
+  }
+}
+
+const publicReplayUnavailableMessage = (
+  reason: ReplayUnavailableReason,
+): string => {
+  switch (reason) {
+    case "missing-chronicle":
+      return "Replay unavailable: no public Chronicle is stored for this Match."
+    case "invalid-chronicle":
+      return "Replay unavailable: the public Chronicle could not be validated for safe playback."
+    case "missing-public-evidence":
+      return "Replay unavailable: no public replay evidence is available for this Match yet."
+    case "stale-evidence":
+      return "Replay unavailable: the public replay evidence is stale and cannot be trusted for playback."
+    case "no-result":
+      return "Replay unavailable: this Match has no public result evidence to replay."
+    default:
+      return "Replay unavailable: public replay evidence is not available."
+  }
+}
+
+const lifecycleFailureLabel = (
+  category: MatchExecutionLifecycleV1["failureCategory"],
+): string => {
+  switch (category) {
+    case "strategy_failure":
+      return "Strategy failure"
+    case "system_failure":
+      return "System failure"
+    case "timeout":
+      return "Timeout"
+    case "runtime_unavailable":
+      return "Unavailable runtime"
+    case "malformed_runtime_result":
+      return "Malformed runtime result"
+    case "stale_artifact":
+      return "Stale artifact"
+    case "blocked":
+      return "Blocked"
+    case "missing_chronicle":
+      return "Missing Chronicle"
+    case "no_result":
+      return "No public result"
+    default:
+      return "Not applicable"
+  }
+}
+
+const replayUnavailableFromLifecycle = (
+  matchId: MatchId,
+  lifecycle: MatchExecutionLifecycleV1,
+): ReplayPageData => {
+  const reason =
+    lifecycle.replayAvailability === "stale"
+      ? "stale-evidence"
+      : lifecycle.failureCategory === "missing_chronicle" ||
+          lifecycle.replayAvailability === "missing"
+        ? "missing-chronicle"
+        : lifecycle.failureCategory === "no_result"
+          ? "no-result"
+          : "missing-public-evidence"
+  return {
+    status: "unavailable",
+    matchId,
+    reason,
+    message: publicReplayUnavailableMessage(reason),
+    evidenceRows: [
+      { label: "lifecycle", value: lifecycle.state },
+      { label: "result", value: lifecycle.resultAvailability },
+      { label: "replay", value: lifecycle.replayAvailability },
+      { label: "retry", value: lifecycle.retryDisposition },
+      ...(lifecycle.failureCategory
+        ? [
+            {
+              label: "category",
+              value: lifecycleFailureLabel(lifecycle.failureCategory),
+            },
+          ]
+        : []),
+      {
+        label: "privacy",
+        value:
+          "Public replay output excludes private Strategy data, owner-only debug data, raw diagnostics, and internal recovery details.",
+      },
+    ],
   }
 }
 
@@ -194,6 +285,14 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
       if (fixtureEvidence) {
         return buildReadyReplayFromGoEvidence(fixtureEvidence, options)
       }
+      const fixtureReplayState =
+        await matchExecutionFixtureClient?.getPublicReplayState(resolvedMatchId)
+      if (fixtureReplayState) {
+        return replayUnavailableFromLifecycle(
+          resolvedMatchId,
+          fixtureReplayState.lifecycle,
+        )
+      }
       const currentRequesterPlayerId = options.currentRequesterPlayerId
       const allowOwnerDebug =
         options.allowOwnerDebug === true &&
@@ -214,9 +313,10 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
           ? {
               status: "unavailable",
               matchId: resolvedMatchId,
-              reason: "missing-chronicle",
-              message:
-                "Replay unavailable: no public replay evidence is stored for this Match.",
+              reason: "missing-public-evidence",
+              message: publicReplayUnavailableMessage(
+                "missing-public-evidence",
+              ),
             }
           : buildReadyReplayFromGoEvidence(evidence, options)
       }
@@ -229,8 +329,7 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
             status: "unavailable",
             matchId: resolvedMatchId,
             reason: "missing-chronicle",
-            message:
-              "Replay unavailable: no Chronicle is stored for this Match.",
+            message: publicReplayUnavailableMessage("missing-chronicle"),
           }
         }
 

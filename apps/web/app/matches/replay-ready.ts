@@ -344,7 +344,26 @@ const projectionFailure = (
   status: "unavailable",
   matchId,
   reason: "invalid-chronicle",
-  message: `[${source}] ${message}`,
+  message:
+    source === "validation"
+      ? "Replay unavailable: the public Chronicle could not be validated for safe playback."
+      : "Replay unavailable: public replay evidence could not be projected for safe playback.",
+  evidenceRows: [
+    { label: "reason", value: "invalid Chronicle" },
+    { label: "source", value: source },
+    {
+      label: "privacy",
+      value:
+        "Validation details are withheld from public replay output to avoid exposing private or internal data.",
+    },
+    {
+      label: "check",
+      value:
+        source === "validation"
+          ? "public Chronicle validation failed"
+          : "public replay projection failed",
+    },
+  ],
 })
 
 export interface BuildReadyReplayFromChronicleInput {

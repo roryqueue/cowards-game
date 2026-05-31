@@ -1,0 +1,231 @@
+{
+  "schemaVersion": "v1.29-replay-result-trust-proof",
+  "milestone": "v1.29",
+  "contractVersion": "match-execution-app-v1",
+  "publicContractChanged": false,
+  "newPublicExecutionDtoFields": false,
+  "countedStrategyPath": "javascript-typescript",
+  "nonCountedExhibitionBeta": [
+    "python",
+    "rust",
+    "zig"
+  ],
+  "activeWasmWasiAbi": "preview1-stdin-stdout-json",
+  "ownership": {
+    "orchestration": "go",
+    "publicEvidence": "go-or-persisted-public-chronicle",
+    "hostileStrategyExecution": "runtime-service",
+    "strategyExecutionInWebApiGo": false
+  },
+  "resultCoverage": [
+    {
+      "id": "complete",
+      "present": true,
+      "state": "complete",
+      "resultAvailability": "complete",
+      "replayAvailability": "none",
+      "failureCategory": "none",
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "queued",
+      "present": true,
+      "state": "queued",
+      "resultAvailability": "none",
+      "replayAvailability": "pending",
+      "failureCategory": "none",
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "running",
+      "present": true,
+      "state": "running",
+      "resultAvailability": "none",
+      "replayAvailability": "pending",
+      "failureCategory": "none",
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "strategy-failure",
+      "present": true,
+      "state": "degraded",
+      "resultAvailability": "partial",
+      "replayAvailability": "none",
+      "failureCategory": "strategy_failure",
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "system-failure",
+      "present": true,
+      "state": "degraded",
+      "resultAvailability": "partial",
+      "replayAvailability": "none",
+      "failureCategory": "system_failure",
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "timeout",
+      "present": true,
+      "state": "failed",
+      "resultAvailability": "none",
+      "replayAvailability": "none",
+      "failureCategory": "timeout",
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "unavailable-runtime",
+      "present": true,
+      "state": "unavailable",
+      "resultAvailability": "none",
+      "replayAvailability": "none",
+      "failureCategory": "runtime_unavailable",
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "malformed-runtime-result",
+      "present": true,
+      "state": "failed",
+      "resultAvailability": "none",
+      "replayAvailability": "none",
+      "failureCategory": "malformed_runtime_result",
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "stale-artifact",
+      "present": true,
+      "state": "failed",
+      "resultAvailability": "none",
+      "replayAvailability": "stale",
+      "failureCategory": "stale_artifact",
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "missing-chronicle",
+      "present": true,
+      "state": "failed",
+      "resultAvailability": "none",
+      "replayAvailability": "missing",
+      "failureCategory": "missing_chronicle",
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "no-result",
+      "present": true,
+      "state": "degraded",
+      "resultAvailability": "partial",
+      "replayAvailability": "none",
+      "failureCategory": "no_result",
+      "privateMarkerLeakCount": 0
+    }
+  ],
+  "replayStateCoverage": [
+    {
+      "state": "available",
+      "proof": true
+    },
+    {
+      "state": "pending",
+      "proof": true
+    },
+    {
+      "state": "missing",
+      "proof": true
+    },
+    {
+      "state": "stale",
+      "proof": true
+    },
+    {
+      "state": "none",
+      "proof": true
+    },
+    {
+      "state": "missing-public-evidence",
+      "proof": true
+    },
+    {
+      "state": "invalid-chronicle",
+      "proof": true
+    }
+  ],
+  "dtoFieldShapes": {
+    "matchSetSummary": [
+      "contractVersion",
+      "failureEvidence",
+      "kind",
+      "lifecycle",
+      "matchSetId",
+      "matches",
+      "privacy",
+      "result",
+      "runtimeEvidence"
+    ],
+    "matchResult": [
+      "arenaVariantId",
+      "chronicleHash",
+      "contractVersion",
+      "entrants",
+      "failureEvidence",
+      "kind",
+      "lifecycle",
+      "matchId",
+      "replayAvailable",
+      "runtimeEvidence"
+    ],
+    "replayMetadata": [
+      "contractVersion",
+      "kind",
+      "lifecycle",
+      "matchId",
+      "privacy",
+      "serviceDto"
+    ],
+    "replayEvidence": [
+      "contractVersion",
+      "kind",
+      "lifecycle",
+      "matchId",
+      "privacy",
+      "serviceDto"
+    ]
+  },
+  "privacyScan": {
+    "scannedPublicPayloads": 12,
+    "privateMarkerLeakCount": 0
+  },
+  "boardRealism": {
+    "publicSafeReplayFixtureChecked": true,
+    "visiblePiecesInsideBounds": true
+  },
+  "proofArtifacts": [
+    "apps/web/e2e/v1-29-public-result-replay-proof.spec.ts",
+    "apps/web/e2e/v1-25-match-execution-fixtures.spec.ts",
+    "apps/web/app/matches/server.test.ts",
+    "apps/web/app/matchsets/evidence-copy.test.ts"
+  ],
+  "relevantLocalPages": [
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Acomplete",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Aqueued",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Arunning",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Aunavailable-runtime",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Amalformed-runtime-result",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Astale-artifact",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Amissing-chronicle",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Ano-result",
+    "http://localhost:3000/matches/match%3Afixture%3Apublic-safe-replay/replay",
+    "http://localhost:3000/matches/match%3Afixture%3Amissing-chronicle/replay",
+    "http://localhost:3000/matches/match%3Afixture%3Ano-result/replay"
+  ],
+  "nonClaims": [
+    "No public execution DTO fields added",
+    "No match-execution-app-v1 version bump",
+    "No execution contract expansion",
+    "No Go execution behavior change",
+    "No runtime-service behavior change",
+    "No retry or recovery policy change",
+    "No MatchSet scoring change",
+    "No Strategy code execution in web, API, or Go",
+    "No runtime promotion",
+    "No counted non-JS play"
+  ]
+}

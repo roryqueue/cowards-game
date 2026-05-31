@@ -3,6 +3,7 @@ import type { PublicMatchSetResultDto } from "@cowards/spec"
 import type { ReplayReadyDto } from "../matches/types.js"
 import {
   matchSetEvidenceRows,
+  publicMatchEvidenceLabel,
   publicPrivacyProvenanceCue,
   publicReliabilityPrivacyCue,
   replayEvidenceRows,
@@ -35,6 +36,7 @@ describe("reliability evidence copy", () => {
     )
 
     expect(rowValue(rows, "status")).toContain("Running or slow")
+    expect(rowValue(rows, "result state")).toContain("Running public result")
     expect(rowValue(rows, "status")).not.toContain("Python")
     expect(rowValue(rows, "retry policy")).toContain("Go-owned orchestration")
     expect(rowValue(rows, "timeout budget")).toContain("1000 ms")
@@ -137,6 +139,99 @@ describe("reliability evidence copy", () => {
     )
     expect(rowValue(noResultRows, "retry policy")).toContain(
       "No-result Matches expose only safe status evidence",
+    )
+  })
+
+  it("explains stale, missing-Chronicle, unavailable-runtime, and no-result lifecycle evidence", () => {
+    const rowsFor = (
+      lifecycle: Parameters<typeof matchSetEvidenceRows>[0]["lifecycle"],
+    ) =>
+      matchSetEvidenceRows(
+        {
+          ...matchSet({
+            status: lifecycle?.state === "degraded" ? "degraded" : "failed",
+            matches: [
+              {
+                matchId: "match:lifecycle",
+                status: "failed_system",
+                publicReason: "no_result",
+              },
+            ] as never,
+          }),
+          lifecycle,
+        },
+        ["JS/TS · runtime-js-worker-thread"],
+      )
+
+    const staleRows = matchSetEvidenceRows(
+      {
+        ...matchSet({
+          status: "failed",
+          matches: [{ matchId: "match:stale", status: "blocked" }] as never,
+        }),
+        lifecycle: {
+          state: "failed",
+          terminal: true,
+          retryDisposition: "non_retryable",
+          failureCategory: "stale_artifact",
+          resultAvailability: "none",
+          replayAvailability: "stale",
+          publicMessageKey: "match_execution.stale_artifact",
+        },
+      },
+      ["JS/TS · runtime-js-worker-thread"],
+    )
+    const missingRows = rowsFor({
+      state: "failed",
+      terminal: true,
+      retryDisposition: "non_retryable",
+      failureCategory: "missing_chronicle",
+      resultAvailability: "none",
+      replayAvailability: "missing",
+      publicMessageKey: "match_execution.missing_chronicle",
+    })
+    const unavailableRows = rowsFor({
+      state: "unavailable",
+      terminal: true,
+      retryDisposition: "retryable",
+      failureCategory: "runtime_unavailable",
+      resultAvailability: "none",
+      replayAvailability: "none",
+      publicMessageKey: "match_execution.runtime_unavailable",
+    })
+    const noResultRows = rowsFor({
+      state: "degraded",
+      terminal: true,
+      retryDisposition: "non_retryable",
+      failureCategory: "no_result",
+      resultAvailability: "partial",
+      replayAvailability: "none",
+      publicMessageKey: "match_execution.no_result",
+    })
+
+    expect(rowValue(staleRows, "result state")).toContain("Stale artifact")
+    expect(rowValue(missingRows, "result state")).toContain("Missing Chronicle")
+    expect(rowValue(unavailableRows, "result state")).toContain(
+      "Unavailable runtime",
+    )
+    expect(rowValue(noResultRows, "result state")).toContain("No public result")
+  })
+
+  it("maps Match ledger evidence labels to player-facing copy", () => {
+    expect(
+      publicMatchEvidenceLabel({
+        status: "failed_system",
+        publicReason: "no_result",
+      } as never),
+    ).toBe("No public result")
+    expect(
+      publicMatchEvidenceLabel({
+        status: "failed_system",
+        publicReason: "invalid_result",
+      } as never),
+    ).toBe("Invalid public result")
+    expect(publicMatchEvidenceLabel({ status: "running" } as never)).toBe(
+      "Running",
     )
   })
 

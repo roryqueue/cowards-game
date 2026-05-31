@@ -43,6 +43,10 @@ describe("match execution fixture adapter", () => {
     expect(MATCH_EXECUTION_CONTRACT_FIXTURE_IDS_V1).toContain(
       "public-safe-replay",
     )
+    expect(MATCH_EXECUTION_CONTRACT_FIXTURE_IDS_V1).not.toContain(
+      "missing-chronicle",
+    )
+    expect(MATCH_EXECUTION_CONTRACT_FIXTURE_IDS_V1).not.toContain("no-result")
     await expect(
       client?.getPublicMatchSetSummary("match-set:does-not-exist"),
     ).resolves.toBeNull()
@@ -57,6 +61,38 @@ describe("match execution fixture adapter", () => {
     ).resolves.toMatchObject({
       kind: "publicReplayEvidence",
       matchId: "match:fixture:public-safe-replay",
+    })
+    await expect(
+      client?.getPublicMatchSetSummary("match-set:fixture:missing-chronicle"),
+    ).resolves.toMatchObject({
+      matchSetId: "match-set:fixture:missing-chronicle",
+      result: {
+        status: "failed",
+      },
+    })
+    await expect(
+      client?.getPublicMatchSetSummary("match-set:fixture:no-result"),
+    ).resolves.toMatchObject({
+      matchSetId: "match-set:fixture:no-result",
+      result: {
+        status: "degraded",
+      },
+    })
+    await expect(
+      client?.getPublicReplayState("match:fixture:missing-chronicle"),
+    ).resolves.toMatchObject({
+      lifecycle: {
+        failureCategory: "missing_chronicle",
+        replayAvailability: "missing",
+      },
+    })
+    await expect(
+      client?.getPublicReplayState("match:fixture:no-result"),
+    ).resolves.toMatchObject({
+      lifecycle: {
+        failureCategory: "no_result",
+        replayAvailability: "none",
+      },
     })
   })
 })

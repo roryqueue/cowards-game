@@ -3,6 +3,7 @@ import type { MatchSetId } from "@cowards/spec"
 import { getPublicMatchSetResult } from "../../../lib/public-service-boundary.js"
 import {
   matchSetEvidenceRows,
+  publicMatchEvidenceLabel,
   publicPrivacyProvenanceCue,
   statusChipClass,
 } from "../evidence-copy.js"
@@ -231,7 +232,7 @@ export default async function MatchSetResultPage({
                 {match.replayHref ? (
                   <a href={match.replayHref}>Replay</a>
                 ) : (
-                  (match.publicReason ?? "Pending")
+                  publicMatchEvidenceLabel(match)
                 )}
               </span>
             </div>

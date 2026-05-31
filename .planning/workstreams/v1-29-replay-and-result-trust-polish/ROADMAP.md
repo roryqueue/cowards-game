@@ -3,7 +3,7 @@
 ## Milestones
 
 - [x] **v1.28 Match Execution Operations, Recovery, and Incident Drills** - Phases 201-209, shipped 2026-05-30 with internal recovery proof behind frozen `match-execution-app-v1`.
-- [ ] **v1.29 Replay and Result Trust Polish** - Phases 210-217, active in workstream `v1-29-replay-and-result-trust-polish`.
+- [x] **v1.29 Replay and Result Trust Polish** - Phases 210-217, implemented in workstream `v1-29-replay-and-result-trust-polish`.
 
 ## Active Milestone
 
@@ -135,18 +135,18 @@
 ## Coverage
 
 - v1 requirements: 44 total
-- Complete: 0
-- Planned: 44
+- Complete: 44
+- Planned: 0
 - Mapped to phases: 44
 - Unmapped: 0
 
 ## Next Up
 
-Phase 210: Public Result/Replay Baseline Inventory.
+Phase 217: final audit/commit/tag.
 
 Suggested next command:
 
-`$gsd-plan-phase 210`
+`$gsd-audit-fix`
 
 ---
 *Roadmap created: 2026-05-31 after v1.29 phase map confirmation*

@@ -36,6 +36,36 @@ const matchReasonLabel = (
   }
 }
 
+export const publicMatchEvidenceLabel = (
+  match: Pick<PublicMatchEvidenceDto, "status" | "publicReason">,
+): string => {
+  if (match.publicReason) {
+    switch (match.publicReason) {
+      case "strategy_failure":
+        return "Strategy failure"
+      case "system_failure":
+        return "System failure"
+      case "invalid_result":
+        return "Invalid public result"
+      case "no_result":
+        return "No public result"
+    }
+  }
+  switch (match.status) {
+    case "pending":
+      return "Pending"
+    case "running":
+      return "Running"
+    case "complete":
+      return "Replay unavailable"
+    case "failed_system":
+      return "Failed"
+    case "blocked":
+      return "Blocked"
+  }
+  return "Pending"
+}
+
 type PublicMatchSetEvidenceInput = PublicMatchSetResultDto & {
   lifecycle?: MatchExecutionLifecycleV1 | undefined
 }
@@ -103,6 +133,67 @@ const matchStateSummary = (
     .join(", ")
 }
 
+const lifecycleResultExplanation = (
+  result: PublicMatchSetEvidenceInput,
+): string => {
+  const lifecycle = result.lifecycle
+  if (!lifecycle) {
+    if (result.status === "complete") {
+      return "Complete public result; scoring and replay links are expected when public evidence is available."
+    }
+    if (result.status === "queued" || result.status === "accepted") {
+      return "Queued public result; no scoring or replay claim is made before execution starts."
+    }
+    if (result.status === "running") {
+      return "Running public result; players can see that execution is in progress without private runtime details."
+    }
+    if (result.status === "degraded") {
+      return "Degraded public result; partial evidence is shown without overclaiming a clean counted outcome."
+    }
+    if (result.status === "failed") {
+      return "Failed public result; only safe status and reason categories are shown."
+    }
+    return "Public result state is shown from the public MatchSet summary only."
+  }
+  if (lifecycle.state === "complete") {
+    return "Complete public result; scoring and replay links are expected when public evidence is available."
+  }
+  if (lifecycle.state === "queued" || lifecycle.state === "accepted") {
+    return "Queued public result; no scoring or replay claim is made before Go-owned execution starts."
+  }
+  if (lifecycle.state === "running") {
+    return "Running public result; players can see that execution is in progress without private runtime details."
+  }
+  if (lifecycle.failureCategory === "runtime_unavailable") {
+    return "Unavailable runtime; public evidence says execution could not start or continue in the runtime lane."
+  }
+  if (lifecycle.failureCategory === "malformed_runtime_result") {
+    return "Malformed runtime result; the public result was rejected without exposing raw runtime output."
+  }
+  if (lifecycle.failureCategory === "stale_artifact") {
+    return "Stale artifact; public evidence is terminal, and stale replay evidence is not trusted for playback."
+  }
+  if (lifecycle.failureCategory === "missing_chronicle") {
+    return "Missing Chronicle; result evidence remains public, but replay proof is not available."
+  }
+  if (lifecycle.failureCategory === "no_result") {
+    return "No public result; no winner, scoring, or replay claim is made from this evidence."
+  }
+  if (lifecycle.failureCategory === "timeout") {
+    return "Timeout; public result evidence is bounded by the Match execution budget."
+  }
+  if (lifecycle.failureCategory === "strategy_failure") {
+    return "Strategy failure; terminal public evidence is attributed without retrying it as a system failure."
+  }
+  if (lifecycle.failureCategory === "system_failure") {
+    return "System failure; retry handling remains Go-owned while public output stays coarse."
+  }
+  if (lifecycle.state === "degraded") {
+    return "Degraded public result; partial evidence is shown without overclaiming a clean counted outcome."
+  }
+  return "Failed public result; only safe status and reason categories are shown."
+}
+
 export const matchSetEvidenceRows = (
   result: PublicMatchSetEvidenceInput,
   entrantRuntimeLabels: readonly string[],
@@ -110,6 +201,7 @@ export const matchSetEvidenceRows = (
   const lifecycle = result.lifecycle
   return [
     { label: "status", value: statusLabel(result) },
+    { label: "result state", value: lifecycleResultExplanation(result) },
     ...(lifecycle
       ? [
           {

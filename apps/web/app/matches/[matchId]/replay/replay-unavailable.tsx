@@ -1,3 +1,4 @@
+import { Fragment } from "react"
 import type { ReplayUnavailableDto } from "../../types.js"
 
 export function ReplayUnavailable({ data }: { data: ReplayUnavailableDto }) {
@@ -18,6 +19,16 @@ export function ReplayUnavailable({ data }: { data: ReplayUnavailableDto }) {
       >
         <p className="replay-muted">Match {data.matchId}</p>
         <p>{data.message}</p>
+        <dl className="replay-details-grid">
+          <dt>Reason</dt>
+          <dd>{data.reason}</dd>
+          {(data.evidenceRows ?? []).map((row) => (
+            <Fragment key={row.label}>
+              <dt>{row.label}</dt>
+              <dd>{row.value}</dd>
+            </Fragment>
+          ))}
+        </dl>
       </section>
     </main>
   )
