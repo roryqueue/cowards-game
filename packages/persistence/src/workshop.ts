@@ -5,7 +5,11 @@ import {
   type StrategyRevisionValidationReport,
 } from "@cowards/runtime-js"
 import { validatePythonStrategySource } from "@cowards/runtime-python/validation"
-import { STRATEGY_RUNTIME_ABI_VERSION } from "@cowards/spec"
+import {
+  describeStrategyRuntimeProductSemantics,
+  getSupportedStrategyLanguageRecord,
+  STRATEGY_RUNTIME_ABI_VERSION,
+} from "@cowards/spec"
 import type {
   MatchId,
   MatchSetId,
@@ -16,6 +20,7 @@ import type {
   StrategyRevisionValidationCode,
   StrategyRevisionId,
   StrategyArtifactSourceFormat,
+  StrategyRuntimeProductSemantics,
 } from "@cowards/spec"
 import type { Pool } from "pg"
 import { withTransaction } from "./db.js"
@@ -299,6 +304,7 @@ export interface WorkshopRevisionSummary {
   valid: boolean
   validation: StrategyRevisionValidationReport
   metadata: StrategyRevision["metadata"]
+  runtimeSemantics: StrategyRuntimeProductSemantics
   createdAt: string
   usedInMatches: number
 }
@@ -998,19 +1004,77 @@ export const listWorkshopRevisions = async (
     sourceHash: row.source_hash,
     sourceBytes: row.source_bytes,
     sourceFormat:
-      row.runtime.language.id === "python"
-        ? "python"
-        : row.runtime.language.id === "rust"
-          ? "rust"
-          : row.runtime.language.id === "zig"
-            ? "zig"
-            : "typescript",
+      getSupportedStrategyLanguageRecord(row.runtime.language.id)
+        ?.sourceFormat ?? "typescript",
     valid: row.validation.valid,
     validation: row.validation,
     metadata: row.metadata,
+    runtimeSemantics: workshopRuntimeSemantics({
+      runtime: row.runtime,
+      metadata: row.metadata,
+      sourceHash: row.source_hash,
+      sourceBytes: row.source_bytes,
+      valid: row.validation.valid,
+    }),
     createdAt: row.created_at.toISOString(),
     usedInMatches: row.used_in_matches,
   }))
+}
+
+const workshopRuntimeSemantics = (revision: {
+  runtime: StrategyRevision["runtime"]
+  metadata: StrategyRevision["metadata"]
+  sourceHash: string
+  sourceBytes: number
+  valid: boolean
+}): StrategyRuntimeProductSemantics => {
+  const semantics = describeStrategyRuntimeProductSemantics(revision.runtime)
+  const language = getSupportedStrategyLanguageRecord(revision.runtime.language.id)
+  if (!revision.valid) {
+    return {
+      ...semantics,
+      countedPlayEligible: false,
+      countedPlayLabel: "Not counted",
+      countedPlayReason: "Invalid Strategy Revision cannot enter counted play.",
+    }
+  }
+  if (language?.runtimeTarget === "runtime-python") {
+    return pythonProviderValidationMatches(revision.metadata, {
+      sourceHash: revision.sourceHash,
+      sourceBytes: revision.sourceBytes,
+    })
+      ? semantics
+      : {
+          ...semantics,
+          countedPlayEligible: false,
+          countedPlayLabel: "Not counted",
+          countedPlayReason:
+            "Python counted play requires provider-validated revision provenance.",
+        }
+  }
+  if (language?.runtimeTarget === "runtime-wasm-wasi") {
+    const artifact = revision.metadata.compiledArtifact
+    const providerId =
+      revision.runtime.language.id === "zig"
+        ? "strategy-language-provider-zig-wasi"
+        : "strategy-language-provider-rust-wasi"
+    return artifact !== undefined &&
+      rustProviderValidationMatches(revision.metadata, {
+        providerId,
+        sourceHash: revision.sourceHash,
+        sourceBytes: revision.sourceBytes,
+        artifactHash: artifact.hash,
+        artifactBytes: artifact.bytes,
+      })
+      ? semantics
+      : {
+          ...semantics,
+          countedPlayEligible: false,
+          countedPlayLabel: "Not counted",
+          countedPlayReason: `${language.label} counted play requires provider-validated artifact provenance.`,
+        }
+  }
+  return semantics
 }
 
 export const insertWorkshopRevision = async (

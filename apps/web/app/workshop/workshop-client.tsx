@@ -35,9 +35,12 @@ import {
   validationStateFromReport,
 } from "./workshop-client-state.js"
 import {
+  WORKSHOP_EDITOR_SOURCE_FORMATS,
   sourceFormatExhibitionLabel,
+  sourceFormatLanguageLabel,
   sourceFormatRuntimeCue,
   sourceFormatShortLabel,
+  runtimeExhibitionStatusLabel,
 } from "../../lib/runtime-labels.js"
 
 export interface WorkshopClientProps {
@@ -48,8 +51,13 @@ const replaceDraftCopy =
   "Replace draft: this will overwrite the current unsaved source with the selected template."
 const invalidSubmitBlockedReason =
   "Resolve validation errors before submitting."
-const runtimeDisplayLabel = (revision: { sourceFormat?: string | undefined }) =>
-  sourceFormatExhibitionLabel(revision.sourceFormat)
+const runtimeDisplayLabel = (revision: {
+  sourceFormat?: string | undefined
+  runtimeSemantics?: WorkshopInitialData["revisions"][number]["runtimeSemantics"]
+}) =>
+  revision.runtimeSemantics
+    ? runtimeExhibitionStatusLabel(revision.runtimeSemantics)
+    : sourceFormatExhibitionLabel(revision.sourceFormat)
 
 type WorkshopEditorSourceFormat = Extract<
   StrategyArtifactSourceFormat,
@@ -669,11 +677,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                   <span>{template.label}</span>
                   {template.experimental ? (
                     <span className="workshop-chip warning">
-                      {template.sourceFormat === "rust"
-                        ? "Rust"
-                        : template.sourceFormat === "zig"
-                          ? "Zig"
-                          : "Experimental"}
+                      {sourceFormatLanguageLabel(template.sourceFormat)}
                     </span>
                   ) : null}
                 </button>
@@ -824,34 +828,16 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
               </button>
             </div>
             <div className="segmented-control" aria-label="Strategy language">
-              <button
-                className={sourceFormat === "typescript" ? "active" : ""}
-                type="button"
-                onClick={() => setSourceFormat("typescript")}
-              >
-                {sourceFormatShortLabel("typescript")}
-              </button>
-              <button
-                className={sourceFormat === "python" ? "active" : ""}
-                type="button"
-                onClick={() => setSourceFormat("python")}
-              >
-                {sourceFormatShortLabel("python")}
-              </button>
-              <button
-                className={sourceFormat === "rust" ? "active" : ""}
-                type="button"
-                onClick={() => setSourceFormat("rust")}
-              >
-                {sourceFormatShortLabel("rust")}
-              </button>
-              <button
-                className={sourceFormat === "zig" ? "active" : ""}
-                type="button"
-                onClick={() => setSourceFormat("zig")}
-              >
-                {sourceFormatShortLabel("zig")}
-              </button>
+              {WORKSHOP_EDITOR_SOURCE_FORMATS.map((format) => (
+                <button
+                  className={sourceFormat === format ? "active" : ""}
+                  key={format}
+                  type="button"
+                  onClick={() => setSourceFormat(format)}
+                >
+                  {sourceFormatShortLabel(format)}
+                </button>
+              ))}
             </div>
             {sourceFormatRuntimeCue(sourceFormat) ? (
               <p className="workshop-muted">

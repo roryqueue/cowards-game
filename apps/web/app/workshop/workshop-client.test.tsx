@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import type { WorkshopRevisionSummary } from "./types.js"
 import {
   canSubmitRevision,
   canOpenReplay,
@@ -194,9 +195,27 @@ describe("Strategy Workshop validation helpers", () => {
         },
       },
       metadata: {},
+      runtimeSemantics: {
+        languageId: "typescript",
+        adapterId: "runtime-js-worker-thread",
+        languageLabel: "TypeScript",
+        adapterLabel: "runtime-js worker thread",
+        readiness: "local-dev-fallback",
+        readinessLabel: "Local/dev fallback",
+        experimental: false,
+        countedPlayEligible: true,
+        countedPlayLabel: "Counted eligible",
+        countedPlayReason: null,
+        sourcePolicyLabel: "Self-contained Strategy source",
+        packagePolicyLabel: "No packages",
+        docsReference: "runtime/languages",
+        examplesReference: "samples/minimal-strategy",
+        warnings: [],
+        validationIssueCodes: [],
+      },
       createdAt: "2026-05-17T20:00:00.000Z",
       usedInMatches: 2,
-    }
+    } satisfies WorkshopRevisionSummary
 
     expect(
       canSubmitRevision({

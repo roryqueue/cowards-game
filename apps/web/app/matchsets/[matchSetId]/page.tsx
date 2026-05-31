@@ -24,22 +24,12 @@ const runtimeLabel = (
   const nonCountedByContract = nonCountedLanguages.has(
     entrant.runtime.language.id,
   )
-  const language = (() => {
-    return runtimeExhibitionStatusLabel({
-      languageId: entrant.runtime.language.id,
-      languageLabel:
-        entrant.runtime.language.id === "python"
-          ? "Python"
-          : entrant.runtime.language.id === "rust"
-            ? "Rust"
-            : entrant.runtime.language.id === "zig"
-              ? "Zig"
-              : "JS/TS",
-      countedPlayLabel: nonCountedByContract
-        ? "Not counted"
-        : "Counted eligible",
-    })
-  })()
+  const language = runtimeExhibitionStatusLabel({
+    languageId: entrant.runtime.language.id,
+    countedPlayLabel: nonCountedByContract
+      ? "Not counted"
+      : "Counted eligible",
+  })
   return `${language} · ${entrant.runtime.adapter.id}`
 }
 

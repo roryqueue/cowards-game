@@ -7,6 +7,7 @@ import {
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import {
   describeStrategyRuntimeProductSemantics,
+  getSupportedStrategyLanguageRecord,
   normalizeStrategyRuntimeMetadata,
   STRATEGY_RUNTIME_ABI_VERSION,
 } from "@cowards/spec"
@@ -214,11 +215,8 @@ const provenanceAwareRuntimeSemantics = (
     return semantics
   }
   const languageLabel =
-    revision.runtime.language.id === "rust"
-      ? "Rust"
-      : revision.runtime.language.id === "zig"
-        ? "Zig"
-        : "Python"
+    getSupportedStrategyLanguageRecord(revision.runtime.language.id)?.label ??
+    "Strategy"
   return {
     ...semantics,
     countedPlayEligible: false,

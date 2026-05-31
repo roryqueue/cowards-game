@@ -1,3 +1,4 @@
+import { getSupportedStrategyLanguageBySourceFormat } from "@cowards/spec"
 import { workshopServer } from "../../../workshop/server.js"
 import { isStorageUnavailableError } from "../../../workshop/server.js"
 import type {
@@ -11,7 +12,8 @@ const runtimeServiceValidateStrategy = async (
 ): Promise<Partial<WorkshopSubmitRequest> | { error: string }> => {
   const endpoint = process.env.COWARDS_RUNTIME_SERVICE_URL?.replace(/\/$/, "")
   const label =
-    sourceFormat === "python" ? "Python" : sourceFormat === "zig" ? "Zig" : "Rust"
+    getSupportedStrategyLanguageBySourceFormat(sourceFormat)?.label ??
+    "Strategy"
   if (!endpoint) {
     return {
       error: `${label} submission requires runtime-service provider validation.`,

@@ -24,6 +24,12 @@ import type {
   StrategyRevision,
   StrategyRevisionId,
 } from "@cowards/spec"
+import {
+  describeStrategyRuntimeProductSemantics,
+  getSupportedStrategyLanguageBySourceFormat,
+  getSupportedStrategyLanguageRecord,
+  type StrategyArtifactSourceFormat,
+} from "@cowards/spec"
 import type {
   WorkshopLaunchTestRequest,
   WorkshopInitialData,
@@ -68,16 +74,13 @@ const revisionToSummary = (
     sourceHash: revision.sourceHash,
     sourceBytes: revision.sourceBytes,
     sourceFormat:
-      revision.runtime.language.id === "python"
-        ? "python"
-        : revision.runtime.language.id === "rust"
-          ? "rust"
-          : revision.runtime.language.id === "zig"
-            ? "zig"
-            : "typescript",
+      (getSupportedStrategyLanguageRecord(revision.runtime.language.id)
+        ?.sourceFormat as StrategyArtifactSourceFormat | undefined) ??
+      "typescript",
     valid: revision.validation.valid,
     validation: revision.validation,
     metadata: revision.metadata,
+    runtimeSemantics: describeStrategyRuntimeProductSemantics(revision.runtime),
     createdAt: new Date().toISOString(),
     usedInMatches: 0,
   },
@@ -140,11 +143,8 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
         request.runtimeServiceValidated !== true
       ) {
         const label =
-          request.sourceFormat === "rust"
-            ? "Rust"
-            : request.sourceFormat === "zig"
-              ? "Zig"
-              : "Python"
+          getSupportedStrategyLanguageBySourceFormat(request.sourceFormat)
+            ?.label ?? "Strategy"
         throw new Error(
           `${label} Workshop revisions require runtime-service provider validation.`,
         )
