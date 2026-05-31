@@ -5,7 +5,12 @@ import type {
 } from "@cowards/spec"
 import type { PublicReadMatchSetResultDto } from "../../lib/public-service-boundary.js"
 import {
+  buildResultIntelligenceViewModel,
+  type ResultIntelligenceViewModel,
+} from "../match-intelligence.js"
+import {
   candidateLaneCue,
+  publicMatchEvidenceLabel,
   publicPrivacyProvenanceCue,
   publicReliabilityPrivacyCue,
   reliabilityBudgetCue,
@@ -41,6 +46,7 @@ export interface ResultWorkbenchViewModel {
   lifecycleSummary: string
   availabilitySummary: string
   privacySummary: string
+  intelligence: ResultIntelligenceViewModel
   sections: ResultWorkbenchSection[]
   matches: ResultWorkbenchMatchRow[]
 }
@@ -255,7 +261,7 @@ export const buildResultWorkbenchViewModel = (
     status: match.status,
     evidence: match.replayHref
       ? "Replay available"
-      : (match.publicReason ?? "Pending public evidence"),
+      : publicMatchEvidenceLabel(match),
     replayHref: match.replayHref,
     tone: toneForMatch(match),
   }))
@@ -266,6 +272,10 @@ export const buildResultWorkbenchViewModel = (
     lifecycleSummary: lifecycleCopy[lifecycle.state],
     availabilitySummary: `Result ${availabilityLabel(lifecycle.resultAvailability).toLowerCase()}; replay ${replayLabel(lifecycle.replayAvailability).toLowerCase()}. ${replayCopy}`,
     privacySummary: publicReliabilityPrivacyCue,
+    intelligence: buildResultIntelligenceViewModel(
+      result,
+      entrantRuntimeLabels,
+    ),
     sections: [
       {
         id: "lifecycle",

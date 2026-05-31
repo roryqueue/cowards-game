@@ -27,6 +27,8 @@ const matchSetFixtureIds = [
   "unavailable-runtime",
   "malformed-runtime-result",
   "stale-artifact",
+  "missing-chronicle",
+  "no-result",
   "public-safe-replay",
 ] as const
 
@@ -83,5 +85,22 @@ test("v1.25 Match execution fixture result and replay pages are public-safe", as
   body = await page.locator("body").innerText()
   for (const marker of privateMarkers) {
     expect(body).not.toContain(marker)
+  }
+
+  for (const [matchId, reason] of [
+    ["match:fixture:missing-chronicle", "missing-chronicle"],
+    ["match:fixture:no-result", "no-result"],
+  ] as const) {
+    await page.goto(`/matches/${encodeURIComponent(matchId)}/replay`)
+    await expect(
+      page.getByRole("heading", { name: "Replay unavailable" }),
+    ).toBeVisible()
+    await expect(page.getByTestId("replay-unavailable-message")).toContainText(
+      reason,
+    )
+    body = await page.locator("body").innerText()
+    for (const marker of privateMarkers) {
+      expect(body).not.toContain(marker)
+    }
   }
 })

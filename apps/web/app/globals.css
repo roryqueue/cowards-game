@@ -1100,6 +1100,181 @@ textarea {
   padding: 12px;
 }
 
+.match-intelligence-panel,
+.replay-intelligence-panel,
+.replay-tactical-panel {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.match-intelligence-panel {
+  border-left: 4px solid var(--accent);
+}
+
+.match-intelligence-panel p,
+.replay-intelligence-panel p,
+.replay-tactical-panel p {
+  margin: 0;
+}
+
+.match-intelligence-comparison {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.match-intelligence-comparison-row {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-secondary);
+  padding: 10px;
+}
+
+.match-intelligence-comparison-row strong,
+.match-intelligence-comparison-row span,
+.match-intelligence-comparison-row small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.match-intelligence-comparison-row small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.match-intelligence-jump-grid,
+.replay-annotation-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.match-intelligence-jump-grid a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.replay-intelligence-panel {
+  text-align: left;
+}
+
+.replay-intelligence-panel h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.replay-annotation-filters button {
+  flex: 0 1 auto;
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.replay-annotation-filters button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: rgba(37, 109, 133, 0.1);
+  color: var(--accent);
+}
+
+.replay-annotation-list,
+.replay-tactical-panels,
+.replay-soldier-status-list {
+  display: grid;
+  gap: 8px;
+}
+
+.replay-annotation-list {
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.replay-annotation-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-secondary);
+  padding: 8px;
+}
+
+.replay-annotation-row button {
+  display: grid;
+  min-height: 0;
+  min-width: 0;
+  gap: 3px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+
+.replay-annotation-row strong,
+.replay-annotation-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.replay-annotation-row span,
+.replay-annotation-row a {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.replay-annotation-row a {
+  color: var(--accent);
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.replay-tactical-panel {
+  background: var(--surface-secondary);
+}
+
+.replay-tactical-panel strong {
+  line-height: 1.25;
+}
+
+.replay-soldier-status-list button {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 1fr;
+  gap: 3px;
+  text-align: left;
+}
+
+.replay-soldier-status-list button[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.replay-soldier-status-list span,
+.replay-soldier-status-list small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
 .result-workbench-card h2,
 .fixture-card h2 {
   margin: 0;

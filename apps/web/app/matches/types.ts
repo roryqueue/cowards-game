@@ -23,7 +23,12 @@ export interface GetMatchReplayOptions {
   focus?: ReplayFocusRequest | undefined
 }
 
-export type ReplayUnavailableReason = "missing-chronicle" | "invalid-chronicle"
+export type ReplayUnavailableReason =
+  | "missing-chronicle"
+  | "invalid-chronicle"
+  | "missing-public-evidence"
+  | "stale-evidence"
+  | "no-result"
 export type ReplayStatus = "ready" | "unavailable"
 
 export interface ReplayTimelineEntryDto {
@@ -98,6 +103,7 @@ export interface ReplayUnavailableDto {
   matchId: MatchId
   reason: ReplayUnavailableReason
   message: string
+  evidenceRows?: { label: string; value: string }[] | undefined
 }
 
 export type ReplayPageData = ReplayReadyDto | ReplayUnavailableDto

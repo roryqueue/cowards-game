@@ -232,11 +232,12 @@ describe("Match replay server facade", () => {
       status: "unavailable",
       matchId: "match:missing",
       reason: "missing-chronicle",
-      message: "Replay unavailable: no Chronicle is stored for this Match.",
+      message:
+        "Replay unavailable: no public Chronicle is stored for this Match.",
     })
   })
 
-  it("returns validation diagnostics for invalid Chronicles", async () => {
+  it("returns sanitized validation messages for invalid Chronicles", async () => {
     const stored = createStoredChronicle()
     stored.artifact.events = stored.artifact.events
       .slice(1)
@@ -259,11 +260,17 @@ describe("Match replay server facade", () => {
     }
     expect(response.matchId).toBe("match:replay-test")
     expect(response.reason).toBe("invalid-chronicle")
-    expect(response.message).toContain("[validation]")
-    expect(response.message).toContain("EVENT_ORDER_INVALID")
+    expect(response.message).toBe(
+      "Replay unavailable: the public Chronicle could not be validated for safe playback.",
+    )
+    expect(response.evidenceRows).toContainEqual({
+      label: "check",
+      value: "public Chronicle validation failed",
+    })
+    expect(JSON.stringify(response)).not.toContain("EVENT_ORDER_INVALID")
   })
 
-  it("returns validation diagnostics before rendering incompatible Chronicles", async () => {
+  it("returns sanitized validation messages before rendering incompatible Chronicles", async () => {
     const stored = createStoredChronicle()
     stored.artifact = {
       ...stored.artifact,
@@ -290,9 +297,16 @@ describe("Match replay server facade", () => {
     }
     expect(response.matchId).toBe("match:replay-test")
     expect(response.reason).toBe("invalid-chronicle")
-    expect(response.message).toContain("[validation]")
-    expect(response.message).toContain("VERSION_INCOMPATIBLE")
-    expect(response.message).toContain("engine")
+    expect(response.message).toBe(
+      "Replay unavailable: the public Chronicle could not be validated for safe playback.",
+    )
+    expect(response.evidenceRows).toContainEqual({
+      label: "privacy",
+      value:
+        "Validation details are withheld from public replay output to avoid exposing private or internal data.",
+    })
+    expect(JSON.stringify(response)).not.toContain("VERSION_INCOMPATIBLE")
+    expect(JSON.stringify(response)).not.toContain("engine")
     expect(JSON.stringify(response)).not.toContain("PRIVATE_STRATEGY_MEMORY")
   })
 
@@ -319,8 +333,10 @@ describe("Match replay server facade", () => {
       return
     }
     expect(response.reason).toBe("invalid-chronicle")
-    expect(response.message).toContain("[validation]")
-    expect(response.message).toContain("out-of-bounds Soldier")
+    expect(response.message).toBe(
+      "Replay unavailable: the public Chronicle could not be validated for safe playback.",
+    )
+    expect(JSON.stringify(response)).not.toContain("out-of-bounds Soldier")
   })
 
   it("rejects replay boards with invalid bounds and overlapping visible pieces", async () => {
@@ -394,7 +410,10 @@ describe("Match replay server facade", () => {
         continue
       }
       expect(response.reason).toBe("invalid-chronicle")
-      expect(response.message).toContain(testCase.expected)
+      expect(response.message).toBe(
+        "Replay unavailable: the public Chronicle could not be validated for safe playback.",
+      )
+      expect(JSON.stringify(response)).not.toContain(testCase.expected)
     }
   })
 
@@ -422,7 +441,10 @@ describe("Match replay server facade", () => {
       return
     }
     expect(response.reason).toBe("invalid-chronicle")
-    expect(response.message).toContain("canonical Match start")
+    expect(response.message).toBe(
+      "Replay unavailable: the public Chronicle could not be validated for safe playback.",
+    )
+    expect(JSON.stringify(response)).not.toContain("canonical Match start")
   })
 
   it("decodes URL-encoded persisted Match ids before Chronicle lookup", async () => {
@@ -565,7 +587,14 @@ describe("Match replay server facade", () => {
 
     await expect(
       server.getPublicReplayMetadata("match%3Afixture%3Apublic-safe-replay"),
-    ).resolves.toEqual(fixture?.service.replayMetadata)
+    ).resolves.toMatchObject({
+      ...fixture?.service.replayMetadata,
+      metadata: {
+        ...fixture?.service.replayMetadata?.metadata,
+        eventCount: 4,
+        snapshotCount: 4,
+      },
+    })
 
     const replay = await server.getMatchReplay(
       "match%3Afixture%3Apublic-safe-replay",
@@ -576,6 +605,38 @@ describe("Match replay server facade", () => {
       expect(replay.projection.viewer.access).toBe("public")
       expect(replay.states[0]?.board.soldiers.length).toBe(2)
     }
+  })
+
+  it("serves app-only missing Chronicle and no-result replay states without contract fixture expansion", async () => {
+    const server = createMatchReplayServer({
+      env: { COWARDS_ENABLE_MATCH_EXECUTION_FIXTURES: "1" },
+    })
+
+    const missingChronicle = await server.getMatchReplay(
+      "match%3Afixture%3Amissing-chronicle",
+    )
+    const noResult = await server.getMatchReplay("match:fixture:no-result")
+
+    expect(missingChronicle).toMatchObject({
+      status: "unavailable",
+      matchId: "match:fixture:missing-chronicle",
+      reason: "missing-chronicle",
+      message:
+        "Replay unavailable: no public Chronicle is stored for this Match.",
+    })
+    expect(noResult).toMatchObject({
+      status: "unavailable",
+      matchId: "match:fixture:no-result",
+      reason: "no-result",
+      message:
+        "Replay unavailable: this Match has no public result evidence to replay.",
+    })
+    expect(JSON.stringify([missingChronicle, noResult])).not.toContain(
+      "strategyMemory",
+    )
+    expect(JSON.stringify([missingChronicle, noResult])).not.toContain(
+      "rawDiagnostics",
+    )
   })
 
   it("does not expose private Chronicle fields in public replay metadata", async () => {
@@ -687,6 +748,35 @@ describe("Match replay server facade", () => {
     )
     expect(getByMatchId).not.toHaveBeenCalled()
     expect(JSON.stringify(response)).not.toContain("PRIVATE_STRATEGY_MEMORY")
+  })
+
+  it("classifies selected Go null replay evidence without claiming a missing Chronicle", async () => {
+    const getByMatchId = vi.fn(async () => {
+      throw new Error("direct Chronicle store should not be used")
+    })
+    const evidenceClient = {
+      getPublicReplayEvidence: vi.fn(async () => null),
+    }
+    const server = createMatchReplayServer({
+      env: {
+        COWARDS_GO_PUBLIC_READS: "1",
+        COWARDS_GO_BACKEND_URL: "http://go.test",
+      },
+      publicReplayEvidenceClient: evidenceClient,
+      withPool: async (fn) => fn({} as never),
+      createChronicleStore: () => ({ getByMatchId }),
+    })
+
+    await expect(
+      server.getMatchReplay("match:missing-go-evidence"),
+    ).resolves.toEqual({
+      status: "unavailable",
+      matchId: "match:missing-go-evidence",
+      reason: "missing-public-evidence",
+      message:
+        "Replay unavailable: no public replay evidence is available for this Match yet.",
+    })
+    expect(getByMatchId).not.toHaveBeenCalled()
   })
 
   it("fails closed when Go replay evidence is selected without a Go URL", async () => {
