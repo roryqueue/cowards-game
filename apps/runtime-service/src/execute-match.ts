@@ -5,6 +5,7 @@ import {
   RuntimeExecutionServiceResponseSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
   findRuntimeBrokerRegistryEntry,
+  validateStrategyLanguageProviderRuntimeCompatibility,
   type MatchId,
   type PlayerId,
   type RuntimeExecutionServiceRequest,
@@ -210,6 +211,21 @@ const createRuntimeForRevision = (
       ok: false
       diagnostics: Record<string, unknown>
     } => {
+  const providerIssues = validateStrategyLanguageProviderRuntimeCompatibility(
+    revision.runtime,
+  )
+  if (providerIssues.length > 0) {
+    return {
+      ok: false,
+      diagnostics: {
+        reason: "language-provider-runtime-mismatch",
+        revisionId: revision.id,
+        languageId: revision.runtime.language.id,
+        adapterId: revision.runtime.adapter.id,
+        issues: providerIssues,
+      },
+    }
+  }
   const registryEntry = findRuntimeBrokerRegistryEntry(revision.runtime)
   if (!registryEntry) {
     return {
@@ -259,6 +275,26 @@ const createRuntimeForRevision = (
           revision.runtime.limits.stderrBytes,
         ),
       }),
+    }
+  }
+  const expectedJsAdapterId =
+    runtimeConfig.metadata.id === "worker-thread"
+      ? "runtime-js-worker-thread"
+      : runtimeConfig.metadata.id === "subprocess"
+        ? "runtime-js-subprocess"
+        : runtimeConfig.metadata.id === "container-subprocess"
+          ? "runtime-js-container-subprocess"
+          : null
+  if (revision.runtime.adapter.id !== expectedJsAdapterId) {
+    return {
+      ok: false,
+      diagnostics: {
+        reason: "runtime-js-adapter-mismatch",
+        revisionId: revision.id,
+        declaredAdapterId: revision.runtime.adapter.id,
+        serviceAdapterId: runtimeConfig.metadata.id,
+        expectedAdapterId: expectedJsAdapterId,
+      },
     }
   }
   return {

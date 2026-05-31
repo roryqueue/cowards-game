@@ -2,22 +2,22 @@
 milestone: v1.32
 milestone_name: Four-Language Production Strategy Support
 status: planning
-current_phase: 224
+current_phase: 225
 progress:
   phases_total: 12
-  phases_complete: 2
+  phases_complete: 3
   requirements_total: 60
-  requirements_complete: 10
+  requirements_complete: 15
 ---
 
 # State: Coward's Game v1.32
 
 ## Current Position
 
-Phase: 224 - StrategyLanguageProvider Runtime Contract
+Phase: 225 - Python Production Support Path
 Plan: Ready for planning
-Status: Phase 223 registry model complete; Phase 224 is next
-Last activity: 2026-05-31 - Phase 223 supported-language registry implemented, reviewed, and verified
+Status: Phase 224 provider contract complete; Phase 225 is next
+Last activity: 2026-05-31 - Phase 224 provider/runtime contract implemented, reviewed, fixed, and verified
 
 ## Project Reference
 
@@ -43,7 +43,8 @@ See: `.planning/PROJECT.md`
 - Roadmap begins at Phase 222 and continues through Phase 233.
 - Phase 222 completed the active language/runtime/eligibility/product/docs/monitor inventory in `.planning/artifacts/v1.32-language-surface-inventory.md`.
 - Phase 223 added `SUPPORTED_STRATEGY_LANGUAGES` in `packages/spec/src/runtime.ts`, derived the legacy language registry from it, and moved web runtime labels onto spec-level language semantics.
-- Phase 224 is next: define the provider/runtime contract and ABI posture without moving Strategy execution into web/API/Go.
+- Phase 224 added a versioned provider contract and provider registry, kept WASI Preview 1 stdin/stdout JSON explicit for Rust/Zig, and made runtime-service fail closed on provider/runtime or JS adapter drift.
+- Phase 225 is next: Python production support path and evidence-gated counted eligibility.
 - Context and discussion logs have been captured for all v1.32 phases:
   - Phase 222: Language Surface Inventory
   - Phase 223: Unified Supported Language Registry and Eligibility Model

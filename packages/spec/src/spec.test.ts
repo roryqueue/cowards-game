@@ -49,16 +49,20 @@ import {
   evaluateStrategyRuntimeCountedEligibility,
   getSupportedStrategyLanguageBySourceFormat,
   getSupportedStrategyLanguageRecord,
+  getStrategyLanguageProviderRecord,
   assertNonJsRuntimeGuardrails,
   NON_JS_RUNTIME_PROMOTION_CRITERIA,
   NON_JS_RUNTIME_SUPPORT_POLICY,
   RUNTIME_BROKER_REGISTRY,
   RUNTIME_BROKER_REGISTRY_VERSION,
+  STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+  STRATEGY_LANGUAGE_PROVIDER_REGISTRY,
   SUPPORTED_STRATEGY_LANGUAGES,
   STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
   runtimeCompatibilityKey,
+  validateStrategyLanguageProviderRuntimeCompatibility,
   validateRuntimeBrokerRegistryMatch,
   validateStrategyRuntimeMetadataPolicy,
 } from "./runtime.js"
@@ -398,6 +402,54 @@ describe("Coward's Game spec contracts", () => {
         (language) => language.countedEligibility === "pending-evidence",
       ).map((language) => language.id),
     ).toEqual(["python", "rust", "zig"])
+  })
+
+  it("v1.32 strategy language providers declare ABI and boundary posture", () => {
+    expect(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION).toBe(
+      "strategy-language-provider-contract-v1.32",
+    )
+    expect(STRATEGY_LANGUAGE_PROVIDER_REGISTRY).toHaveLength(4)
+    for (const language of SUPPORTED_STRATEGY_LANGUAGES) {
+      const provider = getStrategyLanguageProviderRecord(language.id)
+      expect(provider?.id).toBe(language.providerId)
+      expect(provider?.contractVersion).toBe(
+        STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+      )
+      expect(provider?.runtimeAbiVersion).toBe(STRATEGY_RUNTIME_ABI_VERSION)
+      expect(provider?.executionOwner).toBe("runtime-service")
+      expect(provider?.selectionPolicy).toBe("runtime-broker-registry")
+      expect(provider?.failureTaxonomy).toMatchObject({
+        strategyFailureKind: "runtimeViolation",
+        systemFailureKind: "systemFailure",
+        publicDiagnostics: "redacted",
+      })
+      expect(provider?.boundaryRules).toContain(
+        "web-api-go-may-not-execute-strategy-code",
+      )
+      expect(provider?.migrationNotes.length).toBeGreaterThan(0)
+    }
+    expect(getStrategyLanguageProviderRecord("rust")?.abiPosture).toBe(
+      "wasi-preview1-stdin-stdout-json",
+    )
+    expect(getStrategyLanguageProviderRecord("zig")?.abiPosture).toBe(
+      "wasi-preview1-stdin-stdout-json",
+    )
+    expect(
+      validateStrategyLanguageProviderRuntimeCompatibility(
+        defaultRuntimeMetadata("typescript"),
+      ),
+    ).toEqual([])
+    expect(
+      validateStrategyLanguageProviderRuntimeCompatibility({
+        ...defaultRuntimeMetadata("typescript"),
+        adapter: {
+          id: "runtime-python-subprocess-experimental",
+          version: "0.1.0-experimental",
+        },
+      }).sort(),
+    ).toEqual(
+      ["provider-adapter-mismatch", "provider-runtime-target-mismatch"].sort(),
+    )
   })
 
   it("v1.17 runtime broker registry uses exact metadata and keeps Python non-counted", () => {

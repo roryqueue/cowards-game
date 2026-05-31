@@ -57,6 +57,9 @@ export type SupportedStrategyLanguageCountedEligibility =
   | "eligible"
   | "pending-evidence"
 
+export const STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION =
+  "strategy-language-provider-contract-v1.32" as const
+
 export interface SupportedStrategyLanguageRecord {
   id: StrategyLanguageId
   sourceFormat: StrategyArtifactSourceFormat
@@ -83,6 +86,34 @@ export interface SupportedStrategyLanguageRecord {
   deterministicRestrictions: string[]
   privacyRules: string[]
   notes: string[]
+}
+
+export type StrategyRuntimeAbiPosture =
+  | "runtime-js-source"
+  | "python-source-json"
+  | "wasi-preview1-stdin-stdout-json"
+
+export interface StrategyLanguageProviderRecord {
+  id: SupportedStrategyLanguageProviderId
+  contractVersion: typeof STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION
+  languageIds: readonly StrategyLanguageId[]
+  runtimeTarget: StrategyRuntimeAdapterRecord["runtimeTarget"]
+  adapterIds: readonly StrategyRuntimeAdapterId[]
+  runtimeAbiVersion: typeof STRATEGY_RUNTIME_ABI_VERSION
+  abiPosture: StrategyRuntimeAbiPosture
+  validationOwner: "runtime-service" | "runtime-package"
+  buildOwner: "runtime-service" | "runtime-package"
+  executionOwner: "runtime-service"
+  selectionPolicy: "runtime-broker-registry"
+  compatibilityPolicy: "exact-runtime-metadata-and-provider"
+  failureTaxonomy: {
+    strategyFailureKind: "runtimeViolation"
+    systemFailureKind: "systemFailure"
+    publicDiagnostics: "redacted"
+  }
+  evidenceRequirements: readonly string[]
+  boundaryRules: readonly string[]
+  migrationNotes: readonly string[]
 }
 
 export interface NonJsRuntimeSupportPolicy {
@@ -525,6 +556,148 @@ export const STRATEGY_LANGUAGE_REGISTRY = SUPPORTED_STRATEGY_LANGUAGES.map(
   }),
 ) as readonly StrategyLanguageRecord[]
 
+export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
+  {
+    id: "strategy-language-provider-js-ts",
+    contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+    languageIds: ["javascript", "typescript"],
+    runtimeTarget: "runtime-js",
+    adapterIds: [
+      "runtime-js-worker-thread",
+      "runtime-js-subprocess",
+      "runtime-js-container-subprocess",
+    ],
+    runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+    abiPosture: "runtime-js-source",
+    validationOwner: "runtime-package",
+    buildOwner: "runtime-package",
+    executionOwner: "runtime-service",
+    selectionPolicy: "runtime-broker-registry",
+    compatibilityPolicy: "exact-runtime-metadata-and-provider",
+    failureTaxonomy: {
+      strategyFailureKind: "runtimeViolation",
+      systemFailureKind: "systemFailure",
+      publicDiagnostics: "redacted",
+    },
+    evidenceRequirements: [
+      "runtime-js-validation",
+      "runtime-js-execution",
+      "counted-eligibility",
+      "public-privacy-scan",
+    ],
+    boundaryRules: [
+      "web-api-go-may-not-execute-strategy-code",
+      "runtime-service-selects-adapter",
+      "runtime-output-schema-validation-required",
+    ],
+    migrationNotes: [
+      "Existing JS/TS runtime ABI remains active; no service contract migration in Phase 224.",
+    ],
+  },
+  {
+    id: "strategy-language-provider-python",
+    contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+    languageIds: ["python"],
+    runtimeTarget: "runtime-python",
+    adapterIds: ["runtime-python-subprocess-experimental"],
+    runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+    abiPosture: "python-source-json",
+    validationOwner: "runtime-package",
+    buildOwner: "runtime-package",
+    executionOwner: "runtime-service",
+    selectionPolicy: "runtime-broker-registry",
+    compatibilityPolicy: "exact-runtime-metadata-and-provider",
+    failureTaxonomy: {
+      strategyFailureKind: "runtimeViolation",
+      systemFailureKind: "systemFailure",
+      publicDiagnostics: "redacted",
+    },
+    evidenceRequirements: [
+      "python-validation",
+      "python-runtime-execution",
+      "timeout-invalid-output-forbidden-capability",
+      "no-js-fallback",
+      "public-privacy-scan",
+    ],
+    boundaryRules: [
+      "python-executes-only-behind-runtime-service",
+      "web-api-go-may-not-execute-strategy-code",
+      "runtime-output-schema-validation-required",
+    ],
+    migrationNotes: [
+      "Python remains source-backed JSON runtime metadata in Phase 224; counted promotion is deferred to Phase 225.",
+    ],
+  },
+  {
+    id: "strategy-language-provider-rust-wasi",
+    contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+    languageIds: ["rust"],
+    runtimeTarget: "runtime-wasm-wasi",
+    adapterIds: ["runtime-wasm-wasi-wasmtime-preview1"],
+    runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+    abiPosture: "wasi-preview1-stdin-stdout-json",
+    validationOwner: "runtime-service",
+    buildOwner: "runtime-service",
+    executionOwner: "runtime-service",
+    selectionPolicy: "runtime-broker-registry",
+    compatibilityPolicy: "exact-runtime-metadata-and-provider",
+    failureTaxonomy: {
+      strategyFailureKind: "runtimeViolation",
+      systemFailureKind: "systemFailure",
+      publicDiagnostics: "redacted",
+    },
+    evidenceRequirements: [
+      "rust-compile-valid-artifact",
+      "immutable-artifact-metadata",
+      "wasmtime-preview1-execution",
+      "stale-artifact-fails-closed",
+      "public-privacy-scan",
+    ],
+    boundaryRules: [
+      "rust-executes-only-as-immutable-wasm-wasi-artifact",
+      "web-api-go-may-not-execute-strategy-code",
+      "runtime-output-schema-validation-required",
+    ],
+    migrationNotes: [
+      "WASI Preview 1 stdin/stdout JSON remains active for Rust in Phase 224; direct exports and Component Model/WIT stay deferred.",
+    ],
+  },
+  {
+    id: "strategy-language-provider-zig-wasi",
+    contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+    languageIds: ["zig"],
+    runtimeTarget: "runtime-wasm-wasi",
+    adapterIds: ["runtime-wasm-wasi-wasmtime-preview1"],
+    runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+    abiPosture: "wasi-preview1-stdin-stdout-json",
+    validationOwner: "runtime-service",
+    buildOwner: "runtime-service",
+    executionOwner: "runtime-service",
+    selectionPolicy: "runtime-broker-registry",
+    compatibilityPolicy: "exact-runtime-metadata-and-provider",
+    failureTaxonomy: {
+      strategyFailureKind: "runtimeViolation",
+      systemFailureKind: "systemFailure",
+      publicDiagnostics: "redacted",
+    },
+    evidenceRequirements: [
+      "zig-compile-valid-artifact",
+      "zig-import-audit",
+      "immutable-artifact-metadata",
+      "wasmtime-preview1-execution",
+      "public-privacy-scan",
+    ],
+    boundaryRules: [
+      "zig-executes-only-as-immutable-wasm-wasi-artifact",
+      "web-api-go-may-not-execute-strategy-code",
+      "runtime-output-schema-validation-required",
+    ],
+    migrationNotes: [
+      "WASI Preview 1 stdin/stdout JSON remains active for Zig in Phase 224; direct exports and Component Model/WIT stay deferred.",
+    ],
+  },
+] as const satisfies readonly StrategyLanguageProviderRecord[]
+
 export const NON_JS_RUNTIME_SUPPORT_POLICY = {
   status: "experimental-non-counted",
   productionSupportedLanguageIds: ["javascript", "typescript"],
@@ -943,11 +1116,44 @@ export const getSupportedStrategyLanguageBySourceFormat = (
     (candidate) => candidate.sourceFormat === sourceFormat,
   ) ?? null
 
+export const getStrategyLanguageProviderRecord = (
+  id: unknown,
+): StrategyLanguageProviderRecord | null =>
+  STRATEGY_LANGUAGE_PROVIDER_REGISTRY.find(
+    (candidate) =>
+      candidate.id === id ||
+      candidate.languageIds.some((languageId) => languageId === id),
+  ) ?? null
+
 export const getStrategyRuntimeAdapterRecord = (
   id: unknown,
 ): StrategyRuntimeAdapterRecord | null =>
   STRATEGY_RUNTIME_ADAPTER_REGISTRY.find((candidate) => candidate.id === id) ??
   null
+
+export const validateStrategyLanguageProviderRuntimeCompatibility = (
+  runtime: StrategyRuntimeMetadata,
+): string[] => {
+  const provider = getStrategyLanguageProviderRecord(runtime.language.id)
+  const adapter = getStrategyRuntimeAdapterRecord(runtime.adapter.id)
+  const issues: string[] = []
+  if (!provider) {
+    return ["language-provider-missing"]
+  }
+  if (provider.runtimeAbiVersion !== runtime.abiVersion) {
+    issues.push("provider-runtime-abi-mismatch")
+  }
+  if (!provider.languageIds.includes(runtime.language.id)) {
+    issues.push("provider-language-mismatch")
+  }
+  if (!provider.adapterIds.includes(runtime.adapter.id)) {
+    issues.push("provider-adapter-mismatch")
+  }
+  if (adapter && adapter.runtimeTarget !== provider.runtimeTarget) {
+    issues.push("provider-runtime-target-mismatch")
+  }
+  return issues
+}
 
 export const RUNTIME_BROKER_REGISTRY =
   STRATEGY_RUNTIME_ADAPTER_REGISTRY.flatMap(

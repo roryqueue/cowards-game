@@ -14,7 +14,7 @@
 | --- | --- | --- | --- | --- |
 | 222 | Language Surface Inventory | Inventory every current language, runtime, eligibility, product-label, docs, and monitor surface before changing behavior. | INV-01..INV-05 | Complete |
 | 223 | Unified Supported Language Registry and Eligibility Model | Establish one shared supported-language source of truth for all four languages. | LANG-01..LANG-05 | Complete |
-| 224 | StrategyLanguageProvider Runtime Contract | Define the provider/runtime contract, ABI posture, schema validation, and versioning path. | PROV-01..PROV-05 | 5 |
+| 224 | StrategyLanguageProvider Runtime Contract | Define the provider/runtime contract, ABI posture, schema validation, and versioning path. | PROV-01..PROV-05 | Complete |
 | 225 | Python Production Support Path | Promote Python through provider validation, runtime execution, counted eligibility, product surfaces, and signed-in proof. | PY-01..PY-05 | 5 |
 | 226 | Rust Production Support Path | Promote Rust through provider validation, immutable artifact policy, execution, counted eligibility, and signed-in proof. | RUST-01..RUST-05 | 5 |
 | 227 | Zig Production Support Path | Promote Zig through provider validation, no-std/import policy, immutable artifact policy, execution, counted eligibility, and signed-in proof. | ZIG-01..ZIG-05 | 5 |
@@ -193,7 +193,7 @@
 
 ## Next Up
 
-Phase 224: StrategyLanguageProvider Runtime Contract is ready for planning and execution.
+Phase 225: Python Production Support Path is ready for planning and execution.
 
 ---
 *Roadmap created: 2026-05-31 after v1.32 requirements approval*

@@ -9,6 +9,7 @@ import {
   RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,
   RuntimeExecutionServiceResponseSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
+  getStrategyLanguageProviderRecord,
   type RuntimeExecutionServiceResponse,
 } from "@cowards/spec"
 import {
@@ -93,6 +94,7 @@ const validateStrategyRequest = (rawRequest: unknown) => {
     }
   }
   const sourceFormat = body.sourceFormat
+  const provider = getStrategyLanguageProviderRecord(sourceFormat)
   const validation =
     sourceFormat === "zig"
       ? validateZigStrategySource(body.source)
@@ -122,6 +124,14 @@ const validateStrategyRequest = (rawRequest: unknown) => {
     ok: true,
     kind: "strategyValidation",
     sourceFormat,
+    provider: provider
+      ? {
+          id: provider.id,
+          contractVersion: provider.contractVersion,
+          runtimeAbiVersion: provider.runtimeAbiVersion,
+          abiPosture: provider.abiPosture,
+        }
+      : null,
     runtime: revision.runtime,
     validation: revision.validation,
     engineCompatibility: revision.engineCompatibility,
