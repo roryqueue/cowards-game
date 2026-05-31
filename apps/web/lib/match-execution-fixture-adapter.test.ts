@@ -55,12 +55,28 @@ describe("match execution fixture adapter", () => {
     ).resolves.toMatchObject({
       kind: "publicReplayMetadata",
       matchId: "match:fixture:public-safe-replay",
+      metadata: {
+        eventCount: 4,
+        snapshotCount: 4,
+      },
     })
     await expect(
       client?.getPublicReplayEvidence("match:fixture:public-safe-replay"),
     ).resolves.toMatchObject({
       kind: "publicReplayEvidence",
       matchId: "match:fixture:public-safe-replay",
+      metadata: {
+        eventCount: 4,
+        snapshotCount: 4,
+      },
+      projection: {
+        events: [
+          { type: "MATCH_STARTED", sequence: 0 },
+          { type: "ROUND_STARTED", sequence: 1 },
+          { type: "MOVE_ADVANCED", sequence: 2 },
+          { type: "MATCH_ENDED", sequence: 3 },
+        ],
+      },
     })
     await expect(
       client?.getPublicMatchSetSummary("match-set:fixture:missing-chronicle"),

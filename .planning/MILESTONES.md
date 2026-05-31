@@ -1,5 +1,35 @@
 # Milestones
 
+## v1.29 Replay and Result Trust Polish (Shipped: 2026-05-31)
+
+**Status:** Shipped 2026-05-31
+**Phases:** 8
+**Phase range:** 210-217
+**Plans:** 8/8 complete
+**Requirements:** 44/44 complete
+**Research:** .planning/research/v1.29-SUMMARY.md
+**Roadmap:** .planning/milestones/v1.29-ROADMAP.md
+**Decision:** `match-execution-app-v1` remains frozen; no public execution DTO fields were added; JS/TS remains counted; Python/Rust/Zig remain non-counted exhibition beta; Preview 1 stdin/stdout JSON remains active; no Go/runtime-service/retry/recovery/quarantine/job lifecycle/MatchSet scoring/Chronicle persistence change; no public operator UI, runtime promotion, production sandbox certification, counted non-JS play, ABI migration, v1.27 dependency, or Strategy execution in web/API/Go.
+**Audit:** .planning/milestones/v1.29-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.29-ROADMAP.md, .planning/milestones/v1.29-REQUIREMENTS.md, workstream `v1-29-replay-and-result-trust-polish`
+
+**Delivered:**
+
+- Public result-state explanation polish for completed, queued, running, degraded, failed, stale-artifact, unavailable-runtime, malformed-runtime-result, missing-Chronicle, and no-result states.
+- Replay trust cues and unavailable/missing evidence pages for public Chronicle projection, evidence availability, stale/invalid/no-result states, and privacy boundaries.
+- App-only missing-Chronicle/no-result fixtures and a playable public-safe replay fixture adapter that keep the frozen contract fixture catalog untouched.
+- Expanded privacy scans, board realism checks, visual proof, and fixture-backed public page proof.
+- Contract compatibility monitors proving no `match-execution-app-v1` drift or v1.29 public contract version.
+
+### Active Constraints
+
+- `match-execution-app-v1` remains frozen.
+- JS/TS remains the only counted Strategy path.
+- Python, Rust, and Zig remain non-counted exhibition beta only.
+- Preview 1 stdin/stdout JSON remains the active WASM/WASI execution ABI.
+- Public outputs must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads.
+- Strategy code does not execute in web/API/Go.
+
 ## v1.28 Match Execution Operations, Recovery, and Incident Drills (Shipped: 2026-05-30)
 
 **Status:** Shipped 2026-05-30

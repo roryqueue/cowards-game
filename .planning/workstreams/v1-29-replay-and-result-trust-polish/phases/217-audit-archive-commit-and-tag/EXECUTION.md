@@ -9,8 +9,9 @@
   - Replaced enum-ish Match ledger fallback labels.
   - Added DTO field-shape monitor.
 - Validation passes recorded in this workstream.
+- Fixed a post-close public-safe replay playback gap by enriching the app-only fixture adapter and adding automated/in-app browser playback proof.
 - Committed with message `feat: polish replay and result trust`.
-- Tagged as `v1.29`.
+- Retagged as `v1.29` after the closure fix.
 
 ## Remaining
 

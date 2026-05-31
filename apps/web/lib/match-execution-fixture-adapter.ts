@@ -1,5 +1,7 @@
 import {
   MatchExecutionContractFixtureV1Schema,
+  PublicReplayEvidenceServiceDtoSchema,
+  PublicReplayMetadataServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
   getMatchExecutionContractFixtureByMatchId,
   getMatchExecutionContractFixtureByMatchSetId,
@@ -186,6 +188,147 @@ const getFixtureByMatchId = (
     ),
   )
 
+const playableReplayMatchId = "match:fixture:public-safe-replay" as MatchId
+
+const createPlayableReplayEvidence = (
+  evidence: PublicReplayEvidenceServiceDto,
+): PublicReplayEvidenceServiceDto => {
+  if (evidence.matchId !== playableReplayMatchId) {
+    return evidence
+  }
+  const baseSnapshot = evidence.projection.snapshots[0]
+  if (!baseSnapshot) {
+    return evidence
+  }
+  const boardAt = (
+    bottomPosition: { x: number; y: number },
+    topPosition: { x: number; y: number },
+  ) => ({
+    ...baseSnapshot.board,
+    soldiers: baseSnapshot.board.soldiers.map((soldier) =>
+      soldier.id === "fixture-bottom-soldier-1"
+        ? {
+            ...soldier,
+            position: bottomPosition,
+            lastSuccessfulMoveDirection: "UP" as const,
+          }
+        : soldier.id === "fixture-top-soldier-1"
+          ? {
+              ...soldier,
+              position: topPosition,
+              lastSuccessfulMoveDirection: "DOWN" as const,
+            }
+          : soldier,
+    ),
+  })
+  const snapshots = [
+    {
+      ...baseSnapshot,
+      kind: "MATCH_START" as const,
+      sequence: 0,
+      context: {},
+      board: boardAt({ x: 1, y: 3 }, { x: 3, y: 1 }),
+      outcome: undefined,
+    },
+    {
+      ...baseSnapshot,
+      kind: "ROUND_START" as const,
+      sequence: 1,
+      context: { roundNumber: 1 },
+      board: boardAt({ x: 1, y: 3 }, { x: 3, y: 1 }),
+      outcome: undefined,
+    },
+    {
+      ...baseSnapshot,
+      kind: "ACTIVATION_END" as const,
+      sequence: 2,
+      context: {
+        roundNumber: 1,
+        activationIndex: 0,
+        activationId: "activation:fixture:1",
+        actingPlayerId: "player:bottom",
+        soldierId: "fixture-bottom-soldier-1",
+        cycleIndex: 0,
+      },
+      board: boardAt({ x: 1, y: 2 }, { x: 3, y: 1 }),
+      outcome: undefined,
+    },
+    {
+      ...baseSnapshot,
+      kind: "MATCH_END" as const,
+      sequence: 3,
+      context: {},
+      board: boardAt({ x: 1, y: 2 }, { x: 3, y: 1 }),
+      outcome: { type: "DRAW" as const },
+    },
+  ]
+  const events = [
+    {
+      type: "MATCH_STARTED" as const,
+      sequence: 0,
+      context: {},
+      payload: { matchId: playableReplayMatchId },
+    },
+    {
+      type: "ROUND_STARTED" as const,
+      sequence: 1,
+      context: { roundNumber: 1 },
+      payload: { roundNumber: 1 },
+    },
+    {
+      type: "MOVE_ADVANCED" as const,
+      sequence: 2,
+      context: {
+        roundNumber: 1,
+        activationIndex: 0,
+        activationId: "activation:fixture:1",
+        actingPlayerId: "player:bottom",
+        soldierId: "fixture-bottom-soldier-1",
+        cycleIndex: 0,
+      },
+      payload: {
+        soldierId: "fixture-bottom-soldier-1",
+        from: { x: 1, y: 3 },
+        to: { x: 1, y: 2 },
+      },
+    },
+    {
+      type: "MATCH_ENDED" as const,
+      sequence: 3,
+      context: {},
+      payload: { type: "DRAW" },
+    },
+  ]
+  return PublicReplayEvidenceServiceDtoSchema.parse({
+    ...evidence,
+    metadata: {
+      ...evidence.metadata,
+      eventCount: events.length,
+      snapshotCount: snapshots.length,
+      outcome: { type: "DRAW" },
+    },
+    projection: {
+      ...evidence.projection,
+      events,
+      snapshots,
+    },
+  }) as PublicReplayEvidenceServiceDto
+}
+
+const createPlayableReplayMetadata = (
+  metadata: PublicReplayMetadataServiceDto,
+): PublicReplayMetadataServiceDto =>
+  metadata.matchId === playableReplayMatchId
+    ? (PublicReplayMetadataServiceDtoSchema.parse({
+        ...metadata,
+        metadata: {
+          ...metadata.metadata,
+          eventCount: 4,
+          snapshotCount: 4,
+        },
+      }) as PublicReplayMetadataServiceDto)
+    : metadata
+
 export const createMatchExecutionFixturePublicReadClient = (
   env: MatchExecutionFixtureEnv = process.env,
 ): MatchExecutionFixturePublicReadClient | null => {
@@ -202,12 +345,20 @@ export const createMatchExecutionFixturePublicReadClient = (
     async getPublicReplayMetadata(matchId) {
       const metadata = getFixtureByMatchId(safeDecodeURIComponent(matchId))
         ?.service.replayMetadata
-      return (metadata as PublicReplayMetadataServiceDto | undefined) ?? null
+      return metadata
+        ? createPlayableReplayMetadata(
+            metadata as PublicReplayMetadataServiceDto,
+          )
+        : null
     },
     async getPublicReplayEvidence(matchId) {
       const evidence = getFixtureByMatchId(safeDecodeURIComponent(matchId))
         ?.service.replayEvidence
-      return (evidence as PublicReplayEvidenceServiceDto | undefined) ?? null
+      return evidence
+        ? createPlayableReplayEvidence(
+            evidence as PublicReplayEvidenceServiceDto,
+          )
+        : null
     },
     async getPublicReplayState(matchId) {
       const fixture = getFixtureByMatchId(safeDecodeURIComponent(matchId))

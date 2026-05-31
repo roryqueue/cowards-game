@@ -71,6 +71,12 @@ test("v1.29 public result and replay trust proof stays app-side", async ({
   await expect(page.getByTestId("replay-evidence-panel")).toBeVisible()
   await expect(page.locator("canvas")).toHaveCount(1)
   await expectNonblankCanvasPixels(page.locator("canvas"))
+  const replayTimeline = page.getByRole("slider", { name: "Replay timeline" })
+  await expect(replayTimeline).toHaveValue("0")
+  await page.getByRole("button", { name: "Play replay" }).click()
+  await expect
+    .poll(async () => Number(await replayTimeline.inputValue()))
+    .toBeGreaterThan(0)
   await expectPublicSafeBody(page.locator("body"))
 
   for (const [matchId, reason] of replayUnavailableFixtures) {

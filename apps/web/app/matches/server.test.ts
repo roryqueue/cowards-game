@@ -587,7 +587,14 @@ describe("Match replay server facade", () => {
 
     await expect(
       server.getPublicReplayMetadata("match%3Afixture%3Apublic-safe-replay"),
-    ).resolves.toEqual(fixture?.service.replayMetadata)
+    ).resolves.toMatchObject({
+      ...fixture?.service.replayMetadata,
+      metadata: {
+        ...fixture?.service.replayMetadata?.metadata,
+        eventCount: 4,
+        snapshotCount: 4,
+      },
+    })
 
     const replay = await server.getMatchReplay(
       "match%3Afixture%3Apublic-safe-replay",
