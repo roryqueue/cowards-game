@@ -76,69 +76,85 @@ const operatorEvidenceMarkers = requireMarkers(
     "sanitizeMatchJobFailureDetails",
     "allowedScalars",
   ],
-).concat(
-  requireMarkers("apps/go-backend/job_lifecycle_test.go", [
-    "operator evidence leaked",
-    "quarantine evidence leaked",
-    "export default",
-    "/Users/secret",
-  ]),
-).map(publicSafeMarkerLabel)
+)
+  .concat(
+    requireMarkers("apps/go-backend/job_lifecycle_test.go", [
+      "operator evidence leaked",
+      "quarantine evidence leaked",
+      "export default",
+      "/Users/secret",
+    ]),
+  )
+  .map(publicSafeMarkerLabel)
 
-const runtimeRedactionMarkers = requireMarkers("apps/runtime-service/src/redaction.ts", [
-  "redactedDiagnostics",
-  "SENSITIVE_PATTERNS",
-  "private\\s+runtime\\s+internals",
-])
+const runtimeRedactionMarkers = requireMarkers(
+  "apps/runtime-service/src/redaction.ts",
+  [
+    "redactedDiagnostics",
+    "SENSITIVE_PATTERNS",
+    "private\\s+runtime\\s+internals",
+  ],
+)
 
-const internalEndpointMarkers = requireMarkers("apps/go-backend/live_backend.go", [
-  "/internal/match-execution/requeue",
-  "/internal/match-execution/rerun",
-  "COWARDS_GO_BACKEND_INTERNAL_TOKEN",
-])
+const internalEndpointMarkers = requireMarkers(
+  "apps/go-backend/live_backend.go",
+  [
+    "/internal/match-execution/requeue",
+    "/internal/match-execution/rerun",
+    "COWARDS_GO_BACKEND_INTERNAL_TOKEN",
+  ],
+)
 
-const leaseRecoveryMarkers = requireMarkers("apps/go-backend/job_lifecycle_test.go", [
-  "running unexpired job was double-claimed",
-  "expired lease can be reclaimed",
-  "expected invalid lease failure",
-  "duplicate idempotent recovery result",
-])
+const leaseRecoveryMarkers = requireMarkers(
+  "apps/go-backend/job_lifecycle_test.go",
+  [
+    "running unexpired job was double-claimed",
+    "expired lease can be reclaimed",
+    "expected invalid lease failure",
+    "duplicate idempotent recovery result",
+  ],
+)
 
-const interruptedMatchSetMarkers = requireMarkers("apps/go-backend/matchset_status.go", [
-  "refreshMatchSetsForMatchTx",
-  "matchSetStatusRunning",
-  "matchSetStatusFailedSystem",
-  "matchSetStatusComplete",
-])
+const interruptedMatchSetMarkers = requireMarkers(
+  "apps/go-backend/matchset_status.go",
+  [
+    "refreshMatchSetsForMatchTx",
+    "matchSetStatusRunning",
+    "matchSetStatusFailedSystem",
+    "matchSetStatusComplete",
+  ],
+)
 
 const migrationMarkers = requireMarkers(
   "packages/persistence/migrations/0007_match_execution_operations.sql",
   ["match_execution_quarantines", "retry_exhausted", "non_retryable_terminal"],
 ).concat(
-  requireMarkers("packages/persistence/migrations/0008_match_execution_operator_actions.sql", [
-    "match_execution_operator_actions",
-    "idempotency_key",
-    "requeue",
-    "rerun",
-  ]),
+  requireMarkers(
+    "packages/persistence/migrations/0008_match_execution_operator_actions.sql",
+    ["match_execution_operator_actions", "idempotency_key", "requeue", "rerun"],
+  ),
 )
 
-const fixtureValidation = MATCH_EXECUTION_CONTRACT_FIXTURES_V1.map((fixture) => {
-  if (fixture.service.matchSetSummary) {
-    assertPublicServiceDtoLeakSafe(fixture.service.matchSetSummary)
-  }
-  if (fixture.app.matchSetSummary) {
-    MatchExecutionMatchSetSummaryV1Schema.parse(fixture.app.matchSetSummary)
-  }
-  const payload = JSON.stringify(fixture)
-  return {
-    id: fixture.id,
-    contractVersion:
-      fixture.app.matchSetSummary?.contractVersion ??
-      MATCH_EXECUTION_APP_CONTRACT_VERSION,
-    privateMarkerLeaks: privateMarkers.filter((marker) => payload.includes(marker)),
-  }
-})
+const fixtureValidation = MATCH_EXECUTION_CONTRACT_FIXTURES_V1.map(
+  (fixture) => {
+    if (fixture.service.matchSetSummary) {
+      assertPublicServiceDtoLeakSafe(fixture.service.matchSetSummary)
+    }
+    if (fixture.app.matchSetSummary) {
+      MatchExecutionMatchSetSummaryV1Schema.parse(fixture.app.matchSetSummary)
+    }
+    const payload = JSON.stringify(fixture)
+    return {
+      id: fixture.id,
+      contractVersion:
+        fixture.app.matchSetSummary?.contractVersion ??
+        MATCH_EXECUTION_APP_CONTRACT_VERSION,
+      privateMarkerLeaks: privateMarkers.filter((marker) =>
+        payload.includes(marker),
+      ),
+    }
+  },
+)
 
 const drillCatalog = [
   {

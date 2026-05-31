@@ -1,6 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test"
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Page,
+} from "@playwright/test"
 import { createDatabasePool } from "@cowards/persistence/db"
 
 type ProofPool = ReturnType<typeof createDatabasePool>
@@ -176,7 +181,12 @@ const seedRecoverableJob = async (
       values ($1, $2, 'failed_system', 1, 1,
         $3, $4, null, now())
       `,
-      [ids.jobId, ids.matchId, `worker:${input.prefix}`, `lease:${input.prefix}`],
+      [
+        ids.jobId,
+        ids.matchId,
+        `worker:${input.prefix}`,
+        `lease:${input.prefix}`,
+      ],
     )
     await client.query(
       `
@@ -313,7 +323,8 @@ const writeProofArtifacts = (proof: {
     contractVersion: "match-execution-app-v1",
     ...proof,
     betaRegressionLanes: {
-      python: "not executed by Phase 208 local proof; remains non-counted exhibition beta only",
+      python:
+        "not executed by Phase 208 local proof; remains non-counted exhibition beta only",
       rust: "not executed by Phase 208 local proof; remains non-counted exhibition beta only",
       zig: "not executed by Phase 208 local proof; remains non-counted exhibition beta only",
     },

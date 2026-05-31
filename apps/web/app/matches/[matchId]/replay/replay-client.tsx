@@ -111,7 +111,10 @@ export function ReplayClient({ data }: ReplayClientProps) {
             {shortId(data.metadata.matchId)}
           </p>
         </div>
-        <span className="replay-status-chip">{statusLabel}</span>
+        <div className="replay-header-status">
+          <span className="replay-status-chip">{statusLabel}</span>
+          <span className="replay-muted">Public-safe projection</span>
+        </div>
       </header>
 
       <section className="replay-shell" aria-label="Match replay">
@@ -166,16 +169,6 @@ export function ReplayClient({ data }: ReplayClientProps) {
               scrubbing={scrubbing}
               onSelectSoldier={setSelectedSoldierId}
             />
-          </div>
-
-          <div className="replay-position-panel">
-            <p className="replay-label">Current position</p>
-            <p className="replay-position">
-              {formatTimelinePosition(selectedEntry)}
-            </p>
-            <p className="replay-muted">
-              Sequence {selectedEntry.sequence} · {selectedEntry.type}
-            </p>
           </div>
 
           <div className="replay-timeline" aria-label="Replay timeline panel">
@@ -242,6 +235,16 @@ export function ReplayClient({ data }: ReplayClientProps) {
                 </select>
               </label>
             </div>
+          </div>
+
+          <div className="replay-position-panel">
+            <p className="replay-label">Current position</p>
+            <p className="replay-position">
+              {formatTimelinePosition(selectedEntry)}
+            </p>
+            <p className="replay-muted">
+              Sequence {selectedEntry.sequence} · {selectedEntry.type}
+            </p>
           </div>
 
           <div className="replay-event-list" aria-label="Timeline events">
