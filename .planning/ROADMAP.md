@@ -18,7 +18,7 @@
 | 225 | Python Production Support Path | Promote Python through provider validation, runtime execution, counted eligibility, product surfaces, and signed-in proof. | PY-01..PY-05 | Complete |
 | 226 | Rust Production Support Path | Promote Rust through provider validation, immutable artifact policy, execution, counted eligibility, and signed-in proof. | RUST-01..RUST-05 | Complete |
 | 227 | Zig Production Support Path | Promote Zig through provider validation, no-std/import policy, immutable artifact policy, execution, counted eligibility, and signed-in proof. | ZIG-01..ZIG-05 | Complete |
-| 228 | Cross-Language Golden Strategy Corpus and Parity Matrix | Build the golden Strategy corpus, pairwise matrix, conformance tests, result/replay parity, and privacy parity. | PAR-01..PAR-05 | 5 |
+| 228 | Cross-Language Golden Strategy Corpus and Parity Matrix | Build the golden Strategy corpus, pairwise matrix, conformance tests, result/replay parity, and privacy parity. | PAR-01..PAR-05 | Complete |
 | 229 | Workshop, Account, and Competition Entry Unification | Move product authoring, account, and entry flows onto shared provider eligibility and labels. | PROD-01..PROD-05 | 5 |
 | 230 | Result, Replay, Public Evidence, and Docs Language Pass | Unify result/replay/public evidence/docs across all four supported languages with privacy and terminology proof. | EVID-01..EVID-05 | 5 |
 | 231 | Drift Monitors and Boundary Coverage | Convert non-promotion monitors into positive parity/boundary monitors and block future direct special-casing drift. | MON-01..MON-05 | 5 |
@@ -186,14 +186,14 @@
 ## Coverage
 
 - v1 requirements: 60 total
-- Complete: 30
-- Planned: 30
+- Complete: 35
+- Planned: 25
 - Mapped to phases: 60
 - Unmapped: 0
 
 ## Next Up
 
-Phase 228: Cross-Language Golden Strategy Corpus and Parity Matrix is ready for planning and execution.
+Phase 229: Workshop, Account, and Competition Entry Unification is ready for planning and execution.
 
 ---
 *Roadmap created: 2026-05-31 after v1.32 requirements approval*

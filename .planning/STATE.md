@@ -2,22 +2,22 @@
 milestone: v1.32
 milestone_name: Four-Language Production Strategy Support
 status: planning
-current_phase: 228
+current_phase: 229
 progress:
   phases_total: 12
-  phases_complete: 6
+  phases_complete: 7
   requirements_total: 60
-  requirements_complete: 30
+  requirements_complete: 35
 ---
 
 # State: Coward's Game v1.32
 
 ## Current Position
 
-Phase: 228 - Cross-Language Golden Strategy Corpus and Parity Matrix
+Phase: 229 - Workshop, Account, and Competition Entry Unification
 Plan: Ready for planning
-Status: Phase 227 Zig counted provider path complete; Phase 228 is next
-Last activity: 2026-05-31 - Phase 227 Zig provider path implemented, reviewed, and verified
+Status: Phase 228 four-language golden corpus and parity matrix complete; Phase 229 is next
+Last activity: 2026-05-31 - Phase 228 cross-language parity matrix implemented, reviewed, and verified
 
 ## Project Reference
 
@@ -47,7 +47,8 @@ See: `.planning/PROJECT.md`
 - Phase 225 promoted Python to counted eligible through the constrained provider path while keeping Strategy execution behind runtime-service / Runtime Broker.
 - Phase 226 promoted Rust to counted eligible through immutable WASM/WASI artifact provider proof while preserving historical non-counted evidence.
 - Phase 227 promoted Zig to counted eligible through provider validation, no-std/import policy, immutable artifact metadata, and provider proof.
-- Phase 228 is next: cross-language golden Strategy corpus and parity matrix.
+- Phase 228 added a reusable four-language golden corpus, pairwise runtime-service matrix, conformance gate manifest, public Chronicle shape checks, and privacy marker scans.
+- Phase 229 is next: Workshop, Account, and Competition Entry Unification.
 - Context and discussion logs have been captured for all v1.32 phases:
   - Phase 222: Language Surface Inventory
   - Phase 223: Unified Supported Language Registry and Eligibility Model

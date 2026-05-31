@@ -53,6 +53,9 @@ importers:
       '@cowards/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@cowards/golden':
+        specifier: workspace:*
+        version: link:../../packages/golden
       '@cowards/replay':
         specifier: workspace:*
         version: link:../../packages/replay

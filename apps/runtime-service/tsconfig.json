@@ -9,6 +9,7 @@
   "references": [
     { "path": "../../packages/spec" },
     { "path": "../../packages/engine" },
+    { "path": "../../packages/golden" },
     { "path": "../../packages/runtime-js" },
     { "path": "../../packages/runtime-python" },
     { "path": "../../packages/runtime-wasm-wasi" },
