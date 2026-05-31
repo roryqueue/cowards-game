@@ -71,6 +71,11 @@ export default async function StrategyCardPage({
             </span>
           </div>
         </div>
+        <div className="app-actions">
+          <a href="/watch">Watch</a>
+          <a href="/competitions">Competitions</a>
+          <a href="/workshop">Workshop</a>
+        </div>
         {strategy.description ? <p>{strategy.description}</p> : null}
         <div className="workshop-chip-row">
           {strategy.tags.map((tag) => (

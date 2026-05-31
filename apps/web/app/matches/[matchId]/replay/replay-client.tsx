@@ -150,6 +150,10 @@ export function ReplayClient({ data }: ReplayClientProps) {
         <div className="replay-header-status">
           <span className="replay-status-chip">{statusLabel}</span>
           <span className="replay-muted">Public-safe projection</span>
+          <div className="app-actions">
+            <a href="/watch">Watch</a>
+            <a href="/learn#trust">Trust</a>
+          </div>
         </div>
       </header>
 

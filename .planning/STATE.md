@@ -1,23 +1,23 @@
 ---
 milestone: v1.31
 milestone_name: Public Site Spine and Discovery Reads
-status: planning
-current_phase: 212
+status: validating
+current_phase: 221
 progress:
   phases_total: 11
-  phases_complete: 1
+  phases_complete: 11
   requirements_total: 57
-  requirements_complete: 5
+  requirements_complete: 57
 ---
 
 # State: Coward's Game v1.31
 
 ## Current Position
 
-Phase: 212 - Discovery Read Requirements and Boundary Design
-Plan: Pending
-Status: Ready for Phase 212 planning
-Last activity: 2026-05-31 - Milestone-wide discussion completed for Phases 212-221; context and discussion logs written.
+Phase: 221 - Audit, Archive, Commit, and Tag
+Plan: Complete
+Status: Validation and audit passed; ready for commit/tag closure.
+Last activity: 2026-05-31 - v1.31 public site spine implemented, reviewed, visually checked, validated, and boundary-audited after merging `origin/main`.
 
 ## Project Reference
 
@@ -39,8 +39,10 @@ See: `.planning/PROJECT.md`
   - `.planning/phases/211-route-and-link-inventory/211-CONTEXT.md`
   - `.planning/phases/211-route-and-link-inventory/211-PLAN.md`
   - `.planning/phases/211-route-and-link-inventory/211-SUMMARY.md`
-- Phase 212 should define the new discovery DTOs/routes before any global shell or page implementation.
-- Context and discussion logs exist for all remaining v1.31 phases:
+- v1.31 adds `public-discovery-v1` DTOs and app-side discovery service reads separate from `match-execution-app-v1`.
+- `/` is now the public discovery hub; `/workshop` remains the canonical Workshop route.
+- `/watch`, `/competitions`, `/competitions/[competitionId]`, `/competitions/[competitionId]/enter`, and `/learn` are implemented and linked through the global shell.
+- Context, plans, summaries, UI specs, verification, review, and audit artifacts exist for the milestone phases:
   - Phase 212: Discovery Read Requirements and Boundary Design
   - Phase 213: Global Site Shell and Navigation
   - Phase 214: Public Home Discovery Hub

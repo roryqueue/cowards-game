@@ -151,6 +151,41 @@ describe("createPublicGoReadClient", () => {
     })
   })
 
+  it("rejects unsafe public ladder result and replay links", async () => {
+    const unsafeLadderPage: PublicLadderPageServiceDto = {
+      ...publicLadderPage,
+      canonicalHref: "/ladder/ladder-season%3Ademo",
+      payload: {
+        ...publicLadderPage.payload,
+        seasonId: "ladder-season:demo",
+        matchSets: [
+          {
+            matchSetId: "match-set:demo",
+            seasonId: "ladder-season:demo",
+            status: "complete",
+            countedStatus: "counted",
+            entrantIds: ["entry:a", "entry:b"],
+            resultHref: "javascript:alert(1)",
+            replayHref: "/matches/match%3Ademo/replay",
+          },
+        ],
+      },
+    }
+    const client = createPublicGoReadClient({
+      baseUrl: "http://go.local",
+      fetchImpl: async () => jsonResponse(unsafeLadderPage),
+    })
+
+    await expect(
+      client.getPublicLadderSeason("ladder-season:demo"),
+    ).rejects.toMatchObject({
+      diagnostic: {
+        routeId: "getPublicLadderSeason",
+        failureClass: "go_body_divergent",
+      },
+    })
+  })
+
   it("rejects replay evidence with owner-private projection data", async () => {
     const leakedEvidence = {
       ...publicReplayEvidence,

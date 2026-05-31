@@ -27,7 +27,11 @@ export default async function PlayerProfilePage({
             <h1>@{profile.handle}</h1>
             <p>{profile.displayName}</p>
           </div>
-          <a href="/account">Account</a>
+          <div className="app-actions">
+            <a href="/watch">Watch</a>
+            <a href="/competitions">Competitions</a>
+            <a href="/account">Account</a>
+          </div>
         </div>
         <div className="app-section-header compact">
           <h2>Strategies</h2>

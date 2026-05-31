@@ -54,7 +54,11 @@ export default async function MatchSetResultPage({
               <p className="workshop-muted">MatchSet</p>
               <h1>Not found</h1>
             </div>
-            <a href="/account">Account</a>
+            <div className="app-actions">
+              <a href="/watch">Watch</a>
+              <a href="/competitions">Competitions</a>
+              <a href="/account">Account</a>
+            </div>
           </div>
         </section>
       </main>
@@ -90,7 +94,11 @@ export default async function MatchSetResultPage({
             <p className="workshop-muted">{result.matchSetId}</p>
           </div>
           <div className="app-actions">
-            <a href="/exhibitions/new">New exhibition</a>
+            <a href="/watch">Watch</a>
+            <a href="/competitions">Competitions</a>
+            <a href="/competitions/exhibition%3Astandard-exhibition-v1/enter">
+              Enter exhibition
+            </a>
             <a href="/account">Account</a>
           </div>
         </div>
@@ -277,7 +285,12 @@ export default async function MatchSetResultPage({
           {result.entrants.map((entrant) => (
             <article className="entrant-card" key={entrant.entrantId}>
               <strong>{entrant.displayLabel}</strong>
-              <span className="workshop-muted">@{entrant.ownerHandle}</span>
+              <a
+                className="workshop-muted"
+                href={`/players/${encodeURIComponent(entrant.ownerHandle)}`}
+              >
+                @{entrant.ownerHandle}
+              </a>
               <dl className="details-grid">
                 <dt>revision</dt>
                 <dd>{entrant.strategyRevisionId}</dd>

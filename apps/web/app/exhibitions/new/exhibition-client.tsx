@@ -1,7 +1,6 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import type { AccountReadRevisionSummary } from "../../../lib/account-service-boundary.js"
 import { runtimeExhibitionStatusLabel } from "../../../lib/runtime-labels.js"
 
 interface ExhibitionPresetSummary {
@@ -14,10 +13,26 @@ interface ExhibitionPresetSummary {
 
 interface ExhibitionClientProps {
   presets: ExhibitionPresetSummary[]
-  revisions: AccountReadRevisionSummary[]
+  revisions: ExhibitionRevisionSummary[]
 }
 
-const runtimeDisplayLabel = (revision: AccountReadRevisionSummary) =>
+export interface ExhibitionRevisionSummary {
+  id: string
+  label?: string | undefined
+  sourceHash: string
+  sourceBytes: number
+  valid: boolean
+  runtimeSemantics: {
+    languageId: string
+    languageLabel: string
+    countedPlayEligible: boolean
+    countedPlayLabel: string
+    countedPlayReason?: string | null | undefined
+  }
+  createdAt: string
+}
+
+const runtimeDisplayLabel = (revision: ExhibitionRevisionSummary) =>
   runtimeExhibitionStatusLabel(revision.runtimeSemantics)
 
 export function ExhibitionClient({
@@ -103,7 +118,8 @@ export function ExhibitionClient({
         </div>
         <div className="app-actions">
           <a href="/account">Account</a>
-          <a href="/">Workshop</a>
+          <a href="/competitions">Competitions</a>
+          <a href="/workshop">Workshop</a>
         </div>
       </div>
 

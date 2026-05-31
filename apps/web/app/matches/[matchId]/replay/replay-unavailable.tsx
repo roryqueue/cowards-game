@@ -28,7 +28,13 @@ export function ReplayUnavailable({ data }: { data: ReplayUnavailableDto }) {
           <p className="replay-product-label">Coward&apos;s Game</p>
           <h1>Replay unavailable</h1>
         </div>
-        <span className="replay-status-chip">Replay unavailable</span>
+        <div className="replay-header-status">
+          <span className="replay-status-chip">Replay unavailable</span>
+          <div className="app-actions">
+            <a href="/watch">Watch</a>
+            <a href="/learn#trust">Trust</a>
+          </div>
+        </div>
       </header>
 
       <section

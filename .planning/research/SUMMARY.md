@@ -4,13 +4,13 @@
 **Milestone:** v1.31 Public Site Spine and Discovery Reads
 **Domain:** Public site navigation, discovery reads, Watch/competition hubs, signed-in entry spine, public-safe cross-linking, and boundary monitors separate from `match-execution-app-v1`
 **Researched:** 2026-05-31
-**Confidence:** High for route inventory and boundary scope; medium for exact discovery DTO shape until Phase 212 designs contracts against persistence/service data.
+**Confidence:** High after implementation, validation, and audit.
 
 ## Executive Summary
 
 Coward's Game now has strong individual product surfaces, but they are not arranged like a public competitive site. The root route renders Workshop directly, the global layout has no site shell, and public discovery relies on knowing object URLs such as MatchSet result pages, replay pages, player profiles, Strategy cards, and ladder detail pages.
 
-v1.31 should add a public discovery spine without reopening the frozen execution/app contract. The correct shape is a separate set of discovery reads: `getPublicHomeDiscovery`, `getPublicWatchIndex`, `getPublicCompetitionIndex`, `getPublicCompetitionDetail`, and `getSignedInCompetitionEntryDashboard`. These reads can aggregate existing public-safe projections and canonical hrefs while avoiding any change to `match-execution-app-v1`.
+v1.31 added a public discovery spine without reopening the frozen execution/app contract. The delivered shape is a separate set of discovery reads: `getPublicHomeDiscovery`, `getPublicWatchIndex`, `getPublicCompetitionIndex`, `getPublicCompetitionDetail`, and `getSignedInCompetitionEntryDashboard`. These reads aggregate existing public-safe projections and canonical hrefs while avoiding any change to `match-execution-app-v1`.
 
 ## Baseline Findings
 

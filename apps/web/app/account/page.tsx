@@ -54,7 +54,9 @@ export default async function AccountPage() {
             <h1>{user ? `@${user.handle}` : "Sign in required"}</h1>
           </div>
           <div className="app-actions">
-            <a href="/">Workshop</a>
+            <a href="/workshop">Workshop</a>
+            <a href="/watch">Watch</a>
+            <a href="/competitions">Competitions</a>
             {user ? (
               <a href={`/players/${user.handle}`}>Public profile</a>
             ) : null}
@@ -79,7 +81,9 @@ export default async function AccountPage() {
             </dl>
             <div className="app-section-header compact">
               <h2>Account revisions</h2>
-              <a href="/exhibitions/new">Create exhibition</a>
+              <a href="/competitions/exhibition%3Astandard-exhibition-v1/enter">
+                Enter exhibition
+              </a>
             </div>
             {revisionsUnavailable ? (
               <p className="workshop-muted">

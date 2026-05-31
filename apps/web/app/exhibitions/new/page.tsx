@@ -60,7 +60,7 @@ export default async function NewExhibitionPage() {
               </div>
               <div className="app-actions">
                 <a href="/account">Account</a>
-                <a href="/">Workshop</a>
+                <a href="/workshop">Workshop</a>
               </div>
             </div>
             <p className="workshop-muted">
@@ -81,6 +81,7 @@ export default async function NewExhibitionPage() {
             <div className="app-actions">
               <a href="/auth/sign-in">Sign in</a>
               <a href="/auth/sign-up">Create account</a>
+              <a href="/competitions">Competitions</a>
             </div>
           </div>
           {accountUnavailable ? (

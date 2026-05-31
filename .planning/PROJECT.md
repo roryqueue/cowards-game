@@ -2,10 +2,10 @@
 
 ## Current State
 
-**Shipped version:** v1.30 Match Intelligence Workbench Against Frozen Result and Replay Fixtures on 2026-05-31
-**Current milestone:** v1.31 Public Site Spine and Discovery Reads.
-**Status:** v1.31 is in planning/execution after the merged v1.30 baseline. The milestone turns the app into a navigable public competitive site with a public discovery hub, Watch hub, competition discovery/detail/entry spine, player and Strategy cross-links, and signed-in paths from Workshop to saved revisions, entry, results, and replay. New discovery reads are separate public/account-safe APIs and are explicitly not part of `match-execution-app-v1`.
-**Last audit:** v1.30 audit passed after validating public result/replay intelligence coverage, privacy scans, board realism, desktop/mobile public page proof, proof artifacts, boundary monitors, and no contract drift.
+**Shipped version:** v1.31 Public Site Spine and Discovery Reads on 2026-05-31
+**Current milestone:** v1.31 Public Site Spine and Discovery Reads is complete pending commit/tag closure.
+**Status:** v1.31 turns the app into a navigable public competitive site with a public discovery hub, Watch hub, competition discovery/detail/entry spine, player and Strategy cross-links, and signed-in paths from Workshop to saved revisions, entry, results, and replay. New discovery reads are separate public/account-safe APIs and are explicitly not part of `match-execution-app-v1`.
+**Last audit:** v1.31 audit passed after validating public discovery DTOs, site shell/navigation, public and signed-in entry routes, privacy scans, desktop/mobile journey proof, visual screenshots, boundary monitors, and no execution contract drift.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
 
@@ -13,20 +13,20 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.31 Public Site Spine and Discovery Reads
+## Latest Shipped Milestone: v1.31 Public Site Spine and Discovery Reads
 
 **Goal:** Make Coward's Game navigable as a public competitive site where non-users can land, discover recent public Matches, MatchSets, replay-ready evidence, active competitions, and player/Strategy pages, while signed-in users can move clearly from Workshop to saved revisions, competition entry, results, and replay.
 
-**Target features:**
+**Delivered:**
 - Public front door at `/` and global site shell/navigation that separates public discovery from signed-in Workshop/account flows.
-- Public Watch, competition index/detail, player, Strategy, result, replay, and learn paths that cross-link around public-safe evidence.
+- Public Watch, competition index/detail, player, Strategy, result, replay, and Learn paths cross-linked around public-safe evidence.
 - New public/account-safe discovery reads: `getPublicHomeDiscovery`, `getPublicWatchIndex`, `getPublicCompetitionIndex`, `getPublicCompetitionDetail`, and `getSignedInCompetitionEntryDashboard`.
 - Signed-in competition-entry spine from Workshop/account saved revisions into entry, results, and replay without exposing private Strategy source or memory.
 - Privacy, boundary, journey proof, and monitor coverage proving discovery APIs are separate from `match-execution-app-v1`.
 
 **Non-goals:** No change, expansion, rename, repurpose, or version bump to `match-execution-app-v1`; no fields added to existing public execution DTOs; no Go match execution, runtime-service behavior, retry/recovery policy, quarantine semantics, job lifecycle, MatchSet scoring, Chronicle persistence, internal operator controls, runtime promotion, ABI migration, counted non-JS play, or Strategy execution in web/API/Go.
 
-## Latest Shipped Milestone: v1.30 Match Intelligence Workbench Against Frozen Result and Replay Fixtures
+## Previous Shipped Milestone: v1.30 Match Intelligence Workbench Against Frozen Result and Replay Fixtures
 
 **Goal:** Build a public-safe Match Intelligence Workbench that derives tactical summaries, timeline annotations, jump targets, comparison views, Soldier progression, board-control signals, terrain/STONE occupancy, and action/engagement summaries from frozen public result/replay DTOs and fixture-backed replay projections.
 

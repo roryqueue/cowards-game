@@ -442,7 +442,7 @@ export const createPublicGoReadClient = ({
         path: `/public/ladders/${encodeURIComponent(seasonId)}`,
         schema:
           PublicLadderPageServiceDtoSchema as PublicSchema<PublicLadderPageServiceDto>,
-        validate: (page, status, startedAt, endedAt) =>
+        validate: (page, status, startedAt, endedAt) => {
           assertCanonicalHref(
             "getPublicLadderSeason",
             page.canonicalHref,
@@ -450,7 +450,18 @@ export const createPublicGoReadClient = ({
             status,
             startedAt,
             endedAt,
-          ),
+          )
+          assertSafeLinks(
+            "getPublicLadderSeason",
+            page.payload.matchSets.flatMap((matchSet) => [
+              matchSet.resultHref,
+              ...(matchSet.replayHref ? [matchSet.replayHref] : []),
+            ]),
+            status,
+            startedAt,
+            endedAt,
+          )
+        },
       })) as PublicLadderPageServiceDto | null
     },
     async getPublicMatchSetSummary(matchSetId) {

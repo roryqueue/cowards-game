@@ -1,5 +1,35 @@
 # Milestones
 
+## v1.31 Public Site Spine and Discovery Reads (Shipped: 2026-05-31)
+
+**Status:** Shipped 2026-05-31
+**Phases:** 11
+**Phase range:** 211-221
+**Plans:** 11/11 complete
+**Requirements:** 57/57 complete
+**Proof:** .planning/artifacts/v1.31-public-site-spine-proof.md
+**Roadmap:** .planning/milestones/v1.31-ROADMAP.md
+**Decision:** Discovery reads are `public-discovery-v1` and explicitly separate from `match-execution-app-v1`; no execution DTO fields were added, renamed, removed, or repurposed; no Go execution, runtime-service, retry/recovery, quarantine, job lifecycle, MatchSet scoring, Chronicle persistence, operator-control, ABI, runtime-promotion, counted-language, or Strategy execution boundary changed.
+**Audit:** .planning/milestones/v1.31-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.31-ROADMAP.md, .planning/milestones/v1.31-REQUIREMENTS.md, .planning/phases/211-route-and-link-inventory through .planning/phases/221-audit-archive-commit-and-tag
+
+**Delivered:**
+
+- Public front door at `/` with a global site shell linking Home, Watch, Competitions, Learn, Workshop, and Account.
+- Separate public/account-safe discovery DTOs and reads for Home, Watch, competition index/detail, and signed-in competition entry dashboard.
+- `/watch`, `/competitions`, `/competitions/[competitionId]`, `/competitions/[competitionId]/enter`, and `/learn`.
+- Cross-links across Workshop, Account, MatchSet result workbench, Replay, Player, Strategy, competitions, and Learn/trust pages.
+- Privacy, safe-href, boundary, desktop/mobile journey, and visual proof coverage.
+
+### Active Constraints
+
+- `match-execution-app-v1` remains frozen.
+- JS/TS remains the only counted Strategy path.
+- Python, Rust, and Zig remain non-counted exhibition beta only.
+- Preview 1 stdin/stdout JSON remains the active WASM/WASI execution ABI.
+- Public outputs must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads.
+- Strategy code does not execute in web/API/Go.
+
 ## v1.29 Replay and Result Trust Polish (Shipped: 2026-05-31)
 
 **Status:** Shipped 2026-05-31

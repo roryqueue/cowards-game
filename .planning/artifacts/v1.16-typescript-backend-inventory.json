@@ -7567,22 +7567,22 @@
         {
           "line": 14,
           "source": "@cowards/runtime-wasm-wasi",
-          "statementText": "import {\n  buildRustStrategyRevision,\n  buildZigStrategyRevision,\n} from \"@cowards/runtime-wasm-wasi\""
-        },
-        {
-          "line": 18,
-          "source": "./execute-match.js",
-          "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
-        },
-        {
-          "line": 19,
-          "source": "./runtime-config.js",
-          "statementText": "import {\n  createRuntimeServiceConfig,\n  RuntimeServiceConfigError,\n} from \"./runtime-config.js\""
+          "statementText": "import {\n  buildRustStrategyRevision,\n  buildZigStrategyRevision,\n  compileRustWasmArtifact,\n  compileZigWasmArtifact,\n} from \"@cowards/runtime-wasm-wasi\""
         },
         {
           "line": 2,
           "source": "node:path",
           "statementText": "import { join } from \"node:path\""
+        },
+        {
+          "line": 20,
+          "source": "./execute-match.js",
+          "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
+        },
+        {
+          "line": 21,
+          "source": "./runtime-config.js",
+          "statementText": "import {\n  createRuntimeServiceConfig,\n  RuntimeServiceConfigError,\n} from \"./runtime-config.js\""
         },
         {
           "line": 3,
@@ -8932,6 +8932,197 @@
       "scannerFindings": []
     },
     {
+      "id": "apps-web-app-competitions-competitionid-enter-page",
+      "path": "apps/web/app/competitions/[competitionId]/enter/page.tsx",
+      "kind": "web-frontend-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "@cowards/spec",
+          "statementText": "import { COMPETITION_PRESETS } from \"@cowards/spec\""
+        },
+        {
+          "line": 2,
+          "source": "../../../exhibitions/new/exhibition-client.js",
+          "statementText": "import { ExhibitionClient } from \"../../../exhibitions/new/exhibition-client.js\""
+        },
+        {
+          "line": 3,
+          "source": "../../../../lib/public-discovery-service.js",
+          "statementText": "import { getSignedInCompetitionEntryDashboard } from \"../../../../lib/public-discovery-service.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/competitions/[competitionId]/enter/page.tsx"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/lib/account-service-adapter.ts"
+        }
+      ]
+    },
+    {
+      "id": "apps-web-app-competitions-competitionid-page",
+      "path": "apps/web/app/competitions/[competitionId]/page.tsx",
+      "kind": "web-frontend-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "../../public-discovery-components.js",
+          "statementText": "import {\n  BoundaryNotice,\n  EmptyStates,\n  MatchSetDiscoveryCard,\n} from \"../../public-discovery-components.js\""
+        },
+        {
+          "line": 6,
+          "source": "../../../lib/public-discovery-service.js",
+          "statementText": "import { getPublicCompetitionDetail } from \"../../../lib/public-discovery-service.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/competitions/[competitionId]/page.tsx"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/lib/account-service-adapter.ts"
+        }
+      ]
+    },
+    {
+      "id": "apps-web-app-competitions-page",
+      "path": "apps/web/app/competitions/page.tsx",
+      "kind": "web-frontend-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "../public-discovery-components.js",
+          "statementText": "import {\n  BoundaryNotice,\n  CompetitionDiscoveryCard,\n  EmptyStates,\n} from \"../public-discovery-components.js\""
+        },
+        {
+          "line": 6,
+          "source": "../../lib/public-discovery-service.js",
+          "statementText": "import { getPublicCompetitionIndex } from \"../../lib/public-discovery-service.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/competitions/page.tsx"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/lib/account-service-adapter.ts"
+        }
+      ]
+    },
+    {
       "id": "apps-web-app-competitive-http",
       "path": "apps/web/app/competitive/http.ts",
       "kind": "web-frontend-module",
@@ -9014,11 +9205,6 @@
         },
         {
           "line": 4,
-          "source": "../../../lib/account-service-boundary.js",
-          "statementText": "import type { AccountReadRevisionSummary } from \"../../../lib/account-service-boundary.js\""
-        },
-        {
-          "line": 5,
           "source": "../../../lib/runtime-labels.js",
           "statementText": "import { runtimeExhibitionStatusLabel } from \"../../../lib/runtime-labels.js\""
         }
@@ -9026,9 +9212,7 @@
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
-      "localBackendImports": [
-        "apps/web/lib/account-service-adapter.ts"
-      ],
+      "localBackendImports": [],
       "usesDatabase": false,
       "claimsJobs": false,
       "completesMatches": false,
@@ -9046,12 +9230,7 @@
         ".planning/artifacts/v1.15-typescript-surface-labels.json",
         "apps/web/app/exhibitions/new/exhibition-client.tsx"
       ],
-      "scannerFindings": [
-        {
-          "code": "local_backend_import_chain",
-          "detail": "apps/web/lib/account-service-adapter.ts"
-        }
-      ]
+      "scannerFindings": []
     },
     {
       "id": "apps-web-app-exhibitions-new-page",
@@ -9222,6 +9401,11 @@
           "line": 2,
           "source": "./globals.css",
           "statementText": "import \"./globals.css\""
+        },
+        {
+          "line": 3,
+          "source": "./site-shell.js",
+          "statementText": "import { SiteShell } from \"./site-shell.js\""
         }
       ],
       "persistenceImports": [],
@@ -9246,6 +9430,196 @@
         "apps/web/app/layout.tsx"
       ],
       "scannerFindings": []
+    },
+    {
+      "id": "apps-web-app-learn-page",
+      "path": "apps/web/app/learn/page.tsx",
+      "kind": "web-frontend-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/learn/page.tsx"
+      ],
+      "scannerFindings": []
+    },
+    {
+      "id": "apps-web-app-match-intelligence-test",
+      "path": "apps/web/app/match-intelligence.test.ts",
+      "kind": "web-frontend-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  MATCH_EXECUTION_CONTRACT_FIXTURES_V1,\n  type PublicMatchSetSummaryServiceDto,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 6,
+          "source": "./matches/replay-fixture.js",
+          "statementText": "import { createReplayFixtureData } from \"./matches/replay-fixture.js\""
+        },
+        {
+          "line": 7,
+          "source": "../lib/public-service-boundary.js",
+          "statementText": "import type { PublicReadMatchSetResultDto } from \"../lib/public-service-boundary.js\""
+        },
+        {
+          "line": 8,
+          "source": "./match-intelligence.js",
+          "statementText": "import {\n  buildReplayIntelligenceViewModel,\n  buildResultIntelligenceViewModel,\n} from \"./match-intelligence.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/app/matches/replay-fixture.ts",
+        "apps/web/app/matches/replay-ready.ts",
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/match-intelligence.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/app/matches/replay-fixture.ts, apps/web/app/matches/replay-ready.ts, apps/web/lib/account-service-adapter.ts"
+        }
+      ]
+    },
+    {
+      "id": "apps-web-app-match-intelligence",
+      "path": "apps/web/app/match-intelligence.ts",
+      "kind": "web-frontend-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "public-redacted",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "@cowards/spec",
+          "statementText": "import type {\n  MatchExecutionFailureCategoryV1,\n  MatchExecutionLifecycleStateV1,\n  Position,\n  SoldierSnapshot,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 7,
+          "source": "../lib/public-service-boundary.js",
+          "statementText": "import type { PublicReadMatchSetResultDto } from \"../lib/public-service-boundary.js\""
+        },
+        {
+          "line": 8,
+          "source": "./matches/types.js",
+          "statementText": "import type {\n  ReplayPageData,\n  ReplayReadyDto,\n  ReplayStateDto,\n  ReplayTimelineEntryDto,\n} from \"./matches/types.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": true,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/match-intelligence.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/lib/account-service-adapter.ts"
+        }
+      ]
     },
     {
       "id": "apps-web-app-matches-matchid-replay-owner-debug-test",
@@ -9752,12 +10126,12 @@
       "goRouteIds": [],
       "imports": [
         {
-          "line": 19,
+          "line": 20,
           "source": "./replay-board.js",
           "statementText": "import { ReplayBoard } from \"./replay-board.js\""
         },
         {
-          "line": 20,
+          "line": 21,
           "source": "./replay-playback.js",
           "statementText": "import {\n  defaultReplaySpeed,\n  getPlaybackIntervalMs,\n  replaySpeedOptions,\n  type ReplaySpeedValue,\n} from \"./replay-playback.js\""
         },
@@ -9773,11 +10147,16 @@
         },
         {
           "line": 5,
+          "source": "../../../match-intelligence.js",
+          "statementText": "import { buildReplayIntelligenceViewModel } from \"../../../match-intelligence.js\""
+        },
+        {
+          "line": 6,
           "source": "../../../matchsets/evidence-copy.js",
           "statementText": "import { replayEvidenceRows } from \"../../../matchsets/evidence-copy.js\""
         },
         {
-          "line": 6,
+          "line": 7,
           "source": "./replay-state.js",
           "statementText": "import {\n  canShowOwnerDebug,\n  formatTimelinePosition,\n  getCurrentPositionSummary,\n  getEventInspector,\n  getInitialReplaySequence,\n  getOwnerAwarenessGridInspection,\n  getSoldierInactivityExplanation,\n  getSoldierInspector,\n  getTimelineEntryAt,\n  groupTimelineEntries,\n  stepReplayIndex,\n} from \"./replay-state.js\""
         }
@@ -9785,7 +10164,9 @@
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
-      "localBackendImports": [],
+      "localBackendImports": [
+        "apps/web/lib/account-service-adapter.ts"
+      ],
       "usesDatabase": false,
       "claimsJobs": false,
       "completesMatches": false,
@@ -9803,7 +10184,12 @@
         ".planning/artifacts/v1.15-typescript-surface-labels.json",
         "apps/web/app/matches/[matchId]/replay/replay-client.tsx"
       ],
-      "scannerFindings": []
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/lib/account-service-adapter.ts"
+        }
+      ]
     },
     {
       "id": "apps-web-app-matches-matchid-replay-replay-playback-test",
@@ -10042,6 +10428,11 @@
       "imports": [
         {
           "line": 1,
+          "source": "react",
+          "statementText": "import { Fragment } from \"react\""
+        },
+        {
+          "line": 2,
           "source": "../../types.js",
           "statementText": "import type { ReplayUnavailableDto } from \"../../types.js\""
         }
@@ -10301,7 +10692,7 @@
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": false,
-      "servesPublicEvidence": false,
+      "servesPublicEvidence": true,
       "executesStrategy": false,
       "ownerDebugAccess": true,
       "testOnlyGate": null,
@@ -10479,7 +10870,7 @@
       "currentOwner": "typescript_frontend",
       "normalBackendOwner": "go_backend",
       "fallbackPolicy": "no_silent_typescript_backend_fallback",
-      "privacyClass": "source-safe-inventory-only",
+      "privacyClass": "public-redacted",
       "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
       "routeMethods": [],
       "routePath": null,
@@ -10490,6 +10881,11 @@
           "line": 1,
           "source": "react",
           "statementText": "import { Fragment } from \"react\""
+        },
+        {
+          "line": 10,
+          "source": "../../../lib/runtime-labels.js",
+          "statementText": "import { runtimeExhibitionStatusLabel } from \"../../../lib/runtime-labels.js\""
         },
         {
           "line": 2,
@@ -10508,8 +10904,8 @@
         },
         {
           "line": 9,
-          "source": "../../../lib/runtime-labels.js",
-          "statementText": "import { runtimeExhibitionStatusLabel } from \"../../../lib/runtime-labels.js\""
+          "source": "../result-view-model.js",
+          "statementText": "import { buildResultWorkbenchViewModel } from \"../result-view-model.js\""
         }
       ],
       "persistenceImports": [],
@@ -10523,7 +10919,7 @@
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": true,
-      "servesPublicEvidence": false,
+      "servesPublicEvidence": true,
       "executesStrategy": false,
       "ownerDebugAccess": false,
       "testOnlyGate": null,
@@ -10581,7 +10977,7 @@
         {
           "line": 4,
           "source": "./evidence-copy.js",
-          "statementText": "import {\n  matchSetEvidenceRows,\n  publicPrivacyProvenanceCue,\n  publicReliabilityPrivacyCue,\n  replayEvidenceRows,\n  statusChipClass,\n} from \"./evidence-copy.js\""
+          "statementText": "import {\n  matchSetEvidenceRows,\n  publicMatchEvidenceLabel,\n  publicPrivacyProvenanceCue,\n  publicReliabilityPrivacyCue,\n  replayEvidenceRows,\n  statusChipClass,\n} from \"./evidence-copy.js\""
         }
       ],
       "persistenceImports": [],
@@ -10621,7 +11017,7 @@
       "currentOwner": "typescript_frontend",
       "normalBackendOwner": "go_backend",
       "fallbackPolicy": "no_silent_typescript_backend_fallback",
-      "privacyClass": "private-or-owner-scoped",
+      "privacyClass": "public-redacted",
       "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
       "routeMethods": [],
       "routePath": null,
@@ -10650,7 +11046,7 @@
       "refreshesScoring": true,
       "servesPublicEvidence": true,
       "executesStrategy": false,
-      "ownerDebugAccess": true,
+      "ownerDebugAccess": false,
       "testOnlyGate": null,
       "rollbackGate": null,
       "deferredGate": null,
@@ -10661,6 +11057,150 @@
         "apps/web/app/matchsets/evidence-copy.ts"
       ],
       "scannerFindings": []
+    },
+    {
+      "id": "apps-web-app-matchsets-result-view-model-test",
+      "path": "apps/web/app/matchsets/result-view-model.test.ts",
+      "kind": "web-frontend-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  MATCH_EXECUTION_CONTRACT_FIXTURES_V1,\n  type MatchExecutionLifecycleStateV1,\n  type PublicMatchSetSummaryServiceDto,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 7,
+          "source": "../../lib/public-service-boundary.js",
+          "statementText": "import type { PublicReadMatchSetResultDto } from \"../../lib/public-service-boundary.js\""
+        },
+        {
+          "line": 8,
+          "source": "./result-view-model.js",
+          "statementText": "import { buildResultWorkbenchViewModel } from \"./result-view-model.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/matchsets/result-view-model.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/lib/account-service-adapter.ts"
+        }
+      ]
+    },
+    {
+      "id": "apps-web-app-matchsets-result-view-model",
+      "path": "apps/web/app/matchsets/result-view-model.ts",
+      "kind": "web-frontend-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "public-redacted",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "@cowards/spec",
+          "statementText": "import type {\n  MatchExecutionFailureCategoryV1,\n  MatchExecutionLifecycleStateV1,\n  MatchExecutionReplayAvailabilityV1,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 11,
+          "source": "./evidence-copy.js",
+          "statementText": "import {\n  candidateLaneCue,\n  publicMatchEvidenceLabel,\n  publicPrivacyProvenanceCue,\n  publicReliabilityPrivacyCue,\n  reliabilityBudgetCue,\n} from \"./evidence-copy.js\""
+        },
+        {
+          "line": 6,
+          "source": "../../lib/public-service-boundary.js",
+          "statementText": "import type { PublicReadMatchSetResultDto } from \"../../lib/public-service-boundary.js\""
+        },
+        {
+          "line": 7,
+          "source": "../match-intelligence.js",
+          "statementText": "import {\n  buildResultIntelligenceViewModel,\n  type ResultIntelligenceViewModel,\n} from \"../match-intelligence.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": true,
+      "servesPublicEvidence": true,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/matchsets/result-view-model.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/lib/account-service-adapter.ts"
+        }
+      ]
     },
     {
       "id": "apps-web-app-page",
@@ -10685,20 +11225,20 @@
       "imports": [
         {
           "line": 1,
-          "source": "./workshop/workshop-client.js",
-          "statementText": "import { WorkshopClient } from \"./workshop/workshop-client.js\""
+          "source": "./public-discovery-components.js",
+          "statementText": "import {\n  ArenaSignal,\n  BoundaryNotice,\n  CompetitionDiscoveryCard,\n  EmptyStates,\n  MatchSetDiscoveryCard,\n} from \"./public-discovery-components.js\""
         },
         {
-          "line": 2,
-          "source": "./workshop/server.js",
-          "statementText": "import { getWorkshopInitialData } from \"./workshop/server.js\""
+          "line": 8,
+          "source": "../lib/public-discovery-service.js",
+          "statementText": "import { getPublicHomeDiscovery } from \"../lib/public-discovery-service.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
-        "apps/web/app/workshop/server.ts"
+        "apps/web/lib/account-service-adapter.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -10720,7 +11260,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "apps/web/app/workshop/server.ts"
+          "detail": "apps/web/lib/account-service-adapter.ts"
         }
       ]
     },
@@ -10782,6 +11322,106 @@
       ]
     },
     {
+      "id": "apps-web-app-public-discovery-components",
+      "path": "apps/web/app/public-discovery-components.tsx",
+      "kind": "web-frontend-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "@cowards/spec",
+          "statementText": "import type {\n  PublicDiscoveryCompetitionCard,\n  PublicDiscoveryMatchSetCard,\n} from \"@cowards/spec\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/public-discovery-components.tsx"
+      ],
+      "scannerFindings": []
+    },
+    {
+      "id": "apps-web-app-site-shell",
+      "path": "apps/web/app/site-shell.tsx",
+      "kind": "web-frontend-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "react",
+          "statementText": "import type { ReactNode } from \"react\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/site-shell.tsx"
+      ],
+      "scannerFindings": []
+    },
+    {
       "id": "apps-web-app-strategies-strategyid-page",
       "path": "apps/web/app/strategies/[strategyId]/page.tsx",
       "kind": "web-frontend-module",
@@ -10840,6 +11480,123 @@
         ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
         ".planning/artifacts/v1.15-typescript-surface-labels.json",
         "apps/web/app/strategies/[strategyId]/page.tsx"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/lib/account-service-adapter.ts"
+        }
+      ]
+    },
+    {
+      "id": "apps-web-app-test-support-match-execution-fixtures-page",
+      "path": "apps/web/app/test-support/match-execution-fixtures/page.tsx",
+      "kind": "web-frontend-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  MATCH_EXECUTION_APP_CONTRACT_VERSION,\n  MATCH_EXECUTION_CONTRACT_FIXTURES_V1,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 5,
+          "source": "../../../lib/match-execution-fixture-adapter.js",
+          "statementText": "import { isMatchExecutionFixtureEnabled } from \"../../../lib/match-execution-fixture-adapter.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/test-support/match-execution-fixtures/page.tsx"
+      ],
+      "scannerFindings": []
+    },
+    {
+      "id": "apps-web-app-watch-page",
+      "path": "apps/web/app/watch/page.tsx",
+      "kind": "web-frontend-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "../public-discovery-components.js",
+          "statementText": "import {\n  BoundaryNotice,\n  EmptyStates,\n  MatchSetDiscoveryCard,\n} from \"../public-discovery-components.js\""
+        },
+        {
+          "line": 6,
+          "source": "../../lib/public-discovery-service.js",
+          "statementText": "import { getPublicWatchIndex } from \"../../lib/public-discovery-service.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/watch/page.tsx"
       ],
       "scannerFindings": [
         {
@@ -12263,7 +13020,7 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import {\n  getMatchExecutionContractFixtureByMatchId,\n  getMatchExecutionContractFixtureByMatchSetId,\n  type MatchId,\n  type MatchSetId,\n  type PublicMatchSetSummaryServiceDto,\n  type PublicReplayEvidenceServiceDto,\n  type PublicReplayMetadataServiceDto,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  MatchExecutionContractFixtureV1Schema,\n  PublicReplayEvidenceServiceDtoSchema,\n  PublicReplayMetadataServiceDtoSchema,\n  PublicMatchSetSummaryServiceDtoSchema,\n  getMatchExecutionContractFixtureByMatchId,\n  getMatchExecutionContractFixtureByMatchSetId,\n  toMatchExecutionMatchSetSummaryV1,\n  type MatchExecutionContractFixtureV1,\n  type MatchExecutionFailureCategoryV1,\n  type MatchExecutionLifecycleV1,\n  type MatchExecutionLifecycleStateV1,\n  type MatchExecutionReplayAvailabilityV1,\n  type MatchExecutionRetryDispositionV1,\n  type JsonValue,\n  type MatchId,\n  type PublicMatchEvidenceDto,\n  type PublicMatchSetResultDto,\n  type MatchSetId,\n  type PublicMatchSetSummaryServiceDto,\n  type PublicReplayEvidenceServiceDto,\n  type PublicReplayMetadataServiceDto,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -12288,6 +13045,155 @@
         "apps/web/lib/match-execution-fixture-adapter.ts"
       ],
       "scannerFindings": []
+    },
+    {
+      "id": "apps-web-lib-public-discovery-service-test",
+      "path": "apps/web/lib/public-discovery-service.test.ts",
+      "kind": "web-lib-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 2,
+          "source": "./public-discovery-service.js",
+          "statementText": "import { createPublicDiscoveryService } from \"./public-discovery-service.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/lib/public-discovery-service.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/lib/account-service-adapter.ts"
+        }
+      ]
+    },
+    {
+      "id": "apps-web-lib-public-discovery-service",
+      "path": "apps/web/lib/public-discovery-service.ts",
+      "kind": "web-lib-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  COMPETITION_PRESETS,\n  SignedInCompetitionEntryDashboardDtoSchema,\n  PublicCompetitionDetailDtoSchema,\n  PublicCompetitionIndexDtoSchema,\n  PublicHomeDiscoveryDtoSchema,\n  PublicWatchIndexDtoSchema,\n  assertPublicDiscoveryDtoLeakSafe,\n  publicDiscoveryBoundary,\n  type CompetitionPreset,\n  type PublicCompetitionDetailDto,\n  type PublicCompetitionIndexDto,\n  type PublicDiscoveryCompetitionCard,\n  type PublicDiscoveryMatchSetCard,\n  type PublicHomeDiscoveryDto,\n  type PublicTrialLadderSeasonDto,\n  type PublicWatchIndexDto,\n  type SignedInCompetitionEntryDashboardDto,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 20,
+          "source": "./account-service-boundary.js",
+          "statementText": "import {\n  getCurrentAccountReadUser,\n  listAccountReadRevisions,\n  type AccountReadUser,\n  type AccountReadRevisionSummary,\n} from \"./account-service-boundary.js\""
+        },
+        {
+          "line": 26,
+          "source": "./competitive-errors.js",
+          "statementText": "import { CompetitiveInputError } from \"./competitive-errors.js\""
+        },
+        {
+          "line": 27,
+          "source": "./go-backend-service-client.js",
+          "statementText": "import { isGoBackendServiceUnavailableError } from \"./go-backend-service-client.js\""
+        },
+        {
+          "line": 28,
+          "source": "./match-execution-fixture-adapter.js",
+          "statementText": "import { isMatchExecutionFixtureEnabled } from \"./match-execution-fixture-adapter.js\""
+        },
+        {
+          "line": 29,
+          "source": "./public-service-boundary.js",
+          "statementText": "import {\n  getPublicLadderSeason,\n  getPublicMatchSetResult,\n  type PublicReadMatchSetResultDto,\n} from \"./public-service-boundary.js\""
+        },
+        {
+          "line": 34,
+          "source": "./runtime-labels.js",
+          "statementText": "import { runtimeExhibitionStatusLabel } from \"./runtime-labels.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/lib/public-discovery-service.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/lib/account-service-adapter.ts"
+        }
+      ]
     },
     {
       "id": "apps-web-lib-public-go-read-client-test",
@@ -13195,17 +14101,12 @@
         {
           "line": 14,
           "source": "@cowards/spec",
-          "statementText": "import {\n  SERVICE_API_VERSION,\n  toMatchExecutionReplayEvidenceV1,\n} from \"@cowards/spec\""
-        },
-        {
-          "line": 18,
-          "source": "./types.js",
-          "statementText": "import type { GetMatchReplayOptions, ReplayPageData } from \"./types.js\""
+          "statementText": "import {\n  SERVICE_API_VERSION,\n  type MatchExecutionLifecycleV1,\n  toMatchExecutionReplayEvidenceV1,\n} from \"@cowards/spec\""
         },
         {
           "line": 19,
-          "source": "./replay-ready.js",
-          "statementText": "import {\n  buildReadyReplayFromPublicEvidence,\n  buildReadyReplayFromStoredChronicle,\n} from \"./replay-ready.js\""
+          "source": "./types.js",
+          "statementText": "import type {\n  GetMatchReplayOptions,\n  ReplayPageData,\n  ReplayUnavailableReason,\n} from \"./types.js\""
         },
         {
           "line": 2,
@@ -13213,27 +14114,32 @@
           "statementText": "import {\n  createPostgresChronicleStore,\n  type ChronicleMetadata,\n  type ChronicleStore,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
-          "line": 23,
+          "line": 24,
+          "source": "./replay-ready.js",
+          "statementText": "import {\n  buildReadyReplayFromPublicEvidence,\n  buildReadyReplayFromStoredChronicle,\n} from \"./replay-ready.js\""
+        },
+        {
+          "line": 28,
           "source": "../../lib/public-go-read-client.js",
           "statementText": "import {\n  createPublicGoReadClient,\n  type PublicGoReadClient,\n} from \"../../lib/public-go-read-client.js\""
         },
         {
-          "line": 27,
+          "line": 32,
           "source": "../../lib/public-service-adapter.js",
           "statementText": "import {\n  resolvePublicReadRouteOwnership,\n  type PublicReadRouteOwnershipEnv,\n} from \"../../lib/public-service-adapter.js\""
         },
         {
-          "line": 31,
+          "line": 36,
           "source": "../../lib/match-execution-fixture-adapter.js",
           "statementText": "import { createMatchExecutionFixturePublicReadClient } from \"../../lib/match-execution-fixture-adapter.js\""
         },
         {
-          "line": 32,
+          "line": 37,
           "source": "./replay-fixture.js",
           "statementText": "import {\n  createReplayFixtureData,\n  getReplayFixtureScenarioId,\n  isReplayFixtureMatch,\n} from \"./replay-fixture.js\""
         },
         {
-          "line": 55,
+          "line": 60,
           "source": "./types.js",
           "statementText": "export type { GetMatchReplayOptions } from \"./types.js\""
         },
