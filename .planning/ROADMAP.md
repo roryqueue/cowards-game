@@ -146,6 +146,8 @@
 
 ### Phase 231: Drift Monitors and Boundary Coverage
 
+**Status:** Complete
+
 **Goal:** Convert non-promotion monitors into positive parity/boundary monitors and block future direct special-casing drift.
 
 **Requirements:** MON-01, MON-02, MON-03, MON-04, MON-05
@@ -186,14 +188,14 @@
 ## Coverage
 
 - v1 requirements: 60 total
-- Complete: 45
-- Planned: 15
+- Complete: 50
+- Planned: 10
 - Mapped to phases: 60
 - Unmapped: 0
 
 ## Next Up
 
-Phase 231: Drift Monitors and Boundary Coverage is ready for planning and execution.
+Phase 232: Live Four-Language Signed-In Proof is ready for planning and execution.
 
 ---
 *Roadmap created: 2026-05-31 after v1.32 requirements approval*

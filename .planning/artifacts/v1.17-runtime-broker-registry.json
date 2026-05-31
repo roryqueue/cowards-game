@@ -1,6 +1,6 @@
 {
   "schemaVersion": "runtime-broker-registry-v1.17",
-  "generatedBy": "manual-gsd-phase-110",
+  "generatedBy": "manual-gsd-phase-231-v1.32-provider-promotion",
   "baseline": {
     "inheritsFrom": "v1.16",
     "normalTopology": "web frontend -> Go backend -> isolated runtime service(s)",
@@ -95,9 +95,9 @@
       "adapterVersion": "0.1.0-experimental",
       "abiVersion": "strategy-runtime-abi-v1.14",
       "packagePolicy": "none",
-      "readiness": "experimental",
-      "enabledForNormalPlay": false,
-      "countedResultsAllowed": false
+      "readiness": "production-candidate",
+      "enabledForNormalPlay": true,
+      "countedResultsAllowed": true
     },
     {
       "languageId": "rust",
@@ -107,9 +107,9 @@
       "adapterVersion": "0.1.0-alpha",
       "abiVersion": "strategy-runtime-abi-v1.14",
       "packagePolicy": "none",
-      "readiness": "experimental",
-      "enabledForNormalPlay": false,
-      "countedResultsAllowed": false
+      "readiness": "production-candidate",
+      "enabledForNormalPlay": true,
+      "countedResultsAllowed": true
     },
     {
       "languageId": "zig",
@@ -119,9 +119,9 @@
       "adapterVersion": "0.1.0-alpha",
       "abiVersion": "strategy-runtime-abi-v1.14",
       "packagePolicy": "none",
-      "readiness": "experimental",
-      "enabledForNormalPlay": false,
-      "countedResultsAllowed": false
+      "readiness": "production-candidate",
+      "enabledForNormalPlay": true,
+      "countedResultsAllowed": true
     }
   ],
   "authority": {
@@ -140,17 +140,16 @@
       "return internal runtime result or redacted failure"
     ],
     "pythonRuntime": [
-      "experimental Strategy method execution only",
+      "provider-gated counted Strategy method execution",
       "no filesystem",
       "no network",
       "no package install",
       "no backend ownership"
     ],
     "wasmWasiRuntime": [
-      "candidate-readiness Strategy method execution only",
+      "provider-gated counted immutable artifact execution",
       "immutable WASM artifact execution",
       "stdin/stdout JSON ABI envelope",
-      "no counted or ranked eligibility",
       "no backend ownership"
     ]
   }

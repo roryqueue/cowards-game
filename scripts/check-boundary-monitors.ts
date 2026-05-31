@@ -2,6 +2,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import ts from "typescript"
 import { createWorkerRuntimeConfig } from "../apps/worker/src/runtime-config.ts"
 import {
   assertRuntimeIsolationReadinessGuardrails,
@@ -36,6 +37,11 @@ import {
   RUNTIME_BROKER_REGISTRY,
   RUNTIME_BROKER_REGISTRY_VERSION,
   validateRuntimeBrokerRegistryMatch,
+  STRATEGY_LANGUAGE_IDS,
+  STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+  STRATEGY_LANGUAGE_PROVIDER_REGISTRY,
+  SUPPORTED_STRATEGY_LANGUAGES,
+  getSupportedStrategyLanguageBySourceFormat,
   type StrategyRuntimeAdapterId,
 } from "../packages/spec/src/index.ts"
 
@@ -48,6 +54,7 @@ type MonitorLayer =
   | "worker_quarantine"
   | "surface_labels"
   | "non_js_runtime"
+  | "language_provider"
   | "go_parity"
   | "go_promotion"
   | "topology"
@@ -699,6 +706,136 @@ const listFiles = (
       return predicate(relative) ? [relative] : []
     })
   return walk(root).sort()
+}
+
+const supportedProductLanguageIds = new Set<string>([
+  "typescript",
+  "python",
+  "rust",
+  "zig",
+])
+
+const approvedLanguageSpecialCaseFiles = new Set<string>([
+  "apps/web/app/api/workshop/revisions/route.ts",
+  "apps/web/app/api/workshop/validate/route.ts",
+  "apps/web/app/workshop/monaco-editor.tsx",
+  "apps/web/app/workshop/server.ts",
+  "apps/web/app/workshop/workshop-client.tsx",
+  "apps/web/lib/account-revision-write-boundary.ts",
+  "apps/web/lib/runtime-labels.ts",
+])
+
+interface LanguageSpecialCaseOffense {
+  path: string
+  line: number
+  languageId: string
+  snippet: string
+}
+
+const languageLiteralInNode = (node: ts.Node): string | null => {
+  if (
+    (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) &&
+    supportedProductLanguageIds.has(node.text)
+  ) {
+    return node.text
+  }
+  let found: string | null = null
+  node.forEachChild((child) => {
+    found ??= languageLiteralInNode(child)
+  })
+  return found
+}
+
+export const findDirectLanguageSpecialCases = (
+  options: {
+    repoRoot?: string | undefined
+    files?: readonly string[] | undefined
+    approvedFiles?: ReadonlySet<string> | undefined
+  } = {},
+): readonly LanguageSpecialCaseOffense[] => {
+  const root = options.repoRoot ?? repoRoot
+  const files = options.files ?? [
+    ...listFiles(
+      "apps/web/app",
+      (relative) =>
+        (relative.endsWith(".ts") || relative.endsWith(".tsx")) &&
+        !relative.endsWith(".test.ts") &&
+        !relative.endsWith(".test.tsx"),
+    ),
+    ...listFiles(
+      "apps/web/lib",
+      (relative) =>
+        (relative.endsWith(".ts") || relative.endsWith(".tsx")) &&
+        !relative.endsWith(".test.ts") &&
+        !relative.endsWith(".test.tsx"),
+    ),
+  ]
+  const approvedFiles =
+    options.approvedFiles ?? approvedLanguageSpecialCaseFiles
+  const offenses: LanguageSpecialCaseOffense[] = []
+
+  for (const file of files) {
+    if (approvedFiles.has(file)) {
+      continue
+    }
+    const absolutePath = path.join(root, file)
+    if (!existsSync(absolutePath)) {
+      continue
+    }
+    const sourceText = readFileSync(absolutePath, "utf8")
+    const sourceFile = ts.createSourceFile(
+      file,
+      sourceText,
+      ts.ScriptTarget.Latest,
+      true,
+      file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    )
+    const visit = (node: ts.Node): void => {
+      const checked =
+        ts.isIfStatement(node) || ts.isConditionalExpression(node)
+          ? node.expression
+          : ts.isSwitchStatement(node)
+            ? node.caseBlock
+            : null
+      if (checked) {
+        const languageId = languageLiteralInNode(checked)
+        if (languageId) {
+          const { line } = sourceFile.getLineAndCharacterOfPosition(
+            checked.getStart(sourceFile),
+          )
+          offenses.push({
+            path: file,
+            line: line + 1,
+            languageId,
+            snippet: checked.getText(sourceFile).replace(/\s+/g, " "),
+          })
+        }
+      }
+      node.forEachChild(visit)
+    }
+    visit(sourceFile)
+  }
+
+  return offenses.sort(
+    (left, right) =>
+      left.path.localeCompare(right.path) ||
+      left.line - right.line ||
+      left.languageId.localeCompare(right.languageId),
+  )
+}
+
+const checkDirectLanguageSpecialCases = (): string => {
+  const offenses = findDirectLanguageSpecialCases()
+  if (offenses.length > 0) {
+    throw new Error(
+      `direct product language special-cases outside approved boundaries: ${offenses
+        .map(
+          (offense) => `${offense.path}:${offense.line}:${offense.languageId}`,
+        )
+        .join(", ")}`,
+    )
+  }
+  return `${approvedLanguageSpecialCaseFiles.size} approved provider/adapter language boundaries checked`
 }
 
 const offenseKey = (offense: ServiceBoundaryOffense): string =>
@@ -1462,6 +1599,10 @@ const forbiddenRuntimeServiceAuthorityMarkers = [
 const forbiddenStrategyExecutionOutsideBoundaryMarkers = [
   "@cowards/runtime-js/worker",
   "@cowards/runtime-python",
+  "@cowards/runtime-wasm-wasi",
+  "packages/runtime-js",
+  "packages/runtime-python",
+  "packages/runtime-wasm-wasi",
   "createRuntimeFromRevision",
   "createPythonRuntimeFromRevision",
   "runPythonStrategyMethod",
@@ -1469,6 +1610,7 @@ const forbiddenStrategyExecutionOutsideBoundaryMarkers = [
   "runtimeJsWorkerEntrypoint",
   "node:vm",
   "node:wasi",
+  "os/exec",
   'from "vm"',
   "from 'vm'",
   'require("vm")',
@@ -2632,36 +2774,47 @@ const checkRuntimeAdapters = (): string => {
   for (const bridge of runtimeAdapterBridges) {
     checkRuntimeAdapterBridge(bridge)
   }
-  const python = getStrategyRuntimeAdapterRecord(
-    "runtime-python-subprocess-experimental",
-  )
-  if (!python || python.countedResultsAllowed || python.enabledForNormalPlay) {
-    throw new Error("Python runtime must remain experimental and non-counted")
-  }
-  if (python.isolationPromotionState !== "evidence-only") {
-    throw new Error(
-      "Python runtime isolation promotion state must stay blocked",
-    )
-  }
-  const pythonMetadata = {
-    abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-    language: { id: "python", version: "3.9" },
-    adapter: { id: python.id, version: python.version },
-    package: { mode: "none", entrypoint: "default" },
-    requiredCapabilities: [],
-    limits: python.limits,
-  } as const
-  const pythonSemantics =
-    describeStrategyRuntimeProductSemantics(pythonMetadata)
-  const pythonEligibility =
-    evaluateStrategyRuntimeCountedEligibility(pythonMetadata)
-  if (pythonEligibility.ok || pythonSemantics.countedPlayEligible) {
-    throw new Error("Python runtime product semantics must remain non-counted")
+  for (const language of SUPPORTED_STRATEGY_LANGUAGES) {
+    const adapter = getStrategyRuntimeAdapterRecord(language.defaultAdapterId)
+    if (!adapter) {
+      throw new Error(`${language.id} missing default adapter`)
+    }
+    if (
+      adapter.runtimeTarget !== language.runtimeTarget ||
+      !adapter.supportedLanguageIds.includes(language.id)
+    ) {
+      throw new Error(`${language.id} default adapter target drifted`)
+    }
+    if (
+      language.countedEligibility === "eligible" &&
+      (!language.enabledForNormalPlay ||
+        !adapter.enabledForNormalPlay ||
+        !adapter.countedResultsAllowed)
+    ) {
+      throw new Error(`${language.id} counted provider path is disabled`)
+    }
+    const metadata = {
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      language: { id: language.id, version: language.version },
+      adapter: { id: adapter.id, version: adapter.version },
+      package: { mode: "none", entrypoint: "default" },
+      requiredCapabilities: [],
+      limits: adapter.limits,
+    } as const
+    const semantics = describeStrategyRuntimeProductSemantics(metadata)
+    const eligibility = evaluateStrategyRuntimeCountedEligibility(metadata)
+    if (language.countedEligibility === "eligible") {
+      if (!eligibility.ok || !semantics.countedPlayEligible) {
+        throw new Error(`${language.id} product semantics are not counted`)
+      }
+    } else if (eligibility.ok || semantics.countedPlayEligible) {
+      throw new Error(`${language.id} product semantics promoted early`)
+    }
   }
   if (STRATEGY_RUNTIME_ABI_VERSION !== "strategy-runtime-abi-v1.14") {
     throw new Error(`runtime ABI drifted to ${STRATEGY_RUNTIME_ABI_VERSION}`)
   }
-  return `${runtimeAdapterBridges.length} JS/TS adapters and Python experimental gate checked`
+  return `${runtimeAdapterBridges.length} JS/TS adapters and ${SUPPORTED_STRATEGY_LANGUAGES.length} supported provider default adapters checked`
 }
 
 const brokerEntryKey = (entry: {
@@ -2764,17 +2917,115 @@ const checkRuntimeBrokerRegistryArtifact = (): string => {
       `v1.17 runtime broker artifact missing registry entries ${missing.join(", ")}`,
     )
   }
-  const pythonEntry = [...registryByKey.values()].find(
-    (entry) => entry.languageId === "python",
-  )
-  if (
-    !pythonEntry ||
-    pythonEntry.enabledForNormalPlay ||
-    pythonEntry.countedResultsAllowed
-  ) {
-    throw new Error("Python runtime broker entry must remain non-counted")
+  for (const language of SUPPORTED_STRATEGY_LANGUAGES) {
+    const entry = [...registryByKey.values()].find(
+      (candidate) =>
+        candidate.languageId === language.id &&
+        candidate.adapterId === language.defaultAdapterId,
+    )
+    if (!entry) {
+      throw new Error(`runtime broker registry missing ${language.id}`)
+    }
+    if (
+      language.countedEligibility === "eligible" &&
+      (!entry.enabledForNormalPlay || !entry.countedResultsAllowed)
+    ) {
+      throw new Error(`${language.id} runtime broker entry is not counted`)
+    }
   }
   return `${artifact.entries.length} v1.17 runtime broker registry entries checked`
+}
+
+const checkV132SupportedLanguageProviders = (): string => {
+  const supportedIds = new Set(
+    SUPPORTED_STRATEGY_LANGUAGES.map((entry) => entry.id),
+  )
+  for (const languageId of STRATEGY_LANGUAGE_IDS) {
+    if (!supportedIds.has(languageId)) {
+      throw new Error(`supported language registry missing ${languageId}`)
+    }
+  }
+  const providerIds = new Set(
+    STRATEGY_LANGUAGE_PROVIDER_REGISTRY.map((provider) => provider.id),
+  )
+  for (const language of SUPPORTED_STRATEGY_LANGUAGES) {
+    const provider = STRATEGY_LANGUAGE_PROVIDER_REGISTRY.find(
+      (candidate) => candidate.id === language.providerId,
+    )
+    const adapter = getStrategyRuntimeAdapterRecord(language.defaultAdapterId)
+    if (!provider || !providerIds.has(language.providerId)) {
+      throw new Error(`${language.id} missing language provider`)
+    }
+    if (!adapter) {
+      throw new Error(`${language.id} missing runtime adapter`)
+    }
+    if (
+      provider.contractVersion !==
+        STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION ||
+      provider.runtimeAbiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+      provider.executionOwner !== "runtime-service" ||
+      provider.selectionPolicy !== "runtime-broker-registry" ||
+      provider.compatibilityPolicy !== "exact-runtime-metadata-and-provider"
+    ) {
+      throw new Error(`${language.id} provider contract drifted`)
+    }
+    if (
+      !provider.languageIds.includes(language.id) ||
+      !provider.adapterIds.includes(language.defaultAdapterId) ||
+      provider.runtimeTarget !== language.runtimeTarget ||
+      adapter.runtimeTarget !== language.runtimeTarget ||
+      !adapter.supportedLanguageIds.includes(language.id)
+    ) {
+      throw new Error(`${language.id} provider/runtime mapping drifted`)
+    }
+    if (
+      getSupportedStrategyLanguageBySourceFormat(language.sourceFormat)?.id !==
+      language.id
+    ) {
+      throw new Error(`${language.id} sourceFormat lookup drifted`)
+    }
+    if (
+      language.supportStatus !== "supported" ||
+      language.countedEligibility !== "eligible" ||
+      language.entryEligibility !== "counted" ||
+      language.enabledForNormalPlay !== true ||
+      !language.publicLabel.includes("Counted eligible") ||
+      language.deterministicRestrictions.length === 0 ||
+      language.privacyRules.length === 0 ||
+      !language.privacyRules.some((rule) => rule.includes("Strategy source"))
+    ) {
+      throw new Error(`${language.id} supported language metadata incomplete`)
+    }
+    if (
+      !provider.boundaryRules.includes(
+        "web-api-go-may-not-execute-strategy-code",
+      ) ||
+      !provider.evidenceRequirements.includes("public-privacy-scan")
+    ) {
+      throw new Error(`${language.id} provider boundary evidence incomplete`)
+    }
+    if (
+      (language.id === "rust" || language.id === "zig") &&
+      (language.buildBehavior !== "compile-immutable-artifact" ||
+        provider.abiPosture !== "wasi-preview1-stdin-stdout-json" ||
+        language.artifactPolicyLabel !== "Immutable WASM/WASI artifact" ||
+        !provider.evidenceRequirements.includes("immutable-artifact-metadata"))
+    ) {
+      throw new Error(`${language.id} WASM/WASI provider posture drifted`)
+    }
+    if (
+      language.id === "python" &&
+      (language.buildBehavior !== "source-only" ||
+        provider.abiPosture !== "python-source-json" ||
+        !language.deterministicRestrictions.some((rule) =>
+          rule.includes("No imports"),
+        ))
+    ) {
+      throw new Error("Python provider posture drifted")
+    }
+  }
+
+  return `${SUPPORTED_STRATEGY_LANGUAGES.length} supported language/provider records checked`
 }
 
 const checkV118IsolationBaselineArtifact = (): string => {
@@ -2912,7 +3163,7 @@ const checkV118RuntimeIsolationSources = (): string => {
     [
       "python validation",
       validation,
-      ["python_validation_host.py", "spawnSync", "NON_COUNTED_RUNTIME"],
+      ["python_validation_host.py", "spawnSync", "runtimeCompatibilityKey"],
     ],
     [
       "python validation host",
@@ -2922,12 +3173,16 @@ const checkV118RuntimeIsolationSources = (): string => {
     [
       "Go Python revision metadata",
       goBackend,
-      ["SourceFormat", "pythonRuntimeMetadata", "validatePythonSourceMetadata"],
+      ["SourceFormat", "pythonRuntimeMetadata", "providerValidationProof"],
     ],
     [
       "web Python label",
       `${workshop}\n${runtimeLabels}`,
-      ["PY beta", "non-counted exhibition beta", "sourceFormat"],
+      [
+        "sourceFormatExhibitionLabel",
+        "WORKSHOP_EDITOR_SOURCE_FORMATS",
+        "sourceFormat",
+      ],
     ],
     [
       "signed-in exhibition proof",
@@ -2997,10 +3252,19 @@ const checkV118ExhibitionProofArtifact = (): string => {
 
 const checkNonJsRuntimeGuardrails = (): string => {
   assertNonJsRuntimeGuardrails()
-  if (NON_JS_RUNTIME_SUPPORT_POLICY.publicLanguagePickerAllowed !== false) {
-    throw new Error("public non-JS language picker must remain disabled")
+  if (NON_JS_RUNTIME_SUPPORT_POLICY.publicLanguagePickerAllowed !== true) {
+    throw new Error("public language picker must expose supported providers")
   }
-  return `${NON_JS_RUNTIME_PROMOTION_CRITERIA.length} non-JS promotion criteria checked; experimental languages=${NON_JS_RUNTIME_SUPPORT_POLICY.experimentalLanguageIds.join(",")}`
+  for (const languageId of ["python", "rust", "zig"] as const) {
+    if (
+      !NON_JS_RUNTIME_SUPPORT_POLICY.productionSupportedLanguageIds.includes(
+        languageId,
+      )
+    ) {
+      throw new Error(`${languageId} missing from production support policy`)
+    }
+  }
+  return `${NON_JS_RUNTIME_PROMOTION_CRITERIA.length} non-JS promotion criteria checked; supported languages=${NON_JS_RUNTIME_SUPPORT_POLICY.productionSupportedLanguageIds.join(",")}`
 }
 
 const checkRuntimeIsolationReadiness = (): string => {
@@ -5103,6 +5367,14 @@ export const runBoundaryMonitorChecks = async (): Promise<
   await check("privacy", "Go service fixtures", () => checkGoFixtures()),
   await check("web_boundary", "web import drift baseline", () =>
     checkWebBoundary(),
+  ),
+  await check(
+    "web_boundary",
+    "direct product language special-case drift",
+    () => checkDirectLanguageSpecialCases(),
+  ),
+  await check("language_provider", "v1.32 supported language providers", () =>
+    checkV132SupportedLanguageProviders(),
   ),
   await check("runtime_adapter", "runtime registry and adapter metadata", () =>
     checkRuntimeAdapters(),

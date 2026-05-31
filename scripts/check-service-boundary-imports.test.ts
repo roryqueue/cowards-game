@@ -115,6 +115,29 @@ describe("service boundary import guard", () => {
     expect(result.exitCode).toBe(1)
   })
 
+  it("fails strict migrated files on direct WASM/WASI runtime imports", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    for (const file of strictFiles) {
+      writeRepoFile(repoRoot, file, "export const ok = true\n")
+    }
+    writeRepoFile(
+      repoRoot,
+      strictFiles[1],
+      "import { validateWasmWasiStrategySource } from '@cowards/runtime-wasm-wasi'\n",
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.strictOffenses).toEqual([
+      {
+        path: strictFiles[1],
+        line: 1,
+        pattern: "@cowards/runtime-wasm-wasi",
+      },
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
   it("fails strict local dependencies on forbidden imports", () => {
     repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
     for (const file of strictFiles) {

@@ -5,7 +5,7 @@
   "generatedAt": "2026-05-24",
   "generatedBy": "scripts/generate-typescript-surface-labels.ts",
   "sourceInventoryPath": ".planning/artifacts/v1.16-typescript-backend-inventory.json",
-  "sourceInventorySurfaceCount": 205,
+  "sourceInventorySurfaceCount": 208,
   "globalPolicies": {
     "normalTypeScriptBackendAllowed": false,
     "publicOutputPrivacyRequired": true,
@@ -22,7 +22,7 @@
     "rollback-only": 5,
     "runtime-adapter": 18,
     "runtime-service": 5,
-    "test-only": 54
+    "test-only": 57
   },
   "capabilityGroups": {
     "fixture": 6,
@@ -34,7 +34,7 @@
     "rollback": 6,
     "runtime-adapter": 18,
     "runtime-service": 5,
-    "test-support": 38,
+    "test-support": 41,
     "Workshop": 42
   },
   "publicOutputForbiddenMarkers": [
@@ -3335,6 +3335,37 @@
       }
     },
     {
+      "id": "apps-runtime-service-src-four-language-parity-test",
+      "path": "apps/runtime-service/src/four-language-parity.test.ts",
+      "kind": "runtime-service-module",
+      "taxonomyRole": "test-only",
+      "surfaceLabel": "test-only",
+      "capabilityGroup": "test-support",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic. Phase 107 final label: Tests cannot serve product runtime traffic.",
+      "risk": "test or fixture path exposed to product runtime; Tests cannot serve product runtime traffic.",
+      "privacyClass": "test-only",
+      "gate": "Vitest/Playwright-only test infrastructure gate",
+      "futureMigration": "Keep only while focused monitors and tests require it.",
+      "monitorStatus": "phase-107-monitor-enforced",
+      "selectedNormal": false,
+      "selectedNormalJustification": "Tests cannot serve product runtime traffic.",
+      "publicOutputPrivacy": "not-public-output",
+      "noPublicFallback": true,
+      "normalBackendAuthority": false,
+      "routeMethods": [],
+      "routeFamily": "runtime-service",
+      "sourceInventoryRole": "test-only",
+      "publicOutputExample": {
+        "path": "apps/runtime-service/src/four-language-parity.test.ts",
+        "taxonomyRole": "test-only",
+        "surfaceLabel": "test-only",
+        "capabilityGroup": "test-support",
+        "selectedNormal": false,
+        "noPublicFallback": true
+      }
+    },
+    {
       "id": "apps-runtime-service-src-index",
       "path": "apps/runtime-service/src/index.ts",
       "kind": "runtime-service-module",
@@ -4106,6 +4137,37 @@
         "surfaceLabel": "frontend-go-adapter",
         "capabilityGroup": "frontend-only",
         "selectedNormal": true,
+        "noPublicFallback": true
+      }
+    },
+    {
+      "id": "apps-web-app-learn-page-test",
+      "path": "apps/web/app/learn/page.test.ts",
+      "kind": "web-frontend-module",
+      "taxonomyRole": "test-only",
+      "surfaceLabel": "test-only",
+      "capabilityGroup": "test-support",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic. Phase 107 final label: Tests cannot serve product runtime traffic.",
+      "risk": "test or fixture path exposed to product runtime; Tests cannot serve product runtime traffic.",
+      "privacyClass": "test-only",
+      "gate": "Vitest/Playwright-only test infrastructure gate",
+      "futureMigration": "Keep only while focused monitors and tests require it.",
+      "monitorStatus": "phase-107-monitor-enforced",
+      "selectedNormal": false,
+      "selectedNormalJustification": "Tests cannot serve product runtime traffic.",
+      "publicOutputPrivacy": "not-public-output",
+      "noPublicFallback": true,
+      "normalBackendAuthority": false,
+      "routeMethods": [],
+      "routeFamily": "frontend",
+      "sourceInventoryRole": "test-only",
+      "publicOutputExample": {
+        "path": "apps/web/app/learn/page.test.ts",
+        "taxonomyRole": "test-only",
+        "surfaceLabel": "test-only",
+        "capabilityGroup": "test-support",
+        "selectedNormal": false,
         "noPublicFallback": true
       }
     },
@@ -6090,6 +6152,37 @@
         "surfaceLabel": "frontend-go-adapter",
         "capabilityGroup": "frontend-only",
         "selectedNormal": true,
+        "noPublicFallback": true
+      }
+    },
+    {
+      "id": "apps-web-lib-runtime-labels-test",
+      "path": "apps/web/lib/runtime-labels.test.ts",
+      "kind": "web-lib-module",
+      "taxonomyRole": "test-only",
+      "surfaceLabel": "test-only",
+      "capabilityGroup": "test-support",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic. Phase 107 final label: Tests cannot serve product runtime traffic.",
+      "risk": "test or fixture path exposed to product runtime; Tests cannot serve product runtime traffic.",
+      "privacyClass": "test-only",
+      "gate": "Vitest/Playwright-only test infrastructure gate",
+      "futureMigration": "Keep only while focused monitors and tests require it.",
+      "monitorStatus": "phase-107-monitor-enforced",
+      "selectedNormal": false,
+      "selectedNormalJustification": "Tests cannot serve product runtime traffic.",
+      "publicOutputPrivacy": "not-public-output",
+      "noPublicFallback": true,
+      "normalBackendAuthority": false,
+      "routeMethods": [],
+      "routeFamily": "frontend",
+      "sourceInventoryRole": "test-only",
+      "publicOutputExample": {
+        "path": "apps/web/lib/runtime-labels.test.ts",
+        "taxonomyRole": "test-only",
+        "surfaceLabel": "test-only",
+        "capabilityGroup": "test-support",
+        "selectedNormal": false,
         "noPublicFallback": true
       }
     },

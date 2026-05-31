@@ -1880,16 +1880,21 @@
       "imports": [
         {
           "line": 1,
-          "source": "../../../workshop/server.js",
-          "statementText": "import { workshopServer } from \"../../../workshop/server.js\""
+          "source": "@cowards/spec",
+          "statementText": "import { getSupportedStrategyLanguageBySourceFormat } from \"@cowards/spec\""
         },
         {
           "line": 2,
           "source": "../../../workshop/server.js",
-          "statementText": "import { isStorageUnavailableError } from \"../../../workshop/server.js\""
+          "statementText": "import { workshopServer } from \"../../../workshop/server.js\""
         },
         {
           "line": 3,
+          "source": "../../../workshop/server.js",
+          "statementText": "import { isStorageUnavailableError } from \"../../../workshop/server.js\""
+        },
+        {
+          "line": 4,
           "source": "../../../workshop/types.js",
           "statementText": "import type {\n  WorkshopErrorResponse,\n  WorkshopSubmitRequest,\n} from \"../../../workshop/types.js\""
         }
@@ -2432,11 +2437,16 @@
       "imports": [
         {
           "line": 1,
+          "source": "@cowards/spec",
+          "statementText": "import { getSupportedStrategyLanguageBySourceFormat } from \"@cowards/spec\""
+        },
+        {
+          "line": 2,
           "source": "../../../workshop/types.js",
           "statementText": "import type { WorkshopErrorResponse } from \"../../../workshop/types.js\""
         },
         {
-          "line": 2,
+          "line": 3,
           "source": "../../../workshop/server.js",
           "statementText": "import { workshopServer } from \"../../../workshop/server.js\""
         }
@@ -2500,49 +2510,49 @@
         {
           "line": 1,
           "source": "node:crypto",
-          "statementText": "import { randomUUID } from \"node:crypto\""
+          "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
         },
         {
-          "line": 15,
+          "line": 14,
+          "source": "@cowards/spec",
+          "statementText": "import type {\n  StrategyId,\n  StrategyRevision,\n  StrategyRevisionId,\n  StrategyRuntimeProductSemantics,\n  StrategyRevisionMetadata,\n  UserId,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 22,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 16,
+          "line": 23,
           "source": "./advanced-strategies.js",
           "statementText": "import {\n  findAdvancedStrategy,\n  type AdvancedStrategyId,\n} from \"./advanced-strategies.js\""
         },
         {
-          "line": 2,
-          "source": "@cowards/runtime-js",
-          "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
-        },
-        {
-          "line": 20,
+          "line": 27,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 21,
+          "line": 28,
           "source": "./starter-strategies.js",
           "statementText": "import {\n  findStarterStrategy,\n  type StarterStrategyId,\n} from \"./starter-strategies.js\""
         },
         {
-          "line": 3,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  describeStrategyRuntimeProductSemantics,\n  normalizeStrategyRuntimeMetadata,\n} from \"@cowards/spec\""
+          "line": 7,
+          "source": "@cowards/runtime-js",
+          "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
         },
         {
-          "line": 7,
+          "line": 8,
           "source": "@cowards/spec",
-          "statementText": "import type {\n  StrategyId,\n  StrategyRevision,\n  StrategyRevisionId,\n  StrategyRuntimeProductSemantics,\n  StrategyRevisionMetadata,\n  UserId,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  describeStrategyRuntimeProductSemantics,\n  getSupportedStrategyLanguageRecord,\n  normalizeStrategyRuntimeMetadata,\n  STRATEGY_RUNTIME_ABI_VERSION,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 2,
+          "line": 7,
           "source": "@cowards/runtime-js",
           "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
         }
@@ -2885,11 +2895,16 @@
         },
         {
           "line": 2,
+          "source": "node:crypto",
+          "statementText": "import { createHash, createHmac } from \"node:crypto\""
+        },
+        {
+          "line": 3,
           "source": "@cowards/spec",
           "statementText": "import { defaultRuntimeMetadata } from \"@cowards/spec\""
         },
         {
-          "line": 3,
+          "line": 4,
           "source": "./competition.js",
           "statementText": "import {\n  buildExhibitionDuplicateKey,\n  evaluateRateLimit,\n  generateCompetitionPairwiseMatrix,\n  TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE,\n  runtimeAllowsCountedPlay,\n  validateManualExhibitionRevisionIds,\n} from \"./competition.js\""
         }
@@ -2957,57 +2972,57 @@
         {
           "line": 1,
           "source": "node:crypto",
-          "statementText": "import { randomUUID } from \"node:crypto\""
+          "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
         },
         {
-          "line": 14,
+          "line": 20,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 15,
+          "line": 21,
           "source": "./matchset-service.js",
           "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
         },
         {
-          "line": 16,
+          "line": 22,
           "source": "./match-service.js",
           "statementText": "import type { CreateMatchInput } from \"./match-service.js\""
         },
         {
-          "line": 17,
+          "line": 23,
           "source": "./presets.js",
           "statementText": "import { getMatchSetPreset } from \"./presets.js\""
         },
         {
-          "line": 18,
+          "line": 24,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 19,
+          "line": 25,
           "source": "./seed.js",
           "statementText": "import { createDevelopmentSeedData } from \"./seed.js\""
         },
         {
-          "line": 2,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  evaluateStrategyRuntimeCountedEligibility,\n  getCompetitionPreset,\n  normalizeStrategyRuntimeMetadata,\n  type CompetitionEntrantSnapshot,\n  type CompetitionPresetId,\n  type PublicMatchSetResultDto,\n  type PublicPenaltyReason,\n  type PublicStandingDto,\n  type UserId,\n} from \"@cowards/spec\""
-        },
-        {
-          "line": 20,
+          "line": 26,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus, MatchStatus } from \"./schema.js\""
         },
         {
-          "line": 21,
+          "line": 27,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetScore } from \"./scoring.js\""
         },
         {
-          "line": 22,
+          "line": 28,
           "source": "./matchset-status.js",
           "statementText": "import { refreshMatchSetStatus } from \"./matchset-status.js\""
+        },
+        {
+          "line": 7,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  evaluateStrategyRuntimeCountedEligibility,\n  getCompetitionPreset,\n  normalizeStrategyRuntimeMetadata,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type CompetitionEntrantSnapshot,\n  type CompetitionPresetId,\n  type PublicMatchSetResultDto,\n  type PublicPenaltyReason,\n  type PublicStandingDto,\n  type UserId,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -3800,11 +3815,16 @@
         },
         {
           "line": 2,
+          "source": "node:crypto",
+          "statementText": "import { createHash, createHmac } from \"node:crypto\""
+        },
+        {
+          "line": 3,
           "source": "@cowards/spec",
           "statementText": "import { defaultRuntimeMetadata } from \"@cowards/spec\""
         },
         {
-          "line": 3,
+          "line": 4,
           "source": "./ladder.js",
           "statementText": "import {\n  assertLadderEligibleRuntime,\n  DEFAULT_LADDER_MINIMUM_ENTRIES,\n  DEFAULT_LADDER_TARGET_POD_SIZE,\n  trialLadderStatusLabel,\n} from \"./ladder.js\""
         }
@@ -3873,52 +3893,52 @@
         {
           "line": 1,
           "source": "node:crypto",
-          "statementText": "import { randomUUID } from \"node:crypto\""
+          "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
         },
         {
-          "line": 19,
+          "line": 25,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 2,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  EXHIBITION_SCORING_POLICY_V1,\n  evaluateStrategyRuntimeCountedEligibility,\n  normalizeStrategyRuntimeMetadata,\n  type CompetitionEntrantSnapshot,\n  type LadderMatchSetCountedStatus,\n  type LadderNonCountedReason,\n  type PublicLadderMatchSetSummaryDto,\n  type PublicStandingDto,\n  type PublicTrialLadderSeasonDto,\n  type StrategyRevisionId,\n  type TrialLadderEntrySnapshot,\n  type TrialLadderEntryStatus,\n  type TrialLadderSeasonStatus,\n  type UserId,\n} from \"@cowards/spec\""
-        },
-        {
-          "line": 20,
+          "line": 26,
           "source": "./competition.js",
           "statementText": "import { generateCompetitionPairwiseMatrix } from \"./competition.js\""
         },
         {
-          "line": 21,
+          "line": 27,
           "source": "./matchset-service.js",
           "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
         },
         {
-          "line": 22,
+          "line": 28,
           "source": "./matchset-status.js",
           "statementText": "import { refreshMatchSetStatus } from \"./matchset-status.js\""
         },
         {
-          "line": 23,
+          "line": 29,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 24,
+          "line": 30,
           "source": "./seed.js",
           "statementText": "import { createDevelopmentSeedData } from \"./seed.js\""
         },
         {
-          "line": 25,
+          "line": 31,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
         {
-          "line": 26,
+          "line": 32,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetStrategyScore } from \"./scoring.js\""
+        },
+        {
+          "line": 7,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  EXHIBITION_SCORING_POLICY_V1,\n  evaluateStrategyRuntimeCountedEligibility,\n  normalizeStrategyRuntimeMetadata,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type CompetitionEntrantSnapshot,\n  type LadderMatchSetCountedStatus,\n  type LadderNonCountedReason,\n  type PublicLadderMatchSetSummaryDto,\n  type PublicStandingDto,\n  type PublicTrialLadderSeasonDto,\n  type StrategyRevisionId,\n  type TrialLadderEntrySnapshot,\n  type TrialLadderEntryStatus,\n  type TrialLadderSeasonStatus,\n  type UserId,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -5300,13 +5320,13 @@
         },
         {
           "line": 12,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  INITIAL_BOUNDS,\n  type SoldierBrainResult,\n  type StrategyResult,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+          "source": "@cowards/runtime-python",
+          "statementText": "import {\n  buildPythonStrategyRevision,\n  createPythonRuntimeFromRevision,\n} from \"@cowards/runtime-python\""
         },
         {
-          "line": 18,
-          "source": "./workshop.js",
-          "statementText": "import {\n  assertWorkshopRevisionCanBeTested,\n  buildWorkshopRevision,\n  GET_WORKSHOP_REVISION_SOURCE_SQL,\n  getWorkshopTestSummary,\n  LIST_WORKSHOP_REVISIONS_SQL,\n  listWorkshopOpponents,\n  listWorkshopPresets,\n  listWorkshopSamples,\n  listWorkshopTemplates,\n  getWorkshopStaticSnapshot,\n  WORKSHOP_STRATEGY_ID,\n  WORKSHOP_MATCH_SET_PREFIX,\n  WORKSHOP_OPPONENTS,\n  workshopTemplateSource,\n} from \"./workshop.js\""
+          "line": 16,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  INITIAL_BOUNDS,\n  type SoldierBrainResult,\n  type StrategyResult,\n  type StrategyRevision,\n} from \"@cowards/spec\""
         },
         {
           "line": 2,
@@ -5314,22 +5334,27 @@
           "statementText": "import {\n  runMatch,\n  violation,\n  type RuntimeResult,\n  type StrategyRuntime,\n} from \"@cowards/engine\""
         },
         {
-          "line": 34,
+          "line": 22,
+          "source": "./workshop.js",
+          "statementText": "import {\n  assertWorkshopRevisionCanBeTested,\n  buildWorkshopRevision,\n  GET_WORKSHOP_REVISION_SOURCE_SQL,\n  getWorkshopTestSummary,\n  LIST_WORKSHOP_REVISIONS_SQL,\n  listWorkshopOpponents,\n  listWorkshopPresets,\n  listWorkshopSamples,\n  listWorkshopTemplates,\n  getWorkshopStaticSnapshot,\n  WORKSHOP_STRATEGY_ID,\n  WORKSHOP_MATCH_SET_PREFIX,\n  WORKSHOP_OPPONENTS,\n  workshopTemplateSource,\n} from \"./workshop.js\""
+        },
+        {
+          "line": 38,
           "source": "./advanced-strategies.js",
           "statementText": "import {\n  buildAdvancedStrategyRevision,\n  listAdvancedStrategies,\n  type AdvancedStrategySummary,\n} from \"./advanced-strategies.js\""
         },
         {
-          "line": 39,
+          "line": 43,
           "source": "./starter-strategies.js",
           "statementText": "import {\n  buildStarterStrategyRevision,\n  listStarterStrategies,\n  type StarterStrategySummary,\n} from \"./starter-strategies.js\""
         },
         {
-          "line": 44,
+          "line": 48,
           "source": "./schema.js",
           "statementText": "import { MATCH_SET_STATUSES } from \"./schema.js\""
         },
         {
-          "line": 45,
+          "line": 49,
           "source": "./matchset-status.js",
           "statementText": "import {\n  LIST_MATCH_STATUSES_FOR_SET_SQL,\n  mapMatchSetMatchSummaryRow,\n} from \"./matchset-status.js\""
         },
@@ -5414,12 +5439,12 @@
         {
           "line": 1,
           "source": "node:crypto",
-          "statementText": "import { createHash, randomUUID } from \"node:crypto\""
+          "statementText": "import { createHash, createHmac, randomUUID, timingSafeEqual } from \"node:crypto\""
         },
         {
-          "line": 11,
+          "line": 13,
           "source": "@cowards/spec",
-          "statementText": "import type {\n  MatchId,\n  MatchSetId,\n  PlayerId,\n  RuntimeViolationType,\n  StrategyId,\n  StrategyRevision,\n  StrategyRevisionValidationCode,\n  StrategyRevisionId,\n  StrategyArtifactSourceFormat,\n} from \"@cowards/spec\""
+          "statementText": "import type {\n  MatchId,\n  MatchSetId,\n  PlayerId,\n  RuntimeViolationType,\n  StrategyId,\n  StrategyRevision,\n  StrategyRevisionValidationCode,\n  StrategyRevisionId,\n  StrategyArtifactSourceFormat,\n  StrategyRuntimeProductSemantics,\n} from \"@cowards/spec\""
         },
         {
           "line": 2,
@@ -5427,69 +5452,74 @@
           "statementText": "import {\n  buildStrategyRevision,\n  validateStrategySource,\n  type StrategyRevisionValidationReport,\n} from \"@cowards/runtime-js\""
         },
         {
-          "line": 22,
+          "line": 25,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 23,
+          "line": 26,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
         },
         {
-          "line": 24,
+          "line": 27,
           "source": "./matchset-service.js",
           "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
         },
         {
-          "line": 25,
+          "line": 28,
           "source": "./matchset-service.js",
           "statementText": "import { generatePresetMatrix } from \"./matchset-service.js\""
         },
         {
-          "line": 26,
+          "line": 29,
           "source": "./matchset-status.js",
           "statementText": "import {\n  listMatchStatusesForSet,\n  type MatchSetMatchSummary,\n  refreshMatchSetStatus,\n} from \"./matchset-status.js\""
         },
         {
-          "line": 31,
+          "line": 34,
           "source": "./presets.js",
           "statementText": "import { getMatchSetPreset, type MatchSetPresetId } from \"./presets.js\""
         },
         {
-          "line": 32,
+          "line": 35,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 33,
+          "line": 36,
           "source": "./advanced-strategies.js",
           "statementText": "import {\n  listAdvancedStrategies,\n  type AdvancedStrategySummary,\n} from \"./advanced-strategies.js\""
         },
         {
-          "line": 37,
+          "line": 40,
           "source": "./starter-strategies.js",
           "statementText": "import {\n  listStarterStrategies,\n  type StarterStrategySummary,\n} from \"./starter-strategies.js\""
         },
         {
-          "line": 41,
+          "line": 44,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetScore } from \"./scoring.js\""
         },
         {
-          "line": 42,
+          "line": 45,
           "source": "./seed.js",
           "statementText": "import {\n  cautiousSource,\n  createDevelopmentSeedData,\n  recklessSource,\n} from \"./seed.js\""
         },
         {
-          "line": 47,
+          "line": 50,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
         {
           "line": 7,
           "source": "@cowards/runtime-python/validation",
-          "statementText": "import {\n  buildPythonStrategyRevision,\n  validatePythonStrategySource,\n} from \"@cowards/runtime-python/validation\""
+          "statementText": "import { validatePythonStrategySource } from \"@cowards/runtime-python/validation\""
+        },
+        {
+          "line": 8,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  describeStrategyRuntimeProductSemantics,\n  getSupportedStrategyLanguageRecord,\n  STRATEGY_RUNTIME_ABI_VERSION,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -7656,29 +7686,24 @@
           "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
-          "line": 15,
+          "line": 16,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 16,
+          "line": 17,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
         },
         {
-          "line": 17,
+          "line": 18,
           "source": "@cowards/runtime-python",
           "statementText": "import { createPythonRuntimeFromRevision } from \"@cowards/runtime-python\""
         },
         {
-          "line": 18,
+          "line": 19,
           "source": "@cowards/runtime-wasm-wasi",
           "statementText": "import { createWasmWasiRuntimeFromRevision } from \"@cowards/runtime-wasm-wasi\""
-        },
-        {
-          "line": 19,
-          "source": "@cowards/replay",
-          "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
         },
         {
           "line": 2,
@@ -7687,35 +7712,40 @@
         },
         {
           "line": 20,
+          "source": "@cowards/replay",
+          "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
+        },
+        {
+          "line": 21,
           "source": "@cowards/engine",
           "statementText": "import {\n  violation,\n  type RunMatchInput,\n  type StrategyRuntime,\n} from \"@cowards/engine\""
         },
         {
-          "line": 25,
+          "line": 26,
           "source": "./runtime-config.js",
           "statementText": "import type { RuntimeServiceConfig } from \"./runtime-config.js\""
         },
         {
-          "line": 26,
+          "line": 27,
           "source": "./redaction.js",
           "statementText": "import { publicSystemFailureMessage, redactedDiagnostics } from \"./redaction.js\""
         },
         {
           "line": 3,
           "source": "@cowards/spec",
-          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  validateStrategyLanguageProviderRuntimeCompatibility,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type StrategyRevision,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 15,
+          "line": 16,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 16,
+          "line": 17,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
         }
@@ -7743,6 +7773,107 @@
         {
           "code": "runtime_import",
           "detail": "@cowards/runtime-js, @cowards/runtime-js/worker"
+        }
+      ]
+    },
+    {
+      "id": "apps-runtime-service-src-four-language-parity-test",
+      "path": "apps/runtime-service/src/four-language-parity.test.ts",
+      "kind": "runtime-service-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "typescript_runtime_service_only",
+      "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "runtime-service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 11,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  DEFAULT_RUNTIME_LIMITS,\n  INITIAL_BOUNDS,\n  RUNTIME_EXECUTION_SERVICE_VERSION,\n  type RuntimeExecutionServiceRequest,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 18,
+          "source": "@cowards/runtime-js",
+          "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
+        },
+        {
+          "line": 19,
+          "source": "@cowards/runtime-python",
+          "statementText": "import { buildPythonStrategyRevision } from \"@cowards/runtime-python\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/golden",
+          "statementText": "import {\n  fourLanguageConformanceGateIds,\n  fourLanguageConformanceRequirements,\n  fourLanguageGoldenPairs,\n  fourLanguageGoldenSources,\n  fourLanguagePrivateMarkers,\n  FOUR_LANGUAGE_GOLDEN_CORPUS_VERSION,\n  type FourLanguageGoldenLanguageId,\n} from \"@cowards/golden\""
+        },
+        {
+          "line": 20,
+          "source": "@cowards/runtime-wasm-wasi",
+          "statementText": "import {\n  buildRustStrategyRevision,\n  buildZigStrategyRevision,\n  compileRustWasmArtifact,\n  compileZigWasmArtifact,\n} from \"@cowards/runtime-wasm-wasi\""
+        },
+        {
+          "line": 26,
+          "source": "@cowards/replay",
+          "statementText": "import {\n  createChronicleContentHash,\n  projectPublicChronicle,\n} from \"@cowards/replay\""
+        },
+        {
+          "line": 30,
+          "source": "./execute-match.js",
+          "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
+        },
+        {
+          "line": 31,
+          "source": "./runtime-config.js",
+          "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [
+        {
+          "line": 18,
+          "source": "@cowards/runtime-js",
+          "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
+        }
+      ],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": true,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/runtime-service/src/four-language-parity.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "runtime_import",
+          "detail": "@cowards/runtime-js"
         }
       ]
     },
@@ -8000,7 +8131,7 @@
       "currentOwner": "typescript_non_normal_reference",
       "normalBackendOwner": "typescript_runtime_service_only",
       "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership",
-      "privacyClass": "source-safe-inventory-only",
+      "privacyClass": "public-redacted",
       "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
       "routeMethods": [],
       "routePath": null,
@@ -8047,7 +8178,7 @@
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": true,
-      "servesPublicEvidence": false,
+      "servesPublicEvidence": true,
       "executesStrategy": false,
       "ownerDebugAccess": false,
       "testOnlyGate": "test-support route or Vitest/Playwright gate only",
@@ -8088,29 +8219,39 @@
           "statementText": "import {\n  createServer,\n  type IncomingMessage,\n  type ServerResponse,\n} from \"node:http\""
         },
         {
-          "line": 14,
+          "line": 16,
           "source": "@cowards/runtime-wasm-wasi/validation",
           "statementText": "import {\n  buildZigStrategyRevision,\n  buildRustStrategyRevision,\n  validateZigStrategySource,\n  validateRustStrategySource,\n} from \"@cowards/runtime-wasm-wasi/validation\""
         },
         {
-          "line": 20,
+          "line": 22,
+          "source": "@cowards/runtime-python/validation",
+          "statementText": "import {\n  buildPythonStrategyRevision,\n  validatePythonStrategySource,\n} from \"@cowards/runtime-python/validation\""
+        },
+        {
+          "line": 26,
           "source": "./runtime-config.js",
           "statementText": "import {\n  createRuntimeServiceConfig,\n  type RuntimeServiceConfig,\n} from \"./runtime-config.js\""
         },
         {
-          "line": 24,
+          "line": 30,
           "source": "./execute-match.js",
           "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
         },
         {
-          "line": 25,
+          "line": 31,
           "source": "./redaction.js",
           "statementText": "import { redactedErrorMessage } from \"./redaction.js\""
         },
         {
           "line": 6,
+          "source": "node:crypto",
+          "statementText": "import { createHmac } from \"node:crypto\""
+        },
+        {
+          "line": 7,
           "source": "@cowards/spec",
-          "statementText": "import {\n  RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,\n  RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,\n  RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type RuntimeExecutionServiceResponse,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,\n  RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,\n  RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  getStrategyLanguageProviderRecord,\n  type RuntimeExecutionServiceResponse,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -9428,6 +9569,61 @@
         ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
         ".planning/artifacts/v1.15-typescript-surface-labels.json",
         "apps/web/app/layout.tsx"
+      ],
+      "scannerFindings": []
+    },
+    {
+      "id": "apps-web-app-learn-page-test",
+      "path": "apps/web/app/learn/page.test.ts",
+      "kind": "web-frontend-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:fs",
+          "statementText": "import { readFileSync } from \"node:fs\""
+        },
+        {
+          "line": 2,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": true,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/learn/page.test.ts"
       ],
       "scannerFindings": []
     },
@@ -11157,17 +11353,22 @@
           "statementText": "import type {\n  MatchExecutionFailureCategoryV1,\n  MatchExecutionLifecycleStateV1,\n  MatchExecutionReplayAvailabilityV1,\n} from \"@cowards/spec\""
         },
         {
-          "line": 11,
+          "line": 12,
           "source": "./evidence-copy.js",
           "statementText": "import {\n  candidateLaneCue,\n  publicMatchEvidenceLabel,\n  publicPrivacyProvenanceCue,\n  publicReliabilityPrivacyCue,\n  reliabilityBudgetCue,\n} from \"./evidence-copy.js\""
         },
         {
           "line": 6,
+          "source": "@cowards/spec",
+          "statementText": "import { describeStrategyRuntimeProductSemantics } from \"@cowards/spec\""
+        },
+        {
+          "line": 7,
           "source": "../../lib/public-service-boundary.js",
           "statementText": "import type { PublicReadMatchSetResultDto } from \"../../lib/public-service-boundary.js\""
         },
         {
-          "line": 7,
+          "line": 8,
           "source": "../match-intelligence.js",
           "statementText": "import {\n  buildResultIntelligenceViewModel,\n  type ResultIntelligenceViewModel,\n} from \"../match-intelligence.js\""
         }
@@ -12212,8 +12413,18 @@
         },
         {
           "line": 2,
+          "source": "node:crypto",
+          "statementText": "import { createHash, createHmac } from \"node:crypto\""
+        },
+        {
+          "line": 3,
           "source": "./server.js",
           "statementText": "import { createWorkshopServer, isStorageUnavailableError } from \"./server.js\""
+        },
+        {
+          "line": 4,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  COMPATIBILITY_VERSIONS,\n  STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,\n  type StrategyRevision,\n  type StrategyRevisionMetadata,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -12270,7 +12481,7 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import type {\n  MatchSetId,\n  RuntimeViolationType,\n  StrategyRevision,\n  StrategyRevisionId,\n  StrategyArtifactSourceFormat,\n  StrategyRevisionValidationCode,\n  StrategyRevisionValidationReport,\n  WorkshopAnalyticsSnapshot,\n  WorkshopTestSummary,\n} from \"@cowards/spec\""
+          "statementText": "import type {\n  MatchSetId,\n  RuntimeViolationType,\n  StrategyRevision,\n  StrategyRevisionId,\n  StrategyArtifactSourceFormat,\n  StrategyRevisionValidationCode,\n  StrategyRevisionValidationReport,\n  StrategyRuntimeProductSemantics,\n  WorkshopAnalyticsSnapshot,\n  WorkshopTestSummary,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -12389,6 +12600,11 @@
         },
         {
           "line": 2,
+          "source": "./types.js",
+          "statementText": "import type { WorkshopRevisionSummary } from \"./types.js\""
+        },
+        {
+          "line": 3,
           "source": "./workshop-client-state.js",
           "statementText": "import {\n  canSubmitRevision,\n  canOpenReplay,\n  canOpenOwnerReplay,\n  formatMatchOutcome,\n  formatUsedInMatches,\n  formatValidationIssueGuidance,\n  formatValidationIssueHeading,\n  getSampleChipLabels,\n  getSampleKindLabel,\n  getDraftStatusLabel,\n  getReplayAvailability,\n  getReplayHref,\n  getOwnerReplayHref,\n  getWorkshopOwnerPlayerId,\n  getRevisionTitle,\n  getSubmitBlockedReason,\n  getTestStatusCopy,\n  groupWorkshopSamples,\n  isTerminalTestStatus,\n  prependRevision,\n  validationStateFromReport,\n} from \"./workshop-client-state.js\""
         }
@@ -12455,7 +12671,7 @@
         {
           "line": 37,
           "source": "../../lib/runtime-labels.js",
-          "statementText": "import {\n  sourceFormatExhibitionLabel,\n  sourceFormatRuntimeCue,\n  sourceFormatShortLabel,\n} from \"../../lib/runtime-labels.js\""
+          "statementText": "import {\n  WORKSHOP_EDITOR_SOURCE_FORMATS,\n  sourceFormatExhibitionLabel,\n  sourceFormatLanguageLabel,\n  sourceFormatRuntimeCue,\n  sourceFormatShortLabel,\n  runtimeExhibitionStatusLabel,\n} from \"../../lib/runtime-labels.js\""
         },
         {
           "line": 4,
@@ -13537,6 +13753,61 @@
       ]
     },
     {
+      "id": "apps-web-lib-runtime-labels-test",
+      "path": "apps/web/lib/runtime-labels.test.ts",
+      "kind": "web-lib-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 2,
+          "source": "./runtime-labels.js",
+          "statementText": "import {\n  WORKSHOP_EDITOR_SOURCE_FORMATS,\n  runtimeExhibitionStatusLabel,\n  sourceFormatExhibitionLabel,\n  sourceFormatLanguageLabel,\n  sourceFormatRuntimeCue,\n  sourceFormatShortLabel,\n} from \"./runtime-labels.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/lib/runtime-labels.test.ts"
+      ],
+      "scannerFindings": []
+    },
+    {
       "id": "apps-web-lib-runtime-labels",
       "path": "apps/web/lib/runtime-labels.ts",
       "kind": "web-lib-module",
@@ -13560,7 +13831,7 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import type { StrategyArtifactSourceFormat } from \"@cowards/spec\""
+          "statementText": "import {\n  getSupportedStrategyLanguageBySourceFormat,\n  getSupportedStrategyLanguageRecord,\n  type StrategyArtifactSourceFormat,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -14249,11 +14520,16 @@
         },
         {
           "line": 27,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  describeStrategyRuntimeProductSemantics,\n  getSupportedStrategyLanguageBySourceFormat,\n  getSupportedStrategyLanguageRecord,\n  type StrategyArtifactSourceFormat,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 33,
           "source": "./types.js",
           "statementText": "import type {\n  WorkshopLaunchTestRequest,\n  WorkshopInitialData,\n  WorkshopSubmitRequest,\n  WorkshopSubmitResponse,\n} from \"./types.js\""
         },
         {
-          "line": 33,
+          "line": 39,
           "source": "../../lib/storage-unavailable-error.js",
           "statementText": "import { isStorageUnavailableError } from \"../../lib/storage-unavailable-error.js\""
         }

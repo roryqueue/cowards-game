@@ -1,9 +1,18 @@
-import { readFileSync } from "node:fs"
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   assertMonitorPublicPayload,
   assertReportOnlyBoundaryOffenseCount,
   checkRuntimeAdapterBridge,
+  findDirectLanguageSpecialCases,
   findUnknownReportOnlyOffenses,
   runBoundaryMonitorChecks,
   selectedGoRouteManifest,
@@ -347,6 +356,48 @@ describe("boundary drift monitors", () => {
         specAdapterId: "runtime-js-subprocess",
       }),
     ).toThrow(/drifted/)
+  })
+
+  it("detects direct product language branching outside approved boundaries", () => {
+    const repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-language-"))
+    try {
+      const file = "apps/web/app/account/unsafe-language-branch.ts"
+      const absolutePath = path.join(repoRoot, file)
+      mkdirSync(path.dirname(absolutePath), { recursive: true })
+      writeFileSync(
+        absolutePath,
+        [
+          "export const label = (sourceFormat: string) => {",
+          "  if (sourceFormat === 'python') return 'PY'",
+          "  return 'TS'",
+          "}",
+        ].join("\n"),
+      )
+
+      expect(
+        findDirectLanguageSpecialCases({
+          repoRoot,
+          files: [file],
+          approvedFiles: new Set(),
+        }),
+      ).toEqual([
+        {
+          path: file,
+          line: 2,
+          languageId: "python",
+          snippet: "sourceFormat === 'python'",
+        },
+      ])
+      expect(
+        findDirectLanguageSpecialCases({
+          repoRoot,
+          files: [file],
+          approvedFiles: new Set([file]),
+        }),
+      ).toEqual([])
+    } finally {
+      rmSync(repoRoot, { force: true, recursive: true })
+    }
   })
 
   it("validates the v1.15 lifecycle ownership manifest contract", () => {
@@ -878,6 +929,7 @@ describe("boundary drift monitors", () => {
           "contract_drift",
           "privacy",
           "web_boundary",
+          "language_provider",
           "runtime_adapter",
           "runtime_isolation",
           "non_js_runtime",

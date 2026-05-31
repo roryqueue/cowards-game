@@ -20,16 +20,16 @@
       "readiness": "production-candidate"
     },
     {
-      "countedResultsAllowed": false,
+      "countedResultsAllowed": true,
       "id": "runtime-python-subprocess-experimental",
       "isolationPromotionState": "evidence-only",
-      "readiness": "experimental"
+      "readiness": "production-candidate"
     },
     {
-      "countedResultsAllowed": false,
+      "countedResultsAllowed": true,
       "id": "runtime-wasm-wasi-wasmtime-preview1",
       "isolationPromotionState": "evidence-only",
-      "readiness": "experimental"
+      "readiness": "production-candidate"
     }
   ],
   "generatedAt": "2026-05-30T00:00:00.000Z",
@@ -43,15 +43,15 @@
       "id": "typescript"
     },
     {
-      "enabledForNormalPlay": false,
+      "enabledForNormalPlay": true,
       "id": "python"
     },
     {
-      "enabledForNormalPlay": false,
+      "enabledForNormalPlay": true,
       "id": "rust"
     },
     {
-      "enabledForNormalPlay": false,
+      "enabledForNormalPlay": true,
       "id": "zig"
     }
   ],

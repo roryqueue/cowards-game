@@ -113,13 +113,13 @@
       "supportedLocally": false
     },
     {
-      "countedResultsAllowed": false,
+      "countedResultsAllowed": true,
       "doesNotProve": "Production sandbox certification, counted Python eligibility, or broad multi-language support.",
       "id": "python-subprocess-experimental",
       "label": "Python subprocess experimental",
       "mode": "experimental-evidence",
       "proves": "Unavailable or unsupported locally; no live proof is claimed.",
-      "specReadiness": "experimental",
+      "specReadiness": "production-candidate",
       "status": "skipped",
       "summary": {
         "failed": 0,
