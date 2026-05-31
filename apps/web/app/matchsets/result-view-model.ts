@@ -224,7 +224,9 @@ const formatEntrantRuntimeSummary = (
   entrantRuntimeLabels: readonly string[],
 ): string => {
   const counted = result.entrants.filter(
-    (entrant) => entrant.runtime.language.id === "javascript-typescript",
+    (entrant) =>
+      entrant.runtime.language.id === "javascript" ||
+      entrant.runtime.language.id === "typescript",
   ).length
   const exhibition = result.entrants.length - counted
   return [

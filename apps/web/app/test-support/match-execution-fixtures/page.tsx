@@ -2,10 +2,17 @@ import {
   MATCH_EXECUTION_APP_CONTRACT_VERSION,
   MATCH_EXECUTION_CONTRACT_FIXTURES_V1,
 } from "@cowards/spec"
-import { notFound } from "next/navigation"
 import { isMatchExecutionFixtureEnabled } from "../../../lib/match-execution-fixture-adapter.js"
 
 export const dynamic = "force-dynamic"
+
+const notFound = (): never => {
+  const error = new Error("NEXT_HTTP_ERROR_FALLBACK;404") as Error & {
+    digest: "NEXT_HTTP_ERROR_FALLBACK;404"
+  }
+  error.digest = "NEXT_HTTP_ERROR_FALLBACK;404"
+  throw error
+}
 
 const matchSetHref = (fixtureId: string): string =>
   `/matchsets/${encodeURIComponent(`match-set:fixture:${fixtureId}`)}`

@@ -1411,8 +1411,8 @@ textarea {
   }
 
   .replay-board-host {
-    width: 100%;
-    height: min(calc(100vw - 24px), 560px);
+    width: min(100%, 340px);
+    height: auto;
   }
 
   .replay-timeline {
