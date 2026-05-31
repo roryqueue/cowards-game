@@ -1,23 +1,22 @@
-# Requirements: Coward's Game v1.32
+# Requirements: Coward's Game v1.33
 
 **Defined:** 2026-05-31
 **Core Value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
 ## Milestone Goal
 
-Promote JS/TS, Python, Rust, and Zig to fully supported counted Strategy languages with one shared eligibility model, one shared runtime/provider contract, one shared conformance suite, and strong drift prevention across Workshop, Account, competition entry, Match execution, results, replay, public evidence, docs, and monitors.
+Add artifact provenance for TypeScript and Python source-language providers, then run contained TinyGo and Grain WASM/WASI spikes without promoting either candidate language by default.
 
 ## Baseline
 
-- v1.31 Public Site Spine and Discovery Reads is shipped and archived.
-- JS/TS is the counted Strategy path.
-- Python is non-counted exhibition beta through the runtime-service / Runtime Broker path.
-- Rust and Zig are non-counted exhibition beta through immutable WASM/WASI Preview 1 stdin/stdout JSON artifact evidence.
+- v1.32 Four-Language Production Strategy Support is shipped and archived.
+- TypeScript, Python, Rust, and Zig are supported counted Strategy languages only through provider-compatible runtime evidence.
+- Rust and Zig are artifact-backed through immutable WASM/WASI Preview 1 stdin/stdout JSON artifacts whose provider proof binds source hash, source byte count, artifact hash, and artifact byte count.
+- Python is source-backed through constrained provider validation with no packages, host imports, or host capabilities.
+- TypeScript is source/transpile-backed through the JS/TS runtime path.
 - Runtime-service / Runtime Broker is the hostile Strategy execution boundary.
 - Go owns normal backend orchestration, Match lifecycle, scoring/status refresh, Chronicle persistence handoff, selected account reads, selected public reads, and public evidence.
-- `packages/spec/src/runtime.ts` already contains language ids, runtime adapter registry, runtime broker registry, product semantics, counted eligibility, limits, and non-JS promotion criteria.
-- Product surfaces still contain direct language/status branching and old non-counted labels.
-- Existing monitors intentionally preserve Python/Rust/Zig non-promotion and must be converted deliberately, not deleted casually.
+- Public result and replay outputs are public-safe projections and do not expose Strategy source, StrategyMemory, SoldierMemory, or objective payloads by default.
 
 ## Hard Boundaries
 
@@ -26,117 +25,69 @@ Promote JS/TS, Python, Rust, and Zig to fully supported counted Strategy languag
 - Do not use Node `vm` as a security boundary for hostile Strategy code.
 - Strategy execution must remain behind runtime-service / Runtime Broker / language provider boundaries.
 - Preserve deterministic Match execution and canonical terms: Soldier, Match, Phase, Round, Activation, Cycle, Action, Advance, STONE, FALLEN, Chronicle.
-- Public output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads.
-- Any execution DTO, ABI, service contract, Match execution contract, runtime eligibility, or counted eligibility change must be explicit, justified, versioned or migrated where needed, tested, audited, and documented.
-- If Preview 1 stdin/stdout JSON remains active, the decision must be stated explicitly. If it changes, migration, compatibility, rollback, and replay/public-evidence proof are required.
-- No language may become "supported" by labels alone. Promotion requires validation, runtime, conformance, Workshop, Account, entry, results, replay, public evidence, docs, signed-in proof, and monitor coverage.
+- Treat Strategy source, generated artifacts, spike artifacts, compiler outputs, provider proofs, and runtime envelopes as hostile until validated.
+- Source-language artifacts must fail closed if stale, missing, mismatched, unverifiable, or incompatible with provider metadata.
+- TypeScript and Python artifact provenance must not be described as equivalent to WASM/WASI isolation or production sandbox certification.
+- Rust and Zig artifact-backed behavior must not regress.
+- TinyGo and Grain remain spike-only unless a future plan explicitly proves safety and the user approves productionizing them.
+- Public output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, recovery payloads, or spike-only private artifacts.
 
 ## v1 Requirements
 
-### Language Surface Inventory
+### TypeScript Artifact Provenance
 
-- [x] **INV-01**: Operator can inspect a complete inventory of active JS/TS, Python, Rust, Zig, source-format, runtime-adapter, counted-eligibility, alpha/beta/exhibition label, ABI, validation, starter/template, Workshop, Account, competition entry, result, replay, public evidence, docs, and monitor surfaces.
-- [x] **INV-02**: Inventory classifies each surface as source of truth, active consumer, stale historical artifact, approved provider boundary, or drift risk.
-- [x] **INV-03**: Inventory identifies every active product/UI/API code path that directly special-cases `typescript`, `python`, `rust`, or `zig` outside a shared registry/provider boundary.
-- [x] **INV-04**: Inventory records every existing non-promotion monitor, non-counted assertion, exhibition beta label, and JS/TS-only counted gate that must be converted or preserved intentionally.
-- [x] **INV-05**: Inventory states the Phase 222 answer to the core promotion question: what must be true before Python, Rust, and Zig can honestly be fully supported and counted alongside JS/TS, and what monitors prevent future drift.
+- [ ] **TSART-01**: Developer can produce a canonical TypeScript executable artifact during validation/build using a deterministic build path and recorded toolchain/runtime metadata.
+- [ ] **TSART-02**: TypeScript provider proof binds source hash, source byte count, artifact hash, artifact byte count, build policy, provider id, and compatibility metadata.
+- [ ] **TSART-03**: TypeScript runtime execution uses the validated artifact path instead of silently re-transpiling mutable source for Match or MatchSet execution.
+- [ ] **TSART-04**: TypeScript validation fails closed for missing, stale, mismatched, unverifiable, oversized, or incompatible artifacts.
+- [ ] **TSART-05**: TypeScript artifact provenance tests cover source mismatch, artifact mismatch, stale artifact, runtime execution, no silent fallback, public privacy, and existing JS/TS counted behavior.
+- [ ] **TSART-06**: Public and private TypeScript evidence surfaces show artifact-proven provider status without exposing Strategy source or private runtime internals by default.
 
-### Supported Language Registry and Eligibility
+### Python Artifact Provenance
 
-- [x] **LANG-01**: Developer can use one canonical supported-language registry for JS/TS, Python, Rust, and Zig that includes language id, display label, support status, counted eligibility, source/artifact policy, build/compile/package policy, runtime adapter/provider id, validation behavior, limits, deterministic restrictions, starter templates, docs references, public labels, privacy, and public-output rules.
-- [x] **LANG-02**: Existing `STRATEGY_LANGUAGE_REGISTRY`, runtime adapter registry, runtime broker registry, product semantics, and counted eligibility logic are consolidated or bridged so there is one active source of truth for product language semantics.
-- [x] **LANG-03**: Counted eligibility, competition entry eligibility, public labels, validation warnings/errors, and docs references are derived from the shared language model instead of ad hoc UI strings.
-- [x] **LANG-04**: Historical non-JS runtime support policy and validation copy are migrated away from "experimental non-counted" as the active product truth while preserving historical evidence where appropriate.
-- [x] **LANG-05**: Tests prove all four supported languages have complete registry records, provider ids, templates/docs references, limits, privacy rules, public labels, and counted eligibility semantics.
+- [ ] **PYART-01**: Developer can produce a Python artifact provenance layer such as a normalized source bundle, bytecode artifact, sealed executable bundle, or equivalent evidence object with explicit interpreter/version metadata.
+- [ ] **PYART-02**: Python provider proof binds source hash, source byte count, artifact hash, artifact byte count, interpreter metadata, provider id, validation policy, and compatibility metadata.
+- [ ] **PYART-03**: Python validation and execution preserve the current no-packages, no-host-imports, no-filesystem, no-network, no-clock/random, no-host-capabilities policy.
+- [ ] **PYART-04**: Python validation fails closed for missing, stale, mismatched, unverifiable, oversized, incompatible, or policy-violating artifacts.
+- [ ] **PYART-05**: Python runtime tests cover forbidden imports/capabilities, source mismatch, artifact mismatch, stale artifact, invalid output, timeout, oversized output, privacy, and no silent fallback.
+- [ ] **PYART-06**: Docs and evidence surfaces explicitly state that Python artifact provenance is provenance evidence and not equivalent to WASM/WASI isolation or production sandbox certification.
 
-### StrategyLanguageProvider Runtime Contract
+### TinyGo WASM/WASI Spike
 
-- [x] **PROV-01**: Developer can implement or consume a shared `StrategyLanguageProvider` contract, or equivalent provider abstraction, for validation, build/compile, artifact packaging, runtime adapter selection, execution compatibility, counted eligibility, public labels, private diagnostics, and evidence requirements.
-- [x] **PROV-02**: Runtime-service / Runtime Broker routes validation and execution through provider-owned boundaries without moving hostile Strategy execution into web/API/Go.
-- [x] **PROV-03**: Provider contract explicitly states whether WASI Preview 1 stdin/stdout JSON remains the active shared ABI, remains the Rust/Zig provider ABI, or is replaced by a versioned migration.
-- [x] **PROV-04**: Provider contract validates runtime inputs/outputs with schemas and distinguishes Strategy failure from system failure for all four languages.
-- [x] **PROV-05**: Contract, DTO, ABI, and Match execution changes are versioned or migration-documented, tested, and audited before any counted eligibility change depends on them.
+- [ ] **TINYGO-01**: Developer can build a minimal TinyGo Strategy artifact targeting WASI Preview 1 or the closest viable deterministic WebAssembly target available locally.
+- [ ] **TINYGO-02**: TinyGo spike attempts to use the existing WASI Preview 1 stdin/stdout JSON Strategy ABI and documents any required adapter, shim, or incompatibility.
+- [ ] **TINYGO-03**: TinyGo spike audits import tables and records allowed imports, forbidden imports, host capability risks, memory behavior, and any required runtime allowances.
+- [ ] **TINYGO-04**: TinyGo spike measures compile viability, artifact size, startup latency, per-call latency, deterministic behavior, invalid-output behavior, timeout/trap behavior, and failure taxonomy.
+- [ ] **TINYGO-05**: TinyGo spike produces public-safe artifacts and a concrete promote, defer, or reject recommendation without enabling production support or counted eligibility.
 
-### Python Production Support Path
+### Grain WASM/WASI Spike
 
-- [x] **PY-01**: Python Strategy validation uses the shared provider model and enforces deterministic restrictions, forbidden capabilities, source limits, output limits, memory limits, timeout behavior, package policy, and public-safe diagnostics.
-- [x] **PY-02**: Python Strategy execution remains behind runtime-service / Runtime Broker / Python provider boundaries and does not execute in web/API/Go.
-- [x] **PY-03**: Python supports counted eligibility only after invalid output, timeout, oversized output, forbidden capability, memory-heavy output, deterministic behavior, runtime unavailable, malformed runtime result, no-fallback, and privacy tests pass.
-- [x] **PY-04**: Workshop, Account, competition entry, MatchSet creation/execution, result pages, replay pages, public evidence, Learn/docs, and monitors all present Python as fully supported and counted through shared provider semantics.
-- [x] **PY-05**: Signed-in proof creates, saves, enters, executes, views results, views replay, and scans public output for a counted Python Strategy Revision without private data leaks.
+- [ ] **GRAIN-01**: Developer can build a minimal Grain Strategy artifact compiling to WebAssembly, or records fail-loud tooling evidence when local compilation is not viable.
+- [ ] **GRAIN-02**: Grain spike determines whether the artifact can run in the existing Wasmtime/WASI setup without broad JavaScript host glue.
+- [ ] **GRAIN-03**: Grain spike attempts to use the existing WASI Preview 1 stdin/stdout JSON Strategy ABI and documents any required adapter, shim, or incompatibility.
+- [ ] **GRAIN-04**: Grain spike audits import tables and records allowed imports, forbidden imports, host capability risks, memory behavior, and any required runtime allowances.
+- [ ] **GRAIN-05**: Grain spike measures compile viability, artifact size, startup latency, per-call latency, deterministic behavior, invalid-output behavior, timeout/trap behavior, and failure taxonomy.
+- [ ] **GRAIN-06**: Grain spike produces public-safe artifacts and a concrete promote, defer, or reject recommendation without enabling production support or counted eligibility.
 
-### Rust Production Support Path
+### Language Evidence, UI, Docs, and Verification
 
-- [x] **RUST-01**: Rust Strategy validation uses the shared provider model and enforces deterministic restrictions, forbidden capabilities, source limits, output limits, memory limits, timeout/fuel behavior, package/import policy, artifact policy, and public-safe diagnostics.
-- [x] **RUST-02**: Rust build/compile produces immutable artifact metadata with toolchain version, target triple, WASI profile, ABI envelope, artifact hash, source hash, byte count, validation status, and compatibility data.
-- [x] **RUST-03**: Rust Strategy execution remains behind runtime-service / Runtime Broker / Rust provider boundaries and does not execute mutable source or fallback JS/TS code.
-- [x] **RUST-04**: Rust supports counted eligibility only after invalid output, timeout, oversized output, forbidden capability, memory-heavy output, deterministic behavior, stale/missing/mismatched artifact, runtime unavailable, malformed runtime result, no-fallback, and privacy tests pass.
-- [x] **RUST-05**: Workshop, Account, competition entry, MatchSet creation/execution, result pages, replay pages, public evidence, Learn/docs, monitors, and signed-in proof present Rust as fully supported and counted through shared provider semantics.
-
-### Zig Production Support Path
-
-- [x] **ZIG-01**: Zig Strategy validation uses the shared provider model and enforces deterministic restrictions, allowed import surface, no-std/helper policy, source limits, output limits, memory limits, timeout/fuel behavior, package/import policy, artifact policy, and public-safe diagnostics.
-- [x] **ZIG-02**: Zig build/compile produces immutable artifact metadata with toolchain version, target triple, WASI profile, ABI envelope, allowed import audit, artifact hash, source hash, byte count, validation status, and compatibility data.
-- [x] **ZIG-03**: Zig Strategy execution remains behind runtime-service / Runtime Broker / Zig provider boundaries and does not execute mutable source or fallback JS/TS code.
-- [x] **ZIG-04**: Zig supports counted eligibility only after invalid output, timeout, oversized output, forbidden capability, memory-heavy output, deterministic behavior, missing/stale/mismatched artifact, disallowed import, runtime unavailable, malformed runtime result, no-fallback, and privacy tests pass.
-- [x] **ZIG-05**: Workshop, Account, competition entry, MatchSet creation/execution, result pages, replay pages, public evidence, Learn/docs, monitors, and signed-in proof present Zig as fully supported and counted through shared provider semantics.
-
-### Golden Corpus and Parity Matrix
-
-- [x] **PAR-01**: Developer can run a golden Strategy corpus implemented equivalently in JS/TS, Python, Rust, and Zig.
-- [x] **PAR-02**: Cross-language pairwise Match/MatchSet matrix covers JS/TS, Python, Rust, and Zig against each other and same-language mirrors.
-- [x] **PAR-03**: Shared conformance tests cover invalid output, timeout, oversized output, forbidden capability, memory-heavy output, deterministic behavior, runtime unavailable, malformed runtime result, and no silent fallback.
-- [x] **PAR-04**: Result and replay shape parity tests prove equivalent public-safe outcome/evidence structure across all four languages.
-- [x] **PAR-05**: Privacy parity tests prove no four-language result, replay, public evidence, fixture, or proof artifact exposes private Strategy/runtime data by default.
-
-### Workshop, Account, and Competition Entry Unification
-
-- [x] **PROD-01**: Workshop editor, language controls, templates, starter samples, validation copy, submit/save behavior, and runtime cues are driven by the shared language provider model.
-- [x] **PROD-02**: Account revision lists and account-safe save/read flows show all four languages consistently without exposing Strategy source by default.
-- [x] **PROD-03**: Competition entry and exhibition counted/unranked controls use shared counted eligibility so JS/TS, Python, Rust, and Zig can enter counted paths when provider proof passes.
-- [x] **PROD-04**: Strategy cards, player pages, Watch/discovery reads, and competition pages use provider-derived public language labels and counted eligibility.
-- [x] **PROD-05**: Product tests prove label and eligibility consistency across Workshop, Account, competition entry, Strategy cards, player pages, MatchSet results, replay, Learn/docs, and public discovery.
-
-### Result, Replay, Public Evidence, and Docs
-
-- [x] **EVID-01**: MatchSet result pages present language/provider evidence for all four languages without exposing private runtime details or Strategy internals.
-- [x] **EVID-02**: Replay pages present language/provider evidence, replay availability, trust copy, and board realism for all four languages using public-safe projections.
-- [x] **EVID-03**: Public evidence DTOs, fixtures, generated proof artifacts, and rendered pages scan clean for private Strategy/runtime markers across all four languages.
-- [x] **EVID-04**: Learn/docs explain the four supported languages, provider boundaries, counted eligibility, ABI decision, deterministic restrictions, source/artifact policy, package policy, privacy rules, and no-fallback behavior.
-- [x] **EVID-05**: Public docs and UI preserve canonical Coward's Game terminology and avoid overclaiming production sandbox certification where the evidence does not support it.
-
-### Drift Monitors and Boundary Coverage
-
-- [x] **MON-01**: Boundary monitors fail when active product code directly special-cases `typescript`, `python`, `rust`, or `zig` outside approved registry/provider/adapter boundaries.
-- [x] **MON-02**: Existing non-promotion monitors are converted into positive four-language parity, counted eligibility, privacy, no-fallback, ABI, and provider-boundary monitors.
-- [x] **MON-03**: Import monitors prove web/API/Go do not execute Strategy code and do not import runtime implementation internals except through approved service clients or schemas.
-- [x] **MON-04**: Registry/provider monitors prove every supported language has templates, docs references, validation/build path, runtime provider id, limits, public labels, privacy policy, counted eligibility, and proof coverage.
-- [x] **MON-05**: Contract monitors prove any execution DTO, service contract, ABI, or Match execution contract change is intentional, versioned or migrated where needed, and compatible with public result/replay privacy.
-
-### Live Four-Language Signed-In Proof
-
-- [x] **PROOF-01**: Signed-in user can author or load valid JS/TS, Python, Rust, and Zig Strategy Revisions through Workshop or Account flows.
-- [x] **PROOF-02**: Signed-in user can enter counted competition or MatchSet paths with all four languages using shared provider eligibility.
-- [x] **PROOF-03**: Live execution completes a four-language proof matrix with public-safe MatchSet results and replay-ready evidence.
-- [x] **PROOF-04**: Desktop and mobile browser proof confirms Workshop, Account, entry, result, replay, public evidence, and docs surfaces render without clipped, overlapping, or contradictory language labels.
-- [x] **PROOF-05**: Proof artifact records language/provider ids, ABI decision, counted eligibility, pairwise matrix coverage, privacy scan result, boundary monitor result, board realism checks, and non-claims.
-
-### Audit and Closure
-
-- [x] **CLOSE-01**: Code review covers registry/provider model, runtime-service contract, language production paths, conformance suite, product unification, public evidence, docs, privacy, and monitors.
-- [x] **CLOSE-02**: Validation verifies requirements, tests, conformance matrix, public privacy scans, boundary monitors, browser proof, replay board realism, and no Strategy execution in web/API/Go.
-- [x] **CLOSE-03**: Final decision records language promotion status for JS/TS, Python, Rust, and Zig and states the active ABI/service-contract posture.
-- [x] **CLOSE-04**: Audit verifies no label-only promotion, no hidden JS/TS-only counted gate, no public private-data leak, and no unversioned execution/runtime contract drift.
-- [x] **CLOSE-05**: Planning artifacts are archived, milestone audit passes, commits are complete, and tag evidence is recorded.
+- [ ] **LANGDOC-01**: Supported-language docs and UI distinguish source-backed artifact-proven languages, WASM/WASI artifact-backed production languages, and spike-only candidate languages.
+- [ ] **LANGDOC-02**: Provider evidence docs explain source hash/bytes, artifact hash/bytes, toolchain/interpreter metadata, validation policy, compatibility, privacy exclusions, and fail-closed semantics.
+- [ ] **LANGDOC-03**: Product labels, entry flows, Strategy cards, results, replay, Learn/docs, and public evidence avoid implying TinyGo or Grain are production-supported unless explicitly approved.
+- [ ] **LANGDOC-04**: Rust and Zig existing WASM/WASI artifact-backed provider behavior remains green under the expanded artifact provenance model.
+- [ ] **LANGDOC-05**: Boundary monitors and privacy scans cover TypeScript/Python artifact proof, Rust/Zig regression, TinyGo/Grain spike-only labels, and no Strategy execution in web/API/Go.
+- [ ] **LANGDOC-06**: Browser review covers supported-language pages and relevant evidence surfaces, verifying realistic language status labels and no overclaiming security or sandbox guarantees.
+- [ ] **LANGDOC-07**: Final validation records tests, spike artifacts, import audit results, latency/size notes, recommendations, public privacy scans, replay board realism checks where replay or Match creation changes, and milestone audit outcome.
 
 ## Future Requirements
 
-### Future Runtime and Competition Governance
+### Future Runtime Language Production
 
-- **FUT-RUN-01**: Durable all-time ratings, permanent Elo/Glicko, ranked prize ladders, production tournament governance, moderation workflows, and abuse response can be added after four-language counted support has operational proof.
-- **FUT-RUN-02**: Direct exports or Component Model/WIT can replace Preview 1 stdin/stdout JSON only after a separate migration proves parity, schema validation, caps, memory ownership, privacy, rollback, and replay compatibility.
-- **FUT-RUN-03**: Rich package/dependency ecosystems for Python, Rust, Zig, or JS/TS require separate supply-chain, reproducibility, native-code, and deterministic-build policies.
-- **FUT-RUN-04**: Stronger production sandbox certification requires explicit isolation claims, deployment controls, external review or equivalent evidence, and ongoing operations proof.
+- **FUT-LANG-01**: TinyGo can become a production supported Strategy language only after a future milestone proves sandbox posture, deterministic ABI compatibility, provider proof, product surfaces, conformance, public evidence, signed-in proof, monitors, and user approval.
+- **FUT-LANG-02**: Grain can become a production supported Strategy language only after a future milestone proves sandbox posture, deterministic ABI compatibility, provider proof, product surfaces, conformance, public evidence, signed-in proof, monitors, and user approval.
+- **FUT-LANG-03**: Python isolation can be strengthened beyond artifact provenance only through a separate runtime isolation or WASM-backed migration plan with explicit claims, tests, rollback, and public documentation.
+- **FUT-LANG-04**: Direct exports or Component Model/WIT can replace Preview 1 stdin/stdout JSON only after a separate migration proves parity, schema validation, caps, memory ownership, privacy, rollback, and replay compatibility.
+- **FUT-LANG-05**: Rich package/dependency ecosystems for TypeScript, Python, Rust, Zig, TinyGo, or Grain require separate supply-chain, reproducibility, native-code, and deterministic-build policies.
 
 ## Out of Scope
 
@@ -144,13 +95,13 @@ Promote JS/TS, Python, Rust, and Zig to fully supported counted Strategy languag
 | --- | --- |
 | Strategy execution in web/API/Go | Hostile Strategy code must remain behind runtime-service / Runtime Broker / provider boundaries. |
 | Node `vm` as a security boundary | It is not an acceptable sandbox for hostile Strategy code. |
-| Label-only language promotion | Full support requires provider, runtime, conformance, product, public evidence, docs, proof, and monitors. |
-| Unversioned execution/runtime contract drift | Any DTO, ABI, service, or Match execution contract change must be explicit, justified, tested, audited, and versioned or migrated where needed. |
-| Public Strategy source or memory exposure | Public outputs must remain source-free and memory-free by default. |
-| Silent JS/TS fallback for Python/Rust/Zig | Runtime failures must fail closed, not substitute another language path. |
-| Production sandbox overclaim without evidence | Counted support and sandbox certification are separate claims and both need evidence. |
-| Durable permanent rankings or tournament governance | Four-language counted support can prove eligibility without committing to long-term rating/governance systems. |
-| Package ecosystem expansion | Package/dependency policy is constrained to what the provider contract explicitly supports in this milestone. |
+| Treating TypeScript/Python artifacts as sandbox certification | Artifact provenance binds evidence; it does not by itself prove WASM isolation or production sandboxing. |
+| Production TinyGo support | v1.33 only spikes viability and records a recommendation unless explicit approval changes scope. |
+| Production Grain support | v1.33 only spikes viability and records a recommendation unless explicit approval changes scope. |
+| Rust/Zig ABI migration | Existing Rust/Zig behavior must remain green; any Preview 1 replacement is future work. |
+| Public Strategy source, memory, or objective exposure | Public outputs must remain source-free, memory-free, and objective-payload-free by default. |
+| Silent fallback to mutable source or another language runtime | Runtime and artifact failures must fail closed. |
+| Package ecosystem expansion | Package/dependency policy is constrained to what existing providers explicitly support. |
 
 ## Traceability
 
@@ -158,26 +109,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| INV-01..INV-05 | Phase 222 | Complete |
-| LANG-01..LANG-05 | Phase 223 | Complete |
-| PROV-01..PROV-05 | Phase 224 | Complete |
-| PY-01..PY-05 | Phase 225 | Complete |
-| RUST-01..RUST-05 | Phase 226 | Complete |
-| ZIG-01..ZIG-05 | Phase 227 | Complete |
-| PAR-01..PAR-05 | Phase 228 | Complete |
-| PROD-01..PROD-05 | Phase 229 | Complete |
-| EVID-01..EVID-05 | Phase 230 | Complete |
-| MON-01..MON-05 | Phase 231 | Complete |
-| PROOF-01..PROOF-05 | Phase 232 | Complete |
-| CLOSE-01..CLOSE-05 | Phase 233 | Complete |
+| TSART-01..TSART-06 | Phase 234 | Planned |
+| PYART-01..PYART-06 | Phase 235 | Planned |
+| TINYGO-01..TINYGO-05 | Phase 236 | Planned |
+| GRAIN-01..GRAIN-06 | Phase 237 | Planned |
+| LANGDOC-01..LANGDOC-07 | Phase 238 | Planned |
 
 **Coverage:**
-- v1 requirements: 60 total
-- Complete: 60
-- Planned: 0
-- Mapped to phases: 60
+- v1 requirements: 30 total
+- Complete: 0
+- Planned: 30
+- Mapped to phases: 30
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-31*
-*Last updated: 2026-05-31 after v1.32 validation and audit*
+*Last updated: 2026-05-31 after v1.33 roadmap creation*
