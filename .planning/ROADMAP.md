@@ -1,0 +1,189 @@
+# Roadmap: Coward's Game v1.31
+
+## Active Milestone
+
+**v1.31 Public Site Spine and Discovery Reads**
+
+**Goal:** Make Coward's Game navigable as a public competitive site where non-users can land, discover recent public Matches, MatchSets, replay-ready evidence, active competitions, and player/Strategy pages, while signed-in users can move clearly from Workshop to saved revisions, competition entry, results, and replay.
+
+**Decision baseline:** New public discovery reads are separate APIs and are not part of `match-execution-app-v1`. The frozen execution/app contract remains unchanged: no version bump, no added public execution DTO fields, no renamed or repurposed fields, and no execution/runtime/retry/recovery/quarantine/job/scoring/Chronicle behavior changes.
+
+## Phase Overview
+
+| Phase | Name | Goal | Requirements | Success Criteria |
+| --- | --- | --- | --- | --- |
+| 211 | Route and Link Inventory | Inventory the current route/site structure, read boundaries, and navigation gaps before public-site implementation. | INV-01..INV-05 | 5 |
+| 212 | Discovery Read Requirements and Boundary Design | Specify separate public/account-safe discovery DTOs and routes without changing `match-execution-app-v1`. | DISC-01..DISC-06 | 5 |
+| 213 | Global Site Shell and Navigation | Add a global public/signed-in shell and make `/workshop` the canonical Workshop route. | SHELL-01..SHELL-05 | 5 |
+| 214 | Public Home Discovery Hub | Build `/` as the public discovery hub backed by `getPublicHomeDiscovery`. | HOME-01..HOME-05 | 5 |
+| 215 | Watch Hub | Build `/watch` for latest public MatchSets, Matches, replay-ready evidence, and live/degraded states. | WATCH-01..WATCH-05 | 5 |
+| 216 | Competition Hub and Competition Detail | Build `/competitions` and `/competitions/[competitionId]` for active competitions and public evidence. | COMP-01..COMP-06 | 5 |
+| 217 | Signed-In Entry Spine | Build `/competitions/[competitionId]/enter` and account-safe entry dashboard flows. | ENTRY-01..ENTRY-05 | 5 |
+| 218 | Cross-Link Pass Across Existing Object Pages | Link Workshop, Account, MatchSet, replay, player, Strategy, competition, and learn pages into one site spine. | LINK-01..LINK-05 | 5 |
+| 219 | Privacy, Boundary, and Discovery Monitor Coverage | Add privacy scans and monitors proving discovery APIs remain separate and public-safe. | SAFE-01..SAFE-05 | 5 |
+| 220 | Public and Signed-In Journey Proof | Prove anonymous and signed-in journeys through the public site on desktop and mobile. | PROOF-01..PROOF-05 | 5 |
+| 221 | Audit, Archive, Commit, and Tag | Review, validate, audit, archive, commit, and tag v1.31. | CLOSE-01..CLOSE-05 | 5 |
+
+## Phase Details
+
+### Phase 211: Route and Link Inventory
+
+**Goal:** Inventory the current route/site structure, read boundaries, and navigation gaps before public-site implementation.
+
+**Requirements:** INV-01, INV-02, INV-03, INV-04, INV-05
+
+**Success criteria:**
+1. Route inventory lists current public, signed-in, auth, API, test-support, and missing desired routes.
+2. Inventory identifies `/` as Workshop today and `/workshop` as the route that should become canonical for Workshop.
+3. Inventory maps existing pages to public/account-safe read sources and names where discovery reads are missing.
+4. Inventory records cross-link gaps across Workshop, Account, competitions, MatchSets, replays, players, Strategies, and Learn/trust explanations.
+5. Inventory explicitly states that new discovery reads are separate from `match-execution-app-v1` and must not alter existing execution DTOs.
+
+### Phase 212: Discovery Read Requirements and Boundary Design
+
+**Goal:** Specify separate public/account-safe discovery DTOs and routes without changing `match-execution-app-v1`.
+
+**Requirements:** DISC-01, DISC-02, DISC-03, DISC-04, DISC-05, DISC-06
+
+**Success criteria:**
+1. DTO contracts exist for `getPublicHomeDiscovery`, `getPublicWatchIndex`, `getPublicCompetitionIndex`, `getPublicCompetitionDetail`, and `getSignedInCompetitionEntryDashboard`.
+2. Discovery routes are named and organized as public discovery/account-safe APIs, not execution contract endpoints.
+3. Contracts specify allowed public fields, private exclusions, empty/unavailable states, and canonical hrefs.
+4. Tests prove discovery contracts validate independently of `match-execution-app-v1`.
+5. Boundary notes state no existing public execution DTO fields were added or repurposed.
+
+### Phase 213: Global Site Shell and Navigation
+
+**Goal:** Add a global public/signed-in shell and make `/workshop` the canonical Workshop route.
+
+**Requirements:** SHELL-01, SHELL-02, SHELL-03, SHELL-04, SHELL-05
+
+**Success criteria:**
+1. Public shell appears on public pages with Home, Watch, Competitions, Learn, Workshop, and Account navigation.
+2. `/` no longer renders Workshop directly; `/workshop` remains the Workshop experience.
+3. Navigation copy uses canonical terms and avoids marketing-only filler.
+4. Anonymous and signed-in actions are clear without exposing private Strategy data.
+5. Route smoke tests cover shell rendering and canonical Workshop navigation.
+
+### Phase 214: Public Home Discovery Hub
+
+**Goal:** Build `/` as the public discovery hub backed by `getPublicHomeDiscovery`.
+
+**Requirements:** HOME-01, HOME-02, HOME-03, HOME-04, HOME-05
+
+**Success criteria:**
+1. Home explains the product through current public evidence, not a disconnected marketing page.
+2. Home shows recent public MatchSets, replay-ready evidence, active competitions, and player/Strategy links where available.
+3. Home routes users to Watch, Competitions, Learn, Workshop, and Account.
+4. Empty/unavailable states remain honest and public-safe.
+5. Tests prove Home consumes the new discovery DTO and scans clean for private markers.
+
+### Phase 215: Watch Hub
+
+**Goal:** Build `/watch` for latest public MatchSets, Matches, replay-ready evidence, and live/degraded states.
+
+**Requirements:** WATCH-01, WATCH-02, WATCH-03, WATCH-04, WATCH-05
+
+**Success criteria:**
+1. Watch lists recent public MatchSets and Matches with replay availability and result-state cues.
+2. Watch distinguishes replay-ready, queued, running, degraded, failed, stale, missing, and no-result evidence.
+3. Watch links to MatchSet results, replay pages, players, Strategies, and competition detail where known.
+4. Watch handles empty and unavailable states cleanly.
+5. Tests prove Watch consumes discovery DTOs, not execution DTO changes or internals.
+
+### Phase 216: Competition Hub and Competition Detail
+
+**Goal:** Build `/competitions` and `/competitions/[competitionId]` for active competitions and public evidence.
+
+**Requirements:** COMP-01, COMP-02, COMP-03, COMP-04, COMP-05, COMP-06
+
+**Success criteria:**
+1. Competition index lists active tournaments, ladders, exhibitions, and entry opportunities.
+2. Detail page shows entrants, standings, schedule/pods/bracket where applicable, MatchSets, and replay coverage.
+3. Detail page links to result, replay, player, Strategy, and entry routes.
+4. Resettable trial ladder and exhibition copy avoids durable-rating and governance overclaims.
+5. Non-JS lanes remain clearly non-counted exhibition beta only.
+
+### Phase 217: Signed-In Entry Spine
+
+**Goal:** Build `/competitions/[competitionId]/enter` and account-safe entry dashboard flows.
+
+**Requirements:** ENTRY-01, ENTRY-02, ENTRY-03, ENTRY-04, ENTRY-05
+
+**Success criteria:**
+1. Entry route has clear anonymous sign-in and signed-in states.
+2. Signed-in user sees eligible saved Strategy Revisions without source exposure.
+3. Entry flow links back to Workshop, Account, competition detail, results, and replay.
+4. Revision eligibility states are explicit and account-safe.
+5. Tests cover anonymous, eligible, empty, unavailable, and privacy-safe entry states.
+
+### Phase 218: Cross-Link Pass Across Existing Object Pages
+
+**Goal:** Link Workshop, Account, MatchSet, replay, player, Strategy, competition, and learn pages into one site spine.
+
+**Requirements:** LINK-01, LINK-02, LINK-03, LINK-04, LINK-05
+
+**Success criteria:**
+1. Workshop exposes route links to Account, saved revisions, competition entry, and Learn.
+2. Account links revisions to Strategy cards, entry opportunities, MatchSet results, and replay evidence.
+3. MatchSet results link to Watch, competition detail where known, players, Strategies, and replays.
+4. Replay links back to MatchSet result, Watch, players/Strategies where known, and Learn/trust copy.
+5. Player and Strategy pages expose recent public evidence links without source exposure.
+
+### Phase 219: Privacy, Boundary, and Discovery Monitor Coverage
+
+**Goal:** Add privacy scans and monitors proving discovery APIs remain separate and public-safe.
+
+**Requirements:** SAFE-01, SAFE-02, SAFE-03, SAFE-04, SAFE-05
+
+**Success criteria:**
+1. Discovery DTOs and rendered public pages scan clean for private markers.
+2. Monitors prove discovery APIs are not named, versioned, or validated as `match-execution-app-v1`.
+3. Monitors prove no existing public execution DTO fields changed for discovery.
+4. Tests prove discovery reads do not execute Strategy code or import runtime-service private internals.
+5. Proof preserves counted/non-counted/ABI status and all privacy non-claims.
+
+### Phase 220: Public and Signed-In Journey Proof
+
+**Goal:** Prove anonymous and signed-in journeys through the public site on desktop and mobile.
+
+**Requirements:** PROOF-01, PROOF-02, PROOF-03, PROOF-04, PROOF-05
+
+**Success criteria:**
+1. Anonymous journey proof covers Home -> Watch -> MatchSet -> replay -> player/Strategy -> Learn.
+2. Competition journey proof covers index -> detail -> entry sign-in gate -> signed-in dashboard.
+3. Signed-in journey proof covers Workshop -> saved revision -> entry -> result -> replay.
+4. Desktop and mobile proof catch overlap, clipped navigation, unreadable tables, and broken links.
+5. Proof artifact records discovery DTO names, route coverage, privacy scan, boundary result, and non-claims.
+
+### Phase 221: Audit, Archive, Commit, and Tag
+
+**Goal:** Review, validate, audit, archive, commit, and tag v1.31.
+
+**Requirements:** CLOSE-01, CLOSE-02, CLOSE-03, CLOSE-04, CLOSE-05
+
+**Success criteria:**
+1. Code review covers site shell, public routes, discovery DTOs, cross-links, privacy, and monitors.
+2. UI review verifies the public site spine feels coherent and competitive.
+3. Validation covers requirements, tests, route proof, privacy scans, browser proof, and no contract drift.
+4. Final decision preserves separate discovery APIs and frozen `match-execution-app-v1`.
+5. Milestone artifacts are archived and commit/tag evidence is recorded after audit passes.
+
+## Coverage
+
+- v1 requirements: 57 total
+- Complete: 5
+- Planned: 52
+- Mapped to phases: 57
+- Unmapped: 0
+
+## Next Up
+
+**Phase 212: Discovery Read Requirements and Boundary Design** - Specify separate discovery DTOs and routes before public shell/page implementation.
+
+`$gsd-discuss-phase 212`
+
+Also: `$gsd-plan-phase 212` - skip discussion, plan directly.
+
+---
+*Roadmap created: 2026-05-31 after Phase 211 route and link inventory*
