@@ -2,9 +2,9 @@
 
 **Project:** Coward's Game
 **Milestone:** v1.33 Artifact Provenance for Source Languages + WASM Language Spikes
-**Domain:** Source-language artifact provenance for TypeScript/Python plus contained WASM/WASI spike evaluation for TinyGo and Grain.
+**Domain:** Source-language artifact provenance for TypeScript/Python plus contained WASM/WASI spike evaluation for TinyGo.
 **Researched:** 2026-05-31
-**Confidence:** High for milestone decomposition and repo-local boundaries; medium for TinyGo/Grain viability until local toolchain and import-table proof are gathered.
+**Confidence:** High for milestone decomposition and repo-local boundaries; medium for TinyGo viability until local toolchain and import-table proof are gathered.
 
 ## Executive Summary
 
@@ -12,7 +12,7 @@ v1.32 made TypeScript, Python, Rust, and Zig supported counted Strategy language
 
 v1.33 should close that provenance gap for TypeScript and Python without overclaiming isolation. TypeScript can plausibly produce a canonical executable/transpiled artifact and run that validated artifact path. Python needs an explicitly named provenance artifact such as a normalized source bundle, bytecode artifact, sealed executable bundle, or equivalent evidence object, plus interpreter/version metadata and the existing no-packages/no-imports/no-host-capabilities policy.
 
-TinyGo and Grain should be treated as spike-only WASM/WASI candidates. The useful output is not product support by default; it is import audit evidence, ABI compatibility notes, size/latency measurements, deterministic behavior checks, failure taxonomy, and a promote/defer/reject recommendation for each language.
+TinyGo should be treated as a spike-only WASM/WASI candidate. The useful output is not product support by default; it is import audit evidence, ABI compatibility notes, size/latency measurements, deterministic behavior checks, failure taxonomy, and a promote/defer/reject recommendation.
 
 ## Stack Findings
 
@@ -21,7 +21,7 @@ TinyGo and Grain should be treated as spike-only WASM/WASI candidates. The usefu
 - Rust/Zig already prove immutable WASM/WASI Preview 1 stdin/stdout JSON artifact posture and should be regression baselines for expanded artifact proof semantics.
 - TypeScript likely needs a build artifact path that stops runtime execution from silently rebuilding mutable source during Match or MatchSet execution.
 - Python artifact provenance should preserve the existing constrained runtime posture and clearly separate evidence/provenance from stronger sandbox claims.
-- TinyGo and Grain spike work should live in evidence/prototype artifacts until a later production support milestone approves productization.
+- TinyGo spike work should live in evidence/prototype artifacts until a later production support milestone approves productization.
 
 ## Feature Table Stakes
 
@@ -29,8 +29,8 @@ TinyGo and Grain should be treated as spike-only WASM/WASI candidates. The usefu
 - Execute TypeScript through the validated artifact path and fail closed on stale, missing, mismatched, or unverifiable artifacts.
 - Add Python artifact provenance with interpreter/version metadata, source hash/bytes, artifact hash/bytes, and fail-closed validation.
 - Preserve Python's no package/import/host capability policy and Rust/Zig artifact behavior.
-- Build minimal TinyGo and Grain WASM/WASI artifacts where local tooling allows.
-- Audit TinyGo/Grain import tables and record allowed/forbidden imports and host capability risks.
+- Build a minimal TinyGo WASM/WASI artifact where local tooling allows.
+- Audit TinyGo import tables and record allowed/forbidden imports and host capability risks.
 - Measure compile viability, artifact size, startup/per-call latency, deterministic behavior, timeout/trap behavior, invalid outputs, and failure taxonomy.
 - Update docs/UI/evidence to distinguish artifact-proven source languages, WASM/WASI artifact-backed production languages, and spike-only candidates.
 
@@ -51,7 +51,7 @@ Strategy source
 Spike flow:
 
 ```text
-TinyGo/Grain sample source
+TinyGo sample source
   -> local compiler/toolchain probe
   -> WebAssembly artifact if viable
   -> import audit + ABI compatibility check
@@ -66,7 +66,7 @@ TinyGo/Grain sample source
 - Do not let TypeScript silently re-transpile mutable source after provider proof has been created.
 - Do not describe Python artifact provenance as equivalent to WASM isolation.
 - Do not regress Rust/Zig immutable WASM/WASI artifact behavior.
-- Do not let TinyGo or Grain leak into supported-language/product labels beyond spike-only candidate status.
+- Do not let TinyGo leak into supported-language/product labels beyond spike-only candidate status.
 - Do not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, or spike-only private artifacts in public outputs.
 
 ## Recommended Phase Structure
@@ -74,8 +74,7 @@ TinyGo/Grain sample source
 1. Phase 234: TypeScript Artifact Provenance.
 2. Phase 235: Python Artifact Provenance.
 3. Phase 236: TinyGo WASM/WASI Spike.
-4. Phase 237: Grain WASM/WASI Spike.
-5. Phase 238: Documentation, UI, and Verification.
+4. Phase 237: Documentation, UI, and Verification.
 
 ## Sources Consulted
 

@@ -5,7 +5,7 @@
 
 ## Milestone Goal
 
-Add artifact provenance for TypeScript and Python source-language providers, then run contained TinyGo and Grain WASM/WASI spikes without promoting either candidate language by default.
+Add artifact provenance for TypeScript and Python source-language providers, then run a contained TinyGo WASM/WASI spike without promoting the candidate language by default.
 
 ## Baseline
 
@@ -29,7 +29,7 @@ Add artifact provenance for TypeScript and Python source-language providers, the
 - Source-language artifacts must fail closed if stale, missing, mismatched, unverifiable, or incompatible with provider metadata.
 - TypeScript and Python artifact provenance must not be described as equivalent to WASM/WASI isolation or production sandbox certification.
 - Rust and Zig artifact-backed behavior must not regress.
-- TinyGo and Grain remain spike-only unless a future plan explicitly proves safety and the user approves productionizing them.
+- TinyGo remains spike-only unless a future plan explicitly proves safety and the user approves productionizing it.
 - Public output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, recovery payloads, or spike-only private artifacts.
 
 ## v1 Requirements
@@ -60,22 +60,13 @@ Add artifact provenance for TypeScript and Python source-language providers, the
 - [ ] **TINYGO-04**: TinyGo spike measures compile viability, artifact size, startup latency, per-call latency, deterministic behavior, invalid-output behavior, timeout/trap behavior, and failure taxonomy.
 - [ ] **TINYGO-05**: TinyGo spike produces public-safe artifacts and a concrete promote, defer, or reject recommendation without enabling production support or counted eligibility.
 
-### Grain WASM/WASI Spike
-
-- [ ] **GRAIN-01**: Developer can build a minimal Grain Strategy artifact compiling to WebAssembly, or records fail-loud tooling evidence when local compilation is not viable.
-- [ ] **GRAIN-02**: Grain spike determines whether the artifact can run in the existing Wasmtime/WASI setup without broad JavaScript host glue.
-- [ ] **GRAIN-03**: Grain spike attempts to use the existing WASI Preview 1 stdin/stdout JSON Strategy ABI and documents any required adapter, shim, or incompatibility.
-- [ ] **GRAIN-04**: Grain spike audits import tables and records allowed imports, forbidden imports, host capability risks, memory behavior, and any required runtime allowances.
-- [ ] **GRAIN-05**: Grain spike measures compile viability, artifact size, startup latency, per-call latency, deterministic behavior, invalid-output behavior, timeout/trap behavior, and failure taxonomy.
-- [ ] **GRAIN-06**: Grain spike produces public-safe artifacts and a concrete promote, defer, or reject recommendation without enabling production support or counted eligibility.
-
 ### Language Evidence, UI, Docs, and Verification
 
 - [ ] **LANGDOC-01**: Supported-language docs and UI distinguish source-backed artifact-proven languages, WASM/WASI artifact-backed production languages, and spike-only candidate languages.
 - [ ] **LANGDOC-02**: Provider evidence docs explain source hash/bytes, artifact hash/bytes, toolchain/interpreter metadata, validation policy, compatibility, privacy exclusions, and fail-closed semantics.
-- [ ] **LANGDOC-03**: Product labels, entry flows, Strategy cards, results, replay, Learn/docs, and public evidence avoid implying TinyGo or Grain are production-supported unless explicitly approved.
+- [ ] **LANGDOC-03**: Product labels, entry flows, Strategy cards, results, replay, Learn/docs, and public evidence avoid implying TinyGo is production-supported unless explicitly approved.
 - [ ] **LANGDOC-04**: Rust and Zig existing WASM/WASI artifact-backed provider behavior remains green under the expanded artifact provenance model.
-- [ ] **LANGDOC-05**: Boundary monitors and privacy scans cover TypeScript/Python artifact proof, Rust/Zig regression, TinyGo/Grain spike-only labels, and no Strategy execution in web/API/Go.
+- [ ] **LANGDOC-05**: Boundary monitors and privacy scans cover TypeScript/Python artifact proof, Rust/Zig regression, TinyGo spike-only labels, and no Strategy execution in web/API/Go.
 - [ ] **LANGDOC-06**: Browser review covers supported-language pages and relevant evidence surfaces, verifying realistic language status labels and no overclaiming security or sandbox guarantees.
 - [ ] **LANGDOC-07**: Final validation records tests, spike artifacts, import audit results, latency/size notes, recommendations, public privacy scans, replay board realism checks where replay or Match creation changes, and milestone audit outcome.
 
@@ -84,10 +75,9 @@ Add artifact provenance for TypeScript and Python source-language providers, the
 ### Future Runtime Language Production
 
 - **FUT-LANG-01**: TinyGo can become a production supported Strategy language only after a future milestone proves sandbox posture, deterministic ABI compatibility, provider proof, product surfaces, conformance, public evidence, signed-in proof, monitors, and user approval.
-- **FUT-LANG-02**: Grain can become a production supported Strategy language only after a future milestone proves sandbox posture, deterministic ABI compatibility, provider proof, product surfaces, conformance, public evidence, signed-in proof, monitors, and user approval.
-- **FUT-LANG-03**: Python isolation can be strengthened beyond artifact provenance only through a separate runtime isolation or WASM-backed migration plan with explicit claims, tests, rollback, and public documentation.
-- **FUT-LANG-04**: Direct exports or Component Model/WIT can replace Preview 1 stdin/stdout JSON only after a separate migration proves parity, schema validation, caps, memory ownership, privacy, rollback, and replay compatibility.
-- **FUT-LANG-05**: Rich package/dependency ecosystems for TypeScript, Python, Rust, Zig, TinyGo, or Grain require separate supply-chain, reproducibility, native-code, and deterministic-build policies.
+- **FUT-LANG-02**: Python isolation can be strengthened beyond artifact provenance only through a separate runtime isolation or WASM-backed migration plan with explicit claims, tests, rollback, and public documentation.
+- **FUT-LANG-03**: Direct exports or Component Model/WIT can replace Preview 1 stdin/stdout JSON only after a separate migration proves parity, schema validation, caps, memory ownership, privacy, rollback, and replay compatibility.
+- **FUT-LANG-04**: Rich package/dependency ecosystems for TypeScript, Python, Rust, Zig, or TinyGo require separate supply-chain, reproducibility, native-code, and deterministic-build policies.
 
 ## Out of Scope
 
@@ -97,7 +87,6 @@ Add artifact provenance for TypeScript and Python source-language providers, the
 | Node `vm` as a security boundary | It is not an acceptable sandbox for hostile Strategy code. |
 | Treating TypeScript/Python artifacts as sandbox certification | Artifact provenance binds evidence; it does not by itself prove WASM isolation or production sandboxing. |
 | Production TinyGo support | v1.33 only spikes viability and records a recommendation unless explicit approval changes scope. |
-| Production Grain support | v1.33 only spikes viability and records a recommendation unless explicit approval changes scope. |
 | Rust/Zig ABI migration | Existing Rust/Zig behavior must remain green; any Preview 1 replacement is future work. |
 | Public Strategy source, memory, or objective exposure | Public outputs must remain source-free, memory-free, and objective-payload-free by default. |
 | Silent fallback to mutable source or another language runtime | Runtime and artifact failures must fail closed. |
@@ -112,14 +101,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TSART-01..TSART-06 | Phase 234 | Planned |
 | PYART-01..PYART-06 | Phase 235 | Planned |
 | TINYGO-01..TINYGO-05 | Phase 236 | Planned |
-| GRAIN-01..GRAIN-06 | Phase 237 | Planned |
-| LANGDOC-01..LANGDOC-07 | Phase 238 | Planned |
+| LANGDOC-01..LANGDOC-07 | Phase 237 | Planned |
 
 **Coverage:**
-- v1 requirements: 30 total
+- v1 requirements: 24 total
 - Complete: 0
-- Planned: 30
-- Mapped to phases: 30
+- Planned: 24
+- Mapped to phases: 24
 - Unmapped: 0
 
 ---

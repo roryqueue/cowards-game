@@ -4,9 +4,9 @@
 
 **v1.33 Artifact Provenance for Source Languages + WASM Language Spikes**
 
-**Goal:** Add artifact provenance for TypeScript and Python source-language providers, then run contained TinyGo and Grain WASM/WASI spikes without promoting either candidate language by default.
+**Goal:** Add artifact provenance for TypeScript and Python source-language providers, then run a contained TinyGo WASM/WASI spike without promoting the candidate language by default.
 
-**Decision baseline:** v1.33 starts from v1.32's four supported counted Strategy languages. Rust and Zig already have immutable WASM/WASI Preview 1 artifact proof; TypeScript and Python need comparable provider provenance without pretending they are WASM-isolated. TinyGo and Grain are spike-only unless a future approved plan productionizes them. Strategy execution remains behind runtime-service / Runtime Broker / language provider boundaries.
+**Decision baseline:** v1.33 starts from v1.32's four supported counted Strategy languages. Rust and Zig already have immutable WASM/WASI Preview 1 artifact proof; TypeScript and Python need comparable provider provenance without pretending they are WASM-isolated. TinyGo is spike-only unless a future approved plan productionizes it. Strategy execution remains behind runtime-service / Runtime Broker / language provider boundaries.
 
 ## Phase Overview
 
@@ -15,8 +15,7 @@
 | 234 | TypeScript Artifact Provenance | Add canonical TypeScript artifact generation, proof binding, artifact execution, fail-closed validation, privacy, and regression coverage. | TSART-01..TSART-06 | Planned |
 | 235 | Python Artifact Provenance | Add Python artifact provenance with interpreter metadata while preserving constrained source/runtime policy and honest security claims. | PYART-01..PYART-06 | Planned |
 | 236 | TinyGo WASM/WASI Spike | Build and evaluate a minimal TinyGo WASM/WASI Strategy artifact against the existing Strategy ABI and runtime evidence model. | TINYGO-01..TINYGO-05 | Planned |
-| 237 | Grain WASM/WASI Spike | Build and evaluate a minimal Grain WebAssembly Strategy artifact against Wasmtime/WASI compatibility and the existing Strategy ABI. | GRAIN-01..GRAIN-06 | Planned |
-| 238 | Documentation, UI, and Verification | Update language status docs/UI/evidence, preserve Rust/Zig behavior, run monitors/browser review, and close milestone validation. | LANGDOC-01..LANGDOC-07 | Planned |
+| 237 | Documentation, UI, and Verification | Update language status docs/UI/evidence, preserve Rust/Zig behavior, run monitors/browser review, and close milestone validation. | LANGDOC-01..LANGDOC-07 | Planned |
 
 ## Phase Details
 
@@ -59,21 +58,7 @@
 4. Spike evidence records compile viability, artifact size, startup/per-call latency, deterministic behavior, invalid-output behavior, timeout/trap behavior, and failure taxonomy.
 5. A promote/defer/reject recommendation is recorded without enabling TinyGo production support, counted eligibility, or public production labels.
 
-### Phase 237: Grain WASM/WASI Spike
-
-**Goal:** Build and evaluate a minimal Grain WebAssembly Strategy artifact against Wasmtime/WASI compatibility and the existing Strategy ABI.
-
-**Requirements:** GRAIN-01, GRAIN-02, GRAIN-03, GRAIN-04, GRAIN-05, GRAIN-06
-
-**Success criteria:**
-1. A minimal Grain Strategy artifact compiles to WebAssembly, or the spike fails loudly with actionable tooling evidence.
-2. The artifact either runs in the existing Wasmtime/WASI setup without broad JavaScript host glue or documents why it cannot.
-3. The spike attempts the existing WASI Preview 1 stdin/stdout JSON ABI and records any adapter, shim, or incompatibility.
-4. Import table audit records allowed imports, forbidden imports, host capability risks, memory behavior, and runtime allowances.
-5. Spike evidence records compile viability, artifact size, startup/per-call latency, deterministic behavior, invalid-output behavior, timeout/trap behavior, and failure taxonomy.
-6. A promote/defer/reject recommendation is recorded without enabling Grain production support, counted eligibility, or public production labels.
-
-### Phase 238: Documentation, UI, and Verification
+### Phase 237: Documentation, UI, and Verification
 
 **Goal:** Update language status docs/UI/evidence, preserve Rust/Zig behavior, run monitors/browser review, and close milestone validation.
 
@@ -82,16 +67,16 @@
 **Success criteria:**
 1. Supported-language docs, UI labels, provider evidence docs, Strategy cards, result/replay surfaces, Learn/docs, and public evidence distinguish artifact-proven source languages, WASM/WASI artifact-backed production languages, and spike-only candidates.
 2. Rust and Zig artifact-backed behavior stays green under the expanded provider proof model.
-3. Boundary monitors and privacy scans cover TypeScript/Python artifact proof, Rust/Zig regression, TinyGo/Grain spike-only labels, no public private-data leak, and no Strategy execution in web/API/Go.
+3. Boundary monitors and privacy scans cover TypeScript/Python artifact proof, Rust/Zig regression, TinyGo spike-only labels, no public private-data leak, and no Strategy execution in web/API/Go.
 4. Browser review confirms supported-language pages and evidence surfaces are realistic, unclipped, and do not overclaim security or sandbox guarantees.
 5. Final validation records tests, spike artifacts, import audits, latency/size notes, recommendations, public privacy scans, replay board realism checks where applicable, and milestone audit outcome.
 
 ## Coverage
 
-- v1 requirements: 30 total
+- v1 requirements: 24 total
 - Complete: 0
-- Planned: 30
-- Mapped to phases: 30
+- Planned: 24
+- Mapped to phases: 24
 - Unmapped: 0
 
 ## Next Up

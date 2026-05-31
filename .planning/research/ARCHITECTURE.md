@@ -25,7 +25,7 @@ Candidate language sample
   -> recommendation artifact
 ```
 
-TinyGo and Grain spikes should be isolated from production provider registration unless a later approved plan promotes them.
+The TinyGo spike should be isolated from production provider registration unless a later approved plan promotes it.
 
 ## Integration Points
 
