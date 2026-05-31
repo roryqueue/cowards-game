@@ -158,15 +158,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| TBD | TBD | Pending |
+| INV-01..INV-05 | Phase 222 | Pending |
+| LANG-01..LANG-05 | Phase 223 | Pending |
+| PROV-01..PROV-05 | Phase 224 | Pending |
+| PY-01..PY-05 | Phase 225 | Pending |
+| RUST-01..RUST-05 | Phase 226 | Pending |
+| ZIG-01..ZIG-05 | Phase 227 | Pending |
+| PAR-01..PAR-05 | Phase 228 | Pending |
+| PROD-01..PROD-05 | Phase 229 | Pending |
+| EVID-01..EVID-05 | Phase 230 | Pending |
+| MON-01..MON-05 | Phase 231 | Pending |
+| PROOF-01..PROOF-05 | Phase 232 | Pending |
+| CLOSE-01..CLOSE-05 | Phase 233 | Pending |
 
 **Coverage:**
 - v1 requirements: 60 total
 - Complete: 0
-- Planned: 0
-- Mapped to phases: 0
-- Unmapped: 60
+- Planned: 60
+- Mapped to phases: 60
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-31*
-*Last updated: 2026-05-31 after v1.32 research and scoping*
+*Last updated: 2026-05-31 after v1.32 roadmap creation*

@@ -2,11 +2,11 @@
 milestone: v1.32
 milestone_name: Four-Language Production Strategy Support
 status: planning
-current_phase: null
+current_phase: 222
 progress:
-  phases_total: 0
+  phases_total: 12
   phases_complete: 0
-  requirements_total: 0
+  requirements_total: 60
   requirements_complete: 0
 ---
 
@@ -14,10 +14,10 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-05-31 - Milestone v1.32 started
+Phase: 222 - Language Surface Inventory
+Plan: Ready for discussion
+Status: Requirements and roadmap defined
+Last activity: 2026-05-31 - v1.32 requirements and roadmap drafted
 
 ## Project Reference
 
@@ -40,7 +40,8 @@ See: `.planning/PROJECT.md`
 - v1.31 Public Site Spine and Discovery Reads is shipped and archived in `.planning/MILESTONES.md`, `.planning/milestones/v1.31-ROADMAP.md`, `.planning/milestones/v1.31-REQUIREMENTS.md`, `.planning/milestones/v1.31-MILESTONE-AUDIT.md`, and `.planning/artifacts/v1.31-public-site-spine-proof.md`.
 - v1.32 starts from the v1.31 baseline where JS/TS is counted, Python/Rust/Zig are non-counted exhibition beta, and Preview 1 stdin/stdout JSON remains the active WASM/WASI ABI until an explicit migration decision changes it.
 - Core v1.32 question: What must be true before Python, Rust, and Zig can honestly be fully supported and counted alongside JS/TS, and what monitors prevent future drift?
-- Suggested roadmap begins at Phase 222 and continues through Phase 233.
+- Roadmap begins at Phase 222 and continues through Phase 233.
+- Phase 222 is next: inventory active language, runtime, eligibility, product-label, docs, and monitor surfaces before changing behavior.
 - Phase 211 artifacts:
   - `.planning/artifacts/v1.31-route-link-inventory.md`
   - `.planning/phases/211-route-and-link-inventory/211-CONTEXT.md`
