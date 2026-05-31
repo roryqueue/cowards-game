@@ -59,7 +59,12 @@ assertDoesNotContain("public discovery spec", discoverySpec, [
 
 assertDoesNotContain("public discovery web service", discoveryService, [
   "@cowards/runtime-js",
+  "@cowards/runtime-python",
+  "@cowards/runtime-wasm-wasi",
   "@cowards/persistence",
+  "packages/runtime-js",
+  "packages/runtime-python",
+  "packages/runtime-wasm-wasi",
   "node:vm",
   "executeStrategy",
   "StrategyMemory:",
@@ -75,6 +80,11 @@ assertDoesNotContain("public discovery web service", discoveryService, [
 
 assertDoesNotContain("public discovery components", discoveryComponents, [
   "@cowards/runtime-js",
+  "@cowards/runtime-python",
+  "@cowards/runtime-wasm-wasi",
+  "packages/runtime-js",
+  "packages/runtime-python",
+  "packages/runtime-wasm-wasi",
   "node:vm",
   "executeStrategy",
   "StrategyMemory:",
@@ -92,6 +102,11 @@ assertDoesNotContain("public discovery components", discoveryComponents, [
 for (const [route, source] of discoveryRoutes) {
   assertDoesNotContain(route, source, [
     "@cowards/runtime-js",
+    "@cowards/runtime-python",
+    "@cowards/runtime-wasm-wasi",
+    "packages/runtime-js",
+    "packages/runtime-python",
+    "packages/runtime-wasm-wasi",
     "node:vm",
     "executeStrategy",
     "StrategyMemory:",

@@ -31,7 +31,10 @@ export const isSafePublicDiscoveryHref = (href: string): boolean => {
   if (!href.startsWith("/") || href.startsWith("//")) {
     return false
   }
-  if (/[\u0000-\u001f\\]/.test(href)) {
+  if (
+    href.includes("\\") ||
+    Array.from(href).some((character) => character.charCodeAt(0) < 32)
+  ) {
     return false
   }
   try {

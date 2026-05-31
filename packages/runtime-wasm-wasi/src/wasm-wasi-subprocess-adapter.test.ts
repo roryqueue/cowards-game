@@ -175,7 +175,7 @@ describe("WASM/WASI runtime alpha", () => {
     expect(validation.forbiddenPatterns).toContain("std::fs")
   })
 
-  it("records Zig readiness without promoting Zig execution", () => {
+  it("records Zig counted provider readiness evidence", () => {
     const evidence = zigReadinessEvidence()
 
     expect(evidence.target).toBe("wasm32-wasi")

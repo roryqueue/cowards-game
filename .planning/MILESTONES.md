@@ -1,5 +1,36 @@
 # Milestones
 
+## v1.32 Four-Language Production Strategy Support (Shipped: 2026-05-31)
+
+**Status:** Shipped 2026-05-31
+**Phases:** 12
+**Phase range:** 222-233
+**Plans:** 12/12 complete
+**Requirements:** 60/60 complete
+**Proof:** .planning/artifacts/v1.32-four-language-signed-in-proof.md
+**Roadmap:** .planning/milestones/v1.32-ROADMAP.md
+**Decision:** TypeScript, Python, Rust, and Zig are supported counted Strategy languages only through provider-compatible runtime evidence. Python is source-backed through constrained provider validation. Rust and Zig are artifact-backed through immutable WASM/WASI Preview 1 stdin/stdout JSON artifacts. Strategy execution remains behind runtime-service / Runtime Broker / language provider boundaries; counted support is not broad production sandbox certification.
+**Audit:** .planning/milestones/v1.32-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.32-ROADMAP.md, .planning/milestones/v1.32-REQUIREMENTS.md, .planning/phases/222-language-surface-inventory through .planning/phases/233-audit-archive-commit-and-tag
+
+**Delivered:**
+
+- Canonical supported-language/provider registry for TypeScript, Python, Rust, and Zig.
+- Provider validation and counted eligibility for Python, Rust, and Zig without moving Strategy execution into web/API/Go.
+- Rust/Zig immutable WASM/WASI Preview 1 stdin/stdout JSON artifact support with provider proof.
+- Four-language golden corpus, conformance matrix, pairwise parity, privacy parity, no-fallback, result/replay shape checks, and public evidence proof.
+- Workshop, Account, competition entry, Strategy cards, player pages, MatchSet results, replay, Learn/docs, and public evidence unified around provider-derived labels and eligibility.
+- Drift monitors for direct language special-casing, stale non-promotion claims, ABI/contract posture, privacy, and execution boundary imports.
+- Live signed-in proof covering all six counted cross-language MatchSet pairings with public result/replay and realistic board checks.
+
+### Active Constraints
+
+- Counted support remains provider-gated evidence, not broad production sandbox certification.
+- Strategy code does not execute in web/API/Go.
+- WASI Preview 1 stdin/stdout JSON remains the active Rust/Zig WASM/WASI ABI until a future migration proves otherwise.
+- Public outputs must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads.
+- Durable permanent ratings, production tournament governance, package ecosystem expansion, direct-export ABI, Component Model/WIT ABI, and stronger sandbox certification remain future work.
+
 ## v1.31 Public Site Spine and Discovery Reads (Shipped: 2026-05-31)
 
 **Status:** Shipped 2026-05-31

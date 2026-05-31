@@ -1,0 +1,203 @@
+{
+  "schemaVersion": "v1.32-four-language-signed-in-proof",
+  "generatedAt": "2026-05-31T07:38:17.140Z",
+  "account": {
+    "handle": "v132-mptgti96-a, v132-mptgti96-b",
+    "signupMs": 186
+  },
+  "accounts": [
+    {
+      "handle": "v132-mptgti96-a",
+      "signupMs": 88
+    },
+    {
+      "handle": "v132-mptgti96-b",
+      "signupMs": 98
+    }
+  ],
+  "revisions": {
+    "accountA": {
+      "typescript": "strategy-revision:e4aeab6182473df03ba5f3ed73bbec90be87a7d28694ed80d6aa74709919bc8e",
+      "python": "strategy-revision:5e85f756f3a117e19f58698be001963b1f82b599d708d72fd27d50855208776d",
+      "rust": "strategy-revision:9ff8932a514870c025d35f62c6cf57979d01323b3c7a30d13b00d587e4714df2",
+      "zig": "strategy-revision:03841590ca32eb000f1903c2208987ef88e0572dd07c489fae79dc9c7150a0dd"
+    },
+    "accountB": {
+      "typescript": "strategy-revision:705c4dc779ebbee22b96a9abb6cf37b01a25888455268c8ed31bc9691131e89f",
+      "python": "strategy-revision:9b5ab817ad55c370b72ef79fbb3be5321c8181b4436c36ce04a7fe2345fac8c5",
+      "rust": "strategy-revision:ac653654039560546dba5dde7770120ce5b7974a3b42698825f401bad4d317ba",
+      "zig": "strategy-revision:a939b4a08efc0cad0e23a54e908b4b3bb04a4ff30ed05133a4ae73157ddb3480"
+    }
+  },
+  "createMs": 443,
+  "workerMs": 112830,
+  "settleMs": 4669,
+  "workerStatuses": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "exhibitions": [
+    {
+      "matchSetId": "match-set:exhibition:162NHh3PCIMQgYyLPvWBIw",
+      "status": "queued",
+      "matchCount": 2,
+      "matchup": "typescript-vs-python",
+      "observedStatus": "complete",
+      "countedStatus": "pending",
+      "observedMatchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "resultPageMs": 430,
+      "replayPageMs": 2251,
+      "resultBodyLength": 6177,
+      "replayBodyLength": 15472,
+      "replayMatchId": "match:match-set:exhibition:162NHh3PCIMQgYyLPvWBIw:0",
+      "replayBoardCanvasBytes": 2118
+    },
+    {
+      "matchSetId": "match-set:exhibition:8Vffn0QBkVen0QwEohxQ-g",
+      "status": "queued",
+      "matchCount": 2,
+      "matchup": "typescript-vs-rust",
+      "observedStatus": "complete",
+      "countedStatus": "pending",
+      "observedMatchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "resultPageMs": 977,
+      "replayPageMs": 2324,
+      "resultBodyLength": 6147,
+      "replayBodyLength": 12045,
+      "replayMatchId": "match:match-set:exhibition:8Vffn0QBkVen0QwEohxQ-g:0",
+      "replayBoardCanvasBytes": 15650
+    },
+    {
+      "matchSetId": "match-set:exhibition:1mZQS3-d4LERw18y_GCM5w",
+      "status": "queued",
+      "matchCount": 2,
+      "matchup": "typescript-vs-zig",
+      "observedStatus": "complete",
+      "countedStatus": "pending",
+      "observedMatchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "resultPageMs": 480,
+      "replayPageMs": 1806,
+      "resultBodyLength": 6138,
+      "replayBodyLength": 12045,
+      "replayMatchId": "match:match-set:exhibition:1mZQS3-d4LERw18y_GCM5w:0",
+      "replayBoardCanvasBytes": 15650
+    },
+    {
+      "matchSetId": "match-set:exhibition:W9wn_VY7X9QZ1Ls8ZqaZCQ",
+      "status": "queued",
+      "matchCount": 2,
+      "matchup": "python-vs-rust",
+      "observedStatus": "complete",
+      "countedStatus": "pending",
+      "observedMatchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "resultPageMs": 440,
+      "replayPageMs": 2818,
+      "resultBodyLength": 6141,
+      "replayBodyLength": 19230,
+      "replayMatchId": "match:match-set:exhibition:W9wn_VY7X9QZ1Ls8ZqaZCQ:0",
+      "replayBoardCanvasBytes": 2118
+    },
+    {
+      "matchSetId": "match-set:exhibition:cUrqqrkuTOnDJ5Btz5W59A",
+      "status": "queued",
+      "matchCount": 2,
+      "matchup": "python-vs-zig",
+      "observedStatus": "complete",
+      "countedStatus": "pending",
+      "observedMatchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "resultPageMs": 593,
+      "replayPageMs": 1407,
+      "resultBodyLength": 6132,
+      "replayBodyLength": 19230,
+      "replayMatchId": "match:match-set:exhibition:cUrqqrkuTOnDJ5Btz5W59A:0",
+      "replayBoardCanvasBytes": 15650
+    },
+    {
+      "matchSetId": "match-set:exhibition:femTIgTgQ_mZLbBppaPcFw",
+      "status": "queued",
+      "matchCount": 2,
+      "matchup": "rust-vs-zig",
+      "observedStatus": "complete",
+      "countedStatus": "pending",
+      "observedMatchStatuses": [
+        "complete",
+        "complete"
+      ],
+      "resultPageMs": 471,
+      "replayPageMs": 1953,
+      "resultBodyLength": 6100,
+      "replayBodyLength": 15955,
+      "replayMatchId": "match:match-set:exhibition:femTIgTgQ_mZLbBppaPcFw:0",
+      "replayBoardCanvasBytes": 2118
+    }
+  ],
+  "totals": {
+    "matchSetCount": 6,
+    "workerIterations": 12,
+    "privateMarkerScanPassed": true,
+    "pairwiseCoverage": [
+      "typescript-vs-python",
+      "typescript-vs-rust",
+      "typescript-vs-zig",
+      "python-vs-rust",
+      "python-vs-zig",
+      "rust-vs-zig"
+    ],
+    "desktopMobileLayoutChecks": [
+      "desktop-result-replay",
+      "mobile-workshop",
+      "mobile-learn",
+      "mobile-result",
+      "mobile-replay"
+    ]
+  },
+  "runtimePath": "web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> provider-selected runtime implementation",
+  "providerIds": {
+    "typescript": "strategy-language-provider-js-ts",
+    "python": "strategy-language-provider-python",
+    "rust": "strategy-language-provider-rust-wasi",
+    "zig": "strategy-language-provider-zig-wasi"
+  },
+  "abiDecision": "WASI Preview 1 stdin/stdout JSON remains active for Rust/Zig.",
+  "countedEligibility": "TypeScript, Python, Rust, and Zig entered counted MatchSet paths with provider proof.",
+  "antiAbuseBoundary": "Pairwise proof uses two signed-in accounts to respect the live five-exhibition-create-per-hour account limit.",
+  "boundaryMonitor": ".planning/artifacts/v1.32-drift-monitor-boundary-proof.md",
+  "privacyScan": "Public result and replay body scans passed.",
+  "nonClaims": [
+    "Provider-gated counted support is not broad sandbox certification.",
+    "No Strategy execution was moved into web/API/Go.",
+    "Public replay output omits Strategy source and private memory by default."
+  ],
+  "promotionDecision": {
+    "TypeScript": "counted eligible through JS/TS provider",
+    "Python": "counted eligible through constrained Python provider proof",
+    "Rust": "counted eligible through immutable WASM/WASI artifact provider proof",
+    "Zig": "counted eligible through no-std/import-audited WASM/WASI provider proof",
+    "Sandbox": "no broad production sandbox certification claimed"
+  }
+}

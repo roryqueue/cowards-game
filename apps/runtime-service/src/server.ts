@@ -3,12 +3,14 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http"
+import { createHmac } from "node:crypto"
 import {
   RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,
   RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,
   RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,
   RuntimeExecutionServiceResponseSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
+  getStrategyLanguageProviderRecord,
   type RuntimeExecutionServiceResponse,
 } from "@cowards/spec"
 import {
@@ -17,6 +19,10 @@ import {
   validateZigStrategySource,
   validateRustStrategySource,
 } from "@cowards/runtime-wasm-wasi/validation"
+import {
+  buildPythonStrategyRevision,
+  validatePythonStrategySource,
+} from "@cowards/runtime-python/validation"
 import {
   createRuntimeServiceConfig,
   type RuntimeServiceConfig,
@@ -75,13 +81,43 @@ const malformedRequestResponse = (
     },
   }) as RuntimeExecutionServiceResponse
 
+const providerValidationSecret = (): string =>
+  process.env.COWARDS_PROVIDER_VALIDATION_SECRET?.trim() ?? ""
+
+const providerValidationProof = (input: {
+  providerId: string
+  contractVersion: string
+  sourceHash: string
+  sourceBytes: number
+  artifactHash?: string | undefined
+  artifactBytes?: number | undefined
+}): string => {
+  const secret = providerValidationSecret()
+  if (!secret) {
+    throw new Error("Provider validation signing secret is not configured.")
+  }
+  const payload = [
+    input.providerId,
+    input.contractVersion,
+    input.sourceHash,
+    String(input.sourceBytes),
+    input.artifactHash ?? "",
+    input.artifactBytes === undefined ? "" : String(input.artifactBytes),
+  ].join("\n")
+  return `hmac-sha256:${createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex")}`
+}
+
 const validateStrategyRequest = (rawRequest: unknown) => {
   const body =
     rawRequest !== null && typeof rawRequest === "object"
       ? (rawRequest as Record<string, unknown>)
       : {}
   if (
-    (body.sourceFormat !== "rust" && body.sourceFormat !== "zig") ||
+    (body.sourceFormat !== "python" &&
+      body.sourceFormat !== "rust" &&
+      body.sourceFormat !== "zig") ||
     typeof body.source !== "string"
   ) {
     return {
@@ -89,14 +125,17 @@ const validateStrategyRequest = (rawRequest: unknown) => {
       kind: "strategyValidation",
       sourceFormat: body.sourceFormat,
       error:
-        "Rust or Zig source is required for runtime-service WASM/WASI validation.",
+        "Python, Rust, or Zig source is required for runtime-service provider validation.",
     }
   }
   const sourceFormat = body.sourceFormat
+  const provider = getStrategyLanguageProviderRecord(sourceFormat)
   const validation =
-    sourceFormat === "zig"
-      ? validateZigStrategySource(body.source)
-      : validateRustStrategySource(body.source)
+    sourceFormat === "python"
+      ? validatePythonStrategySource(body.source)
+      : sourceFormat === "zig"
+        ? validateZigStrategySource(body.source)
+        : validateRustStrategySource(body.source)
   if (!validation.valid) {
     return {
       ok: false,
@@ -106,26 +145,83 @@ const validateStrategyRequest = (rawRequest: unknown) => {
     }
   }
   const revisionBuilder =
-    sourceFormat === "zig"
-      ? buildZigStrategyRevision
-      : buildRustStrategyRevision
+    sourceFormat === "python"
+      ? buildPythonStrategyRevision
+      : sourceFormat === "zig"
+        ? buildZigStrategyRevision
+        : buildRustStrategyRevision
   const revision = revisionBuilder({
     source: body.source,
     ...(typeof body.strategyId === "string" && body.strategyId.trim().length > 0
       ? { strategyId: body.strategyId }
       : {}),
     metadata: {
-      tags: [sourceFormat, "wasm-wasi", "non-counted", "exhibition-beta"],
+      tags:
+        sourceFormat === "python"
+          ? ["python", "counted", "provider"]
+          : [sourceFormat, "wasm-wasi", "counted", "provider"],
     },
   })
+  const contractVersion =
+    provider?.contractVersion ?? "strategy-language-provider-contract-v1.32"
+  const artifact =
+    sourceFormat === "rust" || sourceFormat === "zig"
+      ? revision.metadata.compiledArtifact
+      : undefined
+  const providerId =
+    sourceFormat === "python"
+      ? "strategy-language-provider-python"
+      : sourceFormat === "rust"
+        ? "strategy-language-provider-rust-wasi"
+        : sourceFormat === "zig"
+          ? "strategy-language-provider-zig-wasi"
+          : null
+  const metadata =
+    providerId === null
+      ? revision.metadata
+      : {
+          ...revision.metadata,
+          tags:
+            sourceFormat === "python"
+              ? ["python", "counted", "provider"]
+              : [sourceFormat, "wasm-wasi", "counted", "provider"],
+          providerValidation: {
+            providerId,
+            contractVersion,
+            sourceHash: validation.sourceHash,
+            sourceBytes: validation.sourceBytes,
+            ...(artifact === undefined
+              ? {}
+              : {
+                  artifactHash: artifact.hash,
+                  artifactBytes: artifact.bytes,
+                }),
+            proof: providerValidationProof({
+              providerId,
+              contractVersion,
+              sourceHash: validation.sourceHash,
+              sourceBytes: validation.sourceBytes,
+              artifactHash: artifact?.hash,
+              artifactBytes: artifact?.bytes,
+            }),
+          },
+        }
   return {
     ok: true,
     kind: "strategyValidation",
     sourceFormat,
+    provider: provider
+      ? {
+          id: provider.id,
+          contractVersion: provider.contractVersion,
+          runtimeAbiVersion: provider.runtimeAbiVersion,
+          abiPosture: provider.abiPosture,
+        }
+      : null,
     runtime: revision.runtime,
     validation: revision.validation,
     engineCompatibility: revision.engineCompatibility,
-    metadata: revision.metadata,
+    metadata,
     sourceHash: revision.sourceHash,
     sourceBytes: revision.sourceBytes,
   }

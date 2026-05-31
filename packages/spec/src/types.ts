@@ -241,6 +241,17 @@ export interface StrategyRevisionMetadata {
   label?: string | undefined
   notes?: string | undefined
   tags?: string[] | undefined
+  providerValidation?:
+    | {
+        providerId: string
+        contractVersion: string
+        sourceHash: string
+        sourceBytes: number
+        artifactHash?: string | undefined
+        artifactBytes?: number | undefined
+        proof: string
+      }
+    | undefined
   starterLineage?:
     | {
         starterId: string
@@ -289,7 +300,7 @@ export interface CompiledStrategyArtifact {
   toolchain: CompiledStrategyArtifactToolchainEvidence
   publicEvidence: {
     label: string
-    nonCounted: true
+    nonCounted: boolean
     sandboxClaim: "candidate-readiness-only"
   }
 }

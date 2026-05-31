@@ -2,6 +2,8 @@ package main
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -221,49 +223,138 @@ func TestPublicRuntimeMetadataOmitsPrivateLimits(t *testing.T) {
 	}
 }
 
-func TestPythonAccountRevisionMetadataIsNonCountedExhibitionBeta(t *testing.T) {
-	source := `
-def select_activations(input):
-    return {"activationOrders": [], "strategyMemory": input["strategyMemory"]}
-
-def soldier_brain(input):
-    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": input["soldierMemory"]}
-`
+func TestPythonRuntimeMetadataIsCountedProviderEligible(t *testing.T) {
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.32")
 	runtime := pythonRuntimeMetadata()
-	validation := validatePythonSourceMetadata(source)
+	sourceHash := "sourcehash:python"
+	sourceBytes := 123
+	metadata := map[string]any{
+		"providerValidation": map[string]any{
+			"providerId":      "strategy-language-provider-python",
+			"contractVersion": "strategy-language-provider-contract-v1.32",
+			"sourceHash":      sourceHash,
+			"sourceBytes":     sourceBytes,
+			"proof":           pythonProviderValidationProof(sourceHash, sourceBytes),
+		},
+	}
 	semantics := runtimeSemantics(runtime)
 
 	if stringValue(mapValue(runtime, "language"), "id") != "python" {
 		t.Fatalf("python runtime metadata did not preserve language id")
 	}
-	if !boolValue(validation, "valid") {
-		t.Fatalf("valid Python source should be accepted for non-counted exhibition beta: %+v", validation)
+	if semantics["languageId"] != "python" || semantics["countedPlayEligible"] != true {
+		t.Fatalf("Python runtime semantics must be counted provider eligible: %+v", semantics)
 	}
-	if semantics["languageId"] != "python" || semantics["countedPlayEligible"] != false {
-		t.Fatalf("Python runtime semantics must stay non-counted exhibition beta: %+v", semantics)
+	if runtimeSemanticsForRevision(runtime, nil, sourceHash, sourceBytes)["countedPlayEligible"] == true {
+		t.Fatalf("Python revision semantics accepted missing provider validation")
 	}
-	if !runtimeAllowsNonCountedExhibition(runtime) || runtimeAllowsCountedPlay(runtime) {
+	if runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes)["countedPlayEligible"] != true {
+		t.Fatalf("Python revision semantics rejected matching provider validation")
+	}
+	if !runtimeAllowsNonCountedExhibition(runtime) ||
+		!runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) {
 		t.Fatalf("Python runtime eligibility gate drifted")
+	}
+	if runtimeAllowsCountedPlay(runtime, nil, sourceHash, sourceBytes) ||
+		runtimeAllowsCountedPlay(runtime, metadata, "other", sourceBytes) ||
+		runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes+1) {
+		t.Fatalf("Python counted gate accepted missing or stale provider validation")
 	}
 }
 
-func TestPythonAccountRevisionValidationRejectsBackendEscapeMarkers(t *testing.T) {
-	validation := validatePythonSourceMetadata("import os\ndef select_activations(input):\n    return {}\n")
-	if boolValue(validation, "valid") {
-		t.Fatalf("Python validation accepted import escape marker")
+func TestRustRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testing.T) {
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.32")
+	runtime := rustWasmRuntimeMetadata()
+	sourceHash := "sourcehash:rust"
+	sourceBytes := 456
+	artifactPayload := []byte("rust-artifact")
+	artifactDigest := sha256.Sum256(artifactPayload)
+	artifactHash := hex.EncodeToString(artifactDigest[:])
+	artifactBytes := len(artifactPayload)
+	metadata := map[string]any{
+		"compiledArtifact": map[string]any{
+			"hash":             artifactHash,
+			"bytes":            artifactBytes,
+			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
+			"sourceHash":       sourceHash,
+			"targetTriple":     "wasm32-wasip1",
+			"wasiProfile":      "preview1",
+			"abiEnvelope":      "stdin-stdout-json",
+			"abiVersion":       "strategy-runtime-abi-v1.14",
+			"validationStatus": "valid",
+		},
+		"providerValidation": map[string]any{
+			"providerId":      "strategy-language-provider-rust-wasi",
+			"contractVersion": "strategy-language-provider-contract-v1.32",
+			"sourceHash":      sourceHash,
+			"sourceBytes":     sourceBytes,
+			"artifactHash":    artifactHash,
+			"artifactBytes":   artifactBytes,
+			"proof":           providerValidationProof("strategy-language-provider-rust-wasi", sourceHash, sourceBytes, artifactHash, artifactBytes),
+		},
 	}
-	errors, ok := validation["errors"].([]map[string]any)
-	if !ok || len(errors) == 0 {
-		t.Fatalf("Python validation did not return structured errors: %+v", validation)
+
+	if runtimeSemantics(runtime)["countedPlayEligible"] != true {
+		t.Fatalf("Rust runtime semantics should be counted provider eligible")
 	}
-	found := false
-	for _, item := range errors {
-		if item["code"] == "IMPORT_NOT_ALLOWED" {
-			found = true
-		}
+	if runtimeSemanticsForRevision(runtime, nil, sourceHash, sourceBytes)["countedPlayEligible"] == true {
+		t.Fatalf("Rust revision semantics accepted missing provider validation")
 	}
-	if !found {
-		t.Fatalf("Python validation did not report IMPORT_NOT_ALLOWED: %+v", errors)
+	if !runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) {
+		t.Fatalf("Rust counted gate rejected matching artifact provider validation")
+	}
+	if runtimeAllowsCountedPlay(runtime, nil, sourceHash, sourceBytes) ||
+		runtimeAllowsCountedPlay(runtime, metadata, "other", sourceBytes) ||
+		runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes+1) {
+		t.Fatalf("Rust counted gate accepted missing or stale provider validation")
+	}
+}
+
+func TestZigRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testing.T) {
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.32")
+	runtime := wasmWasiRuntimeMetadata("zig")
+	sourceHash := "sourcehash:zig"
+	sourceBytes := 345
+	artifactPayload := []byte("zig-artifact")
+	artifactDigest := sha256.Sum256(artifactPayload)
+	artifactHash := hex.EncodeToString(artifactDigest[:])
+	artifactBytes := len(artifactPayload)
+	metadata := map[string]any{
+		"compiledArtifact": map[string]any{
+			"hash":             artifactHash,
+			"bytes":            artifactBytes,
+			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
+			"sourceHash":       sourceHash,
+			"targetTriple":     "wasm32-wasi",
+			"wasiProfile":      "preview1",
+			"abiEnvelope":      "stdin-stdout-json",
+			"abiVersion":       "strategy-runtime-abi-v1.14",
+			"validationStatus": "valid",
+		},
+		"providerValidation": map[string]any{
+			"providerId":      "strategy-language-provider-zig-wasi",
+			"contractVersion": "strategy-language-provider-contract-v1.32",
+			"sourceHash":      sourceHash,
+			"sourceBytes":     sourceBytes,
+			"artifactHash":    artifactHash,
+			"artifactBytes":   artifactBytes,
+			"proof":           providerValidationProof("strategy-language-provider-zig-wasi", sourceHash, sourceBytes, artifactHash, artifactBytes),
+		},
+	}
+
+	if runtimeSemantics(runtime)["countedPlayEligible"] != true {
+		t.Fatalf("Zig runtime semantics should be counted provider eligible")
+	}
+	if runtimeSemanticsForRevision(runtime, nil, sourceHash, sourceBytes)["countedPlayEligible"] == true {
+		t.Fatalf("Zig revision semantics accepted missing provider validation")
+	}
+	if !runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) {
+		t.Fatalf("Zig counted gate rejected matching artifact provider validation")
+	}
+	if runtimeAllowsCountedPlay(runtime, nil, sourceHash, sourceBytes) ||
+		runtimeAllowsCountedPlay(runtime, metadata, "other", sourceBytes) ||
+		runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes+1) {
+		t.Fatalf("Zig counted gate accepted missing or stale provider validation")
 	}
 }
 

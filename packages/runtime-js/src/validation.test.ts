@@ -266,7 +266,7 @@ describe("validateStrategySource", () => {
     expect(issue?.remediation).toContain("fresh Strategy Revision")
   })
 
-  it("adds runtime semantic warnings without breaking default JS validation", () => {
+  it("keeps supported provider runtime metadata counted without default JS validation errors", () => {
     const pythonRuntime = {
       ...defaultRuntimeMetadata(),
       language: { id: "python" as const, version: "3.9" },
@@ -280,7 +280,7 @@ describe("validateStrategySource", () => {
     })
 
     expect(report.valid).toBe(true)
-    expect(report.warnings.map((warning) => warning.code)).toContain(
+    expect(report.warnings.map((warning) => warning.code)).not.toContain(
       "NON_COUNTED_RUNTIME",
     )
   })

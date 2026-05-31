@@ -30,9 +30,7 @@ describe("reliability evidence copy", () => {
         status: "running",
         matches: [{ matchId: "match:1", status: "running" }] as never,
       }),
-      [
-        "Python · non-counted exhibition beta · runtime-python-subprocess-experimental",
-      ],
+      ["Python · Counted eligible · runtime-python-subprocess-experimental"],
     )
 
     expect(rowValue(rows, "status")).toContain("Running or slow")
@@ -81,9 +79,7 @@ describe("reliability evidence copy", () => {
           },
         ] as never,
       }),
-      [
-        "Python · non-counted exhibition beta · runtime-python-subprocess-experimental",
-      ],
+      ["Python · Counted eligible · runtime-python-subprocess-experimental"],
     )
 
     expect(rowValue(strategyRows, "match states")).toContain("strategy-failed")
@@ -242,7 +238,15 @@ describe("reliability evidence copy", () => {
     } as ReplayReadyDto)
     const serialized = JSON.stringify(rows)
 
-    expect(rowValue(rows, "candidate lane")).toContain("readiness evidence")
+    expect(rowValue(rows, "candidate lane")).toContain(
+      "provider-compatible runtime evidence",
+    )
+    expect(rowValue(rows, "candidate lane")).toContain(
+      "WASI Preview 1 stdin/stdout JSON",
+    )
+    expect(rowValue(rows, "candidate lane")).toContain(
+      "not broad sandbox certification",
+    )
     expect(publicReliabilityPrivacyCue).toContain("runtime internals excluded")
     expect(publicPrivacyProvenanceCue).toContain("runtime internals")
     for (const forbidden of [

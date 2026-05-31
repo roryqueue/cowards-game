@@ -21,7 +21,7 @@ test.skip(
 test("Workshop edit-to-replay path opens a completed Match replay", async ({
   page,
 }) => {
-  await page.goto("/")
+  await page.goto("/workshop")
   await expect(
     page.getByRole("heading", { name: "Strategy Workshop" }),
   ).toBeVisible()
@@ -75,7 +75,7 @@ test("Workshop failure sample opens owner debug replay without leaking public re
 }) => {
   test.setTimeout(90_000)
 
-  await page.goto("/")
+  await page.goto("/workshop")
   await expect(
     page.getByRole("heading", { name: "Strategy Workshop" }),
   ).toBeVisible()

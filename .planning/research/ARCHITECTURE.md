@@ -1,68 +1,80 @@
-# Architecture Research: v1.21 WASM/WASI Multi-Language Runtime Candidate
+# v1.32 Architecture Research: Four-Language Production Strategy Support
 
 **Project:** Coward's Game
-**Milestone:** v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
-**Researched:** 2026-05-25
+**Milestone:** v1.32 Four-Language Production Strategy Support
+**Researched:** 2026-05-31
 
-## Recommended Architecture
+## Current Architecture
 
-v1.21 should add WASM/WASI as a runtime-service implementation lane, not as a backend language and not as a replacement for Go orchestration. The end-to-end target flow is:
+The current architecture already has several pieces of a future shared model:
 
-`signed-in user -> web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> runtime-wasm-wasi implementation -> Wasmtime -> immutable Rust WASM artifact`
+- `packages/spec/src/runtime.ts` defines language ids, language registry records, runtime adapter records, runtime metadata, runtime broker registry entries, product semantics, counted eligibility evaluation, and validation messages.
+- `packages/spec/src/types.ts` defines Strategy artifacts, source formats, revision metadata, compiled WASM artifacts, and public summaries.
+- `packages/spec/src/runtime-execution-service.ts` defines the Strategy Execution Service / Runtime Broker boundary and the app-facing execution response/failure shape.
+- `packages/runtime-js`, `packages/runtime-python`, and `packages/runtime-wasm-wasi` provide language/runtime-specific validation and execution lanes.
+- `apps/runtime-service` is the execution/validation boundary used by Go and web flows for hostile Strategy behavior.
+- Product surfaces currently consume a mix of shared semantics and local language switches, especially in Workshop, Account, competition entry, result/replay labels, and public discovery.
+- `scripts/check-boundary-monitors.ts` currently enforces the opposite of v1.32's desired end state for many paths: Python/Rust/Zig must stay non-counted, experimental, or beta.
 
-## ABI Choice
+## Recommended Build Order
 
-Use WASI Preview 1 stdin/stdout JSON envelopes for v1.21.
+1. **Inventory and exception map:** Before changing behavior, write a concrete inventory of all hardcoded language/status/eligibility paths and mark which ones are historical proof, active code, approved provider boundary, or drift.
+2. **Registry/provider contract:** Evolve `STRATEGY_LANGUAGE_REGISTRY`, `STRATEGY_RUNTIME_ADAPTER_REGISTRY`, and product semantics into a first-class supported-language/provider model. Keep compatibility with existing `StrategyRuntimeMetadata` where possible.
+3. **Runtime contract:** Define `StrategyLanguageProvider` responsibilities and runtime-service API changes. Decide whether Preview 1 stdin/stdout JSON remains the active ABI for Rust/Zig and whether Python/JS/TS use the same or a provider-specific ABI behind a shared contract.
+4. **Language production lanes:** Promote Python, Rust, and Zig one by one, with provider, validation/build, execution, privacy, public evidence, and signed-in tests.
+5. **Conformance wall:** Build the golden corpus and pairwise matrix after at least the provider contract exists so parity tests target the new source of truth.
+6. **Product unification:** Replace Workshop/Account/entry/result/replay/docs label and eligibility branching with shared provider questions.
+7. **Drift monitors:** Convert old non-promotion monitors into positive parity monitors and add direct-special-case detection.
+8. **Live proof and audit:** Finish with a four-language signed-in workflow and archive decision records for ABI, provider model, privacy, rollback, and promotion.
 
-Why:
-- Rust `wasm32-wasip1` is locally installed and officially supported as a Rust target.
-- WASI 0.1/P1 remains more widely supported among runtimes than component model P2 for simple command-style execution.
-- JSON envelopes reuse the existing runtime ABI validation mindset.
-- Stdin/stdout is simple to prove with malformed JSON, oversized output, timeout/fuel, and no-fallback probes.
+## Data Flow Target
 
-Tradeoffs:
-- Stdin/stdout is process-style and less elegant than direct exports.
-- Direct exports would require guest memory allocation/marshalling design.
-- Component model/WIT is the long-term interop direction, but introduces more toolchain and binding risk than this milestone needs.
+```text
+Workshop / Account / Entry / Public UI
+    |
+    v
+Supported Strategy Language Registry
+    |
+    v
+StrategyLanguageProvider capability/eligibility/public-label API
+    |
+    v
+runtime-service / Runtime Broker
+    |
+    +--> JS/TS provider -> runtime-js adapter
+    +--> Python provider -> Python runtime adapter
+    +--> Rust provider -> WASM/WASI provider/adapter
+    +--> Zig provider -> WASM/WASI provider/adapter
+    |
+    v
+Pure engine + Chronicle
+    |
+    v
+Public-safe result/replay evidence projection
+```
 
-## Integration Points
+## Contract Concerns
 
-- `packages/spec/src/runtime.ts`: add language/runtime ids, metadata, eligibility, limits, compatibility keys, and non-counted semantics.
-- `packages/spec/src/schemas.ts` and `packages/spec/src/types.ts`: add source/artifact formats and immutable artifact fields if current Strategy Revision shape needs extension.
-- New runtime package or module such as `packages/runtime-wasm-wasi`: validation, compile/preflight, metadata, artifact hashing, Wasmtime runner, failure taxonomy, and tests.
-- `apps/runtime-service/src/runtime-config.ts` and `apps/runtime-service/src/execute-match.ts`: select WASM/WASI runtime implementation behind the broker without changing Go ownership.
-- `apps/web/app/workshop/*`: gated Rust author/save UI and safe samples, with non-counted exhibition alpha copy.
-- `apps/go-backend/*`: preserve runtime-service-only execution, validate runtime metadata/artifact hashes, create non-counted exhibitions, and keep public evidence Go-owned.
-- `scripts/check-boundary-monitors.ts` and topology/sandbox scripts: add WASM/WASI registry, no-fallback, privacy, artifact, and production-claim monitors.
+- `match-execution-app-v1` was intentionally frozen through v1.31. v1.32 may introduce a new version or backward-compatible additions, but the plan must state the versioning/migration route explicitly.
+- Existing runtime ABI is `strategy-runtime-abi-v1.14`; execution service contract is `runtime-execution-service-v1.15`; runtime broker registry is `runtime-broker-registry-v1.17`. Promotion may require new versions or explicit compatibility decisions.
+- Compiled artifacts currently hardcode `publicEvidence.nonCounted: true`. Rust/Zig promotion requires a new artifact evidence model or a versioned change.
+- Product validation messages still say Python is non-counted in v1.18. These messages must be replaced with provider-derived current semantics.
+- Current monitors assert Python/Rust/Zig non-promotion. They must become parity and boundary monitors rather than historical blockers.
 
-## Artifact Contract
+## Architecture Risks
 
-Rust and optional Zig Strategy Revisions should carry:
-- Source hash and source bytes for owner-private source.
-- WASM artifact hash, bytes, target triple, WASI profile, and compile evidence.
-- Runtime adapter id/version and ABI envelope id/version.
-- Toolchain identity and compile command summary.
-- Immutable eligibility snapshot used for Match execution.
-- Public-safe semantics indicating non-counted exhibition alpha/beta only.
+- The project could end up with two sources of truth: registry/provider in spec and separate UI strings in web.
+- Runtime-service validation for Rust/Zig currently depends on `COWARDS_RUNTIME_SERVICE_URL` from the web route; production support needs stable service availability and failure behavior.
+- Python subprocess evidence is not the same as production hostile-code sandbox certification. Promotion must not overclaim isolation.
+- Rust/Zig compile/toolchain behavior can drift by local environment. Production support needs toolchain versioning, artifact compatibility, and fail-closed behavior.
+- Public result/replay evidence could accidentally expose artifacts, diagnostics, source, memory, or host/runtime internals while trying to prove parity.
 
-## Runtime Controls
+## Architecture Outputs to Produce
 
-Wasmtime execution should start with:
-- No inherited env.
-- No preopened host directories by default.
-- Network disabled/not inherited.
-- Deterministic fuel and bounded timeout behavior.
-- Memory/table/instance/resource limits where practical.
-- Output byte caps and schema validation.
-- Redacted diagnostics.
-
-## Build Order
-
-1. Register and specify the WASM/WASI candidate lane and ABI.
-2. Prove local Rust compile/artifact flow before Workshop product UI.
-3. Implement runtime-service execution against immutable WASM artifacts.
-4. Add hostile/determinism probes and monitor gates.
-5. Add signed-in product proof and conservative promotion decision.
-
----
-*Research written: 2026-05-25*
+- `StrategyLanguageProvider` contract or equivalent.
+- `SUPPORTED_STRATEGY_LANGUAGES` registry or evolved `STRATEGY_LANGUAGE_REGISTRY` with provider ids and product semantics.
+- Provider-owned eligibility functions for counted play, competition entry, public labels, validation path, docs/templates, and privacy.
+- Runtime-service/provider contract version decision.
+- Golden corpus and parity matrix runner.
+- Monitor allowlist for approved language-specialization boundaries.
+- Public-safe four-language proof artifact.

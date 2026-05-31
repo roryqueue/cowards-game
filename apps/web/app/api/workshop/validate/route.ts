@@ -1,3 +1,4 @@
+import { getSupportedStrategyLanguageBySourceFormat } from "@cowards/spec"
 import type { WorkshopErrorResponse } from "../../../workshop/types.js"
 import { workshopServer } from "../../../workshop/server.js"
 
@@ -6,7 +7,9 @@ const runtimeServiceValidateWasmWasi = async (
   source: string,
 ) => {
   const endpoint = process.env.COWARDS_RUNTIME_SERVICE_URL?.replace(/\/$/, "")
-  const label = sourceFormat === "zig" ? "Zig" : "Rust"
+  const label =
+    getSupportedStrategyLanguageBySourceFormat(sourceFormat)?.label ??
+    "WASM/WASI"
   if (!endpoint) {
     return {
       ok: false,

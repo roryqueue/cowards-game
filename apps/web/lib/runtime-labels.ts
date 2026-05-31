@@ -1,70 +1,63 @@
-import type { StrategyArtifactSourceFormat } from "@cowards/spec"
+import {
+  getSupportedStrategyLanguageBySourceFormat,
+  getSupportedStrategyLanguageRecord,
+  type StrategyArtifactSourceFormat,
+} from "@cowards/spec"
+
+export type WorkshopEditorSourceFormat = Extract<
+  StrategyArtifactSourceFormat,
+  "typescript" | "python" | "rust" | "zig"
+>
+
+export const WORKSHOP_EDITOR_SOURCE_FORMATS = [
+  "typescript",
+  "python",
+  "rust",
+  "zig",
+] as const satisfies readonly WorkshopEditorSourceFormat[]
 
 export const runtimeExhibitionStatusLabel = (input: {
   languageId?: string | undefined
   languageLabel?: string | undefined
   countedPlayLabel?: string | undefined
 }): string => {
-  const label = input.languageLabel ?? "JS/TS"
-  switch (input.languageId) {
-    case "python":
-      return `${label} · non-counted exhibition beta`
-    case "rust":
-      return `${label} · non-counted exhibition beta`
-    case "zig":
-      return `${label} · non-counted exhibition beta`
-    default:
-      return `${label} · ${input.countedPlayLabel ?? "Counted eligible"}`
+  const language = getSupportedStrategyLanguageRecord(input.languageId)
+  const label = input.languageLabel ?? language?.label ?? "JS/TS"
+  if (language && input.countedPlayLabel === undefined) {
+    return language.publicLabel
   }
+  if (language && language.countedEligibility !== "eligible") {
+    return language.publicLabel
+  }
+  return `${label} · ${input.countedPlayLabel ?? "Counted eligible"}`
 }
 
 export const sourceFormatExhibitionLabel = (
   sourceFormat?: string | undefined,
 ): string | null => {
-  switch (sourceFormat) {
-    case "python":
-      return "Python · non-counted exhibition beta"
-    case "rust":
-      return "Rust · non-counted exhibition beta"
-    case "zig":
-      return "Zig · non-counted exhibition beta"
-    default:
-      return null
-  }
+  const language = getSupportedStrategyLanguageBySourceFormat(sourceFormat)
+  return language?.publicLabel ?? null
 }
 
 export const sourceFormatShortLabel = (
-  sourceFormat: Extract<
-    StrategyArtifactSourceFormat,
-    "typescript" | "python" | "rust" | "zig"
-  >,
+  sourceFormat: WorkshopEditorSourceFormat,
 ): string => {
-  switch (sourceFormat) {
-    case "python":
-      return "PY beta"
-    case "rust":
-      return "Rust beta"
-    case "zig":
-      return "Zig beta"
-    default:
-      return "TS"
-  }
+  return (
+    getSupportedStrategyLanguageBySourceFormat(sourceFormat)?.shortLabel ?? "TS"
+  )
 }
 
+export const sourceFormatLanguageLabel = (
+  sourceFormat?: string | undefined,
+): string =>
+  getSupportedStrategyLanguageBySourceFormat(sourceFormat)?.label ??
+  "TypeScript"
+
 export const sourceFormatRuntimeCue = (
-  sourceFormat: Extract<
-    StrategyArtifactSourceFormat,
-    "typescript" | "python" | "rust" | "zig"
-  >,
+  sourceFormat: WorkshopEditorSourceFormat,
 ): string | null => {
-  switch (sourceFormat) {
-    case "python":
-      return "Python is non-counted exhibition beta and runs only through the Runtime Broker."
-    case "rust":
-      return "Rust is non-counted exhibition beta and executes immutable WASM/WASI artifacts through the Runtime Broker."
-    case "zig":
-      return "Zig is non-counted exhibition beta after no-std WASI Preview 1 compile, artifact, import audit, and Wasmtime ABI proof."
-    default:
-      return null
-  }
+  const language = getSupportedStrategyLanguageBySourceFormat(sourceFormat)
+  return language && language.countedEligibility !== "eligible"
+    ? language.publicRuntimeCue
+    : null
 }

@@ -47,15 +47,22 @@ import {
   defaultRuntimeMetadata,
   describeStrategyRuntimeProductSemantics,
   evaluateStrategyRuntimeCountedEligibility,
+  getSupportedStrategyLanguageBySourceFormat,
+  getSupportedStrategyLanguageRecord,
+  getStrategyLanguageProviderRecord,
   assertNonJsRuntimeGuardrails,
   NON_JS_RUNTIME_PROMOTION_CRITERIA,
   NON_JS_RUNTIME_SUPPORT_POLICY,
   RUNTIME_BROKER_REGISTRY,
   RUNTIME_BROKER_REGISTRY_VERSION,
+  STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+  STRATEGY_LANGUAGE_PROVIDER_REGISTRY,
+  SUPPORTED_STRATEGY_LANGUAGES,
   STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
   runtimeCompatibilityKey,
+  validateStrategyLanguageProviderRuntimeCompatibility,
   validateRuntimeBrokerRegistryMatch,
   validateStrategyRuntimeMetadataPolicy,
 } from "./runtime.js"
@@ -255,7 +262,7 @@ describe("Coward's Game spec contracts", () => {
     expect(RuntimeViolationUserGuidanceSchema.parse(guidance)).toEqual(guidance)
   })
 
-  it("runtime product semantics keep JS counted and Python experimental", () => {
+  it("runtime product semantics keep JS, Python, Rust, and Zig counted through providers", () => {
     const jsRuntime = defaultRuntimeMetadata()
     const pythonRuntime = {
       abiVersion: "strategy-runtime-abi-v1.14",
@@ -275,24 +282,34 @@ describe("Coward's Game spec contracts", () => {
       publicMessage: null,
     })
     expect(evaluateStrategyRuntimeCountedEligibility(pythonRuntime)).toEqual({
-      ok: false,
-      code: "NON_COUNTED_RUNTIME",
-      publicMessage:
-        "Strategy runtime is experimental and not counted-play eligible.",
+      ok: true,
+      code: null,
+      publicMessage: null,
     })
     expect(
       describeStrategyRuntimeProductSemantics(pythonRuntime),
     ).toMatchObject({
       languageLabel: "Python",
-      readinessLabel: "Experimental",
-      countedPlayLabel: "Not counted",
-      experimental: true,
+      readinessLabel: "Production candidate",
+      countedPlayLabel: "Counted eligible",
+      experimental: false,
     })
     expect(
       STRATEGY_RUNTIME_ADAPTER_REGISTRY.every(
-        (adapter) => adapter.isolationPromotionState === "evidence-only",
+        (adapter) =>
+          adapter.id === "runtime-python-subprocess-experimental" ||
+          adapter.isolationPromotionState === "evidence-only",
       ),
     ).toBe(true)
+    expect(
+      STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
+        (adapter) => adapter.id === "runtime-python-subprocess-experimental",
+      ),
+    ).toMatchObject({
+      enabledForNormalPlay: true,
+      countedResultsAllowed: true,
+      isolationPromotionState: "evidence-only",
+    })
     expect(
       STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
         (adapter) => adapter.id === "runtime-js-container-subprocess",
@@ -335,9 +352,16 @@ describe("Coward's Game spec contracts", () => {
     })
     expect(() => assertNonJsRuntimeGuardrails()).not.toThrow()
     expect(NON_JS_RUNTIME_SUPPORT_POLICY).toMatchObject({
-      status: "experimental-non-counted",
-      experimentalLanguageIds: ["python", "rust", "zig"],
-      publicLanguagePickerAllowed: false,
+      status: "partial-production-supported",
+      productionSupportedLanguageIds: [
+        "javascript",
+        "typescript",
+        "python",
+        "rust",
+        "zig",
+      ],
+      experimentalLanguageIds: [],
+      publicLanguagePickerAllowed: true,
     })
     expect(
       NON_JS_RUNTIME_PROMOTION_CRITERIA.map((criterion) => criterion.id),
@@ -356,7 +380,98 @@ describe("Coward's Game spec contracts", () => {
     )
   })
 
-  it("v1.17 runtime broker registry uses exact metadata and keeps Python non-counted", () => {
+  it("v1.32 supported language registry is the product semantics source", () => {
+    expect(SUPPORTED_STRATEGY_LANGUAGES.map((language) => language.id)).toEqual(
+      ["javascript", "typescript", "python", "rust", "zig"],
+    )
+    for (const language of SUPPORTED_STRATEGY_LANGUAGES) {
+      expect(language.supportStatus).toBe("supported")
+      expect(language.providerId).toMatch(/^strategy-language-provider-/)
+      expect(language.publicLabel).toContain(language.label)
+      expect(language.docsReference).toMatch(/^runtime\/languages#/)
+      expect(language.examplesReference.length).toBeGreaterThan(0)
+      expect(language.deterministicRestrictions.length).toBeGreaterThan(0)
+      expect(language.privacyRules.join(" ")).toContain("Public evidence")
+      expect(
+        STRATEGY_RUNTIME_ADAPTER_REGISTRY.some(
+          (adapter) =>
+            adapter.id === language.defaultAdapterId &&
+            adapter.runtimeTarget === language.runtimeTarget &&
+            (adapter.supportedLanguageIds as readonly string[]).includes(
+              language.id,
+            ),
+        ),
+      ).toBe(true)
+      expect(getSupportedStrategyLanguageRecord(language.id)?.providerId).toBe(
+        language.providerId,
+      )
+      expect(
+        getSupportedStrategyLanguageBySourceFormat(language.sourceFormat)?.id,
+      ).toBe(language.id)
+    }
+    expect(
+      SUPPORTED_STRATEGY_LANGUAGES.filter(
+        (language) => language.countedEligibility === "eligible",
+      ).map((language) => language.id),
+    ).toEqual(["javascript", "typescript", "python", "rust", "zig"])
+    expect(
+      SUPPORTED_STRATEGY_LANGUAGES.filter(
+        (language) =>
+          (language as { countedEligibility: string }).countedEligibility ===
+          "pending-evidence",
+      ).map((language) => language.id),
+    ).toEqual([])
+  })
+
+  it("v1.32 strategy language providers declare ABI and boundary posture", () => {
+    expect(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION).toBe(
+      "strategy-language-provider-contract-v1.32",
+    )
+    expect(STRATEGY_LANGUAGE_PROVIDER_REGISTRY).toHaveLength(4)
+    for (const language of SUPPORTED_STRATEGY_LANGUAGES) {
+      const provider = getStrategyLanguageProviderRecord(language.id)
+      expect(provider?.id).toBe(language.providerId)
+      expect(provider?.contractVersion).toBe(
+        STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+      )
+      expect(provider?.runtimeAbiVersion).toBe(STRATEGY_RUNTIME_ABI_VERSION)
+      expect(provider?.executionOwner).toBe("runtime-service")
+      expect(provider?.selectionPolicy).toBe("runtime-broker-registry")
+      expect(provider?.failureTaxonomy).toMatchObject({
+        strategyFailureKind: "runtimeViolation",
+        systemFailureKind: "systemFailure",
+        publicDiagnostics: "redacted",
+      })
+      expect(provider?.boundaryRules).toContain(
+        "web-api-go-may-not-execute-strategy-code",
+      )
+      expect(provider?.migrationNotes.length).toBeGreaterThan(0)
+    }
+    expect(getStrategyLanguageProviderRecord("rust")?.abiPosture).toBe(
+      "wasi-preview1-stdin-stdout-json",
+    )
+    expect(getStrategyLanguageProviderRecord("zig")?.abiPosture).toBe(
+      "wasi-preview1-stdin-stdout-json",
+    )
+    expect(
+      validateStrategyLanguageProviderRuntimeCompatibility(
+        defaultRuntimeMetadata("typescript"),
+      ),
+    ).toEqual([])
+    expect(
+      validateStrategyLanguageProviderRuntimeCompatibility({
+        ...defaultRuntimeMetadata("typescript"),
+        adapter: {
+          id: "runtime-python-subprocess-experimental",
+          version: "0.1.0-experimental",
+        },
+      }).sort(),
+    ).toEqual(
+      ["provider-adapter-mismatch", "provider-runtime-target-mismatch"].sort(),
+    )
+  })
+
+  it("v1.17 runtime broker registry uses exact metadata and promotes Python counted eligibility", () => {
     const jsRuntime = defaultRuntimeMetadata()
     const pythonRuntime = {
       abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
@@ -387,15 +502,15 @@ describe("Coward's Game spec contracts", () => {
           languageId: "python",
           runtimeTarget: "runtime-python",
           adapterId: "runtime-python-subprocess-experimental",
-          enabledForNormalPlay: false,
-          countedResultsAllowed: false,
+          enabledForNormalPlay: true,
+          countedResultsAllowed: true,
         }),
         expect.objectContaining({
           languageId: "rust",
           runtimeTarget: "runtime-wasm-wasi",
           adapterId: "runtime-wasm-wasi-wasmtime-preview1",
-          enabledForNormalPlay: false,
-          countedResultsAllowed: false,
+          enabledForNormalPlay: true,
+          countedResultsAllowed: true,
         }),
       ]),
     )
@@ -408,7 +523,7 @@ describe("Coward's Game spec contracts", () => {
     ).toContain("INCOMPATIBLE_ADAPTER")
   })
 
-  it("WASM/WASI Rust metadata stays non-counted and artifact-backed", () => {
+  it("WASM/WASI Rust metadata is counted eligible and artifact-backed", () => {
     const wasmLimits =
       STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
         (adapter) => adapter.id === "runtime-wasm-wasi-wasmtime-preview1",
@@ -426,18 +541,17 @@ describe("Coward's Game spec contracts", () => {
     }
 
     expect(validateRuntimeBrokerRegistryMatch(rustRuntime)).toHaveLength(0)
-    expect(evaluateStrategyRuntimeCountedEligibility(rustRuntime)).toEqual({
-      ok: false,
-      code: "NON_COUNTED_RUNTIME",
-      publicMessage:
-        "Strategy runtime is experimental and not counted-play eligible.",
+    expect(
+      evaluateStrategyRuntimeCountedEligibility(rustRuntime),
+    ).toMatchObject({
+      ok: true,
     })
     expect(describeStrategyRuntimeProductSemantics(rustRuntime)).toMatchObject({
       languageLabel: "Rust",
       adapterLabel: "WASM/WASI Wasmtime Preview 1",
-      countedPlayEligible: false,
-      countedPlayLabel: "Not counted",
-      examplesReference: "examples/rust-wasi-exhibition-beta",
+      countedPlayEligible: true,
+      countedPlayLabel: "Counted eligible",
+      examplesReference: "examples/rust-wasi-strategy",
     })
   })
 
@@ -862,8 +976,8 @@ describe("Coward's Game spec contracts", () => {
                 "rustc --target wasm32-wasip1 -O strategy.rs -o strategy.wasm",
             },
             publicEvidence: {
-              label: "Rust WASM/WASI non-counted exhibition beta",
-              nonCounted: true,
+              label: "Rust WASM/WASI counted provider artifact",
+              nonCounted: false,
               sandboxClaim: "candidate-readiness-only",
             },
           },

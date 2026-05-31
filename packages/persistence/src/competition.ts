@@ -1,9 +1,16 @@
-import { randomUUID } from "node:crypto"
+import {
+  createHash,
+  createHmac,
+  randomUUID,
+  timingSafeEqual,
+} from "node:crypto"
+import { Buffer } from "node:buffer"
 import {
   assertPublicMatchSetResultLeakSafe,
   evaluateStrategyRuntimeCountedEligibility,
   getCompetitionPreset,
   normalizeStrategyRuntimeMetadata,
+  STRATEGY_RUNTIME_ABI_VERSION,
   type CompetitionEntrantSnapshot,
   type CompetitionPresetId,
   type PublicMatchSetResultDto,
@@ -42,6 +49,11 @@ export class CompetitionInputError extends Error {
 
 export const runtimeAllowsCountedPlay = (
   runtime: unknown,
+  provenance: {
+    metadata?: unknown
+    sourceHash?: string
+    sourceBytes?: number
+  } = {},
 ): CompetitionEntrantSnapshot["runtime"] => {
   const eligibility = evaluateStrategyRuntimeCountedEligibility(runtime)
   if (!eligibility.ok) {
@@ -50,7 +62,195 @@ export const runtimeAllowsCountedPlay = (
         "StrategyRevision runtime is not eligible for counted exhibition entry.",
     )
   }
-  return normalizeStrategyRuntimeMetadata(runtime)
+  const normalized = normalizeStrategyRuntimeMetadata(runtime)
+  if (
+    normalized.language.id === "python" &&
+    !pythonProviderValidationMatches(
+      provenance.metadata,
+      provenance.sourceHash,
+      provenance.sourceBytes,
+    )
+  ) {
+    throw new CompetitionInputError(
+      "Python counted entry requires provider-validated revision provenance.",
+    )
+  }
+  if (
+    (normalized.language.id === "rust" || normalized.language.id === "zig") &&
+    !rustProviderValidationMatches(
+      provenance.metadata,
+      provenance.sourceHash,
+      provenance.sourceBytes,
+      normalized.language.id,
+    )
+  ) {
+    const label = normalized.language.id === "zig" ? "Zig" : "Rust"
+    throw new CompetitionInputError(
+      `${label} counted entry requires provider-validated artifact provenance.`,
+    )
+  }
+  return normalized
+}
+
+const pythonProviderValidationMatches = (
+  metadata: unknown,
+  sourceHash: string | undefined,
+  sourceBytes: number | undefined,
+): boolean => {
+  if (
+    !sourceHash ||
+    sourceBytes === undefined ||
+    metadata === null ||
+    typeof metadata !== "object"
+  ) {
+    return false
+  }
+  const providerValidation = (metadata as { providerValidation?: unknown })
+    .providerValidation
+  if (providerValidation === null || typeof providerValidation !== "object") {
+    return false
+  }
+  const validation = providerValidation as Record<string, unknown>
+  if (
+    validation.providerId !== "strategy-language-provider-python" ||
+    validation.contractVersion !==
+      "strategy-language-provider-contract-v1.32" ||
+    validation.sourceHash !== sourceHash ||
+    validation.sourceBytes !== sourceBytes ||
+    typeof validation.proof !== "string"
+  ) {
+    return false
+  }
+  const expected = pythonProviderValidationProof({
+    providerId: validation.providerId,
+    contractVersion: validation.contractVersion,
+    sourceHash,
+    sourceBytes,
+  })
+  return expected !== null && safeEqual(validation.proof, expected)
+}
+
+const rustProviderValidationMatches = (
+  metadata: unknown,
+  sourceHash: string | undefined,
+  sourceBytes: number | undefined,
+  languageId: "rust" | "zig" = "rust",
+): boolean => {
+  const providerId =
+    languageId === "zig"
+      ? "strategy-language-provider-zig-wasi"
+      : "strategy-language-provider-rust-wasi"
+  const targetTriple = languageId === "zig" ? "wasm32-wasi" : "wasm32-wasip1"
+  if (
+    !sourceHash ||
+    sourceBytes === undefined ||
+    metadata === null ||
+    typeof metadata !== "object"
+  ) {
+    return false
+  }
+  const record = metadata as {
+    providerValidation?: unknown
+    compiledArtifact?: unknown
+  }
+  const artifact = record.compiledArtifact
+  if (artifact === null || typeof artifact !== "object") {
+    return false
+  }
+  const artifactRecord = artifact as Record<string, unknown>
+  if (
+    typeof artifactRecord.hash !== "string" ||
+    typeof artifactRecord.bytes !== "number" ||
+    artifactRecord.sourceHash !== sourceHash ||
+    artifactRecord.targetTriple !== targetTriple ||
+    artifactRecord.wasiProfile !== "preview1" ||
+    artifactRecord.abiEnvelope !== "stdin-stdout-json" ||
+    artifactRecord.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+    artifactRecord.validationStatus !== "valid" ||
+    typeof artifactRecord.bytesBase64 !== "string" ||
+    !artifactBytesMatch({
+      bytesBase64: artifactRecord.bytesBase64,
+      hash: artifactRecord.hash,
+      bytes: artifactRecord.bytes,
+    })
+  ) {
+    return false
+  }
+  const providerValidation = record.providerValidation
+  if (providerValidation === null || typeof providerValidation !== "object") {
+    return false
+  }
+  const validation = providerValidation as Record<string, unknown>
+  if (
+    validation.providerId !== providerId ||
+    validation.contractVersion !==
+      "strategy-language-provider-contract-v1.32" ||
+    validation.sourceHash !== sourceHash ||
+    validation.sourceBytes !== sourceBytes ||
+    validation.artifactHash !== artifactRecord.hash ||
+    validation.artifactBytes !== artifactRecord.bytes ||
+    typeof validation.proof !== "string"
+  ) {
+    return false
+  }
+  const expected = pythonProviderValidationProof({
+    providerId,
+    contractVersion: validation.contractVersion,
+    sourceHash,
+    sourceBytes,
+    artifactHash: artifactRecord.hash,
+    artifactBytes: artifactRecord.bytes,
+  })
+  return expected !== null && safeEqual(validation.proof, expected)
+}
+
+const artifactBytesMatch = (artifact: {
+  bytesBase64: string
+  hash: string
+  bytes: number
+}): boolean => {
+  const bytes = Buffer.from(artifact.bytesBase64, "base64")
+  return (
+    bytes.byteLength === artifact.bytes &&
+    createHash("sha256").update(bytes).digest("hex") === artifact.hash
+  )
+}
+
+const providerValidationSecret = (): string =>
+  process.env.COWARDS_PROVIDER_VALIDATION_SECRET?.trim() ?? ""
+
+const pythonProviderValidationProof = (input: {
+  providerId: string
+  contractVersion: string
+  sourceHash: string
+  sourceBytes: number
+  artifactHash?: string | undefined
+  artifactBytes?: number | undefined
+}): string | null => {
+  const secret = providerValidationSecret()
+  if (!secret) {
+    return null
+  }
+  const payload = [
+    input.providerId,
+    input.contractVersion,
+    input.sourceHash,
+    String(input.sourceBytes),
+    input.artifactHash ?? "",
+    input.artifactBytes === undefined ? "" : String(input.artifactBytes),
+  ].join("\n")
+  return `hmac-sha256:${createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex")}`
+}
+
+const safeEqual = (left: string, right: string): boolean => {
+  const leftBuffer = Buffer.from(left)
+  const rightBuffer = Buffer.from(right)
+  return (
+    leftBuffer.length === rightBuffer.length &&
+    timingSafeEqual(leftBuffer, rightBuffer)
+  )
 }
 
 export class ExhibitionRateLimitError extends Error {
@@ -322,7 +522,11 @@ const loadOwnedRevisionSnapshots = async (
         `StrategyRevision is not valid for exhibition entry: ${revisionId}`,
       )
     }
-    const runtime = runtimeAllowsCountedPlay(row.runtime)
+    const runtime = runtimeAllowsCountedPlay(row.runtime, {
+      metadata: row.metadata,
+      sourceHash: row.source_hash,
+      sourceBytes: row.source_bytes,
+    })
     const label = row.metadata.label ?? `Revision ${entrantIndex + 1}`
     const shortHash = row.source_hash.slice(0, 10)
     return {

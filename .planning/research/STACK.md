@@ -1,41 +1,72 @@
-# Stack Research: v1.21 WASM/WASI Multi-Language Runtime Candidate
+# v1.32 Stack Research: Four-Language Production Strategy Support
 
 **Project:** Coward's Game
-**Milestone:** v1.21 WASM/WASI Multi-Language Runtime Candidate and Rust Exhibition Alpha
-**Researched:** 2026-05-25
+**Milestone:** v1.32 Four-Language Production Strategy Support
+**Researched:** 2026-05-31
+**Scope:** Repo-local stack, runtime/provider contracts, validation, UI/product surfaces, public evidence, and monitor hooks for promoting JS/TS, Python, Rust, and Zig.
 
-## Stack Additions
+## Existing Stack
 
-- Preserve the normal product topology: Next.js web frontend -> Go backend -> Strategy Execution Service / Runtime Broker -> isolated runtime implementation(s).
-- Add a `runtime-wasm-wasi` broker/runtime target or equivalent registry entry that remains runtime-only and non-counted.
-- Use WASI Preview 1 as the first executable ABI lane: compiled module reads a schema-validated JSON request from stdin and writes a schema-validated JSON response to stdout.
-- Use Wasmtime as the local runtime candidate because it is installed locally (`wasmtime 45.0.0`) and supports WASI execution, fuel, timeout, memory/resource options, and deterministic execution controls.
-- Use Rust `wasm32-wasip1` as the first net-new language target. Local tooling is available: `rustc 1.95.0`, `cargo 1.95.0`, `rustup`, and installed target `wasm32-wasip1`.
-- Use `wasm-tools 1.250.0` for artifact inspection/hash/readiness checks where useful.
-- Treat Zig as a gated stretch target. Local `zig 0.16.0` is available and official Zig docs show `wasm32-wasi` build support, but v1.21 should require compile/runtime evidence before claiming Zig support.
+- Strategy language metadata already exists in `packages/spec/src/runtime.ts` through `STRATEGY_LANGUAGE_IDS`, `STRATEGY_LANGUAGE_REGISTRY`, `STRATEGY_RUNTIME_ADAPTER_REGISTRY`, `RUNTIME_BROKER_REGISTRY`, `StrategyRuntimeMetadata`, product semantics, counted eligibility, runtime limits, and validation messages.
+- Current supported source formats are `javascript`, `typescript`, `python`, `rust`, and `zig` in `StrategyArtifactSourceFormat`.
+- JS/TS uses `packages/runtime-js` and is currently counted through worker-thread/subprocess adapters. The container subprocess adapter is a production-candidate evidence lane but is not counted.
+- Python uses `packages/runtime-python` with a subprocess adapter and Python validation hosts. It is intentionally registered as `runtime-python-subprocess-experimental`, non-counted, and evidence-only.
+- Rust and Zig use `packages/runtime-wasm-wasi` through Wasmtime Preview 1 stdin/stdout JSON. They carry immutable WASM artifact metadata and are currently non-counted exhibition beta only.
+- `apps/runtime-service` owns runtime execution and validation endpoints. Web/API/Go may call runtime-service, but Strategy code must not execute in those processes.
+- Go owns normal backend orchestration, Match lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected public reads, and selected account/public API routes.
+- Public app/result/replay consumption is shaped by `match-execution-app-v1` plus newer public discovery DTOs. v1.32 may intentionally change or version execution/runtime contracts, but every change must be justified and audited.
 
-## Stack Non-Additions
+## Stack Additions Needed
 
-- No Rust, Zig, or WASM backend service.
-- No Go/web/API Strategy execution.
-- No Node `node:wasi` sandbox promotion.
-- No production sandbox certification from local Wasmtime evidence alone.
-- No arbitrary Cargo/Zig package installation as a product feature.
-- No direct-export or component-model Strategy ABI promotion unless explicitly proven and replanned.
-- No ranked, ladder, counted, gauntlet, or broad production multi-language support for Rust/Zig/WASM.
+- A canonical supported-language model that supersedes the older `NON_JS_RUNTIME_SUPPORT_POLICY` framing. The model should represent JS/TS, Python, Rust, and Zig as first-class records with shared fields for status, counted eligibility, provider/runtime adapter, source/artifact policy, compile/package policy, validation, limits, templates, docs, public labels, privacy, and monitor ownership.
+- A `StrategyLanguageProvider` or equivalent provider contract that sits above language-specific adapters. It should answer product questions such as "can submit", "can count", "can enter this competition", "what validation/build path applies", "what public label is allowed", and "what evidence is required".
+- Runtime-service provider plumbing for all four languages, including validation/build/execute behavior, failure taxonomy, timeout/memory/output limits, and schema validation parity.
+- A conformance suite package or test namespace that can run a golden Strategy corpus across JS/TS, Python, Rust, and Zig and compare public-safe results/replay shapes.
+- A monitor that rejects new direct product/UI special-casing of `typescript`, `python`, `rust`, or `zig` outside approved registry/provider boundaries.
+- Public-output privacy scan coverage that treats language, adapter, artifact, and diagnostics fields as sensitive unless explicitly public-safe.
 
-## Evidence Sources
+## Do Not Add
 
-- Rust `wasm32-wasip1` docs: https://doc.rust-lang.org/stable/rustc/platform-support/wasm32-wasip1.html
-- WASI interfaces overview: https://wasi.dev/interfaces
-- Wasmtime interruption/fuel docs: https://docs.wasmtime.dev/examples-interrupting-wasm.html
-- Wasmtime WASI context docs: https://docs.wasmtime.dev/api/wasmtime_wasi/struct.WasiCtxBuilder.html
-- Zig WASI docs: https://ziglang.org/documentation/master/#WASI
-- Node WASI warning: https://nodejs.org/api/wasi.html
+- Do not add a second ad hoc language list inside React, Go, persistence, or test fixtures.
+- Do not use Node `vm` as a security boundary.
+- Do not execute Strategy code in web/API/Go.
+- Do not promote Python/Rust/Zig by changing labels before runtime/provider, conformance, public evidence, and monitor proof exists.
+- Do not silently replace Preview 1 stdin/stdout JSON. If v1.32 keeps it, say so. If it changes, design a migration with compatibility and rollback proof.
 
-## Recommended Stack Direction
+## Integration Points
 
-Use a conservative, executable lane first: WASI Preview 1 stdin/stdout JSON through Wasmtime. That path is less elegant than direct exports or WIT/component model, but it minimizes ABI complexity, works with Rust today, gives Zig a realistic stretch path, and lets hostile/determinism probes target concrete behavior.
+- `packages/spec/src/runtime.ts`
+- `packages/spec/src/types.ts`
+- `packages/spec/src/runtime-execution-service.ts`
+- `packages/runtime-js/src/*`
+- `packages/runtime-python/src/*`
+- `packages/runtime-wasm-wasi/src/*`
+- `apps/runtime-service/src/*`
+- `packages/persistence/src/workshop.ts`
+- `apps/web/app/workshop/*`
+- `apps/web/lib/runtime-labels.ts`
+- `apps/web/app/exhibitions/new/*`
+- `apps/web/app/competitions/[competitionId]/enter/page.tsx`
+- `apps/web/app/matchsets/*`
+- `apps/web/app/matches/[matchId]/replay/*`
+- `apps/web/app/account/page.tsx`
+- `apps/web/app/strategies/[strategyId]/page.tsx`
+- `apps/web/lib/public-discovery-service.ts`
+- `scripts/check-boundary-monitors.ts`
 
----
-*Research written: 2026-05-25*
+## Sources
+
+- `AGENTS.md`
+- `.planning/PROJECT.md`
+- `.planning/MILESTONES.md`
+- `.planning/artifacts/v1.23-signed-in-multi-compiler-proof.md`
+- `.planning/artifacts/v1.24-production-sandbox-readiness-matrix.md`
+- `.planning/artifacts/v1.24-runtime-abuse-lab-evidence.md`
+- `.planning/artifacts/v1.25-match-execution-boundary-inventory.md`
+- `.planning/artifacts/v1.31-public-site-spine-proof.md`
+- `packages/spec/src/runtime.ts`
+- `packages/spec/src/types.ts`
+- `packages/spec/src/runtime-execution-service.ts`
+- `apps/web/lib/runtime-labels.ts`
+- `packages/persistence/src/workshop.ts`
+- `scripts/check-boundary-monitors.ts`

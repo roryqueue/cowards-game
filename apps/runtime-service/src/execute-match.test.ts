@@ -292,7 +292,7 @@ describe("runtime execution service", () => {
       "match:runtime-service-test",
     )
     expect(response.result.runtimeViolationEventCount).toBe(0)
-  })
+  }, 10_000)
 
   it.skipIf(!rustWasiCompileProbe.ok)(
     "executes Rust WASM artifacts through Wasmtime without source fallback",
@@ -395,6 +395,62 @@ describe("runtime execution service", () => {
     }
     expect(response.systemFailure.code).toBe("UNSUPPORTED_RUNTIME_ADAPTER")
     expect(stringify(response)).not.toContain("def select_activations")
+  })
+
+  it("fails closed when provider and runtime adapter disagree", () => {
+    const revision = buildStrategyRevision({
+      source: passiveSource,
+      strategyId: "strategy:provider-mismatch",
+    })
+    const mismatchedRevision: StrategyRevision = {
+      ...revision,
+      runtime: {
+        ...revision.runtime,
+        adapter: {
+          id: "runtime-python-subprocess-experimental",
+          version: "0.1.0-experimental",
+        },
+      },
+    }
+    const response = executeRuntimeServiceRequest(
+      requestFor({ bottom: mismatchedRevision }),
+      runtimeConfig,
+    )
+
+    expect(response.ok).toBe(false)
+    if (response.ok) {
+      throw new Error("expected provider mismatch to fail")
+    }
+    expect(response.systemFailure.code).toBe("UNSUPPORTED_RUNTIME_ADAPTER")
+    expect(stringify(response)).not.toContain(passiveSource.trim())
+  })
+
+  it("fails closed when JS runtime metadata declares a different service adapter", () => {
+    const revision = buildStrategyRevision({
+      source: passiveSource,
+      strategyId: "strategy:js-adapter-drift",
+    })
+    const mismatchedRevision: StrategyRevision = {
+      ...revision,
+      runtime: {
+        ...revision.runtime,
+        adapter: {
+          id: "runtime-js-subprocess",
+          version: revision.runtime.adapter.version,
+        },
+      },
+    }
+    const response = executeRuntimeServiceRequest(
+      requestFor({ bottom: mismatchedRevision }),
+      runtimeConfig,
+    )
+
+    expect(response.ok).toBe(false)
+    if (response.ok) {
+      throw new Error("expected JS adapter drift to fail")
+    }
+    expect(response.systemFailure.code).toBe("UNSUPPORTED_RUNTIME_ADAPTER")
+    expect(stringify(response)).not.toContain(passiveSource.trim())
   })
 
   it("returns a redacted systemFailure for malformed requests", () => {

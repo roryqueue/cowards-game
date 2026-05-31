@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest"
+import { createHash, createHmac } from "node:crypto"
 import { createWorkshopServer, isStorageUnavailableError } from "./server.js"
+import {
+  COMPATIBILITY_VERSIONS,
+  STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+  type StrategyRevision,
+  type StrategyRevisionMetadata,
+} from "@cowards/spec"
+
+const TEST_PROVIDER_VALIDATION_SECRET =
+  "cowards-provider-validation-test-secret-v1.32"
+
+process.env.COWARDS_PROVIDER_VALIDATION_SECRET = TEST_PROVIDER_VALIDATION_SECRET
 
 const validSource = `
 export default {
@@ -14,6 +26,89 @@ export default {
   }
 }
 `.trim()
+
+const pythonProviderValidationProof = (input: {
+  sourceHash: string
+  sourceBytes: number
+}): string =>
+  `hmac-sha256:${createHmac("sha256", TEST_PROVIDER_VALIDATION_SECRET)
+    .update(
+      [
+        "strategy-language-provider-python",
+        STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+        input.sourceHash,
+        String(input.sourceBytes),
+        "",
+        "",
+      ].join("\n"),
+    )
+    .digest("hex")}`
+
+const pythonProviderMetadata = (
+  source: string,
+): Pick<
+  StrategyRevision,
+  "runtime" | "validation" | "engineCompatibility" | "metadata" | "sourceHash"
+> => {
+  const sourceBytes = new TextEncoder().encode(source).length
+  const sourceHash = createHash("sha256").update(source).digest("hex")
+  const runtime: StrategyRevision["runtime"] = {
+    abiVersion: "strategy-runtime-abi-v1.14",
+    language: { id: "python", version: "3.9" },
+    adapter: {
+      id: "runtime-python-subprocess-experimental",
+      version: "0.1.0-experimental",
+    },
+    package: { mode: "none", entrypoint: "module" },
+    requiredCapabilities: [],
+    limits: {
+      timeoutMs: 1000,
+      stdoutBytes: 262144,
+      stderrBytes: 65536,
+      sourceBytes: 65536,
+      strategyMemoryBytes: 32768,
+      soldierMemoryBytes: 2048,
+      objectivePayloadBytes: 1024,
+      environment: "minimal",
+      filesystem: "none",
+      network: "disabled",
+      shell: "disabled",
+      packagePolicy: "none",
+    },
+  }
+  const metadata: StrategyRevisionMetadata = {
+    tags: ["python", "counted", "provider"],
+    providerValidation: {
+      providerId: "strategy-language-provider-python",
+      contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+      sourceHash,
+      sourceBytes,
+      proof: pythonProviderValidationProof({ sourceHash, sourceBytes }),
+    },
+  }
+  return {
+    sourceHash,
+    runtime,
+    validation: {
+      valid: true,
+      errors: [],
+      warnings: [],
+      sourceBytes,
+      forbiddenPatterns: [],
+      sourceHash,
+      runtimeVersion: runtime.adapter.version,
+      engineCompatibility: {
+        spec: COMPATIBILITY_VERSIONS.spec,
+        engine: COMPATIBILITY_VERSIONS.engine,
+      },
+    },
+    engineCompatibility: {
+      spec: COMPATIBILITY_VERSIONS.spec,
+      engine: COMPATIBILITY_VERSIONS.engine,
+    },
+    metadata,
+  }
+}
 
 describe("Workshop server facade", () => {
   it("returns validation errors without inserting invalid source", async () => {
@@ -58,6 +153,67 @@ describe("Workshop server facade", () => {
         notes: "Workshop note",
       })
       expect(response.revision).not.toHaveProperty("source")
+    }
+  })
+
+  it("requires runtime-service provenance for submitted Python Workshop revisions", async () => {
+    const pythonSource = `
+def select_activations(input):
+    return {"activationOrders": [], "strategyMemory": input["strategyMemory"]}
+
+def soldier_brain(input):
+    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": input["soldierMemory"]}
+`
+    const providerRevision = pythonProviderMetadata(pythonSource)
+    const insertedIds: string[] = []
+    const server = createWorkshopServer({
+      withPool: async (fn) => fn({} as never),
+      insertRevision: async (_pool, revision) => {
+        insertedIds.push(revision.id)
+        return revision
+      },
+    })
+
+    await expect(
+      server.submitSource({
+        source: pythonSource,
+        sourceFormat: "python",
+        runtime: providerRevision.runtime,
+        validation: providerRevision.validation,
+        engineCompatibility: providerRevision.engineCompatibility,
+        metadata: providerRevision.metadata,
+      }),
+    ).rejects.toThrow("runtime-service provider validation")
+
+    await expect(
+      server.submitSource({
+        source: `${pythonSource}\n# changed after provider validation\n`,
+        sourceFormat: "python",
+        runtime: providerRevision.runtime,
+        validation: providerRevision.validation,
+        engineCompatibility: providerRevision.engineCompatibility,
+        metadata: providerRevision.metadata,
+        runtimeServiceValidated: true,
+      }),
+    ).rejects.toThrow("runtime-service provider validation")
+
+    const response = await server.submitSource({
+      source: pythonSource,
+      sourceFormat: "python",
+      runtime: providerRevision.runtime,
+      validation: providerRevision.validation,
+      engineCompatibility: providerRevision.engineCompatibility,
+      metadata: providerRevision.metadata,
+      runtimeServiceValidated: true,
+    })
+
+    expect(response.ok).toBe(true)
+    expect(insertedIds).toHaveLength(1)
+    if (response.ok) {
+      expect(response.revision.metadata.providerValidation).toMatchObject({
+        providerId: "strategy-language-provider-python",
+        sourceHash: providerRevision.sourceHash,
+      })
     }
   })
 

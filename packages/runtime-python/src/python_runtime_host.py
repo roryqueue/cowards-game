@@ -50,7 +50,6 @@ def main():
             )
         )
         return 0
-    namespace = {}
     safe_builtins = {
         "abs": abs,
         "bool": bool,
@@ -67,7 +66,8 @@ def main():
         "sum": sum,
     }
     try:
-        exec(source, {"__builtins__": safe_builtins}, namespace)
+        namespace = {"__builtins__": safe_builtins}
+        exec(source, namespace, namespace)
         method_name = envelope["methodName"]
         function_name = (
             "select_activations"

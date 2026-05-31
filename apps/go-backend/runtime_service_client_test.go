@@ -42,6 +42,42 @@ func TestRuntimeServiceClientSuccess(t *testing.T) {
 	}
 }
 
+func TestRuntimeServiceClientValidatesPythonProviderSource(t *testing.T) {
+	source := "def select_activations(input):\n    return {\"activationOrders\": [], \"strategyMemory\": input[\"strategyMemory\"]}\n\ndef soldier_brain(input):\n    return {\"action\": {\"type\": \"TURN_TO_STONE\"}, \"soldierMemory\": input[\"soldierMemory\"]}\n"
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, httpRequest *http.Request) {
+		if httpRequest.URL.Path != "/validate-strategy" {
+			t.Fatalf("unexpected path %s", httpRequest.URL.Path)
+		}
+		writeRuntimeServiceTestJSON(t, writer, runtimeServiceValidationResponse{
+			OK:           true,
+			Kind:         "strategyValidation",
+			SourceFormat: "python",
+			Runtime:      pythonRuntimeMetadata(),
+			Validation: map[string]any{
+				"valid":       true,
+				"errors":      []any{},
+				"warnings":    []any{},
+				"sourceHash":  hashStrategySourceForGo(source),
+				"sourceBytes": len([]byte(source)),
+			},
+			EngineCompatibility: engineCompatibility(),
+			Metadata:            map[string]any{"tags": []string{"python", "counted", "provider"}},
+			SourceHash:          hashStrategySourceForGo(source),
+			SourceBytes:         len([]byte(source)),
+		})
+	}))
+	defer server.Close()
+	client := newRuntimeServiceClient(server.URL)
+
+	response, failure := client.validateStrategy(context.Background(), "python", source, "strategy:python")
+	if failure != nil {
+		t.Fatalf("unexpected failure: %s", runtimeServiceFailureJSONSafe(failure))
+	}
+	if response == nil || !response.OK || response.SourceFormat != "python" {
+		t.Fatalf("expected Python validation success, got %+v", response)
+	}
+}
+
 func TestRuntimeServiceClientRejectsSourceMismatchBeforeTransport(t *testing.T) {
 	called := false
 	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {

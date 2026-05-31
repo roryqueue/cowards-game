@@ -10,6 +10,7 @@
     { "path": "../spec" },
     { "path": "../engine" },
     { "path": "../runtime-js" },
+    { "path": "../runtime-python" },
     { "path": "../replay" },
     { "path": "../map-configs" }
   ],

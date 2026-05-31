@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@cowards/engine": "workspace:*",
+    "@cowards/golden": "workspace:*",
     "@cowards/replay": "workspace:*",
     "@cowards/runtime-js": "workspace:*",
     "@cowards/runtime-python": "workspace:*",

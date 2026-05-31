@@ -17,7 +17,7 @@ export const reliabilityBudgetCue =
   "Strategy calls keep the 1000 ms deterministic cap; Match/runtime-service and proof budgets are outer reliability windows."
 
 export const candidateLaneCue =
-  "Docker/container is v1.20 readiness evidence; WASM/WASI is v1.23 non-counted exhibition beta readiness evidence. Neither is production sandbox certification."
+  "TypeScript, Python, Rust, and Zig counted play use provider-compatible runtime evidence. Rust and Zig use WASI Preview 1 stdin/stdout JSON artifacts; provider proof is required, and this is not broad sandbox certification."
 
 const matchReasonLabel = (
   reason: PublicMatchEvidenceDto["publicReason"],

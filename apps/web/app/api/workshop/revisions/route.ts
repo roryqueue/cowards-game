@@ -1,3 +1,4 @@
+import { getSupportedStrategyLanguageBySourceFormat } from "@cowards/spec"
 import { workshopServer } from "../../../workshop/server.js"
 import { isStorageUnavailableError } from "../../../workshop/server.js"
 import type {
@@ -5,15 +6,17 @@ import type {
   WorkshopSubmitRequest,
 } from "../../../workshop/types.js"
 
-const runtimeServiceValidateWasmWasi = async (
-  sourceFormat: "rust" | "zig",
+const runtimeServiceValidateStrategy = async (
+  sourceFormat: "python" | "rust" | "zig",
   source: string,
 ): Promise<Partial<WorkshopSubmitRequest> | { error: string }> => {
   const endpoint = process.env.COWARDS_RUNTIME_SERVICE_URL?.replace(/\/$/, "")
-  const label = sourceFormat === "zig" ? "Zig" : "Rust"
+  const label =
+    getSupportedStrategyLanguageBySourceFormat(sourceFormat)?.label ??
+    "Strategy"
   if (!endpoint) {
     return {
-      error: `${label} WASM/WASI submission requires runtime-service validation.`,
+      error: `${label} submission requires runtime-service provider validation.`,
     }
   }
   const response = await fetch(`${endpoint}/validate-strategy`, {
@@ -33,6 +36,7 @@ const runtimeServiceValidateWasmWasi = async (
     engineCompatibility:
       result.engineCompatibility as WorkshopSubmitRequest["engineCompatibility"],
     metadata: result.metadata as WorkshopSubmitRequest["metadata"],
+    runtimeServiceValidated: true,
   }
 }
 
@@ -65,8 +69,10 @@ export async function POST(request: Request): Promise<Response> {
 
   const sourceFormat = body.sourceFormat ?? "typescript"
   const runtimeValidation =
-    sourceFormat === "rust" || sourceFormat === "zig"
-      ? await runtimeServiceValidateWasmWasi(sourceFormat, body.source)
+    sourceFormat === "python" ||
+    sourceFormat === "rust" ||
+    sourceFormat === "zig"
+      ? await runtimeServiceValidateStrategy(sourceFormat, body.source)
       : {}
   if ("error" in runtimeValidation) {
     return Response.json(

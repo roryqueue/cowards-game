@@ -11,10 +11,7 @@ const runtimeDisplayLabel = (runtimeSemantics: {
   languageId: string
   languageLabel: string
   adapterLabel: string
-}) =>
-  runtimeSemantics.languageId === "python"
-    ? `${runtimeSemantics.languageLabel} / ${runtimeSemantics.adapterLabel} / non-counted exhibition beta`
-    : `${runtimeSemantics.languageLabel} / ${runtimeSemantics.adapterLabel}`
+}) => `${runtimeSemantics.languageLabel} / ${runtimeSemantics.adapterLabel}`
 
 export default async function StrategyCardPage({
   params,

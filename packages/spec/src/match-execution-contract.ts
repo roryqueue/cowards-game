@@ -111,8 +111,8 @@ export const MatchExecutionLifecycleV1Schema = z.object({
 export const MatchExecutionRuntimeEvidenceV1Schema = z.object({
   runtimeLabels: z.array(z.string().min(1)),
   eligibility: z.object({
-    countedStrategyPath: z.literal("javascript-typescript"),
-    nonCountedExhibitionBeta: z.array(z.enum(["python", "rust", "zig"])),
+    countedStrategyPath: z.literal("javascript-typescript-python-rust-zig"),
+    nonCountedExhibitionBeta: z.array(z.enum(["rust", "zig"])),
     activeWasmWasiAbi: z.literal("preview1-stdin-stdout-json"),
   }),
   ownership: z.object({
@@ -415,16 +415,34 @@ const matchLifecycleState = (
 
 export const createMatchExecutionRuntimeEvidenceV1 = (
   result?: PublicMatchSetResultDto,
-): MatchExecutionRuntimeEvidenceV1 =>
-  MatchExecutionRuntimeEvidenceV1Schema.parse({
+): MatchExecutionRuntimeEvidenceV1 => {
+  const storedNonCounted =
+    result?.metadata &&
+    typeof result.metadata === "object" &&
+    !Array.isArray(result.metadata) &&
+    "countedStatus" in result.metadata &&
+    result.metadata.countedStatus === "non_counted"
+  const historicalNonCounted = [
+    ...(result?.entrants.some(
+      (entrant) => entrant.runtime.language.id === "rust",
+    )
+      ? ["rust" as const]
+      : []),
+    ...(result?.entrants.some(
+      (entrant) => entrant.runtime.language.id === "zig",
+    )
+      ? ["zig" as const]
+      : []),
+  ]
+  return MatchExecutionRuntimeEvidenceV1Schema.parse({
     runtimeLabels:
       result?.entrants.map(
         (entrant) =>
           `${entrant.runtime.language.id}:${entrant.runtime.adapter.id}`,
       ) ?? [],
     eligibility: {
-      countedStrategyPath: "javascript-typescript",
-      nonCountedExhibitionBeta: ["python", "rust", "zig"],
+      countedStrategyPath: "javascript-typescript-python-rust-zig",
+      nonCountedExhibitionBeta: storedNonCounted ? historicalNonCounted : [],
       activeWasmWasiAbi: "preview1-stdin-stdout-json",
     },
     ownership: {
@@ -433,6 +451,7 @@ export const createMatchExecutionRuntimeEvidenceV1 = (
       appExecution: false,
     },
   })
+}
 
 export const createMatchExecutionPrivacyV1 = () =>
   MatchExecutionPrivacyV1Schema.parse({

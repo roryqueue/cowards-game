@@ -6,6 +6,7 @@ import type {
   StrategyArtifactSourceFormat,
   StrategyRevisionValidationCode,
   StrategyRevisionValidationReport,
+  StrategyRuntimeProductSemantics,
   WorkshopAnalyticsSnapshot,
   WorkshopTestSummary,
 } from "@cowards/spec"
@@ -24,6 +25,7 @@ export interface WorkshopRevisionSummary {
   valid: boolean
   validation: StrategyRevisionValidationReport
   metadata: StrategyRevision["metadata"]
+  runtimeSemantics: StrategyRuntimeProductSemantics
   createdAt: string
   usedInMatches: number
 }
@@ -126,6 +128,7 @@ export interface WorkshopSubmitRequest {
   validation?: StrategyRevisionValidationReport | undefined
   engineCompatibility?: StrategyRevision["engineCompatibility"] | undefined
   metadata?: StrategyRevision["metadata"] | undefined
+  runtimeServiceValidated?: boolean | undefined
   label?: string | undefined
   notes?: string | undefined
 }
