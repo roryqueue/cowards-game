@@ -115,11 +115,11 @@ Promote JS/TS, Python, Rust, and Zig to fully supported counted Strategy languag
 
 ### Live Four-Language Signed-In Proof
 
-- [ ] **PROOF-01**: Signed-in user can author or load valid JS/TS, Python, Rust, and Zig Strategy Revisions through Workshop or Account flows.
-- [ ] **PROOF-02**: Signed-in user can enter counted competition or MatchSet paths with all four languages using shared provider eligibility.
-- [ ] **PROOF-03**: Live execution completes a four-language proof matrix with public-safe MatchSet results and replay-ready evidence.
-- [ ] **PROOF-04**: Desktop and mobile browser proof confirms Workshop, Account, entry, result, replay, public evidence, and docs surfaces render without clipped, overlapping, or contradictory language labels.
-- [ ] **PROOF-05**: Proof artifact records language/provider ids, ABI decision, counted eligibility, pairwise matrix coverage, privacy scan result, boundary monitor result, board realism checks, and non-claims.
+- [x] **PROOF-01**: Signed-in user can author or load valid JS/TS, Python, Rust, and Zig Strategy Revisions through Workshop or Account flows.
+- [x] **PROOF-02**: Signed-in user can enter counted competition or MatchSet paths with all four languages using shared provider eligibility.
+- [x] **PROOF-03**: Live execution completes a four-language proof matrix with public-safe MatchSet results and replay-ready evidence.
+- [x] **PROOF-04**: Desktop and mobile browser proof confirms Workshop, Account, entry, result, replay, public evidence, and docs surfaces render without clipped, overlapping, or contradictory language labels.
+- [x] **PROOF-05**: Proof artifact records language/provider ids, ABI decision, counted eligibility, pairwise matrix coverage, privacy scan result, boundary monitor result, board realism checks, and non-claims.
 
 ### Audit and Closure
 
@@ -168,13 +168,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROD-01..PROD-05 | Phase 229 | Complete |
 | EVID-01..EVID-05 | Phase 230 | Complete |
 | MON-01..MON-05 | Phase 231 | Complete |
-| PROOF-01..PROOF-05 | Phase 232 | Pending |
+| PROOF-01..PROOF-05 | Phase 232 | Complete |
 | CLOSE-01..CLOSE-05 | Phase 233 | Pending |
 
 **Coverage:**
 - v1 requirements: 60 total
-- Complete: 50
-- Planned: 10
+- Complete: 55
+- Planned: 5
 - Mapped to phases: 60
 - Unmapped: 0
 

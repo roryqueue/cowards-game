@@ -21,8 +21,8 @@
 | 228 | Cross-Language Golden Strategy Corpus and Parity Matrix | Build the golden Strategy corpus, pairwise matrix, conformance tests, result/replay parity, and privacy parity. | PAR-01..PAR-05 | Complete |
 | 229 | Workshop, Account, and Competition Entry Unification | Move product authoring, account, and entry flows onto shared provider eligibility and labels. | PROD-01..PROD-05 | Complete |
 | 230 | Result, Replay, Public Evidence, and Docs Language Pass | Unify result/replay/public evidence/docs across all four supported languages with privacy and terminology proof. | EVID-01..EVID-05 | Complete |
-| 231 | Drift Monitors and Boundary Coverage | Convert non-promotion monitors into positive parity/boundary monitors and block future direct special-casing drift. | MON-01..MON-05 | 5 |
-| 232 | Live Four-Language Signed-In Proof | Prove signed-in author/save/entry/execution/result/replay/public evidence flows for all four languages. | PROOF-01..PROOF-05 | 5 |
+| 231 | Drift Monitors and Boundary Coverage | Convert non-promotion monitors into positive parity/boundary monitors and block future direct special-casing drift. | MON-01..MON-05 | Complete |
+| 232 | Live Four-Language Signed-In Proof | Prove signed-in author/save/entry/execution/result/replay/public evidence flows for all four languages. | PROOF-01..PROOF-05 | Complete |
 | 233 | Audit, Archive, Commit, and Tag | Review, validate, audit, archive, commit, and tag v1.32. | CLOSE-01..CLOSE-05 | 5 |
 
 ## Phase Details
@@ -161,6 +161,8 @@
 
 ### Phase 232: Live Four-Language Signed-In Proof
 
+**Status:** Complete
+
 **Goal:** Prove signed-in author/save/entry/execution/result/replay/public evidence flows for all four languages.
 
 **Requirements:** PROOF-01, PROOF-02, PROOF-03, PROOF-04, PROOF-05
@@ -188,14 +190,14 @@
 ## Coverage
 
 - v1 requirements: 60 total
-- Complete: 50
-- Planned: 10
+- Complete: 55
+- Planned: 5
 - Mapped to phases: 60
 - Unmapped: 0
 
 ## Next Up
 
-Phase 232: Live Four-Language Signed-In Proof is ready for planning and execution.
+Phase 233: Audit, Archive, Commit, and Tag is ready for planning and execution.
 
 ---
 *Roadmap created: 2026-05-31 after v1.32 requirements approval*
