@@ -93,12 +93,12 @@ Build the operational recovery layer on the execution side behind the frozen `ma
 
 ### End-to-End Operations Recovery Proof
 
-- [ ] **E2E-01**: Signed-in live proof creates or reuses eligible JS/TS counted Strategy Revisions and proves JS/TS counted execution still works after recovery changes.
-- [ ] **E2E-02**: Signed-in proof exercises Python, Rust, and Zig only as non-counted exhibition beta regression lanes if local tooling is available; unavailable beta lanes fail loudly without promotion claims.
-- [ ] **E2E-03**: Signed-in proof executes at least one operator recovery path and opens public result/replay pages for recovered or compatible failure outcomes.
-- [ ] **E2E-04**: Signed-in proof verifies no public page or public artifact leaks Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, or private runtime internals.
-- [ ] **E2E-05**: Signed-in proof records operator action IDs, topology, service states, MatchSet IDs, retry/recovery counts, outcome classifications, public links, and private evidence paths.
-- [ ] **E2E-06**: Signed-in proof explicitly states no result/replay UX expansion, runtime promotion, production sandbox certification, ABI migration, or counted non-JS claim is made.
+- [x] **E2E-01**: Signed-in live proof creates or reuses eligible JS/TS counted Strategy Revisions and proves JS/TS counted execution still works after recovery changes.
+- [x] **E2E-02**: Signed-in proof exercises Python, Rust, and Zig only as non-counted exhibition beta regression lanes if local tooling is available; unavailable beta lanes fail loudly without promotion claims.
+- [x] **E2E-03**: Signed-in proof executes at least one operator recovery path and opens public result/replay pages for recovered or compatible failure outcomes.
+- [x] **E2E-04**: Signed-in proof verifies no public page or public artifact leaks Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, or private runtime internals.
+- [x] **E2E-05**: Signed-in proof records operator action IDs, topology, service states, MatchSet IDs, retry/recovery counts, outcome classifications, public links, and private evidence paths.
+- [x] **E2E-06**: Signed-in proof explicitly states no result/replay UX expansion, runtime promotion, production sandbox certification, ABI migration, or counted non-JS claim is made.
 
 ### Audit and Closure
 
@@ -186,12 +186,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COMPAT-04 | Phase 207 | Complete |
 | COMPAT-05 | Phase 207 | Complete |
 | COMPAT-06 | Phase 207 | Complete |
-| E2E-01 | Phase 208 | Planned |
-| E2E-02 | Phase 208 | Planned |
-| E2E-03 | Phase 208 | Planned |
-| E2E-04 | Phase 208 | Planned |
-| E2E-05 | Phase 208 | Planned |
-| E2E-06 | Phase 208 | Planned |
+| E2E-01 | Phase 208 | Complete |
+| E2E-02 | Phase 208 | Complete |
+| E2E-03 | Phase 208 | Complete |
+| E2E-04 | Phase 208 | Complete |
+| E2E-05 | Phase 208 | Complete |
+| E2E-06 | Phase 208 | Complete |
 | CLOSE-01 | Phase 209 | Planned |
 | CLOSE-02 | Phase 209 | Planned |
 | CLOSE-03 | Phase 209 | Planned |
@@ -200,8 +200,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 57 total
-- Complete: 46
-- Planned: 11
+- Complete: 52
+- Planned: 5
 - Mapped to phases: 57
 - Unmapped: 0
 

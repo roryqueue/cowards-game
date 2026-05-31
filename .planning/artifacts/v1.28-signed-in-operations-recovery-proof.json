@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "v1.28-signed-in-operations-recovery-proof",
+  "generatedAt": "2026-05-31T00:06:38.343Z",
+  "contractVersion": "match-execution-app-v1",
+  "account": {
+    "handle": "v128-mpt0rrqb",
+    "signupMs": 239
+  },
+  "revision": {
+    "id": "strategy-revision:c1e228df19512ba983c0b140de1672351c0dec8ecf79e86a0f03bdf3a18437c0",
+    "sourceFormat": "typescript"
+  },
+  "topology": {
+    "command": "base=http://localhost:3001 database=<redacted> go=http://127.0.0.1:8087 internal-token=<redacted> pnpm e2e:v1.28-proof",
+    "webBaseUrl": "http://localhost:3001",
+    "goBackendUrl": "http://127.0.0.1:8087",
+    "database": "local Postgres via redacted connection string",
+    "runtimeService": "not required for the seeded operator recovery control proof"
+  },
+  "recovery": {
+    "actionId": "match-execution-operator-action:v1.28-proof-mpt0rrqb",
+    "duplicateStatus": "duplicate",
+    "jobId": "match-job:v128-mpt0rrqb",
+    "matchId": "match:v128-mpt0rrqb",
+    "jobStatus": "queued",
+    "matchStatus": "pending",
+    "quarantineStatus": "released",
+    "operatorActionCount": 1
+  },
+  "privateEvidence": {
+    "operatorActionTable": "match_execution_operator_actions",
+    "quarantineTable": "match_execution_quarantines",
+    "actionId": "match-execution-operator-action:v1.28-proof-mpt0rrqb",
+    "jobId": "match-job:v128-mpt0rrqb",
+    "matchId": "match:v128-mpt0rrqb"
+  },
+  "publicPages": [
+    {
+      "href": "/matchsets/match-set%3Afixture%3Aunavailable-runtime",
+      "bodyLength": 1929
+    },
+    {
+      "href": "/matchsets/match-set%3Afixture%3Astale-artifact",
+      "bodyLength": 1871
+    },
+    {
+      "href": "/matchsets/match-set%3Afixture%3Amalformed-runtime-result",
+      "bodyLength": 1915
+    },
+    {
+      "href": "/matches/match%3Afixture%3Apublic-safe-replay/replay",
+      "bodyLength": 1387
+    }
+  ],
+  "totals": {
+    "privateMarkerScanPassed": true,
+    "jsTsCountedPathChecked": true,
+    "operatorRecoveryChecked": true,
+    "publicContractChanged": false
+  },
+  "betaRegressionLanes": {
+    "python": "not executed by Phase 208 local proof; remains non-counted exhibition beta only",
+    "rust": "not executed by Phase 208 local proof; remains non-counted exhibition beta only",
+    "zig": "not executed by Phase 208 local proof; remains non-counted exhibition beta only"
+  },
+  "nonClaims": [
+    "No public result/replay contract expansion",
+    "No runtime promotion",
+    "No production sandbox certification",
+    "No direct-export ABI migration",
+    "No Component Model/WIT ABI migration",
+    "No counted non-JS play"
+  ]
+}
