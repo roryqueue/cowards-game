@@ -1,9 +1,15 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto"
+import {
+  createHash,
+  createHmac,
+  randomUUID,
+  timingSafeEqual,
+} from "node:crypto"
 import {
   assertPublicMatchSetResultLeakSafe,
   EXHIBITION_SCORING_POLICY_V1,
   evaluateStrategyRuntimeCountedEligibility,
   normalizeStrategyRuntimeMetadata,
+  STRATEGY_RUNTIME_ABI_VERSION,
   type CompetitionEntrantSnapshot,
   type LadderMatchSetCountedStatus,
   type LadderNonCountedReason,
@@ -60,6 +66,18 @@ export const assertLadderEligibleRuntime = (
       "Python trial ladder entry requires provider-validated revision provenance.",
     )
   }
+  if (
+    normalized.language.id === "rust" &&
+    !rustProviderValidationMatches(
+      provenance.metadata,
+      provenance.sourceHash,
+      provenance.sourceBytes,
+    )
+  ) {
+    throw new LadderInputError(
+      "Rust trial ladder entry requires provider-validated artifact provenance.",
+    )
+  }
   return normalized
 }
 
@@ -104,6 +122,89 @@ const pythonProviderValidationMatches = (
   return expected !== null && safeEqual(validation.proof, expected)
 }
 
+const rustProviderValidationMatches = (
+  metadata: unknown,
+  sourceHash: string | undefined,
+  sourceBytes: number | undefined,
+): boolean => {
+  if (
+    !sourceHash ||
+    sourceBytes === undefined ||
+    metadata === null ||
+    typeof metadata !== "object"
+  ) {
+    return false
+  }
+  const record = metadata as {
+    providerValidation?: unknown
+    compiledArtifact?: unknown
+  }
+  const artifact = record.compiledArtifact
+  if (artifact === null || typeof artifact !== "object") {
+    return false
+  }
+  const artifactRecord = artifact as Record<string, unknown>
+  if (
+    typeof artifactRecord.hash !== "string" ||
+    typeof artifactRecord.bytes !== "number" ||
+    artifactRecord.sourceHash !== sourceHash ||
+    artifactRecord.targetTriple !== "wasm32-wasip1" ||
+    artifactRecord.wasiProfile !== "preview1" ||
+    artifactRecord.abiEnvelope !== "stdin-stdout-json" ||
+    artifactRecord.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+    artifactRecord.validationStatus !== "valid" ||
+    typeof artifactRecord.bytesBase64 !== "string" ||
+    !artifactBytesMatch({
+      bytesBase64: artifactRecord.bytesBase64,
+      hash: artifactRecord.hash,
+      bytes: artifactRecord.bytes,
+    })
+  ) {
+    return false
+  }
+  const providerValidation = record.providerValidation
+  if (
+    providerValidation === null ||
+    typeof providerValidation !== "object"
+  ) {
+    return false
+  }
+  const validation = providerValidation as Record<string, unknown>
+  if (
+    validation.providerId !== "strategy-language-provider-rust-wasi" ||
+    validation.contractVersion !==
+      "strategy-language-provider-contract-v1.32" ||
+    validation.sourceHash !== sourceHash ||
+    validation.sourceBytes !== sourceBytes ||
+    validation.artifactHash !== artifactRecord.hash ||
+    validation.artifactBytes !== artifactRecord.bytes ||
+    typeof validation.proof !== "string"
+  ) {
+    return false
+  }
+  const expected = pythonProviderValidationProof({
+    providerId: validation.providerId,
+    contractVersion: validation.contractVersion,
+    sourceHash,
+    sourceBytes,
+    artifactHash: artifactRecord.hash,
+    artifactBytes: artifactRecord.bytes,
+  })
+  return expected !== null && safeEqual(validation.proof, expected)
+}
+
+const artifactBytesMatch = (artifact: {
+  bytesBase64: string
+  hash: string
+  bytes: number
+}): boolean => {
+  const bytes = Buffer.from(artifact.bytesBase64, "base64")
+  return (
+    bytes.byteLength === artifact.bytes &&
+    createHash("sha256").update(bytes).digest("hex") === artifact.hash
+  )
+}
+
 const providerValidationSecret = (): string =>
   process.env.COWARDS_PROVIDER_VALIDATION_SECRET?.trim() ?? ""
 
@@ -112,6 +213,8 @@ const pythonProviderValidationProof = (input: {
   contractVersion: string
   sourceHash: string
   sourceBytes: number
+  artifactHash?: string | undefined
+  artifactBytes?: number | undefined
 }): string | null => {
   const secret = providerValidationSecret()
   if (!secret) {
@@ -122,6 +225,8 @@ const pythonProviderValidationProof = (input: {
     input.contractVersion,
     input.sourceHash,
     String(input.sourceBytes),
+    input.artifactHash ?? "",
+    input.artifactBytes === undefined ? "" : String(input.artifactBytes),
   ].join("\n")
   return `hmac-sha256:${createHmac("sha256", secret)
     .update(payload)

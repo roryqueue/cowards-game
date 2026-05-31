@@ -247,6 +247,8 @@ export interface StrategyRevisionMetadata {
         contractVersion: string
         sourceHash: string
         sourceBytes: number
+        artifactHash?: string | undefined
+        artifactBytes?: number | undefined
         proof: string
       }
     | undefined
@@ -298,7 +300,7 @@ export interface CompiledStrategyArtifact {
   toolchain: CompiledStrategyArtifactToolchainEvidence
   publicEvidence: {
     label: string
-    nonCounted: true
+    nonCounted: boolean
     sandboxClaim: "candidate-readiness-only"
   }
 }

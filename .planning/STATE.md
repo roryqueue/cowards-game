@@ -2,22 +2,22 @@
 milestone: v1.32
 milestone_name: Four-Language Production Strategy Support
 status: planning
-current_phase: 226
+current_phase: 227
 progress:
   phases_total: 12
-  phases_complete: 4
+  phases_complete: 5
   requirements_total: 60
-  requirements_complete: 20
+  requirements_complete: 25
 ---
 
 # State: Coward's Game v1.32
 
 ## Current Position
 
-Phase: 226 - Rust Production Support Path
+Phase: 227 - Zig Production Support Path
 Plan: Ready for planning
-Status: Phase 225 Python counted provider path complete; Phase 226 is next
-Last activity: 2026-05-31 - Phase 225 Python provider path implemented, reviewed, and verified
+Status: Phase 226 Rust counted provider path complete; Phase 227 is next
+Last activity: 2026-05-31 - Phase 226 Rust provider path implemented, reviewed, and verified
 
 ## Project Reference
 
@@ -45,7 +45,8 @@ See: `.planning/PROJECT.md`
 - Phase 223 added `SUPPORTED_STRATEGY_LANGUAGES` in `packages/spec/src/runtime.ts`, derived the legacy language registry from it, and moved web runtime labels onto spec-level language semantics.
 - Phase 224 added a versioned provider contract and provider registry, kept WASI Preview 1 stdin/stdout JSON explicit for Rust/Zig, and made runtime-service fail closed on provider/runtime or JS adapter drift.
 - Phase 225 promoted Python to counted eligible through the constrained provider path while keeping Strategy execution behind runtime-service / Runtime Broker.
-- Phase 226 is next: Rust production support path and evidence-gated counted eligibility.
+- Phase 226 promoted Rust to counted eligible through immutable WASM/WASI artifact provider proof while preserving historical non-counted evidence.
+- Phase 227 is next: Zig production support path and evidence-gated counted eligibility.
 - Context and discussion logs have been captured for all v1.32 phases:
   - Phase 222: Language Surface Inventory
   - Phase 223: Unified Supported Language Registry and Eligibility Model

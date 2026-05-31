@@ -481,24 +481,24 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
     id: "rust",
     sourceFormat: "rust",
     label: "Rust",
-    shortLabel: "Rust beta",
+    shortLabel: "Rust",
     version: "1.95.0-wasm32-wasip1",
     providerId: "strategy-language-provider-rust-wasi",
     runtimeTarget: "runtime-wasm-wasi",
     defaultAdapterId: "runtime-wasm-wasi-wasmtime-preview1",
     supportStatus: "supported",
-    promotionStatus: "evidence-gated",
-    countedEligibility: "pending-evidence",
-    entryEligibility: "unranked-only",
-    enabledForNormalPlay: false,
-    publicLabel: "Rust · non-counted exhibition beta",
+    promotionStatus: "complete",
+    countedEligibility: "eligible",
+    entryEligibility: "counted",
+    enabledForNormalPlay: true,
+    publicLabel: "Rust · Counted eligible",
     publicRuntimeCue:
-      "Rust is non-counted exhibition beta and executes immutable WASM/WASI artifacts through the Runtime Broker.",
+      "Rust is supported for counted play through immutable WASM/WASI artifacts executed by the Runtime Broker.",
     sourcePolicyLabel: "Self-contained Strategy source",
     artifactPolicyLabel: "Immutable WASM/WASI artifact",
     packagePolicyLabel: "No packages",
     docsReference: "runtime/languages#rust",
-    examplesReference: "examples/rust-wasi-exhibition-beta",
+    examplesReference: "examples/rust-wasi-strategy",
     validationBehavior: "wasm-wasi-compile",
     buildBehavior: "compile-immutable-artifact",
     deterministicRestrictions: [
@@ -508,7 +508,8 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
       "Public evidence omits Strategy source, StrategyMemory, SoldierMemory, objective payloads, host paths, stderr, stack traces, and artifact bytes by default.",
     ],
     notes: [
-      "Evidence-gated for counted play through immutable WASM/WASI artifacts; current adapter remains non-counted until Phase 226 proof passes.",
+      "Counted play requires runtime-service provider validation, immutable WASM/WASI artifact metadata, import audit, and provider proof bound to source and artifact hashes.",
+      "WASI Preview 1 stdin/stdout JSON remains the active Rust ABI; direct exports and Component Model/WIT stay deferred.",
     ],
   },
   {
@@ -703,8 +704,8 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
 
 export const NON_JS_RUNTIME_SUPPORT_POLICY = {
   status: "partial-production-supported",
-  productionSupportedLanguageIds: ["javascript", "typescript", "python"],
-  experimentalLanguageIds: ["rust", "zig"],
+  productionSupportedLanguageIds: ["javascript", "typescript", "python", "rust"],
+  experimentalLanguageIds: ["zig"],
   publicLanguagePickerAllowed: true,
   countedPlayRequiresProductionSupport: true,
 } as const satisfies NonJsRuntimeSupportPolicy
@@ -716,7 +717,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "Language version, locale, hash behavior, clocks, randomness, IO, dynamic loading, memory, and output behavior are deterministic and documented.",
     currentStatus:
-      "Python is promoted through the constrained provider path; Rust and Zig remain evidence-gated.",
+      "Python and Rust are promoted through constrained provider paths; Zig remains evidence-gated.",
     promotionGate:
       "Repeated local and CI evidence must prove deterministic behavior before counted eligibility.",
   },
@@ -726,7 +727,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "The promoted language runs only inside a production-owned hostile-code isolation boundary.",
     currentStatus:
-      "Python counted play uses the runtime-service provider boundary with import/package/host capability denial. Worker-thread, subprocess, container-subprocess, WASM/WASI, and component-model labels remain evidence terms; Node node:wasi is not accepted as an untrusted Strategy sandbox.",
+      "Python counted play uses the runtime-service provider boundary with import/package/host capability denial. Rust counted play uses immutable WASM/WASI artifacts through Wasmtime with provider proof. Worker-thread, subprocess, container-subprocess, WASM/WASI, and component-model labels remain evidence terms; Node node:wasi is not accepted as an untrusted Strategy sandbox.",
     promotionGate:
       "Runtime isolation promotion criteria must pass before non-JS counted play.",
   },
@@ -746,7 +747,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "Workshop templates, examples, validation copy, documentation, and support matrix distinguish production-supported languages from experimental ones.",
     currentStatus:
-      "Product surfaces may show Python as counted eligible only when backed by provider registry evidence; Rust and Zig keep beta labels.",
+      "Product surfaces may show Python and Rust as counted eligible only when backed by provider registry evidence; Zig keeps beta labels.",
     promotionGate:
       "A public picker can appear only after at least one non-JS runtime is production-supported.",
   },
@@ -766,7 +767,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "MatchSet, ladder, gauntlet, analytics, and public entry gates agree on counted eligibility.",
     currentStatus:
-      "Python is counted eligible through the provider registry; Rust and Zig remain disabled for normal counted play.",
+      "Python and Rust are counted eligible through the provider registry; Zig remains disabled for normal counted play.",
     promotionGate:
       "All counted gates must fail closed unless production support is explicit.",
   },
@@ -785,7 +786,8 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     category: "rollback",
     requirement:
       "Operators can disable promoted non-JS counted play without silently reclassifying existing evidence.",
-    currentStatus: "Python counted evidence exists; Rust and Zig remain non-counted.",
+    currentStatus:
+      "Python and Rust counted evidence exists; Zig remains non-counted.",
     promotionGate:
       "Promotion requires rollback semantics for unsafe or nondeterministic runtimes.",
   },
@@ -795,7 +797,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "Language/runtime deprecation rules explain compatibility, replayability, and future submission behavior.",
     currentStatus:
-      "Python is counted provider-supported; Rust and Zig remain evidence-gated.",
+      "Python and Rust are counted provider-supported; Zig remains evidence-gated.",
     promotionGate:
       "A promoted runtime needs versioned deprecation and migration rules.",
   },
@@ -913,10 +915,10 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     label: "WASM/WASI Wasmtime Preview 1",
     version: "0.1.0-alpha",
     runtimeTarget: "runtime-wasm-wasi",
-    readiness: "experimental",
+    readiness: "production-candidate",
     supportedLanguageIds: ["rust", "zig"],
-    enabledForNormalPlay: false,
-    countedResultsAllowed: false,
+    enabledForNormalPlay: true,
+    countedResultsAllowed: true,
     isolationPromotionState: "evidence-only",
     isolationPromotionCriteria: [
       "immutable-wasm-artifact",
@@ -925,7 +927,8 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
       "fuel-timeout-evidence",
       "filesystem-network-denial",
       "redacted-diagnostics",
-      "signed-in-exhibition-proof",
+      "provider-provenance-proof",
+      "signed-in-counted-proof",
     ],
     isolationBoundary:
       "Wasmtime CLI subprocess candidate for immutable WASM/WASI non-counted exhibition beta; not production hostile-code isolation certification.",
@@ -940,7 +943,7 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     requiredCapabilities: [],
     notes: [
       "WASI Preview 1 stdin/stdout JSON envelope only.",
-      "Rust/Zig remain non-counted exhibition beta only; not ranked, ladder, gauntlet, counted, or broad production multi-language support.",
+      "Rust counted play is artifact/provider-proof gated; Zig remains non-counted exhibition beta until Phase 227.",
       "Node node:wasi is not accepted as a hostile-code sandbox.",
     ],
   },
@@ -956,11 +959,12 @@ export const assertNonJsRuntimeGuardrails = (): void => {
       throw new Error(`${language.id} must remain evidence-gated`)
     }
   }
-  for (const adapter of STRATEGY_RUNTIME_ADAPTER_REGISTRY) {
-    const supportsNonJs = adapter.supportedLanguageIds.some((languageId) =>
-      experimental.has(languageId),
+  for (const rawAdapter of STRATEGY_RUNTIME_ADAPTER_REGISTRY) {
+    const adapter: StrategyRuntimeAdapterRecord = rawAdapter
+    const supportsExperimentalOnly = adapter.supportedLanguageIds.every(
+      (languageId) => experimental.has(languageId),
     )
-    if (!supportsNonJs) {
+    if (!supportsExperimentalOnly) {
       continue
     }
     if (
@@ -1191,7 +1195,8 @@ export const RUNTIME_BROKER_REGISTRY =
           readiness: adapter.readiness,
           enabledForNormalPlay:
             language.enabledForNormalPlay && adapter.enabledForNormalPlay,
-          countedResultsAllowed: adapter.countedResultsAllowed,
+          countedResultsAllowed:
+            language.enabledForNormalPlay && adapter.countedResultsAllowed,
           limits: adapter.limits,
         }
       }),

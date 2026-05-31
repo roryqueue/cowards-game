@@ -453,7 +453,7 @@ describe("Workshop service contracts", () => {
       "Python",
       "Python",
       "Python",
-      "Rust beta",
+      "Rust",
       "Zig beta",
     ])
     expect(starters.every((sample) => sample.validation.valid)).toBe(true)

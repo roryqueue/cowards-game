@@ -41,6 +41,8 @@ const pythonProviderValidationProof = (input: {
         STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
         input.sourceHash,
         String(input.sourceBytes),
+        "",
+        "",
       ].join("\n"),
     )
     .digest("hex")}`

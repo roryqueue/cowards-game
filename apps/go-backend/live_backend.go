@@ -2428,18 +2428,18 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"adapterId":            adapterID,
 			"languageLabel":        "Rust",
 			"adapterLabel":         "WASM/WASI Wasmtime Preview 1",
-			"readiness":            "experimental",
-			"readinessLabel":       "Experimental",
-			"experimental":         true,
-			"countedPlayEligible":  false,
-			"countedPlayLabel":     "Not counted",
-			"countedPlayReason":    "Strategy runtime is non-counted exhibition beta and not counted-play eligible.",
+			"readiness":            "production-candidate",
+			"readinessLabel":       "Production candidate",
+			"experimental":         false,
+			"countedPlayEligible":  true,
+			"countedPlayLabel":     "Counted eligible",
+			"countedPlayReason":    nil,
 			"sourcePolicyLabel":    "Self-contained Rust source compiled to immutable WASM artifact",
 			"packagePolicyLabel":   "No packages",
 			"docsReference":        "runtime/languages",
-			"examplesReference":    "examples/rust-wasi-exhibition-beta",
-			"warnings":             []string{"Rust WASM/WASI is non-counted exhibition beta and not ranked/counted eligible."},
-			"validationIssueCodes": []string{"NON_COUNTED_RUNTIME"},
+			"examplesReference":    "examples/rust-wasi-strategy",
+			"warnings":             []string{},
+			"validationIssueCodes": []string{},
 		}
 	}
 	if languageID == "zig" {
@@ -2493,13 +2493,23 @@ func publicRuntimeMetadata(runtime map[string]any) map[string]any {
 
 func runtimeSemanticsForRevision(runtime map[string]any, metadata map[string]any, sourceHash string, sourceBytes int) map[string]any {
 	semantics := runtimeSemantics(runtime)
-	if stringValue(mapValue(runtime, "language"), "id") != "python" ||
-		pythonProviderValidationMatches(metadata, sourceHash, sourceBytes) {
+	languageID := stringValue(mapValue(runtime, "language"), "id")
+	if languageID != "python" && languageID != "rust" {
 		return semantics
+	}
+	if languageID == "python" && pythonProviderValidationMatches(metadata, sourceHash, sourceBytes) {
+		return semantics
+	}
+	if languageID == "rust" && rustProviderValidationMatches(metadata, sourceHash, sourceBytes) {
+		return semantics
+	}
+	languageLabel := "Python"
+	if languageID == "rust" {
+		languageLabel = "Rust"
 	}
 	semantics["countedPlayEligible"] = false
 	semantics["countedPlayLabel"] = "Not counted"
-	semantics["countedPlayReason"] = "Python counted play requires provider-validated revision provenance."
+	semantics["countedPlayReason"] = languageLabel + " counted play requires provider-validated revision provenance."
 	return semantics
 }
 
@@ -2524,6 +2534,13 @@ func runtimeAllowsCountedPlay(runtime map[string]any, metadata map[string]any, s
 			return false
 		}
 		if !pythonProviderValidationMatches(metadata, sourceHash, sourceBytes) {
+			return false
+		}
+	} else if languageID == "rust" {
+		if adapterID != "runtime-wasm-wasi-wasmtime-preview1" {
+			return false
+		}
+		if !rustProviderValidationMatches(metadata, sourceHash, sourceBytes) {
 			return false
 		}
 	} else if languageID == "javascript" || languageID == "typescript" {
@@ -2552,7 +2569,49 @@ func pythonProviderValidationMatches(metadata map[string]any, sourceHash string,
 	}
 	return subtle.ConstantTimeCompare(
 		[]byte(stringValue(providerValidation, "proof")),
-		[]byte(pythonProviderValidationProof(sourceHash, sourceBytes)),
+		[]byte(providerValidationProof("strategy-language-provider-python", sourceHash, sourceBytes, "", 0)),
+	) == 1
+}
+
+func rustProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int) bool {
+	if sourceHash == "" || sourceBytes <= 0 {
+		return false
+	}
+	artifact := mapValue(metadata, "compiledArtifact")
+	artifactHash := stringValue(artifact, "hash")
+	artifactBytes := intValue(artifact, "bytes")
+	if artifactHash == "" || artifactBytes <= 0 {
+		return false
+	}
+	artifactBytesBase64 := stringValue(artifact, "bytesBase64")
+	artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
+	if err != nil || len(artifactBytesRaw) != artifactBytes {
+		return false
+	}
+	artifactDigest := sha256.Sum256(artifactBytesRaw)
+	if hex.EncodeToString(artifactDigest[:]) != artifactHash {
+		return false
+	}
+	if stringValue(artifact, "sourceHash") != sourceHash ||
+		stringValue(artifact, "targetTriple") != "wasm32-wasip1" ||
+		stringValue(artifact, "wasiProfile") != "preview1" ||
+		stringValue(artifact, "abiEnvelope") != "stdin-stdout-json" ||
+		stringValue(artifact, "abiVersion") != "strategy-runtime-abi-v1.14" ||
+		stringValue(artifact, "validationStatus") != "valid" {
+		return false
+	}
+	providerValidation := mapValue(metadata, "providerValidation")
+	if stringValue(providerValidation, "providerId") != "strategy-language-provider-rust-wasi" ||
+		stringValue(providerValidation, "contractVersion") != "strategy-language-provider-contract-v1.32" ||
+		stringValue(providerValidation, "sourceHash") != sourceHash ||
+		intValue(providerValidation, "sourceBytes") != sourceBytes ||
+		stringValue(providerValidation, "artifactHash") != artifactHash ||
+		intValue(providerValidation, "artifactBytes") != artifactBytes {
+		return false
+	}
+	return subtle.ConstantTimeCompare(
+		[]byte(stringValue(providerValidation, "proof")),
+		[]byte(providerValidationProof("strategy-language-provider-rust-wasi", sourceHash, sourceBytes, artifactHash, artifactBytes)),
 	) == 1
 }
 
@@ -2561,15 +2620,26 @@ func providerValidationSecret() string {
 }
 
 func pythonProviderValidationProof(sourceHash string, sourceBytes int) string {
+	return providerValidationProof("strategy-language-provider-python", sourceHash, sourceBytes, "", 0)
+}
+
+func providerValidationProof(providerID string, sourceHash string, sourceBytes int, artifactHash string, artifactBytes int) string {
 	secret := providerValidationSecret()
 	if secret == "" {
 		return ""
 	}
 	payload := strings.Join([]string{
-		"strategy-language-provider-python",
+		providerID,
 		"strategy-language-provider-contract-v1.32",
 		sourceHash,
 		fmt.Sprintf("%d", sourceBytes),
+		artifactHash,
+		func() string {
+			if artifactBytes <= 0 {
+				return ""
+			}
+			return fmt.Sprintf("%d", artifactBytes)
+		}(),
 	}, "\n")
 	mac := hmac.New(sha256.New, []byte(secret))
 	_, _ = mac.Write([]byte(payload))

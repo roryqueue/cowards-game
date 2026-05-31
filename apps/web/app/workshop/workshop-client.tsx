@@ -670,7 +670,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                   {template.experimental ? (
                     <span className="workshop-chip warning">
                       {template.sourceFormat === "rust"
-                        ? "Rust beta"
+                        ? "Rust"
                         : template.sourceFormat === "zig"
                           ? "Zig beta"
                           : "Experimental"}

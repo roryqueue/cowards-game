@@ -569,8 +569,8 @@ export const compileRustWasmArtifact = (source: string): WasmCompileResult => {
           "rustc --target wasm32-wasip1 -O strategy.rs -o strategy.wasm",
       },
       publicEvidence: {
-        label: "Rust WASM/WASI non-counted exhibition beta",
-        nonCounted: true,
+        label: "Rust WASM/WASI counted provider artifact",
+        nonCounted: false,
         sandboxClaim: "candidate-readiness-only",
       },
     }
@@ -587,18 +587,7 @@ export const validateRustStrategySource = (
   return {
     valid: compiled.ok,
     errors: compiled.errors,
-    warnings: [
-      {
-        code: "NON_COUNTED_RUNTIME",
-        severity: "warning",
-        message:
-          "Rust WASM/WASI is a non-counted exhibition beta runtime and not ranked/counted eligible.",
-        constraint:
-          "Rust may run only in non-counted exhibition beta proof paths.",
-        remediation: "Use JS/TS for counted play.",
-        reference: "runtime/counting",
-      },
-    ],
+    warnings: [],
     sourceBytes: Buffer.byteLength(source),
     forbiddenPatterns: compiled.forbiddenPatterns,
     sourceHash: hashSource(source),
@@ -635,6 +624,8 @@ export const buildRustStrategyRevision = (input: {
   const compatibilityHash = createHash("sha256")
     .update(JSON.stringify(compatibility))
     .digest("hex")
+  const { providerValidation: _providerValidation, ...metadata } =
+    input.metadata ?? {}
   return StrategyRevisionSchema.parse({
     id: `strategy-revision:rust-wasi:${validation.sourceHash}:${compatibilityHash.slice(0, 16)}`,
     ...(input.strategyId === undefined ? {} : { strategyId: input.strategyId }),
@@ -645,13 +636,12 @@ export const buildRustStrategyRevision = (input: {
     engineCompatibility: validation.engineCompatibility,
     validation,
     metadata: {
-      ...(input.metadata ?? {}),
+      ...metadata,
       tags: [
         ...new Set([
-          ...(input.metadata?.tags ?? []),
+          ...(metadata.tags ?? []),
           "rust",
           "wasm-wasi",
-          "non-counted",
         ]),
       ],
       compiledArtifact: compiled.artifact,

@@ -359,8 +359,8 @@ export const buildResultWorkbenchViewModel = (
         title: "Runtime Eligibility",
         eyebrow: runtime.ownership.hostileStrategyExecution,
         summary: [
-          "JS/TS and Python are counted Strategy paths.",
-          `${runtime.eligibility.nonCountedExhibitionBeta.join(", ")} remain non-counted exhibition beta.`,
+          "JS/TS, Python, and provider-validated Rust are counted Strategy paths.",
+          `${runtime.eligibility.nonCountedExhibitionBeta.join(", ")} remain non-counted exhibition beta for this evidence view.`,
           "The app reads frozen public DTOs only.",
         ].join(" "),
         metrics: [

@@ -3,6 +3,7 @@ import { buildStrategyRevision } from "@cowards/runtime-js"
 import {
   describeStrategyRuntimeProductSemantics,
   normalizeStrategyRuntimeMetadata,
+  STRATEGY_RUNTIME_ABI_VERSION,
 } from "@cowards/spec"
 import type {
   StrategyId,
@@ -190,8 +191,14 @@ const provenanceAwareRuntimeSemantics = (
   },
 ): StrategyRuntimeProductSemantics => {
   if (
-    revision.runtime.language.id !== "python" ||
+    (revision.runtime.language.id !== "python" &&
+      revision.runtime.language.id !== "rust") ||
     pythonProviderValidationMatches(
+      revision.metadata,
+      revision.sourceHash,
+      revision.sourceBytes,
+    ) ||
+    rustProviderValidationMatches(
       revision.metadata,
       revision.sourceHash,
       revision.sourceBytes,
@@ -199,12 +206,14 @@ const provenanceAwareRuntimeSemantics = (
   ) {
     return semantics
   }
+  const languageLabel =
+    revision.runtime.language.id === "rust" ? "Rust" : "Python"
   return {
     ...semantics,
     countedPlayEligible: false,
     countedPlayLabel: "Not counted",
     countedPlayReason:
-      "Python counted play requires provider-validated revision provenance.",
+      `${languageLabel} counted play requires provider-validated revision provenance.`,
   }
 }
 
@@ -232,6 +241,42 @@ const pythonProviderValidationMatches = (
   return expected !== null && safeEqual(validation.proof, expected)
 }
 
+const rustProviderValidationMatches = (
+  metadata: StrategyRevisionMetadata,
+  sourceHash: string,
+  sourceBytes: number,
+): boolean => {
+  const validation = metadata.providerValidation
+  const artifact = metadata.compiledArtifact
+  if (
+    validation?.providerId !== "strategy-language-provider-rust-wasi" ||
+    validation.contractVersion !==
+      "strategy-language-provider-contract-v1.32" ||
+    validation.sourceHash !== sourceHash ||
+    validation.sourceBytes !== sourceBytes ||
+    artifact === undefined ||
+    artifact.sourceHash !== sourceHash ||
+    artifact.targetTriple !== "wasm32-wasip1" ||
+    artifact.wasiProfile !== "preview1" ||
+    artifact.abiEnvelope !== "stdin-stdout-json" ||
+    artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+    artifact.validationStatus !== "valid" ||
+    validation.artifactHash !== artifact.hash ||
+    validation.artifactBytes !== artifact.bytes
+  ) {
+    return false
+  }
+  const expected = pythonProviderValidationProof({
+    providerId: validation.providerId,
+    contractVersion: validation.contractVersion,
+    sourceHash,
+    sourceBytes,
+    artifactHash: artifact.hash,
+    artifactBytes: artifact.bytes,
+  })
+  return expected !== null && safeEqual(validation.proof, expected)
+}
+
 const providerValidationSecret = (): string =>
   process.env.COWARDS_PROVIDER_VALIDATION_SECRET?.trim() ?? ""
 
@@ -240,6 +285,8 @@ const pythonProviderValidationProof = (input: {
   contractVersion: string
   sourceHash: string
   sourceBytes: number
+  artifactHash?: string | undefined
+  artifactBytes?: number | undefined
 }): string | null => {
   const secret = providerValidationSecret()
   if (!secret) {
@@ -250,6 +297,8 @@ const pythonProviderValidationProof = (input: {
     input.contractVersion,
     input.sourceHash,
     String(input.sourceBytes),
+    input.artifactHash ?? "",
+    input.artifactBytes === undefined ? "" : String(input.artifactBytes),
   ].join("\n")
   return `hmac-sha256:${createHmac("sha256", secret)
     .update(payload)

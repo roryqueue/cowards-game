@@ -262,7 +262,7 @@ describe("Coward's Game spec contracts", () => {
     expect(RuntimeViolationUserGuidanceSchema.parse(guidance)).toEqual(guidance)
   })
 
-  it("runtime product semantics keep JS and Python counted while Rust/Zig stay evidence-gated", () => {
+  it("runtime product semantics keep JS, Python, and Rust counted while Zig stays evidence-gated", () => {
     const jsRuntime = defaultRuntimeMetadata()
     const pythonRuntime = {
       abiVersion: "strategy-runtime-abi-v1.14",
@@ -353,8 +353,13 @@ describe("Coward's Game spec contracts", () => {
     expect(() => assertNonJsRuntimeGuardrails()).not.toThrow()
     expect(NON_JS_RUNTIME_SUPPORT_POLICY).toMatchObject({
       status: "partial-production-supported",
-      productionSupportedLanguageIds: ["javascript", "typescript", "python"],
-      experimentalLanguageIds: ["rust", "zig"],
+      productionSupportedLanguageIds: [
+        "javascript",
+        "typescript",
+        "python",
+        "rust",
+      ],
+      experimentalLanguageIds: ["zig"],
       publicLanguagePickerAllowed: true,
     })
     expect(
@@ -407,12 +412,12 @@ describe("Coward's Game spec contracts", () => {
       SUPPORTED_STRATEGY_LANGUAGES.filter(
         (language) => language.countedEligibility === "eligible",
       ).map((language) => language.id),
-    ).toEqual(["javascript", "typescript", "python"])
+    ).toEqual(["javascript", "typescript", "python", "rust"])
     expect(
       SUPPORTED_STRATEGY_LANGUAGES.filter(
         (language) => language.countedEligibility === "pending-evidence",
       ).map((language) => language.id),
-    ).toEqual(["rust", "zig"])
+    ).toEqual(["zig"])
   })
 
   it("v1.32 strategy language providers declare ABI and boundary posture", () => {
@@ -501,8 +506,8 @@ describe("Coward's Game spec contracts", () => {
           languageId: "rust",
           runtimeTarget: "runtime-wasm-wasi",
           adapterId: "runtime-wasm-wasi-wasmtime-preview1",
-          enabledForNormalPlay: false,
-          countedResultsAllowed: false,
+          enabledForNormalPlay: true,
+          countedResultsAllowed: true,
         }),
       ]),
     )
@@ -515,7 +520,7 @@ describe("Coward's Game spec contracts", () => {
     ).toContain("INCOMPATIBLE_ADAPTER")
   })
 
-  it("WASM/WASI Rust metadata stays non-counted and artifact-backed", () => {
+  it("WASM/WASI Rust metadata is counted eligible and artifact-backed", () => {
     const wasmLimits =
       STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
         (adapter) => adapter.id === "runtime-wasm-wasi-wasmtime-preview1",
@@ -533,18 +538,15 @@ describe("Coward's Game spec contracts", () => {
     }
 
     expect(validateRuntimeBrokerRegistryMatch(rustRuntime)).toHaveLength(0)
-    expect(evaluateStrategyRuntimeCountedEligibility(rustRuntime)).toEqual({
-      ok: false,
-      code: "NON_COUNTED_RUNTIME",
-      publicMessage:
-        "Strategy runtime is experimental and not counted-play eligible.",
+    expect(evaluateStrategyRuntimeCountedEligibility(rustRuntime)).toMatchObject({
+      ok: true,
     })
     expect(describeStrategyRuntimeProductSemantics(rustRuntime)).toMatchObject({
       languageLabel: "Rust",
       adapterLabel: "WASM/WASI Wasmtime Preview 1",
-      countedPlayEligible: false,
-      countedPlayLabel: "Not counted",
-      examplesReference: "examples/rust-wasi-exhibition-beta",
+      countedPlayEligible: true,
+      countedPlayLabel: "Counted eligible",
+      examplesReference: "examples/rust-wasi-strategy",
     })
   })
 
@@ -969,8 +971,8 @@ describe("Coward's Game spec contracts", () => {
                 "rustc --target wasm32-wasip1 -O strategy.rs -o strategy.wasm",
             },
             publicEvidence: {
-              label: "Rust WASM/WASI non-counted exhibition beta",
-              nonCounted: true,
+              label: "Rust WASM/WASI counted provider artifact",
+              nonCounted: false,
               sandboxClaim: "candidate-readiness-only",
             },
           },

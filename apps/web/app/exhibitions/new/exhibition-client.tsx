@@ -174,9 +174,8 @@ export function ExhibitionClient({
         </div>
         {!counted ? (
           <p className="workshop-muted">
-            Unranked exhibitions may include any valid revision; Rust and Zig
-            remain non-counted exhibition beta until their provider evidence
-            passes.
+            Unranked exhibitions may include any valid revision; Zig remains
+            non-counted exhibition beta until its provider evidence passes.
           </p>
         ) : null}
 

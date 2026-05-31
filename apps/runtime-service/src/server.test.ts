@@ -141,6 +141,64 @@ def soldier_brain(input):
     expect(JSON.stringify(invalidBody)).not.toContain("python_validation_host.py")
   })
 
+  it("validates Rust through the provider compiler and returns artifact-bound provenance", async () => {
+    const server = await withServer(64 * 1024)
+    const rustSource = `
+use std::io::{self, Read};
+
+fn main() {
+    let mut input = String::new();
+    let _ = io::stdin().read_to_string(&mut input);
+    if input.contains("\\"methodName\\":\\"soldierBrain\\"") {
+        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"action":{{"type":"TURN_TO_STONE"}},"soldierMemory":null}}}}"#);
+    } else {
+        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
+    }
+}
+`
+    const response = await fetch(`${server.url}/validate-strategy`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sourceFormat: "rust",
+        source: rustSource,
+        strategyId: "strategy:rust",
+      }),
+    })
+    const body = (await response.json()) as Record<string, unknown>
+
+    expect(response.status).toBe(200)
+    expect(body).toMatchObject({
+      ok: true,
+      kind: "strategyValidation",
+      sourceFormat: "rust",
+      provider: {
+        id: "strategy-language-provider-rust-wasi",
+      },
+      metadata: {
+        tags: ["rust", "wasm-wasi", "counted", "provider"],
+        providerValidation: {
+          providerId: "strategy-language-provider-rust-wasi",
+          contractVersion: "strategy-language-provider-contract-v1.32",
+          sourceHash: expect.any(String),
+          sourceBytes: expect.any(Number),
+          artifactHash: expect.any(String),
+          artifactBytes: expect.any(Number),
+          proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
+        },
+        compiledArtifact: {
+          format: "wasm",
+          targetTriple: "wasm32-wasip1",
+          abiEnvelope: "stdin-stdout-json",
+          publicEvidence: {
+            nonCounted: false,
+          },
+        },
+      },
+    })
+    expect(JSON.stringify(body)).not.toContain("NON_COUNTED_RUNTIME")
+  })
+
   it("exposes no product API routes outside health and execute-match", async () => {
     const server = await withServer()
     for (const route of [

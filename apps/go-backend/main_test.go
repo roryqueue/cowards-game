@@ -2,6 +2,8 @@ package main
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -257,6 +259,54 @@ func TestPythonRuntimeMetadataIsCountedProviderEligible(t *testing.T) {
 		runtimeAllowsCountedPlay(runtime, metadata, "other", sourceBytes) ||
 		runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes+1) {
 		t.Fatalf("Python counted gate accepted missing or stale provider validation")
+	}
+}
+
+func TestRustRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testing.T) {
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.32")
+	runtime := rustWasmRuntimeMetadata()
+	sourceHash := "sourcehash:rust"
+	sourceBytes := 456
+	artifactPayload := []byte("rust-artifact")
+	artifactDigest := sha256.Sum256(artifactPayload)
+	artifactHash := hex.EncodeToString(artifactDigest[:])
+	artifactBytes := len(artifactPayload)
+	metadata := map[string]any{
+		"compiledArtifact": map[string]any{
+			"hash":             artifactHash,
+			"bytes":            artifactBytes,
+			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
+			"sourceHash":       sourceHash,
+			"targetTriple":     "wasm32-wasip1",
+			"wasiProfile":      "preview1",
+			"abiEnvelope":      "stdin-stdout-json",
+			"abiVersion":       "strategy-runtime-abi-v1.14",
+			"validationStatus": "valid",
+		},
+		"providerValidation": map[string]any{
+			"providerId":      "strategy-language-provider-rust-wasi",
+			"contractVersion": "strategy-language-provider-contract-v1.32",
+			"sourceHash":      sourceHash,
+			"sourceBytes":     sourceBytes,
+			"artifactHash":    artifactHash,
+			"artifactBytes":   artifactBytes,
+			"proof":           providerValidationProof("strategy-language-provider-rust-wasi", sourceHash, sourceBytes, artifactHash, artifactBytes),
+		},
+	}
+
+	if runtimeSemantics(runtime)["countedPlayEligible"] != true {
+		t.Fatalf("Rust runtime semantics should be counted provider eligible")
+	}
+	if runtimeSemanticsForRevision(runtime, nil, sourceHash, sourceBytes)["countedPlayEligible"] == true {
+		t.Fatalf("Rust revision semantics accepted missing provider validation")
+	}
+	if !runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) {
+		t.Fatalf("Rust counted gate rejected matching artifact provider validation")
+	}
+	if runtimeAllowsCountedPlay(runtime, nil, sourceHash, sourceBytes) ||
+		runtimeAllowsCountedPlay(runtime, metadata, "other", sourceBytes) ||
+		runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes+1) {
+		t.Fatalf("Rust counted gate accepted missing or stale provider validation")
 	}
 }
 

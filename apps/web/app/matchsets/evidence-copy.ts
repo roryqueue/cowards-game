@@ -17,7 +17,7 @@ export const reliabilityBudgetCue =
   "Strategy calls keep the 1000 ms deterministic cap; Match/runtime-service and proof budgets are outer reliability windows."
 
 export const candidateLaneCue =
-  "Python counted play uses the constrained runtime-service provider; WASM/WASI remains non-counted exhibition beta readiness evidence. Neither is broad sandbox certification."
+  "Python and Rust counted play use constrained runtime-service providers; Zig WASM/WASI remains non-counted exhibition beta readiness evidence. Neither is broad sandbox certification."
 
 const matchReasonLabel = (
   reason: PublicMatchEvidenceDto["publicReason"],

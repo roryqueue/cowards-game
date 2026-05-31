@@ -702,6 +702,8 @@ export const StrategyRevisionMetadataSchema = z.object({
       contractVersion: z.string().min(1),
       sourceHash: z.string().min(1),
       sourceBytes: z.number().int().nonnegative(),
+      artifactHash: z.string().min(1).optional(),
+      artifactBytes: z.number().int().nonnegative().optional(),
       proof: z.string().min(1),
     })
     .optional(),
@@ -748,7 +750,7 @@ export const CompiledStrategyArtifactSchema = z.object({
   toolchain: CompiledStrategyArtifactToolchainEvidenceSchema,
   publicEvidence: z.object({
     label: z.string().min(1),
-    nonCounted: z.literal(true),
+    nonCounted: z.boolean(),
     sandboxClaim: z.literal("candidate-readiness-only"),
   }),
 })

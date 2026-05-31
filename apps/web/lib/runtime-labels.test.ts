@@ -18,11 +18,11 @@ describe("runtime language labels", () => {
     expect(sourceFormatExhibitionLabel("python")).toBeNull()
     expect(sourceFormatShortLabel("python")).toBe("PY")
     expect(sourceFormatRuntimeCue("python")).toBeNull()
-    expect(sourceFormatExhibitionLabel("rust")).toBe(
-      "Rust · non-counted exhibition beta",
-    )
+    expect(sourceFormatExhibitionLabel("rust")).toBeNull()
+    expect(sourceFormatShortLabel("rust")).toBe("Rust")
     expect(sourceFormatShortLabel("zig")).toBe("Zig beta")
-    expect(sourceFormatRuntimeCue("rust")).toContain("Runtime Broker")
+    expect(sourceFormatRuntimeCue("rust")).toBeNull()
+    expect(sourceFormatRuntimeCue("zig")).toContain("non-counted exhibition beta")
   })
 
   it("keeps TypeScript counted labels neutral", () => {

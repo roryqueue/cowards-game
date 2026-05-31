@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { createHmac } from "node:crypto"
+import { createHash, createHmac } from "node:crypto"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import {
   buildExhibitionDuplicateKey,
@@ -26,6 +26,30 @@ const pythonProviderProof = (sourceHash: string, sourceBytes: number): string =>
         "strategy-language-provider-contract-v1.32",
         sourceHash,
         String(sourceBytes),
+        "",
+        "",
+      ].join("\n"),
+    )
+    .digest("hex")}`
+
+const rustProviderProof = (
+  sourceHash: string,
+  sourceBytes: number,
+  artifactHash: string,
+  artifactBytes: number,
+): string =>
+  `hmac-sha256:${createHmac(
+    "sha256",
+    TEST_PROVIDER_VALIDATION_SECRET,
+  )
+    .update(
+      [
+        "strategy-language-provider-rust-wasi",
+        "strategy-language-provider-contract-v1.32",
+        sourceHash,
+        String(sourceBytes),
+        artifactHash,
+        String(artifactBytes),
       ].join("\n"),
     )
     .digest("hex")}`
@@ -243,5 +267,58 @@ describe("competition helpers", () => {
         },
       }).language.id,
     ).toBe("python")
+  })
+
+  it("requires artifact provenance before counted Rust exhibition entry", () => {
+    const runtime = {
+      ...defaultRuntimeMetadata(),
+      language: { id: "rust", version: "1.95.0-wasm32-wasip1" },
+      adapter: {
+        id: "runtime-wasm-wasi-wasmtime-preview1",
+        version: "0.1.0-alpha",
+      },
+    }
+    const sourceHash = "rust-source-hash"
+    const sourceBytes = 256
+    const artifactPayload = Buffer.from("rust-artifact")
+    const artifactHash = createHash("sha256").update(artifactPayload).digest("hex")
+    const artifactBytes = artifactPayload.byteLength
+
+    expect(() => runtimeAllowsCountedPlay(runtime)).toThrow(
+      "provider-validated artifact provenance",
+    )
+    expect(
+      runtimeAllowsCountedPlay(runtime, {
+        sourceHash,
+        sourceBytes,
+        metadata: {
+          compiledArtifact: {
+            hash: artifactHash,
+            bytes: artifactBytes,
+            bytesBase64: artifactPayload.toString("base64"),
+            sourceHash,
+            targetTriple: "wasm32-wasip1",
+            wasiProfile: "preview1",
+            abiEnvelope: "stdin-stdout-json",
+            abiVersion: "strategy-runtime-abi-v1.14",
+            validationStatus: "valid",
+          },
+          providerValidation: {
+            providerId: "strategy-language-provider-rust-wasi",
+            contractVersion: "strategy-language-provider-contract-v1.32",
+            sourceHash,
+            sourceBytes,
+            artifactHash,
+            artifactBytes,
+            proof: rustProviderProof(
+              sourceHash,
+              sourceBytes,
+              artifactHash,
+              artifactBytes,
+            ),
+          },
+        },
+      }).language.id,
+    ).toBe("rust")
   })
 })

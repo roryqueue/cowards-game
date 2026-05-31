@@ -3704,9 +3704,9 @@ const checkV119ExhibitionTrustSources = (): string => {
       label: "runtime label helper",
       path: "apps/web/lib/runtime-labels.ts",
       markers: [
-        "Python · non-counted exhibition beta",
-        "Rust · non-counted exhibition beta",
-        "Zig · non-counted exhibition beta",
+        "getSupportedStrategyLanguageBySourceFormat",
+        "countedEligibility",
+        "language.publicLabel",
       ],
     },
     {

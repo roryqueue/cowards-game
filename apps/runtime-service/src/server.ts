@@ -84,21 +84,25 @@ const malformedRequestResponse = (
 const providerValidationSecret = (): string =>
   process.env.COWARDS_PROVIDER_VALIDATION_SECRET?.trim() ?? ""
 
-const pythonProviderValidationProof = (input: {
+const providerValidationProof = (input: {
   providerId: string
   contractVersion: string
   sourceHash: string
   sourceBytes: number
+  artifactHash?: string | undefined
+  artifactBytes?: number | undefined
 }): string => {
   const secret = providerValidationSecret()
   if (!secret) {
-    throw new Error("Python provider validation signing secret is not configured.")
+    throw new Error("Provider validation signing secret is not configured.")
   }
   const payload = [
     input.providerId,
     input.contractVersion,
     input.sourceHash,
     String(input.sourceBytes),
+    input.artifactHash ?? "",
+    input.artifactBytes === undefined ? "" : String(input.artifactBytes),
   ].join("\n")
   return `hmac-sha256:${createHmac("sha256", secret)
     .update(payload)
@@ -146,37 +150,63 @@ const validateStrategyRequest = (rawRequest: unknown) => {
       : sourceFormat === "zig"
       ? buildZigStrategyRevision
       : buildRustStrategyRevision
-  const metadata =
-    sourceFormat === "python"
-      ? {
-          tags: ["python", "counted", "provider"],
-          providerValidation: {
-            providerId: "strategy-language-provider-python",
-            contractVersion:
-              provider?.contractVersion ??
-              "strategy-language-provider-contract-v1.32",
-            sourceHash: validation.sourceHash,
-            sourceBytes: validation.sourceBytes,
-            proof: pythonProviderValidationProof({
-              providerId: "strategy-language-provider-python",
-              contractVersion:
-                provider?.contractVersion ??
-                "strategy-language-provider-contract-v1.32",
-              sourceHash: validation.sourceHash,
-              sourceBytes: validation.sourceBytes,
-            }),
-          },
-        }
-      : {
-          tags: [sourceFormat, "wasm-wasi", "non-counted", "exhibition-beta"],
-        }
   const revision = revisionBuilder({
     source: body.source,
     ...(typeof body.strategyId === "string" && body.strategyId.trim().length > 0
       ? { strategyId: body.strategyId }
       : {}),
-    metadata,
+    metadata:
+      sourceFormat === "zig"
+        ? {
+            tags: [sourceFormat, "wasm-wasi", "non-counted", "exhibition-beta"],
+          }
+        : {
+            tags:
+              sourceFormat === "python"
+                ? ["python", "counted", "provider"]
+                : ["rust", "wasm-wasi", "counted", "provider"],
+          },
   })
+  const contractVersion =
+    provider?.contractVersion ?? "strategy-language-provider-contract-v1.32"
+  const artifact =
+    sourceFormat === "rust" ? revision.metadata.compiledArtifact : undefined
+  const providerId =
+    sourceFormat === "python"
+      ? "strategy-language-provider-python"
+      : sourceFormat === "rust"
+        ? "strategy-language-provider-rust-wasi"
+        : null
+  const metadata =
+    providerId === null
+      ? revision.metadata
+      : {
+          ...revision.metadata,
+          tags:
+            sourceFormat === "python"
+              ? ["python", "counted", "provider"]
+              : ["rust", "wasm-wasi", "counted", "provider"],
+          providerValidation: {
+            providerId,
+            contractVersion,
+            sourceHash: validation.sourceHash,
+            sourceBytes: validation.sourceBytes,
+            ...(artifact === undefined
+              ? {}
+              : {
+                  artifactHash: artifact.hash,
+                  artifactBytes: artifact.bytes,
+                }),
+            proof: providerValidationProof({
+              providerId,
+              contractVersion,
+              sourceHash: validation.sourceHash,
+              sourceBytes: validation.sourceBytes,
+              artifactHash: artifact?.hash,
+              artifactBytes: artifact?.bytes,
+            }),
+          },
+        }
   return {
     ok: true,
     kind: "strategyValidation",
