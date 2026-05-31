@@ -359,11 +359,11 @@ export const buildResultWorkbenchViewModel = (
         title: "Runtime Eligibility",
         eyebrow: runtime.ownership.hostileStrategyExecution,
         summary: [
-          "JS/TS, Python, provider-validated Rust, and provider-validated Zig are counted Strategy paths.",
+          "TypeScript, Python, Rust, and Zig are counted Strategy paths only through provider-compatible runtime evidence.",
           runtime.eligibility.nonCountedExhibitionBeta.length
             ? `${runtime.eligibility.nonCountedExhibitionBeta.join(", ")} remain non-counted exhibition beta for this evidence view.`
             : "No current provider language remains non-counted exhibition beta.",
-          "The app reads frozen public DTOs only.",
+          "Rust and Zig use immutable WASM/WASI Preview 1 stdin/stdout JSON artifacts. The app reads frozen public DTOs only.",
         ].join(" "),
         metrics: [
           {

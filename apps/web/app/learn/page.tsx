@@ -41,6 +41,34 @@ export default function LearnPage() {
         </p>
       </section>
 
+      <section className="app-panel" id="supported-languages">
+        <div className="app-section-header compact">
+          <h2>Supported Strategy languages</h2>
+        </div>
+        <p>
+          TypeScript, Python, Rust, and Zig can enter counted play when their
+          Strategy Revisions carry provider-compatible runtime evidence. The web
+          app, API, and Go read paths inspect provider metadata; Strategy code
+          executes behind runtime-service, Runtime Broker, and language provider
+          boundaries.
+        </p>
+        <p>
+          Python is source-backed with no packages or host imports. Rust and Zig
+          are artifact-backed through immutable WASM/WASI Preview 1 stdin/stdout
+          JSON artifacts. Zig remains no-std/import-audited. Provider proof binds
+          source hash, source byte count, and artifact hash/bytes where an
+          artifact exists.
+        </p>
+        <p>
+          Runtime failures fail closed rather than falling back to another
+          language. Counted support does not claim broad sandbox certification
+          for arbitrary programs; public output omits Strategy source,
+          StrategyMemory, SoldierMemory, objective payloads, raw diagnostics,
+          host paths, environment values, and private runtime internals by
+          default.
+        </p>
+      </section>
+
       <section className="app-panel" id="competitions">
         <div className="app-section-header compact">
           <h2>Competition formats</h2>

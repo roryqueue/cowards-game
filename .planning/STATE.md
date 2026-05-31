@@ -2,22 +2,22 @@
 milestone: v1.32
 milestone_name: Four-Language Production Strategy Support
 status: planning
-current_phase: 230
+current_phase: 231
 progress:
   phases_total: 12
-  phases_complete: 8
+  phases_complete: 9
   requirements_total: 60
-  requirements_complete: 40
+  requirements_complete: 45
 ---
 
 # State: Coward's Game v1.32
 
 ## Current Position
 
-Phase: 230 - Result, Replay, Public Evidence, and Docs Language Pass
+Phase: 231 - Drift Monitors and Boundary Coverage
 Plan: Ready for planning
-Status: Phase 229 Workshop, Account, and entry unification complete; Phase 230 is next
-Last activity: 2026-05-31 - Phase 229 provider-derived product labels implemented, reviewed, and verified
+Status: Phase 230 result/replay/public evidence/docs language pass complete; Phase 231 is next
+Last activity: 2026-05-31 - Phase 230 public evidence language copy implemented, reviewed, and verified
 
 ## Project Reference
 
@@ -49,7 +49,8 @@ See: `.planning/PROJECT.md`
 - Phase 227 promoted Zig to counted eligible through provider validation, no-std/import policy, immutable artifact metadata, and provider proof.
 - Phase 228 added a reusable four-language golden corpus, pairwise runtime-service matrix, conformance gate manifest, public Chronicle shape checks, and privacy marker scans.
 - Phase 229 moved Workshop, account, entry, and MatchSet result labels toward provider-derived language semantics.
-- Phase 230 is next: Result, Replay, Public Evidence, and Docs Language Pass.
+- Phase 230 updated public evidence and Learn/docs to explain four-language provider-gated counted support, WASI Preview 1 artifact posture, no-fallback behavior, privacy exclusions, and sandbox non-claims.
+- Phase 231 is next: Drift Monitors and Boundary Coverage.
 - Context and discussion logs have been captured for all v1.32 phases:
   - Phase 222: Language Surface Inventory
   - Phase 223: Unified Supported Language Registry and Eligibility Model
