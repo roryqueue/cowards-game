@@ -672,7 +672,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                       {template.sourceFormat === "rust"
                         ? "Rust"
                         : template.sourceFormat === "zig"
-                          ? "Zig beta"
+                          ? "Zig"
                           : "Experimental"}
                     </span>
                   ) : null}

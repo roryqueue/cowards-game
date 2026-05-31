@@ -156,27 +156,27 @@ const validateStrategyRequest = (rawRequest: unknown) => {
       ? { strategyId: body.strategyId }
       : {}),
     metadata:
-      sourceFormat === "zig"
-        ? {
-            tags: [sourceFormat, "wasm-wasi", "non-counted", "exhibition-beta"],
-          }
-        : {
-            tags:
-              sourceFormat === "python"
-                ? ["python", "counted", "provider"]
-                : ["rust", "wasm-wasi", "counted", "provider"],
-          },
+      {
+        tags:
+          sourceFormat === "python"
+            ? ["python", "counted", "provider"]
+            : [sourceFormat, "wasm-wasi", "counted", "provider"],
+      },
   })
   const contractVersion =
     provider?.contractVersion ?? "strategy-language-provider-contract-v1.32"
   const artifact =
-    sourceFormat === "rust" ? revision.metadata.compiledArtifact : undefined
+    sourceFormat === "rust" || sourceFormat === "zig"
+      ? revision.metadata.compiledArtifact
+      : undefined
   const providerId =
     sourceFormat === "python"
       ? "strategy-language-provider-python"
       : sourceFormat === "rust"
         ? "strategy-language-provider-rust-wasi"
-        : null
+        : sourceFormat === "zig"
+          ? "strategy-language-provider-zig-wasi"
+          : null
   const metadata =
     providerId === null
       ? revision.metadata
@@ -185,7 +185,7 @@ const validateStrategyRequest = (rawRequest: unknown) => {
           tags:
             sourceFormat === "python"
               ? ["python", "counted", "provider"]
-              : ["rust", "wasm-wasi", "counted", "provider"],
+              : [sourceFormat, "wasm-wasi", "counted", "provider"],
           providerValidation: {
             providerId,
             contractVersion,

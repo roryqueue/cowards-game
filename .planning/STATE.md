@@ -2,22 +2,22 @@
 milestone: v1.32
 milestone_name: Four-Language Production Strategy Support
 status: planning
-current_phase: 227
+current_phase: 228
 progress:
   phases_total: 12
-  phases_complete: 5
+  phases_complete: 6
   requirements_total: 60
-  requirements_complete: 25
+  requirements_complete: 30
 ---
 
 # State: Coward's Game v1.32
 
 ## Current Position
 
-Phase: 227 - Zig Production Support Path
+Phase: 228 - Cross-Language Golden Strategy Corpus and Parity Matrix
 Plan: Ready for planning
-Status: Phase 226 Rust counted provider path complete; Phase 227 is next
-Last activity: 2026-05-31 - Phase 226 Rust provider path implemented, reviewed, and verified
+Status: Phase 227 Zig counted provider path complete; Phase 228 is next
+Last activity: 2026-05-31 - Phase 227 Zig provider path implemented, reviewed, and verified
 
 ## Project Reference
 
@@ -38,7 +38,7 @@ See: `.planning/PROJECT.md`
 ## Resume Notes
 
 - v1.31 Public Site Spine and Discovery Reads is shipped and archived in `.planning/MILESTONES.md`, `.planning/milestones/v1.31-ROADMAP.md`, `.planning/milestones/v1.31-REQUIREMENTS.md`, `.planning/milestones/v1.31-MILESTONE-AUDIT.md`, and `.planning/artifacts/v1.31-public-site-spine-proof.md`.
-- v1.32 starts from the v1.31 baseline where JS/TS is counted, Python/Rust/Zig are non-counted exhibition beta, and Preview 1 stdin/stdout JSON remains the active WASM/WASI ABI until an explicit migration decision changes it.
+- v1.32 started from the v1.31 baseline where JS/TS was counted and Python/Rust/Zig were non-counted exhibition beta; Phase 225 promoted Python, Phase 226 promoted Rust, and Phase 227 promoted Zig through provider-gated counted support. Preview 1 stdin/stdout JSON remains the active WASM/WASI ABI until an explicit migration decision changes it.
 - Core v1.32 question: What must be true before Python, Rust, and Zig can honestly be fully supported and counted alongside JS/TS, and what monitors prevent future drift?
 - Roadmap begins at Phase 222 and continues through Phase 233.
 - Phase 222 completed the active language/runtime/eligibility/product/docs/monitor inventory in `.planning/artifacts/v1.32-language-surface-inventory.md`.
@@ -46,7 +46,8 @@ See: `.planning/PROJECT.md`
 - Phase 224 added a versioned provider contract and provider registry, kept WASI Preview 1 stdin/stdout JSON explicit for Rust/Zig, and made runtime-service fail closed on provider/runtime or JS adapter drift.
 - Phase 225 promoted Python to counted eligible through the constrained provider path while keeping Strategy execution behind runtime-service / Runtime Broker.
 - Phase 226 promoted Rust to counted eligible through immutable WASM/WASI artifact provider proof while preserving historical non-counted evidence.
-- Phase 227 is next: Zig production support path and evidence-gated counted eligibility.
+- Phase 227 promoted Zig to counted eligible through provider validation, no-std/import policy, immutable artifact metadata, and provider proof.
+- Phase 228 is next: cross-language golden Strategy corpus and parity matrix.
 - Context and discussion logs have been captured for all v1.32 phases:
   - Phase 222: Language Surface Inventory
   - Phase 223: Unified Supported Language Registry and Eligibility Model

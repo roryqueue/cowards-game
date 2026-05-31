@@ -2448,18 +2448,18 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"adapterId":            adapterID,
 			"languageLabel":        "Zig",
 			"adapterLabel":         "WASM/WASI Wasmtime Preview 1",
-			"readiness":            "experimental",
-			"readinessLabel":       "Experimental",
-			"experimental":         true,
-			"countedPlayEligible":  false,
-			"countedPlayLabel":     "Not counted",
-			"countedPlayReason":    "Zig WASM/WASI is non-counted exhibition beta and not counted-play eligible.",
+			"readiness":            "production-candidate",
+			"readinessLabel":       "Production candidate",
+			"experimental":         false,
+			"countedPlayEligible":  true,
+			"countedPlayLabel":     "Counted eligible",
+			"countedPlayReason":    nil,
 			"sourcePolicyLabel":    "Self-contained Zig source compiled to immutable WASM artifact",
 			"packagePolicyLabel":   "No packages",
 			"docsReference":        "runtime/languages",
-			"examplesReference":    "examples/zig-wasi-exhibition-beta",
-			"warnings":             []string{"Zig WASM/WASI is non-counted exhibition beta only after compile, artifact, Wasmtime, ABI, and signed-in proof; never ranked/counted eligible in v1.23."},
-			"validationIssueCodes": []string{"NON_COUNTED_RUNTIME"},
+			"examplesReference":    "examples/zig-wasi-strategy",
+			"warnings":             []string{},
+			"validationIssueCodes": []string{},
 		}
 	}
 	return map[string]any{
@@ -2494,18 +2494,20 @@ func publicRuntimeMetadata(runtime map[string]any) map[string]any {
 func runtimeSemanticsForRevision(runtime map[string]any, metadata map[string]any, sourceHash string, sourceBytes int) map[string]any {
 	semantics := runtimeSemantics(runtime)
 	languageID := stringValue(mapValue(runtime, "language"), "id")
-	if languageID != "python" && languageID != "rust" {
+	if languageID != "python" && languageID != "rust" && languageID != "zig" {
 		return semantics
 	}
 	if languageID == "python" && pythonProviderValidationMatches(metadata, sourceHash, sourceBytes) {
 		return semantics
 	}
-	if languageID == "rust" && rustProviderValidationMatches(metadata, sourceHash, sourceBytes) {
+	if (languageID == "rust" || languageID == "zig") && rustProviderValidationMatches(metadata, sourceHash, sourceBytes, languageID) {
 		return semantics
 	}
 	languageLabel := "Python"
 	if languageID == "rust" {
 		languageLabel = "Rust"
+	} else if languageID == "zig" {
+		languageLabel = "Zig"
 	}
 	semantics["countedPlayEligible"] = false
 	semantics["countedPlayLabel"] = "Not counted"
@@ -2536,11 +2538,11 @@ func runtimeAllowsCountedPlay(runtime map[string]any, metadata map[string]any, s
 		if !pythonProviderValidationMatches(metadata, sourceHash, sourceBytes) {
 			return false
 		}
-	} else if languageID == "rust" {
+	} else if languageID == "rust" || languageID == "zig" {
 		if adapterID != "runtime-wasm-wasi-wasmtime-preview1" {
 			return false
 		}
-		if !rustProviderValidationMatches(metadata, sourceHash, sourceBytes) {
+		if !rustProviderValidationMatches(metadata, sourceHash, sourceBytes, languageID) {
 			return false
 		}
 	} else if languageID == "javascript" || languageID == "typescript" {
@@ -2573,7 +2575,7 @@ func pythonProviderValidationMatches(metadata map[string]any, sourceHash string,
 	) == 1
 }
 
-func rustProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int) bool {
+func rustProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int, languageID string) bool {
 	if sourceHash == "" || sourceBytes <= 0 {
 		return false
 	}
@@ -2592,8 +2594,14 @@ func rustProviderValidationMatches(metadata map[string]any, sourceHash string, s
 	if hex.EncodeToString(artifactDigest[:]) != artifactHash {
 		return false
 	}
+	providerID := "strategy-language-provider-rust-wasi"
+	targetTriple := "wasm32-wasip1"
+	if languageID == "zig" {
+		providerID = "strategy-language-provider-zig-wasi"
+		targetTriple = "wasm32-wasi"
+	}
 	if stringValue(artifact, "sourceHash") != sourceHash ||
-		stringValue(artifact, "targetTriple") != "wasm32-wasip1" ||
+		stringValue(artifact, "targetTriple") != targetTriple ||
 		stringValue(artifact, "wasiProfile") != "preview1" ||
 		stringValue(artifact, "abiEnvelope") != "stdin-stdout-json" ||
 		stringValue(artifact, "abiVersion") != "strategy-runtime-abi-v1.14" ||
@@ -2601,7 +2609,7 @@ func rustProviderValidationMatches(metadata map[string]any, sourceHash string, s
 		return false
 	}
 	providerValidation := mapValue(metadata, "providerValidation")
-	if stringValue(providerValidation, "providerId") != "strategy-language-provider-rust-wasi" ||
+	if stringValue(providerValidation, "providerId") != providerID ||
 		stringValue(providerValidation, "contractVersion") != "strategy-language-provider-contract-v1.32" ||
 		stringValue(providerValidation, "sourceHash") != sourceHash ||
 		intValue(providerValidation, "sourceBytes") != sourceBytes ||
@@ -2611,7 +2619,7 @@ func rustProviderValidationMatches(metadata map[string]any, sourceHash string, s
 	}
 	return subtle.ConstantTimeCompare(
 		[]byte(stringValue(providerValidation, "proof")),
-		[]byte(providerValidationProof("strategy-language-provider-rust-wasi", sourceHash, sourceBytes, artifactHash, artifactBytes)),
+		[]byte(providerValidationProof(providerID, sourceHash, sourceBytes, artifactHash, artifactBytes)),
 	) == 1
 }
 

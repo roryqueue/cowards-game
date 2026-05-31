@@ -37,6 +37,7 @@ const rustProviderProof = (
   sourceBytes: number,
   artifactHash: string,
   artifactBytes: number,
+  providerId = "strategy-language-provider-rust-wasi",
 ): string =>
   `hmac-sha256:${createHmac(
     "sha256",
@@ -44,7 +45,7 @@ const rustProviderProof = (
   )
     .update(
       [
-        "strategy-language-provider-rust-wasi",
+        providerId,
         "strategy-language-provider-contract-v1.32",
         sourceHash,
         String(sourceBytes),
@@ -224,7 +225,10 @@ describe("competition helpers", () => {
     ).toEqual({ allowed: false, retryAfterSeconds: 300 })
   })
 
-  it("rejects experimental runtimes for counted exhibition play", () => {
+  it("requires artifact provenance before counted Zig exhibition entry", () => {
+    const sourceHash = "zig-source-hash"
+    const sourceBytes = 192
+
     expect(() =>
       runtimeAllowsCountedPlay({
         ...defaultRuntimeMetadata(),
@@ -234,7 +238,55 @@ describe("competition helpers", () => {
           version: "0.1.0-alpha",
         },
       }),
-    ).toThrow("experimental and not counted-play eligible")
+    ).toThrow("provider-validated artifact provenance")
+
+    const artifactPayload = Buffer.from("zig-artifact")
+    const artifactHash = createHash("sha256").update(artifactPayload).digest("hex")
+    const artifactBytes = artifactPayload.byteLength
+    expect(
+      runtimeAllowsCountedPlay(
+        {
+          ...defaultRuntimeMetadata(),
+          language: { id: "zig", version: "0.16.0-wasm32-wasi" },
+          adapter: {
+            id: "runtime-wasm-wasi-wasmtime-preview1",
+            version: "0.1.0-alpha",
+          },
+        },
+        {
+          sourceHash,
+          sourceBytes,
+          metadata: {
+            compiledArtifact: {
+              hash: artifactHash,
+              bytes: artifactBytes,
+              bytesBase64: artifactPayload.toString("base64"),
+              sourceHash,
+              targetTriple: "wasm32-wasi",
+              wasiProfile: "preview1",
+              abiEnvelope: "stdin-stdout-json",
+              abiVersion: "strategy-runtime-abi-v1.14",
+              validationStatus: "valid",
+            },
+            providerValidation: {
+              providerId: "strategy-language-provider-zig-wasi",
+              contractVersion: "strategy-language-provider-contract-v1.32",
+              sourceHash,
+              sourceBytes,
+              artifactHash,
+              artifactBytes,
+              proof: rustProviderProof(
+                sourceHash,
+                sourceBytes,
+                artifactHash,
+                artifactBytes,
+                "strategy-language-provider-zig-wasi",
+              ),
+            },
+          },
+        },
+      ).language.id,
+    ).toBe("zig")
   })
 
   it("requires provider provenance before counted Python exhibition entry", () => {

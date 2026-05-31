@@ -20,9 +20,9 @@ describe("runtime language labels", () => {
     expect(sourceFormatRuntimeCue("python")).toBeNull()
     expect(sourceFormatExhibitionLabel("rust")).toBeNull()
     expect(sourceFormatShortLabel("rust")).toBe("Rust")
-    expect(sourceFormatShortLabel("zig")).toBe("Zig beta")
+    expect(sourceFormatShortLabel("zig")).toBe("Zig")
     expect(sourceFormatRuntimeCue("rust")).toBeNull()
-    expect(sourceFormatRuntimeCue("zig")).toContain("non-counted exhibition beta")
+    expect(sourceFormatRuntimeCue("zig")).toBeNull()
   })
 
   it("keeps TypeScript counted labels neutral", () => {

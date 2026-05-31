@@ -238,7 +238,7 @@ describe("reliability evidence copy", () => {
     } as ReplayReadyDto)
     const serialized = JSON.stringify(rows)
 
-    expect(rowValue(rows, "candidate lane")).toContain("readiness evidence")
+    expect(rowValue(rows, "candidate lane")).toContain("provider-proof gated")
     expect(publicReliabilityPrivacyCue).toContain("runtime internals excluded")
     expect(publicPrivacyProvenanceCue).toContain("runtime internals")
     for (const forbidden of [

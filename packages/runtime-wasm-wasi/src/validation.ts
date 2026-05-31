@@ -298,7 +298,7 @@ const zigSourceGate = (
           constraint:
             "Zig WASI Preview 1 executable Strategies must read stdin and write one JSON runtime envelope to stdout.",
           remediation: "Use the Zig WASI starter sample as the baseline.",
-          reference: "examples/zig-wasi-exhibition-beta",
+          reference: "examples/zig-wasi-strategy",
         },
       ),
     )
@@ -373,7 +373,7 @@ export const compileZigWasmArtifact = (source: string): WasmCompileResult => {
               "Zig source must compile to wasm32-wasi with the local Zig toolchain.",
             remediation:
               "Fix the Zig syntax or use the Zig WASI starter sample.",
-            reference: "examples/zig-wasi-exhibition-beta",
+            reference: "examples/zig-wasi-strategy",
           }),
         ],
       }
@@ -425,8 +425,8 @@ export const compileZigWasmArtifact = (source: string): WasmCompileResult => {
           "zig build-exe strategy.zig -target wasm32-wasi -O ReleaseSmall --cache-dir <temp> --global-cache-dir <temp> -femit-bin=strategy.wasm",
       },
       publicEvidence: {
-        label: "Zig WASM/WASI non-counted exhibition beta",
-        nonCounted: true,
+        label: "Zig WASM/WASI counted provider artifact",
+        nonCounted: false,
         sandboxClaim: "candidate-readiness-only",
       },
     }
@@ -657,18 +657,7 @@ const zigValidationFromCompile = (
   return {
     valid: compiled.ok,
     errors: compiled.errors,
-    warnings: [
-      {
-        code: "NON_COUNTED_RUNTIME",
-        severity: "warning",
-        message:
-          "Zig WASM/WASI is a non-counted exhibition beta runtime and not ranked/counted eligible.",
-        constraint:
-          "Zig may run only in non-counted exhibition beta proof paths.",
-        remediation: "Use JS/TS for counted play.",
-        reference: "runtime/counting",
-      },
-    ],
+    warnings: [],
     sourceBytes: gate.sourceBytes,
     forbiddenPatterns: compiled.forbiddenPatterns,
     sourceHash: gate.sourceHash,
@@ -710,6 +699,8 @@ export const buildZigStrategyRevision = (input: {
   const compatibilityHash = createHash("sha256")
     .update(JSON.stringify(compatibility))
     .digest("hex")
+  const { providerValidation: _providerValidation, ...metadata } =
+    input.metadata ?? {}
   return StrategyRevisionSchema.parse({
     id: `strategy-revision:zig-wasi:${validation.sourceHash}:${compatibilityHash.slice(0, 16)}`,
     ...(input.strategyId === undefined ? {} : { strategyId: input.strategyId }),
@@ -720,13 +711,12 @@ export const buildZigStrategyRevision = (input: {
     engineCompatibility: validation.engineCompatibility,
     validation,
     metadata: {
-      ...(input.metadata ?? {}),
+      ...metadata,
       tags: [
         ...new Set([
-          ...(input.metadata?.tags ?? []),
+          ...(metadata.tags ?? []),
           "zig",
           "wasm-wasi",
-          "non-counted",
         ]),
       ],
       compiledArtifact: compiled.artifact,
@@ -769,7 +759,8 @@ export const zigReadinessEvidence = (): ZigReadinessEvidence => {
       runtimeProof: false,
       artifactHash: null,
       resolvedPath: null,
-      message: "Zig toolchain unavailable; Zig remains fail-loud non-promoted.",
+      message:
+        "Zig toolchain unavailable; counted Zig provider validation fails closed.",
     }
   }
   const source = `
@@ -900,7 +891,7 @@ export fn _start() void {
       pathResult.status === 0 ? (pathResult.stdout ?? "").trim() : null,
     message:
       compiled.ok && runtimeProof
-        ? "Zig toolchain, target, compile artifact, and WASI Preview 1 ABI proof passed; Zig may be exposed only as non-counted exhibition beta after v1.23 signed-in proof and promotion gates pass."
-        : "Zig toolchain detected but compile/runtime proof failed; Zig remains fail-loud non-promoted.",
+        ? "Zig toolchain, target, compile artifact, and WASI Preview 1 ABI proof passed; Zig provider validation may issue counted artifact provenance."
+        : "Zig toolchain detected but compile/runtime proof failed; counted Zig provider validation fails closed.",
   }
 }

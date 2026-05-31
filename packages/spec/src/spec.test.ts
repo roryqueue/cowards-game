@@ -262,7 +262,7 @@ describe("Coward's Game spec contracts", () => {
     expect(RuntimeViolationUserGuidanceSchema.parse(guidance)).toEqual(guidance)
   })
 
-  it("runtime product semantics keep JS, Python, and Rust counted while Zig stays evidence-gated", () => {
+  it("runtime product semantics keep JS, Python, Rust, and Zig counted through providers", () => {
     const jsRuntime = defaultRuntimeMetadata()
     const pythonRuntime = {
       abiVersion: "strategy-runtime-abi-v1.14",
@@ -358,8 +358,9 @@ describe("Coward's Game spec contracts", () => {
         "typescript",
         "python",
         "rust",
+        "zig",
       ],
-      experimentalLanguageIds: ["zig"],
+      experimentalLanguageIds: [],
       publicLanguagePickerAllowed: true,
     })
     expect(
@@ -412,12 +413,14 @@ describe("Coward's Game spec contracts", () => {
       SUPPORTED_STRATEGY_LANGUAGES.filter(
         (language) => language.countedEligibility === "eligible",
       ).map((language) => language.id),
-    ).toEqual(["javascript", "typescript", "python", "rust"])
+    ).toEqual(["javascript", "typescript", "python", "rust", "zig"])
     expect(
       SUPPORTED_STRATEGY_LANGUAGES.filter(
-        (language) => language.countedEligibility === "pending-evidence",
+        (language) =>
+          (language as { countedEligibility: string }).countedEligibility ===
+          "pending-evidence",
       ).map((language) => language.id),
-    ).toEqual(["zig"])
+    ).toEqual([])
   })
 
   it("v1.32 strategy language providers declare ABI and boundary posture", () => {

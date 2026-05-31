@@ -192,7 +192,8 @@ const provenanceAwareRuntimeSemantics = (
 ): StrategyRuntimeProductSemantics => {
   if (
     (revision.runtime.language.id !== "python" &&
-      revision.runtime.language.id !== "rust") ||
+      revision.runtime.language.id !== "rust" &&
+      revision.runtime.language.id !== "zig") ||
     pythonProviderValidationMatches(
       revision.metadata,
       revision.sourceHash,
@@ -202,12 +203,17 @@ const provenanceAwareRuntimeSemantics = (
       revision.metadata,
       revision.sourceHash,
       revision.sourceBytes,
+      revision.runtime.language.id === "zig" ? "zig" : "rust",
     )
   ) {
     return semantics
   }
   const languageLabel =
-    revision.runtime.language.id === "rust" ? "Rust" : "Python"
+    revision.runtime.language.id === "rust"
+      ? "Rust"
+      : revision.runtime.language.id === "zig"
+        ? "Zig"
+        : "Python"
   return {
     ...semantics,
     countedPlayEligible: false,
@@ -245,18 +251,24 @@ const rustProviderValidationMatches = (
   metadata: StrategyRevisionMetadata,
   sourceHash: string,
   sourceBytes: number,
+  languageId: "rust" | "zig" = "rust",
 ): boolean => {
   const validation = metadata.providerValidation
   const artifact = metadata.compiledArtifact
+  const providerId =
+    languageId === "zig"
+      ? "strategy-language-provider-zig-wasi"
+      : "strategy-language-provider-rust-wasi"
+  const targetTriple = languageId === "zig" ? "wasm32-wasi" : "wasm32-wasip1"
   if (
-    validation?.providerId !== "strategy-language-provider-rust-wasi" ||
+    validation?.providerId !== providerId ||
     validation.contractVersion !==
       "strategy-language-provider-contract-v1.32" ||
     validation.sourceHash !== sourceHash ||
     validation.sourceBytes !== sourceBytes ||
     artifact === undefined ||
     artifact.sourceHash !== sourceHash ||
-    artifact.targetTriple !== "wasm32-wasip1" ||
+    artifact.targetTriple !== targetTriple ||
     artifact.wasiProfile !== "preview1" ||
     artifact.abiEnvelope !== "stdin-stdout-json" ||
     artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||

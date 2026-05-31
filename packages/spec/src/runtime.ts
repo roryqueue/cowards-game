@@ -516,24 +516,24 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
     id: "zig",
     sourceFormat: "zig",
     label: "Zig",
-    shortLabel: "Zig beta",
+    shortLabel: "Zig",
     version: "0.16.0-wasm32-wasi",
     providerId: "strategy-language-provider-zig-wasi",
     runtimeTarget: "runtime-wasm-wasi",
     defaultAdapterId: "runtime-wasm-wasi-wasmtime-preview1",
     supportStatus: "supported",
-    promotionStatus: "evidence-gated",
-    countedEligibility: "pending-evidence",
-    entryEligibility: "unranked-only",
-    enabledForNormalPlay: false,
-    publicLabel: "Zig · non-counted exhibition beta",
+    promotionStatus: "complete",
+    countedEligibility: "eligible",
+    entryEligibility: "counted",
+    enabledForNormalPlay: true,
+    publicLabel: "Zig · Counted eligible",
     publicRuntimeCue:
-      "Zig is non-counted exhibition beta after no-std WASI Preview 1 compile, artifact, import audit, and Wasmtime ABI proof.",
+      "Zig is supported for counted play through no-std WASI Preview 1 compile, artifact, import audit, and Wasmtime ABI proof.",
     sourcePolicyLabel: "Self-contained Strategy source",
     artifactPolicyLabel: "Immutable WASM/WASI artifact",
     packagePolicyLabel: "No packages",
     docsReference: "runtime/languages#zig",
-    examplesReference: "examples/zig-wasi-exhibition-beta",
+    examplesReference: "examples/zig-wasi-strategy",
     validationBehavior: "wasm-wasi-compile",
     buildBehavior: "compile-immutable-artifact",
     deterministicRestrictions: [
@@ -543,7 +543,7 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
       "Public evidence omits Strategy source, StrategyMemory, SoldierMemory, objective payloads, host paths, stderr, stack traces, and artifact bytes by default.",
     ],
     notes: [
-      "Evidence-gated for counted play through no-std WASM/WASI artifacts; current adapter remains non-counted until Phase 227 proof passes.",
+      "Counted play requires runtime-service provider validation, no-std/import-audited immutable WASM/WASI artifact metadata, and provider proof bound to source and artifact hashes.",
     ],
   },
 ] as const satisfies readonly SupportedStrategyLanguageRecord[]
@@ -704,8 +704,14 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
 
 export const NON_JS_RUNTIME_SUPPORT_POLICY = {
   status: "partial-production-supported",
-  productionSupportedLanguageIds: ["javascript", "typescript", "python", "rust"],
-  experimentalLanguageIds: ["zig"],
+  productionSupportedLanguageIds: [
+    "javascript",
+    "typescript",
+    "python",
+    "rust",
+    "zig",
+  ],
+  experimentalLanguageIds: [],
   publicLanguagePickerAllowed: true,
   countedPlayRequiresProductionSupport: true,
 } as const satisfies NonJsRuntimeSupportPolicy
@@ -717,7 +723,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "Language version, locale, hash behavior, clocks, randomness, IO, dynamic loading, memory, and output behavior are deterministic and documented.",
     currentStatus:
-      "Python and Rust are promoted through constrained provider paths; Zig remains evidence-gated.",
+      "Python, Rust, and Zig are promoted through constrained provider paths.",
     promotionGate:
       "Repeated local and CI evidence must prove deterministic behavior before counted eligibility.",
   },
@@ -747,7 +753,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "Workshop templates, examples, validation copy, documentation, and support matrix distinguish production-supported languages from experimental ones.",
     currentStatus:
-      "Product surfaces may show Python and Rust as counted eligible only when backed by provider registry evidence; Zig keeps beta labels.",
+      "Product surfaces may show Python, Rust, and Zig as counted eligible only when backed by provider registry evidence.",
     promotionGate:
       "A public picker can appear only after at least one non-JS runtime is production-supported.",
   },
@@ -767,7 +773,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "MatchSet, ladder, gauntlet, analytics, and public entry gates agree on counted eligibility.",
     currentStatus:
-      "Python and Rust are counted eligible through the provider registry; Zig remains disabled for normal counted play.",
+      "Python, Rust, and Zig are counted eligible through the provider registry.",
     promotionGate:
       "All counted gates must fail closed unless production support is explicit.",
   },
@@ -787,7 +793,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "Operators can disable promoted non-JS counted play without silently reclassifying existing evidence.",
     currentStatus:
-      "Python and Rust counted evidence exists; Zig remains non-counted.",
+      "Python, Rust, and Zig counted evidence exists.",
     promotionGate:
       "Promotion requires rollback semantics for unsafe or nondeterministic runtimes.",
   },
@@ -797,7 +803,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     requirement:
       "Language/runtime deprecation rules explain compatibility, replayability, and future submission behavior.",
     currentStatus:
-      "Python and Rust are counted provider-supported; Zig remains evidence-gated.",
+      "Python, Rust, and Zig are counted provider-supported.",
     promotionGate:
       "A promoted runtime needs versioned deprecation and migration rules.",
   },
@@ -943,7 +949,7 @@ export const STRATEGY_RUNTIME_ADAPTER_REGISTRY = [
     requiredCapabilities: [],
     notes: [
       "WASI Preview 1 stdin/stdout JSON envelope only.",
-      "Rust counted play is artifact/provider-proof gated; Zig remains non-counted exhibition beta until Phase 227.",
+      "Rust and Zig counted play are artifact/provider-proof gated.",
       "Node node:wasi is not accepted as a hostile-code sandbox.",
     ],
   },

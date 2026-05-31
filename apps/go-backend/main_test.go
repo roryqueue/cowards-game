@@ -310,6 +310,54 @@ func TestRustRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testi
 	}
 }
 
+func TestZigRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testing.T) {
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.32")
+	runtime := wasmWasiRuntimeMetadata("zig")
+	sourceHash := "sourcehash:zig"
+	sourceBytes := 345
+	artifactPayload := []byte("zig-artifact")
+	artifactDigest := sha256.Sum256(artifactPayload)
+	artifactHash := hex.EncodeToString(artifactDigest[:])
+	artifactBytes := len(artifactPayload)
+	metadata := map[string]any{
+		"compiledArtifact": map[string]any{
+			"hash":             artifactHash,
+			"bytes":            artifactBytes,
+			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
+			"sourceHash":       sourceHash,
+			"targetTriple":     "wasm32-wasi",
+			"wasiProfile":      "preview1",
+			"abiEnvelope":      "stdin-stdout-json",
+			"abiVersion":       "strategy-runtime-abi-v1.14",
+			"validationStatus": "valid",
+		},
+		"providerValidation": map[string]any{
+			"providerId":      "strategy-language-provider-zig-wasi",
+			"contractVersion": "strategy-language-provider-contract-v1.32",
+			"sourceHash":      sourceHash,
+			"sourceBytes":     sourceBytes,
+			"artifactHash":    artifactHash,
+			"artifactBytes":   artifactBytes,
+			"proof":           providerValidationProof("strategy-language-provider-zig-wasi", sourceHash, sourceBytes, artifactHash, artifactBytes),
+		},
+	}
+
+	if runtimeSemantics(runtime)["countedPlayEligible"] != true {
+		t.Fatalf("Zig runtime semantics should be counted provider eligible")
+	}
+	if runtimeSemanticsForRevision(runtime, nil, sourceHash, sourceBytes)["countedPlayEligible"] == true {
+		t.Fatalf("Zig revision semantics accepted missing provider validation")
+	}
+	if !runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) {
+		t.Fatalf("Zig counted gate rejected matching artifact provider validation")
+	}
+	if runtimeAllowsCountedPlay(runtime, nil, sourceHash, sourceBytes) ||
+		runtimeAllowsCountedPlay(runtime, metadata, "other", sourceBytes) ||
+		runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes+1) {
+		t.Fatalf("Zig counted gate accepted missing or stale provider validation")
+	}
+}
+
 func TestPublicReadRoutesDecodeIdentifiersWithoutCrossRouteFallback(t *testing.T) {
 	tests := []struct {
 		name          string

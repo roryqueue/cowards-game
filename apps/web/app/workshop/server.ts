@@ -134,10 +134,17 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
         return { ok: false, validation }
       }
       if (
-        (request.sourceFormat === "python" || request.sourceFormat === "rust") &&
+        (request.sourceFormat === "python" ||
+          request.sourceFormat === "rust" ||
+          request.sourceFormat === "zig") &&
         request.runtimeServiceValidated !== true
       ) {
-        const label = request.sourceFormat === "rust" ? "Rust" : "Python"
+        const label =
+          request.sourceFormat === "rust"
+            ? "Rust"
+            : request.sourceFormat === "zig"
+              ? "Zig"
+              : "Python"
         throw new Error(
           `${label} Workshop revisions require runtime-service provider validation.`,
         )

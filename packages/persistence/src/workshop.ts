@@ -478,8 +478,8 @@ export const listWorkshopTemplates = (): WorkshopTemplateSummary[] => [
     id: "template:zig-wasi-tactical",
     label: "Zig WASI tactical starter",
     sourceFormat: "zig",
-    experimental: true,
-    countedPlayEligible: false,
+    experimental: false,
+    countedPlayEligible: true,
     source: zigWasiTacticalStarterSource,
     validation: validateWorkshopSource(zigWasiTacticalStarterSource, "zig"),
   },
@@ -849,8 +849,8 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     label: "Zig WASI stone",
     sampleKind: "starter",
     description:
-      "A safe no-std Zig WASI beta helper sample for the Preview 1 JSON envelope.",
-    categories: ["Zig beta", "WASM/WASI"],
+      "A safe no-std Zig WASI helper sample for the counted provider Preview 1 JSON envelope.",
+    categories: ["Zig", "WASM/WASI"],
     sourceFormat: "zig",
     source: zigWasiTacticalStarterSource,
   }),
@@ -934,17 +934,7 @@ export const validateWorkshopSource = (
               message: `${label} WASM/WASI validation requires the runtime-service compile boundary.`,
             },
           ],
-      warnings:
-        sourceFormat === "zig"
-          ? [
-              {
-                code: "NON_COUNTED_RUNTIME",
-                severity: "warning",
-                message:
-                  "Zig WASM/WASI is non-counted exhibition beta and must be compiled by runtime-service before save.",
-              },
-            ]
-          : [],
+      warnings: [],
       sourceBytes,
       forbiddenPatterns: [],
       sourceHash,
@@ -1067,14 +1057,7 @@ export const buildWorkshopRevision = (input: {
       : input.sourceFormat === "rust"
         ? { tags: ["rust", "wasm-wasi", "counted", "provider"] }
         : input.sourceFormat === "zig"
-        ? {
-            tags: [
-              input.sourceFormat,
-              "wasm-wasi",
-              "experimental",
-              "non-counted",
-            ],
-          }
+        ? { tags: ["zig", "wasm-wasi", "counted", "provider"] }
         : {}),
   }
   if (input.sourceFormat === "python") {
@@ -1152,17 +1135,43 @@ export const buildWorkshopRevision = (input: {
     }
   }
   if (input.sourceFormat === "zig") {
-    if (!input.runtime || !input.validation || !input.engineCompatibility) {
+    const sourceHash = createHash("sha256").update(input.source).digest("hex")
+    const sourceBytes = new TextEncoder().encode(input.source).length
+    const artifact = input.metadata?.compiledArtifact
+    if (
+      !input.runtimeServiceValidated ||
+      !input.runtime ||
+      !input.validation ||
+      !input.engineCompatibility ||
+      input.runtime.language.id !== "zig" ||
+      input.runtime.adapter.id !== "runtime-wasm-wasi-wasmtime-preview1" ||
+      input.validation.sourceHash !== sourceHash ||
+      input.validation.sourceBytes !== sourceBytes ||
+      artifact === undefined ||
+      artifact.sourceHash !== sourceHash ||
+      artifact.targetTriple !== "wasm32-wasi" ||
+      artifact.wasiProfile !== "preview1" ||
+      artifact.abiEnvelope !== "stdin-stdout-json" ||
+      artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+      artifact.validationStatus !== "valid" ||
+      !rustProviderValidationMatches(input.metadata, {
+        providerId: "strategy-language-provider-zig-wasi",
+        sourceHash,
+        sourceBytes,
+        artifactHash: artifact.hash,
+        artifactBytes: artifact.bytes,
+      })
+    ) {
       throw new WorkshopInputError(
-        "WASM/WASI Workshop revisions require runtime-service validation and artifact metadata.",
+        "Zig Workshop revisions require runtime-service provider validation.",
       )
     }
     return {
-      id: `strategy-revision:workshop:${input.sourceFormat}:${input.validation.sourceHash}` as StrategyRevisionId,
+      id: `strategy-revision:workshop:zig:${sourceHash}` as StrategyRevisionId,
       strategyId: WORKSHOP_STRATEGY_ID,
       source: input.source,
-      sourceHash: input.validation.sourceHash,
-      sourceBytes: input.validation.sourceBytes,
+      sourceHash,
+      sourceBytes,
       runtime: input.runtime,
       engineCompatibility: input.engineCompatibility,
       validation: input.validation,
@@ -1202,6 +1211,7 @@ const pythonProviderValidationMatches = (
 const rustProviderValidationMatches = (
   metadata: StrategyRevision["metadata"] | undefined,
   source: {
+    providerId?: string | undefined
     sourceHash: string
     sourceBytes: number
     artifactHash: string
@@ -1210,7 +1220,8 @@ const rustProviderValidationMatches = (
 ): boolean => {
   const validation = metadata?.providerValidation
   if (
-    validation?.providerId !== "strategy-language-provider-rust-wasi" ||
+    validation?.providerId !==
+      (source.providerId ?? "strategy-language-provider-rust-wasi") ||
     validation.contractVersion !==
       "strategy-language-provider-contract-v1.32" ||
     validation.sourceHash !== source.sourceHash ||

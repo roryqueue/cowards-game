@@ -199,6 +199,98 @@ fn main() {
     expect(JSON.stringify(body)).not.toContain("NON_COUNTED_RUNTIME")
   })
 
+  it(
+    "validates Zig through the provider compiler and returns artifact-bound provenance",
+    async () => {
+      const server = await withServer(64 * 1024)
+      const zigSource = `
+const Iovec = extern struct { buf: [*]u8, buf_len: usize };
+const Ciovec = extern struct { buf: [*]const u8, buf_len: usize };
+
+extern "wasi_snapshot_preview1" fn fd_read(u32, *const Iovec, usize, *usize) u16;
+extern "wasi_snapshot_preview1" fn fd_write(u32, *const Ciovec, usize, *usize) u16;
+
+fn contains(haystack: []const u8, needle: []const u8) bool {
+    if (needle.len == 0) return true;
+    if (haystack.len < needle.len) return false;
+    var index: usize = 0;
+    while (index <= haystack.len - needle.len) : (index += 1) {
+        var matched = true;
+        var offset: usize = 0;
+        while (offset < needle.len) : (offset += 1) {
+            if (haystack[index + offset] != needle[offset]) {
+                matched = false;
+                break;
+            }
+        }
+        if (matched) return true;
+    }
+    return false;
+}
+
+fn writeAll(bytes: []const u8) void {
+    var written: usize = 0;
+    var iov = Ciovec{ .buf = bytes.ptr, .buf_len = bytes.len };
+    _ = fd_write(1, &iov, 1, &written);
+}
+
+export fn _start() void {
+    var input_buf: [16384]u8 = undefined;
+    var iov = Iovec{ .buf = &input_buf, .buf_len = input_buf.len };
+    var nread: usize = 0;
+    _ = fd_read(0, &iov, 1, &nread);
+    if (contains(input_buf[0..nread], "\\"methodName\\":\\"soldierBrain\\"")) {
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
+    } else {
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
+    }
+}
+`
+      const response = await fetch(`${server.url}/validate-strategy`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sourceFormat: "zig",
+          source: zigSource,
+          strategyId: "strategy:zig",
+        }),
+      })
+      const body = (await response.json()) as Record<string, unknown>
+
+      expect(response.status).toBe(200)
+      expect(body).toMatchObject({
+        ok: true,
+        kind: "strategyValidation",
+        sourceFormat: "zig",
+        provider: {
+          id: "strategy-language-provider-zig-wasi",
+        },
+        metadata: {
+          tags: ["zig", "wasm-wasi", "counted", "provider"],
+          providerValidation: {
+            providerId: "strategy-language-provider-zig-wasi",
+            contractVersion: "strategy-language-provider-contract-v1.32",
+            sourceHash: expect.any(String),
+            sourceBytes: expect.any(Number),
+            artifactHash: expect.any(String),
+            artifactBytes: expect.any(Number),
+            proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
+          },
+          compiledArtifact: {
+            format: "wasm",
+            targetTriple: "wasm32-wasi",
+            abiEnvelope: "stdin-stdout-json",
+            publicEvidence: {
+              nonCounted: false,
+            },
+          },
+        },
+      })
+      expect(JSON.stringify(body)).not.toContain("NON_COUNTED_RUNTIME")
+    },
+    20_000,
+  )
+
   it("exposes no product API routes outside health and execute-match", async () => {
     const server = await withServer()
     for (const route of [

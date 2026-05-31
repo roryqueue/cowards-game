@@ -75,15 +75,17 @@ export const runtimeAllowsCountedPlay = (
     )
   }
   if (
-    normalized.language.id === "rust" &&
+    (normalized.language.id === "rust" || normalized.language.id === "zig") &&
     !rustProviderValidationMatches(
       provenance.metadata,
       provenance.sourceHash,
       provenance.sourceBytes,
+      normalized.language.id,
     )
   ) {
+    const label = normalized.language.id === "zig" ? "Zig" : "Rust"
     throw new CompetitionInputError(
-      "Rust counted entry requires provider-validated artifact provenance.",
+      `${label} counted entry requires provider-validated artifact provenance.`,
     )
   }
   return normalized
@@ -134,7 +136,13 @@ const rustProviderValidationMatches = (
   metadata: unknown,
   sourceHash: string | undefined,
   sourceBytes: number | undefined,
+  languageId: "rust" | "zig" = "rust",
 ): boolean => {
+  const providerId =
+    languageId === "zig"
+      ? "strategy-language-provider-zig-wasi"
+      : "strategy-language-provider-rust-wasi"
+  const targetTriple = languageId === "zig" ? "wasm32-wasi" : "wasm32-wasip1"
   if (
     !sourceHash ||
     sourceBytes === undefined ||
@@ -156,7 +164,7 @@ const rustProviderValidationMatches = (
     typeof artifactRecord.hash !== "string" ||
     typeof artifactRecord.bytes !== "number" ||
     artifactRecord.sourceHash !== sourceHash ||
-    artifactRecord.targetTriple !== "wasm32-wasip1" ||
+    artifactRecord.targetTriple !== targetTriple ||
     artifactRecord.wasiProfile !== "preview1" ||
     artifactRecord.abiEnvelope !== "stdin-stdout-json" ||
     artifactRecord.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
@@ -179,7 +187,7 @@ const rustProviderValidationMatches = (
   }
   const validation = providerValidation as Record<string, unknown>
   if (
-    validation.providerId !== "strategy-language-provider-rust-wasi" ||
+    validation.providerId !== providerId ||
     validation.contractVersion !==
       "strategy-language-provider-contract-v1.32" ||
     validation.sourceHash !== sourceHash ||
@@ -191,7 +199,7 @@ const rustProviderValidationMatches = (
     return false
   }
   const expected = pythonProviderValidationProof({
-    providerId: validation.providerId,
+    providerId,
     contractVersion: validation.contractVersion,
     sourceHash,
     sourceBytes,

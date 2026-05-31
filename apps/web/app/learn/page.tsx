@@ -48,8 +48,8 @@ export default function LearnPage() {
         <p>
           Exhibitions are the current signed-in entry path. Trial ladders and
           tournament-style pages appear through public-safe discovery reads when
-          configured public projections exist. JS/TS, Python, and Rust are
-          counted Strategy paths; Zig remains a non-counted exhibition beta path.
+          configured public projections exist. JS/TS, Python, Rust, and Zig are
+          counted Strategy paths through provider validation.
         </p>
       </section>
     </main>
