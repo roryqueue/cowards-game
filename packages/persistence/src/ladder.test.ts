@@ -14,10 +14,7 @@ const TEST_PROVIDER_VALIDATION_SECRET =
 process.env.COWARDS_PROVIDER_VALIDATION_SECRET = TEST_PROVIDER_VALIDATION_SECRET
 
 const pythonProviderProof = (sourceHash: string, sourceBytes: number): string =>
-  `hmac-sha256:${createHmac(
-    "sha256",
-    TEST_PROVIDER_VALIDATION_SECRET,
-  )
+  `hmac-sha256:${createHmac("sha256", TEST_PROVIDER_VALIDATION_SECRET)
     .update(
       [
         "strategy-language-provider-python",
@@ -37,10 +34,7 @@ const rustProviderProof = (
   artifactBytes: number,
   providerId = "strategy-language-provider-rust-wasi",
 ): string =>
-  `hmac-sha256:${createHmac(
-    "sha256",
-    TEST_PROVIDER_VALIDATION_SECRET,
-  )
+  `hmac-sha256:${createHmac("sha256", TEST_PROVIDER_VALIDATION_SECRET)
     .update(
       [
         providerId,
@@ -84,7 +78,9 @@ describe("trial ladder contracts", () => {
     ).toThrow("provider-validated artifact provenance")
 
     const artifactPayload = Buffer.from("zig-artifact")
-    const artifactHash = createHash("sha256").update(artifactPayload).digest("hex")
+    const artifactHash = createHash("sha256")
+      .update(artifactPayload)
+      .digest("hex")
     const artifactBytes = artifactPayload.byteLength
     expect(
       assertLadderEligibleRuntime(
@@ -176,7 +172,9 @@ describe("trial ladder contracts", () => {
     const sourceHash = "rust-source-hash"
     const sourceBytes = 256
     const artifactPayload = Buffer.from("rust-artifact")
-    const artifactHash = createHash("sha256").update(artifactPayload).digest("hex")
+    const artifactHash = createHash("sha256")
+      .update(artifactPayload)
+      .digest("hex")
     const artifactBytes = artifactPayload.byteLength
 
     expect(() => assertLadderEligibleRuntime(runtime)).toThrow(

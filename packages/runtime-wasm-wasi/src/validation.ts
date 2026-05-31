@@ -637,13 +637,7 @@ export const buildRustStrategyRevision = (input: {
     validation,
     metadata: {
       ...metadata,
-      tags: [
-        ...new Set([
-          ...(metadata.tags ?? []),
-          "rust",
-          "wasm-wasi",
-        ]),
-      ],
+      tags: [...new Set([...(metadata.tags ?? []), "rust", "wasm-wasi"])],
       compiledArtifact: compiled.artifact,
     },
   })
@@ -712,13 +706,7 @@ export const buildZigStrategyRevision = (input: {
     validation,
     metadata: {
       ...metadata,
-      tags: [
-        ...new Set([
-          ...(metadata.tags ?? []),
-          "zig",
-          "wasm-wasi",
-        ]),
-      ],
+      tags: [...new Set([...(metadata.tags ?? []), "zig", "wasm-wasi"])],
       compiledArtifact: compiled.artifact,
     },
   })

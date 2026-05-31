@@ -423,10 +423,14 @@ export const createMatchExecutionRuntimeEvidenceV1 = (
     "countedStatus" in result.metadata &&
     result.metadata.countedStatus === "non_counted"
   const historicalNonCounted = [
-    ...(result?.entrants.some((entrant) => entrant.runtime.language.id === "rust")
+    ...(result?.entrants.some(
+      (entrant) => entrant.runtime.language.id === "rust",
+    )
       ? ["rust" as const]
       : []),
-    ...(result?.entrants.some((entrant) => entrant.runtime.language.id === "zig")
+    ...(result?.entrants.some(
+      (entrant) => entrant.runtime.language.id === "zig",
+    )
       ? ["zig" as const]
       : []),
   ]
@@ -438,8 +442,7 @@ export const createMatchExecutionRuntimeEvidenceV1 = (
       ) ?? [],
     eligibility: {
       countedStrategyPath: "javascript-typescript-python-rust-zig",
-      nonCountedExhibitionBeta:
-        storedNonCounted ? historicalNonCounted : [],
+      nonCountedExhibitionBeta: storedNonCounted ? historicalNonCounted : [],
       activeWasmWasiAbi: "preview1-stdin-stdout-json",
     },
     ownership: {

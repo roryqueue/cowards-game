@@ -134,8 +134,8 @@ const validateStrategyRequest = (rawRequest: unknown) => {
     sourceFormat === "python"
       ? validatePythonStrategySource(body.source)
       : sourceFormat === "zig"
-      ? validateZigStrategySource(body.source)
-      : validateRustStrategySource(body.source)
+        ? validateZigStrategySource(body.source)
+        : validateRustStrategySource(body.source)
   if (!validation.valid) {
     return {
       ok: false,
@@ -148,20 +148,19 @@ const validateStrategyRequest = (rawRequest: unknown) => {
     sourceFormat === "python"
       ? buildPythonStrategyRevision
       : sourceFormat === "zig"
-      ? buildZigStrategyRevision
-      : buildRustStrategyRevision
+        ? buildZigStrategyRevision
+        : buildRustStrategyRevision
   const revision = revisionBuilder({
     source: body.source,
     ...(typeof body.strategyId === "string" && body.strategyId.trim().length > 0
       ? { strategyId: body.strategyId }
       : {}),
-    metadata:
-      {
-        tags:
-          sourceFormat === "python"
-            ? ["python", "counted", "provider"]
-            : [sourceFormat, "wasm-wasi", "counted", "provider"],
-      },
+    metadata: {
+      tags:
+        sourceFormat === "python"
+          ? ["python", "counted", "provider"]
+          : [sourceFormat, "wasm-wasi", "counted", "provider"],
+    },
   })
   const contractVersion =
     provider?.contractVersion ?? "strategy-language-provider-contract-v1.32"

@@ -5439,94 +5439,94 @@
         {
           "line": 1,
           "source": "node:crypto",
-          "statementText": "import { createHash, createHmac, randomUUID, timingSafeEqual } from \"node:crypto\""
+          "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
+        },
+        {
+          "line": 12,
+          "source": "@cowards/runtime-python/validation",
+          "statementText": "import { validatePythonStrategySource } from \"@cowards/runtime-python/validation\""
         },
         {
           "line": 13,
           "source": "@cowards/spec",
+          "statementText": "import {\n  describeStrategyRuntimeProductSemantics,\n  getSupportedStrategyLanguageRecord,\n  STRATEGY_RUNTIME_ABI_VERSION,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 18,
+          "source": "@cowards/spec",
           "statementText": "import type {\n  MatchId,\n  MatchSetId,\n  PlayerId,\n  RuntimeViolationType,\n  StrategyId,\n  StrategyRevision,\n  StrategyRevisionValidationCode,\n  StrategyRevisionId,\n  StrategyArtifactSourceFormat,\n  StrategyRuntimeProductSemantics,\n} from \"@cowards/spec\""
         },
         {
-          "line": 2,
-          "source": "@cowards/runtime-js",
-          "statementText": "import {\n  buildStrategyRevision,\n  validateStrategySource,\n  type StrategyRevisionValidationReport,\n} from \"@cowards/runtime-js\""
-        },
-        {
-          "line": 25,
+          "line": 30,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 26,
+          "line": 31,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
         },
         {
-          "line": 27,
+          "line": 32,
           "source": "./matchset-service.js",
           "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
         },
         {
-          "line": 28,
+          "line": 33,
           "source": "./matchset-service.js",
           "statementText": "import { generatePresetMatrix } from \"./matchset-service.js\""
         },
         {
-          "line": 29,
+          "line": 34,
           "source": "./matchset-status.js",
           "statementText": "import {\n  listMatchStatusesForSet,\n  type MatchSetMatchSummary,\n  refreshMatchSetStatus,\n} from \"./matchset-status.js\""
         },
         {
-          "line": 34,
+          "line": 39,
           "source": "./presets.js",
           "statementText": "import { getMatchSetPreset, type MatchSetPresetId } from \"./presets.js\""
         },
         {
-          "line": 35,
+          "line": 40,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 36,
+          "line": 41,
           "source": "./advanced-strategies.js",
           "statementText": "import {\n  listAdvancedStrategies,\n  type AdvancedStrategySummary,\n} from \"./advanced-strategies.js\""
         },
         {
-          "line": 40,
+          "line": 45,
           "source": "./starter-strategies.js",
           "statementText": "import {\n  listStarterStrategies,\n  type StarterStrategySummary,\n} from \"./starter-strategies.js\""
         },
         {
-          "line": 44,
+          "line": 49,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetScore } from \"./scoring.js\""
         },
         {
-          "line": 45,
+          "line": 50,
           "source": "./seed.js",
           "statementText": "import {\n  cautiousSource,\n  createDevelopmentSeedData,\n  recklessSource,\n} from \"./seed.js\""
         },
         {
-          "line": 50,
+          "line": 55,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
         {
           "line": 7,
-          "source": "@cowards/runtime-python/validation",
-          "statementText": "import { validatePythonStrategySource } from \"@cowards/runtime-python/validation\""
-        },
-        {
-          "line": 8,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  describeStrategyRuntimeProductSemantics,\n  getSupportedStrategyLanguageRecord,\n  STRATEGY_RUNTIME_ABI_VERSION,\n} from \"@cowards/spec\""
+          "source": "@cowards/runtime-js",
+          "statementText": "import {\n  buildStrategyRevision,\n  validateStrategySource,\n  type StrategyRevisionValidationReport,\n} from \"@cowards/runtime-js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 2,
+          "line": 7,
           "source": "@cowards/runtime-js",
           "statementText": "import {\n  buildStrategyRevision,\n  validateStrategySource,\n  type StrategyRevisionValidationReport,\n} from \"@cowards/runtime-js\""
         }

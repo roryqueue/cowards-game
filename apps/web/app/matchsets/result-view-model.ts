@@ -241,18 +241,16 @@ const formatEntrantRuntimeSummary = (
   const nonCountedLanguages = new Set<string>(
     result.contract.runtimeEvidence.eligibility.nonCountedExhibitionBeta,
   )
-  const counted = result.entrants.filter(
-    (entrant) => {
-      if (storedCountedStatus === "non_counted") {
-        return false
-      }
-      return (
-        describeStrategyRuntimeProductSemantics(entrant.runtime)
-          .countedPlayEligible &&
-        !nonCountedLanguages.has(entrant.runtime.language.id)
-      )
-    },
-  ).length
+  const counted = result.entrants.filter((entrant) => {
+    if (storedCountedStatus === "non_counted") {
+      return false
+    }
+    return (
+      describeStrategyRuntimeProductSemantics(entrant.runtime)
+        .countedPlayEligible &&
+      !nonCountedLanguages.has(entrant.runtime.language.id)
+    )
+  }).length
   const exhibition = result.entrants.length - counted
   return [
     `${counted} counted entrant${counted === 1 ? "" : "s"}`,

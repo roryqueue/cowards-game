@@ -1,4 +1,9 @@
-import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto"
+import {
+  createHash,
+  createHmac,
+  randomUUID,
+  timingSafeEqual,
+} from "node:crypto"
 import {
   buildStrategyRevision,
   validateStrategySource,
@@ -817,7 +822,8 @@ export const listWorkshopSamples = (): WorkshopSampleSummary[] => [
     id: "sample:python-screen-and-stone",
     label: "Python screen and stone",
     sampleKind: "starter",
-    description: "A constrained Python provider screen that stones adjacent pressure.",
+    description:
+      "A constrained Python provider screen that stones adjacent pressure.",
     categories: ["Python", "Stone"],
     sourceFormat: "python",
     source: pythonScreenAndStoneSampleSource,
@@ -1029,7 +1035,9 @@ const workshopRuntimeSemantics = (revision: {
   valid: boolean
 }): StrategyRuntimeProductSemantics => {
   const semantics = describeStrategyRuntimeProductSemantics(revision.runtime)
-  const language = getSupportedStrategyLanguageRecord(revision.runtime.language.id)
+  const language = getSupportedStrategyLanguageRecord(
+    revision.runtime.language.id,
+  )
   if (!revision.valid) {
     return {
       ...semantics,
@@ -1121,8 +1129,8 @@ export const buildWorkshopRevision = (input: {
       : input.sourceFormat === "rust"
         ? { tags: ["rust", "wasm-wasi", "counted", "provider"] }
         : input.sourceFormat === "zig"
-        ? { tags: ["zig", "wasm-wasi", "counted", "provider"] }
-        : {}),
+          ? { tags: ["zig", "wasm-wasi", "counted", "provider"] }
+          : {}),
   }
   if (input.sourceFormat === "python") {
     const sourceHash = createHash("sha256").update(input.source).digest("hex")

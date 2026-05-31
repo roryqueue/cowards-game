@@ -106,10 +106,7 @@ const pythonProviderValidationMatches = (
   }
   const providerValidation = (metadata as { providerValidation?: unknown })
     .providerValidation
-  if (
-    providerValidation === null ||
-    typeof providerValidation !== "object"
-  ) {
+  if (providerValidation === null || typeof providerValidation !== "object") {
     return false
   }
   const validation = providerValidation as Record<string, unknown>
@@ -179,10 +176,7 @@ const rustProviderValidationMatches = (
     return false
   }
   const providerValidation = record.providerValidation
-  if (
-    providerValidation === null ||
-    typeof providerValidation !== "object"
-  ) {
+  if (providerValidation === null || typeof providerValidation !== "object") {
     return false
   }
   const validation = providerValidation as Record<string, unknown>

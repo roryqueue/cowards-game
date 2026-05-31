@@ -13,12 +13,12 @@ export const dynamic = "force-dynamic"
 
 const runtimeLabel = (
   entrant: {
-  runtime: {
-    language: { id: string }
-    adapter: { id: string }
-    package: { mode: string }
-  }
-},
+    runtime: {
+      language: { id: string }
+      adapter: { id: string }
+      package: { mode: string }
+    }
+  },
   nonCountedLanguages: ReadonlySet<string>,
 ): string => {
   const nonCountedByContract = nonCountedLanguages.has(
@@ -26,9 +26,7 @@ const runtimeLabel = (
   )
   const language = runtimeExhibitionStatusLabel({
     languageId: entrant.runtime.language.id,
-    countedPlayLabel: nonCountedByContract
-      ? "Not counted"
-      : "Counted eligible",
+    countedPlayLabel: nonCountedByContract ? "Not counted" : "Counted eligible",
   })
   return `${language} · ${entrant.runtime.adapter.id}`
 }

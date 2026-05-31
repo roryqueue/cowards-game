@@ -124,8 +124,11 @@ def soldier_brain(input):
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         sourceFormat: "python",
-        source:
-          "# def select_activations(input): pass\n# def soldier_brain(input): pass\nimport\tos\n",
+        source: `import os
+
+def soldier_brain(input):
+    return {"action": {"type": "TURN", "direction": "UP"}, "soldierMemory": input["soldierMemory"]}
+`,
       }),
     })
     const invalidBody = (await invalid.json()) as Record<string, unknown>
@@ -138,7 +141,9 @@ def soldier_brain(input):
     })
     expect(JSON.stringify(invalidBody)).toContain("IMPORT_NOT_ALLOWED")
     expect(JSON.stringify(invalidBody)).toContain("MISSING_SELECT_ACTIVATIONS")
-    expect(JSON.stringify(invalidBody)).not.toContain("python_validation_host.py")
+    expect(JSON.stringify(invalidBody)).not.toContain(
+      "python_validation_host.py",
+    )
   })
 
   it("validates Rust through the provider compiler and returns artifact-bound provenance", async () => {
@@ -199,11 +204,9 @@ fn main() {
     expect(JSON.stringify(body)).not.toContain("NON_COUNTED_RUNTIME")
   })
 
-  it(
-    "validates Zig through the provider compiler and returns artifact-bound provenance",
-    async () => {
-      const server = await withServer(64 * 1024)
-      const zigSource = `
+  it("validates Zig through the provider compiler and returns artifact-bound provenance", async () => {
+    const server = await withServer(64 * 1024)
+    const zigSource = `
 const Iovec = extern struct { buf: [*]u8, buf_len: usize };
 const Ciovec = extern struct { buf: [*]const u8, buf_len: usize };
 
@@ -246,50 +249,48 @@ export fn _start() void {
     }
 }
 `
-      const response = await fetch(`${server.url}/validate-strategy`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          sourceFormat: "zig",
-          source: zigSource,
-          strategyId: "strategy:zig",
-        }),
-      })
-      const body = (await response.json()) as Record<string, unknown>
-
-      expect(response.status).toBe(200)
-      expect(body).toMatchObject({
-        ok: true,
-        kind: "strategyValidation",
+    const response = await fetch(`${server.url}/validate-strategy`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
         sourceFormat: "zig",
-        provider: {
-          id: "strategy-language-provider-zig-wasi",
+        source: zigSource,
+        strategyId: "strategy:zig",
+      }),
+    })
+    const body = (await response.json()) as Record<string, unknown>
+
+    expect(response.status).toBe(200)
+    expect(body).toMatchObject({
+      ok: true,
+      kind: "strategyValidation",
+      sourceFormat: "zig",
+      provider: {
+        id: "strategy-language-provider-zig-wasi",
+      },
+      metadata: {
+        tags: ["zig", "wasm-wasi", "counted", "provider"],
+        providerValidation: {
+          providerId: "strategy-language-provider-zig-wasi",
+          contractVersion: "strategy-language-provider-contract-v1.32",
+          sourceHash: expect.any(String),
+          sourceBytes: expect.any(Number),
+          artifactHash: expect.any(String),
+          artifactBytes: expect.any(Number),
+          proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
         },
-        metadata: {
-          tags: ["zig", "wasm-wasi", "counted", "provider"],
-          providerValidation: {
-            providerId: "strategy-language-provider-zig-wasi",
-            contractVersion: "strategy-language-provider-contract-v1.32",
-            sourceHash: expect.any(String),
-            sourceBytes: expect.any(Number),
-            artifactHash: expect.any(String),
-            artifactBytes: expect.any(Number),
-            proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
-          },
-          compiledArtifact: {
-            format: "wasm",
-            targetTriple: "wasm32-wasi",
-            abiEnvelope: "stdin-stdout-json",
-            publicEvidence: {
-              nonCounted: false,
-            },
+        compiledArtifact: {
+          format: "wasm",
+          targetTriple: "wasm32-wasi",
+          abiEnvelope: "stdin-stdout-json",
+          publicEvidence: {
+            nonCounted: false,
           },
         },
-      })
-      expect(JSON.stringify(body)).not.toContain("NON_COUNTED_RUNTIME")
-    },
-    20_000,
-  )
+      },
+    })
+    expect(JSON.stringify(body)).not.toContain("NON_COUNTED_RUNTIME")
+  }, 20_000)
 
   it("exposes no product API routes outside health and execute-match", async () => {
     const server = await withServer()

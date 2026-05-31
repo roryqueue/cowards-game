@@ -11,8 +11,7 @@ const runtimeDisplayLabel = (runtimeSemantics: {
   languageId: string
   languageLabel: string
   adapterLabel: string
-}) =>
-  `${runtimeSemantics.languageLabel} / ${runtimeSemantics.adapterLabel}`
+}) => `${runtimeSemantics.languageLabel} / ${runtimeSemantics.adapterLabel}`
 
 export default async function StrategyCardPage({
   params,

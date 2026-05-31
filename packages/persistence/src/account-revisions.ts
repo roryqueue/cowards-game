@@ -221,8 +221,7 @@ const provenanceAwareRuntimeSemantics = (
     ...semantics,
     countedPlayEligible: false,
     countedPlayLabel: "Not counted",
-    countedPlayReason:
-      `${languageLabel} counted play requires provider-validated revision provenance.`,
+    countedPlayReason: `${languageLabel} counted play requires provider-validated revision provenance.`,
   }
 }
 

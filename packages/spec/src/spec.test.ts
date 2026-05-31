@@ -541,7 +541,9 @@ describe("Coward's Game spec contracts", () => {
     }
 
     expect(validateRuntimeBrokerRegistryMatch(rustRuntime)).toHaveLength(0)
-    expect(evaluateStrategyRuntimeCountedEligibility(rustRuntime)).toMatchObject({
+    expect(
+      evaluateStrategyRuntimeCountedEligibility(rustRuntime),
+    ).toMatchObject({
       ok: true,
     })
     expect(describeStrategyRuntimeProductSemantics(rustRuntime)).toMatchObject({

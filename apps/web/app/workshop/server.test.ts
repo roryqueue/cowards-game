@@ -31,10 +31,7 @@ const pythonProviderValidationProof = (input: {
   sourceHash: string
   sourceBytes: number
 }): string =>
-  `hmac-sha256:${createHmac(
-    "sha256",
-    TEST_PROVIDER_VALIDATION_SECRET,
-  )
+  `hmac-sha256:${createHmac("sha256", TEST_PROVIDER_VALIDATION_SECRET)
     .update(
       [
         "strategy-language-provider-python",

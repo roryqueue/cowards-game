@@ -792,8 +792,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     category: "rollback",
     requirement:
       "Operators can disable promoted non-JS counted play without silently reclassifying existing evidence.",
-    currentStatus:
-      "Python, Rust, and Zig counted evidence exists.",
+    currentStatus: "Python, Rust, and Zig counted evidence exists.",
     promotionGate:
       "Promotion requires rollback semantics for unsafe or nondeterministic runtimes.",
   },
@@ -802,8 +801,7 @@ export const NON_JS_RUNTIME_PROMOTION_CRITERIA = [
     category: "deprecation",
     requirement:
       "Language/runtime deprecation rules explain compatibility, replayability, and future submission behavior.",
-    currentStatus:
-      "Python, Rust, and Zig are counted provider-supported.",
+    currentStatus: "Python, Rust, and Zig are counted provider-supported.",
     promotionGate:
       "A promoted runtime needs versioned deprecation and migration rules.",
   },
@@ -979,15 +977,14 @@ export const assertNonJsRuntimeGuardrails = (): void => {
       adapter.readiness !== "experimental" ||
       adapter.isolationPromotionState !== "evidence-only"
     ) {
-      throw new Error(
-        `${adapter.id} must remain experimental and non-counted`,
-      )
+      throw new Error(`${adapter.id} must remain experimental and non-counted`)
     }
   }
   if (
     NON_JS_RUNTIME_SUPPORT_POLICY.publicLanguagePickerAllowed &&
     NON_JS_RUNTIME_SUPPORT_POLICY.productionSupportedLanguageIds.every(
-      (languageId) => languageId === "javascript" || languageId === "typescript",
+      (languageId) =>
+        languageId === "javascript" || languageId === "typescript",
     )
   ) {
     throw new Error(
