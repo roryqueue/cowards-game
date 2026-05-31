@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.28 Match Execution Operations, Recovery, and Incident Drills on 2026-05-30
-**Current milestone:** None active; start the next milestone with `$gsd-new-milestone`
-**Status:** v1.28 shipped from workstream `v1-28-match-execution-operations-recovery-and-incident-drills`. Go-owned operations recovery now has private quarantine, internal requeue/rerun controls, redacted operator evidence, operations drill proof, boundary monitor coverage, and signed-in recovery proof behind the frozen `match-execution-app-v1` boundary.
+**Current milestone:** v1.30 Match Intelligence Workbench Against Frozen Result and Replay Fixtures in workstream `v1-30-match-intelligence-workbench`
+**Status:** v1.30 is planned as an app-side public-safe Match Intelligence Workbench. It will derive tactical summaries, timeline annotations, jump targets, Soldier progression, board-control signals, action/engagement summaries, degraded intelligence states, and comparison views from frozen public result/replay DTOs, fixture DTOs, and public replay projections without depending on execution internals or changing `match-execution-app-v1`.
 **Last audit:** v1.28 audit passed after validating quarantine, recovery controls, stale lease and duplicate convergence evidence, redaction hardening, contract compatibility monitors, and signed-in operator recovery proof.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
@@ -26,6 +26,24 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - Signed-in proof creating a JS/TS Strategy Revision, executing a live Go operator requeue path, verifying duplicate idempotency, and scanning public result/replay pages for private markers.
 
 **Non-goals:** No public result/replay contract expansion, public operations UI, runtime promotion, production sandbox certification, ABI migration, counted non-JS play, v1.27 dependency, or Strategy execution in web/API/Go.
+
+## Active Workstream Milestone: v1.30 Match Intelligence Workbench Against Frozen Result and Replay Fixtures
+
+**Workstream:** `.planning/workstreams/v1-30-match-intelligence-workbench/`
+
+**Goal:** Build a public-safe Match Intelligence Workbench that derives tactical summaries, timeline annotations, jump targets, comparison views, Soldier progression, board-control signals, terrain/stone occupancy, and action/engagement summaries from frozen public result/replay DTOs and fixture-backed replay projections.
+
+**Target features:**
+- Inventory public result/replay DTOs, fixture scenarios, replay-ready DTOs, and public Chronicle projection signals that can support deterministic intelligence.
+- Add an app-side fixture-backed intelligence derivation adapter with explicit confidence and "not enough public evidence" states.
+- Add result-page tactical summaries, comparison panels, turning-point previews, and low-signal intelligence states.
+- Add replay timeline annotations and jump targets using public sequence data and existing focus mechanics.
+- Add Soldier status progression, board-control, terrain/stone occupancy, action-mix, and engagement panels where public projection data supports them.
+- Preserve honest degraded, unavailable, queued, running, failed, no-result, and missing-Chronicle intelligence copy.
+- Keep owner/test-only deeper analysis gated and absent from default public output.
+- Run desktop/mobile fixture-backed visual proof, privacy audits, boundary monitors, and live signed-in compatibility proof where local services are available.
+
+**Non-goals:** No `match-execution-app-v1` redesign or default public DTO expansion, no live execution dependency for normal UI proof, no Go orchestration or runtime-service ownership creep, no AI coach or live model inference, no new language promotion, no production sandbox certification, no direct-export or Component Model/WIT ABI migration, no counted non-JS play, and no Strategy execution in web/API/Go.
 
 ## Previous Shipped Milestone: v1.26 Match Execution Reliability, Retry Semantics, and Failure Drills
 
