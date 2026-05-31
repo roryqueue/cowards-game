@@ -129,57 +129,57 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| BASE-01 | TBD | Pending |
-| BASE-02 | TBD | Pending |
-| BASE-03 | TBD | Pending |
-| BASE-04 | TBD | Pending |
-| BASE-05 | TBD | Pending |
-| STATE-01 | TBD | Pending |
-| STATE-02 | TBD | Pending |
-| STATE-03 | TBD | Pending |
-| STATE-04 | TBD | Pending |
-| STATE-05 | TBD | Pending |
-| STATE-06 | TBD | Pending |
-| REPLAY-01 | TBD | Pending |
-| REPLAY-02 | TBD | Pending |
-| REPLAY-03 | TBD | Pending |
-| REPLAY-04 | TBD | Pending |
-| REPLAY-05 | TBD | Pending |
-| REPLAY-06 | TBD | Pending |
-| PRIV-01 | TBD | Pending |
-| PRIV-02 | TBD | Pending |
-| PRIV-03 | TBD | Pending |
-| PRIV-04 | TBD | Pending |
-| PRIV-05 | TBD | Pending |
-| BOARD-01 | TBD | Pending |
-| BOARD-02 | TBD | Pending |
-| BOARD-03 | TBD | Pending |
-| BOARD-04 | TBD | Pending |
-| BOARD-05 | TBD | Pending |
-| BOARD-06 | TBD | Pending |
-| COMPAT-01 | TBD | Pending |
-| COMPAT-02 | TBD | Pending |
-| COMPAT-03 | TBD | Pending |
-| COMPAT-04 | TBD | Pending |
-| COMPAT-05 | TBD | Pending |
-| COMPAT-06 | TBD | Pending |
-| PROOF-01 | TBD | Pending |
-| PROOF-02 | TBD | Pending |
-| PROOF-03 | TBD | Pending |
-| PROOF-04 | TBD | Pending |
-| PROOF-05 | TBD | Pending |
-| CLOSE-01 | TBD | Pending |
-| CLOSE-02 | TBD | Pending |
-| CLOSE-03 | TBD | Pending |
-| CLOSE-04 | TBD | Pending |
-| CLOSE-05 | TBD | Pending |
+| BASE-01 | Phase 210 | Pending |
+| BASE-02 | Phase 210 | Pending |
+| BASE-03 | Phase 210 | Pending |
+| BASE-04 | Phase 210 | Pending |
+| BASE-05 | Phase 210 | Pending |
+| STATE-01 | Phase 211 | Pending |
+| STATE-02 | Phase 211 | Pending |
+| STATE-03 | Phase 211 | Pending |
+| STATE-04 | Phase 211 | Pending |
+| STATE-05 | Phase 211 | Pending |
+| STATE-06 | Phase 211 | Pending |
+| REPLAY-01 | Phase 212 | Pending |
+| REPLAY-02 | Phase 212 | Pending |
+| REPLAY-03 | Phase 212 | Pending |
+| REPLAY-04 | Phase 212 | Pending |
+| REPLAY-05 | Phase 212 | Pending |
+| REPLAY-06 | Phase 212 | Pending |
+| PRIV-01 | Phase 213 | Pending |
+| PRIV-02 | Phase 213 | Pending |
+| PRIV-03 | Phase 213 | Pending |
+| PRIV-04 | Phase 213 | Pending |
+| PRIV-05 | Phase 213 | Pending |
+| BOARD-01 | Phase 214 | Pending |
+| BOARD-02 | Phase 214 | Pending |
+| BOARD-03 | Phase 214 | Pending |
+| BOARD-04 | Phase 214 | Pending |
+| BOARD-05 | Phase 214 | Pending |
+| BOARD-06 | Phase 214 | Pending |
+| COMPAT-01 | Phase 215 | Pending |
+| COMPAT-02 | Phase 215 | Pending |
+| COMPAT-03 | Phase 215 | Pending |
+| COMPAT-04 | Phase 215 | Pending |
+| COMPAT-05 | Phase 215 | Pending |
+| COMPAT-06 | Phase 215 | Pending |
+| PROOF-01 | Phase 216 | Pending |
+| PROOF-02 | Phase 216 | Pending |
+| PROOF-03 | Phase 216 | Pending |
+| PROOF-04 | Phase 216 | Pending |
+| PROOF-05 | Phase 216 | Pending |
+| CLOSE-01 | Phase 217 | Pending |
+| CLOSE-02 | Phase 217 | Pending |
+| CLOSE-03 | Phase 217 | Pending |
+| CLOSE-04 | Phase 217 | Pending |
+| CLOSE-05 | Phase 217 | Pending |
 
 **Coverage:**
 - v1 requirements: 44 total
 - Complete: 0
-- Planned: 0
-- Mapped to phases: 0
-- Unmapped: 44
+- Planned: 44
+- Mapped to phases: 44
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-31*

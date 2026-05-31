@@ -7,11 +7,11 @@ milestone_name: Replay and Result Trust Polish
 status: planning
 stopped_at: null
 last_updated: "2026-05-31T00:00:00.000-04:00"
-last_activity: 2026-05-31 - v1.29 requirements started
+last_activity: 2026-05-31 - v1.29 roadmap and phase context captured
 progress:
-  total_phases: 0
+  total_phases: 8
   completed_phases: 0
-  total_plans: 0
+  total_plans: 8
   completed_plans: 0
   percent: 0
 ---
@@ -21,9 +21,9 @@ progress:
 ## Current Position
 
 Phase: Not started
-Plan: Requirements definition
-Status: Planning v1.29 requirements
-Last activity: 2026-05-31 - v1.29 requirements started
+Plan: Ready for phase planning
+Status: Context captured for v1.29 phases 210-217
+Last activity: 2026-05-31 - v1.29 roadmap and phase context captured
 
 ## v1.29 Intent
 
@@ -39,10 +39,10 @@ Improve public result and replay trust on top of existing execution outputs. Thi
 
 ## Progress
 
-**Phases Complete:** 0/0
-**Current Plan:** Requirements started; roadmap next.
+**Phases Complete:** 0/8
+**Current Plan:** Plan Phase 210, then continue sequentially through Phase 217.
 
 ## Session Continuity
 
-**Stopped At:** Requirements definition
-**Resume File:** `.planning/workstreams/v1-29-replay-and-result-trust-polish/REQUIREMENTS.md`
+**Stopped At:** Phase 210 ready for planning
+**Resume File:** `.planning/workstreams/v1-29-replay-and-result-trust-polish/phases/210-public-result-replay-baseline-inventory/210-CONTEXT.md`
