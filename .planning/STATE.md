@@ -15,9 +15,9 @@ progress:
 ## Current Position
 
 Phase: 222 - Language Surface Inventory
-Plan: Ready for discussion
-Status: Requirements and roadmap defined
-Last activity: 2026-05-31 - v1.32 requirements and roadmap drafted
+Plan: Ready for planning
+Status: Context gathered for all v1.32 phases
+Last activity: 2026-05-31 - v1.32 phase discussion/context captured for Phases 222-233
 
 ## Project Reference
 
@@ -42,6 +42,19 @@ See: `.planning/PROJECT.md`
 - Core v1.32 question: What must be true before Python, Rust, and Zig can honestly be fully supported and counted alongside JS/TS, and what monitors prevent future drift?
 - Roadmap begins at Phase 222 and continues through Phase 233.
 - Phase 222 is next: inventory active language, runtime, eligibility, product-label, docs, and monitor surfaces before changing behavior.
+- Context and discussion logs have been captured for all v1.32 phases:
+  - Phase 222: Language Surface Inventory
+  - Phase 223: Unified Supported Language Registry and Eligibility Model
+  - Phase 224: StrategyLanguageProvider Runtime Contract
+  - Phase 225: Python Production Support Path
+  - Phase 226: Rust Production Support Path
+  - Phase 227: Zig Production Support Path
+  - Phase 228: Cross-Language Golden Strategy Corpus and Parity Matrix
+  - Phase 229: Workshop, Account, and Competition Entry Unification
+  - Phase 230: Result, Replay, Public Evidence, and Docs Language Pass
+  - Phase 231: Drift Monitors and Boundary Coverage
+  - Phase 232: Live Four-Language Signed-In Proof
+  - Phase 233: Audit, Archive, Commit, and Tag
 - Phase 211 artifacts:
   - `.planning/artifacts/v1.31-route-link-inventory.md`
   - `.planning/phases/211-route-and-link-inventory/211-CONTEXT.md`
