@@ -1,5 +1,36 @@
 # Retrospective
 
+## Milestone: v1.28 — Match Execution Operations, Recovery, and Incident Drills
+
+**Shipped:** 2026-05-30
+**Phases:** 9 | **Plans:** 9
+
+### What Was Built
+
+- Private Go-owned quarantine for exhausted retryable and immediate non-retryable execution jobs.
+- Internal requeue/rerun controls with idempotency keys, operator action audit rows, and completed-Chronicle safeguards.
+- A v1.28 operations proof harness covering failure drills, stale lease reclaim, duplicate worker convergence, interrupted MatchSet refresh, redaction, and contract compatibility.
+- A boundary monitor for v1.28 operations compatibility behind frozen `match-execution-app-v1`.
+- A signed-in Playwright proof that saves a JS/TS Strategy Revision, executes live Go operator requeue, verifies duplicate idempotency, and scans public pages.
+
+### What Worked
+
+- Keeping recovery as private Go-owned operations state avoided public result/replay contract expansion.
+- Idempotency keys gave a clean way to make operator recovery repeatable without double completion, duplicate Chronicles, or duplicate scoring.
+- The signed-in proof could isolate recovery controls from live runtime availability by seeding a bounded recoverable job while still exercising the live Go endpoint.
+
+### What Was Inefficient
+
+- Running local Playwright proof alongside another checkout required making the base URL configurable.
+- The TypeScript backend inventory artifact needed regeneration after runtime-service redaction imports changed.
+- Some live-drill evidence remains proof/marker based; future incident drills can make more of it fully executable.
+
+### Key Lessons
+
+- Operator evidence should be allowlisted and redacted at generation time, not cleaned up later in public views.
+- Public compatibility matrices are useful because private operations states otherwise tempt accidental DTO drift.
+- Recovery controls are easier to reason about when quarantine release, job reset, Match reset, and operator audit write happen in one transaction.
+
 ## Milestone: v1.26 — Match Execution Reliability, Retry Semantics, and Failure Drills
 
 **Shipped:** 2026-05-30

@@ -2,10 +2,10 @@
 
 ## Current State
 
-**Shipped version:** v1.26 Match Execution Reliability, Retry Semantics, and Failure Drills on 2026-05-30
-**Current milestone:** v1.28 Match Execution Operations, Recovery, and Incident Drills
-**Status:** v1.28 planning started in workstream `v1-28-match-execution-operations-recovery-and-incident-drills`. v1.26 shipped with Go/runtime-service execution reliability hardened behind the frozen `match-execution-app-v1` boundary with no app-facing contract change.
-**Last audit:** v1.26 audit passed after adding Go-owned retry/failure classification, public-safe execution metadata projection, post-claim request-build failure closure, runtime-service HTTP redaction, fixture/browser proof, and boundary monitor coverage.
+**Shipped version:** v1.28 Match Execution Operations, Recovery, and Incident Drills on 2026-05-30
+**Current milestone:** None active; start the next milestone with `$gsd-new-milestone`
+**Status:** v1.28 shipped from workstream `v1-28-match-execution-operations-recovery-and-incident-drills`. Go-owned operations recovery now has private quarantine, internal requeue/rerun controls, redacted operator evidence, operations drill proof, boundary monitor coverage, and signed-in recovery proof behind the frozen `match-execution-app-v1` boundary.
+**Last audit:** v1.28 audit passed after validating quarantine, recovery controls, stale lease and duplicate convergence evidence, redaction hardening, contract compatibility monitors, and signed-in operator recovery proof.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
 
@@ -13,19 +13,21 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.28 Match Execution Operations, Recovery, and Incident Drills
+## Latest Shipped Milestone: v1.28 Match Execution Operations, Recovery, and Incident Drills
 
 **Goal:** Build the operational recovery layer on the execution side behind the frozen `match-execution-app-v1` boundary so execution failures are recoverable, auditable, and drillable without expanding public result/replay contracts except for strictly backward-compatible additions proven necessary.
 
-**Target features:**
-- Dead-letter or quarantine exhausted and non-retryable execution jobs with deterministic, bounded, public-safe state.
-- Deterministic internal requeue and rerun controls for operator recovery only, with idempotency guards against duplicate Match completion, scoring, Chronicle persistence, or public evidence.
-- Live local failure-drill harness spanning Postgres, Go backend, runtime-service, and browser evidence.
-- Recovery drills for stopped runtime-service, unavailable runtime, malformed envelopes, stale artifacts, timeouts, stale leases, duplicate workers, and interrupted MatchSet execution.
-- Operator-only evidence and redaction hardening that keep raw diagnostics and private runtime details out of public result/replay outputs by default.
-- Contract compatibility proof against `match-execution-app-v1`, preserving JS/TS counted play, Python/Rust/Zig non-counted exhibition beta, and Preview 1 stdin/stdout JSON as the active WASM/WASI ABI.
+**Delivered:**
+- Private Go-owned quarantine for exhausted retryable and immediate non-retryable execution jobs.
+- Internal-token-gated requeue/rerun controls with idempotency keys, operator action rows, and completed-Chronicle safeguards.
+- Operations proof harness for stopped runtime-service, malformed envelope, timeout, stale artifact, malformed runtime result, stale lease reclaim, duplicate worker convergence, and interrupted MatchSet refresh evidence.
+- Operator-only evidence and runtime redaction hardening that keeps raw diagnostics and private runtime details out of public result/replay outputs by default.
+- Contract compatibility proof and boundary monitor coverage against `match-execution-app-v1`.
+- Signed-in proof creating a JS/TS Strategy Revision, executing a live Go operator requeue path, verifying duplicate idempotency, and scanning public result/replay pages for private markers.
 
-## Latest Shipped Milestone: v1.26 Match Execution Reliability, Retry Semantics, and Failure Drills
+**Non-goals:** No public result/replay contract expansion, public operations UI, runtime promotion, production sandbox certification, ABI migration, counted non-JS play, v1.27 dependency, or Strategy execution in web/API/Go.
+
+## Previous Shipped Milestone: v1.26 Match Execution Reliability, Retry Semantics, and Failure Drills
 
 **Goal:** Harden the execution side behind the frozen `match-execution-app-v1` boundary so Go/runtime-service orchestration, retry classification, unavailable/degraded handling, malformed result handling, stale artifact detection, and live failure drills are deterministic, bounded, public-safe, and contract-compatible.
 

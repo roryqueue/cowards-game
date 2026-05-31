@@ -1,5 +1,36 @@
 # Milestones
 
+## v1.28 Match Execution Operations, Recovery, and Incident Drills (Shipped: 2026-05-30)
+
+**Status:** Shipped 2026-05-30
+**Phases:** 9
+**Phase range:** 201-209
+**Plans:** 9/9 complete
+**Requirements:** 57/57 complete
+**Research:** .planning/research/v1.28-SUMMARY.md
+**Roadmap:** .planning/milestones/v1.28-ROADMAP.md
+**Decision:** `match-execution-app-v1` remains frozen; JS/TS remains counted; Python/Rust/Zig remain non-counted exhibition beta; Preview 1 stdin/stdout JSON remains active; no production sandbox certification, runtime promotion, counted non-JS play, direct-export ABI migration, Component Model/WIT migration, public operations UI, or v1.27 dependency.
+**Audit:** .planning/milestones/v1.28-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.28-ROADMAP.md, .planning/milestones/v1.28-REQUIREMENTS.md, .planning/milestones/ws-v1-28-match-execution-operations-recovery-and-incident-drills-2026-05-30/phases/
+
+**Delivered:**
+
+- Private Go-owned quarantine model for exhausted retryable and immediate non-retryable execution jobs.
+- Internal-token-gated requeue/rerun controls with idempotency keys, operator action audit rows, and completed-Chronicle safeguards.
+- Operations proof harness covering stopped runtime-service, malformed envelope, timeout, stale artifact, malformed runtime result, stale lease reclaim, duplicate worker convergence, and interrupted MatchSet refresh evidence.
+- Operator evidence and runtime redaction hardening with public-safe proof artifacts.
+- Boundary monitor coverage for v1.28 operations compatibility against frozen `match-execution-app-v1`.
+- Signed-in Playwright proof creating a JS/TS Strategy Revision, executing a live Go operator requeue path, verifying duplicate idempotency, and scanning public result/replay pages.
+
+### Active Constraints
+
+- `match-execution-app-v1` remains frozen.
+- JS/TS remains the only counted Strategy path.
+- Python, Rust, and Zig remain non-counted exhibition beta only.
+- Preview 1 stdin/stdout JSON remains the active WASM/WASI execution ABI.
+- Quarantine, recovery policy, operator actions, and private diagnostics remain internal-only.
+- Strategy code does not execute in web/API/Go.
+
 ## v1.26 Match Execution Reliability, Retry Semantics, and Failure Drills (Shipped: 2026-05-30)
 
 **Status:** Shipped 2026-05-30
