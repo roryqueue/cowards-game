@@ -16,8 +16,8 @@ progress:
 
 Phase: 212 - Discovery Read Requirements and Boundary Design
 Plan: Pending
-Status: Ready for Phase 212 discussion/planning
-Last activity: 2026-05-31 - Phase 211 route and link inventory completed; v1.31 requirements and roadmap proposed.
+Status: Ready for Phase 212 planning
+Last activity: 2026-05-31 - Milestone-wide discussion completed for Phases 212-221; context and discussion logs written.
 
 ## Project Reference
 
@@ -40,3 +40,14 @@ See: `.planning/PROJECT.md`
   - `.planning/phases/211-route-and-link-inventory/211-PLAN.md`
   - `.planning/phases/211-route-and-link-inventory/211-SUMMARY.md`
 - Phase 212 should define the new discovery DTOs/routes before any global shell or page implementation.
+- Context and discussion logs exist for all remaining v1.31 phases:
+  - Phase 212: Discovery Read Requirements and Boundary Design
+  - Phase 213: Global Site Shell and Navigation
+  - Phase 214: Public Home Discovery Hub
+  - Phase 215: Watch Hub
+  - Phase 216: Competition Hub and Competition Detail
+  - Phase 217: Signed-In Entry Spine
+  - Phase 218: Cross-Link Pass Across Existing Object Pages
+  - Phase 219: Privacy, Boundary, and Discovery Monitor Coverage
+  - Phase 220: Public and Signed-In Journey Proof
+  - Phase 221: Audit, Archive, Commit, and Tag
