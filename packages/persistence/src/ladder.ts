@@ -4,6 +4,7 @@ import {
   randomUUID,
   timingSafeEqual,
 } from "node:crypto"
+import { Buffer } from "node:buffer"
 import {
   assertPublicMatchSetResultLeakSafe,
   EXHIBITION_SCORING_POLICY_V1,

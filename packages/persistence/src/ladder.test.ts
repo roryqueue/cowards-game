@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { Buffer } from "node:buffer"
 import { createHash, createHmac } from "node:crypto"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import {

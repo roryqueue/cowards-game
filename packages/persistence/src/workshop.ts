@@ -4,6 +4,7 @@ import {
   randomUUID,
   timingSafeEqual,
 } from "node:crypto"
+import { Buffer } from "node:buffer"
 import {
   buildStrategyRevision,
   validateStrategySource,
