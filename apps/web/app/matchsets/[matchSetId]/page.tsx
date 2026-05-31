@@ -6,22 +6,10 @@ import {
   publicPrivacyProvenanceCue,
   statusChipClass,
 } from "../evidence-copy.js"
+import { buildResultWorkbenchViewModel } from "../result-view-model.js"
 import { runtimeExhibitionStatusLabel } from "../../../lib/runtime-labels.js"
 
 export const dynamic = "force-dynamic"
-
-const resultCopy = (status: string): string => {
-  switch (status) {
-    case "complete":
-      return "Valid public result"
-    case "degraded":
-      return "Degraded public result"
-    case "failed":
-      return "Invalid public result"
-    default:
-      return "Pending public result"
-  }
-}
 
 const runtimeLabel = (entrant: {
   runtime: {
@@ -90,13 +78,14 @@ export default async function MatchSetResultPage({
     (hasNonCountedEntrant ? "non-counted exhibition" : "public exhibition")
   const entrantRuntimeLabels = result.entrants.map(runtimeLabel)
   const evidenceRows = matchSetEvidenceRows(result, entrantRuntimeLabels)
+  const workbench = buildResultWorkbenchViewModel(result, entrantRuntimeLabels)
 
   return (
     <main className="app-page">
-      <section className="app-panel">
+      <section className="app-panel result-workbench">
         <div className="app-section-header">
           <div>
-            <p className="workshop-muted">Competitive Alpha Result</p>
+            <p className="workshop-muted">Result Workbench</p>
             <h1>{result.preset.label}</h1>
             <p className="workshop-muted">{result.matchSetId}</p>
           </div>
@@ -107,10 +96,13 @@ export default async function MatchSetResultPage({
         </div>
 
         <div className="status-strip">
-          <span className={`workshop-chip ${statusChipClass(result.status)}`}>
-            {result.status}
+          <span
+            className={`workshop-chip ${statusChipClass(result.status)} result-tone-${workbench.statusTone}`}
+          >
+            {workbench.statusLabel}
           </span>
-          <span>{resultCopy(result.status)}</span>
+          <span>{workbench.lifecycleSummary}</span>
+          <span>{workbench.availabilitySummary}</span>
           {governance.countedStatus ? (
             <span>{governance.countedStatus}</span>
           ) : null}
@@ -121,6 +113,37 @@ export default async function MatchSetResultPage({
           <p className="workshop-muted">{governance.publicExplanation}</p>
         ) : null}
 
+        <div
+          className="result-workbench-grid"
+          aria-label="Result workbench state model"
+        >
+          {workbench.sections.map((section) => (
+            <article className="result-workbench-card" key={section.id}>
+              <div className="app-section-header compact">
+                <div>
+                  <p className="workshop-muted">{section.eyebrow}</p>
+                  <h2>{section.title}</h2>
+                </div>
+              </div>
+              <p className="workshop-muted">{section.summary}</p>
+              <dl className="result-metric-grid">
+                {section.metrics.map((metric) => (
+                  <Fragment key={`${section.id}:${metric.label}`}>
+                    <dt>{metric.label}</dt>
+                    <dd
+                      className={
+                        metric.tone ? `result-tone-${metric.tone}` : undefined
+                      }
+                    >
+                      {metric.value}
+                    </dd>
+                  </Fragment>
+                ))}
+              </dl>
+            </article>
+          ))}
+        </div>
+
         <section
           className="evidence-panel"
           aria-label="MatchSet evidence"
@@ -130,6 +153,7 @@ export default async function MatchSetResultPage({
             <h2>Evidence</h2>
             <span className="workshop-chip">{evidenceStatus}</span>
           </div>
+          <p className="workshop-muted">{workbench.privacySummary}</p>
           <dl className="details-grid">
             {evidenceRows.map((row) => (
               <Fragment key={row.label}>
@@ -178,7 +202,9 @@ export default async function MatchSetResultPage({
           </div>
         ) : (
           <p className="workshop-muted">
-            Matches have not produced scoring evidence yet.
+            {result.status === "complete"
+              ? "This fixture omits standings; inspect the Match ledger for published result evidence."
+              : "Matches have not produced scoring evidence yet."}
           </p>
         )}
 
@@ -210,7 +236,7 @@ export default async function MatchSetResultPage({
         <div className="app-section-header compact">
           <h2>Replay evidence</h2>
           <span className="workshop-muted">
-            {result.matches.length} Matches
+            {workbench.matches.length} Matches
           </span>
         </div>
         <div className="app-table match-ledger-table" role="table">
@@ -221,17 +247,19 @@ export default async function MatchSetResultPage({
             <span>Status</span>
             <span>Evidence</span>
           </div>
-          {result.matches.map((match) => (
+          {workbench.matches.map((match) => (
             <div className="app-table-row" role="row" key={match.matchId}>
               <span title={match.matchId}>{match.matchId}</span>
               <span>{match.bottomLabel}</span>
               <span>{match.topLabel}</span>
-              <span>{match.status}</span>
+              <span className={`result-tone-${match.tone}`}>
+                {match.status}
+              </span>
               <span>
                 {match.replayHref ? (
                   <a href={match.replayHref}>Replay</a>
                 ) : (
-                  (match.publicReason ?? "Pending")
+                  match.evidence
                 )}
               </span>
             </div>

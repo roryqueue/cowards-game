@@ -43,8 +43,8 @@
     "build": "turbo build",
     "e2e": "playwright test",
     "e2e:smoke": "PLAYWRIGHT_TEST=1 pnpm e2e -- replay.fixture.spec.ts",
-    "e2e:service": "RUN_SERVICE_E2E=1 PLAYWRIGHT_TEST=1 playwright test --project=desktop --workers=1 workshop-to-replay.spec.ts",
-    "e2e:visual": "PLAYWRIGHT_TEST=1 pnpm e2e -- replay.visual.spec.ts",
+    "e2e:service": "RUN_SERVICE_E2E=1 PLAYWRIGHT_TEST=1 COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID=player:workshop-local playwright test --project=desktop --workers=1 workshop-to-replay.spec.ts",
+    "e2e:visual": "PLAYWRIGHT_TEST=1 pnpm e2e --project=desktop --project=mobile -- replay.visual.spec.ts",
     "e2e:v1.21-proof": "RUN_V1_21_PROOF=1 PLAYWRIGHT_TEST=1 playwright test --project=desktop --workers=1 v1-21-rust-wasm-exhibition-proof.spec.ts",
     "e2e:v1.23-proof": "RUN_V1_23_PROOF=1 PLAYWRIGHT_TEST=1 playwright test --project=desktop --workers=1 v1-23-multi-compiler-exhibition-proof.spec.ts",
     "e2e:v1.25-proof": "PLAYWRIGHT_TEST=1 playwright test --project=desktop --workers=1 v1-25-match-execution-fixtures.spec.ts",
@@ -66,6 +66,7 @@
     "eslint": "^9.39.2",
     "eslint-plugin-boundaries": "^5.4.0",
     "prettier": "^3.7.4",
+    "tsx": "^4.22.0",
     "turbo": "^2.9.14",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"

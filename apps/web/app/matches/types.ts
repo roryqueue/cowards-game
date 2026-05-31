@@ -74,7 +74,12 @@ export interface ReplayReadyDto {
   status: "ready"
   mode: ReplayViewMode
   metadata: ReplayMetadataDto
-  contract?: MatchExecutionReplayEvidenceV1 | undefined
+  contract?:
+    | Pick<
+        MatchExecutionReplayEvidenceV1,
+        "contractVersion" | "kind" | "matchId" | "lifecycle"
+      >
+    | undefined
   projection: ChronicleProjection
   timeline: ReplayTimelineEntryDto[]
   states: ReplayStateDto[]

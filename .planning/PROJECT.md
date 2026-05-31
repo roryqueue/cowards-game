@@ -51,6 +51,22 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 **Decision:** Frozen for parallel app/execution work. v1.25 does not promote runtimes, certify production sandboxing, migrate the execution ABI, expand ranking/ladder behavior, or allow Strategy code execution in web/API/Go.
 
+## Parallel Workstream Milestone: v1.27 Result and Replay Workbench Against Frozen Match Execution Fixtures
+
+**Workstream:** `.planning/workstreams/v1-27-result-replay-workbench/`
+
+**Goal:** Build ambitious result/replay/app UX on top of the frozen `match-execution-app-v1` boundary, using fixture-backed development so app work can proceed without live Match execution services.
+
+**Target features:**
+- Inventory current result/replay UX dependencies against the frozen v1.25 app contract.
+- Add a fixture catalog browser or developer fixture switcher for the v1.25 scenarios.
+- Improve MatchSet result page state modeling, evidence readability, privacy copy, and degraded/unavailable/running/queued/failed states.
+- Improve replay workbench layout, timeline ergonomics, desktop/mobile proof, and in-bounds board realism.
+- Keep owner/test-only debug surfaces gated away from default public output.
+- Run fixture-backed visual proof across all scenarios and live signed-in compatibility proof without coupling UI to execution internals.
+
+**Non-goals:** No `match-execution-app-v1` redesign, no live execution dependency for normal UI proof, no Go orchestration or runtime-service ownership creep, no new language promotion, no production sandbox certification, no direct-export or Component Model/WIT ABI migration, no counted non-JS play, and no Strategy execution in web/API/Go.
+
 ## Previous Shipped Milestone: v1.24 Runtime Abuse Lab and ABI Future-Proofing
 
 **Goal:** Build a serious runtime abuse lab and production-sandbox readiness matrix across current Strategy runtime lanes, while spiking direct exports and Component Model/WIT as future ABI evidence without changing the active execution path.
@@ -626,6 +642,7 @@ Planning archives live under `.planning/milestones/`:
 | Require explicit ABI migration criteria before replacement | Direct exports and Component Model/WIT can become future paths only after parity, compatibility, rollback, caps, schema, privacy, and no-fallback evidence support a separate promotion decision. | ✓ Implemented in v1.24 |
 | Freeze app-facing Match execution interfaces before parallelizing execution and UX work | v1.25 made lifecycle, DTO, evidence, fixture, adapter, and monitor contracts stable enough for app/result/replay work to proceed without coupling to execution internals. | ✓ Implemented in v1.25 |
 | Harden execution reliability behind the frozen contract | v1.26 improved Go/runtime-service retry classification, unavailable/degraded handling, malformed/stale failure drills, persistence idempotency, and public-safe evidence without changing `match-execution-app-v1`. | ✓ Implemented in v1.26 |
+| Build result/replay UX in front of the frozen Match execution app contract | v1.27 consumes `match-execution-app-v1` and fixtures as a stable app surface, improving public workbench UX without changing execution internals or promotion claims. | ✓ Implemented in v1.27 |
 
 ## Constraints
 

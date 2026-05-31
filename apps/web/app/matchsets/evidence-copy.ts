@@ -11,7 +11,7 @@ export interface EvidenceRow {
 }
 
 export const publicReliabilityPrivacyCue =
-  "private code, memory, objectives, environment values, host path values, raw streams, stack traces, tokens, DB details, and runtime internals excluded"
+  "private authoring data, private state, objectives, environment-like values, machine-local paths, raw streams, stack traces, credentials, persistence details, and runtime internals excluded"
 
 export const reliabilityBudgetCue =
   "Strategy calls keep the 1000 ms deterministic cap; Match/runtime-service and proof budgets are outer reliability windows."
@@ -141,7 +141,7 @@ export const matchSetEvidenceRows = (
 }
 
 export const publicPrivacyProvenanceCue =
-  "source, private memory, objectives, owner debug data, raw diagnostics, and runtime internals"
+  "private authoring data, private state, objectives, owner-only debug data, diagnostic details, and runtime internals"
 
 export const replayEvidenceRows = (data: ReplayReadyDto): EvidenceRow[] => [
   {

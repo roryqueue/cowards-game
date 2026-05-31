@@ -4561,6 +4561,138 @@ const checkV128MatchExecutionOperationsProof = (): string => {
   return `${artifact.publicCompatibilityOutcomes.length} compatibility outcomes, ${artifact.drillCatalog.length} drills, ${artifact.fixtureValidation.length} frozen fixtures, ownership, privacy, and non-claims checked`
 }
 
+const checkV127ResultReplayWorkbenchBoundary = (): string => {
+  const catalogSource = readFileSync(
+    path.join(
+      repoRoot,
+      "apps/web/app/test-support/match-execution-fixtures/page.tsx",
+    ),
+    "utf8",
+  )
+  const resultViewModelSource = readFileSync(
+    path.join(repoRoot, "apps/web/app/matchsets/result-view-model.ts"),
+    "utf8",
+  )
+  const resultPageSource = readFileSync(
+    path.join(repoRoot, "apps/web/app/matchsets/[matchSetId]/page.tsx"),
+    "utf8",
+  )
+  const replayClientSource = readFileSync(
+    path.join(
+      repoRoot,
+      "apps/web/app/matches/[matchId]/replay/replay-client.tsx",
+    ),
+    "utf8",
+  )
+  const replayUnavailableSource = readFileSync(
+    path.join(
+      repoRoot,
+      "apps/web/app/matches/[matchId]/replay/replay-unavailable.tsx",
+    ),
+    "utf8",
+  )
+  const evidenceCopySource = readFileSync(
+    path.join(repoRoot, "apps/web/app/matchsets/evidence-copy.ts"),
+    "utf8",
+  )
+  const e2eSource = readFileSync(
+    path.join(repoRoot, "apps/web/e2e/v1-27-result-replay-workbench.spec.ts"),
+    "utf8",
+  )
+  const playwrightConfigSource = readFileSync(
+    path.join(repoRoot, "playwright.config.ts"),
+    "utf8",
+  )
+
+  for (const marker of [
+    "isMatchExecutionFixtureEnabled",
+    "notFound()",
+    "MATCH_EXECUTION_CONTRACT_FIXTURES_V1",
+    "No live execution service required",
+    "Not a production fallback",
+  ]) {
+    if (!catalogSource.includes(marker)) {
+      throw new Error(`v1.27 fixture workbench missing ${marker}`)
+    }
+  }
+
+  for (const marker of [
+    "buildResultWorkbenchViewModel",
+    "lifecycleCopy",
+    "failureCopy",
+    "replayAvailabilityCopy",
+    "runtime.ownership.appExecution",
+  ]) {
+    if (!resultViewModelSource.includes(marker)) {
+      throw new Error(`v1.27 result view model missing ${marker}`)
+    }
+  }
+  if (!resultPageSource.includes("buildResultWorkbenchViewModel")) {
+    throw new Error("v1.27 result page bypasses result view model")
+  }
+  if (!replayClientSource.includes("Public-safe projection")) {
+    throw new Error("v1.27 replay workbench missing public privacy cue")
+  }
+
+  for (const marker of [
+    "desktop",
+    "tablet",
+    "mobile",
+    "fixture-catalog.png",
+    "public-safe-replay.png",
+    "replay-owner-debug-toggle",
+    "scanPublicOutput",
+    "outerHTML",
+    "replay-board-proof-soldier",
+  ]) {
+    const source =
+      marker === "tablet" || marker === "desktop" || marker === "mobile"
+        ? playwrightConfigSource
+        : e2eSource
+    if (!source.includes(marker)) {
+      throw new Error(`v1.27 visual proof missing ${marker}`)
+    }
+  }
+
+  const appUiSource = [
+    catalogSource,
+    resultViewModelSource,
+    resultPageSource,
+    replayClientSource,
+    replayUnavailableSource,
+    evidenceCopySource,
+  ].join("\n")
+  for (const forbidden of [
+    "apps/runtime-service",
+    "@cowards/persistence",
+    "createDatabasePool",
+    "RuntimeExecution",
+    "StrategyMemory",
+    "SoldierMemory",
+    "objective payloads",
+    "raw diagnostics",
+    "host paths",
+    "env values",
+    "environment values",
+    "tokens",
+    "DB details",
+    "package paths",
+    "private runtime internals",
+    "rawDiagnostics",
+    "privateRuntime",
+    "databaseUrl",
+    "Bearer ",
+  ]) {
+    if (appUiSource.includes(forbidden)) {
+      throw new Error(
+        `v1.27 UI imports or exposes forbidden marker ${forbidden}`,
+      )
+    }
+  }
+
+  return "fixture catalog gate, result view model, replay privacy cue, responsive proof, and UI ownership boundaries checked"
+}
+
 export const runBoundaryMonitorChecks = async (): Promise<
   BoundaryMonitorCheck[]
 > => [
@@ -4600,6 +4732,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("contract_drift", "v1.28 Match execution operations proof", () =>
     checkV128MatchExecutionOperationsProof(),
+  ),
+  await check("web_boundary", "v1.27 result/replay workbench boundary", () =>
+    checkV127ResultReplayWorkbenchBoundary(),
   ),
   await check("runtime_adapter", "v1.18 isolation baseline artifact", () =>
     checkV118IsolationBaselineArtifact(),

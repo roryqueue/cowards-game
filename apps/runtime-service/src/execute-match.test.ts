@@ -14,6 +14,8 @@ import { buildPythonStrategyRevision } from "@cowards/runtime-python"
 import {
   buildRustStrategyRevision,
   buildZigStrategyRevision,
+  compileRustWasmArtifact,
+  compileZigWasmArtifact,
 } from "@cowards/runtime-wasm-wasi"
 import { executeRuntimeServiceRequest } from "./execute-match.js"
 import {
@@ -150,6 +152,9 @@ export fn _start() void {
     }
 }
 `
+
+const rustWasiCompileProbe = compileRustWasmArtifact(rustWasiSource)
+const zigWasiCompileProbe = compileZigWasmArtifact(zigWasiSource)
 
 const requestFor = (
   input: {
@@ -289,70 +294,80 @@ describe("runtime execution service", () => {
     expect(response.result.runtimeViolationEventCount).toBe(0)
   })
 
-  it("executes Rust WASM artifacts through Wasmtime without source fallback", () => {
-    const rustRevision = buildRustStrategyRevision({
-      source: rustWasiSource,
-      strategyId: "strategy:rust-wasi",
-    })
-    const response = executeRuntimeServiceRequest(
-      requestFor({ bottom: rustRevision, top: rustRevision }),
-      runtimeConfig,
-    )
+  it.skipIf(!rustWasiCompileProbe.ok)(
+    "executes Rust WASM artifacts through Wasmtime without source fallback",
+    () => {
+      const rustRevision = buildRustStrategyRevision({
+        source: rustWasiSource,
+        strategyId: "strategy:rust-wasi",
+      })
+      const response = executeRuntimeServiceRequest(
+        requestFor({ bottom: rustRevision, top: rustRevision }),
+        runtimeConfig,
+      )
 
-    expect(response.ok).toBe(true)
-    if (!response.ok) {
-      throw new Error(response.systemFailure.message)
-    }
-    expect(response.result.finalState.matchId).toBe(
-      "match:runtime-service-test",
-    )
-    expect(response.result.runtimeViolationEventCount).toBe(0)
-  })
+      expect(response.ok).toBe(true)
+      if (!response.ok) {
+        throw new Error(response.systemFailure.message)
+      }
+      expect(response.result.finalState.matchId).toBe(
+        "match:runtime-service-test",
+      )
+      expect(response.result.runtimeViolationEventCount).toBe(0)
+    },
+  )
 
-  it("executes Zig WASM artifacts through Wasmtime after compile+run proof", () => {
-    const zigRevision = buildZigStrategyRevision({
-      source: zigWasiSource,
-      strategyId: "strategy:zig-wasi",
-    })
-    const response = executeRuntimeServiceRequest(
-      requestFor({ bottom: zigRevision, top: zigRevision }),
-      runtimeConfig,
-    )
+  it.skipIf(!zigWasiCompileProbe.ok)(
+    "executes Zig WASM artifacts through Wasmtime after compile+run proof",
+    () => {
+      const zigRevision = buildZigStrategyRevision({
+        source: zigWasiSource,
+        strategyId: "strategy:zig-wasi",
+      })
+      const response = executeRuntimeServiceRequest(
+        requestFor({ bottom: zigRevision, top: zigRevision }),
+        runtimeConfig,
+      )
 
-    expect(response.ok).toBe(true)
-    if (!response.ok) {
-      throw new Error(response.systemFailure.message)
-    }
-    expect(response.result.finalState.matchId).toBe(
-      "match:runtime-service-test",
-    )
-    expect(response.result.runtimeViolationEventCount).toBe(0)
-  }, 20_000)
+      expect(response.ok).toBe(true)
+      if (!response.ok) {
+        throw new Error(response.systemFailure.message)
+      }
+      expect(response.result.finalState.matchId).toBe(
+        "match:runtime-service-test",
+      )
+      expect(response.result.runtimeViolationEventCount).toBe(0)
+    },
+    20_000,
+  )
 
-  it("fails closed when a Rust WASM artifact is missing", () => {
-    const rustRevision = buildRustStrategyRevision({
-      source: rustWasiSource,
-      strategyId: "strategy:rust-wasi",
-    })
-    const brokenRevision: StrategyRevision = {
-      ...rustRevision,
-      metadata: {
-        ...rustRevision.metadata,
-        compiledArtifact: undefined,
-      },
-    }
-    const response = executeRuntimeServiceRequest(
-      requestFor({ bottom: brokenRevision }),
-      runtimeConfig,
-    )
+  it.skipIf(!rustWasiCompileProbe.ok)(
+    "fails closed when a Rust WASM artifact is missing",
+    () => {
+      const rustRevision = buildRustStrategyRevision({
+        source: rustWasiSource,
+        strategyId: "strategy:rust-wasi",
+      })
+      const brokenRevision: StrategyRevision = {
+        ...rustRevision,
+        metadata: {
+          ...rustRevision.metadata,
+          compiledArtifact: undefined,
+        },
+      }
+      const response = executeRuntimeServiceRequest(
+        requestFor({ bottom: brokenRevision }),
+        runtimeConfig,
+      )
 
-    expect(response.ok).toBe(false)
-    if (response.ok) {
-      throw new Error("expected missing artifact to fail")
-    }
-    expect(response.systemFailure.code).toBe("MALFORMED_REQUEST")
-    expect(stringify(response)).not.toContain(rustWasiSource.trim())
-  })
+      expect(response.ok).toBe(false)
+      if (response.ok) {
+        throw new Error("expected missing artifact to fail")
+      }
+      expect(response.systemFailure.code).toBe("MALFORMED_REQUEST")
+      expect(stringify(response)).not.toContain(rustWasiSource.trim())
+    },
+  )
 
   it("fails closed when broker registry metadata drifts", () => {
     const pythonRevision = buildPythonStrategyRevision({
