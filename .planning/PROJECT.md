@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.28 Match Execution Operations, Recovery, and Incident Drills on 2026-05-30
-**Current milestone:** None active; start the next milestone with `$gsd-new-milestone`
-**Status:** v1.28 shipped from workstream `v1-28-match-execution-operations-recovery-and-incident-drills`. Go-owned operations recovery now has private quarantine, internal requeue/rerun controls, redacted operator evidence, operations drill proof, boundary monitor coverage, and signed-in recovery proof behind the frozen `match-execution-app-v1` boundary.
+**Current milestone:** v1.29 Replay and Result Trust Polish
+**Status:** v1.29 started in workstream `v1-29-replay-and-result-trust-polish`. This milestone improves public result and replay explanation, layout, visual evidence, privacy proof, board realism proof, and contract compatibility monitors while staying strictly on the app/public UX side of the frozen `match-execution-app-v1` boundary.
 **Last audit:** v1.28 audit passed after validating quarantine, recovery controls, stale lease and duplicate convergence evidence, redaction hardening, contract compatibility monitors, and signed-in operator recovery proof.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable JS/TS Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, Python non-counted exhibition beta semantics, an executable Docker/container runtime candidate lane, executable Rust and Zig WASM/WASI lanes for non-counted exhibition beta, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. WASM/WASI is now a more serious immutable multi-compiler runtime candidate, but not production sandbox certification or counted/ranked support.
@@ -26,6 +26,16 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - Signed-in proof creating a JS/TS Strategy Revision, executing a live Go operator requeue path, verifying duplicate idempotency, and scanning public result/replay pages for private markers.
 
 **Non-goals:** No public result/replay contract expansion, public operations UI, runtime promotion, production sandbox certification, ABI migration, counted non-JS play, v1.27 dependency, or Strategy execution in web/API/Go.
+
+## Current Milestone: v1.29 Replay and Result Trust Polish
+
+**Goal:** Improve the public result and replay experience so players can better understand completed, queued, running, degraded, failed, stale-artifact, unavailable-runtime, malformed-runtime-result, missing-Chronicle, and no-result states without changing the frozen execution/app contract.
+
+**Target features:**
+- Public result-state explanations, labels, layout, and Match ledger evidence for existing `match-execution-app-v1` states.
+- Replay trust cues and unavailable/missing evidence states that explain public Chronicle projection, missing Chronicle, invalid Chronicle, no-result, stale evidence, and privacy boundaries.
+- Expanded public privacy scans, board realism checks, visual regression coverage, and fixture-backed or signed-in public page proof.
+- Contract compatibility monitors that prove no `match-execution-app-v1` DTO fields were added, removed, renamed, repurposed, or version-bumped.
 
 ## Previous Shipped Milestone: v1.26 Match Execution Reliability, Retry Semantics, and Failure Drills
 
