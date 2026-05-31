@@ -2,22 +2,22 @@
 milestone: v1.32
 milestone_name: Four-Language Production Strategy Support
 status: planning
-current_phase: 222
+current_phase: 223
 progress:
   phases_total: 12
-  phases_complete: 0
+  phases_complete: 1
   requirements_total: 60
-  requirements_complete: 0
+  requirements_complete: 5
 ---
 
 # State: Coward's Game v1.32
 
 ## Current Position
 
-Phase: 222 - Language Surface Inventory
+Phase: 223 - Unified Supported Language Registry and Eligibility Model
 Plan: Ready for planning
-Status: Context gathered for all v1.32 phases
-Last activity: 2026-05-31 - v1.32 phase discussion/context captured for Phases 222-233
+Status: Phase 222 inventory complete; Phase 223 is next
+Last activity: 2026-05-31 - Phase 222 inventory completed and verified
 
 ## Project Reference
 
@@ -41,7 +41,8 @@ See: `.planning/PROJECT.md`
 - v1.32 starts from the v1.31 baseline where JS/TS is counted, Python/Rust/Zig are non-counted exhibition beta, and Preview 1 stdin/stdout JSON remains the active WASM/WASI ABI until an explicit migration decision changes it.
 - Core v1.32 question: What must be true before Python, Rust, and Zig can honestly be fully supported and counted alongside JS/TS, and what monitors prevent future drift?
 - Roadmap begins at Phase 222 and continues through Phase 233.
-- Phase 222 is next: inventory active language, runtime, eligibility, product-label, docs, and monitor surfaces before changing behavior.
+- Phase 222 completed the active language/runtime/eligibility/product/docs/monitor inventory in `.planning/artifacts/v1.32-language-surface-inventory.md`.
+- Phase 223 is next: establish one supported-language/provider registry as the active product semantics source.
 - Context and discussion logs have been captured for all v1.32 phases:
   - Phase 222: Language Surface Inventory
   - Phase 223: Unified Supported Language Registry and Eligibility Model
