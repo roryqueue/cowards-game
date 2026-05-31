@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react"
 import type { ReplayReadyDto } from "../../types.js"
+import { buildReplayIntelligenceViewModel } from "../../../match-intelligence.js"
 import { replayEvidenceRows } from "../../../matchsets/evidence-copy.js"
 import {
   canShowOwnerDebug,
@@ -34,6 +35,8 @@ const shortId = (id: string): string =>
 const firstSoldierId = (data: ReplayReadyDto): string | null =>
   data.states[0]?.board.soldiers[0]?.id ?? null
 
+type AnnotationFilter = "all" | string
+
 export function ReplayClient({ data }: ReplayClientProps) {
   const initialIndex = data.timeline.findIndex(
     (entry) => entry.sequence === getInitialReplaySequence(data),
@@ -49,8 +52,14 @@ export function ReplayClient({ data }: ReplayClientProps) {
   const [ownerDebugVisible, setOwnerDebugVisible] = useState(false)
   const [playbackSpeed, setPlaybackSpeed] =
     useState<ReplaySpeedValue>(defaultReplaySpeed)
+  const [annotationFilter, setAnnotationFilter] =
+    useState<AnnotationFilter>("all")
 
   const selectedEntry = getTimelineEntryAt(data, selectedIndex)
+  const intelligence = useMemo(
+    () => buildReplayIntelligenceViewModel(data),
+    [data],
+  )
   const summary = getCurrentPositionSummary(data, selectedEntry)
   const eventInspector = getEventInspector(selectedEntry)
   const soldierInspector = getSoldierInspector(
@@ -76,6 +85,23 @@ export function ReplayClient({ data }: ReplayClientProps) {
   const ownerDebugAvailable = canShowOwnerDebug(data)
   const statusLabel = data.mode === "owner" ? "Owner debug" : "Public view"
   const evidenceRows = replayEvidenceRows(data)
+  const annotationCategories = useMemo(
+    () => [
+      "all",
+      ...Array.from(
+        new Set(
+          intelligence.annotations.map((annotation) => annotation.category),
+        ),
+      ),
+    ],
+    [intelligence.annotations],
+  )
+  const filteredAnnotations =
+    annotationFilter === "all"
+      ? intelligence.annotations
+      : intelligence.annotations.filter(
+          (annotation) => annotation.category === annotationFilter,
+        )
 
   useEffect(() => {
     if (!playing) {
@@ -99,6 +125,16 @@ export function ReplayClient({ data }: ReplayClientProps) {
     setSelectedIndex((current) =>
       stepReplayIndex(current, direction, data.timeline.length),
     )
+  }
+
+  const selectSequence = (sequence: number) => {
+    const index = data.timeline.findIndex(
+      (entry) => entry.sequence === sequence,
+    )
+    if (index >= 0) {
+      setPlaying(false)
+      setSelectedIndex(index)
+    }
   }
 
   return (
@@ -247,6 +283,65 @@ export function ReplayClient({ data }: ReplayClientProps) {
             </p>
           </div>
 
+          <section
+            className="replay-intelligence-panel"
+            aria-label="Replay intelligence annotations"
+            data-testid="replay-intelligence-panel"
+          >
+            <div className="app-section-header compact">
+              <div>
+                <p className="replay-label">
+                  {intelligence.availability} evidence ·{" "}
+                  {intelligence.confidence} confidence
+                </p>
+                <h2>Timeline Intelligence</h2>
+              </div>
+            </div>
+            <p>{intelligence.headline}</p>
+            <p className="replay-muted">{intelligence.summary}</p>
+            <div
+              className="replay-annotation-filters"
+              aria-label="Annotation filters"
+            >
+              {annotationCategories.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  aria-pressed={annotationFilter === category}
+                  onClick={() => setAnnotationFilter(category)}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+            <div className="replay-annotation-list">
+              {filteredAnnotations.length ? (
+                filteredAnnotations.map((annotation) => (
+                  <article
+                    key={`${annotation.category}:${annotation.sequence}`}
+                    className="replay-annotation-row"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => selectSequence(annotation.sequence)}
+                    >
+                      <strong>{annotation.label}</strong>
+                      <span>
+                        #{annotation.sequence} · {annotation.round} ·{" "}
+                        {annotation.activation} · {annotation.cycle}
+                      </span>
+                    </button>
+                    <a href={annotation.href}>Open focus</a>
+                  </article>
+                ))
+              ) : (
+                <p className="replay-muted">
+                  No public annotations match this filter.
+                </p>
+              )}
+            </div>
+          </section>
+
           <div className="replay-event-list" aria-label="Timeline events">
             {groups.map((round) => (
               <div key={round.label} className="replay-event-group">
@@ -290,6 +385,57 @@ export function ReplayClient({ data }: ReplayClientProps) {
         </section>
 
         <aside className="replay-rail" aria-label="Replay inspector">
+          <section
+            className="replay-tactical-panels"
+            aria-label="Replay tactical panels"
+            data-testid="replay-tactical-panels"
+          >
+            <p className="replay-label">Tactical Panels</p>
+            {intelligence.panels.map((panel) => (
+              <article className="replay-tactical-panel" key={panel.id}>
+                <strong>{panel.title}</strong>
+                <p className="replay-muted">{panel.summary}</p>
+                <dl className="replay-details-grid">
+                  {panel.metrics.map((metric) => (
+                    <Fragment key={`${panel.id}:${metric.label}`}>
+                      <dt>{metric.label}</dt>
+                      <dd
+                        className={
+                          metric.tone ? `result-tone-${metric.tone}` : undefined
+                        }
+                      >
+                        {metric.value}
+                      </dd>
+                    </Fragment>
+                  ))}
+                </dl>
+              </article>
+            ))}
+          </section>
+
+          <section
+            className="replay-soldier-status-panel"
+            aria-label="Soldier status intelligence"
+          >
+            <p className="replay-label">Soldier Status</p>
+            <div className="replay-soldier-status-list">
+              {intelligence.soldiers.map((soldier) => (
+                <button
+                  key={soldier.id}
+                  type="button"
+                  aria-pressed={soldier.id === selectedSoldierId}
+                  onClick={() => setSelectedSoldierId(soldier.id)}
+                >
+                  <strong>{soldier.label}</strong>
+                  <span>
+                    {soldier.status} · {soldier.lastVisiblePosition}
+                  </span>
+                  <small>{soldier.recentPublicEvents}</small>
+                </button>
+              ))}
+            </div>
+          </section>
+
           <section>
             <p className="replay-label">Inspector</p>
             <dl className="replay-details-grid">

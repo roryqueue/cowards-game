@@ -329,6 +329,10 @@ const v129ReplayResultTrustProofPath =
   ".planning/artifacts/v1.29-replay-result-trust-proof.json"
 const v129ReplayResultTrustProofMarkdownPath =
   ".planning/artifacts/v1.29-replay-result-trust-proof.md"
+const v130MatchIntelligenceProofPath =
+  ".planning/artifacts/v1.30-match-intelligence-workbench-proof.json"
+const v130MatchIntelligenceProofMarkdownPath =
+  ".planning/artifacts/v1.30-match-intelligence-workbench-proof.md"
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
@@ -4780,6 +4784,181 @@ const checkV129ReplayResultTrustProof = (): string => {
   return `${artifact.resultCoverage.length} result fixtures, ${artifact.replayStateCoverage.length} replay states, DTO field shapes, privacy, and board realism checked`
 }
 
+const checkV130MatchIntelligenceWorkbenchProof = (): string => {
+  const jsonPath = path.join(repoRoot, v130MatchIntelligenceProofPath)
+  const markdownPath = path.join(
+    repoRoot,
+    v130MatchIntelligenceProofMarkdownPath,
+  )
+  if (!existsSync(jsonPath) || !existsSync(markdownPath)) {
+    throw new Error("v1.30 match intelligence proof artifacts are missing")
+  }
+
+  const artifact = readJson<{
+    schemaVersion: string
+    milestone: string
+    contractVersion: string
+    publicContractChanged: boolean
+    newPublicExecutionDtoFields: boolean
+    countedStrategyPath: string
+    nonCountedExhibitionBeta: readonly string[]
+    activeWasmWasiAbi: string
+    ownership: {
+      orchestration: string
+      hostileStrategyExecution: string
+      strategyExecutionInWebApiGo: boolean
+    }
+    resultCoverage: readonly {
+      id: string
+      availability: string
+      confidence: string
+      comparisonRows: number
+      privateMarkerLeakCount: number
+    }[]
+    replayCoverage: readonly {
+      id: string
+      annotations: number
+      tacticalPanels: number
+      soldiers: number
+      boardRealism: boolean
+      privateMarkerLeakCount: number
+    }[]
+    unavailableReplayCoverage: readonly {
+      availability: string
+      confidence: string
+      emptyTacticalOutput: boolean
+      privateMarkerLeakCount: number
+    }[]
+    privacyScan: {
+      scannedPublicPayloads: number
+      privateMarkerLeakCount: number
+    }
+    proofArtifacts: readonly string[]
+    relevantLocalPages: readonly string[]
+    nonClaims: readonly string[]
+  }>(v130MatchIntelligenceProofPath)
+
+  if (
+    artifact.schemaVersion !== "v1.30-match-intelligence-workbench-proof" ||
+    artifact.milestone !== "v1.30" ||
+    artifact.contractVersion !== "match-execution-app-v1" ||
+    artifact.publicContractChanged ||
+    artifact.newPublicExecutionDtoFields
+  ) {
+    throw new Error("v1.30 match intelligence proof drifted from contract")
+  }
+  if (
+    artifact.countedStrategyPath !== "javascript-typescript" ||
+    artifact.activeWasmWasiAbi !== "preview1-stdin-stdout-json" ||
+    artifact.ownership.orchestration !== "go" ||
+    artifact.ownership.hostileStrategyExecution !== "runtime-service" ||
+    artifact.ownership.strategyExecutionInWebApiGo !== false
+  ) {
+    throw new Error("v1.30 ownership or runtime eligibility drifted")
+  }
+  for (const language of ["python", "rust", "zig"]) {
+    if (!artifact.nonCountedExhibitionBeta.includes(language)) {
+      throw new Error(`v1.30 proof missing non-counted ${language} beta`)
+    }
+  }
+  for (const fixtureId of [
+    "complete",
+    "queued",
+    "running",
+    "strategy-failure",
+    "system-failure",
+    "timeout",
+    "unavailable-runtime",
+    "malformed-runtime-result",
+    "stale-artifact",
+    "missing-chronicle",
+    "no-result",
+  ]) {
+    if (!artifact.resultCoverage.some((fixture) => fixture.id === fixtureId)) {
+      throw new Error(`v1.30 result intelligence missing fixture ${fixtureId}`)
+    }
+  }
+  for (const scenarioId of [
+    "push",
+    "fall",
+    "contraction",
+    "legal-backstab",
+    "runtime-failure",
+    "endgame",
+    "compound-tour",
+  ]) {
+    const scenario = artifact.replayCoverage.find(
+      (fixture) => fixture.id === scenarioId,
+    )
+    if (!scenario || scenario.tacticalPanels < 3 || !scenario.boardRealism) {
+      throw new Error(
+        `v1.30 replay intelligence missing scenario ${scenarioId}`,
+      )
+    }
+  }
+  if (
+    artifact.privacyScan.privateMarkerLeakCount !== 0 ||
+    artifact.resultCoverage.some((fixture) => fixture.privateMarkerLeakCount) ||
+    artifact.replayCoverage.some((fixture) => fixture.privateMarkerLeakCount) ||
+    artifact.unavailableReplayCoverage.some(
+      (fixture) => fixture.privateMarkerLeakCount,
+    )
+  ) {
+    throw new Error("v1.30 public proof detected private marker leaks")
+  }
+  if (
+    artifact.unavailableReplayCoverage.some(
+      (fixture) =>
+        fixture.availability !== "unavailable" ||
+        fixture.confidence !== "none" ||
+        !fixture.emptyTacticalOutput,
+    )
+  ) {
+    throw new Error("v1.30 unavailable replay intelligence overclaimed")
+  }
+  for (const proofArtifact of [
+    "apps/web/app/match-intelligence.ts",
+    "apps/web/app/match-intelligence.test.ts",
+    "apps/web/e2e/v1-30-match-intelligence-workbench.spec.ts",
+  ]) {
+    if (!artifact.proofArtifacts.includes(proofArtifact)) {
+      throw new Error(`v1.30 proof missing artifact ${proofArtifact}`)
+    }
+  }
+  for (const page of [
+    "matchsets/match-set%3Afixture%3Amissing-chronicle",
+    "matchsets/match-set%3Afixture%3Ano-result",
+    "matches/match%3Ae2e-replay-fixture%3Acompound-tour/replay",
+    "matches/match%3Ae2e-replay-fixture%3Apush/replay",
+    "matches/match%3Afixture%3Amissing-chronicle/replay",
+  ]) {
+    if (!artifact.relevantLocalPages.some((url) => url.includes(page))) {
+      throw new Error(`v1.30 relevant page proof missing ${page}`)
+    }
+  }
+  for (const nonClaim of [
+    "No match-execution-app-v1 change",
+    "No runtime promotion",
+    "No production sandbox certification",
+    "No execution ABI migration",
+    "No counted non-JS play",
+    "No AI coach or live model inference",
+    "No Strategy code execution in web, API, or Go",
+  ]) {
+    if (!artifact.nonClaims.includes(nonClaim)) {
+      throw new Error(`v1.30 proof missing non-claim: ${nonClaim}`)
+    }
+  }
+
+  assertPublicOutputLeakSafe(artifact)
+  assertPublicOutputLeakSafe(
+    readFileSync(markdownPath, "utf8"),
+    v130MatchIntelligenceProofMarkdownPath,
+  )
+
+  return `${artifact.resultCoverage.length} result fixtures, ${artifact.replayCoverage.length} replay scenarios, unavailable states, privacy, and non-claims checked`
+}
+
 const checkV127ResultReplayWorkbenchBoundary = (): string => {
   const catalogSource = readFileSync(
     path.join(
@@ -4954,6 +5133,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("contract_drift", "v1.29 replay/result trust proof", () =>
     checkV129ReplayResultTrustProof(),
+  ),
+  await check("contract_drift", "v1.30 match intelligence proof", () =>
+    checkV130MatchIntelligenceWorkbenchProof(),
   ),
   await check("web_boundary", "v1.27 result/replay workbench boundary", () =>
     checkV127ResultReplayWorkbenchBoundary(),

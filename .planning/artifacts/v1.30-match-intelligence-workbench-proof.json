@@ -1,0 +1,259 @@
+{
+  "schemaVersion": "v1.30-match-intelligence-workbench-proof",
+  "milestone": "v1.30",
+  "contractVersion": "match-execution-app-v1",
+  "publicContractChanged": false,
+  "newPublicExecutionDtoFields": false,
+  "countedStrategyPath": "javascript-typescript",
+  "nonCountedExhibitionBeta": [
+    "python",
+    "rust",
+    "zig"
+  ],
+  "activeWasmWasiAbi": "preview1-stdin-stdout-json",
+  "ownership": {
+    "orchestration": "go",
+    "publicEvidence": "go-or-persisted-public-chronicle",
+    "hostileStrategyExecution": "runtime-service",
+    "strategyExecutionInWebApiGo": false
+  },
+  "resultCoverage": [
+    {
+      "id": "complete",
+      "availability": "partial",
+      "confidence": "medium",
+      "comparisonRows": 2,
+      "jumpTargets": 0,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "queued",
+      "availability": "pending",
+      "confidence": "low",
+      "comparisonRows": 2,
+      "jumpTargets": 0,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "running",
+      "availability": "partial",
+      "confidence": "medium",
+      "comparisonRows": 2,
+      "jumpTargets": 0,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "strategy-failure",
+      "availability": "partial",
+      "confidence": "medium",
+      "comparisonRows": 2,
+      "jumpTargets": 0,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "system-failure",
+      "availability": "partial",
+      "confidence": "medium",
+      "comparisonRows": 2,
+      "jumpTargets": 0,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "timeout",
+      "availability": "partial",
+      "confidence": "medium",
+      "comparisonRows": 2,
+      "jumpTargets": 0,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "unavailable-runtime",
+      "availability": "unavailable",
+      "confidence": "none",
+      "comparisonRows": 2,
+      "jumpTargets": 0,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "malformed-runtime-result",
+      "availability": "partial",
+      "confidence": "medium",
+      "comparisonRows": 2,
+      "jumpTargets": 0,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "stale-artifact",
+      "availability": "partial",
+      "confidence": "medium",
+      "comparisonRows": 2,
+      "jumpTargets": 0,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "missing-chronicle",
+      "availability": "unavailable",
+      "confidence": "none",
+      "comparisonRows": 2,
+      "jumpTargets": 0,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "no-result",
+      "availability": "unavailable",
+      "confidence": "none",
+      "comparisonRows": 2,
+      "jumpTargets": 0,
+      "privateMarkerLeakCount": 0
+    }
+  ],
+  "replayCoverage": [
+    {
+      "id": "push",
+      "annotations": 33,
+      "tacticalPanels": 3,
+      "soldiers": 16,
+      "boardRealism": true,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "fall",
+      "annotations": 36,
+      "tacticalPanels": 3,
+      "soldiers": 16,
+      "boardRealism": true,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "contraction",
+      "annotations": 21,
+      "tacticalPanels": 3,
+      "soldiers": 16,
+      "boardRealism": true,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "legal-backstab",
+      "annotations": 31,
+      "tacticalPanels": 3,
+      "soldiers": 16,
+      "boardRealism": true,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "runtime-failure",
+      "annotations": 22,
+      "tacticalPanels": 3,
+      "soldiers": 16,
+      "boardRealism": true,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "endgame",
+      "annotations": 16,
+      "tacticalPanels": 3,
+      "soldiers": 16,
+      "boardRealism": true,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "id": "compound-tour",
+      "annotations": 31,
+      "tacticalPanels": 3,
+      "soldiers": 16,
+      "boardRealism": true,
+      "privateMarkerLeakCount": 0
+    }
+  ],
+  "unavailableReplayCoverage": [
+    {
+      "availability": "unavailable",
+      "confidence": "none",
+      "emptyTacticalOutput": true,
+      "privateMarkerLeakCount": 0
+    },
+    {
+      "availability": "unavailable",
+      "confidence": "none",
+      "emptyTacticalOutput": true,
+      "privateMarkerLeakCount": 0
+    }
+  ],
+  "dtoFieldShapes": {
+    "matchSetSummary": [
+      "contractVersion",
+      "failureEvidence",
+      "kind",
+      "lifecycle",
+      "matchSetId",
+      "matches",
+      "privacy",
+      "result",
+      "runtimeEvidence"
+    ],
+    "matchResult": [
+      "arenaVariantId",
+      "chronicleHash",
+      "contractVersion",
+      "entrants",
+      "failureEvidence",
+      "kind",
+      "lifecycle",
+      "matchId",
+      "replayAvailable",
+      "runtimeEvidence"
+    ],
+    "replayMetadata": [
+      "contractVersion",
+      "kind",
+      "lifecycle",
+      "matchId",
+      "privacy",
+      "serviceDto"
+    ],
+    "replayEvidence": [
+      "contractVersion",
+      "kind",
+      "lifecycle",
+      "matchId",
+      "privacy",
+      "serviceDto"
+    ]
+  },
+  "privacyScan": {
+    "scannedPublicPayloads": 20,
+    "privateMarkerLeakCount": 0
+  },
+  "proofArtifacts": [
+    "apps/web/app/match-intelligence.ts",
+    "apps/web/app/match-intelligence.test.ts",
+    "apps/web/e2e/v1-30-match-intelligence-workbench.spec.ts",
+    "apps/web/e2e/replay.visual.spec.ts"
+  ],
+  "relevantLocalPages": [
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Acomplete",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Aqueued",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Arunning",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Aunavailable-runtime",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Amalformed-runtime-result",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Astale-artifact",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Amissing-chronicle",
+    "http://localhost:3000/matchsets/match-set%3Afixture%3Ano-result",
+    "http://localhost:3000/matches/match%3Ae2e-replay-fixture/replay",
+    "http://localhost:3000/matches/match%3Ae2e-replay-fixture%3Acompound-tour/replay",
+    "http://localhost:3000/matches/match%3Ae2e-replay-fixture%3Apush/replay",
+    "http://localhost:3000/matches/match%3Ae2e-replay-fixture%3Afall/replay",
+    "http://localhost:3000/matches/match%3Afixture%3Amissing-chronicle/replay",
+    "http://localhost:3000/matches/match%3Afixture%3Ano-result/replay"
+  ],
+  "nonClaims": [
+    "No match-execution-app-v1 change",
+    "No public execution DTO fields added",
+    "No runtime promotion",
+    "No production sandbox certification",
+    "No execution ABI migration",
+    "No counted non-JS play",
+    "No AI coach or live model inference",
+    "No Strategy code execution in web, API, or Go"
+  ]
+}
