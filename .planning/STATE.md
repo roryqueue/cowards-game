@@ -3,31 +3,31 @@ gsd_state_version: 1.0
 milestone: v1.34
 milestone_name: Workshop Provider Checker Parity
 status: planning
-last_updated: "2026-06-01T13:49:20Z"
+last_updated: "2026-06-01T14:07:12Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+  percent: 20
 ---
 
 # State: Coward's Game v1.34
 
 ## Current Position
 
-Phase: 238 - Workshop Checker Path Inventory and Public Contract
-Plan: Context gathered
-Status: Phase 238 context captured; waiting for user approval to plan and execute
-Last activity: 2026-06-01 - Captured Phase 238 Workshop checker inventory and contract decisions
+Phase: 239 - Provider-Grade Validate Source Parity
+Plan: Not started
+Status: Phase 238 complete; ready to discuss Phase 239
+Last activity: 2026-06-01 - Completed Phase 238 Workshop checker inventory, public contract, parity matrix, and verification
 
 ## Project Reference
 
 See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Bring Workshop Validate source checker behavior for TypeScript, Python, Rust, and Zig to provider-grade parity with submit/save/entry validation while preserving runtime-service/provider boundaries and public-safe diagnostics.
+**Current focus:** Implement provider-grade Validate source parity for TypeScript, Python, Rust, and Zig using the Phase 238 checker contract while preserving runtime-service/provider boundaries and public-safe diagnostics.
 
 ## Active Boundary Notes
 
@@ -47,5 +47,6 @@ See: `.planning/PROJECT.md`
 - Current v1.34 files are `.planning/REQUIREMENTS.md` and `.planning/ROADMAP.md`.
 - Planned phase range begins at Phase 238 and continues through Phase 242.
 - Phase 238 context is captured in `.planning/phases/238-workshop-checker-path-inventory-and-public-contract/238-CONTEXT.md`.
-- Use `$gsd-plan-phase 238` after user approval, then continue phases sequentially.
+- Phase 238 artifacts are `.planning/artifacts/v1.34-workshop-checker-inventory.md`, `.planning/artifacts/v1.34-workshop-checker-contract.md`, and `.planning/artifacts/v1.34-workshop-checker-parity-matrix.md`.
+- Use `$gsd-discuss-phase 239` next, then plan and execute Phase 239.
 - After user approval, plan and execute autonomously as far as possible with validation, audit, and verify-work before wrapping.

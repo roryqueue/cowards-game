@@ -34,10 +34,10 @@ Bring Workshop "Validate source" checker behavior for TypeScript, Python, Rust, 
 
 ### Workshop Checker Inventory and Contract
 
-- [ ] **CHECKINV-01**: Developer can inventory the current Workshop Validate source, submit, save, and competition-entry validation paths for TypeScript, Python, Rust, and Zig, including frontend calls, app/API routes, Go/API involvement, runtime-service/provider calls, cache behavior, and diagnostic surfaces.
-- [ ] **CHECKINV-02**: Developer can identify every semantic difference between Validate source and submit/save/entry validation for Python, Rust, and Zig, with TypeScript recorded as the practical parity baseline.
-- [ ] **CHECKINV-03**: Developer can define a single public-safe Workshop checker contract for all four production languages, including status, diagnostic category, severity, actionability, language/provider id, artifact/provenance state, runtime-service/toolchain availability, and privacy exclusions.
-- [ ] **CHECKINV-04**: Developer can preserve submit/save/entry ownership and runtime-service/provider boundaries while allowing Validate source to reuse provider-grade validation semantics where appropriate.
+- [x] **CHECKINV-01**: Developer can inventory the current Workshop Validate source, submit, save, and competition-entry validation paths for TypeScript, Python, Rust, and Zig, including frontend calls, app/API routes, Go/API involvement, runtime-service/provider calls, cache behavior, and diagnostic surfaces.
+- [x] **CHECKINV-02**: Developer can identify every semantic difference between Validate source and submit/save/entry validation for Python, Rust, and Zig, with TypeScript recorded as the practical parity baseline.
+- [x] **CHECKINV-03**: Developer can define a single public-safe Workshop checker contract for all four production languages, including status, diagnostic category, severity, actionability, language/provider id, artifact/provenance state, runtime-service/toolchain availability, and privacy exclusions.
+- [x] **CHECKINV-04**: Developer can preserve submit/save/entry ownership and runtime-service/provider boundaries while allowing Validate source to reuse provider-grade validation semantics where appropriate.
 
 ### Provider-Grade Validate Source Semantics
 
@@ -98,7 +98,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| CHECKINV-01..CHECKINV-04 | Phase 238 | Planned |
+| CHECKINV-01..CHECKINV-04 | Phase 238 | Complete |
 | CHECKVAL-01..CHECKVAL-05 | Phase 239 | Planned |
 | CHECKDIAG-01..CHECKDIAG-05 | Phase 240 | Planned |
 | CHECKERG-01..CHECKERG-04 | Phase 241 | Planned |
@@ -106,11 +106,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 23 total
-- Complete: 0
-- Planned: 23
+- Complete: 4
+- Planned: 19
 - Mapped to phases: 23
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-01*
-*Last updated: 2026-06-01 after v1.34 milestone initialization*
+*Last updated: 2026-06-01 after Phase 238 completion*
