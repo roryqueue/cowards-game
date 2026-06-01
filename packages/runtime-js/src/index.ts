@@ -7,6 +7,7 @@ export {
   validateStrategySource,
 } from "./validation.js"
 export { transpileStrategySource } from "./transpile.js"
+export { buildTypeScriptSourceArtifact } from "./source-artifact.js"
 export { buildStrategyRevision, isValidStrategyRevision } from "./revision.js"
 export type {
   StrategyRevision,

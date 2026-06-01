@@ -1,6 +1,8 @@
 export const PUBLIC_OUTPUT_FORBIDDEN_FIELDS = [
   "source",
   "sourceText",
+  "bytesBase64",
+  "artifactBytesBase64",
   "strategySource",
   "strategyMemory",
   "soldierMemory",

@@ -13,6 +13,7 @@ import {
   OBJECTIVE_PAYLOAD_BYTES,
   SOLDIER_MEMORY_BYTES,
   STRATEGY_MEMORY_BYTES,
+  STRATEGY_SOURCE_ARTIFACT_BYTES,
   STRATEGY_SOURCE_BYTES,
   STRATEGY_WASM_ARTIFACT_BYTES,
 } from "./constants.js"
@@ -725,6 +726,33 @@ export const StrategyRevisionMetadataSchema = z.object({
     })
     .optional(),
   compiledArtifact: z.lazy(() => CompiledStrategyArtifactSchema).optional(),
+  sourceArtifact: z.lazy(() => SourceLanguageStrategyArtifactSchema).optional(),
+})
+
+export const SourceLanguageStrategyArtifactToolchainEvidenceSchema = z.object({
+  language: z.enum(["typescript", "python"]),
+  runtime: z.string().min(1),
+  runtimeVersion: z.string().min(1),
+  commandSummary: z.string().min(1),
+  validationPolicy: z.string().min(1),
+})
+
+export const SourceLanguageStrategyArtifactSchema = z.object({
+  format: z.enum(["transpiled-javascript", "python-source-bundle"]),
+  hash: z.string().min(1),
+  bytes: z.number().int().positive().max(STRATEGY_SOURCE_ARTIFACT_BYTES),
+  bytesBase64: z.string().min(1).optional(),
+  sourceHash: z.string().min(1),
+  sourceBytes: z.number().int().positive().max(STRATEGY_SOURCE_BYTES),
+  abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
+  validationStatus: z.enum(["valid", "invalid"]),
+  createdAt: z.string().min(1),
+  toolchain: SourceLanguageStrategyArtifactToolchainEvidenceSchema,
+  publicEvidence: z.object({
+    label: z.string().min(1),
+    nonCounted: z.literal(false),
+    sandboxClaim: z.literal("provenance-only"),
+  }),
 })
 
 export const CompiledStrategyArtifactToolchainEvidenceSchema = z.object({
@@ -757,6 +785,11 @@ export const CompiledStrategyArtifactSchema = z.object({
 
 const CompiledStrategyArtifactPublicSchema =
   CompiledStrategyArtifactSchema.omit({
+    bytesBase64: true,
+  })
+
+const SourceLanguageStrategyArtifactPublicSchema =
+  SourceLanguageStrategyArtifactSchema.omit({
     bytesBase64: true,
   })
 
@@ -833,6 +866,40 @@ export const StrategyRevisionSchema = z
         code: "custom",
         path: ["metadata", "compiledArtifact", "toolchain", "language"],
         message: "compiled artifact language must match runtime language",
+      })
+    }
+    const sourceArtifact = revision.metadata.sourceArtifact
+    if (
+      sourceArtifact !== undefined &&
+      sourceArtifact.sourceHash !== revision.sourceHash
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["metadata", "sourceArtifact", "sourceHash"],
+        message:
+          "source-language artifact source hash must match Strategy Revision source hash",
+      })
+    }
+    if (
+      sourceArtifact !== undefined &&
+      sourceArtifact.sourceBytes !== revision.sourceBytes
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["metadata", "sourceArtifact", "sourceBytes"],
+        message:
+          "source-language artifact source byte count must match Strategy Revision source byte count",
+      })
+    }
+    if (
+      sourceArtifact !== undefined &&
+      sourceArtifact.toolchain.language !== revision.runtime.language.id
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["metadata", "sourceArtifact", "toolchain", "language"],
+        message:
+          "source-language artifact language must match runtime language",
       })
     }
   })
@@ -937,6 +1004,7 @@ export const StrategyArtifactSchema = z
     lineage: StrategyArtifactLineageSchema,
     immutableEligibility: StrategyArtifactEligibilitySnapshotSchema.optional(),
     compiledArtifact: CompiledStrategyArtifactSchema.optional(),
+    sourceArtifact: SourceLanguageStrategyArtifactSchema.optional(),
     behaviorCompatibility: z.object({
       compatibilityKey: z.string().min(1),
       behaviorSignificantFields: z.array(z.string().min(1)),
@@ -1019,6 +1087,16 @@ export const StrategyArtifactSchema = z
         message: "compiled artifact source hash must match source hash",
       })
     }
+    if (
+      artifact.sourceArtifact &&
+      artifact.sourceArtifact.sourceHash !== artifact.source.hash
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sourceArtifact", "sourceHash"],
+        message: "source-language artifact source hash must match source hash",
+      })
+    }
   })
 
 export const StrategyArtifactPublicSummarySchema = z
@@ -1043,6 +1121,7 @@ export const StrategyArtifactPublicSummarySchema = z
     lineage: StrategyArtifactLineageSchema,
     immutableEligibility: StrategyArtifactEligibilitySnapshotSchema.optional(),
     compiledArtifact: CompiledStrategyArtifactPublicSchema.optional(),
+    sourceArtifact: SourceLanguageStrategyArtifactPublicSchema.optional(),
   })
   .strict()
 

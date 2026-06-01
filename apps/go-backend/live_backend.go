@@ -2545,7 +2545,11 @@ func runtimeAllowsCountedPlay(runtime map[string]any, metadata map[string]any, s
 		if !rustProviderValidationMatches(metadata, sourceHash, sourceBytes, languageID) {
 			return false
 		}
-	} else if languageID == "javascript" || languageID == "typescript" {
+	} else if languageID == "typescript" {
+		if adapterID != "runtime-js-worker-thread" && adapterID != "runtime-js-subprocess" {
+			return false
+		}
+	} else if languageID == "javascript" {
 		if adapterID != "runtime-js-worker-thread" && adapterID != "runtime-js-subprocess" {
 			return false
 		}
@@ -2559,19 +2563,53 @@ func runtimeAllowsCountedPlay(runtime map[string]any, metadata map[string]any, s
 }
 
 func pythonProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int) bool {
+	return sourceArtifactProviderValidationMatches(metadata, sourceHash, sourceBytes, "strategy-language-provider-python", "python")
+}
+
+func sourceArtifactProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int, providerID string, languageID string) bool {
 	if sourceHash == "" || sourceBytes <= 0 {
 		return false
 	}
+	artifact := mapValue(metadata, "sourceArtifact")
+	artifactHash := stringValue(artifact, "hash")
+	artifactBytes := intValue(artifact, "bytes")
+	if artifactHash == "" || artifactBytes <= 0 {
+		return false
+	}
+	artifactBytesBase64 := stringValue(artifact, "bytesBase64")
+	artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
+	if err != nil || len(artifactBytesRaw) != artifactBytes {
+		return false
+	}
+	artifactDigest := sha256.Sum256(artifactBytesRaw)
+	if hex.EncodeToString(artifactDigest[:]) != artifactHash {
+		return false
+	}
+	toolchain := mapValue(artifact, "toolchain")
+	expectedFormat := "python-source-bundle"
+	if languageID == "typescript" {
+		expectedFormat = "transpiled-javascript"
+	}
+	if stringValue(artifact, "format") != expectedFormat ||
+		stringValue(artifact, "sourceHash") != sourceHash ||
+		intValue(artifact, "sourceBytes") != sourceBytes ||
+		stringValue(artifact, "abiVersion") != "strategy-runtime-abi-v1.14" ||
+		stringValue(artifact, "validationStatus") != "valid" ||
+		stringValue(toolchain, "language") != languageID {
+		return false
+	}
 	providerValidation := mapValue(metadata, "providerValidation")
-	if stringValue(providerValidation, "providerId") != "strategy-language-provider-python" ||
-		stringValue(providerValidation, "contractVersion") != "strategy-language-provider-contract-v1.32" ||
+	if stringValue(providerValidation, "providerId") != providerID ||
+		stringValue(providerValidation, "contractVersion") != "strategy-language-provider-contract-v1.33" ||
 		stringValue(providerValidation, "sourceHash") != sourceHash ||
-		intValue(providerValidation, "sourceBytes") != sourceBytes {
+		intValue(providerValidation, "sourceBytes") != sourceBytes ||
+		stringValue(providerValidation, "artifactHash") != artifactHash ||
+		intValue(providerValidation, "artifactBytes") != artifactBytes {
 		return false
 	}
 	return subtle.ConstantTimeCompare(
 		[]byte(stringValue(providerValidation, "proof")),
-		[]byte(providerValidationProof("strategy-language-provider-python", sourceHash, sourceBytes, "", 0)),
+		[]byte(providerValidationProof(providerID, sourceHash, sourceBytes, artifactHash, artifactBytes)),
 	) == 1
 }
 
@@ -2610,7 +2648,7 @@ func rustProviderValidationMatches(metadata map[string]any, sourceHash string, s
 	}
 	providerValidation := mapValue(metadata, "providerValidation")
 	if stringValue(providerValidation, "providerId") != providerID ||
-		stringValue(providerValidation, "contractVersion") != "strategy-language-provider-contract-v1.32" ||
+		stringValue(providerValidation, "contractVersion") != "strategy-language-provider-contract-v1.33" ||
 		stringValue(providerValidation, "sourceHash") != sourceHash ||
 		intValue(providerValidation, "sourceBytes") != sourceBytes ||
 		stringValue(providerValidation, "artifactHash") != artifactHash ||
@@ -2638,7 +2676,7 @@ func providerValidationProof(providerID string, sourceHash string, sourceBytes i
 	}
 	payload := strings.Join([]string{
 		providerID,
-		"strategy-language-provider-contract-v1.32",
+		"strategy-language-provider-contract-v1.33",
 		sourceHash,
 		fmt.Sprintf("%d", sourceBytes),
 		artifactHash,

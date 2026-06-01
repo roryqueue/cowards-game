@@ -308,6 +308,39 @@ export default {
     expect(!result.ok && result.violation.type).toBe("INVALID_OUTPUT")
   })
 
+  it("fails closed when a TypeScript artifact is stale instead of re-transpiling source", () => {
+    const revision = buildStrategyRevision({ source: validSource })
+    const changedRevision = buildStrategyRevision({
+      source: `
+export default {
+  selectActivations(input) {
+    return { activationOrders: [], strategyMemory: input.strategyMemory }
+  },
+  soldierBrain(input) {
+    return {
+      action: { type: "TURN", direction: "UP" },
+      soldierMemory: input.soldierMemory,
+    }
+  },
+}
+`,
+    })
+    const runtime = createRuntimeFromRevision({
+      ...revision,
+      source: changedRevision.source,
+      sourceHash: changedRevision.sourceHash,
+      sourceBytes: changedRevision.sourceBytes,
+      validation: changedRevision.validation,
+    })
+
+    const result = runtime.runSoldierBrain(soldierBrainInput)
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.violation.message).toBe(
+      "Strategy Revision failed artifact validation",
+    )
+  })
+
   it("invalid selectActivations output returns INVALID_OUTPUT", () => {
     const result = runtimeForSource(`
 export default {

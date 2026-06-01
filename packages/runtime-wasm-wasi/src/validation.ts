@@ -77,6 +77,11 @@ const allowedWasiPreview1Imports = new Set([
   "proc_exit",
 ])
 
+// This allowlist is the production gate for WASM/WASI Strategy artifacts.
+// Candidate compilers, including TinyGo, are rejected until their artifacts
+// avoid host time, randomness, argv, filesystem, network, path, and socket
+// imports or move to a separately approved deterministic ABI.
+
 const readVaruint32 = (
   bytes: Buffer,
   offset: number,
@@ -359,7 +364,7 @@ export const compileZigWasmArtifact = (source: string): WasmCompileResult => {
         encoding: "utf8",
         shell: false,
         env: { PATH: process.env.PATH ?? "" },
-        timeout: 10_000,
+        timeout: 30_000,
         maxBuffer: 256 * 1024,
       },
     )

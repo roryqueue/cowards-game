@@ -362,8 +362,8 @@ export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/matches/server.ts:2:@cowards/persistence:import { createPostgresChronicleStore, type ChronicleMetadata, type ChronicleStore, } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/server.ts:7:@cowards/persistence:import type { Queryable } from "@cowards/persistence/repositories"',
   'apps/web/app/workshop/server.ts:1:@cowards/persistence:import { createDatabasePool } from "@cowards/persistence/db"',
-  'apps/web/app/workshop/server.ts:2:@cowards/persistence:import { buildWorkshopRevision, createWorkshopTestMatchSet, getWorkshopRevisionSource, getWorkshopSnapshot, getWorkshopStaticSnapshot, getWorkshopTestSummary, insertWorkshopRevision, type WorkshopTestSummary, validateWorkshopSource, WORKSHOP_STRATEGY_ID, } from "@cowards/persistence/workshop"',
-  'apps/web/app/workshop/server.ts:14:@cowards/persistence:import { comparePersistedWorkshopAnalyticsRuns, createWorkshopAnalyticsDemoSnapshot, createWorkshopAnalyticsExport, createPersistedWorkshopAnalyticsRerun, getWorkshopAnalyticsSnapshot, seedWorkshopAnalyticsDemo, } from "@cowards/persistence/workshop-analytics"',
+  'apps/web/app/workshop/server.ts:2:@cowards/persistence:import { buildWorkshopRevision, createWorkshopTestMatchSet, getWorkshopRevisionSource, getWorkshopSnapshot, getWorkshopStaticSnapshot, getWorkshopTestSummary, insertWorkshopRevision, publicWorkshopRevisionMetadata, type WorkshopTestSummary, validateWorkshopSource, WORKSHOP_STRATEGY_ID, } from "@cowards/persistence/workshop"',
+  'apps/web/app/workshop/server.ts:15:@cowards/persistence:import { comparePersistedWorkshopAnalyticsRuns, createWorkshopAnalyticsDemoSnapshot, createWorkshopAnalyticsExport, createPersistedWorkshopAnalyticsRerun, getWorkshopAnalyticsSnapshot, seedWorkshopAnalyticsDemo, } from "@cowards/persistence/workshop-analytics"',
 ] as const)
 
 const forbiddenPublicArtifactStrings = [
@@ -3015,13 +3015,26 @@ const checkV132SupportedLanguageProviders = (): string => {
     }
     if (
       language.id === "python" &&
-      (language.buildBehavior !== "source-only" ||
-        provider.abiPosture !== "python-source-json" ||
+      (language.buildBehavior !== "source-provenance-artifact" ||
+        provider.abiPosture !== "python-source-provenance-json" ||
+        !provider.evidenceRequirements.includes(
+          "python-source-artifact-provenance",
+        ) ||
         !language.deterministicRestrictions.some((rule) =>
           rule.includes("No imports"),
         ))
     ) {
       throw new Error("Python provider posture drifted")
+    }
+    if (
+      language.id === "typescript" &&
+      (language.buildBehavior !== "transpile-source-artifact" ||
+        provider.abiPosture !== "runtime-js-source-artifact" ||
+        !provider.evidenceRequirements.includes(
+          "typescript-transpiled-artifact-provenance",
+        ))
+    ) {
+      throw new Error("TypeScript provider posture drifted")
     }
   }
 
@@ -5373,7 +5386,7 @@ export const runBoundaryMonitorChecks = async (): Promise<
     "direct product language special-case drift",
     () => checkDirectLanguageSpecialCases(),
   ),
-  await check("language_provider", "v1.32 supported language providers", () =>
+  await check("language_provider", "v1.33 supported language providers", () =>
     checkV132SupportedLanguageProviders(),
   ),
   await check("runtime_adapter", "runtime registry and adapter metadata", () =>

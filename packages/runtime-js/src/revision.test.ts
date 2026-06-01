@@ -63,6 +63,18 @@ describe("Strategy Revision hashing", () => {
     expect(first.id).toBe(second.id)
     expect(first.source).toBe(validSource)
     expect(first.sourceHash).toBe(hashStrategySource(validSource))
+    expect(first.metadata.sourceArtifact).toMatchObject({
+      format: "transpiled-javascript",
+      sourceHash: first.sourceHash,
+      sourceBytes: first.sourceBytes,
+      validationStatus: "valid",
+      publicEvidence: {
+        sandboxClaim: "provenance-only",
+      },
+    })
+    expect(first.metadata.sourceArtifact?.bytesBase64).toEqual(
+      expect.any(String),
+    )
     expect(StrategyRevisionSchema.parse(first)).toEqual(first)
     expect(isValidStrategyRevision(first)).toBe(true)
     expect(Object.isFrozen(first)).toBe(true)

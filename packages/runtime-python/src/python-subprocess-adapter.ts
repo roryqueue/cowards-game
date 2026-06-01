@@ -9,6 +9,7 @@ import {
   StrategyResultSchema,
   StrategyRuntimeResponseEnvelopeSchema,
   type JsonValue,
+  type RuntimeViolation,
   type SoldierBrainResult,
   type StrategyRuntimeMetadata,
   type StrategyRuntimeMethodName,
@@ -377,6 +378,44 @@ const normalizeSoldierBrainOutput = (
       }
 }
 
+const pythonArtifactSource = (
+  revision: StrategyRevision,
+):
+  | { ok: true; sourceText: string }
+  | { ok: false; violation: RuntimeViolation } => {
+  const artifact = revision.metadata.sourceArtifact
+  if (
+    artifact === undefined ||
+    artifact.format !== "python-source-bundle" ||
+    artifact.validationStatus !== "valid" ||
+    artifact.sourceHash !== revision.sourceHash ||
+    artifact.sourceBytes !== revision.sourceBytes ||
+    artifact.abiVersion !== revision.runtime.abiVersion ||
+    artifact.toolchain.language !== "python" ||
+    artifact.bytesBase64 === undefined
+  ) {
+    return {
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "Python Strategy Revision failed artifact validation.",
+      },
+    }
+  }
+  const bytes = Buffer.from(artifact.bytesBase64, "base64")
+  const hash = createHash("sha256").update(bytes).digest("hex")
+  if (bytes.byteLength !== artifact.bytes || hash !== artifact.hash) {
+    return {
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "Python Strategy Revision failed artifact validation.",
+      },
+    }
+  }
+  return { ok: true, sourceText: bytes.toString("utf8") }
+}
+
 export const createPythonRuntimeFromRevision = (
   revision: StrategyRevision,
   options: {
@@ -386,9 +425,13 @@ export const createPythonRuntimeFromRevision = (
   } = {},
 ): StrategyRuntime => ({
   selectActivations(input) {
+    const artifact = pythonArtifactSource(revision)
+    if (!artifact.ok) {
+      return artifact
+    }
     return normalizeStrategyOutput(
       runPythonStrategyMethodSync({
-        sourceText: revision.source,
+        sourceText: artifact.sourceText,
         sourceHash: revision.sourceHash,
         methodName: "selectActivations",
         input: input as unknown as JsonValue,
@@ -399,9 +442,13 @@ export const createPythonRuntimeFromRevision = (
     )
   },
   runSoldierBrain(input) {
+    const artifact = pythonArtifactSource(revision)
+    if (!artifact.ok) {
+      return artifact
+    }
     return normalizeSoldierBrainOutput(
       runPythonStrategyMethodSync({
-        sourceText: revision.source,
+        sourceText: artifact.sourceText,
         sourceHash: revision.sourceHash,
         methodName: "soldierBrain",
         input: input as unknown as JsonValue,

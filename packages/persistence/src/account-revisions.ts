@@ -198,13 +198,18 @@ const provenanceAwareRuntimeSemantics = (
   },
 ): StrategyRuntimeProductSemantics => {
   if (
-    (revision.runtime.language.id !== "python" &&
+    (revision.runtime.language.id !== "typescript" &&
+      revision.runtime.language.id !== "python" &&
       revision.runtime.language.id !== "rust" &&
       revision.runtime.language.id !== "zig") ||
-    pythonProviderValidationMatches(
+    sourceArtifactProviderValidationMatches(
       revision.metadata,
       revision.sourceHash,
       revision.sourceBytes,
+      revision.runtime.language.id === "typescript"
+        ? "strategy-language-provider-js-ts"
+        : "strategy-language-provider-python",
+      revision.runtime.language.id === "typescript" ? "typescript" : "python",
     ) ||
     rustProviderValidationMatches(
       revision.metadata,
@@ -226,18 +231,34 @@ const provenanceAwareRuntimeSemantics = (
   }
 }
 
-const pythonProviderValidationMatches = (
+const sourceArtifactProviderValidationMatches = (
   metadata: StrategyRevisionMetadata,
   sourceHash: string,
   sourceBytes: number,
+  providerId: string,
+  language: "typescript" | "python",
 ): boolean => {
   const validation = metadata.providerValidation
+  const artifact = metadata.sourceArtifact
   if (
-    validation?.providerId !== "strategy-language-provider-python" ||
+    validation?.providerId !== providerId ||
     validation.contractVersion !==
-      "strategy-language-provider-contract-v1.32" ||
+      "strategy-language-provider-contract-v1.33" ||
     validation.sourceHash !== sourceHash ||
-    validation.sourceBytes !== sourceBytes
+    validation.sourceBytes !== sourceBytes ||
+    artifact === undefined ||
+    artifact.sourceHash !== sourceHash ||
+    artifact.sourceBytes !== sourceBytes ||
+    artifact.validationStatus !== "valid" ||
+    artifact.toolchain.language !== language ||
+    artifact.bytesBase64 === undefined ||
+    !artifactBytesMatch({
+      bytesBase64: artifact.bytesBase64,
+      hash: artifact.hash,
+      bytes: artifact.bytes,
+    }) ||
+    validation.artifactHash !== artifact.hash ||
+    validation.artifactBytes !== artifact.bytes
   ) {
     return false
   }
@@ -246,6 +267,8 @@ const pythonProviderValidationMatches = (
     contractVersion: validation.contractVersion,
     sourceHash,
     sourceBytes,
+    artifactHash: artifact.hash,
+    artifactBytes: artifact.bytes,
   })
   return expected !== null && safeEqual(validation.proof, expected)
 }
@@ -266,7 +289,7 @@ const rustProviderValidationMatches = (
   if (
     validation?.providerId !== providerId ||
     validation.contractVersion !==
-      "strategy-language-provider-contract-v1.32" ||
+      "strategy-language-provider-contract-v1.33" ||
     validation.sourceHash !== sourceHash ||
     validation.sourceBytes !== sourceBytes ||
     artifact === undefined ||

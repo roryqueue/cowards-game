@@ -9,7 +9,7 @@ import { createRuntimeServiceConfig } from "./runtime-config.js"
 import { createRuntimeExecutionHttpServer } from "./server.js"
 
 process.env.COWARDS_PROVIDER_VALIDATION_SECRET =
-  "cowards-provider-validation-test-secret-v1.32"
+  "cowards-provider-validation-test-secret-v1.33"
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
@@ -110,7 +110,7 @@ def soldier_brain(input):
         tags: ["python", "counted", "provider"],
         providerValidation: {
           providerId: "strategy-language-provider-python",
-          contractVersion: "strategy-language-provider-contract-v1.32",
+          contractVersion: "strategy-language-provider-contract-v1.33",
           sourceHash: expect.any(String),
           sourceBytes: expect.any(Number),
           proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
@@ -184,7 +184,7 @@ fn main() {
         tags: ["rust", "wasm-wasi", "counted", "provider"],
         providerValidation: {
           providerId: "strategy-language-provider-rust-wasi",
-          contractVersion: "strategy-language-provider-contract-v1.32",
+          contractVersion: "strategy-language-provider-contract-v1.33",
           sourceHash: expect.any(String),
           sourceBytes: expect.any(Number),
           artifactHash: expect.any(String),
@@ -272,7 +272,7 @@ export fn _start() void {
         tags: ["zig", "wasm-wasi", "counted", "provider"],
         providerValidation: {
           providerId: "strategy-language-provider-zig-wasi",
-          contractVersion: "strategy-language-provider-contract-v1.32",
+          contractVersion: "strategy-language-provider-contract-v1.33",
           sourceHash: expect.any(String),
           sourceBytes: expect.any(Number),
           artifactHash: expect.any(String),

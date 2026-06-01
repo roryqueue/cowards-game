@@ -18,6 +18,28 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       PLAYWRIGHT_TEST: "1",
+      ...(process.env.COWARDS_RUNTIME_SERVICE_URL
+        ? {
+            COWARDS_RUNTIME_SERVICE_URL:
+              process.env.COWARDS_RUNTIME_SERVICE_URL,
+          }
+        : {}),
+      ...(process.env.COWARDS_PROVIDER_VALIDATION_SECRET
+        ? {
+            COWARDS_PROVIDER_VALIDATION_SECRET:
+              process.env.COWARDS_PROVIDER_VALIDATION_SECRET,
+          }
+        : {}),
+      ...(process.env.COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID
+        ? {
+            COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID:
+              process.env.COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID,
+          }
+        : {}),
+      ...(process.env.DATABASE_URL
+        ? { DATABASE_URL: process.env.DATABASE_URL }
+        : {}),
+      ...(process.env.REDIS_URL ? { REDIS_URL: process.env.REDIS_URL } : {}),
     },
   },
   projects: [

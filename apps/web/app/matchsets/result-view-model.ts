@@ -357,7 +357,7 @@ export const buildResultWorkbenchViewModel = (
         title: "Runtime Eligibility",
         eyebrow: runtime.ownership.hostileStrategyExecution,
         summary: [
-          "TypeScript, Python, Rust, and Zig are counted Strategy paths only through provider-compatible runtime evidence.",
+          "TypeScript and Python are counted Strategy paths through artifact-proven source-language evidence.",
           runtime.eligibility.nonCountedExhibitionBeta.length
             ? `${runtime.eligibility.nonCountedExhibitionBeta.join(", ")} remain non-counted exhibition beta for this evidence view.`
             : "No current provider language remains non-counted exhibition beta.",

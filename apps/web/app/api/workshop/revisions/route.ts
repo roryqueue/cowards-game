@@ -7,7 +7,7 @@ import type {
 } from "../../../workshop/types.js"
 
 const runtimeServiceValidateStrategy = async (
-  sourceFormat: "python" | "rust" | "zig",
+  sourceFormat: "typescript" | "python" | "rust" | "zig",
   source: string,
 ): Promise<Partial<WorkshopSubmitRequest> | { error: string }> => {
   const endpoint = process.env.COWARDS_RUNTIME_SERVICE_URL?.replace(/\/$/, "")
@@ -69,6 +69,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const sourceFormat = body.sourceFormat ?? "typescript"
   const runtimeValidation =
+    sourceFormat === "typescript" ||
     sourceFormat === "python" ||
     sourceFormat === "rust" ||
     sourceFormat === "zig"

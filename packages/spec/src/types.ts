@@ -270,6 +270,38 @@ export interface StrategyRevisionMetadata {
       }
     | undefined
   compiledArtifact?: CompiledStrategyArtifact | undefined
+  sourceArtifact?: SourceLanguageStrategyArtifact | undefined
+}
+
+export type SourceLanguageStrategyArtifactFormat =
+  | "transpiled-javascript"
+  | "python-source-bundle"
+export type SourceLanguageStrategyArtifactValidationStatus = "valid" | "invalid"
+
+export interface SourceLanguageStrategyArtifactToolchainEvidence {
+  language: "typescript" | "python"
+  runtime: string
+  runtimeVersion: string
+  commandSummary: string
+  validationPolicy: string
+}
+
+export interface SourceLanguageStrategyArtifact {
+  format: SourceLanguageStrategyArtifactFormat
+  hash: string
+  bytes: number
+  bytesBase64?: string | undefined
+  sourceHash: string
+  sourceBytes: number
+  abiVersion: string
+  validationStatus: SourceLanguageStrategyArtifactValidationStatus
+  createdAt: string
+  toolchain: SourceLanguageStrategyArtifactToolchainEvidence
+  publicEvidence: {
+    label: string
+    nonCounted: false
+    sandboxClaim: "provenance-only"
+  }
 }
 
 export type CompiledStrategyArtifactFormat = "wasm"
@@ -405,6 +437,7 @@ export interface StrategyArtifact {
   lineage: StrategyArtifactLineage
   immutableEligibility?: StrategyArtifactEligibilitySnapshot | undefined
   compiledArtifact?: CompiledStrategyArtifact | undefined
+  sourceArtifact?: SourceLanguageStrategyArtifact | undefined
   behaviorCompatibility: {
     compatibilityKey: string
     behaviorSignificantFields: string[]
@@ -429,6 +462,9 @@ export interface StrategyArtifactPublicSummary {
   lineage: StrategyArtifactLineage
   immutableEligibility?: StrategyArtifactEligibilitySnapshot | undefined
   compiledArtifact?: Omit<CompiledStrategyArtifact, "bytesBase64"> | undefined
+  sourceArtifact?:
+    | Omit<SourceLanguageStrategyArtifact, "bytesBase64">
+    | undefined
 }
 
 export type ChronicleEventType =

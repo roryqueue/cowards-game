@@ -24,6 +24,10 @@ import {
   validatePythonStrategySource,
 } from "@cowards/runtime-python/validation"
 import {
+  buildStrategyRevision,
+  validateStrategySource,
+} from "@cowards/runtime-js"
+import {
   createRuntimeServiceConfig,
   type RuntimeServiceConfig,
 } from "./runtime-config.js"
@@ -115,7 +119,8 @@ const validateStrategyRequest = (rawRequest: unknown) => {
       ? (rawRequest as Record<string, unknown>)
       : {}
   if (
-    (body.sourceFormat !== "python" &&
+    (body.sourceFormat !== "typescript" &&
+      body.sourceFormat !== "python" &&
       body.sourceFormat !== "rust" &&
       body.sourceFormat !== "zig") ||
     typeof body.source !== "string"
@@ -125,17 +130,19 @@ const validateStrategyRequest = (rawRequest: unknown) => {
       kind: "strategyValidation",
       sourceFormat: body.sourceFormat,
       error:
-        "Python, Rust, or Zig source is required for runtime-service provider validation.",
+        "TypeScript, Python, Rust, or Zig source is required for runtime-service provider validation.",
     }
   }
   const sourceFormat = body.sourceFormat
   const provider = getStrategyLanguageProviderRecord(sourceFormat)
   const validation =
-    sourceFormat === "python"
-      ? validatePythonStrategySource(body.source)
-      : sourceFormat === "zig"
-        ? validateZigStrategySource(body.source)
-        : validateRustStrategySource(body.source)
+    sourceFormat === "typescript"
+      ? validateStrategySource(body.source)
+      : sourceFormat === "python"
+        ? validatePythonStrategySource(body.source)
+        : sourceFormat === "zig"
+          ? validateZigStrategySource(body.source)
+          : validateRustStrategySource(body.source)
   if (!validation.valid) {
     return {
       ok: false,
@@ -145,11 +152,13 @@ const validateStrategyRequest = (rawRequest: unknown) => {
     }
   }
   const revisionBuilder =
-    sourceFormat === "python"
-      ? buildPythonStrategyRevision
-      : sourceFormat === "zig"
-        ? buildZigStrategyRevision
-        : buildRustStrategyRevision
+    sourceFormat === "typescript"
+      ? buildStrategyRevision
+      : sourceFormat === "python"
+        ? buildPythonStrategyRevision
+        : sourceFormat === "zig"
+          ? buildZigStrategyRevision
+          : buildRustStrategyRevision
   const revision = revisionBuilder({
     source: body.source,
     ...(typeof body.strategyId === "string" && body.strategyId.trim().length > 0
@@ -157,34 +166,40 @@ const validateStrategyRequest = (rawRequest: unknown) => {
       : {}),
     metadata: {
       tags:
-        sourceFormat === "python"
-          ? ["python", "counted", "provider"]
-          : [sourceFormat, "wasm-wasi", "counted", "provider"],
+        sourceFormat === "typescript"
+          ? ["typescript", "artifact-proven", "counted", "provider"]
+          : sourceFormat === "python"
+            ? ["python", "counted", "provider"]
+            : [sourceFormat, "wasm-wasi", "counted", "provider"],
     },
   })
   const contractVersion =
-    provider?.contractVersion ?? "strategy-language-provider-contract-v1.32"
+    provider?.contractVersion ?? "strategy-language-provider-contract-v1.33"
   const artifact =
     sourceFormat === "rust" || sourceFormat === "zig"
       ? revision.metadata.compiledArtifact
-      : undefined
+      : revision.metadata.sourceArtifact
   const providerId =
-    sourceFormat === "python"
-      ? "strategy-language-provider-python"
-      : sourceFormat === "rust"
-        ? "strategy-language-provider-rust-wasi"
-        : sourceFormat === "zig"
-          ? "strategy-language-provider-zig-wasi"
-          : null
+    sourceFormat === "typescript"
+      ? "strategy-language-provider-js-ts"
+      : sourceFormat === "python"
+        ? "strategy-language-provider-python"
+        : sourceFormat === "rust"
+          ? "strategy-language-provider-rust-wasi"
+          : sourceFormat === "zig"
+            ? "strategy-language-provider-zig-wasi"
+            : null
   const metadata =
     providerId === null
       ? revision.metadata
       : {
           ...revision.metadata,
           tags:
-            sourceFormat === "python"
-              ? ["python", "counted", "provider"]
-              : [sourceFormat, "wasm-wasi", "counted", "provider"],
+            sourceFormat === "typescript"
+              ? ["typescript", "artifact-proven", "counted", "provider"]
+              : sourceFormat === "python"
+                ? ["python", "counted", "provider"]
+                : [sourceFormat, "wasm-wasi", "counted", "provider"],
           providerValidation: {
             providerId,
             contractVersion,

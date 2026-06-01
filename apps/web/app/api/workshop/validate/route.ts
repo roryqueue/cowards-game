@@ -2,8 +2,8 @@ import { getSupportedStrategyLanguageBySourceFormat } from "@cowards/spec"
 import type { WorkshopErrorResponse } from "../../../workshop/types.js"
 import { workshopServer } from "../../../workshop/server.js"
 
-const runtimeServiceValidateWasmWasi = async (
-  sourceFormat: "rust" | "zig",
+const runtimeServiceValidateStrategy = async (
+  sourceFormat: "typescript" | "rust" | "zig",
   source: string,
 ) => {
   const endpoint = process.env.COWARDS_RUNTIME_SERVICE_URL?.replace(/\/$/, "")
@@ -19,7 +19,7 @@ const runtimeServiceValidateWasmWasi = async (
           {
             code: "TRANSPILE_FAILED",
             severity: "error",
-            message: `${label} WASM/WASI validation requires COWARDS_RUNTIME_SERVICE_URL.`,
+            message: `${label} provider validation requires COWARDS_RUNTIME_SERVICE_URL.`,
           },
         ],
         warnings: [],
@@ -66,8 +66,12 @@ export async function POST(request: Request): Promise<Response> {
 
   const sourceFormat = body.sourceFormat ?? "typescript"
 
-  if (sourceFormat === "rust" || sourceFormat === "zig") {
-    const result = await runtimeServiceValidateWasmWasi(
+  if (
+    sourceFormat === "typescript" ||
+    sourceFormat === "rust" ||
+    sourceFormat === "zig"
+  ) {
+    const result = await runtimeServiceValidateStrategy(
       sourceFormat,
       body.source,
     )

@@ -136,6 +136,64 @@ const validateRevisionArtifact = (
       ok: false
       diagnostics: Record<string, unknown>
     } => {
+  if (
+    revision.runtime.language.id === "typescript" ||
+    revision.runtime.language.id === "python"
+  ) {
+    const artifact = revision.metadata.sourceArtifact
+    const expectedFormat =
+      revision.runtime.language.id === "typescript"
+        ? "transpiled-javascript"
+        : "python-source-bundle"
+    if (!artifact?.bytesBase64) {
+      return {
+        ok: false,
+        diagnostics: {
+          reason: "source-artifact-missing",
+          slot,
+          revisionId: revision.id,
+          languageId: revision.runtime.language.id,
+        },
+      }
+    }
+    if (
+      artifact.format !== expectedFormat ||
+      artifact.validationStatus !== "valid" ||
+      artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+      artifact.sourceHash !== revision.sourceHash ||
+      artifact.sourceBytes !== revision.sourceBytes ||
+      artifact.toolchain.language !== revision.runtime.language.id
+    ) {
+      return {
+        ok: false,
+        diagnostics: {
+          reason: "source-artifact-metadata-invalid",
+          slot,
+          revisionId: revision.id,
+          languageId: revision.runtime.language.id,
+          validationStatus: artifact.validationStatus,
+          format: artifact.format,
+        },
+      }
+    }
+    const bytes = Buffer.from(artifact.bytesBase64, "base64")
+    const actualHash = createHash("sha256").update(bytes).digest("hex")
+    if (bytes.byteLength !== artifact.bytes || actualHash !== artifact.hash) {
+      return {
+        ok: false,
+        diagnostics: {
+          reason: "source-artifact-mismatch",
+          slot,
+          revisionId: revision.id,
+          declaredBytes: artifact.bytes,
+          actualBytes: bytes.byteLength,
+          declaredHash: artifact.hash,
+          actualHash,
+        },
+      }
+    }
+    return { ok: true }
+  }
   if (revision.runtime.adapter.id !== "runtime-wasm-wasi-wasmtime-preview1") {
     return { ok: true }
   }

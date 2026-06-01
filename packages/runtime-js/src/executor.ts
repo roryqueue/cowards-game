@@ -11,13 +11,14 @@ import {
   type RuntimeResult,
   type StrategyRuntime,
 } from "@cowards/engine"
+import { createHash } from "node:crypto"
+import { Buffer } from "node:buffer"
 import {
   RUNTIME_OUTPUT_BYTES,
   RUNTIME_TIMEOUT_MS,
   toInvalidOutputViolation,
   toOversizedOutputViolation,
 } from "./guards.js"
-import { transpileStrategySource } from "./transpile.js"
 import type { StrategyExecutionAdapter } from "./adapter.js"
 import { executeStrategyRuntimeAbiV114 } from "./abi-bridge.js"
 import { workerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
@@ -91,6 +92,7 @@ const executableSource = (
 ):
   | { ok: true; source: string }
   | { ok: false; violation: RuntimeViolation } => {
+  const artifact = revision.metadata.sourceArtifact
   const validation = validateStrategySource(revision.source, {
     runtimeVersion: revision.runtime.adapter.version,
     specVersion: revision.engineCompatibility.spec,
@@ -110,15 +112,39 @@ const executableSource = (
     }
   }
 
-  const transpiled = transpileStrategySource(revision.source)
-  if (!transpiled.ok) {
+  if (
+    artifact === undefined ||
+    artifact.format !== "transpiled-javascript" ||
+    artifact.validationStatus !== "valid" ||
+    artifact.sourceHash !== revision.sourceHash ||
+    artifact.sourceBytes !== revision.sourceBytes ||
+    artifact.abiVersion !== revision.runtime.abiVersion ||
+    artifact.toolchain.language !== "typescript" ||
+    artifact.bytesBase64 === undefined
+  ) {
     return {
       ok: false,
-      violation: toInvalidOutputViolation(transpiled.message),
+      violation: toInvalidOutputViolation(
+        "Strategy Revision failed artifact validation",
+      ),
     }
   }
 
-  return { ok: true, source: transpiled.code }
+  const artifactBytes = Buffer.from(artifact.bytesBase64, "base64")
+  const artifactHash = createHash("sha256").update(artifactBytes).digest("hex")
+  if (
+    artifactBytes.byteLength !== artifact.bytes ||
+    artifactHash !== artifact.hash
+  ) {
+    return {
+      ok: false,
+      violation: toInvalidOutputViolation(
+        "Strategy Revision failed artifact validation",
+      ),
+    }
+  }
+
+  return { ok: true, source: artifactBytes.toString("utf8") }
 }
 
 const WORKER_STARTUP_TIMEOUT_MS = RUNTIME_TIMEOUT_MS * 10

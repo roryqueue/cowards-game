@@ -57,7 +57,5 @@ export const sourceFormatRuntimeCue = (
   sourceFormat: WorkshopEditorSourceFormat,
 ): string | null => {
   const language = getSupportedStrategyLanguageBySourceFormat(sourceFormat)
-  return language && language.countedEligibility !== "eligible"
-    ? language.publicRuntimeCue
-    : null
+  return language?.publicRuntimeCue ?? null
 }

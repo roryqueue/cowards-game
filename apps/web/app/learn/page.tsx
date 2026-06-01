@@ -53,19 +53,21 @@ export default function LearnPage() {
           boundaries.
         </p>
         <p>
-          Python is source-backed with no packages or host imports. Rust and Zig
-          are artifact-backed through immutable WASM/WASI Preview 1 stdin/stdout
-          JSON artifacts. Zig remains no-std/import-audited. Provider proof
-          binds source hash, source byte count, and artifact hash/bytes where an
-          artifact exists.
+          TypeScript and Python are artifact-proven source-language paths:
+          TypeScript stores a validated transpiled JavaScript artifact, and
+          Python stores normalized source-bundle provenance with interpreter
+          metadata. Rust and Zig are artifact-backed through immutable WASM/WASI
+          Preview 1 stdin/stdout JSON artifacts. Provider proof binds source
+          hash, source byte count, artifact hash, and artifact byte count for
+          these provider paths.
         </p>
         <p>
           Runtime failures fail closed rather than falling back to another
           language. Counted support does not claim broad sandbox certification
-          for arbitrary programs; public output omits Strategy source,
-          StrategyMemory, SoldierMemory, objective payloads, raw diagnostics,
-          host paths, environment values, and private runtime internals by
-          default.
+          for arbitrary programs; public output omits Strategy source, source
+          artifact bytes, StrategyMemory, SoldierMemory, objective payloads, raw
+          diagnostics, host paths, environment values, and private runtime
+          internals by default.
         </p>
       </section>
 

@@ -7,6 +7,7 @@ import {
   getWorkshopStaticSnapshot,
   getWorkshopTestSummary,
   insertWorkshopRevision,
+  publicWorkshopRevisionMetadata,
   type WorkshopTestSummary,
   validateWorkshopSource,
   WORKSHOP_STRATEGY_ID,
@@ -79,7 +80,7 @@ const revisionToSummary = (
       "typescript",
     valid: revision.validation.valid,
     validation: revision.validation,
-    metadata: revision.metadata,
+    metadata: publicWorkshopRevisionMetadata(revision.metadata),
     runtimeSemantics: describeStrategyRuntimeProductSemantics(revision.runtime),
     createdAt: new Date().toISOString(),
     usedInMatches: 0,
@@ -138,6 +139,7 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
       }
       if (
         (request.sourceFormat === "python" ||
+          request.sourceFormat === "typescript" ||
           request.sourceFormat === "rust" ||
           request.sourceFormat === "zig") &&
         request.runtimeServiceValidated !== true

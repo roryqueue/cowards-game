@@ -324,6 +324,32 @@ export interface WorkshopPresetSummary {
   mirrorSides: boolean
 }
 
+export const publicWorkshopRevisionMetadata = (
+  metadata: StrategyRevision["metadata"],
+): StrategyRevision["metadata"] => {
+  const redactSourceArtifact =
+    metadata.sourceArtifact === undefined
+      ? {}
+      : (() => {
+          const { bytesBase64: _bytesBase64, ...sourceArtifact } =
+            metadata.sourceArtifact
+          return { sourceArtifact }
+        })()
+  const redactCompiledArtifact =
+    metadata.compiledArtifact === undefined
+      ? {}
+      : (() => {
+          const { bytesBase64: _bytesBase64, ...compiledArtifact } =
+            metadata.compiledArtifact
+          return { compiledArtifact }
+        })()
+  return {
+    ...metadata,
+    ...redactSourceArtifact,
+    ...redactCompiledArtifact,
+  }
+}
+
 export interface WorkshopOpponentSummary {
   id: (typeof WORKSHOP_OPPONENTS)[number]["id"]
   label: string
@@ -1015,7 +1041,7 @@ export const listWorkshopRevisions = async (
         ?.sourceFormat ?? "typescript",
     valid: row.validation.valid,
     validation: row.validation,
-    metadata: row.metadata,
+    metadata: publicWorkshopRevisionMetadata(row.metadata),
     runtimeSemantics: workshopRuntimeSemantics({
       runtime: row.runtime,
       metadata: row.metadata,
@@ -1125,13 +1151,58 @@ export const buildWorkshopRevision = (input: {
     ...(input.metadata ?? {}),
     ...(input.label ? { label: input.label } : {}),
     ...(input.notes ? { notes: input.notes } : {}),
-    ...(input.sourceFormat === "python"
-      ? { tags: ["python", "counted", "provider"] }
-      : input.sourceFormat === "rust"
-        ? { tags: ["rust", "wasm-wasi", "counted", "provider"] }
-        : input.sourceFormat === "zig"
-          ? { tags: ["zig", "wasm-wasi", "counted", "provider"] }
-          : {}),
+    ...(input.sourceFormat === "typescript"
+      ? { tags: ["typescript", "artifact-proven", "counted", "provider"] }
+      : input.sourceFormat === "python"
+        ? { tags: ["python", "counted", "provider"] }
+        : input.sourceFormat === "rust"
+          ? { tags: ["rust", "wasm-wasi", "counted", "provider"] }
+          : input.sourceFormat === "zig"
+            ? { tags: ["zig", "wasm-wasi", "counted", "provider"] }
+            : {}),
+  }
+  if (input.sourceFormat === "typescript") {
+    const sourceHash = createHash("sha256").update(input.source).digest("hex")
+    const sourceBytes = new TextEncoder().encode(input.source).length
+    const artifact = input.metadata?.sourceArtifact
+    if (
+      !input.runtimeServiceValidated ||
+      !input.runtime ||
+      !input.validation ||
+      !input.engineCompatibility ||
+      input.runtime.language.id !== "typescript" ||
+      input.validation.sourceHash !== sourceHash ||
+      input.validation.sourceBytes !== sourceBytes ||
+      artifact === undefined ||
+      artifact.sourceHash !== sourceHash ||
+      artifact.sourceBytes !== sourceBytes ||
+      artifact.format !== "transpiled-javascript" ||
+      artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+      artifact.validationStatus !== "valid" ||
+      !sourceArtifactProviderValidationMatches(input.metadata, {
+        providerId: "strategy-language-provider-js-ts",
+        sourceHash,
+        sourceBytes,
+        artifactHash: artifact.hash,
+        artifactBytes: artifact.bytes,
+        language: "typescript",
+      })
+    ) {
+      throw new WorkshopInputError(
+        "TypeScript Workshop revisions require runtime-service provider validation.",
+      )
+    }
+    return {
+      id: `strategy-revision:workshop:typescript:${sourceHash}` as StrategyRevisionId,
+      strategyId: WORKSHOP_STRATEGY_ID,
+      source: input.source,
+      sourceHash,
+      sourceBytes,
+      runtime: input.runtime,
+      engineCompatibility: input.engineCompatibility,
+      validation: input.validation,
+      metadata,
+    }
   }
   if (input.sourceFormat === "python") {
     const sourceHash = createHash("sha256").update(input.source).digest("hex")
@@ -1143,9 +1214,13 @@ export const buildWorkshopRevision = (input: {
       !input.engineCompatibility ||
       input.validation.sourceHash !== sourceHash ||
       input.validation.sourceBytes !== sourceBytes ||
-      !pythonProviderValidationMatches(input.metadata, {
+      !sourceArtifactProviderValidationMatches(input.metadata, {
+        providerId: "strategy-language-provider-python",
         sourceHash,
         sourceBytes,
+        artifactHash: input.metadata?.sourceArtifact?.hash,
+        artifactBytes: input.metadata?.sourceArtifact?.bytes,
+        language: "python",
       })
     ) {
       throw new WorkshopInputError(
@@ -1262,13 +1337,53 @@ const pythonProviderValidationMatches = (
   metadata: StrategyRevision["metadata"] | undefined,
   source: { sourceHash: string; sourceBytes: number },
 ): boolean => {
+  return sourceArtifactProviderValidationMatches(metadata, {
+    providerId: "strategy-language-provider-python",
+    sourceHash: source.sourceHash,
+    sourceBytes: source.sourceBytes,
+    artifactHash: metadata?.sourceArtifact?.hash,
+    artifactBytes: metadata?.sourceArtifact?.bytes,
+    language: "python",
+  })
+}
+
+const sourceArtifactProviderValidationMatches = (
+  metadata: StrategyRevision["metadata"] | undefined,
+  source: {
+    providerId: string
+    sourceHash: string
+    sourceBytes: number
+    artifactHash?: string | undefined
+    artifactBytes?: number | undefined
+    language: "typescript" | "python"
+  },
+): boolean => {
   const validation = metadata?.providerValidation
   if (
-    validation?.providerId !== "strategy-language-provider-python" ||
+    validation?.providerId !== source.providerId ||
     validation.contractVersion !==
-      "strategy-language-provider-contract-v1.32" ||
+      "strategy-language-provider-contract-v1.33" ||
     validation.sourceHash !== source.sourceHash ||
-    validation.sourceBytes !== source.sourceBytes
+    validation.sourceBytes !== source.sourceBytes ||
+    validation.artifactHash !== source.artifactHash ||
+    validation.artifactBytes !== source.artifactBytes
+  ) {
+    return false
+  }
+  const artifact = metadata?.sourceArtifact
+  if (
+    artifact === undefined ||
+    artifact.bytesBase64 === undefined ||
+    artifact.sourceHash !== source.sourceHash ||
+    artifact.sourceBytes !== source.sourceBytes ||
+    artifact.hash !== source.artifactHash ||
+    artifact.bytes !== source.artifactBytes ||
+    artifact.toolchain.language !== source.language ||
+    !artifactBytesMatch({
+      bytesBase64: artifact.bytesBase64,
+      hash: artifact.hash,
+      bytes: artifact.bytes,
+    })
   ) {
     return false
   }
@@ -1277,6 +1392,8 @@ const pythonProviderValidationMatches = (
     contractVersion: validation.contractVersion,
     sourceHash: source.sourceHash,
     sourceBytes: source.sourceBytes,
+    artifactHash: source.artifactHash,
+    artifactBytes: source.artifactBytes,
   })
   return expected !== null && safeEqual(validation.proof, expected)
 }
@@ -1296,7 +1413,7 @@ const rustProviderValidationMatches = (
     validation?.providerId !==
       (source.providerId ?? "strategy-language-provider-rust-wasi") ||
     validation.contractVersion !==
-      "strategy-language-provider-contract-v1.32" ||
+      "strategy-language-provider-contract-v1.33" ||
     validation.sourceHash !== source.sourceHash ||
     validation.sourceBytes !== source.sourceBytes ||
     validation.artifactHash !== source.artifactHash ||
