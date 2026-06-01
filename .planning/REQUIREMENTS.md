@@ -1,96 +1,96 @@
-# Requirements: Coward's Game v1.33
+# Requirements: Coward's Game v1.34
 
-**Defined:** 2026-05-31
+**Defined:** 2026-06-01
 **Core Value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
 ## Milestone Goal
 
-Add artifact provenance for TypeScript and Python source-language providers, then run a contained TinyGo WASM/WASI spike without promoting the candidate language by default.
+Bring Workshop "Validate source" checker behavior for TypeScript, Python, Rust, and Zig up to the same practical quality by routing validation through provider/runtime-service semantics where appropriate, producing accurate public-safe diagnostics before submit, save, and entry without changing runtime ownership or making new sandbox claims.
 
 ## Baseline
 
-- v1.32 Four-Language Production Strategy Support is shipped and archived.
+- v1.33 Source Artifact Provenance and TinyGo WASI Spike is shipped and tagged.
 - TypeScript, Python, Rust, and Zig are supported counted Strategy languages only through provider-compatible runtime evidence.
-- Rust and Zig are artifact-backed through immutable WASM/WASI Preview 1 stdin/stdout JSON artifacts whose provider proof binds source hash, source byte count, artifact hash, and artifact byte count.
-- Python is source-backed through constrained provider validation with no packages, host imports, or host capabilities.
-- TypeScript is source/transpile-backed through the JS/TS runtime path.
-- Runtime-service / Runtime Broker is the hostile Strategy execution boundary.
-- Go owns normal backend orchestration, Match lifecycle, scoring/status refresh, Chronicle persistence handoff, selected account reads, selected public reads, and public evidence.
-- Public result and replay outputs are public-safe projections and do not expose Strategy source, StrategyMemory, SoldierMemory, or objective payloads by default.
+- TypeScript and Python have source-language artifact provenance with runtime-service provider proof binding source hash/bytes and artifact hash/bytes.
+- Rust and Zig remain immutable WASM/WASI Preview 1 artifact-backed production languages.
+- TinyGo remains spike-only and hidden from production surfaces.
+- Workshop Validate source is expected to be fast and useful before submit/save/entry, but Python/Rust/Zig checker behavior now needs parity with the provider-grade semantics used by submit.
+- Runtime-service / Runtime Broker / provider boundaries remain the hostile-code boundary.
+- Public/default output must remain public-safe and must not expose Strategy source, private memory, objective payloads, raw diagnostics, host paths, env values, package paths, artifact bytes, tokens, DB details, or private runtime internals.
 
 ## Hard Boundaries
 
 - Do not execute Strategy code in the web/API process.
 - Do not execute Strategy code in Go.
 - Do not use Node `vm` as a security boundary for hostile Strategy code.
-- Strategy execution must remain behind runtime-service / Runtime Broker / language provider boundaries.
-- Preserve deterministic Match execution and canonical terms: Soldier, Match, Phase, Round, Activation, Cycle, Action, Advance, STONE, FALLEN, Chronicle.
-- Treat Strategy source, generated artifacts, spike artifacts, compiler outputs, provider proofs, and runtime envelopes as hostile until validated.
-- Source-language artifacts must fail closed if stale, missing, mismatched, unverifiable, or incompatible with provider metadata.
-- TypeScript and Python artifact provenance must not be described as equivalent to WASM/WASI isolation or production sandbox certification.
-- Rust and Zig artifact-backed behavior must not regress.
-- TinyGo remains spike-only unless a future plan explicitly proves safety and the user approves productionizing it.
-- Public output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, recovery payloads, or spike-only private artifacts.
+- Strategy validation and execution must remain behind runtime-service / Runtime Broker / language provider boundaries when hostile-code semantics are involved.
+- TypeScript and Python artifact provenance remains provenance evidence, not WASM isolation or production sandbox certification.
+- Rust and Zig remain immutable WASM/WASI Preview 1 artifact-backed lanes; do not replace the active ABI in this milestone.
+- TinyGo remains spike-only and must not appear in production-supported Workshop, submit/save, entry, result, replay, or public evidence surfaces.
+- Validate source may provide diagnostics, but public/default output must redact raw compiler/runtime diagnostics, Strategy source, artifact bytes, host paths, env values, package paths, tokens, DB details, and private runtime internals.
+- Preserve canonical terminology: Soldier, Match, Phase, Round, Activation, Cycle, Action, Advance, STONE, FALLEN, Chronicle.
 
 ## v1 Requirements
 
-### TypeScript Artifact Provenance
+### Workshop Checker Inventory and Contract
 
-- [x] **TSART-01**: Developer can produce a canonical TypeScript executable artifact during validation/build using a deterministic build path and recorded toolchain/runtime metadata.
-- [x] **TSART-02**: TypeScript provider proof binds source hash, source byte count, artifact hash, artifact byte count, build policy, provider id, and compatibility metadata.
-- [x] **TSART-03**: TypeScript runtime execution uses the validated artifact path instead of silently re-transpiling mutable source for Match or MatchSet execution.
-- [x] **TSART-04**: TypeScript validation fails closed for missing, stale, mismatched, unverifiable, oversized, or incompatible artifacts.
-- [x] **TSART-05**: TypeScript artifact provenance tests cover source mismatch, artifact mismatch, stale artifact, runtime execution, no silent fallback, public privacy, and existing JS/TS counted behavior.
-- [x] **TSART-06**: Public and private TypeScript evidence surfaces show artifact-proven provider status without exposing Strategy source or private runtime internals by default.
+- [ ] **CHECKINV-01**: Developer can inventory the current Workshop Validate source, submit, save, and competition-entry validation paths for TypeScript, Python, Rust, and Zig, including frontend calls, app/API routes, Go/API involvement, runtime-service/provider calls, cache behavior, and diagnostic surfaces.
+- [ ] **CHECKINV-02**: Developer can identify every semantic difference between Validate source and submit/save/entry validation for Python, Rust, and Zig, with TypeScript recorded as the practical parity baseline.
+- [ ] **CHECKINV-03**: Developer can define a single public-safe Workshop checker contract for all four production languages, including status, diagnostic category, severity, actionability, language/provider id, artifact/provenance state, runtime-service/toolchain availability, and privacy exclusions.
+- [ ] **CHECKINV-04**: Developer can preserve submit/save/entry ownership and runtime-service/provider boundaries while allowing Validate source to reuse provider-grade validation semantics where appropriate.
 
-### Python Artifact Provenance
+### Provider-Grade Validate Source Semantics
 
-- [x] **PYART-01**: Developer can produce a Python artifact provenance layer such as a normalized source bundle, bytecode artifact, sealed executable bundle, or equivalent evidence object with explicit interpreter/version metadata.
-- [x] **PYART-02**: Python provider proof binds source hash, source byte count, artifact hash, artifact byte count, interpreter metadata, provider id, validation policy, and compatibility metadata.
-- [x] **PYART-03**: Python validation and execution preserve the current no-packages, no-host-imports, no-filesystem, no-network, no-clock/random, no-host-capabilities policy.
-- [x] **PYART-04**: Python validation fails closed for missing, stale, mismatched, unverifiable, oversized, incompatible, or policy-violating artifacts.
-- [x] **PYART-05**: Python runtime tests cover forbidden imports/capabilities, source mismatch, artifact mismatch, stale artifact, invalid output, timeout, oversized output, privacy, and no silent fallback.
-- [x] **PYART-06**: Docs and evidence surfaces explicitly state that Python artifact provenance is provenance evidence and not equivalent to WASM/WASI isolation or production sandbox certification.
+- [ ] **CHECKVAL-01**: Workshop Validate source for TypeScript continues to use the existing provider-grade checker semantics and remains the parity baseline for status, actionability, and public-safe diagnostics.
+- [ ] **CHECKVAL-02**: Workshop Validate source for Python uses the same constrained provider/runtime-service validation semantics as submit, including policy checks for forbidden capabilities, imports, packages, source/artifact provenance compatibility, limits, and public-safe failure categories.
+- [ ] **CHECKVAL-03**: Workshop Validate source for Rust uses provider/runtime-service artifact validation semantics equivalent to submit, including compile/toolchain checks, WASM/WASI Preview 1 artifact metadata, import compatibility, stale/missing/mismatched artifact detection, and public-safe failure categories.
+- [ ] **CHECKVAL-04**: Workshop Validate source for Zig uses provider/runtime-service artifact validation semantics equivalent to submit, including compile/toolchain checks, no-std/helper compatibility, WASM/WASI Preview 1 artifact metadata, import compatibility, stale/missing/mismatched artifact detection, and public-safe failure categories.
+- [ ] **CHECKVAL-05**: Validate, submit, save, and entry paths fail consistently for unsupported providers, stale artifacts, mismatched provenance, invalid output shape, unavailable runtime-service, unavailable toolchain, and privacy-unsafe diagnostics without silently falling back to another runtime or mutable source.
 
-### TinyGo WASM/WASI Spike
+### Language-Specific Diagnostics and UX
 
-- [x] **TINYGO-01**: Developer can build a minimal TinyGo Strategy artifact targeting WASI Preview 1 or the closest viable deterministic WebAssembly target available locally.
-- [x] **TINYGO-02**: TinyGo spike attempts to use the existing WASI Preview 1 stdin/stdout JSON Strategy ABI and documents any required adapter, shim, or incompatibility.
-- [x] **TINYGO-03**: TinyGo spike audits import tables and records allowed imports, forbidden imports, host capability risks, memory behavior, and any required runtime allowances.
-- [x] **TINYGO-04**: TinyGo spike measures compile viability, artifact size, startup latency, per-call latency, deterministic behavior, invalid-output behavior, timeout/trap behavior, and failure taxonomy.
-- [x] **TINYGO-05**: TinyGo spike produces public-safe artifacts and a concrete promote, defer, or reject recommendation without enabling production support or counted eligibility.
+- [ ] **CHECKDIAG-01**: Python Workshop diagnostics distinguish policy/capability errors, forbidden imports, package/dependency errors, syntax/build errors, provenance errors, runtime-service unavailable, timeout/limit failures, and invalid output/schema failures using actionable, public-safe messages.
+- [ ] **CHECKDIAG-02**: Rust Workshop diagnostics distinguish compile errors, artifact/provenance errors, forbidden WASI/import errors, runtime-service errors, toolchain unavailable, timeout/limit failures, and invalid output/schema failures using actionable, public-safe messages.
+- [ ] **CHECKDIAG-03**: Zig Workshop diagnostics distinguish compile errors, artifact/provenance errors, forbidden WASI/import errors, no-std/helper misuse, runtime-service errors, toolchain unavailable, timeout/limit failures, and invalid output/schema failures using actionable, public-safe messages.
+- [ ] **CHECKDIAG-04**: Toolchain-unavailable and runtime-service-unavailable states are honest, calm, non-scary, and explain what the player can do next without implying their Strategy is unsafe or broken.
+- [ ] **CHECKDIAG-05**: Diagnostics never expose Strategy source, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, or objective payloads in public/default Workshop output.
 
-### Language Evidence, UI, Docs, and Verification
+### Checker Ergonomics, Caching, and Boundaries
 
-- [x] **LANGDOC-01**: Supported-language docs and UI distinguish source-backed artifact-proven languages, WASM/WASI artifact-backed production languages, and spike-only candidate languages.
-- [x] **LANGDOC-02**: Provider evidence docs explain source hash/bytes, artifact hash/bytes, toolchain/interpreter metadata, validation policy, compatibility, privacy exclusions, and fail-closed semantics.
-- [x] **LANGDOC-03**: Product labels, entry flows, Strategy cards, results, replay, Learn/docs, and public evidence avoid implying TinyGo is production-supported unless explicitly approved.
-- [x] **LANGDOC-04**: Rust and Zig existing WASM/WASI artifact-backed provider behavior remains green under the expanded artifact provenance model.
-- [x] **LANGDOC-05**: Boundary monitors and privacy scans cover TypeScript/Python artifact proof, Rust/Zig regression, TinyGo spike-only labels, and no Strategy execution in web/API/Go.
-- [x] **LANGDOC-06**: Browser review covers supported-language pages and relevant evidence surfaces, verifying realistic language status labels and no overclaiming security or sandbox guarantees.
-- [x] **LANGDOC-07**: Final validation records tests, spike artifacts, import audit results, latency/size notes, recommendations, public privacy scans, replay board realism checks where replay or Match creation changes, and milestone audit outcome.
+- [ ] **CHECKERG-01**: Rust and Zig Workshop validation is debounced, cached, coalesced, or otherwise made realistic enough for ordinary editing without excessive compile/runtime-service calls or stale status flicker.
+- [ ] **CHECKERG-02**: Checker caching keys account for language, provider id, source hash/bytes, artifact hash/bytes where applicable, toolchain/provider compatibility metadata, and validation policy so stale or cross-language diagnostics cannot be reused incorrectly.
+- [ ] **CHECKERG-03**: Workshop UI clearly separates checking, checked, unavailable, failed, stale, and ready states across TypeScript, Python, Rust, and Zig without adding TinyGo to production surfaces.
+- [ ] **CHECKERG-04**: Web/API/Go surfaces treat checker responses as validated data and do not execute Strategy source, compiler artifacts, or runtime payloads outside the approved runtime-service/provider boundary.
+
+### Tests, E2E Proof, and Audit
+
+- [ ] **CHECKTEST-01**: Focused unit/integration tests cover Validate source and submit/save/entry parity for TypeScript, Python, Rust, and Zig, including invalid source, forbidden capability/import/package, compile/artifact/provenance mismatch, unavailable runtime-service/toolchain, timeout/limit, invalid output/schema, and no-fallback cases.
+- [ ] **CHECKTEST-02**: Privacy tests scan Workshop checker responses, UI text, logs/fixtures where relevant, and public/default output for Strategy source, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, and objective payload leaks.
+- [ ] **CHECKTEST-03**: At least one service-backed E2E proof validates all four Workshop checker paths end to end for TypeScript, Python, Rust, and Zig using runtime-service/provider semantics where required.
+- [ ] **CHECKTEST-04**: Boundary monitors prove no Strategy execution moved into web/API/Go, TinyGo remains spike-only/hidden, TypeScript/Python provenance claims remain non-WASM-isolation claims, and Rust/Zig remain immutable WASM/WASI Preview 1 artifact-backed lanes.
+- [ ] **CHECKTEST-05**: Final validation records inventory findings, parity decisions, checker UX evidence, caching/debounce behavior, test commands, service-backed E2E proof, privacy scans, audit outcome, and any local toolchain/runtime-service limitations.
 
 ## Future Requirements
 
-### Future Runtime Language Production
+### Future Runtime and Checker Work
 
-- **FUT-LANG-01**: TinyGo can become a production supported Strategy language only after a future milestone proves sandbox posture, deterministic ABI compatibility, production WASM/WASI import-audit acceptance or an approved deterministic direct-export ABI, provider proof, product surfaces, conformance, public evidence, signed-in proof, monitors, and user approval.
-- **FUT-LANG-02**: Python isolation can be strengthened beyond artifact provenance only through a separate runtime isolation or WASM-backed migration plan with explicit claims, tests, rollback, and public documentation.
-- **FUT-LANG-03**: Direct exports or Component Model/WIT can replace Preview 1 stdin/stdout JSON only after a separate migration proves parity, schema validation, caps, memory ownership, privacy, rollback, and replay compatibility.
-- **FUT-LANG-04**: Rich package/dependency ecosystems for TypeScript, Python, Rust, Zig, or TinyGo require separate supply-chain, reproducibility, native-code, and deterministic-build policies.
+- **FUT-CHECK-01**: TinyGo production Workshop checker support requires a future explicit productionization milestone that resolves forbidden WASI imports, GA constraints, provider proof, product labels, conformance, public evidence, privacy, and user approval.
+- **FUT-CHECK-02**: Rich package/dependency ecosystems for TypeScript, Python, Rust, Zig, or TinyGo require separate supply-chain, reproducibility, native-code, and deterministic-build policies.
+- **FUT-CHECK-03**: Direct exports or Component Model/WIT can replace Preview 1 stdin/stdout JSON only after a separate ABI migration proves parity, schema validation, caps, memory ownership, privacy, rollback, and replay compatibility.
+- **FUT-CHECK-04**: Stronger Python or TypeScript sandbox claims require a separate runtime isolation plan and must not be inferred from checker parity or artifact provenance.
 
 ## Out of Scope
 
 | Feature | Reason |
 | --- | --- |
-| Strategy execution in web/API/Go | Hostile Strategy code must remain behind runtime-service / Runtime Broker / provider boundaries. |
-| Node `vm` as a security boundary | It is not an acceptable sandbox for hostile Strategy code. |
-| Treating TypeScript/Python artifacts as sandbox certification | Artifact provenance binds evidence; it does not by itself prove WASM isolation or production sandboxing. |
-| Production TinyGo support | v1.33 only spikes viability and records a recommendation unless explicit approval changes scope. |
-| Rust/Zig ABI migration | Existing Rust/Zig behavior must remain green; any Preview 1 replacement is future work. |
-| Public Strategy source, memory, or objective exposure | Public outputs must remain source-free, memory-free, and objective-payload-free by default. |
-| Silent fallback to mutable source or another language runtime | Runtime and artifact failures must fail closed. |
-| Package ecosystem expansion | Package/dependency policy is constrained to what existing providers explicitly support. |
+| Go production Strategy runtime work | This milestone intentionally skips Go production work and keeps hostile Strategy execution outside Go. |
+| TinyGo production support | TinyGo remains spike-only/hidden until a future approved milestone resolves its risks. |
+| New sandbox certification claims | Checker parity improves validation UX; it does not certify a broader production sandbox. |
+| TypeScript/Python WASM isolation claims | Source-language provenance is evidence, not WASM/WASI isolation. |
+| Rust/Zig ABI migration | Existing WASM/WASI Preview 1 artifact-backed behavior must remain stable. |
+| Strategy execution in web/API/Go | Runtime-service / Runtime Broker / provider boundaries remain the hostile-code boundary. |
+| Public raw diagnostics or private internals | Default/public output must remain redacted and public-safe. |
+| Package ecosystem expansion | Dependencies and packages require separate policy work. |
 
 ## Traceability
 
@@ -98,18 +98,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| TSART-01..TSART-06 | Phase 234 | Complete |
-| PYART-01..PYART-06 | Phase 235 | Complete |
-| TINYGO-01..TINYGO-05 | Phase 236 | Complete |
-| LANGDOC-01..LANGDOC-07 | Phase 237 | Complete |
+| CHECKINV-01..CHECKINV-04 | Phase 238 | Planned |
+| CHECKVAL-01..CHECKVAL-05 | Phase 239 | Planned |
+| CHECKDIAG-01..CHECKDIAG-05 | Phase 240 | Planned |
+| CHECKERG-01..CHECKERG-04 | Phase 241 | Planned |
+| CHECKTEST-01..CHECKTEST-05 | Phase 242 | Planned |
 
 **Coverage:**
-- v1 requirements: 24 total
-- Complete: 24
-- Planned: 0
-- Mapped to phases: 24
+- v1 requirements: 23 total
+- Complete: 0
+- Planned: 23
+- Mapped to phases: 23
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-05-31*
-*Last updated: 2026-05-31 after v1.33 roadmap creation*
+*Requirements defined: 2026-06-01*
+*Last updated: 2026-06-01 after v1.34 milestone initialization*
