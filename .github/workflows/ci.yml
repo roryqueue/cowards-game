@@ -58,6 +58,7 @@ jobs:
       DATABASE_URL: postgresql://cowards:cowards@localhost:5432/cowards_game
       REDIS_URL: redis://localhost:6379
       COWARDS_RUNTIME_SERVICE_URL: http://127.0.0.1:3107
+      COWARDS_PROVIDER_VALIDATION_SECRET: cowards-provider-validation-ci-secret-v1.33
       STRATEGY_EXECUTION_ADAPTER: worker-thread
     steps:
       - uses: actions/checkout@v4

@@ -24,6 +24,12 @@ export default defineConfig({
               process.env.COWARDS_RUNTIME_SERVICE_URL,
           }
         : {}),
+      ...(process.env.COWARDS_PROVIDER_VALIDATION_SECRET
+        ? {
+            COWARDS_PROVIDER_VALIDATION_SECRET:
+              process.env.COWARDS_PROVIDER_VALIDATION_SECRET,
+          }
+        : {}),
       ...(process.env.COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID
         ? {
             COWARDS_OWNER_DEBUG_REQUESTER_PLAYER_ID:
