@@ -2,8 +2,8 @@
   "schemaVersion": "strategy-artifact-manifest-v1.14",
   "generatedBy": "scripts/generate-strategy-artifact-manifest.ts",
   "sourceOfTruth": "typescript-registries",
-  "artifactCount": 23,
-  "contentHash": "sha256:c84a1d7b26e8c9d4a3b9fa55bab8a263f206af264689cb4acd35b08a83141af4",
+  "artifactCount": 26,
+  "contentHash": "sha256:3f9e3845aa161d5880177a90b2f42a35d9b4fe2eb7f05cfd91271bb1ec7f641c",
   "artifacts": [
     {
       "id": "strategy-artifact:advanced:center-gravity",
@@ -2234,6 +2234,96 @@
       }
     },
     {
+      "id": "strategy-artifact:template:python-tactical",
+      "kind": "template",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "def select_activations(input):\n    active = [soldier for soldier in input[\"mySoldiers\"] if soldier[\"status\"] == \"ACTIVE\"]\n    orders = []\n    for soldier in active[: input[\"activationCount\"]]:\n        orders.append({\"soldierId\": soldier[\"id\"], \"objective\": {\"stance\": \"probe\"}})\n    return {\n        \"activationOrders\": orders,\n        \"strategyMemory\": input[\"strategyMemory\"],\n    }\n\n\ndef soldier_brain(input):\n    enemy = None\n    for cell in input[\"awarenessGrid\"][\"cells\"]:\n        if cell[\"contents\"] == \"ENEMY_ACTIVE\":\n            enemy = cell\n            break\n    if enemy is not None:\n        if enemy[\"dy\"] < 0:\n            direction = \"UP\"\n        elif enemy[\"dy\"] > 0:\n            direction = \"DOWN\"\n        elif enemy[\"dx\"] > 0:\n            direction = \"RIGHT\"\n        elif enemy[\"dx\"] < 0:\n            direction = \"LEFT\"\n        else:\n            direction = input[\"self\"][\"facing\"] or \"UP\"\n        action = {\"type\": \"TURN\", \"direction\": direction}\n    elif input[\"cycleIndex\"] == 0:\n        action = {\"type\": \"MOVE\", \"direction\": input[\"self\"][\"facing\"] or \"UP\"}\n    else:\n        action = {\"type\": \"TURN_TO_STONE\"}\n    return {\n        \"action\": action,\n        \"soldierMemory\": input[\"soldierMemory\"],\n    }",
+        "hash": "0f5964451211ee5e6557907fe52a507b8875bb6d023b490926f74450280b10d0",
+        "bytes": 1225,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.14",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 1225,
+        "forbiddenPatterns": [],
+        "sourceHash": "0f5964451211ee5e6557907fe52a507b8875bb6d023b490926f74450280b10d0",
+        "runtimeVersion": "0.1.0-experimental",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "publicMetadata": {
+        "label": "Python tactical starter",
+        "name": "Python tactical starter",
+        "version": "v1.14",
+        "level": "template"
+      },
+      "lineage": {},
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "0f5964451211ee5e6557907fe52a507b8875bb6d023b490926f74450280b10d0",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:c581a3b462da45c0557f4939c72738f0f8d93b58a2d38f4644f2259f488797ff",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:c581a3b462da45c0557f4939c72738f0f8d93b58a2d38f4644f2259f488797ff",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
       "id": "strategy-artifact:template:reckless",
       "kind": "template",
       "sourceVisibility": "built-in-forkable",
@@ -2324,6 +2414,96 @@
       }
     },
     {
+      "id": "strategy-artifact:template:rust-wasi-tactical",
+      "kind": "template",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "use std::io::{self, Read};\n\nfn first_active_soldier_id(input: &str) -> Option<&str> {\n    let soldiers_start = input.find(\"\\\"mySoldiers\\\":[\")?;\n    let soldiers = &input[soldiers_start..];\n    let id_start = soldiers.find(\"\\\"id\\\":\\\"\")? + \"\\\"id\\\":\\\"\".len();\n    let after_id = &soldiers[id_start..];\n    let id_end = after_id.find('\"')?;\n    Some(&after_id[..id_end])\n}\n\nfn main() {\n    let mut input = String::new();\n    let _ = io::stdin().read_to_string(&mut input);\n    if input.contains(\"\\\"methodName\\\":\\\"soldierBrain\\\"\") {\n        println!(r#\"{{\"ok\":true,\"abiVersion\":\"strategy-runtime-abi-v1.14\",\"value\":{{\"action\":{{\"type\":\"TURN_TO_STONE\"}},\"soldierMemory\":null}}}}\"#);\n    } else if let Some(soldier_id) = first_active_soldier_id(&input) {\n        println!(\n            r#\"{{\"ok\":true,\"abiVersion\":\"strategy-runtime-abi-v1.14\",\"value\":{{\"activationOrders\":[{{\"soldierId\":\"{}\",\"objective\":{{\"stance\":\"stone\"}}}}],\"strategyMemory\":null}}}}\"#,\n            soldier_id\n        );\n    } else {\n        println!(r#\"{{\"ok\":true,\"abiVersion\":\"strategy-runtime-abi-v1.14\",\"value\":{{\"activationOrders\":[],\"strategyMemory\":null}}}}\"#);\n    }\n}",
+        "hash": "95823f05757cf8287121cd4309f3f3635e856611531b18c906fbadc0ff04044e",
+        "bytes": 1139,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.14",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 1139,
+        "forbiddenPatterns": [],
+        "sourceHash": "95823f05757cf8287121cd4309f3f3635e856611531b18c906fbadc0ff04044e",
+        "runtimeVersion": "0.1.0-alpha",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "engine-v1"
+        }
+      },
+      "publicMetadata": {
+        "label": "Rust WASI tactical starter",
+        "name": "Rust WASI tactical starter",
+        "version": "v1.14",
+        "level": "template"
+      },
+      "lineage": {},
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "95823f05757cf8287121cd4309f3f3635e856611531b18c906fbadc0ff04044e",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:5791438281b5d910de89a748fff8e19786aac01e2373621fd549c2d7d33ff740",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:5791438281b5d910de89a748fff8e19786aac01e2373621fd549c2d7d33ff740",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
       "id": "strategy-artifact:template:sentinel",
       "kind": "template",
       "sourceVisibility": "built-in-forkable",
@@ -2404,6 +2584,96 @@
       },
       "behaviorCompatibility": {
         "compatibilityKey": "sha256:1f714e08014441bc2628eda664ae426f1ee47bec12c4c4309afaa23045c34a40",
+        "behaviorSignificantFields": [
+          "source.hash",
+          "source.bytes",
+          "runtime",
+          "engineCompatibility",
+          "validation.valid"
+        ]
+      }
+    },
+    {
+      "id": "strategy-artifact:template:zig-wasi-tactical",
+      "kind": "template",
+      "sourceVisibility": "built-in-forkable",
+      "forkEligibility": {
+        "forkable": true
+      },
+      "source": {
+        "text": "const Iovec = extern struct { buf: [*]u8, buf_len: usize };\nconst Ciovec = extern struct { buf: [*]const u8, buf_len: usize };\n\nextern \"wasi_snapshot_preview1\" fn fd_read(u32, *const Iovec, usize, *usize) u16;\nextern \"wasi_snapshot_preview1\" fn fd_write(u32, *const Ciovec, usize, *usize) u16;\n\nconst StrategyInput = struct {\n    bytes: []const u8,\n\n    fn contains(self: StrategyInput, needle: []const u8) bool {\n        return containsBytes(self.bytes, needle);\n    }\n\n    fn methodIs(self: StrategyInput, method: []const u8) bool {\n        return self.contains(method);\n    }\n\n    fn firstActiveSoldierId(self: StrategyInput) ?[]const u8 {\n        const soldiers_marker = \"\\\"mySoldiers\\\":[\";\n        const id_marker = \"\\\"id\\\":\\\"\";\n        const soldiers_start = indexOfBytes(self.bytes, soldiers_marker) orelse return null;\n        const soldiers = self.bytes[soldiers_start..];\n        const id_start_relative = indexOfBytes(soldiers, id_marker) orelse return null;\n        const id_start = id_start_relative + id_marker.len;\n        const after_id = soldiers[id_start..];\n        const id_end = indexOfBytes(after_id, \"\\\"\") orelse return null;\n        return after_id[0..id_end];\n    }\n};\n\nfn containsBytes(haystack: []const u8, needle: []const u8) bool {\n    return indexOfBytes(haystack, needle) != null;\n}\n\nfn indexOfBytes(haystack: []const u8, needle: []const u8) ?usize {\n    if (needle.len == 0) return 0;\n    if (haystack.len < needle.len) return null;\n    var index: usize = 0;\n    while (index <= haystack.len - needle.len) : (index += 1) {\n        var matched = true;\n        var offset: usize = 0;\n        while (offset < needle.len) : (offset += 1) {\n            if (haystack[index + offset] != needle[offset]) {\n                matched = false;\n                break;\n            }\n        }\n        if (matched) return index;\n    }\n    return null;\n}\n\nfn writeAll(bytes: []const u8) void {\n    var written: usize = 0;\n    var iov = Ciovec{ .buf = bytes.ptr, .buf_len = bytes.len };\n    _ = fd_write(1, &iov, 1, &written);\n}\n\nfn writeSoldierAction(action_json: []const u8) void {\n    writeAll(\"{\\\"ok\\\":true,\\\"abiVersion\\\":\\\"strategy-runtime-abi-v1.14\\\",\\\"value\\\":{\\\"action\\\":\");\n    writeAll(action_json);\n    writeAll(\",\\\"soldierMemory\\\":null}}\\n\");\n}\n\nfn writeEmptyActivations() void {\n    writeAll(\"{\\\"ok\\\":true,\\\"abiVersion\\\":\\\"strategy-runtime-abi-v1.14\\\",\\\"value\\\":{\\\"activationOrders\\\":[],\\\"strategyMemory\\\":null}}\\n\");\n}\n\nfn writeActivation(soldier_id: []const u8) void {\n    writeAll(\"{\\\"ok\\\":true,\\\"abiVersion\\\":\\\"strategy-runtime-abi-v1.14\\\",\\\"value\\\":{\\\"activationOrders\\\":[{\\\"soldierId\\\":\\\"\");\n    writeAll(soldier_id);\n    writeAll(\"\\\",\\\"objective\\\":{\\\"stance\\\":\\\"stone\\\"}}],\\\"strategyMemory\\\":null}}\\n\");\n}\n\nexport fn _start() void {\n    var input_buf: [16384]u8 = undefined;\n    var iov = Iovec{ .buf = &input_buf, .buf_len = input_buf.len };\n    var nread: usize = 0;\n    _ = fd_read(0, &iov, 1, &nread);\n    const input = StrategyInput{ .bytes = input_buf[0..nread] };\n    if (input.methodIs(\"\\\"methodName\\\":\\\"soldierBrain\\\"\")) {\n        writeSoldierAction(\"{\\\"type\\\":\\\"TURN_TO_STONE\\\"}\");\n    } else if (input.firstActiveSoldierId()) |soldier_id| {\n        writeActivation(soldier_id);\n    } else {\n        writeEmptyActivations();\n    }\n}",
+        "hash": "1ac605b97efb720c59b6b04e027a0ebac19ee3d80a75842fca2ed13d7ab1726a",
+        "bytes": 3276,
+        "format": "typescript",
+        "entrypoint": "default"
+      },
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.14",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 3276,
+        "forbiddenPatterns": [],
+        "sourceHash": "1ac605b97efb720c59b6b04e027a0ebac19ee3d80a75842fca2ed13d7ab1726a",
+        "runtimeVersion": "0.1.0-alpha",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "engine-v1"
+        }
+      },
+      "publicMetadata": {
+        "label": "Zig WASI tactical starter",
+        "name": "Zig WASI tactical starter",
+        "version": "v1.14",
+        "level": "template"
+      },
+      "lineage": {},
+      "immutableEligibility": {
+        "lockedAt": "2026-05-23T00:00:00.000Z",
+        "sourceHash": "1ac605b97efb720c59b6b04e027a0ebac19ee3d80a75842fca2ed13d7ab1726a",
+        "validationStatus": "valid",
+        "countedRuntimeEligible": true,
+        "runtimeCompatibility": "sha256:fc9d6458072c6c455cc8494756ff8bcc7ebc5486ee371281ec5e8ad7f5c1652f",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "0.1.4"
+        }
+      },
+      "behaviorCompatibility": {
+        "compatibilityKey": "sha256:fc9d6458072c6c455cc8494756ff8bcc7ebc5486ee371281ec5e8ad7f5c1652f",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",

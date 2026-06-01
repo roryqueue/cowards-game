@@ -23,6 +23,8 @@
     "strategy-artifacts:check": "pnpm exec tsx scripts/generate-strategy-artifact-manifest.ts --check",
     "wasm-wasi:evaluate": "pnpm exec tsx scripts/evaluate-wasm-wasi-runtime.ts",
     "wasm-wasi:evaluate:check": "pnpm exec tsx scripts/evaluate-wasm-wasi-runtime.ts --check",
+    "tinygo-wasi:spike": "pnpm exec tsx scripts/evaluate-v1-33-tinygo-wasi-spike.ts",
+    "tinygo-wasi:spike:check": "pnpm exec tsx scripts/evaluate-v1-33-tinygo-wasi-spike.ts --check",
     "wasm-wasi:beta-evaluate": "pnpm exec tsx scripts/evaluate-v1-23-wasm-wasi-beta.ts",
     "wasm-wasi:beta-evaluate:check": "pnpm exec tsx scripts/evaluate-v1-23-wasm-wasi-beta.ts --check",
     "runtime-abuse:evaluate": "pnpm exec tsx scripts/evaluate-v1-24-runtime-abuse-lab.ts",

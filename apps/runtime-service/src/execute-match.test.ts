@@ -481,6 +481,16 @@ describe("runtime execution service", () => {
         ...revision.validation,
         sourceHash: "not-the-real-source-hash",
       },
+      metadata: {
+        ...revision.metadata,
+        sourceArtifact:
+          revision.metadata.sourceArtifact === undefined
+            ? undefined
+            : {
+                ...revision.metadata.sourceArtifact,
+                sourceHash: "not-the-real-source-hash",
+              },
+      },
     }
     const response = executeRuntimeServiceRequest(
       requestFor({ bottom: mismatchedRevision }),

@@ -224,17 +224,36 @@ func TestPublicRuntimeMetadataOmitsPrivateLimits(t *testing.T) {
 }
 
 func TestPythonRuntimeMetadataIsCountedProviderEligible(t *testing.T) {
-	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.32")
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
 	runtime := pythonRuntimeMetadata()
 	sourceHash := "sourcehash:python"
 	sourceBytes := 123
+	artifactPayload := []byte("python-artifact")
+	artifactDigest := sha256.Sum256(artifactPayload)
+	artifactHash := hex.EncodeToString(artifactDigest[:])
+	artifactBytes := len(artifactPayload)
 	metadata := map[string]any{
+		"sourceArtifact": map[string]any{
+			"format":           "python-source-bundle",
+			"hash":             artifactHash,
+			"bytes":            artifactBytes,
+			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
+			"sourceHash":       sourceHash,
+			"sourceBytes":      sourceBytes,
+			"abiVersion":       "strategy-runtime-abi-v1.14",
+			"validationStatus": "valid",
+			"toolchain": map[string]any{
+				"language": "python",
+			},
+		},
 		"providerValidation": map[string]any{
 			"providerId":      "strategy-language-provider-python",
-			"contractVersion": "strategy-language-provider-contract-v1.32",
+			"contractVersion": "strategy-language-provider-contract-v1.33",
 			"sourceHash":      sourceHash,
 			"sourceBytes":     sourceBytes,
-			"proof":           pythonProviderValidationProof(sourceHash, sourceBytes),
+			"artifactHash":    artifactHash,
+			"artifactBytes":   artifactBytes,
+			"proof":           providerValidationProof("strategy-language-provider-python", sourceHash, sourceBytes, artifactHash, artifactBytes),
 		},
 	}
 	semantics := runtimeSemantics(runtime)
@@ -263,7 +282,7 @@ func TestPythonRuntimeMetadataIsCountedProviderEligible(t *testing.T) {
 }
 
 func TestRustRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testing.T) {
-	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.32")
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
 	runtime := rustWasmRuntimeMetadata()
 	sourceHash := "sourcehash:rust"
 	sourceBytes := 456
@@ -285,7 +304,7 @@ func TestRustRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testi
 		},
 		"providerValidation": map[string]any{
 			"providerId":      "strategy-language-provider-rust-wasi",
-			"contractVersion": "strategy-language-provider-contract-v1.32",
+			"contractVersion": "strategy-language-provider-contract-v1.33",
 			"sourceHash":      sourceHash,
 			"sourceBytes":     sourceBytes,
 			"artifactHash":    artifactHash,
@@ -311,7 +330,7 @@ func TestRustRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testi
 }
 
 func TestZigRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testing.T) {
-	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.32")
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
 	runtime := wasmWasiRuntimeMetadata("zig")
 	sourceHash := "sourcehash:zig"
 	sourceBytes := 345
@@ -333,7 +352,7 @@ func TestZigRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testin
 		},
 		"providerValidation": map[string]any{
 			"providerId":      "strategy-language-provider-zig-wasi",
-			"contractVersion": "strategy-language-provider-contract-v1.32",
+			"contractVersion": "strategy-language-provider-contract-v1.33",
 			"sourceHash":      sourceHash,
 			"sourceBytes":     sourceBytes,
 			"artifactHash":    artifactHash,

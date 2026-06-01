@@ -58,7 +58,7 @@ export type SupportedStrategyLanguageCountedEligibility =
   | "pending-evidence"
 
 export const STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION =
-  "strategy-language-provider-contract-v1.32" as const
+  "strategy-language-provider-contract-v1.33" as const
 
 export interface SupportedStrategyLanguageRecord {
   id: StrategyLanguageId
@@ -82,15 +82,19 @@ export interface SupportedStrategyLanguageRecord {
   docsReference: string
   examplesReference: string
   validationBehavior: "runtime-js" | "python-host" | "wasm-wasi-compile"
-  buildBehavior: "transpile" | "source-only" | "compile-immutable-artifact"
+  buildBehavior:
+    | "transpile-source-artifact"
+    | "source-provenance-artifact"
+    | "source-only"
+    | "compile-immutable-artifact"
   deterministicRestrictions: string[]
   privacyRules: string[]
   notes: string[]
 }
 
 export type StrategyRuntimeAbiPosture =
-  | "runtime-js-source"
-  | "python-source-json"
+  | "runtime-js-source-artifact"
+  | "python-source-provenance-json"
   | "wasi-preview1-stdin-stdout-json"
 
 export interface StrategyLanguageProviderRecord {
@@ -426,21 +430,24 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
     enabledForNormalPlay: true,
     publicLabel: "TypeScript · Counted eligible",
     publicRuntimeCue:
-      "TypeScript is supported for counted play through transpiled runtime-js execution.",
+      "TypeScript is supported through artifact-proven source-language provenance; it is not WASM/WASI isolated.",
     sourcePolicyLabel: "Self-contained Strategy source",
-    artifactPolicyLabel: "Transpiled source revision",
+    artifactPolicyLabel: "Transpiled JavaScript artifact provenance",
     packagePolicyLabel: "No packages",
     docsReference: "runtime/languages#typescript",
     examplesReference: "samples/minimal-strategy",
     validationBehavior: "runtime-js",
-    buildBehavior: "transpile",
+    buildBehavior: "transpile-source-artifact",
     deterministicRestrictions: [
       "No host filesystem, network, clock, random, process, or dynamic import capability.",
     ],
     privacyRules: [
-      "Public evidence omits Strategy source, StrategyMemory, SoldierMemory, and objective payloads by default.",
+      "Public evidence omits Strategy source, transpiled artifact bytes, StrategyMemory, SoldierMemory, and objective payloads by default.",
     ],
-    notes: ["Transpiled to JavaScript before runtime-js execution."],
+    notes: [
+      "Provider validation emits deterministic transpiled JavaScript artifact provenance and execution uses the stored artifact path.",
+      "Artifact provenance is not equivalent to WASM/WASI isolation.",
+    ],
   },
   {
     id: "python",
@@ -458,23 +465,24 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
     enabledForNormalPlay: true,
     publicLabel: "Python · Counted eligible",
     publicRuntimeCue:
-      "Python is supported for counted play through the Runtime Broker's constrained Python provider.",
+      "Python is supported through artifact-proven source-language provenance in the constrained Python provider; it is not WASM/WASI isolated.",
     sourcePolicyLabel: "Self-contained Strategy source",
-    artifactPolicyLabel: "Source revision",
+    artifactPolicyLabel: "Normalized source bundle provenance",
     packagePolicyLabel: "No packages",
     docsReference: "runtime/languages#python",
     examplesReference: "examples/python-strategy",
     validationBehavior: "python-host",
-    buildBehavior: "source-only",
+    buildBehavior: "source-provenance-artifact",
     deterministicRestrictions: [
       "No imports, filesystem, network, clock, random, eval, exec, or host process capability.",
     ],
     privacyRules: [
-      "Public evidence omits Strategy source, StrategyMemory, SoldierMemory, objective payloads, host paths, stderr, stack traces, and Python runtime internals by default.",
+      "Public evidence omits Strategy source, source bundle bytes, StrategyMemory, SoldierMemory, objective payloads, host paths, stderr, stack traces, and Python runtime internals by default.",
     ],
     notes: [
       "Counted play uses the constrained Runtime Broker provider with no imports, packages, filesystem, network, clock, random, dynamic execution, or host process capability.",
       "The compatibility adapter id is retained from the beta path; counted eligibility is governed by the provider and registry evidence, not the legacy id text.",
+      "Python artifact provenance records normalized source bundle evidence and interpreter metadata; it does not claim WASM isolation or broad sandbox certification.",
     ],
   },
   {
@@ -493,7 +501,7 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
     enabledForNormalPlay: true,
     publicLabel: "Rust · Counted eligible",
     publicRuntimeCue:
-      "Rust is supported for counted play through immutable WASM/WASI artifacts executed by the Runtime Broker.",
+      "Rust is supported through immutable WASM/WASI artifact-backed provider proof.",
     sourcePolicyLabel: "Self-contained Strategy source",
     artifactPolicyLabel: "Immutable WASM/WASI artifact",
     packagePolicyLabel: "No packages",
@@ -528,7 +536,7 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
     enabledForNormalPlay: true,
     publicLabel: "Zig · Counted eligible",
     publicRuntimeCue:
-      "Zig is supported for counted play through no-std WASI Preview 1 compile, artifact, import audit, and Wasmtime ABI proof.",
+      "Zig is supported through no-std immutable WASM/WASI artifact-backed provider proof.",
     sourcePolicyLabel: "Self-contained Strategy source",
     artifactPolicyLabel: "Immutable WASM/WASI artifact",
     packagePolicyLabel: "No packages",
@@ -570,9 +578,9 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
       "runtime-js-container-subprocess",
     ],
     runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-    abiPosture: "runtime-js-source",
-    validationOwner: "runtime-package",
-    buildOwner: "runtime-package",
+    abiPosture: "runtime-js-source-artifact",
+    validationOwner: "runtime-service",
+    buildOwner: "runtime-service",
     executionOwner: "runtime-service",
     selectionPolicy: "runtime-broker-registry",
     compatibilityPolicy: "exact-runtime-metadata-and-provider",
@@ -583,6 +591,8 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
     },
     evidenceRequirements: [
       "runtime-js-validation",
+      "typescript-transpiled-artifact-provenance",
+      "source-and-artifact-provider-proof",
       "runtime-js-execution",
       "counted-eligibility",
       "public-privacy-scan",
@@ -590,10 +600,12 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
     boundaryRules: [
       "web-api-go-may-not-execute-strategy-code",
       "runtime-service-selects-adapter",
+      "typescript-executes-from-validated-artifact",
       "runtime-output-schema-validation-required",
     ],
     migrationNotes: [
-      "Existing JS/TS runtime ABI remains active; no service contract migration in Phase 224.",
+      "TypeScript counted submission requires provider validation bound to source and transpiled artifact hashes; JavaScript remains source-backed.",
+      "Artifact provenance does not claim WASM isolation.",
     ],
   },
   {
@@ -603,7 +615,7 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
     runtimeTarget: "runtime-python",
     adapterIds: ["runtime-python-subprocess-experimental"],
     runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-    abiPosture: "python-source-json",
+    abiPosture: "python-source-provenance-json",
     validationOwner: "runtime-package",
     buildOwner: "runtime-package",
     executionOwner: "runtime-service",
@@ -616,6 +628,8 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
     },
     evidenceRequirements: [
       "python-validation",
+      "python-source-artifact-provenance",
+      "source-and-artifact-provider-proof",
       "python-runtime-execution",
       "timeout-invalid-output-forbidden-capability",
       "deterministic-repeated-execution",
@@ -625,11 +639,12 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
     ],
     boundaryRules: [
       "python-executes-only-behind-runtime-service",
+      "python-source-artifact-fails-closed",
       "web-api-go-may-not-execute-strategy-code",
       "runtime-output-schema-validation-required",
     ],
     migrationNotes: [
-      "Python remains source-backed JSON runtime metadata in Phase 225; this promotion does not claim general package support or broad sandbox certification.",
+      "Python remains constrained source execution with provenance-bound normalized source bundle evidence; this does not claim WASM isolation or broad sandbox certification.",
     ],
   },
   {

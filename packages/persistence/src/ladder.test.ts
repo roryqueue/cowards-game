@@ -10,20 +10,25 @@ import {
 } from "./ladder.js"
 
 const TEST_PROVIDER_VALIDATION_SECRET =
-  "cowards-provider-validation-test-secret-v1.32"
+  "cowards-provider-validation-test-secret-v1.33"
 
 process.env.COWARDS_PROVIDER_VALIDATION_SECRET = TEST_PROVIDER_VALIDATION_SECRET
 
-const pythonProviderProof = (sourceHash: string, sourceBytes: number): string =>
+const pythonProviderProof = (
+  sourceHash: string,
+  sourceBytes: number,
+  artifactHash: string,
+  artifactBytes: number,
+): string =>
   `hmac-sha256:${createHmac("sha256", TEST_PROVIDER_VALIDATION_SECRET)
     .update(
       [
         "strategy-language-provider-python",
-        "strategy-language-provider-contract-v1.32",
+        "strategy-language-provider-contract-v1.33",
         sourceHash,
         String(sourceBytes),
-        "",
-        "",
+        artifactHash,
+        String(artifactBytes),
       ].join("\n"),
     )
     .digest("hex")}`
@@ -39,7 +44,7 @@ const rustProviderProof = (
     .update(
       [
         providerId,
-        "strategy-language-provider-contract-v1.32",
+        "strategy-language-provider-contract-v1.33",
         sourceHash,
         String(sourceBytes),
         artifactHash,
@@ -110,7 +115,7 @@ describe("trial ladder contracts", () => {
             },
             providerValidation: {
               providerId: "strategy-language-provider-zig-wasi",
-              contractVersion: "strategy-language-provider-contract-v1.32",
+              contractVersion: "strategy-language-provider-contract-v1.33",
               sourceHash,
               sourceBytes,
               artifactHash,
@@ -140,6 +145,11 @@ describe("trial ladder contracts", () => {
     }
     const sourceHash = "python-source-hash"
     const sourceBytes = 128
+    const artifactPayload = Buffer.from("python-artifact")
+    const artifactHash = createHash("sha256")
+      .update(artifactPayload)
+      .digest("hex")
+    const artifactBytes = artifactPayload.byteLength
 
     expect(() => assertLadderEligibleRuntime(runtime)).toThrow(
       "provider-validated revision provenance",
@@ -149,12 +159,42 @@ describe("trial ladder contracts", () => {
         sourceHash,
         sourceBytes,
         metadata: {
-          providerValidation: {
-            providerId: "strategy-language-provider-python",
-            contractVersion: "strategy-language-provider-contract-v1.32",
+          sourceArtifact: {
+            format: "python-source-bundle",
+            hash: artifactHash,
+            bytes: artifactBytes,
+            bytesBase64: artifactPayload.toString("base64"),
             sourceHash,
             sourceBytes,
-            proof: pythonProviderProof(sourceHash, sourceBytes),
+            abiVersion: "strategy-runtime-abi-v1.14",
+            validationStatus: "valid",
+            createdAt: "test",
+            toolchain: {
+              language: "python",
+              runtime: "python",
+              runtimeVersion: "3.9",
+              commandSummary: "test",
+              validationPolicy: "test",
+            },
+            publicEvidence: {
+              label: "Python source bundle provenance",
+              nonCounted: false,
+              sandboxClaim: "provenance-only",
+            },
+          },
+          providerValidation: {
+            providerId: "strategy-language-provider-python",
+            contractVersion: "strategy-language-provider-contract-v1.33",
+            sourceHash,
+            sourceBytes,
+            artifactHash,
+            artifactBytes,
+            proof: pythonProviderProof(
+              sourceHash,
+              sourceBytes,
+              artifactHash,
+              artifactBytes,
+            ),
           },
         },
       }).language.id,
@@ -199,7 +239,7 @@ describe("trial ladder contracts", () => {
           },
           providerValidation: {
             providerId: "strategy-language-provider-rust-wasi",
-            contractVersion: "strategy-language-provider-contract-v1.32",
+            contractVersion: "strategy-language-provider-contract-v1.33",
             sourceHash,
             sourceBytes,
             artifactHash,

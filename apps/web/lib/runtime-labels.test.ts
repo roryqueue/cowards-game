@@ -22,12 +22,18 @@ describe("runtime language labels", () => {
     )
     expect(sourceFormatLanguageLabel("python")).toBe("Python")
     expect(sourceFormatShortLabel("python")).toBe("PY")
-    expect(sourceFormatRuntimeCue("python")).toBeNull()
+    expect(sourceFormatRuntimeCue("python")).toContain(
+      "artifact-proven source-language provenance",
+    )
     expect(sourceFormatExhibitionLabel("rust")).toBe("Rust · Counted eligible")
     expect(sourceFormatShortLabel("rust")).toBe("Rust")
     expect(sourceFormatShortLabel("zig")).toBe("Zig")
-    expect(sourceFormatRuntimeCue("rust")).toBeNull()
-    expect(sourceFormatRuntimeCue("zig")).toBeNull()
+    expect(sourceFormatRuntimeCue("rust")).toContain(
+      "immutable WASM/WASI artifact-backed",
+    )
+    expect(sourceFormatRuntimeCue("zig")).toContain(
+      "immutable WASM/WASI artifact-backed",
+    )
   })
 
   it("keeps TypeScript counted labels neutral", () => {
@@ -42,12 +48,16 @@ describe("runtime language labels", () => {
       "TypeScript · Counted eligible",
     )
     expect(sourceFormatShortLabel("typescript")).toBe("TS")
-    expect(sourceFormatRuntimeCue("typescript")).toBeNull()
+    expect(sourceFormatRuntimeCue("typescript")).toContain(
+      "artifact-proven source-language provenance",
+    )
     expect(WORKSHOP_EDITOR_SOURCE_FORMATS).toEqual([
       "typescript",
       "python",
       "rust",
       "zig",
     ])
+    expect(sourceFormatExhibitionLabel("tinygo")).toBeNull()
+    expect(WORKSHOP_EDITOR_SOURCE_FORMATS).not.toContain("tinygo")
   })
 })

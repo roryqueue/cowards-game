@@ -12,10 +12,10 @@
 
 | Phase | Name | Goal | Requirements | Success Criteria |
 | --- | --- | --- | --- | --- |
-| 234 | TypeScript Artifact Provenance | Add canonical TypeScript artifact generation, proof binding, artifact execution, fail-closed validation, privacy, and regression coverage. | TSART-01..TSART-06 | Planned |
-| 235 | Python Artifact Provenance | Add Python artifact provenance with interpreter metadata while preserving constrained source/runtime policy and honest security claims. | PYART-01..PYART-06 | Planned |
-| 236 | TinyGo WASM/WASI Spike | Build and evaluate a minimal TinyGo WASM/WASI Strategy artifact against the existing Strategy ABI and runtime evidence model. | TINYGO-01..TINYGO-05 | Planned |
-| 237 | Documentation, UI, and Verification | Update language status docs/UI/evidence, preserve Rust/Zig behavior, run monitors/browser review, and close milestone validation. | LANGDOC-01..LANGDOC-07 | Planned |
+| 234 | TypeScript Artifact Provenance | Add canonical TypeScript artifact generation, proof binding, artifact execution, fail-closed validation, privacy, and regression coverage. | TSART-01..TSART-06 | Complete |
+| 235 | Python Artifact Provenance | Add Python artifact provenance with interpreter metadata while preserving constrained source/runtime policy and honest security claims. | PYART-01..PYART-06 | Complete |
+| 236 | TinyGo WASM/WASI Spike | Build and evaluate a minimal TinyGo WASM/WASI Strategy artifact against the existing Strategy ABI and runtime evidence model. | TINYGO-01..TINYGO-05 | Complete |
+| 237 | Documentation, UI, and Verification | Update language status docs/UI/evidence, preserve Rust/Zig behavior, run monitors/browser review, and close milestone validation. | LANGDOC-01..LANGDOC-07 | Complete |
 
 ## Phase Details
 
@@ -74,18 +74,14 @@
 ## Coverage
 
 - v1 requirements: 24 total
-- Complete: 0
-- Planned: 24
+- Complete: 24
+- Planned: 0
 - Mapped to phases: 24
 - Unmapped: 0
 
 ## Next Up
 
-Phase 234 is ready for discussion and planning.
-
-`$gsd-discuss-phase 234` - gather context and clarify the TypeScript artifact provenance approach.
-
-Also: `$gsd-plan-phase 234` - skip discussion and plan directly.
+v1.33 implementation and validation are complete. Run milestone audit and archive when ready.
 
 ---
 *Roadmap updated: 2026-05-31 after v1.33 milestone initialization*

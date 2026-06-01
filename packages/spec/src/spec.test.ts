@@ -421,11 +421,13 @@ describe("Coward's Game spec contracts", () => {
           "pending-evidence",
       ).map((language) => language.id),
     ).toEqual([])
+    expect(getSupportedStrategyLanguageRecord("tinygo")).toBeNull()
+    expect(getSupportedStrategyLanguageBySourceFormat("tinygo")).toBeNull()
   })
 
   it("v1.32 strategy language providers declare ABI and boundary posture", () => {
     expect(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION).toBe(
-      "strategy-language-provider-contract-v1.32",
+      "strategy-language-provider-contract-v1.33",
     )
     expect(STRATEGY_LANGUAGE_PROVIDER_REGISTRY).toHaveLength(4)
     for (const language of SUPPORTED_STRATEGY_LANGUAGES) {

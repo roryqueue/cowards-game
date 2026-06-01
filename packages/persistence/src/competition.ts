@@ -64,11 +64,27 @@ export const runtimeAllowsCountedPlay = (
   }
   const normalized = normalizeStrategyRuntimeMetadata(runtime)
   if (
-    normalized.language.id === "python" &&
-    !pythonProviderValidationMatches(
+    normalized.language.id === "typescript" &&
+    !sourceArtifactProviderValidationMatches(
       provenance.metadata,
       provenance.sourceHash,
       provenance.sourceBytes,
+      "strategy-language-provider-js-ts",
+      "typescript",
+    )
+  ) {
+    throw new CompetitionInputError(
+      "TypeScript counted entry requires provider-validated artifact provenance.",
+    )
+  }
+  if (
+    normalized.language.id === "python" &&
+    !sourceArtifactProviderValidationMatches(
+      provenance.metadata,
+      provenance.sourceHash,
+      provenance.sourceBytes,
+      "strategy-language-provider-python",
+      "python",
     )
   ) {
     throw new CompetitionInputError(
@@ -92,10 +108,12 @@ export const runtimeAllowsCountedPlay = (
   return normalized
 }
 
-const pythonProviderValidationMatches = (
+const sourceArtifactProviderValidationMatches = (
   metadata: unknown,
   sourceHash: string | undefined,
   sourceBytes: number | undefined,
+  providerId: string,
+  language: "typescript" | "python",
 ): boolean => {
   if (
     !sourceHash ||
@@ -107,16 +125,39 @@ const pythonProviderValidationMatches = (
   }
   const providerValidation = (metadata as { providerValidation?: unknown })
     .providerValidation
+  const sourceArtifact = (metadata as { sourceArtifact?: unknown })
+    .sourceArtifact
+  if (sourceArtifact === null || typeof sourceArtifact !== "object") {
+    return false
+  }
+  const artifact = sourceArtifact as Record<string, unknown>
+  if (
+    typeof artifact.hash !== "string" ||
+    typeof artifact.bytes !== "number" ||
+    typeof artifact.bytesBase64 !== "string" ||
+    artifact.sourceHash !== sourceHash ||
+    artifact.sourceBytes !== sourceBytes ||
+    artifact.validationStatus !== "valid" ||
+    !artifactBytesMatch({
+      bytesBase64: artifact.bytesBase64,
+      hash: artifact.hash,
+      bytes: artifact.bytes,
+    })
+  ) {
+    return false
+  }
   if (providerValidation === null || typeof providerValidation !== "object") {
     return false
   }
   const validation = providerValidation as Record<string, unknown>
   if (
-    validation.providerId !== "strategy-language-provider-python" ||
+    validation.providerId !== providerId ||
     validation.contractVersion !==
-      "strategy-language-provider-contract-v1.32" ||
+      "strategy-language-provider-contract-v1.33" ||
     validation.sourceHash !== sourceHash ||
     validation.sourceBytes !== sourceBytes ||
+    validation.artifactHash !== artifact.hash ||
+    validation.artifactBytes !== artifact.bytes ||
     typeof validation.proof !== "string"
   ) {
     return false
@@ -126,8 +167,15 @@ const pythonProviderValidationMatches = (
     contractVersion: validation.contractVersion,
     sourceHash,
     sourceBytes,
+    artifactHash: artifact.hash,
+    artifactBytes: artifact.bytes,
   })
-  return expected !== null && safeEqual(validation.proof, expected)
+  return (
+    expected !== null &&
+    safeEqual(validation.proof, expected) &&
+    (artifact.toolchain as Record<string, unknown> | undefined)?.language ===
+      language
+  )
 }
 
 const rustProviderValidationMatches = (
@@ -184,7 +232,7 @@ const rustProviderValidationMatches = (
   if (
     validation.providerId !== providerId ||
     validation.contractVersion !==
-      "strategy-language-provider-contract-v1.32" ||
+      "strategy-language-provider-contract-v1.33" ||
     validation.sourceHash !== sourceHash ||
     validation.sourceBytes !== sourceBytes ||
     validation.artifactHash !== artifactRecord.hash ||

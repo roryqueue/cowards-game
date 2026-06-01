@@ -3,9 +3,11 @@ import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import {
   COMPATIBILITY_VERSIONS,
+  STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_SOURCE_BYTES,
   StrategyRevisionSchema,
   runtimeCompatibilityKey,
+  type SourceLanguageStrategyArtifact,
   type StrategyRevision,
   type StrategyRevisionMetadata,
   type StrategyRevisionValidationIssue,
@@ -24,6 +26,40 @@ const validationHostPath = decodeURIComponent(
 
 const hashStrategySource = (source: string): string =>
   createHash("sha256").update(source).digest("hex")
+
+const normalizePythonArtifactSource = (source: string): string =>
+  source.replace(/\r\n?/g, "\n")
+
+export const buildPythonSourceArtifact = (input: {
+  source: string
+  validation: StrategyRevisionValidationReport
+}): SourceLanguageStrategyArtifact => {
+  const normalizedSource = normalizePythonArtifactSource(input.source)
+  const bytes = Buffer.from(normalizedSource, "utf8")
+  return {
+    format: "python-source-bundle",
+    hash: createHash("sha256").update(bytes).digest("hex"),
+    bytes: bytes.byteLength,
+    bytesBase64: bytes.toString("base64"),
+    sourceHash: input.validation.sourceHash,
+    sourceBytes: input.validation.sourceBytes,
+    abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+    validationStatus: input.validation.valid ? "valid" : "invalid",
+    createdAt: "deterministic-python-source-bundle-v1.33",
+    toolchain: {
+      language: "python",
+      runtime: PYTHON_RUNTIME_EXECUTABLE,
+      runtimeVersion: pythonExperimentalRuntimeMetadata().language.version,
+      commandSummary: "python isolated validation host, no packages/imports",
+      validationPolicy: "python-source-validation-v1.33",
+    },
+    publicEvidence: {
+      label: "Normalized Python source bundle provenance",
+      nonCounted: false,
+      sandboxClaim: "provenance-only",
+    },
+  }
+}
 
 const issue = (
   code: StrategyRevisionValidationIssue["code"],
@@ -217,17 +253,21 @@ export const buildPythonStrategyRevision = (input: {
 }): StrategyRevision => {
   const runtime = pythonExperimentalRuntimeMetadata()
   const validation = validatePythonStrategySource(input.source)
+  const { providerValidation: _providerValidation, ...metadata } =
+    input.metadata ?? {}
+  const sourceArtifact =
+    metadata.sourceArtifact ??
+    buildPythonSourceArtifact({ source: input.source, validation })
   const compatibility = runtimeCompatibilityKey({
     runtime,
     sourceHash: validation.sourceHash,
+    artifactHash: sourceArtifact.hash,
     specVersion: COMPATIBILITY_VERSIONS.spec,
     engineVersion: COMPATIBILITY_VERSIONS.engine,
   })
   const compatibilityHash = createHash("sha256")
     .update(JSON.stringify(compatibility))
     .digest("hex")
-  const { providerValidation: _providerValidation, ...metadata } =
-    input.metadata ?? {}
 
   return StrategyRevisionSchema.parse({
     id: `strategy-revision:python:${validation.sourceHash}:${compatibilityHash.slice(0, 16)}`,
@@ -238,6 +278,9 @@ export const buildPythonStrategyRevision = (input: {
     runtime,
     engineCompatibility: validation.engineCompatibility,
     validation,
-    metadata,
+    metadata: {
+      ...metadata,
+      sourceArtifact,
+    },
   })
 }

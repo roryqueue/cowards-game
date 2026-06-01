@@ -8,6 +8,7 @@ import {
   type StrategyRuntimeMetadata,
 } from "@cowards/spec"
 import { createStrategyRevisionId, hashStrategySource } from "./hash.js"
+import { buildTypeScriptSourceArtifact } from "./source-artifact.js"
 import { validateStrategySource } from "./validation.js"
 
 const deepFreeze = <T>(value: T): T => {
@@ -31,9 +32,20 @@ export const buildStrategyRevision = (input: {
   const sourceHash = hashStrategySource(input.source)
   const runtime = input.runtime ?? defaultRuntimeMetadata("typescript")
   const validation = validateStrategySource(input.source, { runtime })
+  const metadata = input.metadata ?? {}
+  const sourceArtifact =
+    runtime.language.id === "typescript"
+      ? (metadata.sourceArtifact ??
+        buildTypeScriptSourceArtifact({
+          source: input.source,
+          validation,
+          runtime,
+        }))
+      : metadata.sourceArtifact
   const compatibilityKey = runtimeCompatibilityKey({
     runtime,
     sourceHash,
+    artifactHash: sourceArtifact?.hash,
     specVersion: COMPATIBILITY_VERSIONS.spec,
     engineVersion: COMPATIBILITY_VERSIONS.engine,
   })
@@ -57,7 +69,13 @@ export const buildStrategyRevision = (input: {
       engine: COMPATIBILITY_VERSIONS.engine,
     },
     validation,
-    metadata: input.metadata ?? {},
+    metadata:
+      sourceArtifact === undefined || sourceArtifact === null
+        ? metadata
+        : {
+            ...metadata,
+            sourceArtifact,
+          },
   })
 
   return deepFreeze(revision)

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { Buffer } from "node:buffer"
 import { createHash, createHmac } from "node:crypto"
 import { createWorkshopServer, isStorageUnavailableError } from "./server.js"
 import {
@@ -9,7 +10,7 @@ import {
 } from "@cowards/spec"
 
 const TEST_PROVIDER_VALIDATION_SECRET =
-  "cowards-provider-validation-test-secret-v1.32"
+  "cowards-provider-validation-test-secret-v1.33"
 
 process.env.COWARDS_PROVIDER_VALIDATION_SECRET = TEST_PROVIDER_VALIDATION_SECRET
 
@@ -30,6 +31,8 @@ export default {
 const pythonProviderValidationProof = (input: {
   sourceHash: string
   sourceBytes: number
+  artifactHash: string
+  artifactBytes: number
 }): string =>
   `hmac-sha256:${createHmac("sha256", TEST_PROVIDER_VALIDATION_SECRET)
     .update(
@@ -38,8 +41,8 @@ const pythonProviderValidationProof = (input: {
         STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
         input.sourceHash,
         String(input.sourceBytes),
-        "",
-        "",
+        input.artifactHash,
+        String(input.artifactBytes),
       ].join("\n"),
     )
     .digest("hex")}`
@@ -52,6 +55,11 @@ const pythonProviderMetadata = (
 > => {
   const sourceBytes = new TextEncoder().encode(source).length
   const sourceHash = createHash("sha256").update(source).digest("hex")
+  const artifactPayload = Buffer.from(source.replace(/\r\n?/g, "\n"), "utf8")
+  const artifactHash = createHash("sha256")
+    .update(artifactPayload)
+    .digest("hex")
+  const artifactBytes = artifactPayload.byteLength
   const runtime: StrategyRevision["runtime"] = {
     abiVersion: "strategy-runtime-abi-v1.14",
     language: { id: "python", version: "3.9" },
@@ -78,12 +86,42 @@ const pythonProviderMetadata = (
   }
   const metadata: StrategyRevisionMetadata = {
     tags: ["python", "counted", "provider"],
+    sourceArtifact: {
+      format: "python-source-bundle",
+      hash: artifactHash,
+      bytes: artifactBytes,
+      bytesBase64: artifactPayload.toString("base64"),
+      sourceHash,
+      sourceBytes,
+      abiVersion: "strategy-runtime-abi-v1.14",
+      validationStatus: "valid",
+      createdAt: "test",
+      toolchain: {
+        language: "python",
+        runtime: "python",
+        runtimeVersion: "3.9",
+        commandSummary: "test",
+        validationPolicy: "test",
+      },
+      publicEvidence: {
+        label: "Python source bundle provenance",
+        nonCounted: false,
+        sandboxClaim: "provenance-only",
+      },
+    },
     providerValidation: {
       providerId: "strategy-language-provider-python",
       contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
       sourceHash,
       sourceBytes,
-      proof: pythonProviderValidationProof({ sourceHash, sourceBytes }),
+      artifactHash,
+      artifactBytes,
+      proof: pythonProviderValidationProof({
+        sourceHash,
+        sourceBytes,
+        artifactHash,
+        artifactBytes,
+      }),
     },
   }
   return {

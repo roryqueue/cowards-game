@@ -9,13 +9,15 @@ describe("Learn language trust copy", () => {
       "TypeScript, Python, Rust, and Zig",
       "provider-compatible runtime evidence",
       "runtime-service, Runtime Broker, and language provider",
-      "immutable WASM/WASI Preview 1 stdin/stdout",
+      "immutable WASM/WASI",
+      "Preview 1 stdin/stdout",
       "Runtime failures fail closed",
       "does not claim broad sandbox certification",
       "StrategyMemory",
       "SoldierMemory",
       "objective payloads",
-      "private runtime internals",
+      "private runtime",
+      "internals",
     ]) {
       expect(source).toContain(expected)
     }
@@ -26,6 +28,8 @@ describe("Learn language trust copy", () => {
       "Bearer ",
       "site-packages",
       "/Users/",
+      "TinyGo",
+      "tinygo",
     ]) {
       expect(source).not.toContain(forbidden)
     }

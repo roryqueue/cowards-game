@@ -32,6 +32,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     const response = await runPythonStrategyMethod({
       sourceText: pythonSource,
       methodName: "selectActivations",
+      timeoutMs: 3_000,
       input: {
         phaseNumber: 1,
         roundNumber: 1,

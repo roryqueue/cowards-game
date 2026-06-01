@@ -262,6 +262,8 @@ describe("reliability evidence copy", () => {
       "site-packages",
       "DATABASE_URL",
       "Bearer ",
+      "TinyGo",
+      "tinygo",
     ]) {
       expect(serialized).not.toContain(forbidden)
     }
