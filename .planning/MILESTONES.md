@@ -1,5 +1,34 @@
 # Milestones
 
+## v1.33 Source Artifact Provenance and TinyGo WASI Spike (Shipped: 2026-06-01)
+
+**Status:** Shipped 2026-06-01
+**Phases:** 4
+**Phase range:** 234-237
+**Plans:** 4/4 complete
+**Requirements:** 24/24 complete
+**Roadmap:** .planning/milestones/v1.33-ROADMAP.md
+**Decision:** TypeScript and Python now carry source-language artifact provenance with runtime-service provider proof binding source hash/bytes and artifact hash/bytes. Rust and Zig remain immutable WASM/WASI artifact-backed production languages. TinyGo remains spike-only and hidden from production surfaces because the compiled artifact imports production-forbidden WASI capabilities.
+**Audit:** .planning/milestones/v1.33-MILESTONE-AUDIT.md
+**Archives:** .planning/milestones/v1.33-ROADMAP.md, .planning/milestones/v1.33-REQUIREMENTS.md, .planning/phases/234-typescript-artifact-provenance through .planning/phases/237-documentation-ui-and-verification
+
+**Delivered:**
+
+- Deterministic TypeScript transpiled-artifact provenance, provider proof, fail-closed validation, and artifact execution.
+- Python normalized source-bundle provenance with interpreter metadata while preserving no-package, no-host-import, no-host-capability policy.
+- Runtime-service provider validation proofs for source/artifact identity and public-safe evidence surfaces.
+- TinyGo WASI spike evidence covering compile viability, import audit, Wasmtime execution, determinism, invalid-output, timeout/trap behavior, and a defer recommendation.
+- Documentation, UI, evidence copy, monitors, and privacy checks that distinguish source-language artifact provenance, WASM/WASI artifact backing, and spike-only candidates.
+- Production-facing pages keep TinyGo out of supported-language selection until a future explicit productionization milestone.
+
+### Active Constraints
+
+- Source-language artifact provenance is evidence/proof binding, not WASM isolation or production sandbox certification.
+- TypeScript and Python artifact validation must fail closed on stale, missing, mismatched, oversized, unverifiable, or incompatible artifacts.
+- Rust and Zig continue to use immutable WASM/WASI Preview 1 stdin/stdout JSON artifacts until a future ABI migration proves otherwise.
+- TinyGo stays out of production support, counted eligibility, and production UI until its forbidden WASI imports and GA constraints are resolved.
+- Strategy code does not execute in web/API/Go, and public outputs must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, or artifact bytes.
+
 ## v1.32 Four-Language Production Strategy Support (Shipped: 2026-05-31)
 
 **Status:** Shipped 2026-05-31

@@ -2,26 +2,29 @@
 
 ## Current State
 
-**Shipped version:** v1.32 Four-Language Production Strategy Support on 2026-05-31
-**Current milestone:** v1.33 Artifact Provenance for Source Languages + WASM Language Spikes
-**Status:** TypeScript, Python, Rust, and Zig are supported counted Strategy languages through provider-gated runtime evidence. Rust and Zig are artifact-backed through immutable WASM/WASI Preview 1 stdin/stdout JSON artifacts; v1.33 will raise TypeScript and Python to artifact-provenance parity while keeping their execution models honest, and will spike TinyGo as a WASM/WASI candidate language only.
-**Last audit:** v1.32 audit passed after validating provider contracts, language production paths, conformance matrix, public privacy scans, boundary monitors, live signed-in proof, replay board realism, and no Strategy execution in web/API/Go.
+**Shipped version:** v1.33 Source Artifact Provenance and TinyGo WASI Spike on 2026-06-01
+**Current milestone:** Ready for v1.34 planning
+**Status:** TypeScript, Python, Rust, and Zig are supported counted Strategy languages through provider-gated runtime evidence. TypeScript and Python now have source-language artifact provenance with runtime-service provider proof binding source hash/bytes and artifact hash/bytes. Rust and Zig remain artifact-backed through immutable WASM/WASI Preview 1 stdin/stdout JSON artifacts. TinyGo remains spike-only and hidden from production surfaces until a future milestone resolves its forbidden WASI imports and GA constraints.
+**Last audit:** v1.33 audit passed after validating artifact provenance, provider proofs, TinyGo spike evidence, public privacy, boundary monitors, browser review, and no Strategy execution in web/API/Go.
 
-Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. v1.33 extends provider evidence by making TypeScript and Python fail closed on stale, missing, mismatched, or unverifiable artifacts and by producing a conservative TinyGo WASM/WASI spike recommendation.
+Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.33 Artifact Provenance for Source Languages + WASM Language Spikes
+## Latest Shipped Milestone: v1.33 Source Artifact Provenance and TinyGo WASI Spike
 
 **Goal:** Add artifact provenance for TypeScript and Python source-language providers, then run a contained TinyGo WASM/WASI spike without promoting the candidate language by default.
 
-**Target features:**
-- TypeScript build-time canonical executable artifact generation with provider proof binding source hash/bytes and artifact hash/bytes.
-- Python artifact provenance layer with explicit interpreter/version metadata while preserving the current no-packages/no-imports/no-host-capabilities policy.
-- TinyGo WASM/WASI spike using the existing stdin/stdout JSON ABI if feasible, with import audit, deterministic behavior checks, size/latency notes, and a promote/defer/reject recommendation.
+**Delivered:**
+- TypeScript canonical transpiled-artifact provenance with provider proof binding source hash/bytes and artifact hash/bytes.
+- Python normalized source-bundle provenance with explicit interpreter metadata and preserved no-packages/no-host-imports/no-host-capabilities policy.
+- Runtime-service provider validation proofs that fail closed on stale, missing, mismatched, unverifiable, oversized, or incompatible source-language artifacts.
+- TinyGo WASI spike using the existing stdin/stdout JSON ABI through Wasmtime, with import audit, deterministic behavior checks, invalid-output/timeout behavior, size/latency evidence, and a defer recommendation.
 - Docs, UI, runtime evidence, privacy checks, and validation that distinguish source-backed artifact-proven languages, WASM/WASI artifact-backed production languages, and spike-only candidates.
+
+**Non-goals:** No Go/TinyGo production support, no TinyGo counted eligibility, no TypeScript/Python WASM isolation claim, no broad production sandbox certification, no package ecosystem expansion, and no Strategy execution in web/API/Go.
 
 ## Latest Shipped Milestone: v1.32 Four-Language Production Strategy Support
 
@@ -729,16 +732,16 @@ Planning archives live under `.planning/milestones/`:
 | Freeze app-facing Match execution interfaces before parallelizing execution and UX work | v1.25 made lifecycle, DTO, evidence, fixture, adapter, and monitor contracts stable enough for app/result/replay work to proceed without coupling to execution internals. | ✓ Implemented in v1.25 |
 | Harden execution reliability behind the frozen contract | v1.26 improved Go/runtime-service retry classification, unavailable/degraded handling, malformed/stale failure drills, persistence idempotency, and public-safe evidence without changing `match-execution-app-v1`. | ✓ Implemented in v1.26 |
 | Build result/replay UX in front of the frozen Match execution app contract | v1.27 consumes `match-execution-app-v1` and fixtures as a stable app surface, improving public workbench UX without changing execution internals or promotion claims. | ✓ Implemented in v1.27 |
-| Keep discovery APIs separate from the frozen execution contract | v1.31 public discovery reads should aggregate and link public-safe pages without changing existing public execution DTOs or making `match-execution-app-v1` carry site navigation concerns. | — Pending |
+| Keep discovery APIs separate from the frozen execution contract | v1.31 public discovery reads should aggregate and link public-safe pages without changing existing public execution DTOs or making `match-execution-app-v1` carry site navigation concerns. | ✓ Implemented in v1.31 |
 | Promote four supported Strategy languages through one shared model, not one-off labels | v1.32 intentionally reopened execution/runtime/language eligibility contracts, but changes had to be explicit, versioned or migrated as needed, tested, audited, and kept behind the runtime-service / Runtime Broker boundary. | ✓ Implemented in v1.32 |
-| Treat source-language artifacts as provenance evidence, not automatic sandbox proof | v1.33 should make TypeScript and Python provider proofs bind source and artifact hashes/bytes while clearly distinguishing artifact provenance from WASM isolation or production sandbox certification. | — Pending |
-| Keep TinyGo spike-only until separately approved | TinyGo may prove WASM/WASI viability, import boundaries, deterministic behavior, and ergonomics in v1.33, but production support requires an explicit future approval after the spike evidence is reviewed. | — Pending |
+| Treat source-language artifacts as provenance evidence, not automatic sandbox proof | v1.33 made TypeScript and Python provider proofs bind source and artifact hashes/bytes while clearly distinguishing artifact provenance from WASM isolation or production sandbox certification. | ✓ Implemented in v1.33 |
+| Keep TinyGo spike-only until separately approved | v1.33 proved minimal TinyGo WASI execution but deferred production support because the artifact imports forbidden WASI capabilities. | ✓ Implemented in v1.33 |
 
 ## Constraints
 
 The active constraints remain: deterministic engine behavior, engine purity, Strategy Revision immutability, hostile Strategy treatment, runtime isolation, memory/source/output limits, package boundaries, replay privacy, Chronicle compatibility, competitive integrity, Go-owned normal backend behavior, no silent TypeScript backend fallback, and representative page-load smoke for major page types.
 
-v1.33 may change provider proof shape, artifact metadata, validation/build flows, docs/UI evidence copy, and spike artifact tooling only when the change is intentional, justified, versioned or migrated appropriately, tested, and audited. Strategy execution must remain behind runtime-service / Runtime Broker / language provider boundaries, source-language artifacts must fail closed if stale/missing/mismatched/unverifiable, TinyGo must remain spike-only unless explicitly approved for production, and public output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads.
+Future provider proof, artifact metadata, validation/build, docs/UI evidence copy, and spike tooling changes must be intentional, justified, versioned or migrated appropriately, tested, and audited. Strategy execution must remain behind runtime-service / Runtime Broker / language provider boundaries, source-language artifacts must fail closed if stale/missing/mismatched/unverifiable, TinyGo must remain spike-only unless explicitly approved for production, and public output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads.
 
 Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy/analytics surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, and private runtime internals by default. v1.5 created local example MatchSets and a completed example tournament for demonstration, and v1.6 created saved gauntlet analytics for study; neither establishes official public tournament operations or durable ratings.
 
@@ -755,4 +758,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-31 after starting v1.33 milestone*
+*Last updated: 2026-06-01 after shipping v1.33 milestone*

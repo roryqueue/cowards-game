@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.33
 milestone_name: Artifact Provenance for Source Languages + WASM Language Spikes
-status: validation-complete
-last_updated: "2026-06-01T20:10:00.000Z"
+status: shipped
+last_updated: "2026-06-01T13:23:20Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 4
@@ -19,15 +19,15 @@ progress:
 
 Phase: 237 - Documentation, UI, and Verification
 Plan: Complete
-Status: v1.33 implementation, validation, and verification complete; milestone audit/fix pass pending final wrap-up
-Last activity: 2026-06-01 - Added TypeScript/Python source-language artifact provenance, TinyGo spike evidence, docs/UI copy, and validation artifacts
+Status: v1.33 implementation, validation, verification, audit, PR, and planning archive complete
+Last activity: 2026-06-01 - Archived v1.33 after adding TypeScript/Python source-language artifact provenance, TinyGo spike evidence, docs/UI copy, and validation artifacts
 
 ## Project Reference
 
 See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Artifact provenance parity for TypeScript and Python plus TinyGo WASM/WASI spike evidence.
+**Current focus:** Ready to define v1.34; likely focus is Workshop checker parity and language-provider diagnostics while skipping Go/TinyGo production support for now.
 
 ## Active Boundary Notes
 
@@ -45,12 +45,12 @@ See: `.planning/PROJECT.md`
 
 - v1.32 Four-Language Production Strategy Support is shipped and archived in `.planning/MILESTONES.md`, `.planning/milestones/v1.32-ROADMAP.md`, `.planning/milestones/v1.32-REQUIREMENTS.md`, `.planning/milestones/v1.32-MILESTONE-AUDIT.md`, and `.planning/artifacts/v1.32-four-language-signed-in-proof.md`.
 - v1.32 promoted TypeScript, Python, Rust, and Zig to supported counted Strategy languages only through provider-compatible runtime evidence. Preview 1 stdin/stdout JSON remains the active Rust/Zig WASM/WASI ABI until an explicit migration decision changes it.
-- v1.33 goal: add artifact provenance for TypeScript and Python source-language providers, then run a contained TinyGo WASM/WASI spike without promoting the candidate language by default.
+- v1.33 shipped TypeScript and Python source-language artifact provenance, kept Rust/Zig immutable WASM/WASI artifact behavior green, and recorded TinyGo as spike-only/deferred.
 - Roadmap continues after v1.32 and begins at Phase 234.
-- Phase 234 will add TypeScript artifact generation, proof binding, artifact execution, fail-closed validation, privacy, and regression coverage.
-- Phase 235 will add Python artifact provenance with interpreter metadata while preserving constrained source/runtime policy and honest security claims.
-- Phase 236 will build and evaluate a minimal TinyGo WASM/WASI Strategy artifact against the existing Strategy ABI and runtime evidence model.
-- Phase 237 will update docs/UI/evidence, preserve Rust/Zig behavior, run monitors/browser review, and close validation.
+- Phase 234 added TypeScript artifact generation, proof binding, artifact execution, fail-closed validation, privacy, and regression coverage.
+- Phase 235 added Python artifact provenance with interpreter metadata while preserving constrained source/runtime policy and honest security claims.
+- Phase 236 built and evaluated a minimal TinyGo WASM/WASI Strategy artifact against the existing Strategy ABI and deferred production support.
+- Phase 237 updated docs/UI/evidence, preserved Rust/Zig behavior, ran monitors/browser review, and closed validation.
 - Research notes are in `.planning/research/SUMMARY.md` and `.planning/research/v1.33-SUMMARY.md`.
-- Requirements are in `.planning/REQUIREMENTS.md`.
-- Roadmap is in `.planning/ROADMAP.md`.
+- v1.33 archives are in `.planning/milestones/v1.33-ROADMAP.md`, `.planning/milestones/v1.33-REQUIREMENTS.md`, and `.planning/milestones/v1.33-MILESTONE-AUDIT.md`.
+- Current `.planning/ROADMAP.md` and `.planning/REQUIREMENTS.md` still reflect v1.33 until the next milestone is initialized.
