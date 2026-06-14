@@ -118,24 +118,46 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| INV-01..INV-03 | TBD | Pending |
-| ACCT-01..ACCT-05 | TBD | Pending |
-| ENTRY-01..ENTRY-04 | TBD | Pending |
-| AUTH-01..AUTH-02 | TBD | Pending |
-| PRIV-01..PRIV-02 | TBD | Pending |
-| API-01..API-03 | TBD | Pending |
-| SBOX-01..SBOX-02 | TBD | Pending |
-| LABEL-01..LABEL-02 | TBD | Pending |
-| PKG-01..PKG-04 | TBD | Pending |
-| PROOF-01..PROOF-05 | TBD | Pending |
+| INV-01 | Phase 243 | Pending |
+| INV-02 | Phase 243 | Pending |
+| INV-03 | Phase 243 | Pending |
+| ACCT-01 | Phase 244 | Pending |
+| ACCT-02 | Phase 244 | Pending |
+| ACCT-03 | Phase 244 | Pending |
+| ACCT-04 | Phase 244 | Pending |
+| ACCT-05 | Phase 244 | Pending |
+| ENTRY-01 | Phase 244 | Pending |
+| ENTRY-02 | Phase 244 | Pending |
+| ENTRY-03 | Phase 244 | Pending |
+| ENTRY-04 | Phase 244 | Pending |
+| AUTH-01 | Phase 245 | Pending |
+| AUTH-02 | Phase 245 | Pending |
+| PRIV-01 | Phase 245 | Pending |
+| PRIV-02 | Phase 245 | Pending |
+| API-01 | Phase 245 | Pending |
+| API-02 | Phase 245 | Pending |
+| API-03 | Phase 245 | Pending |
+| SBOX-01 | Phase 246 | Pending |
+| SBOX-02 | Phase 246 | Pending |
+| LABEL-01 | Phase 246 | Pending |
+| LABEL-02 | Phase 246 | Pending |
+| PKG-01 | Phase 247 | Pending |
+| PKG-02 | Phase 247 | Pending |
+| PKG-03 | Phase 247 | Pending |
+| PKG-04 | Phase 247 | Pending |
+| PROOF-01 | Phase 248 | Pending |
+| PROOF-02 | Phase 248 | Pending |
+| PROOF-03 | Phase 248 | Pending |
+| PROOF-04 | Phase 248 | Pending |
+| PROOF-05 | Phase 248 | Pending |
 
 **Coverage:**
 - v1 requirements: 32 total
 - Complete: 0
-- Planned: 0
-- Mapped to phases: 0
-- Unmapped: 32
+- Planned: 32
+- Mapped to phases: 32
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-14*
-*Last updated: 2026-06-14 after v1.35 research synthesis*
+*Last updated: 2026-06-14 after v1.35 roadmap creation*
