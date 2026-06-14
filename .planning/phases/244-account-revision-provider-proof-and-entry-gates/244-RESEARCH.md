@@ -303,22 +303,22 @@ This pattern avoids Go execution and avoids raw diagnostic exposure. [VERIFIED: 
 |---|-------|---------|---------------|
 | — | None. All research claims are based on repo files, environment probes, npm registry, or Go module version queries. | — | — |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should invalid/unavailable account saves persist at all, or fail with no row?**
    - What we know: CONTEXT allows draft storage only if explicitly non-execution and non-entry-eligible. [VERIFIED: `244-CONTEXT.md`]
    - What's unclear: No current request DTO field explicitly asks for draft persistence. [VERIFIED: `apps/go-backend/live_backend.go`]
-   - Recommendation: Default execution-ready save should fail closed; add draft persistence only if planner introduces an explicit request flag and public labels. [VERIFIED: `.planning/REQUIREMENTS.md`]
+   - **Resolution:** Default execution-ready save fails closed with no row on unavailable/system/proof-corrupt states. Invalid provider validation may persist only as explicit non-execution draft evidence with non-ready/non-entry-eligible labels; if the executor cannot add those labels without ambiguity, reject instead. [VERIFIED: `.planning/REQUIREMENTS.md`, `244-CONTEXT.md`]
 
 2. **Should JavaScript remain in Go entry helpers?**
    - What we know: Phase 244 requirements name TypeScript, Python, Rust, and Zig, while spec registry still includes JavaScript as supported counted. [VERIFIED: `.planning/REQUIREMENTS.md`, `packages/spec/src/runtime.ts`]
    - What's unclear: Account save route only accepts TypeScript/Python/Rust/Zig source formats today. [VERIFIED: `apps/go-backend/live_backend.go`]
-   - Recommendation: Do not expand JavaScript behavior in Phase 244; preserve existing registry behavior but focus tests and readiness changes on named phase languages. [VERIFIED: `244-CONTEXT.md`]
+   - **Resolution:** Do not expand JavaScript behavior in Phase 244. Preserve existing registry compatibility where necessary, but Phase 244 tests and readiness changes target TypeScript, Python, Rust, and Zig only. [VERIFIED: `244-CONTEXT.md`]
 
 3. **Should Go reuse exact TypeScript persistence helper code through a generated fixture?**
    - What we know: Go and TS have duplicate proof logic today. [VERIFIED: `apps/go-backend/live_backend.go`, `packages/persistence/src/competition.ts`]
    - What's unclear: There is no current cross-language generated proof fixture for all negative cases. [VERIFIED: codebase grep]
-   - Recommendation: Add table fixtures or mirrored tests rather than adding a new runtime service just for proof matching. [VERIFIED: repository test layout]
+   - **Resolution:** Use mirrored table tests and small synthetic fixtures in Go and persistence rather than adding a generated cross-language proof service. Where DB-backed account-save persistence is required, start the existing project service or add a deterministic repository-supported substitute proving `accountRevisionInsert` receives proof-backed fields. [VERIFIED: repository test layout]
 
 ## Environment Availability
 

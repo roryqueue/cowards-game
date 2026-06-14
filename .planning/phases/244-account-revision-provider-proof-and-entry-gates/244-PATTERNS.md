@@ -1,8 +1,8 @@
 # Phase 244: Account Revision Provider-Proof and Entry Gates - Pattern Map
 
 **Mapped:** 2026-06-14
-**Files analyzed:** 17
-**Analogs found:** 14 / 14 likely touch files
+**Files analyzed:** 23
+**Analogs found:** 20 / 20 likely touch files
 
 ## File Classification
 
@@ -19,6 +19,12 @@
 | `scripts/check-boundary-monitors.test.ts` | test | batch/static scan | v1.35 inventory and direct-language monitor tests | exact |
 | `apps/web/app/api/account/revisions/save/route.ts` | route/controller | request-response | same route thin transport pattern | exact |
 | `apps/web/lib/account-revision-write-boundary.ts` | boundary adapter | request-response | same file unsupported source-format gate | exact |
+| `apps/web/app/strategies/[strategyId]/page.tsx` | page/read presenter | transform | account/workshop runtime semantics presenters | role-match |
+| `apps/web/app/matchsets/result-view-model.ts` | view-model derivation | transform | existing public-safe result evidence derivations in same file | exact |
+| `apps/web/app/matchsets/[matchSetId]/page.tsx` | page/read presenter | transform | `result-view-model.ts` runtime summary inputs | role-match |
+| `apps/web/lib/public-go-read-client.test.ts` | public read client test | request-response | public Strategy schema parsing tests in same file | exact |
+| `apps/web/app/matchsets/result-view-model.test.ts` | view-model test | transform | result workbench fixture tests in same file | exact |
+| `packages/spec/src/schemas.ts` / `packages/spec/src/competition.ts` / `packages/spec/src/service.ts` | DTO schema/type | transform | `StrategyRevisionSummaryServiceDtoSchema.runtimeSemantics` | role-match |
 | `packages/persistence/src/competition.ts` | service/reference | CRUD + request-response | stricter reference, avoid unless extracting helper | exact |
 | `packages/persistence/src/ladder.ts` | service/reference | CRUD + request-response | stricter reference, avoid unless extracting helper | exact |
 | `packages/persistence/src/account-revisions.ts` | read-model service | transform | provenance-aware semantics in same file | exact |
@@ -192,6 +198,14 @@ if runtimeAllowsCountedPlay(runtime, nil, sourceHash, sourceBytes) ||
 ```
 
 **Planner action:** Add the missing TypeScript equivalent: sourceArtifact format `transpiled-javascript`, provider id `strategy-language-provider-js-ts`, toolchain language `typescript`, valid proof, and negative checks for missing/stale/mismatched proof.
+
+### Public Strategy/result/replay label propagation (page/view-model/DTO transform)
+
+**Analogs:** `packages/persistence/src/account-revisions.ts#provenanceAwareRuntimeSemantics`, `apps/go-backend/live_backend.go#runtimeSemanticsForRevision`, and `StrategyRevisionSummaryServiceDtoSchema.runtimeSemantics` in `packages/spec/src/schemas.ts`.
+
+**Current drift to fix:** public Strategy pages recompute runtime semantics from raw runtime metadata, and MatchSet result/replay-facing summaries count entrants through `describeStrategyRuntimeProductSemantics(entrant.runtime)`. Both can re-promote TypeScript rows that lack provider proof.
+
+**Planner action:** Carry proof-aware runtime semantics from Go public Strategy DTOs through spec schemas/types if needed, consume DTO-provided semantics in `apps/web/app/strategies/[strategyId]/page.tsx`, and update `apps/web/app/matchsets/result-view-model.ts` / `apps/web/app/matchsets/[matchSetId]/page.tsx` so result/replay-facing labels do not compute counted readiness from raw runtime alone. Tests should assert TypeScript missing-proof rows never display `local-dev-fallback`, `Local/dev fallback`, or `Counted eligible` on public/default labels.
 
 ### `apps/go-backend/runtime_service_client_test.go` (Go client tests)
 
