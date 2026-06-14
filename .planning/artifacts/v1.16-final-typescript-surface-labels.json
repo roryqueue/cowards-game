@@ -5,7 +5,7 @@
   "generatedAt": "2026-05-24",
   "generatedBy": "scripts/generate-typescript-surface-labels.ts",
   "sourceInventoryPath": ".planning/artifacts/v1.16-typescript-backend-inventory.json",
-  "sourceInventorySurfaceCount": 208,
+  "sourceInventorySurfaceCount": 211,
   "globalPolicies": {
     "normalTypeScriptBackendAllowed": false,
     "publicOutputPrivacyRequired": true,
@@ -20,9 +20,9 @@
     "parity-only": 16,
     "quarantined": 1,
     "rollback-only": 5,
-    "runtime-adapter": 18,
+    "runtime-adapter": 19,
     "runtime-service": 5,
-    "test-only": 57
+    "test-only": 59
   },
   "capabilityGroups": {
     "fixture": 6,
@@ -32,10 +32,10 @@
     "owner-debug": 18,
     "parity": 15,
     "rollback": 6,
-    "runtime-adapter": 18,
+    "runtime-adapter": 19,
     "runtime-service": 5,
     "test-support": 41,
-    "Workshop": 42
+    "Workshop": 44
   },
   "publicOutputForbiddenMarkers": [
     "strategyMemory",
@@ -2901,6 +2901,37 @@
       }
     },
     {
+      "id": "packages-runtime-js-src-source-artifact",
+      "path": "packages/runtime-js/src/source-artifact.ts",
+      "kind": "runtime-adapter-module",
+      "taxonomyRole": "runtime-adapter",
+      "surfaceLabel": "runtime-adapter-execution-boundary",
+      "capabilityGroup": "runtime-adapter",
+      "owner": "runtime_js_adapter",
+      "reason": "Runtime adapter code executes Strategy ABI work only inside the runtime boundary. Phase 107 final label: Allowed selected TypeScript role is runtime adapter code inside the execution boundary.",
+      "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics; Allowed selected TypeScript role is runtime adapter code inside the execution boundary.",
+      "privacyClass": "internal-runtime-redacted",
+      "gate": "strategy-runtime-abi-v1.14 adapter contract within isolated runtime boundary",
+      "futureMigration": "May be fronted by a future Runtime Broker while preserving ABI envelopes.",
+      "monitorStatus": "phase-107-monitor-enforced",
+      "selectedNormal": true,
+      "selectedNormalJustification": "Allowed selected TypeScript role is runtime adapter code inside the execution boundary.",
+      "publicOutputPrivacy": "not-public-output",
+      "noPublicFallback": true,
+      "normalBackendAuthority": false,
+      "routeMethods": [],
+      "routeFamily": "runtime-adapter",
+      "sourceInventoryRole": "runtime-adapter",
+      "publicOutputExample": {
+        "path": "packages/runtime-js/src/source-artifact.ts",
+        "taxonomyRole": "runtime-adapter",
+        "surfaceLabel": "runtime-adapter-execution-boundary",
+        "capabilityGroup": "runtime-adapter",
+        "selectedNormal": true,
+        "noPublicFallback": true
+      }
+    },
+    {
       "id": "packages-runtime-js-src-subprocess-adapter-test",
       "path": "packages/runtime-js/src/subprocess-adapter.test.ts",
       "kind": "runtime-adapter-module",
@@ -3769,6 +3800,37 @@
       }
     },
     {
+      "id": "apps-web-app-api-workshop-revisions-route-test",
+      "path": "apps/web/app/api/workshop/revisions/route.test.ts",
+      "kind": "web-frontend-module",
+      "taxonomyRole": "test-only",
+      "surfaceLabel": "deferred-workshop-private-source",
+      "capabilityGroup": "Workshop",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic. Phase 107 final label: Deferred Workshop behavior is not selected normal backend traffic.",
+      "risk": "test or fixture path exposed to product runtime; Deferred Workshop behavior is not selected normal backend traffic.",
+      "privacyClass": "owner-private-workshop",
+      "gate": "deferred Workshop owner/session/local gate; private revision text and diagnostics are not public output",
+      "futureMigration": "Future Go Workshop migration may select validation, private revision, test launch, analytics rerun, profile save, export, or runtime support one slice at a time.",
+      "monitorStatus": "phase-107-monitor-enforced",
+      "selectedNormal": false,
+      "selectedNormalJustification": "Deferred Workshop behavior is not selected normal backend traffic.",
+      "publicOutputPrivacy": "owner-private",
+      "noPublicFallback": true,
+      "normalBackendAuthority": false,
+      "routeMethods": [],
+      "routeFamily": "workshop",
+      "sourceInventoryRole": "test-only",
+      "publicOutputExample": {
+        "path": "apps/web/app/api/workshop/revisions/route.test.ts",
+        "taxonomyRole": "test-only",
+        "surfaceLabel": "deferred-workshop-private-source",
+        "capabilityGroup": "Workshop",
+        "selectedNormal": false,
+        "noPublicFallback": true
+      }
+    },
+    {
       "id": "apps-web-app-api-workshop-tests-matchsetid-route-test",
       "path": "apps/web/app/api/workshop/tests/[matchSetId]/route.test.ts",
       "kind": "web-frontend-module",
@@ -3794,6 +3856,37 @@
         "path": "apps/web/app/api/workshop/tests/[matchSetId]/route.test.ts",
         "taxonomyRole": "test-only",
         "surfaceLabel": "deferred-workshop-test-launch",
+        "capabilityGroup": "Workshop",
+        "selectedNormal": false,
+        "noPublicFallback": true
+      }
+    },
+    {
+      "id": "apps-web-app-api-workshop-validate-route-test",
+      "path": "apps/web/app/api/workshop/validate/route.test.ts",
+      "kind": "web-frontend-module",
+      "taxonomyRole": "test-only",
+      "surfaceLabel": "deferred-workshop-validation",
+      "capabilityGroup": "Workshop",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic. Phase 107 final label: Deferred Workshop behavior is not selected normal backend traffic.",
+      "risk": "test or fixture path exposed to product runtime; Deferred Workshop behavior is not selected normal backend traffic.",
+      "privacyClass": "owner-private-workshop",
+      "gate": "deferred Workshop owner/session/local gate; private revision text and diagnostics are not public output",
+      "futureMigration": "Future Go Workshop migration may select validation, private revision, test launch, analytics rerun, profile save, export, or runtime support one slice at a time.",
+      "monitorStatus": "phase-107-monitor-enforced",
+      "selectedNormal": false,
+      "selectedNormalJustification": "Deferred Workshop behavior is not selected normal backend traffic.",
+      "publicOutputPrivacy": "owner-private",
+      "noPublicFallback": true,
+      "normalBackendAuthority": false,
+      "routeMethods": [],
+      "routeFamily": "workshop",
+      "sourceInventoryRole": "test-only",
+      "publicOutputExample": {
+        "path": "apps/web/app/api/workshop/validate/route.test.ts",
+        "taxonomyRole": "test-only",
+        "surfaceLabel": "deferred-workshop-validation",
         "capabilityGroup": "Workshop",
         "selectedNormal": false,
         "noPublicFallback": true
