@@ -25,8 +25,11 @@ v1.35 closes the runtime/account/security-policy edges left after v1.34 by makin
   3. Developer can rely on a locked v1.35 decision register before later phases change behavior, labels, routes, or proof gates.
 **Plans**: 3 plans
 Plans:
+**Wave 1**
 - [ ] 243-01-PLAN.md — Create deterministic v1.35 inventory evaluator and tests.
 - [ ] 243-02-PLAN.md — Populate the authoritative inventory artifacts and locked decision register.
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 243-03-PLAN.md — Wire static inventory checks into package scripts and boundary monitors.
 
 ### Phase 244: Account Revision Provider-Proof and Entry Gates
