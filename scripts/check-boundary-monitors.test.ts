@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   assertMonitorPublicPayload,
   assertReportOnlyBoundaryOffenseCount,
+  checkV135BoundarySurfaceInventoryMonitor,
   checkRuntimeAdapterBridge,
   findDirectLanguageSpecialCases,
   findUnknownReportOnlyOffenses,
@@ -23,6 +24,11 @@ import {
   validateV116TypeScriptWorkerQuarantineArtifact,
   validateV116RuntimeServiceBoundaryArtifact,
 } from "./check-boundary-monitors.ts"
+import {
+  generateV135BoundarySurfaceInventory,
+  writeV135BoundarySurfaceInventoryArtifacts,
+  type V135BoundarySurfaceRow,
+} from "./evaluate-v1-35-boundary-surface-inventory.ts"
 
 const requiredV115PublicOutputForbidden = [
   "Strategy source",
@@ -182,6 +188,8 @@ const createV116NoTypeScriptBackendTopologyArtifact = () =>
     ),
   ) as Record<string, unknown>
 
+const createTempRepo = () => mkdtempSync(path.join(tmpdir(), "cowards-v135-"))
+
 describe("boundary drift monitors", () => {
   afterEach(() => {
     vi.restoreAllMocks()
@@ -210,6 +218,128 @@ describe("boundary drift monitors", () => {
         "pnpm exec tsx scripts/check-boundary-monitors.ts",
       ),
     )
+  })
+
+  it("checks v1.35 boundary inventory artifacts without live dependencies", () => {
+    const root = createTempRepo()
+    try {
+      writeV135BoundarySurfaceInventoryArtifacts({ repoRoot: root })
+
+      expect(
+        checkV135BoundarySurfaceInventoryMonitor({ repoRoot: root }),
+      ).toBe("v1.35 boundary surface inventory artifacts are current")
+    } finally {
+      rmSync(root, { force: true, recursive: true })
+    }
+  })
+
+  it("fails v1.35 boundary inventory monitor on missing and stale artifacts", () => {
+    const root = createTempRepo()
+    try {
+      expect(() =>
+        checkV135BoundarySurfaceInventoryMonitor({ repoRoot: root }),
+      ).toThrow(
+        ".planning/artifacts/v1.35-boundary-surface-inventory.json is missing",
+      )
+
+      writeV135BoundarySurfaceInventoryArtifacts({ repoRoot: root })
+      writeFileSync(
+        path.join(
+          root,
+          ".planning/artifacts/v1.35-boundary-surface-inventory.md",
+        ),
+        "# stale inventory artifact\n",
+      )
+
+      expect(() =>
+        checkV135BoundarySurfaceInventoryMonitor({ repoRoot: root }),
+      ).toThrow(
+        ".planning/artifacts/v1.35-boundary-surface-inventory.md is stale",
+      )
+    } finally {
+      rmSync(root, { force: true, recursive: true })
+    }
+  })
+
+  it("fails v1.35 boundary inventory monitor on row ID, disposition, downstream phase, and affected requirements drift", () => {
+    const root = createTempRepo()
+    try {
+      writeV135BoundarySurfaceInventoryArtifacts({ repoRoot: root })
+      const jsonPath = path.join(
+        root,
+        ".planning/artifacts/v1.35-boundary-surface-inventory.json",
+      )
+      const artifact = JSON.parse(readFileSync(jsonPath, "utf8")) as {
+        rows: V135BoundarySurfaceRow[]
+        surfaces: V135BoundarySurfaceRow[]
+      }
+      const driftedRow = {
+        ...artifact.rows[0]!,
+        id: "v135-account-save-go-typescript-proof-drifted",
+        disposition: "quarantine" as const,
+        downstreamPhase: 245 as const,
+        affectedRequirements: ["INV-01", "INV-02", "AUTH-01"] as const,
+      }
+      artifact.rows = [driftedRow, ...artifact.rows.slice(1)]
+      artifact.surfaces = artifact.rows
+      writeFileSync(jsonPath, `${JSON.stringify(artifact, null, 2)}\n`)
+
+      expect(() =>
+        checkV135BoundarySurfaceInventoryMonitor({ repoRoot: root }),
+      ).toThrow(/row presence|disposition|downstreamPhase|affectedRequirements/)
+    } finally {
+      rmSync(root, { force: true, recursive: true })
+    }
+  })
+
+  it("fails v1.35 boundary inventory monitor on forbidden overclaim patterns", () => {
+    const rows = [
+      "production sandbox certification",
+      "TinyGo production support",
+      "package ecosystem support",
+      "rich-package support",
+      "host import support",
+      "TypeScript/Python WASM isolation",
+    ].map((claim) => ({
+      ...generateV135BoundarySurfaceInventory().rows[0]!,
+      currentBehavior: `Claims ${claim}.`,
+    }))
+
+    for (const row of rows) {
+      expect(() =>
+        checkV135BoundarySurfaceInventoryMonitor({ rows: [row] }),
+      ).toThrow(/forbidden overclaim/)
+    }
+  })
+
+  it("fails v1.35 boundary inventory monitor on public/default leakage markers", () => {
+    const markers = [
+      "raw diagnostics",
+      "source",
+      "artifact bytes",
+      "host paths",
+      "env values",
+      "tokens",
+      "DB details",
+      "private runtime internals",
+      "StrategyMemory",
+      "SoldierMemory",
+      "objective payload",
+    ] as const
+
+    for (const marker of markers) {
+      expect(() =>
+        checkV135BoundarySurfaceInventoryMonitor({
+          rows: [
+            {
+              ...generateV135BoundarySurfaceInventory().rows[0]!,
+              dataClass: "public",
+              currentBehavior: `Returns ${marker}.`,
+            },
+          ],
+        }),
+      ).toThrow(/forbidden public\/default leakage/)
+    }
   })
 
   it("allows removed baseline web offenses but fails unknown new ones", () => {
@@ -970,6 +1100,14 @@ describe("boundary drift monitors", () => {
       expect(topology?.detail).toContain(
         "required live v1.16 no-TypeScript-backend topology diagnostics checked",
       )
+      const inventory = checks.find(
+        (check) => check.name === "v1.35 boundary surface inventory",
+      )
+      expect(inventory).toMatchObject({
+        layer: "contract_drift",
+        ok: true,
+        detail: "v1.35 boundary surface inventory artifacts are current",
+      })
     } finally {
       if (previousLiveTopology === undefined) {
         delete process.env.COWARDS_REQUIRE_LIVE_TOPOLOGY
