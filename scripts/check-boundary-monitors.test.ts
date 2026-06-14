@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   assertMonitorPublicPayload,
   assertReportOnlyBoundaryOffenseCount,
+  checkV135AccountProviderEntryProofMonitor,
   checkV135BoundarySurfaceInventoryMonitor,
   checkRuntimeAdapterBridge,
   findDirectLanguageSpecialCases,
@@ -203,11 +204,22 @@ describe("boundary drift monitors", () => {
     expect(packageJson.scripts["v1.35:boundary-inventory"]).toBe(
       "pnpm exec tsx scripts/evaluate-v1-35-boundary-surface-inventory.ts --write",
     )
-    expect(packageJson.scripts["v1.35:boundary-inventory:check"]).toBe(
+  expect(packageJson.scripts["v1.35:boundary-inventory:check"]).toBe(
       "pnpm exec tsx scripts/evaluate-v1-35-boundary-surface-inventory.ts --check",
+    )
+    expect(packageJson.scripts["v1.35:account-provider-entry-proof"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-35-account-provider-entry-proof.ts --write",
+    )
+    expect(
+      packageJson.scripts["v1.35:account-provider-entry-proof:check"],
+    ).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-35-account-provider-entry-proof.ts --check",
     )
     expect(packageJson.scripts["boundary:monitors"]).toContain(
       "pnpm v1.35:boundary-inventory:check",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).toContain(
+      "pnpm v1.35:account-provider-entry-proof:check",
     )
     expect(
       packageJson.scripts["boundary:monitors"].indexOf(
@@ -217,6 +229,21 @@ describe("boundary drift monitors", () => {
       packageJson.scripts["boundary:monitors"].indexOf(
         "pnpm exec tsx scripts/check-boundary-monitors.ts",
       ),
+    )
+    expect(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.35:account-provider-entry-proof:check",
+      ),
+    ).toBeLessThan(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm exec tsx scripts/check-boundary-monitors.ts",
+      ),
+    )
+  })
+
+  it("checks v1.35 account provider entry proof artifacts without live dependencies", () => {
+    expect(checkV135AccountProviderEntryProofMonitor()).toBe(
+      "v1.35 account provider entry proof artifacts are current",
     )
   })
 

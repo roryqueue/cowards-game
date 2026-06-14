@@ -22,6 +22,7 @@ import {
   checkV135BoundarySurfaceInventoryArtifacts,
   type GenerateV135BoundarySurfaceInventoryOptions,
 } from "./evaluate-v1-35-boundary-surface-inventory.ts"
+import { checkV135AccountProviderEntryProofArtifacts } from "./evaluate-v1-35-account-provider-entry-proof.ts"
 
 export { validateV116NoTypeScriptBackendTopologyArtifact }
 import {
@@ -934,6 +935,14 @@ export const checkV135BoundarySurfaceInventoryMonitor = (
     throw new Error(failures.join("; "))
   }
   return "v1.35 boundary surface inventory artifacts are current"
+}
+
+export const checkV135AccountProviderEntryProofMonitor = (): string => {
+  const failures = checkV135AccountProviderEntryProofArtifacts()
+  if (failures.length > 0) {
+    throw new Error(failures.join("; "))
+  }
+  return "v1.35 account provider entry proof artifacts are current"
 }
 
 const checkOpenApiContract = (): string => {
@@ -5473,6 +5482,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("contract_drift", "v1.35 boundary surface inventory", () =>
     checkV135BoundarySurfaceInventoryMonitor(),
+  ),
+  await check("contract_drift", "v1.35 account provider entry proof", () =>
+    checkV135AccountProviderEntryProofMonitor(),
   ),
   await check("runtime_adapter", "runtime registry and adapter metadata", () =>
     checkRuntimeAdapters(),
