@@ -1,4 +1,8 @@
-import type { StrategyRevisionValidationReport } from "@cowards/spec"
+import type {
+  StrategyRevisionValidationReport,
+  WorkshopCheckerDiagnostic,
+  WorkshopCheckerResponse,
+} from "@cowards/spec"
 import type { WorkshopRevisionSummary } from "./types.js"
 import type { WorkshopSampleSummary } from "./types.js"
 import type { WorkshopTestSummary } from "./types.js"
@@ -8,34 +12,64 @@ export type DraftValidationState =
   | "checking"
   | "valid"
   | "invalid"
+  | "stale"
+  | "unavailable"
 
 export const getDraftStatusLabel = (
   state: DraftValidationState,
-): "Not checked" | "Checking..." | "Valid draft" | "Invalid draft" => {
+):
+  | "Not checked"
+  | "Checking source..."
+  | "Ready to submit"
+  | "Invalid draft"
+  | "Stale check"
+  | "Checker unavailable" => {
   switch (state) {
     case "checking":
-      return "Checking..."
+      return "Checking source..."
     case "valid":
-      return "Valid draft"
+      return "Ready to submit"
     case "invalid":
       return "Invalid draft"
+    case "stale":
+      return "Stale check"
+    case "unavailable":
+      return "Checker unavailable"
     case "not-checked":
       return "Not checked"
   }
 }
 
 export const getDraftStatusClass = (state: DraftValidationState): string =>
-  state === "valid" ? "valid" : state === "invalid" ? "invalid" : ""
+  state === "valid"
+    ? "valid"
+    : state === "invalid"
+      ? "invalid"
+      : state === "stale" || state === "unavailable"
+        ? "warning"
+        : ""
 
 export const formatValidationIssueHeading = (
   issue: StrategyRevisionValidationReport["errors"][number],
 ): string => `${issue.severity.toUpperCase()} / ${issue.code}`
+
+export const formatCheckerDiagnosticHeading = (
+  diagnostic: WorkshopCheckerDiagnostic,
+): string => `${diagnostic.severity.toUpperCase()} / ${diagnostic.code}`
 
 export interface ValidationIssueGuidance {
   constraint: string
   message: string
   remediation: string | null
   reference: string | null
+}
+
+export interface CheckerDiagnosticGuidance {
+  constraint: string
+  message: string
+  remediation: string | null
+  reference: string | null
+  actionability: WorkshopCheckerDiagnostic["actionability"]
 }
 
 export const formatValidationIssueGuidance = (
@@ -57,17 +91,62 @@ export const formatValidationIssueGuidance = (
   }
 }
 
+export const formatCheckerDiagnosticGuidance = (
+  diagnostic: WorkshopCheckerDiagnostic,
+): CheckerDiagnosticGuidance => ({
+  constraint: diagnostic.constraint ?? diagnostic.message,
+  message: diagnostic.message,
+  remediation: diagnostic.remediation,
+  reference: diagnostic.reference,
+  actionability: diagnostic.actionability,
+})
+
 export const validationStateFromReport = (
   report: StrategyRevisionValidationReport | null,
   checking: boolean,
+  stale = false,
 ): DraftValidationState => {
   if (checking) {
     return "checking"
+  }
+  if (stale) {
+    return "stale"
   }
   if (!report) {
     return "not-checked"
   }
   return report.valid ? "valid" : "invalid"
+}
+
+export const validationStateFromChecker = (
+  checker: WorkshopCheckerResponse | null,
+  checking: boolean,
+  stale = false,
+): DraftValidationState => {
+  if (checking) {
+    return "checking"
+  }
+  if (stale) {
+    return "stale"
+  }
+  switch (checker?.status) {
+    case "ready":
+      return "valid"
+    case "invalid":
+      return "invalid"
+    case "runtime_service_unavailable":
+    case "toolchain_unavailable":
+    case "system_unavailable":
+      return "unavailable"
+    case "stale":
+      return "stale"
+    case "checking":
+      return "checking"
+    case "not_checked":
+    case undefined:
+      return "not-checked"
+  }
+  return "not-checked"
 }
 
 export interface WorkshopSampleGroups {
@@ -93,24 +172,62 @@ export const getSampleChipLabels = (
   sample: WorkshopSampleSummary,
 ): string[] => [...sample.categories, getSampleKindLabel(sample)]
 
+export const checkerMatchesValidation = (
+  checker: WorkshopCheckerResponse | null,
+  validation: StrategyRevisionValidationReport | null,
+): checker is WorkshopCheckerResponse =>
+  Boolean(
+    checker &&
+    validation &&
+    checker.cacheIdentity.sourceHash === validation.sourceHash &&
+    checker.cacheIdentity.sourceBytes === validation.sourceBytes &&
+    checker.source.hash === validation.sourceHash &&
+    checker.source.bytes === validation.sourceBytes,
+  )
+
 export const canSubmitRevision = (input: {
   validation: StrategyRevisionValidationReport | null
+  checker?: WorkshopCheckerResponse | null | undefined
   checking: boolean
   submitting: boolean
-}): boolean => Boolean(input.validation?.valid) && !input.submitting
+}): boolean =>
+  Boolean(input.validation?.valid) &&
+  checkerMatchesValidation(input.checker ?? null, input.validation) &&
+  input.checker?.status === "ready" &&
+  !input.checking &&
+  !input.submitting
 
 export const getSubmitBlockedReason = (input: {
   validation: StrategyRevisionValidationReport | null
+  stale?: boolean | undefined
+  checker?: WorkshopCheckerResponse | null | undefined
   checking: boolean
 }): string | null => {
-  if (input.validation?.valid) {
+  if (
+    input.validation?.valid &&
+    input.checker?.status === "ready" &&
+    checkerMatchesValidation(input.checker, input.validation)
+  ) {
     return null
   }
   if (input.checking) {
-    return "Checking draft before submitting."
+    return "Checking source before submitting."
+  }
+  if (input.stale) {
+    return "Previous check is stale. Validate this draft before submitting."
+  }
+  if (
+    input.checker?.status === "runtime_service_unavailable" ||
+    input.checker?.status === "toolchain_unavailable" ||
+    input.checker?.status === "system_unavailable"
+  ) {
+    return "Checker is unavailable; retry validation before submitting."
   }
   if (input.validation && !input.validation.valid) {
     return "Resolve validation errors before submitting."
+  }
+  if (input.validation?.valid && input.checker?.status !== "ready") {
+    return "Validate source before submitting."
   }
   if (!input.validation) {
     return "Validate source before submitting."

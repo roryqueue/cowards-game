@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest"
+import type { WorkshopCheckerResponse } from "@cowards/spec"
 import type { WorkshopRevisionSummary } from "./types.js"
 import {
   canSubmitRevision,
   canOpenReplay,
   canOpenOwnerReplay,
+  checkerMatchesValidation,
   formatMatchOutcome,
   formatUsedInMatches,
+  formatCheckerDiagnosticGuidance,
+  formatCheckerDiagnosticHeading,
   formatValidationIssueGuidance,
   formatValidationIssueHeading,
   getSampleChipLabels,
@@ -21,6 +25,7 @@ import {
   groupWorkshopSamples,
   isTerminalTestStatus,
   prependRevision,
+  validationStateFromChecker,
   validationStateFromReport,
 } from "./workshop-client-state.js"
 
@@ -53,11 +58,70 @@ const invalidReport = {
   ],
 }
 
+const validChecker: WorkshopCheckerResponse = {
+  contractVersion: "workshop-checker-v1.34",
+  status: "ready",
+  sourceFormat: "typescript",
+  language: {
+    id: "typescript",
+    label: "TypeScript",
+    providerId: "strategy-language-provider-js-ts",
+    contractVersion: "strategy-language-provider-contract-v1.33",
+  },
+  owners: {
+    validationOwner: "runtime-service",
+    buildOwner: "runtime-service",
+    executionOwner: "runtime-service",
+  },
+  source: {
+    hash: validReport.sourceHash,
+    bytes: validReport.sourceBytes,
+  },
+  artifact: {
+    kind: "source-artifact",
+    format: "transpiled-javascript",
+    hash: "artifact-hash",
+    bytes: 456,
+    state: "present",
+  },
+  provenance: {
+    state: "valid",
+    providerProofState: "valid",
+  },
+  runtimeService: {
+    availability: "available",
+    publicReason: null,
+  },
+  toolchain: {
+    availability: "not_required",
+    languageToolchain: null,
+    publicReason: null,
+  },
+  diagnostics: [],
+  cacheIdentity: {
+    languageId: "typescript",
+    providerId: "strategy-language-provider-js-ts",
+    sourceHash: validReport.sourceHash,
+    sourceBytes: validReport.sourceBytes,
+    artifactHash: "artifact-hash",
+    artifactBytes: 456,
+    providerContractVersion: "strategy-language-provider-contract-v1.33",
+    runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+    validationPolicy: "workshop-provider-checker-policy-v1.34",
+    toolchainKey: null,
+  },
+  privacy: {
+    publicSafe: true,
+    redacted: true,
+    excludedFields: [],
+  },
+}
+
 describe("Strategy Workshop validation helpers", () => {
   it("formats the Strategy Workshop status labels", () => {
     expect(getDraftStatusLabel("not-checked")).toBe("Not checked")
-    expect(getDraftStatusLabel("checking")).toBe("Checking...")
-    expect(getDraftStatusLabel("valid")).toBe("Valid draft")
+    expect(getDraftStatusLabel("checking")).toBe("Checking source...")
+    expect(getDraftStatusLabel("valid")).toBe("Ready to submit")
     expect(getDraftStatusLabel("invalid")).toBe("Invalid draft")
   })
 
@@ -69,6 +133,36 @@ describe("Strategy Workshop validation helpers", () => {
         message: "Strategy source must contain export default",
       }),
     ).toBe("ERROR / MISSING_DEFAULT_EXPORT")
+  })
+
+  it("formats public checker diagnostics by category and actionability", () => {
+    const diagnostic = {
+      code: "TRANSPILE_FAILED",
+      category: "toolchain_unavailable" as const,
+      severity: "error" as const,
+      actionability: "install_or_configure_toolchain" as const,
+      message:
+        "Rust checker could not use the required toolchain. The Strategy has not been judged invalid.",
+      constraint: null,
+      remediation: "Install rustc and the wasm32-wasip1 target.",
+      reference: "runtime/languages#rust",
+      line: null,
+      column: null,
+      publicSafe: true as const,
+    }
+
+    expect(formatCheckerDiagnosticHeading(diagnostic)).toBe(
+      "ERROR / TRANSPILE_FAILED",
+    )
+    expect(formatCheckerDiagnosticGuidance(diagnostic)).toEqual({
+      constraint:
+        "Rust checker could not use the required toolchain. The Strategy has not been judged invalid.",
+      message:
+        "Rust checker could not use the required toolchain. The Strategy has not been judged invalid.",
+      remediation: "Install rustc and the wasm32-wasip1 target.",
+      reference: "runtime/languages#rust",
+      actionability: "install_or_configure_toolchain",
+    })
   })
 
   it("formats validation issue guidance from constraint and remediation fields", () => {
@@ -130,6 +224,72 @@ describe("Strategy Workshop validation helpers", () => {
     ).toBe("invalid")
   })
 
+  it("derives stale and unavailable states from checker responses", () => {
+    expect(validationStateFromReport(validReport, false, true)).toBe("stale")
+    expect(
+      validationStateFromChecker(
+        {
+          contractVersion: "workshop-checker-v1.34",
+          status: "runtime_service_unavailable",
+          sourceFormat: "python",
+          language: {
+            id: "python",
+            label: "Python",
+            providerId: "strategy-language-provider-python",
+            contractVersion: "strategy-language-provider-contract-v1.33",
+          },
+          owners: {
+            validationOwner: "runtime-service",
+            buildOwner: "runtime-service",
+            executionOwner: "runtime-service",
+          },
+          source: { hash: "hash", bytes: 10 },
+          artifact: {
+            kind: "source-artifact",
+            format: "python-source-bundle",
+            hash: null,
+            bytes: null,
+            state: "missing",
+          },
+          provenance: {
+            state: "missing",
+            providerProofState: "missing",
+          },
+          runtimeService: {
+            availability: "unavailable",
+            publicReason:
+              "Python checker could not reach runtime-service. The Strategy has not been judged invalid.",
+          },
+          toolchain: {
+            availability: "not_required",
+            languageToolchain: null,
+            publicReason: null,
+          },
+          diagnostics: [],
+          cacheIdentity: {
+            languageId: "python",
+            providerId: "strategy-language-provider-python",
+            sourceHash: "hash",
+            sourceBytes: 10,
+            artifactHash: null,
+            artifactBytes: null,
+            providerContractVersion:
+              "strategy-language-provider-contract-v1.33",
+            runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+            validationPolicy: "workshop-provider-checker-policy-v1.34",
+            toolchainKey: null,
+          },
+          privacy: {
+            publicSafe: true,
+            redacted: true,
+            excludedFields: [],
+          },
+        },
+        false,
+      ),
+    ).toBe("unavailable")
+  })
+
   it("blocks Submit revision when validation is invalid", () => {
     expect(
       getSubmitBlockedReason({
@@ -157,20 +317,37 @@ describe("Strategy Workshop validation helpers", () => {
     ).toBe("Resolve validation errors before submitting.")
   })
 
-  it("keeps Submit revision stable while revalidating an already-valid source", () => {
+  it("requires a current ready checker before submitting", () => {
+    expect(checkerMatchesValidation(validChecker, validReport)).toBe(true)
     expect(
       canSubmitRevision({
         validation: validReport,
-        checking: true,
+        checker: validChecker,
+        checking: false,
         submitting: false,
       }),
     ).toBe(true)
+    expect(
+      canSubmitRevision({
+        validation: validReport,
+        checker: validChecker,
+        checking: true,
+        submitting: false,
+      }),
+    ).toBe(false)
+    expect(
+      canSubmitRevision({
+        validation: validReport,
+        checking: false,
+        submitting: false,
+      }),
+    ).toBe(false)
     expect(
       getSubmitBlockedReason({
         validation: validReport,
         checking: true,
       }),
-    ).toBeNull()
+    ).toBe("Checking source before submitting.")
   })
 
   it("formats Revision submitted history rows and Load source metadata", () => {
@@ -220,6 +397,7 @@ describe("Strategy Workshop validation helpers", () => {
     expect(
       canSubmitRevision({
         validation: revision.validation,
+        checker: validChecker,
         checking: false,
         submitting: false,
       }),

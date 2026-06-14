@@ -25,6 +25,8 @@
     "wasm-wasi:evaluate:check": "pnpm exec tsx scripts/evaluate-wasm-wasi-runtime.ts --check",
     "tinygo-wasi:spike": "pnpm exec tsx scripts/evaluate-v1-33-tinygo-wasi-spike.ts",
     "tinygo-wasi:spike:check": "pnpm exec tsx scripts/evaluate-v1-33-tinygo-wasi-spike.ts --check",
+    "v1.34:workshop-checker": "pnpm exec tsx scripts/evaluate-v1-34-workshop-checker.ts",
+    "v1.34:workshop-checker:check": "pnpm exec tsx scripts/evaluate-v1-34-workshop-checker.ts --check",
     "wasm-wasi:beta-evaluate": "pnpm exec tsx scripts/evaluate-v1-23-wasm-wasi-beta.ts",
     "wasm-wasi:beta-evaluate:check": "pnpm exec tsx scripts/evaluate-v1-23-wasm-wasi-beta.ts --check",
     "runtime-abuse:evaluate": "pnpm exec tsx scripts/evaluate-v1-24-runtime-abuse-lab.ts",

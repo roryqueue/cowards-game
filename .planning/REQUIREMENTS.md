@@ -41,34 +41,34 @@ Bring Workshop "Validate source" checker behavior for TypeScript, Python, Rust, 
 
 ### Provider-Grade Validate Source Semantics
 
-- [ ] **CHECKVAL-01**: Workshop Validate source for TypeScript continues to use the existing provider-grade checker semantics and remains the parity baseline for status, actionability, and public-safe diagnostics.
-- [ ] **CHECKVAL-02**: Workshop Validate source for Python uses the same constrained provider/runtime-service validation semantics as submit, including policy checks for forbidden capabilities, imports, packages, source/artifact provenance compatibility, limits, and public-safe failure categories.
-- [ ] **CHECKVAL-03**: Workshop Validate source for Rust uses provider/runtime-service artifact validation semantics equivalent to submit, including compile/toolchain checks, WASM/WASI Preview 1 artifact metadata, import compatibility, stale/missing/mismatched artifact detection, and public-safe failure categories.
-- [ ] **CHECKVAL-04**: Workshop Validate source for Zig uses provider/runtime-service artifact validation semantics equivalent to submit, including compile/toolchain checks, no-std/helper compatibility, WASM/WASI Preview 1 artifact metadata, import compatibility, stale/missing/mismatched artifact detection, and public-safe failure categories.
-- [ ] **CHECKVAL-05**: Validate, submit, save, and entry paths fail consistently for unsupported providers, stale artifacts, mismatched provenance, invalid output shape, unavailable runtime-service, unavailable toolchain, and privacy-unsafe diagnostics without silently falling back to another runtime or mutable source.
+- [x] **CHECKVAL-01**: Workshop Validate source for TypeScript continues to use the existing provider-grade checker semantics and remains the parity baseline for status, actionability, and public-safe diagnostics.
+- [x] **CHECKVAL-02**: Workshop Validate source for Python uses the same constrained provider/runtime-service validation semantics as submit, including policy checks for forbidden capabilities, imports, packages, source/artifact provenance compatibility, limits, and public-safe failure categories.
+- [x] **CHECKVAL-03**: Workshop Validate source for Rust uses provider/runtime-service artifact validation semantics equivalent to submit, including compile/toolchain checks, WASM/WASI Preview 1 artifact metadata, import compatibility, stale/missing/mismatched artifact detection, and public-safe failure categories.
+- [x] **CHECKVAL-04**: Workshop Validate source for Zig uses provider/runtime-service artifact validation semantics equivalent to submit, including compile/toolchain checks, no-std/helper compatibility, WASM/WASI Preview 1 artifact metadata, import compatibility, stale/missing/mismatched artifact detection, and public-safe failure categories.
+- [x] **CHECKVAL-05**: Validate, submit, save, and entry paths fail consistently for unsupported providers, stale artifacts, mismatched provenance, invalid output shape, unavailable runtime-service, unavailable toolchain, and privacy-unsafe diagnostics without silently falling back to another runtime or mutable source.
 
 ### Language-Specific Diagnostics and UX
 
-- [ ] **CHECKDIAG-01**: Python Workshop diagnostics distinguish policy/capability errors, forbidden imports, package/dependency errors, syntax/build errors, provenance errors, runtime-service unavailable, timeout/limit failures, and invalid output/schema failures using actionable, public-safe messages.
-- [ ] **CHECKDIAG-02**: Rust Workshop diagnostics distinguish compile errors, artifact/provenance errors, forbidden WASI/import errors, runtime-service errors, toolchain unavailable, timeout/limit failures, and invalid output/schema failures using actionable, public-safe messages.
-- [ ] **CHECKDIAG-03**: Zig Workshop diagnostics distinguish compile errors, artifact/provenance errors, forbidden WASI/import errors, no-std/helper misuse, runtime-service errors, toolchain unavailable, timeout/limit failures, and invalid output/schema failures using actionable, public-safe messages.
-- [ ] **CHECKDIAG-04**: Toolchain-unavailable and runtime-service-unavailable states are honest, calm, non-scary, and explain what the player can do next without implying their Strategy is unsafe or broken.
-- [ ] **CHECKDIAG-05**: Diagnostics never expose Strategy source, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, or objective payloads in public/default Workshop output.
+- [x] **CHECKDIAG-01**: Python Workshop diagnostics distinguish policy/capability errors, forbidden imports, package/dependency errors, syntax/build errors, provenance errors, runtime-service unavailable, timeout/limit failures, and invalid output/schema failures using actionable, public-safe messages.
+- [x] **CHECKDIAG-02**: Rust Workshop diagnostics distinguish compile errors, artifact/provenance errors, forbidden WASI/import errors, runtime-service errors, toolchain unavailable, timeout/limit failures, and invalid output/schema failures using actionable, public-safe messages.
+- [x] **CHECKDIAG-03**: Zig Workshop diagnostics distinguish compile errors, artifact/provenance errors, forbidden WASI/import errors, no-std/helper misuse, runtime-service errors, toolchain unavailable, timeout/limit failures, and invalid output/schema failures using actionable, public-safe messages.
+- [x] **CHECKDIAG-04**: Toolchain-unavailable and runtime-service-unavailable states are honest, calm, non-scary, and explain what the player can do next without implying their Strategy is unsafe or broken.
+- [x] **CHECKDIAG-05**: Diagnostics never expose Strategy source, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, or objective payloads in public/default Workshop output.
 
 ### Checker Ergonomics, Caching, and Boundaries
 
-- [ ] **CHECKERG-01**: Rust and Zig Workshop validation is debounced, cached, coalesced, or otherwise made realistic enough for ordinary editing without excessive compile/runtime-service calls or stale status flicker.
-- [ ] **CHECKERG-02**: Checker caching keys account for language, provider id, source hash/bytes, artifact hash/bytes where applicable, toolchain/provider compatibility metadata, and validation policy so stale or cross-language diagnostics cannot be reused incorrectly.
-- [ ] **CHECKERG-03**: Workshop UI clearly separates checking, checked, unavailable, failed, stale, and ready states across TypeScript, Python, Rust, and Zig without adding TinyGo to production surfaces.
-- [ ] **CHECKERG-04**: Web/API/Go surfaces treat checker responses as validated data and do not execute Strategy source, compiler artifacts, or runtime payloads outside the approved runtime-service/provider boundary.
+- [x] **CHECKERG-01**: Rust and Zig Workshop validation is debounced, cached, coalesced, or otherwise made realistic enough for ordinary editing without excessive compile/runtime-service calls or stale status flicker.
+- [x] **CHECKERG-02**: Checker caching keys account for language, provider id, source hash/bytes, artifact hash/bytes where applicable, toolchain/provider compatibility metadata, and validation policy so stale or cross-language diagnostics cannot be reused incorrectly.
+- [x] **CHECKERG-03**: Workshop UI clearly separates checking, checked, unavailable, failed, stale, and ready states across TypeScript, Python, Rust, and Zig without adding TinyGo to production surfaces.
+- [x] **CHECKERG-04**: Web/API/Go surfaces treat checker responses as validated data and do not execute Strategy source, compiler artifacts, or runtime payloads outside the approved runtime-service/provider boundary.
 
 ### Tests, E2E Proof, and Audit
 
-- [ ] **CHECKTEST-01**: Focused unit/integration tests cover Validate source and submit/save/entry parity for TypeScript, Python, Rust, and Zig, including invalid source, forbidden capability/import/package, compile/artifact/provenance mismatch, unavailable runtime-service/toolchain, timeout/limit, invalid output/schema, and no-fallback cases.
-- [ ] **CHECKTEST-02**: Privacy tests scan Workshop checker responses, UI text, logs/fixtures where relevant, and public/default output for Strategy source, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, and objective payload leaks.
-- [ ] **CHECKTEST-03**: At least one service-backed E2E proof validates all four Workshop checker paths end to end for TypeScript, Python, Rust, and Zig using runtime-service/provider semantics where required.
-- [ ] **CHECKTEST-04**: Boundary monitors prove no Strategy execution moved into web/API/Go, TinyGo remains spike-only/hidden, TypeScript/Python provenance claims remain non-WASM-isolation claims, and Rust/Zig remain immutable WASM/WASI Preview 1 artifact-backed lanes.
-- [ ] **CHECKTEST-05**: Final validation records inventory findings, parity decisions, checker UX evidence, caching/debounce behavior, test commands, service-backed E2E proof, privacy scans, audit outcome, and any local toolchain/runtime-service limitations.
+- [x] **CHECKTEST-01**: Focused unit/integration tests cover Validate source and submit/save/entry parity for TypeScript, Python, Rust, and Zig, including invalid source, forbidden capability/import/package, compile/artifact/provenance mismatch, unavailable runtime-service/toolchain, timeout/limit, invalid output/schema, and no-fallback cases.
+- [x] **CHECKTEST-02**: Privacy tests scan Workshop checker responses, UI text, logs/fixtures where relevant, and public/default output for Strategy source, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, and objective payload leaks.
+- [x] **CHECKTEST-03**: At least one service-backed E2E proof validates all four Workshop checker paths end to end for TypeScript, Python, Rust, and Zig using runtime-service/provider semantics where required.
+- [x] **CHECKTEST-04**: Boundary monitors prove no Strategy execution moved into web/API/Go, TinyGo remains spike-only/hidden, TypeScript/Python provenance claims remain non-WASM-isolation claims, and Rust/Zig remain immutable WASM/WASI Preview 1 artifact-backed lanes.
+- [x] **CHECKTEST-05**: Final validation records inventory findings, parity decisions, checker UX evidence, caching/debounce behavior, test commands, service-backed E2E proof, privacy scans, audit outcome, and any local toolchain/runtime-service limitations.
 
 ## Future Requirements
 
@@ -99,18 +99,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 | --- | --- | --- |
 | CHECKINV-01..CHECKINV-04 | Phase 238 | Complete |
-| CHECKVAL-01..CHECKVAL-05 | Phase 239 | Planned |
-| CHECKDIAG-01..CHECKDIAG-05 | Phase 240 | Planned |
-| CHECKERG-01..CHECKERG-04 | Phase 241 | Planned |
-| CHECKTEST-01..CHECKTEST-05 | Phase 242 | Planned |
+| CHECKVAL-01..CHECKVAL-05 | Phase 239 | Complete |
+| CHECKDIAG-01..CHECKDIAG-05 | Phase 240 | Complete |
+| CHECKERG-01..CHECKERG-04 | Phase 241 | Complete |
+| CHECKTEST-01..CHECKTEST-05 | Phase 242 | Complete |
 
 **Coverage:**
 - v1 requirements: 23 total
-- Complete: 4
-- Planned: 19
+- Complete: 23
+- Planned: 0
 - Mapped to phases: 23
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-01*
-*Last updated: 2026-06-01 after Phase 238 completion*
+*Last updated: 2026-06-14 after Phases 239-242 implementation and verification*

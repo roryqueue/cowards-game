@@ -41,7 +41,9 @@ import {
   STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
   STRATEGY_LANGUAGE_PROVIDER_REGISTRY,
   SUPPORTED_STRATEGY_LANGUAGES,
+  WORKSHOP_CHECKER_CONTRACT_VERSION,
   getSupportedStrategyLanguageBySourceFormat,
+  isWorkshopCheckerSourceFormat,
   type StrategyRuntimeAdapterId,
 } from "../packages/spec/src/index.ts"
 
@@ -57,6 +59,7 @@ type MonitorLayer =
   | "language_provider"
   | "go_parity"
   | "go_promotion"
+  | "checker_contract"
   | "topology"
 
 export interface BoundaryMonitorCheck {
@@ -3041,6 +3044,66 @@ const checkV132SupportedLanguageProviders = (): string => {
   return `${SUPPORTED_STRATEGY_LANGUAGES.length} supported language/provider records checked`
 }
 
+const checkV134WorkshopCheckerBoundary = (): string => {
+  if (WORKSHOP_CHECKER_CONTRACT_VERSION !== "workshop-checker-v1.34") {
+    throw new Error("Workshop checker contract version drifted")
+  }
+  const productionSourceFormats = SUPPORTED_STRATEGY_LANGUAGES.map(
+    (language) => language.sourceFormat,
+  )
+    .filter(isWorkshopCheckerSourceFormat)
+    .sort()
+  if (
+    JSON.stringify(productionSourceFormats) !==
+    JSON.stringify(["python", "rust", "typescript", "zig"])
+  ) {
+    throw new Error(
+      `production checker language set drifted: ${productionSourceFormats.join(", ")}`,
+    )
+  }
+  if (getSupportedStrategyLanguageBySourceFormat("tinygo") !== null) {
+    throw new Error("TinyGo leaked into production source-format lookup")
+  }
+
+  const routeSource = readFileSync(
+    path.join(repoRoot, "apps/web/app/api/workshop/validate/route.ts"),
+    "utf8",
+  )
+  for (const required of [
+    "createWorkshopCheckerResponse",
+    "createWorkshopCheckerUnavailableResponse",
+    "isWorkshopCheckerSourceFormat",
+    "runtimeServiceValidateStrategy",
+    "validateWithCache",
+  ]) {
+    if (!routeSource.includes(required)) {
+      throw new Error(`Workshop checker route missing ${required}`)
+    }
+  }
+  for (const forbidden of [
+    "workshopServer.validateSource",
+    "@cowards/runtime-js",
+    "@cowards/runtime-python",
+    "@cowards/runtime-wasm-wasi",
+    "node:vm",
+    "tinygo",
+    "TinyGo",
+  ]) {
+    if (routeSource.includes(forbidden)) {
+      throw new Error(`Workshop checker route contains forbidden ${forbidden}`)
+    }
+  }
+
+  const clientSource = readFileSync(
+    path.join(repoRoot, "apps/web/app/workshop/workshop-client.tsx"),
+    "utf8",
+  )
+  if (clientSource.includes("forbiddenPatterns")) {
+    throw new Error("Workshop UI exposes forbiddenPatterns in public details")
+  }
+  return "v1.34 Workshop checker route, source-format set, TinyGo absence, cache/coalescing, and public details checked"
+}
+
 const checkV118IsolationBaselineArtifact = (): string => {
   const artifact = readJson<{
     schemaVersion?: unknown
@@ -5388,6 +5451,11 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("language_provider", "v1.33 supported language providers", () =>
     checkV132SupportedLanguageProviders(),
+  ),
+  await check(
+    "checker_contract",
+    "v1.34 Workshop checker provider boundary",
+    () => checkV134WorkshopCheckerBoundary(),
   ),
   await check("runtime_adapter", "runtime registry and adapter metadata", () =>
     checkRuntimeAdapters(),

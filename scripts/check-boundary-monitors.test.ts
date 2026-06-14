@@ -930,6 +930,7 @@ describe("boundary drift monitors", () => {
           "privacy",
           "web_boundary",
           "language_provider",
+          "checker_contract",
           "runtime_adapter",
           "runtime_isolation",
           "non_js_runtime",

@@ -13,10 +13,10 @@
 | Phase | Name | Goal | Requirements | Success Criteria |
 | --- | --- | --- | --- | --- |
 | 238 | Workshop Checker Path Inventory and Public Contract | Inventory Validate source, submit, save, and entry paths for all four production languages and define the shared public-safe checker contract. | CHECKINV-01..CHECKINV-04 | Planned |
-| 239 | Provider-Grade Validate Source Parity | Make Workshop Validate source reuse submit-grade provider/runtime-service validation semantics for TypeScript, Python, Rust, and Zig where appropriate. | CHECKVAL-01..CHECKVAL-05 | Planned |
-| 240 | Language Diagnostic UX and Availability States | Add actionable public-safe language-specific diagnostics and honest unavailable states for Python, Rust, and Zig. | CHECKDIAG-01..CHECKDIAG-05 | Planned |
-| 241 | Checker Ergonomics, Caching, and Boundary Monitors | Make Rust/Zig validation realistic for editing, prevent stale diagnostics, keep TinyGo hidden, and prove boundaries do not drift. | CHECKERG-01..CHECKERG-04 | Planned |
-| 242 | Four-Language Checker Proof, Privacy, and Audit | Add focused tests and a service-backed E2E proof covering all four Workshop checker paths, then audit and record evidence. | CHECKTEST-01..CHECKTEST-05 | Planned |
+| 239 | Provider-Grade Validate Source Parity | Make Workshop Validate source reuse submit-grade provider/runtime-service validation semantics for TypeScript, Python, Rust, and Zig where appropriate. | CHECKVAL-01..CHECKVAL-05 | Complete |
+| 240 | Language Diagnostic UX and Availability States | Add actionable public-safe language-specific diagnostics and honest unavailable states for Python, Rust, and Zig. | CHECKDIAG-01..CHECKDIAG-05 | Complete |
+| 241 | Checker Ergonomics, Caching, and Boundary Monitors | Make Rust/Zig validation realistic for editing, prevent stale diagnostics, keep TinyGo hidden, and prove boundaries do not drift. | CHECKERG-01..CHECKERG-04 | Complete |
+| 242 | Four-Language Checker Proof, Privacy, and Audit | Add focused tests and a service-backed E2E proof covering all four Workshop checker paths, then audit and record evidence. | CHECKTEST-01..CHECKTEST-05 | Complete |
 
 ## Phase Details
 
@@ -130,14 +130,14 @@
 ## Coverage
 
 - v1 requirements: 23 total
-- Complete: 0
-- Planned: 23
+- Complete: 23
+- Planned: 0
 - Mapped to phases: 23
 - Unmapped: 0
 
 ## Next Up
 
-Run `$gsd-plan-phase 239` to plan Provider-Grade Validate Source Parity, then execute Phase 239.
+Run final milestone audit/archive flow for v1.34 after review agents are incorporated.
 
 ---
-*Roadmap updated: 2026-06-14 after sequential context gathering for Phases 239-242*
+*Roadmap updated: 2026-06-14 after Phases 239-242 implementation and verification*

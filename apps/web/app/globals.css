@@ -268,6 +268,7 @@ textarea {
   border-left: 3px solid var(--destructive);
   padding: 8px;
   background: var(--surface-secondary);
+  overflow-wrap: anywhere;
 }
 
 .validation-row.warning {
@@ -289,6 +290,15 @@ textarea {
   margin-top: 8px;
   padding: 8px;
   background: var(--surface-secondary);
+}
+
+.validation-empty.warning {
+  border-left: 3px solid var(--warning);
+}
+
+.validation-empty.warning > p:first-child {
+  color: var(--warning);
+  font-weight: 650;
 }
 
 .details-grid {

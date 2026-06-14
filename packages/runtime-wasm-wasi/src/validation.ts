@@ -338,6 +338,21 @@ export const compileZigWasmArtifact = (source: string): WasmCompileResult => {
       forbiddenPatterns: gate.forbiddenPatterns,
     }
   }
+  if (zigVersion() === "zig unavailable") {
+    return {
+      ok: false,
+      forbiddenPatterns: gate.forbiddenPatterns,
+      errors: [
+        issue("TRANSPILE_FAILED", "Zig WASI toolchain unavailable.", {
+          constraint:
+            "Zig source validation requires the local Zig WASI toolchain.",
+          remediation:
+            "Install or configure Zig with wasm32-wasi support, then retry validation.",
+          reference: "runtime/languages#zig",
+        }),
+      ],
+    }
+  }
   const dir = mkdtempSync(join(tmpdir(), "cowards-zig-wasi-"))
   const sourcePath = join(dir, "strategy.zig")
   const artifactPath = join(dir, "strategy.wasm")
@@ -494,6 +509,21 @@ export const compileRustWasmArtifact = (source: string): WasmCompileResult => {
   }
   if (errors.length > 0) {
     return { ok: false, errors, forbiddenPatterns }
+  }
+  if (rustcVersion() === "rustc unavailable") {
+    return {
+      ok: false,
+      forbiddenPatterns,
+      errors: [
+        issue("TRANSPILE_FAILED", "Rust WASI toolchain unavailable.", {
+          constraint:
+            "Rust source validation requires rustc with the wasm32-wasip1 target.",
+          remediation:
+            "Install or configure rustc and the wasm32-wasip1 target, then retry validation.",
+          reference: "runtime/languages#rust",
+        }),
+      ],
+    }
   }
 
   const dir = mkdtempSync(join(tmpdir(), "cowards-rust-wasi-"))
