@@ -255,6 +255,20 @@ describe("v1.35 boundary surface inventory evaluator", () => {
   })
 
   it("accepts all v1.35 requirement IDs and rejects unknown requirement or downstream rows with only INV IDs for INV-01", () => {
+    expect(allowedRequirementIds).toEqual(
+      expect.arrayContaining([
+        "ACCT-01",
+        "ENTRY-01",
+        "AUTH-01",
+        "PRIV-01",
+        "API-01",
+        "SBOX-01",
+        "LABEL-01",
+        "PKG-01",
+        "PROOF-01",
+      ]),
+    )
+
     const allRequirementRows = baseRows()
     allRequirementRows[0] = {
       ...allRequirementRows[0]!,
