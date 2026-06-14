@@ -18,17 +18,25 @@ const runtimeLabel = (
       adapter: { id: string }
       package: { mode: string }
     }
+    runtimeSemantics?: {
+      languageId: string
+      adapterLabel: string
+      countedPlayLabel: "Counted eligible" | "Not counted"
+    }
   },
   nonCountedLanguages: ReadonlySet<string>,
 ): string => {
   const nonCountedByContract = nonCountedLanguages.has(
     entrant.runtime.language.id,
   )
+  const semantics = entrant.runtimeSemantics
   const language = runtimeExhibitionStatusLabel({
-    languageId: entrant.runtime.language.id,
-    countedPlayLabel: nonCountedByContract ? "Not counted" : "Counted eligible",
+    languageId: semantics?.languageId ?? entrant.runtime.language.id,
+    countedPlayLabel: nonCountedByContract
+      ? "Not counted"
+      : (semantics?.countedPlayLabel ?? "Counted eligible"),
   })
-  return `${language} · ${entrant.runtime.adapter.id}`
+  return `${language} · ${semantics?.adapterLabel ?? entrant.runtime.adapter.id}`
 }
 
 export default async function MatchSetResultPage({

@@ -31,6 +31,24 @@
           },
           "requiredCapabilities": []
         },
+        "runtimeSemantics": {
+          "adapterId": "runtime-js-worker-thread",
+          "adapterLabel": "runtime-js worker thread",
+          "countedPlayEligible": true,
+          "countedPlayLabel": "Counted eligible",
+          "countedPlayReason": null,
+          "docsReference": "runtime/languages",
+          "examplesReference": "samples/minimal-strategy",
+          "experimental": false,
+          "languageId": "typescript",
+          "languageLabel": "TypeScript",
+          "packagePolicyLabel": "No packages",
+          "readiness": "local-dev-fallback",
+          "readinessLabel": "Local/dev fallback",
+          "sourcePolicyLabel": "Self-contained Strategy source",
+          "validationIssueCodes": [],
+          "warnings": []
+        },
         "sourceBytes": 128,
         "sourceHash": "sourcehash-bottom",
         "strategyRevisionId": "strategy-revision:golden-bottom"
@@ -61,6 +79,24 @@
             "mode": "none"
           },
           "requiredCapabilities": []
+        },
+        "runtimeSemantics": {
+          "adapterId": "runtime-js-worker-thread",
+          "adapterLabel": "runtime-js worker thread",
+          "countedPlayEligible": true,
+          "countedPlayLabel": "Counted eligible",
+          "countedPlayReason": null,
+          "docsReference": "runtime/languages",
+          "examplesReference": "samples/minimal-strategy",
+          "experimental": false,
+          "languageId": "typescript",
+          "languageLabel": "TypeScript",
+          "packagePolicyLabel": "No packages",
+          "readiness": "local-dev-fallback",
+          "readinessLabel": "Local/dev fallback",
+          "sourcePolicyLabel": "Self-contained Strategy source",
+          "validationIssueCodes": [],
+          "warnings": []
         },
         "sourceBytes": 128,
         "sourceHash": "sourcehash-top",

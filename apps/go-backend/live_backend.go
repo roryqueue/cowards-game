@@ -780,7 +780,7 @@ func (server *LiveServer) forkableStrategyArtifact(kind string, artifactID strin
 	if stringValue(artifact.Validation, "sourceHash") != artifact.Source.Hash || artifact.Source.Hash != hashString(artifact.Source.Text) {
 		return strategyArtifact{}, errors.New("strategy artifact source hash drift")
 	}
-	if !runtimeAllowsCountedPlay(artifact.Runtime, nil, "", 0) {
+	if runtimeSemantics(artifact.Runtime)["countedPlayEligible"] != true {
 		return strategyArtifact{}, errors.New("strategy artifact runtime is not counted-play eligible")
 	}
 	return artifact, nil
@@ -994,6 +994,7 @@ func (row revisionRow) publicCard() map[string]any {
 		"sourceHash":          row.SourceHash,
 		"sourceBytes":         row.SourceBytes,
 		"runtime":             publicRuntimeMetadata(row.Runtime),
+		"runtimeSemantics":    runtimeSemanticsForRevision(row.Runtime, row.Metadata, row.SourceHash, row.SourceBytes),
 		"engineCompatibility": row.Engine,
 		"validationStatus":    validationStatus(row.Validation),
 		"record": map[string]any{
@@ -2082,7 +2083,7 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, 
 		if counted && !runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) {
 			return nil, errors.New("runtime is not counted-play eligible")
 		}
-		if !counted && !runtimeAllowsNonCountedExhibition(runtime) {
+		if !counted && !runtimeAllowsNonCountedExhibition(runtime, metadata, sourceHash, sourceBytes) {
 			return nil, errors.New("runtime is not eligible for non-counted exhibition")
 		}
 		label := stringValue(metadata, "label")
@@ -2097,6 +2098,7 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, 
 			"sourceHash":          sourceHash,
 			"sourceBytes":         sourceBytes,
 			"runtime":             publicRuntimeMetadata(runtime),
+			"runtimeSemantics":    runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes),
 			"engineCompatibility": jsonMap(engineRaw),
 			"lockedAt":            lockedAt.Format(time.RFC3339Nano),
 		}
@@ -2558,6 +2560,11 @@ func runtimeSemanticsForRevision(runtime map[string]any, metadata map[string]any
 	semantics := runtimeSemantics(runtime)
 	languageID := stringValue(mapValue(runtime, "language"), "id")
 	if languageID != "python" && languageID != "rust" && languageID != "zig" {
+		if languageID == "typescript" && !providerProofMatches(metadata, sourceHash, sourceBytes, languageID) {
+			semantics["countedPlayEligible"] = false
+			semantics["countedPlayLabel"] = "Not counted"
+			semantics["countedPlayReason"] = "TypeScript counted play requires provider-validated revision provenance."
+		}
 		return semantics
 	}
 	if languageID == "python" && pythonProviderValidationMatches(metadata, sourceHash, sourceBytes) {
@@ -2610,6 +2617,9 @@ func runtimeAllowsCountedPlay(runtime map[string]any, metadata map[string]any, s
 		}
 	} else if languageID == "typescript" {
 		if adapterID != "runtime-js-worker-thread" && adapterID != "runtime-js-subprocess" {
+			return false
+		}
+		if !sourceArtifactProviderValidationMatches(metadata, sourceHash, sourceBytes, "strategy-language-provider-js-ts", "typescript") {
 			return false
 		}
 	} else if languageID == "javascript" {
@@ -2759,7 +2769,7 @@ func providerValidationProof(providerID string, sourceHash string, sourceBytes i
 	return "hmac-sha256:" + hex.EncodeToString(mac.Sum(nil))
 }
 
-func runtimeAllowsNonCountedExhibition(runtime map[string]any) bool {
+func runtimeAllowsNonCountedExhibition(runtime map[string]any, metadata map[string]any, sourceHash string, sourceBytes int) bool {
 	if stringValue(runtime, "abiVersion") != "strategy-runtime-abi-v1.14" {
 		return false
 	}
@@ -2774,11 +2784,17 @@ func runtimeAllowsNonCountedExhibition(runtime map[string]any) bool {
 	if len(stringSliceFromAny(runtime["requiredCapabilities"])) != 0 {
 		return false
 	}
+	if languageID == "typescript" {
+		return (adapterID == "runtime-js-worker-thread" || adapterID == "runtime-js-subprocess") &&
+			sourceArtifactProviderValidationMatches(metadata, sourceHash, sourceBytes, "strategy-language-provider-js-ts", "typescript")
+	}
 	if languageID == "python" {
-		return adapterID == "runtime-python-subprocess-experimental"
+		return adapterID == "runtime-python-subprocess-experimental" &&
+			pythonProviderValidationMatches(metadata, sourceHash, sourceBytes)
 	}
 	if languageID == "rust" || languageID == "zig" {
-		return adapterID == "runtime-wasm-wasi-wasmtime-preview1"
+		return adapterID == "runtime-wasm-wasi-wasmtime-preview1" &&
+			rustProviderValidationMatches(metadata, sourceHash, sourceBytes, languageID)
 	}
 	return runtimeAllowsCountedPlay(runtime, nil, "", 0)
 }

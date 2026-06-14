@@ -270,7 +270,7 @@ func TestPythonRuntimeMetadataIsCountedProviderEligible(t *testing.T) {
 	if runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes)["countedPlayEligible"] != true {
 		t.Fatalf("Python revision semantics rejected matching provider validation")
 	}
-	if !runtimeAllowsNonCountedExhibition(runtime) ||
+	if !runtimeAllowsNonCountedExhibition(runtime, metadata, sourceHash, sourceBytes) ||
 		!runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) {
 		t.Fatalf("Python runtime eligibility gate drifted")
 	}
@@ -278,6 +278,32 @@ func TestPythonRuntimeMetadataIsCountedProviderEligible(t *testing.T) {
 		runtimeAllowsCountedPlay(runtime, metadata, "other", sourceBytes) ||
 		runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes+1) {
 		t.Fatalf("Python counted gate accepted missing or stale provider validation")
+	}
+}
+
+func TestTypeScriptRuntimeMetadataRequiresProviderProofForCountedPlay(t *testing.T) {
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
+	runtime := defaultRuntimeMetadata()
+	source := "export default { selectActivations() { return []; }, soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: null }; } }"
+	sourceHash := hashString(source)
+	sourceBytes := len([]byte(source))
+	metadata := providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, false)
+
+	if runtimeAllowsCountedPlay(runtime, nil, sourceHash, sourceBytes) {
+		t.Fatalf("TypeScript counted gate accepted missing provider validation")
+	}
+	if runtimeAllowsNonCountedExhibition(runtime, nil, sourceHash, sourceBytes) {
+		t.Fatalf("TypeScript non-counted gate accepted missing provider validation")
+	}
+	if !runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) ||
+		!runtimeAllowsNonCountedExhibition(runtime, metadata, sourceHash, sourceBytes) {
+		t.Fatalf("TypeScript gates rejected matching provider validation")
+	}
+	if runtimeSemanticsForRevision(runtime, nil, sourceHash, sourceBytes)["countedPlayEligible"] == true {
+		t.Fatalf("TypeScript revision semantics accepted missing provider validation")
+	}
+	if runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes)["countedPlayEligible"] != true {
+		t.Fatalf("TypeScript revision semantics rejected matching provider validation")
 	}
 }
 

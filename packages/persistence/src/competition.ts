@@ -7,6 +7,7 @@ import {
 import { Buffer } from "node:buffer"
 import {
   assertPublicMatchSetResultLeakSafe,
+  describeStrategyRuntimeProductSemantics,
   evaluateStrategyRuntimeCountedEligibility,
   getCompetitionPreset,
   normalizeStrategyRuntimeMetadata,
@@ -770,10 +771,16 @@ export const buildPublicMatchSetResultDto = async (
     `,
     [matchSetId],
   )
-  const entrants = entrantsResult.rows.map((row) => ({
-    ...row.snapshot,
-    runtime: normalizeStrategyRuntimeMetadata(row.snapshot.runtime),
-  }))
+  const entrants = entrantsResult.rows.map((row) => {
+    const runtime = normalizeStrategyRuntimeMetadata(row.snapshot.runtime)
+    return {
+      ...row.snapshot,
+      runtime,
+      runtimeSemantics:
+        row.snapshot.runtimeSemantics ??
+        describeStrategyRuntimeProductSemantics(runtime),
+    }
+  })
   const entrantByRevision = new Map(
     entrants.map((entrant) => [entrant.strategyRevisionId, entrant]),
   )

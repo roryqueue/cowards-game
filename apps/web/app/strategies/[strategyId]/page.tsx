@@ -1,5 +1,4 @@
 import type { PublicStrategyCardDto, StrategyId } from "@cowards/spec"
-import { describeStrategyRuntimeProductSemantics } from "@cowards/spec"
 import {
   getPublicStrategyCard,
   isPublicStrategyReadUnavailable,
@@ -44,9 +43,7 @@ export default async function StrategyCardPage({
       </main>
     )
   }
-  const runtimeSemantics = describeStrategyRuntimeProductSemantics(
-    strategy.runtime,
-  )
+  const runtimeSemantics = strategy.runtimeSemantics
   return (
     <main className="app-page">
       <section className="app-panel">

@@ -22,6 +22,7 @@ import {
   publicReplayEvidenceExample,
   publicReplayMetadataExample,
 } from "./service-fixtures.js"
+import { describeStrategyRuntimeProductSemantics } from "./runtime.js"
 
 export const MATCH_EXECUTION_APP_CONTRACT_VERSION =
   "match-execution-app-v1" as const
@@ -573,6 +574,15 @@ export const toMatchExecutionMatchSetSummaryV1 = (
       (evidence): evidence is MatchExecutionFailureEvidenceV1 =>
         evidence !== undefined,
     )
+  const result = {
+    ...serviceDto.result,
+    entrants: serviceDto.result.entrants.map((entrant) => ({
+      ...entrant,
+      runtimeSemantics:
+        entrant.runtimeSemantics ??
+        describeStrategyRuntimeProductSemantics(entrant.runtime),
+    })),
+  }
 
   return MatchExecutionMatchSetSummaryV1Schema.parse({
     contractVersion: MATCH_EXECUTION_APP_CONTRACT_VERSION,
@@ -585,7 +595,7 @@ export const toMatchExecutionMatchSetSummaryV1 = (
       publicMessageKey,
       matches: serviceDto.result.matches,
     }),
-    result: serviceDto.result,
+    result,
     matches,
     runtimeEvidence,
     failureEvidence,
@@ -648,6 +658,25 @@ const createScenarioSummary = (
     package: { mode: "none", entrypoint: "default" },
     requiredCapabilities: [],
   }
+  const runtimeSemantics: PublicMatchSetResultDto["entrants"][number]["runtimeSemantics"] =
+    {
+      languageId: "typescript",
+      adapterId: "runtime-js-worker-thread",
+      languageLabel: "TypeScript",
+      adapterLabel: "runtime-js worker thread",
+      readiness: "local-dev-fallback",
+      readinessLabel: "Local/dev fallback",
+      experimental: false,
+      countedPlayEligible: true,
+      countedPlayLabel: "Counted eligible",
+      countedPlayReason: null,
+      sourcePolicyLabel: "Self-contained Strategy source",
+      packagePolicyLabel: "No packages",
+      docsReference: "runtime/languages",
+      examplesReference: "samples/minimal-strategy",
+      warnings: [],
+      validationIssueCodes: [],
+    }
   summary.matchSetId = `match-set:fixture:${id}` as MatchSetId
   summary.result.matchSetId = summary.matchSetId
   summary.result.status = resultState
@@ -666,6 +695,7 @@ const createScenarioSummary = (
       sourceHash: "sourcehash-fixture-bottom",
       sourceBytes: 128,
       runtime,
+      runtimeSemantics,
       engineCompatibility: {
         spec: "cowards-rules-v1.4",
         engine: "engine-v1",
@@ -682,6 +712,7 @@ const createScenarioSummary = (
       sourceHash: "sourcehash-fixture-top",
       sourceBytes: 128,
       runtime,
+      runtimeSemantics,
       engineCompatibility: {
         spec: "cowards-rules-v1.4",
         engine: "engine-v1",

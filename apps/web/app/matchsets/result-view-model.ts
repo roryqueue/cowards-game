@@ -245,9 +245,13 @@ const formatEntrantRuntimeSummary = (
     if (storedCountedStatus === "non_counted") {
       return false
     }
+    const proofAwareCounted =
+      "runtimeSemantics" in entrant
+        ? entrant.runtimeSemantics.countedPlayEligible
+        : describeStrategyRuntimeProductSemantics(entrant.runtime)
+            .countedPlayEligible
     return (
-      describeStrategyRuntimeProductSemantics(entrant.runtime)
-        .countedPlayEligible &&
+      proofAwareCounted &&
       !nonCountedLanguages.has(entrant.runtime.language.id)
     )
   }).length

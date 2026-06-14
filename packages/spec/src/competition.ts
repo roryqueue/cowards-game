@@ -6,7 +6,10 @@ import type {
   StrategyRevisionId,
   UserId,
 } from "./types.js"
-import type { StrategyRuntimeMetadata } from "./runtime.js"
+import type {
+  StrategyRuntimeMetadata,
+  StrategyRuntimeProductSemantics,
+} from "./runtime.js"
 import { assertPublicOutputLeakSafe } from "./public-output-privacy.js"
 
 export const COMPETITION_PRESET_IDS = [
@@ -147,6 +150,7 @@ export interface PublicStrategyCardDto {
   sourceHash: string
   sourceBytes: number
   runtime: PublicStrategyRuntimeMetadata
+  runtimeSemantics: StrategyRuntimeProductSemantics
   engineCompatibility: CompetitionEntrantSnapshot["engineCompatibility"]
   validationStatus: "valid" | "invalid"
   starterLineage?: {
@@ -263,6 +267,7 @@ export interface CompetitionEntrantSnapshot {
   sourceHash: string
   sourceBytes: number
   runtime: StrategyRuntimeMetadata
+  runtimeSemantics: StrategyRuntimeProductSemantics
   engineCompatibility: {
     spec: string
     engine: string

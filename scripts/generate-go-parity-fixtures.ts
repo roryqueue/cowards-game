@@ -77,6 +77,25 @@ const runtime = {
   requiredCapabilities: [],
 } as const
 
+const runtimeSemantics = {
+  languageId: "typescript",
+  adapterId: "runtime-js-worker-thread",
+  languageLabel: "TypeScript",
+  adapterLabel: "runtime-js worker thread",
+  readiness: "local-dev-fallback",
+  readinessLabel: "Local/dev fallback",
+  experimental: false,
+  countedPlayEligible: true,
+  countedPlayLabel: "Counted eligible",
+  countedPlayReason: null,
+  sourcePolicyLabel: "Self-contained Strategy source",
+  packagePolicyLabel: "No packages",
+  docsReference: "runtime/languages",
+  examplesReference: "samples/minimal-strategy",
+  warnings: [],
+  validationIssueCodes: [],
+} as const
+
 const PUBLIC_STRATEGY_ID = "strategy:go-parity:sentinel"
 
 const createPublicStrategyCard = (): PublicStrategyCardDto => ({
@@ -90,6 +109,7 @@ const createPublicStrategyCard = (): PublicStrategyCardDto => ({
   sourceHash: "sha256:go-parity-sentinel",
   sourceBytes: 192,
   runtime,
+  runtimeSemantics,
   engineCompatibility: {
     spec: "cowards-rules-v1.4",
     engine: "engine-v1",
@@ -129,6 +149,7 @@ const createGoldenMatchSetResult = (): PublicMatchSetResultDto => {
         sourceHash: "sourcehash-bottom",
         sourceBytes: 128,
         runtime,
+        runtimeSemantics,
         engineCompatibility: {
           spec: "cowards-rules-v1.4",
           engine: "engine-v1",
@@ -145,6 +166,7 @@ const createGoldenMatchSetResult = (): PublicMatchSetResultDto => {
         sourceHash: "sourcehash-top",
         sourceBytes: 128,
         runtime,
+        runtimeSemantics,
         engineCompatibility: {
           spec: "cowards-rules-v1.4",
           engine: "engine-v1",
