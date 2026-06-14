@@ -137,7 +137,7 @@
 
 ## Next Up
 
-Run `$gsd-discuss-phase 238` to clarify Phase 238 before planning.
+Run `$gsd-plan-phase 239` to plan Provider-Grade Validate Source Parity, then execute Phase 239.
 
 ---
-*Roadmap updated: 2026-06-01 after v1.34 milestone initialization*
+*Roadmap updated: 2026-06-14 after sequential context gathering for Phases 239-242*
