@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.34
 milestone_name: Workshop Provider Checker Parity
 status: complete
-last_updated: "2026-06-14T18:12:00.000Z"
-last_activity: 2026-06-14 - Completed v1.34 implementation, verification, review, browser check, and milestone audit
+last_updated: "2026-06-14T19:05:00.000Z"
+last_activity: 2026-06-14 - Archived v1.34 ROADMAP/REQUIREMENTS and drafted v1.35/v1.36 milestone prompts
 progress:
   total_phases: 5
   completed_phases: 5
@@ -27,7 +27,7 @@ Last activity: 2026-06-14 - Generated service-backed four-language checker proof
 See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Implement provider-grade Validate source parity for TypeScript, Python, Rust, and Zig using the Phase 238 checker contract while preserving runtime-service/provider boundaries and public-safe diagnostics.
+**Current focus:** Prepare v1.35/v1.36 planning prompts after completing provider-grade Validate source parity for TypeScript, Python, Rust, and Zig.
 
 ## Active Boundary Notes
 
@@ -44,7 +44,7 @@ See: `.planning/PROJECT.md`
 
 - v1.33 shipped and is tagged as `v1.33`.
 - v1.33 archives are in `.planning/milestones/v1.33-ROADMAP.md`, `.planning/milestones/v1.33-REQUIREMENTS.md`, and `.planning/milestones/v1.33-MILESTONE-AUDIT.md`.
-- Current v1.34 files are `.planning/REQUIREMENTS.md` and `.planning/ROADMAP.md`.
+- v1.34 archives are in `.planning/milestones/v1.34-ROADMAP.md`, `.planning/milestones/v1.34-REQUIREMENTS.md`, and `.planning/milestones/v1.34-MILESTONE-AUDIT.md`.
 - Planned phase range begins at Phase 238 and continues through Phase 242.
 - Phase 238 context is captured in `.planning/phases/238-workshop-checker-path-inventory-and-public-contract/238-CONTEXT.md`.
 - Phase 238 artifacts are `.planning/artifacts/v1.34-workshop-checker-inventory.md`, `.planning/artifacts/v1.34-workshop-checker-contract.md`, and `.planning/artifacts/v1.34-workshop-checker-parity-matrix.md`.
