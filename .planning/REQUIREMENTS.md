@@ -40,18 +40,18 @@ Close or explicitly reframe the remaining runtime/account/security-policy edges 
 
 ### Account Save and Provider Proof
 
-- [ ] **ACCT-01**: Go runtime-service validation can request and accept TypeScript provider validation using the same runtime-service/provider boundary as Workshop submit and checker paths.
-- [ ] **ACCT-02**: TypeScript account-owned Strategy Revision save through Go stores provider runtime, validation, engine compatibility, source-artifact identity, and provider-proof metadata equivalent to the current provider-grade proof path where the revision is execution-ready or entry-eligible.
-- [ ] **ACCT-03**: Account save distinguishes provider-validated execution-ready revisions from invalid revisions, unavailable/system states, and any explicitly allowed non-execution draft storage.
-- [ ] **ACCT-04**: If runtime-service proof is unavailable, stale, missing, mismatched, malformed, unverifiable, oversized, or incompatible, Go account save fails closed or saves only as clearly non-execution draft storage with no eligibility/readiness claim.
-- [ ] **ACCT-05**: Go account-save validation errors are normalized into public-safe categories without exposing raw diagnostics, source, artifact bytes, host paths, env values, package paths, tokens, DB details, provider signing material, or private runtime internals by default.
+- [x] **ACCT-01**: Go runtime-service validation can request and accept TypeScript provider validation using the same runtime-service/provider boundary as Workshop submit and checker paths.
+- [x] **ACCT-02**: TypeScript account-owned Strategy Revision save through Go stores provider runtime, validation, engine compatibility, source-artifact identity, and provider-proof metadata equivalent to the current provider-grade proof path where the revision is execution-ready or entry-eligible.
+- [x] **ACCT-03**: Account save distinguishes provider-validated execution-ready revisions from invalid revisions, unavailable/system states, and any explicitly allowed non-execution draft storage.
+- [x] **ACCT-04**: If runtime-service proof is unavailable, stale, missing, mismatched, malformed, unverifiable, oversized, or incompatible, Go account save fails closed or saves only as clearly non-execution draft storage with no eligibility/readiness claim.
+- [x] **ACCT-05**: Go account-save validation errors are normalized into public-safe categories without exposing raw diagnostics, source, artifact bytes, host paths, env values, package paths, tokens, DB details, provider signing material, or private runtime internals by default.
 
 ### Entry Eligibility and Go/Persistence Parity
 
-- [ ] **ENTRY-01**: Counted Go exhibition, persistence competition, and ladder entry gates require current provider-grade proof for TypeScript, Python, Rust, and Zig where eligibility depends on execution readiness.
-- [ ] **ENTRY-02**: Non-counted exhibition gates still reject unsupported providers, hidden TinyGo, stale/missing/mismatched artifacts, incompatible runtime metadata, non-`none` package mode, invalid owner/revision state, and silent fallback.
-- [ ] **ENTRY-03**: Go and persistence eligibility checks agree for eligible, draft, invalid, stale-proof, missing-proof, mismatched-proof, unsupported-provider, package-declared, unavailable-runtime, and TinyGo cases.
-- [ ] **ENTRY-04**: Account, entry, public Strategy, result, replay, and developer evidence labels derive readiness from provider proof and registry policy rather than local language assumptions.
+- [x] **ENTRY-01**: Counted Go exhibition, persistence competition, and ladder entry gates require current provider-grade proof for TypeScript, Python, Rust, and Zig where eligibility depends on execution readiness.
+- [x] **ENTRY-02**: Non-counted exhibition gates still reject unsupported providers, hidden TinyGo, stale/missing/mismatched artifacts, incompatible runtime metadata, non-`none` package mode, invalid owner/revision state, and silent fallback.
+- [x] **ENTRY-03**: Go and persistence eligibility checks agree for eligible, draft, invalid, stale-proof, missing-proof, mismatched-proof, unsupported-provider, package-declared, unavailable-runtime, and TinyGo cases.
+- [x] **ENTRY-04**: Account, entry, public Strategy, result, replay, and developer evidence labels derive readiness from provider proof and registry policy rather than local language assumptions.
 
 ### Ownership, Local Trust, and Private Replay
 
@@ -121,15 +121,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INV-01 | Phase 243 | Complete |
 | INV-02 | Phase 243 | Complete |
 | INV-03 | Phase 243 | Complete |
-| ACCT-01 | Phase 244 | Pending |
-| ACCT-02 | Phase 244 | Pending |
-| ACCT-03 | Phase 244 | Pending |
-| ACCT-04 | Phase 244 | Pending |
-| ACCT-05 | Phase 244 | Pending |
-| ENTRY-01 | Phase 244 | Pending |
-| ENTRY-02 | Phase 244 | Pending |
-| ENTRY-03 | Phase 244 | Pending |
-| ENTRY-04 | Phase 244 | Pending |
+| ACCT-01 | Phase 244 | Complete |
+| ACCT-02 | Phase 244 | Complete |
+| ACCT-03 | Phase 244 | Complete |
+| ACCT-04 | Phase 244 | Complete |
+| ACCT-05 | Phase 244 | Complete |
+| ENTRY-01 | Phase 244 | Complete |
+| ENTRY-02 | Phase 244 | Complete |
+| ENTRY-03 | Phase 244 | Complete |
+| ENTRY-04 | Phase 244 | Complete |
 | AUTH-01 | Phase 245 | Pending |
 | AUTH-02 | Phase 245 | Pending |
 | PRIV-01 | Phase 245 | Pending |
@@ -153,7 +153,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 32 total
-- Complete: 0
+- Complete: 12
 - Planned: 32
 - Mapped to phases: 32
 - Unmapped: 0

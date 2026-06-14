@@ -7,7 +7,7 @@ v1.35 closes the runtime/account/security-policy edges left after v1.34 by makin
 ## Phases
 
 - [x] **Phase 243: Boundary Surface Inventory and Contract Lock** - Inventory v1.35-affected trust surfaces and lock fix/quarantine/deprecation/future decisions before behavior changes. (completed 2026-06-14)
-- [ ] **Phase 244: Account Revision Provider-Proof and Entry Gates** - Make account save and entry readiness require current provider-grade proof or explicit non-execution states.
+- [x] **Phase 244: Account Revision Provider-Proof and Entry Gates** - Make account save and entry readiness require current provider-grade proof or explicit non-execution states. (completed 2026-06-14)
 - [ ] **Phase 245: Ownership, Owner-Debug, and Workshop Alias Cleanup** - Restrict local trust shortcuts, authorize private owner views server-side, and settle legacy Workshop aliases.
 - [ ] **Phase 246: Sandbox-Readiness Claims and Runtime Labels** - Publish conservative readiness/certification labels and fail-loud monitors for unsupported isolation claims.
 - [ ] **Phase 247: Package and Dependency Policy Enforcement** - Define and enforce the current no-package/no-host-import policy across production Strategy lanes.
@@ -42,7 +42,19 @@ Plans:
   3. User cannot enter counted Go exhibitions, persistence competitions, or ladder paths unless TypeScript, Python, Rust, and Zig revisions have current provider-grade proof where execution readiness is required.
   4. User cannot use unsupported providers, hidden TinyGo, stale/missing/mismatched artifacts, incompatible runtime metadata, non-`none` package mode, invalid owner/revision state, or silent fallback to pass non-counted exhibition gates.
   5. Go and persistence eligibility outcomes agree across eligible, draft, invalid, stale-proof, missing-proof, mismatched-proof, unsupported-provider, package-declared, unavailable-runtime, and TinyGo cases, with public-safe errors by default.
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+- [x] 244-01-PLAN.md — TypeScript runtime-service validation parity in Go client.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 244-02-PLAN.md — Provider-proof-backed account save readiness and draft semantics.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 244-03-PLAN.md — Go and persistence entry-gate parity.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [x] 244-04-PLAN.md — Phase proof artifact and boundary monitor wiring.
 
 ### Phase 245: Ownership, Owner-Debug, and Workshop Alias Cleanup
 **Goal**: Users can access account-owned source and owner-private replay evidence only through server-authorized ownership, while legacy Workshop aliases cannot bypass current contracts.
@@ -101,7 +113,7 @@ Phases execute in numeric order: 243 -> 244 -> 245 -> 246 -> 247 -> 248
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 243. Boundary Surface Inventory and Contract Lock | 3/3 | Complete   | 2026-06-14 |
-| 244. Account Revision Provider-Proof and Entry Gates | 0/TBD | Not started | - |
+| 244. Account Revision Provider-Proof and Entry Gates | 4/4 | Complete   | 2026-06-14 |
 | 245. Ownership, Owner-Debug, and Workshop Alias Cleanup | 0/TBD | Not started | - |
 | 246. Sandbox-Readiness Claims and Runtime Labels | 0/TBD | Not started | - |
 | 247. Package and Dependency Policy Enforcement | 0/TBD | Not started | - |
@@ -110,7 +122,7 @@ Phases execute in numeric order: 243 -> 244 -> 245 -> 246 -> 247 -> 248
 ## Coverage
 
 - v1 requirements: 32 total
-- Complete: 0
+- Complete: 12
 - Planned: 32
 - Mapped to phases: 32
 - Unmapped: 0
