@@ -18,6 +18,10 @@ import {
   parseTopologyOptions,
   validateV116NoTypeScriptBackendTopologyArtifact,
 } from "./check-local-topology.ts"
+import {
+  checkV135BoundarySurfaceInventoryArtifacts,
+  type GenerateV135BoundarySurfaceInventoryOptions,
+} from "./evaluate-v1-35-boundary-surface-inventory.ts"
 
 export { validateV116NoTypeScriptBackendTopologyArtifact }
 import {
@@ -920,6 +924,16 @@ const check = async (
       detail: error instanceof Error ? error.message : String(error),
     }
   }
+}
+
+export const checkV135BoundarySurfaceInventoryMonitor = (
+  options: GenerateV135BoundarySurfaceInventoryOptions = {},
+): string => {
+  const failures = checkV135BoundarySurfaceInventoryArtifacts(options)
+  if (failures.length > 0) {
+    throw new Error(failures.join("; "))
+  }
+  return "v1.35 boundary surface inventory artifacts are current"
 }
 
 const checkOpenApiContract = (): string => {
@@ -5456,6 +5470,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
     "checker_contract",
     "v1.34 Workshop checker provider boundary",
     () => checkV134WorkshopCheckerBoundary(),
+  ),
+  await check("contract_drift", "v1.35 boundary surface inventory", () =>
+    checkV135BoundarySurfaceInventoryMonitor(),
   ),
   await check("runtime_adapter", "runtime registry and adapter metadata", () =>
     checkRuntimeAdapters(),
