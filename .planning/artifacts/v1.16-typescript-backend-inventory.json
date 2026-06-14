@@ -2437,26 +2437,29 @@
       "imports": [
         {
           "line": 1,
-          "source": "@cowards/spec",
-          "statementText": "import { getSupportedStrategyLanguageBySourceFormat } from \"@cowards/spec\""
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
-          "line": 2,
+          "line": 14,
           "source": "../../../workshop/types.js",
           "statementText": "import type { WorkshopErrorResponse } from \"../../../workshop/types.js\""
         },
         {
+          "line": 2,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
           "line": 3,
-          "source": "../../../workshop/server.js",
-          "statementText": "import { workshopServer } from \"../../../workshop/server.js\""
+          "source": "@cowards/spec",
+          "statementText": "import {\n  WORKSHOP_CHECKER_VALIDATION_POLICY,\n  createWorkshopCheckerResponse,\n  createWorkshopCheckerUnavailableResponse,\n  getSupportedStrategyLanguageBySourceFormat,\n  isWorkshopCheckerSourceFormat,\n  type StrategyRevisionMetadata,\n  type StrategyRevisionValidationReport,\n  type WorkshopCheckerResponse,\n  type WorkshopCheckerSourceFormat,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
-      "localBackendImports": [
-        "apps/web/app/workshop/server.ts"
-      ],
+      "localBackendImports": [],
       "usesDatabase": false,
       "claimsJobs": false,
       "completesMatches": false,
@@ -2479,10 +2482,6 @@
         {
           "code": "next_api_route",
           "detail": "exports POST"
-        },
-        {
-          "code": "local_backend_import_chain",
-          "detail": "apps/web/app/workshop/server.ts"
         }
       ]
     },
@@ -2513,37 +2512,42 @@
           "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
         },
         {
-          "line": 14,
+          "line": 15,
           "source": "@cowards/spec",
           "statementText": "import type {\n  StrategyId,\n  StrategyRevision,\n  StrategyRevisionId,\n  StrategyRuntimeProductSemantics,\n  StrategyRevisionMetadata,\n  UserId,\n} from \"@cowards/spec\""
         },
         {
-          "line": 22,
+          "line": 23,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 23,
+          "line": 24,
           "source": "./advanced-strategies.js",
           "statementText": "import {\n  findAdvancedStrategy,\n  type AdvancedStrategyId,\n} from \"./advanced-strategies.js\""
         },
         {
-          "line": 27,
+          "line": 28,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 28,
+          "line": 29,
           "source": "./starter-strategies.js",
           "statementText": "import {\n  findStarterStrategy,\n  type StarterStrategyId,\n} from \"./starter-strategies.js\""
         },
         {
           "line": 7,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 8,
           "source": "@cowards/runtime-js",
           "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
         },
         {
-          "line": 8,
+          "line": 9,
           "source": "@cowards/spec",
           "statementText": "import {\n  describeStrategyRuntimeProductSemantics,\n  getSupportedStrategyLanguageRecord,\n  normalizeStrategyRuntimeMetadata,\n  STRATEGY_RUNTIME_ABI_VERSION,\n} from \"@cowards/spec\""
         }
@@ -2552,7 +2556,7 @@
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 7,
+          "line": 8,
           "source": "@cowards/runtime-js",
           "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
         }
@@ -2881,7 +2885,7 @@
       "currentOwner": "typescript_non_normal_reference",
       "normalBackendOwner": "none",
       "fallbackPolicy": "no_silent_typescript_backend_fallback",
-      "privacyClass": "source-safe-inventory-only",
+      "privacyClass": "public-redacted",
       "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
       "routeMethods": [],
       "routePath": null,
@@ -2895,16 +2899,21 @@
         },
         {
           "line": 2,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 3,
           "source": "node:crypto",
           "statementText": "import { createHash, createHmac } from \"node:crypto\""
         },
         {
-          "line": 3,
+          "line": 4,
           "source": "@cowards/spec",
           "statementText": "import { defaultRuntimeMetadata } from \"@cowards/spec\""
         },
         {
-          "line": 4,
+          "line": 5,
           "source": "./competition.js",
           "statementText": "import {\n  buildExhibitionDuplicateKey,\n  evaluateRateLimit,\n  generateCompetitionPairwiseMatrix,\n  TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE,\n  runtimeAllowsCountedPlay,\n  validateManualExhibitionRevisionIds,\n} from \"./competition.js\""
         }
@@ -2929,7 +2938,7 @@
       "completesMatches": true,
       "persistsChronicles": false,
       "refreshesScoring": true,
-      "servesPublicEvidence": false,
+      "servesPublicEvidence": true,
       "executesStrategy": false,
       "ownerDebugAccess": false,
       "testOnlyGate": "test-support route or Vitest/Playwright gate only",
@@ -2975,52 +2984,57 @@
           "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
         },
         {
-          "line": 20,
+          "line": 21,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 21,
+          "line": 22,
           "source": "./matchset-service.js",
           "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
         },
         {
-          "line": 22,
+          "line": 23,
           "source": "./match-service.js",
           "statementText": "import type { CreateMatchInput } from \"./match-service.js\""
         },
         {
-          "line": 23,
+          "line": 24,
           "source": "./presets.js",
           "statementText": "import { getMatchSetPreset } from \"./presets.js\""
         },
         {
-          "line": 24,
+          "line": 25,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 25,
+          "line": 26,
           "source": "./seed.js",
           "statementText": "import { createDevelopmentSeedData } from \"./seed.js\""
         },
         {
-          "line": 26,
+          "line": 27,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus, MatchStatus } from \"./schema.js\""
         },
         {
-          "line": 27,
+          "line": 28,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetScore } from \"./scoring.js\""
         },
         {
-          "line": 28,
+          "line": 29,
           "source": "./matchset-status.js",
           "statementText": "import { refreshMatchSetStatus } from \"./matchset-status.js\""
         },
         {
           "line": 7,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 8,
           "source": "@cowards/spec",
           "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  evaluateStrategyRuntimeCountedEligibility,\n  getCompetitionPreset,\n  normalizeStrategyRuntimeMetadata,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type CompetitionEntrantSnapshot,\n  type CompetitionPresetId,\n  type PublicMatchSetResultDto,\n  type PublicPenaltyReason,\n  type PublicStandingDto,\n  type UserId,\n} from \"@cowards/spec\""
         }
@@ -3801,7 +3815,7 @@
       "currentOwner": "typescript_non_normal_reference",
       "normalBackendOwner": "none",
       "fallbackPolicy": "no_silent_typescript_backend_fallback",
-      "privacyClass": "source-safe-inventory-only",
+      "privacyClass": "public-redacted",
       "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
       "routeMethods": [],
       "routePath": null,
@@ -3815,16 +3829,21 @@
         },
         {
           "line": 2,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 3,
           "source": "node:crypto",
           "statementText": "import { createHash, createHmac } from \"node:crypto\""
         },
         {
-          "line": 3,
+          "line": 4,
           "source": "@cowards/spec",
           "statementText": "import { defaultRuntimeMetadata } from \"@cowards/spec\""
         },
         {
-          "line": 4,
+          "line": 5,
           "source": "./ladder.js",
           "statementText": "import {\n  assertLadderEligibleRuntime,\n  DEFAULT_LADDER_MINIMUM_ENTRIES,\n  DEFAULT_LADDER_TARGET_POD_SIZE,\n  trialLadderStatusLabel,\n} from \"./ladder.js\""
         }
@@ -3850,7 +3869,7 @@
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": false,
-      "servesPublicEvidence": false,
+      "servesPublicEvidence": true,
       "executesStrategy": false,
       "ownerDebugAccess": false,
       "testOnlyGate": "test-support route or Vitest/Playwright gate only",
@@ -3896,47 +3915,52 @@
           "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
         },
         {
-          "line": 25,
+          "line": 26,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 26,
+          "line": 27,
           "source": "./competition.js",
           "statementText": "import { generateCompetitionPairwiseMatrix } from \"./competition.js\""
         },
         {
-          "line": 27,
+          "line": 28,
           "source": "./matchset-service.js",
           "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
         },
         {
-          "line": 28,
+          "line": 29,
           "source": "./matchset-status.js",
           "statementText": "import { refreshMatchSetStatus } from \"./matchset-status.js\""
         },
         {
-          "line": 29,
+          "line": 30,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 30,
+          "line": 31,
           "source": "./seed.js",
           "statementText": "import { createDevelopmentSeedData } from \"./seed.js\""
         },
         {
-          "line": 31,
+          "line": 32,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
         {
-          "line": 32,
+          "line": 33,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetStrategyScore } from \"./scoring.js\""
         },
         {
           "line": 7,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 8,
           "source": "@cowards/spec",
           "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  EXHIBITION_SCORING_POLICY_V1,\n  evaluateStrategyRuntimeCountedEligibility,\n  normalizeStrategyRuntimeMetadata,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type CompetitionEntrantSnapshot,\n  type LadderMatchSetCountedStatus,\n  type LadderNonCountedReason,\n  type PublicLadderMatchSetSummaryDto,\n  type PublicStandingDto,\n  type PublicTrialLadderSeasonDto,\n  type StrategyRevisionId,\n  type TrialLadderEntrySnapshot,\n  type TrialLadderEntryStatus,\n  type TrialLadderSeasonStatus,\n  type UserId,\n} from \"@cowards/spec\""
         }
@@ -5442,82 +5466,87 @@
           "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
         },
         {
-          "line": 12,
+          "line": 13,
           "source": "@cowards/runtime-python/validation",
           "statementText": "import { validatePythonStrategySource } from \"@cowards/runtime-python/validation\""
         },
         {
-          "line": 13,
+          "line": 14,
           "source": "@cowards/spec",
           "statementText": "import {\n  describeStrategyRuntimeProductSemantics,\n  getSupportedStrategyLanguageRecord,\n  STRATEGY_RUNTIME_ABI_VERSION,\n} from \"@cowards/spec\""
         },
         {
-          "line": 18,
+          "line": 19,
           "source": "@cowards/spec",
           "statementText": "import type {\n  MatchId,\n  MatchSetId,\n  PlayerId,\n  RuntimeViolationType,\n  StrategyId,\n  StrategyRevision,\n  StrategyRevisionValidationCode,\n  StrategyRevisionId,\n  StrategyArtifactSourceFormat,\n  StrategyRuntimeProductSemantics,\n} from \"@cowards/spec\""
         },
         {
-          "line": 30,
+          "line": 31,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 31,
+          "line": 32,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
         },
         {
-          "line": 32,
+          "line": 33,
           "source": "./matchset-service.js",
           "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
         },
         {
-          "line": 33,
+          "line": 34,
           "source": "./matchset-service.js",
           "statementText": "import { generatePresetMatrix } from \"./matchset-service.js\""
         },
         {
-          "line": 34,
+          "line": 35,
           "source": "./matchset-status.js",
           "statementText": "import {\n  listMatchStatusesForSet,\n  type MatchSetMatchSummary,\n  refreshMatchSetStatus,\n} from \"./matchset-status.js\""
         },
         {
-          "line": 39,
+          "line": 40,
           "source": "./presets.js",
           "statementText": "import { getMatchSetPreset, type MatchSetPresetId } from \"./presets.js\""
         },
         {
-          "line": 40,
+          "line": 41,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 41,
+          "line": 42,
           "source": "./advanced-strategies.js",
           "statementText": "import {\n  listAdvancedStrategies,\n  type AdvancedStrategySummary,\n} from \"./advanced-strategies.js\""
         },
         {
-          "line": 45,
+          "line": 46,
           "source": "./starter-strategies.js",
           "statementText": "import {\n  listStarterStrategies,\n  type StarterStrategySummary,\n} from \"./starter-strategies.js\""
         },
         {
-          "line": 49,
+          "line": 50,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetScore } from \"./scoring.js\""
         },
         {
-          "line": 50,
+          "line": 51,
           "source": "./seed.js",
           "statementText": "import {\n  cautiousSource,\n  createDevelopmentSeedData,\n  recklessSource,\n} from \"./seed.js\""
         },
         {
-          "line": 55,
+          "line": 56,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
         {
           "line": 7,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 8,
           "source": "@cowards/runtime-js",
           "statementText": "import {\n  buildStrategyRevision,\n  validateStrategySource,\n  type StrategyRevisionValidationReport,\n} from \"@cowards/runtime-js\""
         }
@@ -5526,7 +5555,7 @@
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 7,
+          "line": 8,
           "source": "@cowards/runtime-js",
           "statementText": "import {\n  buildStrategyRevision,\n  validateStrategySource,\n  type StrategyRevisionValidationReport,\n} from \"@cowards/runtime-js\""
         }
@@ -6053,31 +6082,36 @@
         },
         {
           "line": 14,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
+          "line": 15,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 16,
           "source": "./guards.js",
           "statementText": "import {\n  RUNTIME_OUTPUT_BYTES,\n  RUNTIME_TIMEOUT_MS,\n  toInvalidOutputViolation,\n  toOversizedOutputViolation,\n} from \"./guards.js\""
         },
         {
-          "line": 20,
-          "source": "./transpile.js",
-          "statementText": "import { transpileStrategySource } from \"./transpile.js\""
-        },
-        {
-          "line": 21,
+          "line": 22,
           "source": "./adapter.js",
           "statementText": "import type { StrategyExecutionAdapter } from \"./adapter.js\""
         },
         {
-          "line": 22,
+          "line": 23,
           "source": "./abi-bridge.js",
           "statementText": "import { executeStrategyRuntimeAbiV114 } from \"./abi-bridge.js\""
         },
         {
-          "line": 23,
+          "line": 24,
           "source": "./worker-thread-adapter.js",
           "statementText": "import { workerThreadStrategyExecutionAdapter } from \"./worker-thread-adapter.js\""
         },
         {
-          "line": 24,
+          "line": 25,
           "source": "./validation.js",
           "statementText": "import { validateStrategySource } from \"./validation.js\""
         },
@@ -6326,11 +6360,16 @@
       "imports": [
         {
           "line": 10,
+          "source": "./source-artifact.js",
+          "statementText": "export { buildTypeScriptSourceArtifact } from \"./source-artifact.js\""
+        },
+        {
+          "line": 11,
           "source": "./revision.js",
           "statementText": "export { buildStrategyRevision, isValidStrategyRevision } from \"./revision.js\""
         },
         {
-          "line": 11,
+          "line": 12,
           "source": "@cowards/spec",
           "statementText": "export type {\n  StrategyRevision,\n  StrategyRevisionValidationReport,\n} from \"@cowards/spec\""
         },
@@ -6528,7 +6567,7 @@
       "currentOwner": "typescript_non_normal_reference",
       "normalBackendOwner": "none",
       "fallbackPolicy": "no_silent_typescript_backend_fallback",
-      "privacyClass": "source-safe-inventory-only",
+      "privacyClass": "public-redacted",
       "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
       "routeMethods": [],
       "routePath": null,
@@ -6565,7 +6604,7 @@
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": false,
-      "servesPublicEvidence": false,
+      "servesPublicEvidence": true,
       "executesStrategy": false,
       "ownerDebugAccess": false,
       "testOnlyGate": "test-support route or Vitest/Playwright gate only",
@@ -6612,6 +6651,11 @@
         },
         {
           "line": 11,
+          "source": "./source-artifact.js",
+          "statementText": "import { buildTypeScriptSourceArtifact } from \"./source-artifact.js\""
+        },
+        {
+          "line": 12,
           "source": "./validation.js",
           "statementText": "import { validateStrategySource } from \"./validation.js\""
         }
@@ -6797,6 +6841,77 @@
         ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
         ".planning/artifacts/v1.15-typescript-surface-labels.json",
         "packages/runtime-js/src/sandbox-evaluation.ts",
+        "strategy-runtime-abi-v1.14"
+      ],
+      "scannerFindings": []
+    },
+    {
+      "id": "packages-runtime-js-src-source-artifact",
+      "path": "packages/runtime-js/src/source-artifact.ts",
+      "kind": "runtime-adapter-module",
+      "role": "runtime-adapter",
+      "retirementAction": "keep-runtime-adapter-boundary",
+      "owner": "runtime_js_adapter",
+      "reason": "Runtime adapter code executes Strategy ABI work only inside the runtime boundary.",
+      "gate": "strategy-runtime-abi-v1.14 adapter contract",
+      "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
+      "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
+      "currentOwner": "typescript_runtime_adapter",
+      "normalBackendOwner": "runtime_service_boundary_only",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "runtime-adapter",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
+          "line": 10,
+          "source": "./transpile.js",
+          "statementText": "import { transpileStrategySource } from \"./transpile.js\""
+        },
+        {
+          "line": 2,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 3,
+          "source": "typescript",
+          "statementText": "import * as ts from \"typescript\""
+        },
+        {
+          "line": 4,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type SourceLanguageStrategyArtifact,\n  type StrategyRevisionValidationReport,\n  type StrategyRuntimeMetadata,\n} from \"@cowards/spec\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": true,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/runtime-js/src/source-artifact.ts",
         "strategy-runtime-abi-v1.14"
       ],
       "scannerFindings": []
@@ -8230,16 +8345,21 @@
         },
         {
           "line": 26,
+          "source": "@cowards/runtime-js",
+          "statementText": "import {\n  buildStrategyRevision,\n  validateStrategySource,\n} from \"@cowards/runtime-js\""
+        },
+        {
+          "line": 30,
           "source": "./runtime-config.js",
           "statementText": "import {\n  createRuntimeServiceConfig,\n  type RuntimeServiceConfig,\n} from \"./runtime-config.js\""
         },
         {
-          "line": 30,
+          "line": 34,
           "source": "./execute-match.js",
           "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
         },
         {
-          "line": 31,
+          "line": 35,
           "source": "./redaction.js",
           "statementText": "import { redactedErrorMessage } from \"./redaction.js\""
         },
@@ -8256,7 +8376,13 @@
       ],
       "persistenceImports": [],
       "serviceImports": [],
-      "runtimeImports": [],
+      "runtimeImports": [
+        {
+          "line": 26,
+          "source": "@cowards/runtime-js",
+          "statementText": "import {\n  buildStrategyRevision,\n  validateStrategySource,\n} from \"@cowards/runtime-js\""
+        }
+      ],
       "localBackendImports": [],
       "usesDatabase": false,
       "claimsJobs": false,
@@ -8264,7 +8390,7 @@
       "persistsChronicles": false,
       "refreshesScoring": false,
       "servesPublicEvidence": false,
-      "executesStrategy": false,
+      "executesStrategy": true,
       "ownerDebugAccess": false,
       "testOnlyGate": null,
       "rollbackGate": null,
@@ -8276,7 +8402,12 @@
         "apps/runtime-service/src/server.ts",
         "strategy-runtime-abi-v1.14"
       ],
-      "scannerFindings": []
+      "scannerFindings": [
+        {
+          "code": "runtime_import",
+          "detail": "@cowards/runtime-js"
+        }
+      ]
     },
     {
       "id": "packages-service-src-index",
@@ -8856,6 +8987,68 @@
       ]
     },
     {
+      "id": "apps-web-app-api-workshop-revisions-route-test",
+      "path": "apps/web/app/api/workshop/revisions/route.test.ts",
+      "kind": "web-frontend-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "private-or-owner-scoped",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "workshop",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { afterEach, describe, expect, it, vi } from \"vitest\""
+        },
+        {
+          "line": 2,
+          "source": "./route.js",
+          "statementText": "import { POST } from \"./route.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/app/workshop/server.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/api/workshop/revisions/route.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/app/workshop/server.ts"
+        }
+      ]
+    },
+    {
       "id": "apps-web-app-api-workshop-tests-matchsetid-route-test",
       "path": "apps/web/app/api/workshop/tests/[matchSetId]/route.test.ts",
       "kind": "web-frontend-module",
@@ -8921,6 +9114,71 @@
           "detail": "apps/web/lib/workshop-read-service-adapter.ts"
         }
       ]
+    },
+    {
+      "id": "apps-web-app-api-workshop-validate-route-test",
+      "path": "apps/web/app/api/workshop/validate/route.test.ts",
+      "kind": "web-frontend-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "private-or-owner-scoped",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "workshop",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 2,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
+          "line": 3,
+          "source": "vitest",
+          "statementText": "import { afterEach, describe, expect, it, vi } from \"vitest\""
+        },
+        {
+          "line": 4,
+          "source": "./route.js",
+          "statementText": "import { POST } from \"./route.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/api/workshop/validate/route.test.ts"
+      ],
+      "scannerFindings": []
     },
     {
       "id": "apps-web-app-auth-auth-client",
@@ -12413,16 +12671,21 @@
         },
         {
           "line": 2,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 3,
           "source": "node:crypto",
           "statementText": "import { createHash, createHmac } from \"node:crypto\""
         },
         {
-          "line": 3,
+          "line": 4,
           "source": "./server.js",
           "statementText": "import { createWorkshopServer, isStorageUnavailableError } from \"./server.js\""
         },
         {
-          "line": 4,
+          "line": 5,
           "source": "@cowards/spec",
           "statementText": "import {\n  COMPATIBILITY_VERSIONS,\n  STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,\n  type StrategyRevision,\n  type StrategyRevisionMetadata,\n} from \"@cowards/spec\""
         }
@@ -12438,7 +12701,7 @@
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": true,
-      "servesPublicEvidence": false,
+      "servesPublicEvidence": true,
       "executesStrategy": false,
       "ownerDebugAccess": false,
       "testOnlyGate": "test-support route or Vitest/Playwright gate only",
@@ -12531,20 +12794,20 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import type { StrategyRevisionValidationReport } from \"@cowards/spec\""
+          "statementText": "import type {\n  StrategyRevisionValidationReport,\n  WorkshopCheckerDiagnostic,\n  WorkshopCheckerResponse,\n} from \"@cowards/spec\""
         },
         {
-          "line": 2,
+          "line": 6,
           "source": "./types.js",
           "statementText": "import type { WorkshopRevisionSummary } from \"./types.js\""
         },
         {
-          "line": 3,
+          "line": 7,
           "source": "./types.js",
           "statementText": "import type { WorkshopSampleSummary } from \"./types.js\""
         },
         {
-          "line": 4,
+          "line": 8,
           "source": "./types.js",
           "statementText": "import type { WorkshopTestSummary } from \"./types.js\""
         }
@@ -12600,13 +12863,18 @@
         },
         {
           "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import type { WorkshopCheckerResponse } from \"@cowards/spec\""
+        },
+        {
+          "line": 3,
           "source": "./types.js",
           "statementText": "import type { WorkshopRevisionSummary } from \"./types.js\""
         },
         {
-          "line": 3,
+          "line": 4,
           "source": "./workshop-client-state.js",
-          "statementText": "import {\n  canSubmitRevision,\n  canOpenReplay,\n  canOpenOwnerReplay,\n  formatMatchOutcome,\n  formatUsedInMatches,\n  formatValidationIssueGuidance,\n  formatValidationIssueHeading,\n  getSampleChipLabels,\n  getSampleKindLabel,\n  getDraftStatusLabel,\n  getReplayAvailability,\n  getReplayHref,\n  getOwnerReplayHref,\n  getWorkshopOwnerPlayerId,\n  getRevisionTitle,\n  getSubmitBlockedReason,\n  getTestStatusCopy,\n  groupWorkshopSamples,\n  isTerminalTestStatus,\n  prependRevision,\n  validationStateFromReport,\n} from \"./workshop-client-state.js\""
+          "statementText": "import {\n  canSubmitRevision,\n  canOpenReplay,\n  canOpenOwnerReplay,\n  checkerMatchesValidation,\n  formatMatchOutcome,\n  formatUsedInMatches,\n  formatCheckerDiagnosticGuidance,\n  formatCheckerDiagnosticHeading,\n  formatValidationIssueGuidance,\n  formatValidationIssueHeading,\n  getSampleChipLabels,\n  getSampleKindLabel,\n  getDraftStatusLabel,\n  getReplayAvailability,\n  getReplayHref,\n  getOwnerReplayHref,\n  getWorkshopOwnerPlayerId,\n  getRevisionTitle,\n  getSubmitBlockedReason,\n  getTestStatusCopy,\n  groupWorkshopSamples,\n  isTerminalTestStatus,\n  prependRevision,\n  validationStateFromChecker,\n  validationStateFromReport,\n} from \"./workshop-client-state.js\""
         }
       ],
       "persistenceImports": [],
@@ -12654,14 +12922,19 @@
       "goRouteIds": [],
       "imports": [
         {
-          "line": 15,
+          "line": 10,
+          "source": "./types.js",
+          "statementText": "import type {\n  WorkshopSampleSummary,\n  WorkshopInitialData,\n  WorkshopTemplateSummary,\n  WorkshopTestSummary,\n} from \"./types.js\""
+        },
+        {
+          "line": 16,
           "source": "./heatmap-client.js",
           "statementText": "import { WorkshopHeatmap } from \"./heatmap-client.js\""
         },
         {
-          "line": 16,
+          "line": 17,
           "source": "./workshop-client-state.js",
-          "statementText": "import {\n  canSubmitRevision,\n  canOpenReplay,\n  canOpenOwnerReplay,\n  formatMatchOutcome,\n  formatUsedInMatches,\n  formatValidationIssueGuidance,\n  formatValidationIssueHeading,\n  getReplayHref,\n  getOwnerReplayHref,\n  getDraftStatusClass,\n  getDraftStatusLabel,\n  getReplayAvailability,\n  getSampleChipLabels,\n  getTestStatusCopy,\n  getSubmitBlockedReason,\n  groupWorkshopSamples,\n  isTerminalTestStatus,\n  prependRevision,\n  validationStateFromReport,\n} from \"./workshop-client-state.js\""
+          "statementText": "import {\n  canSubmitRevision,\n  canOpenReplay,\n  canOpenOwnerReplay,\n  checkerMatchesValidation,\n  formatMatchOutcome,\n  formatUsedInMatches,\n  formatCheckerDiagnosticGuidance,\n  formatCheckerDiagnosticHeading,\n  formatValidationIssueGuidance,\n  formatValidationIssueHeading,\n  getReplayHref,\n  getOwnerReplayHref,\n  getDraftStatusClass,\n  getDraftStatusLabel,\n  getReplayAvailability,\n  getSampleChipLabels,\n  getTestStatusCopy,\n  getSubmitBlockedReason,\n  groupWorkshopSamples,\n  isTerminalTestStatus,\n  prependRevision,\n  validationStateFromReport,\n  validationStateFromChecker,\n} from \"./workshop-client-state.js\""
         },
         {
           "line": 3,
@@ -12669,24 +12942,19 @@
           "statementText": "import { useEffect, useMemo, useState } from \"react\""
         },
         {
-          "line": 37,
+          "line": 4,
+          "source": "@cowards/spec",
+          "statementText": "import type {\n  StrategyArtifactSourceFormat,\n  StrategyRevisionValidationReport,\n  WorkshopCheckerResponse,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 42,
           "source": "../../lib/runtime-labels.js",
           "statementText": "import {\n  WORKSHOP_EDITOR_SOURCE_FORMATS,\n  sourceFormatExhibitionLabel,\n  sourceFormatLanguageLabel,\n  sourceFormatRuntimeCue,\n  sourceFormatShortLabel,\n  runtimeExhibitionStatusLabel,\n} from \"../../lib/runtime-labels.js\""
         },
         {
-          "line": 4,
-          "source": "@cowards/spec",
-          "statementText": "import type {\n  StrategyArtifactSourceFormat,\n  StrategyRevisionValidationReport,\n} from \"@cowards/spec\""
-        },
-        {
-          "line": 8,
+          "line": 9,
           "source": "./monaco-editor.js",
           "statementText": "import { StrategySourceEditor } from \"./monaco-editor.js\""
-        },
-        {
-          "line": 9,
-          "source": "./types.js",
-          "statementText": "import type {\n  WorkshopSampleSummary,\n  WorkshopInitialData,\n  WorkshopTemplateSummary,\n  WorkshopTestSummary,\n} from \"./types.js\""
         }
       ],
       "persistenceImports": [],
@@ -14504,32 +14772,32 @@
           "statementText": "import { createDatabasePool } from \"@cowards/persistence/db\""
         },
         {
-          "line": 14,
+          "line": 15,
           "source": "@cowards/persistence/workshop-analytics",
           "statementText": "import {\n  comparePersistedWorkshopAnalyticsRuns,\n  createWorkshopAnalyticsDemoSnapshot,\n  createWorkshopAnalyticsExport,\n  createPersistedWorkshopAnalyticsRerun,\n  getWorkshopAnalyticsSnapshot,\n  seedWorkshopAnalyticsDemo,\n} from \"@cowards/persistence/workshop-analytics\""
         },
         {
           "line": 2,
           "source": "@cowards/persistence/workshop",
-          "statementText": "import {\n  buildWorkshopRevision,\n  createWorkshopTestMatchSet,\n  getWorkshopRevisionSource,\n  getWorkshopSnapshot,\n  getWorkshopStaticSnapshot,\n  getWorkshopTestSummary,\n  insertWorkshopRevision,\n  type WorkshopTestSummary,\n  validateWorkshopSource,\n  WORKSHOP_STRATEGY_ID,\n} from \"@cowards/persistence/workshop\""
+          "statementText": "import {\n  buildWorkshopRevision,\n  createWorkshopTestMatchSet,\n  getWorkshopRevisionSource,\n  getWorkshopSnapshot,\n  getWorkshopStaticSnapshot,\n  getWorkshopTestSummary,\n  insertWorkshopRevision,\n  publicWorkshopRevisionMetadata,\n  type WorkshopTestSummary,\n  validateWorkshopSource,\n  WORKSHOP_STRATEGY_ID,\n} from \"@cowards/persistence/workshop\""
         },
         {
-          "line": 22,
+          "line": 23,
           "source": "@cowards/spec",
           "statementText": "import type {\n  MatchSetId,\n  StrategyRevision,\n  StrategyRevisionId,\n} from \"@cowards/spec\""
         },
         {
-          "line": 27,
+          "line": 28,
           "source": "@cowards/spec",
           "statementText": "import {\n  describeStrategyRuntimeProductSemantics,\n  getSupportedStrategyLanguageBySourceFormat,\n  getSupportedStrategyLanguageRecord,\n  type StrategyArtifactSourceFormat,\n} from \"@cowards/spec\""
         },
         {
-          "line": 33,
+          "line": 34,
           "source": "./types.js",
           "statementText": "import type {\n  WorkshopLaunchTestRequest,\n  WorkshopInitialData,\n  WorkshopSubmitRequest,\n  WorkshopSubmitResponse,\n} from \"./types.js\""
         },
         {
-          "line": 39,
+          "line": 40,
           "source": "../../lib/storage-unavailable-error.js",
           "statementText": "import { isStorageUnavailableError } from \"../../lib/storage-unavailable-error.js\""
         }
@@ -14541,14 +14809,14 @@
           "statementText": "import { createDatabasePool } from \"@cowards/persistence/db\""
         },
         {
-          "line": 14,
+          "line": 15,
           "source": "@cowards/persistence/workshop-analytics",
           "statementText": "import {\n  comparePersistedWorkshopAnalyticsRuns,\n  createWorkshopAnalyticsDemoSnapshot,\n  createWorkshopAnalyticsExport,\n  createPersistedWorkshopAnalyticsRerun,\n  getWorkshopAnalyticsSnapshot,\n  seedWorkshopAnalyticsDemo,\n} from \"@cowards/persistence/workshop-analytics\""
         },
         {
           "line": 2,
           "source": "@cowards/persistence/workshop",
-          "statementText": "import {\n  buildWorkshopRevision,\n  createWorkshopTestMatchSet,\n  getWorkshopRevisionSource,\n  getWorkshopSnapshot,\n  getWorkshopStaticSnapshot,\n  getWorkshopTestSummary,\n  insertWorkshopRevision,\n  type WorkshopTestSummary,\n  validateWorkshopSource,\n  WORKSHOP_STRATEGY_ID,\n} from \"@cowards/persistence/workshop\""
+          "statementText": "import {\n  buildWorkshopRevision,\n  createWorkshopTestMatchSet,\n  getWorkshopRevisionSource,\n  getWorkshopSnapshot,\n  getWorkshopStaticSnapshot,\n  getWorkshopTestSummary,\n  insertWorkshopRevision,\n  publicWorkshopRevisionMetadata,\n  type WorkshopTestSummary,\n  validateWorkshopSource,\n  WORKSHOP_STRATEGY_ID,\n} from \"@cowards/persistence/workshop\""
         }
       ],
       "serviceImports": [],

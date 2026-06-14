@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -20,6 +21,20 @@ import {
 } from "./generate-typescript-backend-inventory.ts"
 
 const tempRoots: string[] = []
+
+const resolvePlanningArtifact = (activePath: string): string => {
+  if (existsSync(activePath)) {
+    return activePath
+  }
+  const archivedPath = activePath.replace(
+    ".planning/phases/",
+    ".planning/milestones/v1.16-phases/",
+  )
+  if (existsSync(archivedPath)) {
+    return archivedPath
+  }
+  return activePath
+}
 
 const createTempRepo = (): string => {
   const root = mkdtempSync(path.join(tmpdir(), "cowards-ts-backend-inventory-"))
@@ -330,6 +345,7 @@ export const TYPE_SCRIPT_LIFECYCLE_QUARANTINE = { normalBackend: false }
       ".planning/phases/103-typescript-backend-inventory-and-retirement-contract/103-REVIEW.md",
       ".planning/phases/103-typescript-backend-inventory-and-retirement-contract/103-VALIDATION.md",
     ]
+      .map(resolvePlanningArtifact)
       .map((file) => readFileSync(file, "utf8"))
       .join("\n")
 
