@@ -34,9 +34,9 @@ Close or explicitly reframe the remaining runtime/account/security-policy edges 
 
 ### Boundary Inventory and Decisions
 
-- [ ] **INV-01**: Developer can inventory every v1.35-affected account save, account-owned revision/source read, owner-debug/private replay, Workshop compatibility alias, competition entry, Go-owned read/write, provider-proof, sandbox-claim, package/dependency, TinyGo, and privacy monitor surface.
-- [ ] **INV-02**: Developer can classify every inventoried surface as fix-now, quarantine, deprecate/remove, document-only, or future, with current owner, trust boundary, public/private data class, required tests, and follow-up evidence.
-- [ ] **INV-03**: Developer can lock the v1.35 decision register before behavioral changes so later phases know which surfaces must preserve, migrate, hide, or fail loudly.
+- [x] **INV-01**: Developer can inventory every v1.35-affected account save, account-owned revision/source read, owner-debug/private replay, Workshop compatibility alias, competition entry, Go-owned read/write, provider-proof, sandbox-claim, package/dependency, TinyGo, and privacy monitor surface.
+- [x] **INV-02**: Developer can classify every inventoried surface as fix-now, quarantine, deprecate/remove, document-only, or future, with current owner, trust boundary, public/private data class, required tests, and follow-up evidence.
+- [x] **INV-03**: Developer can lock the v1.35 decision register before behavioral changes so later phases know which surfaces must preserve, migrate, hide, or fail loudly.
 
 ### Account Save and Provider Proof
 
@@ -118,9 +118,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| INV-01 | Phase 243 | Pending |
-| INV-02 | Phase 243 | Pending |
-| INV-03 | Phase 243 | Pending |
+| INV-01 | Phase 243 | Complete |
+| INV-02 | Phase 243 | Complete |
+| INV-03 | Phase 243 | Complete |
 | ACCT-01 | Phase 244 | Pending |
 | ACCT-02 | Phase 244 | Pending |
 | ACCT-03 | Phase 244 | Pending |
