@@ -1,10 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -261,7 +256,8 @@ const forbiddenOverclaimPatterns = [
   },
   {
     phrase: "production-supported package mode other than none",
-    pattern: /\bpackage mode (?!`?none`?\b)[^.\n]{0,80}\bproduction-supported\b/i,
+    pattern:
+      /\bpackage mode (?!`?none`?\b)[^.\n]{0,80}\bproduction-supported\b/i,
   },
 ] as const
 
@@ -343,7 +339,9 @@ const defaultRows = [
     requiredTestsOrProof: [
       "Phase 245 owner-debug authorization and public fallback tests",
     ],
-    privacyRisks: ["Owner-debug payloads must remain absent from public replay."],
+    privacyRisks: [
+      "Owner-debug payloads must remain absent from public replay.",
+    ],
     downstreamPhase: 245,
   },
   {
@@ -354,7 +352,8 @@ const defaultRows = [
       "apps/web/app/api/workshop/revisions/[revisionId]/source/route.ts",
     ],
     currentOwner: "Legacy Workshop source aliases",
-    intendedOwner: "Deprecated, removed, hidden, or migrated Workshop alias policy",
+    intendedOwner:
+      "Deprecated, removed, hidden, or migrated Workshop alias policy",
     trustBoundary: "Workshop-local route -> source payload",
     dataClass: "owner-private",
     affectedRequirements: ["INV-01", "INV-02", "API-01", "API-02"],
@@ -532,7 +531,8 @@ const authoritativeRows = [
     currentOwner: "Web transport plus Go account revision write path",
     intendedOwner:
       "Go account save with runtime-service provider proof for execution-ready revisions",
-    trustBoundary: "authenticated account request -> selected Go backend -> PostgreSQL revision write",
+    trustBoundary:
+      "authenticated account request -> selected Go backend -> PostgreSQL revision write",
     dataClass: "owner-private",
     affectedRequirements: [
       "INV-01",
@@ -562,7 +562,8 @@ const authoritativeRows = [
       "apps/go-backend/live_backend.go#strategyRevisionSource",
     ],
     currentOwner: "Web API transport and Go account source read route",
-    intendedOwner: "Server-authorized account source read with private/no-store response",
+    intendedOwner:
+      "Server-authorized account source read with private/no-store response",
     trustBoundary: "account session -> owner-private Strategy source response",
     dataClass: "owner-private",
     affectedRequirements: ["INV-01", "INV-02", "AUTH-02", "PRIV-02"],
@@ -587,18 +588,14 @@ const authoritativeRows = [
       "apps/web/app/matches/[matchId]/replay/owner-debug.test.ts",
       "apps/web/app/workshop/workshop-client-state.ts#LOCAL_WORKSHOP_PLAYER_ID",
     ],
-    currentOwner: "Replay owner-debug parser, server tests, and local Workshop owner-link helper",
+    currentOwner:
+      "Replay owner-debug parser, server tests, and local Workshop owner-link helper",
     intendedOwner:
       "Server-authorized owner/participant or internal-test owner-private replay projection",
-    trustBoundary: "replay query request -> server authorization -> public or owner-private projection",
+    trustBoundary:
+      "replay query request -> server authorization -> public or owner-private projection",
     dataClass: "owner-private",
-    affectedRequirements: [
-      "INV-01",
-      "INV-02",
-      "AUTH-01",
-      "PRIV-01",
-      "PRIV-02",
-    ],
+    affectedRequirements: ["INV-01", "INV-02", "AUTH-01", "PRIV-01", "PRIV-02"],
     currentBehavior:
       "ownerDebug/debug query parameters request an owner view but must not grant private replay evidence; player:workshop-local remains an ephemeral Workshop/test identity.",
     disposition: "quarantine",
@@ -625,7 +622,8 @@ const authoritativeRows = [
     currentOwner: "Legacy and local Workshop compatibility API routes",
     intendedOwner:
       "Removed, hidden/local-only, migrated, or deprecated-with-tests alias policy",
-    trustBoundary: "Workshop-local or compatibility request -> source/submit/save/test/analytics payload",
+    trustBoundary:
+      "Workshop-local or compatibility request -> source/submit/save/test/analytics payload",
     dataClass: "owner-private",
     affectedRequirements: [
       "INV-01",
@@ -657,9 +655,12 @@ const authoritativeRows = [
       "packages/persistence/src/competition.ts",
       "packages/persistence/src/ladder.ts",
     ],
-    currentOwner: "Web entry transport, Go exhibition creation, and persistence competition/ladder gates",
-    intendedOwner: "Provider-proof-backed entry eligibility with Go/persistence parity",
-    trustBoundary: "saved account revision -> exhibition, competition, or ladder entry",
+    currentOwner:
+      "Web entry transport, Go exhibition creation, and persistence competition/ladder gates",
+    intendedOwner:
+      "Provider-proof-backed entry eligibility with Go/persistence parity",
+    trustBoundary:
+      "saved account revision -> exhibition, competition, or ladder entry",
     dataClass: "session",
     affectedRequirements: [
       "INV-01",
@@ -694,8 +695,10 @@ const authoritativeRows = [
       "apps/go-backend/main.go#public replay fixture validation",
       "apps/web/lib/public-go-read-client.ts",
     ],
-    currentOwner: "Selected Go account, MatchSet, public replay, public summary, and session helper routes",
-    intendedOwner: "Go-owned backend reads/writes with web adapters as schema/transport boundaries",
+    currentOwner:
+      "Selected Go account, MatchSet, public replay, public summary, and session helper routes",
+    intendedOwner:
+      "Go-owned backend reads/writes with web adapters as schema/transport boundaries",
     trustBoundary: "HTTP API -> Go backend -> PostgreSQL/public projection",
     dataClass: "session",
     affectedRequirements: [
@@ -732,9 +735,12 @@ const authoritativeRows = [
       ".planning/artifacts/v1.34-workshop-checker-contract.md",
       ".planning/artifacts/v1.34-workshop-checker-proof.md",
     ],
-    currentOwner: "Runtime-service provider validation, Go client, spec checker contract, and persistence proof helpers",
-    intendedOwner: "Runtime-service/provider proof boundary reused by account save, Workshop, entry, and final proof",
-    trustBoundary: "hostile Strategy source/artifact validation -> provider metadata/proof -> public-safe projection",
+    currentOwner:
+      "Runtime-service provider validation, Go client, spec checker contract, and persistence proof helpers",
+    intendedOwner:
+      "Runtime-service/provider proof boundary reused by account save, Workshop, entry, and final proof",
+    trustBoundary:
+      "hostile Strategy source/artifact validation -> provider metadata/proof -> public-safe projection",
     dataClass: "internal-private",
     affectedRequirements: [
       "INV-01",
@@ -769,9 +775,12 @@ const authoritativeRows = [
       ".planning/artifacts/v1.24-production-sandbox-readiness-matrix.md",
       ".planning/artifacts/v1.24-runtime-abuse-lab-evidence.md",
     ],
-    currentOwner: "Spec runtime labels, Learn/evidence copy, sandbox artifacts, and boundary monitors",
-    intendedOwner: "Versioned sandbox-readiness/certification contract and fail-loud claim monitor",
-    trustBoundary: "runtime evidence and metadata -> public/developer readiness labels",
+    currentOwner:
+      "Spec runtime labels, Learn/evidence copy, sandbox artifacts, and boundary monitors",
+    intendedOwner:
+      "Versioned sandbox-readiness/certification contract and fail-loud claim monitor",
+    trustBoundary:
+      "runtime evidence and metadata -> public/developer readiness labels",
     dataClass: "public",
     affectedRequirements: [
       "INV-01",
@@ -803,9 +812,12 @@ const authoritativeRows = [
       "packages/runtime-wasm-wasi/src/validation.ts",
       "packages/runtime-js/src/revision.ts",
     ],
-    currentOwner: "Spec runtime package policy, checker diagnostics, and runtime provider validators",
-    intendedOwner: "Production package mode none enforcement plus future package-lane criteria",
-    trustBoundary: "Strategy metadata/source/artifact -> validation, compatibility, entry, and public evidence policy",
+    currentOwner:
+      "Spec runtime package policy, checker diagnostics, and runtime provider validators",
+    intendedOwner:
+      "Production package mode none enforcement plus future package-lane criteria",
+    trustBoundary:
+      "Strategy metadata/source/artifact -> validation, compatibility, entry, and public evidence policy",
     dataClass: "public",
     affectedRequirements: [
       "INV-01",
@@ -836,7 +848,8 @@ const authoritativeRows = [
     ],
     currentOwner: "Planning requirements",
     intendedOwner: "Future explicit package-lane milestone",
-    trustBoundary: "future package-policy ideas -> current production no-package boundary",
+    trustBoundary:
+      "future package-policy ideas -> current production no-package boundary",
     dataClass: "public",
     affectedRequirements: ["INV-01", "INV-02", "PKG-04"],
     currentBehavior:
@@ -860,9 +873,12 @@ const authoritativeRows = [
       "packages/spec/src/runtime.ts#supported languages",
       "scripts/check-boundary-monitors.ts#TinyGo",
     ],
-    currentOwner: "TinyGo spike artifact, source-format lists, and boundary monitor",
-    intendedOwner: "Hidden spike-only TinyGo policy until a future explicit productionization milestone",
-    trustBoundary: "candidate TinyGo evidence -> production-visible runtime/source-format labels",
+    currentOwner:
+      "TinyGo spike artifact, source-format lists, and boundary monitor",
+    intendedOwner:
+      "Hidden spike-only TinyGo policy until a future explicit productionization milestone",
+    trustBoundary:
+      "candidate TinyGo evidence -> production-visible runtime/source-format labels",
     dataClass: "public",
     affectedRequirements: [
       "INV-01",
@@ -896,9 +912,11 @@ const authoritativeRows = [
       "apps/web/app/matches/server.test.ts",
       ".planning/artifacts/v1.34-workshop-checker-proof.md",
     ],
-    currentOwner: "Spec privacy utilities, boundary monitors, Go/runtime-service/web tests, and v1.34 proof scan",
+    currentOwner:
+      "Spec privacy utilities, boundary monitors, Go/runtime-service/web tests, and v1.34 proof scan",
     intendedOwner: "v1.35 public/default privacy proof and monitor suite",
-    trustBoundary: "private runtime/account/Match data -> public/default API, UI, logs, fixtures, and proof artifacts",
+    trustBoundary:
+      "private runtime/account/Match data -> public/default API, UI, logs, fixtures, and proof artifacts",
     dataClass: "public",
     affectedRequirements: [
       "INV-01",
@@ -935,8 +953,10 @@ const authoritativeRows = [
       ".planning/artifacts/v1.35-boundary-surface-inventory.json",
     ],
     currentOwner: "Prior milestone artifacts plus Phase 243 evaluator output",
-    intendedOwner: "Historical baseline and locked v1.35 decision register for Phases 244-248",
-    trustBoundary: "static repo evidence -> generated planning artifacts and downstream monitor inputs",
+    intendedOwner:
+      "Historical baseline and locked v1.35 decision register for Phases 244-248",
+    trustBoundary:
+      "static repo evidence -> generated planning artifacts and downstream monitor inputs",
     dataClass: "public",
     affectedRequirements: ["INV-01", "INV-02", "INV-03", "PROOF-05"],
     currentBehavior:
@@ -1215,10 +1235,10 @@ export const validateV135BoundarySurfaceInventory = (
     errors.push(`milestone must be ${milestone}`)
   }
 
-  const requiredGroups = new Set<V135BoundarySurfaceGroup>(requiredSurfaceGroups)
-  const presentGroups = new Set(
-    inventory.rows.map((row) => row.surfaceGroup),
+  const requiredGroups = new Set<V135BoundarySurfaceGroup>(
+    requiredSurfaceGroups,
   )
+  const presentGroups = new Set(inventory.rows.map((row) => row.surfaceGroup))
   for (const group of requiredGroups) {
     if (!presentGroups.has(group)) {
       errors.push(`missing required surface group ${group}`)
@@ -1226,12 +1246,15 @@ export const validateV135BoundarySurfaceInventory = (
   }
 
   const allowedGroups = new Set<V135BoundarySurfaceGroup>(allowedSurfaceGroups)
-  const allowedDispositionSet =
-    new Set<V135BoundaryDisposition>(allowedDispositions)
-  const allowedDataClassSet =
-    new Set<V135BoundarySurfaceRow["dataClass"]>(allowedDataClasses)
-  const allowedPhaseSet =
-    new Set<V135BoundarySurfaceRow["downstreamPhase"]>(allowedDownstreamPhases)
+  const allowedDispositionSet = new Set<V135BoundaryDisposition>(
+    allowedDispositions,
+  )
+  const allowedDataClassSet = new Set<V135BoundarySurfaceRow["dataClass"]>(
+    allowedDataClasses,
+  )
+  const allowedPhaseSet = new Set<V135BoundarySurfaceRow["downstreamPhase"]>(
+    allowedDownstreamPhases,
+  )
   const allowedRequirements = new Set<V135RequirementId>(allowedRequirementIds)
   const rowIds = new Set<string>()
   const rowFamilyCodeRefs = new Set<string>()
@@ -1256,7 +1279,9 @@ export const validateV135BoundarySurfaceInventory = (
       errors.push(`${row.id} has invalid dataClass ${row.dataClass}`)
     }
     if (!allowedPhaseSet.has(row.downstreamPhase)) {
-      errors.push(`${row.id} has invalid downstreamPhase ${row.downstreamPhase}`)
+      errors.push(
+        `${row.id} has invalid downstreamPhase ${row.downstreamPhase}`,
+      )
     }
 
     const requiredStringFields = [
@@ -1300,11 +1325,18 @@ export const validateV135BoundarySurfaceInventory = (
     }
 
     if (row.downstreamPhase === "none") {
-      if (!row.affectedRequirements.some((requirement) => requirement.startsWith("INV-"))) {
-        errors.push(`${row.id} downstreamPhase none must include INV traceability`)
+      if (
+        !row.affectedRequirements.some((requirement) =>
+          requirement.startsWith("INV-"),
+        )
+      ) {
+        errors.push(
+          `${row.id} downstreamPhase none must include INV traceability`,
+        )
       }
     } else {
-      const requiredPrefixes = downstreamRequirementPrefixes[row.downstreamPhase]
+      const requiredPrefixes =
+        downstreamRequirementPrefixes[row.downstreamPhase]
       const hasDownstreamRequirement = row.affectedRequirements.some(
         (requirement) =>
           requiredPrefixes.some((prefix) => requirement.startsWith(prefix)),
@@ -1376,7 +1408,8 @@ export const renderV135BoundarySurfaceInventoryMarkdown = (
       if (phaseRows.length === 0) {
         return ""
       }
-      const label = phase === "none" ? "No downstream behavior phase" : `Phase ${phase}`
+      const label =
+        phase === "none" ? "No downstream behavior phase" : `Phase ${phase}`
       return `- **${label}:** ${phaseRows.map((row) => row.id).join(", ")}`
     })
     .filter(Boolean)
@@ -1475,7 +1508,13 @@ export const renderV135BoundarySurfaceInventoryJson = (
 
 const parseMarkdownRowSyncFields = (
   markdown: string,
-): Map<string, Pick<V135BoundarySurfaceRow, "affectedRequirements" | "disposition" | "downstreamPhase">> => {
+): Map<
+  string,
+  Pick<
+    V135BoundarySurfaceRow,
+    "affectedRequirements" | "disposition" | "downstreamPhase"
+  >
+> => {
   const result = new Map<
     string,
     Pick<
@@ -1484,7 +1523,11 @@ const parseMarkdownRowSyncFields = (
     >
   >()
   for (const line of markdown.split("\n")) {
-    if (!line.startsWith("| ") || line.startsWith("| ---") || line.includes(" Surface Group ")) {
+    if (
+      !line.startsWith("| ") ||
+      line.startsWith("| ---") ||
+      line.includes(" Surface Group ")
+    ) {
       continue
     }
     const cells = line

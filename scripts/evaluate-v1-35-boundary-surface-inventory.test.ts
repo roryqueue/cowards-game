@@ -38,11 +38,10 @@ const baseRows = (): V135BoundarySurfaceRow[] => [
   {
     id: "account-save-go-typescript-proof",
     surfaceGroup: "account-save",
-    codeReferences: [
-      "apps/go-backend/live_backend.go#createStrategyRevision",
-    ],
+    codeReferences: ["apps/go-backend/live_backend.go#createStrategyRevision"],
     currentOwner: "Go account revision write path",
-    intendedOwner: "Go with runtime-service provider proof for execution-ready saves",
+    intendedOwner:
+      "Go with runtime-service provider proof for execution-ready saves",
     trustBoundary: "session account request -> Go persistence write",
     dataClass: "owner-private",
     affectedRequirements: ["INV-01", "INV-02", "ACCT-01"],
@@ -64,7 +63,8 @@ const baseRows = (): V135BoundarySurfaceRow[] => [
     trustBoundary: "session account request -> private source response",
     dataClass: "owner-private",
     affectedRequirements: ["INV-01", "INV-02", "AUTH-02"],
-    currentBehavior: "Private source read is inventoried for server authorization.",
+    currentBehavior:
+      "Private source read is inventoried for server authorization.",
     disposition: "quarantine",
     requiredTestsOrProof: ["Phase 245 account source authorization tests"],
     privacyRisks: ["Strategy source must not appear in public/default output."],
@@ -94,7 +94,8 @@ const baseRows = (): V135BoundarySurfaceRow[] => [
     trustBoundary: "Workshop local route -> source payload",
     dataClass: "owner-private",
     affectedRequirements: ["INV-01", "INV-02", "API-01"],
-    currentBehavior: "Alias is inventoried as a possible bypass until Phase 245 decides fate.",
+    currentBehavior:
+      "Alias is inventoried as a possible bypass until Phase 245 decides fate.",
     disposition: "deprecate-remove",
     requiredTestsOrProof: ["Phase 245 alias migration or removal tests"],
     privacyRisks: ["Source alias must not bypass account authorization."],
@@ -109,7 +110,8 @@ const baseRows = (): V135BoundarySurfaceRow[] => [
     trustBoundary: "account revision -> entry eligibility",
     dataClass: "session",
     affectedRequirements: ["INV-01", "INV-02", "ENTRY-01"],
-    currentBehavior: "Entry gate drift is inventoried for Phase 244 provider proof.",
+    currentBehavior:
+      "Entry gate drift is inventoried for Phase 244 provider proof.",
     disposition: "fix-now",
     requiredTestsOrProof: ["Phase 244 Go and persistence entry parity tests"],
     privacyRisks: ["Entry diagnostics must be public-safe."],
@@ -124,7 +126,8 @@ const baseRows = (): V135BoundarySurfaceRow[] => [
     trustBoundary: "HTTP API -> Go backend -> PostgreSQL",
     dataClass: "session",
     affectedRequirements: ["INV-01", "INV-02", "ACCT-02"],
-    currentBehavior: "Go read/write surfaces are inventoried as the normal backend.",
+    currentBehavior:
+      "Go read/write surfaces are inventoried as the normal backend.",
     disposition: "document-only",
     requiredTestsOrProof: ["Phase 244 Go route parity proof"],
     privacyRisks: ["Account writes must not emit raw diagnostics."],
@@ -139,7 +142,8 @@ const baseRows = (): V135BoundarySurfaceRow[] => [
     trustBoundary: "provider validation request -> proof metadata",
     dataClass: "internal-private",
     affectedRequirements: ["INV-01", "INV-02", "PROOF-02"],
-    currentBehavior: "Provider proof is evidence, not a sandbox certification claim.",
+    currentBehavior:
+      "Provider proof is evidence, not a sandbox certification claim.",
     disposition: "document-only",
     requiredTestsOrProof: ["Phase 248 service-backed provider proof"],
     privacyRisks: ["Provider signing material must remain private."],
@@ -170,10 +174,13 @@ const baseRows = (): V135BoundarySurfaceRow[] => [
     trustBoundary: "strategy metadata -> validation and entry policy",
     dataClass: "public",
     affectedRequirements: ["INV-01", "INV-02", "PKG-01"],
-    currentBehavior: "Current production package policy keeps package mode none.",
+    currentBehavior:
+      "Current production package policy keeps package mode none.",
     disposition: "fix-now",
     requiredTestsOrProof: ["Phase 247 package mode none monitor"],
-    privacyRisks: ["Package diagnostics must omit package paths and host paths."],
+    privacyRisks: [
+      "Package diagnostics must omit package paths and host paths.",
+    ],
     downstreamPhase: 247,
   },
   {
@@ -185,7 +192,8 @@ const baseRows = (): V135BoundarySurfaceRow[] => [
     trustBoundary: "candidate runtime evidence -> production-visible labels",
     dataClass: "public",
     affectedRequirements: ["INV-01", "INV-02", "LABEL-01"],
-    currentBehavior: "TinyGo remains spike-only and hidden from production surfaces.",
+    currentBehavior:
+      "TinyGo remains spike-only and hidden from production surfaces.",
     disposition: "document-only",
     requiredTestsOrProof: ["Phase 246 TinyGo visibility monitor"],
     privacyRisks: ["Candidate evidence must not imply production visibility."],
@@ -200,7 +208,8 @@ const baseRows = (): V135BoundarySurfaceRow[] => [
     trustBoundary: "private runtime/account data -> public/default projection",
     dataClass: "public",
     affectedRequirements: ["INV-01", "INV-02", "PROOF-03"],
-    currentBehavior: "Public/default projection rows require privacy proof coverage.",
+    currentBehavior:
+      "Public/default projection rows require privacy proof coverage.",
     disposition: "fix-now",
     requiredTestsOrProof: ["Phase 248 public/default privacy scan"],
     privacyRisks: ["Default outputs must redact private markers."],
@@ -217,7 +226,9 @@ describe("v1.35 boundary surface inventory evaluator", () => {
   it("rejects fixtures missing required INV-01 surface groups like account-save", () => {
     const rows = baseRows().filter((row) => row.surfaceGroup !== "account-save")
 
-    expect(validateV135BoundarySurfaceInventory(inventoryWithRows(rows))).toEqual(
+    expect(
+      validateV135BoundarySurfaceInventory(inventoryWithRows(rows)),
+    ).toEqual(
       expect.arrayContaining(["missing required surface group account-save"]),
     )
     expect(requiredSurfaceGroups).toContain("privacy-monitor")
@@ -227,7 +238,9 @@ describe("v1.35 boundary surface inventory evaluator", () => {
     const rows = baseRows()
     rows[0] = { ...rows[0]!, disposition: "defer-later" as never }
 
-    expect(validateV135BoundarySurfaceInventory(inventoryWithRows(rows))).toEqual(
+    expect(
+      validateV135BoundarySurfaceInventory(inventoryWithRows(rows)),
+    ).toEqual(
       expect.arrayContaining([
         "account-save-go-typescript-proof has invalid disposition defer-later",
       ]),
@@ -244,7 +257,9 @@ describe("v1.35 boundary surface inventory evaluator", () => {
       privacyRisks: [],
     }
 
-    expect(validateV135BoundarySurfaceInventory(inventoryWithRows(rows))).toEqual(
+    expect(
+      validateV135BoundarySurfaceInventory(inventoryWithRows(rows)),
+    ).toEqual(
       expect.arrayContaining([
         "account-save-go-typescript-proof missing currentOwner",
         "account-save-go-typescript-proof missing trustBoundary",
@@ -275,7 +290,9 @@ describe("v1.35 boundary surface inventory evaluator", () => {
       affectedRequirements: allowedRequirementIds,
     }
     expect(
-      validateV135BoundarySurfaceInventory(inventoryWithRows(allRequirementRows)),
+      validateV135BoundarySurfaceInventory(
+        inventoryWithRows(allRequirementRows),
+      ),
     ).toEqual([])
 
     const unknownRequirementRows = baseRows()
@@ -296,7 +313,9 @@ describe("v1.35 boundary surface inventory evaluator", () => {
       ...onlyInvRows[0]!,
       affectedRequirements: ["INV-01", "INV-02"],
     }
-    expect(validateV135BoundarySurfaceInventory(inventoryWithRows(onlyInvRows))).toEqual(
+    expect(
+      validateV135BoundarySurfaceInventory(inventoryWithRows(onlyInvRows)),
+    ).toEqual(
       expect.arrayContaining([
         "account-save-go-typescript-proof downstreamPhase 244 requires ACCT-* or ENTRY-* traceability, not only INV IDs",
       ]),
@@ -316,7 +335,9 @@ describe("v1.35 boundary surface inventory evaluator", () => {
       const rows = baseRows()
       rows[7] = { ...rows[7]!, currentBehavior: `Claims ${phrase}.` }
 
-      expect(validateV135BoundarySurfaceInventory(inventoryWithRows(rows))).toEqual(
+      expect(
+        validateV135BoundarySurfaceInventory(inventoryWithRows(rows)),
+      ).toEqual(
         expect.arrayContaining([
           expect.stringContaining("forbidden overclaim"),
         ]),
@@ -345,7 +366,9 @@ describe("v1.35 boundary surface inventory evaluator", () => {
         currentBehavior: `Public/default output exposes ${marker}.`,
       }
 
-      expect(validateV135BoundarySurfaceInventory(inventoryWithRows(rows))).toEqual(
+      expect(
+        validateV135BoundarySurfaceInventory(inventoryWithRows(rows)),
+      ).toEqual(
         expect.arrayContaining([
           expect.stringContaining("forbidden public/default leakage"),
         ]),
