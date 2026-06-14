@@ -176,8 +176,8 @@ func (client *runtimeServiceClient) executeMatch(ctx context.Context, request ru
 }
 
 func (client *runtimeServiceClient) validateStrategy(ctx context.Context, sourceFormat string, source string, strategyID string) (*runtimeServiceValidationResponse, *runtimeServiceFailure) {
-	if sourceFormat != "python" && sourceFormat != "rust" && sourceFormat != "zig" {
-		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service validation only supports Python, Rust, and Zig provider sources in v1.32", false, nil)
+	if sourceFormat != "typescript" && sourceFormat != "python" && sourceFormat != "rust" && sourceFormat != "zig" {
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service validation only supports TypeScript, Python, Rust, and Zig provider sources", false, nil)
 	}
 	endpoint := client.endpoint
 	if endpoint == "" {

@@ -113,6 +113,31 @@ const providerValidationProof = (input: {
     .digest("hex")}`
 }
 
+const publicValidationMetadata = (
+  metadata: Record<string, unknown>,
+): Record<string, unknown> => {
+  const redactArtifactBytes = (artifact: unknown): unknown => {
+    if (artifact === null || typeof artifact !== "object") {
+      return artifact
+    }
+    const { bytesBase64: _bytesBase64, ...publicArtifact } = artifact as Record<
+      string,
+      unknown
+    >
+    return publicArtifact
+  }
+
+  return {
+    ...metadata,
+    ...(metadata.sourceArtifact === undefined
+      ? {}
+      : { sourceArtifact: redactArtifactBytes(metadata.sourceArtifact) }),
+    ...(metadata.compiledArtifact === undefined
+      ? {}
+      : { compiledArtifact: redactArtifactBytes(metadata.compiledArtifact) }),
+  }
+}
+
 const validateStrategyRequest = (rawRequest: unknown) => {
   const body =
     rawRequest !== null && typeof rawRequest === "object"
@@ -221,6 +246,9 @@ const validateStrategyRequest = (rawRequest: unknown) => {
             }),
           },
         }
+  const publicMetadata = publicValidationMetadata(
+    metadata as Record<string, unknown>,
+  )
   return {
     ok: true,
     kind: "strategyValidation",
@@ -236,7 +264,7 @@ const validateStrategyRequest = (rawRequest: unknown) => {
     runtime: revision.runtime,
     validation: revision.validation,
     engineCompatibility: revision.engineCompatibility,
-    metadata,
+    metadata: publicMetadata,
     sourceHash: revision.sourceHash,
     sourceBytes: revision.sourceBytes,
   }

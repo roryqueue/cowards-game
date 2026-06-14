@@ -78,6 +78,70 @@ describe("runtime execution HTTP boundary", () => {
     })
   })
 
+  it("validates TypeScript through provider proof without exposing private artifacts", async () => {
+    const server = await withServer(8 * 1024)
+    const source = `
+export default {
+  selectActivations() {
+    return []
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: null }
+  },
+}
+`
+    const response = await fetch(`${server.url}/validate-strategy`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sourceFormat: "typescript",
+        source,
+        strategyId: "strategy:typescript",
+      }),
+    })
+    const body = (await response.json()) as Record<string, unknown>
+    const serialized = JSON.stringify(body)
+
+    expect(response.status).toBe(200)
+    expect(body).toMatchObject({
+      ok: true,
+      kind: "strategyValidation",
+      sourceFormat: "typescript",
+      provider: {
+        id: "strategy-language-provider-js-ts",
+      },
+      metadata: {
+        tags: ["typescript", "artifact-proven", "counted", "provider"],
+        sourceArtifact: {
+          format: "transpiled-javascript",
+          sourceHash: expect.any(String),
+          sourceBytes: expect.any(Number),
+          hash: expect.any(String),
+          bytes: expect.any(Number),
+        },
+        providerValidation: {
+          providerId: "strategy-language-provider-js-ts",
+          contractVersion: "strategy-language-provider-contract-v1.33",
+          sourceHash: expect.any(String),
+          sourceBytes: expect.any(Number),
+          artifactHash: expect.any(String),
+          artifactBytes: expect.any(Number),
+          proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
+        },
+      },
+      sourceHash: expect.any(String),
+      sourceBytes: expect.any(Number),
+    })
+    expect(serialized).not.toContain(source)
+    expect(serialized).not.toContain("bytesBase64")
+    expect(serialized).not.toContain("/Users/")
+    expect(serialized).not.toContain("process.env")
+    expect(serialized).not.toContain("StrategyMemory")
+    expect(serialized).not.toContain("SoldierMemory")
+    expect(serialized).not.toContain('"objectivePayload":')
+    expect(serialized).not.toContain("postgres://")
+  })
+
   it("validates Python through the provider validator instead of backend string scanning", async () => {
     const server = await withServer(8 * 1024)
     const validSource = `

@@ -78,6 +78,161 @@ func TestRuntimeServiceClientValidatesPythonProviderSource(t *testing.T) {
 	}
 }
 
+func TestRuntimeServiceClientValidatesTypeScriptProviderSourceD01D02D09D10(t *testing.T) {
+	source := "export default { selectActivations() { return []; }, soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: null }; } }"
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, httpRequest *http.Request) {
+		if httpRequest.URL.Path != "/validate-strategy" {
+			t.Fatalf("unexpected path %s", httpRequest.URL.Path)
+		}
+		var request map[string]any
+		if err := json.NewDecoder(httpRequest.Body).Decode(&request); err != nil {
+			t.Fatal(err)
+		}
+		if request["sourceFormat"] != "typescript" || request["strategyId"] != "strategy:typescript" {
+			t.Fatalf("unexpected TypeScript validation request: %+v", request)
+		}
+		writeRuntimeServiceTestJSON(t, writer, runtimeServiceValidationResponse{
+			OK:           true,
+			Kind:         "strategyValidation",
+			SourceFormat: "typescript",
+			Runtime: map[string]any{
+				"language": map[string]any{"id": "typescript"},
+				"adapter":  map[string]any{"id": "runtime-service-js-ts"},
+				"package":  map[string]any{"mode": "none"},
+			},
+			Validation: map[string]any{
+				"valid":       true,
+				"errors":      []any{},
+				"warnings":    []any{},
+				"sourceHash":  hashStrategySourceForGo(source),
+				"sourceBytes": len([]byte(source)),
+			},
+			EngineCompatibility: engineCompatibility(),
+			Metadata: map[string]any{
+				"tags": []string{"typescript", "artifact-proven", "counted", "provider"},
+				"sourceArtifact": map[string]any{
+					"format":      "javascript-module",
+					"hash":        "sha256:typescript-artifact-test",
+					"bytes":       128,
+					"sourceHash":  hashStrategySourceForGo(source),
+					"sourceBytes": len([]byte(source)),
+				},
+				"providerValidation": map[string]any{
+					"providerId":      "strategy-language-provider-js-ts",
+					"contractVersion": "strategy-language-provider-contract-v1.33",
+					"sourceHash":      hashStrategySourceForGo(source),
+					"sourceBytes":     len([]byte(source)),
+					"artifactHash":    "sha256:typescript-artifact-test",
+					"artifactBytes":   128,
+					"proof":           "hmac-sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
+			},
+			SourceHash:  hashStrategySourceForGo(source),
+			SourceBytes: len([]byte(source)),
+		})
+	}))
+	defer server.Close()
+	client := newRuntimeServiceClient(server.URL)
+
+	response, failure := client.validateStrategy(context.Background(), "typescript", source, "strategy:typescript")
+	if failure != nil {
+		t.Fatalf("unexpected failure: %s", runtimeServiceFailureJSONSafe(failure))
+	}
+	if response == nil || !response.OK || response.SourceFormat != "typescript" {
+		t.Fatalf("expected TypeScript validation success, got %+v", response)
+	}
+}
+
+func TestRuntimeServiceClientRejectsTypeScriptValidationDriftD02D04D09D10(t *testing.T) {
+	source := "export default { selectActivations() { return []; }, soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: null }; } }"
+
+	t.Run("wrong source format", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+			writeRuntimeServiceTestJSON(t, writer, runtimeServiceValidationResponse{
+				OK:           true,
+				Kind:         "strategyValidation",
+				SourceFormat: "python",
+				Runtime:      map[string]any{"language": map[string]any{"id": "typescript"}},
+				Validation:   map[string]any{"valid": true},
+				Metadata:     map[string]any{"tags": []string{"typescript"}},
+				SourceHash:   hashStrategySourceForGo(source),
+				SourceBytes:  len([]byte(source)),
+			})
+		}))
+		defer server.Close()
+		client := newRuntimeServiceClient(server.URL)
+
+		_, failure := client.validateStrategy(context.Background(), "typescript", source, "strategy:typescript")
+		if failure == nil || failure.ErrorClass != "RuntimeServiceContractMismatch" || !failure.Retryable {
+			t.Fatalf("expected retryable contract mismatch, got %+v", failure)
+		}
+		assertRuntimeServiceFailureSafe(t, failure)
+	})
+
+	t.Run("incomplete success", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+			writeRuntimeServiceTestJSON(t, writer, runtimeServiceValidationResponse{
+				OK:           true,
+				Kind:         "strategyValidation",
+				SourceFormat: "typescript",
+				Runtime:      map[string]any{"language": map[string]any{"id": "typescript"}},
+				SourceHash:   hashStrategySourceForGo(source),
+				SourceBytes:  len([]byte(source)),
+			})
+		}))
+		defer server.Close()
+		client := newRuntimeServiceClient(server.URL)
+
+		_, failure := client.validateStrategy(context.Background(), "typescript", source, "strategy:typescript")
+		if failure == nil || failure.ErrorClass != "RuntimeServiceMalformedResponse" || !failure.Retryable {
+			t.Fatalf("expected retryable malformed response, got %+v", failure)
+		}
+		assertRuntimeServiceFailureSafe(t, failure)
+	})
+
+	t.Run("source identity mismatch", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+			writeRuntimeServiceTestJSON(t, writer, runtimeServiceValidationResponse{
+				OK:                  true,
+				Kind:                "strategyValidation",
+				SourceFormat:        "typescript",
+				Runtime:             map[string]any{"language": map[string]any{"id": "typescript"}},
+				Validation:          map[string]any{"valid": true},
+				EngineCompatibility: engineCompatibility(),
+				Metadata:            map[string]any{"tags": []string{"typescript"}},
+				SourceHash:          hashStrategySourceForGo(source + "changed"),
+				SourceBytes:         len([]byte(source)),
+			})
+		}))
+		defer server.Close()
+		client := newRuntimeServiceClient(server.URL)
+
+		_, failure := client.validateStrategy(context.Background(), "typescript", source, "strategy:typescript")
+		if failure == nil || failure.ErrorClass != "RuntimeServiceSourceMismatch" || failure.Retryable {
+			t.Fatalf("expected non-retryable source mismatch, got %+v", failure)
+		}
+		assertRuntimeServiceFailureSafe(t, failure)
+	})
+}
+
+func TestRuntimeServiceClientRejectsUnsupportedValidationFormatD01(t *testing.T) {
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		called = true
+	}))
+	defer server.Close()
+	client := newRuntimeServiceClient(server.URL)
+
+	_, failure := client.validateStrategy(context.Background(), "javascript", "export default {}", "strategy:javascript")
+	if failure == nil || failure.ErrorClass != "RuntimeServiceContractMismatch" || failure.Retryable {
+		t.Fatalf("expected non-retryable contract mismatch, got %+v", failure)
+	}
+	if called {
+		t.Fatal("client called runtime service for unsupported source format")
+	}
+	assertRuntimeServiceFailureSafe(t, failure)
+}
+
 func TestRuntimeServiceClientRejectsSourceMismatchBeforeTransport(t *testing.T) {
 	called := false
 	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
