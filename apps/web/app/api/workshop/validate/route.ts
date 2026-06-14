@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import {
   WORKSHOP_CHECKER_VALIDATION_POLICY,
