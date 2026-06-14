@@ -26,8 +26,8 @@ v1.35 closes the runtime/account/security-policy edges left after v1.34 by makin
 **Plans**: 3 plans
 Plans:
 **Wave 1**
-- [ ] 243-01-PLAN.md — Create deterministic v1.35 inventory evaluator and tests.
-- [ ] 243-02-PLAN.md — Populate the authoritative inventory artifacts and locked decision register.
+- [x] 243-01-PLAN.md — Create deterministic v1.35 inventory evaluator and tests.
+- [x] 243-02-PLAN.md — Populate the authoritative inventory artifacts and locked decision register.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 243-03-PLAN.md — Wire static inventory checks into package scripts and boundary monitors.
@@ -100,7 +100,7 @@ Phases execute in numeric order: 243 -> 244 -> 245 -> 246 -> 247 -> 248
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 243. Boundary Surface Inventory and Contract Lock | 0/TBD | Not started | - |
+| 243. Boundary Surface Inventory and Contract Lock | 2/3 | In Progress|  |
 | 244. Account Revision Provider-Proof and Entry Gates | 0/TBD | Not started | - |
 | 245. Ownership, Owner-Debug, and Workshop Alias Cleanup | 0/TBD | Not started | - |
 | 246. Sandbox-Readiness Claims and Runtime Labels | 0/TBD | Not started | - |
