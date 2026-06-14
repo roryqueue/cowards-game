@@ -6,7 +6,7 @@ v1.35 closes the runtime/account/security-policy edges left after v1.34 by makin
 
 ## Phases
 
-- [ ] **Phase 243: Boundary Surface Inventory and Contract Lock** - Inventory v1.35-affected trust surfaces and lock fix/quarantine/deprecation/future decisions before behavior changes.
+- [x] **Phase 243: Boundary Surface Inventory and Contract Lock** - Inventory v1.35-affected trust surfaces and lock fix/quarantine/deprecation/future decisions before behavior changes. (completed 2026-06-14)
 - [ ] **Phase 244: Account Revision Provider-Proof and Entry Gates** - Make account save and entry readiness require current provider-grade proof or explicit non-execution states.
 - [ ] **Phase 245: Ownership, Owner-Debug, and Workshop Alias Cleanup** - Restrict local trust shortcuts, authorize private owner views server-side, and settle legacy Workshop aliases.
 - [ ] **Phase 246: Sandbox-Readiness Claims and Runtime Labels** - Publish conservative readiness/certification labels and fail-loud monitors for unsupported isolation claims.
@@ -30,7 +30,7 @@ Plans:
 - [x] 243-02-PLAN.md — Populate the authoritative inventory artifacts and locked decision register.
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 243-03-PLAN.md — Wire static inventory checks into package scripts and boundary monitors.
+- [x] 243-03-PLAN.md — Wire static inventory checks into package scripts and boundary monitors.
 
 ### Phase 244: Account Revision Provider-Proof and Entry Gates
 **Goal**: Users can save and enter account-owned Strategy Revisions only under honest provider-proof-backed readiness states.
@@ -100,7 +100,7 @@ Phases execute in numeric order: 243 -> 244 -> 245 -> 246 -> 247 -> 248
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 243. Boundary Surface Inventory and Contract Lock | 2/3 | In Progress|  |
+| 243. Boundary Surface Inventory and Contract Lock | 3/3 | Complete   | 2026-06-14 |
 | 244. Account Revision Provider-Proof and Entry Gates | 0/TBD | Not started | - |
 | 245. Ownership, Owner-Debug, and Workshop Alias Cleanup | 0/TBD | Not started | - |
 | 246. Sandbox-Readiness Claims and Runtime Labels | 0/TBD | Not started | - |

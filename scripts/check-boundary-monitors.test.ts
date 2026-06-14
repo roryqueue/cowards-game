@@ -225,9 +225,9 @@ describe("boundary drift monitors", () => {
     try {
       writeV135BoundarySurfaceInventoryArtifacts({ repoRoot: root })
 
-      expect(
-        checkV135BoundarySurfaceInventoryMonitor({ repoRoot: root }),
-      ).toBe("v1.35 boundary surface inventory artifacts are current")
+      expect(checkV135BoundarySurfaceInventoryMonitor({ repoRoot: root })).toBe(
+        "v1.35 boundary surface inventory artifacts are current",
+      )
     } finally {
       rmSync(root, { force: true, recursive: true })
     }
