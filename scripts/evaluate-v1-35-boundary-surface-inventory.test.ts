@@ -425,7 +425,7 @@ describe("v1.35 boundary surface inventory evaluator", () => {
     ).toEqual(
       expect.arrayContaining([
         ".planning/artifacts/v1.35-boundary-surface-inventory.json is stale",
-        ".planning/artifacts/v1.35-boundary-surface-inventory.json and .planning/artifacts/v1.35-boundary-surface-inventory.md are desynchronized for account-save-go-typescript-proof affectedRequirements",
+        ".planning/artifacts/v1.35-boundary-surface-inventory.json and .planning/artifacts/v1.35-boundary-surface-inventory.md are desynchronized for v135-account-save-go-typescript-proof affectedRequirements",
       ]),
     )
   })
