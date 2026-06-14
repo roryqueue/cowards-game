@@ -187,6 +187,31 @@ describe("boundary drift monitors", () => {
     vi.restoreAllMocks()
   })
 
+  it("wires v1.35 boundary inventory package scripts into monitor commands", () => {
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts: Record<string, string>
+    }
+
+    expect(packageJson.scripts["v1.35:boundary-inventory"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-35-boundary-surface-inventory.ts --write",
+    )
+    expect(packageJson.scripts["v1.35:boundary-inventory:check"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-35-boundary-surface-inventory.ts --check",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).toContain(
+      "pnpm v1.35:boundary-inventory:check",
+    )
+    expect(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.35:boundary-inventory:check",
+      ),
+    ).toBeLessThan(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm exec tsx scripts/check-boundary-monitors.ts",
+      ),
+    )
+  })
+
   it("allows removed baseline web offenses but fails unknown new ones", () => {
     expect(findUnknownReportOnlyOffenses([])).toEqual([])
     expect(
