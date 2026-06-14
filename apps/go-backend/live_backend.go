@@ -233,6 +233,16 @@ type accountRevisionInsert struct {
 	Validation          map[string]any
 }
 
+type strategyRevisionCreateBody struct {
+	StrategyID   string `json:"strategyId"`
+	Source       string `json:"source"`
+	SourceFormat string `json:"sourceFormat"`
+	Label        string `json:"label"`
+	Notes        string `json:"notes"`
+	StarterID    string `json:"starterId"`
+	AdvancedID   string `json:"advancedId"`
+}
+
 func (server *LiveServer) publicStrategyPage(writer http.ResponseWriter, request *http.Request) {
 	strategyID := decodePathValue(request.PathValue("strategyId"))
 	card, err := server.publicStrategyCard(request.Context(), strategyID)
@@ -555,15 +565,7 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 	if err != nil || user == nil {
 		return
 	}
-	var body struct {
-		StrategyID   string `json:"strategyId"`
-		Source       string `json:"source"`
-		SourceFormat string `json:"sourceFormat"`
-		Label        string `json:"label"`
-		Notes        string `json:"notes"`
-		StarterID    string `json:"starterId"`
-		AdvancedID   string `json:"advancedId"`
-	}
+	var body strategyRevisionCreateBody
 	if !decodeBody(writer, request, &body) {
 		return
 	}
@@ -581,43 +583,16 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 		Label:      body.Label,
 		Notes:      body.Notes,
 	}
-	if body.SourceFormat == "python" {
-		validation, failure := server.orchestrator.runtime.validateStrategy(request.Context(), body.SourceFormat, body.Source, body.StrategyID)
-		if failure != nil {
-			writeServiceError(writer, http.StatusServiceUnavailable, "RUNTIME_SERVICE_UNAVAILABLE", fmt.Sprintf("Python validation requires the runtime execution service: %s %s.", failure.Code, failure.ErrorMessage))
-			return
-		}
-		if !validation.OK {
-			input.Runtime = pythonRuntimeMetadata()
-			input.Validation = validation.Validation
-			input.Metadata = map[string]any{"tags": []string{"python", "provider", "invalid"}}
-		} else {
-			input.Runtime = validation.Runtime
-			input.Validation = validation.Validation
-			input.EngineCompatibility = validation.EngineCompatibility
-			input.Metadata = validation.Metadata
-		}
+	validation, failure := server.orchestrator.runtime.validateStrategy(request.Context(), body.SourceFormat, body.Source, body.StrategyID)
+	if failure != nil {
+		writeServiceError(writer, http.StatusServiceUnavailable, "RUNTIME_SERVICE_UNAVAILABLE", fmt.Sprintf("%s validation requires the runtime execution service: %s %s.", sourceFormatLabel(body.SourceFormat), failure.Code, failure.ErrorMessage))
+		return
 	}
-	if body.SourceFormat == "rust" || body.SourceFormat == "zig" {
-		languageLabel := "Rust"
-		if body.SourceFormat == "zig" {
-			languageLabel = "Zig"
-		}
-		validation, failure := server.orchestrator.runtime.validateStrategy(request.Context(), body.SourceFormat, body.Source, body.StrategyID)
-		if failure != nil {
-			writeServiceError(writer, http.StatusServiceUnavailable, "RUNTIME_SERVICE_UNAVAILABLE", fmt.Sprintf("%s validation requires the runtime execution service: %s %s.", languageLabel, failure.Code, failure.ErrorMessage))
-			return
-		}
-		if !validation.OK {
-			input.Runtime = wasmWasiRuntimeMetadata(body.SourceFormat)
-			input.Validation = validation.Validation
-			input.Metadata = map[string]any{"tags": []string{body.SourceFormat, "wasm-wasi", "non-counted", "exhibition-alpha"}}
-		} else {
-			input.Runtime = validation.Runtime
-			input.Validation = validation.Validation
-			input.EngineCompatibility = validation.EngineCompatibility
-			input.Metadata = validation.Metadata
-		}
+	var readiness revisionReadinessResult
+	input, readiness = accountRevisionInsertFromProviderValidation(user.ID, body, validation)
+	if readiness.State == revisionReadinessInvalid {
+		writeServiceError(writer, http.StatusBadRequest, "PROVIDER_PROOF_INVALID", "Strategy Revision could not be saved as execution-ready because provider proof did not match the submitted source and runtime metadata.")
+		return
 	}
 	if artifact, ok := server.matchSubmittedArtifact(body.Source, body.StarterID, "starter"); ok {
 		input.applyArtifact(artifact)
@@ -636,7 +611,95 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 		"strategyId":         revision["strategyId"],
 		"strategyRevisionId": revision["strategyRevisionId"],
 		"validationStatus":   revision["validationStatus"],
+		"readinessState":     string(readiness.State),
+		"readinessCategory":  readiness.PublicCategory,
+		"entryEligible":      readiness.EntryEligible,
+		"countedEligible":    readiness.CountedEligible,
 	})
+}
+
+func accountRevisionInsertFromProviderValidation(userID string, body strategyRevisionCreateBody, validation *runtimeServiceValidationResponse) (accountRevisionInsert, revisionReadinessResult) {
+	input := accountRevisionInsert{
+		UserID:     userID,
+		StrategyID: body.StrategyID,
+		Source:     body.Source,
+		Label:      body.Label,
+		Notes:      body.Notes,
+		Runtime:    runtimeMetadataForSourceFormat(body.SourceFormat),
+		Validation: map[string]any{
+			"valid":       false,
+			"errors":      []map[string]any{validationIssue("PROVIDER_VALIDATION_MISSING", "Runtime-service validation did not return Strategy validation metadata.")},
+			"warnings":    []map[string]any{},
+			"sourceHash":  hashString(body.Source),
+			"sourceBytes": len([]byte(body.Source)),
+		},
+		EngineCompatibility: engineCompatibility(),
+		Metadata:            map[string]any{"tags": []string{body.SourceFormat, "provider", "invalid"}},
+		SourceHash:          hashString(body.Source),
+		SourceBytes:         len([]byte(body.Source)),
+	}
+	if validation != nil {
+		if validation.Runtime != nil {
+			input.Runtime = validation.Runtime
+		}
+		if validation.Validation != nil {
+			input.Validation = validation.Validation
+		}
+		if validation.EngineCompatibility != nil {
+			input.EngineCompatibility = validation.EngineCompatibility
+		}
+		if validation.Metadata != nil {
+			input.Metadata = cloneMap(validation.Metadata)
+		}
+		if validation.SourceHash != "" {
+			input.SourceHash = validation.SourceHash
+		}
+		if validation.SourceBytes > 0 {
+			input.SourceBytes = validation.SourceBytes
+		}
+	}
+	if input.Metadata == nil {
+		input.Metadata = map[string]any{}
+	}
+	readiness := classifyRevisionReadiness(revisionReadinessInput{
+		SourceFormat: body.SourceFormat,
+		Runtime:      input.Runtime,
+		Validation:   input.Validation,
+		Metadata:     input.Metadata,
+		SourceHash:   input.SourceHash,
+		SourceBytes:  input.SourceBytes,
+	})
+	input.Metadata["readinessState"] = string(readiness.State)
+	input.Metadata["readinessCategory"] = readiness.PublicCategory
+	input.Metadata["entryEligible"] = readiness.EntryEligible
+	input.Metadata["countedEligible"] = readiness.CountedEligible
+	return input, readiness
+}
+
+func runtimeMetadataForSourceFormat(sourceFormat string) map[string]any {
+	switch sourceFormat {
+	case "python":
+		return pythonRuntimeMetadata()
+	case "rust", "zig":
+		return wasmWasiRuntimeMetadata(sourceFormat)
+	default:
+		return defaultRuntimeMetadata()
+	}
+}
+
+func sourceFormatLabel(sourceFormat string) string {
+	switch sourceFormat {
+	case "typescript":
+		return "TypeScript"
+	case "python":
+		return "Python"
+	case "rust":
+		return "Rust"
+	case "zig":
+		return "Zig"
+	default:
+		return "Strategy"
+	}
 }
 
 func (server *LiveServer) forkStarterStrategy(writer http.ResponseWriter, request *http.Request) {
@@ -2577,13 +2640,15 @@ func sourceArtifactProviderValidationMatches(metadata map[string]any, sourceHash
 		return false
 	}
 	artifactBytesBase64 := stringValue(artifact, "bytesBase64")
-	artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
-	if err != nil || len(artifactBytesRaw) != artifactBytes {
-		return false
-	}
-	artifactDigest := sha256.Sum256(artifactBytesRaw)
-	if hex.EncodeToString(artifactDigest[:]) != artifactHash {
-		return false
+	if artifactBytesBase64 != "" {
+		artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
+		if err != nil || len(artifactBytesRaw) != artifactBytes {
+			return false
+		}
+		artifactDigest := sha256.Sum256(artifactBytesRaw)
+		if hex.EncodeToString(artifactDigest[:]) != artifactHash {
+			return false
+		}
 	}
 	toolchain := mapValue(artifact, "toolchain")
 	expectedFormat := "python-source-bundle"
@@ -2624,13 +2689,15 @@ func rustProviderValidationMatches(metadata map[string]any, sourceHash string, s
 		return false
 	}
 	artifactBytesBase64 := stringValue(artifact, "bytesBase64")
-	artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
-	if err != nil || len(artifactBytesRaw) != artifactBytes {
-		return false
-	}
-	artifactDigest := sha256.Sum256(artifactBytesRaw)
-	if hex.EncodeToString(artifactDigest[:]) != artifactHash {
-		return false
+	if artifactBytesBase64 != "" {
+		artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
+		if err != nil || len(artifactBytesRaw) != artifactBytes {
+			return false
+		}
+		artifactDigest := sha256.Sum256(artifactBytesRaw)
+		if hex.EncodeToString(artifactDigest[:]) != artifactHash {
+			return false
+		}
 	}
 	providerID := "strategy-language-provider-rust-wasi"
 	targetTriple := "wasm32-wasip1"
