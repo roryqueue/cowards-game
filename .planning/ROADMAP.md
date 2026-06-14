@@ -23,7 +23,11 @@ v1.35 closes the runtime/account/security-policy edges left after v1.34 by makin
   1. Developer can review one inventory covering account save, account-owned revision/source read, owner-debug/private replay, Workshop compatibility alias, competition entry, Go-owned read/write, provider-proof, sandbox-claim, package/dependency, TinyGo, and privacy monitor surfaces.
   2. Developer can see each inventoried surface classified as fix-now, quarantine, deprecate/remove, document-only, or future, with current owner, trust boundary, public/private data class, required tests, and follow-up evidence.
   3. Developer can rely on a locked v1.35 decision register before later phases change behavior, labels, routes, or proof gates.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 243-01-PLAN.md — Create deterministic v1.35 inventory evaluator and tests.
+- [ ] 243-02-PLAN.md — Populate the authoritative inventory artifacts and locked decision register.
+- [ ] 243-03-PLAN.md — Wire static inventory checks into package scripts and boundary monitors.
 
 ### Phase 244: Account Revision Provider-Proof and Entry Gates
 **Goal**: Users can save and enter account-owned Strategy Revisions only under honest provider-proof-backed readiness states.
