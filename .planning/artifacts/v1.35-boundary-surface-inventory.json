@@ -1,0 +1,1218 @@
+{
+  "schemaVersion": "v1.35-boundary-surface-inventory",
+  "milestone": "v1.35",
+  "generatedBy": "scripts/evaluate-v1-35-boundary-surface-inventory.ts",
+  "generatedAt": "2026-06-14",
+  "requiredSurfaceGroups": [
+    "account-save",
+    "account-source-read",
+    "owner-debug-replay",
+    "workshop-alias",
+    "competition-entry",
+    "go-read-write",
+    "provider-proof",
+    "sandbox-claim",
+    "package-policy",
+    "tinygo-visibility",
+    "privacy-monitor"
+  ],
+  "allowedSurfaceGroups": [
+    "account-save",
+    "account-source-read",
+    "owner-debug-replay",
+    "workshop-alias",
+    "competition-entry",
+    "go-read-write",
+    "provider-proof",
+    "sandbox-claim",
+    "package-policy",
+    "tinygo-visibility",
+    "privacy-monitor",
+    "evidence-artifact"
+  ],
+  "allowedDispositions": [
+    "fix-now",
+    "quarantine",
+    "deprecate-remove",
+    "document-only",
+    "future"
+  ],
+  "allowedDataClasses": [
+    "public",
+    "session",
+    "owner-private",
+    "internal-private"
+  ],
+  "allowedDownstreamPhases": [
+    244,
+    245,
+    246,
+    247,
+    248,
+    "none"
+  ],
+  "allowedRequirementIds": [
+    "INV-01",
+    "INV-02",
+    "INV-03",
+    "ACCT-01",
+    "ACCT-02",
+    "ACCT-03",
+    "ACCT-04",
+    "ACCT-05",
+    "ENTRY-01",
+    "ENTRY-02",
+    "ENTRY-03",
+    "ENTRY-04",
+    "AUTH-01",
+    "AUTH-02",
+    "PRIV-01",
+    "PRIV-02",
+    "API-01",
+    "API-02",
+    "API-03",
+    "SBOX-01",
+    "SBOX-02",
+    "LABEL-01",
+    "LABEL-02",
+    "PKG-01",
+    "PKG-02",
+    "PKG-03",
+    "PKG-04",
+    "PROOF-01",
+    "PROOF-02",
+    "PROOF-03",
+    "PROOF-04",
+    "PROOF-05"
+  ],
+  "forbiddenOverclaimPatterns": [
+    "production sandbox certification",
+    "TypeScript/Python WASM isolation",
+    "TinyGo production support",
+    "package ecosystem",
+    "rich-package",
+    "host import",
+    "production-supported package mode other than none"
+  ],
+  "forbiddenPublicDefaultLeakageMarkers": [
+    "raw diagnostics",
+    "source",
+    "artifact bytes",
+    "host paths",
+    "env values",
+    "package paths",
+    "tokens",
+    "DB details",
+    "private runtime internals",
+    "StrategyMemory",
+    "SoldierMemory",
+    "objective payload"
+  ],
+  "globalPolicies": {
+    "phaseScope": "Phase 243 is inventory/contract/characterization only and must not change account proof, auth, sandbox, package, aliases, labels, runtime execution, or proof gates.",
+    "claimCalibration": [
+      "TypeScript/Python are provenance-only.",
+      "Rust/Zig are immutable WASM/WASI Preview 1 artifact-backed.",
+      "TinyGo is spike-only/hidden.",
+      "no current lane is production sandbox certified by default.",
+      "package mode remains `none`.",
+      "rich packages/package ecosystems/host imports are not production-supported."
+    ],
+    "privacyBoundary": [
+      "Public/default output must not expose the D-09 forbidden marker set.",
+      "Strategy source, StrategyMemory, SoldierMemory, objective payload, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, and private runtime internals are forbidden by default."
+    ],
+    "behaviorHandoff": [
+      "Phase 244 owns account/provider proof and entry gate behavior changes.",
+      "Phase 245 owns auth, owner-debug, local trust, and alias behavior changes.",
+      "Phase 246 owns sandbox claim and runtime label behavior changes.",
+      "Phase 247 owns package/dependency policy behavior changes.",
+      "Phase 248 owns service-backed proof, privacy scans, and boundary monitors."
+    ]
+  },
+  "sourceCoverageAudit": [
+    {
+      "command": "rg --files apps/web/app/api | sort",
+      "result": "COVERED account, Workshop, exhibition, ladder, replay, and selected public/test route families.",
+      "coveredSurfaceFamilies": [
+        {
+          "family": "account-save",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-account-save-go-typescript-proof"
+          ]
+        },
+        {
+          "family": "account-source-read",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-account-source-read-web-go-private"
+          ]
+        },
+        {
+          "family": "workshop-alias",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-workshop-alias-source-submit-save"
+          ]
+        },
+        {
+          "family": "competition-entry",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-competition-entry-go-persistence-proof"
+          ]
+        },
+        {
+          "family": "go-read-write",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-go-read-write-selected-boundaries"
+          ]
+        }
+      ]
+    },
+    {
+      "command": "rg -n \"createStrategyRevision|getStrategyRevisionSource|createMatchSet|getPublicReplayEvidence|account/revisions|matchset|competition|exhibition|replay|source\" apps/go-backend/live_backend.go apps/go-backend/*.go",
+      "result": "COVERED Go account revision save/source, MatchSet/exhibition, public replay evidence, public summary, competition rows, and session/owner helpers.",
+      "coveredSurfaceFamilies": [
+        {
+          "family": "account-save",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-account-save-go-typescript-proof"
+          ]
+        },
+        {
+          "family": "account-source-read",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-account-source-read-web-go-private"
+          ]
+        },
+        {
+          "family": "competition-entry",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-competition-entry-go-persistence-proof"
+          ]
+        },
+        {
+          "family": "go-read-write",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-go-read-write-selected-boundaries"
+          ]
+        },
+        {
+          "family": "privacy-monitor",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-privacy-monitor-public-default-forbidden"
+          ]
+        }
+      ]
+    },
+    {
+      "command": "rg -n \"validate-strategy|providerProof|provider proof|runtime.validateStrategy|sourceArtifact|artifactHash|artifactBytes|COWARDS_PROVIDER_VALIDATION_SECRET\" apps packages scripts .planning/artifacts",
+      "result": "COVERED runtime-service /validate-strategy, Go runtime client, provider HMAC proof, source/compiled artifact identity, persistence reference gates, and v1.34 proof artifacts.",
+      "coveredSurfaceFamilies": [
+        {
+          "family": "provider-proof",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-provider-proof-runtime-service-contract"
+          ]
+        },
+        {
+          "family": "account-save",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-account-save-go-typescript-proof"
+          ]
+        },
+        {
+          "family": "privacy-monitor",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-privacy-monitor-public-default-forbidden"
+          ]
+        }
+      ]
+    },
+    {
+      "command": "rg -n \"workshop.*(source|revision|submit|save)|compat|alias\" apps/web/app/api apps/web/lib apps packages scripts",
+      "result": "COVERED Workshop source aliases, revision submit/save routes, analytics/test compatibility routes, and compatibility-key surfaces.",
+      "coveredSurfaceFamilies": [
+        {
+          "family": "workshop-alias",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-workshop-alias-source-submit-save"
+          ]
+        },
+        {
+          "family": "package-policy",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-package-policy-none-current"
+          ]
+        }
+      ]
+    },
+    {
+      "command": "rg -n \"player:workshop-local|ownerDebug|owner-debug|owner-private|ownerPrivate|StrategyMemory|SoldierMemory|objectivePayload|Awareness Grid\" apps packages scripts .planning/artifacts",
+      "result": "COVERED local Workshop identity, owner-debug request/query handling, owner-private projection tests, Awareness Grid UI, and private-marker scans.",
+      "coveredSurfaceFamilies": [
+        {
+          "family": "owner-debug-replay",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-owner-debug-replay-request-private"
+          ]
+        },
+        {
+          "family": "privacy-monitor",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-privacy-monitor-public-default-forbidden"
+          ]
+        }
+      ]
+    },
+    {
+      "command": "rg -n \"sandbox|certified|certification|provenance-only|WASM isolation|WASI|Preview 1|TinyGo|spike-only|hidden\" apps packages scripts .planning/artifacts",
+      "result": "COVERED sandbox/readiness artifacts, Learn/evidence copy, spec runtime labels, WASM/WASI Preview 1 metadata, TinyGo spike evidence, and boundary monitor claim checks.",
+      "coveredSurfaceFamilies": [
+        {
+          "family": "sandbox-claim",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-sandbox-claim-runtime-labels"
+          ]
+        },
+        {
+          "family": "tinygo-visibility",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-tinygo-visibility-hidden-spike"
+          ]
+        }
+      ]
+    },
+    {
+      "command": "rg -n \"package.mode|package mode|packages|dependency|host import|forbidden_import|package_or_dependency|rich package|Cargo|npm|PyPI|Zig package\" apps packages scripts .planning/artifacts",
+      "result": "COVERED package mode, checker diagnostic categories, JS/Python/WASM package/import validators, package-path privacy markers, and future package criteria.",
+      "coveredSurfaceFamilies": [
+        {
+          "family": "package-policy",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-package-policy-none-current",
+            "v135-package-policy-future-package-criteria"
+          ]
+        },
+        {
+          "family": "privacy-monitor",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-privacy-monitor-public-default-forbidden"
+          ]
+        }
+      ]
+    },
+    {
+      "command": "rg -n \"PUBLIC_OUTPUT_FORBIDDEN_FIELDS|assertPublicOutputLeakSafe|raw diagnostics|artifact bytes|host paths|env values|tokens|DB details|private runtime internals|bytesBase64|artifactBytesBase64\" apps packages scripts .planning/artifacts",
+      "result": "COVERED public-output privacy contract, boundary monitor scans, workshop checker exclusions, artifact bytes/base64 internals, and Go/runtime-service redaction tests.",
+      "coveredSurfaceFamilies": [
+        {
+          "family": "privacy-monitor",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-privacy-monitor-public-default-forbidden"
+          ]
+        }
+      ]
+    },
+    {
+      "command": "rg -n \"v1\\.34|v1\\.33|v1\\.32|v1\\.24|boundary monitor|boundary:monitors|check-boundary-monitors\" .planning/artifacts scripts package.json",
+      "result": "COVERED v1.34 checker, v1.33 TinyGo, v1.32 language parity, v1.24 sandbox/runtime abuse artifacts, and active boundary monitor command chain.",
+      "coveredSurfaceFamilies": [
+        {
+          "family": "evidence-artifact",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-evidence-artifact-prior-baselines"
+          ]
+        },
+        {
+          "family": "privacy-monitor",
+          "status": "COVERED",
+          "rowIds": [
+            "v135-privacy-monitor-public-default-forbidden"
+          ]
+        }
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "v135-account-save-go-typescript-proof",
+      "surfaceGroup": "account-save",
+      "codeReferences": [
+        "apps/web/app/api/account/revisions/save/route.ts",
+        "apps/web/lib/account-revision-write-boundary.ts",
+        "apps/go-backend/live_backend.go#createStrategyRevision",
+        "apps/go-backend/runtime_service_client.go#validateStrategy"
+      ],
+      "currentOwner": "Web transport plus Go account revision write path",
+      "intendedOwner": "Go account save with runtime-service provider proof for execution-ready revisions",
+      "trustBoundary": "authenticated account request -> selected Go backend -> PostgreSQL revision write",
+      "dataClass": "owner-private",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "ACCT-01",
+        "ACCT-02",
+        "ACCT-03",
+        "ACCT-04",
+        "ACCT-05"
+      ],
+      "currentBehavior": "TypeScript account save is inventoried as current local-validation drift while Python/Rust/Zig use runtime-service validation; Phase 244 owns provider-proof parity and fail-closed/non-execution draft behavior.",
+      "disposition": "fix-now",
+      "requiredTestsOrProof": [
+        "Phase 244 account-save provider proof tests for TypeScript, Python, Rust, and Zig valid, invalid, draft/non-execution, unavailable-runtime, stale/missing/mismatched proof, malformed provider response, package-declared, unsupported-provider, and TinyGo-hidden states."
+      ],
+      "privacyRisks": [
+        "Strategy source, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, provider signing material, and private runtime internals must not be public/default output."
+      ],
+      "downstreamPhase": 244
+    },
+    {
+      "id": "v135-account-source-read-web-go-private",
+      "surfaceGroup": "account-source-read",
+      "codeReferences": [
+        "apps/web/app/api/account/revisions/[revisionId]/source/route.ts",
+        "apps/go-backend/live_backend.go#strategyRevisionSource"
+      ],
+      "currentOwner": "Web API transport and Go account source read route",
+      "intendedOwner": "Server-authorized account source read with private/no-store response",
+      "trustBoundary": "account session -> owner-private Strategy source response",
+      "dataClass": "owner-private",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "AUTH-02",
+        "PRIV-02"
+      ],
+      "currentBehavior": "Account source read is owner-private and session-authorized; Phase 245 must prove no local/no-auth shortcut can authorize it.",
+      "disposition": "quarantine",
+      "requiredTestsOrProof": [
+        "Phase 245 account source authorization tests and public/default source absence scans."
+      ],
+      "privacyRisks": [
+        "Strategy source is the explicit private payload and must remain absent from public/default replay, result, Strategy, entry, checker, and evidence outputs."
+      ],
+      "downstreamPhase": 245
+    },
+    {
+      "id": "v135-owner-debug-replay-request-private",
+      "surfaceGroup": "owner-debug-replay",
+      "codeReferences": [
+        "apps/web/app/matches/[matchId]/replay/owner-debug.ts",
+        "apps/web/app/matches/[matchId]/replay/page.tsx",
+        "apps/web/app/matches/server.test.ts",
+        "apps/web/app/matches/[matchId]/replay/owner-debug.test.ts",
+        "apps/web/app/workshop/workshop-client-state.ts#LOCAL_WORKSHOP_PLAYER_ID"
+      ],
+      "currentOwner": "Replay owner-debug parser, server tests, and local Workshop owner-link helper",
+      "intendedOwner": "Server-authorized owner/participant or internal-test owner-private replay projection",
+      "trustBoundary": "replay query request -> server authorization -> public or owner-private projection",
+      "dataClass": "owner-private",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "AUTH-01",
+        "PRIV-01",
+        "PRIV-02"
+      ],
+      "currentBehavior": "ownerDebug/debug query parameters request an owner view but must not grant private replay evidence; player:workshop-local remains an ephemeral Workshop/test identity.",
+      "disposition": "quarantine",
+      "requiredTestsOrProof": [
+        "Phase 245 owner-debug authorization tests prove query parameters and player:workshop-local cannot authorize persisted account-owned revisions, private source reads, private replay, private analytics, or competition entry."
+      ],
+      "privacyRisks": [
+        "Public/default replay must not expose owner-debug payloads, ownerPrivate projection data, raw Awareness Grids, StrategyMemory, SoldierMemory, objective payload, Strategy source, or raw diagnostics."
+      ],
+      "downstreamPhase": 245
+    },
+    {
+      "id": "v135-workshop-alias-source-submit-save",
+      "surfaceGroup": "workshop-alias",
+      "codeReferences": [
+        "apps/web/app/api/workshop/source/route.ts",
+        "apps/web/app/api/workshop/revisions/[revisionId]/source/route.ts",
+        "apps/web/app/api/workshop/revisions/route.ts",
+        "apps/web/app/api/workshop/submit/route.ts",
+        "apps/web/app/api/workshop/analytics/profiles/route.ts",
+        "apps/web/app/api/workshop/tests/route.ts",
+        "scripts/generate-typescript-surface-labels.ts"
+      ],
+      "currentOwner": "Legacy and local Workshop compatibility API routes",
+      "intendedOwner": "Removed, hidden/local-only, migrated, or deprecated-with-tests alias policy",
+      "trustBoundary": "Workshop-local or compatibility request -> source/submit/save/test/analytics payload",
+      "dataClass": "owner-private",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "API-01",
+        "API-02",
+        "API-03",
+        "AUTH-01"
+      ],
+      "currentBehavior": "Workshop source, revision source, submit/save, analytics, and tests routes are inventoried as possible bypass surfaces until Phase 245 decides fate route by route.",
+      "disposition": "deprecate-remove",
+      "requiredTestsOrProof": [
+        "Phase 245 alias migration/removal tests and retained-alias tests proving no provider-proof, account authorization, package policy, TinyGo hiding, or public/default privacy bypass."
+      ],
+      "privacyRisks": [
+        "Aliases must not leak Strategy source, owner-private data, raw diagnostics, artifact bytes, provider internals, host paths, env values, package paths, tokens, DB details, or private runtime internals."
+      ],
+      "downstreamPhase": 245
+    },
+    {
+      "id": "v135-competition-entry-go-persistence-proof",
+      "surfaceGroup": "competition-entry",
+      "codeReferences": [
+        "apps/web/app/api/exhibitions/route.ts",
+        "apps/web/app/api/ladder/seasons/[seasonId]/entries/route.ts",
+        "apps/go-backend/live_backend.go#createExhibition",
+        "apps/go-backend/live_backend.go#runtimeAllowsCountedPlay",
+        "packages/persistence/src/competition.ts",
+        "packages/persistence/src/ladder.ts"
+      ],
+      "currentOwner": "Web entry transport, Go exhibition creation, and persistence competition/ladder gates",
+      "intendedOwner": "Provider-proof-backed entry eligibility with Go/persistence parity",
+      "trustBoundary": "saved account revision -> exhibition, competition, or ladder entry",
+      "dataClass": "session",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "ENTRY-01",
+        "ENTRY-02",
+        "ENTRY-03",
+        "ENTRY-04"
+      ],
+      "currentBehavior": "Go exhibition eligibility is looser for TypeScript provider proof than persistence competition/ladder reference gates; Phase 244 owns parity.",
+      "disposition": "fix-now",
+      "requiredTestsOrProof": [
+        "Phase 244 Go and persistence eligibility tests for eligible, draft, invalid, stale-proof, missing-proof, mismatched-proof, unsupported-provider, package-declared, unavailable-runtime, and TinyGo cases."
+      ],
+      "privacyRisks": [
+        "Entry diagnostics must remain public-safe and omit raw diagnostics, source, artifact bytes, host paths, env values, package paths, tokens, DB details, and private runtime internals."
+      ],
+      "downstreamPhase": 244
+    },
+    {
+      "id": "v135-go-read-write-selected-boundaries",
+      "surfaceGroup": "go-read-write",
+      "codeReferences": [
+        "apps/go-backend/live_backend.go#GET /account/strategy-revisions",
+        "apps/go-backend/live_backend.go#POST /account/strategy-revisions",
+        "apps/go-backend/live_backend.go#GET /account/strategy-revisions/{strategyRevisionId}/source",
+        "apps/go-backend/live_backend.go#POST /matchsets",
+        "apps/go-backend/live_backend.go#publicReplayEvidence",
+        "apps/go-backend/live_backend.go#publicMatchSetSummary",
+        "apps/go-backend/live_backend.go#currentUser",
+        "apps/go-backend/main.go#public replay fixture validation",
+        "apps/web/lib/public-go-read-client.ts"
+      ],
+      "currentOwner": "Selected Go account, MatchSet, public replay, public summary, and session helper routes",
+      "intendedOwner": "Go-owned backend reads/writes with web adapters as schema/transport boundaries",
+      "trustBoundary": "HTTP API -> Go backend -> PostgreSQL/public projection",
+      "dataClass": "session",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "ACCT-03",
+        "ENTRY-03",
+        "AUTH-02",
+        "PRIV-02",
+        "PROOF-03"
+      ],
+      "currentBehavior": "Go selected routes are the normal backend integration points for account revision writes/reads, public MatchSet summaries, public replay evidence, MatchSet creation, and session/owner checks.",
+      "disposition": "document-only",
+      "requiredTestsOrProof": [
+        "Phase 244 Go route parity proof, Phase 245 owner/session authorization proof, and Phase 248 public-output privacy scans."
+      ],
+      "privacyRisks": [
+        "Go public/default outputs must omit Strategy source, owner-private data, ownerDebug, StrategyMemory, SoldierMemory, objective payload, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, and private runtime internals."
+      ],
+      "downstreamPhase": 248
+    },
+    {
+      "id": "v135-provider-proof-runtime-service-contract",
+      "surfaceGroup": "provider-proof",
+      "codeReferences": [
+        "apps/go-backend/runtime_service_client.go",
+        "apps/runtime-service/src/server.ts",
+        "packages/spec/src/workshop-checker.ts",
+        "packages/persistence/src/account-revisions.ts",
+        "packages/persistence/src/workshop.ts",
+        "packages/persistence/src/competition.ts",
+        "packages/persistence/src/ladder.ts",
+        ".planning/artifacts/v1.34-workshop-checker-contract.md",
+        ".planning/artifacts/v1.34-workshop-checker-proof.md"
+      ],
+      "currentOwner": "Runtime-service provider validation, Go client, spec checker contract, and persistence proof helpers",
+      "intendedOwner": "Runtime-service/provider proof boundary reused by account save, Workshop, entry, and final proof",
+      "trustBoundary": "hostile Strategy source/artifact validation -> provider metadata/proof -> public-safe projection",
+      "dataClass": "internal-private",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "ACCT-01",
+        "ACCT-02",
+        "ENTRY-01",
+        "PROOF-01",
+        "PROOF-02",
+        "PROOF-03"
+      ],
+      "currentBehavior": "Provider proof is runtime evidence and not a sandbox certification label; Go currently lacks TypeScript client parity while runtime-service and persistence references know provider artifact identity.",
+      "disposition": "fix-now",
+      "requiredTestsOrProof": [
+        "Phase 244 TypeScript Go account-save provider proof integration and Phase 248 service-backed proof for matching source/artifact identity and provider metadata."
+      ],
+      "privacyRisks": [
+        "Provider signing material, provider proof signatures, sourceArtifact bytesBase64, compiled artifact bytesBase64, raw diagnostics, host paths, env values, package paths, tokens, DB details, and private runtime internals are not public/default output."
+      ],
+      "downstreamPhase": 244
+    },
+    {
+      "id": "v135-sandbox-claim-runtime-labels",
+      "surfaceGroup": "sandbox-claim",
+      "codeReferences": [
+        "packages/spec/src/runtime.ts",
+        "apps/web/app/learn/page.tsx",
+        "apps/web/app/matchsets/evidence-copy.ts",
+        "scripts/check-boundary-monitors.ts",
+        "packages/runtime-js/src/sandbox-evaluation.ts",
+        ".planning/artifacts/v1.24-production-sandbox-readiness-matrix.md",
+        ".planning/artifacts/v1.24-runtime-abuse-lab-evidence.md"
+      ],
+      "currentOwner": "Spec runtime labels, Learn/evidence copy, sandbox artifacts, and boundary monitors",
+      "intendedOwner": "Versioned sandbox-readiness/certification contract and fail-loud claim monitor",
+      "trustBoundary": "runtime evidence and metadata -> public/developer readiness labels",
+      "dataClass": "public",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "SBOX-01",
+        "SBOX-02",
+        "LABEL-01",
+        "LABEL-02"
+      ],
+      "currentBehavior": "Current labels and artifacts distinguish provenance evidence, immutable WASM/WASI Preview 1 artifact backing, candidate readiness, TinyGo spike-only/hidden posture, and no-certification state.",
+      "disposition": "fix-now",
+      "requiredTestsOrProof": [
+        "Phase 246 claim contract and monitor reject positive overclaims for production sandbox certification, TypeScript/Python WASM isolation, TinyGo production support, package ecosystem support, rich-package support, host import support, and active direct-export/Component Model/WIT ABI claims."
+      ],
+      "privacyRisks": [
+        "Claim artifacts and monitor output must avoid raw diagnostics, source, host paths, env values, tokens, DB details, package paths, artifact bytes, and private runtime internals."
+      ],
+      "downstreamPhase": 246
+    },
+    {
+      "id": "v135-package-policy-none-current",
+      "surfaceGroup": "package-policy",
+      "codeReferences": [
+        "packages/spec/src/runtime.ts",
+        "packages/spec/src/workshop-checker.ts",
+        "packages/runtime-js/src/validation.ts",
+        "packages/runtime-python/src/validation.ts",
+        "packages/runtime-wasm-wasi/src/validation.ts",
+        "packages/runtime-js/src/revision.ts"
+      ],
+      "currentOwner": "Spec runtime package policy, checker diagnostics, and runtime provider validators",
+      "intendedOwner": "Production package mode none enforcement plus future package-lane criteria",
+      "trustBoundary": "Strategy metadata/source/artifact -> validation, compatibility, entry, and public evidence policy",
+      "dataClass": "public",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "PKG-01",
+        "PKG-02",
+        "PKG-03",
+        "PKG-04",
+        "ENTRY-04"
+      ],
+      "currentBehavior": "Current production package policy keeps package mode `none`; diagnostics classify forbidden imports/packages while future rich package work remains documented but disabled.",
+      "disposition": "fix-now",
+      "requiredTestsOrProof": [
+        "Phase 247 package mode none monitor across account save, Workshop validation/submit, competition entry, runtime registry, compatibility keys, public evidence, and TypeScript/Python/Rust/Zig/TinyGo package diagnostics."
+      ],
+      "privacyRisks": [
+        "Package diagnostics must omit package paths, host paths, env values, tokens, DB details, artifact bytes, raw compiler/runtime output, raw diagnostics, source, and private runtime internals; future criteria must not imply package ecosystem support, rich-package support, or host import support."
+      ],
+      "downstreamPhase": 247
+    },
+    {
+      "id": "v135-package-policy-future-package-criteria",
+      "surfaceGroup": "package-policy",
+      "codeReferences": [
+        ".planning/REQUIREMENTS.md#PKG-04",
+        ".planning/artifacts/v1.35-v1.36-milestone-prompts.md"
+      ],
+      "currentOwner": "Planning requirements",
+      "intendedOwner": "Future explicit package-lane milestone",
+      "trustBoundary": "future package-policy ideas -> current production no-package boundary",
+      "dataClass": "public",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "PKG-04"
+      ],
+      "currentBehavior": "Future package support criteria are documented without enabling packages in v1.35.",
+      "disposition": "future",
+      "requiredTestsOrProof": [
+        "Phase 247 records future requirements for reproducible dependency resolution, lockfiles, supply-chain policy, native-code policy, sandboxed build/install, deterministic outputs, cache invalidation, privacy redaction, rollback, and runtime-boundary proof."
+      ],
+      "privacyRisks": [
+        "Future package criteria must not imply current package ecosystem support, rich-package support, or host import support."
+      ],
+      "downstreamPhase": 247
+    },
+    {
+      "id": "v135-tinygo-visibility-hidden-spike",
+      "surfaceGroup": "tinygo-visibility",
+      "codeReferences": [
+        ".planning/artifacts/v1.33-tinygo-wasi-spike-evidence.md",
+        "scripts/evaluate-v1-33-tinygo-wasi-spike.ts",
+        "packages/spec/src/workshop-checker.ts#source formats",
+        "packages/spec/src/runtime.ts#supported languages",
+        "scripts/check-boundary-monitors.ts#TinyGo"
+      ],
+      "currentOwner": "TinyGo spike artifact, source-format lists, and boundary monitor",
+      "intendedOwner": "Hidden spike-only TinyGo policy until a future explicit productionization milestone",
+      "trustBoundary": "candidate TinyGo evidence -> production-visible runtime/source-format labels",
+      "dataClass": "public",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "LABEL-01",
+        "LABEL-02",
+        "API-03",
+        "PROOF-04"
+      ],
+      "currentBehavior": "TinyGo remains spike-only/hidden, absent from production Workshop/source-format/account/entry/result/replay evidence surfaces, and monitored separately from production languages.",
+      "disposition": "quarantine",
+      "requiredTestsOrProof": [
+        "Phase 246 monitor rejects TinyGo production support in source-format lists, account/entry support, product labels, result/replay evidence, and public docs."
+      ],
+      "privacyRisks": [
+        "TinyGo spike evidence must not expose host paths, raw diagnostics, artifact bytes, env values, or private runtime internals and must not imply production visibility."
+      ],
+      "downstreamPhase": 246
+    },
+    {
+      "id": "v135-privacy-monitor-public-default-forbidden",
+      "surfaceGroup": "privacy-monitor",
+      "codeReferences": [
+        "packages/spec/src/public-output-privacy.ts",
+        "packages/spec/src/workshop-checker.ts#privacy exclusions",
+        "scripts/check-boundary-monitors.ts",
+        "apps/go-backend/main_test.go#public forbidden markers",
+        "apps/go-backend/runtime_service_client_test.go#redaction",
+        "apps/web/e2e/replay.fixture.spec.ts",
+        "apps/web/app/matches/server.test.ts",
+        ".planning/artifacts/v1.34-workshop-checker-proof.md"
+      ],
+      "currentOwner": "Spec privacy utilities, boundary monitors, Go/runtime-service/web tests, and v1.34 proof scan",
+      "intendedOwner": "v1.35 public/default privacy proof and monitor suite",
+      "trustBoundary": "private runtime/account/Match data -> public/default API, UI, logs, fixtures, and proof artifacts",
+      "dataClass": "public",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "PRIV-02",
+        "PKG-03",
+        "PROOF-03",
+        "PROOF-04",
+        "PROOF-05"
+      ],
+      "currentBehavior": "Existing privacy utilities and tests scan public outputs and proof artifacts; Phase 248 owns expanded v1.35 coverage across corrected account/provider/package/sandbox boundaries.",
+      "disposition": "fix-now",
+      "requiredTestsOrProof": [
+        "Phase 248 privacy scans cover account source routes, owner-debug replay, public replay/result pages and APIs, Workshop aliases, checker/provider proof responses, package diagnostics, logs/fixtures, and generated proof artifacts for all forbidden private markers."
+      ],
+      "privacyRisks": [
+        "Public/default output must not expose raw diagnostics, Strategy source, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, objective payload, owner-debug payloads, raw Awareness Grids, quarantine details, operator action details, or recovery payloads."
+      ],
+      "downstreamPhase": 248
+    },
+    {
+      "id": "v135-evidence-artifact-prior-baselines",
+      "surfaceGroup": "evidence-artifact",
+      "codeReferences": [
+        ".planning/artifacts/v1.34-workshop-checker-inventory.md",
+        ".planning/artifacts/v1.34-workshop-checker-contract.md",
+        ".planning/artifacts/v1.34-workshop-checker-proof.md",
+        ".planning/artifacts/v1.32-language-surface-inventory.md",
+        ".planning/artifacts/v1.32-four-language-parity-matrix.md",
+        ".planning/artifacts/v1.24-production-sandbox-readiness-matrix.md",
+        ".planning/artifacts/v1.33-tinygo-wasi-spike-evidence.md",
+        ".planning/artifacts/v1.35-boundary-surface-inventory.md",
+        ".planning/artifacts/v1.35-boundary-surface-inventory.json"
+      ],
+      "currentOwner": "Prior milestone artifacts plus Phase 243 evaluator output",
+      "intendedOwner": "Historical baseline and locked v1.35 decision register for Phases 244-248",
+      "trustBoundary": "static repo evidence -> generated planning artifacts and downstream monitor inputs",
+      "dataClass": "public",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "INV-03",
+        "PROOF-05"
+      ],
+      "currentBehavior": "Prior artifacts define the v1.34 checker baseline, v1.32 four-language baseline, v1.24 no-certification baseline, and v1.33 TinyGo spike baseline consumed by this deterministic v1.35 inventory.",
+      "disposition": "document-only",
+      "requiredTestsOrProof": [
+        "Phase 243 evaluator --check keeps JSON/markdown synchronized; Phase 248 final validation records how later work resolves each row."
+      ],
+      "privacyRisks": [
+        "Artifacts must describe source file paths and risk categories only; they must not embed private Strategy source, StrategyMemory, SoldierMemory, objective payload, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, or private runtime internals."
+      ],
+      "downstreamPhase": "none"
+    }
+  ],
+  "rows": [
+    {
+      "id": "v135-account-save-go-typescript-proof",
+      "surfaceGroup": "account-save",
+      "codeReferences": [
+        "apps/web/app/api/account/revisions/save/route.ts",
+        "apps/web/lib/account-revision-write-boundary.ts",
+        "apps/go-backend/live_backend.go#createStrategyRevision",
+        "apps/go-backend/runtime_service_client.go#validateStrategy"
+      ],
+      "currentOwner": "Web transport plus Go account revision write path",
+      "intendedOwner": "Go account save with runtime-service provider proof for execution-ready revisions",
+      "trustBoundary": "authenticated account request -> selected Go backend -> PostgreSQL revision write",
+      "dataClass": "owner-private",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "ACCT-01",
+        "ACCT-02",
+        "ACCT-03",
+        "ACCT-04",
+        "ACCT-05"
+      ],
+      "currentBehavior": "TypeScript account save is inventoried as current local-validation drift while Python/Rust/Zig use runtime-service validation; Phase 244 owns provider-proof parity and fail-closed/non-execution draft behavior.",
+      "disposition": "fix-now",
+      "requiredTestsOrProof": [
+        "Phase 244 account-save provider proof tests for TypeScript, Python, Rust, and Zig valid, invalid, draft/non-execution, unavailable-runtime, stale/missing/mismatched proof, malformed provider response, package-declared, unsupported-provider, and TinyGo-hidden states."
+      ],
+      "privacyRisks": [
+        "Strategy source, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, provider signing material, and private runtime internals must not be public/default output."
+      ],
+      "downstreamPhase": 244
+    },
+    {
+      "id": "v135-account-source-read-web-go-private",
+      "surfaceGroup": "account-source-read",
+      "codeReferences": [
+        "apps/web/app/api/account/revisions/[revisionId]/source/route.ts",
+        "apps/go-backend/live_backend.go#strategyRevisionSource"
+      ],
+      "currentOwner": "Web API transport and Go account source read route",
+      "intendedOwner": "Server-authorized account source read with private/no-store response",
+      "trustBoundary": "account session -> owner-private Strategy source response",
+      "dataClass": "owner-private",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "AUTH-02",
+        "PRIV-02"
+      ],
+      "currentBehavior": "Account source read is owner-private and session-authorized; Phase 245 must prove no local/no-auth shortcut can authorize it.",
+      "disposition": "quarantine",
+      "requiredTestsOrProof": [
+        "Phase 245 account source authorization tests and public/default source absence scans."
+      ],
+      "privacyRisks": [
+        "Strategy source is the explicit private payload and must remain absent from public/default replay, result, Strategy, entry, checker, and evidence outputs."
+      ],
+      "downstreamPhase": 245
+    },
+    {
+      "id": "v135-owner-debug-replay-request-private",
+      "surfaceGroup": "owner-debug-replay",
+      "codeReferences": [
+        "apps/web/app/matches/[matchId]/replay/owner-debug.ts",
+        "apps/web/app/matches/[matchId]/replay/page.tsx",
+        "apps/web/app/matches/server.test.ts",
+        "apps/web/app/matches/[matchId]/replay/owner-debug.test.ts",
+        "apps/web/app/workshop/workshop-client-state.ts#LOCAL_WORKSHOP_PLAYER_ID"
+      ],
+      "currentOwner": "Replay owner-debug parser, server tests, and local Workshop owner-link helper",
+      "intendedOwner": "Server-authorized owner/participant or internal-test owner-private replay projection",
+      "trustBoundary": "replay query request -> server authorization -> public or owner-private projection",
+      "dataClass": "owner-private",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "AUTH-01",
+        "PRIV-01",
+        "PRIV-02"
+      ],
+      "currentBehavior": "ownerDebug/debug query parameters request an owner view but must not grant private replay evidence; player:workshop-local remains an ephemeral Workshop/test identity.",
+      "disposition": "quarantine",
+      "requiredTestsOrProof": [
+        "Phase 245 owner-debug authorization tests prove query parameters and player:workshop-local cannot authorize persisted account-owned revisions, private source reads, private replay, private analytics, or competition entry."
+      ],
+      "privacyRisks": [
+        "Public/default replay must not expose owner-debug payloads, ownerPrivate projection data, raw Awareness Grids, StrategyMemory, SoldierMemory, objective payload, Strategy source, or raw diagnostics."
+      ],
+      "downstreamPhase": 245
+    },
+    {
+      "id": "v135-workshop-alias-source-submit-save",
+      "surfaceGroup": "workshop-alias",
+      "codeReferences": [
+        "apps/web/app/api/workshop/source/route.ts",
+        "apps/web/app/api/workshop/revisions/[revisionId]/source/route.ts",
+        "apps/web/app/api/workshop/revisions/route.ts",
+        "apps/web/app/api/workshop/submit/route.ts",
+        "apps/web/app/api/workshop/analytics/profiles/route.ts",
+        "apps/web/app/api/workshop/tests/route.ts",
+        "scripts/generate-typescript-surface-labels.ts"
+      ],
+      "currentOwner": "Legacy and local Workshop compatibility API routes",
+      "intendedOwner": "Removed, hidden/local-only, migrated, or deprecated-with-tests alias policy",
+      "trustBoundary": "Workshop-local or compatibility request -> source/submit/save/test/analytics payload",
+      "dataClass": "owner-private",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "API-01",
+        "API-02",
+        "API-03",
+        "AUTH-01"
+      ],
+      "currentBehavior": "Workshop source, revision source, submit/save, analytics, and tests routes are inventoried as possible bypass surfaces until Phase 245 decides fate route by route.",
+      "disposition": "deprecate-remove",
+      "requiredTestsOrProof": [
+        "Phase 245 alias migration/removal tests and retained-alias tests proving no provider-proof, account authorization, package policy, TinyGo hiding, or public/default privacy bypass."
+      ],
+      "privacyRisks": [
+        "Aliases must not leak Strategy source, owner-private data, raw diagnostics, artifact bytes, provider internals, host paths, env values, package paths, tokens, DB details, or private runtime internals."
+      ],
+      "downstreamPhase": 245
+    },
+    {
+      "id": "v135-competition-entry-go-persistence-proof",
+      "surfaceGroup": "competition-entry",
+      "codeReferences": [
+        "apps/web/app/api/exhibitions/route.ts",
+        "apps/web/app/api/ladder/seasons/[seasonId]/entries/route.ts",
+        "apps/go-backend/live_backend.go#createExhibition",
+        "apps/go-backend/live_backend.go#runtimeAllowsCountedPlay",
+        "packages/persistence/src/competition.ts",
+        "packages/persistence/src/ladder.ts"
+      ],
+      "currentOwner": "Web entry transport, Go exhibition creation, and persistence competition/ladder gates",
+      "intendedOwner": "Provider-proof-backed entry eligibility with Go/persistence parity",
+      "trustBoundary": "saved account revision -> exhibition, competition, or ladder entry",
+      "dataClass": "session",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "ENTRY-01",
+        "ENTRY-02",
+        "ENTRY-03",
+        "ENTRY-04"
+      ],
+      "currentBehavior": "Go exhibition eligibility is looser for TypeScript provider proof than persistence competition/ladder reference gates; Phase 244 owns parity.",
+      "disposition": "fix-now",
+      "requiredTestsOrProof": [
+        "Phase 244 Go and persistence eligibility tests for eligible, draft, invalid, stale-proof, missing-proof, mismatched-proof, unsupported-provider, package-declared, unavailable-runtime, and TinyGo cases."
+      ],
+      "privacyRisks": [
+        "Entry diagnostics must remain public-safe and omit raw diagnostics, source, artifact bytes, host paths, env values, package paths, tokens, DB details, and private runtime internals."
+      ],
+      "downstreamPhase": 244
+    },
+    {
+      "id": "v135-go-read-write-selected-boundaries",
+      "surfaceGroup": "go-read-write",
+      "codeReferences": [
+        "apps/go-backend/live_backend.go#GET /account/strategy-revisions",
+        "apps/go-backend/live_backend.go#POST /account/strategy-revisions",
+        "apps/go-backend/live_backend.go#GET /account/strategy-revisions/{strategyRevisionId}/source",
+        "apps/go-backend/live_backend.go#POST /matchsets",
+        "apps/go-backend/live_backend.go#publicReplayEvidence",
+        "apps/go-backend/live_backend.go#publicMatchSetSummary",
+        "apps/go-backend/live_backend.go#currentUser",
+        "apps/go-backend/main.go#public replay fixture validation",
+        "apps/web/lib/public-go-read-client.ts"
+      ],
+      "currentOwner": "Selected Go account, MatchSet, public replay, public summary, and session helper routes",
+      "intendedOwner": "Go-owned backend reads/writes with web adapters as schema/transport boundaries",
+      "trustBoundary": "HTTP API -> Go backend -> PostgreSQL/public projection",
+      "dataClass": "session",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "ACCT-03",
+        "ENTRY-03",
+        "AUTH-02",
+        "PRIV-02",
+        "PROOF-03"
+      ],
+      "currentBehavior": "Go selected routes are the normal backend integration points for account revision writes/reads, public MatchSet summaries, public replay evidence, MatchSet creation, and session/owner checks.",
+      "disposition": "document-only",
+      "requiredTestsOrProof": [
+        "Phase 244 Go route parity proof, Phase 245 owner/session authorization proof, and Phase 248 public-output privacy scans."
+      ],
+      "privacyRisks": [
+        "Go public/default outputs must omit Strategy source, owner-private data, ownerDebug, StrategyMemory, SoldierMemory, objective payload, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, and private runtime internals."
+      ],
+      "downstreamPhase": 248
+    },
+    {
+      "id": "v135-provider-proof-runtime-service-contract",
+      "surfaceGroup": "provider-proof",
+      "codeReferences": [
+        "apps/go-backend/runtime_service_client.go",
+        "apps/runtime-service/src/server.ts",
+        "packages/spec/src/workshop-checker.ts",
+        "packages/persistence/src/account-revisions.ts",
+        "packages/persistence/src/workshop.ts",
+        "packages/persistence/src/competition.ts",
+        "packages/persistence/src/ladder.ts",
+        ".planning/artifacts/v1.34-workshop-checker-contract.md",
+        ".planning/artifacts/v1.34-workshop-checker-proof.md"
+      ],
+      "currentOwner": "Runtime-service provider validation, Go client, spec checker contract, and persistence proof helpers",
+      "intendedOwner": "Runtime-service/provider proof boundary reused by account save, Workshop, entry, and final proof",
+      "trustBoundary": "hostile Strategy source/artifact validation -> provider metadata/proof -> public-safe projection",
+      "dataClass": "internal-private",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "ACCT-01",
+        "ACCT-02",
+        "ENTRY-01",
+        "PROOF-01",
+        "PROOF-02",
+        "PROOF-03"
+      ],
+      "currentBehavior": "Provider proof is runtime evidence and not a sandbox certification label; Go currently lacks TypeScript client parity while runtime-service and persistence references know provider artifact identity.",
+      "disposition": "fix-now",
+      "requiredTestsOrProof": [
+        "Phase 244 TypeScript Go account-save provider proof integration and Phase 248 service-backed proof for matching source/artifact identity and provider metadata."
+      ],
+      "privacyRisks": [
+        "Provider signing material, provider proof signatures, sourceArtifact bytesBase64, compiled artifact bytesBase64, raw diagnostics, host paths, env values, package paths, tokens, DB details, and private runtime internals are not public/default output."
+      ],
+      "downstreamPhase": 244
+    },
+    {
+      "id": "v135-sandbox-claim-runtime-labels",
+      "surfaceGroup": "sandbox-claim",
+      "codeReferences": [
+        "packages/spec/src/runtime.ts",
+        "apps/web/app/learn/page.tsx",
+        "apps/web/app/matchsets/evidence-copy.ts",
+        "scripts/check-boundary-monitors.ts",
+        "packages/runtime-js/src/sandbox-evaluation.ts",
+        ".planning/artifacts/v1.24-production-sandbox-readiness-matrix.md",
+        ".planning/artifacts/v1.24-runtime-abuse-lab-evidence.md"
+      ],
+      "currentOwner": "Spec runtime labels, Learn/evidence copy, sandbox artifacts, and boundary monitors",
+      "intendedOwner": "Versioned sandbox-readiness/certification contract and fail-loud claim monitor",
+      "trustBoundary": "runtime evidence and metadata -> public/developer readiness labels",
+      "dataClass": "public",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "SBOX-01",
+        "SBOX-02",
+        "LABEL-01",
+        "LABEL-02"
+      ],
+      "currentBehavior": "Current labels and artifacts distinguish provenance evidence, immutable WASM/WASI Preview 1 artifact backing, candidate readiness, TinyGo spike-only/hidden posture, and no-certification state.",
+      "disposition": "fix-now",
+      "requiredTestsOrProof": [
+        "Phase 246 claim contract and monitor reject positive overclaims for production sandbox certification, TypeScript/Python WASM isolation, TinyGo production support, package ecosystem support, rich-package support, host import support, and active direct-export/Component Model/WIT ABI claims."
+      ],
+      "privacyRisks": [
+        "Claim artifacts and monitor output must avoid raw diagnostics, source, host paths, env values, tokens, DB details, package paths, artifact bytes, and private runtime internals."
+      ],
+      "downstreamPhase": 246
+    },
+    {
+      "id": "v135-package-policy-none-current",
+      "surfaceGroup": "package-policy",
+      "codeReferences": [
+        "packages/spec/src/runtime.ts",
+        "packages/spec/src/workshop-checker.ts",
+        "packages/runtime-js/src/validation.ts",
+        "packages/runtime-python/src/validation.ts",
+        "packages/runtime-wasm-wasi/src/validation.ts",
+        "packages/runtime-js/src/revision.ts"
+      ],
+      "currentOwner": "Spec runtime package policy, checker diagnostics, and runtime provider validators",
+      "intendedOwner": "Production package mode none enforcement plus future package-lane criteria",
+      "trustBoundary": "Strategy metadata/source/artifact -> validation, compatibility, entry, and public evidence policy",
+      "dataClass": "public",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "PKG-01",
+        "PKG-02",
+        "PKG-03",
+        "PKG-04",
+        "ENTRY-04"
+      ],
+      "currentBehavior": "Current production package policy keeps package mode `none`; diagnostics classify forbidden imports/packages while future rich package work remains documented but disabled.",
+      "disposition": "fix-now",
+      "requiredTestsOrProof": [
+        "Phase 247 package mode none monitor across account save, Workshop validation/submit, competition entry, runtime registry, compatibility keys, public evidence, and TypeScript/Python/Rust/Zig/TinyGo package diagnostics."
+      ],
+      "privacyRisks": [
+        "Package diagnostics must omit package paths, host paths, env values, tokens, DB details, artifact bytes, raw compiler/runtime output, raw diagnostics, source, and private runtime internals; future criteria must not imply package ecosystem support, rich-package support, or host import support."
+      ],
+      "downstreamPhase": 247
+    },
+    {
+      "id": "v135-package-policy-future-package-criteria",
+      "surfaceGroup": "package-policy",
+      "codeReferences": [
+        ".planning/REQUIREMENTS.md#PKG-04",
+        ".planning/artifacts/v1.35-v1.36-milestone-prompts.md"
+      ],
+      "currentOwner": "Planning requirements",
+      "intendedOwner": "Future explicit package-lane milestone",
+      "trustBoundary": "future package-policy ideas -> current production no-package boundary",
+      "dataClass": "public",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "PKG-04"
+      ],
+      "currentBehavior": "Future package support criteria are documented without enabling packages in v1.35.",
+      "disposition": "future",
+      "requiredTestsOrProof": [
+        "Phase 247 records future requirements for reproducible dependency resolution, lockfiles, supply-chain policy, native-code policy, sandboxed build/install, deterministic outputs, cache invalidation, privacy redaction, rollback, and runtime-boundary proof."
+      ],
+      "privacyRisks": [
+        "Future package criteria must not imply current package ecosystem support, rich-package support, or host import support."
+      ],
+      "downstreamPhase": 247
+    },
+    {
+      "id": "v135-tinygo-visibility-hidden-spike",
+      "surfaceGroup": "tinygo-visibility",
+      "codeReferences": [
+        ".planning/artifacts/v1.33-tinygo-wasi-spike-evidence.md",
+        "scripts/evaluate-v1-33-tinygo-wasi-spike.ts",
+        "packages/spec/src/workshop-checker.ts#source formats",
+        "packages/spec/src/runtime.ts#supported languages",
+        "scripts/check-boundary-monitors.ts#TinyGo"
+      ],
+      "currentOwner": "TinyGo spike artifact, source-format lists, and boundary monitor",
+      "intendedOwner": "Hidden spike-only TinyGo policy until a future explicit productionization milestone",
+      "trustBoundary": "candidate TinyGo evidence -> production-visible runtime/source-format labels",
+      "dataClass": "public",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "LABEL-01",
+        "LABEL-02",
+        "API-03",
+        "PROOF-04"
+      ],
+      "currentBehavior": "TinyGo remains spike-only/hidden, absent from production Workshop/source-format/account/entry/result/replay evidence surfaces, and monitored separately from production languages.",
+      "disposition": "quarantine",
+      "requiredTestsOrProof": [
+        "Phase 246 monitor rejects TinyGo production support in source-format lists, account/entry support, product labels, result/replay evidence, and public docs."
+      ],
+      "privacyRisks": [
+        "TinyGo spike evidence must not expose host paths, raw diagnostics, artifact bytes, env values, or private runtime internals and must not imply production visibility."
+      ],
+      "downstreamPhase": 246
+    },
+    {
+      "id": "v135-privacy-monitor-public-default-forbidden",
+      "surfaceGroup": "privacy-monitor",
+      "codeReferences": [
+        "packages/spec/src/public-output-privacy.ts",
+        "packages/spec/src/workshop-checker.ts#privacy exclusions",
+        "scripts/check-boundary-monitors.ts",
+        "apps/go-backend/main_test.go#public forbidden markers",
+        "apps/go-backend/runtime_service_client_test.go#redaction",
+        "apps/web/e2e/replay.fixture.spec.ts",
+        "apps/web/app/matches/server.test.ts",
+        ".planning/artifacts/v1.34-workshop-checker-proof.md"
+      ],
+      "currentOwner": "Spec privacy utilities, boundary monitors, Go/runtime-service/web tests, and v1.34 proof scan",
+      "intendedOwner": "v1.35 public/default privacy proof and monitor suite",
+      "trustBoundary": "private runtime/account/Match data -> public/default API, UI, logs, fixtures, and proof artifacts",
+      "dataClass": "public",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "PRIV-02",
+        "PKG-03",
+        "PROOF-03",
+        "PROOF-04",
+        "PROOF-05"
+      ],
+      "currentBehavior": "Existing privacy utilities and tests scan public outputs and proof artifacts; Phase 248 owns expanded v1.35 coverage across corrected account/provider/package/sandbox boundaries.",
+      "disposition": "fix-now",
+      "requiredTestsOrProof": [
+        "Phase 248 privacy scans cover account source routes, owner-debug replay, public replay/result pages and APIs, Workshop aliases, checker/provider proof responses, package diagnostics, logs/fixtures, and generated proof artifacts for all forbidden private markers."
+      ],
+      "privacyRisks": [
+        "Public/default output must not expose raw diagnostics, Strategy source, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, objective payload, owner-debug payloads, raw Awareness Grids, quarantine details, operator action details, or recovery payloads."
+      ],
+      "downstreamPhase": 248
+    },
+    {
+      "id": "v135-evidence-artifact-prior-baselines",
+      "surfaceGroup": "evidence-artifact",
+      "codeReferences": [
+        ".planning/artifacts/v1.34-workshop-checker-inventory.md",
+        ".planning/artifacts/v1.34-workshop-checker-contract.md",
+        ".planning/artifacts/v1.34-workshop-checker-proof.md",
+        ".planning/artifacts/v1.32-language-surface-inventory.md",
+        ".planning/artifacts/v1.32-four-language-parity-matrix.md",
+        ".planning/artifacts/v1.24-production-sandbox-readiness-matrix.md",
+        ".planning/artifacts/v1.33-tinygo-wasi-spike-evidence.md",
+        ".planning/artifacts/v1.35-boundary-surface-inventory.md",
+        ".planning/artifacts/v1.35-boundary-surface-inventory.json"
+      ],
+      "currentOwner": "Prior milestone artifacts plus Phase 243 evaluator output",
+      "intendedOwner": "Historical baseline and locked v1.35 decision register for Phases 244-248",
+      "trustBoundary": "static repo evidence -> generated planning artifacts and downstream monitor inputs",
+      "dataClass": "public",
+      "affectedRequirements": [
+        "INV-01",
+        "INV-02",
+        "INV-03",
+        "PROOF-05"
+      ],
+      "currentBehavior": "Prior artifacts define the v1.34 checker baseline, v1.32 four-language baseline, v1.24 no-certification baseline, and v1.33 TinyGo spike baseline consumed by this deterministic v1.35 inventory.",
+      "disposition": "document-only",
+      "requiredTestsOrProof": [
+        "Phase 243 evaluator --check keeps JSON/markdown synchronized; Phase 248 final validation records how later work resolves each row."
+      ],
+      "privacyRisks": [
+        "Artifacts must describe source file paths and risk categories only; they must not embed private Strategy source, StrategyMemory, SoldierMemory, objective payload, raw diagnostics, artifact bytes, host paths, env values, package paths, tokens, DB details, or private runtime internals."
+      ],
+      "downstreamPhase": "none"
+    }
+  ]
+}
