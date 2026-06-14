@@ -31,7 +31,7 @@ The following constraints are copied from `.planning/phases/243-boundary-surface
 - **D-11:** Package/dependency policy must be inventoried as an enforced boundary, not just documentation. Current production policy is package mode `none` with no rich packages or host imports.
 
 ### Auto-Selected Discussion Areas
-- **D-12:** Auto mode selected all meaningful Phase 243 gray areas: inventory scope, row taxonomy, compatibility alias disposition, privacy/claim calibration, and handoff boundaries. Recommended defaults were selected because they match v1.35 research and the approved roadmap.
+- **D-12:** Auto mode covered all meaningful Phase 243 gray areas: inventory scope, row taxonomy, compatibility alias disposition, privacy/claim calibration, and handoff boundaries. Recommended defaults were used because they match v1.35 research and the approved roadmap.
 
 ### the agent's Discretion
 The planner may choose the exact artifact filenames, table format, and inventory script structure, as long as downstream phases get a single authoritative inventory plus a decision register that maps all Phase 243 requirements and v1.35 affected surfaces.
@@ -80,7 +80,7 @@ The most important planning fact is that the account/provider-proof risk is real
 | --- | --- | --- | --- |
 | v1.35 inventory artifact and decision register | Planning/docs | Scripts | The phase output is a contract artifact before behavior changes. [VERIFIED: .planning/ROADMAP.md; .planning/phases/243-boundary-surface-inventory-and-contract-lock/243-CONTEXT.md] |
 | Surface discovery over Next routes | Frontend Server/API | Scripts | Next API route files own web/API transport surfaces and can be enumerated by scripts. [VERIFIED: apps/web/app/api] |
-| Go-owned account/save/read/entry surfaces | API / Backend | Database / Storage | `apps/go-backend/live_backend.go` registers selected account, public, replay, and matchset routes. [VERIFIED: apps/go-backend/live_backend.go] |
+| Go-owned account/save/read/entry surfaces | API / Backend | Database / Storage | `apps/go-backend/live_backend.go` registers account, public, replay, and matchset routes relevant to v1.35. [VERIFIED: apps/go-backend/live_backend.go] |
 | Provider validation/proof surfaces | Runtime-service / provider boundary | API / Backend | Runtime-service `/validate-strategy` accepts TypeScript, Python, Rust, and Zig and attaches provider metadata/proof. [VERIFIED: apps/runtime-service/src/server.ts] |
 | Public/default privacy classification | API / Backend | Frontend Server/API | Public DTO builders and `PUBLIC_OUTPUT_FORBIDDEN_FIELDS` define what must not appear by default. [VERIFIED: packages/spec/src/public-output-privacy.ts; apps/go-backend/live_backend.go] |
 | Owner-debug/private replay classification | Frontend Server/API | API / Backend | Owner-debug options are currently resolved in the replay page route helper and server replay reads enforce projection behavior. [VERIFIED: apps/web/app/matches/[matchId]/replay/owner-debug.ts; apps/web/app/matches/server.test.ts] |
@@ -137,7 +137,7 @@ The most important planning fact is that the account/provider-proof risk is real
 
 | Surface Group | Current Evidence | Phase 243 Planning Implication |
 | --- | --- | --- |
-| Account save transport | `apps/web/app/api/account/revisions/save/route.ts` delegates to `saveAccountRevisionFromRequest`; `apps/web/lib/account-revision-write-boundary.ts` forwards source and sourceFormat to selected Go backend. [VERIFIED: codebase] | Inventory as web transport boundary, not proof owner. [VERIFIED: codebase; AGENTS.md] |
+| Account save transport | `apps/web/app/api/account/revisions/save/route.ts` delegates to `saveAccountRevisionFromRequest`; `apps/web/lib/account-revision-write-boundary.ts` forwards source and sourceFormat to the configured Go backend. [VERIFIED: codebase] | Inventory as web transport boundary, not proof owner. [VERIFIED: codebase; AGENTS.md] |
 | Go account save | `createStrategyRevision` accepts TypeScript/Python/Rust/Zig; Python/Rust/Zig call `runtime.validateStrategy`; TypeScript falls through to local metadata/default insertion. [VERIFIED: apps/go-backend/live_backend.go] | Classify TypeScript account-save proof drift as `fix-now` for Phase 244, with current behavior frozen by characterization. [VERIFIED: .planning/ROADMAP.md; .planning/artifacts/v1.34-workshop-checker-inventory.md] |
 | Go runtime-service validation client | `validateStrategy` rejects non-Python/Rust/Zig before transport. [VERIFIED: apps/go-backend/runtime_service_client.go] | Inventory as Phase 244 prerequisite and characterize current TypeScript rejection without changing it. [VERIFIED: apps/go-backend/runtime_service_client.go; .planning/ROADMAP.md] |
 | Account source read | Go source read requires authenticated user ownership and returns private JSON; Next account source route returns private no-store text. [VERIFIED: apps/go-backend/live_backend.go; apps/web/app/api/account/revisions/[revisionId]/source/route.ts] | Inventory as owner-private source surface with privacy tests. [VERIFIED: codebase; AGENTS.md] |
@@ -320,7 +320,7 @@ describe("v1.35 boundary surface inventory", () => {
 
 **What goes wrong:** A row says a surface is "provider-proofed" because the intended owner is runtime-service, while the current route still uses local or weaker semantics. [VERIFIED: .planning/artifacts/v1.34-workshop-checker-inventory.md]
 
-**Why it happens:** Go TypeScript account save and selected Go counted eligibility are known drifts from runtime-service/provider proof semantics. [VERIFIED: apps/go-backend/live_backend.go; apps/go-backend/runtime_service_client.go]
+**Why it happens:** Go TypeScript account save and Go counted eligibility surfaces are known drift candidates from runtime-service/provider proof semantics. [VERIFIED: apps/go-backend/live_backend.go; apps/go-backend/runtime_service_client.go]
 
 **How to avoid:** Record both current owner and intended owner on every row, and keep the disposition separate from current behavior. [VERIFIED: 243-CONTEXT.md]
 
@@ -433,20 +433,11 @@ for (const row of publicArtifactRows) {
 | --- | --- | --- | --- |
 | A1 | No `[ASSUMED]` claims are used in this research; all project claims are tied to repo files, artifacts, local commands, or npm registry checks. [VERIFIED: this research process] | All sections | None from assumed factual claims; planner should still confirm product decisions if it changes dispositions. [VERIFIED: 243-CONTEXT.md] |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should the inventory JSON be committed as generated output or hand-maintained source?** [VERIFIED: existing artifacts include both generated and hand-authored patterns]
-   - What we know: Prior artifacts include markdown and JSON evidence files, and scripts often support `--check`. [VERIFIED: .planning/artifacts list; scripts]
-   - What's unclear: Phase 243 context leaves exact filenames/table/script structure to planner discretion. [VERIFIED: 243-CONTEXT.md]
-   - Recommendation: Make markdown authoritative and JSON monitor-friendly; add `--check` only if generation is deterministic. [RECOMMENDED: existing script/artifact pattern]
-2. **Should Phase 243 wire the inventory check into `pnpm boundary:monitors` immediately?** [VERIFIED: package.json]
-   - What we know: Existing boundary monitors are comprehensive and can be slow. [VERIFIED: package.json]
-   - What's unclear: The planner must decide whether inventory completeness is stable enough for every monitor run. [VERIFIED: 243-CONTEXT.md]
-   - Recommendation: Add a focused script command first; wire to `boundary:monitors` only if it is deterministic and not environment-sensitive. [RECOMMENDED: package.json pattern]
-3. **How many characterization tests are enough before Phase 244?** [VERIFIED: .planning/ROADMAP.md]
-   - What we know: Behavior changes are out of scope, but safe characterization and inventory checks are allowed. [VERIFIED: 243-CONTEXT.md]
-   - What's unclear: The exact test count depends on planner task slicing. [VERIFIED: 243-CONTEXT.md]
-   - Recommendation: Minimum tests should cover required surface groups, known TypeScript account-save/provider-proof drift, alias classification, owner-debug request semantics, TinyGo absence, package mode `none`, and privacy marker inventory. [RECOMMENDED: requirements and codebase scan]
+1. **RESOLVED - JSON source of truth:** `.planning/artifacts/v1.35-boundary-surface-inventory.json` is the machine-checkable source consumed by the evaluator. `.planning/artifacts/v1.35-boundary-surface-inventory.md` is the human-readable locked decision register. Both artifacts are generated from the same evaluator row source, and the evaluator must check that both exist and are in sync on row IDs, disposition, downstream phase, and affected requirements. [VERIFIED: revision decision; existing artifact/evaluator pattern]
+2. **RESOLVED - Monitor wiring:** Phase 243 should add a focused deterministic script command and wire it into `boundary:monitors` only through `scripts/check-boundary-monitors.ts` if the check remains local-file-only and environment-insensitive. The monitor check must not require runtime-service, Go backend, database, network, browser automation, Docker, or external processes beyond local TypeScript execution. [VERIFIED: revision decision; package.json monitor pattern]
+3. **RESOLVED - Characterization-test scope:** Phase 243 may add characterization/static tests that freeze current drift and inventory coverage, including TypeScript account-save/provider-proof drift, alias inventory, owner-debug request semantics, TinyGo absence, package mode `none`, forbidden overclaim patterns, and public/default privacy-marker coverage. Phase 243 must not fix account/provider/auth/sandbox/package behavior; drift rows must point to Phases 244-248. [VERIFIED: revision decision; .planning/ROADMAP.md phase boundaries]
 
 ## Environment Availability
 
