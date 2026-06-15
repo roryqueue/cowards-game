@@ -3,7 +3,7 @@ phase: 249
 slug: competition-surface-inventory-and-policy-lock
 status: draft
 nyquist_compliant: true
-wave_0_complete: true
+wave_0_complete: not_applicable
 created: 2026-06-15
 ---
 
@@ -53,10 +53,11 @@ created: 2026-06-15
 
 ## Wave 0 Requirements
 
-- [ ] `packages/spec/src/spec.test.ts` additions for `competition-policy-v1.36` contract and vocabulary.
-- [ ] `scripts/evaluate-v1-36-competition-policy.test.ts` for artifact generation, row validation, forbidden claims, required labels, private markers, and Markdown/JSON synchronization.
-- [ ] `scripts/check-boundary-monitors.test.ts` additions for package script wiring and named v1.36 monitor registration.
-- [ ] Root `package.json` scripts for write/check commands and boundary monitor chain wiring.
+Wave 0 is not applicable for Phase 249. The formerly missing validation references are planned as normal task-level RED/GREEN checks in Waves 1-3:
+
+- `packages/spec/src/spec.test.ts` additions are covered by `249-01-task-1-policy-tests` and `249-01-task-2-policy-contract`.
+- `scripts/evaluate-v1-36-competition-policy.test.ts` is covered by `249-02-task-1-inventory-tests`, `249-02-task-2-inventory-evaluator`, `249-02-task-3-inventory-artifacts`, and Phase 249 monitor tasks.
+- `scripts/check-boundary-monitors.test.ts` and root `package.json` script wiring are covered by `249-03-task-1-monitor-scan-tests` and `249-03-task-2-monitor-scan-implementation`.
 
 ---
 
@@ -70,7 +71,7 @@ All Phase 249 behaviors should have automated verification through spec tests, e
 
 - [x] All tasks have automated verify commands or Wave 0 dependencies
 - [x] Sampling continuity: no 3 consecutive tasks without automated verify
-- [x] Wave 0 covers all missing references
+- [x] Wave 0 not applicable; all formerly missing references are covered by task-level RED/GREEN checks
 - [x] No watch-mode flags
 - [x] Feedback latency < 180s for focused checks
 - [x] `nyquist_compliant: true` set in frontmatter
