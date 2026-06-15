@@ -1,5 +1,12 @@
 #!/usr/bin/env -S pnpm exec tsx
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
@@ -124,6 +131,35 @@ export interface V136CompetitionSurfaceInventory {
 export interface GenerateV136CompetitionSurfaceInventoryOptions {
   repoRoot?: string
   rows?: readonly V136CompetitionSurfaceRow[]
+  scanRoots?: readonly string[]
+  suppressions?: readonly V136CompetitionPolicyScanSuppression[]
+  includeDefaultSuppressions?: boolean
+}
+
+export interface V136CompetitionPolicyScanSuppression {
+  path: string
+  category: string
+  rationale: string
+  owner: string
+  expiry: string
+}
+
+export interface V136CompetitionPolicyScanFinding {
+  path: string
+  category: string
+  message: string
+  matchedPhrase: string
+}
+
+export interface V136CompetitionPolicyScannedFile {
+  path: string
+}
+
+export interface V136CompetitionPolicyScanResult {
+  scannedRoots: readonly string[]
+  scannedFiles: readonly V136CompetitionPolicyScannedFile[]
+  findings: readonly V136CompetitionPolicyScanFinding[]
+  invalidSuppressions: readonly string[]
 }
 
 export const requiredSurfaceGroups = [
@@ -178,6 +214,30 @@ export const artifactPaths = {
   json: ".planning/artifacts/v1.36-competition-surface-inventory.json",
   markdown: ".planning/artifacts/v1.36-competition-surface-inventory.md",
 } as const
+
+export const defaultScanRoots = [
+  ".planning",
+  "packages",
+  "apps",
+  "scripts",
+] as const
+
+export const scanFileExtensions = [
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".md",
+  ".mdx",
+  ".json",
+  ".jsonl",
+  ".txt",
+  ".go",
+  ".yaml",
+  ".yml",
+  ".snap",
+  ".html",
+] as const
 
 const requiredResetNoDurableCopy =
   "resettable Season-scoped standings; no durable permanent rating promise" as const
@@ -1383,6 +1443,481 @@ const collectArtifactSynchronizationFailures = (
   return failures
 }
 
+const ignoredPathSegments = new Set([
+  "node_modules",
+  ".next",
+  "dist",
+  "build",
+  "coverage",
+  ".git",
+])
+
+const ignoredFileNames = new Set([
+  "pnpm-lock.yaml",
+  "package-lock.json",
+  "yarn.lock",
+  "npm-shrinkwrap.json",
+])
+
+const ignoredFileExtensions = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".ico",
+  ".zip",
+  ".gz",
+  ".tgz",
+  ".tar",
+  ".wasm",
+  ".pdf",
+])
+
+const scanExtensionSet = new Set<string>(scanFileExtensions)
+
+const normalizeScanPath = (value: string): string =>
+  value.split(path.sep).join("/").replace(/^\.\//, "")
+
+const hasIgnoredSegment = (relativePath: string): boolean =>
+  normalizeScanPath(relativePath)
+    .split("/")
+    .some((segment) => ignoredPathSegments.has(segment))
+
+const isSupportedTextFile = (relativePath: string): boolean => {
+  const normalizedPath = normalizeScanPath(relativePath)
+  const fileName = path.basename(normalizedPath)
+  if (ignoredFileNames.has(fileName)) {
+    return false
+  }
+  if (/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(fileName)) {
+    return false
+  }
+  if (hasIgnoredSegment(normalizedPath)) {
+    return false
+  }
+  if (
+    normalizedPath.startsWith(".planning/milestones/") ||
+    normalizedPath.startsWith(".planning/workstreams/") ||
+    (normalizedPath.startsWith(".planning/artifacts/") &&
+      !normalizedPath.startsWith(
+        ".planning/artifacts/v1.36-competition-surface-inventory.",
+      ))
+  ) {
+    return false
+  }
+  const extension = path.extname(normalizedPath)
+  if (ignoredFileExtensions.has(extension)) {
+    return false
+  }
+  return scanExtensionSet.has(extension)
+}
+
+const textHasNullByte = (text: string): boolean => text.includes("\u0000")
+
+const discoverFixtureAndSnapshotRoots = (
+  root: string,
+  baseRoots: readonly string[],
+): readonly string[] => {
+  const discovered = new Set<string>()
+  const visit = (relativeDir: string): void => {
+    if (hasIgnoredSegment(relativeDir)) {
+      return
+    }
+    const absoluteDir = path.join(root, relativeDir)
+    if (!existsSync(absoluteDir)) {
+      return
+    }
+    const stat = statSync(absoluteDir)
+    if (!stat.isDirectory()) {
+      return
+    }
+    const baseName = path.basename(relativeDir)
+    if (
+      ["fixtures", "__fixtures__", "snapshots", "__snapshots__"].includes(
+        baseName,
+      )
+    ) {
+      discovered.add(normalizeScanPath(relativeDir))
+    }
+    for (const entry of readdirSync(absoluteDir)) {
+      visit(path.join(relativeDir, entry))
+    }
+  }
+
+  for (const baseRoot of baseRoots) {
+    visit(baseRoot)
+  }
+  return [...discovered].sort()
+}
+
+const collectTextFiles = (
+  root: string,
+  roots: readonly string[],
+): readonly V136CompetitionPolicyScannedFile[] => {
+  const files: V136CompetitionPolicyScannedFile[] = []
+  const seen = new Set<string>()
+  const visit = (relativePath: string): void => {
+    const normalizedPath = normalizeScanPath(relativePath)
+    if (seen.has(normalizedPath) || hasIgnoredSegment(normalizedPath)) {
+      return
+    }
+    const absolutePath = path.join(root, normalizedPath)
+    if (!existsSync(absolutePath)) {
+      return
+    }
+    const stat = statSync(absolutePath)
+    if (stat.isDirectory()) {
+      for (const entry of readdirSync(absolutePath)) {
+        visit(path.join(normalizedPath, entry))
+      }
+      return
+    }
+    seen.add(normalizedPath)
+    if (!stat.isFile() || !isSupportedTextFile(normalizedPath)) {
+      return
+    }
+    const text = readFileSync(absolutePath, "utf8")
+    if (textHasNullByte(text)) {
+      return
+    }
+    files.push({ path: normalizedPath })
+  }
+
+  for (const scanRoot of roots) {
+    visit(scanRoot)
+  }
+  return files.sort((a, b) => a.path.localeCompare(b.path))
+}
+
+const forbiddenTextPatterns = [
+  {
+    category: "durable-rating",
+    phrases: [
+      "Coward's Game has durable permanent ratings",
+      "trial ladder points are permanent player ratings",
+      "durable permanent ratings are available",
+      "durable permanent rating is available",
+      "permanent player ratings are live",
+    ],
+  },
+  {
+    category: "all-time-ranking",
+    phrases: [
+      "Coward's Game publishes all-time rankings",
+      "all-time rankings are available",
+      "official lifetime rank",
+    ],
+  },
+  {
+    category: "rating-refund",
+    phrases: [
+      "Invalidated Matches refund permanent rating",
+      "rating refunds are available",
+      "governance can repair lost rating points",
+    ],
+  },
+  {
+    category: "mature-staffed-moderation",
+    phrases: [
+      "Every dispute receives staffed moderation review",
+      "appeals have guaranteed human moderator SLAs",
+      "staffed moderation is available",
+    ],
+  },
+  {
+    category: "production-sandbox",
+    phrases: [
+      "All runtime lanes provide production sandbox certification",
+      "the Strategy sandbox is production certified",
+      "production sandbox certification is available",
+    ],
+  },
+  {
+    category: "package-ecosystem",
+    phrases: [
+      "Strategies can use the full npm ecosystem",
+      "Python package installs are supported in counted play",
+      "package ecosystem support is available",
+    ],
+  },
+  {
+    category: "tinygo-production",
+    phrases: [
+      "TinyGo is a production Strategy lane",
+      "TinyGo entries are eligible for counted competition",
+      "TinyGo production support is available",
+    ],
+  },
+  {
+    category: "raw-diagnostic",
+    phrases: [
+      "Public results show raw runtime diagnostics",
+      "players can inspect raw provider stderr in public replay",
+      "raw diagnostics are public",
+    ],
+  },
+  {
+    category: "private-runtime",
+    phrases: [
+      "Public pages expose private runtime internals",
+      "runtime provider secrets are part of public evidence",
+      "private runtime internals are public",
+    ],
+  },
+] as const
+
+const privateTextMarkers = [
+  ...COMPETITION_POLICY_V1_36_PRIVACY_EXCLUSIONS,
+] as const
+
+const privateTextPatterns = privateTextMarkers.map((marker) => ({
+  marker,
+  pattern: new RegExp(
+    `\\bpublic(?:ly)?\\b[^.\\n]{0,60}\\b(?:exposes?|includes?|returns?|publishes?|leaks?|shows?)\\b[^.\\n]{0,100}\\b${escapeRegExp(
+      marker,
+    ).replaceAll("\\ ", "\\s+")}\\b`,
+    "i",
+  ),
+}))
+
+const negatedPolicyLinePattern =
+  /\b(?:must not|do not|does not|not expose|not exposed|never expose|without|excluded|excludes|forbidden|denylist|privacy exclusion|must stay|avoid|omit|omits|but not|fail if|no public|not public|rejects?)\b/i
+
+const createDefaultSuppressions = (): readonly V136CompetitionPolicyScanSuppression[] => {
+  const categories = [
+    ...forbiddenTextPatterns.map((entry) => entry.category),
+    "private-marker",
+    "required-posture-label",
+    "required-reset-no-durable-copy",
+  ]
+  const paths = [
+    "packages/spec/src/competition-policy-v1-36.ts",
+    "scripts/evaluate-v1-36-competition-policy.ts",
+    "scripts/evaluate-v1-36-competition-policy.test.ts",
+    "scripts/check-boundary-monitors.test.ts",
+    ".planning/artifacts/v1.36-competition-surface-inventory.md",
+    ".planning/artifacts/v1.36-competition-surface-inventory.json",
+    ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-01-PLAN.md",
+    ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-02-PLAN.md",
+    ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-03-PLAN.md",
+    ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-CONTEXT.md",
+    ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-VALIDATION.md",
+    ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-RESEARCH.md",
+    ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-PATTERNS.md",
+    ".planning/research/ARCHITECTURE.md",
+    ".planning/research/FEATURES.md",
+    ".planning/research/PITFALLS.md",
+    ".planning/research/SUMMARY.md",
+    ".planning/research/v1.9-GO-READMODEL.md",
+    ".planning/research/v1.9-RUNTIME-ISOLATION.md",
+  ]
+  const suppressions: V136CompetitionPolicyScanSuppression[] = []
+  for (const suppressionPath of paths) {
+    for (const category of categories) {
+      suppressions.push({
+        path: suppressionPath,
+        category,
+        rationale:
+          "Intentional policy, artifact, or test fixture text documents forbidden examples and monitor calibration without making a product claim.",
+        owner: "Phase 249 static monitor",
+        expiry: "2026-12-31",
+      })
+    }
+  }
+  for (const row of authoritativeRows) {
+    if (row.postureLabelRequired && row.disposition !== "lock-now") {
+      for (const reference of row.references) {
+        suppressions.push({
+          path: reference,
+          category: "required-posture-label",
+          rationale:
+            "Inventory row is assigned to a downstream implementation phase; Phase 249 locks the requirement without editing the product surface.",
+          owner: "Phase 249 static monitor",
+          expiry: "2026-12-31",
+        })
+        suppressions.push({
+          path: reference,
+          category: "required-reset-no-durable-copy",
+          rationale:
+            "Inventory row is assigned to a downstream implementation phase; Phase 249 locks the reset/no-durable requirement without editing the product surface.",
+          owner: "Phase 249 static monitor",
+          expiry: "2026-12-31",
+        })
+      }
+    }
+  }
+  return suppressions
+}
+
+const currentScanDate = generatedAt
+
+const validateSuppression = (
+  suppression: V136CompetitionPolicyScanSuppression,
+): string | null => {
+  for (const field of ["path", "category", "rationale", "owner", "expiry"] as const) {
+    if (!isNonEmptyString(suppression[field])) {
+      return `invalid suppression for ${suppression.path || "<missing path>"} ${suppression.category || "<missing category>"} missing ${field}`
+    }
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(suppression.expiry)) {
+    return `invalid suppression for ${suppression.path} ${suppression.category} has invalid expiry ${suppression.expiry}`
+  }
+  if (suppression.expiry < currentScanDate) {
+    return `invalid suppression for ${suppression.path} ${suppression.category} expired ${suppression.expiry}`
+  }
+  return null
+}
+
+const getSuppressions = (
+  options: GenerateV136CompetitionSurfaceInventoryOptions,
+): readonly V136CompetitionPolicyScanSuppression[] => [
+  ...(options.includeDefaultSuppressions === false
+    ? []
+    : createDefaultSuppressions()),
+  ...(options.suppressions ?? []),
+]
+
+const isSuppressed = (
+  finding: V136CompetitionPolicyScanFinding,
+  suppressions: readonly V136CompetitionPolicyScanSuppression[],
+): boolean =>
+  suppressions.some(
+    (suppression) =>
+      normalizeScanPath(suppression.path) === finding.path &&
+      suppression.category === finding.category,
+  )
+
+const findingToFailure = (
+  finding: V136CompetitionPolicyScanFinding,
+): string =>
+  `${finding.path} ${finding.category}: ${finding.message} (${finding.matchedPhrase})`
+
+export const scanV136CompetitionPolicyTextRoots = (
+  options: GenerateV136CompetitionSurfaceInventoryOptions = {},
+): V136CompetitionPolicyScanResult => {
+  const root = options.repoRoot ?? repoRoot
+  const configuredRoots = options.scanRoots ?? defaultScanRoots
+  const scannedRoots = [
+    ...configuredRoots.map(normalizeScanPath),
+    ...discoverFixtureAndSnapshotRoots(root, configuredRoots),
+  ]
+  const scannedFiles = collectTextFiles(root, scannedRoots)
+  const scannedFileSet = new Set(scannedFiles.map((file) => file.path))
+  const findings: V136CompetitionPolicyScanFinding[] = []
+  const suppressions = getSuppressions(options)
+  const invalidSuppressions = suppressions
+    .map(validateSuppression)
+    .filter((failure): failure is string => failure !== null)
+  const validSuppressions =
+    invalidSuppressions.length > 0
+      ? []
+      : suppressions.map((suppression) => ({
+          ...suppression,
+          path: normalizeScanPath(suppression.path),
+        }))
+
+  for (const file of scannedFiles) {
+    const text = readFileSync(path.join(root, file.path), "utf8")
+    for (const { category, phrases } of forbiddenTextPatterns) {
+      for (const phrase of phrases) {
+        const matchedLine = text
+          .split("\n")
+          .find(
+            (line) =>
+              line.toLowerCase().includes(phrase.toLowerCase()) &&
+              !negatedPolicyLinePattern.test(line),
+          )
+        if (matchedLine !== undefined) {
+          findings.push({
+            path: file.path,
+            category,
+            message: `clear violation for forbidden ${category} claim`,
+            matchedPhrase: phrase,
+          })
+        }
+      }
+    }
+    for (const { marker, pattern } of privateTextPatterns) {
+      const matchedLine = text
+        .split("\n")
+        .find((line) => pattern.test(line) && !negatedPolicyLinePattern.test(line))
+      if (matchedLine !== undefined) {
+        findings.push({
+          path: file.path,
+          category: "private-marker",
+          message: `private marker must not appear in public/default output: ${marker}`,
+          matchedPhrase: marker,
+        })
+      }
+    }
+  }
+
+  const inventory = generateV136CompetitionSurfaceInventory(options)
+  for (const row of inventory.rows) {
+    if (!row.postureLabelRequired) {
+      continue
+    }
+    const referenceTexts = row.references
+      .map(normalizeScanPath)
+      .filter((reference) => scannedFileSet.has(reference))
+      .map((reference) => ({
+        path: reference,
+        text: readFileSync(path.join(root, reference), "utf8"),
+      }))
+    if (referenceTexts.length === 0) {
+      continue
+    }
+    const hasPosture = referenceTexts.some(({ text }) =>
+      text.includes(row.requiredPostureCopy),
+    )
+    const hasResetNoDurable = referenceTexts.some(({ text }) =>
+      text.includes(row.requiredResetNoDurableCopy) ||
+      (text.includes(COMPETITION_POLICY_V1_36_POSTURE.standingsScope) &&
+        text.includes(COMPETITION_POLICY_V1_36_POSTURE.durableRatingPromise)),
+    )
+    if (!hasPosture) {
+      for (const reference of referenceTexts) {
+        findings.push({
+          path: reference.path,
+          category: "required-posture-label",
+          message: `${row.id} missing required posture label`,
+          matchedPhrase: row.requiredPostureCopy,
+        })
+      }
+    }
+    if (!hasResetNoDurable) {
+      for (const reference of referenceTexts) {
+        findings.push({
+          path: reference.path,
+          category: "required-reset-no-durable-copy",
+          message: `${row.id} missing required reset/no-durable copy`,
+          matchedPhrase: row.requiredResetNoDurableCopy,
+        })
+      }
+    }
+  }
+
+  return {
+    scannedRoots,
+    scannedFiles,
+    findings: findings.filter(
+      (finding) => !isSuppressed(finding, validSuppressions),
+    ),
+    invalidSuppressions,
+  }
+}
+
+export const checkV136CompetitionPolicyScan = (
+  options: GenerateV136CompetitionSurfaceInventoryOptions = {},
+): readonly string[] => {
+  const scan = scanV136CompetitionPolicyTextRoots(options)
+  return [
+    ...scan.invalidSuppressions,
+    ...scan.findings.map(findingToFailure),
+  ]
+}
+
 export const checkV136CompetitionSurfaceInventoryArtifacts = (
   options: GenerateV136CompetitionSurfaceInventoryOptions = {},
 ): readonly string[] => {
@@ -1458,13 +1993,16 @@ const runCli = (): void => {
     return
   }
   if (flag === "--check") {
-    const failures = checkV136CompetitionSurfaceInventoryArtifacts()
+    const failures = [
+      ...checkV136CompetitionSurfaceInventoryArtifacts(),
+      ...checkV136CompetitionPolicyScan(),
+    ]
     if (failures.length > 0) {
       console.error(failures.join("\n"))
       process.exitCode = 1
       return
     }
-    console.log("v1.36 competition surface inventory artifacts are current")
+    console.log("v1.36 competition policy artifacts are current")
     return
   }
   if (flag === undefined) {

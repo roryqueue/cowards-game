@@ -203,6 +203,15 @@ const writeTempFile = (root: string, relativePath: string, text: string): void =
   writeFileSync(absolutePath, text)
 }
 
+const clearPostureRequirement = (
+  row: V136CompetitionSurfaceRow,
+): V136CompetitionSurfaceRow => ({
+  ...row,
+  postureLabelRequired: false,
+  requiredPostureCopy: "",
+  requiredResetNoDurableCopy: "",
+})
+
 describe("boundary drift monitors", () => {
   afterEach(() => {
     vi.restoreAllMocks()
@@ -409,11 +418,9 @@ describe("boundary drift monitors", () => {
   it("checks v1.36 competition policy artifacts and calibrated public beta trial competition copy", () => {
     const root = createTempRepo()
     try {
-      writeV136CompetitionSurfaceInventoryArtifacts({ repoRoot: root })
-      const rows = generateV136CompetitionSurfaceInventory().rows.map((row) => ({
-        ...row,
-        postureLabelRequired: false,
-      })) as V136CompetitionSurfaceRow[]
+      const rows =
+        generateV136CompetitionSurfaceInventory().rows.map(clearPostureRequirement)
+      writeV136CompetitionSurfaceInventoryArtifacts({ repoRoot: root, rows })
       writeTempFile(
         root,
         "apps/web/app/competitions/page.tsx",
@@ -424,7 +431,6 @@ describe("boundary drift monitors", () => {
         checkV136CompetitionPolicyMonitor({
           repoRoot: root,
           rows,
-          includeDefaultSuppressions: false,
         }),
       ).toBe("v1.36 competition policy artifacts are current")
     } finally {
@@ -436,10 +442,8 @@ describe("boundary drift monitors", () => {
     const root = createTempRepo()
     try {
       writeV136CompetitionSurfaceInventoryArtifacts({ repoRoot: root })
-      const rows = generateV136CompetitionSurfaceInventory().rows.map((row) => ({
-        ...row,
-        postureLabelRequired: false,
-      })) as V136CompetitionSurfaceRow[]
+      const rows =
+        generateV136CompetitionSurfaceInventory().rows.map(clearPostureRequirement)
 
       writeTempFile(root, "apps/web/app/competitions/page.tsx", [
         "Coward's Game has durable permanent ratings.",
@@ -467,10 +471,8 @@ describe("boundary drift monitors", () => {
   it("fails v1.36 competition policy monitor when posture-required inventory references lack required labels", () => {
     const root = createTempRepo()
     try {
-      const rows = generateV136CompetitionSurfaceInventory().rows.map((row) => ({
-        ...row,
-        postureLabelRequired: false,
-      })) as V136CompetitionSurfaceRow[]
+      const rows =
+        generateV136CompetitionSurfaceInventory().rows.map(clearPostureRequirement)
       rows[0] = {
         ...rows[0]!,
         references: ["apps/web/app/competitions/page.tsx"],

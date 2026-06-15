@@ -23,6 +23,11 @@ import {
   type GenerateV135BoundarySurfaceInventoryOptions,
 } from "./evaluate-v1-35-boundary-surface-inventory.ts"
 import { checkV135AccountProviderEntryProofArtifacts } from "./evaluate-v1-35-account-provider-entry-proof.ts"
+import {
+  checkV136CompetitionPolicyScan,
+  checkV136CompetitionSurfaceInventoryArtifacts,
+  type GenerateV136CompetitionSurfaceInventoryOptions,
+} from "./evaluate-v1-36-competition-policy.ts"
 
 export { validateV116NoTypeScriptBackendTopologyArtifact }
 import {
@@ -943,6 +948,19 @@ export const checkV135AccountProviderEntryProofMonitor = (): string => {
     throw new Error(failures.join("; "))
   }
   return "v1.35 account provider entry proof artifacts are current"
+}
+
+export const checkV136CompetitionPolicyMonitor = (
+  options: GenerateV136CompetitionSurfaceInventoryOptions = {},
+): string => {
+  const failures = [
+    ...checkV136CompetitionSurfaceInventoryArtifacts(options),
+    ...checkV136CompetitionPolicyScan(options),
+  ]
+  if (failures.length > 0) {
+    throw new Error(failures.join("; "))
+  }
+  return "v1.36 competition policy artifacts are current"
 }
 
 const checkOpenApiContract = (): string => {
@@ -5485,6 +5503,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("contract_drift", "v1.35 account provider entry proof", () =>
     checkV135AccountProviderEntryProofMonitor(),
+  ),
+  await check("contract_drift", "v1.36 competition policy", () =>
+    checkV136CompetitionPolicyMonitor(),
   ),
   await check("runtime_adapter", "runtime registry and adapter metadata", () =>
     checkRuntimeAdapters(),
