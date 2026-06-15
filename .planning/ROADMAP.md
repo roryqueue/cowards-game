@@ -11,7 +11,7 @@ v1.35 closes the runtime/account/security-policy edges left after v1.34 by makin
 - [x] **Phase 245: Ownership, Owner-Debug, and Workshop Alias Cleanup** - Restrict local trust shortcuts, authorize private owner views server-side, and settle legacy Workshop aliases. (completed 2026-06-15)
 - [x] **Phase 246: Sandbox-Readiness Claims and Runtime Labels** - Publish conservative readiness/certification labels and fail-loud monitors for unsupported isolation claims. (completed 2026-06-15)
 - [x] **Phase 247: Package and Dependency Policy Enforcement** - Define and enforce the current no-package/no-host-import policy across production Strategy lanes. (completed 2026-06-15)
-- [ ] **Phase 248: Service-Backed Proof, Privacy, and Boundary Monitors** - Prove the corrected account/provider/privacy/package/sandbox boundaries with tests, scans, monitors, and final evidence.
+- [x] **Phase 248: Service-Backed Proof, Privacy, and Boundary Monitors** - Prove the corrected account/provider/privacy/package/sandbox boundaries with tests, scans, monitors, and final evidence. (completed 2026-06-15)
 
 ## Phase Details
 
@@ -111,8 +111,11 @@ Plans:
   3. Privacy scans cover account source routes, owner-debug replay, public replay/result pages and APIs, Workshop aliases, checker/provider proof responses, package diagnostics, logs/fixtures where relevant, and generated proof artifacts for all forbidden private markers.
   4. Boundary monitors prove no Strategy execution moved into web/API/Go, TinyGo remains hidden, TypeScript/Python remain provenance-only, Rust/Zig remain immutable WASM/WASI Preview 1 artifact-backed, package mode stays `none`, and unsupported sandbox/package claims fail loudly.
   5. Final validation records inventory findings, provider-proof decisions, account/entry readiness behavior, alias decisions, sandbox-readiness contract, package policy, test commands, service-backed proof, privacy scans, boundary monitors, local service/toolchain limitations, and audit outcome.
-**Plans**: TBD
+**Plans**: 1 plan
 **UI hint**: yes
+Plans:
+**Wave 1**
+- [x] 248-01-PLAN.md — Final v1.35 proof artifact, privacy scans, and boundary monitor rollup.
 
 ## Progress
 
@@ -126,12 +129,12 @@ Phases execute in numeric order: 243 -> 244 -> 245 -> 246 -> 247 -> 248
 | 245. Ownership, Owner-Debug, and Workshop Alias Cleanup | 1/1 | Complete   | 2026-06-15 |
 | 246. Sandbox-Readiness Claims and Runtime Labels | 1/1 | Complete   | 2026-06-15 |
 | 247. Package and Dependency Policy Enforcement | 1/1 | Complete   | 2026-06-15 |
-| 248. Service-Backed Proof, Privacy, and Boundary Monitors | 0/TBD | Not started | - |
+| 248. Service-Backed Proof, Privacy, and Boundary Monitors | 1/1 | Complete   | 2026-06-15 |
 
 ## Coverage
 
 - v1 requirements: 32 total
-- Complete: 27
+- Complete: 32
 - Planned: 32
 - Mapped to phases: 32
 - Unmapped: 0

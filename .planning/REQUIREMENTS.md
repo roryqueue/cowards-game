@@ -82,11 +82,11 @@ Close or explicitly reframe the remaining runtime/account/security-policy edges 
 
 ### Tests, Proof, Privacy, and Monitors
 
-- [ ] **PROOF-01**: Focused unit/integration/API tests cover account-save/provider-proof states across TypeScript, Python, Rust, and Zig, including valid, invalid, draft/non-execution, unavailable-runtime, stale/missing/mismatched proof, malformed provider response, package-declared, unsupported-provider, and TinyGo-hidden cases.
-- [ ] **PROOF-02**: At least one service-backed proof shows a TypeScript account revision saved through Go carries provider proof and can become entry-eligible only with matching source/artifact identity and current provider metadata.
-- [ ] **PROOF-03**: Privacy scans cover account source routes, owner-debug replay, public replay/result pages and APIs, Workshop aliases, checker/provider proof responses, package diagnostics, logs/fixtures where relevant, and generated proof artifacts for all forbidden private markers.
-- [ ] **PROOF-04**: Boundary monitors prove no Strategy execution moved into web/API/Go, TinyGo remains hidden, TypeScript/Python remain provenance-only, Rust/Zig remain immutable WASM/WASI Preview 1 artifact-backed, package mode stays `none`, and unsupported sandbox/package claims fail loudly.
-- [ ] **PROOF-05**: Final validation records inventory findings, provider-proof decisions, account/entry readiness behavior, alias decisions, sandbox-readiness contract, package policy, test commands, service-backed proof, privacy scans, boundary monitors, local service/toolchain limitations, and audit outcome.
+- [x] **PROOF-01**: Focused unit/integration/API tests cover account-save/provider-proof states across TypeScript, Python, Rust, and Zig, including valid, invalid, draft/non-execution, unavailable-runtime, stale/missing/mismatched proof, malformed provider response, package-declared, unsupported-provider, and TinyGo-hidden cases.
+- [x] **PROOF-02**: At least one service-backed proof shows a TypeScript account revision saved through Go carries provider proof and can become entry-eligible only with matching source/artifact identity and current provider metadata.
+- [x] **PROOF-03**: Privacy scans cover account source routes, owner-debug replay, public replay/result pages and APIs, Workshop aliases, checker/provider proof responses, package diagnostics, logs/fixtures where relevant, and generated proof artifacts for all forbidden private markers.
+- [x] **PROOF-04**: Boundary monitors prove no Strategy execution moved into web/API/Go, TinyGo remains hidden, TypeScript/Python remain provenance-only, Rust/Zig remain immutable WASM/WASI Preview 1 artifact-backed, package mode stays `none`, and unsupported sandbox/package claims fail loudly.
+- [x] **PROOF-05**: Final validation records inventory findings, provider-proof decisions, account/entry readiness behavior, alias decisions, sandbox-readiness contract, package policy, test commands, service-backed proof, privacy scans, boundary monitors, local service/toolchain limitations, and audit outcome.
 
 ## Future Requirements
 
@@ -145,15 +145,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PKG-02 | Phase 247 | Complete |
 | PKG-03 | Phase 247 | Complete |
 | PKG-04 | Phase 247 | Complete |
-| PROOF-01 | Phase 248 | Pending |
-| PROOF-02 | Phase 248 | Pending |
-| PROOF-03 | Phase 248 | Pending |
-| PROOF-04 | Phase 248 | Pending |
-| PROOF-05 | Phase 248 | Pending |
+| PROOF-01 | Phase 248 | Complete |
+| PROOF-02 | Phase 248 | Complete |
+| PROOF-03 | Phase 248 | Complete |
+| PROOF-04 | Phase 248 | Complete |
+| PROOF-05 | Phase 248 | Complete |
 
 **Coverage:**
 - v1 requirements: 32 total
-- Complete: 27
+- Complete: 32
 - Planned: 32
 - Mapped to phases: 32
 - Unmapped: 0
