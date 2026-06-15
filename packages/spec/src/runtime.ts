@@ -68,6 +68,22 @@ export interface StrategyRuntimeSandboxReadinessClaim {
   forbiddenStrongerClaims: readonly string[]
 }
 
+export const STRATEGY_RUNTIME_PACKAGE_POLICY_CONTRACT_VERSION =
+  "strategy-runtime-package-policy-v1.35" as const
+
+export interface StrategyRuntimePackagePolicyClaim {
+  contractVersion: typeof STRATEGY_RUNTIME_PACKAGE_POLICY_CONTRACT_VERSION
+  laneId: StrategyRuntimeSandboxLaneId
+  productionPackageMode: "none"
+  hostImportsAllowed: false
+  richPackagesAllowed: false
+  nativeDependenciesAllowed: false
+  publicLabel: string
+  developerLabel: string
+  currentRestrictions: readonly string[]
+  futureSupportRequirements: readonly string[]
+}
+
 export interface StrategyLanguageRecord {
   id: StrategyLanguageId
   label: string
@@ -676,6 +692,104 @@ export const getStrategyRuntimeSandboxReadinessClaim = (
     (claim) => claim.laneId === laneId,
   ) ?? null
 
+const futurePackageSupportRequirements = [
+  "versioned package-lane policy",
+  "reproducible dependency resolution",
+  "committed lockfile and manifest hashing",
+  "supply-chain allowlist and provenance",
+  "native-code and build-script policy",
+  "sandboxed build/install boundary",
+  "deterministic build output proof",
+  "cache invalidation and rollback",
+  "privacy redaction for diagnostics and paths",
+  "runtime-boundary proof before entry eligibility",
+] as const
+
+const packagePolicyClaims = [
+  {
+    laneId: "javascript",
+    developerLabel:
+      "JavaScript production Strategies are self-contained; npm packages, dynamic imports, host imports, and package installation are not supported.",
+    currentRestrictions: [
+      "no npm package metadata",
+      "no require/import/dynamic import",
+      "no host filesystem/network/process imports",
+    ],
+  },
+  {
+    laneId: "typescript",
+    developerLabel:
+      "TypeScript production Strategies are self-contained source/artifact revisions; npm packages, host imports, and package installation are not supported.",
+    currentRestrictions: [
+      "no npm package metadata",
+      "no require/import/dynamic import",
+      "no host filesystem/network/process imports",
+    ],
+  },
+  {
+    laneId: "python",
+    developerLabel:
+      "Python production Strategies are self-contained source bundles; PyPI packages, imports, site-packages, and host imports are not supported.",
+    currentRestrictions: [
+      "no PyPI package metadata",
+      "no import statements",
+      "no site-packages or host process access",
+    ],
+  },
+  {
+    laneId: "rust",
+    developerLabel:
+      "Rust production Strategies are self-contained immutable WASM/WASI Preview 1 artifacts; external crates and package installation are not supported.",
+    currentRestrictions: [
+      "no external crate package lane",
+      "no package installation",
+      "no host filesystem/network/process imports",
+    ],
+  },
+  {
+    laneId: "zig",
+    developerLabel:
+      "Zig production Strategies are self-contained no-std/helper WASM/WASI Preview 1 artifacts; Zig packages and host imports are not supported.",
+    currentRestrictions: [
+      "no Zig package lane",
+      "no std/host import capability beyond approved no-std helper lanes",
+      "no package installation",
+    ],
+  },
+  {
+    laneId: "tinygo",
+    developerLabel:
+      "TinyGo remains hidden and spike-only; no production package support exists.",
+    currentRestrictions: [
+      "no TinyGo production lane",
+      "no TinyGo packages",
+      "hidden from production surfaces",
+    ],
+  },
+] as const
+
+export const STRATEGY_RUNTIME_PACKAGE_POLICY_CLAIMS = packagePolicyClaims.map(
+  (claim): StrategyRuntimePackagePolicyClaim => ({
+    contractVersion: STRATEGY_RUNTIME_PACKAGE_POLICY_CONTRACT_VERSION,
+    laneId: claim.laneId,
+    productionPackageMode: "none",
+    hostImportsAllowed: false,
+    richPackagesAllowed: false,
+    nativeDependenciesAllowed: false,
+    publicLabel: "No packages",
+    developerLabel: claim.developerLabel,
+    currentRestrictions: claim.currentRestrictions,
+    futureSupportRequirements: futurePackageSupportRequirements,
+  }),
+) as readonly StrategyRuntimePackagePolicyClaim[]
+
+export const getStrategyRuntimePackagePolicyClaim = (
+  laneId: unknown,
+): StrategyRuntimePackagePolicyClaim | null =>
+  STRATEGY_RUNTIME_PACKAGE_POLICY_CLAIMS.find(
+    (claim) => claim.laneId === laneId,
+  ) ?? null
+
 export const assertStrategyRuntimeSandboxReadinessContract = (): void => {
   for (const claim of STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS) {
     if (claim.productionSandboxCertification !== false) {
@@ -701,6 +815,28 @@ export const assertStrategyRuntimeSandboxReadinessContract = (): void => {
         claim.evidenceClass !== "spike-only-hidden")
     ) {
       throw new Error("TinyGo must remain hidden and spike-only")
+    }
+  }
+}
+
+export const assertStrategyRuntimePackagePolicyContract = (): void => {
+  for (const claim of STRATEGY_RUNTIME_PACKAGE_POLICY_CLAIMS) {
+    if (claim.productionPackageMode !== "none") {
+      throw new Error(`${claim.laneId} must remain package mode none`)
+    }
+    if (
+      claim.hostImportsAllowed ||
+      claim.richPackagesAllowed ||
+      claim.nativeDependenciesAllowed
+    ) {
+      throw new Error(`${claim.laneId} must not enable package support`)
+    }
+    if (
+      !claim.futureSupportRequirements.includes(
+        "runtime-boundary proof before entry eligibility",
+      )
+    ) {
+      throw new Error(`${claim.laneId} must retain future package proof gates`)
     }
   }
 }
@@ -1620,7 +1756,7 @@ export const describeStrategyRuntimeProductSemantics = (
     packagePolicyLabel:
       runtime.package.mode === "none"
         ? (supportedLanguage?.packagePolicyLabel ?? "No packages")
-        : "Declared packages experimental",
+        : "Package metadata unsupported",
     docsReference: supportedLanguage?.docsReference ?? "runtime/languages",
     examplesReference:
       supportedLanguage?.examplesReference ?? "samples/minimal-strategy",

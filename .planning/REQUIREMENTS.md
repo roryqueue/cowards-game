@@ -75,10 +75,10 @@ Close or explicitly reframe the remaining runtime/account/security-policy edges 
 
 ### Package and Dependency Policy
 
-- [ ] **PKG-01**: Developer can define the current package/dependency policy per language: no TypeScript packages/host imports, no Python packages/host imports, no Rust external crates or package installation for production Strategy support, no Zig packages or host imports beyond approved no-std/helper lanes, and no TinyGo production packages.
-- [ ] **PKG-02**: Account save, Workshop validation/submit, competition entry, runtime registry, compatibility keys, and public evidence enforce package mode `none` for current production Strategy lanes.
-- [ ] **PKG-03**: Package/dependency diagnostics are public-safe and do not expose package paths, host paths, env values, tokens, DB details, artifact bytes, raw compiler/runtime output, raw diagnostics, source, or private runtime internals.
-- [ ] **PKG-04**: Future package support requirements are documented without enabling packages, including reproducible dependency resolution, lockfiles, supply-chain policy, native-code policy, sandboxed build/install, deterministic outputs, cache invalidation, privacy redaction, rollback, and runtime-boundary proof.
+- [x] **PKG-01**: Developer can define the current package/dependency policy per language: no TypeScript packages/host imports, no Python packages/host imports, no Rust external crates or package installation for production Strategy support, no Zig packages or host imports beyond approved no-std/helper lanes, and no TinyGo production packages.
+- [x] **PKG-02**: Account save, Workshop validation/submit, competition entry, runtime registry, compatibility keys, and public evidence enforce package mode `none` for current production Strategy lanes.
+- [x] **PKG-03**: Package/dependency diagnostics are public-safe and do not expose package paths, host paths, env values, tokens, DB details, artifact bytes, raw compiler/runtime output, raw diagnostics, source, or private runtime internals.
+- [x] **PKG-04**: Future package support requirements are documented without enabling packages, including reproducible dependency resolution, lockfiles, supply-chain policy, native-code policy, sandboxed build/install, deterministic outputs, cache invalidation, privacy redaction, rollback, and runtime-boundary proof.
 
 ### Tests, Proof, Privacy, and Monitors
 
@@ -137,14 +137,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-01 | Phase 245 | Complete |
 | API-02 | Phase 245 | Complete |
 | API-03 | Phase 245 | Complete |
-| SBOX-01 | Phase 246 | Pending |
-| SBOX-02 | Phase 246 | Pending |
-| LABEL-01 | Phase 246 | Pending |
-| LABEL-02 | Phase 246 | Pending |
-| PKG-01 | Phase 247 | Pending |
-| PKG-02 | Phase 247 | Pending |
-| PKG-03 | Phase 247 | Pending |
-| PKG-04 | Phase 247 | Pending |
+| SBOX-01 | Phase 246 | Complete |
+| SBOX-02 | Phase 246 | Complete |
+| LABEL-01 | Phase 246 | Complete |
+| LABEL-02 | Phase 246 | Complete |
+| PKG-01 | Phase 247 | Complete |
+| PKG-02 | Phase 247 | Complete |
+| PKG-03 | Phase 247 | Complete |
+| PKG-04 | Phase 247 | Complete |
 | PROOF-01 | Phase 248 | Pending |
 | PROOF-02 | Phase 248 | Pending |
 | PROOF-03 | Phase 248 | Pending |
@@ -153,7 +153,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 32 total
-- Complete: 19
+- Complete: 27
 - Planned: 32
 - Mapped to phases: 32
 - Unmapped: 0

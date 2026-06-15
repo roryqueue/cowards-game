@@ -52,6 +52,7 @@ import {
   getStrategyLanguageProviderRecord,
   assertNonJsRuntimeGuardrails,
   assertStrategyRuntimeSandboxReadinessContract,
+  assertStrategyRuntimePackagePolicyContract,
   NON_JS_RUNTIME_PROMOTION_CRITERIA,
   NON_JS_RUNTIME_SUPPORT_POLICY,
   RUNTIME_BROKER_REGISTRY,
@@ -61,8 +62,10 @@ import {
   SUPPORTED_STRATEGY_LANGUAGES,
   STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   STRATEGY_RUNTIME_ABI_VERSION,
+  STRATEGY_RUNTIME_PACKAGE_POLICY_CLAIMS,
   STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS,
   STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
+  getStrategyRuntimePackagePolicyClaim,
   getStrategyRuntimeSandboxReadinessClaim,
   runtimeCompatibilityKey,
   validateStrategyLanguageProviderRuntimeCompatibility,
@@ -355,6 +358,7 @@ describe("Coward's Game spec contracts", () => {
     })
     expect(() => assertNonJsRuntimeGuardrails()).not.toThrow()
     expect(() => assertStrategyRuntimeSandboxReadinessContract()).not.toThrow()
+    expect(() => assertStrategyRuntimePackagePolicyContract()).not.toThrow()
     expect(
       STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS.every(
         (claim) => claim.productionSandboxCertification === false,
@@ -386,6 +390,39 @@ describe("Coward's Game spec contracts", () => {
       evidenceClass: "spike-only-hidden",
       unavailableInProduction: true,
       publicLabel: "Hidden spike-only lane",
+    })
+    expect(
+      STRATEGY_RUNTIME_PACKAGE_POLICY_CLAIMS.every(
+        (claim) =>
+          claim.productionPackageMode === "none" &&
+          claim.hostImportsAllowed === false &&
+          claim.richPackagesAllowed === false &&
+          claim.nativeDependenciesAllowed === false,
+      ),
+    ).toBe(true)
+    expect(getStrategyRuntimePackagePolicyClaim("typescript")).toMatchObject({
+      productionPackageMode: "none",
+      publicLabel: "No packages",
+      hostImportsAllowed: false,
+      richPackagesAllowed: false,
+    })
+    expect(getStrategyRuntimePackagePolicyClaim("python")).toMatchObject({
+      productionPackageMode: "none",
+      publicLabel: "No packages",
+      hostImportsAllowed: false,
+      richPackagesAllowed: false,
+    })
+    expect(getStrategyRuntimePackagePolicyClaim("rust")).toMatchObject({
+      productionPackageMode: "none",
+      nativeDependenciesAllowed: false,
+    })
+    expect(getStrategyRuntimePackagePolicyClaim("zig")).toMatchObject({
+      productionPackageMode: "none",
+      nativeDependenciesAllowed: false,
+    })
+    expect(getStrategyRuntimePackagePolicyClaim("tinygo")).toMatchObject({
+      productionPackageMode: "none",
+      richPackagesAllowed: false,
     })
     expect(NON_JS_RUNTIME_SUPPORT_POLICY).toMatchObject({
       status: "partial-production-supported",

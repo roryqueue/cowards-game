@@ -2475,6 +2475,20 @@ func sandboxReadinessLabel(languageID string) string {
 	}
 }
 
+func packagePolicyLabel(runtime map[string]any) string {
+	if stringValue(mapValue(runtime, "package"), "mode") != "none" {
+		return "Package metadata unsupported"
+	}
+	return "No packages"
+}
+
+func packagePolicyIssueCodes(runtime map[string]any) []string {
+	if stringValue(mapValue(runtime, "package"), "mode") != "none" {
+		return []string{"UNSUPPORTED_PACKAGE_METADATA"}
+	}
+	return []string{}
+}
+
 func runtimeSemantics(runtime map[string]any) map[string]any {
 	language := mapValue(runtime, "language")
 	adapter := mapValue(runtime, "adapter")
@@ -2493,11 +2507,11 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"countedPlayLabel":     "Counted eligible",
 			"countedPlayReason":    nil,
 			"sourcePolicyLabel":    "Self-contained Strategy source",
-			"packagePolicyLabel":   "No packages",
+			"packagePolicyLabel":   packagePolicyLabel(runtime),
 			"docsReference":        "runtime/languages",
 			"examplesReference":    "examples/python-strategy",
 			"warnings":             []string{},
-			"validationIssueCodes": []string{},
+			"validationIssueCodes": packagePolicyIssueCodes(runtime),
 		}
 	}
 	if languageID == "rust" {
@@ -2513,11 +2527,11 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"countedPlayLabel":     "Counted eligible",
 			"countedPlayReason":    nil,
 			"sourcePolicyLabel":    "Self-contained Rust source compiled to immutable WASM artifact",
-			"packagePolicyLabel":   "No packages",
+			"packagePolicyLabel":   packagePolicyLabel(runtime),
 			"docsReference":        "runtime/languages",
 			"examplesReference":    "examples/rust-wasi-strategy",
 			"warnings":             []string{},
-			"validationIssueCodes": []string{},
+			"validationIssueCodes": packagePolicyIssueCodes(runtime),
 		}
 	}
 	if languageID == "zig" {
@@ -2533,11 +2547,11 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"countedPlayLabel":     "Counted eligible",
 			"countedPlayReason":    nil,
 			"sourcePolicyLabel":    "Self-contained Zig source compiled to immutable WASM artifact",
-			"packagePolicyLabel":   "No packages",
+			"packagePolicyLabel":   packagePolicyLabel(runtime),
 			"docsReference":        "runtime/languages",
 			"examplesReference":    "examples/zig-wasi-strategy",
 			"warnings":             []string{},
-			"validationIssueCodes": []string{},
+			"validationIssueCodes": packagePolicyIssueCodes(runtime),
 		}
 	}
 	return map[string]any{
@@ -2552,11 +2566,11 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 		"countedPlayLabel":     "Counted eligible",
 		"countedPlayReason":    nil,
 		"sourcePolicyLabel":    "Self-contained Strategy source",
-		"packagePolicyLabel":   "No packages",
+		"packagePolicyLabel":   packagePolicyLabel(runtime),
 		"docsReference":        "runtime/languages",
 		"examplesReference":    "samples/minimal-strategy",
 		"warnings":             []string{},
-		"validationIssueCodes": []string{},
+		"validationIssueCodes": packagePolicyIssueCodes(runtime),
 	}
 }
 
@@ -2572,6 +2586,12 @@ func publicRuntimeMetadata(runtime map[string]any) map[string]any {
 func runtimeSemanticsForRevision(runtime map[string]any, metadata map[string]any, sourceHash string, sourceBytes int) map[string]any {
 	semantics := runtimeSemantics(runtime)
 	languageID := stringValue(mapValue(runtime, "language"), "id")
+	if stringValue(mapValue(runtime, "package"), "mode") != "none" {
+		semantics["countedPlayEligible"] = false
+		semantics["countedPlayLabel"] = "Not counted"
+		semantics["countedPlayReason"] = "Package metadata is not supported for counted play."
+		return semantics
+	}
 	if languageID != "python" && languageID != "rust" && languageID != "zig" {
 		if languageID == "typescript" && !providerProofMatches(metadata, sourceHash, sourceBytes, languageID) {
 			semantics["countedPlayEligible"] = false

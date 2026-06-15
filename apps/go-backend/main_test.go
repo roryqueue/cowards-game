@@ -305,6 +305,13 @@ func TestTypeScriptRuntimeMetadataRequiresProviderProofForCountedPlay(t *testing
 	if runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes)["countedPlayEligible"] != true {
 		t.Fatalf("TypeScript revision semantics rejected matching provider validation")
 	}
+	runtime["package"] = map[string]any{"mode": "npm", "entrypoint": "default"}
+	semantics := runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes)
+	if semantics["countedPlayEligible"] == true ||
+		semantics["packagePolicyLabel"] != "Package metadata unsupported" ||
+		semantics["countedPlayReason"] != "Package metadata is not supported for counted play." {
+		t.Fatalf("TypeScript revision semantics accepted unsupported package metadata: %+v", semantics)
+	}
 }
 
 func TestRustRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testing.T) {
