@@ -1,257 +1,240 @@
-# Stack Research
+# Technology Stack
 
-**Domain:** Deterministic programmable strategy game runtime/account/security-policy cleanup
-**Project:** Coward's Game v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup
-**Researched:** 2026-06-14
-**Confidence:** HIGH for repo-local stack and integration points; MEDIUM for future package-policy roadmap details because they require later product/security decisions.
+**Project:** Coward's Game v1.36 Competition Maturity  
+**Researched:** 2026-06-15  
+**Scope:** Stack additions and integration points only for public beta/trial competition maturity  
+**Confidence:** HIGH for repo-local stack and mechanisms; MEDIUM for exact schema names until v1.36 requirements lock terminology.
 
 ## Executive Recommendation
 
-Do not add a new platform, runtime, package manager, auth provider, sandbox brand, or broker process for v1.35. The cleanup should be implemented by tightening existing contracts, clients, diagnostics, labels, and proof scripts around the current stack:
+Do not add a new platform for v1.36. Competition maturity should use the existing TypeScript/Go/PostgreSQL/runtime-service stack and add contracts, schemas, proof harnesses, monitors, and public-safe UI copy around the current competition surfaces.
 
-- `@cowards/spec` remains the source of truth for provider records, runtime metadata, package policy, public privacy exclusions, Workshop checker envelopes, and sandbox-readiness labels.
-- `apps/runtime-service` remains the provider validation/build/proof boundary through `POST /validate-strategy` and `POST /execute-match`.
-- Go remains the normal backend owner for account-owned Strategy Revision persistence and competition/exhibition orchestration, but must call runtime-service provider validation when a saved revision is represented as execution-ready or counted eligible.
-- Existing monitor/proof scripts should be extended and one focused v1.35 evaluator should be added. No broad observability service is needed.
+The work should center on `@cowards/spec`, `packages/persistence`, `apps/go-backend`, public discovery/result/replay pages, and proof scripts. v1.35 already provides provider-proof-backed account save and entry gates for TypeScript, Python, Rust, and Zig. v1.36 should consume that evidence to mature entry eligibility, counted/non-counted/degraded policy, resettable trial seasons, standings recomputation, governance explanations, and public trust UX.
 
-The main stack change is not a dependency change: make Go account-save and Go-owned entry/read surfaces consume the same provider-grade proof path already used by Workshop submit/save and v1.34 checker proof. TypeScript is the specific drift point: runtime-service already validates TypeScript, emits transpiled source-artifact provenance, and signs provider proof; `apps/go-backend/runtime_service_client.go` still rejects TypeScript validation client-side and `apps/go-backend/live_backend.go` permits TypeScript counted eligibility without `sourceArtifactProviderValidationMatches`.
+No runtime ownership, game-rule, package ecosystem, sandbox certification, TinyGo, ABI, or durable rating stack should be added.
 
 ## Recommended Stack
 
-### Core Technologies
+### Core Framework
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| pnpm workspace | `pnpm@11.1.2` | Monorepo package manager and script runner | Already drives every proof and monitor command; no new task runner is needed. |
-| TypeScript | `^6.0.3` | Contracts, runtime-service, web, runtime packages, scripts | Existing source of runtime/provider contracts and proof harnesses; keep policy and diagnostics in shared TS contracts. |
-| `@cowards/spec` | workspace `0.1.0` | Runtime/provider/package/privacy/checker contracts | Extend this for v1.35 labels/gates so web, Go, runtime-service, tests, and monitors share one vocabulary. |
-| `apps/runtime-service` | workspace `0.1.0` | Strategy Execution Service / Runtime Broker HTTP+JSON binding | Already owns provider validation, artifact build/proof, and Match execution. Keep hostile validation/build semantics here. |
-| Go backend | Go `1.25.0`, `pgx/v5 v5.9.2` | Account-owned revisions, selected API ownership, orchestration | Existing normal backend owner; v1.35 should tighten its runtime-service client and eligibility checks rather than move execution into Go. |
-| PostgreSQL | local compose-backed | Canonical persistence | Existing account/revision/competition store; no schema platform replacement needed for this cleanup. |
-| Zod | `^4.4.3` | TS boundary/schema validation | Already validates public/service/runtime DTOs; use for any v1.35 contract additions. |
-| HMAC SHA-256 provider proof | Node/Go crypto stdlibs | Provider validation proof binding source/artifact identity | Already implemented in runtime-service and verified in persistence/Go helper code; reuse with `COWARDS_PROVIDER_VALIDATION_SECRET`. |
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| pnpm workspace | `pnpm@11.1.2` | Monorepo scripts, proof runners, package orchestration | Existing verified command path; add v1.36 scripts here instead of new task tooling. |
+| TypeScript | `^6.0.3` | Spec contracts, persistence helpers, web UI, proof harnesses | Best place for shared competition-policy schemas and public-safe DTO validation. |
+| Next.js / React | Next `^16.2.6`, React `^19.2.6` | Public competition, result, replay, player, Strategy, Learn, and entry surfaces | Existing public site spine; v1.36 needs trust UX, not a new frontend framework. |
+| Go backend | Go `1.25.0`, `pgx/v5 v5.9.2` | Normal backend orchestration, MatchSet status/scoring refresh, selected public reads, entry/provider checks | Keep Go as normal backend owner while preserving runtime-service as hostile-code boundary. |
+| `apps/runtime-service` | workspace `0.1.0` | Provider validation/build/proof and Strategy execution boundary | v1.36 should consume provider evidence; it should not change runtime ownership or execute Strategy code elsewhere. |
 
-### Runtime Provider Lanes
+### Database
 
-| Lane | Current Stack | v1.35 Action | Non-Claim |
-|------|---------------|--------------|-----------|
-| TypeScript | `@cowards/runtime-js`, runtime-service `/validate-strategy`, transpiled JS source artifact | Require provider proof for Go account-save/countable eligibility, or label saved drafts as non-execution draft storage | Not WASM isolation; not production sandbox certification. |
-| Python | `@cowards/runtime-python`, `python3 -I`, empty env, no imports/packages | Preserve provider proof and no-package policy; include package/security diagnostics in v1.35 proof | Not general Python package support or broad sandbox certification. |
-| Rust | `@cowards/runtime-wasm-wasi`, Wasmtime Preview 1 stdin/stdout JSON, immutable `.wasm` artifact | Preserve artifact/import/proof gates; include stale/missing/mismatched proof probes | No direct-export or Component Model/WIT ABI migration. |
-| Zig | `@cowards/runtime-wasm-wasi`, no-std `wasm32-wasi`, immutable artifact | Preserve no-std/helper and import-audit gates | No Zig package ecosystem expansion. |
-| TinyGo | `scripts/evaluate-v1-33-tinygo-wasi-spike.ts`, hidden spike evidence | Keep hidden and monitor absence from production surfaces | Not production supported; not counted eligible. |
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| PostgreSQL | local compose-backed | Canonical store for users, Strategy Revisions, MatchSets, Chronicles, trial seasons, result flags, audit events | Existing migrations already include `trial_ladder_seasons`, `trial_ladder_entries`, `result_flags`, `competition_audit_events`, counted status, public counted explanations, and review status. |
+| `packages/persistence` | workspace `0.1.0` | Competition, ladder, governance, scoring, account revision reads/writes | Reuse `competition.ts`, `ladder.ts`, `governance.ts`, `matchset-status.ts`, and `scoring.ts`; do not create a parallel competition subsystem. |
 
-### Supporting Libraries and Local Packages
+### Infrastructure
 
-| Library / Package | Version | Purpose | When to Use |
-|-------------------|---------|---------|-------------|
-| `@cowards/runtime-js` | workspace `0.1.0` | TypeScript validation, transpiled source artifact, JS/TS execution adapters | Reuse for TypeScript provider proof and source-artifact metadata; do not use it as a web/API executor. |
-| `@cowards/runtime-python` | workspace `0.1.0` | Python AST/compile validation, source-bundle provenance, subprocess adapter | Preserve no-import/no-package boundaries and public-safe diagnostics. |
-| `@cowards/runtime-wasm-wasi` | workspace `0.1.0` | Rust/Zig compile, import audit, Wasmtime Preview 1 execution | Preserve immutable artifact-backed lanes and proof checks. |
-| `@cowards/persistence` | workspace `0.1.0` | Account revision semantics and provider-proof-aware summaries | Use existing proof validators as a reference for Go/account behavior. |
-| `@cowards/service` | workspace `0.1.0` | Typed service boundary | Use for service DTO shape and privacy expectations; do not resurrect it as a backend fallback. |
-| `@playwright/test` | `^1.60.0` | Browser proof and signed-in E2E | Use for service-backed account/provider proof and public/default privacy scans. |
-| Vitest | `^4.1.6` | Unit/integration tests | Add focused spec/runtime/web tests for labels, gates, diagnostics, and privacy. |
-| Redocly CLI | `2.31.4` | OpenAPI lint | Keep in `boundary:monitors`; no v1.35 OpenAPI split unless route contracts change. |
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| Docker Compose | existing `compose.yaml` | Local PostgreSQL/service proof topology | Existing `pnpm services:up`, `preflight`, and service-backed proof pattern are enough. |
+| Playwright | `^1.60.0` | Browser E2E and visual/privacy checks | Use for entry -> counted MatchSet -> result -> standings -> replay proof and board realism checks. |
+| Vitest | `^4.1.6` | Contract, persistence, view-model, and proof unit tests | Existing TS test stack covers public DTOs and persistence logic. |
+| Redocly CLI | `2.31.4` | OpenAPI lint | Keep if public/service route schemas change; no new API tooling needed. |
 
-## Required Stack Additions / Changes
+### Supporting Libraries and Mechanisms
 
-### 1. Add a v1.35 Local Proof Evaluator
+| Library / Mechanism | Version | Purpose | When to Use |
+|---------------------|---------|---------|-------------|
+| `@cowards/spec` | workspace `0.1.0` | Canonical public DTOs, runtime labels, competition statuses, privacy guards | Add v1.36 competition-posture, counted-policy, entry-policy, and governance DTO schemas here. |
+| `packages/spec/src/public-output-privacy.ts` | current | Public leak guard | Extend forbidden markers for dispute internals, account-recovery payloads, provider proof strings, package paths, and operator-only governance details. |
+| `packages/spec/src/public-discovery.ts` | `public-discovery-v1` | Public Home/Watch/Competition/entry discovery DTOs | Add public beta/trial/resettable posture fields if discovery pages need them. Keep separate from `match-execution-app-v1`. |
+| `packages/spec/src/competition.ts` | current | Competition presets, ladder season DTOs, counted statuses, public result shape | Formalize current `metadata` into typed public governance/counting fields instead of free-form `JsonValue` where v1.36 needs proof. |
+| `packages/persistence/src/competition.ts` | current | Exhibitions, entrant snapshots, counted entry checks, public MatchSet DTOs | Reuse for exhibitions and result DTOs; harden same-user/multi-revision/self-play policy here. |
+| `packages/persistence/src/ladder.ts` | current | Trial seasons, one-entry-per-user, scheduling, standings recomputation | Primary integration point for resettable trial ladder maturity and recomputable standings. |
+| `packages/persistence/src/governance.ts` | current | Result flags, admin counted-status changes, public explanations, private notes, audit events | Mature this for disputes and invalidation explanations; do not add a broad moderation platform. |
+| `apps/go-backend/matchset_status.go`, `scoring.go`, `provider_readiness.go` | current | Go parity for status/scoring/provider-readiness | Add Go tests/fixtures for v1.36 counted/degraded/governance states if public reads depend on Go. |
+| `apps/web/app/matchsets/*` | current | Public result and trust workbench | Add counted/non-counted/disputed/invalidated explanations here without leaking private data. |
+| `apps/web/app/ladder/[seasonId]/page.tsx` | current | Public ladder page | Add resettable/trial/public-beta posture, standings explanation, entry eligibility summaries, and governance state explanations. |
+| `apps/web/lib/public-discovery-service.ts` | current | Public competition discovery | Surface public beta/trial posture and entry availability using configured public ladder ids and preset cards. |
 
-Add a local script modeled after `scripts/evaluate-v1-34-workshop-checker.ts`:
+## Required Stack Additions
+
+### 1. Add a v1.36 Competition Maturity Contract in `@cowards/spec`
+
+Add a versioned contract, preferably near `packages/spec/src/competition.ts`, for:
+
+| Contract | Required Values |
+|----------|-----------------|
+| `competitionMaturityContractVersion` | `competition-maturity-v1.36` |
+| `competitionPosture` | `public-beta-trial`, `resettable-trial`, `exhibition`, `future-durable-rating` as future-only/non-active |
+| `seasonDurability` | `resettable`, `archived-public-evidence`, `no-durable-rating` |
+| `countedResultPolicy` | `pending`, `counted`, `retrying`, `under_review`, `invalid`, `non_competitive`, `non_counted` |
+| `nonCountedReason` | existing reasons plus any needed public-safe v1.36 reason such as `entry_ineligible` only if requirements demand it |
+| `entryPolicy` | provider proof required, package mode `none`, TinyGo hidden, current runtime lane required, one active entry per user per trial season |
+| `sameUserPolicy` | exhibitions allow same-user multi-revision where explicitly modeled; trial ladder uses one active revision per user; self-play/mirror drills are policy-labeled, not game-rule changes |
+| `privacyExclusions` | Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, private runtime internals, account-recovery payloads, dispute internals, operator-only governance details |
+
+Use Zod schemas for any public DTO additions. Avoid burying the posture in UI strings only; the roadmap needs one contract that web, persistence, Go fixtures, and proof scripts can assert.
+
+### 2. Type Public Governance Metadata Instead of Free-Form Result Metadata
+
+`PublicMatchSetResultDto.metadata` currently carries counted status, public reason, public explanation, and review status as `JsonValue`. v1.36 should add a typed public structure such as:
+
+```ts
+type PublicCompetitionGovernanceDto = {
+  countedStatus: LadderMatchSetCountedStatus
+  publicReason?: LadderNonCountedReason
+  publicExplanation: string
+  reviewStatus: "none" | "under_review" | "resolved"
+  posture: "exhibition" | "resettable-trial-public-beta"
+  durableRating: false
+  standingsImpact: "included" | "excluded" | "pending"
+}
+```
+
+Keep private notes, flag notes, operator action details, and account recovery details out of public DTOs. If this changes public service schemas, regenerate and lint the existing OpenAPI artifact rather than adding a second API contract system.
+
+### 3. Add a v1.36 Proof Evaluator
+
+Add a script modeled after the existing milestone evaluators:
 
 ```bash
-pnpm exec tsx scripts/evaluate-v1-35-runtime-account-policy.ts
-pnpm exec tsx scripts/evaluate-v1-35-runtime-account-policy.ts --check
+pnpm exec tsx scripts/evaluate-v1-36-competition-maturity.ts --write
+pnpm exec tsx scripts/evaluate-v1-36-competition-maturity.ts --check
 ```
 
 Recommended root scripts:
 
 ```json
-"v1.35:runtime-account-policy": "pnpm exec tsx scripts/evaluate-v1-35-runtime-account-policy.ts",
-"v1.35:runtime-account-policy:check": "pnpm exec tsx scripts/evaluate-v1-35-runtime-account-policy.ts --check"
+"v1.36:competition-maturity": "pnpm exec tsx scripts/evaluate-v1-36-competition-maturity.ts --write",
+"v1.36:competition-maturity:check": "pnpm exec tsx scripts/evaluate-v1-36-competition-maturity.ts --check"
 ```
 
-The evaluator should write `.planning/artifacts/v1.35-runtime-account-policy-proof.md` and optionally `.json`, then be added to `pnpm boundary:monitors`.
+Artifacts should be:
 
-Proof coverage should include:
+- `.planning/artifacts/v1.36-competition-maturity-proof.json`
+- `.planning/artifacts/v1.36-competition-maturity-proof.md`
 
-- TypeScript, Python, Rust, and Zig account-save through Go with runtime-service available.
-- TypeScript provider proof present on Go-created execution-ready/countable revisions.
-- Draft/non-execution behavior is explicitly labeled if runtime-service proof is unavailable.
-- Stale, missing, mismatched, or unsigned provider proof fails counted/entry eligibility.
-- Declared packages, non-empty required capabilities, forbidden imports, package paths, host paths, env/tokens/DB details, source, artifact bytes, and provider proofs do not leak to public/default output.
-- TinyGo remains absent from production source-format, submit/save, entry, result, replay, and public evidence paths.
+Required proof cases:
 
-### 2. Extend Existing Go Runtime-Service Client, Not Runtime-Service
+- Exhibition policy inventory: public exhibition, counted/non-counted/degraded policy, same-user multi-revision behavior.
+- Trial ladder policy: resettable season, one active entry per user, next-season replacement, no durable rating promise.
+- Eligibility: TypeScript/Python/Rust/Zig require v1.35 provider-proof/language/runtime/provenance/package evidence; TinyGo and stale/missing/mismatched proof fail closed.
+- Standings recomputation: counted results included; pending/retrying/under_review/invalid/non_competitive/non_counted/degraded/system-failure results excluded with public explanations.
+- Governance: entrant flag -> under review -> admin counted/invalid/non-counted resolution writes audit event and public-safe explanation.
+- Privacy: public result/replay/player/Strategy/competition/ladder DTOs omit source, memory, objective payloads, raw diagnostics, dispute private notes, recovery payloads, provider proofs, package paths, host paths, tokens, DB details, and operator-only internals.
+- Board realism: public replay proof still shows in-bounds Soldier/terrain positions and plausible canonical Match starts.
 
-Change `apps/go-backend/runtime_service_client.go` so `validateStrategy` accepts `"typescript"` in addition to Python/Rust/Zig. Runtime-service already supports TypeScript provider validation and returns source-artifact metadata plus provider proof.
+### 4. Extend Boundary Monitors
 
-Then change `apps/go-backend/live_backend.go` so TypeScript account save uses runtime-service validation when a saved revision is represented as valid/execution-ready. For counted eligibility, require:
+Update `scripts/check-boundary-monitors.ts` and `pnpm boundary:monitors` to include the v1.36 check. Add monitor rules for:
 
-- language `typescript`
-- adapter `runtime-js-worker-thread` or approved JS/TS adapter
-- package mode `none`
-- empty required capabilities
-- source artifact `format: "transpiled-javascript"`
-- provider id `strategy-language-provider-js-ts`
-- provider contract `strategy-language-provider-contract-v1.33`
-- source hash/bytes match
-- artifact hash/bytes match actual artifact bytes
-- HMAC proof matches `COWARDS_PROVIDER_VALIDATION_SECRET`
+- No durable permanent rating claim unless a future explicit milestone promotes it.
+- No production sandbox certification, TinyGo production support, package ecosystem support, ABI migration, or runtime ownership migration.
+- Public beta copy must say resettable/trial/no durable rating where standings are trial-only.
+- Public/default DTOs and generated artifacts must not contain private Strategy/runtime/dispute/recovery markers.
+- `match-execution-app-v1` remains separate; public discovery and competition maturity additions must not mutate frozen execution DTOs without an explicit compatibility decision.
+- Counted standings use recomputable policy, not cached UI-only state.
 
-There is already a reusable shape in Go: `sourceArtifactProviderValidationMatches(...)` supports the TypeScript artifact format but the TypeScript branch of `runtimeAllowsCountedPlay(...)` does not call it. v1.35 should close that exact gap.
+### 5. Add Service-Backed E2E Proof
 
-### 3. Promote a v1.35 Claim Contract in `@cowards/spec`
-
-Add or tighten spec-owned fields/constants for:
-
-- `sandboxReadinessLabel`: current runtime containment/evidence label.
-- `sandboxCertificationState`: explicit values such as `not-certified`, `readiness-evidence-only`, `candidate-lane`, `unavailable-lane`.
-- `packagePolicy`: keep `none` as the only counted value; `declared` remains unsupported for counted play.
-- `providerProofRequiredFor`: account-save execution readiness, counted entry, ladder/trial entry, public evidence.
-
-Do this in existing runtime/provider structures (`packages/spec/src/runtime.ts`) and tests (`packages/spec/src/spec.test.ts`) instead of a separate policy package.
-
-### 4. Extend Existing Privacy and Redaction Utilities
-
-Reuse and extend:
-
-- `packages/spec/src/public-output-privacy.ts`
-- `packages/spec/src/workshop-checker.ts`
-- `apps/runtime-service/src/redaction.ts`
-- Go runtime failure redaction in `apps/go-backend/runtime_service_client.go`
-
-Add v1.35 checks for provider proof strings, package manifests, lockfile hashes when unsupported, package paths, host paths, env values, DB details, artifact bytes/base64, raw diagnostics, and private runtime internals. Public/default outputs may expose normalized categories, public messages, source/artifact hashes and byte counts, provider id, contract version, ABI version, and readiness labels.
-
-### 5. Extend Existing Monitors
-
-Update `scripts/check-boundary-monitors.ts` rather than adding a new monitor framework. v1.35 monitor checks should verify:
-
-- TypeScript Go account-save does not bypass provider proof for execution-ready/countable revisions.
-- Go counted eligibility uses provider proof for TypeScript, Python, Rust, and Zig.
-- `player:workshop-local` cannot authorize persisted account-owned or public/private replay owner-debug behavior outside test/local gates.
-- Workshop compatibility aliases are either removed, deprecated with tests, or explicitly hidden from production navigation.
-- Sandbox wording never escalates from readiness evidence/candidate lane to certification.
-- TinyGo remains hidden.
-- Package mode `declared` and non-empty `requiredCapabilities` remain non-counted/unsupported.
-
-## Development Tools
-
-| Tool / Command | Purpose | v1.35 Recommendation |
-|----------------|---------|----------------------|
-| `pnpm boundary:monitors` | Composite contract/privacy/runtime/topology drift gate | Add the new v1.35 proof check here. |
-| `pnpm v1.34:workshop-checker:check` | Existing four-language checker proof | Keep as regression baseline for provider-grade checker semantics. |
-| `pnpm runtime-abuse:evaluate:check` | Runtime abuse and sandbox-readiness matrix | Reuse labels; do not treat as certification. |
-| `pnpm sandbox:evaluate:check` | Runtime sandbox candidate evidence | Keep evidence-only; strict container/runsc lanes fail loud when unavailable. |
-| `pnpm wasm-wasi:evaluate:check` | WASM/WASI hardening evidence | Preserve Rust/Zig immutable artifact and import audit gates. |
-| `pnpm tinygo-wasi:spike:check` | TinyGo spike evidence freshness | Keep spike-only and hidden; do not wire to production. |
-| `pnpm topology:check` | Local topology diagnostics | Include v1.35 service availability/proof requirements if needed. |
-| `pnpm go:parity` | Go tests plus fixture parity | Add Go tests for TypeScript runtime-service validation and provider-proof eligibility. |
-| `pnpm test:fast` | Formatting, lint, typecheck, tests | Required final baseline. |
-| Playwright signed-in proof | Browser/service E2E | Add a focused v1.35 proof only if account/provider/public labels need browser validation. |
-
-## Installation
-
-No new npm, Go, Python, Rust, Zig, Docker, or browser packages are recommended for v1.35.
+Add one focused Playwright spec, for example:
 
 ```bash
-# No dependency install required for v1.35 stack cleanup.
-
-# Existing verification commands to reuse:
-pnpm test:fast
-pnpm boundary:monitors
-pnpm v1.34:workshop-checker:check
-pnpm runtime-abuse:evaluate:check
-pnpm sandbox:evaluate:check
-pnpm wasm-wasi:evaluate:check
-pnpm tinygo-wasi:spike:check
+PLAYWRIGHT_TEST=1 RUN_V1_36_PROOF=1 playwright test --project=desktop --workers=1 v1-36-competition-maturity-proof.spec.ts
 ```
 
-Only add a root script for the v1.35 evaluator if the milestone implements the proof harness.
+Proof should exercise:
+
+1. Signed-in account with provider-proof-backed eligible revision.
+2. Enter exhibition or trial season.
+3. Create/schedule counted MatchSet.
+4. Run execution through existing service-backed topology.
+5. Open public result, standings, replay, player, and Strategy pages.
+6. Flag/dispute or use fixture-backed governance state if full live mutation is too expensive.
+7. Scan pages/API JSON for private markers.
+8. Confirm replay board realism and public copy posture.
+
+Use fixture-backed public states for rare governance branches, but keep at least one service-backed happy path.
+
+## Code Areas to Touch
+
+| Area | Use for v1.36 | Notes |
+|------|---------------|-------|
+| `packages/spec/src/competition.ts` | Add v1.36 posture/governance/counting schemas and types | Primary contract source. |
+| `packages/spec/src/public-discovery.ts` | Add competition posture fields if index/detail/entry pages need them | Keep `public-discovery-v1` or deliberately version if shape changes require it. |
+| `packages/spec/src/public-output-privacy.ts` | Add forbidden markers for dispute/recovery/operator-private leakage | Use in evaluator and tests. |
+| `packages/persistence/src/competition.ts` | Exhibition policy, entrant snapshots, public result governance DTO | Preserve current provider-proof entry gate. |
+| `packages/persistence/src/ladder.ts` | Trial season posture, one-active-revision rule, standings recomputation | Existing unique constraints already support one active entry per user per season; verify behavior and public copy. |
+| `packages/persistence/src/governance.ts` | Dispute/flag/resolution/audit behavior | Harden public/private splits; avoid full moderation workflow. |
+| `packages/persistence/migrations/0004_competition_trust_beta.sql` | Existing schema baseline | Prefer using existing statuses before adding migration churn. |
+| `apps/go-backend/*scoring*`, `matchset_status.go`, `provider_readiness.go` | Go parity and service-backed status proof | Add fixtures/tests if v1.36 public reads depend on Go responses. |
+| `apps/web/app/competitions/*`, `ladder/[seasonId]`, `matchsets/*`, `players/*`, `strategies/*`, `matches/*/replay` | Public trust UX | Display public-safe policy and evidence only. |
+| `apps/web/e2e` | v1.36 proof | Add focused desktop proof and reuse replay realism helpers. |
+| `scripts/check-boundary-monitors.ts` | Drift prevention | Add v1.36 no-overclaim/no-leak/no-runtime-creep checks. |
+
+## What Should NOT Be Added
+
+| Do Not Add | Why | Use Instead |
+|------------|-----|-------------|
+| Durable permanent ratings | v1.36 target asks for honest resettable/trial/public-beta posture, not durable ratings. | Explicit `noPermanentRatings: true`, resettable seasons, archived evidence. |
+| New rating engine like Elo/Glicko/TrueSkill | Would imply a durable competitive promise and extra calibration work. | Existing points/W-L-D/survivor/survival-turn deterministic standings. |
+| New runtime, Runtime Broker ownership, or Strategy execution path | Runtime-service/provider boundary is non-negotiable and v1.35 just cleaned it up. | Existing runtime-service provider proof and Go orchestration. |
+| Package ecosystem support | v1.35 enforced package mode `none`; packages need a future supply-chain milestone. | Reject non-`none` package mode with public-safe diagnostics. |
+| TinyGo production support | TinyGo remains spike-only and hidden. | Keep TinyGo out of production UI, entry, result, replay, and public evidence. |
+| Production sandbox certification | Current evidence is provider/runtime readiness, not certification. | Evidence-scoped labels and no-certification monitors. |
+| ABI migration to direct exports or Component Model/WIT | Out of scope and previously deferred. | Keep WASI Preview 1 stdin/stdout JSON for Rust/Zig. |
+| External moderation/dispute platform | v1.36 needs expectation surfaces and minimal governance proof, not a full trust-and-safety system. | Existing `result_flags`, `competition_audit_events`, admin counted-status route, and public explanations. |
+| Account recovery product/vendor | Scope is assumptions/expectation surfaces, not recovery workflow implementation. | Public copy that says what is and is not available now; no recovery payloads in public output. |
+| New auth provider | Account ownership gates already exist. | Tighten existing session/admin/entrant authorization checks. |
+| Public raw diagnostics or private governance notes | Violates privacy boundaries. | Public-safe categories, public explanations, and private audit notes only. |
+| Game-rule changes | v1.36 is competition maturity. | Keep engine/Chronicle deterministic and unchanged unless separately approved. |
+
+## Existing Project Mechanisms to Reuse
+
+- Provider-proof entry gates from v1.35: `apps/go-backend/provider_readiness.go`, `packages/persistence/src/competition.ts`, and `packages/persistence/src/ladder.ts`.
+- Counted status and review schema from `packages/persistence/migrations/0004_competition_trust_beta.sql`.
+- Trial ladder season/entry policy from `packages/persistence/src/ladder.ts` and `PublicTrialLadderSeasonDto`.
+- Result flagging and audit events from `packages/persistence/src/governance.ts`.
+- Public discovery separation through `public-discovery-v1`, explicitly not `match-execution-app-v1`.
+- Result/replay trust copy and view-model patterns in `apps/web/app/matchsets/evidence-copy.ts` and `result-view-model.ts`.
+- Replay board realism checks from existing Playwright replay proof.
+- Boundary monitor pattern from v1.35 scripts and `pnpm boundary:monitors`.
 
 ## Alternatives Considered
 
-| Recommended | Alternative | Why Not for v1.35 |
-|-------------|-------------|-------------------|
-| Extend runtime-service `/validate-strategy` use from Go | New Runtime Broker process | Current runtime-service already implements provider validation/proof; a new process would be architecture churn. |
-| Spec-owned readiness/certification labels | UI-only copy changes | The risk is cross-surface drift; labels must be contract-backed and monitorable. |
-| Existing HMAC provider proof | New signing/KMS system | Local HMAC proof already exists and is enough for repo-local provider proof cleanup; KMS belongs to deployment hardening. |
-| Existing privacy denylist/redaction utilities | New DLP/scanning vendor | The milestone needs deterministic repo-local proof, not external observability. |
-| Keep `package.mode: "none"` | npm/PyPI/Cargo/Zig package support | Package ecosystems require supply-chain, reproducibility, native-code, and deterministic-build policy that is explicitly future work. |
-| Existing Playwright/Vitest/Go tests | New E2E framework | Current test stack already covers signed-in proof, browser privacy, Go behavior, and local service-backed checks. |
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| Competition posture | Resettable public beta/trial contract | Durable official rating ladder | Durability requires future governance, abuse, recovery, and calibration proof. |
+| Standings | Recompute from counted MatchSets and governance status | Store authoritative mutable leaderboard only | Mutable cached standings are harder to audit and explain. |
+| Governance | Existing flags/audit/status fields plus public explanations | Full moderation/dispute case-management system | Too large for v1.36 and not required for honest beta posture. |
+| Proof | Local evaluator plus Playwright service-backed E2E | External observability/compliance tooling | Repo-local deterministic proof is enough and aligns with existing milestone practice. |
+| Entry eligibility | Consume v1.35 provider-proof gates | Revalidate/recompile source at entry in UI | UI state is not authority; runtime-service proof and immutable revision metadata are. |
 
-## What NOT to Use
+## Installation
 
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| Node `vm` as a security boundary | Explicitly forbidden; not a hostile-code sandbox. | Runtime-service/provider boundaries and existing runtime adapters. |
-| Strategy execution in web/API/Go | Violates core architecture and AGENTS non-negotiables. | Go calls runtime-service; web displays validated DTOs. |
-| New rich package lanes | No current reproducibility/supply-chain/native-code policy. | `package.mode: "none"` and self-contained Strategy source. |
-| PyPI/npm/Cargo/Zig package installs during validation/execution | Would add nondeterminism, supply-chain risk, host access risk, and package-path leaks. | Provider diagnostics should reject package/dependency use publicly and safely. |
-| TinyGo production support | Existing spike imports forbidden/unsupported WASI capabilities. | Keep `tinygo-wasi:spike:check` as hidden evidence only. |
-| Direct exports or Component Model/WIT migration | Out of scope and previously non-promoted. | Keep WASI Preview 1 stdin/stdout JSON. |
-| `node:wasi` sandbox claims | Existing monitors reject treating it as an untrusted Strategy sandbox. | Wasmtime Preview 1 artifact-backed lane for Rust/Zig. |
-| gVisor/runsc certification language without executable adapter proof | Existing lanes fail loud when unavailable/unimplemented. | Candidate/unavailable labels only. |
-| Public raw diagnostics | Can leak source, host paths, package paths, tokens, DB details, or internals. | Normalized public-safe diagnostic categories and remediation. |
-| New auth/account platform | v1.35 is ownership/proof cleanup, not account recovery/OAuth/password reset. | Tighten existing session/owner gates and `player:workshop-local` quarantine. |
+No dependency installation is recommended.
 
-## Stack Patterns by Variant
-
-**If a user saves a Strategy Revision to account and it may be used for Match/MatchSet play:**
-- Use Go account-save as the persistence owner.
-- Require runtime-service provider validation for TypeScript, Python, Rust, and Zig.
-- Store provider metadata/proof and artifact metadata.
-- Because execution readiness must mean provider-grade proof, not local syntax heuristics.
-
-**If runtime-service is unavailable during account save:**
-- Either fail closed for execution-ready save, or store only an explicitly labeled non-execution draft if product requirements choose that path.
-- Do not mark the revision counted eligible or provider-ready.
-- Because unavailable runtime-service is not evidence that the Strategy is valid or invalid.
-
-**If a revision enters counted competition/trial ladder:**
-- Evaluate saved immutable revision metadata only.
-- Require provider proof for all four production source formats.
-- Reject stale/missing/mismatched artifacts, hidden TinyGo, declared packages, non-empty required capabilities, and unavailable lanes.
-- Because entry gates should not recompile mutable source or rely on UI checker state.
-
-**If a surface displays sandbox status:**
-- Use spec-owned readiness/certification labels.
-- Say "readiness evidence", "candidate lane", or "not certified" where appropriate.
-- Do not say "production sandbox certified" unless a future milestone proves and explicitly promotes that claim.
-
-**If diagnostics mention packages/dependencies:**
-- Use public-safe categories such as `package_or_dependency`, `forbidden_import`, `forbidden_capability`, `unsupported_provider`, or `system_unavailable`.
-- Never include raw compiler/runtime output, package paths, host paths, env values, DB details, tokens, source, artifact bytes, or provider proof strings.
-
-## Version Compatibility
-
-| Component | Compatible With | Notes |
-|-----------|-----------------|-------|
-| `strategy-language-provider-contract-v1.33` | `strategy-runtime-abi-v1.14` | Current provider proof and runtime ABI baseline. |
-| `workshop-checker-v1.34` | TypeScript/Python/Rust/Zig provider validation | Reuse as checker/proof baseline; v1.35 may add account/provider policy proof but should not break checker contract without a migration. |
-| TypeScript provider | `runtime-js-worker-thread`, `runtime-js-subprocess`, source artifact `transpiled-javascript` | Source-artifact provenance only, not WASM isolation. |
-| Python provider | `runtime-python-subprocess-experimental`, Python metadata `3.9`, `python3 -I` validation host | No imports/packages; counted support is provider-gated evidence, not general Python sandbox certification. |
-| Rust provider | `runtime-wasm-wasi-wasmtime-preview1`, `1.95.0-wasm32-wasip1` | Immutable WASM/WASI Preview 1 artifact and provider proof required. |
-| Zig provider | `runtime-wasm-wasi-wasmtime-preview1`, `0.16.0-wasm32-wasi` | No-std/helper lane; immutable WASM/WASI Preview 1 artifact and provider proof required. |
-| TinyGo spike | TinyGo `0.41.1`, target `wasi` | Evidence exists but production support remains false due forbidden/unsupported imports. |
-| Go backend | Go `1.25.0`, `pgx/v5 v5.9.2` | Extend runtime-service validation client; do not execute Strategy code. |
-| Web | Next `^16.2.6`, React `^19.2.6` | Display labels/diagnostics only; do not add game/rule/runtime execution behavior. |
+```bash
+# Add scripts only; no new packages.
+pnpm v1.36:competition-maturity
+pnpm v1.36:competition-maturity:check
+pnpm boundary:monitors
+pnpm test:fast
+```
 
 ## Sources
 
-- `.planning/PROJECT.md` - v1.35 goal, hard boundaries, current runtime/account/security-policy scope. Confidence: HIGH.
-- `.planning/STATE.md` - active v1.35 boundary notes and v1.34 proof baseline. Confidence: HIGH.
-- `.planning/artifacts/v1.35-v1.36-milestone-prompts.md` - desired v1.35 scope and non-goals. Confidence: HIGH.
-- `.planning/artifacts/v1.34-workshop-checker-inventory.md` - concrete account-save/provider-proof drift, Workshop alias, and entry-surface findings. Confidence: HIGH.
-- `.planning/artifacts/v1.34-workshop-checker-contract.md` and `.planning/artifacts/v1.34-workshop-checker-proof.md` - current checker envelope and service-backed proof. Confidence: HIGH.
-- `.planning/artifacts/v1.33-tinygo-wasi-spike-evidence.md` - TinyGo spike-only/defer evidence. Confidence: HIGH.
-- `packages/spec/src/runtime.ts`, `packages/spec/src/workshop-checker.ts`, `packages/spec/src/public-output-privacy.ts`, `packages/spec/src/schemas.ts` - provider, runtime, package, checker, and privacy contracts. Confidence: HIGH.
-- `apps/runtime-service/src/server.ts`, `apps/runtime-service/src/redaction.ts` - provider validation/proof and redaction implementation. Confidence: HIGH.
-- `apps/go-backend/runtime_service_client.go`, `apps/go-backend/live_backend.go` - Go runtime-service client, account-save path, provider-proof validators, counted eligibility gap. Confidence: HIGH.
-- `scripts/check-boundary-monitors.ts`, `scripts/evaluate-v1-34-workshop-checker.ts`, `scripts/evaluate-runtime-sandbox.ts`, `scripts/evaluate-v1-24-runtime-abuse-lab.ts`, `scripts/evaluate-v1-33-tinygo-wasi-spike.ts` - existing monitors and proof harness families. Confidence: HIGH.
-- `CowardsGameSpec_Full_Consolidated_v1.md` and `CowardsGame_Technical_Architecture_Spec_V1.md` - canonical deterministic runtime/security/account/replay constraints. Confidence: HIGH.
+- `.planning/PROJECT.md` - v1.36 goal, boundaries, v1.35 shipped baseline. Confidence: HIGH.
+- `.planning/STATE.md` - active v1.36 state and deferred durable ratings/moderation/recovery/runtime/package/TinyGo/ABI items. Confidence: HIGH.
+- `.planning/MILESTONES.md` - v1.35 active constraints and prior competition/language/runtime decisions. Confidence: HIGH.
+- `.planning/milestones/v1.35-REQUIREMENTS.md` and `.planning/milestones/v1.35-ROADMAP.md` - provider-proof, sandbox-label, package-policy, privacy, and boundary monitor baseline. Confidence: HIGH.
+- `.planning/research/SUMMARY.md` - v1.35 stack/architecture/pitfall baseline now superseded for v1.36 stack scope. Confidence: HIGH.
+- `CowardsGameSpec_Full_Consolidated_v1.md` - immutable Strategy Revisions, ranked Set lock, Chronicle privacy, runtime restrictions, competitive structures. Confidence: HIGH.
+- `CowardsGame_Technical_Architecture_Spec_V1.md` - pure engine, runtime isolation, MatchSet scoring, replay, PostgreSQL, testing, observability, security boundaries. Confidence: HIGH.
+- `packages/spec/src/competition.ts`, `public-discovery.ts`, `public-output-privacy.ts` - current public competition/discovery/privacy contracts. Confidence: HIGH.
+- `packages/persistence/src/competition.ts`, `ladder.ts`, `governance.ts`, `scoring.ts`, `matchset-status.ts` - current exhibition, ladder, governance, standing, and status mechanisms. Confidence: HIGH.
+- `packages/persistence/migrations/0004_competition_trust_beta.sql` - current competition trust beta tables/status columns. Confidence: HIGH.
+- `apps/go-backend/provider_readiness.go`, `matchset_status.go`, `scoring.go` - Go provider/readiness/status/scoring parity areas. Confidence: HIGH.
+- `apps/web/app/competitive/server.ts`, public competition/ladder/result/replay routes, and `apps/web/lib/public-discovery-service.ts` - existing web integration points. Confidence: HIGH.
 
----
-*Stack research for: Coward's Game v1.35 runtime/account/provider-proof/sandbox/package-policy cleanup*
-*Researched: 2026-06-14*

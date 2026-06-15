@@ -1,318 +1,382 @@
-# Pitfalls Research
+# Domain Pitfalls
 
-**Domain:** Coward's Game v1.35 runtime/account ownership/provider-proof/sandbox/package-policy cleanup
-**Researched:** 2026-06-14
-**Confidence:** HIGH
+**Domain:** Coward's Game v1.36 Competition Maturity
+**Researched:** 2026-06-15
+**Overall confidence:** HIGH
+
+## Scope
+
+v1.36 should move competition from alpha/trial posture toward mature public beta without changing game rules, moving Strategy execution into web/API/Go, or making stronger runtime/sandbox/package/account-recovery claims than v1.35 proves. The risk profile is not mostly "add moderation." The risks are trust-contract drift: standings that look more durable than they are, counted-entry paths that bypass provider proof, governance states that are not recomputable, public copy that overpromises, and replay/result evidence that is either privacy-unsafe or insufficient to explain outcomes.
+
+Recommended requirement categories for the roadmap:
+
+| Category | Purpose |
+| --- | --- |
+| `INV` | Inventory all competition surfaces and lock decisions before behavior changes. |
+| `POSTURE` | Define honest public beta, resettable trial season, durable rating, and copy claims. |
+| `ENTRY` | Tighten counted entry, one-active-revision, same-user, self-play, and provider-proof eligibility. |
+| `SEASON` | Define season lifecycle, reset policy, counted/degraded/non-counted behavior, and archive semantics. |
+| `RESULT` | Govern result states, recomputation, invalidation, disputes, and public-safe evidence. |
+| `ABUSE` | Add minimal abuse/dispute/recovery expectations without implying full moderation maturity. |
+| `PUBLIC` | Update standings, result, replay, player, Strategy, and competition pages with accurate trust copy. |
+| `VERIFY` | Prove entry -> MatchSet -> execution -> result -> standings -> replay plus negative/privacy/realism drills. |
+
+Recommended phase shape:
+
+1. **Competition Surface Inventory and Posture Contract** - `INV`, `POSTURE`
+2. **Counted Entry and Season Eligibility Rules** - `ENTRY`, `SEASON`
+3. **Standings, Results, and Governance State Model** - `RESULT`, `SEASON`
+4. **Abuse, Dispute, Recovery, and Public Trust UX** - `ABUSE`, `PUBLIC`
+5. **End-to-End Competition Proof and Boundary Monitors** - `VERIFY`
 
 ## Critical Pitfalls
 
-### Pitfall 1: TypeScript Account Save Looks Provider-Proofed But Still Uses Local Trust
+### Pitfall 1: Public Beta Copy Implies Durable Ratings Or Mature Governance
 
-**What goes wrong:**
-Go account save continues to accept TypeScript Strategy Revisions using local source-size/string-marker validation while Workshop submit, Workshop checker, ladder eligibility, and persistence competition gates use provider-grade proof. The saved account revision can then display runtime semantics or eligibility labels that imply the same proof as Python/Rust/Zig even though the Go path never called runtime-service for TypeScript.
+**What goes wrong:** Public pages describe the competition as ranked, official, permanent, production-ready, abuse-managed, or dispute-resolved when the product still has resettable trial seasons, no durable permanent ratings, and limited moderation/account-recovery maturity.
 
-**Why it happens:**
-TypeScript was the original baseline, so older Go code treats it as the simple path. v1.34 made Workshop validation provider-backed, but the inventory still found `apps/go-backend/runtime_service_client.go` rejecting TypeScript validation client-side and `apps/go-backend/live_backend.go` using `validateSourceMetadata` for TypeScript account save.
+**Why it happens:** v1.36's goal says "toward mature public beta," and prior milestones already have public standings/results/replay evidence. That makes it easy for copy, badges, or nav labels to outrun the actual governance proof.
 
-**How to avoid:**
-Make the roadmap split draft storage from executable/countable revisions. If a TypeScript account save can enter counted play or claim readiness, it must require current runtime-service provider proof with source hash/bytes, source artifact metadata, provider id, validation policy, runtime ABI, package policy, and privacy-safe metadata. If a save path is intentionally draft-only, label and gate it as non-execution storage and block entry until provider proof is created.
+**Consequences:** Players treat trial standings as permanent reputation. Disputes create trust damage because the UI implied guarantees the system cannot meet. Future durable rating work inherits ambiguous historical data.
 
-**Warning signs:**
-`validateSourceMetadata` remains in account save eligibility; `validateStrategy` still rejects `typescript`; account revision summaries show `ready`, `counted eligible`, `provider validated`, or source-artifact labels without a provider-proof state; TypeScript tests cover Workshop checker but not Go account save -> entry.
+**Prevention:** Create a versioned competition posture contract before UI work. Require exact language for resettable seasons, trial ladders, counted status, degraded states, dispute outcomes, and no durable rating promise. Use conservative public labels such as "trial season," "resettable standings," and "counted for this season" unless stronger behavior is explicitly built and proven.
 
-**Phase to address:**
-Phase 244, Account-Owned Revision and Provider-Proof Gate Cleanup.
+**Detection:** Search UI/docs/API fixtures for forbidden or ambiguous terms: "permanent rating," "official rating," "Elo," "Glicko," "ranked forever," "moderated," "appealable," "guaranteed recovery," "production sandbox," "certified." Snapshot public pages for reset/dispute/counting explanations.
 
----
+**Requirement category:** `POSTURE`, `PUBLIC`, `VERIFY`
+**Phase:** Phase 1, then enforced in Phase 4 and Phase 5.
 
-### Pitfall 2: Local Workshop Identity Becomes Persisted Account Ownership
+### Pitfall 2: Counted Entry Uses Stale Or Partial v1.35 Eligibility Evidence
 
-**What goes wrong:**
-`player:workshop-local` or no-auth local shortcuts leak into persisted owner-debug, account-owned revision, Match participant, or private replay behavior. The system then treats a local/testing identity as if it were server-authenticated ownership.
+**What goes wrong:** A Strategy Revision enters counted ladder play with missing, stale, mismatched, unsupported, package-declared, unavailable-runtime, hidden TinyGo, or provider-proof metadata that was valid for a prior save/check but no longer matches current policy.
 
-**Why it happens:**
-Local Workshop replay UX already uses `player:workshop-local` to open owner-debug links. That is acceptable for local/test fixtures, but v1.35 touches account ownership and private replay surfaces where identity must come from server-side authorization, not a query string, fixture default, or client helper.
+**Why it happens:** v1.35 fixed provider-proof-backed account save and entry gates. v1.36 adds competition policy on top. If season entry code reuses old display labels or cached checker state instead of the saved immutable provider-proof/readiness tuple, counted eligibility drifts.
 
-**How to avoid:**
-Quarantine local identities behind explicit test/dev gates and keep them out of persisted account rows, production Match participants, owner-debug authorization, and public/private replay decisions. Owner-debug and account-owned revision behavior should derive the requester from the authenticated session or a server-authorized resolver, then compare against persisted ownership/participant data.
+**Consequences:** Standings contain results from unproven or ineligible revisions. Later invalidation is hard to explain and can require season reset. It can also create a false runtime/sandbox/package claim.
 
-**Warning signs:**
-Production code imports `LOCAL_WORKSHOP_PLAYER_ID`; tests assert private owner behavior with only query params; new database rows can contain `player:workshop-local`; owner replay works when `ownerPlayerId` is supplied by the URL but no server identity is present.
+**Prevention:** Counted entry must consume the immutable Strategy Revision's current provider proof, source/artifact identity, runtime/provider id, engine compatibility, sandbox-readiness label, package mode `none`, owner/account state, and supported-language registry. Do not accept Workshop-local checker state as entry proof. Fail closed or classify as non-counted where proof is unavailable.
 
-**Phase to address:**
-Phase 245, Account Ownership, Owner-Debug, and Compatibility Alias Cleanup.
+**Detection:** Negative tests for stale proof, missing proof, mismatched source/artifact, unsupported provider, package mode not `none`, hidden TinyGo, unavailable runtime, draft/non-execution revision, and provider-policy drift. Public entry errors must be public-safe and must not expose raw provider diagnostics.
 
----
+**Requirement category:** `ENTRY`, `VERIFY`
+**Phase:** Phase 2 and Phase 5.
 
-### Pitfall 3: Owner-Debug Privacy Is Protected By UI State Instead Of Server Authorization
+### Pitfall 3: Same-User, Multi-Revision, And Self-Play Rules Blur Exhibition And Trial Competition
 
-**What goes wrong:**
-Private replay evidence, SoldierMemory-derived explanations, owner-only diagnostics, or objective-adjacent data appear in default/public replay outputs because the implementation trusts a UI toggle, environment flag, fixture route, or query parameter.
+**What goes wrong:** Self-play remains allowed where it should be an explicit exhibition/study feature, or the roadmap blocks self-play globally and breaks legitimate Workshop/gauntlet/exhibition analysis. A user may enter multiple revisions into the same trial standings without a clear one-active-revision rule.
 
-**Why it happens:**
-The canonical spec allows owner inspection but makes Strategy source, StrategyMemory, SoldierMemory, and objective payloads private by default. Existing replay code has good server-side concepts (`requestedOwnerPlayerId`, authorized owners, persisted participant checks), but v1.35 can accidentally weaken them while cleaning up local owner shortcuts.
+**Why it happens:** Project decisions intentionally allowed same-user multi-revision exhibition entry in alpha because it is useful for doctrine testing. v1.36 must mature competition without changing the value of self-play as a learning tool.
 
-**How to avoid:**
-Keep owner-debug as a server-authorized projection mode. Require both an authenticated requester identity and persisted Match ownership/participant evidence before returning owner fields. Public/default replay DTOs must omit `ownerPlayerId`, `ownerDebug`, Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid, raw diagnostics, and private runtime details.
+**Consequences:** Trial standings can be manipulated by one user farming their own revisions, or useful self-play workflows regress. Public player/Strategy pages become misleading if same-account results are mixed with public competition evidence.
 
-**Warning signs:**
-`ownerDebug=1` appears sufficient in tests; public replay snapshots contain `ownerPlayerId` or owner-debug keys; private fields are hidden only by React conditional rendering; fixture/test-support routes are reachable outside `PLAYWRIGHT_TEST`, `NODE_ENV=test`, or an explicit fixture env gate.
+**Prevention:** Split policy by mode. Exhibitions and private/study MatchSets may allow same-user and multi-revision play with clear non-counted labels. Trial ladder seasons should choose and enforce a one-active-counted-revision-per-user-per-season policy, or explicitly document any exception. Same-user Matches should be non-counted unless the posture contract deliberately permits them for a named season type.
 
-**Phase to address:**
-Phase 245, Account Ownership, Owner-Debug, and Compatibility Alias Cleanup.
+**Detection:** Tests for one user entering two revisions into counted season, self-play counted attempt, same-user exhibition allowed, same-user public result label, and standings recomputation excluding non-counted self-play. UI snapshots should show why the MatchSet is counted or non-counted.
 
----
+**Requirement category:** `ENTRY`, `SEASON`, `PUBLIC`
+**Phase:** Phase 2, reflected in Phase 4.
 
-### Pitfall 4: Sandbox Readiness Labels Become Production Certification Claims
+### Pitfall 4: Degraded, Failed, Disputed, And Invalidated Results Pollute Standings
 
-**What goes wrong:**
-UI, docs, diagnostics, or provider evidence label current lanes as "sandboxed", "secure", "production-ready", or "certified" when the evidence only proves current containment/readiness. This especially affects TypeScript/Python provenance-only lanes and Rust/Zig WASM/WASI artifact-backed lanes.
+**What goes wrong:** Standings include MatchSets that are running, degraded, system-failed, stale-artifact, runtime-unavailable, disputed, invalidated, or manually governed without a clean counted/non-counted decision.
 
-**Why it happens:**
-v1.24 and v1.20 already produced readiness matrices, and v1.32/v1.34 made four languages counted/provider-gated. Those achievements can be conflated with production sandbox certification even though the project explicitly has no broad certification claim.
+**Why it happens:** Prior milestones have rich result states and public evidence. v1.36 adds maturity pressure, which can tempt developers to aggregate "whatever has an outcome" instead of only recomputable counted outcomes.
 
-**How to avoid:**
-Create a v1.35 claims contract with separate labels for provider validation, artifact provenance, runtime containment evidence, candidate/unavailable lanes, and production sandbox certification. Default public labels should be conservative. Certification language should fail tests unless a future phase explicitly adds the required evidence.
+**Consequences:** Standings become non-deterministic product truth rather than an auditable projection. A later governance action can silently move ranks without clear evidence.
 
-**Warning signs:**
-Copy says "sandbox certified" or "safe runtime"; source-language artifacts show `sandboxClaim` stronger than `provenance-only`; Rust/Zig labels imply WASM equals certified isolation; documentation removes "does not prove" rows from readiness matrices.
+**Prevention:** Define a small result-state lattice: counted, non-counted, degraded-non-counted, disputed-pending, invalidated, system-failed, strategy-failed-counted if policy allows, and archived. Standings must be recomputed from source MatchSet/result/governance events and should explain excluded results in public-safe terms.
 
-**Phase to address:**
-Phase 246, Sandbox-Readiness Claims Contract and Fail-Loud Labels.
+**Detection:** Fixture and service-backed tests for each state. Recompute standings twice from the same events and assert identical output. Verify public standings explain exclusions without raw diagnostics, quarantine details, operator action internals, tokens, DB ids, package paths, or Strategy data.
 
----
+**Requirement category:** `RESULT`, `SEASON`, `VERIFY`
+**Phase:** Phase 3 and Phase 5.
 
-### Pitfall 5: Package Policy Is Treated As A Message, Not A Contract Boundary
+### Pitfall 5: Governance Controls Become Private Operator Internals In Public Output
 
-**What goes wrong:**
-TypeScript, Python, Rust, Zig, or TinyGo package/dependency behavior drifts through validators, runtime metadata, entry gates, or diagnostics. A source can appear to pass because an import was not caught, while runtime compatibility still says `package.mode = none`, or a diagnostic leaks host package paths while explaining a rejection.
+**What goes wrong:** Public result/standings pages expose raw governance events, operator names, internal status notes, quarantine/requeue details, DB identifiers, tokens, runtime diagnostics, package paths, or account-recovery payloads while trying to explain disputes or invalidations.
 
-**Why it happens:**
-Package ecosystems are intentionally unsolved. The runtime metadata currently registers exact language/adapter/package combinations with package mode `none`, and the specs forbid package installation, native modules, filesystem, network, process APIs, and host imports. v1.35 adds policy language, which can tempt developers to document future package support without enforcing current no-package behavior.
+**Why it happens:** v1.28 and later built operator and quarantine mechanisms behind public-safe boundaries. v1.36 needs public-facing governance explanations, but raw internal evidence is not public evidence.
 
-**How to avoid:**
-Keep `packagePolicy: none` as an enforced compatibility field across provider validation, stored runtime metadata, account save, entry, execution request construction, and diagnostics. Future package lanes need their own supply-chain, reproducibility, native-code, deterministic-build, lockfile, privacy, and runtime-boundary evidence before being selectable.
+**Consequences:** Privacy leaks, operational security exposure, and public confusion. Public pages become a debugging console instead of a trust projection.
 
-**Warning signs:**
-Runtime metadata accepts unknown package modes; validators reject packages but entry gates ignore package metadata; diagnostics mention `site-packages`, `node_modules`, Cargo/Zig cache paths, host paths, or package manager output; a dependency doc appears without tests proving unsupported packages fail closed.
+**Prevention:** Store and expose separate projections. Operator/internal events may include private audit data; public governance evidence should expose only status, reason category, effective time, affected MatchSet/season ids, counted impact, and replay/result availability. Public copy should never display raw diagnostics or operator-only details.
 
-**Phase to address:**
-Phase 247, Package and Dependency Policy Enforcement.
+**Detection:** Privacy scans over public JSON, rendered pages, fixtures, logs used as proof, generated artifacts, and public discovery APIs for forbidden markers. Tests should verify internal governance rows can exist without appearing in default public projections.
 
----
+**Requirement category:** `RESULT`, `ABUSE`, `PUBLIC`, `VERIFY`
+**Phase:** Phase 3, Phase 4, and Phase 5.
 
-### Pitfall 6: Runtime-Service Failure Becomes Strategy Invalid Or Falls Back Locally
+### Pitfall 6: Dispute UX Promises Investigation Or Appeals The Product Cannot Deliver
 
-**What goes wrong:**
-Unavailable runtime-service, unavailable Rust/Zig toolchains, malformed provider envelopes, or transport errors are reported as invalid Strategy source. Worse, the app/Go path silently falls back to local validation or execution, creating a weaker trust boundary than submit/save/entry expects.
+**What goes wrong:** The UI invites disputes, appeals, reports, or recovery requests as if there is a staffed moderation workflow, SLA, full audit trail, or account recovery process, when v1.36 only proves limited status controls and expectation surfaces.
 
-**Why it happens:**
-Older paths used local TypeScript validation, Rust/Zig heuristics, or generic `TRANSPILE_FAILED` reports. v1.34 normalized Workshop checker states, but v1.35 will touch account save, Go-owned entry, provider proof, and sandbox labels where unavailable/system states need the same care.
+**Why it happens:** "Competition maturity" naturally suggests dispute handling. The baseline explicitly says limited abuse/dispute/account recovery maturity unless this milestone proves changes.
 
-**How to avoid:**
-Use explicit states: `runtime_service_unavailable`, `toolchain_unavailable`, `system_unavailable`, `invalid`, `stale`, and `ready`. Unavailable/system states must be calm, public-safe, and non-eligibility states. No hostile Strategy validation/build/execution may move into web/API/Go as a fallback.
+**Consequences:** Users submit sensitive information the system is not prepared to protect or act on. Product trust erodes when reports disappear or have unclear outcomes.
 
-**Warning signs:**
-Tests expect `TRANSPILE_FAILED` for a stopped runtime-service; unavailable service still stores a valid revision; account save succeeds with default runtime metadata after provider transport failure; fallback branches call local validators for source formats that require provider-grade semantics.
+**Prevention:** Scope a minimal policy surface: what can be reported, what happens now, what outcomes exist, what data is public, what remains future work, and what account recovery cannot guarantee. If no workflow is built, make the page informational rather than a collection form. If a form is built, schema-limit payloads and keep them private by default.
 
-**Phase to address:**
-Phase 244 and Phase 248, because account/provider gates must fail closed and final proof must stop fallback drift.
+**Detection:** UX review for overpromising verbs: "appeal," "recover," "restore," "investigate," "moderated," "resolved," "guaranteed." Tests for report/dispute payload redaction and public result pages showing only public-safe dispute states.
 
----
+**Requirement category:** `ABUSE`, `PUBLIC`, `VERIFY`
+**Phase:** Phase 4 and Phase 5.
 
-### Pitfall 7: Compatibility Aliases Bypass Current Contracts
+### Pitfall 7: Season Reset Semantics Are Not Explicit Or Auditable
 
-**What goes wrong:**
-Old Workshop/API compatibility aliases continue to accept request shapes or source formats that skip v1.34 checker metadata, provider proof, current privacy normalization, or account ownership checks.
+**What goes wrong:** A trial ladder season resets or archives standings without clear public timing, archived evidence, result inclusion rules, or player-facing explanation. Old pages keep implying current rank, or new season pages mix old counted results with new standings.
 
-**Why it happens:**
-Aliases are often kept for old tests, local UX, or migration comfort. v1.35 explicitly asks whether to remove, hide, migrate, or document them. Leaving them ambiguous lets future phases accidentally depend on stale behavior.
+**Why it happens:** Resettable seasons are a deliberate compromise before durable ratings. Without a formal season lifecycle, resets become ad hoc data edits.
 
-**How to avoid:**
-Inventory every alias and choose one policy per route: remove it, gate it as test-only, migrate it to the current contract, or document deprecation with tests proving it cannot create executable/countable revisions without current proof.
+**Consequences:** Players perceive rank loss as a bug or manipulation. Public discovery links show stale standings without context. Future durable rating work cannot cleanly separate trial histories.
 
-**Warning signs:**
-Two routes save Strategy Revisions with different validation metadata; alias tests only check 200/404 status; old routes return `StrategyRevisionValidationReport` instead of `workshop-checker-v1.34`; compatibility route bypasses account ownership or runtime-service unavailable handling.
+**Prevention:** Define season states and transitions: draft/configured, open, locked/executing, finalized, archived, reset/superseded. Public pages must identify the season, state, reset policy, counted window, archive link, and whether standings are current or historical. Do not delete evidence needed to explain prior results.
 
-**Phase to address:**
-Phase 245, Account Ownership, Owner-Debug, and Compatibility Alias Cleanup.
+**Detection:** Tests for season transition validity, archive/read-only behavior, standings not mixing seasons, reset copy on competition pages, and stable public links to historical result/replay evidence.
 
----
+**Requirement category:** `SEASON`, `RESULT`, `PUBLIC`
+**Phase:** Phase 2 and Phase 3, surfaced in Phase 4.
 
-### Pitfall 8: Public Evidence Leaks Private Runtime Or Artifact Data
+### Pitfall 8: Public Replay/Result Evidence Is Too Weak To Support Trust
 
-**What goes wrong:**
-Public/default outputs expose raw compiler diagnostics, runtime-service messages, provider proof payloads, artifact bytes/base64, source snippets, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, or objective payloads.
+**What goes wrong:** Standings and player/Strategy pages show rank changes or counted results without enough public-safe evidence to trace them to MatchSets, results, Chronicles, and replay availability. Conversely, evidence tries to be complete by leaking private data.
 
-**Why it happens:**
-Runtime-service success metadata legitimately contains private/internal proof fields for validation and execution. Go and app routes also carry failure details and diagnostics. Cleanup work can accidentally pass those through while trying to make proof labels and package-policy diagnostics more transparent.
+**Why it happens:** Coward's Game is Chronicle-first, and public trust depends on replayable deterministic evidence. v1.36 aggregation surfaces can accidentally flatten evidence into rank rows.
 
-**How to avoid:**
-Normalize all external-facing evidence into categories, public reasons, hashes/byte counts, provider ids, contract versions, and explicit redaction metadata. Keep bytes, signing/proof internals, raw diagnostics, and owner/private fields out of default/public responses and generated proof artifacts.
+**Consequences:** Users cannot inspect why they moved in standings. Disputes become unresolvable from public evidence. Private Strategy data can leak if pages expose owner/debug projections to fill the explanation gap.
 
-**Warning signs:**
-JSON snapshots contain `bytesBase64`, `stderr`, `stack`, `/Users/`, `/home/`, `/tmp/`, `DATABASE_URL`, `token`, `ownerDebug`, `StrategyMemory`, `SoldierMemory`, or `objectivePayload`; tests scan UI but not API responses/log artifacts; provider proof fields are displayed to "show trust".
+**Prevention:** Every public counted standing/result row should link to public-safe MatchSet result and replay evidence when available, or show an honest unavailable/degraded reason. Public evidence may include hashes, provider ids, contract versions, counted status, season id, result state, and replay availability, but not Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grids, raw diagnostics, artifact bytes, operator internals, or recovery payloads.
 
-**Phase to address:**
-Phase 248, Service-Backed Proof, Privacy Scans, and Boundary Monitors.
+**Detection:** E2E path: counted entry -> completed MatchSet -> standings row -> result page -> replay page. Negative paths for missing Chronicle, no result, degraded, disputed, invalidated, and unavailable replay. Privacy scans across the same surfaces.
 
----
+**Requirement category:** `RESULT`, `PUBLIC`, `VERIFY`
+**Phase:** Phase 3, Phase 4, and Phase 5.
 
-### Pitfall 9: TinyGo Or Candidate ABI Evidence Leaks Into Production Surfaces
+### Pitfall 9: Verification Skips Board Realism While Focusing On Policy
 
-**What goes wrong:**
-TinyGo, direct exports, Component Model/WIT, gVisor/runsc, container lanes, or other candidates appear in Workshop language selectors, entry eligibility, result/replay labels, or public evidence as available production features.
+**What goes wrong:** Competition proof validates entry/standing states but misses clipped, off-board, empty, or implausible replay boards. Public trust pages then link to replay evidence that visually undermines the result.
 
-**Why it happens:**
-The project has multiple useful spike/readiness artifacts. v1.35 asks for a broader sandbox-readiness/certification contract, which can accidentally promote candidate names into product registries or labels.
+**Why it happens:** v1.36 is policy-heavy. Prior milestones established board realism checks, but roadmap pressure can move validation toward database/state tests only.
 
-**How to avoid:**
-Keep candidate lanes in research/readiness artifacts unless an explicit productionization milestone promotes them. Production source-format lists remain TypeScript, Python, Rust, and Zig. TinyGo stays spike-only and hidden from Workshop, submit/save, entry, result, replay, and public evidence surfaces.
+**Consequences:** A counted MatchSet appears mathematically valid but visually broken. Players cannot trust replay evidence, and regressions in canonical arena/start positions slip through.
 
-**Warning signs:**
-`tinygo`, `direct-exports`, `component-model-wit`, `runsc`, or container candidate labels appear in production UI snapshots, provider registries, source-format enums, counted eligibility tests, or public Match evidence.
+**Prevention:** Keep replay/result realism checks mandatory in final proof. Validate visible Soldier and terrain positions are inside declared board bounds, STONE and FALLEN rendering semantics are preserved, canonical arenas contain canonical starting positions, and local browser validation shows a plausible full Match start.
 
-**Phase to address:**
-Phase 246 and Phase 248.
+**Detection:** Automated replay projection checks plus Playwright screenshot/canvas checks for result/replay pages. Include at least one completed counted MatchSet and one degraded/non-counted state in browser proof.
 
----
+**Requirement category:** `VERIFY`, `RESULT`, `PUBLIC`
+**Phase:** Phase 5, with test requirements seeded in earlier phases.
 
-### Pitfall 10: Service-Backed Proof Covers The Checker But Not The Product Boundary
+### Pitfall 10: Competition Maturity Accidentally Changes Game Rules
 
-**What goes wrong:**
-The milestone appears done because Workshop "Validate source" returns `ready` for four languages, but account save, Go-owned revision storage, entry, owner-debug replay, package-policy gates, and public evidence are not exercised end to end.
+**What goes wrong:** A standings, dispute, fairness, or anti-abuse fix changes Match rules, MatchSet scoring, Soldier outcomes, contraction, STONE/FALLEN handling, seed/arena reveal timing, or deterministic tiebreakers.
 
-**Why it happens:**
-v1.34's service-backed proof was intentionally scoped to Workshop checker parity. v1.35 is broader and must prove corrected account/provider-proof behavior plus sandbox/package-policy gates.
+**Why it happens:** It can feel easier to improve fairness by changing the simulation or MatchSet scoring than by clarifying policy. The milestone boundary explicitly says no game-rule changes unless approved.
 
-**How to avoid:**
-Require at least one service-backed proof that covers the corrected account path and eligibility-relevant proof, plus negative drills for missing/stale/mismatched proof, runtime-service unavailable, package/dependency rejection, owner-debug unauthorized access, privacy scans, and boundary monitors.
+**Consequences:** Existing Chronicle/replay compatibility, engine determinism, fixtures, strategy expectations, and prior public evidence drift. Roadmap work becomes rule migration rather than competition maturity.
 
-**Warning signs:**
-Final proof table only lists checker responses; tests do not create saved account revisions through Go; no entry attempt verifies provider proof; privacy scans omit generated artifacts/logs; public replay was checked only with fixtures.
+**Prevention:** Treat the engine, Chronicle grammar, canonical terminology, and MatchSet scoring as locked inputs. Competition maturity should classify and aggregate existing deterministic outcomes, not alter rules. Any proposed rule change must be separated into an explicit approved rules milestone.
 
-**Phase to address:**
-Phase 248, Service-Backed Proof, Privacy Scans, and Boundary Monitors.
+**Detection:** Boundary monitor for engine/spec changes, scoring changes, Chronicle schema drift, canonical terminology drift, and fixture rebaselines. Re-run deterministic replay tests: same seed + same Strategy Revisions + same engine version = same Chronicle.
 
-## Technical Debt Patterns
+**Requirement category:** `INV`, `RESULT`, `VERIFY`
+**Phase:** Phase 1 and Phase 5.
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Keep TypeScript local Go validation for account save | Fast implementation; avoids runtime-service dependency | Split-brain eligibility and misleading proof labels | Only for explicitly draft-only storage that cannot enter Match/MatchSet play |
-| Treat `player:workshop-local` as a real player id | Preserves local Workshop owner-debug UX | Local trust can become persisted private access | Test/dev fixtures only, never production persisted ownership |
-| Leave old aliases undocumented | Avoids migration churn | Hidden routes bypass current contracts | Never for executable/countable revision creation |
-| Use raw runtime/toolchain messages in diagnostics | Faster debugging | Source/path/token/package/private-runtime leaks | Internal logs only after redaction and access control |
-| Broaden package support by allowlisting imports ad hoc | Better samples and ergonomics | Non-reproducible builds, host dependency leaks, nondeterminism | Never in v1.35; future narrow lane only with explicit evidence |
-| Use "sandboxed" as shorthand for provider-backed | Simple product copy | Overclaims security readiness | Only if paired with exact claim text and "not certification" language |
+### Pitfall 11: Competition Work Pulls Strategy Execution Or Validation Into Web/API/Go
 
-## Integration Gotchas
+**What goes wrong:** To make eligibility, disputes, or standings faster, code runs Strategy validation/build/execution in web/API/Go, uses Node `vm` as a security boundary, or adds local fallback when runtime-service is unavailable.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Go account save -> runtime-service | Add TypeScript to one call site but not source identity/proof/runtime metadata validation | Treat TypeScript like other counted languages: provider response, source hash/bytes, artifact metadata, proof state, package policy, ABI, and fail-closed storage |
-| Account revisions -> entry gates | Trust `validation.valid` without checking provider proof and package/runtime compatibility | Entry must consume saved immutable metadata and require current provider proof where eligibility needs it |
-| Replay owner-debug -> public replay | Let query params or UI toggles select owner mode | Server-authorized resolver plus persisted Match participant/owner check selects owner projection |
-| Workshop checker -> submit/save | Reuse checker `ready` as the only gate | Submit/save/entry must have their own provider-grade gate or verified current checker identity |
-| Runtime-service diagnostics -> API output | Forward raw provider failure messages | Map to public-safe categories and redact forbidden markers before output |
-| Sandbox readiness matrix -> UI/docs labels | Collapse evidence/candidate/certification into one label | Use distinct labels for containment evidence, candidate unavailable, provenance-only, WASM/WASI artifact-backed, and certification |
-| Package metadata -> runtime compatibility | Ignore `package.mode` in eligibility | Require exact registered language/adapter/ABI/package tuple, currently package mode `none` |
+**Why it happens:** Competition flows need quick answers: "is this revision eligible?", "can this MatchSet count?", "why did this fail?" v1.35 proved the correct answer is provider/runtime evidence, not local hostile-code shortcuts.
 
-## Performance Traps
+**Consequences:** Hostile Strategy code crosses the trusted process boundary. Public beta posture becomes materially unsafe and contradicts core project constraints.
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Revalidating Rust/Zig account saves without cache identity | Slow save/entry flows, duplicate toolchain work, flapping unavailable states | Cache/coalesce only by language, provider id, source hash/bytes, artifact hash/bytes, toolchain key, ABI, and validation policy | Ordinary editing plus repeated save attempts |
-| Over-broad runtime-service response caps | Large internal artifact responses fail as system errors or tempt exposing bytes to clients | Keep internal byte caps but strip artifact bytes before public/default output | Rust/Zig artifacts or verbose compiler failures |
-| Privacy scans only checking rendered UI | API/proof/log artifacts leak private markers while pages look clean | Scan API JSON, fixtures, generated artifacts, logs used as proof, and public pages | Final proof/audit time |
-| Account save waits synchronously on slow toolchains without honest unavailable state | User sees generic failure or retries repeatedly | Return explicit unavailable/system states and keep draft-only storage separate from eligibility | Runtime-service/toolchain outage |
+**Prevention:** Eligibility and result governance consume stored provider proof, provider-safe metadata, runtime-service outcomes, and validated public projections. Runtime-service unavailable means unavailable/non-eligible/non-counted, not local fallback. Keep all runtime outputs crossing trust boundaries schema validated.
 
-## Security Mistakes
+**Detection:** Boundary monitors for Strategy execution imports/calls in web/API/Go, Node `vm`, subprocess fallbacks, direct provider execution, and runtime-service bypass. Tests for runtime unavailable producing honest non-eligibility rather than local validation.
 
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Running Strategy validation/build/execution in web/API/Go to fill runtime-service gaps | Hostile code crosses the trusted process boundary | Runtime-service / Runtime Broker / provider remains the hostile-code boundary; fail closed on unavailable |
-| Treating Node `vm`, local subprocess, or source scanning as a security boundary | Sandbox bypass or false readiness claim | Do not promote stronger claims without explicit isolation evidence and externalized runtime boundary |
-| Trusting client-provided owner ids for replay/private evidence | Private Strategy data exposed to another player | Derive requester from server auth and verify persisted Match ownership/participant data |
-| Persisting raw provider proof or artifact bytes into public-readable metadata | Strategy source/artifact leakage | Store internal proof separately or redact public summaries; expose hashes/byte counts only where safe |
-| Allowing package installs/imports in Strategy code | Filesystem/network/native module access, nondeterminism, supply-chain risk | Keep no-package/no-host-import policy enforced across validators and runtime metadata |
-| Accepting unknown runtime/package/provider metadata | Unsupported lane can enter counted play | Exact registered tuple checks and no-fallback tests |
+**Requirement category:** `ENTRY`, `RESULT`, `VERIFY`
+**Phase:** Phase 2, Phase 3, and Phase 5.
 
-## UX Pitfalls
+### Pitfall 12: Player And Strategy Public Pages Leak Private Competition Context
 
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| "Invalid Strategy" for stopped runtime-service | Player thinks their source is broken | Use calm unavailable copy: the Strategy has not been judged invalid |
-| "Ready" for draft-only account storage | Player expects competition eligibility | Label as saved draft/non-executable until provider proof exists |
-| "Secure sandbox" copy for provenance-only TypeScript/Python | Misleading trust promise | Say provider-validated provenance evidence; not WASM isolation or certification |
-| Package rejection exposes raw compiler/package paths | Confusing and privacy-unsafe diagnostics | Public-safe category plus short remediation and no host/package paths |
-| Owner-debug toggle appears on public replay without authorization context | Player may infer private data is public | Hide owner mode unless server returned owner projection |
+**What goes wrong:** Public player/Strategy pages expose Strategy source, private memory, objective payloads, owner-debug evidence, private analytics, account-recovery state, dispute internals, or raw diagnostics while adding competition history and standing context.
 
-## "Looks Done But Isn't" Checklist
+**Why it happens:** v1.31 added public discovery pages, and v1.36 will likely enrich them with eligibility, counted status, season participation, and result evidence. Those pages sit close to account-owned Strategy and owner-private data.
 
-- [ ] **TypeScript account save:** Often missing runtime-service provider proof -- verify Go account save can create provider-backed TypeScript metadata and cannot claim eligibility on local-only validation.
-- [ ] **Draft storage:** Often missing non-execution labels -- verify draft-only saves cannot enter counted/exhibition paths that require provider proof.
-- [ ] **Owner-debug replay:** Often missing server authorization -- verify query-only and mismatched requester/owner requests return public projection.
-- [ ] **Public privacy:** Often missing artifact/log scans -- verify API responses, generated proof files, logs, fixtures, and pages exclude private markers.
-- [ ] **Sandbox labels:** Often missing negative claim tests -- verify no production surface claims certification or WASM isolation beyond evidence.
-- [ ] **Package policy:** Often missing runtime metadata enforcement -- verify unknown package modes and host imports fail closed at validation, storage, entry, and execution request construction.
-- [ ] **Compatibility aliases:** Often missing route-level policy -- verify each alias is removed, test-only, migrated, or deprecation-tested.
-- [ ] **TinyGo/candidates:** Often missing registry scans -- verify spike-only/candidate lanes are absent from production selectors, entries, results, replay, and public evidence.
-- [ ] **Unavailable states:** Often missing non-invalid state coverage -- verify stopped runtime-service/toolchain unavailable does not store a valid executable revision and does not fall back locally.
-- [ ] **Service-backed proof:** Often missing product-flow coverage -- verify proof covers account save/provider proof and entry-relevant gates, not only Workshop checker.
+**Consequences:** Opponents can infer private doctrine internals. Account and dispute data leaks through profile/history surfaces.
 
-## Recovery Strategies
+**Prevention:** Public pages should consume only public-safe projections. Strategy cards can show publication state, language/provider labels, counted eligibility category, season participation, public result links, and replay evidence availability. Owner-only source/debug/analytics must stay behind authenticated account routes and no-store/private responses.
 
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| TypeScript local validation persisted as eligible | HIGH | Add migration/audit query for affected revisions, downgrade eligibility labels, require revalidation through runtime-service, and block entry until proof is refreshed |
-| Local Workshop identity persisted | HIGH | Identify rows containing `player:workshop-local`, quarantine or relabel as fixture/dev data, remove private access, and add persistence tests/monitors |
-| Owner-debug leak | HIGH | Disable owner-debug route/env gates, rotate affected proof artifacts if needed, add deny-by-default server authorization, and rerun public/privacy scans |
-| Sandbox overclaim shipped | MEDIUM | Patch copy/docs/evidence labels, add negative label monitors, and publish corrected claim language in roadmap/audit artifacts |
-| Package policy drift | MEDIUM | Fail unknown package modes, normalize diagnostics, add compatibility tuple tests, and revalidate stored revisions before entry |
-| Compatibility alias bypass | MEDIUM | Remove or gate the route, add contract tests proving old shape cannot create executable revisions, and update callers |
-| Public evidence artifact leak | MEDIUM | Regenerate proof artifacts with redaction, add scanner coverage, and review logs/fixtures committed during the phase |
+**Detection:** Public route tests as anonymous, owner, and other signed-in user. Snapshot/JSON scans for Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid, owner debug, account recovery, dispute internals, package paths, host paths, tokens, DB details, and private runtime internals.
 
-## Pitfall-to-Phase Mapping
+**Requirement category:** `PUBLIC`, `ABUSE`, `VERIFY`
+**Phase:** Phase 4 and Phase 5.
 
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| TypeScript account save local trust | Phase 244 | Service-backed Go account save test plus entry gate negative cases for missing/stale/mismatched TypeScript provider proof |
-| Local Workshop identity as owner | Phase 245 | Search/monitor proving `player:workshop-local` appears only in test/dev/local Workshop contexts and never persisted production ownership |
-| Owner-debug privacy leak | Phase 245 and Phase 248 | Server authorization tests, public/default replay scans, unauthorized query-param proof returning public mode |
-| Sandbox certification overclaim | Phase 246 | Label/copy monitors rejecting certification/WASM isolation claims without explicit evidence |
-| Package policy drift | Phase 247 | Exact runtime metadata tuple tests, package import/install rejection tests, package-path privacy scans |
-| Runtime-service unavailable fallback | Phase 244 and Phase 248 | Stopped runtime-service/toolchain unavailable drills proving no local hostile-code fallback and no executable valid revision |
-| Compatibility alias bypass | Phase 245 | Route inventory with policy decision per alias and tests for removed/gated/migrated behavior |
-| Public proof/data leakage | Phase 248 | Privacy scanner over API JSON, fixtures, generated artifacts, logs, and UI pages |
-| TinyGo/candidate leakage | Phase 246 and Phase 248 | Registry/source-format/public evidence scan proving candidate lanes remain hidden |
-| Checker-only proof gap | Phase 248 | End-to-end proof covering account save -> proof metadata -> entry gate plus negative drills |
+### Pitfall 13: Recomputability Is Sacrificed For Cached Standings Convenience
 
-## Suggested v1.35 Phase Shape
+**What goes wrong:** Standings are stored as mutable rows that cannot be regenerated from seasons, entries, MatchSets, results, and governance events. Manual status changes update the visible rank but not the source evidence.
 
-1. **Phase 243: Boundary Surface Inventory** - inventory account save, account-owned revisions, owner-debug, aliases, Go reads/writes, provider proof, sandbox claims, and package policy surfaces before changing behavior.
-2. **Phase 244: Account Revision Provider-Proof Gates** - fix or relabel TypeScript Go account save and eligibility-relevant account/entry paths.
-3. **Phase 245: Ownership, Owner-Debug, and Alias Cleanup** - quarantine local trust shortcuts, harden private replay authorization, and decide compatibility alias policy.
-4. **Phase 246: Sandbox Claims Contract** - define public/developer labels and fail-loud proof gates for readiness versus certification.
-5. **Phase 247: Package Policy Enforcement** - keep no-package/no-host-import boundaries explicit and enforced across all production languages and TinyGo candidate docs.
-6. **Phase 248: Proof, Privacy, and Boundary Audit** - service-backed product-flow proof, negative drills, privacy scans, and monitors.
+**Why it happens:** Public standings need to be fast and stable. Mature-looking tables can mask an unauditable write model.
+
+**Consequences:** Bugs and disputes cannot be repaired deterministically. Reset/archive behavior becomes data surgery. Public evidence links disagree with rank totals.
+
+**Prevention:** Treat standings as projections over immutable or append-only source facts: season config, entry eligibility snapshot, MatchSet ids, result states, governance events, and invalidation/dispute status. Caches are acceptable only with invalidation rules and a recomputation test oracle.
+
+**Detection:** Recompute test that drops cached standings and regenerates identical public output. Mutating a governance event should trigger or require standings refresh. Public row totals must match linked counted MatchSets.
+
+**Requirement category:** `RESULT`, `SEASON`, `VERIFY`
+**Phase:** Phase 3 and Phase 5.
+
+### Pitfall 14: Account Recovery Expectations Undermine Strategy Immutability And Ownership
+
+**What goes wrong:** Recovery copy or tooling implies users can regain, reassign, mutate, or replace Strategy Revisions after submission to a Match/season. Recovery payloads may appear in public pages or governance evidence.
+
+**Why it happens:** Public beta expectations often include account recovery. The project explicitly defers enterprise-grade recovery unless scoped and proven.
+
+**Consequences:** Immutable competition assets lose trust. Disputes can become claims to revise or reassign historical entries. Private account data leaks.
+
+**Prevention:** Keep recovery expectations narrow. Explain that Strategy Revisions submitted for Match or MatchSet play are immutable. If recovery is informational only, do not build public collection forms. If limited recovery controls exist, keep them separate from competition result mutation and public projections.
+
+**Detection:** Tests and copy review for "restore revision," "edit submitted," "replace counted entry," or public recovery status. Privacy scans for account-recovery payloads on result/replay/player/Strategy/standings pages.
+
+**Requirement category:** `ABUSE`, `POSTURE`, `PUBLIC`
+**Phase:** Phase 4.
+
+### Pitfall 15: Abuse Controls Create Hidden Eligibility Or Ranking Penalties
+
+**What goes wrong:** A report, dispute, or admin status silently suppresses a player, Strategy, or MatchSet from standings without public-safe explanation or auditable state. Alternatively, abuse controls expose too much and become public shaming.
+
+**Why it happens:** Minimal abuse controls are often implemented as ad hoc flags. Competition maturity needs clear outcomes, not hidden table filters.
+
+**Consequences:** Players cannot understand why results count or do not count. Operators cannot audit actions. Public trust decreases because standings look manipulated.
+
+**Prevention:** Define explicit public-safe governance states: under review, disputed, invalidated, non-counted by policy, removed from public discovery, or archived. Separate private reasons from public categories. Do not create hidden rank penalties without a public state and internal audit event.
+
+**Detection:** Tests that each abuse/governance state has a public-safe projection, standings impact, audit record, and privacy scan. Anonymous users should see status categories, not private allegations or operator notes.
+
+**Requirement category:** `ABUSE`, `RESULT`, `PUBLIC`, `VERIFY`
+**Phase:** Phase 3, Phase 4, and Phase 5.
+
+## Moderate Pitfalls
+
+### Pitfall 16: Eligibility Labels Drift Across Entry, Strategy Cards, Results, Replays, And Standings
+
+**What goes wrong:** One page says a Strategy is counted eligible, another says non-counted/degraded, and a replay result uses a third language/provider/sandbox label.
+
+**Prevention:** Derive labels from one spec-owned eligibility/posture contract and one public projection adapter. Add snapshot tests across competition index/detail, entry dashboard, player page, Strategy page, result, replay, and standings.
+
+**Requirement category:** `ENTRY`, `PUBLIC`, `VERIFY`
+**Phase:** Phase 2, Phase 4, and Phase 5.
+
+### Pitfall 17: Trial Season Pages Hide Limited Abuse And Recovery Maturity
+
+**What goes wrong:** Public pages are accurate in small print but the primary status language feels like a fully mature competitive league.
+
+**Prevention:** Put resettable/trial posture, counted-status meaning, degraded-state treatment, dispute limitations, and account-recovery limitations in first-class page copy near entry and standings actions.
+
+**Requirement category:** `POSTURE`, `PUBLIC`
+**Phase:** Phase 1 and Phase 4.
+
+### Pitfall 18: Non-Counted Exhibitions Become Discovery-Equivalent To Counted Competition
+
+**What goes wrong:** Public discovery surfaces rank or highlight exhibition/self-play/degraded MatchSets beside counted season results with the same visual treatment.
+
+**Prevention:** Use distinct labels and filters. Discovery may show exhibitions, but standings and player/Strategy competitive summaries must separate counted season evidence from non-counted study evidence.
+
+**Requirement category:** `SEASON`, `PUBLIC`
+**Phase:** Phase 2 and Phase 4.
+
+### Pitfall 19: MatchSet Scoring And Tie-Breakers Are Reimplemented In UI
+
+**What goes wrong:** React pages or client utilities duplicate scoring logic and drift from deterministic backend/spec behavior.
+
+**Prevention:** UI consumes public result/standing projections. Shared scoring/tie-breaker contracts stay outside React, with tests for deterministic ordering.
+
+**Requirement category:** `RESULT`, `VERIFY`
+**Phase:** Phase 3 and Phase 5.
+
+### Pitfall 20: Historical Public Links Break During Season Reset Or Result Invalidation
+
+**What goes wrong:** Result/replay/player/Strategy links 404 or change meaning after reset, archive, dispute, or invalidation.
+
+**Prevention:** Keep immutable public identifiers for MatchSets/results/replays and season archive pages. Invalidation changes status and counted impact, not evidence addressability unless privacy/security requires removal.
+
+**Requirement category:** `SEASON`, `RESULT`, `PUBLIC`
+**Phase:** Phase 3 and Phase 4.
+
+## Minor Pitfalls
+
+### Pitfall 21: Canonical Terminology Drifts In Competition Copy
+
+**What goes wrong:** Public pages say turn, piece, dead, bot, game, or move where the canonical terms are Round/Activation/Cycle, Soldier, STONE/FALLEN, Strategy, Match, and Action/Advance.
+
+**Prevention:** Add copy review or snapshot scan for forbidden terminology on new competition pages.
+
+**Requirement category:** `PUBLIC`, `VERIFY`
+**Phase:** Phase 4 and Phase 5.
+
+### Pitfall 22: Public Copy Uses Security Language As Marketing
+
+**What goes wrong:** Copy says "secure sandbox," "safe code," or "certified runtime" while the actual claim is provider proof, provenance evidence, runtime containment evidence, and no-package policy.
+
+**Prevention:** Reuse v1.35 sandbox-readiness labels. Keep security claims boring and evidence-scoped.
+
+**Requirement category:** `POSTURE`, `PUBLIC`, `VERIFY`
+**Phase:** Phase 1, Phase 4, and Phase 5.
+
+### Pitfall 23: Proof Artifacts Leak Local Paths Or Operator Data
+
+**What goes wrong:** Final markdown proof, screenshots, JSON fixtures, or logs include `/Users/...`, `/tmp/...`, DB DSNs, tokens, package paths, raw diagnostics, operator notes, or private payload keys.
+
+**Prevention:** Treat proof artifacts as public-output-adjacent and scan them with the same forbidden-marker list.
+
+**Requirement category:** `VERIFY`
+**Phase:** Phase 5.
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+| --- | --- | --- |
+| Competition inventory and posture | Starting with UI copy before deciding reset/durable/dispute claims | Lock a posture contract and forbidden-claim list before implementation. |
+| Counted entry and seasons | Reusing checker-ready or display-ready state as counted eligibility | Gate counted entry on immutable provider-proof/readiness metadata from v1.35. |
+| Same-user and multi-revision policy | Breaking useful self-play or allowing counted self-play manipulation | Split exhibition/study policy from counted trial season policy. |
+| Standings projection | Cached mutable rank rows become product truth | Build recomputable projections from season entries, MatchSets, results, and governance events. |
+| Result governance | Degraded/disputed/invalidated states are vague or private-only | Define public-safe state lattice and standings impact for every status. |
+| Abuse/dispute/recovery | Public UX overpromises staffed moderation or account recovery | Publish limited expectations and collect no sensitive payloads unless private handling exists. |
+| Public player/Strategy pages | Competition enrichment leaks private owner/debug/source context | Use public-safe projections only and test anonymous/owner/other-user views. |
+| Replay/result proof | Policy tests pass while replay visuals are broken | Keep board realism and browser replay proof mandatory. |
+| Boundary monitors | Competition shortcuts bypass runtime-service | Monitor no Strategy execution in web/API/Go and no local fallback. |
+| Final proof | Generated evidence leaks internals | Scan pages, APIs, fixtures, logs, screenshots metadata where practical, and proof markdown. |
+
+## Validation Targets For Requirements
+
+The roadmap should require these validation targets explicitly:
+
+- Entry: valid counted entry for TypeScript, Python, Rust, and Zig with current provider proof; rejection for stale/missing/mismatched proof, unsupported provider, package mode not `none`, hidden TinyGo, draft/non-execution revision, unavailable runtime, same-user counted self-play if disallowed, and multi-active-revision conflict.
+- Season: open/finalize/archive/reset lifecycle; counted window; historical archive links; no cross-season standings contamination.
+- Results: completed counted, completed non-counted, degraded, system-failed, strategy-failed if counted by policy, disputed-pending, invalidated, missing Chronicle, no result, and unavailable replay.
+- Standings: recomputation from source evidence produces stable output; excluded results are explainable; invalidation/dispute changes counted impact deterministically.
+- Privacy: public/default output excludes Strategy source, artifact bytes, raw diagnostics, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grid, owner-debug data, operator internals, quarantine details, dispute internals, and account-recovery payloads.
+- Copy: public beta/trial/reset/durable-rating/dispute/recovery/sandbox/package claims match the posture contract and v1.35 evidence.
+- Replay realism: visible Soldier, STONE, FALLEN, and terrain positions stay inside board bounds; canonical arenas contain canonical starts; browser proof shows a plausible full Match start and replay evidence for counted results.
+- Boundary: no Strategy execution in web/API/Go, no Node `vm` security boundary, no runtime-service fallback, no game-rule changes, no package/TinyGo/sandbox overclaim.
 
 ## Sources
 
-- `.planning/PROJECT.md` - v1.35 milestone goal, active boundaries, and hard non-claims.
-- `.planning/STATE.md` - current v1.35 planning state and active boundary notes.
-- `.planning/REQUIREMENTS.md` - v1.34 baseline requirements and future package/sandbox warnings carried into v1.35.
-- `.planning/ROADMAP.md` - completed v1.34 phase structure and proof scope.
-- `.planning/MILESTONES.md` - shipped v1.20-v1.34 decisions and active constraints.
-- `.planning/artifacts/v1.35-v1.36-milestone-prompts.md` - requested v1.35 scope and downstream milestone intent.
-- `.planning/artifacts/v1.34-workshop-checker-inventory.md` - concrete account save, checker, entry, provider-proof, and privacy gaps.
-- `.planning/artifacts/v1.34-workshop-checker-contract.md` - public checker envelope, status semantics, cache identity, privacy exclusions, and non-claims.
-- `.planning/artifacts/v1.34-workshop-checker-proof.md` - service-backed checker proof scope and negative unavailable probe.
-- `.planning/artifacts/v1.24-production-sandbox-readiness-matrix.md` - readiness evidence only; no production sandbox certification.
-- `.planning/artifacts/v1.20-runtime-sandbox-candidate-readiness.md` - candidate lane unavailable/no-fallback/readiness evidence.
-- `CowardsGameSpec_Full_Consolidated_v1.md` - canonical Strategy Revision immutability, private memory/objective rules, deterministic/runtime/package constraints, and Chronicle visibility.
-- `CowardsGame_Technical_Architecture_Spec_V1.md` - architecture boundaries, runtime sandbox restrictions, replay visibility, validation, and package boundary guidance.
-- Code inspection of `apps/go-backend/runtime_service_client.go`, `apps/go-backend/live_backend.go`, `apps/web/app/matches/replay-ready.ts`, `apps/web/app/matches/[matchId]/replay/owner-debug.ts`, `apps/web/app/workshop/workshop-client-state.ts`, and `scripts/check-boundary-monitors.ts`.
+- `.planning/PROJECT.md` - v1.36 goal, hard boundaries, prior decisions, out-of-scope durable ratings/recovery/tournaments, and current competition baseline. HIGH confidence.
+- `.planning/STATE.md` - v1.36 planning status, deferred durable ratings/moderation/recovery/runtime/package/TinyGo/ABI items. HIGH confidence.
+- `.planning/MILESTONES.md` - shipped v1.35 baseline and prior competition/runtime/replay decisions. HIGH confidence.
+- `.planning/milestones/v1.35-REQUIREMENTS.md` - provider-proof, entry, ownership, privacy, sandbox-readiness, and package-policy gates now available to v1.36. HIGH confidence.
+- `.planning/milestones/v1.35-ROADMAP.md` - delivered phases 243-248 and proof expectations. HIGH confidence.
+- `.planning/research/SUMMARY.md` - v1.35 research synthesis and carried-forward trust-boundary risks. HIGH confidence.
+- `CowardsGameSpec_Full_Consolidated_v1.md` - deterministic Match/Set, Strategy Revision immutability, Chronicle, privacy, runtime constraints, competitive structures, and canonical terminology. HIGH confidence.
+- `CowardsGame_Technical_Architecture_Spec_V1.md` - pure engine, web/API/runtime boundaries, MatchSet scoring, replay visibility, persistence, runtime validation, and test expectations. HIGH confidence.
 
----
-*Pitfalls research for: Coward's Game v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup*
-*Researched: 2026-06-14*
+## Confidence Assessment
+
+| Area | Confidence | Notes |
+| --- | --- | --- |
+| Competition posture risks | HIGH | Directly grounded in v1.36 milestone goal, current deferred items, and prior public standings/replay baseline. |
+| Entry eligibility risks | HIGH | v1.35 provider-proof/package/sandbox/account gates are explicit and shipped. |
+| Governance/standings risks | MEDIUM-HIGH | The exact v1.36 implementation is not designed yet, but recomputable projection and public-safe status needs are strongly implied by existing result/replay/governance surfaces. |
+| Abuse/dispute/recovery risks | MEDIUM | The product has limited current maturity by design; exact feature scope must be decided in requirements. |
+| Verification risks | HIGH | Prior milestones repeatedly require privacy scans, boundary monitors, signed-in proof, and replay board realism checks. |
