@@ -3,7 +3,7 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http"
-import { createHmac } from "node:crypto"
+import { createHmac, timingSafeEqual } from "node:crypto"
 import {
   RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,
   RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,
@@ -35,10 +35,12 @@ import { executeRuntimeServiceRequest } from "./execute-match.js"
 import { redactedErrorMessage } from "./redaction.js"
 
 const DEFAULT_BODY_LIMIT_BYTES = 8 * 1024 * 1024
+const PRIVATE_ARTIFACT_TOKEN_HEADER = "x-cowards-private-artifact-token"
 
 export interface RuntimeExecutionHttpServerOptions {
   runtimeConfig?: RuntimeServiceConfig | undefined
   bodyLimitBytes?: number | undefined
+  privateArtifactToken?: string | undefined
 }
 
 const writeJson = (
@@ -87,6 +89,31 @@ const malformedRequestResponse = (
 
 const providerValidationSecret = (): string =>
   process.env.COWARDS_PROVIDER_VALIDATION_SECRET?.trim() ?? ""
+
+const privateArtifactToken = (configured?: string | undefined): string =>
+  configured?.trim() ??
+  process.env.COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN?.trim() ??
+  ""
+
+const privateArtifactRequestAuthorized = (
+  request: IncomingMessage,
+  token: string,
+): boolean => {
+  if (!token) {
+    return false
+  }
+  const rawHeader = request.headers[PRIVATE_ARTIFACT_TOKEN_HEADER]
+  const presented = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader
+  if (!presented) {
+    return false
+  }
+  const expectedBytes = Buffer.from(token)
+  const presentedBytes = Buffer.from(presented)
+  return (
+    expectedBytes.byteLength === presentedBytes.byteLength &&
+    timingSafeEqual(expectedBytes, presentedBytes)
+  )
+}
 
 const providerValidationProof = (input: {
   providerId: string
@@ -138,7 +165,10 @@ const publicValidationMetadata = (
   }
 }
 
-const validateStrategyRequest = (rawRequest: unknown) => {
+const validateStrategyRequest = (
+  rawRequest: unknown,
+  options: { includePrivateArtifact?: boolean } = {},
+) => {
   const body =
     rawRequest !== null && typeof rawRequest === "object"
       ? (rawRequest as Record<string, unknown>)
@@ -246,9 +276,10 @@ const validateStrategyRequest = (rawRequest: unknown) => {
             }),
           },
         }
-  const publicMetadata = publicValidationMetadata(
-    metadata as Record<string, unknown>,
-  )
+  const responseMetadata =
+    options.includePrivateArtifact === true
+      ? metadata
+      : publicValidationMetadata(metadata as Record<string, unknown>)
   return {
     ok: true,
     kind: "strategyValidation",
@@ -264,7 +295,7 @@ const validateStrategyRequest = (rawRequest: unknown) => {
     runtime: revision.runtime,
     validation: revision.validation,
     engineCompatibility: revision.engineCompatibility,
-    metadata: publicMetadata,
+    metadata: responseMetadata,
     sourceHash: revision.sourceHash,
     sourceBytes: revision.sourceBytes,
   }
@@ -281,6 +312,9 @@ export const createRuntimeExecutionHttpHandler = (
         process.env.COWARDS_RUNTIME_SERVICE_ALLOW_LOCAL_WORKER_THREAD === "1",
     })
   const bodyLimitBytes = options.bodyLimitBytes ?? DEFAULT_BODY_LIMIT_BYTES
+  const configuredPrivateArtifactToken = privateArtifactToken(
+    options.privateArtifactToken,
+  )
 
   return async (
     request: IncomingMessage,
@@ -304,7 +338,32 @@ export const createRuntimeExecutionHttpHandler = (
       try {
         const body = await readBody(request, bodyLimitBytes)
         const rawRequest = JSON.parse(body) as unknown
-        const result = validateStrategyRequest(rawRequest)
+        const requestBody =
+          rawRequest !== null && typeof rawRequest === "object"
+            ? (rawRequest as Record<string, unknown>)
+            : {}
+        const includePrivateArtifact =
+          requestBody.includePrivateArtifact === true
+        if (
+          includePrivateArtifact &&
+          !privateArtifactRequestAuthorized(
+            request,
+            configuredPrivateArtifactToken,
+          )
+        ) {
+          writeJson(response, 403, {
+            ok: false,
+            kind: "strategyValidation",
+            ...(typeof requestBody.sourceFormat === "string"
+              ? { sourceFormat: requestBody.sourceFormat }
+              : {}),
+            error: "Private artifact validation evidence is not available.",
+          })
+          return
+        }
+        const result = validateStrategyRequest(rawRequest, {
+          includePrivateArtifact,
+        })
         writeJson(response, result.ok ? 200 : 422, result)
       } catch (error) {
         writeJson(response, 400, {
@@ -312,7 +371,7 @@ export const createRuntimeExecutionHttpHandler = (
           kind: "strategyValidation",
           error:
             error instanceof Error
-              ? error.message
+              ? redactedErrorMessage(error)
               : "Strategy validation request was malformed.",
         })
       }

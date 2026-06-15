@@ -2650,15 +2650,16 @@ func sourceArtifactProviderValidationMatches(metadata map[string]any, sourceHash
 		return false
 	}
 	artifactBytesBase64 := stringValue(artifact, "bytesBase64")
-	if artifactBytesBase64 != "" {
-		artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
-		if err != nil || len(artifactBytesRaw) != artifactBytes {
-			return false
-		}
-		artifactDigest := sha256.Sum256(artifactBytesRaw)
-		if hex.EncodeToString(artifactDigest[:]) != artifactHash {
-			return false
-		}
+	if artifactBytesBase64 == "" {
+		return false
+	}
+	artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
+	if err != nil || len(artifactBytesRaw) != artifactBytes {
+		return false
+	}
+	artifactDigest := sha256.Sum256(artifactBytesRaw)
+	if hex.EncodeToString(artifactDigest[:]) != artifactHash {
+		return false
 	}
 	toolchain := mapValue(artifact, "toolchain")
 	expectedFormat := "python-source-bundle"
@@ -2699,15 +2700,16 @@ func rustProviderValidationMatches(metadata map[string]any, sourceHash string, s
 		return false
 	}
 	artifactBytesBase64 := stringValue(artifact, "bytesBase64")
-	if artifactBytesBase64 != "" {
-		artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
-		if err != nil || len(artifactBytesRaw) != artifactBytes {
-			return false
-		}
-		artifactDigest := sha256.Sum256(artifactBytesRaw)
-		if hex.EncodeToString(artifactDigest[:]) != artifactHash {
-			return false
-		}
+	if artifactBytesBase64 == "" {
+		return false
+	}
+	artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
+	if err != nil || len(artifactBytesRaw) != artifactBytes {
+		return false
+	}
+	artifactDigest := sha256.Sum256(artifactBytesRaw)
+	if hex.EncodeToString(artifactDigest[:]) != artifactHash {
+		return false
 	}
 	providerID := "strategy-language-provider-rust-wasi"
 	targetTriple := "wasm32-wasip1"

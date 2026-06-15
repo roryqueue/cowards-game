@@ -143,8 +143,7 @@ export const generateV135AccountProviderEntryProof = (
   },
   serviceBackedProof: {
     status: "not-run-local-postgresql-unavailable",
-    note:
-      "Local PostgreSQL was unavailable during Phase 244 planning; deterministic save-path substitute proves provider fields reach accountRevisionInsert.",
+    note: "Local PostgreSQL was unavailable during Phase 244 planning; deterministic save-path substitute proves Go account-save uses internally authorized private provider artifact material and carries provider fields to accountRevisionInsert.",
   },
   evidence: rows,
 })
@@ -160,13 +159,15 @@ const defaultEvidenceRows: readonly V135AccountProviderEntryEvidenceRow[] = [
       "apps/go-backend/runtime_service_client_test.go",
       "apps/runtime-service/src/server.ts",
       "apps/runtime-service/src/server.test.ts",
+      "apps/runtime-service/src/redaction.ts",
+      "apps/runtime-service/src/redaction.test.ts",
     ],
     commands: [
-      "pnpm --filter @cowards/runtime-service test -- server.test.ts",
+      "pnpm --filter @cowards/runtime-service exec vitest run src/server.test.ts src/redaction.test.ts",
       "cd apps/go-backend && go test ./... -run 'TestRuntimeServiceClient'",
     ],
     outcome:
-      "Go accepts TypeScript provider validation through runtime-service and rejects malformed, mismatched, incomplete, oversized, and unavailable proof responses.",
+      "Go accepts TypeScript provider validation through runtime-service with an internally authorized private account-save request, while default and unauthorized validation responses redact or reject raw artifact material and malformed, mismatched, incomplete, oversized, unauthorized, and unavailable proof responses fail closed.",
     limitations: [],
   },
   {
@@ -183,7 +184,7 @@ const defaultEvidenceRows: readonly V135AccountProviderEntryEvidenceRow[] = [
       "cd apps/go-backend && go test ./... -run 'TestProviderReadiness|TestRuntimeServiceClient|Test.*Account.*Revision|Test.*CreateStrategyRevision'",
     ],
     outcome:
-      "Account-save assembly carries runtime, validation, engine compatibility, source identity, artifact identity, provider proof metadata, and readiness labels into accountRevisionInsert.",
+      "Account-save assembly carries runtime, validation, engine compatibility, source identity, internally authorized private artifact material, provider proof metadata, and readiness labels into accountRevisionInsert; public-redacted provider metadata remains non-execution-ready.",
     limitations: [
       "DB-backed save proof was replaced by deterministic save-path substitute in this local environment.",
     ],
@@ -270,11 +271,11 @@ const defaultEvidenceRows: readonly V135AccountProviderEntryEvidenceRow[] = [
       "apps/runtime-service/src/server.test.ts",
     ],
     commands: [
-      "pnpm --filter @cowards/runtime-service test -- server.test.ts",
+      "pnpm --filter @cowards/runtime-service exec vitest run src/server.test.ts",
       "cd apps/go-backend && go test ./... -run 'TestRuntimeServiceClient|TestProviderReadiness'",
     ],
     outcome:
-      "Malformed, unavailable, mismatched, missing, package-declared, hidden, and proof-invalid states fail closed with category-based public diagnostics.",
+      "Malformed, unavailable, unauthorized-private-artifact, mismatched, missing, package-declared, hidden, and proof-invalid states fail closed with category-based public diagnostics.",
     limitations: [],
   },
   {
@@ -285,14 +286,16 @@ const defaultEvidenceRows: readonly V135AccountProviderEntryEvidenceRow[] = [
     files: [
       "apps/runtime-service/src/server.ts",
       "apps/runtime-service/src/server.test.ts",
+      "apps/runtime-service/src/redaction.ts",
+      "apps/runtime-service/src/redaction.test.ts",
       "apps/go-backend/runtime_service_client_test.go",
     ],
     commands: [
-      "pnpm --filter @cowards/runtime-service test -- server.test.ts",
+      "pnpm --filter @cowards/runtime-service exec vitest run src/server.test.ts src/redaction.test.ts",
       "cd apps/go-backend && go test ./... -run 'TestRuntimeServiceClient'",
     ],
     outcome:
-      "Validation responses expose provider proof identity and public categories without raw artifact payloads, host details, token material, or private runtime data.",
+      "Default validation responses expose provider proof identity and public categories without raw artifact material, host details, credential material, or private runtime data; private account-save validation is available only through an internally authorized Go request.",
     limitations: [],
   },
   {
@@ -318,7 +321,9 @@ export const validateV135AccountProviderEntryProof = (
 ): readonly string[] => {
   const errors: string[] = []
   if (proof.schemaVersion !== accountProviderEntryProofSchemaVersion) {
-    errors.push(`schemaVersion must be ${accountProviderEntryProofSchemaVersion}`)
+    errors.push(
+      `schemaVersion must be ${accountProviderEntryProofSchemaVersion}`,
+    )
   }
   if (proof.milestone !== "v1.35" || proof.phase !== 244) {
     errors.push("proof must target v1.35 phase 244")
@@ -367,7 +372,12 @@ export const validateV135AccountProviderEntryProof = (
     }
   }
   for (const row of proof.evidence) {
-    if (!row.id || !row.outcome || row.files.length === 0 || row.commands.length === 0) {
+    if (
+      !row.id ||
+      !row.outcome ||
+      row.files.length === 0 ||
+      row.commands.length === 0
+    ) {
       errors.push(`evidence row ${row.id || "(missing id)"} is incomplete`)
     }
     if (row.decisions.length === 0) {
@@ -445,7 +455,10 @@ export const checkV135AccountProviderEntryProofArtifacts = (
   const expectedJson = renderV135AccountProviderEntryProofJson(proof)
   const expectedMarkdown = renderV135AccountProviderEntryProofMarkdown(proof)
   const jsonPath = path.join(root, accountProviderEntryArtifactPaths.json)
-  const markdownPath = path.join(root, accountProviderEntryArtifactPaths.markdown)
+  const markdownPath = path.join(
+    root,
+    accountProviderEntryArtifactPaths.markdown,
+  )
   if (!existsSync(jsonPath)) {
     failures.push(`missing ${accountProviderEntryArtifactPaths.json}`)
   } else if (readFileSync(jsonPath, "utf8") !== expectedJson) {

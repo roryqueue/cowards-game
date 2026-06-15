@@ -201,6 +201,85 @@ describe("trial ladder contracts", () => {
     ).toBe("python")
   })
 
+  it("requires private TypeScript artifact bytes before counted trial ladder entry", () => {
+    const runtime = {
+      ...defaultRuntimeMetadata(),
+      language: { id: "typescript", version: "0.1.0" },
+      adapter: {
+        id: "runtime-js-worker-thread",
+        version: "0.1.0",
+      },
+    }
+    const sourceHash = "typescript-source-hash"
+    const sourceBytes = 128
+    const artifactPayload = Buffer.from("typescript-artifact")
+    const artifactHash = createHash("sha256")
+      .update(artifactPayload)
+      .digest("hex")
+    const artifactBytes = artifactPayload.byteLength
+    const sourceArtifact = {
+      format: "transpiled-javascript",
+      hash: artifactHash,
+      bytes: artifactBytes,
+      bytesBase64: artifactPayload.toString("base64"),
+      sourceHash,
+      sourceBytes,
+      abiVersion: "strategy-runtime-abi-v1.14",
+      validationStatus: "valid",
+      createdAt: "test",
+      toolchain: {
+        language: "typescript",
+        runtime: "node",
+        runtimeVersion: "20",
+        commandSummary: "test",
+        validationPolicy: "test",
+      },
+      publicEvidence: {
+        label: "TypeScript transpiled artifact provenance",
+        nonCounted: false,
+        sandboxClaim: "provenance-only",
+      },
+    }
+    const { bytesBase64: _redactedBytesBase64, ...publicSourceArtifact } =
+      sourceArtifact
+    const providerValidation = {
+      providerId: "strategy-language-provider-js-ts",
+      contractVersion: "strategy-language-provider-contract-v1.33",
+      sourceHash,
+      sourceBytes,
+      artifactHash,
+      artifactBytes,
+      proof: rustProviderProof(
+        sourceHash,
+        sourceBytes,
+        artifactHash,
+        artifactBytes,
+        "strategy-language-provider-js-ts",
+      ),
+    }
+
+    expect(
+      assertLadderEligibleRuntime(runtime, {
+        sourceHash,
+        sourceBytes,
+        metadata: {
+          sourceArtifact,
+          providerValidation,
+        },
+      }).language.id,
+    ).toBe("typescript")
+    expect(() =>
+      assertLadderEligibleRuntime(runtime, {
+        sourceHash,
+        sourceBytes,
+        metadata: {
+          sourceArtifact: publicSourceArtifact,
+          providerValidation,
+        },
+      }),
+    ).toThrow("provider-validated artifact provenance")
+  })
+
   it("requires artifact provenance before counted Rust trial ladder entry", () => {
     const runtime = {
       ...defaultRuntimeMetadata(),

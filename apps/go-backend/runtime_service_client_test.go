@@ -79,16 +79,22 @@ func TestRuntimeServiceClientValidatesPythonProviderSource(t *testing.T) {
 }
 
 func TestRuntimeServiceClientValidatesTypeScriptProviderSourceD01D02D09D10(t *testing.T) {
+	t.Setenv("COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN", "cowards-private-artifact-test-token-v1.35")
 	source := "export default { selectActivations() { return []; }, soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: null }; } }"
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, httpRequest *http.Request) {
 		if httpRequest.URL.Path != "/validate-strategy" {
 			t.Fatalf("unexpected path %s", httpRequest.URL.Path)
 		}
+		if got := httpRequest.Header.Get(runtimeServicePrivateArtifactTokenHeader); got != "cowards-private-artifact-test-token-v1.35" {
+			t.Fatalf("expected private artifact token header, got %q", got)
+		}
 		var request map[string]any
 		if err := json.NewDecoder(httpRequest.Body).Decode(&request); err != nil {
 			t.Fatal(err)
 		}
-		if request["sourceFormat"] != "typescript" || request["strategyId"] != "strategy:typescript" {
+		if request["sourceFormat"] != "typescript" ||
+			request["strategyId"] != "strategy:typescript" ||
+			request["includePrivateArtifact"] != true {
 			t.Fatalf("unexpected TypeScript validation request: %+v", request)
 		}
 		writeRuntimeServiceTestJSON(t, writer, runtimeServiceValidationResponse{
@@ -145,6 +151,26 @@ func TestRuntimeServiceClientValidatesTypeScriptProviderSourceD01D02D09D10(t *te
 
 func TestRuntimeServiceClientRejectsTypeScriptValidationDriftD02D04D09D10(t *testing.T) {
 	source := "export default { selectActivations() { return []; }, soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: null }; } }"
+
+	t.Run("private artifact unauthorized", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+			writer.WriteHeader(http.StatusForbidden)
+			writeRuntimeServiceTestJSON(t, writer, runtimeServiceValidationResponse{
+				OK:           false,
+				Kind:         "strategyValidation",
+				SourceFormat: "typescript",
+				Error:        "Private artifact validation evidence is not available.",
+			})
+		}))
+		defer server.Close()
+		client := newRuntimeServiceClient(server.URL)
+
+		_, failure := client.validateStrategy(context.Background(), "typescript", source, "strategy:typescript")
+		if failure == nil || failure.ErrorClass != "RuntimeServicePrivateArtifactUnauthorized" || failure.Retryable {
+			t.Fatalf("expected fail-loud private artifact authorization failure, got %+v", failure)
+		}
+		assertRuntimeServiceFailureSafe(t, failure)
+	})
 
 	t.Run("wrong source format", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {

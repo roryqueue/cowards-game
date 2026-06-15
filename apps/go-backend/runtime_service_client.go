@@ -22,11 +22,13 @@ const runtimeExecutionServiceVersion = "runtime-execution-service-v1.15"
 const strategyRuntimeABIVersion = "strategy-runtime-abi-v1.14"
 const defaultRuntimeServiceResponseBytes = 8 * 1024 * 1024
 const defaultRuntimeServiceHTTPTimeout = 90 * time.Second
+const runtimeServicePrivateArtifactTokenHeader = "x-cowards-private-artifact-token"
 
 type runtimeServiceClient struct {
-	endpoint         string
-	httpClient       *http.Client
-	maxResponseBytes int64
+	endpoint             string
+	httpClient           *http.Client
+	maxResponseBytes     int64
+	privateArtifactToken string
 }
 
 type runtimeServiceMatch struct {
@@ -101,7 +103,8 @@ func newRuntimeServiceClient(endpoint string) *runtimeServiceClient {
 		httpClient: &http.Client{
 			Timeout: runtimeServiceHTTPTimeout(),
 		},
-		maxResponseBytes: defaultRuntimeServiceResponseBytes,
+		maxResponseBytes:     defaultRuntimeServiceResponseBytes,
+		privateArtifactToken: runtimeServicePrivateArtifactToken(),
 	}
 }
 
@@ -115,6 +118,10 @@ func runtimeServiceHTTPTimeout() time.Duration {
 		return defaultRuntimeServiceHTTPTimeout
 	}
 	return time.Duration(timeoutMs) * time.Millisecond
+}
+
+func runtimeServicePrivateArtifactToken() string {
+	return strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN"))
 }
 
 func (client *runtimeServiceClient) executeMatch(ctx context.Context, request runtimeServiceRequest) (*runtimeServiceResponse, *runtimeServiceFailure) {
@@ -184,8 +191,9 @@ func (client *runtimeServiceClient) validateStrategy(ctx context.Context, source
 		return nil, newRuntimeServiceFailure("RuntimeServiceStopped", "Runtime execution service endpoint is not configured", true, nil)
 	}
 	requestBody := map[string]any{
-		"sourceFormat": sourceFormat,
-		"source":       source,
+		"sourceFormat":           sourceFormat,
+		"source":                 source,
+		"includePrivateArtifact": true,
 	}
 	if strings.TrimSpace(strategyID) != "" {
 		requestBody["strategyId"] = strategyID
@@ -203,6 +211,9 @@ func (client *runtimeServiceClient) validateStrategy(ctx context.Context, source
 		return nil, newRuntimeServiceFailure("RuntimeServiceRequestCreate", "Runtime service validation request could not be created", false, nil)
 	}
 	httpRequest.Header.Set("content-type", "application/json")
+	if token := strings.TrimSpace(client.privateArtifactToken); token != "" {
+		httpRequest.Header.Set(runtimeServicePrivateArtifactTokenHeader, token)
+	}
 	response, err := httpClient.Do(httpRequest)
 	if err != nil {
 		return nil, newRuntimeServiceFailure("RuntimeServiceTransport", "Runtime execution service is unavailable", true, nil)
@@ -218,6 +229,9 @@ func (client *runtimeServiceClient) validateStrategy(ctx context.Context, source
 	}
 	if int64(len(payload)) > maxBytes {
 		return nil, newRuntimeServiceFailure("RuntimeServiceOversizedResponse", "Runtime service validation response exceeded the configured byte limit", true, map[string]any{"status": response.StatusCode, "capBytes": maxBytes})
+	}
+	if response.StatusCode == http.StatusForbidden {
+		return nil, newRuntimeServiceFailure("RuntimeServicePrivateArtifactUnauthorized", "Runtime service private artifact validation is not authorized", false, map[string]any{"status": response.StatusCode})
 	}
 	var decoded runtimeServiceValidationResponse
 	if err := json.NewDecoder(bytes.NewReader(payload)).Decode(&decoded); err != nil {

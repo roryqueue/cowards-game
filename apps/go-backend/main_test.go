@@ -287,7 +287,7 @@ func TestTypeScriptRuntimeMetadataRequiresProviderProofForCountedPlay(t *testing
 	source := "export default { selectActivations() { return []; }, soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: null }; } }"
 	sourceHash := hashString(source)
 	sourceBytes := len([]byte(source))
-	metadata := providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, false)
+	metadata := providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, true)
 
 	if runtimeAllowsCountedPlay(runtime, nil, sourceHash, sourceBytes) {
 		t.Fatalf("TypeScript counted gate accepted missing provider validation")

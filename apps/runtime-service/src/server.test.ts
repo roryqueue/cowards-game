@@ -11,6 +11,8 @@ import { createRuntimeExecutionHttpServer } from "./server.js"
 process.env.COWARDS_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
 
+const PRIVATE_ARTIFACT_TOKEN = "cowards-private-artifact-test-token-v1.35"
+
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
 })
@@ -19,6 +21,7 @@ const servers: ReturnType<typeof createRuntimeExecutionHttpServer>[] = []
 
 const withServer = async (
   bodyLimitBytes = 1024,
+  privateArtifactToken?: string,
 ): Promise<{
   url: string
   close: () => Promise<void>
@@ -26,6 +29,7 @@ const withServer = async (
   const server = createRuntimeExecutionHttpServer({
     runtimeConfig,
     bodyLimitBytes,
+    privateArtifactToken,
   })
   servers.push(server)
   server.listen(0, "127.0.0.1")
@@ -140,6 +144,88 @@ export default {
     expect(serialized).not.toContain("SoldierMemory")
     expect(serialized).not.toContain('"objectivePayload":')
     expect(serialized).not.toContain("postgres://")
+  })
+
+  it("rejects private TypeScript artifact requests without the internal token", async () => {
+    const server = await withServer(8 * 1024)
+    const source = `
+export default {
+  selectActivations() {
+    return []
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: null }
+  },
+}
+`
+    const response = await fetch(`${server.url}/validate-strategy`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sourceFormat: "typescript",
+        source,
+        strategyId: "strategy:typescript",
+        includePrivateArtifact: true,
+      }),
+    })
+    const body = (await response.json()) as Record<string, unknown>
+    const serialized = JSON.stringify(body)
+
+    expect(response.status).toBe(403)
+    expect(body).toMatchObject({
+      ok: false,
+      kind: "strategyValidation",
+      sourceFormat: "typescript",
+      error: "Private artifact validation evidence is not available.",
+    })
+    expect(serialized).not.toContain(source)
+    expect(serialized).not.toContain("bytesBase64")
+  })
+
+  it("returns private TypeScript artifact bytes only when account save is internally authorized", async () => {
+    const server = await withServer(8 * 1024, PRIVATE_ARTIFACT_TOKEN)
+    const source = `
+export default {
+  selectActivations() {
+    return []
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: null }
+  },
+}
+`
+    const response = await fetch(`${server.url}/validate-strategy`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-cowards-private-artifact-token": PRIVATE_ARTIFACT_TOKEN,
+      },
+      body: JSON.stringify({
+        sourceFormat: "typescript",
+        source,
+        strategyId: "strategy:typescript",
+        includePrivateArtifact: true,
+      }),
+    })
+    const body = (await response.json()) as Record<string, unknown>
+
+    expect(response.status).toBe(200)
+    expect(body).toMatchObject({
+      ok: true,
+      kind: "strategyValidation",
+      sourceFormat: "typescript",
+      metadata: {
+        sourceArtifact: {
+          format: "transpiled-javascript",
+          bytesBase64: expect.any(String),
+        },
+        providerValidation: {
+          providerId: "strategy-language-provider-js-ts",
+          proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
+        },
+      },
+    })
+    expect(JSON.stringify(body)).not.toContain(source)
   })
 
   it("validates Python through the provider validator instead of backend string scanning", async () => {

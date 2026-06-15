@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"testing"
 )
@@ -19,7 +20,7 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 		"sourceHash":  sourceHash,
 		"sourceBytes": sourceBytes,
 	}
-	validMetadata := providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, false)
+	validMetadata := providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, true)
 
 	tests := []struct {
 		name          string
@@ -29,7 +30,7 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 		entryEligible bool
 	}{
 		{
-			name: "D-02 TypeScript provider proof without artifact bytes is execution ready",
+			name: "D-02 TypeScript provider proof with private artifact bytes is execution ready",
 			input: revisionReadinessInput{
 				SourceFormat: "typescript",
 				Runtime:      validRuntime,
@@ -41,6 +42,19 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 			state:         revisionReadinessExecutionReady,
 			category:      "provider_validated",
 			entryEligible: true,
+		},
+		{
+			name: "D-04 public-redacted artifact identity is not execution ready",
+			input: revisionReadinessInput{
+				SourceFormat: "typescript",
+				Runtime:      validRuntime,
+				Validation:   validValidation,
+				Metadata:     providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, false),
+				SourceHash:   sourceHash,
+				SourceBytes:  sourceBytes,
+			},
+			state:    revisionReadinessInvalid,
+			category: "provider_proof_mismatched",
 		},
 		{
 			name: "D-04 missing provider proof is not eligible",
@@ -147,7 +161,7 @@ func TestProviderReadinessAccountSaveAssemblyD02D03(t *testing.T) {
 	source := "export default { selectActivations() { return []; }, soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: null }; } }"
 	sourceHash := hashString(source)
 	sourceBytes := len([]byte(source))
-	metadata := providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, false)
+	metadata := providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, true)
 
 	input, readiness := accountRevisionInsertFromProviderValidation("user:phase-244", strategyRevisionCreateBody{
 		StrategyID:   "strategy:phase-244",
@@ -209,7 +223,7 @@ func providerReadinessSourceArtifactMetadata(t *testing.T, languageID string, pr
 		artifact["format"] = "python-source-bundle"
 	}
 	if includeBytes {
-		artifact["bytesBase64"] = "dGVzdA=="
+		artifact["bytesBase64"] = base64.StdEncoding.EncodeToString(artifactPayload)
 	}
 	return map[string]any{
 		"tags":           []string{languageID, "artifact-proven", "counted", "provider"},
