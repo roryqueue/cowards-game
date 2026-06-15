@@ -162,7 +162,7 @@ describe("public discovery service", () => {
             adapterId: "runtime-js-worker-thread",
             adapterLabel: "Worker thread",
             readiness: "production-candidate",
-            readinessLabel: "Production candidate",
+            readinessLabel: "Provenance evidence only",
             experimental: false,
             countedPlayLabel: "Counted eligible",
             countedPlayEligible: true,

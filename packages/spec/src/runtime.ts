@@ -39,6 +39,35 @@ export type StrategyRuntimeIsolationPromotionState =
   | "shadow-only"
   | "production-counted"
 
+export const STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION =
+  "strategy-runtime-sandbox-readiness-v1.35" as const
+
+export type StrategyRuntimeSandboxLaneId = StrategyLanguageId | "tinygo"
+
+export type StrategyRuntimeEvidenceClass =
+  | "runtime-containment"
+  | "source-artifact-provenance"
+  | "immutable-wasm-wasi-preview1-artifact"
+  | "spike-only-hidden"
+
+export type StrategyRuntimeArtifactPosture =
+  | "source-backed"
+  | "source-language-artifact-provenance"
+  | "immutable-wasm-wasi-preview1"
+  | "unavailable"
+
+export interface StrategyRuntimeSandboxReadinessClaim {
+  contractVersion: typeof STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION
+  laneId: StrategyRuntimeSandboxLaneId
+  evidenceClass: StrategyRuntimeEvidenceClass
+  artifactPosture: StrategyRuntimeArtifactPosture
+  productionSandboxCertification: false
+  publicLabel: string
+  developerLabel: string
+  unavailableInProduction: boolean
+  forbiddenStrongerClaims: readonly string[]
+}
+
 export interface StrategyLanguageRecord {
   id: StrategyLanguageId
   label: string
@@ -555,6 +584,126 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
     ],
   },
 ] as const satisfies readonly SupportedStrategyLanguageRecord[]
+
+const forbiddenSandboxClaimPhrases = [
+  "production sandbox certification",
+  "WASM isolation for TypeScript or Python",
+  "TinyGo production support",
+  "direct-export ABI promotion",
+  "Component Model/WIT ABI promotion",
+  "package ecosystem support",
+] as const
+
+export const STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS = [
+  {
+    contractVersion: STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION,
+    laneId: "javascript",
+    evidenceClass: "runtime-containment",
+    artifactPosture: "source-backed",
+    productionSandboxCertification: false,
+    publicLabel: "Runtime containment evidence only",
+    developerLabel:
+      "JavaScript remains runtime-service/provider-gated containment evidence, not production sandbox certification.",
+    unavailableInProduction: false,
+    forbiddenStrongerClaims: forbiddenSandboxClaimPhrases,
+  },
+  {
+    contractVersion: STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION,
+    laneId: "typescript",
+    evidenceClass: "source-artifact-provenance",
+    artifactPosture: "source-language-artifact-provenance",
+    productionSandboxCertification: false,
+    publicLabel: "Provenance evidence only",
+    developerLabel:
+      "TypeScript provider proof binds source and transpiled artifact identity; it is not WASM/WASI isolation or sandbox certification.",
+    unavailableInProduction: false,
+    forbiddenStrongerClaims: forbiddenSandboxClaimPhrases,
+  },
+  {
+    contractVersion: STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION,
+    laneId: "python",
+    evidenceClass: "source-artifact-provenance",
+    artifactPosture: "source-language-artifact-provenance",
+    productionSandboxCertification: false,
+    publicLabel: "Provenance evidence only",
+    developerLabel:
+      "Python provider proof binds normalized source-bundle provenance; it is not WASM/WASI isolation or sandbox certification.",
+    unavailableInProduction: false,
+    forbiddenStrongerClaims: forbiddenSandboxClaimPhrases,
+  },
+  {
+    contractVersion: STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION,
+    laneId: "rust",
+    evidenceClass: "immutable-wasm-wasi-preview1-artifact",
+    artifactPosture: "immutable-wasm-wasi-preview1",
+    productionSandboxCertification: false,
+    publicLabel: "WASM/WASI artifact-backed evidence",
+    developerLabel:
+      "Rust is immutable WASM/WASI Preview 1 artifact-backed through provider proof; this is not broad production sandbox certification.",
+    unavailableInProduction: false,
+    forbiddenStrongerClaims: forbiddenSandboxClaimPhrases,
+  },
+  {
+    contractVersion: STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION,
+    laneId: "zig",
+    evidenceClass: "immutable-wasm-wasi-preview1-artifact",
+    artifactPosture: "immutable-wasm-wasi-preview1",
+    productionSandboxCertification: false,
+    publicLabel: "WASM/WASI artifact-backed evidence",
+    developerLabel:
+      "Zig is immutable WASM/WASI Preview 1 artifact-backed through provider proof; this is not broad production sandbox certification.",
+    unavailableInProduction: false,
+    forbiddenStrongerClaims: forbiddenSandboxClaimPhrases,
+  },
+  {
+    contractVersion: STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION,
+    laneId: "tinygo",
+    evidenceClass: "spike-only-hidden",
+    artifactPosture: "unavailable",
+    productionSandboxCertification: false,
+    publicLabel: "Hidden spike-only lane",
+    developerLabel:
+      "TinyGo remains hidden and spike-only until a future productionization milestone proves the required boundary evidence.",
+    unavailableInProduction: true,
+    forbiddenStrongerClaims: forbiddenSandboxClaimPhrases,
+  },
+] as const satisfies readonly StrategyRuntimeSandboxReadinessClaim[]
+
+export const getStrategyRuntimeSandboxReadinessClaim = (
+  laneId: unknown,
+): StrategyRuntimeSandboxReadinessClaim | null =>
+  STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS.find(
+    (claim) => claim.laneId === laneId,
+  ) ?? null
+
+export const assertStrategyRuntimeSandboxReadinessContract = (): void => {
+  for (const claim of STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS) {
+    if (claim.productionSandboxCertification !== false) {
+      throw new Error(`${claim.laneId} must not be sandbox certified`)
+    }
+    if (
+      (claim.laneId === "typescript" || claim.laneId === "python") &&
+      claim.evidenceClass !== "source-artifact-provenance"
+    ) {
+      throw new Error(`${claim.laneId} must remain provenance-only`)
+    }
+    if (
+      (claim.laneId === "rust" || claim.laneId === "zig") &&
+      claim.artifactPosture !== "immutable-wasm-wasi-preview1"
+    ) {
+      throw new Error(
+        `${claim.laneId} must remain WASI Preview 1 artifact-backed`,
+      )
+    }
+    if (
+      claim.laneId === "tinygo" &&
+      (!claim.unavailableInProduction ||
+        claim.evidenceClass !== "spike-only-hidden")
+    ) {
+      throw new Error("TinyGo must remain hidden and spike-only")
+    }
+  }
+}
 
 export const STRATEGY_LANGUAGE_REGISTRY = SUPPORTED_STRATEGY_LANGUAGES.map(
   (language): StrategyLanguageRecord => ({
@@ -1108,7 +1257,7 @@ export const STRATEGY_RUNTIME_PRODUCT_VALIDATION_MESSAGES = {
 const readinessLabels = {
   "local-dev-fallback": "Local fallback",
   prototype: "Prototype",
-  "production-candidate": "Production candidate",
+  "production-candidate": "Readiness evidence only",
   experimental: "Experimental",
   unknown: "Unknown",
 } as const satisfies Record<StrategyRuntimeReadiness | "unknown", string>
@@ -1459,7 +1608,9 @@ export const describeStrategyRuntimeProductSemantics = (
       supportedLanguage?.label ?? language?.label ?? runtime.language.id,
     adapterLabel: adapter?.label ?? runtime.adapter.id,
     readiness,
-    readinessLabel: readinessLabels[readiness],
+    readinessLabel:
+      getStrategyRuntimeSandboxReadinessClaim(runtime.language.id)
+        ?.publicLabel ?? readinessLabels[readiness],
     experimental,
     countedPlayEligible: eligibility.ok,
     countedPlayLabel: eligibility.ok ? "Counted eligible" : "Not counted",

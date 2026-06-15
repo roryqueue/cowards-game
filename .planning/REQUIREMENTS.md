@@ -68,10 +68,10 @@ Close or explicitly reframe the remaining runtime/account/security-policy edges 
 
 ### Sandbox-Readiness and Labels
 
-- [ ] **SBOX-01**: Developer can publish a versioned sandbox-readiness/certification contract that distinguishes runtime containment, hostile-code evidence, source/artifact provenance, immutable artifact backing, candidate-readiness evidence, unavailable lanes, spike-only lanes, and actual production sandbox certification.
-- [ ] **SBOX-02**: No lane claims production sandbox certification unless the explicit evidence checklist is complete; current lanes remain uncertified unless v1.35 produces that evidence.
-- [ ] **LABEL-01**: Public and developer labels state that TypeScript/Python are provenance-only, Rust/Zig are immutable WASM/WASI Preview 1 artifact-backed, TinyGo is spike-only/hidden, and no current lane silently claims stronger isolation than it proves.
-- [ ] **LABEL-02**: Boundary monitors fail loudly on forbidden claim drift such as TypeScript/Python WASM isolation, broad production sandbox certification, TinyGo production support, package ecosystem support, or active direct-export/Component Model/WIT ABI claims.
+- [x] **SBOX-01**: Developer can publish a versioned sandbox-readiness/certification contract that distinguishes runtime containment, hostile-code evidence, source/artifact provenance, immutable artifact backing, candidate-readiness evidence, unavailable lanes, spike-only lanes, and actual production sandbox certification.
+- [x] **SBOX-02**: No lane claims production sandbox certification unless the explicit evidence checklist is complete; current lanes remain uncertified unless v1.35 produces that evidence.
+- [x] **LABEL-01**: Public and developer labels state that TypeScript/Python are provenance-only, Rust/Zig are immutable WASM/WASI Preview 1 artifact-backed, TinyGo is spike-only/hidden, and no current lane silently claims stronger isolation than it proves.
+- [x] **LABEL-02**: Boundary monitors fail loudly on forbidden claim drift such as TypeScript/Python WASM isolation, broad production sandbox certification, TinyGo production support, package ecosystem support, or active direct-export/Component Model/WIT ABI claims.
 
 ### Package and Dependency Policy
 

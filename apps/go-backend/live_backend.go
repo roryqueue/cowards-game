@@ -2462,6 +2462,19 @@ func validationIssue(code string, message string) map[string]any {
 	}
 }
 
+func sandboxReadinessLabel(languageID string) string {
+	switch languageID {
+	case "javascript":
+		return "Runtime containment evidence only"
+	case "typescript", "python":
+		return "Provenance evidence only"
+	case "rust", "zig":
+		return "WASM/WASI artifact-backed evidence"
+	default:
+		return "Readiness evidence only"
+	}
+}
+
 func runtimeSemantics(runtime map[string]any) map[string]any {
 	language := mapValue(runtime, "language")
 	adapter := mapValue(runtime, "adapter")
@@ -2474,7 +2487,7 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"languageLabel":        "Python",
 			"adapterLabel":         "Python subprocess provider",
 			"readiness":            "production-candidate",
-			"readinessLabel":       "Production candidate",
+			"readinessLabel":       sandboxReadinessLabel(languageID),
 			"experimental":         false,
 			"countedPlayEligible":  true,
 			"countedPlayLabel":     "Counted eligible",
@@ -2494,7 +2507,7 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"languageLabel":        "Rust",
 			"adapterLabel":         "WASM/WASI Wasmtime Preview 1",
 			"readiness":            "production-candidate",
-			"readinessLabel":       "Production candidate",
+			"readinessLabel":       sandboxReadinessLabel(languageID),
 			"experimental":         false,
 			"countedPlayEligible":  true,
 			"countedPlayLabel":     "Counted eligible",
@@ -2514,7 +2527,7 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"languageLabel":        "Zig",
 			"adapterLabel":         "WASM/WASI Wasmtime Preview 1",
 			"readiness":            "production-candidate",
-			"readinessLabel":       "Production candidate",
+			"readinessLabel":       sandboxReadinessLabel(languageID),
 			"experimental":         false,
 			"countedPlayEligible":  true,
 			"countedPlayLabel":     "Counted eligible",
@@ -2532,8 +2545,8 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 		"adapterId":            "runtime-js-worker-thread",
 		"languageLabel":        "TypeScript",
 		"adapterLabel":         "runtime-js worker thread",
-		"readiness":            "local-dev-fallback",
-		"readinessLabel":       "Local/dev fallback",
+		"readiness":            "production-candidate",
+		"readinessLabel":       sandboxReadinessLabel("typescript"),
 		"experimental":         false,
 		"countedPlayEligible":  true,
 		"countedPlayLabel":     "Counted eligible",

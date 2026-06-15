@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.35
 milestone_name: Runtime, Account Ownership, Sandbox, and Package Policy Cleanup
 status: executing
-stopped_at: Phase 245 complete
+stopped_at: Phase 246 complete
 last_updated: "2026-06-15T00:00:00.000Z"
-last_activity: 2026-06-15 -- Phase 245 complete
+last_activity: 2026-06-15 -- Phase 246 complete
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
-  percent: 50
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 9
+  percent: 67
 ---
 
 # State: Coward's Game v1.35
@@ -21,22 +21,22 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 245 — Ownership, Owner-Debug, and Workshop Alias Cleanup
+**Current focus:** Phase 247 — Package and Dependency Policy Enforcement
 
 ## Current Position
 
-Phase: 246 of 248 (Sandbox-Readiness Claims and Runtime Labels)
+Phase: 247 of 248 (Package and Dependency Policy Enforcement)
 Plan: Not planned yet
 Status: Ready to discuss
-Last activity: 2026-06-15 -- Phase 245 complete
+Last activity: 2026-06-15 -- Phase 246 complete
 
-Progress: [#####-----] 50%
+Progress: [#######---] 67%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 3
+- Total plans completed: 9
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -46,8 +46,8 @@ Progress: [#####-----] 50%
 |-------|-------|-------|----------|
 | 243 | 3 | - | - |
 | 244 | 4 | - | - |
-| 245 | TBD | - | - |
-| 246 | TBD | - | - |
+| 245 | 1 | - | - |
+| 246 | 1 | - | - |
 | 247 | TBD | - | - |
 | 248 | TBD | - | - |
 
@@ -61,6 +61,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 243 established the authoritative v1.35 boundary surface inventory and locked decision register for account/provider, owner-debug, Workshop alias, sandbox-label, and package-policy cleanup.
 - Phase 244 completed TypeScript Go runtime-service validation parity, provider-proof-backed account save readiness, Go/persistence entry parity, proof-aware public labels, and the v1.35 account/provider/entry proof monitor.
 - Phase 245 completed local Workshop identity quarantine, server-authorized owner-debug proof, source alias deprecation, public-only local Workshop replay UX, and the v1.35 ownership/alias proof monitor.
+- Phase 246 completed the versioned sandbox-readiness contract, evidence-scoped runtime labels, no-certification guardrails, and the v1.35 sandbox readiness proof monitor.
 - TinyGo remains spike-only/hidden, package mode remains `none`, and no current lane claims production sandbox certification.
 
 ### Pending Todos

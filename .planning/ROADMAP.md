@@ -9,7 +9,7 @@ v1.35 closes the runtime/account/security-policy edges left after v1.34 by makin
 - [x] **Phase 243: Boundary Surface Inventory and Contract Lock** - Inventory v1.35-affected trust surfaces and lock fix/quarantine/deprecation/future decisions before behavior changes. (completed 2026-06-14)
 - [x] **Phase 244: Account Revision Provider-Proof and Entry Gates** - Make account save and entry readiness require current provider-grade proof or explicit non-execution states. (completed 2026-06-14)
 - [x] **Phase 245: Ownership, Owner-Debug, and Workshop Alias Cleanup** - Restrict local trust shortcuts, authorize private owner views server-side, and settle legacy Workshop aliases. (completed 2026-06-15)
-- [ ] **Phase 246: Sandbox-Readiness Claims and Runtime Labels** - Publish conservative readiness/certification labels and fail-loud monitors for unsupported isolation claims.
+- [x] **Phase 246: Sandbox-Readiness Claims and Runtime Labels** - Publish conservative readiness/certification labels and fail-loud monitors for unsupported isolation claims. (completed 2026-06-15)
 - [ ] **Phase 247: Package and Dependency Policy Enforcement** - Define and enforce the current no-package/no-host-import policy across production Strategy lanes.
 - [ ] **Phase 248: Service-Backed Proof, Privacy, and Boundary Monitors** - Prove the corrected account/provider/privacy/package/sandbox boundaries with tests, scans, monitors, and final evidence.
 
@@ -81,8 +81,11 @@ Plans:
   2. Public and developer UI labels state that TypeScript/Python are provenance-only, Rust/Zig are immutable WASM/WASI Preview 1 artifact-backed, TinyGo is spike-only/hidden, and no current lane claims stronger isolation than it proves.
   3. User sees no production sandbox certification claim unless the explicit evidence checklist is complete; current lanes remain uncertified unless v1.35 genuinely produces that evidence.
   4. Boundary monitors fail loudly on forbidden claim drift such as TypeScript/Python WASM isolation, broad production sandbox certification, TinyGo production support, package ecosystem support, or active direct-export/Component Model/WIT ABI claims.
-**Plans**: TBD
+**Plans**: 1 plan
 **UI hint**: yes
+Plans:
+**Wave 1**
+- [x] 246-01-PLAN.md — Sandbox-readiness contract, runtime labels, and fail-loud claim monitor.
 
 ### Phase 247: Package and Dependency Policy Enforcement
 **Goal**: Users and developers have one enforced no-package/no-host-import production policy for all current Strategy lanes.
@@ -118,14 +121,14 @@ Phases execute in numeric order: 243 -> 244 -> 245 -> 246 -> 247 -> 248
 | 243. Boundary Surface Inventory and Contract Lock | 3/3 | Complete   | 2026-06-14 |
 | 244. Account Revision Provider-Proof and Entry Gates | 4/4 | Complete   | 2026-06-14 |
 | 245. Ownership, Owner-Debug, and Workshop Alias Cleanup | 1/1 | Complete   | 2026-06-15 |
-| 246. Sandbox-Readiness Claims and Runtime Labels | 0/TBD | Not started | - |
+| 246. Sandbox-Readiness Claims and Runtime Labels | 1/1 | Complete   | 2026-06-15 |
 | 247. Package and Dependency Policy Enforcement | 0/TBD | Not started | - |
 | 248. Service-Backed Proof, Privacy, and Boundary Monitors | 0/TBD | Not started | - |
 
 ## Coverage
 
 - v1 requirements: 32 total
-- Complete: 19
+- Complete: 23
 - Planned: 32
 - Mapped to phases: 32
 - Unmapped: 0

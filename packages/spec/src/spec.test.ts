@@ -51,6 +51,7 @@ import {
   getSupportedStrategyLanguageRecord,
   getStrategyLanguageProviderRecord,
   assertNonJsRuntimeGuardrails,
+  assertStrategyRuntimeSandboxReadinessContract,
   NON_JS_RUNTIME_PROMOTION_CRITERIA,
   NON_JS_RUNTIME_SUPPORT_POLICY,
   RUNTIME_BROKER_REGISTRY,
@@ -60,7 +61,9 @@ import {
   SUPPORTED_STRATEGY_LANGUAGES,
   STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   STRATEGY_RUNTIME_ABI_VERSION,
+  STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS,
   STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
+  getStrategyRuntimeSandboxReadinessClaim,
   runtimeCompatibilityKey,
   validateStrategyLanguageProviderRuntimeCompatibility,
   validateRuntimeBrokerRegistryMatch,
@@ -290,7 +293,7 @@ describe("Coward's Game spec contracts", () => {
       describeStrategyRuntimeProductSemantics(pythonRuntime),
     ).toMatchObject({
       languageLabel: "Python",
-      readinessLabel: "Production candidate",
+      readinessLabel: "Provenance evidence only",
       countedPlayLabel: "Counted eligible",
       experimental: false,
     })
@@ -346,11 +349,44 @@ describe("Coward's Game spec contracts", () => {
       describeStrategyRuntimeProductSemantics(containerRuntime),
     ).toMatchObject({
       adapterLabel: "runtime-js container subprocess",
-      readinessLabel: "Production candidate",
+      readinessLabel: "Provenance evidence only",
       countedPlayLabel: "Not counted",
       countedPlayEligible: false,
     })
     expect(() => assertNonJsRuntimeGuardrails()).not.toThrow()
+    expect(() => assertStrategyRuntimeSandboxReadinessContract()).not.toThrow()
+    expect(
+      STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS.every(
+        (claim) => claim.productionSandboxCertification === false,
+      ),
+    ).toBe(true)
+    expect(getStrategyRuntimeSandboxReadinessClaim("typescript")).toMatchObject(
+      {
+        evidenceClass: "source-artifact-provenance",
+        artifactPosture: "source-language-artifact-provenance",
+        publicLabel: "Provenance evidence only",
+      },
+    )
+    expect(getStrategyRuntimeSandboxReadinessClaim("python")).toMatchObject({
+      evidenceClass: "source-artifact-provenance",
+      artifactPosture: "source-language-artifact-provenance",
+      publicLabel: "Provenance evidence only",
+    })
+    expect(getStrategyRuntimeSandboxReadinessClaim("rust")).toMatchObject({
+      evidenceClass: "immutable-wasm-wasi-preview1-artifact",
+      artifactPosture: "immutable-wasm-wasi-preview1",
+      publicLabel: "WASM/WASI artifact-backed evidence",
+    })
+    expect(getStrategyRuntimeSandboxReadinessClaim("zig")).toMatchObject({
+      evidenceClass: "immutable-wasm-wasi-preview1-artifact",
+      artifactPosture: "immutable-wasm-wasi-preview1",
+      publicLabel: "WASM/WASI artifact-backed evidence",
+    })
+    expect(getStrategyRuntimeSandboxReadinessClaim("tinygo")).toMatchObject({
+      evidenceClass: "spike-only-hidden",
+      unavailableInProduction: true,
+      publicLabel: "Hidden spike-only lane",
+    })
     expect(NON_JS_RUNTIME_SUPPORT_POLICY).toMatchObject({
       status: "partial-production-supported",
       productionSupportedLanguageIds: [
