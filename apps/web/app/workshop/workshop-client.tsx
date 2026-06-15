@@ -25,6 +25,7 @@ import {
   formatCheckerDiagnosticHeading,
   formatValidationIssueGuidance,
   formatValidationIssueHeading,
+  getAccountRevisionSourceHref,
   getReplayHref,
   getOwnerReplayHref,
   getDraftStatusClass,
@@ -461,15 +462,24 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   }
 
   const loadRevisionSource = async (revisionId: string) => {
-    const response = await fetch(
-      `/api/workshop/revisions/${encodeURIComponent(revisionId)}/source`,
-    )
-    const body = (await response.json()) as { source?: string; error?: string }
-    if (!response.ok || typeof body.source !== "string") {
-      setSubmitError(body.error ?? "Revision source could not be loaded.")
+    const response = await fetch(getAccountRevisionSourceHref(revisionId))
+    const body = await response.text()
+    if (!response.ok) {
+      let error = "Revision source could not be loaded."
+      try {
+        const parsed = JSON.parse(body) as { error?: unknown }
+        if (typeof parsed.error === "string") {
+          error = parsed.error
+        }
+      } catch {
+        if (body.trim()) {
+          error = body.trim()
+        }
+      }
+      setSubmitError(error)
       return
     }
-    setSource(body.source)
+    setSource(body)
     setSourceFormat(
       normalizeEditorSourceFormat(
         revisions.find((revision) => revision.id === revisionId)?.sourceFormat,

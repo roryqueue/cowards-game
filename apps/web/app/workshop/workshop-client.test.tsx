@@ -12,6 +12,7 @@ import {
   formatCheckerDiagnosticHeading,
   formatValidationIssueGuidance,
   formatValidationIssueHeading,
+  getAccountRevisionSourceHref,
   getSampleChipLabels,
   getSampleKindLabel,
   getDraftStatusLabel,
@@ -405,6 +406,12 @@ describe("Strategy Workshop validation helpers", () => {
     expect(prependRevision([], revision)[0]).toBe(revision)
     expect(getRevisionTitle(revision)).toBe("Untitled revision")
     expect(formatUsedInMatches(revision)).toBe("2 used in matches")
+    expect(getAccountRevisionSourceHref(revision.id)).toBe(
+      "/api/account/revisions/strategy-revision%3A1/source",
+    )
+    expect(getAccountRevisionSourceHref("strategy revision/space")).toBe(
+      "/api/account/revisions/strategy%20revision%2Fspace/source",
+    )
     expect("Submit revision").toBe("Submit revision")
     expect("Revision submitted").toBe("Revision submitted")
     expect("Load source").toBe("Load source")

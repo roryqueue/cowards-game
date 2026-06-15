@@ -242,6 +242,9 @@ export const formatUsedInMatches = (
   revision: WorkshopRevisionSummary,
 ): string => `${revision.usedInMatches} used in matches`
 
+export const getAccountRevisionSourceHref = (revisionId: string): string =>
+  `/api/account/revisions/${encodeURIComponent(revisionId)}/source`
+
 export const prependRevision = (
   revisions: WorkshopRevisionSummary[],
   revision: WorkshopRevisionSummary,
