@@ -305,6 +305,7 @@ export const canOpenOwnerReplay = (
   match: WorkshopMatchSummary,
   localPlayerId = LOCAL_WORKSHOP_PLAYER_ID,
 ): boolean =>
+  localPlayerId !== LOCAL_WORKSHOP_PLAYER_ID &&
   canOpenReplay(match) &&
   getWorkshopOwnerPlayerId(match, localPlayerId) !== null
 
@@ -332,10 +333,7 @@ export const getReplayAvailability = (
       state: "available",
       label: "Open replay",
       href: getReplayHref(match.matchId),
-      ownerHref:
-        getWorkshopOwnerPlayerId(match) === null
-          ? null
-          : getOwnerReplayHref(match.matchId, LOCAL_WORKSHOP_PLAYER_ID),
+      ownerHref: null,
       reason: null,
     }
   }

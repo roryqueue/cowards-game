@@ -55,16 +55,16 @@ Close or explicitly reframe the remaining runtime/account/security-policy edges 
 
 ### Ownership, Local Trust, and Private Replay
 
-- [ ] **AUTH-01**: `player:workshop-local` and no-auth local shortcuts are restricted to ephemeral Workshop/test-only flows and cannot authorize persisted account-owned revisions, private source reads, owner-debug replay, private analytics, or competition entry.
-- [ ] **AUTH-02**: Account-owned Strategy source/read/write paths require the current server-authorized account/session or internal test authorization and return private/no-store responses where source or owner-private evidence is involved.
-- [ ] **PRIV-01**: Owner-debug/private replay evidence requires server-side owner/participant authorization or internal test authorization; query parameters may request owner view but cannot grant it.
-- [ ] **PRIV-02**: Public/default replay, result, account, Strategy, entry, checker, and evidence outputs omit owner-debug payloads, owner-private data, Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grids, raw diagnostics, host paths, env values, tokens, DB details, package paths, artifact bytes, provider signing material, and private runtime internals.
+- [x] **AUTH-01**: `player:workshop-local` and no-auth local shortcuts are restricted to ephemeral Workshop/test-only flows and cannot authorize persisted account-owned revisions, private source reads, owner-debug replay, private analytics, or competition entry.
+- [x] **AUTH-02**: Account-owned Strategy source/read/write paths require the current server-authorized account/session or internal test authorization and return private/no-store responses where source or owner-private evidence is involved.
+- [x] **PRIV-01**: Owner-debug/private replay evidence requires server-side owner/participant authorization or internal test authorization; query parameters may request owner view but cannot grant it.
+- [x] **PRIV-02**: Public/default replay, result, account, Strategy, entry, checker, and evidence outputs omit owner-debug payloads, owner-private data, Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grids, raw diagnostics, host paths, env values, tokens, DB details, package paths, artifact bytes, provider signing material, and private runtime internals.
 
 ### Workshop Compatibility Aliases
 
-- [ ] **API-01**: Developer can decide the fate of legacy Workshop source, submit, save, and compatibility aliases as removed, hidden/local-only, migrated, or deprecated.
-- [ ] **API-02**: Removed or deprecated aliases return explicit public-safe migration errors without leaking source, owner-private data, provider internals, host paths, raw diagnostics, or account details.
-- [ ] **API-03**: Retained aliases are tested so they cannot bypass current provider-proof, account authorization, package policy, TinyGo hiding, or public/default privacy rules.
+- [x] **API-01**: Developer can decide the fate of legacy Workshop source, submit, save, and compatibility aliases as removed, hidden/local-only, migrated, or deprecated.
+- [x] **API-02**: Removed or deprecated aliases return explicit public-safe migration errors without leaking source, owner-private data, provider internals, host paths, raw diagnostics, or account details.
+- [x] **API-03**: Retained aliases are tested so they cannot bypass current provider-proof, account authorization, package policy, TinyGo hiding, or public/default privacy rules.
 
 ### Sandbox-Readiness and Labels
 
@@ -130,13 +130,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENTRY-02 | Phase 244 | Complete |
 | ENTRY-03 | Phase 244 | Complete |
 | ENTRY-04 | Phase 244 | Complete |
-| AUTH-01 | Phase 245 | Pending |
-| AUTH-02 | Phase 245 | Pending |
-| PRIV-01 | Phase 245 | Pending |
-| PRIV-02 | Phase 245 | Pending |
-| API-01 | Phase 245 | Pending |
-| API-02 | Phase 245 | Pending |
-| API-03 | Phase 245 | Pending |
+| AUTH-01 | Phase 245 | Complete |
+| AUTH-02 | Phase 245 | Complete |
+| PRIV-01 | Phase 245 | Complete |
+| PRIV-02 | Phase 245 | Complete |
+| API-01 | Phase 245 | Complete |
+| API-02 | Phase 245 | Complete |
+| API-03 | Phase 245 | Complete |
 | SBOX-01 | Phase 246 | Pending |
 | SBOX-02 | Phase 246 | Pending |
 | LABEL-01 | Phase 246 | Pending |
@@ -153,7 +153,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 32 total
-- Complete: 12
+- Complete: 19
 - Planned: 32
 - Mapped to phases: 32
 - Unmapped: 0

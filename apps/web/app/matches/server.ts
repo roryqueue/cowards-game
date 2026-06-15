@@ -49,6 +49,7 @@ type ResolveAuthorizedReplayOwners = (input: {
 }) => Promise<readonly PlayerId[]>
 
 const WORKSHOP_MATCH_SET_PREFIX = "match-set:workshop:"
+const LOCAL_WORKSHOP_PLAYER_ID = "player:workshop-local"
 
 const isOwnerDebugReplayRequestEnabled = (
   env: PublicReadRouteOwnershipEnv,
@@ -187,6 +188,12 @@ const resolvePersistedMatchOwners: ResolveAuthorizedReplayOwners = async ({
   requestedOwnerPlayerId,
   currentPlayerId,
 }) => {
+  if (
+    requestedOwnerPlayerId === LOCAL_WORKSHOP_PLAYER_ID ||
+    currentPlayerId === LOCAL_WORKSHOP_PLAYER_ID
+  ) {
+    return []
+  }
   if (
     currentPlayerId !== requestedOwnerPlayerId ||
     requestedOwnerPlayerId !== currentPlayerId

@@ -70,7 +70,7 @@ test("Workshop edit-to-replay path opens a completed Match replay", async ({
   ).toBeVisible()
 })
 
-test("Workshop failure sample opens owner debug replay without leaking public replay data", async ({
+test("Workshop failure sample keeps local replay public-only", async ({
   page,
 }) => {
   test.setTimeout(90_000)
@@ -107,25 +107,14 @@ test("Workshop failure sample opens owner debug replay without leaking public re
     "[chronicle_validation] failure-mode Match did not reach a replayable terminal state",
   ).toBeVisible()
 
-  const ownerReplayLink = page.getByRole("link", {
-    name: "Open owner debug",
-  })
+  const ownerReplayLink = page.getByRole("link", { name: "Open owner debug" })
   await expect(
-    ownerReplayLink.first(),
-    "[replay_projection] owner replay link was not exposed for the Workshop participant",
-  ).toBeVisible()
-  const ownerHref = await ownerReplayLink.first().getAttribute("href")
-  expect(ownerHref).toContain("ownerDebug=1")
-  expect(ownerHref).toContain("ownerPlayerId=player%3Aworkshop-local")
+    ownerReplayLink,
+    "[replay_projection] local Workshop identity must not expose owner-debug replay links",
+  ).toHaveCount(0)
 
-  await ownerReplayLink.first().click()
-  await expect(page.locator(".replay-status-chip")).toHaveText("Owner debug")
-  const ownerToggle = page.getByTestId("replay-owner-debug-toggle")
-  await expect(ownerToggle).toBeVisible()
-  await expect(ownerToggle).not.toBeChecked()
-  await expect(page.getByText("Why this Soldier did nothing")).toHaveCount(0)
-
-  const explanation = page.getByTestId("replay-soldier-inactivity-explanation")
+  await page.getByRole("link", { name: "Open replay" }).first().click()
+  await expect(page.locator(".replay-status-chip")).toHaveText("Public view")
   const runtimeViolationEvents = page.getByRole("button", {
     name: /Timeline event \d+: RUNTIME_VIOLATION/,
   })
@@ -136,53 +125,7 @@ test("Workshop failure sample opens owner debug replay without leaking public re
   const ownerSoldierCount = await ownerSoldiers.count()
   expect(runtimeViolationCount).toBeGreaterThan(0)
   expect(ownerSoldierCount).toBeGreaterThan(0)
-  for (
-    let soldierIndex = 0;
-    soldierIndex < ownerSoldierCount;
-    soldierIndex += 1
-  ) {
-    await ownerSoldiers.nth(soldierIndex).click()
-    for (
-      let eventIndex = 0;
-      eventIndex < runtimeViolationCount;
-      eventIndex += 1
-    ) {
-      await runtimeViolationEvents.nth(eventIndex).click()
-      await ownerToggle.check()
-      if ((await explanation.count()) === 0) {
-        continue
-      }
-      if (
-        (await explanation.getAttribute("data-cause-code")) ===
-        "THROWN_EXCEPTION"
-      ) {
-        break
-      }
-    }
-    if (
-      (await explanation.count()) > 0 &&
-      (await explanation.getAttribute("data-cause-code")) === "THROWN_EXCEPTION"
-    ) {
-      break
-    }
-  }
 
-  await expect(explanation).toBeVisible()
-  await expect(explanation).toHaveAttribute(
-    "data-cause-code",
-    "THROWN_EXCEPTION",
-  )
-  await expect(
-    explanation.getByText("Why this Soldier did nothing"),
-  ).toBeVisible()
-  await expect(explanation.getByText("Strategy threw")).toBeVisible()
-
-  const publicReplayPath = page
-    .url()
-    .replace(/[?&]ownerDebug=1/g, "")
-    .replace(/[?&]ownerPlayerId=[^&]+/g, "")
-  await page.goto(publicReplayPath)
-  await expect(page.locator(".replay-status-chip")).toHaveText("Public view")
   const publicBody = await page.locator("body").innerText()
   for (const marker of privateReplayMarkers) {
     expect(

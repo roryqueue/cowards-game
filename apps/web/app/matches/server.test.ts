@@ -934,7 +934,7 @@ describe("Match replay server facade", () => {
     expect(response).not.toHaveProperty("ownerDebug")
   })
 
-  it("uses persisted Match participant data to authorize requested owner replay", async () => {
+  it("quarantines local Workshop identity even when stale persisted Match rows authorize it", async () => {
     const stored = createStoredChronicleForBottomOwner("player:workshop-local")
     const pool = createMatchOwnerPool([{ authorized: true }])
     const server = createMatchReplayServer({
@@ -954,15 +954,13 @@ describe("Match replay server facade", () => {
     if (response.status !== "ready") {
       return
     }
-    expect(response.mode).toBe("owner")
-    expect(response.ownerPlayerId).toBe("player:workshop-local")
-    expect(response.projection.viewer).toEqual({
-      access: "owner",
-      playerId: "player:workshop-local",
-    })
-    expect(
-      response.ownerDebug?.soldierInactivityExplanations.length,
-    ).toBeGreaterThan(0)
+    expect(response.mode).toBe("public")
+    expect(response.projection.viewer).toEqual({ access: "public" })
+    expect(response).not.toHaveProperty("ownerPlayerId")
+    expect(response).not.toHaveProperty("ownerDebug")
+    expect(JSON.stringify(response)).not.toContain(
+      "PRIVATE_OWNER_DEBUG_EXPLANATION",
+    )
   })
 
   it("upgrades an authorized requested owner through the server resolver", async () => {

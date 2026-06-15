@@ -482,8 +482,7 @@ describe("Strategy Workshop validation helpers", () => {
       state: "available",
       label: "Open replay",
       href: "/matches/match%3Acomplete/replay",
-      ownerHref:
-        "/matches/match%3Acomplete/replay?ownerDebug=1&ownerPlayerId=player%3Aworkshop-local",
+      ownerHref: null,
       reason: null,
     })
     expect(
@@ -539,7 +538,7 @@ describe("Strategy Workshop validation helpers", () => {
     ).toBe("Replay unavailable: this completed Match has no stored Chronicle.")
   })
 
-  it("builds owner replay links only for local Workshop participant Matches", () => {
+  it("keeps local Workshop replay links public-only", () => {
     const mirroredMatch = {
       matchId: "match:mirrored",
       status: "complete" as const,
@@ -559,10 +558,8 @@ describe("Strategy Workshop validation helpers", () => {
     expect(getWorkshopOwnerPlayerId(mirroredMatch)).toBe(
       "player:workshop-local",
     )
-    expect(canOpenOwnerReplay(mirroredMatch)).toBe(true)
-    expect(getReplayAvailability(mirroredMatch).ownerHref).toBe(
-      "/matches/match%3Amirrored/replay?ownerDebug=1&ownerPlayerId=player%3Aworkshop-local",
-    )
+    expect(canOpenOwnerReplay(mirroredMatch)).toBe(false)
+    expect(getReplayAvailability(mirroredMatch).ownerHref).toBeNull()
     expect(getWorkshopOwnerPlayerId(nonParticipantMatch)).toBeNull()
     expect(canOpenOwnerReplay(nonParticipantMatch)).toBe(false)
     expect(getReplayAvailability(nonParticipantMatch).ownerHref).toBeNull()

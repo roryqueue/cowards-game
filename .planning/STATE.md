@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.35
 milestone_name: Runtime, Account Ownership, Sandbox, and Package Policy Cleanup
 status: executing
-stopped_at: Phase 244 complete
-last_updated: "2026-06-14T23:08:29.751Z"
-last_activity: 2026-06-14 -- Phase 244 complete
+stopped_at: Phase 245 complete
+last_updated: "2026-06-15T00:00:00.000Z"
+last_activity: 2026-06-15 -- Phase 245 complete
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
-  percent: 33
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 8
+  percent: 50
 ---
 
 # State: Coward's Game v1.35
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md`
 
 ## Current Position
 
-Phase: 245 of 248 (Ownership, Owner-Debug, and Workshop Alias Cleanup)
+Phase: 246 of 248 (Sandbox-Readiness Claims and Runtime Labels)
 Plan: Not planned yet
 Status: Ready to discuss
-Last activity: 2026-06-14 -- Phase 244 complete
+Last activity: 2026-06-15 -- Phase 245 complete
 
-Progress: [###-------] 33%
+Progress: [#####-----] 50%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - v1.35 phases continue after v1.34, starting at Phase 243 and ending at Phase 248.
 - Phase 243 established the authoritative v1.35 boundary surface inventory and locked decision register for account/provider, owner-debug, Workshop alias, sandbox-label, and package-policy cleanup.
 - Phase 244 completed TypeScript Go runtime-service validation parity, provider-proof-backed account save readiness, Go/persistence entry parity, proof-aware public labels, and the v1.35 account/provider/entry proof monitor.
+- Phase 245 completed local Workshop identity quarantine, server-authorized owner-debug proof, source alias deprecation, public-only local Workshop replay UX, and the v1.35 ownership/alias proof monitor.
 - TinyGo remains spike-only/hidden, package mode remains `none`, and no current lane claims production sandbox certification.
 
 ### Pending Todos
@@ -68,8 +69,6 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 245 must ensure local Workshop trust shortcuts cannot authorize persisted account-owned/private replay behavior.
-- Phase 245 must decide the route-by-route fate of legacy Workshop aliases.
 - Phase 246 and Phase 247 must not overclaim sandbox certification or package support beyond produced evidence.
 
 ## Deferred Items

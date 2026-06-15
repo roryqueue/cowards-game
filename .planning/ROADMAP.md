@@ -8,7 +8,7 @@ v1.35 closes the runtime/account/security-policy edges left after v1.34 by makin
 
 - [x] **Phase 243: Boundary Surface Inventory and Contract Lock** - Inventory v1.35-affected trust surfaces and lock fix/quarantine/deprecation/future decisions before behavior changes. (completed 2026-06-14)
 - [x] **Phase 244: Account Revision Provider-Proof and Entry Gates** - Make account save and entry readiness require current provider-grade proof or explicit non-execution states. (completed 2026-06-14)
-- [ ] **Phase 245: Ownership, Owner-Debug, and Workshop Alias Cleanup** - Restrict local trust shortcuts, authorize private owner views server-side, and settle legacy Workshop aliases.
+- [x] **Phase 245: Ownership, Owner-Debug, and Workshop Alias Cleanup** - Restrict local trust shortcuts, authorize private owner views server-side, and settle legacy Workshop aliases. (completed 2026-06-15)
 - [ ] **Phase 246: Sandbox-Readiness Claims and Runtime Labels** - Publish conservative readiness/certification labels and fail-loud monitors for unsupported isolation claims.
 - [ ] **Phase 247: Package and Dependency Policy Enforcement** - Define and enforce the current no-package/no-host-import policy across production Strategy lanes.
 - [ ] **Phase 248: Service-Backed Proof, Privacy, and Boundary Monitors** - Prove the corrected account/provider/privacy/package/sandbox boundaries with tests, scans, monitors, and final evidence.
@@ -66,8 +66,11 @@ Plans:
   3. Owner can request owner-debug/private replay, but the owner view appears only after server-side owner/participant authorization or internal test authorization; query parameters alone return the public projection.
   4. Public/default replay, result, account, Strategy, entry, checker, and evidence outputs omit owner-debug payloads, owner-private data, Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw Awareness Grids, raw diagnostics, host paths, env values, tokens, DB details, package paths, artifact bytes, provider signing material, and private runtime internals.
   5. Developer can see each legacy Workshop source, submit, save, and compatibility alias removed, hidden/local-only, migrated, or deprecated, and retained aliases cannot bypass provider-proof, account authorization, package policy, TinyGo hiding, or privacy rules.
-**Plans**: TBD
+**Plans**: 1 plan
 **UI hint**: yes
+Plans:
+**Wave 1**
+- [x] 245-01-PLAN.md — Ownership, owner-debug, and Workshop source alias cleanup.
 
 ### Phase 246: Sandbox-Readiness Claims and Runtime Labels
 **Goal**: Users and developers see precise runtime-readiness claims that distinguish evidence from production sandbox certification.
@@ -114,7 +117,7 @@ Phases execute in numeric order: 243 -> 244 -> 245 -> 246 -> 247 -> 248
 |-------|----------------|--------|-----------|
 | 243. Boundary Surface Inventory and Contract Lock | 3/3 | Complete   | 2026-06-14 |
 | 244. Account Revision Provider-Proof and Entry Gates | 4/4 | Complete   | 2026-06-14 |
-| 245. Ownership, Owner-Debug, and Workshop Alias Cleanup | 0/TBD | Not started | - |
+| 245. Ownership, Owner-Debug, and Workshop Alias Cleanup | 1/1 | Complete   | 2026-06-15 |
 | 246. Sandbox-Readiness Claims and Runtime Labels | 0/TBD | Not started | - |
 | 247. Package and Dependency Policy Enforcement | 0/TBD | Not started | - |
 | 248. Service-Backed Proof, Privacy, and Boundary Monitors | 0/TBD | Not started | - |
@@ -122,7 +125,7 @@ Phases execute in numeric order: 243 -> 244 -> 245 -> 246 -> 247 -> 248
 ## Coverage
 
 - v1 requirements: 32 total
-- Complete: 12
+- Complete: 19
 - Planned: 32
 - Mapped to phases: 32
 - Unmapped: 0
