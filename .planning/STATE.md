@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.36
 milestone_name: Competition Maturity
 status: planning
-stopped_at: roadmap created; ready for phase 249 discussion
+stopped_at: Phase 249 context gathered
 last_updated: "2026-06-15T00:00:00.000Z"
-last_activity: 2026-06-15 -- v1.36 roadmap created with phases 249-255
+last_activity: 2026-06-15 -- Phase 249 context gathered
 progress:
   total_phases: 7
   completed_phases: 0
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-06-15)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.36 Competition Maturity roadmap and Phase 249 discussion
+**Current focus:** Phase 249 planning
 
 ## Current Position
 
 Phase: 249 - Competition Surface Inventory and Policy Lock
 Plan: -
-Status: Roadmap created; ready for phase discussion
-Last activity: 2026-06-15 -- v1.36 roadmap created with 7 phases and 39/39 requirements mapped
+Status: Context gathered; ready for planning
+Last activity: 2026-06-15 -- Phase 249 context gathered
 
 Progress: [----------] 0%
 
@@ -70,8 +70,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Run `$gsd-discuss-phase 249` to clarify Phase 249.
-- Run `$gsd-plan-phase 249` after discussion approval.
+- Run `$gsd-plan-phase 249` to create executable plans from the captured context.
 
 ### Blockers/Concerns
 
@@ -94,6 +93,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 ## Session Continuity
 
 Last session: 2026-06-15T00:00:00.000Z
-Stopped at: v1.36 roadmap created; ready for Phase 249 discussion
-Resume file: `.planning/ROADMAP.md`
-Next command: `$gsd-discuss-phase 249`
+Stopped at: Phase 249 context gathered
+Resume file: `.planning/phases/249-competition-surface-inventory-and-policy-lock/249-CONTEXT.md`
+Next command: `$gsd-plan-phase 249`
