@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup on 2026-06-15
-**Current milestone:** Planning next milestone
-**Status:** v1.35 is shipped and archived. Coward's Game now has an authoritative runtime/account/security-policy boundary inventory, provider-proof-backed account save and entry gates, server-authorized account source and owner-debug boundaries, deprecated Workshop source aliases, evidence-scoped sandbox readiness labels, enforced no-package/no-host-import policy, service-backed PostgreSQL proof for the corrected TypeScript account/provider path, and final proof artifacts wired into boundary monitors. TypeScript, Python, Rust, and Zig remain supported counted Strategy languages through provider-gated runtime evidence. TypeScript and Python source-language artifact provenance remains provenance evidence, not WASM isolation. Rust and Zig remain immutable WASM/WASI Preview 1 artifact-backed lanes. TinyGo remains spike-only and hidden from production surfaces.
+**Current milestone:** v1.36 Competition Maturity
+**Status:** v1.36 planning is active. v1.35 is shipped and archived. Coward's Game now has an authoritative runtime/account/security-policy boundary inventory, provider-proof-backed account save and entry gates, server-authorized account source and owner-debug boundaries, deprecated Workshop source aliases, evidence-scoped sandbox readiness labels, enforced no-package/no-host-import policy, service-backed PostgreSQL proof for the corrected TypeScript account/provider path, and final proof artifacts wired into boundary monitors. TypeScript, Python, Rust, and Zig remain supported counted Strategy languages through provider-gated runtime evidence. TypeScript and Python source-language artifact provenance remains provenance evidence, not WASM isolation. Rust and Zig remain immutable WASM/WASI Preview 1 artifact-backed lanes. TinyGo remains spike-only and hidden from production surfaces.
 **Last audit:** v1.35 audit passed after fixing one integration gap where Workshop Load source still called a deprecated alias, refreshing generated OpenAPI/v1.16 inventory artifacts, and rerunning the full boundary monitor chain.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.
@@ -12,6 +12,26 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.36 Competition Maturity
+
+**Goal:** Move Coward's Game competition from alpha/trial posture toward mature public beta by tightening season policy, entry eligibility, standings/result governance, abuse/dispute/recovery expectations, public trust copy, and replay/result proof while preserving deterministic rules and runtime ownership boundaries.
+
+**Target features:**
+- Inventory competition surfaces: exhibition MatchSets, trial ladder seasons, counted/non-counted/degraded result policy, standings recomputation, entry eligibility, one-active-revision rules, same-user/multi-revision/self-play behavior, public result/replay/player/Strategy pages, governance/status marking, and abuse/dispute/account-recovery assumptions.
+- Decide the honest v1.36 competition posture: what remains resettable or trial, what can be called public beta, whether durable ratings remain out of scope, and what public copy must say about resets, counted status, degraded Matches, and dispute outcomes.
+- Tighten counted entry and season rules so eligibility uses current provider-proof, language, runtime, provenance, sandbox-readiness, and package-policy evidence from v1.35 without admitting stale artifacts, unsupported providers, hidden TinyGo, invalid provenance, or unavailable runtime lanes.
+- Clarify same-user, multi-revision, and self-play behavior for exhibitions versus ranked/trial competition without changing deterministic game rules.
+- Mature standings and result governance so counted, non-counted, degraded, disputed, and invalidated states are recomputable, auditable, player-explainable, and public-safe.
+- Add abuse, dispute, and account-recovery policy surfaces appropriate for public beta, while clearly distinguishing product behavior now from future moderation or recovery work.
+- Improve public trust UX across standings, competition, result, replay, player, and Strategy pages so eligibility, counted status, season state, and evidence availability are understandable without exposing private internals.
+- Prove entry -> counted MatchSet -> execution -> result -> standings -> replay, degraded/non-counted/disputed/invalidated scenarios, privacy boundaries, public copy posture, and replay/result realism checks.
+
+**Hard boundaries:**
+- No game-rule changes unless explicitly justified and approved.
+- Strategy execution remains outside web/API/Go and behind runtime-service / Runtime Broker / provider boundaries.
+- No new runtime, sandbox, package, TinyGo, or durable permanent rating claims beyond proven v1.35 evidence.
+- Public/default output must not expose raw diagnostics, Strategy source, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, objective payloads, account-recovery payloads, dispute internals, or operator-only governance details.
 
 ## Latest Shipped Milestone: v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup
 
@@ -33,7 +53,7 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - TinyGo remains spike-only and hidden from production surfaces.
 - No public/default output may expose raw diagnostics, Strategy source, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, or objective payloads.
 
-**Archive:** `.planning/milestones/v1.35-ROADMAP.md`, `.planning/milestones/v1.35-REQUIREMENTS.md`, `.planning/milestones/v1.35-MILESTONE-AUDIT.md`
+**Archive:** `.planning/milestones/v1.35-ROADMAP.md`, `.planning/milestones/v1.35-REQUIREMENTS.md`, `.planning/milestones/v1.35-MILESTONE-AUDIT.md`, `.planning/milestones/v1.35-phases/`
 
 ## Latest Shipped Milestone: v1.34 Workshop Provider Checker Parity
 
@@ -52,7 +72,7 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 ## Proposed Next Milestones
 
-- **v1.36 Competition Maturity:** Move competition out of its alpha-ish posture by addressing season policy, ranking/governance maturity, abuse/dispute/account recovery surfaces, replay/result realism expectations, and public trust UX.
+- (None yet — v1.36 Competition Maturity is active.)
 
 ## Latest Shipped Milestone: v1.33 Source Artifact Provenance and TinyGo WASI Spike
 
@@ -802,4 +822,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-14 after completing Phase 243 of the v1.35 milestone*
+*Last updated: 2026-06-15 after starting milestone v1.36 Competition Maturity*

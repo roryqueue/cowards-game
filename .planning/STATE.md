@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.35
-milestone_name: Runtime, Account Ownership, Sandbox, and Package Policy Cleanup
-status: complete
-stopped_at: v1.35 archived
+milestone: v1.36
+milestone_name: Competition Maturity
+status: planning
+stopped_at: defining requirements
 last_updated: "2026-06-15T00:00:00.000Z"
-last_activity: 2026-06-15 -- v1.35 shipped and archived
+last_activity: 2026-06-15 -- Milestone v1.36 started
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 11
-  completed_plans: 11
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
@@ -21,35 +21,28 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-06-15)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Planning next milestone
+**Current focus:** v1.36 Competition Maturity requirements and roadmap
 
 ## Current Position
 
-Phase: 248 of 248 (Service-Backed Proof, Privacy, and Boundary Monitors)
-Plan: 1 of 1
-Status: v1.35 shipped and archived
-Last activity: 2026-06-15 -- v1.35 shipped and archived
+Phase: Not started (defining requirements)
+Plan: -
+Status: Defining requirements
+Last activity: 2026-06-15 -- Milestone v1.36 started
 
-Progress: [##########] 100%
+Progress: [----------] 0%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 11
+- Total plans completed: 0
 - Average duration: -
 - Total execution time: 0.0 hours
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 243 | 3 | - | - |
-| 244 | 4 | - | - |
-| 245 | 1 | - | - |
-| 246 | 1 | - | - |
-| 247 | 1 | - | - |
-| 248 | 1 | - | - |
+No v1.36 phases yet.
 
 ## Accumulated Context
 
@@ -57,15 +50,13 @@ Progress: [##########] 100%
 
 Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecting current work:
 
-- v1.35 phases continue after v1.34, starting at Phase 243 and ending at Phase 248.
-- Phase 243 established the authoritative v1.35 boundary surface inventory and locked decision register for account/provider, owner-debug, Workshop alias, sandbox-label, and package-policy cleanup.
-- Phase 244 completed TypeScript Go runtime-service validation parity, provider-proof-backed account save readiness, Go/persistence entry parity, proof-aware public labels, and the v1.35 account/provider/entry proof monitor.
-- Phase 245 completed local Workshop identity quarantine, server-authorized owner-debug proof, source alias deprecation, public-only local Workshop replay UX, and the v1.35 ownership/alias proof monitor.
-- Phase 246 completed the versioned sandbox-readiness contract, evidence-scoped runtime labels, no-certification guardrails, and the v1.35 sandbox readiness proof monitor.
-- Phase 247 completed the versioned package/dependency policy contract, fail-loud unsupported package metadata labels, no-package/no-host-import proof monitor, and future package-lane requirements.
-- Phase 248 completed the final v1.35 proof artifact, service-backed proof rollup, proof artifact privacy scan, and boundary monitor rollup.
-- Final audit fixed Workshop Load source route drift, refreshed generated OpenAPI/v1.16 inventory artifacts, and passed `pnpm boundary:monitors`.
-- TinyGo remains spike-only/hidden, package mode remains `none`, and no current lane claims production sandbox certification.
+- v1.35 shipped and archived on 2026-06-15 after closing runtime/account/security-policy edges or explicitly documenting deferred production sandbox, package ecosystem, TinyGo, and ABI work.
+- v1.36 is not a workstream and should continue phase numbering after v1.35, starting at Phase 249 unless the roadmap is explicitly reset later.
+- The v1.36 focus is competition maturity: season policy, entry eligibility, standings/result governance, abuse/dispute/account-recovery expectations, public trust copy, and replay/result realism.
+- Competition can move toward public beta only where the product has honest evidence; resettable/trial posture, non-durable ratings, and future moderation/recovery work must remain explicit where still true.
+- Counted competition eligibility must use current provider-proof, language, runtime, provenance, sandbox-readiness, and package-policy evidence from v1.35.
+- Strategy execution remains outside web/API/Go and behind runtime-service / Runtime Broker / provider boundaries.
+- Public/default outputs must not expose Strategy source, artifact bytes, raw diagnostics, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, objective payloads, account-recovery payloads, dispute internals, or operator-only governance details.
 
 ### Pending Todos
 
@@ -73,12 +64,16 @@ None yet.
 
 ### Blockers/Concerns
 
-None for the shipped v1.35 milestone.
+- The local `gsd-sdk` binary in this checkout does not expose the `query` subcommand referenced by the workflow text, so milestone switching is being performed manually while preserving the workflow gates.
+- Requirements and roadmap still need approval before phase planning/execution begins.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
+| Ratings | Durable permanent rating promise | Future explicit milestone unless v1.36 roadmap proves otherwise | v1.36 start |
+| Moderation | Full abuse moderation system and broad operator workflow | Future explicit milestone unless v1.36 scopes a minimal public-safe subset | v1.36 start |
+| Recovery | Full account recovery product | Future explicit milestone unless v1.36 scopes honest expectation surfaces only | v1.36 start |
 | Runtime | Production sandbox certification for any lane | Future explicit milestone | v1.35 scope |
 | Packages | Rich TypeScript/Python/Rust/Zig/TinyGo package ecosystems | Future explicit milestone | v1.35 scope |
 | TinyGo | Production TinyGo support | Future explicit milestone | v1.35 scope |
@@ -86,6 +81,6 @@ None for the shipped v1.35 milestone.
 
 ## Session Continuity
 
-Last session: 2026-06-15T03:08:18.000Z
-Stopped at: v1.35 shipped and archived; ready for `$gsd-new-milestone`
+Last session: 2026-06-15T00:00:00.000Z
+Stopped at: Milestone v1.36 started; ready for requirements definition
 Resume file: .planning/ROADMAP.md

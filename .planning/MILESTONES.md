@@ -10,6 +10,7 @@
 **Roadmap:** .planning/milestones/v1.35-ROADMAP.md
 **Requirements archive:** .planning/milestones/v1.35-REQUIREMENTS.md
 **Audit:** .planning/milestones/v1.35-MILESTONE-AUDIT.md
+**Phase archive:** .planning/milestones/v1.35-phases/
 **Decision:** v1.35 closes runtime/account/security-policy edges by requiring provider-grade proof for account-owned Strategy readiness and entry eligibility, quarantining local trust shortcuts, deprecating Workshop source aliases, calibrating sandbox-readiness claims, enforcing no-package policy, and preserving runtime-service / Runtime Broker / provider boundaries as the hostile-code boundary. No production sandbox certification, rich package ecosystem, TinyGo production support, or runtime ownership migration is claimed.
 
 **Delivered:**
