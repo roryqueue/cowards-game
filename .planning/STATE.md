@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.35
 milestone_name: Runtime, Account Ownership, Sandbox, and Package Policy Cleanup
-status: verifying
-stopped_at: Phase 248 complete
+status: complete
+stopped_at: v1.35 archived
 last_updated: "2026-06-15T00:00:00.000Z"
-last_activity: 2026-06-15 -- Phase 248 complete
+last_activity: 2026-06-15 -- v1.35 shipped and archived
 progress:
   total_phases: 6
   completed_phases: 6
@@ -14,21 +14,21 @@ progress:
   percent: 100
 ---
 
-# State: Coward's Game v1.35
+# State: Coward's Game
 
 ## Project Reference
 
-See: `.planning/PROJECT.md`
+See: `.planning/PROJECT.md` (updated 2026-06-15)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Milestone verification and audit
+**Current focus:** Planning next milestone
 
 ## Current Position
 
 Phase: 248 of 248 (Service-Backed Proof, Privacy, and Boundary Monitors)
 Plan: 1 of 1
-Status: Ready for milestone verification and audit
-Last activity: 2026-06-15 -- Phase 248 complete
+Status: v1.35 shipped and archived
+Last activity: 2026-06-15 -- v1.35 shipped and archived
 
 Progress: [##########] 100%
 
@@ -64,6 +64,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 246 completed the versioned sandbox-readiness contract, evidence-scoped runtime labels, no-certification guardrails, and the v1.35 sandbox readiness proof monitor.
 - Phase 247 completed the versioned package/dependency policy contract, fail-loud unsupported package metadata labels, no-package/no-host-import proof monitor, and future package-lane requirements.
 - Phase 248 completed the final v1.35 proof artifact, service-backed proof rollup, proof artifact privacy scan, and boundary monitor rollup.
+- Final audit fixed Workshop Load source route drift, refreshed generated OpenAPI/v1.16 inventory artifacts, and passed `pnpm boundary:monitors`.
 - TinyGo remains spike-only/hidden, package mode remains `none`, and no current lane claims production sandbox certification.
 
 ### Pending Todos
@@ -72,7 +73,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Milestone verification and audit must not overclaim production sandbox certification or package ecosystem support beyond the v1.35 proof artifacts.
+None for the shipped v1.35 milestone.
 
 ## Deferred Items
 
@@ -86,5 +87,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-06-15T03:08:18.000Z
-Stopped at: Phase 248 complete; proceeding to GSD verify work and audit-fix milestone
+Stopped at: v1.35 shipped and archived; ready for `$gsd-new-milestone`
 Resume file: .planning/ROADMAP.md

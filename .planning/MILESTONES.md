@@ -1,5 +1,35 @@
 # Milestones
 
+## v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup (Shipped: 2026-06-15)
+
+**Status:** Shipped 2026-06-15
+**Phases:** 6
+**Phase range:** 243-248
+**Plans:** 11/11 complete
+**Requirements:** 32/32 complete
+**Roadmap:** .planning/milestones/v1.35-ROADMAP.md
+**Requirements archive:** .planning/milestones/v1.35-REQUIREMENTS.md
+**Audit:** .planning/milestones/v1.35-MILESTONE-AUDIT.md
+**Decision:** v1.35 closes runtime/account/security-policy edges by requiring provider-grade proof for account-owned Strategy readiness and entry eligibility, quarantining local trust shortcuts, deprecating Workshop source aliases, calibrating sandbox-readiness claims, enforcing no-package policy, and preserving runtime-service / Runtime Broker / provider boundaries as the hostile-code boundary. No production sandbox certification, rich package ecosystem, TinyGo production support, or runtime ownership migration is claimed.
+
+**Delivered:**
+
+- Authoritative boundary inventory covering account save, account source, owner-debug replay, Workshop aliases, entry gates, provider proof, sandbox claims, package policy, TinyGo, privacy monitors, and evidence artifacts.
+- Provider-proof-backed Go account save and entry gates for TypeScript, Python, Rust, and Zig, including service-backed PostgreSQL proof for TypeScript account save through runtime request construction.
+- Local Workshop trust quarantine, server-authorized account source and owner-debug/private replay evidence, deprecated Workshop source aliases, and a fixed Workshop Load source UI path that now uses account-owned source routes.
+- Evidence-scoped sandbox-readiness labels and fail-loud monitors that keep TypeScript/Python as provenance-only, Rust/Zig as WASM/WASI Preview 1 artifact-backed, TinyGo hidden, and all current lanes uncertified for production sandbox claims.
+- Enforced package mode `none` for current production Strategy lanes, public-safe package diagnostics, and documented future package-lane requirements.
+- Final proof artifact, privacy scans, generated artifact refreshes, and full boundary monitor pass.
+
+### Active Constraints
+
+- Strategy execution remains outside web/API/Go and behind runtime-service / Runtime Broker / provider boundaries.
+- TypeScript/Python artifact provenance is evidence, not WASM isolation or production sandbox certification.
+- Rust/Zig remain immutable WASM/WASI Preview 1 artifact-backed until a future ABI milestone proves otherwise.
+- TinyGo stays spike-only and hidden from production surfaces.
+- Package mode remains `none`; rich package ecosystems require a future explicit package-lane milestone.
+- Public/default output must not expose Strategy source, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, objective payloads, owner-debug payloads, raw Awareness Grids, raw diagnostics, provider signing material, quarantine details, operator action details, or recovery payloads.
+
 ## v1.33 Source Artifact Provenance and TinyGo WASI Spike (Shipped: 2026-06-01)
 
 **Status:** Shipped 2026-06-01

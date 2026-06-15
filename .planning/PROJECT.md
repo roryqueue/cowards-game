@@ -2,10 +2,10 @@
 
 ## Current State
 
-**Shipped version:** v1.34 Workshop Provider Checker Parity on 2026-06-14
-**Current milestone:** v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup
-**Status:** Phases 243 and 244 are complete. v1.35 now has an authoritative boundary surface inventory plus provider-proof-backed Go account save and entry gates for account-owned Strategy Revisions. TypeScript account save now goes through runtime-service provider validation; account save distinguishes execution-ready, non-execution draft, invalid/proof-invalid, and unavailable states; counted and non-counted Go entry gates require provider proof for TypeScript, Python, Rust, and Zig; public Strategy/result/replay labels consume proof-aware runtime semantics; and a Phase 244 proof artifact is wired into boundary monitors. Phase 245 is next and will tighten local trust shortcuts, owner-debug/private replay authorization, account source access, and Workshop compatibility aliases. TypeScript, Python, Rust, and Zig remain supported counted Strategy languages through provider-gated runtime evidence. TypeScript and Python have source-language artifact provenance with runtime-service provider proof binding source hash/bytes and artifact hash/bytes, but that provenance remains evidence rather than WASM isolation. Rust and Zig remain artifact-backed through immutable WASM/WASI Preview 1 stdin/stdout JSON artifacts. TinyGo remains spike-only and hidden from production surfaces. This milestone closes or explicitly reframes runtime/account/security-policy edges without moving Strategy execution into web/API/Go or making unsupported sandbox claims.
-**Last audit:** v1.34 audit passed after validating four-language Workshop checker parity, service-backed provider proof, privacy redaction, boundary monitors, browser unavailable-service UX, and no Strategy execution in web/API/Go.
+**Shipped version:** v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup on 2026-06-15
+**Current milestone:** Planning next milestone
+**Status:** v1.35 is shipped and archived. Coward's Game now has an authoritative runtime/account/security-policy boundary inventory, provider-proof-backed account save and entry gates, server-authorized account source and owner-debug boundaries, deprecated Workshop source aliases, evidence-scoped sandbox readiness labels, enforced no-package/no-host-import policy, service-backed PostgreSQL proof for the corrected TypeScript account/provider path, and final proof artifacts wired into boundary monitors. TypeScript, Python, Rust, and Zig remain supported counted Strategy languages through provider-gated runtime evidence. TypeScript and Python source-language artifact provenance remains provenance evidence, not WASM isolation. Rust and Zig remain immutable WASM/WASI Preview 1 artifact-backed lanes. TinyGo remains spike-only and hidden from production surfaces.
+**Last audit:** v1.35 audit passed after fixing one integration gap where Workshop Load source still called a deprecated alias, refreshing generated OpenAPI/v1.16 inventory artifacts, and rerunning the full boundary monitor chain.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.
 
@@ -13,20 +13,18 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup
+## Latest Shipped Milestone: v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup
 
 **Goal:** Close or explicitly reframe the remaining runtime/account/security-policy edges so Coward's Game has honest, testable, production-facing boundaries for account-owned Strategy Revisions, provider proof, sandbox-readiness evidence, and package/dependency policy without changing runtime ownership or making unsupported sandbox claims.
 
-**Target features:**
-- Inventory all current account save, account-owned revision, owner-debug, Workshop compatibility alias, competition entry, Go-owned read/write, provider-proof, sandbox-claim, and package/dependency surfaces affected by the standing limitations.
-- Clean up Go TypeScript account-save/provider-proof behavior so TypeScript account-save and Go-owned account/entry surfaces either require current provider-grade proof where eligibility needs it or are explicitly scoped as non-execution draft storage with no misleading readiness claim.
-- Replace or tightly quarantine local trust shortcuts such as `player:workshop-local` where they can affect persisted owner-debug, account-owned, or private replay behavior.
-- Ensure owner-debug/private replay evidence is server-authorized and absent from public/default output.
-- Decide whether old Workshop compatibility API aliases should be removed, hidden, migrated, or documented as deprecated with tests.
-- Define a sandbox-readiness/certification contract that distinguishes current runtime containment, hostile-code evidence, candidate lanes, unavailable lanes, and actual production sandbox certification.
-- Add fail-loud proof gates and public/developer labels so no current lane silently claims more isolation than it proves.
-- Define and enforce package/dependency ecosystem policy for TypeScript, Python, Rust, Zig, and TinyGo while keeping current no-rich-package/no-host-import boundaries intact unless a narrow approved lane is proven.
-- Add diagnostics, privacy scans, boundary monitors, and service-backed proof for corrected account/provider-proof behavior plus sandbox/package-policy gates.
+**Delivered:**
+- Authoritative v1.35 boundary surface inventory and decision register.
+- TypeScript runtime-service validation parity in Go, provider-proof-backed account save readiness, and Go/persistence entry-gate parity.
+- Server-authorized account source and owner-debug/private replay boundaries, local Workshop trust quarantine, and deprecated Workshop source aliases.
+- Versioned sandbox-readiness contract and public/developer labels that avoid production sandbox overclaims.
+- Versioned package/dependency policy contract enforcing package mode `none` and documenting future package-lane requirements.
+- Final proof artifact covering service-backed PostgreSQL proof, privacy scans, generated proof artifacts, and boundary monitors.
+- Audit fix for Workshop Load source so the UI uses account-owned source routes instead of deprecated Workshop aliases.
 
 **Hard boundaries:**
 - Strategy execution remains outside web/API/Go and behind runtime-service / Runtime Broker / provider boundaries.
@@ -35,9 +33,7 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - TinyGo remains spike-only and hidden from production surfaces.
 - No public/default output may expose raw diagnostics, Strategy source, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, or objective payloads.
 
-**Phase 243 delivered:** authoritative v1.35 boundary inventory artifacts, evaluator coverage, package-script monitor wiring, and verified drift checks that later phases must update when they resolve or reframe each locked surface.
-
-**Phase 244 delivered:** TypeScript runtime-service validation parity in Go, provider-proof-backed account save readiness and draft semantics, Go/persistence entry-gate parity, proof-aware public Strategy/result/replay labels, regenerated Go parity fixtures, and `.planning/artifacts/v1.35-account-provider-entry-proof.*` with boundary monitor wiring.
+**Archive:** `.planning/milestones/v1.35-ROADMAP.md`, `.planning/milestones/v1.35-REQUIREMENTS.md`, `.planning/milestones/v1.35-MILESTONE-AUDIT.md`
 
 ## Latest Shipped Milestone: v1.34 Workshop Provider Checker Parity
 
