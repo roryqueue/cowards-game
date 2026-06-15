@@ -65,7 +65,11 @@ Archive:
   2. A surface inventory identifies each competition surface's owner, public/private data class, counted behavior, replay evidence requirement, and privacy risk.
   3. A versioned competition policy contract defines counted-state vocabulary, reset policy, privacy exclusions, forbidden claims, and authoritative owners.
   4. Public copy monitors reject durable-rating, production-sandbox, package-ecosystem, TinyGo-production, raw-diagnostic, and private-runtime overclaims.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 249-01-PLAN.md — Create the spec-owned `competition-policy-v1.36` contract for posture, vocabulary, privacy exclusions, owners, and forbidden claims.
+- [ ] 249-02-PLAN.md — Generate the Markdown/JSON route-code-artifact competition surface inventory from a typed evaluator.
+- [ ] 249-03-PLAN.md — Wire fail-loud v1.36 copy/privacy monitor checks into package scripts and the boundary monitor chain.
 
 ### Phase 250: Counted Entry and One-Active-Revision Enforcement
 **Goal**: Players can enter counted trial competition only through current, immutable, account-owned, provider-proof-valid Strategy Revisions, while exhibition workflows remain clearly non-counted where appropriate.
