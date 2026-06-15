@@ -1,0 +1,108 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-06-15T00:52:34Z",
+  "phase": "247",
+  "phase_name": "Package and Dependency Policy Enforcement",
+  "phase_dir": ".planning/phases/247-package-and-dependency-policy-enforcement",
+  "plan": 1,
+  "task": 6,
+  "total_tasks": 8,
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "Research package/dependency policy surfaces",
+      "status": "done",
+      "commit": null
+    },
+    {
+      "id": 2,
+      "name": "Add spec-owned package policy contract",
+      "status": "done",
+      "commit": null
+    },
+    {
+      "id": 3,
+      "name": "Make Go package metadata semantics fail-loud",
+      "status": "done",
+      "commit": null
+    },
+    {
+      "id": 4,
+      "name": "Add package policy proof evaluator and tests",
+      "status": "done",
+      "commit": null
+    },
+    {
+      "id": 5,
+      "name": "Run focused Phase 247 checks",
+      "status": "done",
+      "commit": null
+    },
+    {
+      "id": 6,
+      "name": "Write Phase 247 GSD artifacts and final validation",
+      "status": "in_progress",
+      "progress": "Phase directory exists but phase docs/state updates are not yet written."
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 6,
+      "name": "Write Phase 247 RESEARCH/UI-SPEC/PLAN/SUMMARY/REVIEW/VALIDATION/VERIFICATION/UAT artifacts and update ROADMAP/REQUIREMENTS/STATE",
+      "status": "in_progress"
+    },
+    {
+      "id": 7,
+      "name": "Run targeted boundary monitor chain including v1.35 package policy proof",
+      "status": "not_started"
+    },
+    {
+      "id": 8,
+      "name": "Review diff and commit Phase 247 implementation",
+      "status": "not_started"
+    },
+    {
+      "id": 9,
+      "name": "Continue Phase 248 service-backed proof/privacy/boundary monitor cycle",
+      "status": "not_started"
+    },
+    {
+      "id": 10,
+      "name": "Run GSD verify work and audit-fix milestone until clean",
+      "status": "not_started"
+    }
+  ],
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {
+      "decision": "Package policy should be a spec-owned versioned contract, not scattered copy.",
+      "rationale": "Existing package gates were already present across spec, Go, and runtime validators; v1.35 needs an honest monitored contract rather than a new package ecosystem.",
+      "phase": "247"
+    },
+    {
+      "decision": "Go runtime semantics should label declared package metadata as unsupported.",
+      "rationale": "Go eligibility gates rejected non-none package mode, but public semantics previously still said No packages; Phase 247 makes labels and gates agree.",
+      "phase": "247"
+    },
+    {
+      "decision": "Future package support requirements are documented without enabling any package lane.",
+      "rationale": "v1.35 must preserve no-rich-package/no-host-import boundaries while naming the supply-chain and reproducibility work required later.",
+      "phase": "247"
+    }
+  ],
+  "uncommitted_files": [
+    "apps/go-backend/live_backend.go",
+    "apps/go-backend/main_test.go",
+    "package.json",
+    "packages/spec/src/runtime.ts",
+    "packages/spec/src/spec.test.ts",
+    ".planning/artifacts/v1.35-package-policy-proof.json",
+    ".planning/artifacts/v1.35-package-policy-proof.md",
+    "scripts/evaluate-v1-35-package-policy-proof.ts",
+    "scripts/evaluate-v1-35-package-policy-proof.test.ts"
+  ],
+  "next_action": "Resume Phase 247 by writing the phase planning artifacts, updating ROADMAP/REQUIREMENTS/STATE for PKG-01 through PKG-04, then run the targeted boundary monitor chain and commit Phase 247.",
+  "context_notes": "Phase 246 is committed at 5abdb8e. Phase 247 implementation is mostly done and focused checks pass, but the GSD documentation/state update and Phase 247 commit are not done. Keep package support claims conservative: package mode none only, no host imports, no rich packages, no native dependency lane, TinyGo hidden/spike-only."
+}
