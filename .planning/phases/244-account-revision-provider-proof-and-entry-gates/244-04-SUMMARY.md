@@ -25,5 +25,5 @@ None - plan executed as written.
 
 ## Notes
 
-- The proof artifact honestly records that local PostgreSQL-backed save proof was not run and points to the deterministic save-path substitute from Plan 02.
+- Follow-up DB proof now passed after local PostgreSQL became available: `TestPhase244AccountProviderProofPersistsThroughDBEntryAndRuntimeRequest` verifies authenticated Go account save, private provider artifact persistence, public-safe counted entry snapshots, and runtime request construction.
 - The proof artifact preserves the phase guardrails: no Strategy execution in web/API/Go, TypeScript/Python provenance-only, Rust/Zig immutable WASM/WASI Preview 1 artifact-backed, TinyGo hidden, package mode `none`, and no production sandbox certification.

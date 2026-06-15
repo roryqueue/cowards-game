@@ -1,11 +1,12 @@
 ---
 phase: 244-account-revision-provider-proof-and-entry-gates
-reviewed: 2026-06-15T00:02:14Z
+reviewed: 2026-06-15T00:18:00Z
 depth: deep
-files_reviewed: 13
+files_reviewed: 14
 files_reviewed_list:
   - apps/go-backend/live_backend.go
   - apps/go-backend/main_test.go
+  - apps/go-backend/phase244_account_provider_db_test.go
   - apps/go-backend/provider_readiness.go
   - apps/go-backend/provider_readiness_test.go
   - apps/go-backend/runtime_service_client.go
@@ -19,41 +20,37 @@ files_reviewed_list:
   - scripts/evaluate-v1-35-account-provider-entry-proof.ts
 findings:
   critical: 0
-  warning: 1
+  warning: 0
   info: 0
-  total: 1
-status: issues_found
+  total: 0
+status: passed
 ---
 
 # Phase 244: Code Review Report
 
-**Reviewed:** 2026-06-15T00:02:14Z
+**Reviewed:** 2026-06-15T00:18:00Z
 **Depth:** deep
-**Files Reviewed:** 13
-**Status:** issues_found
+**Files Reviewed:** 14
+**Status:** passed
 
 ## Summary
 
-Final re-review focused on the latest private artifact authorization fix and the current uncommitted diff. The prior blockers and the Go 403 warning are resolved. Runtime-service gates private artifact material behind `x-cowards-private-artifact-token`, default validation remains redacted, token-shaped secrets are covered by redaction tests, Go sends the private artifact token from `COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN`, and Go now treats HTTP 403 as `RuntimeServicePrivateArtifactUnauthorized` instead of feeding it into account-save assembly as an invalid draft.
+Final re-review focused on the private artifact authorization fix, Go fail-loud behavior, and the added PostgreSQL-backed account/provider proof. The prior blockers, the Go 403 warning, and the DB-backed proof warning are resolved. Runtime-service gates private artifact material behind `x-cowards-private-artifact-token`, default validation remains redacted, token-shaped secrets are covered by redaction tests, Go sends the private artifact token from `COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN`, and Go treats HTTP 403 as `RuntimeServicePrivateArtifactUnauthorized` instead of feeding it into account-save assembly as an invalid draft.
 
-No blockers remain in the reviewed scope. One warning remains because the Phase 244 proof still substitutes deterministic account-save evidence for a DB-backed PostgreSQL save/entry run.
+No blockers or warnings remain in the reviewed scope. The DB-backed Phase 244 proof now saves authenticated account-owned TypeScript revisions through the Go route, verifies private artifact bytes persisted in PostgreSQL, creates a counted exhibition, confirms entrant snapshots remain public-safe, and verifies runtime request construction preserves private artifact bytes for execution.
 
 Focused checks run:
 
 - `cd apps/go-backend && go test ./... -run 'TestRuntimeServiceClient|TestProviderReadiness|TestTypeScriptRuntimeMetadataRequiresProviderProofForCountedPlay'`
+- `cd apps/go-backend && COWARDS_GO_BACKEND_TEST_DATABASE_URL=<local-db> PATH=/usr/local/go/bin:$PATH go test ./... -run TestPhase244AccountProviderProofPersistsThroughDBEntryAndRuntimeRequest -count=1`
 - `pnpm --filter @cowards/runtime-service exec vitest run src/server.test.ts src/redaction.test.ts`
 
-## Warnings
+## Findings
 
-### WR-01: PostgreSQL Save/Entry Proof Is Still Substituted By A Deterministic Unit Path
-
-**Classification:** WARNING
-**File:** `scripts/evaluate-v1-35-account-provider-entry-proof.ts:143`
-**Issue:** The proof still records `serviceBackedProof.status` as `not-run-local-postgresql-unavailable`, and the account-save evidence still notes that DB-backed save proof was replaced by a deterministic substitute. That proves the Go assembly path carries internally authorized private artifact material into `accountRevisionInsert`, but it does not prove PostgreSQL persistence, entry snapshot loading, and runtime request construction preserve the private artifact bytes while public DTOs stay redacted.
-**Fix:** Add a DB-backed integration proof that saves provider-validated TypeScript, Python, Rust, and Zig account revisions, verifies stored private artifact bytes, creates counted and non-counted entries, and builds or executes a runtime-service request for each artifact class. Keep the deterministic substitute as a fallback, not the only Phase 244 proof.
+No issues found.
 
 ---
 
-_Reviewed: 2026-06-15T00:02:14Z_
+_Reviewed: 2026-06-15T00:18:00Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_

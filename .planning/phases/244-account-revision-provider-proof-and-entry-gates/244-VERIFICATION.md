@@ -1,6 +1,6 @@
 ---
 phase: 244-account-revision-provider-proof-and-entry-gates
-verified: 2026-06-15T00:01:55Z
+verified: 2026-06-15T00:18:00Z
 status: passed
 score: 5/5 must-haves verified
 overrides_applied: 0
@@ -11,6 +11,7 @@ re_verification:
     - "Go and persistence eligibility outcomes now agree for TypeScript provider proof by requiring private sourceArtifact.bytesBase64 on Go account-save/readiness and persistence competition/ladder paths while keeping runtime-service public validation metadata redacted by default."
     - "Private sourceArtifact.bytesBase64 now requires internal runtime-service authorization; unauthorized includePrivateArtifact requests return a public-safe 403 response without source or artifact bytes."
     - "Go now treats runtime-service 403 private artifact authorization failure as a fail-loud RuntimeServicePrivateArtifactUnauthorized failure before account-save draft assembly or insert can run."
+    - "PostgreSQL-backed account/provider proof now passes: authenticated Go account save persists private provider artifact bytes, counted entry snapshots stay public-safe, and runtime request construction preserves private artifact bytes for execution."
   gaps_remaining: []
   regressions: []
 human_verification: []
@@ -19,9 +20,9 @@ human_verification: []
 # Phase 244: Account Revision Provider-Proof and Entry Gates Verification Report
 
 **Phase Goal:** Users can save and enter account-owned Strategy Revisions only under honest provider-proof-backed readiness states.
-**Verified:** 2026-06-15T00:01:55Z
+**Verified:** 2026-06-15T00:18:00Z
 **Status:** passed
-**Re-verification:** Yes - after audit-fix closure of TypeScript `bytesBase64` Go/persistence parity blocker, private artifact authorization fix, and Go 403 fail-loud fix.
+**Re-verification:** Yes - after audit-fix closure of TypeScript `bytesBase64` Go/persistence parity blocker, private artifact authorization fix, Go 403 fail-loud fix, and DB-backed account/provider proof.
 
 ## Goal Achievement
 
@@ -29,7 +30,7 @@ human_verification: []
 
 | # | Truth | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | User can save an execution-ready TypeScript account-owned Strategy Revision through Go only when runtime-service/provider validation supplies current proof matching source/artifact identity and engine/runtime compatibility. | VERIFIED | `apps/go-backend/live_backend.go:563` routes account saves through `runtime.validateStrategy`; the Go client requests private artifact evidence with `includePrivateArtifact: true` and sends `x-cowards-private-artifact-token` only when `COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN` is configured (`apps/go-backend/runtime_service_client.go:193`, `apps/go-backend/runtime_service_client.go:214`). Runtime-service 403 is classified as `RuntimeServicePrivateArtifactUnauthorized` (`apps/go-backend/runtime_service_client.go:233`), and account save returns on any validation failure before `accountRevisionInsertFromProviderValidation` or `insertAccountRevision` can run (`apps/go-backend/live_backend.go:586`). |
+| 1 | User can save an execution-ready TypeScript account-owned Strategy Revision through Go only when runtime-service/provider validation supplies current proof matching source/artifact identity and engine/runtime compatibility. | VERIFIED | `apps/go-backend/live_backend.go:563` routes account saves through `runtime.validateStrategy`; the Go client requests private artifact evidence with `includePrivateArtifact: true` and sends `x-cowards-private-artifact-token` only when `COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN` is configured (`apps/go-backend/runtime_service_client.go:193`, `apps/go-backend/runtime_service_client.go:214`). Runtime-service 403 is classified as `RuntimeServicePrivateArtifactUnauthorized` (`apps/go-backend/runtime_service_client.go:233`), and account save returns on any validation failure before `accountRevisionInsertFromProviderValidation` or `insertAccountRevision` can run (`apps/go-backend/live_backend.go:586`). The PostgreSQL-backed Phase 244 proof saves authenticated account-owned revisions through the Go route and verifies persisted private provider artifact bytes. |
 | 2 | User can distinguish provider-validated execution-ready revisions from invalid revisions, unavailable/system states, and explicitly allowed non-execution draft storage with no readiness or eligibility claim. | VERIFIED | `classifyRevisionReadiness` still separates execution-ready, invalid, non-execution draft, and unavailable states. The re-verification test matrix now includes `D-02 TypeScript provider proof with private artifact bytes is execution ready` and `D-04 public-redacted artifact identity is not execution ready` in `apps/go-backend/provider_readiness_test.go:33` and `apps/go-backend/provider_readiness_test.go:47`. |
 | 3 | User cannot enter counted Go exhibitions, persistence competitions, or ladder paths unless TypeScript, Python, Rust, and Zig revisions have current provider-grade proof where execution readiness is required. | VERIFIED | Go `sourceArtifactProviderValidationMatches` now requires `bytesBase64`, decodes it, checks byte length, and hashes it before accepting source-artifact proof (`apps/go-backend/live_backend.go:2652`). Persistence competition and ladder already require the same private bytes shape, and tests now prove TypeScript public-redacted artifacts are rejected. |
 | 4 | User cannot use unsupported providers, hidden TinyGo, stale/missing/mismatched artifacts, incompatible runtime metadata, non-`none` package mode, invalid owner/revision state, or silent fallback to pass non-counted exhibition gates. | VERIFIED | Quick regression: existing Go provider/readiness and entry-gate tests pass. `runtimeAllowsNonCountedExhibition` still delegates to the same proof matchers as counted play for provider languages, so public-redacted TypeScript metadata is not promoted through the non-counted path. |
@@ -47,6 +48,7 @@ human_verification: []
 | `apps/go-backend/runtime_service_client.go` | Go account-save validation asks runtime-service for private artifact material with internal token and fails loud on unauthorized 403 | VERIFIED | `validateStrategy` request body includes `includePrivateArtifact: true` for provider source validation, sends `x-cowards-private-artifact-token` when `COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN` is configured, and maps HTTP 403 to `RuntimeServicePrivateArtifactUnauthorized` before decoding a validation body. |
 | `apps/go-backend/live_backend.go` | Go provider-proof matchers require private artifact bytes | VERIFIED | `sourceArtifactProviderValidationMatches` and `rustProviderValidationMatches` now fail if artifact `bytesBase64` is missing, malformed, size-mismatched, or hash-mismatched. |
 | `apps/go-backend/provider_readiness_test.go` | Go readiness rejects public-redacted TypeScript metadata | VERIFIED | Test matrix accepts private TypeScript artifact bytes and rejects public-redacted artifact identity as `provider_proof_mismatched`. |
+| `apps/go-backend/phase244_account_provider_db_test.go` | DB-backed account save, entry snapshot, and runtime request proof | VERIFIED | Authenticated Go account-save route persists private provider artifact bytes in PostgreSQL, counted exhibition entrant snapshots stay public-safe, and `buildRuntimeServiceRequestForClaimedMatch` preserves private artifact bytes for execution. |
 | `packages/persistence/src/competition.test.ts` / `packages/persistence/src/ladder.test.ts` | Persistence parity tests require private TypeScript artifact bytes | VERIFIED | New tests accept private bytes-bearing metadata and reject the same metadata after `bytesBase64` is removed. |
 | `.planning/artifacts/v1.35-account-provider-entry-proof.{md,json}` | Phase proof artifacts reflect private/public artifact split | VERIFIED | Proof artifacts now state Go account-save requests private artifact material while public/default validation remains redacted; monitor check passes. |
 
@@ -70,6 +72,8 @@ human_verification: []
 | Go unauthorized private artifact response | `RuntimeServicePrivateArtifactUnauthorized` | Runtime-service HTTP 403 | Yes - non-retryable validation failure returns before account-save insert/draft assembly | FLOWING |
 | Go runtime-service client | `requestBody.includePrivateArtifact`, token header | Constant `true` in `validateStrategy` request body and env-backed private artifact token header | Yes - runtime-service receives an internally authorizable private account-save request | FLOWING |
 | Go account-save insert | `input.Metadata` | Validation response metadata cloned into account revision insert | Yes - private bytes-bearing source artifact reaches readiness classification and persistence insert path | FLOWING |
+| PostgreSQL persisted revision | `strategy_revisions.metadata.sourceArtifact` | Authenticated Go account-save route | Yes - DB-backed proof verifies private artifact bytes and provider validation are stored only in private revision metadata | FLOWING |
+| Competition entrant snapshot | `competition_entrants.snapshot` | Counted exhibition creation | Yes - DB-backed proof verifies public entrant snapshots omit private artifact bytes and Strategy source | FLOWING |
 | Go/persistence entry gates | `metadata.sourceArtifact.bytesBase64` | Stored private revision metadata | Yes - both Go and persistence require bytes to verify artifact hash and proof | FLOWING |
 
 ### Behavioral Spot-Checks
@@ -78,6 +82,7 @@ human_verification: []
 | --- | --- | --- | --- |
 | Runtime-service public redaction, unauthorized denial, authorized private TypeScript artifact response, and credential redaction | `pnpm --filter @cowards/runtime-service exec vitest run src/server.test.ts src/redaction.test.ts` | 2 files passed, 12 tests passed | PASS |
 | Go client private request/token header, 403 fail-loud behavior, Go proof matchers, readiness public-redacted rejection | `cd apps/go-backend && go test ./... -count=1 -run 'TestRuntimeServiceClientRejectsTypeScriptValidationDriftD02D04D09D10|TestRuntimeServiceClientValidatesTypeScriptProviderSourceD01D02D09D10|TestProviderReadiness|TestTypeScriptRuntimeMetadataRequiresProviderProofForCountedPlay'` | `ok github.com/cowards-game/go-backend 1.950s` | PASS |
+| PostgreSQL-backed authenticated account save, counted entry, public-safe snapshot, and runtime request proof | `cd apps/go-backend && COWARDS_GO_BACKEND_TEST_DATABASE_URL=<local-db> PATH=/usr/local/go/bin:$PATH go test ./... -run TestPhase244AccountProviderProofPersistsThroughDBEntryAndRuntimeRequest -count=1` | `ok github.com/cowards-game/go-backend 0.687s` | PASS |
 | Persistence competition/ladder private TypeScript artifact bytes parity | `pnpm --filter @cowards/persistence test -- competition.test.ts ladder.test.ts` | 12 files passed, 62 tests passed, 1 skipped | PASS |
 | Phase 244 proof artifact monitor | `pnpm v1.35:account-provider-entry-proof:check` | Exit 0 | PASS |
 
@@ -86,7 +91,7 @@ human_verification: []
 | Requirement | Source Plan | Description | Status | Evidence |
 | --- | --- | --- | --- | --- |
 | ACCT-01 | 244-01, 244-04 | Go runtime-service validation can request and accept TypeScript provider validation. | SATISFIED | Go client allows `typescript`, sends private artifact request to `/validate-strategy`, and supplies the internal private artifact token header when configured; focused Go client tests pass. |
-| ACCT-02 | 244-02, 244-04 | Execution-ready account save stores provider runtime, validation, compatibility, source/artifact identity, and proof metadata. | SATISFIED | Account-save assembly copies runtime-service metadata into insert payload; private TypeScript artifact bytes now participate in readiness proof. |
+| ACCT-02 | 244-02, 244-04 | Execution-ready account save stores provider runtime, validation, compatibility, source/artifact identity, and proof metadata. | SATISFIED | Account-save assembly copies runtime-service metadata into insert payload; private TypeScript artifact bytes now participate in readiness proof. DB-backed proof verifies the authenticated route persists those fields through PostgreSQL. |
 | ACCT-03 | 244-02, 244-04 | Account save distinguishes ready, invalid, unavailable, and draft states. | SATISFIED | Readiness tests cover private bytes ready state, public-redacted invalid state, invalid draft, unavailable, package violation, and TinyGo hidden provider. Runtime-service private artifact authorization failure is not represented as a draft; Go returns a validation failure before readiness assembly. |
 | ACCT-04 | 244-01, 244-02, 244-04 | Unavailable/stale/missing/mismatched/malformed/unverifiable/incompatible proof fails closed or non-execution draft. | SATISFIED | Go proof matcher fails missing/malformed/mismatched artifact bytes; client rejects malformed, oversized, mismatched, incomplete, unsupported, and unauthorized private-artifact validation responses. Unauthorized 403 is fail-loud, non-retryable, and does not save as draft. |
 | ACCT-05 | 244-01, 244-02, 244-04 | Account-save validation errors are public-safe. | SATISFIED | Runtime-service default response redacts artifact bytes and tests assert no source, paths, env markers, private memory names, objective payloads, or DB URL. Unauthorized private artifact requests return a stable public 403 without source or `bytesBase64`; redaction now also covers credential-like tokens. Private artifact material is only returned for an internally authorized account-save request. |
@@ -107,9 +112,9 @@ None. The prior blocker, private artifact authorization fix, and Go 403 fail-lou
 
 ### Gaps Summary
 
-No remaining gaps. The previous Go/persistence TypeScript bytes parity blocker remains closed, and the latest private artifact authorization/fail-loud behavior is verified: runtime-service redacts artifact bytes by default, unauthorized `includePrivateArtifact` requests return 403 without source or `bytesBase64`, Go maps that 403 to `RuntimeServicePrivateArtifactUnauthorized` and returns before draft assembly or insert, Go account-save sends an env-backed internal token when requesting private artifact material, Go proof matching requires `bytesBase64`, Go readiness rejects public-redacted metadata, and persistence competition/ladder tests require the same private TypeScript artifact bytes.
+No remaining gaps. The previous Go/persistence TypeScript bytes parity blocker remains closed, and the private artifact authorization/fail-loud behavior is verified: runtime-service redacts artifact bytes by default, unauthorized `includePrivateArtifact` requests return 403 without source or `bytesBase64`, Go maps that 403 to `RuntimeServicePrivateArtifactUnauthorized` and returns before draft assembly or insert, Go account-save sends an env-backed internal token when requesting private artifact material, Go proof matching requires `bytesBase64`, Go readiness rejects public-redacted metadata, persistence competition/ladder tests require the same private TypeScript artifact bytes, and the PostgreSQL-backed proof verifies private provider artifact bytes survive account-save persistence and runtime request construction while public entry snapshots stay redacted.
 
 ---
 
-_Verified: 2026-06-15T00:01:55Z_
+_Verified: 2026-06-15T00:18:00Z_
 _Verifier: the agent (gsd-verifier)_

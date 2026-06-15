@@ -20,7 +20,7 @@ Complete.
 
 **[Rule 2 - Local service limitation] Used deterministic save-path substitute instead of DB-backed account revision persistence proof** — Found during: Task 3 | Issue: the phase research already identified local PostgreSQL as unavailable in this environment. | Fix: added `accountRevisionInsertFromProviderValidation` and `TestProviderReadinessAccountSaveAssemblyD02D03` to prove the save assembly carries provider runtime, validation, engine compatibility, source identity, artifact identity, provider proof metadata, and readiness labels before DB insert. | Files modified: `apps/go-backend/live_backend.go`, `apps/go-backend/provider_readiness_test.go`. | Verification: focused Go command passed.
 
-**Total deviations:** 1 auto-scoped substitute. **Impact:** Acceptable for Wave 2; service-backed/DB-backed proof remains recorded for later proof phases if local services are available.
+**Total deviations:** 1 auto-scoped substitute during Wave 2. **Impact:** resolved by follow-up DB-backed proof after local PostgreSQL became available; `TestPhase244AccountProviderProofPersistsThroughDBEntryAndRuntimeRequest` now proves authenticated Go account save persists provider-backed private artifact metadata through PostgreSQL and into runtime request construction while counted entry snapshots stay public-safe.
 
 ## Notes
 

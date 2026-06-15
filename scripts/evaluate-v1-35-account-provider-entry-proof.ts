@@ -10,7 +10,7 @@ const repoRoot = path.resolve(
 
 export const accountProviderEntryProofSchemaVersion =
   "v1.35-account-provider-entry-proof" as const
-export const accountProviderEntryProofGeneratedAt = "2026-06-14" as const
+export const accountProviderEntryProofGeneratedAt = "2026-06-15" as const
 export const accountProviderEntryProofGeneratedBy =
   "scripts/evaluate-v1-35-account-provider-entry-proof.ts" as const
 
@@ -64,7 +64,7 @@ export interface V135AccountProviderEntryProof {
     productionSandboxCertified: false
   }
   serviceBackedProof: {
-    status: "not-run-local-postgresql-unavailable"
+    status: "passed-local-postgresql" | "not-run-local-postgresql-unavailable"
     note: string
   }
   evidence: readonly V135AccountProviderEntryEvidenceRow[]
@@ -142,8 +142,8 @@ export const generateV135AccountProviderEntryProof = (
     productionSandboxCertified: false,
   },
   serviceBackedProof: {
-    status: "not-run-local-postgresql-unavailable",
-    note: "Local PostgreSQL was unavailable during Phase 244 planning; deterministic save-path substitute proves Go account-save uses internally authorized private provider artifact material and carries provider fields to accountRevisionInsert.",
+    status: "passed-local-postgresql",
+    note: "Local PostgreSQL proof passed after services were made available: authenticated Go account save persisted internally authorized private provider artifact material, counted entry snapshots stayed public-safe, and runtime request construction preserved private artifact bytes for execution.",
   },
   evidence: rows,
 })
@@ -177,17 +177,17 @@ const defaultEvidenceRows: readonly V135AccountProviderEntryEvidenceRow[] = [
     requirements: ["ACCT-02", "ACCT-03", "ACCT-04", "ACCT-05"],
     files: [
       "apps/go-backend/live_backend.go",
+      "apps/go-backend/phase244_account_provider_db_test.go",
       "apps/go-backend/provider_readiness.go",
       "apps/go-backend/provider_readiness_test.go",
     ],
     commands: [
+      "cd apps/go-backend && COWARDS_GO_BACKEND_TEST_DATABASE_URL=<local-db> go test ./... -run TestPhase244AccountProviderProofPersistsThroughDBEntryAndRuntimeRequest -count=1",
       "cd apps/go-backend && go test ./... -run 'TestProviderReadiness|TestRuntimeServiceClient|Test.*Account.*Revision|Test.*CreateStrategyRevision'",
     ],
     outcome:
-      "Account-save assembly carries runtime, validation, engine compatibility, source identity, internally authorized private artifact material, provider proof metadata, and readiness labels into accountRevisionInsert; public-redacted provider metadata remains non-execution-ready.",
-    limitations: [
-      "DB-backed save proof was replaced by deterministic save-path substitute in this local environment.",
-    ],
+      "Authenticated Go account save persists runtime, validation, engine compatibility, source identity, internally authorized private artifact material, provider proof metadata, and readiness labels through PostgreSQL; counted entry snapshots stay public-safe and runtime request construction preserves private artifact bytes for execution.",
+    limitations: [],
   },
   {
     id: "readiness-state-separation-d03-d04",
