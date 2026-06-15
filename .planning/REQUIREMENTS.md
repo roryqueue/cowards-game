@@ -118,51 +118,52 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| POST-01 | TBD | Pending |
-| POST-02 | TBD | Pending |
-| POST-03 | TBD | Pending |
-| POST-04 | TBD | Pending |
-| POST-05 | TBD | Pending |
-| ELIG-01 | TBD | Pending |
-| ELIG-02 | TBD | Pending |
-| ELIG-03 | TBD | Pending |
-| ELIG-04 | TBD | Pending |
-| ELIG-05 | TBD | Pending |
-| ELIG-06 | TBD | Pending |
-| SEAS-01 | TBD | Pending |
-| SEAS-02 | TBD | Pending |
-| SEAS-03 | TBD | Pending |
-| SEAS-04 | TBD | Pending |
-| SEAS-05 | TBD | Pending |
-| RESULT-01 | TBD | Pending |
-| RESULT-02 | TBD | Pending |
-| RESULT-03 | TBD | Pending |
-| RESULT-04 | TBD | Pending |
-| RESULT-05 | TBD | Pending |
-| RESULT-06 | TBD | Pending |
-| GOV-01 | TBD | Pending |
-| GOV-02 | TBD | Pending |
-| GOV-03 | TBD | Pending |
-| GOV-04 | TBD | Pending |
-| GOV-05 | TBD | Pending |
-| GOV-06 | TBD | Pending |
-| TRUST-01 | TBD | Pending |
-| TRUST-02 | TBD | Pending |
-| TRUST-03 | TBD | Pending |
-| TRUST-04 | TBD | Pending |
-| TRUST-05 | TBD | Pending |
-| PROOF-01 | TBD | Pending |
-| PROOF-02 | TBD | Pending |
-| PROOF-03 | TBD | Pending |
-| PROOF-04 | TBD | Pending |
-| PROOF-05 | TBD | Pending |
-| PROOF-06 | TBD | Pending |
+| POST-01 | Phase 249 | Pending |
+| POST-02 | Phase 249 | Pending |
+| POST-03 | Phase 249 | Pending |
+| POST-04 | Phase 249 | Pending |
+| POST-05 | Phase 249 | Pending |
+| ELIG-01 | Phase 250 | Pending |
+| ELIG-02 | Phase 250 | Pending |
+| ELIG-03 | Phase 250 | Pending |
+| ELIG-04 | Phase 250 | Pending |
+| ELIG-05 | Phase 250 | Pending |
+| ELIG-06 | Phase 250 | Pending |
+| SEAS-01 | Phase 251 | Pending |
+| SEAS-02 | Phase 251 | Pending |
+| SEAS-03 | Phase 251 | Pending |
+| SEAS-04 | Phase 251 | Pending |
+| SEAS-05 | Phase 251 | Pending |
+| RESULT-01 | Phase 252 | Pending |
+| RESULT-02 | Phase 252 | Pending |
+| RESULT-03 | Phase 252 | Pending |
+| RESULT-04 | Phase 252 | Pending |
+| RESULT-05 | Phase 252 | Pending |
+| RESULT-06 | Phase 252 | Pending |
+| GOV-01 | Phase 253 | Pending |
+| GOV-02 | Phase 253 | Pending |
+| GOV-03 | Phase 253 | Pending |
+| GOV-04 | Phase 253 | Pending |
+| GOV-05 | Phase 253 | Pending |
+| GOV-06 | Phase 253 | Pending |
+| TRUST-01 | Phase 254 | Pending |
+| TRUST-02 | Phase 254 | Pending |
+| TRUST-03 | Phase 254 | Pending |
+| TRUST-04 | Phase 254 | Pending |
+| TRUST-05 | Phase 254 | Pending |
+| PROOF-01 | Phase 255 | Pending |
+| PROOF-02 | Phase 255 | Pending |
+| PROOF-03 | Phase 255 | Pending |
+| PROOF-04 | Phase 255 | Pending |
+| PROOF-05 | Phase 255 | Pending |
+| PROOF-06 | Phase 255 | Pending |
 
 **Coverage:**
 - v1.36 requirements: 39 total
-- Mapped to phases: 0
-- Unmapped: 39
+- Mapped to phases: 39
+- Unmapped: 0
+- Coverage: 39/39
 
 ---
 *Requirements defined: 2026-06-15*
-*Last updated: 2026-06-15 after v1.36 research synthesis*
+*Last updated: 2026-06-15 after v1.36 roadmap creation*
