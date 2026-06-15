@@ -363,22 +363,19 @@ Phase 249 should lock public projection labels around this vocabulary without fi
 |---|-------|---------|---------------|
 | A1 | Simple keyword guards are easier than row-aware scans. | Common Pitfalls | Low; recommendation is still independently supported by locked D-13 through D-16. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact artifact and script names**
    - What we know: Phase decisions leave filenames and helper names to planner discretion. [VERIFIED: .planning/phases/249-competition-surface-inventory-and-policy-lock/249-CONTEXT.md]
-   - What's unclear: Whether planner prefers `evaluate-v1-36-competition-policy.ts` or `evaluate-v1-36-competition-surface-inventory.ts`. [VERIFIED: .planning/phases/249-competition-surface-inventory-and-policy-lock/249-CONTEXT.md]
-   - Recommendation: Use names that include both policy and inventory only if concise; otherwise prefer `evaluate-v1-36-competition-policy.ts` with artifact names `v1.36-competition-surface-inventory.*`. [ASSUMED]
+   - Resolution: Use script `scripts/evaluate-v1-36-competition-policy.ts` and artifacts `.planning/artifacts/v1.36-competition-surface-inventory.md` plus `.planning/artifacts/v1.36-competition-surface-inventory.json`. [RESOLVED: Phase 249 plan revision]
 
 2. **Whether to split a new spec module**
    - What we know: The contract must be in `@cowards/spec`, and `competition.ts` already contains related types. [VERIFIED: .planning/phases/249-competition-surface-inventory-and-policy-lock/249-CONTEXT.md; packages/spec/src/competition.ts]
-   - What's unclear: Whether adding `competition-policy-v1-36.ts` is cleaner than extending `competition.ts`. [ASSUMED]
-   - Recommendation: Use a focused module only if it keeps `competition.ts` readable and export it from `index.ts`. [ASSUMED]
+   - Resolution: Use focused spec module `packages/spec/src/competition-policy-v1-36.ts` and export it from `packages/spec/src/index.ts`. [RESOLVED: Phase 249 plan revision]
 
 3. **Exact required-copy matching rules**
    - What we know: Required posture-label presence and forbidden/private-marker absence must be checked. [VERIFIED: .planning/phases/249-competition-surface-inventory-and-policy-lock/249-CONTEXT.md]
-   - What's unclear: Whether exact phrase matching is required everywhere or category-based equivalent copy is allowed. [ASSUMED]
-   - Recommendation: Require the exact default phrase `public beta trial competition` for posture surfaces and allow controlled examples for nearby reset/no-durable explanation text. [VERIFIED: .planning/phases/249-competition-surface-inventory-and-policy-lock/249-CONTEXT.md]
+   - Resolution: Required-copy matching is inventory-driven. Rows with `postureLabelRequired: true` must include exact `public beta trial competition` and the row/policy reset/no-durable copy in referenced scanned text. Calibrated explanatory wording may pass only through a documented false-positive allowlist/suppression entry with `path`, `category`, `rationale`, `owner`, and `expiry`; clear violations still fail. [RESOLVED: Phase 249 plan revision]
 
 ## Environment Availability
 
