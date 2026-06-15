@@ -151,7 +151,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 249. Competition Surface Inventory and Policy Lock | 0/0 | Not started | - |
+| 249. Competition Surface Inventory and Policy Lock | 0/3 | Ready to execute | - |
 | 250. Counted Entry and One-Active-Revision Enforcement | 0/0 | Not started | - |
 | 251. Season Lifecycle and Scheduling Policy | 0/0 | Not started | - |
 | 252. Counted-State Classifier and Standings Recompute | 0/0 | Not started | - |
