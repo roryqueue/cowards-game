@@ -13,6 +13,7 @@ import {
   assertReportOnlyBoundaryOffenseCount,
   checkV135AccountProviderEntryProofMonitor,
   checkV135BoundarySurfaceInventoryMonitor,
+  checkV136CompetitionPolicyMonitor,
   checkRuntimeAdapterBridge,
   findDirectLanguageSpecialCases,
   findUnknownReportOnlyOffenses,
@@ -30,6 +31,11 @@ import {
   writeV135BoundarySurfaceInventoryArtifacts,
   type V135BoundarySurfaceRow,
 } from "./evaluate-v1-35-boundary-surface-inventory.ts"
+import {
+  generateV136CompetitionSurfaceInventory,
+  writeV136CompetitionSurfaceInventoryArtifacts,
+  type V136CompetitionSurfaceRow,
+} from "./evaluate-v1-36-competition-policy.ts"
 
 const requiredV115PublicOutputForbidden = [
   "Strategy source",
@@ -191,6 +197,12 @@ const createV116NoTypeScriptBackendTopologyArtifact = () =>
 
 const createTempRepo = () => mkdtempSync(path.join(tmpdir(), "cowards-v135-"))
 
+const writeTempFile = (root: string, relativePath: string, text: string): void => {
+  const absolutePath = path.join(root, relativePath)
+  mkdirSync(path.dirname(absolutePath), { recursive: true })
+  writeFileSync(absolutePath, text)
+}
+
 describe("boundary drift monitors", () => {
   afterEach(() => {
     vi.restoreAllMocks()
@@ -237,6 +249,31 @@ describe("boundary drift monitors", () => {
     ).toBeLessThan(
       packageJson.scripts["boundary:monitors"].indexOf(
         "pnpm exec tsx scripts/check-boundary-monitors.ts",
+      ),
+    )
+  })
+
+  it("wires v1.36 competition-policy package scripts into boundary monitor commands after v1.35 final proof", () => {
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts: Record<string, string>
+    }
+
+    expect(packageJson.scripts["v1.36:competition-policy"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-36-competition-policy.ts --write",
+    )
+    expect(packageJson.scripts["v1.36:competition-policy:check"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-36-competition-policy.ts --check",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).toContain(
+      "pnpm v1.36:competition-policy:check && pnpm exec tsx scripts/check-boundary-monitors.ts",
+    )
+    expect(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.35:final-proof:check",
+      ),
+    ).toBeLessThan(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.36:competition-policy:check",
       ),
     )
   })
@@ -366,6 +403,94 @@ describe("boundary drift monitors", () => {
           ],
         }),
       ).toThrow(/forbidden public\/default leakage/)
+    }
+  })
+
+  it("checks v1.36 competition policy artifacts and calibrated public beta trial competition copy", () => {
+    const root = createTempRepo()
+    try {
+      writeV136CompetitionSurfaceInventoryArtifacts({ repoRoot: root })
+      const rows = generateV136CompetitionSurfaceInventory().rows.map((row) => ({
+        ...row,
+        postureLabelRequired: false,
+      })) as V136CompetitionSurfaceRow[]
+      writeTempFile(
+        root,
+        "apps/web/app/competitions/page.tsx",
+        "public beta trial competition with resettable Season-scoped standings; no durable permanent rating promise",
+      )
+
+      expect(
+        checkV136CompetitionPolicyMonitor({
+          repoRoot: root,
+          rows,
+          includeDefaultSuppressions: false,
+        }),
+      ).toBe("v1.36 competition policy artifacts are current")
+    } finally {
+      rmSync(root, { force: true, recursive: true })
+    }
+  })
+
+  it("fails v1.36 competition policy monitor on durable-rating, production-sandbox, package-ecosystem, TinyGo-production, raw-diagnostic, and private-runtime overclaims", () => {
+    const root = createTempRepo()
+    try {
+      writeV136CompetitionSurfaceInventoryArtifacts({ repoRoot: root })
+      const rows = generateV136CompetitionSurfaceInventory().rows.map((row) => ({
+        ...row,
+        postureLabelRequired: false,
+      })) as V136CompetitionSurfaceRow[]
+
+      writeTempFile(root, "apps/web/app/competitions/page.tsx", [
+        "Coward's Game has durable permanent ratings.",
+        "All runtime lanes provide production sandbox certification.",
+        "Strategies can use the full npm ecosystem.",
+        "TinyGo is a production Strategy lane.",
+        "Public results show raw runtime diagnostics.",
+        "Public pages expose private runtime internals.",
+      ].join("\n"))
+
+      expect(() =>
+        checkV136CompetitionPolicyMonitor({
+          repoRoot: root,
+          rows,
+          includeDefaultSuppressions: false,
+        }),
+      ).toThrow(
+        /durable-rating|production-sandbox|package-ecosystem|tinygo-production|raw-diagnostic|private-runtime/,
+      )
+    } finally {
+      rmSync(root, { force: true, recursive: true })
+    }
+  })
+
+  it("fails v1.36 competition policy monitor when posture-required inventory references lack required labels", () => {
+    const root = createTempRepo()
+    try {
+      const rows = generateV136CompetitionSurfaceInventory().rows.map((row) => ({
+        ...row,
+        postureLabelRequired: false,
+      })) as V136CompetitionSurfaceRow[]
+      rows[0] = {
+        ...rows[0]!,
+        references: ["apps/web/app/competitions/page.tsx"],
+        postureLabelRequired: true,
+        requiredPostureCopy: "public beta trial competition",
+        requiredResetNoDurableCopy:
+          "resettable Season-scoped standings; no durable permanent rating promise",
+      }
+      writeV136CompetitionSurfaceInventoryArtifacts({ repoRoot: root, rows })
+      writeTempFile(root, "apps/web/app/competitions/page.tsx", "Competition")
+
+      expect(() =>
+        checkV136CompetitionPolicyMonitor({
+          repoRoot: root,
+          rows,
+          includeDefaultSuppressions: false,
+        }),
+      ).toThrow(/public beta trial competition|resettable Season-scoped standings/)
+    } finally {
+      rmSync(root, { force: true, recursive: true })
     }
   })
 
@@ -1135,6 +1260,20 @@ describe("boundary drift monitors", () => {
         ok: true,
         detail: "v1.35 boundary surface inventory artifacts are current",
       })
+      const v136Policy = checks.find(
+        (check) => check.name === "v1.36 competition policy",
+      )
+      expect(v136Policy).toMatchObject({
+        layer: "contract_drift",
+        ok: true,
+        detail: "v1.36 competition policy artifacts are current",
+      })
+      expect(checks.map((check) => check.name)).toEqual(
+        expect.arrayContaining([
+          "v1.35 boundary surface inventory",
+          "v1.36 competition policy",
+        ]),
+      )
     } finally {
       if (previousLiveTopology === undefined) {
         delete process.env.COWARDS_REQUIRE_LIVE_TOPOLOGY

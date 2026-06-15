@@ -15,9 +15,14 @@ import {
 import {
   allowedDispositions,
   checkV136CompetitionSurfaceInventoryArtifacts,
+  checkV136CompetitionPolicyScan,
+  defaultScanRoots,
   generateV136CompetitionSurfaceInventory,
   requiredSurfaceGroups,
+  scanFileExtensions,
+  scanV136CompetitionPolicyTextRoots,
   validateV136CompetitionSurfaceInventory,
+  type V136CompetitionPolicyScanSuppression,
   writeV136CompetitionSurfaceInventoryArtifacts,
   type V136CompetitionSurfaceInventory,
   type V136CompetitionSurfaceRow,
@@ -30,6 +35,12 @@ const createTempRepo = (): string => {
   tempRoots.push(root)
   mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true })
   return root
+}
+
+const writeTempFile = (root: string, relativePath: string, text: string): void => {
+  const absolutePath = path.join(root, relativePath)
+  mkdirSync(path.dirname(absolutePath), { recursive: true })
+  writeFileSync(absolutePath, text)
 }
 
 afterEach(() => {
@@ -490,5 +501,241 @@ describe("v1.36 competition surface inventory evaluator", () => {
         ".planning/artifacts/v1.36-competition-surface-inventory.json and .planning/artifacts/v1.36-competition-surface-inventory.md are desynchronized for competition-index-route disposition row-sync drift",
       ]),
     )
+  })
+})
+
+describe("v1.36 competition policy text scanner", () => {
+  it("uses defaultScanRoots for .planning, packages, apps, and scripts and includes fixture and __snapshots__ text paths", () => {
+    const root = createTempRepo()
+    expect(defaultScanRoots).toEqual([".planning", "packages", "apps", "scripts"])
+
+    writeTempFile(
+      root,
+      ".planning/notes.md",
+      "public beta trial competition with resettable Season-scoped standings and no durable permanent rating promise",
+    )
+    writeTempFile(root, "packages/spec/src/policy.ts", "allowed package text")
+    writeTempFile(root, "apps/web/app/fixtures/result.json", "{\"ok\": true}")
+    writeTempFile(root, "scripts/__snapshots__/copy.snap", "snapshot text")
+
+    const scan = scanV136CompetitionPolicyTextRoots({
+      repoRoot: root,
+      rows: baseRows().map((row) => ({ ...row, postureLabelRequired: false })),
+      includeDefaultSuppressions: false,
+    })
+
+    expect(scan.scannedRoots).toEqual(
+      expect.arrayContaining([
+        ".planning",
+        "packages",
+        "apps",
+        "scripts",
+        "apps/web/app/fixtures",
+        "scripts/__snapshots__",
+      ]),
+    )
+    expect(scan.scannedFiles.map((file) => file.path)).toEqual(
+      expect.arrayContaining([
+        ".planning/notes.md",
+        "packages/spec/src/policy.ts",
+        "apps/web/app/fixtures/result.json",
+        "scripts/__snapshots__/copy.snap",
+      ]),
+    )
+  })
+
+  it("filters supported text extensions and skips node_modules, .next, dist, build, coverage, .git, lockfiles, images, archives, and binary null-byte files", () => {
+    const root = createTempRepo()
+    const allowedExtensions = [
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".md",
+      ".mdx",
+      ".json",
+      ".jsonl",
+      ".txt",
+      ".go",
+      ".yaml",
+      ".yml",
+      ".snap",
+      ".html",
+    ]
+    expect(scanFileExtensions).toEqual(allowedExtensions)
+    for (const extension of allowedExtensions) {
+      writeTempFile(root, `packages/copy/file${extension}`, "allowed text")
+    }
+    for (const ignored of [
+      "packages/node_modules/pkg/index.ts",
+      "apps/web/.next/server/page.js",
+      "packages/spec/dist/index.js",
+      "packages/spec/build/index.js",
+      "coverage/report.json",
+      ".git/config",
+      "pnpm-lock.yaml",
+      "apps/web/public/image.png",
+      "apps/web/archive.zip",
+    ]) {
+      writeTempFile(root, ignored, "TinyGo production support is available")
+    }
+    writeTempFile(root, "scripts/binary.ts", "allowed\u0000TinyGo production support is available")
+
+    const scan = scanV136CompetitionPolicyTextRoots({
+      repoRoot: root,
+      rows: baseRows().map((row) => ({ ...row, postureLabelRequired: false })),
+      includeDefaultSuppressions: false,
+    })
+    const scanned = scan.scannedFiles.map((file) => file.path)
+    expect(scanned).toEqual(
+      expect.arrayContaining(
+        allowedExtensions.map((extension) => `packages/copy/file${extension}`),
+      ),
+    )
+    expect(scanned).not.toEqual(
+      expect.arrayContaining([
+        "packages/node_modules/pkg/index.ts",
+        "apps/web/.next/server/page.js",
+        "packages/spec/dist/index.js",
+        "packages/spec/build/index.js",
+        "coverage/report.json",
+        ".git/config",
+        "pnpm-lock.yaml",
+        "apps/web/public/image.png",
+        "apps/web/archive.zip",
+        "scripts/binary.ts",
+      ]),
+    )
+    expect(checkV136CompetitionPolicyScan({
+      repoRoot: root,
+      rows: baseRows().map((row) => ({ ...row, postureLabelRequired: false })),
+      includeDefaultSuppressions: false,
+    })).toEqual([])
+  })
+
+  it("detects forbidden and private markers across durable-rating, production-sandbox, package-ecosystem, TinyGo-production, raw-diagnostic, and private-runtime copy", () => {
+    const root = createTempRepo()
+    writeTempFile(root, "apps/web/copy.ts", [
+      "Coward's Game has durable permanent ratings.",
+      "Coward's Game publishes all-time rankings.",
+      "Invalidated Matches refund permanent rating.",
+      "Every dispute receives staffed moderation review.",
+      "All runtime lanes provide production sandbox certification.",
+      "Strategies can use the full npm ecosystem.",
+      "TinyGo is a production Strategy lane.",
+      "Public results show raw runtime diagnostics.",
+      "Public pages expose private runtime internals.",
+      "Public replay includes Strategy source.",
+    ].join("\n"))
+
+    expect(checkV136CompetitionPolicyScan({
+      repoRoot: root,
+      rows: baseRows().map((row) => ({ ...row, postureLabelRequired: false })),
+      includeDefaultSuppressions: false,
+    })).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/durable-rating/),
+        expect.stringMatching(/all-time-ranking/),
+        expect.stringMatching(/rating-refund/),
+        expect.stringMatching(/mature-staffed-moderation/),
+        expect.stringMatching(/production-sandbox/),
+        expect.stringMatching(/package-ecosystem/),
+        expect.stringMatching(/tinygo-production/),
+        expect.stringMatching(/raw-diagnostic/),
+        expect.stringMatching(/private-runtime/),
+        expect.stringMatching(/private marker.*Strategy source/),
+      ]),
+    )
+  })
+
+  it("requires public beta trial competition plus resettable Season-scoped standings and no durable permanent rating promise for posture-required references", () => {
+    const root = createTempRepo()
+    const rows = baseRows()
+    rows[0] = {
+      ...rows[0]!,
+      references: ["apps/web/app/competitions/page.tsx"],
+      postureLabelRequired: true,
+    }
+    writeTempFile(root, "apps/web/app/competitions/page.tsx", "Competition page")
+
+    expect(checkV136CompetitionPolicyScan({
+      repoRoot: root,
+      rows,
+      includeDefaultSuppressions: false,
+    })).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/missing required posture label/),
+        expect.stringMatching(/missing required reset\/no-durable copy/),
+      ]),
+    )
+
+    writeTempFile(
+      root,
+      "apps/web/app/competitions/page.tsx",
+      "public beta trial competition uses resettable Season-scoped standings; no durable permanent rating promise",
+    )
+    expect(checkV136CompetitionPolicyScan({
+      repoRoot: root,
+      rows,
+      includeDefaultSuppressions: false,
+    })).toEqual([])
+  })
+
+  it("requires documented V136CompetitionPolicyScanSuppression fields and exact suppression category/path matches", () => {
+    const root = createTempRepo()
+    writeTempFile(
+      root,
+      "packages/spec/src/copy.ts",
+      "This fixture says not a durable permanent rating promise while showing clear violation: Coward's Game has durable permanent ratings.",
+    )
+    writeTempFile(
+      root,
+      "packages/spec/src/sandbox.ts",
+      "This contract does not provide production sandbox certification.",
+    )
+    const rows = baseRows().map((row) => ({
+      ...row,
+      postureLabelRequired: false,
+    }))
+    const durableSuppression: V136CompetitionPolicyScanSuppression = {
+      path: "packages/spec/src/copy.ts",
+      category: "durable-rating",
+      rationale: "documents a false positive phrase in a static test fixture",
+      owner: "Phase 249 monitor tests",
+      expiry: "2026-12-31",
+    }
+
+    expect(checkV136CompetitionPolicyScan({
+      repoRoot: root,
+      rows,
+      suppressions: [durableSuppression],
+      includeDefaultSuppressions: false,
+    })).toEqual([])
+    expect(checkV136CompetitionPolicyScan({
+      repoRoot: root,
+      rows,
+      suppressions: [{ ...durableSuppression, category: "production-sandbox" }],
+      includeDefaultSuppressions: false,
+    })).toEqual(expect.arrayContaining([expect.stringMatching(/clear violation|durable-rating/)]))
+    expect(checkV136CompetitionPolicyScan({
+      repoRoot: root,
+      rows,
+      suppressions: [{ ...durableSuppression, path: "packages/spec/src/other.ts" }],
+      includeDefaultSuppressions: false,
+    })).toEqual(expect.arrayContaining([expect.stringMatching(/suppression path|durable-rating/)]))
+    expect(checkV136CompetitionPolicyScan({
+      repoRoot: root,
+      rows,
+      suppressions: [
+        {
+          path: "packages/spec/src/sandbox.ts",
+          category: "production-sandbox",
+          rationale: "",
+          owner: "Phase 249 monitor tests",
+          expiry: "2026-12-31",
+        },
+      ],
+      includeDefaultSuppressions: false,
+    })).toEqual(expect.arrayContaining([expect.stringMatching(/invalid suppression/)]))
   })
 })
