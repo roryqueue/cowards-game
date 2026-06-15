@@ -14,6 +14,18 @@ import {
   getCompetitionPreset,
 } from "./competition.js"
 import {
+  assertCompetitionPolicyV136PublicLeakSafe,
+  COMPETITION_POLICY_V1_36_AUTHORITY_OWNERS,
+  COMPETITION_POLICY_V1_36_COUNTED_STATE_PUBLIC_PROJECTIONS,
+  COMPETITION_POLICY_V1_36_COUNTED_STATE_SCOPE,
+  COMPETITION_POLICY_V1_36_FORBIDDEN_CLAIMS,
+  COMPETITION_POLICY_V1_36_ID,
+  COMPETITION_POLICY_V1_36_POSTURE,
+  COMPETITION_POLICY_V1_36_PRIVACY_EXCLUSIONS,
+  COMPETITION_POLICY_V1_36_PUBLIC_PAYLOAD,
+  COMPETITION_POLICY_V1_36_TRUST_SURFACES,
+} from "./competition-policy-v1-36.js"
+import {
   assertPublicServiceDtoLeakSafe,
   SERVICE_API_ROUTES,
   SERVICE_API_VERSION,
@@ -90,6 +102,179 @@ import {
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
 
 describe("Coward's Game spec contracts", () => {
+  describe("competition-policy-v1.36", () => {
+    it("POST-01/D-02 locks the exact public beta trial competition posture", () => {
+      expect(COMPETITION_POLICY_V1_36_ID).toBe("competition-policy-v1.36")
+      expect(COMPETITION_POLICY_V1_36_POSTURE.publicLabel).toBe(
+        "public beta trial competition",
+      )
+    })
+
+    it("POST-01/D-03/D-04 preserves resettable Season copy and the no durable rating promise", () => {
+      expect(COMPETITION_POLICY_V1_36_POSTURE.standingsScope).toBe(
+        "resettable Season-scoped standings",
+      )
+      expect(COMPETITION_POLICY_V1_36_POSTURE.durableRatingPromise).toBe(
+        "no durable permanent rating promise",
+      )
+      expect(COMPETITION_POLICY_V1_36_POSTURE.completedSeasonLabel).toContain(
+        "completed Seasons remain resettable public beta trial competition evidence",
+      )
+      expect(COMPETITION_POLICY_V1_36_POSTURE.completedSeasonLabel).toContain(
+        "not durable rating truth",
+      )
+      expect(COMPETITION_POLICY_V1_36_POSTURE.archivedSeasonLabel).toContain(
+        "archived Seasons remain resettable public beta trial competition evidence",
+      )
+      expect(COMPETITION_POLICY_V1_36_POSTURE.archivedSeasonLabel).toContain(
+        "not durable rating truth",
+      )
+    })
+
+    it("POST-03/D-11 defines counted-state public projection vocabulary only", () => {
+      expect(
+        COMPETITION_POLICY_V1_36_COUNTED_STATE_PUBLIC_PROJECTIONS.map(
+          (projection) => projection.state,
+        ),
+      ).toEqual([
+        "pending",
+        "counted",
+        "retrying",
+        "degraded_system_failure",
+        "non_counted",
+        "non_competitive",
+        "under_review",
+        "disputed",
+        "invalid",
+        "invalidated",
+      ])
+      expect(
+        COMPETITION_POLICY_V1_36_COUNTED_STATE_PUBLIC_PROJECTIONS.map(
+          (projection) => projection.publicMeaning,
+        ).join(" "),
+      ).toMatch(
+        /pending|counted|retrying|degraded system failure|non-counted|non-competitive|under review|disputed|invalid|invalidated/,
+      )
+      expect(COMPETITION_POLICY_V1_36_COUNTED_STATE_SCOPE).toContain(
+        "public projection vocabulary only",
+      )
+      expect(COMPETITION_POLICY_V1_36_COUNTED_STATE_SCOPE).toContain(
+        "Phase 252 owns final persistence enum mappings",
+      )
+    })
+
+    it("POST-02/D-12 represents forbidden claim categories with concrete examples", () => {
+      expect(
+        COMPETITION_POLICY_V1_36_FORBIDDEN_CLAIMS.map(
+          (claim) => claim.category,
+        ),
+      ).toEqual([
+        "durable-rating",
+        "production-sandbox",
+        "package-ecosystem",
+        "tinygo-production",
+        "raw-diagnostic",
+        "private-runtime",
+        "mature-staffed-moderation",
+        "rating-refund",
+        "all-time-ranking",
+      ])
+      for (const claim of COMPETITION_POLICY_V1_36_FORBIDDEN_CLAIMS) {
+        expect(claim.examples.length).toBeGreaterThanOrEqual(2)
+        expect(claim.examples.every((example) => example.length > 0)).toBe(
+          true,
+        )
+      }
+    })
+
+    it("POST-03 keeps authoritative owners outside React rules and web/API Strategy execution", () => {
+      expect(COMPETITION_POLICY_V1_36_TRUST_SURFACES).toEqual(
+        expect.arrayContaining([
+          "competition-index",
+          "competition-detail",
+          "entry",
+          "season",
+          "standings",
+          "result",
+          "replay",
+          "player",
+          "strategy",
+          "governance",
+          "docs",
+          "fixtures",
+          "snapshots",
+          "proof-artifacts",
+          "monitors",
+        ]),
+      )
+      expect(COMPETITION_POLICY_V1_36_AUTHORITY_OWNERS).toMatchObject({
+        specContract: expect.stringContaining("vocabulary"),
+        goBackendOrchestration: expect.stringContaining("normal orchestration"),
+        runtimeServiceProviderBoundary: expect.stringContaining(
+          "hostile Strategy validation/build/execution",
+        ),
+        persistence: expect.stringContaining("canonical stored evidence"),
+        webProjection: expect.stringContaining("public projections only"),
+        staticMonitorProof: expect.stringContaining("static drift checks"),
+      })
+      expect(
+        COMPETITION_POLICY_V1_36_AUTHORITY_OWNERS.webProjection,
+      ).toContain("no game rules")
+      expect(
+        COMPETITION_POLICY_V1_36_AUTHORITY_OWNERS.goBackendOrchestration,
+      ).toContain("no Strategy execution")
+    })
+
+    it("POST-03 public payload is leak-safe and rejects private competition markers", () => {
+      expect(COMPETITION_POLICY_V1_36_PRIVACY_EXCLUSIONS).toEqual(
+        expect.arrayContaining([
+          "Strategy source",
+          "StrategyMemory",
+          "SoldierMemory",
+          "objective payloads",
+          "raw diagnostics",
+          "artifact bytes",
+          "host paths",
+          "env values",
+          "tokens",
+          "DB details",
+          "package paths",
+          "private runtime internals",
+          "dispute internals",
+          "account-recovery payloads",
+          "operator-only governance details",
+        ]),
+      )
+      expect(() =>
+        assertCompetitionPolicyV136PublicLeakSafe(
+          COMPETITION_POLICY_V1_36_PUBLIC_PAYLOAD,
+        ),
+      ).not.toThrow()
+
+      for (const privateMarker of [
+        { strategySource: "private strategy code" },
+        { StrategyMemory: { hidden: true } },
+        { SoldierMemory: { hidden: true } },
+        { objectivePayload: { hidden: true } },
+        { rawDiagnostics: "Traceback" },
+        { artifactBytesBase64: "abc123" },
+        { hostPaths: ["/private/path"] },
+        { envValues: { DATABASE_URL: "postgres://private" } },
+        { tokens: ["Bearer private"] },
+        { dbDetails: "private DSN" },
+        { packagePaths: ["site-packages/private"] },
+        { privateRuntimeInternals: { stderr: "private" } },
+        { disputeInternals: { operatorNote: "private" } },
+        { accountRecoveryPayloads: { secret: "private" } },
+        { operatorOnlyGovernance: { hidden: true } },
+      ]) {
+        expect(() =>
+          assertCompetitionPolicyV136PublicLeakSafe(privateMarker),
+        ).toThrow(/private/)
+      }
+    })
+  })
+
   it("exposes generation-ready v1.8 service route metadata and public DTO schemas", () => {
     expect(SERVICE_API_VERSION).toBe("service-api-v1.8")
     expect(SERVICE_API_ROUTES.getPublicStrategyPage).toMatchObject({
