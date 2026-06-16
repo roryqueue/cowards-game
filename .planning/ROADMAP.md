@@ -3,7 +3,7 @@
 ## Milestones
 
 - **v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup** - Phases 243-248, shipped 2026-06-15
-- **v1.36 Competition Maturity** - Phases 249-255, active planning
+- **v1.36 Competition Maturity** - Phases 249-255, active execution
 
 ## Shipped Context
 
@@ -46,7 +46,7 @@ Archive:
 
 ## Phases
 
-- [ ] **Phase 249: Competition Surface Inventory and Policy Lock** - Lock v1.36 public beta posture, surface inventory, vocabulary, owners, privacy exclusions, and forbidden claims.
+- [x] **Phase 249: Competition Surface Inventory and Policy Lock** - Lock v1.36 public beta posture, surface inventory, vocabulary, owners, privacy exclusions, and forbidden claims.
 - [ ] **Phase 250: Counted Entry and One-Active-Revision Enforcement** - Enforce provider-proof-backed counted eligibility, one active counted revision per Season, and explicit exhibition separation.
 - [ ] **Phase 251: Season Lifecycle and Scheduling Policy** - Define public-safe Season lifecycle, entry and scheduling windows, entrant snapshots, archive behavior, and reset semantics.
 - [ ] **Phase 252: Counted-State Classifier and Standings Recompute** - Classify result states and recompute Season standings from canonical counted evidence plus governance state.
@@ -67,9 +67,9 @@ Archive:
   4. Public copy monitors reject durable-rating, production-sandbox, package-ecosystem, TinyGo-production, raw-diagnostic, and private-runtime overclaims.
 **Plans**: 3 plans
 Plans:
-- [ ] 249-01-PLAN.md — Create the spec-owned `competition-policy-v1.36` contract for posture, vocabulary, privacy exclusions, owners, and forbidden claims.
-- [ ] 249-02-PLAN.md — Generate the Markdown/JSON route-code-artifact competition surface inventory from a typed evaluator.
-- [ ] 249-03-PLAN.md — Wire fail-loud v1.36 copy/privacy monitor checks into package scripts and the boundary monitor chain.
+- [x] 249-01-PLAN.md — Create the spec-owned `competition-policy-v1.36` contract for posture, vocabulary, privacy exclusions, owners, and forbidden claims.
+- [x] 249-02-PLAN.md — Generate the Markdown/JSON route-code-artifact competition surface inventory from a typed evaluator.
+- [x] 249-03-PLAN.md — Wire fail-loud v1.36 copy/privacy monitor checks into package scripts and the boundary monitor chain.
 
 ### Phase 250: Counted Entry and One-Active-Revision Enforcement
 **Goal**: Players can enter counted trial competition only through current, immutable, account-owned, provider-proof-valid Strategy Revisions, while exhibition workflows remain clearly non-counted where appropriate.
@@ -151,7 +151,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 249. Competition Surface Inventory and Policy Lock | 0/3 | Ready to execute | - |
+| 249. Competition Surface Inventory and Policy Lock | 3/3 | Complete | 2026-06-16 |
 | 250. Counted Entry and One-Active-Revision Enforcement | 0/0 | Not started | - |
 | 251. Season Lifecycle and Scheduling Policy | 0/0 | Not started | - |
 | 252. Counted-State Classifier and Standings Recompute | 0/0 | Not started | - |
@@ -175,4 +175,4 @@ Plans:
 
 ## Next
 
-Start sequential phase discussion with `$gsd-discuss-phase 249`.
+Start sequential phase discussion with `$gsd-discuss-phase 250`.

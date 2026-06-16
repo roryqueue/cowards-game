@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.36
 milestone_name: Competition Maturity
 status: planning
-stopped_at: Phase 249 planned
+stopped_at: Phase 249 verified complete
 last_updated: "2026-06-15T00:00:00.000Z"
-last_activity: 2026-06-15 -- Phase 249 planned and verified
+last_activity: 2026-06-16 -- Phase 249 executed, reviewed, and verified
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_plans: 3
+  percent: 14
 ---
 
 # State: Coward's Game
@@ -21,22 +21,22 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-06-15)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 249 execution
+**Current focus:** Phase 250 discussion
 
 ## Current Position
 
-Phase: 249 - Competition Surface Inventory and Policy Lock
-Plan: 0 of 3
-Status: Plans verified; ready to execute
-Last activity: 2026-06-15 -- Phase 249 planned and verified
+Phase: 250 - Counted Entry and One-Active-Revision Enforcement
+Plan: 0 of 0
+Status: Not started; ready for discussion
+Last activity: 2026-06-16 -- Phase 249 executed, reviewed, and verified
 
-Progress: [----------] 0%
+Progress: [#---------] 14%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 3
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -44,7 +44,7 @@ Progress: [----------] 0%
 
 | Phase | Status | Plans | Requirements |
 |-------|--------|-------|--------------|
-| 249. Competition Surface Inventory and Policy Lock | Ready to execute | 0/3 | 5 |
+| 249. Competition Surface Inventory and Policy Lock | Complete | 3/3 | 5 |
 | 250. Counted Entry and One-Active-Revision Enforcement | Not started | 0/0 | 6 |
 | 251. Season Lifecycle and Scheduling Policy | Not started | 0/0 | 5 |
 | 252. Counted-State Classifier and Standings Recompute | Not started | 0/0 | 6 |
@@ -70,7 +70,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Run `$gsd-execute-phase 249` to execute the verified plans.
+- Run `$gsd-discuss-phase 250` to start the next phase.
 
 ### Blockers/Concerns
 
@@ -92,7 +92,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-06-15T00:00:00.000Z
-Stopped at: Phase 249 planned and verified
-Resume file: `.planning/phases/249-competition-surface-inventory-and-policy-lock/249-01-PLAN.md`
-Next command: `$gsd-execute-phase 249`
+Last session: 2026-06-16T00:40:05.000Z
+Stopped at: Phase 249 verified complete
+Resume file: `.planning/phases/250-counted-entry-and-one-active-revision-enforcement/`
+Next command: `$gsd-discuss-phase 250`
