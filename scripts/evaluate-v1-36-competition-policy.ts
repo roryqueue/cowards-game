@@ -1718,7 +1718,9 @@ const isNegatedMatch = (line: string, matchIndex: number): boolean => {
     return false
   }
   const afterNegation = prefix.slice(lastNegation.index + lastNegation[0].length)
-  return !/\b(?:but|however|yet|though|although)\b|[.;:]/i.test(afterNegation)
+  return !/\b(?:and|but|however|yet|though|although)\b|[,.;:]/i.test(
+    afterNegation,
+  )
 }
 
 const findForbiddenPolicyClaimMatches = (

@@ -671,6 +671,8 @@ describe("v1.36 competition policy text scanner", () => {
     writeTempFile(root, "apps/web/copy.ts", [
       "The product is not permanent, but players now receive permanent ratings.",
       "This is not public; TinyGo strategies are production eligible.",
+      "The product is not permanent, players now receive permanent ratings.",
+      "This is not public and TinyGo strategies are production eligible.",
       "This contract does not provide production sandbox certification.",
     ].join("\n"))
 
