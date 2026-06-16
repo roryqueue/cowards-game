@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.36
 milestone_name: Competition Maturity
 status: planning
-stopped_at: Phase 249 verified complete
+stopped_at: Phase 250 discussion complete
 last_updated: "2026-06-15T00:00:00.000Z"
 last_activity: 2026-06-16 -- Phase 249 executed, reviewed, and verified
 progress:
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-06-15)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 250 discussion
+**Current focus:** Phase 250 planning
 
 ## Current Position
 
 Phase: 250 - Counted Entry and One-Active-Revision Enforcement
 Plan: 0 of 0
-Status: Not started; ready for discussion
-Last activity: 2026-06-16 -- Phase 249 executed, reviewed, and verified
+Status: Discussion complete; ready for planning
+Last activity: 2026-06-16 -- Phase 250 discussion completed
 
 Progress: [#---------] 14%
 
@@ -70,7 +70,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Run `$gsd-discuss-phase 250` to start the next phase.
+- Run `$gsd-plan-phase 250` to create execution plans for counted entry and one-active-revision enforcement.
 
 ### Blockers/Concerns
 
@@ -93,6 +93,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 ## Session Continuity
 
 Last session: 2026-06-16T00:40:05.000Z
-Stopped at: Phase 249 verified complete
+Stopped at: Phase 250 discussion complete
 Resume file: `.planning/phases/250-counted-entry-and-one-active-revision-enforcement/`
-Next command: `$gsd-discuss-phase 250`
+Next command: `$gsd-plan-phase 250`
