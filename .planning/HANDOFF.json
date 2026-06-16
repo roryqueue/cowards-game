@@ -1,0 +1,70 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-06-16T01:30:45Z",
+  "phase": "250",
+  "phase_name": "Counted Entry and One-Active-Revision Enforcement",
+  "phase_dir": ".planning/phases/250-counted-entry-and-one-active-revision-enforcement",
+  "plan": 2,
+  "task": 0,
+  "total_tasks": 4,
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "Plan 250-01: counted entry eligibility contract",
+      "status": "done",
+      "commit": "e5a982e"
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 2,
+      "name": "Plan 250-02: persistence counted entry evaluator and one-owner Season enforcement",
+      "status": "not_started"
+    },
+    {
+      "id": 3,
+      "name": "Plan 250-03: web/API/public discovery/Go readiness projection and exhibition separation",
+      "status": "not_started"
+    },
+    {
+      "id": 4,
+      "name": "Phase 250 verification, review, and completion tracking",
+      "status": "not_started"
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No active blockers. PostgreSQL was not responding during research; Plan 250-02 should prefer unit/fixture tests unless service-backed proof becomes necessary, and can start services with pnpm services:up if needed.",
+      "type": "technical",
+      "workaround": "Use existing unit tests first; start Docker-backed services only if DB-backed proof is required."
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "None",
+      "context": "Wave 1 completed and committed; Wave 2 can start without user input.",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "JavaScript is excluded from counted trial entry for Phase 250.",
+      "rationale": "Phase 250 locked counted trial lanes to TypeScript, Python, Rust, and Zig provider-proof evidence; existing JavaScript runtime support is not removed but is not counted trial Season eligible.",
+      "phase": "250"
+    },
+    {
+      "decision": "Go readiness remains parity/monitoring in Phase 250.",
+      "rationale": "Entry mutation stays in the current TypeScript persistence/API path; Go category parity is handled in Plan 250-03.",
+      "phase": "250"
+    },
+    {
+      "decision": "Negative counted entry responses use { ok: false, eligibility: { category, publicMessage, remediation } }.",
+      "rationale": "This groups public-safe category/remediation data for UI projection without exposing provider/runtime/database internals.",
+      "phase": "250"
+    }
+  ],
+  "uncommitted_files": [],
+  "next_action": "Execute .planning/phases/250-counted-entry-and-one-active-revision-enforcement/250-02-PLAN.md with a gsd-executor or inline execute-plan flow.",
+  "context_notes": "Paused at a clean wave boundary after Phase 250 Plan 01 completed. The spec-owned eligibility contract exists, tests passed, and the next work is persistence enforcement that consumes that contract."
+}
