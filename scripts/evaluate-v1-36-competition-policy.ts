@@ -1746,16 +1746,29 @@ const findForbiddenPolicyClaimMatches = (
       })),
     ]
     for (const matcher of matchers) {
+      let matcherFound = false
       for (const line of text.split("\n")) {
-        const match = line.match(matcher.pattern)
-        if (
-          match !== null &&
-          (matcher.ignoreNegation || !isNegatedMatch(line, match.index ?? 0))
-        ) {
+        const globalPattern = new RegExp(
+          matcher.pattern.source,
+          matcher.pattern.flags.includes("g")
+            ? matcher.pattern.flags
+            : `${matcher.pattern.flags}g`,
+        )
+        for (const match of line.matchAll(globalPattern)) {
+          if (
+            !matcher.ignoreNegation &&
+            isNegatedMatch(line, match.index ?? 0)
+          ) {
+            continue
+          }
           matches.push({
             category: entry.category,
             matchedPhrase: matcher.phrase || match[0],
           })
+          matcherFound = true
+          break
+        }
+        if (matcherFound) {
           break
         }
       }
