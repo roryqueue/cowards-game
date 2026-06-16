@@ -617,12 +617,14 @@ describe("v1.36 competition policy text scanner", () => {
     const root = createTempRepo()
     writeTempFile(root, "apps/web/copy.ts", [
       "Coward's Game has durable permanent ratings.",
+      "Players now receive permanent ratings in public beta.",
       "Coward's Game publishes all-time rankings.",
       "Invalidated Matches refund permanent rating.",
       "Every dispute receives staffed moderation review.",
       "All runtime lanes provide production sandbox certification.",
       "Strategies can use the full npm ecosystem.",
       "TinyGo is a production Strategy lane.",
+      "TinyGo strategies are now production eligible.",
       "Public results show raw runtime diagnostics.",
       "Public pages expose private runtime internals.",
       "Public replay includes Strategy source.",
@@ -661,7 +663,6 @@ describe("v1.36 competition policy text scanner", () => {
     expect(checkV136CompetitionPolicyScan({
       repoRoot: root,
       rows,
-      includeDefaultSuppressions: false,
     })).toEqual(
       expect.arrayContaining([
         expect.stringMatching(/missing required posture label/),
@@ -681,12 +682,15 @@ describe("v1.36 competition policy text scanner", () => {
     })).toEqual([])
   })
 
-  it("requires documented V136CompetitionPolicyScanSuppression fields and exact suppression category/path matches", () => {
+  it("requires documented V136CompetitionPolicyScanSuppression fields and exact suppression category/path/matchedPhrase matches", () => {
     const root = createTempRepo()
     writeTempFile(
       root,
       "packages/spec/src/copy.ts",
-      "This fixture says not a durable permanent rating promise while showing clear violation: Coward's Game has durable permanent ratings.",
+      [
+        "Fixture quote: Coward's Game has durable permanent ratings.",
+        "Players receive permanent ratings now.",
+      ].join("\n"),
     )
     writeTempFile(
       root,
@@ -700,6 +704,7 @@ describe("v1.36 competition policy text scanner", () => {
     const durableSuppression: V136CompetitionPolicyScanSuppression = {
       path: "packages/spec/src/copy.ts",
       category: "durable-rating",
+      matchedPhrase: "Coward's Game has durable permanent ratings",
       rationale: "documents a false positive phrase in a static test fixture",
       owner: "Phase 249 monitor tests",
       expiry: "2026-12-31",
@@ -709,6 +714,18 @@ describe("v1.36 competition policy text scanner", () => {
       repoRoot: root,
       rows,
       suppressions: [durableSuppression],
+      includeDefaultSuppressions: false,
+    })).toEqual(expect.arrayContaining([expect.stringMatching(/permanent ratings/)]))
+    expect(checkV136CompetitionPolicyScan({
+      repoRoot: root,
+      rows,
+      suppressions: [
+        durableSuppression,
+        {
+          ...durableSuppression,
+          matchedPhrase: "permanent ratings",
+        },
+      ],
       includeDefaultSuppressions: false,
     })).toEqual([])
     expect(checkV136CompetitionPolicyScan({
@@ -730,6 +747,7 @@ describe("v1.36 competition policy text scanner", () => {
         {
           path: "packages/spec/src/sandbox.ts",
           category: "production-sandbox",
+          matchedPhrase: "production sandbox certification",
           rationale: "",
           owner: "Phase 249 monitor tests",
           expiry: "2026-12-31",

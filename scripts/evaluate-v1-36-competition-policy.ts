@@ -139,6 +139,7 @@ export interface GenerateV136CompetitionSurfaceInventoryOptions {
 export interface V136CompetitionPolicyScanSuppression {
   path: string
   category: string
+  matchedPhrase: string
   rationale: string
   owner: string
   expiry: string
@@ -1600,6 +1601,10 @@ const forbiddenTextPatterns = [
       "durable permanent rating is available",
       "permanent player ratings are live",
     ],
+    patterns: [
+      /\b(?:permanent|durable|lifetime)\s+(?:player\s+)?ratings?\b/i,
+      /\b(?:ratings?|rankings?)\s+(?:are\s+)?(?:permanent|durable|lifetime)\b/i,
+    ],
   },
   {
     category: "all-time-ranking",
@@ -1607,6 +1612,10 @@ const forbiddenTextPatterns = [
       "Coward's Game publishes all-time rankings",
       "all-time rankings are available",
       "official lifetime rank",
+    ],
+    patterns: [
+      /\ball[-\s]?time\s+(?:rankings?|leaderboards?)\b/i,
+      /\b(?:official\s+)?lifetime\s+rank(?:ing)?s?\b/i,
     ],
   },
   {
@@ -1616,6 +1625,10 @@ const forbiddenTextPatterns = [
       "rating refunds are available",
       "governance can repair lost rating points",
     ],
+    patterns: [
+      /\b(?:refund|repair|restore|return)s?\s+(?:permanent\s+)?rating\s+points?\b/i,
+      /\brating\s+refunds?\b/i,
+    ],
   },
   {
     category: "mature-staffed-moderation",
@@ -1623,6 +1636,11 @@ const forbiddenTextPatterns = [
       "Every dispute receives staffed moderation review",
       "appeals have guaranteed human moderator SLAs",
       "staffed moderation is available",
+    ],
+    patterns: [
+      /\bstaffed\s+moderation\b/i,
+      /\bguaranteed\s+human\s+moderator\s+SLAs?\b/i,
+      /\bevery\s+dispute\s+receives\s+(?:staffed|human)\s+(?:moderation|review)\b/i,
     ],
   },
   {
@@ -1632,6 +1650,11 @@ const forbiddenTextPatterns = [
       "the Strategy sandbox is production certified",
       "production sandbox certification is available",
     ],
+    patterns: [
+      /\bproduction\s+sandbox\s+certification\b/i,
+      /\bStrategy\s+sandbox\s+is\s+production\s+certified\b/i,
+      /\bruntime\s+lanes?\b[^.\n]{0,80}\bproduction\s+(?:certified|sandbox)\b/i,
+    ],
   },
   {
     category: "package-ecosystem",
@@ -1639,6 +1662,11 @@ const forbiddenTextPatterns = [
       "Strategies can use the full npm ecosystem",
       "Python package installs are supported in counted play",
       "package ecosystem support is available",
+    ],
+    patterns: [
+      /\bfull\s+npm\s+ecosystem\b/i,
+      /\bpackage\s+ecosystem\s+support\b/i,
+      /\b(?:Python|TypeScript|JavaScript|Rust|Zig|TinyGo)\s+package\s+installs?\b[^.\n]{0,80}\b(?:supported|available|eligible)\b/i,
     ],
   },
   {
@@ -1648,6 +1676,10 @@ const forbiddenTextPatterns = [
       "TinyGo entries are eligible for counted competition",
       "TinyGo production support is available",
     ],
+    patterns: [
+      /\bTinyGo\b(?!-)[^.\n"`]{0,100}\b(?:production|counted|eligible|supported|public)\b/i,
+      /\bproduction\s+TinyGo\b/i,
+    ],
   },
   {
     category: "raw-diagnostic",
@@ -1656,6 +1688,10 @@ const forbiddenTextPatterns = [
       "players can inspect raw provider stderr in public replay",
       "raw diagnostics are public",
     ],
+    patterns: [
+      /\braw\s+(?:runtime\s+)?diagnostics?\b(?:\s+(?:are|is))?\s+(?:public|shown|visible|available)\b/i,
+      /\braw\s+provider\s+stderr\b/i,
+    ],
   },
   {
     category: "private-runtime",
@@ -1663,6 +1699,10 @@ const forbiddenTextPatterns = [
       "Public pages expose private runtime internals",
       "runtime provider secrets are part of public evidence",
       "private runtime internals are public",
+    ],
+    patterns: [
+      /\bprivate\s+runtime\s+internals?\b(?:\s+(?:are|is))?\s+(?:public|shown|visible|available|exposed)\b/i,
+      /\bruntime\s+provider\s+secrets?\b(?:\s+\w+){0,8}\s+public\b/i,
     ],
   },
 ] as const
@@ -1682,15 +1722,24 @@ const privateTextPatterns = privateTextMarkers.map((marker) => ({
 }))
 
 const negatedPolicyLinePattern =
-  /\b(?:must not|do not|does not|not expose|not exposed|never expose|without|excluded|excludes|forbidden|denylist|privacy exclusion|must stay|avoid|omit|omits|but not|fail if|no public|not public|rejects?)\b/i
+  /\b(?:must not|do not|does not|not expose|not exposed|never expose|without|excluded|excludes|forbidden|denylist|privacy exclusion|must stay|avoid|omit|omits|but not|fail if|no public|not public|no durable|not durable|no permanent|not permanent|rejects?)\b/i
+
+const forbiddenSuppressionPhrases = (
+  entry: (typeof forbiddenTextPatterns)[number],
+): readonly string[] => {
+  const phrases = new Set<string>(entry.phrases)
+  for (const phrase of entry.phrases) {
+    for (const pattern of entry.patterns) {
+      const match = phrase.match(pattern)
+      if (match?.[0] !== undefined) {
+        phrases.add(match[0])
+      }
+    }
+  }
+  return [...phrases].sort()
+}
 
 const createDefaultSuppressions = (): readonly V136CompetitionPolicyScanSuppression[] => {
-  const categories = [
-    ...forbiddenTextPatterns.map((entry) => entry.category),
-    "private-marker",
-    "required-posture-label",
-    "required-reset-no-durable-copy",
-  ]
   const paths = [
     "packages/spec/src/competition-policy-v1-36.ts",
     "scripts/evaluate-v1-36-competition-policy.ts",
@@ -1705,6 +1754,7 @@ const createDefaultSuppressions = (): readonly V136CompetitionPolicyScanSuppress
     ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-VALIDATION.md",
     ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-RESEARCH.md",
     ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-PATTERNS.md",
+    ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-REVIEW.md",
     ".planning/research/ARCHITECTURE.md",
     ".planning/research/FEATURES.md",
     ".planning/research/PITFALLS.md",
@@ -1714,48 +1764,222 @@ const createDefaultSuppressions = (): readonly V136CompetitionPolicyScanSuppress
   ]
   const suppressions: V136CompetitionPolicyScanSuppression[] = []
   for (const suppressionPath of paths) {
-    for (const category of categories) {
-      suppressions.push({
-        path: suppressionPath,
-        category,
-        rationale:
-          "Intentional policy, artifact, or test fixture text documents forbidden examples and monitor calibration without making a product claim.",
-        owner: "Phase 249 static monitor",
-        expiry: "2026-12-31",
-      })
-    }
-  }
-  for (const row of authoritativeRows) {
-    if (row.postureLabelRequired && row.disposition !== "lock-now") {
-      for (const reference of row.references) {
+    for (const entry of forbiddenTextPatterns) {
+      for (const matchedPhrase of forbiddenSuppressionPhrases(entry)) {
         suppressions.push({
-          path: reference,
-          category: "required-posture-label",
+          path: suppressionPath,
+          category: entry.category,
+          matchedPhrase,
           rationale:
-            "Inventory row is assigned to a downstream implementation phase; Phase 249 locks the requirement without editing the product surface.",
-          owner: "Phase 249 static monitor",
-          expiry: "2026-12-31",
-        })
-        suppressions.push({
-          path: reference,
-          category: "required-reset-no-durable-copy",
-          rationale:
-            "Inventory row is assigned to a downstream implementation phase; Phase 249 locks the reset/no-durable requirement without editing the product surface.",
+            "Intentional policy, artifact, or test fixture text documents forbidden examples and monitor calibration without making a product claim.",
           owner: "Phase 249 static monitor",
           expiry: "2026-12-31",
         })
       }
     }
+    for (const matchedPhrase of privateTextMarkers) {
+      suppressions.push({
+        path: suppressionPath,
+        category: "private-marker",
+        matchedPhrase,
+        rationale:
+          "Intentional policy, artifact, or test fixture text documents private-marker exclusions without exposing a product payload.",
+        owner: "Phase 249 static monitor",
+        expiry: "2026-12-31",
+      })
+    }
   }
   return suppressions
 }
+
+const phase249LegacyPolicyCalibrationPaths = [
+  ".planning/artifacts/v1.36-competition-surface-inventory.json",
+  ".planning/artifacts/v1.36-competition-surface-inventory.md",
+  ".planning/MILESTONES.md",
+  ".planning/PROJECT.md",
+  ".planning/REQUIREMENTS.md",
+  ".planning/RETROSPECTIVE.md",
+  ".planning/ROADMAP.md",
+  ".planning/STATE.md",
+  ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-03-PLAN.md",
+  ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-DISCUSSION-LOG.md",
+  ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-PATTERNS.md",
+  ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-RESEARCH.md",
+  ".planning/research/ARCHITECTURE.md",
+  ".planning/research/FEATURES.md",
+  ".planning/research/PITFALLS.md",
+  ".planning/research/STACK.md",
+  ".planning/research/SUMMARY.md",
+  ".planning/research/v1.24-SUMMARY.md",
+  ".planning/research/v1.25-SUMMARY.md",
+  ".planning/research/v1.33-SUMMARY.md",
+  ".planning/research/v1.5-STRATEGY-LIBRARY.md",
+  ".planning/research/v1.5-SUMMARY.md",
+  "packages/runtime-js/src/sandbox-evaluation.ts",
+  "packages/spec/src/runtime.ts",
+  "scripts/check-boundary-monitors.ts",
+  "scripts/evaluate-v1-36-competition-policy.ts",
+  "scripts/evaluate-runtime-sandbox.ts",
+  "scripts/evaluate-v1-23-wasm-wasi-beta.ts",
+  "scripts/evaluate-v1-24-runtime-abuse-lab.ts",
+  "scripts/evaluate-v1-26-match-execution-reliability.ts",
+  "scripts/evaluate-v1-28-match-execution-operations.ts",
+  "scripts/evaluate-v1-30-match-intelligence-workbench.ts",
+  "scripts/evaluate-v1-33-tinygo-wasi-spike.ts",
+  "scripts/evaluate-v1-34-workshop-checker.ts",
+  "scripts/evaluate-v1-35-account-provider-entry-proof.ts",
+  "scripts/evaluate-v1-35-boundary-surface-inventory.ts",
+  "scripts/evaluate-v1-35-final-proof.ts",
+  "scripts/evaluate-v1-35-package-policy-proof.ts",
+  "scripts/evaluate-v1-35-sandbox-readiness-proof.ts",
+  "scripts/evaluate-wasm-wasi-runtime.ts",
+] as const
+
+const phase249AdditionalCalibrationPhrases: Record<string, readonly string[]> = {
+  "durable-rating": [
+    "durable rating",
+    "durable ratings",
+    "permanent rating",
+    "permanent ratings",
+    "rankings are durable",
+  ],
+  "all-time-ranking": ["all-time ranking", "all-time rankings"],
+  "rating-refund": ["rating refund", "rating refunds"],
+  "mature-staffed-moderation": ["staffed moderation"],
+  "production-sandbox": [
+    "Production sandbox certification",
+    "production sandbox certification",
+    "runtime lane can claim production sandbox",
+    "runtime lanes provide production sandbox",
+    "runtime lanes, sandbox readiness evidence, and actual production sandbox",
+  ],
+  "package-ecosystem": [
+    "Package ecosystem support",
+    "package ecosystem support",
+  ],
+  "tinygo-production": [
+    "Production TinyGo",
+    "TinyGo production",
+    "TinyGo production claims, raw diagnostic public claims, and private runtime public",
+    "TinyGo production support, ABI migration to direct exports or Component Model/WIT, production",
+    "TinyGo remains spike-only and hidden from production",
+    "TinyGo spike work should live in evidence/prototype artifacts until a later production",
+    "TinyGo is not part of this production",
+    "TinyGo leaked into production",
+    "TinyGo, draft/non-execution revision, unavailable runtime, same-user counted",
+    "TinyGo, invalid provenance, package-policy bypass, same-user counted",
+    "TinyGo, invalid provenance, unavailable runtime lane, package-policy violation, same-user counted",
+    "TinyGo, with production",
+    "TinyGo compile failed before runtime execution; stderr redacted to keep toolchain paths out of public",
+    "TinyGo remains a hidden spike-only lane and is absent from public/default production",
+  ],
+  "raw-diagnostic": ["raw diagnostic public"],
+}
+
+const phase249PostureDeferredRows = new Set([
+  "competition-index-route",
+  "competition-detail-route",
+  "competition-entry-route",
+  "ladder-season-route",
+  "player-public-route",
+  "strategy-public-route",
+  "replay-public-route",
+  "matchset-result-view-model",
+  "public-trust-copy",
+  "competition-copy-fixtures",
+  "competition-copy-snapshots",
+])
+
+export const createV136CompetitionPolicyPhase249ScanSuppressions =
+  (
+    options: { includePostureDeferrals?: boolean } = {},
+  ): readonly V136CompetitionPolicyScanSuppression[] => {
+    const suppressions: V136CompetitionPolicyScanSuppression[] = []
+    for (const suppressionPath of phase249LegacyPolicyCalibrationPaths) {
+      for (const entry of forbiddenTextPatterns) {
+        const matchedPhrases = new Set([
+          ...forbiddenSuppressionPhrases(entry),
+          ...(phase249AdditionalCalibrationPhrases[entry.category] ?? []),
+        ])
+        for (const matchedPhrase of matchedPhrases) {
+          suppressions.push({
+            path: suppressionPath,
+            category: entry.category,
+            matchedPhrase,
+            rationale:
+              "Existing planning/proof artifact documents policy boundaries or historical non-claims; it is not player-facing competition copy.",
+            owner: "Phase 249 static monitor",
+            expiry: "2026-12-31",
+          })
+        }
+      }
+      for (const matchedPhrase of privateTextMarkers) {
+        suppressions.push({
+          path: suppressionPath,
+          category: "private-marker",
+          matchedPhrase,
+          rationale:
+            "Existing planning/proof artifact documents privacy exclusions; it is not player-facing competition copy.",
+          owner: "Phase 249 static monitor",
+          expiry: "2026-12-31",
+        })
+      }
+    }
+    if (options.includePostureDeferrals !== false) {
+      for (const row of authoritativeRows) {
+        if (!phase249PostureDeferredRows.has(row.id)) {
+          continue
+        }
+        for (const reference of row.references) {
+          suppressions.push({
+            path: reference,
+            category: "required-posture-label",
+            matchedPhrase: row.requiredPostureCopy,
+            rationale:
+              "Phase 249 inventories this public trust surface; Phase 254 or the row disposition phase owns rendering the player-facing posture copy.",
+            owner: "Phase 249 static monitor",
+            expiry: "2026-12-31",
+          })
+          suppressions.push({
+            path: reference,
+            category: "required-reset-no-durable-copy",
+            matchedPhrase: row.requiredResetNoDurableCopy,
+            rationale:
+              "Phase 249 inventories this public trust surface; Phase 254 or the row disposition phase owns rendering reset/no-durable copy.",
+            owner: "Phase 249 static monitor",
+            expiry: "2026-12-31",
+          })
+        }
+      }
+    }
+    return suppressions
+  }
+
+const withPhase249ScanSuppressions = (
+  options: GenerateV136CompetitionSurfaceInventoryOptions = {},
+): GenerateV136CompetitionSurfaceInventoryOptions => ({
+    ...options,
+  suppressions: [
+    ...createV136CompetitionPolicyPhase249ScanSuppressions({
+      includePostureDeferrals: options.rows === undefined,
+    }),
+    ...(options.suppressions ?? []),
+  ],
+})
 
 const currentScanDate = generatedAt
 
 const validateSuppression = (
   suppression: V136CompetitionPolicyScanSuppression,
 ): string | null => {
-  for (const field of ["path", "category", "rationale", "owner", "expiry"] as const) {
+  for (const field of [
+    "path",
+    "category",
+    "matchedPhrase",
+    "rationale",
+    "owner",
+    "expiry",
+  ] as const) {
     if (!isNonEmptyString(suppression[field])) {
       return `invalid suppression for ${suppression.path || "<missing path>"} ${suppression.category || "<missing category>"} missing ${field}`
     }
@@ -1785,7 +2009,9 @@ const isSuppressed = (
   suppressions.some(
     (suppression) =>
       normalizeScanPath(suppression.path) === finding.path &&
-      suppression.category === finding.category,
+      suppression.category === finding.category &&
+      suppression.matchedPhrase.toLowerCase() ===
+        finding.matchedPhrase.toLowerCase(),
   )
 
 const findingToFailure = (
@@ -1819,22 +2045,29 @@ export const scanV136CompetitionPolicyTextRoots = (
 
   for (const file of scannedFiles) {
     const text = readFileSync(path.join(root, file.path), "utf8")
-    for (const { category, phrases } of forbiddenTextPatterns) {
-      for (const phrase of phrases) {
-        const matchedLine = text
-          .split("\n")
-          .find(
-            (line) =>
-              line.toLowerCase().includes(phrase.toLowerCase()) &&
-              !negatedPolicyLinePattern.test(line),
-          )
-        if (matchedLine !== undefined) {
-          findings.push({
-            path: file.path,
-            category,
-            message: `clear violation for forbidden ${category} claim`,
-            matchedPhrase: phrase,
-          })
+    for (const { category, phrases, patterns } of forbiddenTextPatterns) {
+      const matchers = [
+        ...phrases.map((phrase) => ({
+          phrase,
+          pattern: new RegExp(escapeRegExp(phrase), "i"),
+        })),
+        ...patterns.map((pattern) => ({ phrase: "", pattern })),
+      ]
+      for (const matcher of matchers) {
+        for (const line of text.split("\n")) {
+          if (negatedPolicyLinePattern.test(line)) {
+            continue
+          }
+          const match = line.match(matcher.pattern)
+          if (match !== null) {
+            findings.push({
+              path: file.path,
+              category,
+              message: `clear violation for forbidden ${category} claim`,
+              matchedPhrase: matcher.phrase || match[0],
+            })
+            break
+          }
         }
       }
     }
@@ -1993,9 +2226,10 @@ const runCli = (): void => {
     return
   }
   if (flag === "--check") {
+    const options = withPhase249ScanSuppressions()
     const failures = [
-      ...checkV136CompetitionSurfaceInventoryArtifacts(),
-      ...checkV136CompetitionPolicyScan(),
+      ...checkV136CompetitionSurfaceInventoryArtifacts(options),
+      ...checkV136CompetitionPolicyScan(options),
     ]
     if (failures.length > 0) {
       console.error(failures.join("\n"))

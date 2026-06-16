@@ -26,6 +26,7 @@ import { checkV135AccountProviderEntryProofArtifacts } from "./evaluate-v1-35-ac
 import {
   checkV136CompetitionPolicyScan,
   checkV136CompetitionSurfaceInventoryArtifacts,
+  createV136CompetitionPolicyPhase249ScanSuppressions,
   type GenerateV136CompetitionSurfaceInventoryOptions,
 } from "./evaluate-v1-36-competition-policy.ts"
 
@@ -953,9 +954,18 @@ export const checkV135AccountProviderEntryProofMonitor = (): string => {
 export const checkV136CompetitionPolicyMonitor = (
   options: GenerateV136CompetitionSurfaceInventoryOptions = {},
 ): string => {
+  const monitorOptions: GenerateV136CompetitionSurfaceInventoryOptions = {
+    ...options,
+    suppressions: [
+      ...createV136CompetitionPolicyPhase249ScanSuppressions({
+        includePostureDeferrals: options.rows === undefined,
+      }),
+      ...(options.suppressions ?? []),
+    ],
+  }
   const failures = [
-    ...checkV136CompetitionSurfaceInventoryArtifacts(options),
-    ...checkV136CompetitionPolicyScan(options),
+    ...checkV136CompetitionSurfaceInventoryArtifacts(monitorOptions),
+    ...checkV136CompetitionPolicyScan(monitorOptions),
   ]
   if (failures.length > 0) {
     throw new Error(failures.join("; "))
