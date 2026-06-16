@@ -1710,7 +1710,14 @@ interface ForbiddenPolicyClaimMatch {
   matchedPhrase: string
 }
 
-const isNegatedMatch = (line: string, matchIndex: number): boolean => {
+const isNegatedMatch = (
+  line: string,
+  matchIndex: number,
+  matchedText = "",
+): boolean => {
+  if (negatedPolicyLinePattern.test(matchedText)) {
+    return true
+  }
   const prefix = line.slice(Math.max(0, matchIndex - 80), matchIndex)
   const negations = [...prefix.matchAll(new RegExp(negatedPolicyLinePattern, "gi"))]
   const lastNegation = negations.at(-1)
@@ -1757,7 +1764,7 @@ const findForbiddenPolicyClaimMatches = (
         for (const match of line.matchAll(globalPattern)) {
           if (
             !matcher.ignoreNegation &&
-            isNegatedMatch(line, match.index ?? 0)
+            isNegatedMatch(line, match.index ?? 0, match[0])
           ) {
             continue
           }
@@ -2122,7 +2129,9 @@ export const scanV136CompetitionPolicyTextRoots = (
     for (const { marker, pattern } of privateTextPatterns) {
       const matchedLine = text.split("\n").find((line) => {
         const match = line.match(pattern)
-        return match !== null && !isNegatedMatch(line, match.index ?? 0)
+        return (
+          match !== null && !isNegatedMatch(line, match.index ?? 0, match[0])
+        )
       })
       if (matchedLine !== undefined) {
         findings.push({
