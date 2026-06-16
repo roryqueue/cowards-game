@@ -1,6 +1,7 @@
 export * from "./constants.js"
 export * from "./analytics.js"
 export * from "./competition.js"
+export * from "./competition-entry-eligibility.js"
 export * from "./competition-policy-v1-36.js"
 export * from "./fixtures/index.js"
 export * from "./match-execution-contract.js"
