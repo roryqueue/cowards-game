@@ -47,7 +47,7 @@ Archive:
 ## Phases
 
 - [x] **Phase 249: Competition Surface Inventory and Policy Lock** - Lock v1.36 public beta posture, surface inventory, vocabulary, owners, privacy exclusions, and forbidden claims.
-- [ ] **Phase 250: Counted Entry and One-Active-Revision Enforcement** - Enforce provider-proof-backed counted eligibility, one active counted revision per Season, and explicit exhibition separation.
+- [ ] **Phase 250: Counted Entry and One-Active-Revision Enforcement** - Enforce provider-proof-backed counted eligibility, one active counted revision per Season, and explicit exhibition separation. Plan 01 completed the shared spec contract.
 - [ ] **Phase 251: Season Lifecycle and Scheduling Policy** - Define public-safe Season lifecycle, entry and scheduling windows, entrant snapshots, archive behavior, and reset semantics.
 - [ ] **Phase 252: Counted-State Classifier and Standings Recompute** - Classify result states and recompute Season standings from canonical counted evidence plus governance state.
 - [ ] **Phase 253: Governance, Dispute, Abuse, and Recovery Surfaces** - Add minimal public-safe reporting, dispute, governance, abuse-policy, and recovery-expectation behavior.
@@ -83,7 +83,7 @@ Plans:
   5. Exhibition MatchSets still support explicitly labeled same-user, self-play, and multi-revision workflows without affecting counted trial standings.
 **Plans**: 3 plans
 Plans:
-- [ ] 250-01-PLAN.md — Create the spec-owned counted entry eligibility category/remediation contract and leak-safe tests.
+- [x] 250-01-PLAN.md — Create the spec-owned counted entry eligibility category/remediation contract and leak-safe tests.
 - [ ] 250-02-PLAN.md — Implement persistence counted entry evaluation, public-safe category failures, and one-owner-per-Season enforcement.
 - [ ] 250-03-PLAN.md — Align web/API/public discovery/Go readiness projection and preserve exhibition separation.
 
@@ -167,7 +167,7 @@ Cross-cutting constraints:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 249. Competition Surface Inventory and Policy Lock | 3/3 | Complete | 2026-06-16 |
-| 250. Counted Entry and One-Active-Revision Enforcement | 0/0 | Not started | - |
+| 250. Counted Entry and One-Active-Revision Enforcement | 1/3 | In progress | - |
 | 251. Season Lifecycle and Scheduling Policy | 0/0 | Not started | - |
 | 252. Counted-State Classifier and Standings Recompute | 0/0 | Not started | - |
 | 253. Governance, Dispute, Abuse, and Recovery Surfaces | 0/0 | Not started | - |

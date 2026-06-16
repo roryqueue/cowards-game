@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.36
 milestone_name: Competition Maturity
-status: ready_to_execute
-stopped_at: Phase 250 planned
+status: in_progress
+stopped_at: Phase 250 Plan 01 complete
 last_updated: "2026-06-15T00:00:00.000Z"
-last_activity: 2026-06-16 -- Phase 250 planned and plan-checker passed
+last_activity: 2026-06-16 -- Phase 250 Plan 01 completed counted entry eligibility contract
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 14
 ---
 
@@ -26,9 +26,9 @@ See: `.planning/PROJECT.md` (updated 2026-06-15)
 ## Current Position
 
 Phase: 250 - Counted Entry and One-Active-Revision Enforcement
-Plan: 0 of 3
-Status: Planned; ready to execute
-Last activity: 2026-06-16 -- Phase 250 planning completed and plan-checker passed
+Plan: 1 of 3
+Status: In progress; Plan 01 complete, ready for Plan 02
+Last activity: 2026-06-16 -- Phase 250 Plan 01 completed counted entry eligibility contract
 
 Progress: [#---------] 14%
 
@@ -36,16 +36,16 @@ Progress: [#---------] 14%
 
 **Velocity:**
 
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: -
-- Total execution time: 0.0 hours
+- Total execution time: 0.1 hours
 
 **By Phase:**
 
 | Phase | Status | Plans | Requirements |
 |-------|--------|-------|--------------|
 | 249. Competition Surface Inventory and Policy Lock | Complete | 3/3 | 5 |
-| 250. Counted Entry and One-Active-Revision Enforcement | Ready to execute | 0/3 | 6 |
+| 250. Counted Entry and One-Active-Revision Enforcement | In progress | 1/3 | 6 |
 | 251. Season Lifecycle and Scheduling Policy | Not started | 0/0 | 5 |
 | 252. Counted-State Classifier and Standings Recompute | Not started | 0/0 | 6 |
 | 253. Governance, Dispute, Abuse, and Recovery Surfaces | Not started | 0/0 | 6 |
@@ -70,7 +70,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Run `$gsd-execute-phase 250` to implement counted entry and one-active-revision enforcement.
+- Continue Phase 250 with Plan 02 persistence counted entry evaluation and one-owner-per-Season enforcement.
 
 ### Blockers/Concerns
 
@@ -92,7 +92,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-06-16T00:40:05.000Z
-Stopped at: Phase 250 planned
+Last session: 2026-06-16T01:28:27Z
+Stopped at: Phase 250 Plan 01 complete
 Resume file: `.planning/phases/250-counted-entry-and-one-active-revision-enforcement/`
-Next command: `$gsd-execute-phase 250`
+Next command: execute `.planning/phases/250-counted-entry-and-one-active-revision-enforcement/250-02-PLAN.md`

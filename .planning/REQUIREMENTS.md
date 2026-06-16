@@ -123,9 +123,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | POST-03 | Phase 249 | Pending |
 | POST-04 | Phase 249 | Pending |
 | POST-05 | Phase 249 | Pending |
-| ELIG-01 | Phase 250 | Pending |
-| ELIG-02 | Phase 250 | Pending |
-| ELIG-03 | Phase 250 | Pending |
+| ELIG-01 | Phase 250 | In progress - 250-01 spec contract complete |
+| ELIG-02 | Phase 250 | In progress - 250-01 rejection category contract complete |
+| ELIG-03 | Phase 250 | In progress - 250-01 public copy and leak-safe contract complete |
 | ELIG-04 | Phase 250 | Pending |
 | ELIG-05 | Phase 250 | Pending |
 | ELIG-06 | Phase 250 | Pending |
