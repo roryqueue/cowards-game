@@ -20,7 +20,7 @@
 | Should Phase 250 create new runtime/sandbox claims? | Broaden runtime readiness | Add stronger production-readiness claims while touching entry. | |
 | Should Phase 250 create new runtime/sandbox claims? | Defer readiness entirely | Only enforce account ownership and active entries. | |
 
-**User's choice:** `all`.
+**User's choice:** `1`.
 **Interpretation:** Full Phase 250 scope with strict counted-entry enforcement and no new runtime/sandbox/package claims.
 
 ---
@@ -39,7 +39,7 @@
 | How detailed should rejection responses be? | Current messages | Keep ad hoc thrown strings. | |
 | How detailed should rejection responses be? | Diagnostic-rich | Return provider/runtime details to signed-in owner. | |
 
-**User's choice:** `all`.
+**User's choice:** `1`.
 **Interpretation:** Strict v1.35-backed counted entry with hidden TinyGo rejection and public-safe category/remediation responses.
 
 ---
@@ -58,7 +58,7 @@
 | Where should enforcement live? | Persistence only | Easier migration, weaker guard. | |
 | Where should enforcement live? | Database only | Strong invariant, worse user-facing errors. | |
 
-**User's choice:** `all`.
+**User's choice:** `1`.
 **Interpretation:** Enforce one owner entry per Season in persistence and database, and block mid-season replacement even after withdrawal/invalidated historical entries.
 
 ---
@@ -74,7 +74,7 @@
 | Where should counted entry truth live? | UI runtime labels | Use dashboard labels as the gate. | |
 | Where should counted entry truth live? | API route only | Keep the deeper persistence layer broad. | |
 
-**User's choice:** `all`.
+**User's choice:** `1`.
 **Interpretation:** Preserve exhibition flexibility while ensuring exhibition results cannot affect counted trial standings, and keep counted entry truth below the UI.
 
 ---
