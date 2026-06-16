@@ -81,7 +81,22 @@ Plans:
   3. Entry rejection responses provide public-safe eligibility categories and remediation copy without exposing private Strategy, artifact, provider, runtime, host, package, token, or database details.
   4. A Player can have only one active Strategy Revision entry per counted Season, and counted mid-season replacement is blocked.
   5. Exhibition MatchSets still support explicitly labeled same-user, self-play, and multi-revision workflows without affecting counted trial standings.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 250-01-PLAN.md — Create the spec-owned counted entry eligibility category/remediation contract and leak-safe tests.
+- [ ] 250-02-PLAN.md — Implement persistence counted entry evaluation, public-safe category failures, and one-owner-per-Season enforcement.
+- [ ] 250-03-PLAN.md — Align web/API/public discovery/Go readiness projection and preserve exhibition separation.
+
+Wave dependency notes:
+- **Wave 1:** 250-01 establishes the shared spec contract.
+- **Wave 2 (blocked on Wave 1 completion):** 250-02 consumes the spec contract in persistence.
+- **Wave 3 (blocked on Waves 1-2 completion):** 250-03 projects the persistence/spec contract through API, discovery, readiness parity, and exhibition copy.
+
+Cross-cutting constraints:
+- Counted entry must consume v1.35 provider-proof, runtime, provenance, engine, and package-policy evidence without creating new runtime, sandbox, package, TinyGo, or durable-rating claims.
+- Public entry responses and projections must use stable public categories/remediation and exclude private Strategy, provider, runtime, artifact, database, token, memory, objective, and operator-only details.
+- Strategy execution remains outside web/API/Go.
+- Exhibition flows remain separate from counted trial standings and continue to support labeled same-user, self-play, and multi-revision workflows.
 
 ### Phase 251: Season Lifecycle and Scheduling Policy
 **Goal**: Trial Seasons expose stable lifecycle and scheduling rules that lock counted entrants, preserve resettable archives, and prevent cross-Season standings contamination.

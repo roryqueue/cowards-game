@@ -373,22 +373,19 @@ The full `(season_id, owner_user_id)` uniqueness should be treated as a product 
 |---|-------|---------|---------------|
 | A1 | No new dependency installation is needed for Phase 250. [ASSUMED] | Standard Stack | If a hidden route/proof need requires a new helper library, the planner must add explicit version verification. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should JavaScript remain counted-trial eligible in Phase 250?**
    - What we know: `runtime.ts` lists JavaScript as counted eligible, but Phase 250 decisions name TypeScript/Python/Rust/Zig provider-proof lanes. [VERIFIED: `packages/spec/src/runtime.ts:430`; `250-CONTEXT.md`]
-   - What's unclear: Whether JavaScript should be grandfathered for counted trial entry or excluded from v1.36 counted trial Seasons. [VERIFIED: `.planning/PROJECT.md`]
-   - Recommendation: Default to the locked Phase 250 lane list unless the planner records an explicit decision. [VERIFIED: `250-CONTEXT.md`]
+   - Resolution: JavaScript is excluded from counted trial entry for Phase 250. The counted trial lane list is TypeScript, Python, Rust, and Zig only, matching D-06 and the Phase 250 plans. Existing JavaScript runtime support is not removed by this resolution; it is not promoted into counted trial Season eligibility in v1.36. [VERIFIED: `250-CONTEXT.md`; `250-01-PLAN.md`]
 
 2. **Should Phase 250 add Go-owned trial ladder entry mutation, or only Go readiness parity?**
    - What we know: Next API currently calls TypeScript persistence for ladder entry, while Go has readiness classification and selected backend ownership elsewhere. [VERIFIED: `apps/web/app/api/ladder/seasons/[seasonId]/entries/route.ts`; `apps/go-backend/provider_readiness.go`]
-   - What's unclear: Whether v1.36 wants counted entry mutation moved to Go in this phase or left in TypeScript persistence with parity checks. [VERIFIED: `.planning/research/SUMMARY.md`]
-   - Recommendation: Keep mutation ownership unchanged unless existing architecture docs require Go migration; enforce parity through categories/tests. [VERIFIED: `250-CONTEXT.md`]
+   - Resolution: Go readiness remains parity/monitoring and public-readiness projection support in Phase 250. Entry mutation stays in the current TypeScript persistence/API path unless a later phase explicitly migrates ownership. [VERIFIED: `250-CONTEXT.md`; `250-03-PLAN.md`]
 
 3. **What exact API shape should negative entry responses use?**
    - What we know: Current API returns `{ error }`; Phase 250 requires categories and remediation copy. [VERIFIED: `apps/web/app/competitive/http.ts:12`; `.planning/REQUIREMENTS.md`]
-   - What's unclear: Whether response shape should be `{ ok:false, category, publicMessage, remediation }` or nested under `eligibility`. [ASSUMED]
-   - Recommendation: Use the smallest stable shape and add leak-safe assertions. [VERIFIED: `packages/spec/src/public-discovery.ts:225`]
+   - Resolution: Negative counted entry responses use `{ ok: false, eligibility: { category, publicMessage, remediation } }`. This keeps category/remediation data grouped for UI projection and leaves raw provider/runtime/database detail out of public responses. [VERIFIED: `.planning/REQUIREMENTS.md`; `250-03-PLAN.md`]
 
 ## Environment Availability
 
