@@ -250,25 +250,8 @@ const privateMarkers = [
   "objective payload",
 ] as const
 
-const forbiddenClaimCategorySet = new Set(
-  COMPETITION_POLICY_V1_36_FORBIDDEN_CLAIMS.map((claim) => claim.category),
-)
-
 const escapeRegExp = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-
-const forbiddenClaimPatterns = COMPETITION_POLICY_V1_36_FORBIDDEN_CLAIMS.map(
-  (claim) => ({
-    category: claim.category,
-    examples: claim.examples,
-    pattern: new RegExp(
-      `\\b(?:forbidden\\s+)?${escapeRegExp(claim.category)}\\b|${claim.examples
-        .map(escapeRegExp)
-        .join("|")}`,
-      "i",
-    ),
-  }),
-)
 
 const privateMarkerPatterns = privateMarkers.map((marker) => ({
   marker,
@@ -1206,10 +1189,8 @@ export const validateV136CompetitionSurfaceInventory = (
     }
 
     const text = rowSearchText(row)
-    for (const { category, pattern } of forbiddenClaimPatterns) {
-      if (pattern.test(text) || forbiddenClaimCategorySet.has(text as never)) {
-        errors.push(`${row.id} forbidden claim category: ${category}`)
-      }
+    for (const { category } of findForbiddenPolicyClaimMatches(text)) {
+      errors.push(`${row.id} forbidden claim category: ${category}`)
     }
     for (const { marker, pattern } of privateMarkerPatterns) {
       if (pattern.test(text)) {
@@ -1722,12 +1703,69 @@ const privateTextPatterns = privateTextMarkers.map((marker) => ({
 }))
 
 const negatedPolicyLinePattern =
-  /\b(?:must not|do not|does not|not expose|not exposed|never expose|without|excluded|excludes|forbidden|denylist|privacy exclusion|must stay|avoid|omit|omits|but not|fail if|no public|not public|no durable|not durable|no permanent|not permanent|rejects?)\b/i
+  /\b(?:no|not|must not|do not|does not|not expose|not exposed|never expose|without|excluded|excludes|forbidden|denylist|privacy exclusion|must stay|avoid|omit|omits|but not|fail if|no public|not public|no durable|not durable|no permanent|not permanent|rejects?)\b/i
+
+interface ForbiddenPolicyClaimMatch {
+  category: string
+  matchedPhrase: string
+}
+
+const isNegatedMatch = (line: string, matchIndex: number): boolean => {
+  const prefix = line.slice(Math.max(0, matchIndex - 80), matchIndex)
+  const negations = [...prefix.matchAll(new RegExp(negatedPolicyLinePattern, "gi"))]
+  const lastNegation = negations.at(-1)
+  if (lastNegation === undefined || lastNegation.index === undefined) {
+    return false
+  }
+  const afterNegation = prefix.slice(lastNegation.index + lastNegation[0].length)
+  return !/\b(?:but|however|yet|though|although)\b|[.;:]/i.test(afterNegation)
+}
+
+const findForbiddenPolicyClaimMatches = (
+  text: string,
+): readonly ForbiddenPolicyClaimMatch[] => {
+  const matches: ForbiddenPolicyClaimMatch[] = []
+  for (const entry of forbiddenTextPatterns) {
+    const matchers = [
+      {
+        phrase: entry.category,
+        pattern: new RegExp(`\\b(?:forbidden\\s+)?${escapeRegExp(entry.category)}\\b`, "i"),
+        ignoreNegation: true,
+      },
+      ...entry.phrases.map((phrase) => ({
+        phrase,
+        pattern: new RegExp(escapeRegExp(phrase), "i"),
+        ignoreNegation: false,
+      })),
+      ...entry.patterns.map((pattern) => ({
+        phrase: "",
+        pattern,
+        ignoreNegation: false,
+      })),
+    ]
+    for (const matcher of matchers) {
+      for (const line of text.split("\n")) {
+        const match = line.match(matcher.pattern)
+        if (
+          match !== null &&
+          (matcher.ignoreNegation || !isNegatedMatch(line, match.index ?? 0))
+        ) {
+          matches.push({
+            category: entry.category,
+            matchedPhrase: matcher.phrase || match[0],
+          })
+          break
+        }
+      }
+    }
+  }
+  return matches
+}
 
 const forbiddenSuppressionPhrases = (
   entry: (typeof forbiddenTextPatterns)[number],
 ): readonly string[] => {
-  const phrases = new Set<string>(entry.phrases)
+  const phrases = new Set<string>([entry.category, ...entry.phrases])
   for (const phrase of entry.phrases) {
     for (const pattern of entry.patterns) {
       const match = phrase.match(pattern)
@@ -1801,20 +1839,29 @@ const phase249LegacyPolicyCalibrationPaths = [
   ".planning/RETROSPECTIVE.md",
   ".planning/ROADMAP.md",
   ".planning/STATE.md",
+  ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-01-PLAN.md",
   ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-03-PLAN.md",
+  ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-02-SUMMARY.md",
+  ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-CONTEXT.md",
   ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-DISCUSSION-LOG.md",
   ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-PATTERNS.md",
   ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-RESEARCH.md",
+  ".planning/phases/249-competition-surface-inventory-and-policy-lock/249-REVIEW.md",
   ".planning/research/ARCHITECTURE.md",
   ".planning/research/FEATURES.md",
   ".planning/research/PITFALLS.md",
   ".planning/research/STACK.md",
   ".planning/research/SUMMARY.md",
+  ".planning/research/v1.23-SUMMARY.md",
   ".planning/research/v1.24-SUMMARY.md",
   ".planning/research/v1.25-SUMMARY.md",
   ".planning/research/v1.33-SUMMARY.md",
   ".planning/research/v1.5-STRATEGY-LIBRARY.md",
   ".planning/research/v1.5-SUMMARY.md",
+  ".planning/research/v1.5-WORKSHOP-UX.md",
+  ".planning/research/v1.9-SERVICE-OWNERSHIP.md",
+  "packages/spec/src/competition-policy-v1-36.ts",
+  "packages/spec/src/schemas.ts",
   "packages/runtime-js/src/sandbox-evaluation.ts",
   "packages/spec/src/runtime.ts",
   "scripts/check-boundary-monitors.ts",
@@ -1830,6 +1877,7 @@ const phase249LegacyPolicyCalibrationPaths = [
   "scripts/evaluate-v1-35-account-provider-entry-proof.ts",
   "scripts/evaluate-v1-35-boundary-surface-inventory.ts",
   "scripts/evaluate-v1-35-final-proof.ts",
+  "scripts/evaluate-v1-35-ownership-alias-proof.ts",
   "scripts/evaluate-v1-35-package-policy-proof.ts",
   "scripts/evaluate-v1-35-sandbox-readiness-proof.ts",
   "scripts/evaluate-wasm-wasi-runtime.ts",
@@ -1860,8 +1908,11 @@ const phase249AdditionalCalibrationPhrases: Record<string, readonly string[]> = 
   "tinygo-production": [
     "Production TinyGo",
     "TinyGo production",
+    "TinyGo hidden, and all current lanes uncertified for production",
     "TinyGo production claims, raw diagnostic public claims, and private runtime public",
     "TinyGo production support, ABI migration to direct exports or Component Model/WIT, production",
+    "TinyGo strategies are now production eligible",
+    "TinyGo claims, no public",
     "TinyGo remains spike-only and hidden from production",
     "TinyGo spike work should live in evidence/prototype artifacts until a later production",
     "TinyGo is not part of this production",
@@ -2045,36 +2096,19 @@ export const scanV136CompetitionPolicyTextRoots = (
 
   for (const file of scannedFiles) {
     const text = readFileSync(path.join(root, file.path), "utf8")
-    for (const { category, phrases, patterns } of forbiddenTextPatterns) {
-      const matchers = [
-        ...phrases.map((phrase) => ({
-          phrase,
-          pattern: new RegExp(escapeRegExp(phrase), "i"),
-        })),
-        ...patterns.map((pattern) => ({ phrase: "", pattern })),
-      ]
-      for (const matcher of matchers) {
-        for (const line of text.split("\n")) {
-          if (negatedPolicyLinePattern.test(line)) {
-            continue
-          }
-          const match = line.match(matcher.pattern)
-          if (match !== null) {
-            findings.push({
-              path: file.path,
-              category,
-              message: `clear violation for forbidden ${category} claim`,
-              matchedPhrase: matcher.phrase || match[0],
-            })
-            break
-          }
-        }
-      }
+    for (const { category, matchedPhrase } of findForbiddenPolicyClaimMatches(text)) {
+      findings.push({
+        path: file.path,
+        category,
+        message: `clear violation for forbidden ${category} claim`,
+        matchedPhrase,
+      })
     }
     for (const { marker, pattern } of privateTextPatterns) {
-      const matchedLine = text
-        .split("\n")
-        .find((line) => pattern.test(line) && !negatedPolicyLinePattern.test(line))
+      const matchedLine = text.split("\n").find((line) => {
+        const match = line.match(pattern)
+        return match !== null && !isNegatedMatch(line, match.index ?? 0)
+      })
       if (matchedLine !== undefined) {
         findings.push({
           path: file.path,

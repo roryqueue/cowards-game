@@ -386,6 +386,22 @@ describe("v1.36 competition surface inventory evaluator", () => {
       )
     }
 
+    for (const [copy, category] of [
+      ["Players now receive permanent ratings in public beta.", "durable-rating"],
+      ["TinyGo strategies are now production eligible.", "tinygo-production"],
+    ] as const) {
+      const rows = baseRows()
+      rows[0] = {
+        ...rows[0]!,
+        notes: copy,
+      }
+      expect(validateV136CompetitionSurfaceInventory(inventoryWithRows(rows))).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(`forbidden claim category: ${category}`),
+        ]),
+      )
+    }
+
     for (const marker of [
       "Strategy source",
       "artifact bytes",
@@ -646,6 +662,33 @@ describe("v1.36 competition policy text scanner", () => {
         expect.stringMatching(/raw-diagnostic/),
         expect.stringMatching(/private-runtime/),
         expect.stringMatching(/private marker.*Strategy source/),
+      ]),
+    )
+  })
+
+  it("does not let a separate negated phrase hide a clear durable-rating or TinyGo-production overclaim on the same line", () => {
+    const root = createTempRepo()
+    writeTempFile(root, "apps/web/copy.ts", [
+      "The product is not permanent, but players now receive permanent ratings.",
+      "This is not public; TinyGo strategies are production eligible.",
+      "This contract does not provide production sandbox certification.",
+    ].join("\n"))
+
+    const failures = checkV136CompetitionPolicyScan({
+      repoRoot: root,
+      rows: baseRows().map((row) => ({ ...row, postureLabelRequired: false })),
+      includeDefaultSuppressions: false,
+    })
+
+    expect(failures).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/durable-rating/),
+        expect.stringMatching(/tinygo-production/),
+      ]),
+    )
+    expect(failures).not.toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/production-sandbox/),
       ]),
     )
   })
