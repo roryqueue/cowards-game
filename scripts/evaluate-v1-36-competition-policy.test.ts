@@ -676,6 +676,7 @@ describe("v1.36 competition policy text scanner", () => {
       "There are no permanent ratings, permanent ratings are live now.",
       "TinyGo strategies are not production eligible; TinyGo strategies are production eligible.",
       "TinyGo strategies are not production eligible.",
+      "TinyGo is not hidden; TinyGo strategies are production eligible.",
       "This contract does not provide production sandbox certification.",
     ].join("\n"))
 

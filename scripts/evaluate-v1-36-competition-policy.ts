@@ -1634,7 +1634,7 @@ const forbiddenTextPatterns = [
     patterns: [
       /\bproduction\s+sandbox\s+certification\b/i,
       /\bStrategy\s+sandbox\s+is\s+production\s+certified\b/i,
-      /\bruntime\s+lanes?\b[^.\n]{0,80}\bproduction\s+(?:certified|sandbox)\b/i,
+      /\bruntime\s+lanes?\b[^,.;:\n]{0,80}\bproduction\s+(?:certified|sandbox)\b/i,
     ],
   },
   {
@@ -1647,7 +1647,7 @@ const forbiddenTextPatterns = [
     patterns: [
       /\bfull\s+npm\s+ecosystem\b/i,
       /\bpackage\s+ecosystem\s+support\b/i,
-      /\b(?:Python|TypeScript|JavaScript|Rust|Zig|TinyGo)\s+package\s+installs?\b[^.\n]{0,80}\b(?:supported|available|eligible)\b/i,
+      /\b(?:Python|TypeScript|JavaScript|Rust|Zig|TinyGo)\s+package\s+installs?\b[^,.;:\n]{0,80}\b(?:supported|available|eligible)\b/i,
     ],
   },
   {
@@ -1658,7 +1658,7 @@ const forbiddenTextPatterns = [
       "TinyGo production support is available",
     ],
     patterns: [
-      /\bTinyGo\b(?!-)[^.\n"`]{0,100}\b(?:production|counted|eligible|supported|public)\b/i,
+      /\bTinyGo\b(?!-)[^,.;:\n"`]{0,100}\b(?:production|counted|eligible|supported|public)\b/i,
       /\bproduction\s+TinyGo\b/i,
     ],
   },
@@ -1934,6 +1934,8 @@ const phase249AdditionalCalibrationPhrases: Record<string, readonly string[]> = 
     "TinyGo production claims, raw diagnostic public claims, and private runtime public",
     "TinyGo production support, ABI migration to direct exports or Component Model/WIT, production",
     "TinyGo strategies are now production eligible",
+    "TinyGo strategies are production eligible",
+    "TinyGo production support | TinyGo remains spike-only and hidden from production",
     "TinyGo claims, no public",
     "TinyGo remains spike-only and hidden from production",
     "TinyGo spike work should live in evidence/prototype artifacts until a later production",
