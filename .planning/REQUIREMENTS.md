@@ -9,28 +9,28 @@ Requirements for the Competition Maturity milestone. Each maps to roadmap phases
 
 ### Posture and Policy
 
-- [ ] **POST-01**: Public competition surfaces describe Coward's Game competition as public beta trial competition with resettable season-scoped standings.
-- [ ] **POST-02**: Public competition surfaces clearly state that v1.36 does not promise durable permanent ratings, all-time rankings, rating refunds, or mature staffed moderation.
-- [ ] **POST-03**: A versioned competition policy contract defines public beta posture, reset policy, counted-state vocabulary, privacy exclusions, forbidden claims, and authoritative owners for competition decisions.
-- [ ] **POST-04**: Competition surfaces are inventoried with owner, public/private data class, counted behavior, replay evidence requirement, and privacy risk.
-- [ ] **POST-05**: Public copy monitors reject durable-rating, production-sandbox, package-ecosystem, TinyGo-production, raw-diagnostic, or private-runtime overclaims.
+- [x] **POST-01**: Public competition surfaces describe Coward's Game competition as public beta trial competition with resettable season-scoped standings.
+- [x] **POST-02**: Public competition surfaces clearly state that v1.36 does not promise durable permanent ratings, all-time rankings, rating refunds, or mature staffed moderation.
+- [x] **POST-03**: A versioned competition policy contract defines public beta posture, reset policy, counted-state vocabulary, privacy exclusions, forbidden claims, and authoritative owners for competition decisions.
+- [x] **POST-04**: Competition surfaces are inventoried with owner, public/private data class, counted behavior, replay evidence requirement, and privacy risk.
+- [x] **POST-05**: Public copy monitors reject durable-rating, production-sandbox, package-ecosystem, TinyGo-production, raw-diagnostic, or private-runtime overclaims.
 
 ### Entry Eligibility
 
-- [ ] **ELIG-01**: A Player can enter counted trial competition only with an immutable account-owned Strategy Revision whose provider proof, language/provider support, provenance/artifact evidence, runtime readiness, engine compatibility, and package mode satisfy v1.35 policy.
-- [ ] **ELIG-02**: Counted entry rejects stale artifacts, missing or mismatched provider proof, unsupported providers, hidden TinyGo lanes, invalid provenance, unavailable runtime lanes, owner mismatch, mutable drafts, and non-`none` package modes.
-- [ ] **ELIG-03**: Counted entry returns public-safe eligibility categories and remediation copy without exposing Strategy source, artifact bytes, raw diagnostics, host paths, env values, package paths, tokens, DB details, provider signing material, or private runtime internals.
-- [ ] **ELIG-04**: A Player can have only one active Strategy Revision entry per counted Season.
-- [ ] **ELIG-05**: A counted Season entry cannot be replaced mid-season; replacement is allowed only for a future Season or an explicitly non-counted/exhibition path.
-- [ ] **ELIG-06**: Exhibition MatchSets preserve explicitly labeled same-user, self-play, and multi-revision workflows without allowing those results to affect counted trial standings.
+- [x] **ELIG-01**: A Player can enter counted trial competition only with an immutable account-owned Strategy Revision whose provider proof, language/provider support, provenance/artifact evidence, runtime readiness, engine compatibility, and package mode satisfy v1.35 policy.
+- [x] **ELIG-02**: Counted entry rejects stale artifacts, missing or mismatched provider proof, unsupported providers, hidden TinyGo lanes, invalid provenance, unavailable runtime lanes, owner mismatch, mutable drafts, and non-`none` package modes.
+- [x] **ELIG-03**: Counted entry returns public-safe eligibility categories and remediation copy without exposing Strategy source, artifact bytes, raw diagnostics, host paths, env values, package paths, tokens, DB details, provider signing material, or private runtime internals.
+- [x] **ELIG-04**: A Player can have only one active Strategy Revision entry per counted Season.
+- [x] **ELIG-05**: A counted Season entry cannot be replaced mid-season; replacement is allowed only for a future Season or an explicitly non-counted/exhibition path.
+- [x] **ELIG-06**: Exhibition MatchSets preserve explicitly labeled same-user, self-play, and multi-revision workflows without allowing those results to affect counted trial standings.
 
 ### Season Lifecycle
 
-- [ ] **SEAS-01**: Trial Seasons expose lifecycle state, entry window, scheduling window, active/completed/archive state, reset policy, and counted-entry rules through public-safe DTOs.
-- [ ] **SEAS-02**: Season scheduling snapshots eligible entrants before MatchSet creation so Strategy Revisions remain locked for the Season's counted MatchSets.
-- [ ] **SEAS-03**: Completed or archived Seasons keep stable public links to standings, results, and replay evidence while making resettable/non-durable status visible.
-- [ ] **SEAS-04**: Season standings do not mix entrants, MatchSets, or counted results across Season boundaries.
-- [ ] **SEAS-05**: Season policy explains minimum entries, target MatchSet/pod behavior where applicable, and what happens when a Season cannot produce enough counted evidence.
+- [x] **SEAS-01**: Trial Seasons expose lifecycle state, entry window, scheduling window, active/completed/archive state, reset policy, and counted-entry rules through public-safe DTOs.
+- [x] **SEAS-02**: Season scheduling snapshots eligible entrants before MatchSet creation so Strategy Revisions remain locked for the Season's counted MatchSets.
+- [x] **SEAS-03**: Completed or archived Seasons keep stable public links to standings, results, and replay evidence while making resettable/non-durable status visible.
+- [x] **SEAS-04**: Season standings do not mix entrants, MatchSets, or counted results across Season boundaries.
+- [x] **SEAS-05**: Season policy explains minimum entries, target MatchSet/pod behavior where applicable, and what happens when a Season cannot produce enough counted evidence.
 
 ### Result and Standings Integrity
 
@@ -129,11 +129,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ELIG-04 | Phase 250 | Complete |
 | ELIG-05 | Phase 250 | Complete |
 | ELIG-06 | Phase 250 | Complete |
-| SEAS-01 | Phase 251 | Pending |
-| SEAS-02 | Phase 251 | Pending |
-| SEAS-03 | Phase 251 | Pending |
-| SEAS-04 | Phase 251 | Pending |
-| SEAS-05 | Phase 251 | Pending |
+| SEAS-01 | Phase 251 | Complete |
+| SEAS-02 | Phase 251 | Complete |
+| SEAS-03 | Phase 251 | Complete |
+| SEAS-04 | Phase 251 | Complete |
+| SEAS-05 | Phase 251 | Complete |
 | RESULT-01 | Phase 252 | Pending |
 | RESULT-02 | Phase 252 | Pending |
 | RESULT-03 | Phase 252 | Pending |
