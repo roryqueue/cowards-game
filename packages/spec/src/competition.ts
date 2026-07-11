@@ -314,13 +314,15 @@ export interface PublicStandingDto {
   survivingSoldiers: number
   survivalTurns: number
   tieBreakerPath: string[]
-  competitionEvidence?: {
-    countedMatchSetCount: number
-    excludedMatchSetCount: number
-    evidenceAvailability: CompetitionEvidenceAvailability
-    resultLinks: string[]
-    replayLinks: string[]
-  }
+  competitionEvidence?:
+    | {
+        countedMatchSetCount: number
+        excludedMatchSetCount: number
+        evidenceAvailability: CompetitionEvidenceAvailability
+        resultLinks: string[]
+        replayLinks: string[]
+      }
+    | undefined
 }
 
 export interface PublicMatchEvidenceDto {
@@ -361,10 +363,12 @@ export interface PublicMatchSetResultDto {
     publicReplayEvidence: true
     privateFieldsExcluded: string[]
   }
-  competition?: {
-    seasonId?: string | undefined
-    countedState: CompetitionCountedStateProjection
-  }
+  competition?:
+    | {
+        seasonId?: string | undefined
+        countedState: CompetitionCountedStateProjection
+      }
+    | undefined
   metadata?: JsonValue | undefined
 }
 

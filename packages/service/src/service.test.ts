@@ -3,6 +3,7 @@ import {
   EXHIBITION_SCORING_POLICY_V1,
   SERVICE_API_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION,
+  classifyCompetitionCountedState,
   describeStrategyRuntimeProductSemantics,
   type PublicMatchSetResultDto,
   type PublicPlayerProfileDto,
@@ -122,8 +123,7 @@ const publicTrialLadderSeason = {
   outcome: {
     status: "pending",
     publicLabel: "Outcome pending",
-    publicExplanation:
-      "The Season has not reached a final scheduling outcome.",
+    publicExplanation: "The Season has not reached a final scheduling outcome.",
   },
   links: {
     seasonHref: "/ladder/demo-season",
@@ -147,6 +147,13 @@ const publicTrialLadderSeason = {
       seasonId: "ladder-season:demo",
       status: "complete",
       countedStatus: "counted",
+      countedState: classifyCompetitionCountedState({
+        executionStatus: "complete",
+        origin: "trial",
+        expectedMatchCount: 2,
+        chronicleMatchCount: 2,
+        scoringAvailable: true,
+      }),
       publicExplanation: "Complete replay-backed ladder evidence.",
       entrantIds: [],
       resultHref: "/matchsets/match-set%3Aladder%3Ademo",
