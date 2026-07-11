@@ -196,7 +196,13 @@ const providerEvidenceFor = (
 type FakeEntryStatus = "active" | "withdrawn" | "invalidated"
 
 const revisionRow = (input: {
-  languageId?: "typescript" | "python" | "rust" | "zig" | "javascript" | "tinygo"
+  languageId?:
+    | "typescript"
+    | "python"
+    | "rust"
+    | "zig"
+    | "javascript"
+    | "tinygo"
   metadata?: Record<string, unknown>
   validation?: { valid: boolean }
   lockedAt?: string | null
@@ -232,19 +238,26 @@ const revisionRow = (input: {
         : {}),
     owner_user_id: input.ownerUserId ?? "user:owner",
     handle: "owner",
-    locked_at: input.lockedAt === undefined ? "2026-06-16T00:00:00.000Z" : input.lockedAt,
+    locked_at:
+      input.lockedAt === undefined
+        ? "2026-06-16T00:00:00.000Z"
+        : input.lockedAt,
   }
 }
 
-const createFakePool = (input: {
-  seasonStatus?: string | null
-  revision?: ReturnType<typeof revisionRow> | null
-  existingEntryStatus?: FakeEntryStatus | null
-  existingEntryStatuses?: Array<FakeEntryStatus | null>
-  insertError?: unknown
-} = {}) => {
+const createFakePool = (
+  input: {
+    seasonStatus?: string | null
+    revision?: ReturnType<typeof revisionRow> | null
+    existingEntryStatus?: FakeEntryStatus | null
+    existingEntryStatuses?: Array<FakeEntryStatus | null>
+    insertError?: unknown
+    insertErrors?: unknown[]
+  } = {},
+) => {
   const calls: string[] = []
   let ownerEntryQueryIndex = 0
+  let insertIndex = 0
   const pool = {
     calls,
     async query(sql: string, values?: unknown[]) {
@@ -262,23 +275,27 @@ const createFakePool = (input: {
         sql.includes("owner_user_id")
       ) {
         const status = input.existingEntryStatuses
-          ? input.existingEntryStatuses[ownerEntryQueryIndex++] ?? null
-          : input.existingEntryStatus ?? null
+          ? (input.existingEntryStatuses[ownerEntryQueryIndex++] ?? null)
+          : (input.existingEntryStatus ?? null)
         return {
-          rows: status
-            ? [{ id: "trial-entry:existing", status }]
-            : [],
+          rows: status ? [{ id: "trial-entry:existing", status }] : [],
         }
       }
       if (sql.includes("from strategy_revisions")) {
-        return { rows: input.revision === null ? [] : [input.revision ?? revisionRow({})] }
+        return {
+          rows:
+            input.revision === null ? [] : [input.revision ?? revisionRow({})],
+        }
       }
-      if (sql.includes("count(*)::integer")) {
-        return { rows: [{ count: 0 }] }
+      if (sql.includes("max(entry_index)")) {
+        return { rows: [{ entry_index: insertIndex }] }
       }
       if (sql.includes("insert into trial_ladder_entries")) {
-        if (input.insertError) {
-          throw input.insertError
+        const insertError =
+          input.insertErrors?.[insertIndex] ?? input.insertError
+        insertIndex += 1
+        if (insertError) {
+          throw insertError
         }
         return { rows: [] }
       }
@@ -306,8 +323,7 @@ const expectEligibilityCategory = async (
   ).resolves.toMatchObject({
     ok: category === "provider_validated",
     category,
-    publicMessage:
-      getCountedEntryEligibilityPublicCopy(category).publicMessage,
+    publicMessage: getCountedEntryEligibilityPublicCopy(category).publicMessage,
     remediation: getCountedEntryEligibilityPublicCopy(category).remediation,
   })
 }
@@ -420,7 +436,9 @@ describe("trial ladder contracts", () => {
     ],
     [
       "invalid revision",
-      createFakePool({ revision: revisionRow({ validation: { valid: false } }) }),
+      createFakePool({
+        revision: revisionRow({ validation: { valid: false } }),
+      }),
       "invalid_strategy_revision",
     ],
     [
@@ -428,11 +446,7 @@ describe("trial ladder contracts", () => {
       createFakePool({ revision: revisionRow({ lockedAt: null }) }),
       "mutable_draft",
     ],
-    [
-      "owner mismatch",
-      createFakePool({ revision: null }),
-      "owner_mismatch",
-    ],
+    ["owner mismatch", createFakePool({ revision: null }), "owner_mismatch"],
     [
       "runtime lane unavailable",
       createFakePool({
@@ -505,19 +519,24 @@ describe("trial ladder contracts", () => {
     ).rejects.toMatchObject({
       name: "LadderInputError",
       category: "already_entered_season",
-      publicMessage:
-        getCountedEntryEligibilityPublicCopy("already_entered_season")
-          .publicMessage,
-      remediation:
-        getCountedEntryEligibilityPublicCopy("already_entered_season")
-          .remediation,
+      publicMessage: getCountedEntryEligibilityPublicCopy(
+        "already_entered_season",
+      ).publicMessage,
+      remediation: getCountedEntryEligibilityPublicCopy(
+        "already_entered_season",
+      ).remediation,
     })
-    expect(pool.calls.some((sql) => sql.includes("insert into trial_ladder_entries"))).toBe(false)
+    expect(
+      pool.calls.some((sql) =>
+        sql.includes("insert into trial_ladder_entries"),
+      ),
+    ).toBe(false)
   })
 
   it("maps PostgreSQL owner uniqueness races to public-safe categories", async () => {
     const race = Object.assign(new Error("redacted database race"), {
       code: "23505",
+      constraint: "trial_ladder_entries_season_id_owner_user_id_key",
     })
 
     await expect(
@@ -530,13 +549,28 @@ describe("trial ladder contracts", () => {
       ),
     ).rejects.toMatchObject({
       category: "replacement_blocked",
-      publicMessage:
-        getCountedEntryEligibilityPublicCopy("replacement_blocked")
-          .publicMessage,
-      message:
-        getCountedEntryEligibilityPublicCopy("replacement_blocked")
-          .publicMessage,
+      publicMessage: getCountedEntryEligibilityPublicCopy("replacement_blocked")
+        .publicMessage,
+      message: getCountedEntryEligibilityPublicCopy("replacement_blocked")
+        .publicMessage,
     })
+  })
+
+  it("retries entry-index races without misreporting a duplicate owner", async () => {
+    const indexRace = Object.assign(new Error("entry index race"), {
+      code: "23505",
+      constraint: "trial_ladder_entries_season_id_entry_index_key",
+    })
+    const pool = createFakePool({ insertErrors: [indexRace] })
+
+    await expect(
+      enterTrialLadderSeason(pool, defaultEntryInput),
+    ).resolves.toMatch(/^trial-entry:/)
+    expect(
+      pool.calls.filter((sql) =>
+        sql.includes("insert into trial_ladder_entries"),
+      ),
+    ).toHaveLength(2)
   })
 
   it("keeps the migration full owner/Season uniqueness policy", () => {
@@ -562,9 +596,9 @@ describe("trial ladder contracts", () => {
       expect(error).toBeInstanceOf(LadderInputError)
       expect(error).toMatchObject({
         category: "unsupported_source_format",
-        publicMessage:
-          getCountedEntryEligibilityPublicCopy("unsupported_source_format")
-            .publicMessage,
+        publicMessage: getCountedEntryEligibilityPublicCopy(
+          "unsupported_source_format",
+        ).publicMessage,
       })
     }
   })

@@ -633,7 +633,7 @@ func accountRevisionInsertFromProviderValidation(userID string, body strategyRev
 			"sourceHash":  hashString(body.Source),
 			"sourceBytes": len([]byte(body.Source)),
 		},
-		EngineCompatibility: engineCompatibility(),
+		EngineCompatibility: nil,
 		Metadata:            map[string]any{"tags": []string{body.SourceFormat, "provider", "invalid"}},
 		SourceHash:          hashString(body.Source),
 		SourceBytes:         len([]byte(body.Source)),
@@ -1797,17 +1797,31 @@ func (server *LiveServer) accountRevisionSummaries(ctx context.Context, userID s
 		row.Engine = jsonMap(engineRaw)
 		row.Validation = jsonMap(validationRaw)
 		row.Metadata = jsonMap(metadataRaw)
+		readiness := classifyRevisionReadiness(revisionReadinessInput{
+			SourceFormat:        stringValue(mapValue(row.Runtime, "language"), "id"),
+			Runtime:             row.Runtime,
+			Validation:          row.Validation,
+			Metadata:            row.Metadata,
+			EngineCompatibility: row.Engine,
+			SourceHash:          row.SourceHash,
+			SourceBytes:         row.SourceBytes,
+		})
+		readinessCategory := readiness.PublicCategory
+		if row.LockedAt == nil && readinessCategory == "provider_validated" {
+			readinessCategory = "mutable_draft"
+		}
 		summary := map[string]any{
-			"apiVersion":          serviceAPIVersion,
-			"kind":                "strategyRevisionSummary",
-			"strategyId":          row.StrategyID,
-			"strategyRevisionId":  row.ID,
-			"sourceHash":          row.SourceHash,
-			"sourceBytes":         row.SourceBytes,
-			"runtimeSemantics":    runtimeSemanticsForRevision(row.Runtime, row.Metadata, row.SourceHash, row.SourceBytes),
-			"engineCompatibility": row.Engine,
-			"validationStatus":    validationStatus(row.Validation),
-			"createdAt":           row.CreatedAt.Format(time.RFC3339Nano),
+			"apiVersion":                      serviceAPIVersion,
+			"kind":                            "strategyRevisionSummary",
+			"strategyId":                      row.StrategyID,
+			"strategyRevisionId":              row.ID,
+			"sourceHash":                      row.SourceHash,
+			"sourceBytes":                     row.SourceBytes,
+			"runtimeSemantics":                runtimeSemanticsForRevision(row.Runtime, row.Metadata, row.SourceHash, row.SourceBytes),
+			"countedEntryEligibilityCategory": readinessCategory,
+			"engineCompatibility":             row.Engine,
+			"validationStatus":                validationStatus(row.Validation),
+			"createdAt":                       row.CreatedAt.Format(time.RFC3339Nano),
 		}
 		copyOptional(summary, row.Metadata, "label")
 		copyOptional(summary, row.Metadata, "notes")

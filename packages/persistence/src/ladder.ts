@@ -87,8 +87,8 @@ const runtimeEligibility = (
   runtime: unknown,
   provenance: {
     metadata?: unknown
-    sourceHash?: string
-    sourceBytes?: number
+    sourceHash?: string | undefined
+    sourceBytes?: number | undefined
     engineCompatibility?: unknown
   } = {},
 ): LadderRuntimeEligibility => {
@@ -99,9 +99,7 @@ const runtimeEligibility = (
 
   if (language === "tinygo") {
     return {
-      decision: countedEntryEligibilityDecision(
-        "hidden_unsupported_provider",
-      ),
+      decision: countedEntryEligibilityDecision("hidden_unsupported_provider"),
     }
   }
   if (!isCountedEntrySupportedLane(language)) {
@@ -123,9 +121,7 @@ const runtimeEligibility = (
     rawRuntime.requiredCapabilities.length > 0
   ) {
     return {
-      decision: countedEntryEligibilityDecision(
-        "capability_policy_violation",
-      ),
+      decision: countedEntryEligibilityDecision("capability_policy_violation"),
     }
   }
 
@@ -157,8 +153,7 @@ const runtimeEligibility = (
     provenance.engineCompatibility !== undefined &&
     (!isRecord(provenance.engineCompatibility) ||
       provenance.engineCompatibility.spec !== COMPATIBILITY_VERSIONS.spec ||
-      provenance.engineCompatibility.engine !==
-        COMPATIBILITY_VERSIONS.engine)
+      provenance.engineCompatibility.engine !== COMPATIBILITY_VERSIONS.engine)
   ) {
     return {
       decision: countedEntryEligibilityDecision(
@@ -178,8 +173,9 @@ const runtimeEligibility = (
   }
 
   return {
-    decision: countedEntryEligibilityDecision("provider_validated") as
-      CountedEntryEligibilityDecision & { ok: true },
+    decision: countedEntryEligibilityDecision(
+      "provider_validated",
+    ) as CountedEntryEligibilityDecision & { ok: true },
     runtime: normalizeStrategyRuntimeMetadata(runtime),
   }
 }
@@ -188,8 +184,8 @@ export const assertLadderEligibleRuntime = (
   runtime: unknown,
   provenance: {
     metadata?: unknown
-    sourceHash?: string
-    sourceBytes?: number
+    sourceHash?: string | undefined
+    sourceBytes?: number | undefined
   } = {},
 ): CompetitionEntrantSnapshot["runtime"] => {
   const eligibility = runtimeEligibility(runtime, provenance)
@@ -639,73 +635,92 @@ export const enterTrialLadderSeason = async (
     throw ladderEligibilityError("mutable_draft")
   }
 
-  const entryCount = await pool.query<{ count: number }>(
-    "select count(*)::integer as count from trial_ladder_entries where season_id = $1",
-    [input.seasonId],
-  )
-  const entryIndex = entryCount.rows[0]?.count ?? 0
   const entryId = `trial-entry:${randomUUID()}`
   const label = row.metadata.label ?? row.strategy_name
-  const snapshot: TrialLadderEntrySnapshot = {
-    entrantId: entryId,
-    entrantIndex: entryIndex,
-    strategyRevisionId: input.revisionId,
-    ownerUserId: row.owner_user_id,
-    ownerHandle: row.handle,
-    displayLabel: `@${row.handle} / "${label}" / ${row.source_hash.slice(0, 10)}`,
-    sourceHash: row.source_hash,
-    sourceBytes: row.source_bytes,
-    runtime,
-    runtimeSemantics: describeStrategyRuntimeProductSemantics(runtime),
-    engineCompatibility: row.engine_compatibility,
-    lockedAt:
-      row.locked_at instanceof Date
-        ? row.locked_at.toISOString()
-        : row.locked_at,
-    seasonId: input.seasonId,
-    entryId,
-    status: "active",
-    strategyName: row.strategy_name,
-    ...(row.strategy_description
-      ? { strategyDescription: row.strategy_description }
-      : {}),
-    tags: row.strategy_tags.length
-      ? row.strategy_tags
-      : (row.metadata.tags ?? []),
-  }
-
-  try {
-    await pool.query(
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const entryIndexResult = await pool.query<{ entry_index: number }>(
       `
+        select coalesce(max(entry_index), -1)::integer + 1 as entry_index
+        from trial_ladder_entries
+        where season_id = $1
+      `,
+      [input.seasonId],
+    )
+    const entryIndex = entryIndexResult.rows[0]?.entry_index ?? 0
+    const snapshot: TrialLadderEntrySnapshot = {
+      entrantId: entryId,
+      entrantIndex: entryIndex,
+      strategyRevisionId: input.revisionId,
+      ownerUserId: row.owner_user_id,
+      ownerHandle: row.handle,
+      displayLabel: `@${row.handle} / "${label}" / ${row.source_hash.slice(0, 10)}`,
+      sourceHash: row.source_hash,
+      sourceBytes: row.source_bytes,
+      runtime,
+      runtimeSemantics: describeStrategyRuntimeProductSemantics(runtime),
+      engineCompatibility: row.engine_compatibility,
+      lockedAt:
+        row.locked_at instanceof Date
+          ? row.locked_at.toISOString()
+          : row.locked_at,
+      seasonId: input.seasonId,
+      entryId,
+      status: "active",
+      strategyName: row.strategy_name,
+      ...(row.strategy_description
+        ? { strategyDescription: row.strategy_description }
+        : {}),
+      tags: row.strategy_tags.length
+        ? row.strategy_tags
+        : (row.metadata.tags ?? []),
+    }
+
+    try {
+      await pool.query(
+        `
         insert into trial_ladder_entries (
           id, season_id, owner_user_id, owner_handle, strategy_id,
           strategy_revision_id, status, snapshot, entry_index
         )
         values ($1, $2, $3, $4, $5, $6, 'active', $7, $8)
       `,
-      [
-        entryId,
-        input.seasonId,
-        row.owner_user_id,
-        row.handle,
-        row.strategy_id,
-        input.revisionId,
-        snapshot,
-        entryIndex,
-      ],
-    )
-  } catch (error) {
-    if (!isRecord(error) || error.code !== "23505") {
+        [
+          entryId,
+          input.seasonId,
+          row.owner_user_id,
+          row.handle,
+          row.strategy_id,
+          input.revisionId,
+          snapshot,
+          entryIndex,
+        ],
+      )
+      return entryId
+    } catch (error) {
+      if (!isRecord(error) || error.code !== "23505") {
+        throw error
+      }
+      const constraint =
+        typeof error.constraint === "string" ? error.constraint : ""
+      if (constraint.includes("entry_index")) {
+        continue
+      }
+      const existing = await findOwnerSeasonEntry(pool, input)
+      if (
+        existing ||
+        constraint.includes("owner_user_id") ||
+        constraint.includes("strategy_revision_id")
+      ) {
+        throw ladderEligibilityError(
+          existing && existing.status !== "active"
+            ? "replacement_blocked"
+            : "already_entered_season",
+        )
+      }
       throw error
     }
-    const existing = await findOwnerSeasonEntry(pool, input)
-    throw ladderEligibilityError(
-      existing && existing.status !== "active"
-        ? "replacement_blocked"
-        : "already_entered_season",
-    )
   }
-  return entryId
+  throw new Error("Counted entry index allocation did not converge.")
 }
 
 type CountedEntryInput = {
@@ -738,6 +753,29 @@ type CountedEntryEligibilityDetails = {
   decision: CountedEntryEligibilityDecision
   row?: CountedEntryRevisionRow
   runtime?: CompetitionEntrantSnapshot["runtime"]
+}
+
+export const evaluateStoredRevisionCountedEligibility = (input: {
+  valid: boolean
+  lockedAt: Date | string | null | undefined
+  runtime: unknown
+  metadata?: unknown
+  sourceHash?: string | undefined
+  sourceBytes?: number | undefined
+  engineCompatibility?: unknown
+}): CountedEntryEligibilityDecision => {
+  if (!input.valid) {
+    return countedEntryEligibilityDecision("invalid_strategy_revision")
+  }
+  if (!input.lockedAt) {
+    return countedEntryEligibilityDecision("mutable_draft")
+  }
+  return runtimeEligibility(input.runtime, {
+    metadata: input.metadata,
+    sourceHash: input.sourceHash,
+    sourceBytes: input.sourceBytes,
+    engineCompatibility: input.engineCompatibility,
+  }).decision
 }
 
 const findOwnerSeasonEntry = async (
@@ -809,26 +847,29 @@ const evaluateCountedEntryEligibilityDetails = async (
   if (!row) {
     return { decision: countedEntryEligibilityDecision("owner_mismatch") }
   }
-  if (row.validation.valid !== true) {
-    return {
-      decision: countedEntryEligibilityDecision("invalid_strategy_revision"),
-    }
+  const revisionDecision = evaluateStoredRevisionCountedEligibility({
+    valid: row.validation.valid === true,
+    lockedAt: row.locked_at,
+    runtime: row.runtime,
+    metadata: row.metadata,
+    sourceHash: row.source_hash,
+    sourceBytes: row.source_bytes,
+    engineCompatibility: row.engine_compatibility,
+  })
+  if (!revisionDecision.ok) {
+    return { decision: revisionDecision }
   }
-  if (row.locked_at === null) {
-    return { decision: countedEntryEligibilityDecision("mutable_draft") }
-  }
-
   const runtimeResult = runtimeEligibility(row.runtime, {
     metadata: row.metadata,
     sourceHash: row.source_hash,
     sourceBytes: row.source_bytes,
     engineCompatibility: row.engine_compatibility,
   })
-  if (!runtimeResult.decision.ok || !runtimeResult.runtime) {
+  if (!runtimeResult.runtime) {
     return { decision: runtimeResult.decision }
   }
   return {
-    decision: runtimeResult.decision,
+    decision: revisionDecision,
     row,
     runtime: runtimeResult.runtime,
   }

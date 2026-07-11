@@ -17,6 +17,7 @@ import type {
 } from "./competition.js"
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
 import type { StrategyRuntimeProductSemantics } from "./runtime.js"
+import type { CountedEntryEligibilityCategory } from "./competition-entry-eligibility.js"
 import type {
   WorkshopAnalyticsComparisonSchema,
   WorkshopTestSummarySchema,
@@ -840,6 +841,7 @@ export interface StrategyRevisionSummaryServiceDto {
   sourceHash: string
   sourceBytes: number
   runtimeSemantics: StrategyRuntimeProductSemantics
+  countedEntryEligibilityCategory: CountedEntryEligibilityCategory
   engineCompatibility: {
     spec: string
     engine: string

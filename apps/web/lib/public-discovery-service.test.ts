@@ -157,6 +157,7 @@ describe("public discovery service", () => {
           sourceHash: "hash-test",
           sourceBytes: 120,
           valid: true,
+          countedEntryEligibilityCategory: "provider_validated",
           runtimeSemantics: {
             languageId: "typescript",
             languageLabel: "JS/TS",
@@ -254,6 +255,7 @@ describe("public discovery service", () => {
           sourceHash: "hash-ready",
           sourceBytes: 120,
           valid: true,
+          countedEntryEligibilityCategory: "provider_validated",
           runtimeSemantics,
           engineCompatibility: { spec: "cowards-rules-v1.4", engine: "0.1.4" },
           createdAt: "2026-07-11T00:00:00.000Z",
@@ -266,6 +268,7 @@ describe("public discovery service", () => {
           sourceHash: "hash-needs-proof",
           sourceBytes: 130,
           valid: true,
+          countedEntryEligibilityCategory: "provider_proof_missing",
           runtimeSemantics: {
             ...runtimeSemantics,
             countedPlayEligible: false,
@@ -280,9 +283,8 @@ describe("public discovery service", () => {
       ],
     })
 
-    const dashboard = await service.getSignedInCompetitionEntryDashboard(
-      "ladder:season:open",
-    )
+    const dashboard =
+      await service.getSignedInCompetitionEntryDashboard("ladder:season:open")
 
     expect(dashboard?.entryMode).toBe("counted-ladder-season")
     expect(dashboard?.entryHref).toBe(

@@ -138,7 +138,7 @@ func runtimeMetadataMatchesCountedLane(runtime map[string]any, languageID string
 
 func engineCompatibilityMatches(value map[string]any) bool {
 	if value == nil {
-		return true
+		return false
 	}
 	expected := engineCompatibility()
 	return stringValue(value, "spec") == stringValue(expected, "spec") &&

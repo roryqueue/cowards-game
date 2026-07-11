@@ -30,6 +30,7 @@ import {
   findStarterStrategy,
   type StarterStrategyId,
 } from "./starter-strategies.js"
+import { evaluateStoredRevisionCountedEligibility } from "./ladder.js"
 
 export class AccountRevisionError extends Error {
   constructor(message: string) {
@@ -51,6 +52,7 @@ export interface AccountStrategyRevisionSummary {
   valid: boolean
   runtime: StrategyRevision["runtime"]
   runtimeSemantics: StrategyRuntimeProductSemantics
+  countedEntryEligibilityCategory: import("@cowards/spec").CountedEntryEligibilityCategory
   engineCompatibility: StrategyRevision["engineCompatibility"]
   createdAt: string
   lockedAt?: string | undefined
@@ -181,6 +183,17 @@ export const listAccountStrategyRevisions = async (
         sourceHash: row.source_hash,
         sourceBytes: row.source_bytes,
       }),
+      countedEntryEligibilityCategory: evaluateStoredRevisionCountedEligibility(
+        {
+          valid: row.validation.valid,
+          lockedAt: row.locked_at,
+          runtime: row.runtime,
+          metadata: row.metadata,
+          sourceHash: row.source_hash,
+          sourceBytes: row.source_bytes,
+          engineCompatibility: row.engine_compatibility,
+        },
+      ).category,
       engineCompatibility: row.engine_compatibility,
       createdAt: row.created_at.toISOString(),
       ...(row.locked_at ? { lockedAt: row.locked_at.toISOString() } : {}),

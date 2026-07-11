@@ -205,6 +205,9 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			if test.input.EngineCompatibility == nil {
+				test.input.EngineCompatibility = engineCompatibility()
+			}
 			result := classifyRevisionReadiness(test.input)
 			if result.State != test.state || result.PublicCategory != test.category || result.EntryEligible != test.entryEligible {
 				t.Fatalf("unexpected readiness result: %+v", result)
@@ -309,6 +312,32 @@ func TestProviderReadinessAccountSaveAssemblyD02D03(t *testing.T) {
 		input.Metadata["entryEligible"] != true ||
 		input.Metadata["countedEligible"] != true {
 		t.Fatalf("save assembly omitted readiness labels: %+v", input.Metadata)
+	}
+}
+
+func TestProviderReadinessRejectsMissingEngineEvidence(t *testing.T) {
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
+	source := "export default { selectActivations() { return []; }, soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: null }; } }"
+	sourceHash := hashString(source)
+	sourceBytes := len([]byte(source))
+
+	input, readiness := accountRevisionInsertFromProviderValidation("user:missing-engine", strategyRevisionCreateBody{
+		Source:       source,
+		SourceFormat: "typescript",
+	}, &runtimeServiceValidationResponse{
+		OK:          true,
+		Runtime:     defaultRuntimeMetadata(),
+		Validation:  map[string]any{"valid": true, "sourceHash": sourceHash, "sourceBytes": sourceBytes},
+		Metadata:    providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, true),
+		SourceHash:  sourceHash,
+		SourceBytes: sourceBytes,
+	})
+
+	if input.EngineCompatibility != nil {
+		t.Fatalf("missing runtime-service engine evidence must not be synthesized: %+v", input.EngineCompatibility)
+	}
+	if readiness.State != revisionReadinessInvalid || readiness.PublicCategory != "incompatible_runtime_metadata" || readiness.EntryEligible || readiness.CountedEligible {
+		t.Fatalf("missing engine evidence must fail counted readiness: %+v", readiness)
 	}
 }
 

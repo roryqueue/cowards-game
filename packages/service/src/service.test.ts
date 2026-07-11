@@ -154,6 +154,7 @@ const accountRevision = {
   sourceHash: "sourcehash-demo",
   sourceBytes: 256,
   valid: true,
+  countedEntryEligibilityCategory: "provider_validated" as const,
   runtime,
   runtimeSemantics: {
     languageId: "typescript",
@@ -364,6 +365,7 @@ describe("createCowardsLocalService", () => {
               memoryBytes: 64 * 1024 * 1024,
             },
           },
+          runtimeSemantics: accountRevision.runtimeSemantics,
           engineCompatibility: {
             spec: "cowards-rules-v1.4",
             engine: "engine-v1",

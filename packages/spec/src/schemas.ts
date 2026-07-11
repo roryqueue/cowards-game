@@ -36,6 +36,7 @@ import {
   STRATEGY_RUNTIME_SYSTEM_FAILURE_CODES,
   STRATEGY_RUNTIME_VIOLATION_CODES,
 } from "./runtime.js"
+import { COUNTED_ENTRY_ELIGIBILITY_CATEGORIES } from "./competition-entry-eligibility.js"
 
 export const jsonByteLength = (value: unknown): number =>
   new TextEncoder().encode(JSON.stringify(value)).length
@@ -1261,6 +1262,7 @@ export const StrategyRevisionSummaryServiceDtoSchema = z.object({
     warnings: z.array(z.string().min(1)),
     validationIssueCodes: z.array(z.string().min(1)),
   }),
+  countedEntryEligibilityCategory: z.enum(COUNTED_ENTRY_ELIGIBILITY_CATEGORIES),
   engineCompatibility: z.object({
     spec: z.string().min(1),
     engine: z.string().min(1),

@@ -8,7 +8,6 @@ import {
   PublicWatchIndexDtoSchema,
   assertPublicDiscoveryDtoLeakSafe,
   getCountedEntryEligibilityPublicCopy,
-  isCountedEntrySupportedLane,
   publicDiscoveryBoundary,
   type CompetitionPreset,
   type CountedEntryEligibilityPublicCopy,
@@ -264,32 +263,8 @@ const countedEntryEligibilityForRevision = (
   if (!revision.lockedAt) {
     return getCountedEntryEligibilityPublicCopy("mutable_draft")
   }
-  const languageId: string = revision.runtimeSemantics.languageId
-  if (languageId === "tinygo") {
-    return getCountedEntryEligibilityPublicCopy("hidden_unsupported_provider")
-  }
-  if (!isCountedEntrySupportedLane(languageId)) {
-    return getCountedEntryEligibilityPublicCopy("unsupported_source_format")
-  }
-  if (revision.runtimeSemantics.countedPlayEligible) {
-    return getCountedEntryEligibilityPublicCopy("provider_validated")
-  }
-
-  const reason = revision.runtimeSemantics.countedPlayReason?.toLowerCase() ?? ""
-  if (reason.includes("package")) {
-    return getCountedEntryEligibilityPublicCopy("package_policy_violation")
-  }
-  if (reason.includes("capabilit")) {
-    return getCountedEntryEligibilityPublicCopy("capability_policy_violation")
-  }
-  if (reason.includes("provider") || reason.includes("provenance")) {
-    return getCountedEntryEligibilityPublicCopy("provider_proof_missing")
-  }
-  if (reason.includes("unavailable")) {
-    return getCountedEntryEligibilityPublicCopy("runtime_service_unavailable")
-  }
   return getCountedEntryEligibilityPublicCopy(
-    "incompatible_runtime_metadata",
+    revision.countedEntryEligibilityCategory,
   )
 }
 
@@ -541,15 +516,29 @@ export const createPublicDiscoveryService = (
             detail.competition.status === "open"
           ? "counted-ladder-season"
           : "unavailable"
+    let existingSeasonEntryStatus:
+      | PublicTrialLadderSeasonDto["entries"][number]["status"]
+      | undefined
+    if (parsedCompetition?.kind === "ladder" && user) {
+      const ladder = await deps.getLadderSeason(parsedCompetition.seasonId)
+      existingSeasonEntryStatus = ladder?.entries.find(
+        (entry) => entry.ownerHandle === user.handle,
+      )?.status
+    }
     const revisionsWithEligibility = revisions.map((revision) => ({
       revision,
-      eligibility: countedEntryEligibilityForRevision(revision),
+      eligibility: existingSeasonEntryStatus
+        ? getCountedEntryEligibilityPublicCopy(
+            existingSeasonEntryStatus === "active"
+              ? "already_entered_season"
+              : "replacement_blocked",
+          )
+        : countedEntryEligibilityForRevision(revision),
     }))
     const eligibleRevisions =
       entryMode === "counted-ladder-season"
         ? revisionsWithEligibility.filter(
-            ({ eligibility }) =>
-              eligibility.category === "provider_validated",
+            ({ eligibility }) => eligibility.category === "provider_validated",
           )
         : revisionsWithEligibility.filter(({ revision }) => revision.valid)
     const ineligibleRevisions = revisionsWithEligibility.filter(
