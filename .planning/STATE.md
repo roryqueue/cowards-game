@@ -9,7 +9,7 @@ last_activity: 2026-07-11 -- Phase 250 verified complete and Phase 251 planned
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 8
+  total_plans: 9
   completed_plans: 6
   percent: 29
 ---
@@ -26,7 +26,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-15)
 ## Current Position
 
 Phase: 251 - Season Lifecycle and Scheduling Policy
-Plan: 0 of 2
+Plan: 0 of 3
 Status: Planned; ready for Plan 01
 Last activity: 2026-07-11 -- Phase 250 verified complete and Phase 251 planned
 
@@ -46,7 +46,7 @@ Progress: [###-------] 29%
 |-------|--------|-------|--------------|
 | 249. Competition Surface Inventory and Policy Lock | Complete | 3/3 | 5 |
 | 250. Counted Entry and One-Active-Revision Enforcement | Complete | 3/3 | 6 |
-| 251. Season Lifecycle and Scheduling Policy | Planned | 0/2 | 5 |
+| 251. Season Lifecycle and Scheduling Policy | Planned | 0/3 | 5 |
 | 252. Counted-State Classifier and Standings Recompute | Not started | 0/0 | 6 |
 | 253. Governance, Dispute, Abuse, and Recovery Surfaces | Not started | 0/0 | 6 |
 | 254. Public Trust UX Projections | Not started | 0/0 | 5 |

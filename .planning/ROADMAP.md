@@ -108,7 +108,11 @@ Cross-cutting constraints:
   3. Completed or archived Seasons keep stable public links to standings, results, and replay evidence while visibly remaining resettable and non-durable.
   4. Season standings do not mix entrants, MatchSets, or counted results across Season boundaries.
   5. Season policy explains minimum entries, target MatchSet or pod behavior where applicable, and insufficient-evidence outcomes.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 251-01-PLAN.md — Define the Season lifecycle/window/outcome/link contract and additive storage.
+- [ ] 251-02-PLAN.md — Enforce monotonic transitions and atomic, idempotent, Season-isolated scheduling.
+- [ ] 251-03-PLAN.md — Align TypeScript and Go public Season projections with stable evidence links.
 
 ### Phase 252: Counted-State Classifier and Standings Recompute
 **Goal**: Players can trust Season standings because every MatchSet has a public-safe counted state and rankings are recomputed from canonical evidence instead of UI-owned display state.
@@ -168,7 +172,7 @@ Cross-cutting constraints:
 |-------|----------------|--------|-----------|
 | 249. Competition Surface Inventory and Policy Lock | 3/3 | Complete | 2026-06-16 |
 | 250. Counted Entry and One-Active-Revision Enforcement | 3/3 | Complete | 2026-07-11 |
-| 251. Season Lifecycle and Scheduling Policy | 0/2 | Planned | - |
+| 251. Season Lifecycle and Scheduling Policy | 0/3 | Planned | - |
 | 252. Counted-State Classifier and Standings Recompute | 0/0 | Not started | - |
 | 253. Governance, Dispute, Abuse, and Recovery Surfaces | 0/0 | Not started | - |
 | 254. Public Trust UX Projections | 0/0 | Not started | - |
