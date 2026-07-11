@@ -22,7 +22,9 @@ export const competitiveErrorResponse = (error: unknown): Response => {
         ? undefined
         : { "Retry-After": String(error.retryAfterSeconds) }
     return Response.json(
-      { error: error.message },
+      error.eligibility
+        ? { ok: false, eligibility: error.eligibility }
+        : { error: error.message },
       headers === undefined
         ? { status: error.status }
         : { status: error.status, headers },

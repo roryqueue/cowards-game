@@ -44,7 +44,9 @@ import { findStarterStrategy } from "@cowards/persistence/starter-strategies"
 import {
   COMPETITION_PRESET_IDS,
   COMPETITION_PRESETS,
+  getCountedEntryEligibilityPublicCopy,
   type CompetitionPresetId,
+  type CountedEntryEligibilityCategory,
   type MatchId,
   type MatchSetId,
   type PublicMatchSetResultDto,
@@ -149,6 +151,23 @@ const assertCompetitionPresetId = (value: unknown): CompetitionPresetId => {
   throw new CompetitiveInputError("Unknown exhibition preset.")
 }
 
+const countedEntryEligibilityStatus = (
+  category: CountedEntryEligibilityCategory,
+): number => {
+  switch (category) {
+    case "owner_mismatch":
+      return 403
+    case "season_not_open":
+    case "already_entered_season":
+    case "replacement_blocked":
+      return 409
+    case "runtime_service_unavailable":
+      return 503
+    default:
+      return 422
+  }
+}
+
 const mapPersistenceError = (error: unknown): never => {
   if (error instanceof CompetitiveInputError) {
     throw error
@@ -161,6 +180,13 @@ const mapPersistenceError = (error: unknown): never => {
   }
   if (error instanceof ActiveDuplicateExhibitionError) {
     throw new CompetitiveInputError(error.message, { status: 409 })
+  }
+  if (error instanceof LadderInputError && error.category) {
+    const eligibility = getCountedEntryEligibilityPublicCopy(error.category)
+    throw new CompetitiveInputError(eligibility.publicMessage, {
+      status: countedEntryEligibilityStatus(eligibility.category),
+      eligibility,
+    })
   }
   if (
     error instanceof AuthInputError ||
