@@ -124,7 +124,11 @@ Plans:
   3. Standings recompute from canonical complete counted MatchSet evidence plus governance state, not React-owned display state or manually edited rank rows.
   4. Degraded, failed, disputed, invalid, invalidated, non-counted, and non-competitive MatchSets do not silently pollute counted standings.
   5. Repeated recomputation from the same canonical inputs produces deterministic, Season-scoped, stable standings rows with public-safe evidence availability, exclusion, tie-breaker, result, and replay links.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 252-01-PLAN.md — Define the canonical counted-state classifier, DTOs, schemas, and storage vocabulary.
+- [ ] 252-02-PLAN.md — Recompute deterministic Season standings from canonical classified evidence.
+- [ ] 252-03-PLAN.md — Align public result and selected Go counted-state/standings projections.
 **UI hint**: yes
 
 ### Phase 253: Governance, Dispute, Abuse, and Recovery Surfaces
@@ -173,7 +177,7 @@ Plans:
 | 249. Competition Surface Inventory and Policy Lock | 3/3 | Complete | 2026-06-16 |
 | 250. Counted Entry and One-Active-Revision Enforcement | 3/3 | Complete | 2026-07-11 |
 | 251. Season Lifecycle and Scheduling Policy | 3/3 | Complete | 2026-07-11 |
-| 252. Counted-State Classifier and Standings Recompute | 0/0 | Not started | - |
+| 252. Counted-State Classifier and Standings Recompute | 0/3 | Planned | - |
 | 253. Governance, Dispute, Abuse, and Recovery Surfaces | 0/0 | Not started | - |
 | 254. Public Trust UX Projections | 0/0 | Not started | - |
 | 255. Service-Backed E2E Proof and Boundary Monitors | 0/0 | Not started | - |
