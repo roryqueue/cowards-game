@@ -7,6 +7,7 @@ import {
 import { Buffer } from "node:buffer"
 import {
   assertPublicMatchSetResultLeakSafe,
+  classifyCompetitionCountedState,
   describeStrategyRuntimeProductSemantics,
   evaluateStrategyRuntimeCountedEligibility,
   getCompetitionPreset,
@@ -14,6 +15,7 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   type CompetitionEntrantSnapshot,
   type CompetitionPresetId,
+  type LadderMatchSetCountedStatus,
   type PublicMatchSetResultDto,
   type PublicPenaltyReason,
   type PublicStandingDto,
@@ -27,7 +29,6 @@ import { createRepositories } from "./repositories.js"
 import { createDevelopmentSeedData } from "./seed.js"
 import type { MatchSetStatus, MatchStatus } from "./schema.js"
 import type { MatchSetScore } from "./scoring.js"
-import { refreshMatchSetStatus } from "./matchset-status.js"
 
 export const TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE = {
   normalBackend: false,
@@ -724,7 +725,6 @@ export const buildPublicMatchSetResultDto = async (
   pool: Pool,
   matchSetId: string,
 ): Promise<PublicMatchSetResultDto | null> => {
-  await refreshMatchSetStatus(pool, matchSetId)
   const matchSetResult = await pool.query<{
     id: string
     status: MatchSetStatus
@@ -733,10 +733,9 @@ export const buildPublicMatchSetResultDto = async (
     scoring_policy_version: string | null
     visibility: "public" | null
     scoring: MatchSetScore | null
-    counted_status: string
-    public_counted_reason: string | null
-    public_counted_explanation: string | null
-    review_status: string
+    ladder_season_id: string | null
+    counted_status: LadderMatchSetCountedStatus
+    review_status: "none" | "under_review" | "resolved"
   }>(
     `
       select
@@ -747,9 +746,8 @@ export const buildPublicMatchSetResultDto = async (
         scoring_policy_version,
         visibility,
         scoring,
+        ladder_season_id,
         counted_status,
-        public_counted_reason,
-        public_counted_explanation,
         review_status
       from match_sets
       where id = $1
@@ -855,16 +853,16 @@ export const buildPublicMatchSetResultDto = async (
       : {}),
     arenaVariantId: row.arena_variant_id,
   }))
-  const hasCompleteEvidence =
-    matchSet.status === "complete" &&
-    matches.length > 0 &&
-    matches.every(
-      (match) => match.status === "complete" && match.replayAvailable,
-    )
-  const derivedCountedStatus =
-    matchSet.counted_status === "pending" && hasCompleteEvidence
-      ? "counted"
-      : matchSet.counted_status
+  const countedState = classifyCompetitionCountedState({
+    executionStatus: mapStatus(matchSet.status),
+    storedState: matchSet.counted_status,
+    reviewState: matchSet.review_status,
+    origin: matchSet.ladder_season_id ? "trial" : "non_competitive",
+    expectedMatchCount: matches.length,
+    chronicleMatchCount: matches.filter((match) => match.replayAvailable)
+      .length,
+    scoringAvailable: Array.isArray(score?.rankings),
+  })
   const dto: PublicMatchSetResultDto = {
     matchSetId,
     preset: {
@@ -900,11 +898,11 @@ export const buildPublicMatchSetResultDto = async (
         "private runtime internals",
       ],
     },
-    metadata: {
-      countedStatus: derivedCountedStatus,
-      publicReason: matchSet.public_counted_reason,
-      publicExplanation: matchSet.public_counted_explanation,
-      reviewStatus: matchSet.review_status,
+    competition: {
+      ...(matchSet.ladder_season_id
+        ? { seasonId: matchSet.ladder_season_id }
+        : {}),
+      countedState,
     },
   }
   assertPublicMatchSetResultLeakSafe(dto)

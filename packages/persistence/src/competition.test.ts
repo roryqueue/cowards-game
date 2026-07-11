@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { Buffer } from "node:buffer"
 import { createHash, createHmac } from "node:crypto"
+import { readFileSync } from "node:fs"
 import {
   defaultRuntimeMetadata,
   describeStrategyRuntimeProductSemantics,
@@ -139,7 +140,7 @@ describe("competition helpers", () => {
     expect(quarantine).toHaveProperty("createManualExhibitionMatchSet")
   })
 
-  it("labels TypeScript competition MatchSet creation and public DTO refresh as non-normal support", () => {
+  it("labels TypeScript competition MatchSet creation and public DTO reads as non-normal support", () => {
     expect(TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE.normalBackend).toBe(false)
     expect(TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE.selectedNormalBackend).toBe(
       false,
@@ -159,6 +160,20 @@ describe("competition helpers", () => {
         "buildPublicMatchSetResultDto",
       ]),
     )
+  })
+
+  it("classifies public result evidence without mutating MatchSet lifecycle", () => {
+    const source = readFileSync(
+      "packages/persistence/src/competition.ts",
+      "utf8",
+    )
+    const publicRead = source.slice(
+      source.indexOf("export const buildPublicMatchSetResultDto"),
+    )
+    expect(publicRead).toContain("classifyCompetitionCountedState")
+    expect(publicRead).toContain("countedState")
+    expect(publicRead).not.toContain("refreshMatchSetStatus")
+    expect(publicRead).not.toContain("countedStatus: derivedCountedStatus")
   })
 
   it("allows 2-8 distinct owned revisions for manual exhibitions", () => {
