@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { Buffer } from "node:buffer"
 import { createHash, createHmac } from "node:crypto"
 import {
+  COMPATIBILITY_VERSIONS,
   STRATEGY_RUNTIME_ABI_VERSION,
   defaultRuntimeMetadata,
   getCountedEntryEligibilityPublicCopy,
@@ -203,6 +204,7 @@ const revisionRow = (input: {
   sourceHash?: string
   sourceBytes?: number
   runtime?: unknown
+  engineCompatibility?: unknown
 }) => {
   const languageId = input.languageId ?? "typescript"
   const sourceHash = input.sourceHash ?? `${languageId}-source-hash`
@@ -215,7 +217,10 @@ const revisionRow = (input: {
     source_hash: sourceHash,
     source_bytes: sourceBytes,
     runtime: input.runtime ?? runtimeFor(languageId),
-    engine_compatibility: { specVersion: "v1", engineVersion: "v1" },
+    engine_compatibility: input.engineCompatibility ?? {
+      spec: COMPATIBILITY_VERSIONS.spec,
+      engine: COMPATIBILITY_VERSIONS.engine,
+    },
     validation: input.validation ?? { valid: true },
     metadata:
       input.metadata ??
@@ -235,9 +240,11 @@ const createFakePool = (input: {
   seasonStatus?: string | null
   revision?: ReturnType<typeof revisionRow> | null
   existingEntryStatus?: FakeEntryStatus | null
+  existingEntryStatuses?: Array<FakeEntryStatus | null>
   insertError?: unknown
 } = {}) => {
   const calls: string[] = []
+  let ownerEntryQueryIndex = 0
   const pool = {
     calls,
     async query(sql: string, values?: unknown[]) {
@@ -254,9 +261,12 @@ const createFakePool = (input: {
         sql.includes("from trial_ladder_entries") &&
         sql.includes("owner_user_id")
       ) {
+        const status = input.existingEntryStatuses
+          ? input.existingEntryStatuses[ownerEntryQueryIndex++] ?? null
+          : input.existingEntryStatus ?? null
         return {
-          rows: input.existingEntryStatus
-            ? [{ id: "trial-entry:existing", status: input.existingEntryStatus }]
+          rows: status
+            ? [{ id: "trial-entry:existing", status }]
             : [],
         }
       }
@@ -397,6 +407,18 @@ describe("trial ladder contracts", () => {
       "incompatible_runtime_metadata",
     ],
     [
+      "incompatible engine metadata",
+      createFakePool({
+        revision: revisionRow({
+          engineCompatibility: {
+            spec: "stale-spec",
+            engine: "stale-engine",
+          },
+        }),
+      }),
+      "incompatible_runtime_metadata",
+    ],
+    [
       "invalid revision",
       createFakePool({ revision: revisionRow({ validation: { valid: false } }) }),
       "invalid_strategy_revision",
@@ -473,8 +495,9 @@ describe("trial ladder contracts", () => {
   )
 
   it("throws category-bearing public errors from counted entry mutation", async () => {
+    const pool = createFakePool({ existingEntryStatus: "active" })
     await expect(
-      enterTrialLadderSeason(createFakePool({ existingEntryStatus: "active" }), {
+      enterTrialLadderSeason(pool, {
         seasonId: "season:trial",
         userId: "user:owner",
         revisionId: "revision:owned",
@@ -489,6 +512,7 @@ describe("trial ladder contracts", () => {
         getCountedEntryEligibilityPublicCopy("already_entered_season")
           .remediation,
     })
+    expect(pool.calls.some((sql) => sql.includes("insert into trial_ladder_entries"))).toBe(false)
   })
 
   it("maps PostgreSQL owner uniqueness races to public-safe categories", async () => {
@@ -500,13 +524,16 @@ describe("trial ladder contracts", () => {
       enterTrialLadderSeason(
         createFakePool({
           insertError: race,
-          existingEntryStatus: "withdrawn",
+          existingEntryStatuses: [null, "withdrawn"],
         }),
         defaultEntryInput,
       ),
     ).rejects.toMatchObject({
       category: "replacement_blocked",
       publicMessage:
+        getCountedEntryEligibilityPublicCopy("replacement_blocked")
+          .publicMessage,
+      message:
         getCountedEntryEligibilityPublicCopy("replacement_blocked")
           .publicMessage,
     })
@@ -519,6 +546,12 @@ describe("trial ladder contracts", () => {
         "utf8",
       ),
     ).toContain("unique(season_id, owner_user_id)")
+    expect(
+      readFileSync(
+        "packages/persistence/migrations/0004_competition_trust_beta.sql",
+        "utf8",
+      ),
+    ).not.toMatch(/unique\s*\([^)]*owner_user_id[^)]*\)\s*where/i)
   })
 
   it("delegates runtime compatibility wrapper failures to public categories", () => {

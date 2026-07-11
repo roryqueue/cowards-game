@@ -7,11 +7,19 @@ import {
 import { Buffer } from "node:buffer"
 import {
   assertPublicMatchSetResultLeakSafe,
+  COMPATIBILITY_VERSIONS,
+  countedEntryEligibilityDecision,
+  describeStrategyRuntimeProductSemantics,
   EXHIBITION_SCORING_POLICY_V1,
   evaluateStrategyRuntimeCountedEligibility,
+  getCountedEntryEligibilityPublicCopy,
+  isCountedEntrySupportedLane,
   normalizeStrategyRuntimeMetadata,
   STRATEGY_RUNTIME_ABI_VERSION,
+  validateRuntimeBrokerRegistryMatch,
   type CompetitionEntrantSnapshot,
+  type CountedEntryEligibilityCategory,
+  type CountedEntryEligibilityDecision,
   type LadderMatchSetCountedStatus,
   type LadderNonCountedReason,
   type PublicLadderMatchSetSummaryDto,
@@ -33,9 +41,146 @@ import type { MatchSetStatus } from "./schema.js"
 import type { MatchSetStrategyScore } from "./scoring.js"
 
 export class LadderInputError extends Error {
-  constructor(message: string) {
+  readonly category: CountedEntryEligibilityCategory | undefined
+  readonly publicMessage: string
+  readonly remediation: string | undefined
+
+  constructor(
+    message: string,
+    eligibility?: {
+      category: CountedEntryEligibilityCategory
+      remediation: string
+    },
+  ) {
     super(message)
     this.name = "LadderInputError"
+    this.category = eligibility?.category
+    this.publicMessage = message
+    this.remediation = eligibility?.remediation
+  }
+}
+
+const ladderEligibilityError = (
+  category: CountedEntryEligibilityCategory,
+): LadderInputError => {
+  const copy = getCountedEntryEligibilityPublicCopy(category)
+  return new LadderInputError(copy.publicMessage, {
+    category,
+    remediation: copy.remediation,
+  })
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+
+type LadderRuntimeEligibility =
+  | {
+      decision: CountedEntryEligibilityDecision
+      runtime?: undefined
+    }
+  | {
+      decision: CountedEntryEligibilityDecision & { ok: true }
+      runtime: CompetitionEntrantSnapshot["runtime"]
+    }
+
+const runtimeEligibility = (
+  runtime: unknown,
+  provenance: {
+    metadata?: unknown
+    sourceHash?: string
+    sourceBytes?: number
+    engineCompatibility?: unknown
+  } = {},
+): LadderRuntimeEligibility => {
+  const rawRuntime = isRecord(runtime) ? runtime : null
+  const language = isRecord(rawRuntime?.language)
+    ? rawRuntime.language.id
+    : undefined
+
+  if (language === "tinygo") {
+    return {
+      decision: countedEntryEligibilityDecision(
+        "hidden_unsupported_provider",
+      ),
+    }
+  }
+  if (!isCountedEntrySupportedLane(language)) {
+    return {
+      decision: countedEntryEligibilityDecision("unsupported_source_format"),
+    }
+  }
+
+  const packageMetadata = isRecord(rawRuntime?.package)
+    ? rawRuntime.package
+    : null
+  if (packageMetadata?.mode !== undefined && packageMetadata.mode !== "none") {
+    return {
+      decision: countedEntryEligibilityDecision("package_policy_violation"),
+    }
+  }
+  if (
+    Array.isArray(rawRuntime?.requiredCapabilities) &&
+    rawRuntime.requiredCapabilities.length > 0
+  ) {
+    return {
+      decision: countedEntryEligibilityDecision(
+        "capability_policy_violation",
+      ),
+    }
+  }
+
+  if (
+    rawRuntime?.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+    packageMetadata?.mode !== "none" ||
+    !Array.isArray(rawRuntime?.requiredCapabilities) ||
+    validateRuntimeBrokerRegistryMatch(runtime).length > 0
+  ) {
+    return {
+      decision: countedEntryEligibilityDecision(
+        "incompatible_runtime_metadata",
+      ),
+    }
+  }
+
+  const countedRuntime = evaluateStrategyRuntimeCountedEligibility(runtime)
+  if (!countedRuntime.ok) {
+    return {
+      decision: countedEntryEligibilityDecision(
+        countedRuntime.code === "NON_COUNTED_RUNTIME"
+          ? "runtime_service_unavailable"
+          : "incompatible_runtime_metadata",
+      ),
+    }
+  }
+
+  if (
+    provenance.engineCompatibility !== undefined &&
+    (!isRecord(provenance.engineCompatibility) ||
+      provenance.engineCompatibility.spec !== COMPATIBILITY_VERSIONS.spec ||
+      provenance.engineCompatibility.engine !==
+        COMPATIBILITY_VERSIONS.engine)
+  ) {
+    return {
+      decision: countedEntryEligibilityDecision(
+        "incompatible_runtime_metadata",
+      ),
+    }
+  }
+
+  const proofCategory = providerProofCategory({
+    metadata: provenance.metadata,
+    sourceHash: provenance.sourceHash,
+    sourceBytes: provenance.sourceBytes,
+    language,
+  })
+  if (proofCategory !== null) {
+    return { decision: countedEntryEligibilityDecision(proofCategory) }
+  }
+
+  return {
+    decision: countedEntryEligibilityDecision("provider_validated") as
+      CountedEntryEligibilityDecision & { ok: true },
+    runtime: normalizeStrategyRuntimeMetadata(runtime),
   }
 }
 
@@ -47,57 +192,92 @@ export const assertLadderEligibleRuntime = (
     sourceBytes?: number
   } = {},
 ): CompetitionEntrantSnapshot["runtime"] => {
-  const eligibility = evaluateStrategyRuntimeCountedEligibility(runtime)
-  if (!eligibility.ok) {
-    throw new LadderInputError(
-      eligibility.publicMessage ??
-        "Strategy Revision runtime is not eligible for trial ladder entry.",
-    )
+  const eligibility = runtimeEligibility(runtime, provenance)
+  if (!eligibility.decision.ok || !eligibility.runtime) {
+    throw ladderEligibilityError(eligibility.decision.category)
   }
-  const normalized = normalizeStrategyRuntimeMetadata(runtime)
-  if (
-    normalized.language.id === "typescript" &&
-    !sourceArtifactProviderValidationMatches(
-      provenance.metadata,
-      provenance.sourceHash,
-      provenance.sourceBytes,
-      "strategy-language-provider-js-ts",
-      "typescript",
-    )
-  ) {
-    throw new LadderInputError(
-      "TypeScript trial ladder entry requires provider-validated artifact provenance.",
-    )
+  return eligibility.runtime
+}
+
+const providerProofCategory = (input: {
+  metadata: unknown
+  sourceHash: string | undefined
+  sourceBytes: number | undefined
+  language: "typescript" | "python" | "rust" | "zig"
+}): CountedEntryEligibilityCategory | null => {
+  if (!isRecord(input.metadata)) {
+    return "provider_proof_missing"
   }
-  if (
-    normalized.language.id === "python" &&
-    !sourceArtifactProviderValidationMatches(
-      provenance.metadata,
-      provenance.sourceHash,
-      provenance.sourceBytes,
-      "strategy-language-provider-python",
-      "python",
-    )
-  ) {
-    throw new LadderInputError(
-      "Python trial ladder entry requires provider-validated revision provenance.",
-    )
+  const artifactKey =
+    input.language === "typescript" || input.language === "python"
+      ? "sourceArtifact"
+      : "compiledArtifact"
+  const artifact = input.metadata[artifactKey]
+  const validation = input.metadata.providerValidation
+  if (!isRecord(artifact) || !isRecord(validation)) {
+    return "provider_proof_missing"
+  }
+  if (typeof validation.proof !== "string" || validation.proof.length === 0) {
+    return "provider_proof_missing"
   }
   if (
-    (normalized.language.id === "rust" || normalized.language.id === "zig") &&
-    !rustProviderValidationMatches(
-      provenance.metadata,
-      provenance.sourceHash,
-      provenance.sourceBytes,
-      normalized.language.id,
-    )
+    !input.sourceHash ||
+    input.sourceBytes === undefined ||
+    artifact.sourceHash !== input.sourceHash ||
+    validation.sourceHash !== input.sourceHash ||
+    validation.sourceBytes !== input.sourceBytes ||
+    ((input.language === "typescript" || input.language === "python") &&
+      artifact.sourceBytes !== input.sourceBytes)
   ) {
-    const label = normalized.language.id === "zig" ? "Zig" : "Rust"
-    throw new LadderInputError(
-      `${label} trial ladder entry requires provider-validated artifact provenance.`,
-    )
+    return "provider_proof_stale"
   }
-  return normalized
+
+  if (input.language === "typescript" || input.language === "python") {
+    const expectedFormat =
+      input.language === "typescript"
+        ? "transpiled-javascript"
+        : "python-source-bundle"
+    if (artifact.format !== expectedFormat) {
+      return "unsupported_source_format"
+    }
+    if (
+      artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+      (isRecord(artifact.toolchain) &&
+        artifact.toolchain.language !== input.language)
+    ) {
+      return "incompatible_runtime_metadata"
+    }
+  } else {
+    const expectedTarget =
+      input.language === "zig" ? "wasm32-wasi" : "wasm32-wasip1"
+    if (
+      artifact.targetTriple !== expectedTarget ||
+      artifact.wasiProfile !== "preview1" ||
+      artifact.abiEnvelope !== "stdin-stdout-json" ||
+      artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION
+    ) {
+      return "incompatible_runtime_metadata"
+    }
+  }
+
+  const matches =
+    input.language === "typescript" || input.language === "python"
+      ? sourceArtifactProviderValidationMatches(
+          input.metadata,
+          input.sourceHash,
+          input.sourceBytes,
+          input.language === "typescript"
+            ? "strategy-language-provider-js-ts"
+            : "strategy-language-provider-python",
+          input.language,
+        )
+      : rustProviderValidationMatches(
+          input.metadata,
+          input.sourceHash,
+          input.sourceBytes,
+          input.language,
+        )
+  return matches ? null : "provider_proof_mismatched"
 }
 
 const sourceArtifactProviderValidationMatches = (
@@ -449,62 +629,16 @@ export const enterTrialLadderSeason = async (
     revisionId: StrategyRevisionId
   },
 ): Promise<string> => {
-  const season = await pool.query<{
-    status: TrialLadderSeasonStatus
-  }>("select status from trial_ladder_seasons where id = $1", [input.seasonId])
-  if (season.rows[0]?.status !== "open") {
-    throw new LadderInputError("Trial ladder season is not open for entries.")
+  const eligibility = await evaluateCountedEntryEligibilityDetails(pool, input)
+  if (!eligibility.decision.ok || !eligibility.row || !eligibility.runtime) {
+    throw ladderEligibilityError(eligibility.decision.category)
   }
-  const rowResult = await pool.query<{
-    strategy_id: string
-    strategy_name: string
-    strategy_description: string | null
-    strategy_tags: string[]
-    source_hash: string
-    source_bytes: number
-    runtime: CompetitionEntrantSnapshot["runtime"]
-    engine_compatibility: CompetitionEntrantSnapshot["engineCompatibility"]
-    validation: { valid: boolean }
-    metadata: { label?: string; notes?: string; tags?: string[] }
-    owner_user_id: UserId
-    handle: string
-  }>(
-    `
-      select
-        s.id as strategy_id,
-        s.name as strategy_name,
-        s.description as strategy_description,
-        s.public_tags as strategy_tags,
-        sr.source_hash,
-        sr.source_bytes,
-        sr.runtime,
-        sr.engine_compatibility,
-        sr.validation,
-        sr.metadata,
-        s.owner_user_id,
-        u.handle
-      from strategy_revisions sr
-      join strategies s on s.id = sr.strategy_id
-      join users u on u.id = s.owner_user_id
-      where sr.id = $1
-        and s.owner_user_id = $2
-    `,
-    [input.revisionId, input.userId],
-  )
-  const row = rowResult.rows[0]
-  if (!row) {
-    throw new LadderInputError("Strategy Revision is not owned by this user.")
+  const row = eligibility.row
+  const runtime = eligibility.runtime
+  if (row.locked_at === null) {
+    throw ladderEligibilityError("mutable_draft")
   }
-  if (!row.validation.valid) {
-    throw new LadderInputError(
-      "Strategy Revision is not eligible for trial ladder entry.",
-    )
-  }
-  const runtime = assertLadderEligibleRuntime(row.runtime, {
-    metadata: row.metadata,
-    sourceHash: row.source_hash,
-    sourceBytes: row.source_bytes,
-  })
+
   const entryCount = await pool.query<{ count: number }>(
     "select count(*)::integer as count from trial_ladder_entries where season_id = $1",
     [input.seasonId],
@@ -522,8 +656,12 @@ export const enterTrialLadderSeason = async (
     sourceHash: row.source_hash,
     sourceBytes: row.source_bytes,
     runtime,
+    runtimeSemantics: describeStrategyRuntimeProductSemantics(runtime),
     engineCompatibility: row.engine_compatibility,
-    lockedAt: new Date().toISOString(),
+    lockedAt:
+      row.locked_at instanceof Date
+        ? row.locked_at.toISOString()
+        : row.locked_at,
     seasonId: input.seasonId,
     entryId,
     status: "active",
@@ -535,28 +673,172 @@ export const enterTrialLadderSeason = async (
       ? row.strategy_tags
       : (row.metadata.tags ?? []),
   }
-  await pool.query(
-    `
-      insert into trial_ladder_entries (
-        id, season_id, owner_user_id, owner_handle, strategy_id,
-        strategy_revision_id, status, snapshot, entry_index
-      )
-      values ($1, $2, $3, $4, $5, $6, 'active', $7, $8)
-    `,
-    [
-      entryId,
-      input.seasonId,
-      row.owner_user_id,
-      row.handle,
-      row.strategy_id,
-      input.revisionId,
-      snapshot,
-      entryIndex,
-    ],
-  )
-  await createRepositories(pool).lockStrategyRevision(input.revisionId)
+
+  try {
+    await pool.query(
+      `
+        insert into trial_ladder_entries (
+          id, season_id, owner_user_id, owner_handle, strategy_id,
+          strategy_revision_id, status, snapshot, entry_index
+        )
+        values ($1, $2, $3, $4, $5, $6, 'active', $7, $8)
+      `,
+      [
+        entryId,
+        input.seasonId,
+        row.owner_user_id,
+        row.handle,
+        row.strategy_id,
+        input.revisionId,
+        snapshot,
+        entryIndex,
+      ],
+    )
+  } catch (error) {
+    if (!isRecord(error) || error.code !== "23505") {
+      throw error
+    }
+    const existing = await findOwnerSeasonEntry(pool, input)
+    throw ladderEligibilityError(
+      existing && existing.status !== "active"
+        ? "replacement_blocked"
+        : "already_entered_season",
+    )
+  }
   return entryId
 }
+
+type CountedEntryInput = {
+  seasonId: string
+  userId: UserId
+  revisionId: StrategyRevisionId
+}
+
+type CountedEntryRevisionRow = {
+  strategy_id: string
+  strategy_name: string
+  strategy_description: string | null
+  strategy_tags: string[]
+  source_hash: string
+  source_bytes: number
+  runtime: CompetitionEntrantSnapshot["runtime"]
+  engine_compatibility: CompetitionEntrantSnapshot["engineCompatibility"]
+  validation: { valid?: unknown }
+  metadata: Record<string, unknown> & {
+    label?: string
+    notes?: string
+    tags?: string[]
+  }
+  owner_user_id: UserId
+  handle: string
+  locked_at: Date | string | null
+}
+
+type CountedEntryEligibilityDetails = {
+  decision: CountedEntryEligibilityDecision
+  row?: CountedEntryRevisionRow
+  runtime?: CompetitionEntrantSnapshot["runtime"]
+}
+
+const findOwnerSeasonEntry = async (
+  pool: Pool,
+  input: Pick<CountedEntryInput, "seasonId" | "userId">,
+): Promise<{ id: string; status: TrialLadderEntryStatus } | null> => {
+  const result = await pool.query<{
+    id: string
+    status: TrialLadderEntryStatus
+  }>(
+    `
+      select id, status
+      from trial_ladder_entries
+      where season_id = $1 and owner_user_id = $2
+      limit 1
+    `,
+    [input.seasonId, input.userId],
+  )
+  return result.rows[0] ?? null
+}
+
+const evaluateCountedEntryEligibilityDetails = async (
+  pool: Pool,
+  input: CountedEntryInput,
+): Promise<CountedEntryEligibilityDetails> => {
+  const season = await pool.query<{
+    status: TrialLadderSeasonStatus
+  }>("select status from trial_ladder_seasons where id = $1", [input.seasonId])
+  if (season.rows[0]?.status !== "open") {
+    return { decision: countedEntryEligibilityDecision("season_not_open") }
+  }
+
+  const existing = await findOwnerSeasonEntry(pool, input)
+  if (existing) {
+    return {
+      decision: countedEntryEligibilityDecision(
+        existing.status === "active"
+          ? "already_entered_season"
+          : "replacement_blocked",
+      ),
+    }
+  }
+
+  const rowResult = await pool.query<CountedEntryRevisionRow>(
+    `
+      select
+        s.id as strategy_id,
+        s.name as strategy_name,
+        s.description as strategy_description,
+        s.public_tags as strategy_tags,
+        sr.source_hash,
+        sr.source_bytes,
+        sr.runtime,
+        sr.engine_compatibility,
+        sr.validation,
+        sr.metadata,
+        sr.locked_at,
+        s.owner_user_id,
+        u.handle
+      from strategy_revisions sr
+      join strategies s on s.id = sr.strategy_id
+      join users u on u.id = s.owner_user_id
+      where sr.id = $1
+        and s.owner_user_id = $2
+    `,
+    [input.revisionId, input.userId],
+  )
+  const row = rowResult.rows[0]
+  if (!row) {
+    return { decision: countedEntryEligibilityDecision("owner_mismatch") }
+  }
+  if (row.validation.valid !== true) {
+    return {
+      decision: countedEntryEligibilityDecision("invalid_strategy_revision"),
+    }
+  }
+  if (row.locked_at === null) {
+    return { decision: countedEntryEligibilityDecision("mutable_draft") }
+  }
+
+  const runtimeResult = runtimeEligibility(row.runtime, {
+    metadata: row.metadata,
+    sourceHash: row.source_hash,
+    sourceBytes: row.source_bytes,
+    engineCompatibility: row.engine_compatibility,
+  })
+  if (!runtimeResult.decision.ok || !runtimeResult.runtime) {
+    return { decision: runtimeResult.decision }
+  }
+  return {
+    decision: runtimeResult.decision,
+    row,
+    runtime: runtimeResult.runtime,
+  }
+}
+
+export const evaluateCountedEntryEligibility = async (
+  pool: Pool,
+  input: CountedEntryInput,
+): Promise<CountedEntryEligibilityDecision> =>
+  (await evaluateCountedEntryEligibilityDetails(pool, input)).decision
 
 export const withdrawTrialLadderEntry = async (
   pool: Pool,
