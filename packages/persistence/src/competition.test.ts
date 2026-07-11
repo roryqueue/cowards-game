@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest"
 import { Buffer } from "node:buffer"
 import { createHash, createHmac } from "node:crypto"
-import { defaultRuntimeMetadata } from "@cowards/spec"
+import {
+  defaultRuntimeMetadata,
+  describeStrategyRuntimeProductSemantics,
+} from "@cowards/spec"
 import {
   buildExhibitionDuplicateKey,
   evaluateRateLimit,
@@ -66,6 +69,9 @@ const entrants = [
     sourceHash: "hash-a",
     sourceBytes: 120,
     runtime: defaultRuntimeMetadata(),
+    runtimeSemantics: describeStrategyRuntimeProductSemantics(
+      defaultRuntimeMetadata(),
+    ),
     engineCompatibility: { spec: "spec-v1", engine: "engine-v1" },
     lockedAt: "2026-05-19T00:00:00.000Z",
   },
@@ -79,6 +85,9 @@ const entrants = [
     sourceHash: "hash-b",
     sourceBytes: 128,
     runtime: defaultRuntimeMetadata(),
+    runtimeSemantics: describeStrategyRuntimeProductSemantics(
+      defaultRuntimeMetadata(),
+    ),
     engineCompatibility: { spec: "spec-v1", engine: "engine-v1" },
     lockedAt: "2026-05-19T00:00:00.000Z",
   },
@@ -92,6 +101,9 @@ const entrants = [
     sourceHash: "hash-c",
     sourceBytes: 136,
     runtime: defaultRuntimeMetadata(),
+    runtimeSemantics: describeStrategyRuntimeProductSemantics(
+      defaultRuntimeMetadata(),
+    ),
     engineCompatibility: { spec: "spec-v1", engine: "engine-v1" },
     lockedAt: "2026-05-19T00:00:00.000Z",
   },

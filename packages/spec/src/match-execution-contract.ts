@@ -772,7 +772,8 @@ const createScenarioSummary = (
     matchExecutionMetadata.replayAvailability = override.replayAvailability
   }
   summary.result.metadata = { matchExecution: matchExecutionMetadata }
-  return PublicMatchSetSummaryServiceDtoSchema.parse(summary)
+  PublicMatchSetSummaryServiceDtoSchema.parse(summary)
+  return summary
 }
 
 const completeSummary = createScenarioSummary(

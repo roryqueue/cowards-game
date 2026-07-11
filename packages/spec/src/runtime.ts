@@ -790,32 +790,38 @@ export const getStrategyRuntimePackagePolicyClaim = (
     (claim) => claim.laneId === laneId,
   ) ?? null
 
+const assertStrategyRuntimeSandboxReadinessClaim = (
+  claim: StrategyRuntimeSandboxReadinessClaim,
+): void => {
+  if (claim.productionSandboxCertification !== false) {
+    throw new Error(`${claim.laneId} must not be sandbox certified`)
+  }
+  if (
+    (claim.laneId === "typescript" || claim.laneId === "python") &&
+    claim.evidenceClass !== "source-artifact-provenance"
+  ) {
+    throw new Error(`${claim.laneId} must remain provenance-only`)
+  }
+  if (
+    (claim.laneId === "rust" || claim.laneId === "zig") &&
+    claim.artifactPosture !== "immutable-wasm-wasi-preview1"
+  ) {
+    throw new Error(
+      `${claim.laneId} must remain WASI Preview 1 artifact-backed`,
+    )
+  }
+  if (
+    claim.laneId === "tinygo" &&
+    (!claim.unavailableInProduction ||
+      claim.evidenceClass !== "spike-only-hidden")
+  ) {
+    throw new Error("TinyGo must remain hidden and spike-only")
+  }
+}
+
 export const assertStrategyRuntimeSandboxReadinessContract = (): void => {
   for (const claim of STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS) {
-    if (claim.productionSandboxCertification !== false) {
-      throw new Error(`${claim.laneId} must not be sandbox certified`)
-    }
-    if (
-      (claim.laneId === "typescript" || claim.laneId === "python") &&
-      claim.evidenceClass !== "source-artifact-provenance"
-    ) {
-      throw new Error(`${claim.laneId} must remain provenance-only`)
-    }
-    if (
-      (claim.laneId === "rust" || claim.laneId === "zig") &&
-      claim.artifactPosture !== "immutable-wasm-wasi-preview1"
-    ) {
-      throw new Error(
-        `${claim.laneId} must remain WASI Preview 1 artifact-backed`,
-      )
-    }
-    if (
-      claim.laneId === "tinygo" &&
-      (!claim.unavailableInProduction ||
-        claim.evidenceClass !== "spike-only-hidden")
-    ) {
-      throw new Error("TinyGo must remain hidden and spike-only")
-    }
+    assertStrategyRuntimeSandboxReadinessClaim(claim)
   }
 }
 

@@ -588,6 +588,7 @@ const loadOwnedRevisionSnapshots = async (
       sourceHash: row.source_hash,
       sourceBytes: row.source_bytes,
       runtime,
+      runtimeSemantics: describeStrategyRuntimeProductSemantics(runtime),
       engineCompatibility: row.engine_compatibility,
       lockedAt: input.lockedAt.toISOString(),
     }

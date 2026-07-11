@@ -1,5 +1,6 @@
 import {
   assertPublicMatchSetResultLeakSafe,
+  describeStrategyRuntimeProductSemantics,
   normalizeStrategyRuntimeMetadata,
   type PublicPlayerProfileDto,
   type PublicStrategyCardDto,
@@ -247,39 +248,43 @@ export const listPublicStrategyCardsForUser = async (
     [userId],
   )
   const recordsByRevision = await loadPublicRecordsByRevision(pool, userId)
-  return result.rows.map((row) => ({
-    strategyId: row.strategy_id,
-    strategyRevisionId: row.revision_id,
-    name: row.strategy_name,
-    ...(row.strategy_description
-      ? { description: row.strategy_description }
-      : {}),
-    tags: row.strategy_tags.length
-      ? row.strategy_tags
-      : (row.metadata.tags ?? []),
-    authorHandle: row.handle,
-    sourceHash: row.source_hash,
-    sourceBytes: row.source_bytes,
-    runtime: normalizeStrategyRuntimeMetadata(row.runtime),
-    engineCompatibility: row.engine_compatibility,
-    validationStatus: row.validation.valid ? "valid" : "invalid",
-    ...(row.metadata.starterLineage
-      ? { starterLineage: row.metadata.starterLineage }
-      : {}),
-    ...(row.metadata.advancedLineage
-      ? { advancedLineage: row.metadata.advancedLineage }
-      : {}),
-    record: recordsByRevision.get(row.revision_id) ?? {
-      wins: 0,
-      losses: 0,
-      draws: 0,
-      points: 0,
-      resultLinks: [],
-      replayLinks: [],
-    },
-    resultLinks: recordsByRevision.get(row.revision_id)?.resultLinks ?? [],
-    replayLinks: recordsByRevision.get(row.revision_id)?.replayLinks ?? [],
-  }))
+  return result.rows.map((row) => {
+    const runtime = normalizeStrategyRuntimeMetadata(row.runtime)
+    return {
+      strategyId: row.strategy_id,
+      strategyRevisionId: row.revision_id,
+      name: row.strategy_name,
+      ...(row.strategy_description
+        ? { description: row.strategy_description }
+        : {}),
+      tags: row.strategy_tags.length
+        ? row.strategy_tags
+        : (row.metadata.tags ?? []),
+      authorHandle: row.handle,
+      sourceHash: row.source_hash,
+      sourceBytes: row.source_bytes,
+      runtime,
+      runtimeSemantics: describeStrategyRuntimeProductSemantics(runtime),
+      engineCompatibility: row.engine_compatibility,
+      validationStatus: row.validation.valid ? "valid" : "invalid",
+      ...(row.metadata.starterLineage
+        ? { starterLineage: row.metadata.starterLineage }
+        : {}),
+      ...(row.metadata.advancedLineage
+        ? { advancedLineage: row.metadata.advancedLineage }
+        : {}),
+      record: recordsByRevision.get(row.revision_id) ?? {
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        points: 0,
+        resultLinks: [],
+        replayLinks: [],
+      },
+      resultLinks: recordsByRevision.get(row.revision_id)?.resultLinks ?? [],
+      replayLinks: recordsByRevision.get(row.revision_id)?.replayLinks ?? [],
+    }
+  })
 }
 
 export const buildPublicStrategyCardDto = async (
