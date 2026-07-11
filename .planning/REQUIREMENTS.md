@@ -118,17 +118,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| POST-01 | Phase 249 | Pending |
-| POST-02 | Phase 249 | Pending |
-| POST-03 | Phase 249 | Pending |
-| POST-04 | Phase 249 | Pending |
-| POST-05 | Phase 249 | Pending |
-| ELIG-01 | Phase 250 | In progress - 250-01 spec contract complete |
-| ELIG-02 | Phase 250 | In progress - 250-01 rejection category contract complete |
-| ELIG-03 | Phase 250 | In progress - 250-01 public copy and leak-safe contract complete |
-| ELIG-04 | Phase 250 | Pending |
-| ELIG-05 | Phase 250 | Pending |
-| ELIG-06 | Phase 250 | Pending |
+| POST-01 | Phase 249 | Complete |
+| POST-02 | Phase 249 | Complete |
+| POST-03 | Phase 249 | Complete |
+| POST-04 | Phase 249 | Complete |
+| POST-05 | Phase 249 | Complete |
+| ELIG-01 | Phase 250 | Complete |
+| ELIG-02 | Phase 250 | Complete |
+| ELIG-03 | Phase 250 | Complete |
+| ELIG-04 | Phase 250 | Complete |
+| ELIG-05 | Phase 250 | Complete |
+| ELIG-06 | Phase 250 | Complete |
 | SEAS-01 | Phase 251 | Pending |
 | SEAS-02 | Phase 251 | Pending |
 | SEAS-03 | Phase 251 | Pending |

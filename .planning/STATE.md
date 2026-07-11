@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.36
 milestone_name: Competition Maturity
 status: in_progress
-stopped_at: Phase 250 Plan 01 complete
-last_updated: "2026-06-15T00:00:00.000Z"
-last_activity: 2026-06-16 -- Phase 250 Plan 01 completed counted entry eligibility contract
+stopped_at: Phase 250 complete; Phase 251 planned
+last_updated: "2026-07-11T13:42:00.000Z"
+last_activity: 2026-07-11 -- Phase 250 verified complete and Phase 251 planned
 progress:
   total_phases: 7
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 4
-  percent: 14
+  completed_phases: 2
+  total_plans: 8
+  completed_plans: 6
+  percent: 29
 ---
 
 # State: Coward's Game
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-06-15)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 250 execution
+**Current focus:** Phase 251 execution
 
 ## Current Position
 
-Phase: 250 - Counted Entry and One-Active-Revision Enforcement
-Plan: 1 of 3
-Status: In progress; Plan 01 complete, ready for Plan 02
-Last activity: 2026-06-16 -- Phase 250 Plan 01 completed counted entry eligibility contract
+Phase: 251 - Season Lifecycle and Scheduling Policy
+Plan: 0 of 2
+Status: Planned; ready for Plan 01
+Last activity: 2026-07-11 -- Phase 250 verified complete and Phase 251 planned
 
-Progress: [#---------] 14%
+Progress: [###-------] 29%
 
 ## Performance Metrics
 
@@ -45,8 +45,8 @@ Progress: [#---------] 14%
 | Phase | Status | Plans | Requirements |
 |-------|--------|-------|--------------|
 | 249. Competition Surface Inventory and Policy Lock | Complete | 3/3 | 5 |
-| 250. Counted Entry and One-Active-Revision Enforcement | In progress | 1/3 | 6 |
-| 251. Season Lifecycle and Scheduling Policy | Not started | 0/0 | 5 |
+| 250. Counted Entry and One-Active-Revision Enforcement | Complete | 3/3 | 6 |
+| 251. Season Lifecycle and Scheduling Policy | Planned | 0/2 | 5 |
 | 252. Counted-State Classifier and Standings Recompute | Not started | 0/0 | 6 |
 | 253. Governance, Dispute, Abuse, and Recovery Surfaces | Not started | 0/0 | 6 |
 | 254. Public Trust UX Projections | Not started | 0/0 | 5 |
@@ -70,7 +70,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Continue Phase 250 with Plan 02 persistence counted entry evaluation and one-owner-per-Season enforcement.
+- Execute Phase 251 Plan 01 Season lifecycle contract, DTO, and migration.
 
 ### Blockers/Concerns
 
@@ -93,6 +93,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 ## Session Continuity
 
 Last session: 2026-06-16T01:28:27Z
-Stopped at: Phase 250 Plan 01 complete
-Resume file: `.planning/phases/250-counted-entry-and-one-active-revision-enforcement/`
-Next command: execute `.planning/phases/250-counted-entry-and-one-active-revision-enforcement/250-02-PLAN.md`
+Stopped at: Phase 250 complete; Phase 251 planned
+Resume file: `.planning/phases/251-season-lifecycle-and-scheduling-policy/`
+Next command: execute `.planning/phases/251-season-lifecycle-and-scheduling-policy/251-01-PLAN.md`
