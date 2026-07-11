@@ -1725,6 +1725,27 @@ export const PublicTrialLadderSeasonDtoSchema = z.object({
   scheduledAt: z.string().min(1).optional(),
   completedAt: z.string().min(1).optional(),
   archivedAt: z.string().min(1).optional(),
+  entryWindow: z.object({
+    state: z.enum(["not_started", "open", "closed"]),
+    publicLabel: z.string().min(1),
+    openedAt: z.string().min(1).optional(),
+    closedAt: z.string().min(1).optional(),
+  }),
+  schedulingWindow: z.object({
+    state: z.enum(["not_started", "open", "closed"]),
+    publicLabel: z.string().min(1),
+    openedAt: z.string().min(1).optional(),
+    closedAt: z.string().min(1).optional(),
+  }),
+  outcome: z.object({
+    status: z.enum(["pending", "scheduled", "insufficient_evidence"]),
+    publicLabel: z.string().min(1),
+    publicExplanation: z.string().min(1),
+  }),
+  links: z.object({
+    seasonHref: z.string().startsWith("/ladder/"),
+    standingsHref: z.string().startsWith("/ladder/"),
+  }),
   policy: TrialLadderPolicyDtoSchema,
   entries: z.array(TrialLadderEntrySnapshotSchema),
   standings: z.array(PublicStandingServiceDtoSchema),

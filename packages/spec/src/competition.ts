@@ -11,6 +11,11 @@ import type {
   StrategyRuntimeProductSemantics,
 } from "./runtime.js"
 import { assertPublicOutputLeakSafe } from "./public-output-privacy.js"
+import type {
+  TrialSeasonOutcomeProjection,
+  TrialSeasonPublicLinks,
+  TrialSeasonWindowProjection,
+} from "./competition-season-policy.js"
 
 export const COMPETITION_PRESET_IDS = [
   "smoke-exhibition-v1",
@@ -100,6 +105,10 @@ export interface PublicTrialLadderSeasonDto {
   scheduledAt?: string | undefined
   completedAt?: string | undefined
   archivedAt?: string | undefined
+  entryWindow: TrialSeasonWindowProjection
+  schedulingWindow: TrialSeasonWindowProjection
+  outcome: TrialSeasonOutcomeProjection
+  links: TrialSeasonPublicLinks
   policy: TrialLadderPolicyDto
   entries: TrialLadderEntrySnapshot[]
   standings: PublicStandingDto[]
