@@ -16,6 +16,12 @@ import type {
   TrialSeasonPublicLinks,
   TrialSeasonWindowProjection,
 } from "./competition-season-policy.js"
+import type {
+  CompetitionCountedPublicReason,
+  CompetitionCountedStateProjection,
+  CompetitionEvidenceAvailability,
+} from "./competition-counted-state.js"
+import type { CompetitionPolicyV136CountedStatePublicProjection } from "./competition-policy-v1-36.js"
 
 export const COMPETITION_PRESET_IDS = [
   "smoke-exhibition-v1",
@@ -58,20 +64,9 @@ export type TrialLadderEntryStatus =
   (typeof TRIAL_LADDER_ENTRY_STATUSES)[number]
 
 export type LadderMatchSetCountedStatus =
-  | "pending"
-  | "counted"
-  | "retrying"
-  | "under_review"
-  | "invalid"
-  | "non_competitive"
-  | "non_counted"
+  CompetitionPolicyV136CountedStatePublicProjection
 
-export type LadderNonCountedReason =
-  | "system_failure"
-  | "incomplete_evidence"
-  | "invalid_result"
-  | "governance_hold"
-  | "non_counted"
+export type LadderNonCountedReason = CompetitionCountedPublicReason
 
 export interface TrialLadderPolicyDto {
   oneEntryPerUser: true
@@ -128,6 +123,7 @@ export interface PublicLadderMatchSetSummaryDto {
   podIndex?: number | undefined
   status: CompetitionStatus
   countedStatus: LadderMatchSetCountedStatus
+  countedState: CompetitionCountedStateProjection
   publicReason?: LadderNonCountedReason | undefined
   publicExplanation?: string | undefined
   entrantIds: string[]
@@ -318,6 +314,13 @@ export interface PublicStandingDto {
   survivingSoldiers: number
   survivalTurns: number
   tieBreakerPath: string[]
+  competitionEvidence?: {
+    countedMatchSetCount: number
+    excludedMatchSetCount: number
+    evidenceAvailability: CompetitionEvidenceAvailability
+    resultLinks: string[]
+    replayLinks: string[]
+  }
 }
 
 export interface PublicMatchEvidenceDto {
@@ -357,6 +360,10 @@ export interface PublicMatchSetResultDto {
     publicResults: true
     publicReplayEvidence: true
     privateFieldsExcluded: string[]
+  }
+  competition?: {
+    seasonId?: string | undefined
+    countedState: CompetitionCountedStateProjection
   }
   metadata?: JsonValue | undefined
 }

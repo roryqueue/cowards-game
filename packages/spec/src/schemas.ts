@@ -1384,6 +1384,37 @@ const PublicScorePenaltyServiceDtoSchema = z.object({
   points: z.number().int(),
 })
 
+export const CompetitionCountedStateProjectionSchema = z.object({
+  state: z.enum([
+    "pending",
+    "counted",
+    "retrying",
+    "degraded_system_failure",
+    "non_counted",
+    "non_competitive",
+    "under_review",
+    "disputed",
+    "invalid",
+    "invalidated",
+  ]),
+  publicLabel: z.string().min(1),
+  publicExplanation: z.string().min(1),
+  standingsEffect: z.string().min(1),
+  evidenceAvailability: z.enum(["available", "partial", "unavailable"]),
+  publicReason: z
+    .enum([
+      "system_failure",
+      "incomplete_evidence",
+      "invalid_result",
+      "governance_hold",
+      "non_counted",
+      "non_competitive",
+      "disputed",
+      "invalidated",
+    ])
+    .optional(),
+})
+
 const PublicStandingServiceDtoSchema = z.object({
   rank: z.number().int().positive(),
   entrantId: z.string().min(1),
@@ -1399,6 +1430,15 @@ const PublicStandingServiceDtoSchema = z.object({
   survivingSoldiers: z.number().int().nonnegative(),
   survivalTurns: z.number().int().nonnegative(),
   tieBreakerPath: z.array(z.string().min(1)),
+  competitionEvidence: z
+    .object({
+      countedMatchSetCount: z.number().int().nonnegative(),
+      excludedMatchSetCount: z.number().int().nonnegative(),
+      evidenceAvailability: z.enum(["available", "partial", "unavailable"]),
+      resultLinks: z.array(z.string().min(1)),
+      replayLinks: z.array(z.string().min(1)),
+    })
+    .optional(),
 })
 
 const PublicMatchEvidenceServiceDtoSchema = z.object({
@@ -1454,6 +1494,12 @@ export const PublicMatchSetResultServiceDtoSchema = z.object({
     publicReplayEvidence: z.literal(true),
     privateFieldsExcluded: z.array(z.string().min(1)),
   }),
+  competition: z
+    .object({
+      seasonId: z.string().min(1).optional(),
+      countedState: CompetitionCountedStateProjectionSchema,
+    })
+    .optional(),
   metadata: JsonValueSchema.optional(),
 })
 
@@ -1676,11 +1722,15 @@ export const PublicLadderMatchSetSummaryDtoSchema = z.object({
     "pending",
     "counted",
     "retrying",
-    "under_review",
-    "invalid",
-    "non_competitive",
+    "degraded_system_failure",
     "non_counted",
+    "non_competitive",
+    "under_review",
+    "disputed",
+    "invalid",
+    "invalidated",
   ]),
+  countedState: CompetitionCountedStateProjectionSchema,
   publicReason: z
     .enum([
       "system_failure",
@@ -1688,6 +1738,9 @@ export const PublicLadderMatchSetSummaryDtoSchema = z.object({
       "invalid_result",
       "governance_hold",
       "non_counted",
+      "non_competitive",
+      "disputed",
+      "invalidated",
     ])
     .optional(),
   publicExplanation: z.string().min(1).optional(),
