@@ -8721,34 +8721,34 @@
           "statementText": "import { describe, expect, it } from \"vitest\""
         },
         {
-          "line": 12,
+          "line": 13,
           "source": "@cowards/persistence/quarantine-lifecycle",
           "statementText": "import type { StoredChronicle } from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
-          "line": 13,
+          "line": 14,
           "source": "@cowards/persistence/workshop-analytics",
           "statementText": "import { createWorkshopAnalyticsDemoSnapshot } from \"@cowards/persistence/workshop-analytics\""
         },
         {
-          "line": 14,
+          "line": 15,
           "source": "./index.js",
           "statementText": "import {\n  COWARDS_LOCAL_SERVICE_ROLE,\n  createCowardsLocalService,\n} from \"./index.js\""
         },
         {
           "line": 2,
           "source": "@cowards/spec",
-          "statementText": "import {\n  EXHIBITION_SCORING_POLICY_V1,\n  SERVICE_API_VERSION,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  describeStrategyRuntimeProductSemantics,\n  type PublicMatchSetResultDto,\n  type PublicPlayerProfileDto,\n  type PublicStrategyCardDto,\n  type PublicTrialLadderSeasonDto,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  EXHIBITION_SCORING_POLICY_V1,\n  SERVICE_API_VERSION,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  classifyCompetitionCountedState,\n  describeStrategyRuntimeProductSemantics,\n  type PublicMatchSetResultDto,\n  type PublicPlayerProfileDto,\n  type PublicStrategyCardDto,\n  type PublicTrialLadderSeasonDto,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [
         {
-          "line": 12,
+          "line": 13,
           "source": "@cowards/persistence/quarantine-lifecycle",
           "statementText": "import type { StoredChronicle } from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
-          "line": 13,
+          "line": 14,
           "source": "@cowards/persistence/workshop-analytics",
           "statementText": "import { createWorkshopAnalyticsDemoSnapshot } from \"@cowards/persistence/workshop-analytics\""
         }
@@ -14157,14 +14157,14 @@
           "statementText": "import { describe, expect, it } from \"vitest\""
         },
         {
-          "line": 17,
+          "line": 18,
           "source": "./public-go-read-client.js",
           "statementText": "import {\n  createPublicGoReadClient,\n  isPublicGoReadError,\n} from \"./public-go-read-client.js\""
         },
         {
           "line": 2,
           "source": "@cowards/spec",
-          "statementText": "import {\n  SERVICE_API_VERSION,\n  publicLadderPageExample,\n  publicMatchSetSummaryExample,\n  publicPlayerPageExample,\n  publicReplayEvidenceExample,\n  publicReplayMetadataExample,\n  publicStrategyPageExample,\n  type PublicLadderPageServiceDto,\n  type PublicMatchSetSummaryServiceDto,\n  type PublicPlayerPageServiceDto,\n  type PublicReplayEvidenceServiceDto,\n  type PublicReplayMetadataServiceDto,\n  type PublicStrategyPageServiceDto,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  SERVICE_API_VERSION,\n  publicLadderPageExample,\n  publicMatchSetSummaryExample,\n  publicPlayerPageExample,\n  publicReplayEvidenceExample,\n  publicReplayMetadataExample,\n  publicStrategyPageExample,\n  classifyCompetitionCountedState,\n  type PublicLadderPageServiceDto,\n  type PublicMatchSetSummaryServiceDto,\n  type PublicPlayerPageServiceDto,\n  type PublicReplayEvidenceServiceDto,\n  type PublicReplayMetadataServiceDto,\n  type PublicStrategyPageServiceDto,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -14175,7 +14175,7 @@
       "claimsJobs": false,
       "completesMatches": false,
       "persistsChronicles": false,
-      "refreshesScoring": false,
+      "refreshesScoring": true,
       "servesPublicEvidence": true,
       "executesStrategy": false,
       "ownerDebugAccess": false,
