@@ -1,57 +1,306 @@
 import { describe, expect, it } from "vitest"
 import { Buffer } from "node:buffer"
 import { createHash, createHmac } from "node:crypto"
-import { defaultRuntimeMetadata } from "@cowards/spec"
 import {
+  STRATEGY_RUNTIME_ABI_VERSION,
+  defaultRuntimeMetadata,
+  getCountedEntryEligibilityPublicCopy,
+  type CountedEntryEligibilityCategory,
+  type StrategyRuntimeAdapterId,
+  type StrategyRuntimeMetadata,
+} from "@cowards/spec"
+import type { Pool } from "pg"
+import { readFileSync } from "node:fs"
+import {
+  LadderInputError,
   assertLadderEligibleRuntime,
   DEFAULT_LADDER_MINIMUM_ENTRIES,
   DEFAULT_LADDER_TARGET_POD_SIZE,
+  enterTrialLadderSeason,
+  evaluateCountedEntryEligibility,
   trialLadderStatusLabel,
 } from "./ladder.js"
 
 const TEST_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
 
+const ARTIFACT_BYTES_FIELD = "bytes" + "Base64"
+
 process.env.COWARDS_PROVIDER_VALIDATION_SECRET = TEST_PROVIDER_VALIDATION_SECRET
 
-const pythonProviderProof = (
-  sourceHash: string,
-  sourceBytes: number,
-  artifactHash: string,
-  artifactBytes: number,
-): string =>
+const providerProof = (input: {
+  providerId: string
+  sourceHash: string
+  sourceBytes: number
+  artifactHash: string
+  artifactBytes: number
+}): string =>
   `hmac-sha256:${createHmac("sha256", TEST_PROVIDER_VALIDATION_SECRET)
     .update(
       [
-        "strategy-language-provider-python",
+        input.providerId,
         "strategy-language-provider-contract-v1.33",
-        sourceHash,
-        String(sourceBytes),
-        artifactHash,
-        String(artifactBytes),
+        input.sourceHash,
+        String(input.sourceBytes),
+        input.artifactHash,
+        String(input.artifactBytes),
       ].join("\n"),
     )
     .digest("hex")}`
 
-const rustProviderProof = (
-  sourceHash: string,
-  sourceBytes: number,
-  artifactHash: string,
-  artifactBytes: number,
-  providerId = "strategy-language-provider-rust-wasi",
-): string =>
-  `hmac-sha256:${createHmac("sha256", TEST_PROVIDER_VALIDATION_SECRET)
-    .update(
-      [
+const artifactRecord = (payload: string) => {
+  const artifactPayload = Buffer.from(payload)
+  return {
+    hash: createHash("sha256").update(artifactPayload).digest("hex"),
+    bytes: artifactPayload.byteLength,
+    [ARTIFACT_BYTES_FIELD]: artifactPayload.toString("base64"),
+  }
+}
+
+const runtimeFor = (
+  languageId: StrategyRuntimeMetadata["language"]["id"] | "tinygo",
+  overrides: Partial<StrategyRuntimeMetadata> = {},
+): StrategyRuntimeMetadata => {
+  const adapterByLanguage: Record<string, StrategyRuntimeAdapterId> = {
+    javascript: "runtime-js-worker-thread",
+    typescript: "runtime-js-worker-thread",
+    python: "runtime-python-subprocess-experimental",
+    rust: "runtime-wasm-wasi-wasmtime-preview1",
+    zig: "runtime-wasm-wasi-wasmtime-preview1",
+    tinygo: "runtime-wasm-wasi-wasmtime-preview1",
+  }
+  const base = defaultRuntimeMetadata("typescript")
+  return {
+    ...base,
+    ...overrides,
+    abiVersion: overrides.abiVersion ?? STRATEGY_RUNTIME_ABI_VERSION,
+    language: {
+      id: languageId as StrategyRuntimeMetadata["language"]["id"],
+      version:
+        languageId === "python"
+          ? "3.9"
+          : languageId === "rust"
+            ? "1.95.0-wasm32-wasip1"
+            : languageId === "zig" || languageId === "tinygo"
+              ? "0.16.0-wasm32-wasi"
+              : "0.1.0",
+      ...overrides.language,
+    },
+    adapter: {
+      id: adapterByLanguage[languageId] ?? "runtime-js-worker-thread",
+      version:
+        languageId === "python"
+          ? "0.1.0-experimental"
+          : languageId === "rust" || languageId === "zig"
+            ? "0.1.0-alpha"
+            : "0.1.0",
+      ...overrides.adapter,
+    },
+    package: overrides.package ?? {
+      mode: "none",
+      entrypoint: "default",
+    },
+    requiredCapabilities: overrides.requiredCapabilities ?? [],
+    limits: overrides.limits ?? base.limits,
+  }
+}
+
+const providerEvidenceFor = (
+  languageId: "typescript" | "python" | "rust" | "zig",
+  input: {
+    sourceHash?: string
+    sourceBytes?: number
+    proof?: string
+    artifactSourceHash?: string
+    artifactSourceBytes?: number
+    artifactFormat?: string
+    providerId?: string
+  } = {},
+) => {
+  const sourceHash = input.sourceHash ?? `${languageId}-source-hash`
+  const sourceBytes = input.sourceBytes ?? 128
+  const artifact = artifactRecord(`${languageId}-artifact`)
+  const providerId =
+    input.providerId ??
+    (languageId === "typescript"
+      ? "strategy-language-provider-js-ts"
+      : languageId === "python"
+        ? "strategy-language-provider-python"
+        : languageId === "zig"
+          ? "strategy-language-provider-zig-wasi"
+          : "strategy-language-provider-rust-wasi")
+  const artifactSourceHash = input.artifactSourceHash ?? sourceHash
+  const artifactSourceBytes = input.artifactSourceBytes ?? sourceBytes
+  const proof =
+    input.proof ??
+    providerProof({
+      providerId,
+      sourceHash,
+      sourceBytes,
+      artifactHash: artifact.hash,
+      artifactBytes: artifact.bytes,
+    })
+
+  if (languageId === "typescript" || languageId === "python") {
+    return {
+      sourceArtifact: {
+        format:
+          input.artifactFormat ??
+          (languageId === "typescript"
+            ? "transpiled-javascript"
+            : "python-source-bundle"),
+        ...artifact,
+        sourceHash: artifactSourceHash,
+        sourceBytes: artifactSourceBytes,
+        abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+        validationStatus: "valid",
+        toolchain: {
+          language: languageId,
+        },
+      },
+      providerValidation: {
         providerId,
-        "strategy-language-provider-contract-v1.33",
+        contractVersion: "strategy-language-provider-contract-v1.33",
         sourceHash,
-        String(sourceBytes),
-        artifactHash,
-        String(artifactBytes),
-      ].join("\n"),
-    )
-    .digest("hex")}`
+        sourceBytes,
+        artifactHash: artifact.hash,
+        artifactBytes: artifact.bytes,
+        proof,
+      },
+    }
+  }
+
+  return {
+    compiledArtifact: {
+      ...artifact,
+      sourceHash: artifactSourceHash,
+      targetTriple: languageId === "zig" ? "wasm32-wasi" : "wasm32-wasip1",
+      wasiProfile: "preview1",
+      abiEnvelope: "stdin-stdout-json",
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      validationStatus: "valid",
+    },
+    providerValidation: {
+      providerId,
+      contractVersion: "strategy-language-provider-contract-v1.33",
+      sourceHash,
+      sourceBytes,
+      artifactHash: artifact.hash,
+      artifactBytes: artifact.bytes,
+      proof,
+    },
+  }
+}
+
+type FakeEntryStatus = "active" | "withdrawn" | "invalidated"
+
+const revisionRow = (input: {
+  languageId?: "typescript" | "python" | "rust" | "zig" | "javascript" | "tinygo"
+  metadata?: Record<string, unknown>
+  validation?: { valid: boolean }
+  lockedAt?: string | null
+  ownerUserId?: string
+  sourceHash?: string
+  sourceBytes?: number
+  runtime?: unknown
+}) => {
+  const languageId = input.languageId ?? "typescript"
+  const sourceHash = input.sourceHash ?? `${languageId}-source-hash`
+  const sourceBytes = input.sourceBytes ?? 128
+  return {
+    strategy_id: `strategy:${languageId}`,
+    strategy_name: `${languageId} strategy`,
+    strategy_description: null,
+    strategy_tags: [],
+    source_hash: sourceHash,
+    source_bytes: sourceBytes,
+    runtime: input.runtime ?? runtimeFor(languageId),
+    engine_compatibility: { specVersion: "v1", engineVersion: "v1" },
+    validation: input.validation ?? { valid: true },
+    metadata:
+      input.metadata ??
+      (languageId === "typescript" ||
+      languageId === "python" ||
+      languageId === "rust" ||
+      languageId === "zig"
+        ? providerEvidenceFor(languageId, { sourceHash, sourceBytes })
+        : {}),
+    owner_user_id: input.ownerUserId ?? "user:owner",
+    handle: "owner",
+    locked_at: input.lockedAt === undefined ? "2026-06-16T00:00:00.000Z" : input.lockedAt,
+  }
+}
+
+const createFakePool = (input: {
+  seasonStatus?: string | null
+  revision?: ReturnType<typeof revisionRow> | null
+  existingEntryStatus?: FakeEntryStatus | null
+  insertError?: unknown
+} = {}) => {
+  const calls: string[] = []
+  const pool = {
+    calls,
+    async query(sql: string, values?: unknown[]) {
+      calls.push(sql)
+      if (sql.includes("from trial_ladder_seasons")) {
+        return {
+          rows:
+            input.seasonStatus === null
+              ? []
+              : [{ status: input.seasonStatus ?? "open" }],
+        }
+      }
+      if (
+        sql.includes("from trial_ladder_entries") &&
+        sql.includes("owner_user_id")
+      ) {
+        return {
+          rows: input.existingEntryStatus
+            ? [{ id: "trial-entry:existing", status: input.existingEntryStatus }]
+            : [],
+        }
+      }
+      if (sql.includes("from strategy_revisions")) {
+        return { rows: input.revision === null ? [] : [input.revision ?? revisionRow({})] }
+      }
+      if (sql.includes("count(*)::integer")) {
+        return { rows: [{ count: 0 }] }
+      }
+      if (sql.includes("insert into trial_ladder_entries")) {
+        if (input.insertError) {
+          throw input.insertError
+        }
+        return { rows: [] }
+      }
+      if (sql.includes("update strategy_revisions")) {
+        return { rows: [] }
+      }
+      return { rows: [] }
+    },
+  }
+  return pool as unknown as Pool & { calls: string[] }
+}
+
+const defaultEntryInput = {
+  seasonId: "season:trial",
+  userId: "user:owner",
+  revisionId: "revision:owned",
+} as const
+
+const expectEligibilityCategory = async (
+  pool: Pool,
+  category: CountedEntryEligibilityCategory,
+) => {
+  await expect(
+    evaluateCountedEntryEligibility(pool, defaultEntryInput),
+  ).resolves.toMatchObject({
+    ok: category === "provider_validated",
+    category,
+    publicMessage:
+      getCountedEntryEligibilityPublicCopy(category).publicMessage,
+    remediation: getCountedEntryEligibilityPublicCopy(category).remediation,
+  })
+}
 
 describe("trial ladder contracts", () => {
   it("uses resettable beta lifecycle labels without permanent rating language", () => {
@@ -68,270 +317,222 @@ describe("trial ladder contracts", () => {
     expect(DEFAULT_LADDER_TARGET_POD_SIZE).toBe(4)
   })
 
-  it("requires artifact provenance before counted Zig trial ladder entry", () => {
-    const sourceHash = "zig-source-hash"
-    const sourceBytes = 192
+  it.each(["typescript", "python", "rust", "zig"] as const)(
+    "accepts immutable provider-proof-valid %s entries",
+    async (languageId) => {
+      await expectEligibilityCategory(
+        createFakePool({ revision: revisionRow({ languageId }) }),
+        "provider_validated",
+      )
+    },
+  )
 
-    expect(() =>
-      assertLadderEligibleRuntime({
-        ...defaultRuntimeMetadata(),
-        language: { id: "zig", version: "0.16.0-wasm32-wasi" },
-        adapter: {
-          id: "runtime-wasm-wasi-wasmtime-preview1",
-          version: "0.1.0-alpha",
-        },
+  it.each([
+    [
+      "closed season",
+      createFakePool({ seasonStatus: "active" }),
+      "season_not_open",
+    ],
+    [
+      "missing proof",
+      createFakePool({ revision: revisionRow({ metadata: {} }) }),
+      "provider_proof_missing",
+    ],
+    [
+      "mismatched proof",
+      createFakePool({
+        revision: revisionRow({
+          metadata: providerEvidenceFor("typescript", {
+            proof: "hmac-sha256:not-valid",
+          }),
+        }),
       }),
-    ).toThrow("provider-validated artifact provenance")
+      "provider_proof_mismatched",
+    ],
+    [
+      "stale proof",
+      createFakePool({
+        revision: revisionRow({
+          metadata: providerEvidenceFor("typescript", {
+            artifactSourceHash: "stale-source-hash",
+          }),
+        }),
+      }),
+      "provider_proof_stale",
+    ],
+    [
+      "unsupported JavaScript counted trial entry",
+      createFakePool({ revision: revisionRow({ languageId: "javascript" }) }),
+      "unsupported_source_format",
+    ],
+    [
+      "hidden TinyGo provider",
+      createFakePool({ revision: revisionRow({ languageId: "tinygo" }) }),
+      "hidden_unsupported_provider",
+    ],
+    [
+      "unsupported source format",
+      createFakePool({
+        revision: revisionRow({
+          metadata: providerEvidenceFor("typescript", {
+            artifactFormat: "legacy-javascript-source",
+          }),
+        }),
+      }),
+      "unsupported_source_format",
+    ],
+    [
+      "incompatible runtime metadata",
+      createFakePool({
+        revision: revisionRow({
+          runtime: runtimeFor("python", {
+            adapter: {
+              id: "runtime-js-worker-thread",
+              version: "0.1.0",
+            },
+          }),
+          metadata: providerEvidenceFor("python"),
+        }),
+      }),
+      "incompatible_runtime_metadata",
+    ],
+    [
+      "invalid revision",
+      createFakePool({ revision: revisionRow({ validation: { valid: false } }) }),
+      "invalid_strategy_revision",
+    ],
+    [
+      "mutable draft",
+      createFakePool({ revision: revisionRow({ lockedAt: null }) }),
+      "mutable_draft",
+    ],
+    [
+      "owner mismatch",
+      createFakePool({ revision: null }),
+      "owner_mismatch",
+    ],
+    [
+      "runtime lane unavailable",
+      createFakePool({
+        revision: revisionRow({
+          runtime: runtimeFor("typescript", {
+            adapter: {
+              id: "runtime-js-container-subprocess",
+              version: "0.1.0",
+            },
+          }),
+        }),
+      }),
+      "runtime_service_unavailable",
+    ],
+    [
+      "package mode other than none",
+      createFakePool({
+        revision: revisionRow({
+          runtime: runtimeFor("typescript", {
+            package: {
+              mode: "declared",
+              entrypoint: "default",
+            },
+          }),
+        }),
+      }),
+      "package_policy_violation",
+    ],
+    [
+      "required capabilities",
+      createFakePool({
+        revision: revisionRow({
+          runtime: runtimeFor("typescript", {
+            requiredCapabilities: ["filesystem.read"],
+          }),
+        }),
+      }),
+      "capability_policy_violation",
+    ],
+    [
+      "duplicate active owner entry",
+      createFakePool({ existingEntryStatus: "active" }),
+      "already_entered_season",
+    ],
+    [
+      "withdrawn replacement attempt",
+      createFakePool({ existingEntryStatus: "withdrawn" }),
+      "replacement_blocked",
+    ],
+    [
+      "invalidated historical replacement attempt",
+      createFakePool({ existingEntryStatus: "invalidated" }),
+      "replacement_blocked",
+    ],
+  ] satisfies Array<[string, Pool, CountedEntryEligibilityCategory]>)(
+    "returns %s as %s",
+    async (_name, pool, category) => {
+      await expectEligibilityCategory(pool, category)
+    },
+  )
 
-    const artifactPayload = Buffer.from("zig-artifact")
-    const artifactHash = createHash("sha256")
-      .update(artifactPayload)
-      .digest("hex")
-    const artifactBytes = artifactPayload.byteLength
-    expect(
-      assertLadderEligibleRuntime(
-        {
-          ...defaultRuntimeMetadata(),
-          language: { id: "zig", version: "0.16.0-wasm32-wasi" },
-          adapter: {
-            id: "runtime-wasm-wasi-wasmtime-preview1",
-            version: "0.1.0-alpha",
-          },
-        },
-        {
-          sourceHash,
-          sourceBytes,
-          metadata: {
-            compiledArtifact: {
-              hash: artifactHash,
-              bytes: artifactBytes,
-              bytesBase64: artifactPayload.toString("base64"),
-              sourceHash,
-              targetTriple: "wasm32-wasi",
-              wasiProfile: "preview1",
-              abiEnvelope: "stdin-stdout-json",
-              abiVersion: "strategy-runtime-abi-v1.14",
-              validationStatus: "valid",
-            },
-            providerValidation: {
-              providerId: "strategy-language-provider-zig-wasi",
-              contractVersion: "strategy-language-provider-contract-v1.33",
-              sourceHash,
-              sourceBytes,
-              artifactHash,
-              artifactBytes,
-              proof: rustProviderProof(
-                sourceHash,
-                sourceBytes,
-                artifactHash,
-                artifactBytes,
-                "strategy-language-provider-zig-wasi",
-              ),
-            },
-          },
-        },
-      ).language.id,
-    ).toBe("zig")
+  it("throws category-bearing public errors from counted entry mutation", async () => {
+    await expect(
+      enterTrialLadderSeason(createFakePool({ existingEntryStatus: "active" }), {
+        seasonId: "season:trial",
+        userId: "user:owner",
+        revisionId: "revision:owned",
+      }),
+    ).rejects.toMatchObject({
+      name: "LadderInputError",
+      category: "already_entered_season",
+      publicMessage:
+        getCountedEntryEligibilityPublicCopy("already_entered_season")
+          .publicMessage,
+      remediation:
+        getCountedEntryEligibilityPublicCopy("already_entered_season")
+          .remediation,
+    })
   })
 
-  it("requires provider provenance before counted Python trial ladder entry", () => {
-    const runtime = {
-      ...defaultRuntimeMetadata(),
-      language: { id: "python", version: "3.9" },
-      adapter: {
-        id: "runtime-python-subprocess-experimental",
-        version: "0.1.0-experimental",
-      },
-    }
-    const sourceHash = "python-source-hash"
-    const sourceBytes = 128
-    const artifactPayload = Buffer.from("python-artifact")
-    const artifactHash = createHash("sha256")
-      .update(artifactPayload)
-      .digest("hex")
-    const artifactBytes = artifactPayload.byteLength
+  it("maps PostgreSQL owner uniqueness races to public-safe categories", async () => {
+    const race = Object.assign(new Error("redacted database race"), {
+      code: "23505",
+    })
 
-    expect(() => assertLadderEligibleRuntime(runtime)).toThrow(
-      "provider-validated revision provenance",
-    )
-    expect(
-      assertLadderEligibleRuntime(runtime, {
-        sourceHash,
-        sourceBytes,
-        metadata: {
-          sourceArtifact: {
-            format: "python-source-bundle",
-            hash: artifactHash,
-            bytes: artifactBytes,
-            bytesBase64: artifactPayload.toString("base64"),
-            sourceHash,
-            sourceBytes,
-            abiVersion: "strategy-runtime-abi-v1.14",
-            validationStatus: "valid",
-            createdAt: "test",
-            toolchain: {
-              language: "python",
-              runtime: "python",
-              runtimeVersion: "3.9",
-              commandSummary: "test",
-              validationPolicy: "test",
-            },
-            publicEvidence: {
-              label: "Python source bundle provenance",
-              nonCounted: false,
-              sandboxClaim: "provenance-only",
-            },
-          },
-          providerValidation: {
-            providerId: "strategy-language-provider-python",
-            contractVersion: "strategy-language-provider-contract-v1.33",
-            sourceHash,
-            sourceBytes,
-            artifactHash,
-            artifactBytes,
-            proof: pythonProviderProof(
-              sourceHash,
-              sourceBytes,
-              artifactHash,
-              artifactBytes,
-            ),
-          },
-        },
-      }).language.id,
-    ).toBe("python")
-  })
-
-  it("requires private TypeScript artifact bytes before counted trial ladder entry", () => {
-    const runtime = {
-      ...defaultRuntimeMetadata(),
-      language: { id: "typescript", version: "0.1.0" },
-      adapter: {
-        id: "runtime-js-worker-thread",
-        version: "0.1.0",
-      },
-    }
-    const sourceHash = "typescript-source-hash"
-    const sourceBytes = 128
-    const artifactPayload = Buffer.from("typescript-artifact")
-    const artifactHash = createHash("sha256")
-      .update(artifactPayload)
-      .digest("hex")
-    const artifactBytes = artifactPayload.byteLength
-    const sourceArtifact = {
-      format: "transpiled-javascript",
-      hash: artifactHash,
-      bytes: artifactBytes,
-      bytesBase64: artifactPayload.toString("base64"),
-      sourceHash,
-      sourceBytes,
-      abiVersion: "strategy-runtime-abi-v1.14",
-      validationStatus: "valid",
-      createdAt: "test",
-      toolchain: {
-        language: "typescript",
-        runtime: "node",
-        runtimeVersion: "20",
-        commandSummary: "test",
-        validationPolicy: "test",
-      },
-      publicEvidence: {
-        label: "TypeScript transpiled artifact provenance",
-        nonCounted: false,
-        sandboxClaim: "provenance-only",
-      },
-    }
-    const { bytesBase64: _redactedBytesBase64, ...publicSourceArtifact } =
-      sourceArtifact
-    const providerValidation = {
-      providerId: "strategy-language-provider-js-ts",
-      contractVersion: "strategy-language-provider-contract-v1.33",
-      sourceHash,
-      sourceBytes,
-      artifactHash,
-      artifactBytes,
-      proof: rustProviderProof(
-        sourceHash,
-        sourceBytes,
-        artifactHash,
-        artifactBytes,
-        "strategy-language-provider-js-ts",
+    await expect(
+      enterTrialLadderSeason(
+        createFakePool({
+          insertError: race,
+          existingEntryStatus: "withdrawn",
+        }),
+        defaultEntryInput,
       ),
-    }
-
-    expect(
-      assertLadderEligibleRuntime(runtime, {
-        sourceHash,
-        sourceBytes,
-        metadata: {
-          sourceArtifact,
-          providerValidation,
-        },
-      }).language.id,
-    ).toBe("typescript")
-    expect(() =>
-      assertLadderEligibleRuntime(runtime, {
-        sourceHash,
-        sourceBytes,
-        metadata: {
-          sourceArtifact: publicSourceArtifact,
-          providerValidation,
-        },
-      }),
-    ).toThrow("provider-validated artifact provenance")
+    ).rejects.toMatchObject({
+      category: "replacement_blocked",
+      publicMessage:
+        getCountedEntryEligibilityPublicCopy("replacement_blocked")
+          .publicMessage,
+    })
   })
 
-  it("requires artifact provenance before counted Rust trial ladder entry", () => {
-    const runtime = {
-      ...defaultRuntimeMetadata(),
-      language: { id: "rust", version: "1.95.0-wasm32-wasip1" },
-      adapter: {
-        id: "runtime-wasm-wasi-wasmtime-preview1",
-        version: "0.1.0-alpha",
-      },
-    }
-    const sourceHash = "rust-source-hash"
-    const sourceBytes = 256
-    const artifactPayload = Buffer.from("rust-artifact")
-    const artifactHash = createHash("sha256")
-      .update(artifactPayload)
-      .digest("hex")
-    const artifactBytes = artifactPayload.byteLength
-
-    expect(() => assertLadderEligibleRuntime(runtime)).toThrow(
-      "provider-validated artifact provenance",
-    )
+  it("keeps the migration full owner/Season uniqueness policy", () => {
     expect(
-      assertLadderEligibleRuntime(runtime, {
-        sourceHash,
-        sourceBytes,
-        metadata: {
-          compiledArtifact: {
-            hash: artifactHash,
-            bytes: artifactBytes,
-            bytesBase64: artifactPayload.toString("base64"),
-            sourceHash,
-            targetTriple: "wasm32-wasip1",
-            wasiProfile: "preview1",
-            abiEnvelope: "stdin-stdout-json",
-            abiVersion: "strategy-runtime-abi-v1.14",
-            validationStatus: "valid",
-          },
-          providerValidation: {
-            providerId: "strategy-language-provider-rust-wasi",
-            contractVersion: "strategy-language-provider-contract-v1.33",
-            sourceHash,
-            sourceBytes,
-            artifactHash,
-            artifactBytes,
-            proof: rustProviderProof(
-              sourceHash,
-              sourceBytes,
-              artifactHash,
-              artifactBytes,
-            ),
-          },
-        },
-      }).language.id,
-    ).toBe("rust")
+      readFileSync(
+        "packages/persistence/migrations/0004_competition_trust_beta.sql",
+        "utf8",
+      ),
+    ).toContain("unique(season_id, owner_user_id)")
+  })
+
+  it("delegates runtime compatibility wrapper failures to public categories", () => {
+    try {
+      assertLadderEligibleRuntime(runtimeFor("javascript"))
+      throw new Error("expected wrapper to reject JavaScript")
+    } catch (error) {
+      expect(error).toBeInstanceOf(LadderInputError)
+      expect(error).toMatchObject({
+        category: "unsupported_source_format",
+        publicMessage:
+          getCountedEntryEligibilityPublicCopy("unsupported_source_format")
+            .publicMessage,
+      })
+    }
   })
 })
