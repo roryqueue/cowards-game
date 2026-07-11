@@ -9,6 +9,7 @@ import {
   assertPublicMatchSetResultLeakSafe,
   assertTrialSeasonTransition,
   COMPATIBILITY_VERSIONS,
+  classifyCompetitionCountedState,
   countedEntryEligibilityDecision,
   describeStrategyRuntimeProductSemantics,
   EXHIBITION_SCORING_POLICY_V1,
@@ -24,8 +25,6 @@ import {
   type CompetitionEntrantSnapshot,
   type CountedEntryEligibilityCategory,
   type CountedEntryEligibilityDecision,
-  type LadderMatchSetCountedStatus,
-  type LadderNonCountedReason,
   type PublicLadderMatchSetSummaryDto,
   type PublicStandingDto,
   type PublicTrialLadderSeasonDto,
@@ -41,11 +40,14 @@ import type { PoolClient } from "pg"
 import { withTransaction } from "./db.js"
 import { generateCompetitionPairwiseMatrix } from "./competition.js"
 import { insertMatchSetWithMatrixOnClient } from "./matchset-service.js"
-import { refreshMatchSetStatus } from "./matchset-status.js"
 import { createRepositories } from "./repositories.js"
 import { createDevelopmentSeedData } from "./seed.js"
 import type { MatchSetStatus } from "./schema.js"
 import type { MatchSetStrategyScore } from "./scoring.js"
+import {
+  recomputeSeasonStandings,
+  type ClassifiedSeasonMatchSet,
+} from "./standings-recompute.js"
 
 export class LadderInputError extends Error {
   readonly category: CountedEntryEligibilityCategory | undefined
@@ -1194,83 +1196,6 @@ const mapMatchSetStatus = (
   return "failed"
 }
 
-const classifyCountedStatus = (row: {
-  status: MatchSetStatus
-  counted_status: LadderMatchSetCountedStatus
-  public_counted_reason: LadderNonCountedReason | null
-  chronicle_count: number
-  match_count: number
-}): {
-  countedStatus: LadderMatchSetCountedStatus
-  publicReason?: LadderNonCountedReason | undefined
-  publicExplanation: string
-} => {
-  if (
-    row.counted_status === "invalid" ||
-    row.counted_status === "non_competitive" ||
-    row.counted_status === "under_review" ||
-    row.counted_status === "non_counted"
-  ) {
-    return {
-      countedStatus: row.counted_status,
-      ...(row.public_counted_reason
-        ? { publicReason: row.public_counted_reason }
-        : {}),
-      publicExplanation:
-        row.counted_status === "under_review"
-          ? "Result is under review and excluded until review completes."
-          : "Result does not count for standings.",
-    }
-  }
-  if (row.status === "complete" && row.chronicle_count === row.match_count) {
-    return {
-      countedStatus: "counted",
-      publicExplanation: "Counts for trial ladder standings.",
-    }
-  }
-  if (row.status === "failed_system" || row.status === "degraded") {
-    return {
-      countedStatus: "non_counted",
-      publicReason: "system_failure",
-      publicExplanation:
-        "System failure prevented complete evidence; this result is excluded.",
-    }
-  }
-  return {
-    countedStatus: row.status === "running" ? "retrying" : "pending",
-    publicReason: "incomplete_evidence",
-    publicExplanation: "Waiting for complete replay-backed evidence.",
-  }
-}
-
-const addScore = (
-  totals: Map<string, MatchSetStrategyScore>,
-  entry: MatchSetStrategyScore,
-): void => {
-  const current = totals.get(entry.strategyRevisionId) ?? {
-    ...entry,
-    wins: 0,
-    losses: 0,
-    draws: 0,
-    points: 0,
-    penaltyPoints: 0,
-    penalties: [],
-    failedSystemMatches: 0,
-    survivingSoldiers: 0,
-    survivalTurns: 0,
-  }
-  current.wins += entry.wins
-  current.losses += entry.losses
-  current.draws += entry.draws
-  current.points += entry.points
-  current.penaltyPoints += entry.penaltyPoints
-  current.penalties.push(...entry.penalties)
-  current.failedSystemMatches += entry.failedSystemMatches
-  current.survivingSoldiers += entry.survivingSoldiers
-  current.survivalTurns += entry.survivalTurns
-  totals.set(entry.strategyRevisionId, current)
-}
-
 export const buildTrialLadderSeasonDto = async (
   pool: Pool,
   seasonIdOrSlug: string,
@@ -1313,9 +1238,9 @@ export const buildTrialLadderSeasonDto = async (
     status: MatchSetStatus
     ladder_schedule_run_id: string | null
     ladder_pod_index: number | null
-    counted_status: LadderMatchSetCountedStatus
-    public_counted_reason: LadderNonCountedReason | null
+    counted_status: PublicLadderMatchSetSummaryDto["countedStatus"]
     public_counted_explanation: string | null
+    review_status: "none" | "under_review" | "resolved"
     scoring: { rankings: MatchSetStrategyScore[] } | null
     chronicle_count: number
     match_count: number
@@ -1328,8 +1253,8 @@ export const buildTrialLadderSeasonDto = async (
         ms.ladder_schedule_run_id,
         ms.ladder_pod_index,
         ms.counted_status,
-        ms.public_counted_reason,
         ms.public_counted_explanation,
+        ms.review_status,
         ms.scoring,
         count(distinct c.match_id)::integer as chronicle_count,
         count(distinct msm.match_id)::integer as match_count,
@@ -1343,21 +1268,18 @@ export const buildTrialLadderSeasonDto = async (
     `,
     [season.id],
   )
-  const totals = new Map<string, MatchSetStrategyScore>()
   const matchSets: PublicLadderMatchSetSummaryDto[] = []
+  const recomputeInputs: ClassifiedSeasonMatchSet[] = []
   for (const row of matchSetRows.rows) {
-    const refreshed = await refreshMatchSetStatus(pool, row.id)
-    const classification = classifyCountedStatus({
-      ...row,
-      status: refreshed.status,
-      chronicle_count: row.chronicle_count,
-      match_count: row.match_count,
+    const countedState = classifyCompetitionCountedState({
+      executionStatus: mapMatchSetStatus(row.status),
+      storedState: row.counted_status,
+      reviewState: row.review_status,
+      origin: "trial",
+      expectedMatchCount: row.match_count,
+      chronicleMatchCount: row.chronicle_count,
+      scoringAvailable: Array.isArray(row.scoring?.rankings),
     })
-    if (classification.countedStatus === "counted") {
-      for (const ranking of refreshed.scoring.rankings) {
-        addScore(totals, ranking)
-      }
-    }
     const entrantRows = await pool.query<{
       snapshot: TrialLadderEntrySnapshot
     }>(
@@ -1369,6 +1291,24 @@ export const buildTrialLadderSeasonDto = async (
       `,
       [row.id],
     )
+    const entrantIds = entrantRows.rows.map(
+      (entrant) => entrant.snapshot.entryId,
+    )
+    const strategyRevisionIds = entrantRows.rows.map(
+      (entrant) => entrant.snapshot.strategyRevisionId,
+    )
+    const resultHref = `/matchsets/${encodeURIComponent(row.id)}`
+    const replayHref = row.replay_match_id
+      ? `/matches/${encodeURIComponent(row.replay_match_id)}/replay`
+      : undefined
+    recomputeInputs.push({
+      matchSetId: row.id,
+      strategyRevisionIds,
+      countedState,
+      scoring: row.scoring,
+      resultHref,
+      ...(replayHref ? { replayHref } : {}),
+    })
     matchSets.push({
       matchSetId: row.id,
       seasonId: season.id,
@@ -1378,62 +1318,29 @@ export const buildTrialLadderSeasonDto = async (
       ...(row.ladder_pod_index === null
         ? {}
         : { podIndex: row.ladder_pod_index }),
-      status: mapMatchSetStatus(refreshed.status),
-      countedStatus: classification.countedStatus,
-      ...(classification.publicReason
-        ? { publicReason: classification.publicReason }
+      status: mapMatchSetStatus(row.status),
+      countedStatus: countedState.state,
+      countedState,
+      ...(countedState.publicReason
+        ? { publicReason: countedState.publicReason }
         : {}),
       publicExplanation:
-        classification.countedStatus === "counted"
-          ? classification.publicExplanation
-          : (row.public_counted_explanation ??
-            classification.publicExplanation),
-      entrantIds: entrantRows.rows.map((entrant) => entrant.snapshot.entryId),
-      ...(row.replay_match_id
-        ? {
-            replayHref: `/matches/${encodeURIComponent(row.replay_match_id)}/replay`,
-          }
-        : {}),
-      resultHref: `/matchsets/${encodeURIComponent(row.id)}`,
+        row.public_counted_explanation ?? countedState.publicExplanation,
+      entrantIds,
+      ...(replayHref ? { replayHref } : {}),
+      resultHref,
     })
   }
-  const entrantByRevision = new Map(
-    entries.map((entry) => [entry.strategyRevisionId, entry]),
-  )
-  const standings: PublicStandingDto[] = [...totals.values()]
-    .sort(
-      (left, right) =>
-        right.points - left.points ||
-        right.wins - left.wins ||
-        right.survivingSoldiers - left.survivingSoldiers ||
-        right.survivalTurns - left.survivalTurns ||
-        left.strategyRevisionId.localeCompare(right.strategyRevisionId),
-    )
-    .map((entry, index) => {
-      const entrant = entrantByRevision.get(entry.strategyRevisionId)
-      return {
-        rank: index + 1,
-        entrantId: entrant?.entryId ?? entry.strategyRevisionId,
-        strategyRevisionId: entry.strategyRevisionId,
-        ownerHandle: entrant?.ownerHandle ?? "unknown",
-        displayLabel: entrant?.displayLabel ?? entry.strategyRevisionId,
-        sourceHash: entrant?.sourceHash ?? "",
-        points: entry.points,
-        wins: entry.wins,
-        draws: entry.draws,
-        losses: entry.losses,
-        penalties: entry.penalties,
-        survivingSoldiers: entry.survivingSoldiers,
-        survivalTurns: entry.survivalTurns,
-        tieBreakerPath: [
-          "points",
-          "wins",
-          "survivingSoldiers",
-          "survivalTurns",
-          "strategyRevisionId",
-        ],
-      }
-    })
+  const standings: PublicStandingDto[] = recomputeSeasonStandings({
+    entrants: entries.map((entry) => ({
+      entrantId: entry.entryId,
+      strategyRevisionId: entry.strategyRevisionId,
+      ownerHandle: entry.ownerHandle,
+      displayLabel: entry.displayLabel,
+      sourceHash: entry.sourceHash,
+    })),
+    matchSets: recomputeInputs,
+  })
   const dto: PublicTrialLadderSeasonDto = {
     seasonId: season.id,
     slug: season.slug,

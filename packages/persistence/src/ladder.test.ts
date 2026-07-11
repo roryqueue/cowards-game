@@ -790,6 +790,19 @@ describe("trial ladder contracts", () => {
     ).not.toMatch(/unique\s*\([^)]*owner_user_id[^)]*\)\s*where/i)
   })
 
+  it("keeps public Season reads scoped and mutation-free", () => {
+    const ladderSource = readFileSync(
+      "packages/persistence/src/ladder.ts",
+      "utf8",
+    )
+    const publicRead = ladderSource.slice(
+      ladderSource.indexOf("export const buildTrialLadderSeasonDto"),
+    )
+    expect(publicRead).toContain("where ms.ladder_season_id = $1")
+    expect(publicRead).not.toContain("refreshMatchSetStatus")
+    expect(publicRead).not.toMatch(/update\s+match_sets/i)
+  })
+
   it("delegates runtime compatibility wrapper failures to public categories", () => {
     try {
       assertLadderEligibleRuntime(runtimeFor("javascript"))

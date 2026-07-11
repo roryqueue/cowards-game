@@ -1,5 +1,6 @@
 import {
   assertPublicMatchSetResultLeakSafe,
+  classifyCompetitionCountedState,
   describeStrategyRuntimeProductSemantics,
   normalizeStrategyRuntimeMetadata,
   type PublicPlayerProfileDto,
@@ -147,6 +148,10 @@ export const buildPublicPlayerProfileDto = async (
       | PublicPlayerProfileDto["results"][number]["publicReason"]
       | null
     public_counted_explanation: string | null
+    scoring: { rankings?: MatchSetStrategyScore[] } | null
+    review_status: "none" | "under_review" | "resolved"
+    chronicle_count: number
+    match_count: number
   }>(
     `
       select distinct
@@ -155,7 +160,11 @@ export const buildPublicPlayerProfileDto = async (
         ms.status,
         ms.counted_status,
         ms.public_counted_reason,
-        ms.public_counted_explanation
+        ms.public_counted_explanation,
+        ms.scoring,
+        ms.review_status,
+        (select count(*)::integer from match_set_matches msm where msm.match_set_id = ms.id) as match_count,
+        (select count(*)::integer from match_set_matches msm join chronicles c on c.match_id = msm.match_id where msm.match_set_id = ms.id) as chronicle_count
       from match_sets ms
       join competition_entrants ce on ce.match_set_id = ms.id
       where ce.owner_user_id = $1
@@ -177,25 +186,37 @@ export const buildPublicPlayerProfileDto = async (
         return total + (record?.points ?? 0)
       }, 0),
     })),
-    results: resultRows.rows.map((row) => ({
-      matchSetId: row.match_set_id,
-      seasonId: row.season_id ?? "",
-      status:
+    results: resultRows.rows.map((row) => {
+      const status =
         row.status === "pending"
           ? "queued"
           : row.status === "failed_system" || row.status === "blocked"
             ? "failed"
-            : row.status,
-      countedStatus: row.counted_status,
-      ...(row.public_counted_reason
-        ? { publicReason: row.public_counted_reason }
-        : {}),
-      ...(row.public_counted_explanation
-        ? { publicExplanation: row.public_counted_explanation }
-        : {}),
-      entrantIds: [],
-      resultHref: `/matchsets/${encodeURIComponent(row.match_set_id)}`,
-    })),
+            : row.status
+      const countedState = classifyCompetitionCountedState({
+        executionStatus: status,
+        storedState: row.counted_status,
+        reviewState: row.review_status,
+        origin: row.season_id ? "trial" : "non_competitive",
+        expectedMatchCount: row.match_count,
+        chronicleMatchCount: row.chronicle_count,
+        scoringAvailable: Array.isArray(row.scoring?.rankings),
+      })
+      return {
+        matchSetId: row.match_set_id,
+        seasonId: row.season_id ?? "",
+        status,
+        countedStatus: countedState.state,
+        countedState,
+        ...(countedState.publicReason
+          ? { publicReason: countedState.publicReason }
+          : {}),
+        publicExplanation:
+          row.public_counted_explanation ?? countedState.publicExplanation,
+        entrantIds: [],
+        resultHref: `/matchsets/${encodeURIComponent(row.match_set_id)}`,
+      }
+    }),
   }
   assertPublicMatchSetResultLeakSafe(dto)
   return dto
