@@ -19,6 +19,8 @@ import {
   DEFAULT_LADDER_TARGET_POD_SIZE,
   enterTrialLadderSeason,
   evaluateCountedEntryEligibility,
+  scheduleTrialLadderSeason,
+  setTrialLadderSeasonStatus,
   trialLadderStatusLabel,
 } from "./ladder.js"
 
@@ -258,7 +260,14 @@ const createFakePool = (
   const calls: string[] = []
   let ownerEntryQueryIndex = 0
   let insertIndex = 0
-  const pool = {
+  const pool: {
+    calls: string[]
+    query: (sql: string, values?: unknown[]) => Promise<{ rows: any[] }>
+    connect?: () => Promise<{
+      query: (sql: string, values?: unknown[]) => Promise<{ rows: any[] }>
+      release: () => void
+    }>
+  } = {
     calls,
     async query(sql: string, values?: unknown[]) {
       calls.push(sql)
@@ -305,6 +314,10 @@ const createFakePool = (
       return { rows: [] }
     },
   }
+  pool.connect = async () => ({
+    query: pool.query,
+    release() {},
+  })
   return pool as unknown as Pool & { calls: string[] }
 }
 
@@ -328,7 +341,196 @@ const expectEligibilityCategory = async (
   })
 }
 
+const createLifecyclePool = (input: {
+  status: "draft" | "open" | "scheduling" | "active" | "completed" | "archived"
+  entries?: Array<{ id: string; status: string; snapshot: any }>
+  existingRun?:
+    | {
+        id: string
+        created_match_set_ids: string[]
+        leftover_entry_ids: string[]
+      }
+    | undefined
+  failPattern?: string | undefined
+}) => {
+  const calls: string[] = []
+  let status = input.status
+  const client = {
+    async query(sql: string, values?: unknown[]) {
+      calls.push(sql)
+      if (input.failPattern && sql.includes(input.failPattern)) {
+        throw new Error("injected scheduling failure")
+      }
+      if (
+        sql.trim() === "begin" ||
+        sql.trim() === "commit" ||
+        sql.trim() === "rollback"
+      ) {
+        return { rows: [] }
+      }
+      if (sql.includes("select id, status, season_seed")) {
+        return {
+          rows: [
+            {
+              id: "season:trial",
+              status,
+              season_seed: "season-seed",
+              minimum_entries: 4,
+              target_pod_size: 4,
+            },
+          ],
+        }
+      }
+      if (sql.includes("from trial_ladder_schedule_runs")) {
+        return { rows: input.existingRun ? [input.existingRun] : [] }
+      }
+      if (sql.includes("select status from trial_ladder_seasons")) {
+        return { rows: [{ status }] }
+      }
+      if (
+        sql.includes("update trial_ladder_seasons") &&
+        sql.includes("set status")
+      ) {
+        status = values?.[1] as typeof status
+        return { rows: [] }
+      }
+      if (sql.includes("from trial_ladder_entries")) {
+        return { rows: input.entries ?? [] }
+      }
+      return { rows: [] }
+    },
+    release() {},
+  }
+  return {
+    calls,
+    pool: {
+      async connect() {
+        return client
+      },
+      async query(sql: string) {
+        calls.push(sql)
+        return { rows: [] }
+      },
+    } as unknown as Pool,
+  }
+}
+
 describe("trial ladder contracts", () => {
+  it("enforces monotonic Season lifecycle changes and closes entry once", async () => {
+    const lifecycle = createLifecyclePool({ status: "open" })
+
+    await setTrialLadderSeasonStatus(lifecycle.pool, {
+      seasonId: "season:trial",
+      status: "scheduling",
+      reason: "Freeze entries.",
+    })
+
+    const update = lifecycle.calls.find(
+      (sql) =>
+        sql.includes("update trial_ladder_seasons") &&
+        sql.includes("set status"),
+    )
+    expect(update).toContain("closed_at")
+    expect(lifecycle.calls).toContain("commit")
+  })
+
+  it("rolls back illegal backward Season transitions", async () => {
+    const lifecycle = createLifecyclePool({ status: "active" })
+
+    await expect(
+      setTrialLadderSeasonStatus(lifecycle.pool, {
+        seasonId: "season:trial",
+        status: "open",
+        reason: "Reopen.",
+      }),
+    ).rejects.toThrow("cannot move from active to open")
+    expect(lifecycle.calls).toContain("rollback")
+    expect(
+      lifecycle.calls.some((sql) =>
+        sql.includes("insert into competition_audit_events"),
+      ),
+    ).toBe(false)
+  })
+
+  it("completes a frozen below-minimum Season with insufficient evidence", async () => {
+    const entries = ["entry:a", "entry:b"].map((id) => ({
+      id,
+      status: "active",
+      snapshot: { sourceHash: `${id}:hash` },
+    }))
+    const lifecycle = createLifecyclePool({ status: "open", entries })
+
+    await expect(
+      scheduleTrialLadderSeason(lifecycle.pool, {
+        seasonId: "season:trial",
+      }),
+    ).resolves.toMatchObject({
+      createdMatchSetIds: [],
+      leftoverEntryIds: ["entry:a", "entry:b"],
+    })
+    const schedulingUpdate = lifecycle.calls.findIndex(
+      (sql) =>
+        sql.includes("update trial_ladder_seasons") &&
+        sql.includes("set status"),
+    )
+    const entryRead = lifecycle.calls.findIndex((sql) =>
+      sql.includes("from trial_ladder_entries"),
+    )
+    expect(schedulingUpdate).toBeGreaterThan(-1)
+    expect(schedulingUpdate).toBeLessThan(entryRead)
+    expect(
+      lifecycle.calls.some(
+        (sql) =>
+          sql.includes("'no_op'") && sql.includes("trial_ladder_schedule_runs"),
+      ),
+    ).toBe(true)
+    expect(lifecycle.calls).toContain("commit")
+  })
+
+  it("returns an existing Season run without creating duplicate MatchSets", async () => {
+    const lifecycle = createLifecyclePool({
+      status: "active",
+      existingRun: {
+        id: "trial-schedule:existing",
+        created_match_set_ids: ["match-set:existing"],
+        leftover_entry_ids: [],
+      },
+    })
+
+    await expect(
+      scheduleTrialLadderSeason(lifecycle.pool, {
+        seasonId: "season:trial",
+      }),
+    ).resolves.toEqual({
+      scheduleRunId: "trial-schedule:existing",
+      createdMatchSetIds: ["match-set:existing"],
+      leftoverEntryIds: [],
+    })
+    expect(
+      lifecycle.calls.some((sql) => sql.includes("insert into match_sets")),
+    ).toBe(false)
+  })
+
+  it("rolls back the Season run when scheduling persistence fails", async () => {
+    const entries = ["entry:a", "entry:b"].map((id) => ({
+      id,
+      status: "active",
+      snapshot: { sourceHash: `${id}:hash` },
+    }))
+    const lifecycle = createLifecyclePool({
+      status: "open",
+      entries,
+      failPattern: "insert into trial_ladder_schedule_runs",
+    })
+
+    await expect(
+      scheduleTrialLadderSeason(lifecycle.pool, {
+        seasonId: "season:trial",
+      }),
+    ).rejects.toThrow("injected scheduling failure")
+    expect(lifecycle.calls).toContain("rollback")
+  })
+
   it("uses resettable beta lifecycle labels without permanent rating language", () => {
     expect(trialLadderStatusLabel("draft")).toBe("Preparing")
     expect(trialLadderStatusLabel("open")).toBe("Open for entries")

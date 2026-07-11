@@ -4,7 +4,7 @@ import type {
   PlayerId,
   StrategyRevisionId,
 } from "@cowards/spec"
-import type { Pool } from "pg"
+import type { Pool, PoolClient } from "pg"
 import { createRepositories } from "./repositories.js"
 import { withTransaction } from "./db.js"
 import {
@@ -92,40 +92,39 @@ export const generatePresetMatrix = (
   return matches
 }
 
-const insertMatchSetWithMatrix = async (
-  pool: Pool,
+export const insertMatchSetWithMatrixOnClient = async (
+  client: PoolClient,
   input: CreateMatchSetFromMatrixInput,
 ): Promise<void> => {
   for (const match of input.matches) {
     validateCreateMatchInput(match)
   }
 
-  await withTransaction(pool, async (client) => {
-    const repositories = createRepositories(client)
-    const revisionIds = new Set<StrategyRevisionId>()
+  const repositories = createRepositories(client)
+  const revisionIds = new Set<StrategyRevisionId>()
 
-    for (const match of input.matches) {
-      await repositories.assertStrategyRevisionCanBeUsed(
-        match.bottomStrategyRevisionId,
-      )
-      await repositories.assertStrategyRevisionCanBeUsed(
-        match.topStrategyRevisionId,
-      )
-      const arena = await repositories.getArenaVariant(match.arenaVariantId)
-      if (!arena) {
-        throw new Error(`ArenaVariant not found: ${match.arenaVariantId}`)
-      }
-      revisionIds.add(match.bottomStrategyRevisionId)
-      revisionIds.add(match.topStrategyRevisionId)
+  for (const match of input.matches) {
+    await repositories.assertStrategyRevisionCanBeUsed(
+      match.bottomStrategyRevisionId,
+    )
+    await repositories.assertStrategyRevisionCanBeUsed(
+      match.topStrategyRevisionId,
+    )
+    const arena = await repositories.getArenaVariant(match.arenaVariantId)
+    if (!arena) {
+      throw new Error(`ArenaVariant not found: ${match.arenaVariantId}`)
     }
+    revisionIds.add(match.bottomStrategyRevisionId)
+    revisionIds.add(match.topStrategyRevisionId)
+  }
 
-    for (const revisionId of revisionIds) {
-      await repositories.lockStrategyRevision(revisionId)
-    }
+  for (const revisionId of revisionIds) {
+    await repositories.lockStrategyRevision(revisionId)
+  }
 
-    const matchSet = input.matchSet ?? {}
-    await client.query(
-      `
+  const matchSet = input.matchSet ?? {}
+  await client.query(
+    `
         insert into match_sets (
           id,
           status,
@@ -159,26 +158,26 @@ const insertMatchSetWithMatrix = async (
           $13
         )
       `,
-      [
-        input.id,
-        matchSet.presetId ?? null,
-        matchSet.presetVersion ?? null,
-        JSON.stringify(input.matches),
-        matchSet.creatorUserId ?? null,
-        matchSet.competitionPresetId ?? null,
-        matchSet.competitionPresetVersion ?? null,
-        matchSet.scoringPolicyVersion ?? null,
-        matchSet.visibility ?? null,
-        JSON.stringify(matchSet.entrantSnapshotSet ?? []),
-        JSON.stringify(matchSet.publicationPolicy ?? {}),
-        matchSet.duplicateKey ?? null,
-        matchSet.lockedAt ?? null,
-      ],
-    )
+    [
+      input.id,
+      matchSet.presetId ?? null,
+      matchSet.presetVersion ?? null,
+      JSON.stringify(input.matches),
+      matchSet.creatorUserId ?? null,
+      matchSet.competitionPresetId ?? null,
+      matchSet.competitionPresetVersion ?? null,
+      matchSet.scoringPolicyVersion ?? null,
+      matchSet.visibility ?? null,
+      JSON.stringify(matchSet.entrantSnapshotSet ?? []),
+      JSON.stringify(matchSet.publicationPolicy ?? {}),
+      matchSet.duplicateKey ?? null,
+      matchSet.lockedAt ?? null,
+    ],
+  )
 
-    for (const entrant of input.competitionEntrants ?? []) {
-      await client.query(
-        `
+  for (const entrant of input.competitionEntrants ?? []) {
+    await client.query(
+      `
           insert into competition_entrants (
             id,
             match_set_id,
@@ -195,59 +194,66 @@ const insertMatchSetWithMatrix = async (
           )
           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         `,
-        [
-          entrant.id,
-          input.id,
-          entrant.entrantIndex,
-          entrant.strategyRevisionId,
-          entrant.ownerUserId,
-          entrant.ownerHandle,
-          entrant.displayLabel,
-          entrant.sourceHash,
-          entrant.sourceBytes,
-          entrant.runtime,
-          entrant.engineCompatibility,
-          entrant.snapshot,
-        ],
-      )
-    }
+      [
+        entrant.id,
+        input.id,
+        entrant.entrantIndex,
+        entrant.strategyRevisionId,
+        entrant.ownerUserId,
+        entrant.ownerHandle,
+        entrant.displayLabel,
+        entrant.sourceHash,
+        entrant.sourceBytes,
+        entrant.runtime,
+        entrant.engineCompatibility,
+        entrant.snapshot,
+      ],
+    )
+  }
 
-    for (const [matrixIndex, match] of input.matches.entries()) {
-      await client.query(
-        `
+  for (const [matrixIndex, match] of input.matches.entries()) {
+    await client.query(
+      `
           insert into matches (
             id, bottom_strategy_revision_id, top_strategy_revision_id,
             arena_variant_id, seed, bottom_player_id, top_player_id, status
           )
           values ($1, $2, $3, $4, $5, $6, $7, 'pending')
         `,
-        [
-          match.id,
-          match.bottomStrategyRevisionId,
-          match.topStrategyRevisionId,
-          match.arenaVariantId,
-          match.seed,
-          match.bottomPlayerId,
-          match.topPlayerId,
-        ],
-      )
-      await client.query(
-        `
+      [
+        match.id,
+        match.bottomStrategyRevisionId,
+        match.topStrategyRevisionId,
+        match.arenaVariantId,
+        match.seed,
+        match.bottomPlayerId,
+        match.topPlayerId,
+      ],
+    )
+    await client.query(
+      `
           insert into match_jobs (id, match_id, status)
           values ($1, $2, 'queued')
         `,
-        [createMatchJobId(match.id), match.id],
-      )
-      await client.query(
-        `
+      [createMatchJobId(match.id), match.id],
+    )
+    await client.query(
+      `
           insert into match_set_matches (match_set_id, match_id, matrix_index)
           values ($1, $2, $3)
         `,
-        [input.id, match.id, matrixIndex],
-      )
-    }
-  })
+      [input.id, match.id, matrixIndex],
+    )
+  }
 }
+
+const insertMatchSetWithMatrix = async (
+  pool: Pool,
+  input: CreateMatchSetFromMatrixInput,
+): Promise<void> =>
+  withTransaction(pool, (client) =>
+    insertMatchSetWithMatrixOnClient(client, input),
+  )
 
 export const createMatchSetService = (pool: Pool) => ({
   async createFromMatrix(

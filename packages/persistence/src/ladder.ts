@@ -7,6 +7,7 @@ import {
 import { Buffer } from "node:buffer"
 import {
   assertPublicMatchSetResultLeakSafe,
+  assertTrialSeasonTransition,
   COMPATIBILITY_VERSIONS,
   countedEntryEligibilityDecision,
   describeStrategyRuntimeProductSemantics,
@@ -36,8 +37,10 @@ import {
   type UserId,
 } from "@cowards/spec"
 import type { Pool } from "pg"
+import type { PoolClient } from "pg"
+import { withTransaction } from "./db.js"
 import { generateCompetitionPairwiseMatrix } from "./competition.js"
-import { createMatchSetService } from "./matchset-service.js"
+import { insertMatchSetWithMatrixOnClient } from "./matchset-service.js"
 import { refreshMatchSetStatus } from "./matchset-status.js"
 import { createRepositories } from "./repositories.js"
 import { createDevelopmentSeedData } from "./seed.js"
@@ -556,20 +559,22 @@ export const createTrialLadderSeason = async (
   return id
 }
 
-export const setTrialLadderSeasonStatus = async (
-  pool: Pool,
-  input: {
-    seasonId: string
-    status: TrialLadderSeasonStatus
-    actorUserId?: UserId | undefined
-    reason: string
-  },
+type TrialLadderSeasonStatusChange = {
+  seasonId: string
+  status: TrialLadderSeasonStatus
+  actorUserId?: UserId | undefined
+  reason: string
+}
+
+const setTrialLadderSeasonStatusOnClient = async (
+  client: PoolClient,
+  input: TrialLadderSeasonStatusChange,
 ): Promise<void> => {
   if (!input.reason.trim()) {
     throw new LadderInputError("A reason is required for season changes.")
   }
-  const existing = await pool.query<{ status: TrialLadderSeasonStatus }>(
-    "select status from trial_ladder_seasons where id = $1",
+  const existing = await client.query<{ status: TrialLadderSeasonStatus }>(
+    "select status from trial_ladder_seasons where id = $1 for update",
     [input.seasonId],
   )
   const before = existing.rows[0]
@@ -577,6 +582,16 @@ export const setTrialLadderSeasonStatus = async (
     throw new LadderInputError(
       `Trial ladder season not found: ${input.seasonId}`,
     )
+  }
+  try {
+    assertTrialSeasonTransition(before.status, input.status)
+  } catch {
+    throw new LadderInputError(
+      `Trial Season cannot move from ${before.status} to ${input.status}.`,
+    )
+  }
+  if (before.status === input.status) {
+    return
   }
   const timestampColumn =
     input.status === "open"
@@ -588,7 +603,7 @@ export const setTrialLadderSeasonStatus = async (
           : input.status === "archived"
             ? "archived_at"
             : null
-  await pool.query(
+  await client.query(
     `
       update trial_ladder_seasons
       set status = $2,
@@ -596,12 +611,18 @@ export const setTrialLadderSeasonStatus = async (
           opened_at = case when $3 = 'opened_at' then coalesce(opened_at, now()) else opened_at end,
           scheduled_at = case when $3 = 'scheduled_at' then coalesce(scheduled_at, now()) else scheduled_at end,
           completed_at = case when $3 = 'completed_at' then coalesce(completed_at, now()) else completed_at end,
-          archived_at = case when $3 = 'archived_at' then coalesce(archived_at, now()) else archived_at end
+          archived_at = case when $3 = 'archived_at' then coalesce(archived_at, now()) else archived_at end,
+          closed_at = case when $4 then coalesce(closed_at, now()) else closed_at end
       where id = $1
     `,
-    [input.seasonId, input.status, timestampColumn],
+    [
+      input.seasonId,
+      input.status,
+      timestampColumn,
+      before.status === "open" && input.status !== "open",
+    ],
   )
-  await pool.query(
+  await client.query(
     `
       insert into competition_audit_events (
         id, actor_user_id, action, target_type, target_id,
@@ -621,6 +642,14 @@ export const setTrialLadderSeasonStatus = async (
   )
 }
 
+export const setTrialLadderSeasonStatus = async (
+  pool: Pool,
+  input: TrialLadderSeasonStatusChange,
+): Promise<void> =>
+  withTransaction(pool, (client) =>
+    setTrialLadderSeasonStatusOnClient(client, input),
+  )
+
 export const enterTrialLadderSeason = async (
   pool: Pool,
   input: {
@@ -628,104 +657,112 @@ export const enterTrialLadderSeason = async (
     userId: UserId
     revisionId: StrategyRevisionId
   },
-): Promise<string> => {
-  const eligibility = await evaluateCountedEntryEligibilityDetails(pool, input)
-  if (!eligibility.decision.ok || !eligibility.row || !eligibility.runtime) {
-    throw ladderEligibilityError(eligibility.decision.category)
-  }
-  const row = eligibility.row
-  const runtime = eligibility.runtime
-  if (row.locked_at === null) {
-    throw ladderEligibilityError("mutable_draft")
-  }
+): Promise<string> =>
+  withTransaction(pool, async (client) => {
+    const eligibility = await evaluateCountedEntryEligibilityDetails(
+      client,
+      input,
+      true,
+    )
+    if (!eligibility.decision.ok || !eligibility.row || !eligibility.runtime) {
+      throw ladderEligibilityError(eligibility.decision.category)
+    }
+    const row = eligibility.row
+    const runtime = eligibility.runtime
+    if (row.locked_at === null) {
+      throw ladderEligibilityError("mutable_draft")
+    }
 
-  const entryId = `trial-entry:${randomUUID()}`
-  const label = row.metadata.label ?? row.strategy_name
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const entryIndexResult = await pool.query<{ entry_index: number }>(
-      `
+    const entryId = `trial-entry:${randomUUID()}`
+    const label = row.metadata.label ?? row.strategy_name
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const entryIndexResult = await client.query<{ entry_index: number }>(
+        `
         select coalesce(max(entry_index), -1)::integer + 1 as entry_index
         from trial_ladder_entries
         where season_id = $1
       `,
-      [input.seasonId],
-    )
-    const entryIndex = entryIndexResult.rows[0]?.entry_index ?? 0
-    const snapshot: TrialLadderEntrySnapshot = {
-      entrantId: entryId,
-      entrantIndex: entryIndex,
-      strategyRevisionId: input.revisionId,
-      ownerUserId: row.owner_user_id,
-      ownerHandle: row.handle,
-      displayLabel: `@${row.handle} / "${label}" / ${row.source_hash.slice(0, 10)}`,
-      sourceHash: row.source_hash,
-      sourceBytes: row.source_bytes,
-      runtime,
-      runtimeSemantics: describeStrategyRuntimeProductSemantics(runtime),
-      engineCompatibility: row.engine_compatibility,
-      lockedAt:
-        row.locked_at instanceof Date
-          ? row.locked_at.toISOString()
-          : row.locked_at,
-      seasonId: input.seasonId,
-      entryId,
-      status: "active",
-      strategyName: row.strategy_name,
-      ...(row.strategy_description
-        ? { strategyDescription: row.strategy_description }
-        : {}),
-      tags: row.strategy_tags.length
-        ? row.strategy_tags
-        : (row.metadata.tags ?? []),
-    }
+        [input.seasonId],
+      )
+      const entryIndex = entryIndexResult.rows[0]?.entry_index ?? 0
+      const snapshot: TrialLadderEntrySnapshot = {
+        entrantId: entryId,
+        entrantIndex: entryIndex,
+        strategyRevisionId: input.revisionId,
+        ownerUserId: row.owner_user_id,
+        ownerHandle: row.handle,
+        displayLabel: `@${row.handle} / "${label}" / ${row.source_hash.slice(0, 10)}`,
+        sourceHash: row.source_hash,
+        sourceBytes: row.source_bytes,
+        runtime,
+        runtimeSemantics: describeStrategyRuntimeProductSemantics(runtime),
+        engineCompatibility: row.engine_compatibility,
+        lockedAt:
+          row.locked_at instanceof Date
+            ? row.locked_at.toISOString()
+            : row.locked_at,
+        seasonId: input.seasonId,
+        entryId,
+        status: "active",
+        strategyName: row.strategy_name,
+        ...(row.strategy_description
+          ? { strategyDescription: row.strategy_description }
+          : {}),
+        tags: row.strategy_tags.length
+          ? row.strategy_tags
+          : (row.metadata.tags ?? []),
+      }
 
-    try {
-      await pool.query(
-        `
+      try {
+        await client.query("savepoint counted_entry_insert")
+        await client.query(
+          `
         insert into trial_ladder_entries (
           id, season_id, owner_user_id, owner_handle, strategy_id,
           strategy_revision_id, status, snapshot, entry_index
         )
         values ($1, $2, $3, $4, $5, $6, 'active', $7, $8)
       `,
-        [
-          entryId,
-          input.seasonId,
-          row.owner_user_id,
-          row.handle,
-          row.strategy_id,
-          input.revisionId,
-          snapshot,
-          entryIndex,
-        ],
-      )
-      return entryId
-    } catch (error) {
-      if (!isRecord(error) || error.code !== "23505") {
+          [
+            entryId,
+            input.seasonId,
+            row.owner_user_id,
+            row.handle,
+            row.strategy_id,
+            input.revisionId,
+            snapshot,
+            entryIndex,
+          ],
+        )
+        await client.query("release savepoint counted_entry_insert")
+        return entryId
+      } catch (error) {
+        if (!isRecord(error) || error.code !== "23505") {
+          throw error
+        }
+        await client.query("rollback to savepoint counted_entry_insert")
+        const constraint =
+          typeof error.constraint === "string" ? error.constraint : ""
+        if (constraint.includes("entry_index")) {
+          continue
+        }
+        const existing = await findOwnerSeasonEntry(client, input)
+        if (
+          existing ||
+          constraint.includes("owner_user_id") ||
+          constraint.includes("strategy_revision_id")
+        ) {
+          throw ladderEligibilityError(
+            existing && existing.status !== "active"
+              ? "replacement_blocked"
+              : "already_entered_season",
+          )
+        }
         throw error
       }
-      const constraint =
-        typeof error.constraint === "string" ? error.constraint : ""
-      if (constraint.includes("entry_index")) {
-        continue
-      }
-      const existing = await findOwnerSeasonEntry(pool, input)
-      if (
-        existing ||
-        constraint.includes("owner_user_id") ||
-        constraint.includes("strategy_revision_id")
-      ) {
-        throw ladderEligibilityError(
-          existing && existing.status !== "active"
-            ? "replacement_blocked"
-            : "already_entered_season",
-        )
-      }
-      throw error
     }
-  }
-  throw new Error("Counted entry index allocation did not converge.")
-}
+    throw new Error("Counted entry index allocation did not converge.")
+  })
 
 type CountedEntryInput = {
   seasonId: string
@@ -783,7 +820,7 @@ export const evaluateStoredRevisionCountedEligibility = (input: {
 }
 
 const findOwnerSeasonEntry = async (
-  pool: Pool,
+  pool: Pool | PoolClient,
   input: Pick<CountedEntryInput, "seasonId" | "userId">,
 ): Promise<{ id: string; status: TrialLadderEntryStatus } | null> => {
   const result = await pool.query<{
@@ -802,12 +839,16 @@ const findOwnerSeasonEntry = async (
 }
 
 const evaluateCountedEntryEligibilityDetails = async (
-  pool: Pool,
+  pool: Pool | PoolClient,
   input: CountedEntryInput,
+  lockSeason = false,
 ): Promise<CountedEntryEligibilityDetails> => {
   const season = await pool.query<{
     status: TrialLadderSeasonStatus
-  }>("select status from trial_ladder_seasons where id = $1", [input.seasonId])
+  }>(
+    `select status from trial_ladder_seasons where id = $1${lockSeason ? " for update" : ""}`,
+    [input.seasonId],
+  )
   if (season.rows[0]?.status !== "open") {
     return { decision: countedEntryEligibilityDecision("season_not_open") }
   }
@@ -900,7 +941,7 @@ export const withdrawTrialLadderEntry = async (
 }
 
 const readSeasonEntries = async (
-  pool: Pool,
+  pool: Pool | PoolClient,
   seasonId: string,
 ): Promise<
   Array<{
@@ -934,159 +975,213 @@ export const scheduleTrialLadderSeason = async (
   leftoverEntryIds: string[]
 }> => {
   await ensureCompetitionArenas(pool)
-  const seasonResult = await pool.query<{
-    id: string
-    status: TrialLadderSeasonStatus
-    season_seed: string
-    minimum_entries: number
-    target_pod_size: number
-  }>(
-    `
-      select id, status, season_seed, minimum_entries, target_pod_size
-      from trial_ladder_seasons
-      where id = $1
-    `,
-    [input.seasonId],
-  )
-  const season = seasonResult.rows[0]
-  if (!season) {
-    throw new LadderInputError(
-      `Trial ladder season not found: ${input.seasonId}`,
-    )
-  }
-  if (season.status !== "open" && season.status !== "scheduling") {
-    throw new LadderInputError(
-      "Trial ladder season must be open or scheduling before MatchSets can be generated.",
-    )
-  }
-  const entries = stableEntryOrder(
-    (await readSeasonEntries(pool, input.seasonId)).filter(
-      (entry) => entry.status === "active",
-    ),
-    season.season_seed,
-  )
-  if (entries.length < season.minimum_entries) {
-    throw new LadderInputError(
-      `Trial ladder season needs at least ${season.minimum_entries} active entries before scheduling.`,
-    )
-  }
-  const scheduledResult = await pool.query<{ entry_id: string }>(
-    `
-      select distinct ce.snapshot ->> 'entryId' as entry_id
-      from match_sets ms
-      join competition_entrants ce on ce.match_set_id = ms.id
-      where ms.ladder_season_id = $1
-    `,
-    [input.seasonId],
-  )
-  const scheduledEntryIds = new Set(
-    scheduledResult.rows.map((row) => row.entry_id).filter(Boolean),
-  )
-  const unscheduled = entries.filter(
-    (entry) => !scheduledEntryIds.has(entry.id),
-  )
-  const podSize = season.target_pod_size || DEFAULT_LADDER_TARGET_POD_SIZE
-  const runIndexResult = await pool.query<{ run_index: number }>(
-    `
-      select coalesce(max(run_index), -1) + 1 as run_index
-      from trial_ladder_schedule_runs
-      where season_id = $1
-    `,
-    [input.seasonId],
-  )
-  const runIndex = runIndexResult.rows[0]?.run_index ?? 0
-  const scheduleRunId = `trial-schedule:${randomUUID()}`
-  const createdMatchSetIds: string[] = []
-  const fullPodCount = Math.floor(unscheduled.length / podSize)
-
-  for (let podIndex = 0; podIndex < fullPodCount; podIndex += 1) {
-    const pod = unscheduled.slice(podIndex * podSize, (podIndex + 1) * podSize)
-    const matchSetId = `match-set:trial:${input.seasonId}:${runIndex}:${podIndex}`
-    const entrants = pod.map((entry, index) => ({
-      ...entry.snapshot,
-      entrantIndex: index,
-      entrantId: entry.id,
-    }))
-    const matches = generateCompetitionPairwiseMatrix({
-      matchSetId,
-      presetId: TRIAL_LADDER_PRESET_ID,
-      entrants,
-    })
-    await createMatchSetService(pool).createFromMatrix({
-      id: matchSetId,
-      matches,
-      matchSet: {
-        presetId: "standard-v1",
-        presetVersion: "v1",
-        competitionPresetId: TRIAL_LADDER_PRESET_ID,
-        competitionPresetVersion: "v1",
-        scoringPolicyVersion: EXHIBITION_SCORING_POLICY_V1.version,
-        visibility: "public",
-        entrantSnapshotSet: entrants,
-        publicationPolicy: {
-          publicResults: true,
-          publicReplayEvidence: true,
-          excludesPrivateStrategyData: true,
-          trialLadder: true,
-        },
-        lockedAt: new Date(),
-      },
-      competitionEntrants: entrants.map((entrant) => ({
-        id: `${matchSetId}:${entrant.entryId}`,
-        entrantIndex: entrant.entrantIndex,
-        strategyRevisionId: entrant.strategyRevisionId,
-        ownerUserId: entrant.ownerUserId,
-        ownerHandle: entrant.ownerHandle,
-        displayLabel: entrant.displayLabel,
-        sourceHash: entrant.sourceHash,
-        sourceBytes: entrant.sourceBytes,
-        runtime: entrant.runtime,
-        engineCompatibility: entrant.engineCompatibility,
-        snapshot: entrant,
-      })),
-    })
-    await pool.query(
+  return withTransaction(pool, async (client) => {
+    const seasonResult = await client.query<{
+      id: string
+      status: TrialLadderSeasonStatus
+      season_seed: string
+      minimum_entries: number
+      target_pod_size: number
+    }>(
       `
-        update match_sets
-        set ladder_season_id = $2,
-            ladder_schedule_run_id = $3,
-            ladder_pod_index = $4,
-            counted_status = 'pending',
-            public_counted_explanation = 'Waiting for complete replay-backed evidence.'
+        select id, status, season_seed, minimum_entries, target_pod_size
+        from trial_ladder_seasons
+        where id = $1
+        for update
+      `,
+      [input.seasonId],
+    )
+    const season = seasonResult.rows[0]
+    if (!season) {
+      throw new LadderInputError(
+        `Trial ladder season not found: ${input.seasonId}`,
+      )
+    }
+
+    const existingRun = await client.query<{
+      id: string
+      created_match_set_ids: unknown
+      leftover_entry_ids: unknown
+    }>(
+      `
+        select id, created_match_set_ids, leftover_entry_ids
+        from trial_ladder_schedule_runs
+        where season_id = $1 and status in ('complete', 'no_op')
+        order by run_index desc
+        limit 1
+      `,
+      [input.seasonId],
+    )
+    const previous = existingRun.rows[0]
+    if (previous) {
+      return {
+        scheduleRunId: previous.id,
+        createdMatchSetIds: Array.isArray(previous.created_match_set_ids)
+          ? previous.created_match_set_ids.filter(
+              (value): value is string => typeof value === "string",
+            )
+          : [],
+        leftoverEntryIds: Array.isArray(previous.leftover_entry_ids)
+          ? previous.leftover_entry_ids.filter(
+              (value): value is string => typeof value === "string",
+            )
+          : [],
+      }
+    }
+
+    if (season.status !== "open" && season.status !== "scheduling") {
+      throw new LadderInputError(
+        "Trial ladder season must be open or scheduling before MatchSets can be generated.",
+      )
+    }
+    if (season.status === "open") {
+      await setTrialLadderSeasonStatusOnClient(client, {
+        seasonId: input.seasonId,
+        status: "scheduling",
+        actorUserId: input.actorUserId,
+        reason: "Froze counted entries for deterministic scheduling.",
+      })
+    }
+
+    const entries = stableEntryOrder(
+      (await readSeasonEntries(client, input.seasonId)).filter(
+        (entry) => entry.status === "active",
+      ),
+      season.season_seed,
+    )
+    const podSize = season.target_pod_size || DEFAULT_LADDER_TARGET_POD_SIZE
+    const fullPodCount = Math.floor(entries.length / podSize)
+    const scheduleRunId = `trial-schedule:${randomUUID()}`
+
+    if (entries.length < season.minimum_entries || fullPodCount === 0) {
+      const leftoverEntryIds = entries.map((entry) => entry.id)
+      await client.query(
+        `
+          insert into trial_ladder_schedule_runs (
+            id, season_id, run_index, status, created_match_set_ids, leftover_entry_ids
+          )
+          values ($1, $2, 0, 'no_op', '[]'::jsonb, $3::jsonb)
+        `,
+        [scheduleRunId, input.seasonId, JSON.stringify(leftoverEntryIds)],
+      )
+      const outcome = trialSeasonOutcome("insufficient_evidence")
+      await client.query(
+        `
+          update trial_ladder_seasons
+          set outcome_status = $2, public_outcome_explanation = $3
+          where id = $1
+        `,
+        [input.seasonId, outcome.status, outcome.publicExplanation],
+      )
+      await setTrialLadderSeasonStatusOnClient(client, {
+        seasonId: input.seasonId,
+        status: "completed",
+        actorUserId: input.actorUserId,
+        reason: "Season closed without enough entrants for counted evidence.",
+      })
+      return {
+        scheduleRunId,
+        createdMatchSetIds: [],
+        leftoverEntryIds,
+      }
+    }
+
+    const createdMatchSetIds: string[] = []
+    for (let podIndex = 0; podIndex < fullPodCount; podIndex += 1) {
+      const pod = entries.slice(podIndex * podSize, (podIndex + 1) * podSize)
+      const matchSetId = `match-set:trial:${input.seasonId}:0:${podIndex}`
+      const entrants = pod.map((entry, index) => ({
+        ...entry.snapshot,
+        entrantIndex: index,
+        entrantId: entry.id,
+      }))
+      const matches = generateCompetitionPairwiseMatrix({
+        matchSetId,
+        presetId: TRIAL_LADDER_PRESET_ID,
+        entrants,
+      })
+      await insertMatchSetWithMatrixOnClient(client, {
+        id: matchSetId,
+        matches,
+        matchSet: {
+          presetId: "standard-v1",
+          presetVersion: "v1",
+          competitionPresetId: TRIAL_LADDER_PRESET_ID,
+          competitionPresetVersion: "v1",
+          scoringPolicyVersion: EXHIBITION_SCORING_POLICY_V1.version,
+          visibility: "public",
+          entrantSnapshotSet: entrants,
+          publicationPolicy: {
+            publicResults: true,
+            publicReplayEvidence: true,
+            excludesPrivateStrategyData: true,
+            trialLadder: true,
+          },
+          lockedAt: new Date(),
+        },
+        competitionEntrants: entrants.map((entrant) => ({
+          id: `${matchSetId}:${entrant.entryId}`,
+          entrantIndex: entrant.entrantIndex,
+          strategyRevisionId: entrant.strategyRevisionId,
+          ownerUserId: entrant.ownerUserId,
+          ownerHandle: entrant.ownerHandle,
+          displayLabel: entrant.displayLabel,
+          sourceHash: entrant.sourceHash,
+          sourceBytes: entrant.sourceBytes,
+          runtime: entrant.runtime,
+          engineCompatibility: entrant.engineCompatibility,
+          snapshot: entrant,
+        })),
+      })
+      await client.query(
+        `
+          update match_sets
+          set ladder_season_id = $2,
+              ladder_schedule_run_id = $3,
+              ladder_pod_index = $4,
+              counted_status = 'pending',
+              public_counted_explanation = 'Waiting for complete replay-backed evidence.'
+          where id = $1
+        `,
+        [matchSetId, input.seasonId, scheduleRunId, podIndex],
+      )
+      createdMatchSetIds.push(matchSetId)
+    }
+
+    const leftoverEntryIds = entries
+      .slice(fullPodCount * podSize)
+      .map((entry) => entry.id)
+    await client.query(
+      `
+        insert into trial_ladder_schedule_runs (
+          id, season_id, run_index, status, created_match_set_ids, leftover_entry_ids
+        )
+        values ($1, $2, 0, 'complete', $3::jsonb, $4::jsonb)
+      `,
+      [
+        scheduleRunId,
+        input.seasonId,
+        JSON.stringify(createdMatchSetIds),
+        JSON.stringify(leftoverEntryIds),
+      ],
+    )
+    const outcome = trialSeasonOutcome("scheduled")
+    await client.query(
+      `
+        update trial_ladder_seasons
+        set outcome_status = $2, public_outcome_explanation = $3
         where id = $1
       `,
-      [matchSetId, input.seasonId, scheduleRunId, podIndex],
+      [input.seasonId, outcome.status, outcome.publicExplanation],
     )
-    createdMatchSetIds.push(matchSetId)
-  }
-
-  const leftoverEntryIds = unscheduled
-    .slice(fullPodCount * podSize)
-    .map((entry) => entry.id)
-  await pool.query(
-    `
-      insert into trial_ladder_schedule_runs (
-        id, season_id, run_index, status, created_match_set_ids, leftover_entry_ids
-      )
-      values ($1, $2, $3, 'complete', $4::jsonb, $5::jsonb)
-    `,
-    [
-      scheduleRunId,
-      input.seasonId,
-      runIndex,
-      JSON.stringify(createdMatchSetIds),
-      JSON.stringify(leftoverEntryIds),
-    ],
-  )
-  if (createdMatchSetIds.length > 0) {
-    await setTrialLadderSeasonStatus(pool, {
+    await setTrialLadderSeasonStatusOnClient(client, {
       seasonId: input.seasonId,
       status: "active",
       actorUserId: input.actorUserId,
       reason: "Created deterministic round-robin ladder pods.",
     })
-  }
-  return { scheduleRunId, createdMatchSetIds, leftoverEntryIds }
+    return { scheduleRunId, createdMatchSetIds, leftoverEntryIds }
+  })
 }
 
 const mapMatchSetStatus = (
@@ -1360,12 +1455,8 @@ export const buildTrialLadderSeasonDto = async (
       : {}),
     ...projectTrialSeasonWindows({
       status: season.status,
-      ...(season.opened_at
-        ? { openedAt: season.opened_at.toISOString() }
-        : {}),
-      ...(season.closed_at
-        ? { closedAt: season.closed_at.toISOString() }
-        : {}),
+      ...(season.opened_at ? { openedAt: season.opened_at.toISOString() } : {}),
+      ...(season.closed_at ? { closedAt: season.closed_at.toISOString() } : {}),
       ...(season.scheduled_at
         ? { scheduledAt: season.scheduled_at.toISOString() }
         : {}),
