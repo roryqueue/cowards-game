@@ -16,6 +16,7 @@ import {
   allowedDispositions,
   checkV136CompetitionSurfaceInventoryArtifacts,
   checkV136CompetitionPolicyScan,
+  createV136CompetitionPolicyPhase249ScanSuppressions,
   defaultScanRoots,
   generateV136CompetitionSurfaceInventory,
   requiredSurfaceGroups,
@@ -521,6 +522,41 @@ describe("v1.36 competition surface inventory evaluator", () => {
 })
 
 describe("v1.36 competition policy text scanner", () => {
+  it("treats GSD phase evidence as internal while preserving public surface scans", () => {
+    const root = createTempRepo()
+    writeTempFile(
+      root,
+      ".planning/phases/250-test/250-PLAN.md",
+      "Threat model rejects durable ratings and raw diagnostics.",
+    )
+    writeTempFile(
+      root,
+      "apps/web/public-copy.ts",
+      "This product promises durable ratings.",
+    )
+
+    const suppressions = createV136CompetitionPolicyPhase249ScanSuppressions({
+      includePostureDeferrals: false,
+      repoRoot: root,
+    })
+    const failures = checkV136CompetitionPolicyScan({
+      repoRoot: root,
+      rows: baseRows().map((row) => ({ ...row, postureLabelRequired: false })),
+      suppressions,
+    })
+
+    expect(failures).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(".planning/phases/250-test/250-PLAN.md"),
+      ]),
+    )
+    expect(failures).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("apps/web/public-copy.ts durable-rating"),
+      ]),
+    )
+  })
+
   it("uses defaultScanRoots for .planning, packages, apps, and scripts and includes fixture and __snapshots__ text paths", () => {
     const root = createTempRepo()
     expect(defaultScanRoots).toEqual([".planning", "packages", "apps", "scripts"])

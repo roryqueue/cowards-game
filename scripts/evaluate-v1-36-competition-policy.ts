@@ -1967,7 +1967,10 @@ const phase249PostureDeferredRows = new Set([
 
 export const createV136CompetitionPolicyPhase249ScanSuppressions =
   (
-    options: { includePostureDeferrals?: boolean } = {},
+    options: {
+      includePostureDeferrals?: boolean
+      repoRoot?: string
+    } = {},
   ): readonly V136CompetitionPolicyScanSuppression[] => {
     const suppressions: V136CompetitionPolicyScanSuppression[] = []
     for (const suppressionPath of phase249LegacyPolicyCalibrationPaths) {
@@ -1996,6 +1999,32 @@ export const createV136CompetitionPolicyPhase249ScanSuppressions =
           rationale:
             "Existing planning/proof artifact documents privacy exclusions; it is not player-facing competition copy.",
           owner: "Phase 249 static monitor",
+          expiry: "2026-12-31",
+        })
+      }
+    }
+    const planningRoot = options.repoRoot ?? repoRoot
+    for (const file of collectTextFiles(planningRoot, [".planning/phases"])) {
+      const text = readFileSync(path.join(planningRoot, file.path), "utf8")
+      for (const finding of findForbiddenPolicyClaimMatches(text)) {
+        suppressions.push({
+          path: file.path,
+          category: finding.category,
+          matchedPhrase: finding.matchedPhrase,
+          rationale:
+            "Internal GSD phase evidence records policy risks and prohibited examples; it is not public/default product copy.",
+          owner: "GSD milestone planning",
+          expiry: "2026-12-31",
+        })
+      }
+      for (const matchedPhrase of privateTextMarkers) {
+        suppressions.push({
+          path: file.path,
+          category: "private-marker",
+          matchedPhrase,
+          rationale:
+            "Internal GSD phase evidence records privacy exclusions; it is not public/default product output.",
+          owner: "GSD milestone planning",
           expiry: "2026-12-31",
         })
       }
@@ -2037,6 +2066,7 @@ const withPhase249ScanSuppressions = (
   suppressions: [
     ...createV136CompetitionPolicyPhase249ScanSuppressions({
       includePostureDeferrals: options.rows === undefined,
+      repoRoot: options.repoRoot,
     }),
     ...(options.suppressions ?? []),
   ],

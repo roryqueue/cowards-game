@@ -959,6 +959,7 @@ export const checkV136CompetitionPolicyMonitor = (
     suppressions: [
       ...createV136CompetitionPolicyPhase249ScanSuppressions({
         includePostureDeferrals: options.rows === undefined,
+        repoRoot: options.repoRoot,
       }),
       ...(options.suppressions ?? []),
     ],

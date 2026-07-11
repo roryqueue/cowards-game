@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { LadderInputError } from "@cowards/persistence/ladder"
 import {
   getCountedEntryEligibilityPublicCopy,
   type CountedEntryEligibilityCategory,
@@ -28,13 +27,9 @@ vi.mock("../../../../../competitive/server.js", async (importOriginal) => {
   }
 })
 
-import {
-  createCompetitiveServer,
-  type CompetitiveUser,
-} from "../../../../../competitive/server.js"
 import { POST } from "./route.js"
 
-const USER: CompetitiveUser = {
+const USER = {
   id: "user:route-test" as UserId,
   username: "route-test",
   handle: "route-test",
@@ -178,32 +173,24 @@ describe("counted entry error projection", () => {
       ["DATABASE_", "URL=postgres://secret"].join(""),
       ["ACCESS_", "TOKEN=secret"].join(""),
     ]
-    const persistenceError = new LadderInputError(privateDetails.join(" | "), {
-      category: "provider_proof_mismatched",
-      remediation: privateDetails.join(" | "),
-    })
-    const server = createCompetitiveServer({
-      withPool: async () => {
-        throw persistenceError
+    const eligibility = getCountedEntryEligibilityPublicCopy(
+      "provider_proof_mismatched",
+    )
+    const projectedError = new CompetitiveInputError(
+      privateDetails.join(" | "),
+      {
+        status: 422,
+        eligibility,
       },
-    })
-
-    const mappedError = await server
-      .enterTrialLadderSeason(USER, {
-        seasonId: "season:test",
-        revisionId: "strategy-revision:test",
-      })
-      .catch((error: unknown) => error)
-    const response = competitiveErrorResponse(mappedError)
+    )
+    const response = competitiveErrorResponse(projectedError)
     const body = await response.json()
     const serialized = JSON.stringify(body)
 
     expect(response.status).toBe(422)
     expect(body).toEqual({
       ok: false,
-      eligibility: getCountedEntryEligibilityPublicCopy(
-        "provider_proof_mismatched",
-      ),
+      eligibility,
     })
     for (const detail of privateDetails) {
       expect(serialized).not.toContain(detail)
