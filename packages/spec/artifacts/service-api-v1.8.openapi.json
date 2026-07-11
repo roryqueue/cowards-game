@@ -269,7 +269,13 @@
                           "type": "string"
                         },
                         "readiness": {
-                          "minLength": 1,
+                          "enum": [
+                            "production-candidate",
+                            "prototype",
+                            "local-dev-fallback",
+                            "experimental",
+                            "unknown"
+                          ],
                           "type": "string"
                         },
                         "readinessLabel": {
@@ -282,7 +288,17 @@
                         },
                         "validationIssueCodes": {
                           "items": {
-                            "minLength": 1,
+                            "enum": [
+                              "UNSUPPORTED_LANGUAGE",
+                              "UNSUPPORTED_PACKAGE_METADATA",
+                              "INCOMPATIBLE_ADAPTER",
+                              "ABI_MISMATCH",
+                              "SOURCE_TOO_LARGE",
+                              "MEMORY_LIMIT_EXCEEDED",
+                              "TIMEOUT",
+                              "FORBIDDEN_CAPABILITY",
+                              "NON_COUNTED_RUNTIME"
+                            ],
                             "type": "string"
                           },
                           "type": "array"
@@ -381,6 +397,54 @@
                 },
                 "type": "array"
               },
+              "entryWindow": {
+                "additionalProperties": false,
+                "properties": {
+                  "closedAt": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "openedAt": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "publicLabel": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "state": {
+                    "enum": [
+                      "not_started",
+                      "open",
+                      "closed"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "state",
+                  "publicLabel"
+                ],
+                "type": "object"
+              },
+              "links": {
+                "additionalProperties": false,
+                "properties": {
+                  "seasonHref": {
+                    "pattern": "^\\/ladder\\/.*",
+                    "type": "string"
+                  },
+                  "standingsHref": {
+                    "pattern": "^\\/ladder\\/.*",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "seasonHref",
+                  "standingsHref"
+                ],
+                "type": "object"
+              },
               "matchSets": {
                 "items": {
                   "additionalProperties": false,
@@ -475,6 +539,33 @@
                 "minLength": 1,
                 "type": "string"
               },
+              "outcome": {
+                "additionalProperties": false,
+                "properties": {
+                  "publicExplanation": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "publicLabel": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "status": {
+                    "enum": [
+                      "pending",
+                      "scheduled",
+                      "insufficient_evidence"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "publicLabel",
+                  "publicExplanation"
+                ],
+                "type": "object"
+              },
               "policy": {
                 "additionalProperties": false,
                 "properties": {
@@ -554,6 +645,36 @@
               "scheduledAt": {
                 "minLength": 1,
                 "type": "string"
+              },
+              "schedulingWindow": {
+                "additionalProperties": false,
+                "properties": {
+                  "closedAt": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "openedAt": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "publicLabel": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "state": {
+                    "enum": [
+                      "not_started",
+                      "open",
+                      "closed"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "state",
+                  "publicLabel"
+                ],
+                "type": "object"
               },
               "seasonId": {
                 "minLength": 1,
@@ -708,6 +829,10 @@
               "status",
               "statusLabel",
               "seasonSeed",
+              "entryWindow",
+              "schedulingWindow",
+              "outcome",
+              "links",
               "policy",
               "entries",
               "standings",
@@ -1003,7 +1128,13 @@
                           "type": "string"
                         },
                         "readiness": {
-                          "minLength": 1,
+                          "enum": [
+                            "production-candidate",
+                            "prototype",
+                            "local-dev-fallback",
+                            "experimental",
+                            "unknown"
+                          ],
                           "type": "string"
                         },
                         "readinessLabel": {
@@ -1016,7 +1147,17 @@
                         },
                         "validationIssueCodes": {
                           "items": {
-                            "minLength": 1,
+                            "enum": [
+                              "UNSUPPORTED_LANGUAGE",
+                              "UNSUPPORTED_PACKAGE_METADATA",
+                              "INCOMPATIBLE_ADAPTER",
+                              "ABI_MISMATCH",
+                              "SOURCE_TOO_LARGE",
+                              "MEMORY_LIMIT_EXCEEDED",
+                              "TIMEOUT",
+                              "FORBIDDEN_CAPABILITY",
+                              "NON_COUNTED_RUNTIME"
+                            ],
                             "type": "string"
                           },
                           "type": "array"
@@ -3333,8 +3474,21 @@
                       "page": "ladder",
                       "payload": {
                         "entries": [],
+                        "entryWindow": {
+                          "publicLabel": "Open for counted entries",
+                          "state": "open"
+                        },
+                        "links": {
+                          "seasonHref": "/ladder/demo-season",
+                          "standingsHref": "/ladder/demo-season#standings"
+                        },
                         "matchSets": [],
                         "name": "Demo Trial Ladder",
+                        "outcome": {
+                          "publicExplanation": "The Season has not reached a final scheduling outcome.",
+                          "publicLabel": "Outcome pending",
+                          "status": "pending"
+                        },
                         "policy": {
                           "minimumEntries": 2,
                           "noPermanentRatings": true,
@@ -3356,6 +3510,10 @@
                           "publicEntries": true,
                           "publicReplayEvidence": true,
                           "publicStandings": true
+                        },
+                        "schedulingWindow": {
+                          "publicLabel": "Scheduling has not started",
+                          "state": "not_started"
                         },
                         "seasonId": "ladder-season:demo",
                         "seasonSeed": "trial-ladder-demo-seed",

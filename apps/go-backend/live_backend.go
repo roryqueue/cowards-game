@@ -1037,7 +1037,7 @@ func (server *LiveServer) publicPlayerResults(ctx context.Context, userID string
 		if err := rows.Scan(&matchSetID, &seasonID, &status, &countedStatus, &reason, &explanation); err != nil {
 			return nil, err
 		}
-		result := ladderMatchSetSummary(matchSetID, seasonID, status, countedStatus, reason, explanation, []string{})
+		result := ladderMatchSetSummary(matchSetID, seasonID, status, countedStatus, reason, explanation, []string{}, nil)
 		results = append(results, result)
 	}
 	return results, rows.Err()
@@ -1073,14 +1073,17 @@ func (server *LiveServer) publicPlayerLadderHistory(ctx context.Context, userID 
 
 func (server *LiveServer) publicLadder(ctx context.Context, seasonIDOrSlug string) (map[string]any, error) {
 	var seasonID, slug, name, status, seed, stalePolicy string
-	var description *string
+	var description, outcomeStatus, outcomeExplanation *string
+	var openedAt, closedAt, scheduledAt, completedAt, archivedAt *time.Time
 	var minEntries, targetPodSize int
 	err := server.pool.QueryRow(ctx, `
 		select id, slug, name, description, status, season_seed,
-		       minimum_entries, target_pod_size, stale_revision_policy
+		       minimum_entries, target_pod_size, stale_revision_policy,
+		       opened_at, closed_at, scheduled_at, completed_at, archived_at,
+		       outcome_status, public_outcome_explanation
 		from trial_ladder_seasons
 		where id = $1 or slug = $1
-	`, seasonIDOrSlug).Scan(&seasonID, &slug, &name, &description, &status, &seed, &minEntries, &targetPodSize, &stalePolicy)
+	`, seasonIDOrSlug).Scan(&seasonID, &slug, &name, &description, &status, &seed, &minEntries, &targetPodSize, &stalePolicy, &openedAt, &closedAt, &scheduledAt, &completedAt, &archivedAt, &outcomeStatus, &outcomeExplanation)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -1096,12 +1099,22 @@ func (server *LiveServer) publicLadder(ctx context.Context, seasonIDOrSlug strin
 		return nil, err
 	}
 	dto := map[string]any{
-		"seasonId":    seasonID,
-		"slug":        slug,
-		"name":        name,
-		"status":      status,
-		"statusLabel": trialLadderStatusLabel(status),
-		"seasonSeed":  seed,
+		"seasonId":         seasonID,
+		"slug":             slug,
+		"name":             name,
+		"status":           status,
+		"statusLabel":      trialLadderStatusLabel(status),
+		"seasonSeed":       seed,
+		"entryWindow":      trialSeasonEntryWindow(status, openedAt, closedAt),
+		"schedulingWindow": trialSeasonSchedulingWindow(status, scheduledAt),
+		"outcome": trialSeasonOutcomeProjection(
+			valueOr(outcomeStatus, "pending"),
+			outcomeExplanation,
+		),
+		"links": map[string]any{
+			"seasonHref":    "/ladder/" + urlPathEscape(slug),
+			"standingsHref": "/ladder/" + urlPathEscape(slug) + "#standings",
+		},
 		"policy": map[string]any{
 			"oneEntryPerUser":     true,
 			"replacementPolicy":   "next-season-only",
@@ -1131,6 +1144,16 @@ func (server *LiveServer) publicLadder(ctx context.Context, seasonIDOrSlug strin
 	if description != nil && *description != "" {
 		dto["description"] = *description
 	}
+	copyTime := func(key string, value *time.Time) {
+		if value != nil {
+			dto[key] = value.UTC().Format(time.RFC3339Nano)
+		}
+	}
+	copyTime("openedAt", openedAt)
+	copyTime("closedAt", closedAt)
+	copyTime("scheduledAt", scheduledAt)
+	copyTime("completedAt", completedAt)
+	copyTime("archivedAt", archivedAt)
 	return dto, nil
 }
 
@@ -1170,7 +1193,8 @@ func (server *LiveServer) ladderMatchSetsAndStandings(ctx context.Context, seaso
 		  ms.public_counted_reason,
 		  ms.public_counted_explanation,
 		  count(distinct c.match_id)::integer as chronicle_count,
-		  count(distinct msm.match_id)::integer as match_count
+		  count(distinct msm.match_id)::integer as match_count,
+		  min(case when c.match_id is not null then msm.match_id end) as replay_match_id
 		from match_sets ms
 		left join match_set_matches msm on msm.match_set_id = ms.id
 		left join chronicles c on c.match_id = msm.match_id
@@ -1188,9 +1212,9 @@ func (server *LiveServer) ladderMatchSetsAndStandings(ctx context.Context, seaso
 		var matchSetID, status, countedStatus string
 		var scheduleRunID *string
 		var podIndex *int
-		var reason, explanation *string
+		var reason, explanation, replayMatchID *string
 		var chronicleCount, matchCount int
-		if err := rows.Scan(&matchSetID, &status, &scheduleRunID, &podIndex, &countedStatus, &reason, &explanation, &chronicleCount, &matchCount); err != nil {
+		if err := rows.Scan(&matchSetID, &status, &scheduleRunID, &podIndex, &countedStatus, &reason, &explanation, &chronicleCount, &matchCount, &replayMatchID); err != nil {
 			return nil, nil, err
 		}
 		refreshedStatus, refreshedScoring, err := newMatchSetStatusService(server.pool).refreshMatchSetStatus(ctx, matchSetID)
@@ -1207,7 +1231,7 @@ func (server *LiveServer) ladderMatchSetsAndStandings(ctx context.Context, seaso
 		if err != nil {
 			return nil, nil, err
 		}
-		summary := ladderMatchSetSummary(matchSetID, seasonID, refreshedStatus, stringValue(classification, "countedStatus"), stringPtrFromMap(classification, "publicReason"), stringPtrFromMap(classification, "publicExplanation"), entrantIDs)
+		summary := ladderMatchSetSummary(matchSetID, seasonID, refreshedStatus, stringValue(classification, "countedStatus"), stringPtrFromMap(classification, "publicReason"), stringPtrFromMap(classification, "publicExplanation"), entrantIDs, replayMatchID)
 		if scheduleRunID != nil && *scheduleRunID != "" {
 			summary["scheduleRunId"] = *scheduleRunID
 		}
@@ -3154,7 +3178,7 @@ func urlPathEscape(value string) string {
 	return replacer.Replace(value)
 }
 
-func ladderMatchSetSummary(matchSetID string, seasonID string, status string, countedStatus string, reason *string, explanation *string, entrantIDs []string) map[string]any {
+func ladderMatchSetSummary(matchSetID string, seasonID string, status string, countedStatus string, reason *string, explanation *string, entrantIDs []string, replayMatchID *string) map[string]any {
 	dto := map[string]any{
 		"matchSetId":        matchSetID,
 		"seasonId":          seasonID,
@@ -3166,6 +3190,9 @@ func ladderMatchSetSummary(matchSetID string, seasonID string, status string, co
 	}
 	if reason != nil && *reason != "" {
 		dto["publicReason"] = *reason
+	}
+	if replayMatchID != nil && *replayMatchID != "" {
+		dto["replayHref"] = "/matches/" + urlPathEscape(*replayMatchID) + "/replay"
 	}
 	return dto
 }
@@ -3197,6 +3224,70 @@ func trialLadderStatusLabel(status string) string {
 		return "Archived"
 	default:
 		return status
+	}
+}
+
+func trialSeasonEntryWindow(status string, openedAt *time.Time, closedAt *time.Time) map[string]any {
+	state := "closed"
+	label := "Counted entries closed"
+	if status == "draft" {
+		state = "not_started"
+		label = "Counted entries not open yet"
+	} else if status == "open" {
+		state = "open"
+		label = "Open for counted entries"
+	}
+	window := map[string]any{"state": state, "publicLabel": label}
+	if openedAt != nil {
+		window["openedAt"] = openedAt.UTC().Format(time.RFC3339Nano)
+	}
+	if closedAt != nil {
+		window["closedAt"] = closedAt.UTC().Format(time.RFC3339Nano)
+	}
+	return window
+}
+
+func trialSeasonSchedulingWindow(status string, scheduledAt *time.Time) map[string]any {
+	state := "closed"
+	label := "Scheduling window closed"
+	if status == "draft" || status == "open" {
+		state = "not_started"
+		label = "Scheduling has not started"
+	} else if status == "scheduling" {
+		state = "open"
+		label = "Scheduling frozen entrant snapshots"
+	}
+	window := map[string]any{"state": state, "publicLabel": label}
+	if scheduledAt != nil {
+		formatted := scheduledAt.UTC().Format(time.RFC3339Nano)
+		window["openedAt"] = formatted
+		if state == "closed" {
+			window["closedAt"] = formatted
+		}
+	}
+	return window
+}
+
+func trialSeasonOutcomeProjection(status string, storedExplanation *string) map[string]any {
+	label := "Outcome pending"
+	explanation := "The Season has not reached a final scheduling outcome."
+	switch status {
+	case "scheduled":
+		label = "Scheduled evidence"
+		explanation = "The Season produced public MatchSet evidence for resettable Season-scoped standings."
+	case "insufficient_evidence":
+		label = "Insufficient evidence"
+		explanation = "The Season closed below its minimum entry requirement and produced no counted MatchSets."
+	default:
+		status = "pending"
+	}
+	if storedExplanation != nil && *storedExplanation != "" {
+		explanation = *storedExplanation
+	}
+	return map[string]any{
+		"status":            status,
+		"publicLabel":       label,
+		"publicExplanation": explanation,
 	}
 }
 

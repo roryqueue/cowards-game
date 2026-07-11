@@ -266,6 +266,15 @@ func TestGoMatchSetStatusIntegration(t *testing.T) {
 		if !ok || len(matchSets) != 1 || matchSets[0]["countedStatus"] != "counted" {
 			t.Fatalf("expected counted ladder MatchSet, got %+v", result["matchSets"])
 		}
+		if stringValue(mapValue(result, "entryWindow"), "state") != "closed" || stringValue(mapValue(result, "schedulingWindow"), "state") != "closed" {
+			t.Fatalf("expected active Season windows to be closed, got %+v", result)
+		}
+		if stringValue(mapValue(result, "links"), "standingsHref") != "/ladder/phase100-ladder#standings" {
+			t.Fatalf("expected stable Season standings link, got %+v", result["links"])
+		}
+		if stringValue(matchSets[0], "replayHref") == "" || stringValue(matchSets[0], "resultHref") == "" {
+			t.Fatalf("expected Chronicle-backed result and replay links, got %+v", matchSets[0])
+		}
 	})
 
 	t.Run("public replay evidence projects Chronicle without private sections", func(t *testing.T) {

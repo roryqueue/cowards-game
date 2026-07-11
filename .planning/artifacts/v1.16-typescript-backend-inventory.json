@@ -2893,10 +2893,10 @@
         {
           "line": 4,
           "source": "@cowards/spec",
-          "statementText": "import { defaultRuntimeMetadata } from \"@cowards/spec\""
+          "statementText": "import {\n  defaultRuntimeMetadata,\n  describeStrategyRuntimeProductSemantics,\n} from \"@cowards/spec\""
         },
         {
-          "line": 5,
+          "line": 8,
           "source": "./competition.js",
           "statementText": "import {\n  buildExhibitionDuplicateKey,\n  evaluateRateLimit,\n  generateCompetitionPairwiseMatrix,\n  TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE,\n  runtimeAllowsCountedPlay,\n  validateManualExhibitionRevisionIds,\n} from \"./competition.js\""
         }
@@ -3823,7 +3823,7 @@
         {
           "line": 15,
           "source": "./ladder.js",
-          "statementText": "import {\n  LadderInputError,\n  assertLadderEligibleRuntime,\n  DEFAULT_LADDER_MINIMUM_ENTRIES,\n  DEFAULT_LADDER_TARGET_POD_SIZE,\n  enterTrialLadderSeason,\n  evaluateCountedEntryEligibility,\n  trialLadderStatusLabel,\n} from \"./ladder.js\""
+          "statementText": "import {\n  LadderInputError,\n  assertLadderEligibleRuntime,\n  DEFAULT_LADDER_MINIMUM_ENTRIES,\n  DEFAULT_LADDER_TARGET_POD_SIZE,\n  enterTrialLadderSeason,\n  evaluateCountedEntryEligibility,\n  scheduleTrialLadderSeason,\n  setTrialLadderSeasonStatus,\n  trialLadderStatusLabel,\n} from \"./ladder.js\""
         },
         {
           "line": 2,
@@ -3858,7 +3858,7 @@
         "packages/persistence/src/seed.ts"
       ],
       "usesDatabase": false,
-      "claimsJobs": false,
+      "claimsJobs": true,
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": false,
@@ -3908,42 +3908,52 @@
           "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
         },
         {
-          "line": 34,
+          "line": 39,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 35,
+          "line": 40,
+          "source": "pg",
+          "statementText": "import type { PoolClient } from \"pg\""
+        },
+        {
+          "line": 41,
+          "source": "./db.js",
+          "statementText": "import { withTransaction } from \"./db.js\""
+        },
+        {
+          "line": 42,
           "source": "./competition.js",
           "statementText": "import { generateCompetitionPairwiseMatrix } from \"./competition.js\""
         },
         {
-          "line": 36,
+          "line": 43,
           "source": "./matchset-service.js",
-          "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
+          "statementText": "import { insertMatchSetWithMatrixOnClient } from \"./matchset-service.js\""
         },
         {
-          "line": 37,
+          "line": 44,
           "source": "./matchset-status.js",
           "statementText": "import { refreshMatchSetStatus } from \"./matchset-status.js\""
         },
         {
-          "line": 38,
+          "line": 45,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 39,
+          "line": 46,
           "source": "./seed.js",
           "statementText": "import { createDevelopmentSeedData } from \"./seed.js\""
         },
         {
-          "line": 40,
+          "line": 47,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
         {
-          "line": 41,
+          "line": 48,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetStrategyScore } from \"./scoring.js\""
         },
@@ -3955,7 +3965,7 @@
         {
           "line": 8,
           "source": "@cowards/spec",
-          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  COMPATIBILITY_VERSIONS,\n  countedEntryEligibilityDecision,\n  describeStrategyRuntimeProductSemantics,\n  EXHIBITION_SCORING_POLICY_V1,\n  evaluateStrategyRuntimeCountedEligibility,\n  getCountedEntryEligibilityPublicCopy,\n  isCountedEntrySupportedLane,\n  normalizeStrategyRuntimeMetadata,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  validateRuntimeBrokerRegistryMatch,\n  type CompetitionEntrantSnapshot,\n  type CountedEntryEligibilityCategory,\n  type CountedEntryEligibilityDecision,\n  type LadderMatchSetCountedStatus,\n  type LadderNonCountedReason,\n  type PublicLadderMatchSetSummaryDto,\n  type PublicStandingDto,\n  type PublicTrialLadderSeasonDto,\n  type StrategyRevisionId,\n  type TrialLadderEntrySnapshot,\n  type TrialLadderEntryStatus,\n  type TrialLadderSeasonStatus,\n  type UserId,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  assertTrialSeasonTransition,\n  COMPATIBILITY_VERSIONS,\n  countedEntryEligibilityDecision,\n  describeStrategyRuntimeProductSemantics,\n  EXHIBITION_SCORING_POLICY_V1,\n  evaluateStrategyRuntimeCountedEligibility,\n  getCountedEntryEligibilityPublicCopy,\n  isCountedEntrySupportedLane,\n  normalizeStrategyRuntimeMetadata,\n  projectTrialSeasonWindows,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  trialSeasonOutcome,\n  trialSeasonPublicLinks,\n  validateRuntimeBrokerRegistryMatch,\n  type CompetitionEntrantSnapshot,\n  type CountedEntryEligibilityCategory,\n  type CountedEntryEligibilityDecision,\n  type LadderMatchSetCountedStatus,\n  type LadderNonCountedReason,\n  type PublicLadderMatchSetSummaryDto,\n  type PublicStandingDto,\n  type PublicTrialLadderSeasonDto,\n  type StrategyRevisionId,\n  type TrialLadderEntrySnapshot,\n  type TrialLadderEntryStatus,\n  type TrialLadderSeasonStatus,\n  type TrialSeasonOutcomeStatus,\n  type UserId,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -3974,7 +3984,7 @@
         "packages/persistence/src/seed.ts"
       ],
       "usesDatabase": false,
-      "claimsJobs": false,
+      "claimsJobs": true,
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": true,
@@ -4272,7 +4282,7 @@
         {
           "line": 7,
           "source": "pg",
-          "statementText": "import type { Pool } from \"pg\""
+          "statementText": "import type { Pool, PoolClient } from \"pg\""
         },
         {
           "line": 8,
@@ -4612,15 +4622,15 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  normalizeStrategyRuntimeMetadata,\n  type PublicPlayerProfileDto,\n  type PublicStrategyCardDto,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  describeStrategyRuntimeProductSemantics,\n  normalizeStrategyRuntimeMetadata,\n  type PublicPlayerProfileDto,\n  type PublicStrategyCardDto,\n} from \"@cowards/spec\""
         },
         {
-          "line": 7,
+          "line": 8,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 8,
+          "line": 9,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetStrategyScore } from \"./scoring.js\""
         }
@@ -8580,34 +8590,34 @@
           "statementText": "import { describe, expect, it } from \"vitest\""
         },
         {
-          "line": 11,
+          "line": 12,
           "source": "@cowards/persistence/quarantine-lifecycle",
           "statementText": "import type { StoredChronicle } from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
-          "line": 12,
+          "line": 13,
           "source": "@cowards/persistence/workshop-analytics",
           "statementText": "import { createWorkshopAnalyticsDemoSnapshot } from \"@cowards/persistence/workshop-analytics\""
         },
         {
-          "line": 13,
+          "line": 14,
           "source": "./index.js",
           "statementText": "import {\n  COWARDS_LOCAL_SERVICE_ROLE,\n  createCowardsLocalService,\n} from \"./index.js\""
         },
         {
           "line": 2,
           "source": "@cowards/spec",
-          "statementText": "import {\n  EXHIBITION_SCORING_POLICY_V1,\n  SERVICE_API_VERSION,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type PublicMatchSetResultDto,\n  type PublicPlayerProfileDto,\n  type PublicStrategyCardDto,\n  type PublicTrialLadderSeasonDto,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  EXHIBITION_SCORING_POLICY_V1,\n  SERVICE_API_VERSION,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  describeStrategyRuntimeProductSemantics,\n  type PublicMatchSetResultDto,\n  type PublicPlayerProfileDto,\n  type PublicStrategyCardDto,\n  type PublicTrialLadderSeasonDto,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [
         {
-          "line": 11,
+          "line": 12,
           "source": "@cowards/persistence/quarantine-lifecycle",
           "statementText": "import type { StoredChronicle } from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
-          "line": 12,
+          "line": 13,
           "source": "@cowards/persistence/workshop-analytics",
           "statementText": "import { createWorkshopAnalyticsDemoSnapshot } from \"@cowards/persistence/workshop-analytics\""
         }
@@ -10257,7 +10267,7 @@
         {
           "line": 2,
           "source": "@cowards/spec",
-          "statementText": "import {\n  MATCH_EXECUTION_CONTRACT_FIXTURES_V1,\n  type PublicMatchSetSummaryServiceDto,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  MATCH_EXECUTION_CONTRACT_FIXTURES_V1,\n  type MatchExecutionContractFixtureV1,\n} from \"@cowards/spec\""
         },
         {
           "line": 6,
@@ -10271,6 +10281,11 @@
         },
         {
           "line": 8,
+          "source": "../lib/match-execution-fixture-adapter.js",
+          "statementText": "import { toPublicMatchSetSummaryFixture } from \"../lib/match-execution-fixture-adapter.js\""
+        },
+        {
+          "line": 9,
           "source": "./match-intelligence.js",
           "statementText": "import {\n  buildReplayIntelligenceViewModel,\n  buildResultIntelligenceViewModel,\n} from \"./match-intelligence.js\""
         }
@@ -11840,7 +11855,7 @@
         {
           "line": 2,
           "source": "@cowards/spec",
-          "statementText": "import {\n  MATCH_EXECUTION_CONTRACT_FIXTURES_V1,\n  type MatchExecutionLifecycleStateV1,\n  type PublicMatchSetSummaryServiceDto,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  MATCH_EXECUTION_CONTRACT_FIXTURES_V1,\n  type MatchExecutionContractFixtureV1,\n  type MatchExecutionLifecycleStateV1,\n} from \"@cowards/spec\""
         },
         {
           "line": 7,
@@ -11849,6 +11864,11 @@
         },
         {
           "line": 8,
+          "source": "../../lib/match-execution-fixture-adapter.js",
+          "statementText": "import { toPublicMatchSetSummaryFixture } from \"../../lib/match-execution-fixture-adapter.js\""
+        },
+        {
+          "line": 9,
           "source": "./result-view-model.js",
           "statementText": "import { buildResultWorkbenchViewModel } from \"./result-view-model.js\""
         }
@@ -11910,22 +11930,17 @@
           "statementText": "import type {\n  MatchExecutionFailureCategoryV1,\n  MatchExecutionLifecycleStateV1,\n  MatchExecutionReplayAvailabilityV1,\n} from \"@cowards/spec\""
         },
         {
-          "line": 12,
+          "line": 11,
           "source": "./evidence-copy.js",
           "statementText": "import {\n  candidateLaneCue,\n  publicMatchEvidenceLabel,\n  publicPrivacyProvenanceCue,\n  publicReliabilityPrivacyCue,\n  reliabilityBudgetCue,\n} from \"./evidence-copy.js\""
         },
         {
           "line": 6,
-          "source": "@cowards/spec",
-          "statementText": "import { describeStrategyRuntimeProductSemantics } from \"@cowards/spec\""
-        },
-        {
-          "line": 7,
           "source": "../../lib/public-service-boundary.js",
           "statementText": "import type { PublicReadMatchSetResultDto } from \"../../lib/public-service-boundary.js\""
         },
         {
-          "line": 8,
+          "line": 7,
           "source": "../match-intelligence.js",
           "statementText": "import {\n  buildResultIntelligenceViewModel,\n  type ResultIntelligenceViewModel,\n} from \"../match-intelligence.js\""
         }
@@ -13804,7 +13819,7 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import {\n  MatchExecutionContractFixtureV1Schema,\n  PublicReplayEvidenceServiceDtoSchema,\n  PublicReplayMetadataServiceDtoSchema,\n  PublicMatchSetSummaryServiceDtoSchema,\n  getMatchExecutionContractFixtureByMatchId,\n  getMatchExecutionContractFixtureByMatchSetId,\n  toMatchExecutionMatchSetSummaryV1,\n  type MatchExecutionContractFixtureV1,\n  type MatchExecutionFailureCategoryV1,\n  type MatchExecutionLifecycleV1,\n  type MatchExecutionLifecycleStateV1,\n  type MatchExecutionReplayAvailabilityV1,\n  type MatchExecutionRetryDispositionV1,\n  type JsonValue,\n  type MatchId,\n  type PublicMatchEvidenceDto,\n  type PublicMatchSetResultDto,\n  type MatchSetId,\n  type PublicMatchSetSummaryServiceDto,\n  type PublicReplayEvidenceServiceDto,\n  type PublicReplayMetadataServiceDto,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  MatchExecutionContractFixtureV1Schema,\n  PublicReplayEvidenceServiceDtoSchema,\n  PublicReplayMetadataServiceDtoSchema,\n  PublicMatchSetSummaryServiceDtoSchema,\n  getMatchExecutionContractFixtureByMatchId,\n  getMatchExecutionContractFixtureByMatchSetId,\n  toMatchExecutionMatchSetSummaryV1,\n  type MatchExecutionContractFixtureV1,\n  type MatchExecutionFailureCategoryV1,\n  type MatchExecutionLifecycleV1,\n  type MatchExecutionLifecycleStateV1,\n  type MatchExecutionReplayAvailabilityV1,\n  type MatchExecutionRetryDispositionV1,\n  type JsonValue,\n  type MatchId,\n  type PublicMatchEvidenceDto,\n  type PublicMatchSetResultDto,\n  type MatchSetId,\n  type PublicMatchSetSummaryServiceDto,\n  type PublicReplayEvidenceServiceDto,\n  type PublicReplayMetadataServiceDto,\n  type StrategyRuntimeProductSemantics,\n  type StrategyRuntimeProductValidationCode,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
