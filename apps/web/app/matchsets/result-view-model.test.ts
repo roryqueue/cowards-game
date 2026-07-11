@@ -1,20 +1,23 @@
 import { describe, expect, it } from "vitest"
 import {
   MATCH_EXECUTION_CONTRACT_FIXTURES_V1,
+  type MatchExecutionContractFixtureV1,
   type MatchExecutionLifecycleStateV1,
-  type PublicMatchSetSummaryServiceDto,
 } from "@cowards/spec"
 import type { PublicReadMatchSetResultDto } from "../../lib/public-service-boundary.js"
+import { toPublicMatchSetSummaryFixture } from "../../lib/match-execution-fixture-adapter.js"
 import { buildResultWorkbenchViewModel } from "./result-view-model.js"
 
 const readResult = (
-  summary: PublicMatchSetSummaryServiceDto,
+  fixture: MatchExecutionContractFixtureV1,
 ): PublicReadMatchSetResultDto => {
+  const fixtureSummary = fixture.service.matchSetSummary
+  if (!fixtureSummary) {
+    throw new Error(`Missing fixture summary for ${fixture.id}`)
+  }
+  const summary = toPublicMatchSetSummaryFixture(fixtureSummary)
   const result = summary.result
-  const contract =
-    MATCH_EXECUTION_CONTRACT_FIXTURES_V1.find(
-      (fixture) => fixture.service.matchSetSummary === summary,
-    )?.app.matchSetSummary ?? null
+  const contract = fixture.app.matchSetSummary ?? null
   if (!contract) {
     throw new Error(`Missing app contract for ${summary.matchSetId}`)
   }
@@ -52,7 +55,7 @@ const fixtureResult = (id: string): PublicReadMatchSetResultDto => {
   if (!fixture?.service.matchSetSummary) {
     throw new Error(`Missing fixture result ${id}`)
   }
-  return readResult(fixture.service.matchSetSummary)
+  return readResult(fixture)
 }
 
 describe("result workbench view model", () => {

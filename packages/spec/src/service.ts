@@ -701,6 +701,24 @@ export const SERVICE_API_ROUTES = {
           status: "open",
           statusLabel: "Open",
           seasonSeed: "trial-ladder-demo-seed",
+          entryWindow: {
+            state: "open",
+            publicLabel: "Open for counted entries",
+          },
+          schedulingWindow: {
+            state: "not_started",
+            publicLabel: "Scheduling has not started",
+          },
+          outcome: {
+            status: "pending",
+            publicLabel: "Outcome pending",
+            publicExplanation:
+              "The Season has not reached a final scheduling outcome.",
+          },
+          links: {
+            seasonHref: "/ladder/demo-season",
+            standingsHref: "/ladder/demo-season#standings",
+          },
           policy: {
             oneEntryPerUser: true,
             replacementPolicy: "next-season-only",

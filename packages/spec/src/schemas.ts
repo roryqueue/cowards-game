@@ -33,6 +33,7 @@ import {
   STRATEGY_LANGUAGE_IDS,
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_ADAPTER_IDS,
+  STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
   STRATEGY_RUNTIME_SYSTEM_FAILURE_CODES,
   STRATEGY_RUNTIME_VIOLATION_CODES,
 } from "./runtime.js"
@@ -1249,7 +1250,13 @@ export const StrategyRevisionSummaryServiceDtoSchema = z.object({
     adapterId: StrategyRuntimeAdapterIdSchema,
     languageLabel: z.string().min(1),
     adapterLabel: z.string().min(1),
-    readiness: z.string().min(1),
+    readiness: z.enum([
+      "production-candidate",
+      "prototype",
+      "local-dev-fallback",
+      "experimental",
+      "unknown",
+    ]),
     readinessLabel: z.string().min(1),
     experimental: z.boolean(),
     countedPlayEligible: z.boolean(),
@@ -1260,7 +1267,9 @@ export const StrategyRevisionSummaryServiceDtoSchema = z.object({
     docsReference: z.string().min(1),
     examplesReference: z.string().min(1),
     warnings: z.array(z.string().min(1)),
-    validationIssueCodes: z.array(z.string().min(1)),
+    validationIssueCodes: z.array(
+      z.enum(STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES),
+    ),
   }),
   countedEntryEligibilityCategory: z.enum(COUNTED_ENTRY_ELIGIBILITY_CATEGORIES),
   engineCompatibility: z.object({
@@ -1336,7 +1345,13 @@ const CompetitionEntrantSnapshotServiceDtoSchema = z.object({
     adapterId: StrategyRuntimeAdapterIdSchema,
     languageLabel: z.string().min(1),
     adapterLabel: z.string().min(1),
-    readiness: z.string().min(1),
+    readiness: z.enum([
+      "production-candidate",
+      "prototype",
+      "local-dev-fallback",
+      "experimental",
+      "unknown",
+    ]),
     readinessLabel: z.string().min(1),
     experimental: z.boolean(),
     countedPlayEligible: z.boolean(),
@@ -1347,7 +1362,9 @@ const CompetitionEntrantSnapshotServiceDtoSchema = z.object({
     docsReference: z.string().min(1),
     examplesReference: z.string().min(1),
     warnings: z.array(z.string().min(1)),
-    validationIssueCodes: z.array(z.string().min(1)),
+    validationIssueCodes: z.array(
+      z.enum(STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES),
+    ),
   }),
   engineCompatibility: z.object({
     spec: z.string().min(1),

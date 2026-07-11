@@ -15,7 +15,10 @@ import {
   getCountedEntryEligibilityPublicCopy,
   isCountedEntrySupportedLane,
   normalizeStrategyRuntimeMetadata,
+  projectTrialSeasonWindows,
   STRATEGY_RUNTIME_ABI_VERSION,
+  trialSeasonOutcome,
+  trialSeasonPublicLinks,
   validateRuntimeBrokerRegistryMatch,
   type CompetitionEntrantSnapshot,
   type CountedEntryEligibilityCategory,
@@ -29,6 +32,7 @@ import {
   type TrialLadderEntrySnapshot,
   type TrialLadderEntryStatus,
   type TrialLadderSeasonStatus,
+  type TrialSeasonOutcomeStatus,
   type UserId,
 } from "@cowards/spec"
 import type { Pool } from "pg"
@@ -1191,6 +1195,8 @@ export const buildTrialLadderSeasonDto = async (
     scheduled_at: Date | null
     completed_at: Date | null
     archived_at: Date | null
+    outcome_status: Exclude<TrialSeasonOutcomeStatus, "pending"> | null
+    public_outcome_explanation: string | null
   }>(
     `
       select *
@@ -1218,6 +1224,7 @@ export const buildTrialLadderSeasonDto = async (
     scoring: { rankings: MatchSetStrategyScore[] } | null
     chronicle_count: number
     match_count: number
+    replay_match_id: string | null
   }>(
     `
       select
@@ -1230,7 +1237,8 @@ export const buildTrialLadderSeasonDto = async (
         ms.public_counted_explanation,
         ms.scoring,
         count(distinct c.match_id)::integer as chronicle_count,
-        count(distinct msm.match_id)::integer as match_count
+        count(distinct msm.match_id)::integer as match_count,
+        min(case when c.match_id is not null then msm.match_id end) as replay_match_id
       from match_sets ms
       left join match_set_matches msm on msm.match_set_id = ms.id
       left join chronicles c on c.match_id = msm.match_id
@@ -1286,6 +1294,11 @@ export const buildTrialLadderSeasonDto = async (
           : (row.public_counted_explanation ??
             classification.publicExplanation),
       entrantIds: entrantRows.rows.map((entrant) => entrant.snapshot.entryId),
+      ...(row.replay_match_id
+        ? {
+            replayHref: `/matches/${encodeURIComponent(row.replay_match_id)}/replay`,
+          }
+        : {}),
       resultHref: `/matchsets/${encodeURIComponent(row.id)}`,
     })
   }
@@ -1345,6 +1358,25 @@ export const buildTrialLadderSeasonDto = async (
     ...(season.archived_at
       ? { archivedAt: season.archived_at.toISOString() }
       : {}),
+    ...projectTrialSeasonWindows({
+      status: season.status,
+      ...(season.opened_at
+        ? { openedAt: season.opened_at.toISOString() }
+        : {}),
+      ...(season.closed_at
+        ? { closedAt: season.closed_at.toISOString() }
+        : {}),
+      ...(season.scheduled_at
+        ? { scheduledAt: season.scheduled_at.toISOString() }
+        : {}),
+    }),
+    outcome: {
+      ...trialSeasonOutcome(season.outcome_status ?? "pending"),
+      ...(season.public_outcome_explanation
+        ? { publicExplanation: season.public_outcome_explanation }
+        : {}),
+    },
+    links: trialSeasonPublicLinks(season.slug),
     policy: {
       oneEntryPerUser: true,
       replacementPolicy: "next-season-only",

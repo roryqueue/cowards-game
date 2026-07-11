@@ -3,7 +3,6 @@ import type {
   MatchExecutionLifecycleStateV1,
   MatchExecutionReplayAvailabilityV1,
 } from "@cowards/spec"
-import { describeStrategyRuntimeProductSemantics } from "@cowards/spec"
 import type { PublicReadMatchSetResultDto } from "../../lib/public-service-boundary.js"
 import {
   buildResultIntelligenceViewModel,
@@ -245,13 +244,8 @@ const formatEntrantRuntimeSummary = (
     if (storedCountedStatus === "non_counted") {
       return false
     }
-    const proofAwareCounted =
-      "runtimeSemantics" in entrant
-        ? entrant.runtimeSemantics.countedPlayEligible
-        : describeStrategyRuntimeProductSemantics(entrant.runtime)
-            .countedPlayEligible
     return (
-      proofAwareCounted &&
+      entrant.runtimeSemantics.countedPlayEligible &&
       !nonCountedLanguages.has(entrant.runtime.language.id)
     )
   }).length

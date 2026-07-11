@@ -3,6 +3,7 @@ import {
   EXHIBITION_SCORING_POLICY_V1,
   SERVICE_API_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION,
+  describeStrategyRuntimeProductSemantics,
   type PublicMatchSetResultDto,
   type PublicPlayerProfileDto,
   type PublicStrategyCardDto,
@@ -63,6 +64,7 @@ const publicStrategyCard = {
   sourceHash: "sourcehash-demo",
   sourceBytes: 256,
   runtime,
+  runtimeSemantics: describeStrategyRuntimeProductSemantics(runtime),
   engineCompatibility: {
     spec: "cowards-rules-v1.4",
     engine: "engine-v1",
@@ -77,6 +79,9 @@ const publicStrategyCard = {
   resultLinks: ["/matchsets/match-set:demo"],
   replayLinks: ["/matches/match:demo/replay"],
 } satisfies PublicStrategyCardDto
+
+const { runtimeSemantics: _runtimeSemantics, ...publicStrategyCardResponse } =
+  publicStrategyCard
 
 const publicPlayerProfile = {
   handle: "demo-player",
@@ -94,6 +99,11 @@ const publicPlayerProfile = {
   results: [],
 } satisfies PublicPlayerProfileDto
 
+const publicPlayerProfileResponse = {
+  ...publicPlayerProfile,
+  strategies: [publicStrategyCardResponse],
+}
+
 const publicTrialLadderSeason = {
   seasonId: "ladder-season:demo",
   slug: "demo-season",
@@ -101,6 +111,24 @@ const publicTrialLadderSeason = {
   status: "open",
   statusLabel: "Open",
   seasonSeed: "trial-ladder-demo-seed",
+  entryWindow: {
+    state: "open",
+    publicLabel: "Open for counted entries",
+  },
+  schedulingWindow: {
+    state: "not_started",
+    publicLabel: "Scheduling has not started",
+  },
+  outcome: {
+    status: "pending",
+    publicLabel: "Outcome pending",
+    publicExplanation:
+      "The Season has not reached a final scheduling outcome.",
+  },
+  links: {
+    seasonHref: "/ladder/demo-season",
+    standingsHref: "/ladder/demo-season#standings",
+  },
   policy: {
     oneEntryPerUser: true,
     replacementPolicy: "next-season-only",
@@ -161,8 +189,8 @@ const accountRevision = {
     languageLabel: "TypeScript",
     adapterId: "runtime-js-worker-thread",
     adapterLabel: "Worker thread",
-    readiness: "production",
-    readinessLabel: "Production",
+    readiness: "production-candidate",
+    readinessLabel: "Provenance evidence only",
     experimental: false,
     countedPlayEligible: true,
     countedPlayLabel: "Counted eligible",
@@ -400,7 +428,7 @@ describe("createCowardsLocalService", () => {
       page: "strategy",
       canonicalHref: "/strategies/strategy%3Ademo",
       payload: {
-        strategy: publicStrategyCard,
+        strategy: publicStrategyCardResponse,
       },
     })
   })
@@ -427,7 +455,7 @@ describe("createCowardsLocalService", () => {
       kind: "publicPage",
       page: "player",
       canonicalHref: "/players/demo-player",
-      payload: publicPlayerProfile,
+      payload: publicPlayerProfileResponse,
     })
   })
 

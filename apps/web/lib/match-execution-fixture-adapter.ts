@@ -20,6 +20,8 @@ import {
   type PublicMatchSetSummaryServiceDto,
   type PublicReplayEvidenceServiceDto,
   type PublicReplayMetadataServiceDto,
+  type StrategyRuntimeProductSemantics,
+  type StrategyRuntimeProductValidationCode,
 } from "@cowards/spec"
 
 export interface MatchExecutionFixtureEnv extends Record<
@@ -65,6 +67,61 @@ const safeDecodeURIComponent = <T extends string>(value: T): T => {
 
 const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
+const fixtureRuntimeReadiness = (
+  value: string,
+): StrategyRuntimeProductSemantics["readiness"] => {
+  switch (value) {
+    case "production-candidate":
+    case "prototype":
+    case "local-dev-fallback":
+    case "experimental":
+    case "unknown":
+      return value
+    default:
+      throw new Error(`invalid fixture runtime readiness: ${value}`)
+  }
+}
+
+const fixtureRuntimeValidationCode = (
+  value: string,
+): StrategyRuntimeProductValidationCode => {
+  switch (value) {
+    case "UNSUPPORTED_LANGUAGE":
+    case "UNSUPPORTED_PACKAGE_METADATA":
+    case "INCOMPATIBLE_ADAPTER":
+    case "ABI_MISMATCH":
+    case "SOURCE_TOO_LARGE":
+    case "MEMORY_LIMIT_EXCEEDED":
+    case "TIMEOUT":
+    case "FORBIDDEN_CAPABILITY":
+    case "NON_COUNTED_RUNTIME":
+      return value
+    default:
+      throw new Error(`invalid fixture runtime validation code: ${value}`)
+  }
+}
+
+export const toPublicMatchSetSummaryFixture = (
+  summary: NonNullable<
+    MatchExecutionContractFixtureV1["service"]["matchSetSummary"]
+  >,
+): PublicMatchSetSummaryServiceDto => ({
+  ...summary,
+  result: {
+    ...summary.result,
+    entrants: summary.result.entrants.map((entrant) => ({
+      ...entrant,
+      runtimeSemantics: {
+        ...entrant.runtimeSemantics,
+        readiness: fixtureRuntimeReadiness(entrant.runtimeSemantics.readiness),
+        validationIssueCodes: entrant.runtimeSemantics.validationIssueCodes.map(
+          fixtureRuntimeValidationCode,
+        ),
+      },
+    })),
+  },
+})
+
 const requiredBaseSummary = (): PublicMatchSetSummaryServiceDto => {
   const base = getMatchExecutionContractFixtureByMatchSetId(
     "match-set:fixture:stale-artifact",
@@ -72,7 +129,9 @@ const requiredBaseSummary = (): PublicMatchSetSummaryServiceDto => {
   if (!base) {
     throw new Error("missing stale-artifact fixture summary")
   }
-  return base as PublicMatchSetSummaryServiceDto
+  return toPublicMatchSetSummaryFixture(
+    PublicMatchSetSummaryServiceDtoSchema.parse(base),
+  )
 }
 
 const createAppOnlyMatchSetFixture = (
@@ -133,7 +192,9 @@ const createAppOnlyMatchSetFixture = (
       chronicleHashes: [],
     },
   }
-  const serviceSummary = PublicMatchSetSummaryServiceDtoSchema.parse(summary)
+  const serviceSummary = toPublicMatchSetSummaryFixture(
+    PublicMatchSetSummaryServiceDtoSchema.parse(summary),
+  )
   return MatchExecutionContractFixtureV1Schema.parse({
     id,
     label,
@@ -340,14 +401,18 @@ export const createMatchExecutionFixturePublicReadClient = (
     async getPublicMatchSetSummary(matchSetId) {
       const summary = getFixtureByMatchSetId(safeDecodeURIComponent(matchSetId))
         ?.service.matchSetSummary
-      return (summary as PublicMatchSetSummaryServiceDto | undefined) ?? null
+      return summary
+        ? toPublicMatchSetSummaryFixture(
+            PublicMatchSetSummaryServiceDtoSchema.parse(summary),
+          )
+        : null
     },
     async getPublicReplayMetadata(matchId) {
       const metadata = getFixtureByMatchId(safeDecodeURIComponent(matchId))
         ?.service.replayMetadata
       return metadata
         ? createPlayableReplayMetadata(
-            metadata as PublicReplayMetadataServiceDto,
+            PublicReplayMetadataServiceDtoSchema.parse(metadata),
           )
         : null
     },
@@ -356,7 +421,9 @@ export const createMatchExecutionFixturePublicReadClient = (
         ?.service.replayEvidence
       return evidence
         ? createPlayableReplayEvidence(
-            evidence as PublicReplayEvidenceServiceDto,
+            PublicReplayEvidenceServiceDtoSchema.parse(
+              evidence,
+            ) as PublicReplayEvidenceServiceDto,
           )
         : null
     },
