@@ -2541,12 +2541,12 @@
         "packages/persistence/src/ladder.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
-        "packages/persistence/src/matchset-status.ts",
         "packages/persistence/src/presets.ts",
         "packages/persistence/src/repositories.ts",
         "packages/persistence/src/schema.ts",
         "packages/persistence/src/scoring.ts",
         "packages/persistence/src/seed.ts",
+        "packages/persistence/src/standings-recompute.ts",
         "packages/persistence/src/starter-strategies.ts"
       ],
       "usesDatabase": false,
@@ -2573,7 +2573,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts"
+          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts, packages/persistence/src/starter-strategies.ts"
         }
       ]
     },
@@ -2892,11 +2892,16 @@
         },
         {
           "line": 4,
+          "source": "node:fs",
+          "statementText": "import { readFileSync } from \"node:fs\""
+        },
+        {
+          "line": 5,
           "source": "@cowards/spec",
           "statementText": "import {\n  defaultRuntimeMetadata,\n  describeStrategyRuntimeProductSemantics,\n} from \"@cowards/spec\""
         },
         {
-          "line": 8,
+          "line": 9,
           "source": "./competition.js",
           "statementText": "import {\n  buildExhibitionDuplicateKey,\n  evaluateRateLimit,\n  generateCompetitionPairwiseMatrix,\n  TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE,\n  runtimeAllowsCountedPlay,\n  validateManualExhibitionRevisionIds,\n} from \"./competition.js\""
         }
@@ -2909,7 +2914,6 @@
         "packages/persistence/src/db.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
-        "packages/persistence/src/matchset-status.ts",
         "packages/persistence/src/presets.ts",
         "packages/persistence/src/repositories.ts",
         "packages/persistence/src/schema.ts",
@@ -2936,7 +2940,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
+          "detail": "packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
         }
       ]
     },
@@ -2967,49 +2971,44 @@
           "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
         },
         {
-          "line": 22,
+          "line": 24,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 23,
+          "line": 25,
           "source": "./matchset-service.js",
           "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
         },
         {
-          "line": 24,
+          "line": 26,
           "source": "./match-service.js",
           "statementText": "import type { CreateMatchInput } from \"./match-service.js\""
         },
         {
-          "line": 25,
+          "line": 27,
           "source": "./presets.js",
           "statementText": "import { getMatchSetPreset } from \"./presets.js\""
         },
         {
-          "line": 26,
+          "line": 28,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 27,
+          "line": 29,
           "source": "./seed.js",
           "statementText": "import { createDevelopmentSeedData } from \"./seed.js\""
         },
         {
-          "line": 28,
+          "line": 30,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus, MatchStatus } from \"./schema.js\""
         },
         {
-          "line": 29,
+          "line": 31,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetScore } from \"./scoring.js\""
-        },
-        {
-          "line": 30,
-          "source": "./matchset-status.js",
-          "statementText": "import { refreshMatchSetStatus } from \"./matchset-status.js\""
         },
         {
           "line": 7,
@@ -3019,7 +3018,7 @@
         {
           "line": 8,
           "source": "@cowards/spec",
-          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  describeStrategyRuntimeProductSemantics,\n  evaluateStrategyRuntimeCountedEligibility,\n  getCompetitionPreset,\n  normalizeStrategyRuntimeMetadata,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type CompetitionEntrantSnapshot,\n  type CompetitionPresetId,\n  type PublicMatchSetResultDto,\n  type PublicPenaltyReason,\n  type PublicStandingDto,\n  type UserId,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  classifyCompetitionCountedState,\n  describeStrategyRuntimeProductSemantics,\n  evaluateStrategyRuntimeCountedEligibility,\n  getCompetitionPreset,\n  normalizeStrategyRuntimeMetadata,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type CompetitionEntrantSnapshot,\n  type CompetitionPresetId,\n  type LadderMatchSetCountedStatus,\n  type PublicMatchSetResultDto,\n  type PublicPenaltyReason,\n  type PublicStandingDto,\n  type UserId,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -3029,7 +3028,6 @@
         "packages/persistence/src/db.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
-        "packages/persistence/src/matchset-status.ts",
         "packages/persistence/src/presets.ts",
         "packages/persistence/src/repositories.ts",
         "packages/persistence/src/schema.ts",
@@ -3056,7 +3054,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
         }
       ]
     },
@@ -3621,6 +3619,7 @@
         "packages/persistence/src/schema.ts",
         "packages/persistence/src/scoring.ts",
         "packages/persistence/src/seed.ts",
+        "packages/persistence/src/standings-recompute.ts",
         "packages/persistence/src/starter-strategies.ts",
         "packages/persistence/src/workshop-analytics.ts",
         "packages/persistence/src/workshop.ts"
@@ -3645,7 +3644,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/account-revisions.ts, packages/persistence/src/advanced-strategies.ts, packages/persistence/src/auth.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/dev-smoke.ts, packages/persistence/src/governance.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/profiles.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop-analytics.ts, packages/persistence/src/workshop.ts"
+          "detail": "packages/persistence/src/account-revisions.ts, packages/persistence/src/advanced-strategies.ts, packages/persistence/src/auth.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/dev-smoke.ts, packages/persistence/src/governance.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/profiles.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop-analytics.ts, packages/persistence/src/workshop.ts"
         }
       ]
     },
@@ -3850,18 +3849,18 @@
         "packages/persistence/src/ladder.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
-        "packages/persistence/src/matchset-status.ts",
         "packages/persistence/src/presets.ts",
         "packages/persistence/src/repositories.ts",
         "packages/persistence/src/schema.ts",
         "packages/persistence/src/scoring.ts",
-        "packages/persistence/src/seed.ts"
+        "packages/persistence/src/seed.ts",
+        "packages/persistence/src/standings-recompute.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": true,
       "completesMatches": false,
       "persistsChronicles": false,
-      "refreshesScoring": false,
+      "refreshesScoring": true,
       "servesPublicEvidence": false,
       "executesStrategy": false,
       "ownerDebugAccess": false,
@@ -3877,7 +3876,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
+          "detail": "packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts"
         }
       ]
     },
@@ -3908,54 +3907,54 @@
           "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
         },
         {
-          "line": 39,
+          "line": 38,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 40,
+          "line": 39,
           "source": "pg",
           "statementText": "import type { PoolClient } from \"pg\""
         },
         {
-          "line": 41,
+          "line": 40,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
         },
         {
-          "line": 42,
+          "line": 41,
           "source": "./competition.js",
           "statementText": "import { generateCompetitionPairwiseMatrix } from \"./competition.js\""
         },
         {
-          "line": 43,
+          "line": 42,
           "source": "./matchset-service.js",
           "statementText": "import { insertMatchSetWithMatrixOnClient } from \"./matchset-service.js\""
         },
         {
-          "line": 44,
-          "source": "./matchset-status.js",
-          "statementText": "import { refreshMatchSetStatus } from \"./matchset-status.js\""
-        },
-        {
-          "line": 45,
+          "line": 43,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 46,
+          "line": 44,
           "source": "./seed.js",
           "statementText": "import { createDevelopmentSeedData } from \"./seed.js\""
         },
         {
-          "line": 47,
+          "line": 45,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
         {
-          "line": 48,
+          "line": 46,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetStrategyScore } from \"./scoring.js\""
+        },
+        {
+          "line": 47,
+          "source": "./standings-recompute.js",
+          "statementText": "import {\n  recomputeSeasonStandings,\n  type ClassifiedSeasonMatchSet,\n} from \"./standings-recompute.js\""
         },
         {
           "line": 7,
@@ -3965,7 +3964,7 @@
         {
           "line": 8,
           "source": "@cowards/spec",
-          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  assertTrialSeasonTransition,\n  COMPATIBILITY_VERSIONS,\n  countedEntryEligibilityDecision,\n  describeStrategyRuntimeProductSemantics,\n  EXHIBITION_SCORING_POLICY_V1,\n  evaluateStrategyRuntimeCountedEligibility,\n  getCountedEntryEligibilityPublicCopy,\n  isCountedEntrySupportedLane,\n  normalizeStrategyRuntimeMetadata,\n  projectTrialSeasonWindows,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  trialSeasonOutcome,\n  trialSeasonPublicLinks,\n  validateRuntimeBrokerRegistryMatch,\n  type CompetitionEntrantSnapshot,\n  type CountedEntryEligibilityCategory,\n  type CountedEntryEligibilityDecision,\n  type LadderMatchSetCountedStatus,\n  type LadderNonCountedReason,\n  type PublicLadderMatchSetSummaryDto,\n  type PublicStandingDto,\n  type PublicTrialLadderSeasonDto,\n  type StrategyRevisionId,\n  type TrialLadderEntrySnapshot,\n  type TrialLadderEntryStatus,\n  type TrialLadderSeasonStatus,\n  type TrialSeasonOutcomeStatus,\n  type UserId,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  assertTrialSeasonTransition,\n  COMPATIBILITY_VERSIONS,\n  classifyCompetitionCountedState,\n  countedEntryEligibilityDecision,\n  describeStrategyRuntimeProductSemantics,\n  EXHIBITION_SCORING_POLICY_V1,\n  evaluateStrategyRuntimeCountedEligibility,\n  getCountedEntryEligibilityPublicCopy,\n  isCountedEntrySupportedLane,\n  normalizeStrategyRuntimeMetadata,\n  projectTrialSeasonWindows,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  trialSeasonOutcome,\n  trialSeasonPublicLinks,\n  validateRuntimeBrokerRegistryMatch,\n  type CompetitionEntrantSnapshot,\n  type CountedEntryEligibilityCategory,\n  type CountedEntryEligibilityDecision,\n  type PublicLadderMatchSetSummaryDto,\n  type PublicStandingDto,\n  type PublicTrialLadderSeasonDto,\n  type StrategyRevisionId,\n  type TrialLadderEntrySnapshot,\n  type TrialLadderEntryStatus,\n  type TrialLadderSeasonStatus,\n  type TrialSeasonOutcomeStatus,\n  type UserId,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -3976,12 +3975,12 @@
         "packages/persistence/src/db.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
-        "packages/persistence/src/matchset-status.ts",
         "packages/persistence/src/presets.ts",
         "packages/persistence/src/repositories.ts",
         "packages/persistence/src/schema.ts",
         "packages/persistence/src/scoring.ts",
-        "packages/persistence/src/seed.ts"
+        "packages/persistence/src/seed.ts",
+        "packages/persistence/src/standings-recompute.ts"
       ],
       "usesDatabase": false,
       "claimsJobs": true,
@@ -4003,7 +4002,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
+          "detail": "packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts"
         }
       ]
     },
@@ -4622,17 +4621,17 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  describeStrategyRuntimeProductSemantics,\n  normalizeStrategyRuntimeMetadata,\n  type PublicPlayerProfileDto,\n  type PublicStrategyCardDto,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  classifyCompetitionCountedState,\n  describeStrategyRuntimeProductSemantics,\n  normalizeStrategyRuntimeMetadata,\n  type PublicPlayerProfileDto,\n  type PublicStrategyCardDto,\n} from \"@cowards/spec\""
         },
         {
-          "line": 8,
-          "source": "pg",
-          "statementText": "import type { Pool } from \"pg\""
+          "line": 10,
+          "source": "./scoring.js",
+          "statementText": "import type { MatchSetStrategyScore } from \"./scoring.js\""
         },
         {
           "line": 9,
-          "source": "./scoring.js",
-          "statementText": "import type { MatchSetStrategyScore } from \"./scoring.js\""
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
         }
       ],
       "persistenceImports": [],
@@ -5058,6 +5057,138 @@
         {
           "code": "runtime_import",
           "detail": "@cowards/runtime-js"
+        }
+      ]
+    },
+    {
+      "id": "packages-persistence-src-standings-recompute-test",
+      "path": "packages/persistence/src/standings-recompute.test.ts",
+      "kind": "persistence-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "persistence",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  classifyCompetitionCountedState,\n  type CompetitionCountedStateProjection,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 6,
+          "source": "./standings-recompute.js",
+          "statementText": "import {\n  recomputeSeasonStandings,\n  type ClassifiedSeasonMatchSet,\n  type SeasonStandingEntrant,\n} from \"./standings-recompute.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "packages/persistence/src/schema.ts",
+        "packages/persistence/src/scoring.ts",
+        "packages/persistence/src/standings-recompute.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": true,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/persistence/src/standings-recompute.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/standings-recompute.ts"
+        }
+      ]
+    },
+    {
+      "id": "packages-persistence-src-standings-recompute",
+      "path": "packages/persistence/src/standings-recompute.ts",
+      "kind": "persistence-module",
+      "role": "parity-only",
+      "retirementAction": "quarantine-for-parity",
+      "owner": "parity_fixture_maintainer",
+      "reason": "TypeScript service or persistence behavior remains as parity oracle or reference fixture, not normal backend behavior.",
+      "gate": "parity fixture generation or monitor-only reference gate",
+      "risk": "parity reference accidentally used as normal product backend",
+      "futureMigration": "Keep only as fixture/parity source until monitors no longer need TypeScript reference output.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "persistence",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "@cowards/spec",
+          "statementText": "import type {\n  CompetitionCountedStateProjection,\n  CompetitionEvidenceAvailability,\n  PublicStandingDto,\n  StrategyRevisionId,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 7,
+          "source": "./scoring.js",
+          "statementText": "import type { MatchSetStrategyScore } from \"./scoring.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "packages/persistence/src/schema.ts",
+        "packages/persistence/src/scoring.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": true,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/persistence/src/standings-recompute.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts"
         }
       ]
     },

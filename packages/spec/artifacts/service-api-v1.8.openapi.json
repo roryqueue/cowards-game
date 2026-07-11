@@ -449,15 +449,79 @@
                 "items": {
                   "additionalProperties": false,
                   "properties": {
+                    "countedState": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "evidenceAvailability": {
+                          "enum": [
+                            "available",
+                            "partial",
+                            "unavailable"
+                          ],
+                          "type": "string"
+                        },
+                        "publicExplanation": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "publicLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "publicReason": {
+                          "enum": [
+                            "system_failure",
+                            "incomplete_evidence",
+                            "invalid_result",
+                            "governance_hold",
+                            "non_counted",
+                            "non_competitive",
+                            "disputed",
+                            "invalidated"
+                          ],
+                          "type": "string"
+                        },
+                        "standingsEffect": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "pending",
+                            "counted",
+                            "retrying",
+                            "degraded_system_failure",
+                            "non_counted",
+                            "non_competitive",
+                            "under_review",
+                            "disputed",
+                            "invalid",
+                            "invalidated"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "publicLabel",
+                        "publicExplanation",
+                        "standingsEffect",
+                        "evidenceAvailability"
+                      ],
+                      "type": "object"
+                    },
                     "countedStatus": {
                       "enum": [
                         "pending",
                         "counted",
                         "retrying",
-                        "under_review",
-                        "invalid",
+                        "degraded_system_failure",
+                        "non_counted",
                         "non_competitive",
-                        "non_counted"
+                        "under_review",
+                        "disputed",
+                        "invalid",
+                        "invalidated"
                       ],
                       "type": "string"
                     },
@@ -487,7 +551,10 @@
                         "incomplete_evidence",
                         "invalid_result",
                         "governance_hold",
-                        "non_counted"
+                        "non_counted",
+                        "non_competitive",
+                        "disputed",
+                        "invalidated"
                       ],
                       "type": "string"
                     },
@@ -524,6 +591,7 @@
                     "seasonId",
                     "status",
                     "countedStatus",
+                    "countedState",
                     "entrantIds",
                     "resultHref"
                   ],
@@ -692,6 +760,51 @@
                 "items": {
                   "additionalProperties": false,
                   "properties": {
+                    "competitionEvidence": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "countedMatchSetCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "evidenceAvailability": {
+                          "enum": [
+                            "available",
+                            "partial",
+                            "unavailable"
+                          ],
+                          "type": "string"
+                        },
+                        "excludedMatchSetCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "replayLinks": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "resultLinks": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "countedMatchSetCount",
+                        "excludedMatchSetCount",
+                        "evidenceAvailability",
+                        "resultLinks",
+                        "replayLinks"
+                      ],
+                      "type": "object"
+                    },
                     "displayLabel": {
                       "minLength": 1,
                       "type": "string"
@@ -903,6 +1016,80 @@
           "result": {
             "additionalProperties": false,
             "properties": {
+              "competition": {
+                "additionalProperties": false,
+                "properties": {
+                  "countedState": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "evidenceAvailability": {
+                        "enum": [
+                          "available",
+                          "partial",
+                          "unavailable"
+                        ],
+                        "type": "string"
+                      },
+                      "publicExplanation": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "publicLabel": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "publicReason": {
+                        "enum": [
+                          "system_failure",
+                          "incomplete_evidence",
+                          "invalid_result",
+                          "governance_hold",
+                          "non_counted",
+                          "non_competitive",
+                          "disputed",
+                          "invalidated"
+                        ],
+                        "type": "string"
+                      },
+                      "standingsEffect": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "state": {
+                        "enum": [
+                          "pending",
+                          "counted",
+                          "retrying",
+                          "degraded_system_failure",
+                          "non_counted",
+                          "non_competitive",
+                          "under_review",
+                          "disputed",
+                          "invalid",
+                          "invalidated"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "publicLabel",
+                      "publicExplanation",
+                      "standingsEffect",
+                      "evidenceAvailability"
+                    ],
+                    "type": "object"
+                  },
+                  "seasonId": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "countedState"
+                ],
+                "type": "object"
+              },
               "entrants": {
                 "items": {
                   "additionalProperties": false,
@@ -1432,6 +1619,51 @@
                 "items": {
                   "additionalProperties": false,
                   "properties": {
+                    "competitionEvidence": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "countedMatchSetCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "evidenceAvailability": {
+                          "enum": [
+                            "available",
+                            "partial",
+                            "unavailable"
+                          ],
+                          "type": "string"
+                        },
+                        "excludedMatchSetCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "replayLinks": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "resultLinks": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "countedMatchSetCount",
+                        "excludedMatchSetCount",
+                        "evidenceAvailability",
+                        "resultLinks",
+                        "replayLinks"
+                      ],
+                      "type": "object"
+                    },
                     "displayLabel": {
                       "minLength": 1,
                       "type": "string"
@@ -1663,15 +1895,79 @@
                 "items": {
                   "additionalProperties": false,
                   "properties": {
+                    "countedState": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "evidenceAvailability": {
+                          "enum": [
+                            "available",
+                            "partial",
+                            "unavailable"
+                          ],
+                          "type": "string"
+                        },
+                        "publicExplanation": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "publicLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "publicReason": {
+                          "enum": [
+                            "system_failure",
+                            "incomplete_evidence",
+                            "invalid_result",
+                            "governance_hold",
+                            "non_counted",
+                            "non_competitive",
+                            "disputed",
+                            "invalidated"
+                          ],
+                          "type": "string"
+                        },
+                        "standingsEffect": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "pending",
+                            "counted",
+                            "retrying",
+                            "degraded_system_failure",
+                            "non_counted",
+                            "non_competitive",
+                            "under_review",
+                            "disputed",
+                            "invalid",
+                            "invalidated"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "publicLabel",
+                        "publicExplanation",
+                        "standingsEffect",
+                        "evidenceAvailability"
+                      ],
+                      "type": "object"
+                    },
                     "countedStatus": {
                       "enum": [
                         "pending",
                         "counted",
                         "retrying",
-                        "under_review",
-                        "invalid",
+                        "degraded_system_failure",
+                        "non_counted",
                         "non_competitive",
-                        "non_counted"
+                        "under_review",
+                        "disputed",
+                        "invalid",
+                        "invalidated"
                       ],
                       "type": "string"
                     },
@@ -1701,7 +1997,10 @@
                         "incomplete_evidence",
                         "invalid_result",
                         "governance_hold",
-                        "non_counted"
+                        "non_counted",
+                        "non_competitive",
+                        "disputed",
+                        "invalidated"
                       ],
                       "type": "string"
                     },
@@ -1738,6 +2037,7 @@
                     "seasonId",
                     "status",
                     "countedStatus",
+                    "countedState",
                     "entrantIds",
                     "resultHref"
                   ],
