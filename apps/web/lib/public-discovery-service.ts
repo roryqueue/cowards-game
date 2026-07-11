@@ -1,4 +1,5 @@
 import {
+  COMPETITION_POLICY_V1_36_POSTURE,
   COMPETITION_PRESETS,
   SignedInCompetitionEntryDashboardDtoSchema,
   PublicCompetitionDetailDtoSchema,
@@ -6,8 +7,11 @@ import {
   PublicHomeDiscoveryDtoSchema,
   PublicWatchIndexDtoSchema,
   assertPublicDiscoveryDtoLeakSafe,
+  getCountedEntryEligibilityPublicCopy,
+  isCountedEntrySupportedLane,
   publicDiscoveryBoundary,
   type CompetitionPreset,
+  type CountedEntryEligibilityPublicCopy,
   type PublicCompetitionDetailDto,
   type PublicCompetitionIndexDto,
   type PublicDiscoveryCompetitionCard,
@@ -163,6 +167,7 @@ const toLadderCompetitionCard = (
   ladder: PublicTrialLadderSeasonDto,
 ): PublicDiscoveryCompetitionCard => {
   const competitionId = `ladder:${ladder.seasonId}`
+  const openForEntry = ladder.status === "open"
   return {
     competitionId,
     title: ladder.name,
@@ -177,6 +182,7 @@ const toLadderCompetitionCard = (
             : "unavailable",
     statusLabel: ladder.statusLabel,
     href: competitionHref(competitionId),
+    ...(openForEntry ? { enterHref: competitionEnterHref(competitionId) } : {}),
     ...(ladder.description ? { description: ladder.description } : {}),
     entrantCount: ladder.entries.length,
     matchSetCount: ladder.matchSets.length,
@@ -248,6 +254,44 @@ const parseCompetitionId = (
 
 const revisionRuntimeLabel = (revision: AccountReadRevisionSummary): string =>
   runtimeExhibitionStatusLabel(revision.runtimeSemantics)
+
+const countedEntryEligibilityForRevision = (
+  revision: AccountReadRevisionSummary,
+): CountedEntryEligibilityPublicCopy => {
+  if (!revision.valid) {
+    return getCountedEntryEligibilityPublicCopy("invalid_strategy_revision")
+  }
+  if (!revision.lockedAt) {
+    return getCountedEntryEligibilityPublicCopy("mutable_draft")
+  }
+  const languageId: string = revision.runtimeSemantics.languageId
+  if (languageId === "tinygo") {
+    return getCountedEntryEligibilityPublicCopy("hidden_unsupported_provider")
+  }
+  if (!isCountedEntrySupportedLane(languageId)) {
+    return getCountedEntryEligibilityPublicCopy("unsupported_source_format")
+  }
+  if (revision.runtimeSemantics.countedPlayEligible) {
+    return getCountedEntryEligibilityPublicCopy("provider_validated")
+  }
+
+  const reason = revision.runtimeSemantics.countedPlayReason?.toLowerCase() ?? ""
+  if (reason.includes("package")) {
+    return getCountedEntryEligibilityPublicCopy("package_policy_violation")
+  }
+  if (reason.includes("capabilit")) {
+    return getCountedEntryEligibilityPublicCopy("capability_policy_violation")
+  }
+  if (reason.includes("provider") || reason.includes("provenance")) {
+    return getCountedEntryEligibilityPublicCopy("provider_proof_missing")
+  }
+  if (reason.includes("unavailable")) {
+    return getCountedEntryEligibilityPublicCopy("runtime_service_unavailable")
+  }
+  return getCountedEntryEligibilityPublicCopy(
+    "incompatible_runtime_metadata",
+  )
+}
 
 export const createPublicDiscoveryService = (
   options: PublicDiscoveryServiceDeps = {},
@@ -489,12 +533,31 @@ export const createPublicDiscoveryService = (
       }
     }
 
-    const validRevisions = revisions.filter((revision) => revision.valid)
-    const invalidRevisions = revisions.filter((revision) => !revision.valid)
+    const parsedCompetition = parseCompetitionId(competitionId)
     const entryMode =
-      parseCompetitionId(competitionId)?.kind === "exhibition"
+      parsedCompetition?.kind === "exhibition"
         ? "exhibition-preset"
-        : "unavailable"
+        : parsedCompetition?.kind === "ladder" &&
+            detail.competition.status === "open"
+          ? "counted-ladder-season"
+          : "unavailable"
+    const revisionsWithEligibility = revisions.map((revision) => ({
+      revision,
+      eligibility: countedEntryEligibilityForRevision(revision),
+    }))
+    const eligibleRevisions =
+      entryMode === "counted-ladder-season"
+        ? revisionsWithEligibility.filter(
+            ({ eligibility }) =>
+              eligibility.category === "provider_validated",
+          )
+        : revisionsWithEligibility.filter(({ revision }) => revision.valid)
+    const ineligibleRevisions = revisionsWithEligibility.filter(
+      ({ revision, eligibility }) =>
+        entryMode === "counted-ladder-season"
+          ? eligibility.category !== "provider_validated"
+          : !revision.valid,
+    )
     const dto = SignedInCompetitionEntryDashboardDtoSchema.parse({
       kind: "signedInCompetitionEntryDashboard",
       boundary: publicDiscoveryBoundary(),
@@ -502,6 +565,7 @@ export const createPublicDiscoveryService = (
       signedIn: Boolean(user),
       accountUnavailable,
       revisionsUnavailable,
+      posture: COMPETITION_POLICY_V1_36_POSTURE,
       user: user
         ? {
             handle: user.handle,
@@ -509,7 +573,7 @@ export const createPublicDiscoveryService = (
             accountHref: "/account",
           }
         : null,
-      eligibleRevisions: validRevisions.map((revision) => ({
+      eligibleRevisions: eligibleRevisions.map(({ revision, eligibility }) => ({
         strategyRevisionId: revision.id,
         strategyId: revision.strategyId,
         label: revision.label ?? "Untitled revision",
@@ -523,18 +587,29 @@ export const createPublicDiscoveryService = (
         countedPlayEligible:
           revision.runtimeSemantics.countedPlayEligible === true,
         countedPlayReason: revision.runtimeSemantics.countedPlayReason,
+        eligibility,
         createdAt: revision.createdAt,
       })),
-      ineligibleRevisions: invalidRevisions.map((revision) => ({
-        strategyRevisionId: revision.id,
-        label: revision.label ?? "Untitled revision",
-        runtimeLabel: revisionRuntimeLabel(revision),
-        reason: "Revision must validate before competition entry.",
-      })),
+      ineligibleRevisions: ineligibleRevisions.map(
+        ({ revision, eligibility }) => ({
+          strategyRevisionId: revision.id,
+          label: revision.label ?? "Untitled revision",
+          runtimeLabel: revisionRuntimeLabel(revision),
+          reason: eligibility.publicMessage,
+          eligibility,
+        }),
+      ),
       entryMode,
       ...(entryMode === "exhibition-preset"
         ? { entryHref: "/api/exhibitions" }
-        : {}),
+        : entryMode === "counted-ladder-season" &&
+            parsedCompetition?.kind === "ladder"
+          ? {
+              entryHref: `/api/ladder/seasons/${encode(
+                parsedCompetition.seasonId,
+              )}/entries`,
+            }
+          : {}),
     })
     return assertDiscovery(dto)
   }

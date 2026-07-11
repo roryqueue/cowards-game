@@ -1,4 +1,6 @@
 import { z } from "zod"
+import { COUNTED_ENTRY_ELIGIBILITY_CATEGORIES } from "./competition-entry-eligibility.js"
+import { COMPETITION_POLICY_V1_36_POSTURE } from "./competition-policy-v1-36.js"
 import { assertPublicOutputLeakSafe } from "./public-output-privacy.js"
 
 export const PUBLIC_DISCOVERY_API_VERSION = "public-discovery-v1"
@@ -53,6 +55,12 @@ const PublicDiscoveryHrefSchema = z
 const PublicDiscoveryLinkSchema = z.object({
   label: z.string().min(1),
   href: PublicDiscoveryHrefSchema,
+})
+
+const CountedEntryEligibilityPublicCopySchema = z.object({
+  category: z.enum(COUNTED_ENTRY_ELIGIBILITY_CATEGORIES),
+  publicMessage: z.string().min(1),
+  remediation: z.string().min(1),
 })
 
 export const PublicDiscoveryMatchSetCardSchema = z.object({
@@ -182,6 +190,15 @@ export const SignedInCompetitionEntryDashboardDtoSchema = z.object({
   signedIn: z.boolean(),
   accountUnavailable: z.boolean(),
   revisionsUnavailable: z.boolean(),
+  posture: z.object({
+    publicLabel: z.literal(COMPETITION_POLICY_V1_36_POSTURE.publicLabel),
+    standingsScope: z.literal(
+      COMPETITION_POLICY_V1_36_POSTURE.standingsScope,
+    ),
+    durableRatingPromise: z.literal(
+      COMPETITION_POLICY_V1_36_POSTURE.durableRatingPromise,
+    ),
+  }),
   user: z
     .object({
       handle: z.string().min(1),
@@ -203,6 +220,7 @@ export const SignedInCompetitionEntryDashboardDtoSchema = z.object({
       countedPlayLabel: z.string().min(1),
       countedPlayEligible: z.boolean(),
       countedPlayReason: z.string().min(1).nullable(),
+      eligibility: CountedEntryEligibilityPublicCopySchema,
       createdAt: z.string().min(1),
     }),
   ),
@@ -212,9 +230,14 @@ export const SignedInCompetitionEntryDashboardDtoSchema = z.object({
       label: z.string().min(1),
       runtimeLabel: z.string().min(1),
       reason: z.string().min(1),
+      eligibility: CountedEntryEligibilityPublicCopySchema,
     }),
   ),
-  entryMode: z.enum(["exhibition-preset", "unavailable"]),
+  entryMode: z.enum([
+    "exhibition-preset",
+    "counted-ladder-season",
+    "unavailable",
+  ]),
   entryHref: PublicDiscoveryHrefSchema.optional(),
 })
 

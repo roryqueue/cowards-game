@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import type { AccountReadRevisionSummary } from "./account-service-boundary.js"
 import { createPublicDiscoveryService } from "./public-discovery-service.js"
 
 describe("public discovery service", () => {
@@ -189,5 +190,121 @@ describe("public discovery service", () => {
     expect(JSON.stringify(dashboard?.eligibleRevisions)).not.toContain(
       "StrategyMemory",
     )
+  })
+
+  it("projects counted ladder entry posture and public eligibility", async () => {
+    const runtimeSemantics = {
+      languageId: "typescript",
+      languageLabel: "TypeScript",
+      adapterId: "runtime-js-worker-thread",
+      adapterLabel: "Worker thread",
+      readiness: "production-candidate",
+      readinessLabel: "Provider evidence available",
+      experimental: false,
+      countedPlayLabel: "Counted eligible",
+      countedPlayEligible: true,
+      countedPlayReason: null,
+      sourcePolicyLabel: "Provider artifact",
+      packagePolicyLabel: "No packages",
+      docsReference: "docs/runtime-js",
+      examplesReference: "examples/runtime-js",
+      warnings: [],
+      validationIssueCodes: [],
+    } satisfies AccountReadRevisionSummary["runtimeSemantics"]
+    const service = createPublicDiscoveryService({
+      env: {},
+      getLadderSeason: async (seasonId) =>
+        ({
+          seasonId,
+          slug: "open-season",
+          name: "Open Season",
+          status: "open",
+          statusLabel: "Open for entries",
+          seasonSeed: "open-season",
+          policy: {
+            oneEntryPerUser: true,
+            replacementPolicy: "next-season-only",
+            staleRevisionPolicy: "locked snapshot remains active",
+            standingsReset: true,
+            noPermanentRatings: true,
+            minimumEntries: 4,
+            targetPodSize: 4,
+          },
+          entries: [],
+          standings: [],
+          matchSets: [],
+          publication: {
+            publicEntries: true,
+            publicStandings: true,
+            publicReplayEvidence: true,
+            privateFieldsExcluded: [],
+          },
+        }) as any,
+      getCurrentUser: async () => ({
+        id: "user:test",
+        username: "test",
+        handle: "test",
+        displayName: "Test Player",
+      }),
+      listRevisions: async () => [
+        {
+          id: "strategy-revision:ready",
+          strategyId: "strategy:ready",
+          label: "Ready",
+          sourceHash: "hash-ready",
+          sourceBytes: 120,
+          valid: true,
+          runtimeSemantics,
+          engineCompatibility: { spec: "cowards-rules-v1.4", engine: "0.1.4" },
+          createdAt: "2026-07-11T00:00:00.000Z",
+          lockedAt: "2026-07-11T00:00:00.000Z",
+        },
+        {
+          id: "strategy-revision:proof-missing",
+          strategyId: "strategy:proof-missing",
+          label: "Needs proof",
+          sourceHash: "hash-needs-proof",
+          sourceBytes: 130,
+          valid: true,
+          runtimeSemantics: {
+            ...runtimeSemantics,
+            countedPlayEligible: false,
+            countedPlayLabel: "Not counted",
+            countedPlayReason:
+              "TypeScript counted play requires provider-validated revision provenance.",
+          },
+          engineCompatibility: { spec: "cowards-rules-v1.4", engine: "0.1.4" },
+          createdAt: "2026-07-11T00:00:00.000Z",
+          lockedAt: "2026-07-11T00:00:00.000Z",
+        },
+      ],
+    })
+
+    const dashboard = await service.getSignedInCompetitionEntryDashboard(
+      "ladder:season:open",
+    )
+
+    expect(dashboard?.entryMode).toBe("counted-ladder-season")
+    expect(dashboard?.entryHref).toBe(
+      "/api/ladder/seasons/season%3Aopen/entries",
+    )
+    expect(dashboard?.posture).toEqual({
+      publicLabel: "public beta trial competition",
+      standingsScope: "resettable Season-scoped standings",
+      durableRatingPromise: "no durable permanent rating promise",
+    })
+    expect(dashboard?.eligibleRevisions[0]?.eligibility.category).toBe(
+      "provider_validated",
+    )
+    expect(dashboard?.ineligibleRevisions[0]?.eligibility.category).toBe(
+      "provider_proof_missing",
+    )
+    const serialized = JSON.stringify({
+      posture: dashboard?.posture,
+      eligibleRevisions: dashboard?.eligibleRevisions,
+      ineligibleRevisions: dashboard?.ineligibleRevisions,
+    })
+    expect(serialized).not.toContain("StrategyMemory")
+    expect(serialized).not.toContain("bytesBase64")
   })
 })
