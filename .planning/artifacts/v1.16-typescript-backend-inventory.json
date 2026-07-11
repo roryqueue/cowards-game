@@ -2505,6 +2505,11 @@
           "statementText": "import {\n  findStarterStrategy,\n  type StarterStrategyId,\n} from \"./starter-strategies.js\""
         },
         {
+          "line": 33,
+          "source": "./ladder.js",
+          "statementText": "import { evaluateStoredRevisionCountedEligibility } from \"./ladder.js\""
+        },
+        {
           "line": 7,
           "source": "node:buffer",
           "statementText": "import { Buffer } from \"node:buffer\""
@@ -2531,7 +2536,17 @@
       ],
       "localBackendImports": [
         "packages/persistence/src/advanced-strategies.ts",
+        "packages/persistence/src/competition.ts",
+        "packages/persistence/src/db.ts",
+        "packages/persistence/src/ladder.ts",
+        "packages/persistence/src/match-service.ts",
+        "packages/persistence/src/matchset-service.ts",
+        "packages/persistence/src/matchset-status.ts",
+        "packages/persistence/src/presets.ts",
         "packages/persistence/src/repositories.ts",
+        "packages/persistence/src/schema.ts",
+        "packages/persistence/src/scoring.ts",
+        "packages/persistence/src/seed.ts",
         "packages/persistence/src/starter-strategies.ts"
       ],
       "usesDatabase": false,
@@ -2558,7 +2573,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/repositories.ts, packages/persistence/src/starter-strategies.ts"
+          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts"
         }
       ]
     },
@@ -3783,7 +3798,7 @@
       "currentOwner": "typescript_non_normal_reference",
       "normalBackendOwner": "none",
       "fallbackPolicy": "no_silent_typescript_backend_fallback",
-      "privacyClass": "public-redacted",
+      "privacyClass": "source-safe-inventory-only",
       "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
       "routeMethods": [],
       "routePath": null,
@@ -3794,6 +3809,21 @@
           "line": 1,
           "source": "vitest",
           "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 13,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
+        },
+        {
+          "line": 14,
+          "source": "node:fs",
+          "statementText": "import { readFileSync } from \"node:fs\""
+        },
+        {
+          "line": 15,
+          "source": "./ladder.js",
+          "statementText": "import {\n  LadderInputError,\n  assertLadderEligibleRuntime,\n  DEFAULT_LADDER_MINIMUM_ENTRIES,\n  DEFAULT_LADDER_TARGET_POD_SIZE,\n  enterTrialLadderSeason,\n  evaluateCountedEntryEligibility,\n  trialLadderStatusLabel,\n} from \"./ladder.js\""
         },
         {
           "line": 2,
@@ -3808,12 +3838,7 @@
         {
           "line": 4,
           "source": "@cowards/spec",
-          "statementText": "import { defaultRuntimeMetadata } from \"@cowards/spec\""
-        },
-        {
-          "line": 5,
-          "source": "./ladder.js",
-          "statementText": "import {\n  assertLadderEligibleRuntime,\n  DEFAULT_LADDER_MINIMUM_ENTRIES,\n  DEFAULT_LADDER_TARGET_POD_SIZE,\n  trialLadderStatusLabel,\n} from \"./ladder.js\""
+          "statementText": "import {\n  COMPATIBILITY_VERSIONS,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  defaultRuntimeMetadata,\n  getCountedEntryEligibilityPublicCopy,\n  type CountedEntryEligibilityCategory,\n  type StrategyRuntimeAdapterId,\n  type StrategyRuntimeMetadata,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -3837,7 +3862,7 @@
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": false,
-      "servesPublicEvidence": true,
+      "servesPublicEvidence": false,
       "executesStrategy": false,
       "ownerDebugAccess": false,
       "testOnlyGate": "test-support route or Vitest/Playwright gate only",
@@ -3883,42 +3908,42 @@
           "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
         },
         {
-          "line": 26,
+          "line": 34,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 27,
+          "line": 35,
           "source": "./competition.js",
           "statementText": "import { generateCompetitionPairwiseMatrix } from \"./competition.js\""
         },
         {
-          "line": 28,
+          "line": 36,
           "source": "./matchset-service.js",
           "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
         },
         {
-          "line": 29,
+          "line": 37,
           "source": "./matchset-status.js",
           "statementText": "import { refreshMatchSetStatus } from \"./matchset-status.js\""
         },
         {
-          "line": 30,
+          "line": 38,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 31,
+          "line": 39,
           "source": "./seed.js",
           "statementText": "import { createDevelopmentSeedData } from \"./seed.js\""
         },
         {
-          "line": 32,
+          "line": 40,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
         {
-          "line": 33,
+          "line": 41,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetStrategyScore } from \"./scoring.js\""
         },
@@ -3930,7 +3955,7 @@
         {
           "line": 8,
           "source": "@cowards/spec",
-          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  EXHIBITION_SCORING_POLICY_V1,\n  evaluateStrategyRuntimeCountedEligibility,\n  normalizeStrategyRuntimeMetadata,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  type CompetitionEntrantSnapshot,\n  type LadderMatchSetCountedStatus,\n  type LadderNonCountedReason,\n  type PublicLadderMatchSetSummaryDto,\n  type PublicStandingDto,\n  type PublicTrialLadderSeasonDto,\n  type StrategyRevisionId,\n  type TrialLadderEntrySnapshot,\n  type TrialLadderEntryStatus,\n  type TrialLadderSeasonStatus,\n  type UserId,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  COMPATIBILITY_VERSIONS,\n  countedEntryEligibilityDecision,\n  describeStrategyRuntimeProductSemantics,\n  EXHIBITION_SCORING_POLICY_V1,\n  evaluateStrategyRuntimeCountedEligibility,\n  getCountedEntryEligibilityPublicCopy,\n  isCountedEntrySupportedLane,\n  normalizeStrategyRuntimeMetadata,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  validateRuntimeBrokerRegistryMatch,\n  type CompetitionEntrantSnapshot,\n  type CountedEntryEligibilityCategory,\n  type CountedEntryEligibilityDecision,\n  type LadderMatchSetCountedStatus,\n  type LadderNonCountedReason,\n  type PublicLadderMatchSetSummaryDto,\n  type PublicStandingDto,\n  type PublicTrialLadderSeasonDto,\n  type StrategyRevisionId,\n  type TrialLadderEntrySnapshot,\n  type TrialLadderEntryStatus,\n  type TrialLadderSeasonStatus,\n  type UserId,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -8693,6 +8718,147 @@
       ]
     },
     {
+      "id": "apps-web-app-api-exhibitions-route-test",
+      "path": "apps/web/app/api/exhibitions/route.test.ts",
+      "kind": "web-frontend-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "exhibition-create",
+      "goRouteIds": [
+        "exhibitions.create"
+      ],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { beforeEach, describe, expect, it, vi } from \"vitest\""
+        },
+        {
+          "line": 14,
+          "source": "./route.js",
+          "statementText": "import { POST } from \"./route.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/lib/account-service-adapter.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/api/exhibitions/route.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/lib/account-service-adapter.ts"
+        }
+      ]
+    },
+    {
+      "id": "apps-web-app-api-ladder-seasons-seasonid-entries-route-test",
+      "path": "apps/web/app/api/ladder/seasons/[seasonId]/entries/route.test.ts",
+      "kind": "web-frontend-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "ladder",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { beforeEach, describe, expect, it, vi } from \"vitest\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  getCountedEntryEligibilityPublicCopy,\n  type CountedEntryEligibilityCategory,\n  type UserId,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 30,
+          "source": "./route.js",
+          "statementText": "import { POST } from \"./route.js\""
+        },
+        {
+          "line": 7,
+          "source": "../../../../../../lib/competitive-errors.js",
+          "statementText": "import { CompetitiveInputError } from \"../../../../../../lib/competitive-errors.js\""
+        },
+        {
+          "line": 8,
+          "source": "../../../../../competitive/http.js",
+          "statementText": "import { competitiveErrorResponse } from \"../../../../../competitive/http.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "apps/web/app/competitive/server.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/api/ladder/seasons/[seasonId]/entries/route.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "apps/web/app/competitive/server.ts"
+        }
+      ]
+    },
+    {
       "id": "apps-web-app-api-service-health-route-test",
       "path": "apps/web/app/api/service/health/route.test.ts",
       "kind": "web-frontend-module",
@@ -9409,6 +9575,56 @@
       "scannerFindings": []
     },
     {
+      "id": "apps-web-app-competitions-competitionid-enter-ladder-entry-client",
+      "path": "apps/web/app/competitions/[competitionId]/enter/ladder-entry-client.tsx",
+      "kind": "web-frontend-module",
+      "role": "frontend-only",
+      "retirementAction": "keep-frontend-go-adapter",
+      "owner": "web_frontend",
+      "reason": "TypeScript is allowed here only as frontend or Go-calling adapter code, not as a normal backend owner.",
+      "gate": "Go ownership flags and schema validation",
+      "risk": "silent TypeScript backend fallback if Go adapter checks drift",
+      "futureMigration": "Keep as frontend adapter while Phase 105 removes any remaining TypeScript backend fallback.",
+      "currentOwner": "typescript_frontend",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-strictness-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "frontend",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 3,
+          "source": "react",
+          "statementText": "import { useState, type FormEvent } from \"react\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/web/app/competitions/[competitionId]/enter/ladder-entry-client.tsx"
+      ],
+      "scannerFindings": []
+    },
+    {
       "id": "apps-web-app-competitions-competitionid-enter-page",
       "path": "apps/web/app/competitions/[competitionId]/enter/page.tsx",
       "kind": "web-frontend-module",
@@ -9443,6 +9659,11 @@
           "line": 3,
           "source": "../../../../lib/public-discovery-service.js",
           "statementText": "import { getSignedInCompetitionEntryDashboard } from \"../../../../lib/public-discovery-service.js\""
+        },
+        {
+          "line": 4,
+          "source": "./ladder-entry-client.js",
+          "statementText": "import { LadderEntryClient } from \"./ladder-entry-client.js\""
         }
       ],
       "persistenceImports": [],
@@ -13365,7 +13586,13 @@
       "routePath": null,
       "routeFamily": "frontend",
       "goRouteIds": [],
-      "imports": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  assertCountedEntryEligibilityPublicLeakSafe,\n  type CountedEntryEligibilityPublicCopy,\n} from \"@cowards/spec\""
+        }
+      ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
@@ -13631,6 +13858,11 @@
         },
         {
           "line": 2,
+          "source": "./account-service-boundary.js",
+          "statementText": "import type { AccountReadRevisionSummary } from \"./account-service-boundary.js\""
+        },
+        {
+          "line": 3,
           "source": "./public-discovery-service.js",
           "statementText": "import { createPublicDiscoveryService } from \"./public-discovery-service.js\""
         }
@@ -13689,35 +13921,35 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import {\n  COMPETITION_PRESETS,\n  SignedInCompetitionEntryDashboardDtoSchema,\n  PublicCompetitionDetailDtoSchema,\n  PublicCompetitionIndexDtoSchema,\n  PublicHomeDiscoveryDtoSchema,\n  PublicWatchIndexDtoSchema,\n  assertPublicDiscoveryDtoLeakSafe,\n  publicDiscoveryBoundary,\n  type CompetitionPreset,\n  type PublicCompetitionDetailDto,\n  type PublicCompetitionIndexDto,\n  type PublicDiscoveryCompetitionCard,\n  type PublicDiscoveryMatchSetCard,\n  type PublicHomeDiscoveryDto,\n  type PublicTrialLadderSeasonDto,\n  type PublicWatchIndexDto,\n  type SignedInCompetitionEntryDashboardDto,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  COMPETITION_POLICY_V1_36_POSTURE,\n  COMPETITION_PRESETS,\n  SignedInCompetitionEntryDashboardDtoSchema,\n  PublicCompetitionDetailDtoSchema,\n  PublicCompetitionIndexDtoSchema,\n  PublicHomeDiscoveryDtoSchema,\n  PublicWatchIndexDtoSchema,\n  assertPublicDiscoveryDtoLeakSafe,\n  getCountedEntryEligibilityPublicCopy,\n  publicDiscoveryBoundary,\n  type CompetitionPreset,\n  type CountedEntryEligibilityPublicCopy,\n  type PublicCompetitionDetailDto,\n  type PublicCompetitionIndexDto,\n  type PublicDiscoveryCompetitionCard,\n  type PublicDiscoveryMatchSetCard,\n  type PublicHomeDiscoveryDto,\n  type PublicTrialLadderSeasonDto,\n  type PublicWatchIndexDto,\n  type SignedInCompetitionEntryDashboardDto,\n} from \"@cowards/spec\""
         },
         {
-          "line": 20,
+          "line": 23,
           "source": "./account-service-boundary.js",
           "statementText": "import {\n  getCurrentAccountReadUser,\n  listAccountReadRevisions,\n  type AccountReadUser,\n  type AccountReadRevisionSummary,\n} from \"./account-service-boundary.js\""
         },
         {
-          "line": 26,
+          "line": 29,
           "source": "./competitive-errors.js",
           "statementText": "import { CompetitiveInputError } from \"./competitive-errors.js\""
         },
         {
-          "line": 27,
+          "line": 30,
           "source": "./go-backend-service-client.js",
           "statementText": "import { isGoBackendServiceUnavailableError } from \"./go-backend-service-client.js\""
         },
         {
-          "line": 28,
+          "line": 31,
           "source": "./match-execution-fixture-adapter.js",
           "statementText": "import { isMatchExecutionFixtureEnabled } from \"./match-execution-fixture-adapter.js\""
         },
         {
-          "line": 29,
+          "line": 32,
           "source": "./public-service-boundary.js",
           "statementText": "import {\n  getPublicLadderSeason,\n  getPublicMatchSetResult,\n  type PublicReadMatchSetResultDto,\n} from \"./public-service-boundary.js\""
         },
         {
-          "line": 34,
+          "line": 37,
           "source": "./runtime-labels.js",
           "statementText": "import { runtimeExhibitionStatusLabel } from \"./runtime-labels.js\""
         }
@@ -14592,15 +14824,15 @@
         {
           "line": 44,
           "source": "@cowards/spec",
-          "statementText": "import {\n  COMPETITION_PRESET_IDS,\n  COMPETITION_PRESETS,\n  type CompetitionPresetId,\n  type MatchId,\n  type MatchSetId,\n  type PublicMatchSetResultDto,\n  type PublicStrategyCardDto,\n  type StrategyRevisionId,\n  type TrialLadderSeasonStatus,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  COMPETITION_PRESET_IDS,\n  COMPETITION_PRESETS,\n  getCountedEntryEligibilityPublicCopy,\n  type CompetitionPresetId,\n  type CountedEntryEligibilityCategory,\n  type MatchId,\n  type MatchSetId,\n  type PublicMatchSetResultDto,\n  type PublicStrategyCardDto,\n  type StrategyRevisionId,\n  type TrialLadderSeasonStatus,\n} from \"@cowards/spec\""
         },
         {
-          "line": 55,
+          "line": 57,
           "source": "../../lib/competitive-errors.js",
           "statementText": "import { CompetitiveInputError } from \"../../lib/competitive-errors.js\""
         },
         {
-          "line": 56,
+          "line": 58,
           "source": "../../lib/competitive-session.js",
           "statementText": "import { SESSION_COOKIE_NAME } from \"../../lib/competitive-session.js\""
         }
