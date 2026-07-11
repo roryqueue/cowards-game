@@ -662,12 +662,13 @@ func accountRevisionInsertFromProviderValidation(userID string, body strategyRev
 		input.Metadata = map[string]any{}
 	}
 	readiness := classifyRevisionReadiness(revisionReadinessInput{
-		SourceFormat: body.SourceFormat,
-		Runtime:      input.Runtime,
-		Validation:   input.Validation,
-		Metadata:     input.Metadata,
-		SourceHash:   input.SourceHash,
-		SourceBytes:  input.SourceBytes,
+		SourceFormat:        body.SourceFormat,
+		Runtime:             input.Runtime,
+		Validation:          input.Validation,
+		Metadata:            input.Metadata,
+		EngineCompatibility: input.EngineCompatibility,
+		SourceHash:          input.SourceHash,
+		SourceBytes:         input.SourceBytes,
 	})
 	input.Metadata["readinessState"] = string(readiness.State)
 	input.Metadata["readinessCategory"] = readiness.PublicCategory

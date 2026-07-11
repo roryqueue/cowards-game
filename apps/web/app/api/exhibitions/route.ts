@@ -26,6 +26,8 @@ export async function POST(request: Request): Promise<Response> {
         matchSetId: result.matchSetId,
         status: "queued",
         matchCount: result.matchCount ?? 0,
+        competitionImpact: "exhibition-only",
+        standingsImpact: "none",
       },
       { status: 201 },
     )

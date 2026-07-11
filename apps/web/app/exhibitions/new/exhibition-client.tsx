@@ -113,7 +113,7 @@ export function ExhibitionClient({
     <section className="app-panel">
       <div className="app-section-header">
         <div>
-          <p className="workshop-muted">Competitive Alpha</p>
+          <p className="workshop-muted">Public beta exhibition</p>
           <h1>Create exhibition</h1>
         </div>
         <div className="app-actions">
@@ -124,6 +124,11 @@ export function ExhibitionClient({
       </div>
 
       <div className="app-form-stack">
+        <p className="workshop-muted">
+          Exhibitions support same-player self-play and multiple revisions from
+          one account. They provide Match evidence only and never change
+          counted trial Season standings.
+        </p>
         <label>
           <span className="workshop-label">Preset</span>
           <select
@@ -144,7 +149,7 @@ export function ExhibitionClient({
           </p>
         ) : null}
 
-        <div className="segmented-control" aria-label="Exhibition counting">
+        <div className="segmented-control" aria-label="Exhibition evidence">
           <button
             className={counted ? "active" : ""}
             type="button"
@@ -162,22 +167,29 @@ export function ExhibitionClient({
               )
             }}
           >
-            Counted
+            Verified evidence
           </button>
           <button
             className={!counted ? "active" : ""}
             type="button"
             onClick={() => setCounted(false)}
           >
-            Unranked
+            Flexible evidence
           </button>
         </div>
         {!counted ? (
           <p className="workshop-muted">
-            Unranked exhibitions may include any valid revision, including
-            historical non-counted provider evidence.
+            Flexible exhibitions may include any valid revision, including
+            revisions with historical provider evidence. Results remain
+            exhibition-only and do not affect trial standings.
           </p>
-        ) : null}
+        ) : (
+          <p className="workshop-muted">
+            Verified evidence applies current counted execution eligibility to
+            the selected revisions, but this MatchSet still does not affect
+            trial standings.
+          </p>
+        )}
 
         {validRevisions.length ? (
           <div className="selectable-list">

@@ -70,7 +70,7 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 			category: "provider_proof_missing",
 		},
 		{
-			name: "D-04 stale source identity is proof mismatch",
+			name: "D-04 stale source identity has a distinct public category",
 			input: revisionReadinessInput{
 				SourceFormat: "typescript",
 				Runtime:      validRuntime,
@@ -80,7 +80,7 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 				SourceBytes:  sourceBytes,
 			},
 			state:    revisionReadinessInvalid,
-			category: "provider_proof_mismatched",
+			category: "provider_proof_stale",
 		},
 		{
 			name: "D-03 invalid validation persists only as non-execution draft",
@@ -129,6 +129,66 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 			category: "package_policy_violation",
 		},
 		{
+			name: "v1.36 required capabilities are rejected distinctly",
+			input: revisionReadinessInput{
+				SourceFormat: "typescript",
+				Runtime: func() map[string]any {
+					runtime := defaultRuntimeMetadata()
+					runtime["requiredCapabilities"] = []string{"filesystem"}
+					return runtime
+				}(),
+				Validation:  validValidation,
+				Metadata:    validMetadata,
+				SourceHash:  sourceHash,
+				SourceBytes: sourceBytes,
+			},
+			state:    revisionReadinessInvalid,
+			category: "capability_policy_violation",
+		},
+		{
+			name: "v1.36 unsupported source format stays rejected",
+			input: revisionReadinessInput{
+				SourceFormat: "javascript",
+				Runtime:      defaultRuntimeMetadata(),
+				Validation:   validValidation,
+				Metadata:     validMetadata,
+				SourceHash:   sourceHash,
+				SourceBytes:  sourceBytes,
+			},
+			state:    revisionReadinessInvalid,
+			category: "unsupported_source_format",
+		},
+		{
+			name: "v1.36 mismatched source and runtime language is incompatible",
+			input: revisionReadinessInput{
+				SourceFormat: "python",
+				Runtime:      defaultRuntimeMetadata(),
+				Validation:   validValidation,
+				Metadata:     validMetadata,
+				SourceHash:   sourceHash,
+				SourceBytes:  sourceBytes,
+			},
+			state:    revisionReadinessInvalid,
+			category: "incompatible_runtime_metadata",
+		},
+		{
+			name: "v1.36 unavailable adapter is incompatible",
+			input: revisionReadinessInput{
+				SourceFormat: "typescript",
+				Runtime: func() map[string]any {
+					runtime := defaultRuntimeMetadata()
+					runtime["adapter"] = map[string]any{"id": "runtime-unknown"}
+					return runtime
+				}(),
+				Validation:  validValidation,
+				Metadata:    validMetadata,
+				SourceHash:  sourceHash,
+				SourceBytes: sourceBytes,
+			},
+			state:    revisionReadinessInvalid,
+			category: "incompatible_runtime_metadata",
+		},
+		{
 			name: "D-11 TinyGo stays hidden unsupported provider",
 			input: revisionReadinessInput{
 				SourceFormat: "tinygo",
@@ -151,6 +211,57 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 			}
 			if result.State != revisionReadinessExecutionReady && result.CountedEligible {
 				t.Fatalf("non-ready state must not be counted eligible: %+v", result)
+			}
+		})
+	}
+}
+
+func TestProviderReadinessAcceptsCurrentCountedLanguages(t *testing.T) {
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
+	sourceHash := hashString("current provider proof")
+	sourceBytes := len([]byte("current provider proof"))
+	validation := map[string]any{"valid": true, "sourceHash": sourceHash, "sourceBytes": sourceBytes}
+
+	tests := []struct {
+		language string
+		runtime  map[string]any
+		metadata map[string]any
+	}{
+		{
+			language: "typescript",
+			runtime:  defaultRuntimeMetadata(),
+			metadata: providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, true),
+		},
+		{
+			language: "python",
+			runtime:  pythonRuntimeMetadata(),
+			metadata: providerReadinessSourceArtifactMetadata(t, "python", "strategy-language-provider-python", sourceHash, sourceBytes, true),
+		},
+		{
+			language: "rust",
+			runtime:  wasmWasiRuntimeMetadata("rust"),
+			metadata: providerReadinessCompiledArtifactMetadata(t, "rust", sourceHash, sourceBytes),
+		},
+		{
+			language: "zig",
+			runtime:  wasmWasiRuntimeMetadata("zig"),
+			metadata: providerReadinessCompiledArtifactMetadata(t, "zig", sourceHash, sourceBytes),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.language, func(t *testing.T) {
+			result := classifyRevisionReadiness(revisionReadinessInput{
+				SourceFormat:        test.language,
+				Runtime:             test.runtime,
+				Validation:          validation,
+				Metadata:            test.metadata,
+				EngineCompatibility: engineCompatibility(),
+				SourceHash:          sourceHash,
+				SourceBytes:         sourceBytes,
+			})
+			if result.State != revisionReadinessExecutionReady || result.PublicCategory != "provider_validated" || !result.EntryEligible || !result.CountedEligible {
+				t.Fatalf("expected current %s evidence to be counted eligible, got %+v", test.language, result)
 			}
 		})
 	}
@@ -228,6 +339,43 @@ func providerReadinessSourceArtifactMetadata(t *testing.T, languageID string, pr
 	return map[string]any{
 		"tags":           []string{languageID, "artifact-proven", "counted", "provider"},
 		"sourceArtifact": artifact,
+		"providerValidation": map[string]any{
+			"providerId":      providerID,
+			"contractVersion": "strategy-language-provider-contract-v1.33",
+			"sourceHash":      sourceHash,
+			"sourceBytes":     sourceBytes,
+			"artifactHash":    artifactHash,
+			"artifactBytes":   artifactBytes,
+			"proof":           providerValidationProof(providerID, sourceHash, sourceBytes, artifactHash, artifactBytes),
+		},
+	}
+}
+
+func providerReadinessCompiledArtifactMetadata(t *testing.T, languageID string, sourceHash string, sourceBytes int) map[string]any {
+	t.Helper()
+	artifactPayload := []byte(languageID + "-wasm-artifact")
+	artifactDigest := sha256.Sum256(artifactPayload)
+	artifactHash := hex.EncodeToString(artifactDigest[:])
+	artifactBytes := len(artifactPayload)
+	providerID := "strategy-language-provider-rust-wasi"
+	targetTriple := "wasm32-wasip1"
+	if languageID == "zig" {
+		providerID = "strategy-language-provider-zig-wasi"
+		targetTriple = "wasm32-wasi"
+	}
+	return map[string]any{
+		"compiledArtifact": map[string]any{
+			"format":           "wasm",
+			"hash":             artifactHash,
+			"bytes":            artifactBytes,
+			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
+			"sourceHash":       sourceHash,
+			"targetTriple":     targetTriple,
+			"wasiProfile":      "preview1",
+			"abiEnvelope":      "stdin-stdout-json",
+			"abiVersion":       strategyRuntimeABIVersion,
+			"validationStatus": "valid",
+		},
 		"providerValidation": map[string]any{
 			"providerId":      providerID,
 			"contractVersion": "strategy-language-provider-contract-v1.33",
