@@ -126,6 +126,7 @@ flowchart TD
 **Requirements:** META-01–META-05
 **Depends on:** 258, 260
 **Audit basis:** [F-16–F-22](../../research/v2.0-core-rules-enforcement-runtime-and-metagame-audit.md#game-design-and-metagame-findings)
+**Strategy-development basis:** [Competitive Strategy Factory and Adversarial League](../../research/competitive-strategy-factory-and-adversarial-league.md)
 
 **Success criteria:**
 
@@ -134,6 +135,8 @@ flowchart TD
 3. Paired scenarios give every entrant each side and each initiative state, producing a complete payoff matrix/best-response graph.
 4. First-contact, pacing, interaction, draw, runtime, complexity, and anti-dominance thresholds are locked before candidate output is inspected.
 5. The staged funnel runs micro-scenarios, 48–96 Match screens, full in-process matrices, and only then sealed/service proof.
+6. Multiple independent best-response oracle families produce legal deterministic Strategies, respect the real information boundary, and preserve a reproducible portfolio plus robust pure finalist.
+7. Every ruleset comparison gives each candidate equal adaptation, oracle, model/human, and Match budgets; the current 540-Match toy field remains a regression fixture rather than balance proof.
 
 ### Phase 262 — Minimal v2 Rules Convergence and Standalone Spec Freeze
 

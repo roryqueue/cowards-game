@@ -41,6 +41,8 @@ The proposal contains 13 phases (256–268) and 63 draft requirements. Phase 256
 - [Draft roadmap](../milestone-proposals/v2.0-rules-integrity-and-metagame-renewal/ROADMAP.md)
 - [Core rules, enforcement, runtime, and metagame audit](../research/v2.0-core-rules-enforcement-runtime-and-metagame-audit.md)
 - [Focused reproductions and current-rules matrix](../artifacts/v2.0-core-rules-audit/README.md)
+- [Competitive Strategy factory and adversarial-league handoff](../research/competitive-strategy-factory-and-adversarial-league.md)
+- [Dedicated competitive Strategy seed](SEED-002-competitive-strategy-factory-and-adversarial-league.md)
 - [Canonical v1 rules](../../CowardsGameSpec_Full_Consolidated_v1.md)
 - [v1.4 Cycle-interleaving amendment](../../CowardsGameSpec_CycleInterleaved_v1.4.md)
 - [v1.4 technical architecture](../../CowardsGame_Technical_Architecture_Spec_v1.4.md)

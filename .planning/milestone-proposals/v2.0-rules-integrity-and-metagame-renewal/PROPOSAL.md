@@ -13,6 +13,7 @@ phases: 13
 > This is a durable proposal, not the active GSD milestone. It does not replace `.planning/ROADMAP.md`, `.planning/REQUIREMENTS.md`, or `.planning/STATE.md`. Start it only through `$gsd-new-milestone` after explicit approval and revalidation of Phase 256’s safety assumptions.
 
 **Source audit:** [Core Rules, Enforcement, Runtime, and Metagame Audit](../../research/v2.0-core-rules-enforcement-runtime-and-metagame-audit.md)
+**Strategy-development handoff:** [Competitive Strategy Factory and Adversarial League](../../research/competitive-strategy-factory-and-adversarial-league.md)
 **Draft requirements:** [REQUIREMENTS.md](REQUIREMENTS.md)
 **Draft roadmap:** [ROADMAP.md](ROADMAP.md)
 **Reproduction artifacts:** [v2.0 core-rules audit artifacts](../../artifacts/v2.0-core-rules-audit/README.md)
@@ -192,6 +193,8 @@ Phase 261 should calibrate and lock exact values before candidate evaluation. St
 - the accepted rules have a non-increasing concept budget.
 
 The exact numeric counter threshold should be fixed only after the independent baseline reveals how many scenario points exist and how coarse their deterministic percentages are.
+
+The benchmark field must be produced through the [competitive Strategy factory and multi-oracle best-response process](../../research/competitive-strategy-factory-and-adversarial-league.md), not by adding more parameter profiles to the current shared generator. Any ruleset promoted from Phase 262 must receive equal adaptation and training compute; fixed-agent comparisons are screening evidence only.
 
 ## Explicit non-goals
 
