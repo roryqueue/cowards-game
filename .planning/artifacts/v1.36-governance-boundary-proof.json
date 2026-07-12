@@ -1,0 +1,266 @@
+{
+  "schemaVersion": "v1.36-governance-boundary-proof",
+  "milestone": "v1.36",
+  "phase": 255,
+  "generatedAt": "2026-07-12T11:22:08.921Z",
+  "generatedBy": "scripts/evaluate-v1-36-competition-boundaries.ts",
+  "status": "passed",
+  "serviceStatus": "passed-local-services",
+  "requiredGovernanceScenarioIds": [
+    "degraded-result",
+    "explicit-non-counted",
+    "general-report-no-suppression",
+    "entrant-dispute-hold",
+    "under-review-disputed",
+    "invalid-result",
+    "invalidated-result",
+    "restore-counted-complete-evidence",
+    "restore-counted-incomplete-evidence-rejected",
+    "replay-availability-chronicle-derived"
+  ],
+  "governanceScenarios": [
+    {
+      "id": "degraded-result",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "A degraded result remained visible but contributed no counted standing."
+    },
+    {
+      "id": "entrant-dispute-hold",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "An entrant dispute created the canonical standings hold."
+    },
+    {
+      "id": "explicit-non-counted",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "An explicit non-counted action excluded the result from standings."
+    },
+    {
+      "id": "general-report-no-suppression",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "A general report left complete counted evidence in standings."
+    },
+    {
+      "id": "invalid-result",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "Invalid evidence was excluded with fixed public-safe copy."
+    },
+    {
+      "id": "invalidated-result",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "Invalidated evidence was excluded without removing public result evidence."
+    },
+    {
+      "id": "replay-availability-chronicle-derived",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "Replay availability remained derived from Chronicle evidence while governance excluded standings."
+    },
+    {
+      "id": "restore-counted-complete-evidence",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "Complete scoring and Chronicle evidence restored counted standing after review."
+    },
+    {
+      "id": "restore-counted-incomplete-evidence-rejected",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "Counted restoration failed closed while scoring evidence was incomplete."
+    },
+    {
+      "id": "under-review-disputed",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "Under-review and disputed states both excluded otherwise complete evidence."
+    }
+  ],
+  "monitors": [
+    {
+      "id": "competition-policy",
+      "status": "passed",
+      "checkedFiles": [
+        ".planning/artifacts/v1.36-competition-surface-inventory.json",
+        ".planning/artifacts/v1.36-competition-surface-inventory.md"
+      ]
+    },
+    {
+      "id": "public-privacy",
+      "status": "passed",
+      "checkedFiles": [
+        ".planning/artifacts/v1.36-competition-service-proof.json",
+        ".planning/artifacts/v1.36-competition-service-proof.md",
+        ".planning/artifacts/v1.36-competition-surface-inventory.json",
+        ".planning/artifacts/v1.36-competition-surface-inventory.md",
+        "apps/go-backend/testdata/service-fixtures/analytics-run-summary.json",
+        "apps/go-backend/testdata/service-fixtures/degraded-match-set-summary.json",
+        "apps/go-backend/testdata/service-fixtures/fixture-manifest.json",
+        "apps/go-backend/testdata/service-fixtures/forbidden-error.json",
+        "apps/go-backend/testdata/service-fixtures/health.json",
+        "apps/go-backend/testdata/service-fixtures/not-found-error.json",
+        "apps/go-backend/testdata/service-fixtures/public-ladder-page.json",
+        "apps/go-backend/testdata/service-fixtures/public-match-set-summary.json",
+        "apps/go-backend/testdata/service-fixtures/public-player-page.json",
+        "apps/go-backend/testdata/service-fixtures/public-replay-evidence.json",
+        "apps/go-backend/testdata/service-fixtures/public-replay-metadata.json",
+        "apps/go-backend/testdata/service-fixtures/public-strategy-page.json",
+        "apps/go-backend/testdata/service-fixtures/route-manifest.json",
+        "apps/web/app/competitions/[competitionId]/page.tsx",
+        "apps/web/app/competitions/fair-play/page.tsx",
+        "apps/web/app/competitions/page.tsx",
+        "apps/web/app/ladder/[seasonId]/page.tsx",
+        "apps/web/app/matches/server.ts",
+        "apps/web/app/matchsets/result-view-model.ts",
+        "packages/spec/artifacts/service-api-v1.8.openapi.json"
+      ]
+    },
+    {
+      "id": "ownership-boundaries",
+      "status": "passed",
+      "checkedFiles": [
+        "scripts/check-boundary-monitors.ts",
+        "packages/spec/src/public-output-privacy.ts",
+        "packages/spec/src/competition-governance.ts",
+        "packages/spec/src/competition-policy-v1-36.ts"
+      ]
+    }
+  ],
+  "scannedFiles": [
+    {
+      "path": ".planning/artifacts/v1.36-competition-service-proof.json",
+      "sha256": "1204e592b0cfc6e7bab999457e7790d813f092dc4b2856e128c060d82333e43d"
+    },
+    {
+      "path": ".planning/artifacts/v1.36-competition-service-proof.md",
+      "sha256": "b47042a19f92a2b33dc3557baf293412495c83f8226fa6d0ca9b6536c7d33685"
+    },
+    {
+      "path": ".planning/artifacts/v1.36-competition-surface-inventory.json",
+      "sha256": "8b0a3855e732da21f643cd44086426b63038de01d1d10209416d924cc357f4e7"
+    },
+    {
+      "path": ".planning/artifacts/v1.36-competition-surface-inventory.md",
+      "sha256": "32214f6578b94245e0cdb46edb4c546ca2d613d579d11c0da322f7dffd3e10d3"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/analytics-run-summary.json",
+      "sha256": "8c09ab802236168752bc190c496830a836af332aff53ab62575919b5bb052608"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/degraded-match-set-summary.json",
+      "sha256": "66b2a1add5c5bdacee3e83cce970a88b132c9a54aa21fcd5be25d7e0bcd18f62"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/fixture-manifest.json",
+      "sha256": "91d82bc0397348c6be6b2dcf6b1a3afc1b0f0dc36f13248a794f03f44fdfe887"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/forbidden-error.json",
+      "sha256": "56f90864bfb3af1c065f825755b6dc20a4a321eaca4df759c9dde1a267af750a"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/health.json",
+      "sha256": "56488b12b6397ceee7ddc05dfe54ca7f0f7d428a7073f16122443a7e5d37deb0"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/not-found-error.json",
+      "sha256": "558857729a5410e46f11c58906b6642cddbeb888463ba96eec26256e5ffca538"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/public-ladder-page.json",
+      "sha256": "8d8488269d349e6dd3cc62809dbbb916459721a8607f14877422a50b3eb8c944"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/public-match-set-summary.json",
+      "sha256": "ed428ce2d99cde5b2f4b19dca0402ce687ead91c7ee492d95f7bc91b3f83dd3a"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/public-player-page.json",
+      "sha256": "8c1dd630741a281c4c9239e30a411c1b55a54fe40efa7f375f5ec9bc70b75235"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/public-replay-evidence.json",
+      "sha256": "bc5a96292e793dc6a317349c03c6d854ee0764d81b59fb37b2dc28b10043143b"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/public-replay-metadata.json",
+      "sha256": "21bfb503304b0367528544cba109fa6ec73543ff6af1df40ab0b74777e85baed"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/public-strategy-page.json",
+      "sha256": "4710b0ef0b9ec5a037a978dbe50564fbde109688e95a92ae258b56c42742cb58"
+    },
+    {
+      "path": "apps/go-backend/testdata/service-fixtures/route-manifest.json",
+      "sha256": "fe804ec317619900371ffe5f7c0e3725f12692315dbfba5bb1e830124d95d68c"
+    },
+    {
+      "path": "apps/web/app/competitions/[competitionId]/page.tsx",
+      "sha256": "61bbd5cac78b725a417cdf7f1abc260c3f63387e2d5e87f058cf4f2900d51206"
+    },
+    {
+      "path": "apps/web/app/competitions/fair-play/page.tsx",
+      "sha256": "8a9c8ea09b452242941332bcdb249b19ff568638b1d7debe94ab15ebd3082e07"
+    },
+    {
+      "path": "apps/web/app/competitions/page.tsx",
+      "sha256": "30aec5cf253bf27cddff3af17b5522b3d70905201d41a52d29aec8eec19f6f71"
+    },
+    {
+      "path": "apps/web/app/ladder/[seasonId]/page.tsx",
+      "sha256": "9762f4058a1cc3519d6adfaeb45ed6d9bdd85d62cd6ba25afff451ac495caab8"
+    },
+    {
+      "path": "apps/web/app/matches/server.ts",
+      "sha256": "4470588c0e0f62878858c30db177baed9cdc129d8eb855bb89a91a53d69febe7"
+    },
+    {
+      "path": "apps/web/app/matchsets/result-view-model.ts",
+      "sha256": "1ea447d9cdfa03e71964e48ab821a4c4d5642f62f5eb621b675cbc827734b7ff"
+    },
+    {
+      "path": "packages/spec/artifacts/service-api-v1.8.openapi.json",
+      "sha256": "56a6ae699b8eb912946fad2b22108d6a0d2bbbad6dc719a7ed47878a49efa5b1"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": ".planning/artifacts/v1.36-competition-service-proof.json",
+      "sha256": "1204e592b0cfc6e7bab999457e7790d813f092dc4b2856e128c060d82333e43d"
+    },
+    {
+      "path": ".planning/artifacts/v1.36-competition-service-proof.md",
+      "sha256": "b47042a19f92a2b33dc3557baf293412495c83f8226fa6d0ca9b6536c7d33685"
+    },
+    {
+      "path": ".planning/artifacts/v1.36-competition-surface-inventory.json",
+      "sha256": "8b0a3855e732da21f643cd44086426b63038de01d1d10209416d924cc357f4e7"
+    },
+    {
+      "path": ".planning/artifacts/v1.36-competition-surface-inventory.md",
+      "sha256": "32214f6578b94245e0cdb46edb4c546ca2d613d579d11c0da322f7dffd3e10d3"
+    },
+    {
+      "path": "packages/spec/src/competition-governance.ts",
+      "sha256": "1171c113fe96fd9ad617a66da0f9f826058d8a6346746f45d7939124ceb5255b"
+    },
+    {
+      "path": "packages/spec/src/competition-policy-v1-36.ts",
+      "sha256": "3723efa43bbaf0a6e28bd4221a7ec61e83150c63dbb9ea33ec9799bbcde50498"
+    },
+    {
+      "path": "packages/spec/src/public-output-privacy.ts",
+      "sha256": "a4050aba4ee27f4e85a98ebbabfb2f862ad6fccf7695086b5f90565f215967cc"
+    },
+    {
+      "path": "scripts/check-boundary-monitors.ts",
+      "sha256": "cece780dde7902e72dc1c8530ea16780869b6699023bfd886d46006c7935a0ac"
+    }
+  ],
+  "limitation": null
+}

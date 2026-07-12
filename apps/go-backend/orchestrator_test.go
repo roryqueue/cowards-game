@@ -94,7 +94,7 @@ func TestGoMatchOrchestratorIntegration(t *testing.T) {
 	defer runtimeServer.Close()
 
 	orchestrator := newGoMatchOrchestrator(pool, runtimeServer.URL)
-	orchestrator.lifecycle = newTestMatchJobLifecycle(pool, time.Date(2026, 5, 25, 1, 20, 0, 0, time.UTC), "lease:go:orchestrator")
+	orchestrator.lifecycle = newTestMatchJobLifecycle(pool, time.Now().UTC().Add(time.Minute), "lease:go:orchestrator")
 	for _, matchID := range matchIDs {
 		result, err := orchestrator.runOnce(ctx, []string{matchID})
 		if err != nil {

@@ -12377,7 +12377,7 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import type {\n  AnalyticsReplayMomentType,\n  ChronicleEventContext,\n  ChronicleEventType,\n  ChronicleProjection,\n  FullBoardSnapshot,\n  JsonValue,\n  MatchId,\n  MatchExecutionReplayEvidenceV1,\n  MatchOutcome,\n  PlayerId,\n  SoldierInactivityExplanationDto,\n} from \"@cowards/spec\""
+          "statementText": "import type {\n  AnalyticsReplayMomentType,\n  ChronicleEventContext,\n  ChronicleEventType,\n  ChronicleProjection,\n  FullBoardSnapshot,\n  JsonValue,\n  MatchId,\n  MatchExecutionReplayEvidenceV1,\n  MatchOutcome,\n  PlayerId,\n  PublicMatchSetResultDto,\n  SoldierInactivityExplanationDto,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -12699,7 +12699,7 @@
         {
           "line": 6,
           "source": "../matches/types.js",
-          "statementText": "import type { ReplayReadyDto } from \"../matches/types.js\""
+          "statementText": "import type {\n  ReplayCompetitionContextDto,\n  ReplayReadyDto,\n} from \"../matches/types.js\""
         }
       ],
       "persistenceImports": [],
@@ -14718,7 +14718,7 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import {\n  MatchExecutionContractFixtureV1Schema,\n  PublicReplayEvidenceServiceDtoSchema,\n  PublicReplayMetadataServiceDtoSchema,\n  PublicMatchSetSummaryServiceDtoSchema,\n  getMatchExecutionContractFixtureByMatchId,\n  getMatchExecutionContractFixtureByMatchSetId,\n  toMatchExecutionMatchSetSummaryV1,\n  type MatchExecutionContractFixtureV1,\n  type MatchExecutionFailureCategoryV1,\n  type MatchExecutionLifecycleV1,\n  type MatchExecutionLifecycleStateV1,\n  type MatchExecutionReplayAvailabilityV1,\n  type MatchExecutionRetryDispositionV1,\n  type JsonValue,\n  type MatchId,\n  type PublicMatchEvidenceDto,\n  type PublicMatchSetResultDto,\n  type MatchSetId,\n  type PublicMatchSetSummaryServiceDto,\n  type PublicReplayEvidenceServiceDto,\n  type PublicReplayMetadataServiceDto,\n  type StrategyRuntimeProductSemantics,\n  type StrategyRuntimeProductValidationCode,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  MatchExecutionContractFixtureV1Schema,\n  PublicReplayEvidenceServiceDtoSchema,\n  PublicReplayMetadataServiceDtoSchema,\n  PublicMatchSetSummaryServiceDtoSchema,\n  classifyCompetitionCountedState,\n  getMatchExecutionContractFixtureByMatchId,\n  getMatchExecutionContractFixtureByMatchSetId,\n  projectPublicCompetitionGovernance,\n  toMatchExecutionMatchSetSummaryV1,\n  type MatchExecutionContractFixtureV1,\n  type MatchExecutionFailureCategoryV1,\n  type MatchExecutionLifecycleV1,\n  type MatchExecutionLifecycleStateV1,\n  type MatchExecutionReplayAvailabilityV1,\n  type MatchExecutionRetryDispositionV1,\n  type JsonValue,\n  type MatchId,\n  type PublicMatchEvidenceDto,\n  type PublicMatchSetResultDto,\n  type MatchSetId,\n  type PublicMatchSetSummaryServiceDto,\n  type PublicReplayEvidenceServiceDto,\n  type PublicReplayMetadataServiceDto,\n  type StrategyRuntimeProductSemantics,\n  type StrategyRuntimeProductValidationCode,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -14729,7 +14729,7 @@
       "claimsJobs": false,
       "completesMatches": false,
       "persistsChronicles": false,
-      "refreshesScoring": false,
+      "refreshesScoring": true,
       "servesPublicEvidence": true,
       "executesStrategy": false,
       "ownerDebugAccess": false,
@@ -15857,14 +15857,9 @@
           "statementText": "import { createDatabasePool } from \"@cowards/persistence/db\""
         },
         {
-          "line": 14,
+          "line": 15,
           "source": "@cowards/spec",
           "statementText": "import {\n  SERVICE_API_VERSION,\n  type MatchExecutionLifecycleV1,\n  toMatchExecutionReplayEvidenceV1,\n} from \"@cowards/spec\""
-        },
-        {
-          "line": 19,
-          "source": "./types.js",
-          "statementText": "import type {\n  GetMatchReplayOptions,\n  ReplayPageData,\n  ReplayUnavailableReason,\n} from \"./types.js\""
         },
         {
           "line": 2,
@@ -15872,32 +15867,42 @@
           "statementText": "import {\n  createPostgresChronicleStore,\n  type ChronicleMetadata,\n  type ChronicleStore,\n} from \"@cowards/persistence/quarantine-lifecycle\""
         },
         {
-          "line": 24,
+          "line": 20,
+          "source": "./types.js",
+          "statementText": "import type {\n  GetMatchReplayOptions,\n  ReplayCompetitionContextDto,\n  ReplayPageData,\n  ReplayUnavailableReason,\n} from \"./types.js\""
+        },
+        {
+          "line": 26,
           "source": "./replay-ready.js",
           "statementText": "import {\n  buildReadyReplayFromPublicEvidence,\n  buildReadyReplayFromStoredChronicle,\n} from \"./replay-ready.js\""
         },
         {
-          "line": 28,
+          "line": 30,
           "source": "../../lib/public-go-read-client.js",
           "statementText": "import {\n  createPublicGoReadClient,\n  type PublicGoReadClient,\n} from \"../../lib/public-go-read-client.js\""
         },
         {
-          "line": 32,
+          "line": 34,
           "source": "../../lib/public-service-adapter.js",
           "statementText": "import {\n  resolvePublicReadRouteOwnership,\n  type PublicReadRouteOwnershipEnv,\n} from \"../../lib/public-service-adapter.js\""
         },
         {
-          "line": 36,
+          "line": 38,
           "source": "../../lib/match-execution-fixture-adapter.js",
           "statementText": "import { createMatchExecutionFixturePublicReadClient } from \"../../lib/match-execution-fixture-adapter.js\""
         },
         {
-          "line": 37,
+          "line": 39,
           "source": "./replay-fixture.js",
           "statementText": "import {\n  createReplayFixtureData,\n  getReplayFixtureScenarioId,\n  isReplayFixtureMatch,\n} from \"./replay-fixture.js\""
         },
         {
-          "line": 61,
+          "line": 44,
+          "source": "../matchsets/evidence-copy.js",
+          "statementText": "import { replayCompetitionEvidenceRows } from \"../matchsets/evidence-copy.js\""
+        },
+        {
+          "line": 68,
           "source": "./types.js",
           "statementText": "export type { GetMatchReplayOptions } from \"./types.js\""
         },
@@ -15909,7 +15914,7 @@
         {
           "line": 8,
           "source": "@cowards/spec",
-          "statementText": "import type {\n  MatchId,\n  PlayerId,\n  PublicReplayEvidenceServiceDto,\n  PublicReplayMetadataServiceDto,\n} from \"@cowards/spec\""
+          "statementText": "import type {\n  MatchId,\n  MatchSetId,\n  PlayerId,\n  PublicReplayEvidenceServiceDto,\n  PublicReplayMetadataServiceDto,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [

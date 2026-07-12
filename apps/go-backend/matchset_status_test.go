@@ -733,6 +733,7 @@ func insertPhase101ChronicleArtifact(t *testing.T, ctx context.Context, pool *pg
 
 func seedPhase102OwnedRevisions(t *testing.T, ctx context.Context, pool *pgxpool.Pool, prefix string) (string, []string) {
 	t.Helper()
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
 	userID := "user:" + prefix
 	if _, err := pool.Exec(ctx, `
 		insert into users (id, username, handle, display_name, metadata)
@@ -751,6 +752,15 @@ func seedPhase102OwnedRevisions(t *testing.T, ctx context.Context, pool *pgxpool
 		source := "export default { async selectActivations() { return []; } } // " + side
 		sourceHash := hashStrategySourceForGo(source)
 		sourceBytes := len([]byte(source))
+		metadata := providerReadinessSourceArtifactMetadata(
+			t,
+			"typescript",
+			"strategy-language-provider-js-ts",
+			sourceHash,
+			sourceBytes,
+			true,
+		)
+		metadata["label"] = "Phase 102 " + side
 		if _, err := pool.Exec(ctx, `
 			insert into strategies (id, owner_user_id, name, metadata)
 			values ($1, $2, $3, '{}'::jsonb)
@@ -780,9 +790,7 @@ func seedPhase102OwnedRevisions(t *testing.T, ctx context.Context, pool *pgxpool
 			"valid":       true,
 			"sourceHash":  sourceHash,
 			"sourceBytes": sourceBytes,
-		}, map[string]any{
-			"label": "Phase 102 " + side,
-		}); err != nil {
+		}, metadata); err != nil {
 			t.Fatal(err)
 		}
 		revisions = append(revisions, revisionID)

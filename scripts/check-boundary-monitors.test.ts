@@ -262,7 +262,7 @@ describe("boundary drift monitors", () => {
     )
   })
 
-  it("wires v1.36 competition-policy package scripts into boundary monitor commands after v1.35 final proof", () => {
+  it("wires the complete v1.36 proof chain after v1.35 final proof", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
       scripts: Record<string, string>
     }
@@ -274,7 +274,13 @@ describe("boundary drift monitors", () => {
       "pnpm exec tsx scripts/evaluate-v1-36-competition-policy.ts --check",
     )
     expect(packageJson.scripts["boundary:monitors"]).toContain(
-      "pnpm v1.36:competition-policy:check && pnpm exec tsx scripts/check-boundary-monitors.ts",
+      "pnpm v1.36:competition-policy:check && pnpm v1.36:competition-boundaries:check && pnpm v1.36:final-proof:check && pnpm exec tsx scripts/check-boundary-monitors.ts",
+    )
+    expect(packageJson.scripts["v1.36:competition-boundaries:check"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-36-competition-boundaries.ts --check",
+    )
+    expect(packageJson.scripts["v1.36:final-proof:check"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-36-final-proof.ts --check",
     )
     expect(
       packageJson.scripts["boundary:monitors"].indexOf(
