@@ -9,7 +9,7 @@ var expectedFixtureChecksumManifest = fixtureChecksumManifest{
 		"forbidden-error.json"           : "sha256:56f90864bfb3af1c065f825755b6dc20a4a321eaca4df759c9dde1a267af750a",
 		"health.json"                    : "sha256:56488b12b6397ceee7ddc05dfe54ca7f0f7d428a7073f16122443a7e5d37deb0",
 		"not-found-error.json"           : "sha256:558857729a5410e46f11c58906b6642cddbeb888463ba96eec26256e5ffca538",
-		"public-ladder-page.json"        : "sha256:1955721d8b36d9eb741072936c82569f8bc9b8e5da130c1bb191afa5aecef522",
+		"public-ladder-page.json"        : "sha256:8d8488269d349e6dd3cc62809dbbb916459721a8607f14877422a50b3eb8c944",
 		"public-match-set-summary.json"  : "sha256:ed428ce2d99cde5b2f4b19dca0402ce687ead91c7ee492d95f7bc91b3f83dd3a",
 		"public-player-page.json"        : "sha256:8c1dd630741a281c4c9239e30a411c1b55a54fe40efa7f375f5ec9bc70b75235",
 		"public-replay-evidence.json"    : "sha256:bc5a96292e793dc6a317349c03c6d854ee0764d81b59fb37b2dc28b10043143b",
