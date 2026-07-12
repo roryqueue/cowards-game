@@ -51,7 +51,7 @@ Archive:
 - [x] **Phase 251: Season Lifecycle and Scheduling Policy** - Define public-safe Season lifecycle, entry and scheduling windows, entrant snapshots, archive behavior, and reset semantics.
 - [x] **Phase 252: Counted-State Classifier and Standings Recompute** - Classify result states and recompute Season standings from canonical counted evidence plus governance state.
 - [x] **Phase 253: Governance, Dispute, Abuse, and Recovery Surfaces** - Add minimal public-safe reporting, dispute, governance, abuse-policy, and recovery-expectation behavior.
-- [ ] **Phase 254: Public Trust UX Projections** - Render policy-backed competition, standings, result, replay, player, Strategy, and entry trust projections without owning rules in UI.
+- [x] **Phase 254: Public Trust UX Projections** - Render policy-backed competition, standings, result, replay, player, Strategy, and entry trust projections without owning rules in UI.
 - [ ] **Phase 255: Service-Backed E2E Proof and Boundary Monitors** - Prove the full counted competition path, negative cases, governance scenarios, privacy, boundary monitors, and replay realism.
 
 ## Phase Details
@@ -161,9 +161,9 @@ Plans:
   5. Public UI renders authoritative projections only and does not implement game rules, scoring truth, entry eligibility truth, or Strategy execution.
 **Plans**: 3 plans
 Plans:
-- [ ] 254-01-PLAN.md — Render posture, eligibility, Season, standings, and evidence projections.
-- [ ] 254-02-PLAN.md — Compose typed result, replay, Player, and Strategy trust surfaces.
-- [ ] 254-03-PLAN.md — Verify responsive trust UX, privacy, and replay realism in browsers.
+- [x] 254-01-PLAN.md — Render posture, eligibility, Season, standings, and evidence projections.
+- [x] 254-02-PLAN.md — Compose typed result, replay, Player, and Strategy trust surfaces.
+- [x] 254-03-PLAN.md — Verify responsive trust UX, privacy, and replay realism in browsers.
 **UI hint**: yes
 
 ### Phase 255: Service-Backed E2E Proof and Boundary Monitors
@@ -176,7 +176,11 @@ Plans:
   3. Governance proof covers degraded, non-counted, disputed/under-review, invalid, and invalidated scenarios with standings recomputation and public-safe explanations.
   4. Privacy scans and boundary monitors pass for public APIs, pages, fixtures, proof artifacts, copy snapshots, Strategy execution ownership, React rule ownership, Node `vm` avoidance, package/TinyGo/sandbox claims, and runtime-service / Runtime Broker / provider boundaries.
   5. Browser replay/result realism checks verify visible Soldier, STONE, and terrain positions stay inside declared board bounds, canonical arenas contain canonical starting positions, FALLEN/STONE display remains plausible, and public replay pages show plausible full Match starts.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 255-01-PLAN.md — Prove a live counted Season path and the authenticated eligibility rejection matrix.
+- [ ] 255-02-PLAN.md — Prove governance recomputation and extend privacy, ownership, and overclaim monitors.
+- [ ] 255-03-PLAN.md — Prove browser realism and generate the strict final milestone evidence rollup.
 **UI hint**: yes
 
 ## Progress
@@ -188,8 +192,8 @@ Plans:
 | 251. Season Lifecycle and Scheduling Policy | 3/3 | Complete | 2026-07-11 |
 | 252. Counted-State Classifier and Standings Recompute | 3/3 | Complete | 2026-07-11 |
 | 253. Governance, Dispute, Abuse, and Recovery Surfaces | 4/4 | Complete | 2026-07-11 |
-| 254. Public Trust UX Projections | 0/0 | Not started | - |
-| 255. Service-Backed E2E Proof and Boundary Monitors | 0/0 | Not started | - |
+| 254. Public Trust UX Projections | 3/3 | Complete | 2026-07-11 |
+| 255. Service-Backed E2E Proof and Boundary Monitors | 0/3 | In progress | - |
 
 ## Coverage
 

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.36
 milestone_name: Competition Maturity
 status: in_progress
-stopped_at: Phase 253 complete; Phase 254 planning and implementation in progress
-last_updated: "2026-07-11T14:10:00.000Z"
-last_activity: 2026-07-11 -- Phase 251 verified complete
+stopped_at: Phase 254 verified complete; Phase 255 service-backed proof in progress
+last_updated: "2026-07-12T02:00:00.000Z"
+last_activity: 2026-07-11 -- Phase 254 verified complete
 progress:
   total_phases: 7
-  completed_phases: 5
-  total_plans: 16
-  completed_plans: 16
-  percent: 71
+  completed_phases: 6
+  total_plans: 22
+  completed_plans: 19
+  percent: 86
 ---
 
 # State: Coward's Game
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-06-15)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 254 public trust UX
+**Current focus:** Phase 255 service-backed proof and boundary monitors
 
 ## Current Position
 
-Phase: 254 - Public Trust UX Projections
-Plan: planning
-Status: Research complete; implementation partly complete
-Last activity: 2026-07-11 -- Phase 253 verified complete
+Phase: 255 - Service-Backed E2E Proof and Boundary Monitors
+Plan: 255-01
+Status: Live local topology running; counted Season proof implementation in progress
+Last activity: 2026-07-11 -- Phase 254 verified complete
 
-Progress: [#######---] 71%
+Progress: [#########-] 86%
 
 ## Performance Metrics
 
@@ -49,8 +49,8 @@ Progress: [#######---] 71%
 | 251. Season Lifecycle and Scheduling Policy | Complete | 3/3 | 5 |
 | 252. Counted-State Classifier and Standings Recompute | Complete | 3/3 | 6 |
 | 253. Governance, Dispute, Abuse, and Recovery Surfaces | Complete | 4/4 | 6 |
-| 254. Public Trust UX Projections | Not started | 0/0 | 5 |
-| 255. Service-Backed E2E Proof and Boundary Monitors | Not started | 0/0 | 6 |
+| 254. Public Trust UX Projections | Complete | 3/3 | 5 |
+| 255. Service-Backed E2E Proof and Boundary Monitors | In progress | 0/3 | 6 |
 
 ## Accumulated Context
 
@@ -70,7 +70,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Finish Phase 254 trust UX validation and Phase 255 final proof.
+- Finish Phase 255 live service, governance, boundary, browser, and audit proof.
 
 ### Blockers/Concerns
 
@@ -92,7 +92,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-06-16T01:28:27Z
-Stopped at: Phase 252 complete; Phase 253 planning in progress
-Resume file: `.planning/phases/253-governance-dispute-abuse-and-recovery-surfaces/`
-Next command: execute `.planning/phases/253-governance-dispute-abuse-and-recovery-surfaces/253-01-PLAN.md`
+Last session: 2026-07-11T22:00:00-04:00
+Stopped at: Phase 254 verified complete; Phase 255 service proof in progress
+Resume file: `.planning/phases/255-service-backed-e2e-proof-and-boundary-monitors/`
+Next command: execute `.planning/phases/255-service-backed-e2e-proof-and-boundary-monitors/255-01-PLAN.md`

@@ -52,11 +52,11 @@ Requirements for the Competition Maturity milestone. Each maps to roadmap phases
 
 ### Public Trust UX
 
-- [ ] **TRUST-01**: Competition index/detail, Season, standings, entry, result, replay, player, and Strategy pages render eligibility, counted status, Season state, evidence availability, and resettable/no-durable-rating posture from policy-backed public DTOs.
-- [ ] **TRUST-02**: Public player and Strategy pages distinguish counted trial evidence from exhibition/study/self-play evidence without exposing private Strategy data.
-- [ ] **TRUST-03**: Replay pages and result pages preserve source/memory/objective/private-runtime privacy while showing public Chronicle/replay evidence and counted-state explanations.
-- [ ] **TRUST-04**: Public trust copy is calm and product-facing, avoiding scary internal jargon while remaining honest about resets, degraded Matches, disputes, invalidations, and limited recovery/moderation maturity.
-- [ ] **TRUST-05**: Public UI does not implement game rules, scoring truth, entry eligibility truth, or Strategy execution; it renders authoritative public projections.
+- [x] **TRUST-01**: Competition index/detail, Season, standings, entry, result, replay, player, and Strategy pages render eligibility, counted status, Season state, evidence availability, and resettable/no-durable-rating posture from policy-backed public DTOs.
+- [x] **TRUST-02**: Public player and Strategy pages distinguish counted trial evidence from exhibition/study/self-play evidence without exposing private Strategy data.
+- [x] **TRUST-03**: Replay pages and result pages preserve source/memory/objective/private-runtime privacy while showing public Chronicle/replay evidence and counted-state explanations.
+- [x] **TRUST-04**: Public trust copy is calm and product-facing, avoiding scary internal jargon while remaining honest about resets, degraded Matches, disputes, invalidations, and limited recovery/moderation maturity.
+- [x] **TRUST-05**: Public UI does not implement game rules, scoring truth, entry eligibility truth, or Strategy execution; it renders authoritative public projections.
 
 ### Verification and Boundary Proof
 
@@ -146,11 +146,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GOV-04 | Phase 253 | Complete |
 | GOV-05 | Phase 253 | Complete |
 | GOV-06 | Phase 253 | Complete |
-| TRUST-01 | Phase 254 | Pending |
-| TRUST-02 | Phase 254 | Pending |
-| TRUST-03 | Phase 254 | Pending |
-| TRUST-04 | Phase 254 | Pending |
-| TRUST-05 | Phase 254 | Pending |
+| TRUST-01 | Phase 254 | Complete |
+| TRUST-02 | Phase 254 | Complete |
+| TRUST-03 | Phase 254 | Complete |
+| TRUST-04 | Phase 254 | Complete |
+| TRUST-05 | Phase 254 | Complete |
 | PROOF-01 | Phase 255 | Pending |
 | PROOF-02 | Phase 255 | Pending |
 | PROOF-03 | Phase 255 | Pending |
