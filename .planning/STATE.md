@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.36
-milestone_name: Competition Maturity
-status: shipped
-stopped_at: v1.36 archived and ready for next milestone selection
-last_updated: "2026-07-12T12:00:00.000Z"
-last_activity: 2026-07-12 -- v1.36 audit passed, archived, and tagged
+milestone: v1.37
+milestone_name: Rules Integrity and Strategy Evaluation Foundations
+status: planning
+last_updated: "2026-07-12T19:24:19.801Z"
+last_activity: 2026-07-12
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 22
-  completed_plans: 22
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
@@ -25,11 +24,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 ## Current Position
 
-Milestone: v1.36 Competition Maturity
-Status: Shipped and archived
-Progress: [##########] 100%
-
-The milestone passed its final audit with 39/39 requirements, 7/7 phases, 39/39 integration checks, and 5/5 end-to-end flows. Full roadmap, requirements, audit, and phase records are under `.planning/milestones/`.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-12 — Milestone v1.37 started
 
 ## Durable Decisions
 

@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.36 Competition Maturity on 2026-07-12
-**Current milestone:** None; ready for next milestone selection
-**Status:** v1.36 is shipped and archived. Coward's Game now presents competition as a resettable public beta with provider-proof-backed counted entry, immutable Season entrant snapshots, explicit exhibition and self-play separation, canonical result classification and standings recomputation, public-safe dispute/governance states, policy-only abuse and recovery expectations, and clear trust projections across competition, result, replay, player, and Strategy surfaces. Strategy execution remains behind runtime-service / Runtime Broker / provider boundaries, and public replay/result output remains source, artifact, memory, objective, diagnostics, and private-runtime safe.
+**Current milestone:** v1.37 Rules Integrity and Strategy Evaluation Foundations
+**Status:** v1.37 planning is active. The milestone will make canonical Matches deterministic, replayable, language-neutral, failure-safe, semantically validated, and suitable for trustworthy competitive Strategy research while preserving valid v1.4 gameplay and immutable historical evidence.
 **Last audit:** v1.36 passed with 39/39 requirements, 7/7 phases, 39/39 integration checks, and 5/5 end-to-end flows. Live proof completed 48/48 Matches through Go and runtime-service and verified standings, governance recomputation, privacy boundaries, and replay realism.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.
@@ -12,6 +12,32 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.37 Rules Integrity and Strategy Evaluation Foundations
+
+**Goal:** Make canonical Matches deterministic, replayable, language-neutral, failure-safe, semantically validated, and suitable for trustworthy competitive Strategy research without changing valid v1.4 gameplay.
+
+**Target features:**
+- Fail closed for counted runtime lanes without current containment and executable conformance evidence bound to exact runtime and toolchain identity.
+- Establish one canonical rules/engine/runtime ABI/Chronicle/arena/Set-policy version tuple and one transition kernel consumed by engine execution, Chronicle, replay, services, and competition scheduling.
+- Add semantic validation for arenas and Match states; fix every confirmed lifecycle, precedence, event-vocabulary, constant-ownership, and stale-entry-point defect preserved by the core-rules audit reproductions.
+- Preserve and explicitly document valid v1.4 behavior; require separate approval for any change to valid Match state, Action legality, event order, outcome, or Strategy observation.
+- Define canonical JSON limits and end-to-end success/player-violation/system-failure semantics, including exact source/artifact/runtime/toolchain identity.
+- Replace parity declarations with executable TypeScript, Python, Rust, and Zig full-state, event, memory, objective, and failure-trace conformance.
+- Make Chronicle validation per-slot, version-strict, semantic, reconstruction-equivalent, and historically compatible with immutable v1.4 evidence.
+- Add truthful initiative and activation-state Strategy inputs, one runtime-budget contract, and a common supported-language ABI envelope.
+- Consolidate arena authority and prove Set scheduling gives each entrant every side and initial-initiative state without treating duplicate empty geometries as diversity.
+- Close with engine, spec, replay, runtime-service, four-language, privacy, boundary-monitor, service-backed, persistence, rollback, archive, and tag proof.
+
+**Conditional simplifications:**
+- Remove Cycle-start Backstab scans only if reachable-state differential proof establishes identical state, outcome, and canonical-event behavior.
+- Add `HOLD`/`END_ACTIVATION` after Advance only after explicit semantic approval and equivalence proof; otherwise defer it.
+
+**Hard boundaries:**
+- No Cycle-cap, starting-position, facing-only MOVE, reversal-history, attacker-facing Backstab, hidden-information, randomness, adaptive-rule, or per-Match rule experiments in this milestone.
+- No new official arena geometry beyond authority/fairness repair and no gameplay change justified only by the current toy Strategy matrix.
+- No durable ratings, prizes, staffed moderation, new languages, TinyGo promotion, package ecosystems, or broad UI redesign.
+- Strategy execution remains outside web/API/Go; public/default output remains source, artifact, memory, objective, diagnostics, host-data, security-internal, and private-runtime safe.
 
 ## Latest Shipped Milestone: v1.36 Competition Maturity
 
