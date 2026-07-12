@@ -237,6 +237,64 @@ describe("Match replay server facade", () => {
     })
   })
 
+  it("threads the public MatchSet counted and governance projection into replay data", async () => {
+    const stored = createStoredChronicle()
+    const countedState = {
+      state: "under_review",
+      publicLabel: "Under review",
+      publicExplanation:
+        "This result is being reviewed before standings include it.",
+      standingsEffect: "Held out of standings during review.",
+      evidenceAvailability: "available",
+      publicReason: "governance_hold",
+    } as const
+    const governance = {
+      status: "under_review",
+      publicReason: "governance_hold",
+      publicExplanation:
+        "This result is being reviewed and is held out of standings for now.",
+      standingsEffect: "Held out of standings during review.",
+      replayAvailable: true,
+    } as const
+    const getPublicMatchSetSummary = vi.fn(
+      async () =>
+        ({
+          matchSetId: "match-set:trial:1",
+          result: {
+            competition: {
+              seasonId: "season:trial:1",
+              countedState,
+              governance,
+            },
+          },
+        }) as never,
+    )
+    const server = createMatchReplayServer({
+      withPool: async (fn) =>
+        fn({
+          query: vi.fn(async () => ({
+            rows: [{ match_set_id: "match-set:trial:1" }],
+          })),
+        } as never),
+      createChronicleStore: () => ({
+        getByMatchId: async () => stored,
+      }),
+      publicMatchSetSummaryClient: { getPublicMatchSetSummary },
+    })
+
+    const response = await server.getMatchReplay("match:replay-test")
+
+    expect(response.status).toBe("ready")
+    expect(response.competition).toEqual({
+      matchSetId: "match-set:trial:1",
+      seasonId: "season:trial:1",
+      countedState,
+      governance,
+    })
+    expect(getPublicMatchSetSummary).toHaveBeenCalledWith("match-set:trial:1")
+    expect(JSON.stringify(response)).not.toContain("PRIVATE_STRATEGY_MEMORY")
+  })
+
   it("returns sanitized validation messages for invalid Chronicles", async () => {
     const stored = createStoredChronicle()
     stored.artifact.events = stored.artifact.events
@@ -604,6 +662,7 @@ describe("Match replay server facade", () => {
       expect(replay.metadata.matchId).toBe("match:fixture:public-safe-replay")
       expect(replay.projection.viewer.access).toBe("public")
       expect(replay.states[0]?.board.soldiers.length).toBe(2)
+      expect(replay.competition?.countedState.state).toBe("non_competitive")
     }
   })
 
@@ -623,6 +682,17 @@ describe("Match replay server facade", () => {
       reason: "missing-chronicle",
       message:
         "Replay unavailable: no public Chronicle is stored for this Match.",
+      competition: {
+        countedState: { state: "non_competitive" },
+      },
+    })
+    expect(
+      missingChronicle.status === "unavailable"
+        ? missingChronicle.evidenceRows
+        : [],
+    ).toContainEqual({
+      label: "counted status",
+      value: expect.stringContaining("Non-competitive"),
     })
     expect(noResult).toMatchObject({
       status: "unavailable",

@@ -139,6 +139,65 @@ describe("public discovery service", () => {
     expect(detail?.matchSets[0]?.presetId).toBe("smoke-exhibition-v1")
   })
 
+  it("carries authoritative ladder standing competition evidence", async () => {
+    const competitionEvidence = {
+      countedMatchSetCount: 3,
+      excludedMatchSetCount: 1,
+      evidenceAvailability: "partial" as const,
+      resultLinks: ["/matchsets/match-set%3Acounted"],
+      replayLinks: ["/matches/match%3Acounted/replay"],
+    }
+    const service = createPublicDiscoveryService({
+      env: {},
+      getLadderSeason: async (seasonId) =>
+        ({
+          seasonId,
+          slug: "evidence-season",
+          name: "Evidence Season",
+          status: "active",
+          statusLabel: "Active",
+          seasonSeed: "evidence-season",
+          policy: {
+            oneEntryPerUser: true,
+            replacementPolicy: "next-season-only",
+            staleRevisionPolicy: "locked snapshot remains active",
+            standingsReset: true,
+            noPermanentRatings: true,
+            minimumEntries: 2,
+            targetPodSize: 4,
+          },
+          entries: [],
+          standings: [
+            {
+              rank: 1,
+              entrantId: "entrant:alpha",
+              displayLabel: "Alpha",
+              points: 9,
+              wins: 3,
+              losses: 0,
+              draws: 0,
+              competitionEvidence,
+            },
+          ],
+          matchSets: [],
+          publication: {
+            publicEntries: true,
+            publicStandings: true,
+            publicReplayEvidence: true,
+            privateFieldsExcluded: [],
+          },
+        }) as any,
+    })
+
+    const detail = await service.getPublicCompetitionDetail(
+      "ladder:season:evidence",
+    )
+
+    expect(detail?.standings[0]?.competitionEvidence).toEqual(
+      competitionEvidence,
+    )
+  })
+
   it("builds a signed-in source-free entry dashboard", async () => {
     const service = createPublicDiscoveryService({
       env: {},

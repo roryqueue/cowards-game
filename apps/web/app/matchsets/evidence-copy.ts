@@ -3,7 +3,10 @@ import type {
   PublicMatchEvidenceDto,
   PublicMatchSetResultDto,
 } from "@cowards/spec"
-import type { ReplayReadyDto } from "../matches/types.js"
+import type {
+  ReplayCompetitionContextDto,
+  ReplayReadyDto,
+} from "../matches/types.js"
 
 export interface EvidenceRow {
   label: string
@@ -235,6 +238,34 @@ export const matchSetEvidenceRows = (
 export const publicPrivacyProvenanceCue =
   "private authoring data, private state, objectives, owner-only debug data, diagnostic details, and runtime internals"
 
+export const replayCompetitionEvidenceRows = (
+  competition: ReplayCompetitionContextDto | undefined,
+): EvidenceRow[] =>
+  competition
+    ? [
+        {
+          label: "counted status",
+          value: `${competition.countedState.publicLabel}. ${competition.countedState.publicExplanation}`,
+        },
+        {
+          label: "standings effect",
+          value: competition.countedState.standingsEffect,
+        },
+        {
+          label: "evidence availability",
+          value: competition.countedState.evidenceAvailability,
+        },
+        ...(competition.governance
+          ? [
+              {
+                label: "governance",
+                value: competition.governance.publicExplanation,
+              },
+            ]
+          : []),
+      ]
+    : []
+
 export const replayEvidenceRows = (data: ReplayReadyDto): EvidenceRow[] => [
   {
     label: "status",
@@ -249,6 +280,7 @@ export const replayEvidenceRows = (data: ReplayReadyDto): EvidenceRow[] => [
     label: "runtime evidence",
     value: "Replay DTO shows public outcome evidence, not runtime internals.",
   },
+  ...replayCompetitionEvidenceRows(data.competition),
   ...(data.contract
     ? [
         {

@@ -172,6 +172,15 @@ export const PublicCompetitionDetailDtoSchema = z.object({
       label: z.string().min(1),
       points: z.number().int(),
       record: z.string().min(1),
+      competitionEvidence: z
+        .object({
+          countedMatchSetCount: z.number().int().nonnegative(),
+          excludedMatchSetCount: z.number().int().nonnegative(),
+          evidenceAvailability: z.enum(["available", "partial", "unavailable"]),
+          resultLinks: z.array(PublicDiscoveryHrefSchema),
+          replayLinks: z.array(PublicDiscoveryHrefSchema),
+        })
+        .optional(),
     }),
   ),
   matchSets: z.array(PublicDiscoveryMatchSetCardSchema),
@@ -192,9 +201,7 @@ export const SignedInCompetitionEntryDashboardDtoSchema = z.object({
   revisionsUnavailable: z.boolean(),
   posture: z.object({
     publicLabel: z.literal(COMPETITION_POLICY_V1_36_POSTURE.publicLabel),
-    standingsScope: z.literal(
-      COMPETITION_POLICY_V1_36_POSTURE.standingsScope,
-    ),
+    standingsScope: z.literal(COMPETITION_POLICY_V1_36_POSTURE.standingsScope),
     durableRatingPromise: z.literal(
       COMPETITION_POLICY_V1_36_POSTURE.durableRatingPromise,
     ),

@@ -7,6 +7,7 @@ import {
 import type { Queryable } from "@cowards/persistence/repositories"
 import type {
   MatchId,
+  MatchSetId,
   PlayerId,
   PublicReplayEvidenceServiceDto,
   PublicReplayMetadataServiceDto,
@@ -18,6 +19,7 @@ import {
 } from "@cowards/spec"
 import type {
   GetMatchReplayOptions,
+  ReplayCompetitionContextDto,
   ReplayPageData,
   ReplayUnavailableReason,
 } from "./types.js"
@@ -39,6 +41,7 @@ import {
   getReplayFixtureScenarioId,
   isReplayFixtureMatch,
 } from "./replay-fixture.js"
+import { replayCompetitionEvidenceRows } from "../matchsets/evidence-copy.js"
 
 type WithPool = <T>(fn: (pool: Queryable) => Promise<T>) => Promise<T>
 type ResolveAuthorizedReplayOwners = (input: {
@@ -47,6 +50,10 @@ type ResolveAuthorizedReplayOwners = (input: {
   requestedOwnerPlayerId: PlayerId
   currentPlayerId: PlayerId
 }) => Promise<readonly PlayerId[]>
+type ResolveReplayMatchSetId = (input: {
+  pool: Queryable
+  matchId: MatchId
+}) => Promise<MatchSetId | null>
 
 const WORKSHOP_MATCH_SET_PREFIX = "match-set:workshop:"
 const LOCAL_WORKSHOP_PLAYER_ID = "player:workshop-local"
@@ -66,6 +73,7 @@ export interface MatchReplayServerDeps {
     | ((pool: Queryable) => Pick<ChronicleStore, "getByMatchId">)
     | undefined
   resolveAuthorizedReplayOwners?: ResolveAuthorizedReplayOwners | undefined
+  resolveReplayMatchSetId?: ResolveReplayMatchSetId | undefined
   env?: PublicReadRouteOwnershipEnv | undefined
   publicReplayEvidenceClient?:
     | Pick<PublicGoReadClient, "getPublicReplayEvidence">
@@ -75,6 +83,9 @@ export interface MatchReplayServerDeps {
         PublicGoReadClient,
         "getPublicReplayEvidence" | "getPublicReplayMetadata"
       >
+    | undefined
+  publicMatchSetSummaryClient?:
+    | Pick<PublicGoReadClient, "getPublicMatchSetSummary">
     | undefined
   fetchImpl?: typeof fetch | undefined
 }
@@ -220,11 +231,29 @@ const resolvePersistedMatchOwners: ResolveAuthorizedReplayOwners = async ({
   return [requestedOwnerPlayerId]
 }
 
+const resolvePersistedReplayMatchSetId: ResolveReplayMatchSetId = async ({
+  pool,
+  matchId,
+}) => {
+  const result = await pool.query<{ match_set_id: MatchSetId }>(
+    `
+      select match_set_id
+      from match_set_matches
+      where match_id = $1
+      limit 1
+    `,
+    [matchId],
+  )
+  return result.rows[0]?.match_set_id ?? null
+}
+
 export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
   const withPool = deps.withPool ?? withDatabasePool
   const createStore = deps.createChronicleStore ?? createPostgresChronicleStore
   const resolveAuthorizedReplayOwners =
     deps.resolveAuthorizedReplayOwners ?? resolvePersistedMatchOwners
+  const resolveReplayMatchSetId =
+    deps.resolveReplayMatchSetId ?? resolvePersistedReplayMatchSetId
   const env = deps.env ?? process.env
   const publicReadOwnership = resolvePublicReadRouteOwnership(env)
   const selectedPublicReplayEvidence =
@@ -243,8 +272,63 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
     deps.publicReplayReadClient ??
     deps.publicReplayEvidenceClient ??
     createdPublicReplayReadClient
+  const publicMatchSetSummaryClient =
+    deps.publicMatchSetSummaryClient ??
+    (deps.publicReplayReadClient || deps.publicReplayEvidenceClient
+      ? undefined
+      : createdPublicReplayReadClient)
   const matchExecutionFixtureClient =
     createMatchExecutionFixturePublicReadClient(env)
+
+  const resolveReplayCompetitionContext = async (
+    matchId: MatchId,
+  ): Promise<ReplayCompetitionContextDto | undefined> => {
+    const fixtureContext =
+      await matchExecutionFixtureClient?.getPublicReplayCompetitionContext(
+        matchId,
+      )
+    if (fixtureContext) {
+      return fixtureContext
+    }
+    if (!publicMatchSetSummaryClient) {
+      return undefined
+    }
+    const matchSetId = await withPool((pool) =>
+      resolveReplayMatchSetId({ pool, matchId }),
+    )
+    if (!matchSetId) {
+      return undefined
+    }
+    const summary =
+      await publicMatchSetSummaryClient.getPublicMatchSetSummary(matchSetId)
+    return summary?.result.competition
+      ? {
+          matchSetId: summary.matchSetId,
+          ...summary.result.competition,
+        }
+      : undefined
+  }
+
+  const attachReplayCompetitionContext = async (
+    data: ReplayPageData,
+    matchId: MatchId,
+  ): Promise<ReplayPageData> => {
+    const competition = await resolveReplayCompetitionContext(matchId)
+    if (!competition) {
+      return data
+    }
+    if (data.status === "ready") {
+      return { ...data, competition }
+    }
+    return {
+      ...data,
+      competition,
+      evidenceRows: [
+        ...replayCompetitionEvidenceRows(competition),
+        ...(data.evidenceRows ?? []),
+      ],
+    }
+  }
 
   return {
     async getPublicReplayMetadata(
@@ -280,24 +364,34 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
     ): Promise<ReplayPageData> {
       const resolvedMatchId = decodeMatchId(matchId)
       if (isReplayFixtureMatch(resolvedMatchId, env)) {
-        return createReplayFixtureData({
-          ...options,
-          scenarioId: getReplayFixtureScenarioId(resolvedMatchId) ?? undefined,
-        })
+        return attachReplayCompetitionContext(
+          createReplayFixtureData({
+            ...options,
+            scenarioId:
+              getReplayFixtureScenarioId(resolvedMatchId) ?? undefined,
+          }),
+          resolvedMatchId,
+        )
       }
       const fixtureEvidence =
         await matchExecutionFixtureClient?.getPublicReplayEvidence(
           resolvedMatchId,
         )
       if (fixtureEvidence) {
-        return buildReadyReplayFromGoEvidence(fixtureEvidence, options)
+        return attachReplayCompetitionContext(
+          buildReadyReplayFromGoEvidence(fixtureEvidence, options),
+          resolvedMatchId,
+        )
       }
       const fixtureReplayState =
         await matchExecutionFixtureClient?.getPublicReplayState(resolvedMatchId)
       if (fixtureReplayState) {
-        return replayUnavailableFromLifecycle(
+        return attachReplayCompetitionContext(
+          replayUnavailableFromLifecycle(
+            resolvedMatchId,
+            fixtureReplayState.lifecycle,
+          ),
           resolvedMatchId,
-          fixtureReplayState.lifecycle,
         )
       }
       const currentRequesterPlayerId = options.currentRequesterPlayerId
@@ -316,19 +410,21 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
           await publicReplayEvidenceClient.getPublicReplayEvidence(
             resolvedMatchId,
           )
-        return evidence === null
-          ? {
-              status: "unavailable",
-              matchId: resolvedMatchId,
-              reason: "missing-public-evidence",
-              message: publicReplayUnavailableMessage(
-                "missing-public-evidence",
-              ),
-            }
-          : buildReadyReplayFromGoEvidence(evidence, options)
+        const replay: ReplayPageData =
+          evidence === null
+            ? {
+                status: "unavailable",
+                matchId: resolvedMatchId,
+                reason: "missing-public-evidence",
+                message: publicReplayUnavailableMessage(
+                  "missing-public-evidence",
+                ),
+              }
+            : buildReadyReplayFromGoEvidence(evidence, options)
+        return attachReplayCompetitionContext(replay, resolvedMatchId)
       }
 
-      return withPool(async (pool) => {
+      const replay = await withPool<ReplayPageData>(async (pool) => {
         const stored = await createStore(pool).getByMatchId(resolvedMatchId)
 
         if (!stored) {
@@ -358,6 +454,7 @@ export const createMatchReplayServer = (deps: MatchReplayServerDeps = {}) => {
           authorizedRequestedOwners,
         )
       })
+      return attachReplayCompetitionContext(replay, resolvedMatchId)
     },
   }
 }

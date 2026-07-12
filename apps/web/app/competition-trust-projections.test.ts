@@ -20,10 +20,34 @@ describe("public competition trust projections", () => {
     expect(season).toContain("competitionEvidence.countedMatchSetCount")
     expect(season).toContain("matchSet.countedState.publicLabel")
 
+    const competitionDetail = read(
+      "apps/web/app/competitions/[competitionId]/page.tsx",
+    )
+    expect(competitionDetail).toContain(
+      "standing.competitionEvidence.countedMatchSetCount",
+    )
+    expect(competitionDetail).toContain(
+      "standing.competitionEvidence.excludedMatchSetCount",
+    )
+    expect(competitionDetail).toContain(
+      "standing.competitionEvidence.evidenceAvailability",
+    )
+    expect(competitionDetail).toContain(
+      "standing.competitionEvidence.resultLinks.map",
+    )
+    expect(competitionDetail).toContain(
+      "standing.competitionEvidence.replayLinks.map",
+    )
+    expect(competitionDetail).not.toContain("Public standings")
+
     const result = read("apps/web/app/matchsets/[matchSetId]/page.tsx")
     expect(result).toContain("result.competition?.countedState")
     expect(result).toContain("result.competition?.governance")
     expect(result).not.toContain("result.metadata")
+
+    const resultViewModel = read("apps/web/app/matchsets/result-view-model.ts")
+    expect(resultViewModel).toContain("result.competition?.countedState.state")
+    expect(resultViewModel).not.toContain("result.metadata")
   })
 
   it("distinguishes counted trial records from other public evidence", () => {

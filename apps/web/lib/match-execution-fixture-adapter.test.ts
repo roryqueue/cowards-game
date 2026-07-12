@@ -79,6 +79,21 @@ describe("match execution fixture adapter", () => {
       },
     })
     await expect(
+      client?.getPublicReplayCompetitionContext(
+        "match:fixture:public-safe-replay",
+      ),
+    ).resolves.toMatchObject({
+      matchSetId: "match-set:fixture:public-safe-replay",
+      countedState: {
+        state: "non_competitive",
+        evidenceAvailability: "partial",
+      },
+      governance: {
+        status: "non_competitive",
+        replayAvailable: true,
+      },
+    })
+    await expect(
       client?.getPublicMatchSetSummary("match-set:fixture:missing-chronicle"),
     ).resolves.toMatchObject({
       matchSetId: "match-set:fixture:missing-chronicle",

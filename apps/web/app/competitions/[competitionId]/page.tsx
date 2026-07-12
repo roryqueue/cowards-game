@@ -140,7 +140,35 @@ export default async function CompetitionDetailPage({
                 <span>{standing.label}</span>
                 <span>{standing.points}</span>
                 <span>{standing.record}</span>
-                <span>Public standings</span>
+                <span>
+                  {standing.competitionEvidence ? (
+                    <>
+                      {standing.competitionEvidence.countedMatchSetCount}{" "}
+                      counted /{" "}
+                      {standing.competitionEvidence.excludedMatchSetCount}{" "}
+                      excluded · Evidence{" "}
+                      {standing.competitionEvidence.evidenceAvailability}
+                      {standing.competitionEvidence.resultLinks.map(
+                        (href, index) => (
+                          <span key={`result-${index}-${href}`}>
+                            {" · "}
+                            <a href={href}>Result {index + 1}</a>
+                          </span>
+                        ),
+                      )}
+                      {standing.competitionEvidence.replayLinks.map(
+                        (href, index) => (
+                          <span key={`replay-${index}-${href}`}>
+                            {" · "}
+                            <a href={href}>Replay {index + 1}</a>
+                          </span>
+                        ),
+                      )}
+                    </>
+                  ) : (
+                    "No competition evidence"
+                  )}
+                </span>
               </div>
             ))}
           </div>

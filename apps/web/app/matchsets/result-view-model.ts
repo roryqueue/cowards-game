@@ -229,19 +229,12 @@ const formatEntrantRuntimeSummary = (
   result: PublicReadMatchSetResultDto,
   entrantRuntimeLabels: readonly string[],
 ): string => {
-  const storedCountedStatus =
-    result.metadata &&
-    typeof result.metadata === "object" &&
-    !Array.isArray(result.metadata) &&
-    "countedStatus" in result.metadata &&
-    typeof result.metadata.countedStatus === "string"
-      ? result.metadata.countedStatus
-      : null
+  const countedState = result.competition?.countedState.state
   const nonCountedLanguages = new Set<string>(
     result.contract.runtimeEvidence.eligibility.nonCountedExhibitionBeta,
   )
   const counted = result.entrants.filter((entrant) => {
-    if (storedCountedStatus === "non_counted") {
+    if (countedState === "non_counted") {
       return false
     }
     return (

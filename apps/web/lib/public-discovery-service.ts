@@ -449,6 +449,9 @@ export const createPublicDiscoveryService = (
         label: standing.displayLabel,
         points: standing.points,
         record: `${standing.wins}-${standing.losses}-${standing.draws}`,
+        ...(standing.competitionEvidence
+          ? { competitionEvidence: standing.competitionEvidence }
+          : {}),
       })),
       matchSets,
       replayCoverage: {

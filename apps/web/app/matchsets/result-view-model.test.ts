@@ -147,4 +147,34 @@ describe("result workbench view model", () => {
 
     expect(model.matches[0]?.tone).toBe("danger")
   })
+
+  it("uses the typed competition projection instead of legacy metadata", () => {
+    const result = fixtureResult("complete")
+    const projection = {
+      state: "non_counted" as const,
+      publicLabel: "Non-counted",
+      publicReason: "non_counted" as const,
+      publicExplanation: "This exhibition does not affect Season standings.",
+      standingsEffect: "excluded" as const,
+      evidenceAvailability: "available" as const,
+    }
+    const model = buildResultWorkbenchViewModel(
+      {
+        ...result,
+        competition: { countedState: projection },
+        metadata: { countedStatus: "counted" },
+      },
+      ["JS/TS - counted eligible"],
+    )
+
+    expect(
+      model.sections.find((section) => section.id === "runtime")?.metrics,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          value: expect.stringContaining("0 counted entrants"),
+        }),
+      ]),
+    )
+  })
 })

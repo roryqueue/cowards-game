@@ -3,8 +3,10 @@ import {
   PublicReplayEvidenceServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
+  classifyCompetitionCountedState,
   getMatchExecutionContractFixtureByMatchId,
   getMatchExecutionContractFixtureByMatchSetId,
+  projectPublicCompetitionGovernance,
   toMatchExecutionMatchSetSummaryV1,
   type MatchExecutionContractFixtureV1,
   type MatchExecutionFailureCategoryV1,
@@ -43,6 +45,13 @@ export interface MatchExecutionFixturePublicReadClient {
   getPublicReplayEvidence(
     matchId: MatchId,
   ): Promise<PublicReplayEvidenceServiceDto | null>
+  getPublicReplayCompetitionContext(
+    matchId: MatchId,
+  ): Promise<
+    | (Pick<PublicMatchSetResultDto, "matchSetId"> &
+        NonNullable<PublicMatchSetResultDto["competition"]>)
+    | null
+  >
   getPublicReplayState(matchId: MatchId): Promise<{
     label: string
     lifecycle: MatchExecutionLifecycleV1
@@ -426,6 +435,38 @@ export const createMatchExecutionFixturePublicReadClient = (
             ) as PublicReplayEvidenceServiceDto,
           )
         : null
+    },
+    async getPublicReplayCompetitionContext(matchId) {
+      const summary = getFixtureByMatchId(safeDecodeURIComponent(matchId))
+        ?.service.matchSetSummary
+      if (!summary) {
+        return null
+      }
+      const result = toPublicMatchSetSummaryFixture(
+        PublicMatchSetSummaryServiceDtoSchema.parse(summary),
+      ).result
+      if (result.competition) {
+        return { matchSetId: result.matchSetId, ...result.competition }
+      }
+      const countedState = classifyCompetitionCountedState({
+        executionStatus: result.status,
+        origin: "non_competitive",
+        expectedMatchCount: result.matches.length,
+        chronicleMatchCount: result.matches.filter(
+          (match) => match.replayAvailable,
+        ).length,
+        scoringAvailable: result.standings.length > 0,
+      })
+      return {
+        matchSetId: result.matchSetId,
+        countedState,
+        governance: projectPublicCompetitionGovernance({
+          countedState,
+          replayAvailable: result.matches.some(
+            (match) => match.replayAvailable,
+          ),
+        }),
+      }
     },
     async getPublicReplayState(matchId) {
       const fixture = getFixtureByMatchId(safeDecodeURIComponent(matchId))
