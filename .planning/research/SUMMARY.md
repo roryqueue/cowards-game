@@ -1,223 +1,140 @@
-# Project Research Summary
+# Research Summary
 
-**Project:** Coward's Game v1.36 Competition Maturity  
-**Domain:** Deterministic programmable strategy-game public beta competition maturity  
-**Researched:** 2026-06-15  
-**Confidence:** HIGH
+**Project:** Coward's Game v1.37 Rules Integrity and Strategy Evaluation Foundations
+**Researched:** 2026-07-12
+**Scope:** Approved integrity foundation only; preserve valid v1.4 gameplay and historical evidence
+**Overall confidence:** HIGH for repository-local findings and dependency order; MEDIUM for final phase sizing
 
 ## Executive Summary
 
-Coward's Game is a deterministic two-player programmable strategy game where public competition trust depends on immutable Strategy Revisions, provider-proof-backed eligibility, replay-backed evidence, and strict separation between public projections and private runtime/account/governance data. Experts should build this kind of product as an auditable competition policy layer around the existing engine, Chronicle, runtime-service, Go backend, PostgreSQL store, and public UI. They should not solve competition maturity by changing game rules, moving Strategy execution into web/API/Go, adding unproven runtime claims, or introducing durable ratings before governance and abuse maturity are proven.
+v1.37 should establish the smallest complete trust substrate required before serious Strategy development. The repository already has the right broad ownership split—TypeScript spec/engine/replay, runtime-service and language adapters, Go orchestration/persistence, and public web projections—but its contracts and proof are not yet strong enough to prevent those layers from drifting independently.
 
-The recommended v1.36 approach is to make Coward's Game an honest public beta competition with resettable trial seasons and no permanent rating promise. The roadmap should lock a versioned competition posture and policy contract first, then tighten counted entry using v1.35 provider-proof/readiness/package evidence, mature season lifecycle and one-active-revision rules, define counted/non-counted/degraded/disputed/invalidated result semantics, recompute standings from canonical evidence, add minimal public-safe governance/dispute/abuse/recovery expectation surfaces, update trust UX, and finish with service-backed E2E proof plus boundary monitors.
+The milestone should converge existing components onto one canonical transition authority rather than introduce a new rules stack. `@cowards/spec` should own an atomic rules/engine/runtime-ABI/Chronicle/arena/Set-policy tuple and bounded language-neutral contracts; `@cowards/engine` should own the only Match transition kernel; `@cowards/replay` should record and reconstruct kernel transitions without scheduling a second Match; adapters should report success, player violation, or system failure without deciding gameplay; Go should continue to own job lifecycle, persistence, Set scoring, rollback, and public-safe evidence.
 
-The main risks are trust-contract drift and privacy leakage: standings that look durable, entry gates that accept stale or partial proof, degraded/disputed results that pollute rankings, public pages that overpromise moderation or account recovery, and result/replay/player/Strategy pages that expose private internals. Mitigate these with spec-owned DTOs, Go-owned normal competition orchestration, recomputable projections, coarse public-safe explanations, append-only audit events, privacy scans, copy monitors, and replay board realism checks.
+The current-HEAD reproductions are the acceptance baseline. All seven persisted probes still reproduce, and audited production source has not changed since the audit snapshot. They must become permanent regression inputs, not be replaced by changed expectations. Valid v1.4 behavior—including same-direction collision, successful-push reversal history, blocked MOVE/PUSH, terminal timing, and other ambiguous rulings—must be frozen with executable fixtures before refactoring. Any change to a valid Match state, Action legality, event order, outcome, or Strategy observation requires a compatibility approval stop.
 
-## Key Findings
+No new framework or third-party dependency is recommended. Use the existing pinned TypeScript, Zod, Vitest, Playwright, Go, PostgreSQL, runtime-service, and WASI infrastructure. Counted runtime eligibility must be derived from current executable containment and four-language conformance evidence tied to exact runtime, toolchain, adapter, policy, corpus, source, normalized-byte, artifact, and compatibility-tuple identities.
 
-### Recommended Stack
+## Scope Boundary
 
-Do not add a new platform for v1.36. Use the current pnpm/TypeScript/Next.js/React/Go/PostgreSQL/runtime-service stack and add versioned contracts, policy services, persistence hardening, public-safe DTOs, proof scripts, Playwright coverage, and boundary monitors. The stack research is strongly repo-local and recommends extending existing packages rather than introducing rating engines, moderation vendors, runtime systems, or new API frameworks.
+### Committed Integrity Foundation
 
-**Core technologies:**
+- Fail closed for counted lanes without current containment and executable conformance evidence bound to exact identity.
+- Establish one canonical ownership and atomic version tuple for rules, engine, runtime ABI, Chronicle, arena catalog, and Set policy.
+- Replace the engine and Chronicle Match loops with one transition kernel whose transitions are recorded, semantically validated, reconstructed, and hash-compared.
+- Add bounded canonical JSON handling and semantic validation for arenas, all state boundaries, occupancy, ownership, bounds, status/position consistency, initiative, versions, and outcomes.
+- Repair every confirmed audit lifecycle defect while preserving approved v1.4 semantics: immediate outcome after no-Advance cleanup, Cycle-end Backstab closure/reason, excess-order precedence, stale contiguous-Activation export removal, immutable/cloned constants, and emitted-or-removed event vocabulary.
+- Preserve success, player violation, and system failure end to end; system failure cannot mutate gameplay, memory, standings, or become a player penalty.
+- Reconcile original bytes, normalized bytes, line endings, manifests, artifacts, runtimes, toolchains, ABI, corpus, and evidence identity.
+- Replace parity declarations with identical TypeScript/Python/Rust/Zig corpus execution and full state, event, memory, objective, and failure-trace comparison.
+- Make Chronicle validation version-strict, semantic, per activation slot, reconstruction-equivalent, and historically routed without rewriting v1.4 evidence.
+- Add explicit initiative and authoritative `hasAdvancedThisActivation`, one documented budget contract, and the same ABI envelope for every supported language.
+- Consolidate arena authority, deduplicate semantically identical geometry for diversity claims, and schedule explicit side and entrant-level initiative coverage.
+- Close with service-backed execution, failure, Chronicle, replay, persistence, fairness, rollback, privacy, and boundary-monitor proof.
 
-- `pnpm@11.1.2`: workspace orchestration and proof scripts — keep milestone evaluators and monitors in the existing command path.
-- TypeScript `^6.0.3`: shared spec contracts, Zod schemas, persistence helpers, public DTO privacy guards, and proof harnesses — best fit for versioned competition policy.
-- Next.js `^16.2.6` / React `^19.2.6`: public competition, ladder, result, replay, player, Strategy, Learn, and entry surfaces — update trust UX without moving rules into components.
-- Go `1.25.0` with `pgx/v5 v5.9.2`: normal backend orchestration, MatchSet status/scoring refresh, public reads, season entry/provider checks, and competition policy ownership — never execute Strategy code here.
-- PostgreSQL: canonical store for users, immutable Strategy Revisions, MatchSets, Chronicles, trial seasons, entries, result flags, counted status, standings inputs, and audit events.
-- `apps/runtime-service`: authoritative provider validation/build/proof and Strategy execution boundary — v1.36 consumes this evidence; it does not own standings or season policy.
-- Vitest and Playwright: contract/persistence/unit tests plus service-backed public flow and replay realism proof.
+### Proof-Gated Behavior-Preserving Simplifications
 
-Critical stack additions should be limited to a v1.36 competition maturity contract in `@cowards/spec`, typed public governance metadata, a `scripts/evaluate-v1-36-competition-maturity.ts` proof evaluator, extended boundary monitors, and one focused service-backed Playwright proof. No dependency installation is recommended.
+- Remove Cycle-start Backstab scans only if reachable-state differential proof establishes identical canonical state, outcome, event sequence, and Strategy observation behavior.
+- Add `HOLD`/`END_ACTIVATION` after Advance only after a separate approval and proof that scheduling, Backstab, Chronicle, replay, reachable outcomes, and observations preserve the intended existing hold behavior.
+- If either candidate changes any valid state, legality, event order, outcome, or observation, defer it. Neither is required to complete the integrity foundation.
 
-### Expected Features
+### Deferred Experiments
 
-v1.36 should make existing alpha/trial competition understandable, bounded, and auditable. The product posture should be "public beta trial competition": resettable season-scoped standings, strict counted eligibility, replay-backed public evidence, and limited public-safe governance explanations.
+- Cycle caps, inward starting rows, facing-only MOVE, reversal-history removal, attacker-facing or stronger Backstab rules.
+- Hidden information, randomness, adaptive rules, per-Match mutation, and new official arena geometries beyond authority/fairness repair.
+- Gameplay changes justified by the toy Strategy matrix, metagame selection machinery, or the proposal's broader experimental program.
+- Durable ratings, prizes, staffed moderation, new languages, TinyGo promotion, package ecosystems, and broad UI redesign.
+- The v2.0 proposal's full 63 requirements and 13 phases are source material only and must not be imported into active planning.
 
-**Must have (table stakes):**
+## Key Research Conclusions
 
-- Competition surface inventory and posture contract — every exhibition, trial season, entry dashboard, result, replay, player, Strategy, governance, discovery, proof, and monitor surface needs an owner, public/private data class, counted behavior, and proof requirement.
-- Public beta/resettable trial season copy — pages must say trial/resettable/no permanent rating and avoid ranked permanence, Elo/Glicko, production sandbox certification, package ecosystem, or TinyGo production claims.
-- Versioned season rules — expose lifecycle, entry windows, minimum entries, target pod size, scoring policy, one-entry rule, next-season replacement, stale revision policy, reset policy, and no durable rating promise.
-- Counted entry eligibility — require current provider proof, supported language/provider, compatible runtime/engine metadata, valid provenance/artifact evidence, package mode `none`, non-hidden provider, owner authorization, immutable revision state, and no unsupported TinyGo lane.
-- One active Strategy Revision per Player per Season — no mid-season replacement for counted trial standings.
-- Exhibition versus trial ladder split — exhibitions can remain flexible and same-user/multi-revision where explicitly allowed; counted trial standings stay stricter and exclude same-user/self-play pollution.
-- Counted-state taxonomy — `pending`, `counted`, `retrying`, `under_review`/`disputed`, `invalid`/`invalidated`, `non_competitive`, `non_counted`, and degraded/system-failure semantics need clear public standing effects.
-- Recomputable standings — derive rankings from counted, complete, replay-backed MatchSets plus governance state, not UI-owned cached display truth.
-- Public-safe governance/dispute behavior — result flags, review holds, admin resolution, audit events, and public explanations without private notes, reporter identity, raw diagnostics, or recovery evidence.
-- Privacy-safe public projections — default public output must omit Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, tokens, DB details, host paths, package paths, provider proof strings, private runtime internals, dispute internals, recovery payloads, and operator-only governance details.
-- End-to-end proof — entry -> counted MatchSet -> execution -> result -> standings -> replay, plus negative eligibility, degraded/non-counted/disputed/invalidated, privacy, boundary, and board realism cases.
+### Architecture and Ownership
 
-**Should have (competitive differentiators):**
+The safest architecture is a functional core with evidence adapters. The kernel accepts validated state plus explicit input and returns validated next state, canonical events, runtime requests/results, and terminal/failure status. Direct Match execution and Chronicle recording consume those same transition records. Replay validates and reconstructs them; it does not independently advance Phases, Rounds, Cycles, Activations, or Contractions.
 
-- Evidence-first counted standings — every included/excluded ledger row explains why it counts or does not count and links to public result/replay evidence.
-- Provider-proof-aware entry UX — Strategy authors see public-safe eligibility categories, not raw diagnostics.
-- Public-safe governance trail — transparency through coarse public status, reason, explanation, timestamp where safe, and standings impact.
-- Chronicle-centered trust — public results point to deterministic replay evidence instead of opaque adjudication.
-- Same-user/self-play separation — useful exhibition learning workflows continue without contaminating trial standings.
+The complete compatibility tuple must be treated atomically. Independent support checks for each version string are insufficient because individually supported components may never have been certified together. Missing, unknown, stale, or mixed tuples must fail before counted scheduling, execution, persistence, or replay. Historical v1.4 evidence routes through immutable original semantics and is never normalized to the latest tuple.
 
-**Defer (v2+ or later milestone):**
+### Validation and Failure Safety
 
-- Durable permanent ratings, Elo/Glicko/TrueSkill/MMR, rating refunds, and all-time rankings.
-- Formal tournaments, prizes, public sanction histories, broad spectator/community features, and tournament legal/governance operations.
-- Full moderation console, automated abuse detection, appeals operation, SLAs, and public enforcement history.
-- Full account ownership transfer/recovery product.
-- Package ecosystem support, TinyGo production support, ABI migration to direct exports or Component Model/WIT, production sandbox certification, and any new runtime ownership.
-- Game-rule changes.
+Shape validation is necessary but insufficient. Explicit semantic validators must cover cross-record invariants at arena admission, initial state, relevant transition postconditions, runtime final state, persistence, and Chronicle reconstruction. Canonical JSON limits must include bytes, depth, nodes/entries, strings, collections, Unicode, finite/safe numeric rules, duplicate keys, ordering/hashing, and serialization behavior. Traversal must be iterative and bounded so adversarial depth produces a typed result rather than `RangeError` or uncontrolled allocation.
 
-External comparison sources in `FEATURES.md` support these conclusions only as secondary context: mature competition platforms distinguish provisional versus final standings, publish fair-play expectations, constrain appeals/reports, and communicate reset/ranking policies. The roadmap should remain primarily grounded in local Coward's Game specs and shipped milestones.
+All adapters must implement a common three-way result envelope. Only the canonical engine boundary may translate a valid player violation into the already-approved v1.4 consequence. Timeouts, crashes, unavailable runtimes/toolchains, transport errors, malformed envelopes, stale artifacts, and persistence failures remain system failures, produce zero gameplay/memory mutation, and follow Go-owned retry/rollback policy.
 
-### Architecture Approach
+### Executable Language and Identity Proof
 
-v1.36 should integrate as a competition policy and governance layer around the existing Go-owned MatchSet lifecycle. The architectural center should be a versioned Competition Policy Service described in `@cowards/spec` and owned by Go for normal product behavior. It should consume immutable Strategy Revision/provider-proof state from v1.35, snapshot entrants, classify MatchSets into counted/non-counted/degraded/disputed/invalidated states, recompute standings from canonical evidence plus governance events, and publish redacted public projections. TypeScript persistence helpers remain useful parity/test/rollback references, but public beta claims should be proven through Go-owned service-backed flows.
+Language neutrality means equivalent observable ABI behavior, not four independent engines. One versioned, hash-addressed corpus should drive actual TypeScript, Python, Rust, and Zig adapters. It must compare complete canonical state transitions, events, StrategyMemory, SoldierMemory, objectives, failure classes, invalid/boundary JSON, timeouts/resource failures, stale artifacts, deterministic repeats, and exact runtime/toolchain identity.
 
-**Major components:**
+Original source bytes, normalized bytes, normalization policy/version, line endings, artifact bytes, manifests, provider, runtime, toolchain, ABI, policy, corpus, and evidence hashes need explicit domains and bindings. Floating Rust `stable` or Wasmtime `latest` may support discovery but cannot identify counted evidence. A relevant dependency change must invalidate eligibility automatically.
 
-1. `@cowards/spec` — versioned competition policy, entry eligibility, counted-state, public governance, standings snapshot, dispute/abuse/recovery expectation, and privacy DTO schemas.
-2. Go backend — season lifecycle, entry gates, one-active-revision enforcement, MatchSet orchestration/status refresh, standings recomputation, governance writes, audit events, and public projections.
-3. Runtime-service / Runtime Broker / providers — provider validation/build/proof and Strategy execution only; no standings, governance, account recovery, or public policy ownership.
-4. Pure engine and Chronicle — deterministic rules and replay reconstruction only; no season, account, governance, ratings, or abuse concepts.
-5. PostgreSQL / persistence — immutable revision snapshots, season entries, MatchSets, Matches, Chronicles, scoring snapshots, counted-state overrides, result flags, and audit events.
-6. Web UI — public-safe policy/trust explanations and signed-in entry/report forms; no scoring truth, game rules, or Strategy execution.
-7. Boundary monitors and proof scripts — enforce no runtime creep, no public overclaims, no private leaks, recomputable standings, and replay board realism.
+### Chronicle, Strategy Inputs, and Competition Fairness
 
-Key patterns to follow are policy-backed public DTOs, system classifier plus governance override, snapshot entrants, recompute standings, and split private decision evidence from public trust evidence.
+Chronicle grammar state must be keyed per `activationId`; a global increasing sequence cannot detect duplicated, skipped, reopened, or out-of-order interleaved slots. Current evidence should require version-strict literals, semantic subject/state agreement, and reconstruction-equivalent transition hashes, while immutable historical evidence remains readable only under its original rules and Chronicle semantics.
 
-### Critical Pitfalls
+Strategy observations must expose canonical facts rather than language-specific inference: explicit initiative and scheduler-owned `hasAdvancedThisActivation`. Budget terms must name measurement boundaries and units rather than reuse equal numbers with different meanings across adapters.
 
-1. **Public beta copy implies durable ratings or mature governance** — lock a posture contract and forbidden-claim list before UI work; require resettable/trial/no durable rating language everywhere standings are shown.
-2. **Counted entry uses stale or partial v1.35 evidence** — gate counted entry on current immutable provider-proof/readiness/provenance/package/account metadata, not Workshop display state or local checker labels.
-3. **Exhibition/self-play rules blur into trial standings** — keep same-user and multi-revision play labeled as exhibition/study evidence, while counted trial seasons enforce one active revision per user and exclude same-user/self-play results.
-4. **Degraded, failed, disputed, or invalidated results pollute standings** — define an explicit counted-state lattice and recompute standings only from complete replay-backed counted MatchSets.
-5. **Public governance output leaks private internals** — separate private audit/operator evidence from public status, reason, explanation, timestamp, standings impact, and replay availability.
-6. **Dispute/recovery UX overpromises operations** — add expectation surfaces and minimal private-safe flows only; do not promise appeals, guaranteed recovery, staffed moderation, or rating repair.
-7. **Competition maturity changes rules or moves runtime boundaries** — treat engine rules, Chronicle grammar, runtime-service/provider ownership, package mode `none`, and TinyGo hidden/spike-only status as locked unless a future approved milestone changes them.
-8. **Policy proof skips replay realism** — final proof must still validate in-bounds Soldier/terrain positions, canonical starts, STONE/FALLEN rendering semantics, and plausible public replay pages.
+Set fairness requires explicit scenario data. Swapping sides and changing a seed suffix can leave the same entrant with initiative in both Matches. Scheduling and service-backed proof must demonstrate that each entrant receives each side and each initial-initiative state. Arena diversity must be based on versioned semantic geometry identity, not duplicate IDs for the same empty geometry.
 
-## Implications for Roadmap
+## Recommended Compact Roadmap
 
-Based on research, suggested phase structure continuing after Phase 248:
+### Phase 1: Counted Safety and Canonical Authority
 
-### Phase 249: Competition Surface Inventory and Policy Lock
+Quarantine unproved counted lanes; freeze current-HEAD audit evidence, valid v1.4 compatibility fixtures, privacy baselines, and rollback controls; define the ownership map, atomic compatibility tuple, historical routing, and evidence-derived eligibility. This phase prevents new untrusted evidence while later foundations are built.
 
-**Rationale:** v1.36 touches many existing surfaces; locking vocabulary and authority first prevents copy, entry, standings, governance, and proof drift.  
-**Delivers:** surface inventory, public/private data classification, policy owner map, `competition-policy-v1.36` posture contract, forbidden-claim list, and initial monitor updates.  
-**Addresses:** posture inventory, public beta decision, resettable/no-durable-rating promise, privacy exclusions, proof requirements.  
-**Avoids:** public beta overclaim, game-rule drift, runtime claim creep, hidden private outputs.
+### Phase 2: Canonical Transition Kernel and v1.4 Semantic Integrity
 
-### Phase 250: Counted Entry and One-Active-Revision Enforcement
+Add bounded arena/state/outcome validators and immutable/cloned constants; extract one transition kernel; route direct execution and Chronicle recording through it; remove the stale public contiguous-Activation route; repair the reproduced lifecycle, order, outcome, and event-vocabulary defects. Run differential compatibility fixtures throughout.
 
-**Rationale:** Entry eligibility is the gate that protects all later standings and governance work. It must consume v1.35 provider-proof/readiness/package evidence before scheduling or result aggregation matures.  
-**Delivers:** canonical entry eligibility decision, public-safe failure categories, one active Strategy Revision per Player per Season, next-season-only replacement, same-user counted restrictions, exhibition labels, Go/spec/persistence parity tests.  
-**Addresses:** strict counted eligibility, one-entry rule, exhibition versus trial ladder separation, immutable lock clarity.  
-**Avoids:** stale proof acceptance, hidden TinyGo/package bypass, unsupported provider entry, owner mismatch, same-user standings manipulation.
+**Approval stop:** If any proposed clarification or refactor changes valid state, legality, event order, outcome, terminal reason/timing, or Strategy observation, stop and obtain an explicit compatibility ruling before changing expectations.
 
-### Phase 251: Season Lifecycle and Scheduling Policy
+### Phase 3: Canonical JSON, Failure Semantics, and Artifact Identity
 
-**Rationale:** Once eligible entries are defined, seasons need explicit lifecycle, freeze, scheduling, archive, and reset semantics.  
-**Delivers:** draft/open/scheduling/active/completed/archived behavior, season policy DTOs, deterministic scheduling audit events, resettable archive semantics, historical link stability.  
-**Addresses:** versioned season rules, standings reset policy, no-permanent-rating copy, no mid-season mutation.  
-**Avoids:** entering closed seasons, mutating entrants after scheduling, cross-season contamination, stale public rank context.
+Define iterative JSON limits, common three-way results, no-mutation system-failure semantics, exact source/normalized/artifact/manifest/toolchain identity, and one documented runtime-budget and ABI envelope. Prove atomic failure behavior before broad conformance work.
 
-### Phase 252: Counted-State Classifier and Standings Recompute
+### Phase 4: Executable Four-Language and Chronicle Conformance
 
-**Rationale:** Standings cannot be trusted until every MatchSet has a public-safe counted state and standings derive from canonical evidence.  
-**Delivers:** counted-state projection enum, public reasons/explanations, replay-backed evidence checks, degraded/non-counted/disputed/invalidated exclusion, deterministic tie-breakers, recompute service, optional materialized snapshot with input hash, unit/property-style recomputation tests.  
-**Addresses:** counted taxonomy, recomputable standings, degraded result behavior, evidence-first ledger rows.  
-**Avoids:** UI-owned scoring, cached mutable rank truth, counted system failures, unexplained exclusions.
+Execute the identical positive/negative corpus through actual TypeScript, Python, Rust, and Zig adapters; compare complete traces; bind counted eligibility to fresh proof. Add version-strict per-slot Chronicle grammar, semantic validation, transition/reconstruction equality, and immutable historical routing.
 
-### Phase 253: Governance, Dispute, Abuse, and Recovery Surfaces
+### Phase 5: Truthful Strategy Inputs, Arena Authority, and Set Fairness
 
-**Rationale:** Governance transitions need the counted-state model so report/review/invalidated decisions have deterministic standings effects and public-safe explanations.  
-**Delivers:** entrant/admin flagging, review hold, admin resolution to counted/non-counted/non-competitive/invalidated, private notes plus public explanation split, audit event standardization, fair-play policy, limited account recovery expectation copy.  
-**Addresses:** dispute/report entry points, admin governance decisions, abuse policy surface, recovery expectations, public-safe governance trail.  
-**Avoids:** public accusation labels, operator/private leak, hidden eligibility penalties, unsupported moderation/recovery promises.
+Add explicit initiative and authoritative Advance state across every language envelope; consolidate arena authority and semantic geometry identity; generate explicit side/initiative scenario matrices and prove entrant-level coverage in TypeScript, Go, persistence, and service-backed flows.
 
-### Phase 254: Public Trust UX Projections
+### Phase 6: Integrated Service Proof, Drift Guards, and Release
 
-**Rationale:** UI should render already-stable public DTOs rather than inventing policy or scoring semantics in React.  
-**Delivers:** competition index/detail, season, standings, result, replay, player, Strategy, entry, report/policy pages updated with posture, counted status, public explanation, replay evidence, privacy exclusions, provider/readiness labels, and trial/no-durable-rating copy.  
-**Addresses:** public trust UX, Strategy/player public history, public privacy exclusions, external-facing policy clarity.  
-**Avoids:** contradictory copy, public raw diagnostics, private Strategy/source/memory/objective leaks, discovery-equivalent treatment for non-counted exhibitions.
+Rerun every persisted audit reproduction and all compatibility fixtures. Prove service-backed execution, failure classification, no-mutation behavior, Chronicle reconstruction, replay, persistence, recomputation, Set fairness, idempotency, rollback, privacy, and public boundaries. Add structural monitors for duplicate loops/arenas, mixed tuples, adapter-owned gameplay classification, stale identity, unsupported events, unproved counted lanes, and private-output leakage. Audit one transition authority, then archive and tag before beginning the serious-Strategy milestone.
 
-### Phase 255: Service-Backed E2E Proof and Boundary Monitors
+This six-phase shape is dependency-ordered and intentionally smaller than the proposal. If implementation sizing requires a split, split within these integrity seams rather than importing deferred experimental phases.
 
-**Rationale:** v1.36 should close only when the full public beta trust path is proven through service-backed behavior, negative cases, privacy scans, monitors, and replay realism.  
-**Delivers:** v1.36 evaluator artifacts, Playwright service-backed counted-flow proof, negative eligibility matrix, counted-state/governance matrix, standings recomputation proof, privacy scans across public outputs and proof artifacts, copy monitors, no-runtime-creep monitors, board realism checks.  
-**Addresses:** final verification, boundary monitors, public copy posture, public result/replay proof.  
-**Avoids:** fixture-only completion, proof artifact leaks, strategy execution in web/API/Go, Node `vm` misuse, package/TinyGo/sandbox overclaims, visually broken replay evidence.
+## Acceptance and Approval Rules
 
-### Phase Ordering Rationale
+- Treat the seven current-HEAD reproductions as permanent acceptance tests; every probe must pass or have an explicitly approved compatibility ruling.
+- Freeze valid v1.4 state/event/observation fixtures before changing loops, validators, or Chronicle construction.
+- Do not re-record golden outputs to conceal semantic drift.
+- Do not count a runtime lane from documentation, registry metadata, readiness flags, or gate names. Require current executable proof bound to exact identity.
+- Do not rewrite or relabel historical v1.4 Chronicles/results; route by persisted tuple and original semantics.
+- Keep Strategy source, artifacts, memory, objectives, Awareness/private traces, raw diagnostics, host data, credentials, security internals, and proof secrets out of public/default output and generated public evidence.
+- Treat the two behavior-preserving candidates as optional gated work. Failed equivalence defers the candidate and does not block the committed foundation.
+- Final completion requires passing engine, spec, replay, runtime-service, four-language, privacy, boundary-monitor, and service-backed proof suites plus archive and tag.
 
-- Policy lock must come first because every later phase needs the same vocabulary for public beta, resettable seasons, counted state, privacy exclusions, and forbidden claims.
-- Entry and one-active-revision rules come before season scheduling and standings because invalid entrants poison every downstream result.
-- Season lifecycle comes before standings recompute because standings need stable season windows, entrant freezes, schedule linkage, and archive semantics.
-- Counted-state classification and recomputation must precede dispute/governance UX because review/invalidated/non-counted decisions need deterministic standings impact.
-- Public UX comes after DTOs and services are stable so React renders authoritative projections instead of owning scoring or policy.
-- Final proof comes last but should be seeded throughout; privacy, boundary, copy, and replay realism checks are acceptance criteria for every phase.
+## Recommended Stack Position
 
-### Research Flags
+Retain the existing repository stack and package boundaries. Add contracts, validators, fixtures, generated artifacts, migrations, proof scripts, and exact CI pins as needed, but no new dependency is currently justified. TypeScript remains the canonical rules implementation; Go remains orchestration and persistence; the four Strategy languages share one data ABI behind runtime-service. WASI Preview 1 stdin/stdout JSON remains the Rust/Zig boundary for this milestone.
 
-Phases likely needing deeper research during planning:
+## Principal Risks and Mitigations
 
-- **Phase 250:** Confirm exact existing v1.35 provider-proof/readiness/package fields and Go/persistence parity points before implementing the canonical eligibility decision.
-- **Phase 252:** Decide whether storage enum names migrate or v1.36 adds a projection enum first. Recommendation: projection enum first.
-- **Phase 253:** Clarify product scope for dispute, abuse, and account recovery. Recommendation: minimal public-safe expectation surfaces plus result flag/admin resolution, not a broad moderation or recovery product.
-- **Phase 255:** Confirm service-backed topology and proof cost before locking the Playwright matrix; keep at least one real counted happy path and use fixtures only for rare governance branches.
+| Risk | Mitigation |
+| --- | --- |
+| Compatibility drift disguised as clarification | Frozen differential fixtures and mandatory approval stop on any semantic delta |
+| Two Match authorities survive | One kernel, recorder-only Chronicle builder, stale export removal, structural monitor |
+| Shape-valid but impossible states | Explicit semantic validation at every trust boundary |
+| Deep JSON causes crash/DoS | Iterative byte/depth/node/value limits and shared adversarial corpus |
+| System failure becomes gameplay | Central three-way classification and atomic no-mutation tests |
+| Stale or ambiguous artifact identity | Explicit hash domains and complete identity/evidence closure |
+| Four-language parity remains declarative | Actual adapter execution with full-trace comparison |
+| Historical Chronicle reinterpretation | Tuple/version router and immutable v1.4 fixtures |
+| Apparent rather than real Set fairness | Explicit side/initiative Cartesian coverage per entrant |
+| Privacy leak in proof artifacts | Separate private/public schemas and scans over APIs, logs, fixtures, and generated evidence |
+| Scope expands to v2 experiments | Trace active requirements to committed integrity scope; keep conditional and deferred lists separate |
 
-Phases with standard patterns where `$gsd-research-phase` is probably unnecessary:
+## Research Inputs
 
-- **Phase 249:** Well-researched inventory and posture lock based on current local files.
-- **Phase 251:** Standard lifecycle and scheduling policy work using existing season/entry/MatchSet patterns.
-- **Phase 254:** Public projection rendering and copy/snapshot work once DTOs are stable.
-
-## Confidence Assessment
-
-| Area | Confidence | Notes |
-|------|------------|-------|
-| Stack | HIGH | Based on repo-local stack, versions, packages, service boundaries, migrations, and shipped v1.35 mechanisms. No new dependencies needed. |
-| Features | HIGH | Table stakes are directly grounded in `.planning/PROJECT.md`, `.planning/STATE.md`, shipped v1.35 evidence, primary specs, and existing competition/ladder/governance surfaces. External comparisons are secondary only. |
-| Architecture | HIGH | Ownership boundaries are repeatedly established: Go owns normal backend orchestration, runtime-service owns hostile Strategy handling, spec owns contracts, engine/Chronicle stay pure, public projections stay redacted. |
-| Pitfalls | HIGH | Major risks align across STACK, FEATURES, ARCHITECTURE, PITFALLS, project constraints, and prior milestone audits. |
-
-**Overall confidence:** HIGH
-
-### Gaps to Address
-
-- Exact enum/storage naming for counted states: choose projection enum first unless a requirements phase explicitly justifies data migration.
-- Admin/governance UI scope: keep minimal admin resolution and audit proof unless requirements expand it.
-- Account recovery depth: publish expectation surfaces only unless separately scoped; do not collect or expose sensitive recovery payloads by default.
-- Standings materialization: implement pure recompute first; add materialized snapshot only if performance or public read shape requires it.
-- Fixture versus service-backed proof balance: service-back at least one full counted flow; use fixture-backed states only for rare/expensive governance branches.
-- External policy copy: fair-play/reporting language should be conservative and product-specific, not copied from external platforms or used to imply mature enforcement.
-
-## Sources
-
-### Primary (HIGH confidence)
-
-- `.planning/research/STACK.md` — v1.36 stack additions, contracts, proof harnesses, boundary monitors, and code areas to touch.
-- `.planning/research/FEATURES.md` — table-stakes features, differentiators, anti-features, requirement candidate categories, and MVP recommendation.
-- `.planning/research/ARCHITECTURE.md` — component boundaries, data flows, contracts, recomputation semantics, build order, and anti-patterns.
-- `.planning/research/PITFALLS.md` — critical/moderate/minor pitfalls, phase warnings, and validation targets.
-- `.planning/PROJECT.md` — active v1.36 goal, hard boundaries, shipped v1.35 baseline, constraints, and deferred items.
-- `.planning/STATE.md` — active planning status, phase numbering after Phase 248, current decisions, blockers, and deferred durable rating/moderation/recovery/runtime/package/TinyGo/ABI items.
-- `.planning/MILESTONES.md` — shipped milestone history and carried-forward competition/runtime constraints cited by research files.
-- `.planning/milestones/v1.35-REQUIREMENTS.md` and `.planning/milestones/v1.35-ROADMAP.md` — provider-proof, sandbox-readiness, package-policy, privacy, and monitor baseline cited by research files.
-- `CowardsGameSpec_Full_Consolidated_v1.md` — deterministic Match/Set rules, Strategy Revision immutability, Chronicle, memory privacy, runtime constraints, and canonical terminology.
-- `CowardsGame_Technical_Architecture_Spec_V1.md` — pure engine, runtime isolation, MatchSet scoring, replay visibility, persistence, and testing strategy.
-- `packages/spec/src/competition.ts`, `public-discovery.ts`, `public-output-privacy.ts` — current public competition/discovery/privacy contracts cited by research.
-- `packages/persistence/src/competition.ts`, `ladder.ts`, `governance.ts`, `scoring.ts`, `matchset-status.ts` and `packages/persistence/migrations/0004_competition_trust_beta.sql` — current exhibition, ladder, governance, scoring, status, and schema mechanisms cited by research.
-- `apps/go-backend/provider_readiness.go`, `matchset_status.go`, `scoring.go`, `live_backend.go` — Go provider/readiness/status/scoring/public-read ownership areas cited by research.
-
-### Secondary (MEDIUM confidence)
-
-- Codeforces Contest Rules — comparison context for registration, monitoring/disqualification, unofficial intermediate standings, and final standings.
-- Kaggle Competitions Documentation and Community Guidelines — comparison context for public/private leaderboard and conduct patterns.
-- Chess.com Fair Play Policy and Lichess Fair Play/Appeal pages — comparison context for fair-play categories, reporting, and appeal constraints.
-- Google Account Help compromised-account recovery — comparison context for conservative recovery/security expectations.
-- League of Legends ranked update — comparison context for reset/ranking communication as a mature ranked-system concern.
-
----
-*Research completed: 2026-06-15*  
-*Ready for roadmap: yes*
+This synthesis uses the approved milestone summary; the committed core-rules audit, reproduction artifact, proposal documents, competitive Strategy research, seed, v1/v1.4 rules and architecture specs; current `.planning/PROJECT.md`, `.planning/STATE.md`, and `.planning/MILESTONES.md`; and the repository-focused stack, features, architecture, and pitfalls research. The proposal was used selectively as source material and not as authority to activate its experimental program.

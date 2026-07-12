@@ -1,17 +1,19 @@
 # Technology Stack
 
-**Project:** Coward's Game v1.36 Competition Maturity  
-**Researched:** 2026-06-15  
-**Scope:** Stack additions and integration points only for public beta/trial competition maturity  
-**Confidence:** HIGH for repo-local stack and mechanisms; MEDIUM for exact schema names until v1.36 requirements lock terminology.
+**Project:** Coward's Game v1.37 Rules Integrity and Strategy Evaluation Foundations
+**Researched:** 2026-07-12
+**Scope:** Minimal stack changes for the approved integrity foundation; no experimental rule program
+**Confidence:** HIGH for repository-local versions, boundaries, and recommendations
 
 ## Executive Recommendation
 
-Do not add a new platform for v1.36. Competition maturity should use the existing TypeScript/Go/PostgreSQL/runtime-service stack and add contracts, schemas, proof harnesses, monitors, and public-safe UI copy around the current competition surfaces.
+Do not add a framework or replace the existing TypeScript/Go/runtime-service architecture. v1.37 is primarily a contract, authority, validation, and executable-proof milestone. The safest stack is the stack already shipping Coward's Game, with one canonical transition package boundary, stricter Zod-backed semantic validators, iterative canonical-JSON utilities, versioned trace fixtures, and repo-local proof scripts.
 
-The work should center on `@cowards/spec`, `packages/persistence`, `apps/go-backend`, public discovery/result/replay pages, and proof scripts. v1.35 already provides provider-proof-backed account save and entry gates for TypeScript, Python, Rust, and Zig. v1.36 should consume that evidence to mature entry eligibility, counted/non-counted/degraded policy, resettable trial seasons, standings recomputation, governance explanations, and public trust UX.
+The core implementation should remain TypeScript because `@cowards/spec`, `@cowards/engine`, and `@cowards/replay` already own the relevant types and transitions. Go should continue to own normal orchestration and persistence-facing behavior while consuming generated/versioned contracts. TypeScript, Python, Rust, and Zig should continue to execute only behind runtime-service/provider boundaries. Cross-language conformance should compare data artifacts, not require four independent game engines.
 
-No runtime ownership, game-rule, package ecosystem, sandbox certification, TinyGo, ABI, or durable rating stack should be added.
+The milestone should pin exact runtime and toolchain identities wherever counted evidence is created. The current CI uses floating Rust `stable` and Wasmtime `latest`; those are acceptable for discovery but not for counted conformance identity. Record resolved versions and artifact hashes now, then pin the approved exact versions in CI and evidence manifests during implementation.
+
+No new npm dependency is recommended. In particular, do not introduce a second schema library, JSON canonicalization package, replay/event-store framework, property-testing framework, workflow engine, or language-specific Match implementation.
 
 ## Recommended Stack
 
@@ -19,222 +21,204 @@ No runtime ownership, game-rule, package ecosystem, sandbox certification, TinyG
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| pnpm workspace | `pnpm@11.1.2` | Monorepo scripts, proof runners, package orchestration | Existing verified command path; add v1.36 scripts here instead of new task tooling. |
-| TypeScript | `^6.0.3` | Spec contracts, persistence helpers, web UI, proof harnesses | Best place for shared competition-policy schemas and public-safe DTO validation. |
-| Next.js / React | Next `^16.2.6`, React `^19.2.6` | Public competition, result, replay, player, Strategy, Learn, and entry surfaces | Existing public site spine; v1.36 needs trust UX, not a new frontend framework. |
-| Go backend | Go `1.25.0`, `pgx/v5 v5.9.2` | Normal backend orchestration, MatchSet status/scoring refresh, selected public reads, entry/provider checks | Keep Go as normal backend owner while preserving runtime-service as hostile-code boundary. |
-| `apps/runtime-service` | workspace `0.1.0` | Provider validation/build/proof and Strategy execution boundary | v1.36 should consume provider evidence; it should not change runtime ownership or execute Strategy code elsewhere. |
+| Node.js | `24` in CI; persist exact resolved patch in evidence | Canonical TypeScript execution and proof host | Existing supported CI/runtime family; exact patch identity must be captured for counted proof. |
+| pnpm workspace | `pnpm@11.1.2` | Monorepo orchestration and deterministic proof commands | Already pinned in the root manifest and lockfile. |
+| TypeScript | `6.0.3` resolved | Canonical rules contracts, transition kernel, validators, trace corpus, proof tooling | Existing authority language for spec/engine/replay; minimizes drift and migration risk. |
+| `@cowards/spec` | workspace `0.1.0` | Canonical ownership/version tuple, JSON limits, semantic schemas, runtime envelopes | Existing shared contract authority. Add versioned contracts here rather than a parallel schema package. |
+| `@cowards/engine` | workspace `0.1.0` | One canonical transition kernel | Refactor current transitions into one driver consumed by Match execution and Chronicle recording. |
+| `@cowards/replay` | workspace `0.1.0` | Chronicle recording, version-strict grammar, reconstruction | Convert the builder from a second Match loop into a transition recorder/reconstructor. |
+| `apps/runtime-service` | workspace `0.1.0` | Hostile-code boundary and four-language conformance coordinator | Keep Strategy execution outside web/API/Go; transport failure classes without deciding gameplay. |
+| Go backend | Go `1.25.0`; `pgx/v5 v5.9.2` | Orchestration, persistence, Set scheduling, compatibility rejection | Existing backend owner; consume generated tuple/trace contracts and preserve rollback semantics. |
 
-### Database
+### Runtime and Language Lanes
+
+| Technology | Existing identity | Purpose | v1.37 recommendation |
+|------------|-------------------|---------|----------------------|
+| TypeScript Strategy lane | TypeScript `6.0.3`; Node `24`; worker-thread adapter currently counted but evidence-scoped | Source-language Strategy execution | Fail closed for counted scheduling until current containment and full conformance artifacts bind exact adapter, Node, TypeScript, policy, and source/artifact identities. Do not attempt to make regex filtering a production sandbox. |
+| Python Strategy lane | Contract currently reports Python `3.9`; subprocess adapter | Source-language Strategy execution | Preserve the adapter, but bind original bytes, normalized LF bytes, source-bundle hash, interpreter executable/version, policy, and adapter version distinctly. |
+| Rust Strategy lane | CI `rust-toolchain stable`; target `wasm32-wasip1` | Immutable WASM/WASI Preview 1 artifacts | Resolve and pin an exact Rust compiler/toolchain for evidence. Preserve stdin/stdout JSON ABI; no direct-export or Component Model migration. |
+| Zig Strategy lane | Zig `0.16.0`; target currently `wasm32-wasi` | Immutable WASM/WASI Preview 1 artifacts | Keep `0.16.0`, record exact binary identity, and preserve the current no-std/helper and import-audit path. |
+| Wasmtime | CI currently `latest` | Rust/Zig WASI host | Replace floating evidence identity with an exact resolved version/digest before a lane can count. Keep the existing subprocess boundary. |
+
+### Database and Infrastructure
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| PostgreSQL | local compose-backed | Canonical store for users, Strategy Revisions, MatchSets, Chronicles, trial seasons, result flags, audit events | Existing migrations already include `trial_ladder_seasons`, `trial_ladder_entries`, `result_flags`, `competition_audit_events`, counted status, public counted explanations, and review status. |
-| `packages/persistence` | workspace `0.1.0` | Competition, ladder, governance, scoring, account revision reads/writes | Reuse `competition.ts`, `ladder.ts`, `governance.ts`, `matchset-status.ts`, and `scoring.ts`; do not create a parallel competition subsystem. |
+| PostgreSQL | `18` in service E2E CI | Match/Chronicle/Set/version-tuple persistence and rollback proof | Existing canonical store; extend schemas/migrations only where tuple or conformance identities must persist. |
+| Redis | `8` in service E2E CI | Existing job/topology support | Reuse unchanged; it is not a rules authority. |
+| Docker Compose | existing repository topology | Service-backed execution and rollback proof | Existing repeatable local integration path. |
+| Git + SHA-256 manifests | repository-native | Bind source bytes, normalized bytes, artifacts, contracts, toolchains, runtimes, corpus, and evidence | Already used throughout project evidence; extend the manifest model rather than adding an artifact platform. |
 
-### Infrastructure
+### Testing and Verification
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Docker Compose | existing `compose.yaml` | Local PostgreSQL/service proof topology | Existing `pnpm services:up`, `preflight`, and service-backed proof pattern are enough. |
-| Playwright | `^1.60.0` | Browser E2E and visual/privacy checks | Use for entry -> counted MatchSet -> result -> standings -> replay proof and board realism checks. |
-| Vitest | `^4.1.6` | Contract, persistence, view-model, and proof unit tests | Existing TS test stack covers public DTOs and persistence logic. |
-| Redocly CLI | `2.31.4` | OpenAPI lint | Keep if public/service route schemas change; no new API tooling needed. |
+| Technology | Version | Purpose | When to Use |
+|------------|---------|---------|-------------|
+| Vitest | `4.1.6` resolved | Unit, semantic, differential, reconstruction, mutation, and conformance tests | Primary TypeScript test runner for kernel/spec/replay/runtime-service. |
+| Zod | `4.4.3` resolved | Shape validation and typed contract parsing | Retain for structural schemas; add explicit semantic refinement functions for cross-record invariants. |
+| Playwright | `1.60.0` resolved | Service-backed and public privacy/boundary proof | Final proof of execution, persistence, replay, fairness, rollback, and public-safe output. |
+| Go `testing` | Go `1.25.0` | Generated-contract parity, compatibility rejection, Set scheduling, persistence/rollback | Keep Go checks fixture-driven and derived from canonical TypeScript artifacts. |
+| Existing proof/evaluator scripts | `tsx 4.22.0` resolved | Reproducible manifests and drift monitors | Add v1.37 evaluators using the established `--write` / `--check` pattern. |
 
-### Supporting Libraries and Mechanisms
+## Required Stack Changes
 
-| Library / Mechanism | Version | Purpose | When to Use |
-|---------------------|---------|---------|-------------|
-| `@cowards/spec` | workspace `0.1.0` | Canonical public DTOs, runtime labels, competition statuses, privacy guards | Add v1.36 competition-posture, counted-policy, entry-policy, and governance DTO schemas here. |
-| `packages/spec/src/public-output-privacy.ts` | current | Public leak guard | Extend forbidden markers for dispute internals, account-recovery payloads, provider proof strings, package paths, and operator-only governance details. |
-| `packages/spec/src/public-discovery.ts` | `public-discovery-v1` | Public Home/Watch/Competition/entry discovery DTOs | Add public beta/trial/resettable posture fields if discovery pages need them. Keep separate from `match-execution-app-v1`. |
-| `packages/spec/src/competition.ts` | current | Competition presets, ladder season DTOs, counted statuses, public result shape | Formalize current `metadata` into typed public governance/counting fields instead of free-form `JsonValue` where v1.36 needs proof. |
-| `packages/persistence/src/competition.ts` | current | Exhibitions, entrant snapshots, counted entry checks, public MatchSet DTOs | Reuse for exhibitions and result DTOs; harden same-user/multi-revision/self-play policy here. |
-| `packages/persistence/src/ladder.ts` | current | Trial seasons, one-entry-per-user, scheduling, standings recomputation | Primary integration point for resettable trial ladder maturity and recomputable standings. |
-| `packages/persistence/src/governance.ts` | current | Result flags, admin counted-status changes, public explanations, private notes, audit events | Mature this for disputes and invalidation explanations; do not add a broad moderation platform. |
-| `apps/go-backend/matchset_status.go`, `scoring.go`, `provider_readiness.go` | current | Go parity for status/scoring/provider-readiness | Add Go tests/fixtures for v1.36 counted/degraded/governance states if public reads depend on Go. |
-| `apps/web/app/matchsets/*` | current | Public result and trust workbench | Add counted/non-counted/disputed/invalidated explanations here without leaking private data. |
-| `apps/web/app/ladder/[seasonId]/page.tsx` | current | Public ladder page | Add resettable/trial/public-beta posture, standings explanation, entry eligibility summaries, and governance state explanations. |
-| `apps/web/lib/public-discovery-service.ts` | current | Public competition discovery | Surface public beta/trial posture and entry availability using configured public ladder ids and preset cards. |
+### 1. Canonical authority and compatibility contract in `@cowards/spec`
 
-## Required Stack Additions
-
-### 1. Add a v1.36 Competition Maturity Contract in `@cowards/spec`
-
-Add a versioned contract, preferably near `packages/spec/src/competition.ts`, for:
-
-| Contract | Required Values |
-|----------|-----------------|
-| `competitionMaturityContractVersion` | `competition-maturity-v1.36` |
-| `competitionPosture` | `public-beta-trial`, `resettable-trial`, `exhibition`, `future-durable-rating` as future-only/non-active |
-| `seasonDurability` | `resettable`, `archived-public-evidence`, `no-durable-rating` |
-| `countedResultPolicy` | `pending`, `counted`, `retrying`, `under_review`, `invalid`, `non_competitive`, `non_counted` |
-| `nonCountedReason` | existing reasons plus any needed public-safe v1.36 reason such as `entry_ineligible` only if requirements demand it |
-| `entryPolicy` | provider proof required, package mode `none`, TinyGo hidden, current runtime lane required, one active entry per user per trial season |
-| `sameUserPolicy` | exhibitions allow same-user multi-revision where explicitly modeled; trial ladder uses one active revision per user; self-play/mirror drills are policy-labeled, not game-rule changes |
-| `privacyExclusions` | Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, private runtime internals, account-recovery payloads, dispute internals, operator-only governance details |
-
-Use Zod schemas for any public DTO additions. Avoid burying the posture in UI strings only; the roadmap needs one contract that web, persistence, Go fixtures, and proof scripts can assert.
-
-### 2. Type Public Governance Metadata Instead of Free-Form Result Metadata
-
-`PublicMatchSetResultDto.metadata` currently carries counted status, public reason, public explanation, and review status as `JsonValue`. v1.36 should add a typed public structure such as:
+Add one versioned tuple carried by every new Match, runtime request/result, Chronicle, arena scenario, Set schedule, persisted record, and proof artifact:
 
 ```ts
-type PublicCompetitionGovernanceDto = {
-  countedStatus: LadderMatchSetCountedStatus
-  publicReason?: LadderNonCountedReason
-  publicExplanation: string
-  reviewStatus: "none" | "under_review" | "resolved"
-  posture: "exhibition" | "resettable-trial-public-beta"
-  durableRating: false
-  standingsImpact: "included" | "excluded" | "pending"
+type CanonicalMatchVersionTuple = {
+  rules: "cowards-rules-v1.4"
+  engine: string
+  runtimeAbi: string
+  chronicle: string
+  arenaCatalog: string
+  setPolicy: string
 }
 ```
 
-Keep private notes, flag notes, operator action details, and account recovery details out of public DTOs. If this changes public service schemas, regenerate and lint the existing OpenAPI artifact rather than adding a second API contract system.
+The literal values beyond the preserved rules version should be chosen during requirements/design and generated from one authority. Compatibility must be table-driven and fail before execution or persistence on missing, unknown, mixed, or stale tuples. Historical v1.4 evidence keeps its original tuple/interpretation and is never rewritten.
 
-### 3. Add a v1.36 Proof Evaluator
+### 2. One transition kernel in `@cowards/engine`
 
-Add a script modeled after the existing milestone evaluators:
+Refactor the existing Phase/Round/Contraction flow into a deterministic transition iterator/driver. Each step should accept validated canonical state plus an explicit input and return validated next state, canonical events, runtime requests, and terminal/failure status. `runMatch` consumes it; Chronicle records it; replay reconstructs it. Do not create an event-sourcing framework or move the kernel into replay.
+
+The kernel boundary should make these checks unavoidable after every relevant transition:
+
+- semantic state invariants;
+- immediate outcome after status changes;
+- selected-slot status/terminal-reason agreement;
+- immutable/cloned canonical constants;
+- canonical event emission and ordering;
+- no gameplay mutation on system failure.
+
+### 3. Semantic validation layered over Zod
+
+Keep Zod for shape parsing, then run explicit iterative semantic validators for:
+
+- arena bounds, terrain, starting occupancy, and authority/version identity;
+- unique Soldier identities and ownership;
+- unique occupancy and in-bounds positions;
+- ACTIVE/STONE/FALLEN status-position consistency;
+- Phase/Round/activation/initiative consistency;
+- selected-slot lifecycle and terminal reasons;
+- initial/intermediate/final outcome consistency;
+- Chronicle event subject, version, slot, Cycle, and reconstructed-state agreement.
+
+These validators should return typed, public-safe error codes. They should not leak source, memory, objectives, raw payloads, host paths, stack traces, or security internals.
+
+### 4. Repository-owned canonical JSON preflight
+
+Implement an iterative parser/preflight utility in `@cowards/spec` or a narrowly scoped workspace module owned by it. The contract must define byte encoding, maximum bytes, maximum depth, maximum nodes/entries, strings/Unicode policy, finite-number and safe-integer rules, negative zero, object key ordering for hashing, duplicate-key handling at raw-byte parse time, and serialization behavior.
+
+Do not rely on recursive Zod traversal for adversarial depth and do not add an off-the-shelf canonical-JSON dependency unless a phase-specific spike proves the native implementation inadequate. Raw-byte duplicate-key detection must occur before ordinary `JSON.parse` loses that evidence.
+
+### 5. Three-way runtime result transport
+
+Use one discriminated envelope across all adapters:
+
+```ts
+type InvocationResult<T> =
+  | { kind: "success"; value: T; traceIdentity: string }
+  | { kind: "playerViolation"; code: string }
+  | { kind: "systemFailure"; code: string; retryability: string }
+```
+
+Only the canonical engine boundary maps a player violation to gameplay consequences. A system failure aborts/degrades according to service policy with zero gameplay or memory mutation. Python and WASM/WASI normalizers must stop converting infrastructure failures into `THROWN_EXCEPTION` player violations.
+
+### 6. Executable four-language conformance corpus
+
+Store a versioned, hash-addressed corpus of canonical JSON inputs and expected full traces. Each language lane executes identical cases through its actual adapter. Compare:
+
+- complete canonical state transitions and event sequence;
+- StrategyMemory, SoldierMemory, and objective transport internally (never public output);
+- success/player-violation/system-failure classes;
+- invalid JSON/schema/semantics, oversize/depth/node/numeric boundaries;
+- timeout/resource/unavailable/transport/malformed/stale-artifact cases;
+- deterministic repeats and exact runtime/toolchain/adapter identity.
+
+Counted eligibility should consume a fresh signed/hash-bound conformance artifact, not a list of declared gate names.
+
+### 7. Chronicle reconstruction and compatibility fixtures
+
+Use `@cowards/replay` to maintain per-`activationId` slot grammar state, restrict event literals by Chronicle/rules version, and compare reconstructed transition hashes to engine execution. Freeze representative v1.4 Chronicles/results as immutable compatibility fixtures and validate them only under original semantics.
+
+### 8. v1.37 proof and boundary monitors
+
+Add root scripts following the existing evaluator convention, for example:
 
 ```bash
-pnpm exec tsx scripts/evaluate-v1-36-competition-maturity.ts --write
-pnpm exec tsx scripts/evaluate-v1-36-competition-maturity.ts --check
+pnpm v1.37:rules-integrity:check
+pnpm v1.37:four-language-conformance:check
+pnpm v1.37:boundary-monitors:check
+pnpm v1.37:service-proof:strict
 ```
 
-Recommended root scripts:
+Monitors should fail on duplicate Match loops, replay-owned transition logic, adapter-owned gameplay classification, unbound/floating counted runtime identity, duplicate arena authorities, stale contiguous-Activation exports, unsupported event vocabulary, mixed tuples, private corpus leakage, and public/default exposure of prohibited data.
 
-```json
-"v1.36:competition-maturity": "pnpm exec tsx scripts/evaluate-v1-36-competition-maturity.ts --write",
-"v1.36:competition-maturity:check": "pnpm exec tsx scripts/evaluate-v1-36-competition-maturity.ts --check"
-```
+## Existing Components to Reuse
 
-Artifacts should be:
-
-- `.planning/artifacts/v1.36-competition-maturity-proof.json`
-- `.planning/artifacts/v1.36-competition-maturity-proof.md`
-
-Required proof cases:
-
-- Exhibition policy inventory: public exhibition, counted/non-counted/degraded policy, same-user multi-revision behavior.
-- Trial ladder policy: resettable season, one active entry per user, next-season replacement, no durable rating promise.
-- Eligibility: TypeScript/Python/Rust/Zig require v1.35 provider-proof/language/runtime/provenance/package evidence; TinyGo and stale/missing/mismatched proof fail closed.
-- Standings recomputation: counted results included; pending/retrying/under_review/invalid/non_competitive/non_counted/degraded/system-failure results excluded with public explanations.
-- Governance: entrant flag -> under review -> admin counted/invalid/non-counted resolution writes audit event and public-safe explanation.
-- Privacy: public result/replay/player/Strategy/competition/ladder DTOs omit source, memory, objective payloads, raw diagnostics, dispute private notes, recovery payloads, provider proofs, package paths, host paths, tokens, DB details, and operator-only internals.
-- Board realism: public replay proof still shows in-bounds Soldier/terrain positions and plausible canonical Match starts.
-
-### 4. Extend Boundary Monitors
-
-Update `scripts/check-boundary-monitors.ts` and `pnpm boundary:monitors` to include the v1.36 check. Add monitor rules for:
-
-- No durable permanent rating claim unless a future explicit milestone promotes it.
-- No production sandbox certification, TinyGo production support, package ecosystem support, ABI migration, or runtime ownership migration.
-- Public beta copy must say resettable/trial/no durable rating where standings are trial-only.
-- Public/default DTOs and generated artifacts must not contain private Strategy/runtime/dispute/recovery markers.
-- `match-execution-app-v1` remains separate; public discovery and competition maturity additions must not mutate frozen execution DTOs without an explicit compatibility decision.
-- Counted standings use recomputable policy, not cached UI-only state.
-
-### 5. Add Service-Backed E2E Proof
-
-Add one focused Playwright spec, for example:
-
-```bash
-PLAYWRIGHT_TEST=1 RUN_V1_36_PROOF=1 playwright test --project=desktop --workers=1 v1-36-competition-maturity-proof.spec.ts
-```
-
-Proof should exercise:
-
-1. Signed-in account with provider-proof-backed eligible revision.
-2. Enter exhibition or trial season.
-3. Create/schedule counted MatchSet.
-4. Run execution through existing service-backed topology.
-5. Open public result, standings, replay, player, and Strategy pages.
-6. Flag/dispute or use fixture-backed governance state if full live mutation is too expensive.
-7. Scan pages/API JSON for private markers.
-8. Confirm replay board realism and public copy posture.
-
-Use fixture-backed public states for rare governance branches, but keep at least one service-backed happy path.
-
-## Code Areas to Touch
-
-| Area | Use for v1.36 | Notes |
-|------|---------------|-------|
-| `packages/spec/src/competition.ts` | Add v1.36 posture/governance/counting schemas and types | Primary contract source. |
-| `packages/spec/src/public-discovery.ts` | Add competition posture fields if index/detail/entry pages need them | Keep `public-discovery-v1` or deliberately version if shape changes require it. |
-| `packages/spec/src/public-output-privacy.ts` | Add forbidden markers for dispute/recovery/operator-private leakage | Use in evaluator and tests. |
-| `packages/persistence/src/competition.ts` | Exhibition policy, entrant snapshots, public result governance DTO | Preserve current provider-proof entry gate. |
-| `packages/persistence/src/ladder.ts` | Trial season posture, one-active-revision rule, standings recomputation | Existing unique constraints already support one active entry per user per season; verify behavior and public copy. |
-| `packages/persistence/src/governance.ts` | Dispute/flag/resolution/audit behavior | Harden public/private splits; avoid full moderation workflow. |
-| `packages/persistence/migrations/0004_competition_trust_beta.sql` | Existing schema baseline | Prefer using existing statuses before adding migration churn. |
-| `apps/go-backend/*scoring*`, `matchset_status.go`, `provider_readiness.go` | Go parity and service-backed status proof | Add fixtures/tests if v1.36 public reads depend on Go responses. |
-| `apps/web/app/competitions/*`, `ladder/[seasonId]`, `matchsets/*`, `players/*`, `strategies/*`, `matches/*/replay` | Public trust UX | Display public-safe policy and evidence only. |
-| `apps/web/e2e` | v1.36 proof | Add focused desktop proof and reuse replay realism helpers. |
-| `scripts/check-boundary-monitors.ts` | Drift prevention | Add v1.36 no-overclaim/no-leak/no-runtime-creep checks. |
-
-## What Should NOT Be Added
-
-| Do Not Add | Why | Use Instead |
-|------------|-----|-------------|
-| Durable permanent ratings | v1.36 target asks for honest resettable/trial/public-beta posture, not durable ratings. | Explicit `noPermanentRatings: true`, resettable seasons, archived evidence. |
-| New rating engine like Elo/Glicko/TrueSkill | Would imply a durable competitive promise and extra calibration work. | Existing points/W-L-D/survivor/survival-turn deterministic standings. |
-| New runtime, Runtime Broker ownership, or Strategy execution path | Runtime-service/provider boundary is non-negotiable and v1.35 just cleaned it up. | Existing runtime-service provider proof and Go orchestration. |
-| Package ecosystem support | v1.35 enforced package mode `none`; packages need a future supply-chain milestone. | Reject non-`none` package mode with public-safe diagnostics. |
-| TinyGo production support | TinyGo remains spike-only and hidden. | Keep TinyGo out of production UI, entry, result, replay, and public evidence. |
-| Production sandbox certification | Current evidence is provider/runtime readiness, not certification. | Evidence-scoped labels and no-certification monitors. |
-| ABI migration to direct exports or Component Model/WIT | Out of scope and previously deferred. | Keep WASI Preview 1 stdin/stdout JSON for Rust/Zig. |
-| External moderation/dispute platform | v1.36 needs expectation surfaces and minimal governance proof, not a full trust-and-safety system. | Existing `result_flags`, `competition_audit_events`, admin counted-status route, and public explanations. |
-| Account recovery product/vendor | Scope is assumptions/expectation surfaces, not recovery workflow implementation. | Public copy that says what is and is not available now; no recovery payloads in public output. |
-| New auth provider | Account ownership gates already exist. | Tighten existing session/admin/entrant authorization checks. |
-| Public raw diagnostics or private governance notes | Violates privacy boundaries. | Public-safe categories, public explanations, and private audit notes only. |
-| Game-rule changes | v1.36 is competition maturity. | Keep engine/Chronicle deterministic and unchanged unless separately approved. |
-
-## Existing Project Mechanisms to Reuse
-
-- Provider-proof entry gates from v1.35: `apps/go-backend/provider_readiness.go`, `packages/persistence/src/competition.ts`, and `packages/persistence/src/ladder.ts`.
-- Counted status and review schema from `packages/persistence/migrations/0004_competition_trust_beta.sql`.
-- Trial ladder season/entry policy from `packages/persistence/src/ladder.ts` and `PublicTrialLadderSeasonDto`.
-- Result flagging and audit events from `packages/persistence/src/governance.ts`.
-- Public discovery separation through `public-discovery-v1`, explicitly not `match-execution-app-v1`.
-- Result/replay trust copy and view-model patterns in `apps/web/app/matchsets/evidence-copy.ts` and `result-view-model.ts`.
-- Replay board realism checks from existing Playwright replay proof.
-- Boundary monitor pattern from v1.35 scripts and `pnpm boundary:monitors`.
+| Component | v1.37 use |
+|-----------|-----------|
+| `packages/spec/src/constants.ts` | Canonical limits and constants; clone/freeze nested values and export read-only contracts. |
+| `packages/spec/src/schemas.ts` | Structural schemas plus entry points into semantic validators. |
+| `packages/spec/src/runtime.ts` | Runtime registry, exact evidence identity, common ABI/failure/budget contracts, counted eligibility. |
+| `packages/engine/src/match.ts` | Source behavior for the single transition driver; remove loop duplication rather than copying it. |
+| `packages/engine/src/activation.ts` | Slot lifecycle repairs, order precedence, stale export removal, truthful activation state. |
+| `packages/engine/src/runtime-inputs.ts` | Add initiative and authoritative `hasAdvancedThisActivation`. |
+| `packages/replay/src/build.ts` | Convert from Match executor to transition recorder. |
+| `packages/replay/src/grammar.ts` | Per-slot state machine. |
+| `packages/replay/src/validate.ts` | Tuple/version-strict semantic and reconstruction validation. |
+| `packages/runtime-js` | Existing TypeScript validation/adapter path; quarantine counted use until evidence passes. |
+| `packages/runtime-python` | Existing AST/subprocess path; repair byte normalization and failure transport. |
+| `packages/runtime-wasm-wasi` | Existing Rust/Zig compilation, artifact, import-audit, Wasmtime path. |
+| `packages/golden` and audit reproductions | Seed full-trace conformance and regression fixtures. |
+| `packages/map-configs` | Consolidate official arena authority and geometry identity. |
+| `apps/go-backend` | Compatibility, scheduling fairness, persistence, idempotency, rollback, and public-safe orchestration proof. |
 
 ## Alternatives Considered
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| Competition posture | Resettable public beta/trial contract | Durable official rating ladder | Durability requires future governance, abuse, recovery, and calibration proof. |
-| Standings | Recompute from counted MatchSets and governance status | Store authoritative mutable leaderboard only | Mutable cached standings are harder to audit and explain. |
-| Governance | Existing flags/audit/status fields plus public explanations | Full moderation/dispute case-management system | Too large for v1.36 and not required for honest beta posture. |
-| Proof | Local evaluator plus Playwright service-backed E2E | External observability/compliance tooling | Repo-local deterministic proof is enough and aligns with existing milestone practice. |
-| Entry eligibility | Consume v1.35 provider-proof gates | Revalidate/recompile source at entry in UI | UI state is not authority; runtime-service proof and immutable revision metadata are. |
+| Transition authority | TypeScript kernel in `@cowards/engine` | New Rust core or four native engines | A rewrite expands risk and makes language neutrality harder to prove; languages need equal ABI behavior, not separate rule ownership. |
+| Schema validation | Zod plus explicit semantic validators | Ajv/new schema framework | Existing contracts are Zod-based; changing validators does not solve cross-record semantics by itself. |
+| Canonical JSON | Small repo-owned iterative contract | New canonicalization package only | Limits and failure behavior are game ABI semantics and must be controlled/tested across all lanes. |
+| Chronicle | Record kernel transitions | Dedicated event-sourcing framework | Chronicle already exists; a framework would add a second authority and migration burden. |
+| Cross-language proof | Shared JSON corpus and full-trace comparison | Gate-name declarations or final-outcome comparison | Declarations and coarse outcomes miss state, memory, event, and failure drift. |
+| Rust/Zig ABI | Preserve WASI Preview 1 stdin/stdout JSON | Direct exports / Component Model / WIT | Explicitly deferred and unnecessary for semantic parity. |
+| Property coverage | Vitest data-driven/differential generators | Add `fast-check` immediately | Existing runner is sufficient for bounded exhaustive and deterministic generated cases; add a property library only if a later plan proves a concrete gap. |
+| Toolchain policy | Exact pinned versions plus hashes | `stable` / `latest` counted evidence | Floating identities make conformance irreproducible and stale-proof detection impossible. |
+| Arena authority | One catalog in existing map/spec boundary | New arena service | The problem is duplicate authority, not missing infrastructure. |
+
+## What Not to Add or Change
+
+- No v2 experimental rule flags, Cycle-cap variants, inward starts, facing-only MOVE, attacker-facing Backstab, hidden information, or live randomness.
+- No new official arena geometry beyond authority/fairness repair.
+- No Strategy execution in web/API/Go and no silent runtime fallback.
+- No new languages, TinyGo promotion, package ecosystem, durable rating system, moderation platform, or UI framework.
+- No direct-export, Component Model, or WIT migration.
+- No new public DTO fields containing source, artifacts, memory, objectives, diagnostic payloads, host data, security details, or conformance corpus secrets.
+- No reinterpretation or rewriting of persisted v1.4 Chronicles/results.
 
 ## Installation
 
 No dependency installation is recommended.
 
 ```bash
-# Add scripts only; no new packages.
-pnpm v1.36:competition-maturity
-pnpm v1.36:competition-maturity:check
-pnpm boundary:monitors
+corepack enable
+pnpm install --frozen-lockfile
 pnpm test:fast
+pnpm boundary:monitors
 ```
+
+The implementation may add workspace files, generated fixtures, scripts, migrations, and CI pins, but should not add third-party packages without phase-specific evidence.
 
 ## Sources
 
-- `.planning/PROJECT.md` - v1.36 goal, boundaries, v1.35 shipped baseline. Confidence: HIGH.
-- `.planning/STATE.md` - active v1.36 state and deferred durable ratings/moderation/recovery/runtime/package/TinyGo/ABI items. Confidence: HIGH.
-- `.planning/MILESTONES.md` - v1.35 active constraints and prior competition/language/runtime decisions. Confidence: HIGH.
-- `.planning/milestones/v1.35-REQUIREMENTS.md` and `.planning/milestones/v1.35-ROADMAP.md` - provider-proof, sandbox-label, package-policy, privacy, and boundary monitor baseline. Confidence: HIGH.
-- `.planning/research/SUMMARY.md` - v1.35 stack/architecture/pitfall baseline now superseded for v1.36 stack scope. Confidence: HIGH.
-- `CowardsGameSpec_Full_Consolidated_v1.md` - immutable Strategy Revisions, ranked Set lock, Chronicle privacy, runtime restrictions, competitive structures. Confidence: HIGH.
-- `CowardsGame_Technical_Architecture_Spec_V1.md` - pure engine, runtime isolation, MatchSet scoring, replay, PostgreSQL, testing, observability, security boundaries. Confidence: HIGH.
-- `packages/spec/src/competition.ts`, `public-discovery.ts`, `public-output-privacy.ts` - current public competition/discovery/privacy contracts. Confidence: HIGH.
-- `packages/persistence/src/competition.ts`, `ladder.ts`, `governance.ts`, `scoring.ts`, `matchset-status.ts` - current exhibition, ladder, governance, standing, and status mechanisms. Confidence: HIGH.
-- `packages/persistence/migrations/0004_competition_trust_beta.sql` - current competition trust beta tables/status columns. Confidence: HIGH.
-- `apps/go-backend/provider_readiness.go`, `matchset_status.go`, `scoring.go` - Go provider/readiness/status/scoring parity areas. Confidence: HIGH.
-- `apps/web/app/competitive/server.ts`, public competition/ladder/result/replay routes, and `apps/web/lib/public-discovery-service.ts` - existing web integration points. Confidence: HIGH.
-
+- User-approved v1.37 milestone summary and committed/deferred scope. Confidence: HIGH.
+- `.planning/PROJECT.md`, `.planning/STATE.md`, `.planning/MILESTONES.md`. Current milestone and shipped architecture/boundaries. Confidence: HIGH.
+- `.planning/research/v2.0-core-rules-enforcement-runtime-and-metagame-audit.md` and persisted reproduction artifacts. Confirmed authority, validation, lifecycle, runtime, Chronicle, identity, parity, and scheduling gaps. Confidence: HIGH.
+- v2.0 proposal/requirements/roadmap. Source material used selectively; experimental rules and full 63-requirement/13-phase program are not activated. Confidence: HIGH.
+- `CowardsGameSpec_Full_Consolidated_v1.md`, `CowardsGameSpec_CycleInterleaved_v1.4.md`, and `CowardsGame_Technical_Architecture_Spec_v1.4.md`. Preserved gameplay and architecture authority. Confidence: HIGH.
+- `.planning/research/competitive-strategy-factory-and-adversarial-league.md`. Strategy evaluation prerequisites only. Confidence: HIGH.
+- Root/package manifests, `pnpm-lock.yaml`, `apps/go-backend/go.mod`, and `.github/workflows/ci.yml`. Exact repository dependency versions and current floating toolchain setup. Confidence: HIGH.
+- Current `packages/spec`, `packages/engine`, `packages/replay`, runtime adapters, runtime-service, map configs, Go backend, and proof scripts. Integration boundaries and minimal-change recommendation. Confidence: HIGH.
