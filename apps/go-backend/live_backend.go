@@ -1018,7 +1018,7 @@ func (row revisionRow) publicCard() map[string]any {
 func (server *LiveServer) publicPlayerResults(ctx context.Context, userID string) ([]map[string]any, error) {
 	rows, err := server.pool.Query(ctx, `
 		select distinct ms.id, coalesce(ms.ladder_season_id, ''), ms.status,
-		       ms.counted_status, ms.review_status, ms.scoring,
+		       ms.counted_status, ms.review_status, ms.governance_changed_at, ms.scoring,
 		       (select count(*)::integer from match_set_matches msm where msm.match_set_id = ms.id),
 		       (select count(distinct c.match_id)::integer
 		        from match_set_matches msm
@@ -1038,9 +1038,10 @@ func (server *LiveServer) publicPlayerResults(ctx context.Context, userID string
 	results := []map[string]any{}
 	for rows.Next() {
 		var matchSetID, seasonID, status, countedStatus, reviewStatus string
+		var governanceChangedAt *time.Time
 		var scoringRaw []byte
 		var matchCount, chronicleCount int
-		if err := rows.Scan(&matchSetID, &seasonID, &status, &countedStatus, &reviewStatus, &scoringRaw, &matchCount, &chronicleCount); err != nil {
+		if err := rows.Scan(&matchSetID, &seasonID, &status, &countedStatus, &reviewStatus, &governanceChangedAt, &scoringRaw, &matchCount, &chronicleCount); err != nil {
 			return nil, err
 		}
 		_, scoringAvailable := storedMatchSetScoring(scoringRaw)
@@ -1053,7 +1054,8 @@ func (server *LiveServer) publicPlayerResults(ctx context.Context, userID string
 			ChronicleMatchCount: chronicleCount,
 			ScoringAvailable:    scoringAvailable,
 		})
-		result := ladderMatchSetSummaryWithCountedState(matchSetID, seasonID, status, countedState, []string{}, nil)
+		governance := projectPublicCompetitionGovernance(countedState, reviewStatus, governanceChangedAt, chronicleCount > 0)
+		result := ladderMatchSetSummaryWithCountedState(matchSetID, seasonID, status, countedState, []string{}, nil, governance)
 		results = append(results, result)
 	}
 	return results, rows.Err()
@@ -1206,9 +1208,8 @@ func (server *LiveServer) ladderMatchSetsAndStandings(ctx context.Context, seaso
 		  ms.ladder_schedule_run_id,
 		  ms.ladder_pod_index,
 		  ms.counted_status,
-		  ms.public_counted_reason,
-		  ms.public_counted_explanation,
 		  ms.review_status,
+		  ms.governance_changed_at,
 		  ms.scoring,
 		  count(distinct c.match_id)::integer as chronicle_count,
 		  count(distinct msm.match_id)::integer as match_count,
@@ -1231,11 +1232,12 @@ func (server *LiveServer) ladderMatchSetsAndStandings(ctx context.Context, seaso
 		var matchSetID, status, countedStatus string
 		var scheduleRunID *string
 		var podIndex *int
-		var reason, explanation, replayMatchID *string
+		var replayMatchID *string
 		var reviewStatus string
+		var governanceChangedAt *time.Time
 		var scoringRaw []byte
 		var chronicleCount, matchCount int
-		if err := rows.Scan(&matchSetID, &status, &scheduleRunID, &podIndex, &countedStatus, &reason, &explanation, &reviewStatus, &scoringRaw, &chronicleCount, &matchCount, &replayMatchID); err != nil {
+		if err := rows.Scan(&matchSetID, &status, &scheduleRunID, &podIndex, &countedStatus, &reviewStatus, &governanceChangedAt, &scoringRaw, &chronicleCount, &matchCount, &replayMatchID); err != nil {
 			return nil, nil, err
 		}
 		storedScoring, scoringAvailable := storedMatchSetScoring(scoringRaw)
@@ -1257,7 +1259,8 @@ func (server *LiveServer) ladderMatchSetsAndStandings(ctx context.Context, seaso
 		if err != nil {
 			return nil, nil, err
 		}
-		summary := ladderMatchSetSummaryWithCountedState(matchSetID, seasonID, status, countedState, entrantIDs, replayMatchID)
+		governance := projectPublicCompetitionGovernance(countedState, reviewStatus, governanceChangedAt, replayMatchID != nil)
+		summary := ladderMatchSetSummaryWithCountedState(matchSetID, seasonID, status, countedState, entrantIDs, replayMatchID, governance)
 		resultHref := stringValue(summary, "resultHref")
 		replayHref := stringValue(summary, "replayHref")
 		for _, revisionID := range uniqueSortedStrings(strategyRevisionIDs) {
@@ -1395,6 +1398,32 @@ func classifyCompetitionCountedState(input competitionCountedStateInput) map[str
 	}
 	if reason := competitionCountedPublicReason(state); reason != "" {
 		projection["publicReason"] = reason
+	}
+	return projection
+}
+
+func projectPublicCompetitionGovernance(countedState map[string]any, reviewState string, changedAt *time.Time, replayAvailable bool) map[string]any {
+	state := stringValue(countedState, "state")
+	status := "clear"
+	if reviewState == "resolved" && state == "counted" {
+		status = "resolved"
+	} else {
+		switch state {
+		case "under_review", "disputed", "non_counted", "non_competitive", "invalid", "invalidated":
+			status = state
+		}
+	}
+	projection := map[string]any{
+		"status":            status,
+		"publicExplanation": stringValue(countedState, "publicExplanation"),
+		"standingsEffect":   stringValue(countedState, "standingsEffect"),
+		"replayAvailable":   replayAvailable,
+	}
+	if reason := stringValue(countedState, "publicReason"); reason != "" {
+		projection["publicReason"] = reason
+	}
+	if changedAt != nil {
+		projection["changedAt"] = changedAt.UTC().Format(time.RFC3339Nano)
 	}
 	return projection
 }
@@ -1635,12 +1664,13 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 	}
 	var status, countedStatus, reviewStatus string
 	var competitionPresetID, competitionPresetVersion, scoringPolicyVersion, visibility, seasonID *string
+	var governanceChangedAt *time.Time
 	var scoringRaw []byte
 	var matchCount, chronicleCount int
 	err := server.pool.QueryRow(ctx, `
 		select status, competition_preset_id, competition_preset_version,
 		       scoring_policy_version, visibility, scoring,
-		       counted_status, review_status, ladder_season_id,
+		       counted_status, review_status, governance_changed_at, ladder_season_id,
 		       (select count(*)::integer from match_set_matches msm where msm.match_set_id = match_sets.id),
 		       (select count(distinct c.match_id)::integer
 		        from match_set_matches msm
@@ -1648,7 +1678,7 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 		        where msm.match_set_id = match_sets.id)
 		from match_sets
 		where id = $1
-	`, matchSetID).Scan(&status, &competitionPresetID, &competitionPresetVersion, &scoringPolicyVersion, &visibility, &scoringRaw, &countedStatus, &reviewStatus, &seasonID, &matchCount, &chronicleCount)
+	`, matchSetID).Scan(&status, &competitionPresetID, &competitionPresetVersion, &scoringPolicyVersion, &visibility, &scoringRaw, &countedStatus, &reviewStatus, &governanceChangedAt, &seasonID, &matchCount, &chronicleCount)
 	if errors.Is(err, pgx.ErrNoRows) || competitionPresetID == nil {
 		return nil, nil
 	}
@@ -1692,6 +1722,12 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 		metadata["matchExecution"] = matchExecutionMetadata
 	}
 	competition := map[string]any{"countedState": countedState}
+	competition["governance"] = projectPublicCompetitionGovernance(
+		countedState,
+		reviewStatus,
+		governanceChangedAt,
+		matchSetReplayAvailable(matches),
+	)
 	if seasonID != nil && *seasonID != "" {
 		competition["seasonId"] = *seasonID
 	}
@@ -3461,7 +3497,7 @@ func ladderMatchSetSummary(matchSetID string, seasonID string, status string, co
 	return ladderMatchSetSummaryWithCountedState(matchSetID, seasonID, status, countedState, entrantIDs, replayMatchID)
 }
 
-func ladderMatchSetSummaryWithCountedState(matchSetID string, seasonID string, status string, countedState map[string]any, entrantIDs []string, replayMatchID *string) map[string]any {
+func ladderMatchSetSummaryWithCountedState(matchSetID string, seasonID string, status string, countedState map[string]any, entrantIDs []string, replayMatchID *string, governance ...map[string]any) map[string]any {
 	dto := map[string]any{
 		"matchSetId":        matchSetID,
 		"seasonId":          seasonID,
@@ -3478,7 +3514,19 @@ func ladderMatchSetSummaryWithCountedState(matchSetID string, seasonID string, s
 	if replayMatchID != nil && *replayMatchID != "" {
 		dto["replayHref"] = "/matches/" + urlPathEscape(*replayMatchID) + "/replay"
 	}
+	if len(governance) > 0 && governance[0] != nil {
+		dto["governance"] = governance[0]
+	}
 	return dto
+}
+
+func matchSetReplayAvailable(matches []map[string]any) bool {
+	for _, match := range matches {
+		if boolValue(match, "replayAvailable") {
+			return true
+		}
+	}
+	return false
 }
 
 func mapMatchSetStatus(status string) string {
