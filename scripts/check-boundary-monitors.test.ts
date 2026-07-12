@@ -601,6 +601,12 @@ describe("boundary drift monitors", () => {
     expect(() =>
       assertMonitorPublicPayload({ privateDiagnostics: { stack: "nope" } }),
     ).toThrow(/private field/)
+    expect(() =>
+      assertMonitorPublicPayload({ reporterUserId: "user:private" }),
+    ).toThrow(/private field/i)
+    expect(() =>
+      assertMonitorPublicPayload({ recoveryEvidence: "private" }),
+    ).toThrow(/private field/i)
   })
 
   it("fails worker quarantine artifacts that contain private markers", () => {

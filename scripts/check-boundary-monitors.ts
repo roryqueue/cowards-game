@@ -40,6 +40,7 @@ import {
   assertPublicOutputLeakSafe,
   assertNonJsRuntimeGuardrails,
   assertPublicServiceDtoLeakSafe,
+  assertPublicCompetitionGovernanceLeakSafe,
   describeStrategyRuntimeProductSemantics,
   evaluateStrategyRuntimeCountedEligibility,
   getStrategyRuntimeAdapterRecord,
@@ -357,18 +358,20 @@ const v130MatchIntelligenceProofMarkdownPath =
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
+  'apps/web/app/api/admin/matchsets/governance/route.ts:2:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../competitive/server.js"',
   'apps/web/app/api/ladder/seasons/[seasonId]/entries/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
   'apps/web/app/api/ladder/seasons/[seasonId]/schedule/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
   'apps/web/app/api/ladder/seasons/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
   'apps/web/app/api/matchsets/[matchSetId]/flags/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../competitive/server.js"',
+  'apps/web/app/api/matchsets/[matchSetId]/reports/route.ts:2:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../competitive/server.js"',
   'apps/web/app/competitive/server.ts:2:@cowards/persistence:import { createDatabasePool } from "@cowards/persistence/db"',
   'apps/web/app/competitive/server.ts:3:@cowards/persistence:import { AuthInputError, authenticateAccount, createAccount, createSession, getSession, revokeSession, type PublicUserAccount, } from "@cowards/persistence/auth"',
   'apps/web/app/competitive/server.ts:12:@cowards/persistence:import { AccountRevisionError, createAccountStrategyRevision, forkAdvancedStrategyToAccount, forkStarterStrategyToAccount, getAccountStrategyRevisionSource, listAccountStrategyRevisions, type AccountStrategyRevisionSummary, } from "@cowards/persistence/account-revisions"',
   'apps/web/app/competitive/server.ts:21:@cowards/persistence:import { ActiveDuplicateExhibitionError, CompetitionInputError, ExhibitionRateLimitError, createManualExhibitionMatchSet, } from "@cowards/persistence/competition"',
   'apps/web/app/competitive/server.ts:28:@cowards/persistence:import { createTrialLadderSeason, enterTrialLadderSeason, LadderInputError, scheduleTrialLadderSeason, setTrialLadderSeasonStatus, withdrawTrialLadderEntry, } from "@cowards/persistence/ladder"',
-  'apps/web/app/competitive/server.ts:36:@cowards/persistence:import { assertAdminUser, flagMatchSetResult, GovernanceInputError, markMatchSetGovernanceStatus, } from "@cowards/persistence/governance"',
-  'apps/web/app/competitive/server.ts:42:@cowards/persistence:import { findAdvancedStrategy } from "@cowards/persistence/advanced-strategies"',
-  'apps/web/app/competitive/server.ts:43:@cowards/persistence:import { findStarterStrategy } from "@cowards/persistence/starter-strategies"',
+  'apps/web/app/competitive/server.ts:36:@cowards/persistence:import { assertAdminUser, applyCompetitionGovernanceAction, flagMatchSetResult, GovernanceInputError, markMatchSetGovernanceStatus, submitCompetitionReport, } from "@cowards/persistence/governance"',
+  'apps/web/app/competitive/server.ts:44:@cowards/persistence:import { findAdvancedStrategy } from "@cowards/persistence/advanced-strategies"',
+  'apps/web/app/competitive/server.ts:45:@cowards/persistence:import { findStarterStrategy } from "@cowards/persistence/starter-strategies"',
   'apps/web/app/matches/replay-fixture.ts:6:@cowards/persistence:import { createChronicleMetadata } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/replay-ready.ts:7:@cowards/persistence:import type { StoredChronicle } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/server.test.ts:8:@cowards/persistence:import { createChronicleMetadata, type StoredChronicle, } from "@cowards/persistence/quarantine-lifecycle"',
@@ -879,6 +882,7 @@ export const assertReportOnlyBoundaryOffenseCount = (
 
 export const assertMonitorPublicPayload = (value: unknown): void => {
   assertPublicServiceDtoLeakSafe(value)
+  assertPublicCompetitionGovernanceLeakSafe(value)
 }
 
 const assertOpenApiPublicSchemaLeakSafe = (
@@ -903,6 +907,9 @@ const assertOpenApiPublicSchemaLeakSafe = (
       )) {
         try {
           assertPublicServiceDtoLeakSafe({ [propertyName]: null })
+          assertPublicCompetitionGovernanceLeakSafe({
+            [propertyName]: null,
+          })
         } catch (error) {
           throw new Error(
             `OpenAPI public schema leaks private field at ${routePath}.properties.${propertyName}: ${
