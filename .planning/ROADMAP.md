@@ -50,7 +50,7 @@ Archive:
 - [x] **Phase 250: Counted Entry and One-Active-Revision Enforcement** - Enforce provider-proof-backed counted eligibility, one active counted revision per Season, and explicit exhibition separation.
 - [x] **Phase 251: Season Lifecycle and Scheduling Policy** - Define public-safe Season lifecycle, entry and scheduling windows, entrant snapshots, archive behavior, and reset semantics.
 - [x] **Phase 252: Counted-State Classifier and Standings Recompute** - Classify result states and recompute Season standings from canonical counted evidence plus governance state.
-- [ ] **Phase 253: Governance, Dispute, Abuse, and Recovery Surfaces** - Add minimal public-safe reporting, dispute, governance, abuse-policy, and recovery-expectation behavior.
+- [x] **Phase 253: Governance, Dispute, Abuse, and Recovery Surfaces** - Add minimal public-safe reporting, dispute, governance, abuse-policy, and recovery-expectation behavior.
 - [ ] **Phase 254: Public Trust UX Projections** - Render policy-backed competition, standings, result, replay, player, Strategy, and entry trust projections without owning rules in UI.
 - [ ] **Phase 255: Service-Backed E2E Proof and Boundary Monitors** - Prove the full counted competition path, negative cases, governance scenarios, privacy, boundary monitors, and replay realism.
 
@@ -143,10 +143,10 @@ Plans:
   5. Public/default outputs exclude reporter identity, operator notes, raw diagnostics, recovery evidence, tokens, DB details, private runtime internals, Strategy-private data, dispute internals, and account-recovery payloads.
 **Plans**: 4 plans
 Plans:
-- [ ] 253-01-PLAN.md — Lock governance contracts, public projections, and report/audit storage invariants.
-- [ ] 253-02-PLAN.md — Implement atomic report/dispute and governance mutations behind strict routes.
-- [ ] 253-03-PLAN.md — Add the minimal report, fair-play, and policy-only recovery UX.
-- [ ] 253-04-PLAN.md — Align Go public-read parity and refresh privacy/boundary artifacts.
+- [x] 253-01-PLAN.md — Lock governance contracts, public projections, and report/audit storage invariants.
+- [x] 253-02-PLAN.md — Implement atomic report/dispute and governance mutations behind strict routes.
+- [x] 253-03-PLAN.md — Add the minimal report, fair-play, and policy-only recovery UX.
+- [x] 253-04-PLAN.md — Align Go public-read parity and refresh privacy/boundary artifacts.
 **UI hint**: yes
 
 ### Phase 254: Public Trust UX Projections
@@ -183,7 +183,7 @@ Plans:
 | 250. Counted Entry and One-Active-Revision Enforcement | 3/3 | Complete | 2026-07-11 |
 | 251. Season Lifecycle and Scheduling Policy | 3/3 | Complete | 2026-07-11 |
 | 252. Counted-State Classifier and Standings Recompute | 3/3 | Complete | 2026-07-11 |
-| 253. Governance, Dispute, Abuse, and Recovery Surfaces | 0/0 | Not started | - |
+| 253. Governance, Dispute, Abuse, and Recovery Surfaces | 4/4 | Complete | 2026-07-11 |
 | 254. Public Trust UX Projections | 0/0 | Not started | - |
 | 255. Service-Backed E2E Proof and Boundary Monitors | 0/0 | Not started | - |
 

@@ -43,12 +43,12 @@ Requirements for the Competition Maturity milestone. Each maps to roadmap phases
 
 ### Governance, Dispute, Abuse, and Recovery
 
-- [ ] **GOV-01**: Signed-in Players can report or dispute eligible competition results through a minimal product surface that records private-safe report metadata.
-- [ ] **GOV-02**: Governance actions can mark MatchSets or MatchSet groups under review, counted, non-counted, non-competitive, invalid, or invalidated with auditable private records and public-safe explanations.
-- [ ] **GOV-03**: Public governance projections expose only coarse status, safe reason category, safe explanation, timestamp where appropriate, standings impact, and replay availability.
-- [ ] **GOV-04**: Private governance data, reporter identity, operator notes, raw diagnostics, recovery evidence, tokens, DB details, private runtime internals, and Strategy-private data are excluded from public/default outputs.
-- [ ] **GOV-05**: Abuse and fair-play policy surfaces define current product behavior, reporting expectations, evidence limits, and future moderation work without promising automatic punishment, public sanction history, appeal SLAs, or permanent rating repair.
-- [ ] **GOV-06**: Account recovery surfaces explain current account ownership/recovery assumptions and future recovery limitations without collecting or publishing sensitive recovery payloads by default.
+- [x] **GOV-01**: Signed-in Players can report or dispute eligible competition results through a minimal product surface that records private-safe report metadata.
+- [x] **GOV-02**: Governance actions can mark MatchSets or MatchSet groups under review, counted, non-counted, non-competitive, invalid, or invalidated with auditable private records and public-safe explanations.
+- [x] **GOV-03**: Public governance projections expose only coarse status, safe reason category, safe explanation, timestamp where appropriate, standings impact, and replay availability.
+- [x] **GOV-04**: Private governance data, reporter identity, operator notes, raw diagnostics, recovery evidence, tokens, DB details, private runtime internals, and Strategy-private data are excluded from public/default outputs.
+- [x] **GOV-05**: Abuse and fair-play policy surfaces define current product behavior, reporting expectations, evidence limits, and future moderation work without promising automatic punishment, public sanction history, appeal SLAs, or permanent rating repair.
+- [x] **GOV-06**: Account recovery surfaces explain current account ownership/recovery assumptions and future recovery limitations without collecting or publishing sensitive recovery payloads by default.
 
 ### Public Trust UX
 
@@ -140,12 +140,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RESULT-04 | Phase 252 | Complete |
 | RESULT-05 | Phase 252 | Complete |
 | RESULT-06 | Phase 252 | Complete |
-| GOV-01 | Phase 253 | Pending |
-| GOV-02 | Phase 253 | Pending |
-| GOV-03 | Phase 253 | Pending |
-| GOV-04 | Phase 253 | Pending |
-| GOV-05 | Phase 253 | Pending |
-| GOV-06 | Phase 253 | Pending |
+| GOV-01 | Phase 253 | Complete |
+| GOV-02 | Phase 253 | Complete |
+| GOV-03 | Phase 253 | Complete |
+| GOV-04 | Phase 253 | Complete |
+| GOV-05 | Phase 253 | Complete |
+| GOV-06 | Phase 253 | Complete |
 | TRUST-01 | Phase 254 | Pending |
 | TRUST-02 | Phase 254 | Pending |
 | TRUST-03 | Phase 254 | Pending |
