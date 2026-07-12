@@ -4,6 +4,7 @@ import {
   MatchSetDiscoveryCard,
 } from "../../public-discovery-components.js"
 import { getPublicCompetitionDetail } from "../../../lib/public-discovery-service.js"
+import { COMPETITION_POLICY_V1_36_POSTURE } from "@cowards/spec"
 
 export const dynamic = "force-dynamic"
 
@@ -59,6 +60,8 @@ export default async function CompetitionDetailPage({
           </span>
           <span>{detail.scheduleLabel}</span>
           <span>{detail.replayCoverage.label}</span>
+          <span>{COMPETITION_POLICY_V1_36_POSTURE.standingsScope}</span>
+          <span>{COMPETITION_POLICY_V1_36_POSTURE.durableRatingPromise}</span>
         </div>
         <BoundaryNotice
           privateFieldsExcluded={detail.boundary.privateFieldsExcluded}

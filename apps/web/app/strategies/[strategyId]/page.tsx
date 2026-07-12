@@ -101,6 +101,11 @@ export default async function StrategyCardPage({
             {strategy.record.wins}-{strategy.record.losses}-
             {strategy.record.draws}, {strategy.record.points} points
           </dd>
+          <dt>record scope</dt>
+          <dd>
+            Counted trial evidence only. Exhibition, study, self-play, and
+            excluded results do not affect this record.
+          </dd>
           {strategy.starterLineage ? (
             <>
               <dt>lineage</dt>

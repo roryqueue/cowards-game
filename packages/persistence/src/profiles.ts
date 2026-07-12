@@ -10,12 +10,6 @@ import {
 import type { Pool } from "pg"
 import type { MatchSetStrategyScore } from "./scoring.js"
 
-const isCountablePublicStatus = (status: string): boolean =>
-  status !== "invalid" &&
-  status !== "non_competitive" &&
-  status !== "under_review" &&
-  status !== "non_counted"
-
 const loadPublicRecordsByRevision = async (
   pool: Pool,
   userId: string,
@@ -35,7 +29,11 @@ const loadPublicRecordsByRevision = async (
   const rows = await pool.query<{
     id: string
     scoring: { rankings?: MatchSetStrategyScore[] } | null
-    counted_status: string
+    counted_status: PublicPlayerProfileDto["results"][number]["countedStatus"]
+    review_status: "none" | "under_review" | "disputed" | "resolved"
+    ladder_season_id: string | null
+    chronicle_count: number
+    match_count: number
     match_ids: string[]
   }>(
     `
@@ -43,10 +41,15 @@ const loadPublicRecordsByRevision = async (
         ms.id,
         ms.scoring,
         ms.counted_status,
-        array_remove(array_agg(distinct msm.match_id order by msm.match_id), null) as match_ids
+        ms.review_status,
+        ms.ladder_season_id,
+        count(distinct msm.match_id)::integer as match_count,
+        count(distinct c.match_id)::integer as chronicle_count,
+        array_remove(array_agg(distinct case when c.match_id is not null then msm.match_id end order by case when c.match_id is not null then msm.match_id end), null) as match_ids
       from match_sets ms
       join competition_entrants ce on ce.match_set_id = ms.id
       left join match_set_matches msm on msm.match_set_id = ms.id
+      left join chronicles c on c.match_id = msm.match_id
       where ce.owner_user_id = $1
         and ms.status = 'complete'
         and ms.scoring is not null
@@ -67,7 +70,16 @@ const loadPublicRecordsByRevision = async (
     }
   >()
   for (const row of rows.rows) {
-    if (!isCountablePublicStatus(row.counted_status)) {
+    const countedState = classifyCompetitionCountedState({
+      executionStatus: "complete",
+      storedState: row.counted_status,
+      reviewState: row.review_status,
+      origin: row.ladder_season_id ? "trial" : "non_competitive",
+      expectedMatchCount: row.match_count,
+      chronicleMatchCount: row.chronicle_count,
+      scoringAvailable: Array.isArray(row.scoring?.rankings),
+    })
+    if (countedState.state !== "counted") {
       continue
     }
     for (const ranking of row.scoring?.rankings ?? []) {
