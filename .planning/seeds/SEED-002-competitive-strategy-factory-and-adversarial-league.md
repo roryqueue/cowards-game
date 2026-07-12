@@ -41,6 +41,7 @@ The first program should prove a legal hierarchical planner, add structured opti
 - [Proposed v2.0 milestone](../milestone-proposals/v2.0-rules-integrity-and-metagame-renewal/PROPOSAL.md)
 - [Proposed v2.0 requirements](../milestone-proposals/v2.0-rules-integrity-and-metagame-renewal/REQUIREMENTS.md)
 - [Proposed v2.0 roadmap](../milestone-proposals/v2.0-rules-integrity-and-metagame-renewal/ROADMAP.md)
+- [Updated Milestone 2 activation prompt](../milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/ACTIVATION-PROMPT.md)
 - [Earlier Advanced Strategy library research](../research/v1.5-STRATEGY-LIBRARY.md)
 - [Canonical Strategy input and limits](../../packages/spec/src/types.ts)
 - [Input construction and information boundaries](../../packages/engine/src/runtime-inputs.ts)
@@ -54,7 +55,7 @@ The first program should prove a legal hierarchical planner, add structured opti
 - “Exploitability” is always qualified as oracle-relative.
 - Every rule candidate receives equal adaptation and training compute.
 - Production runtimes certify finalists; they are not the training loop.
-- The milestone itself changes no game rules.
+- The milestone itself changes no production game rules. After freezing the current-rules league, it runs a versioned lab-only, equal-compute comparison of the current edge rank, full inward rank, and edge-anchored bracket start.
 
 ## Notes
 
@@ -62,4 +63,4 @@ The first program should prove a legal hierarchical planner, add structured opti
 - Produce a portfolio plus a robust pure finalist; the PSRO mixture is diagnostic evidence, not one deployable entrant.
 - Resolve initiative visibility, authoritative Advance state, runtime-budget mismatch, and language-envelope asymmetry in the preceding integrity milestone.
 - Preserve failed attacks, negative results, manifests, payoff matrices, behavior fingerprints, and holdout identities for later rule evaluation.
-
+- Treat the bracket as an experiment, not a selected rule: top `y=0, x={2,3,8,9}` plus `y=1, x={4,5,6,7}`, vertically mirrored for bottom. Keep cap, MOVE, Backstab, arenas, and other rules fixed during the primary comparison.

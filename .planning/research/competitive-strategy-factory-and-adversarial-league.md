@@ -48,7 +48,7 @@ The valid replacement is an iterative best-response process whose implementation
 - Optimizing only against the existing Advanced library.
 - Allowing a privileged teacher to leak hidden state into emitted decisions.
 - Using invalid output, timeouts, runtime failure, or nondeterminism as tactics.
-- Changing core rules, official arenas, counted policy, or runtime eligibility inside the Strategy milestone.
+- Changing production core rules, official arenas, counted policy, or runtime eligibility inside the Strategy milestone. Versioned lab-only starting-formation profiles are permitted after the current-rules league is frozen, but cannot become production, persisted, public, or counted behavior.
 - Starting with end-to-end deep reinforcement learning before the tractable structured controller is understood.
 
 ## Existing evidence and breadcrumbs
@@ -326,6 +326,67 @@ Suggested funnel:
 
 Report approximate response gap, pure-policy worst-case payoff, support diversity, first contact, Actions before interaction, push/Backstab/block/STONE/Contraction incidence, draws, inactivity, runtime/source complexity, and transfer to held-out arenas and opponents.
 
+## Lab-only starting-formation experiment
+
+After the current-rules league, thresholds, and sealed holdouts are frozen, the milestone should use the same factory to run one contained starting-formation ablation. This is an evaluation deliverable, not authority to ship a rule change.
+
+### Profiles
+
+Compare these profiles while holding the Cycle cap, MOVE rules, Backstab geometry/timing, activation counts, arenas, and every other rule constant:
+
+1. **Current edge rank:** `x=2..9`, top `y=0`, bottom `y=11`.
+2. **Inward-rank control:** `x=2..9`, top `y=1`, bottom `y=10`.
+3. **Edge-anchored bracket shield:** the primary challenger below.
+
+All Soldiers retain their current inward facing.
+
+```text
+Top player facing DOWN
+
+y=0   ..RR....RR..   x={2,3,8,9}
+y=1   ....FFFF....   x={4,5,6,7}
+
+y=10  ....FFFF....   x={4,5,6,7}
+y=11  ..RR....RR..   x={2,3,8,9}
+
+Bottom player facing UP
+```
+
+`R` marks the four boundary wing Soldiers and `F` the four inward center Soldiers.
+
+### Why this challenger exists
+
+- The current edge rank protects all rear squares by placing them off-board, but forces eight Phase-1 evacuation selections.
+- The full inward rank removes that evacuation pressure. Its endpoint rear squares are reachable in 12 unobstructed MOVEs under current rules, exactly the current Cycle cap; central rear squares require 13–15.
+- The bracket starts all eight Soldiers Backstab-safe without directly stacking rear/front pairs. The wing rears are off-board, while the four empty center rear squares form a sealed pocket bounded by the board edge, the center rank, and the two wing pairs.
+- Every Soldier's directly inward square is initially empty, avoiding the self-blocking and front-then-rear deployment script of an aligned 2×4 rectangle.
+- Only four Soldiers remain on the first-Contraction boundary, halving compulsory evacuation rather than eliminating it.
+- Moving one wing Soldier does not open the center pocket; both wing guards on the same side must vacate. Once open, an attacker starting from the opposing formation still needs at least 15 MOVEs to reach a center rear square under the static-position lower-bound model.
+- Protection decays as the formation develops, so the experiment does not make Backstab generally irrelevant.
+
+### Experimental controls
+
+- Freeze and report the current-rules competitive league before creating any alternate start profile.
+- Implement starts through one versioned, lab-only initial-state profile boundary; all subsequent transitions must use the canonical engine unchanged.
+- Make experimental profiles impossible to register as official arenas/rules, persist as canonical evidence, enter counted scheduling, or appear in public product surfaces.
+- Retrain Strategies separately for every profile with equal doctrine, candidate, oracle, model/human, search-node, Match, side, initiative, arena, and replay-review budgets.
+- Use the same design/validation/holdout split and open the sealed holdout only after every profile is frozen.
+- Do not combine this primary ablation with a lower Cycle cap, attacker-facing Backstab, facing-only MOVE, or scan-timing change. Preserve causality. Record those as separately budgeted future interaction experiments.
+
+### Formation-specific evidence
+
+Measure:
+
+- viable opening selections and opening-policy entropy;
+- boundary Soldiers evacuated and unselected ACTIVE reserves at first Contraction;
+- first Awareness, contact, push, Backstab, STONE, and decisive event;
+- stationary-reserve Backstabs and Backstabs by cause;
+- same-direction blocks, blocked/resolved pushes, and no-Advance cleanup;
+- center-rush, wing-guard, convoy, reserve-hoarding, and persistent STONE-shield incidence;
+- draw rate, Match length, Contractions, ACTIVE survival, response gap, worst-case pure payoff, and best-response graph.
+
+Reject the bracket if independently retrained Strategies converge on a robust scripted opening, convoy/turtle or STONE-shield meta, materially lower interaction, or worse oracle-relative exploitability. A passing result becomes a decision packet for a later rules milestone; it does not ship from this milestone.
+
 ## API and contract prerequisites
 
 The integrity/foundation milestone should resolve these before final Strategy certification:
@@ -354,6 +415,7 @@ The eventual milestone should preserve:
 - held-out evaluation opened once at the declared gate;
 - accepted/rejected candidate ledger;
 - equal-compute ruleset-comparison protocol;
+- current/inward/bracket formation manifests, separately retrained populations, causal comparison report, and later-milestone decision packet;
 - final report that distinguishes observed evidence from claims the experiment cannot support.
 
 ## Research basis
@@ -365,7 +427,7 @@ The eventual milestone should preserve:
 ## Recommended sequencing
 
 1. Ship the non-controversial audit repairs and API/evaluation prerequisites without experimental gameplay changes.
-2. Run this competitive Strategy factory milestone under the repaired current rules.
-3. Use its league, oracles, holdouts, and equal-compute protocol to evaluate the isolated v2 rule experiments.
-4. Promote only the smallest causally supported rule bundle and Strategies retrained for it.
-
+2. Run and freeze the competitive Strategy factory milestone's current-rules league.
+3. Use that frozen lab to compare the current, inward-rank, and edge-anchored bracket starts under otherwise identical current rules.
+4. Use its league, oracles, holdouts, and equal-compute protocol to evaluate later isolated v2 rule experiments.
+5. Promote only the smallest causally supported rule bundle and Strategies retrained for it.
