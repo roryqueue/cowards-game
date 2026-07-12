@@ -60,12 +60,12 @@ Requirements for the Competition Maturity milestone. Each maps to roadmap phases
 
 ### Verification and Boundary Proof
 
-- [ ] **PROOF-01**: Service-backed proof covers entry -> counted MatchSet -> execution -> result -> standings -> replay for at least one realistic counted Season flow.
-- [ ] **PROOF-02**: Negative proof covers stale/missing/mismatched provider proof, unsupported provider/language, hidden TinyGo, invalid provenance, unavailable runtime lane, package-policy violation, same-user counted entry, and mid-season replacement rejection.
-- [ ] **PROOF-03**: Governance proof covers degraded, non-counted, disputed/under-review, invalid, and invalidated scenarios with standings recomputation and public-safe explanations.
-- [ ] **PROOF-04**: Privacy scans cover public APIs, pages, fixtures, proof artifacts, and copy snapshots for Strategy source, artifact bytes, raw diagnostics, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, objective payloads, dispute internals, account-recovery payloads, and operator-only details.
-- [ ] **PROOF-05**: Boundary monitors prove no Strategy execution moved into web/API/Go, no game rules moved into React, no Node `vm` security boundary was introduced, no package/TinyGo/sandbox overclaims were added, and runtime-service / Runtime Broker / provider ownership remains intact.
-- [ ] **PROOF-06**: Browser replay/result realism checks verify visible Soldier, STONE, and terrain positions stay inside declared board bounds, canonical arenas contain canonical starting positions, FALLEN/STONE display remains plausible, and public replay pages show plausible full Match starts instead of clipped or off-screen pieces.
+- [x] **PROOF-01**: Service-backed proof covers entry -> counted MatchSet -> execution -> result -> standings -> replay for at least one realistic counted Season flow.
+- [x] **PROOF-02**: Negative proof covers stale/missing/mismatched provider proof, unsupported provider/language, hidden TinyGo, invalid provenance, unavailable runtime lane, package-policy violation, same-user counted entry, and mid-season replacement rejection.
+- [x] **PROOF-03**: Governance proof covers degraded, non-counted, disputed/under-review, invalid, and invalidated scenarios with standings recomputation and public-safe explanations.
+- [x] **PROOF-04**: Privacy scans cover public APIs, pages, fixtures, proof artifacts, and copy snapshots for Strategy source, artifact bytes, raw diagnostics, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, objective payloads, dispute internals, account-recovery payloads, and operator-only details.
+- [x] **PROOF-05**: Boundary monitors prove no Strategy execution moved into web/API/Go, no game rules moved into React, no Node `vm` security boundary was introduced, no package/TinyGo/sandbox overclaims were added, and runtime-service / Runtime Broker / provider ownership remains intact.
+- [x] **PROOF-06**: Browser replay/result realism checks verify visible Soldier, STONE, and terrain positions stay inside declared board bounds, canonical arenas contain canonical starting positions, FALLEN/STONE display remains plausible, and public replay pages show plausible full Match starts instead of clipped or off-screen pieces.
 
 ## Future Requirements
 
@@ -151,12 +151,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRUST-03 | Phase 254 | Complete |
 | TRUST-04 | Phase 254 | Complete |
 | TRUST-05 | Phase 254 | Complete |
-| PROOF-01 | Phase 255 | Pending |
-| PROOF-02 | Phase 255 | Pending |
-| PROOF-03 | Phase 255 | Pending |
-| PROOF-04 | Phase 255 | Pending |
-| PROOF-05 | Phase 255 | Pending |
-| PROOF-06 | Phase 255 | Pending |
+| PROOF-01 | Phase 255 | Complete |
+| PROOF-02 | Phase 255 | Complete |
+| PROOF-03 | Phase 255 | Complete |
+| PROOF-04 | Phase 255 | Complete |
+| PROOF-05 | Phase 255 | Complete |
+| PROOF-06 | Phase 255 | Complete |
 
 **Coverage:**
 - v1.36 requirements: 39 total

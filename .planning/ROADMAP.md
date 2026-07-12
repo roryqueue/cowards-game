@@ -52,7 +52,7 @@ Archive:
 - [x] **Phase 252: Counted-State Classifier and Standings Recompute** - Classify result states and recompute Season standings from canonical counted evidence plus governance state.
 - [x] **Phase 253: Governance, Dispute, Abuse, and Recovery Surfaces** - Add minimal public-safe reporting, dispute, governance, abuse-policy, and recovery-expectation behavior.
 - [x] **Phase 254: Public Trust UX Projections** - Render policy-backed competition, standings, result, replay, player, Strategy, and entry trust projections without owning rules in UI.
-- [ ] **Phase 255: Service-Backed E2E Proof and Boundary Monitors** - Prove the full counted competition path, negative cases, governance scenarios, privacy, boundary monitors, and replay realism.
+- [x] **Phase 255: Service-Backed E2E Proof and Boundary Monitors** - Prove the full counted competition path, negative cases, governance scenarios, privacy, boundary monitors, and replay realism.
 
 ## Phase Details
 
@@ -178,9 +178,9 @@ Plans:
   5. Browser replay/result realism checks verify visible Soldier, STONE, and terrain positions stay inside declared board bounds, canonical arenas contain canonical starting positions, FALLEN/STONE display remains plausible, and public replay pages show plausible full Match starts.
 **Plans**: 3 plans
 Plans:
-- [ ] 255-01-PLAN.md — Prove a live counted Season path and the authenticated eligibility rejection matrix.
-- [ ] 255-02-PLAN.md — Prove governance recomputation and extend privacy, ownership, and overclaim monitors.
-- [ ] 255-03-PLAN.md — Prove browser realism and generate the strict final milestone evidence rollup.
+- [x] 255-01-PLAN.md — Prove a live counted Season path and the authenticated eligibility rejection matrix.
+- [x] 255-02-PLAN.md — Prove governance recomputation and extend privacy, ownership, and overclaim monitors.
+- [x] 255-03-PLAN.md — Prove browser realism and generate the strict final milestone evidence rollup.
 **UI hint**: yes
 
 ## Progress
@@ -193,7 +193,7 @@ Plans:
 | 252. Counted-State Classifier and Standings Recompute | 3/3 | Complete | 2026-07-11 |
 | 253. Governance, Dispute, Abuse, and Recovery Surfaces | 4/4 | Complete | 2026-07-11 |
 | 254. Public Trust UX Projections | 3/3 | Complete | 2026-07-11 |
-| 255. Service-Backed E2E Proof and Boundary Monitors | 0/3 | In progress | - |
+| 255. Service-Backed E2E Proof and Boundary Monitors | 3/3 | Complete | 2026-07-12 |
 
 ## Coverage
 

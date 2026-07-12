@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.36
 milestone_name: Competition Maturity
-status: in_progress
-stopped_at: Phase 254 verified complete; Phase 255 service-backed proof in progress
-last_updated: "2026-07-12T02:00:00.000Z"
-last_activity: 2026-07-11 -- Phase 254 verified complete
+status: complete
+stopped_at: Phase 255 verified complete; v1.36 milestone audit pending archive
+last_updated: "2026-07-12T11:27:00.000Z"
+last_activity: 2026-07-12 -- Phase 255 verified complete
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 22
-  completed_plans: 19
-  percent: 86
+  completed_plans: 22
+  percent: 100
 ---
 
 # State: Coward's Game
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-06-15)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 255 service-backed proof and boundary monitors
+**Current focus:** v1.36 milestone audit and archive
 
 ## Current Position
 
 Phase: 255 - Service-Backed E2E Proof and Boundary Monitors
-Plan: 255-01
-Status: Live local topology running; counted Season proof implementation in progress
-Last activity: 2026-07-11 -- Phase 254 verified complete
+Plan: complete
+Status: Verified complete; milestone audit and archive next
+Last activity: 2026-07-12 -- Phase 255 verified complete
 
-Progress: [#########-] 86%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -50,7 +50,7 @@ Progress: [#########-] 86%
 | 252. Counted-State Classifier and Standings Recompute | Complete | 3/3 | 6 |
 | 253. Governance, Dispute, Abuse, and Recovery Surfaces | Complete | 4/4 | 6 |
 | 254. Public Trust UX Projections | Complete | 3/3 | 5 |
-| 255. Service-Backed E2E Proof and Boundary Monitors | In progress | 0/3 | 6 |
+| 255. Service-Backed E2E Proof and Boundary Monitors | Complete | 3/3 | 6 |
 
 ## Accumulated Context
 
@@ -70,7 +70,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Finish Phase 255 live service, governance, boundary, browser, and audit proof.
+- Audit and archive v1.36 after the passed strict final proof.
 
 ### Blockers/Concerns
 
@@ -92,7 +92,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-07-11T22:00:00-04:00
-Stopped at: Phase 254 verified complete; Phase 255 service proof in progress
+Last session: 2026-07-12T07:27:00-04:00
+Stopped at: Phase 255 verified complete; milestone audit pending
 Resume file: `.planning/phases/255-service-backed-e2e-proof-and-boundary-monitors/`
-Next command: execute `.planning/phases/255-service-backed-e2e-proof-and-boundary-monitors/255-01-PLAN.md`
+Next command: run the v1.36 milestone audit and archive workflow
