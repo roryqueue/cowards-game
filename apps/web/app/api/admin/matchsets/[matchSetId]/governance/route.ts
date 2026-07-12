@@ -3,20 +3,7 @@ import {
   getCurrentCompetitiveUser,
 } from "../../../../../competitive/server.js"
 import { competitiveErrorResponse } from "../../../../../competitive/http.js"
-
-const countedStatuses = new Set([
-  "counted",
-  "invalid",
-  "non_competitive",
-  "non_counted",
-])
-const publicReasons = new Set([
-  "system_failure",
-  "incomplete_evidence",
-  "invalid_result",
-  "governance_hold",
-  "non_counted",
-])
+import { CompetitionGovernanceActionRequestBodySchema } from "@cowards/spec"
 
 export async function POST(
   request: Request,
@@ -30,29 +17,18 @@ export async function POST(
       return Response.json({ error: "Sign in is required." }, { status: 401 })
     }
     const { matchSetId } = await params
-    const body = (await request.json()) as Record<string, unknown>
-    const countedStatus =
-      typeof body.countedStatus === "string" &&
-      countedStatuses.has(body.countedStatus)
-        ? body.countedStatus
-        : "invalid"
-    const publicReason =
-      typeof body.publicReason === "string" &&
-      publicReasons.has(body.publicReason)
-        ? body.publicReason
-        : "invalid_result"
-    await competitiveServer.markMatchSetGovernanceStatus(user, {
-      matchSetId,
-      countedStatus: countedStatus as never,
-      publicReason: publicReason as never,
-      reason: typeof body.reason === "string" ? body.reason : "",
-      publicExplanation:
-        typeof body.publicExplanation === "string"
-          ? body.publicExplanation
-          : "",
-      privateNote:
-        typeof body.privateNote === "string" ? body.privateNote : undefined,
-      adminUserId: user.id,
+    const parsed = CompetitionGovernanceActionRequestBodySchema.safeParse(
+      await request.json(),
+    )
+    if (!parsed.success) {
+      return Response.json(
+        { error: "Invalid governance action." },
+        { status: 422 },
+      )
+    }
+    await competitiveServer.applyCompetitionGovernanceAction(user, {
+      matchSetIds: [matchSetId],
+      ...parsed.data,
     })
     return Response.json({ ok: true })
   } catch (error) {

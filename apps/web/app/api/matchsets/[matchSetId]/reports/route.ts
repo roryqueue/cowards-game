@@ -1,3 +1,4 @@
+import { SubmitCompetitionReportRequestBodySchema } from "@cowards/spec"
 import {
   competitiveServer,
   getCurrentCompetitiveUser,
@@ -15,15 +16,23 @@ export async function POST(
     if (!user) {
       return Response.json({ error: "Sign in is required." }, { status: 401 })
     }
+    const parsed = SubmitCompetitionReportRequestBodySchema.safeParse(
+      await request.json(),
+    )
+    if (!parsed.success) {
+      return Response.json(
+        { error: "Choose a valid report type and category." },
+        { status: 422 },
+      )
+    }
     const { matchSetId } = await params
-    const body = (await request.json()) as Record<string, unknown>
-    const result = await competitiveServer.submitCompetitionReport(user, {
+    const receipt = await competitiveServer.submitCompetitionReport(user, {
       matchSetId,
-      submissionType: "dispute",
-      category: "result_integrity",
-      privateDetail: body.note,
+      ...parsed.data,
     })
-    return Response.json({ flagId: result.submissionId }, { status: 201 })
+    return Response.json(receipt, {
+      status: receipt.disposition === "created" ? 201 : 200,
+    })
   } catch (error) {
     return competitiveErrorResponse(error)
   }

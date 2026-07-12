@@ -35,9 +35,11 @@ import {
 } from "@cowards/persistence/ladder"
 import {
   assertAdminUser,
+  applyCompetitionGovernanceAction,
   flagMatchSetResult,
   GovernanceInputError,
   markMatchSetGovernanceStatus,
+  submitCompetitionReport,
 } from "@cowards/persistence/governance"
 import { findAdvancedStrategy } from "@cowards/persistence/advanced-strategies"
 import { findStarterStrategy } from "@cowards/persistence/starter-strategies"
@@ -181,6 +183,14 @@ const mapPersistenceError = (error: unknown): never => {
   if (error instanceof ActiveDuplicateExhibitionError) {
     throw new CompetitiveInputError(error.message, { status: 409 })
   }
+  if (error instanceof GovernanceInputError) {
+    throw new CompetitiveInputError(error.message, {
+      status: error.status,
+      ...(error.retryAfterSeconds === undefined
+        ? {}
+        : { retryAfterSeconds: error.retryAfterSeconds }),
+    })
+  }
   if (error instanceof LadderInputError && error.category) {
     const eligibility = getCountedEntryEligibilityPublicCopy(error.category)
     throw new CompetitiveInputError(eligibility.publicMessage, {
@@ -192,8 +202,7 @@ const mapPersistenceError = (error: unknown): never => {
     error instanceof AuthInputError ||
     error instanceof AccountRevisionError ||
     error instanceof CompetitionInputError ||
-    error instanceof LadderInputError ||
-    error instanceof GovernanceInputError
+    error instanceof LadderInputError
   ) {
     throw new CompetitiveInputError(error.message, { status: 400 })
   }
@@ -625,6 +634,44 @@ export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
             note: normalizeText(input.note),
           }),
         }))
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async submitCompetitionReport(
+      user: CompetitiveUser,
+      input: Omit<
+        Parameters<typeof submitCompetitionReport>[1],
+        "reporterUserId"
+      >,
+    ) {
+      try {
+        return await withPool((pool) =>
+          submitCompetitionReport(pool, {
+            ...input,
+            reporterUserId: user.id,
+          }),
+        )
+      } catch (error) {
+        return mapPersistenceError(error)
+      }
+    },
+
+    async applyCompetitionGovernanceAction(
+      user: CompetitiveUser,
+      input: Omit<
+        Parameters<typeof applyCompetitionGovernanceAction>[1],
+        "adminUserId"
+      >,
+    ): Promise<void> {
+      try {
+        return await withPool((pool) =>
+          applyCompetitionGovernanceAction(pool, {
+            ...input,
+            adminUserId: user.id,
+          }),
+        )
       } catch (error) {
         return mapPersistenceError(error)
       }
