@@ -1,5 +1,38 @@
 # Milestones
 
+## v1.36 Competition Maturity (Shipped: 2026-07-12)
+
+**Status:** Shipped 2026-07-12
+**Phases:** 7
+**Phase range:** 249-255
+**Plans:** 22/22 complete
+**Requirements:** 39/39 complete
+**Audit:** Passed - 39/39 integration checks and 5/5 end-to-end flows
+**Roadmap:** .planning/milestones/v1.36-ROADMAP.md
+**Requirements archive:** .planning/milestones/v1.36-REQUIREMENTS.md
+**Audit archive:** .planning/milestones/v1.36-MILESTONE-AUDIT.md
+**Phase archive:** .planning/milestones/v1.36-phases/
+**Decision:** Competition is now an honest resettable public beta with Season-scoped standings, provider-proof-backed counted eligibility, canonical recomputation, and public-safe governance. It does not promise durable ratings, staffed moderation, full account recovery, production sandbox certification, package ecosystems, TinyGo production support, or a new runtime ABI.
+
+**Delivered:**
+
+- Locked competition policy, vocabulary, ownership, privacy exclusions, and public-beta/reset semantics.
+- Enforced immutable account-owned counted entry using current provider, language, runtime, provenance, artifact, and package-policy evidence, including one active revision per Season.
+- Added explicit Season lifecycle, entrant snapshots, scheduling/freeze/archive behavior, and separation of exhibition/self-play from counted competition.
+- Made counted, non-counted, degraded, disputed, invalid, and invalidated outcomes canonically classifiable and standings-recomputable.
+- Added minimal report/dispute/governance behavior plus honest abuse and recovery policy surfaces without exposing private evidence or operator internals.
+- Unified public trust projections across competition, standings, result, replay, player, and Strategy pages.
+- Proved a live 48-Match counted Season path through Go and runtime-service, negative entry cases, governance recomputation, privacy monitors, and desktop/mobile replay realism.
+
+### Active Constraints
+
+- Strategy execution remains outside web/API/Go and behind runtime-service / Runtime Broker / provider boundaries.
+- Current live worker-thread proof demonstrates ownership and integration, not production sandbox certification.
+- Durable ratings, staffed moderation and appeals, and full account recovery require future explicit milestones.
+- Package mode remains `none`; TinyGo remains hidden and spike-only.
+- Public/default output must not expose Strategy source, artifact bytes, memories, objectives, raw diagnostics, host/environment/package paths, tokens, database details, private runtime/provider data, dispute internals, recovery payloads, or operator-only governance detail.
+- Standalone Nyquist validation documents remain incomplete for six phases, but phase verification, strict proof evaluators, service-backed tests, integration review, and the milestone audit all passed.
+
 ## v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup (Shipped: 2026-06-15)
 
 **Status:** Shipped 2026-06-15

@@ -2,10 +2,10 @@
 
 ## Current State
 
-**Shipped version:** v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup on 2026-06-15
-**Current milestone:** v1.36 Competition Maturity
-**Status:** v1.36 planning is active. v1.35 is shipped and archived. Coward's Game now has an authoritative runtime/account/security-policy boundary inventory, provider-proof-backed account save and entry gates, server-authorized account source and owner-debug boundaries, deprecated Workshop source aliases, evidence-scoped sandbox readiness labels, enforced no-package/no-host-import policy, service-backed PostgreSQL proof for the corrected TypeScript account/provider path, and final proof artifacts wired into boundary monitors. TypeScript, Python, Rust, and Zig remain supported counted Strategy languages through provider-gated runtime evidence. TypeScript and Python source-language artifact provenance remains provenance evidence, not WASM isolation. Rust and Zig remain immutable WASM/WASI Preview 1 artifact-backed lanes. TinyGo remains spike-only and hidden from production surfaces.
-**Last audit:** v1.35 audit passed after fixing one integration gap where Workshop Load source still called a deprecated alias, refreshing generated OpenAPI/v1.16 inventory artifacts, and rerunning the full boundary monitor chain.
+**Shipped version:** v1.36 Competition Maturity on 2026-07-12
+**Current milestone:** None; ready for next milestone selection
+**Status:** v1.36 is shipped and archived. Coward's Game now presents competition as a resettable public beta with provider-proof-backed counted entry, immutable Season entrant snapshots, explicit exhibition and self-play separation, canonical result classification and standings recomputation, public-safe dispute/governance states, policy-only abuse and recovery expectations, and clear trust projections across competition, result, replay, player, and Strategy surfaces. Strategy execution remains behind runtime-service / Runtime Broker / provider boundaries, and public replay/result output remains source, artifact, memory, objective, diagnostics, and private-runtime safe.
+**Last audit:** v1.36 passed with 39/39 requirements, 7/7 phases, 39/39 integration checks, and 5/5 end-to-end flows. Live proof completed 48/48 Matches through Go and runtime-service and verified standings, governance recomputation, privacy boundaries, and replay realism.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.
 
@@ -13,7 +13,7 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.36 Competition Maturity
+## Latest Shipped Milestone: v1.36 Competition Maturity
 
 **Goal:** Move Coward's Game competition from alpha/trial posture toward mature public beta by tightening season policy, entry eligibility, standings/result governance, abuse/dispute/recovery expectations, public trust copy, and replay/result proof while preserving deterministic rules and runtime ownership boundaries.
 
@@ -72,7 +72,11 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 ## Proposed Next Milestones
 
-- (None yet — v1.36 Competition Maturity is active.)
+- **Competitive Operations and Account Recovery** - Build moderation queues, sanctions, appeals, recovery workflows, operator roles, and auditable service expectations before promising durable competitive identity.
+- **Durable Ratings and Competitive Identity** - Add placements, rating history, Season transitions, repair/rollback semantics, and all-time identity only after operational governance and recovery are proven.
+- **Tournament and League Operations** - Add registration, brackets or pods, scheduled rounds, tournament governance, spectator views, and event evidence on top of the mature competition substrate.
+- **Production Runtime Certification** - Prove deployable isolation, image and toolchain provenance, resource/failure controls, package supply-chain policy, and lane certification without weakening runtime ownership boundaries.
+- **Strategy Ecosystem and Creator League** - Add verified publishing, discovery, lineage/forks, benchmarks, curated events, and creator/team identity while preserving Strategy privacy.
 
 ## Latest Shipped Milestone: v1.33 Source Artifact Provenance and TinyGo WASI Spike
 
@@ -759,6 +763,9 @@ Planning archives live under `.planning/milestones/`:
 | Allow same-user multi-revision exhibition entry in alpha | Self-play is valuable for doctrine testing; one-strategy-per-user belongs with ranked or more formal competition. | ✓ Good |
 | Publish result evidence without Strategy internals | Public standings, replay links, hashes, and provenance are enough for alpha disputes while source/memory/objective data stays private. | ✓ Good |
 | Use resettable trial ladders before durable ratings | Ranking pressure is useful, but permanent ratings should wait until abuse, moderation, and sandbox behavior are better understood. | ✓ Good |
+| Promote competition to a resettable public beta | v1.36 adds credible entry, Season, standings, governance, and trust behavior while keeping durable ratings and staffed operations out of scope. | ✓ Implemented in v1.36 |
+| Derive counted eligibility from provider evidence | Account ownership, immutability, supported lane, current proof, provenance, runtime availability, and package policy must agree before counted entry. | ✓ Implemented in v1.36 |
+| Recompute standings from canonical evidence and governance state | Disputes and invalidations must change standings predictably without mutating deterministic Match rules or leaking private audit data. | ✓ Implemented in v1.36 |
 | Seed starter Strategies as forkable templates | Players should begin with readable, credible doctrines they choose to fork, not opaque auto-submissions. | ✓ Good |
 | Treat containerized subprocess as the production-candidate runtime path | It preserves the JS/TS Strategy API while adding a clearer process and container boundary than worker threads. | ✓ Revisit before real hostile public scale |
 | Interleave selected Soldiers by Cycle, not full Activation | The intended game is simultaneous-feeling tactical pressure where selected Soldiers respond between Cycles instead of one Soldier consuming its whole Cycle budget before the next slot acts. | ✓ Implemented in v1.4 |
@@ -822,4 +829,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-15 after starting milestone v1.36 Competition Maturity*
+*Last updated: 2026-07-12 after shipping milestone v1.36 Competition Maturity*
