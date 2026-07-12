@@ -159,7 +159,11 @@ Plans:
   3. Replay and result pages preserve source, memory, objective, dispute, recovery, and private-runtime privacy while showing public Chronicle/replay evidence and counted-state explanations.
   4. Public trust copy is calm, product-facing, and honest about resets, degraded Matches, disputes, invalidations, and limited recovery/moderation maturity.
   5. Public UI renders authoritative projections only and does not implement game rules, scoring truth, entry eligibility truth, or Strategy execution.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 254-01-PLAN.md — Render posture, eligibility, Season, standings, and evidence projections.
+- [ ] 254-02-PLAN.md — Compose typed result, replay, Player, and Strategy trust surfaces.
+- [ ] 254-03-PLAN.md — Verify responsive trust UX, privacy, and replay realism in browsers.
 **UI hint**: yes
 
 ### Phase 255: Service-Backed E2E Proof and Boundary Monitors
