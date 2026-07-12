@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-07-12T19:24:19.801Z"
 last_activity: 2026-07-12
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Select and start the milestone after v1.36 Competition Maturity.
+**Current focus:** Phase 256 — Counted Safety and Canonical Authority.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 256 of 261 (Counted Safety and Canonical Authority)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-12 — Milestone v1.37 started
+Status: Ready to discuss or plan
+Last activity: 2026-07-12 — v1.37 roadmap approved with 56/56 requirements mapped
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Durable Decisions
 
@@ -37,6 +39,8 @@ Last activity: 2026-07-12 — Milestone v1.37 started
 - Counted, non-counted, degraded, disputed, invalid, and invalidated outcomes are classified from canonical evidence and recomputed into standings.
 - Strategy execution remains outside web/API/Go and behind runtime-service / Runtime Broker / provider boundaries.
 - Public/default output remains source, artifact, memory, objective, diagnostics, runtime-internal, dispute-internal, recovery-sensitive, and operator-detail safe.
+- v1.37 preserves valid v1.4 gameplay and immutable historical evidence; any semantic delta requires explicit compatibility approval.
+- Optional Cycle-start Backstab removal and post-Advance HOLD/END_ACTIVATION are not required for v1.37 and proceed only after equivalence proof and approval.
 
 ## Deferred Items
 
@@ -52,5 +56,5 @@ Last activity: 2026-07-12 — Milestone v1.37 started
 ## Session Continuity
 
 Last session: 2026-07-12
-Stopped at: v1.36 archived and ready for next milestone selection
-Next command: `$gsd-new-milestone`
+Stopped at: v1.37 initialized; Phase 256 ready for discussion or planning
+Next command: `$gsd-discuss-phase 256` or `$gsd-plan-phase 256`

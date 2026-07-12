@@ -119,13 +119,70 @@ These candidates are optional and are not required for v1.37 completion.
 
 ## Traceability
 
-Traceability will be populated after roadmap approval. Every active v1.37 requirement must map to exactly one phase.
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| SAFE-01 | Phase 256 | Pending |
+| SAFE-02 | Phase 256 | Pending |
+| SAFE-03 | Phase 256 | Pending |
+| SAFE-04 | Phase 256 | Pending |
+| AUTH-01 | Phase 256 | Pending |
+| AUTH-02 | Phase 256 | Pending |
+| AUTH-03 | Phase 256 | Pending |
+| AUTH-04 | Phase 256 | Pending |
+| AUTH-05 | Phase 256 | Pending |
+| KERN-01 | Phase 257 | Pending |
+| KERN-02 | Phase 257 | Pending |
+| KERN-03 | Phase 257 | Pending |
+| KERN-04 | Phase 257 | Pending |
+| KERN-05 | Phase 257 | Pending |
+| KERN-06 | Phase 257 | Pending |
+| KERN-07 | Phase 257 | Pending |
+| KERN-08 | Phase 257 | Pending |
+| KERN-09 | Phase 257 | Pending |
+| KERN-10 | Phase 257 | Pending |
+| KERN-11 | Phase 257 | Pending |
+| RABI-01 | Phase 258 | Pending |
+| RABI-02 | Phase 258 | Pending |
+| RABI-03 | Phase 258 | Pending |
+| RABI-04 | Phase 258 | Pending |
+| RABI-05 | Phase 258 | Pending |
+| RABI-06 | Phase 258 | Pending |
+| RABI-07 | Phase 258 | Pending |
+| RABI-08 | Phase 258 | Pending |
+| CONF-01 | Phase 259 | Pending |
+| CONF-02 | Phase 259 | Pending |
+| CONF-03 | Phase 259 | Pending |
+| CONF-04 | Phase 259 | Pending |
+| CONF-05 | Phase 259 | Pending |
+| CHRN-01 | Phase 259 | Pending |
+| CHRN-02 | Phase 259 | Pending |
+| CHRN-03 | Phase 259 | Pending |
+| CHRN-04 | Phase 259 | Pending |
+| CHRN-05 | Phase 259 | Pending |
+| CHRN-06 | Phase 259 | Pending |
+| STRAT-01 | Phase 260 | Pending |
+| STRAT-02 | Phase 260 | Pending |
+| STRAT-03 | Phase 260 | Pending |
+| STRAT-04 | Phase 260 | Pending |
+| SET-01 | Phase 260 | Pending |
+| SET-02 | Phase 260 | Pending |
+| SET-03 | Phase 260 | Pending |
+| SET-04 | Phase 260 | Pending |
+| SET-05 | Phase 260 | Pending |
+| PROOF-01 | Phase 261 | Pending |
+| PROOF-02 | Phase 261 | Pending |
+| PROOF-03 | Phase 261 | Pending |
+| PROOF-04 | Phase 261 | Pending |
+| PROOF-05 | Phase 261 | Pending |
+| PROOF-06 | Phase 261 | Pending |
+| PROOF-07 | Phase 261 | Pending |
+| PROOF-08 | Phase 261 | Pending |
 
 **Coverage:**
 - v1.37 requirements: 56 total
-- Mapped to phases: 0
-- Unmapped: 56 pending roadmap
+- Mapped to phases: 56
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-07-12*
-*Last updated: 2026-07-12 after research synthesis*
+*Last updated: 2026-07-12 after roadmap drafting*

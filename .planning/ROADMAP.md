@@ -4,26 +4,118 @@
 
 - **v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup** - Phases 243-248, shipped 2026-06-15 ([archive](milestones/v1.35-ROADMAP.md))
 - **v1.36 Competition Maturity** - Phases 249-255, shipped 2026-07-12 ([archive](milestones/v1.36-ROADMAP.md))
+- **v1.37 Rules Integrity and Strategy Evaluation Foundations** - Phases 256-261, planning
 
-## Latest Shipped Context
+## v1.37 Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 
-### v1.36 Competition Maturity
+## Overview
 
-**Status:** Shipped 2026-07-12
-**Phase range:** 249-255
-**Plans:** 22/22 complete
-**Requirements:** 39/39 complete
-**Audit:** Passed, with 39/39 integration checks and 5/5 end-to-end flows
+v1.37 establishes the smallest complete trust substrate needed before serious competitive Strategy development. It first prevents unproved runtime lanes and incompatible evidence from being counted, then converges Match execution on one semantically validated transition authority, hardens the language-neutral runtime and artifact contracts, proves executable four-language and Chronicle conformance, repairs Strategy observations and evaluation fairness, and closes with service-backed drift, privacy, compatibility, persistence, rollback, archive, and tag proof. Valid v1.4 gameplay and historical evidence remain immutable; experiments and optional simplifications are not required for completion.
 
-v1.36 moved competition to an honest resettable public beta posture. It added provider-proof-backed counted entry, immutable Season entrant snapshots, explicit exhibition/self-play separation, canonical counted-state classification and standings recomputation, public-safe dispute and governance projections, policy-only abuse and recovery expectations, clearer trust UX, and live service-backed proof from entry through replay. Durable permanent ratings, staffed moderation, full account recovery, production sandbox certification, package ecosystems, TinyGo production support, and runtime ABI changes remain explicitly deferred.
+## Phases
 
-Archives:
+- [ ] **Phase 256: Counted Safety and Canonical Authority** - Fail closed on unproved lanes and establish one atomic compatibility and ownership authority.
+- [ ] **Phase 257: Canonical Transition Kernel and v1.4 Semantic Integrity** - Make one validated kernel authoritative and close every confirmed rules-lifecycle defect without changing valid v1.4 behavior.
+- [ ] **Phase 258: Canonical JSON, Failure Semantics, and Artifact Identity** - Define a bounded language-neutral ABI with exact identity and atomic three-way failure behavior.
+- [ ] **Phase 259: Executable Four-Language and Chronicle Conformance** - Prove full-trace parity through real adapters and version-strict, reconstruction-equivalent Chronicles.
+- [ ] **Phase 260: Truthful Strategy Inputs, Arena Authority, and Set Fairness** - Give every Strategy truthful observations and every entrant explicit side-by-initiative evaluation coverage.
+- [ ] **Phase 261: Integrated Service Proof, Drift Guards, and Release** - Prove the complete trust chain, audit compatibility and privacy, then archive and tag v1.37.
 
-- `.planning/milestones/v1.36-ROADMAP.md`
-- `.planning/milestones/v1.36-REQUIREMENTS.md`
-- `.planning/milestones/v1.36-MILESTONE-AUDIT.md`
-- `.planning/milestones/v1.36-phases/`
+## Phase Details
 
-## Next
+### Phase 256: Counted Safety and Canonical Authority
+**Goal:** Operators can trust that only currently proved runtime lanes and atomically compatible evidence enter counted competition while historical v1.4 evidence remains unchanged.
+**Depends on:** Phase 255 (v1.36 complete)
+**Requirements:** SAFE-01, SAFE-02, SAFE-03, SAFE-04, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05
+**Success Criteria** (what must be TRUE):
+  1. A lane cannot be counted unless current executable containment and conformance evidence matches every exact provider, runtime, toolchain, adapter, policy, corpus, artifact, and compatibility identity; stale or unverifiable evidence fails closed before scheduling or execution.
+  2. New Match and evidence records carry one atomic rules/engine/runtime-ABI/Chronicle/arena/Set-policy tuple, and every consumer rejects missing, unknown, mixed, or uncertified tuples.
+  3. Operators can classify affected historical results, invalidate and recompute derived standings when needed, while the original Match evidence and v1.4 interpretation remain immutable.
+  4. Public/default safety surfaces expose only safe classifications and evidence identifiers, and structural monitors reject duplicate authorities and stale execution entry points.
+**Plans:** TBD
 
-No active milestone. Start the next cycle with `$gsd-new-milestone`.
+### Phase 257: Canonical Transition Kernel and v1.4 Semantic Integrity
+**Goal:** Every canonical Match advances through one engine-owned, semantically validated transition authority that fixes confirmed defects while preserving valid v1.4 behavior.
+**Depends on:** Phase 256
+**Requirements:** KERN-01, KERN-02, KERN-03, KERN-04, KERN-05, KERN-06, KERN-07, KERN-08, KERN-09, KERN-10, KERN-11
+**Success Criteria** (what must be TRUE):
+  1. Direct execution and Chronicle production consume the same engine-owned transition kernel; Chronicle records transitions without scheduling gameplay, and no stale contiguous-Activation route can bypass Cycle-interleaved execution.
+  2. Arena and Match states are semantically validated at initial, transition, runtime-final, persistence, and reconstruction boundaries, rejecting impossible geometry, identity, occupancy, ownership, status, initiative, version, and outcome combinations.
+  3. Permanent regression cases prove immediate last-Soldier outcome, correct Cycle-end Backstab slot closure, literal excess-order precedence, immutable constants, and an emitted-or-removed version-strict event vocabulary.
+  4. Executable compatibility fixtures preserve same-direction collision, successful-push reversal history, blocked MOVE/PUSH, terminal timing, Backstab behavior, and every other audited valid v1.4 ruling.
+  5. If any clarification or refactor would change a valid state, Action legality, event order, outcome, terminal timing/reason, or Strategy observation, work stops for an explicit compatibility ruling before expectations change.
+**Plans:** TBD
+
+### Phase 258: Canonical JSON, Failure Semantics, and Artifact Identity
+**Goal:** Every supported runtime exchanges bounded canonical data, preserves exact provenance, and cannot turn infrastructure failure into gameplay or player penalty.
+**Depends on:** Phase 257
+**Requirements:** RABI-01, RABI-02, RABI-03, RABI-04, RABI-05, RABI-06, RABI-07, RABI-08
+**Success Criteria** (what must be TRUE):
+  1. Strategy authors and adapters share one canonical JSON profile whose iterative bounded validation returns typed errors for adversarial bytes, depth, nodes, strings, collections, Unicode, keys, ordering, and numeric values without recursion overflow or uncontrolled allocation.
+  2. Every runtime boundary preserves exactly success, player violation, or system failure, and only the canonical engine can translate a valid player violation into the approved v1.4 gameplay consequence.
+  3. Timeout, crash, runtime/toolchain unavailability, transport, malformed envelope, stale artifact, and persistence failures produce no gameplay, memory, standings, or player-result mutation.
+  4. Evidence binds explicit source-byte, normalized-byte, normalization, line-ending, artifact, manifest, provider, runtime, toolchain, ABI, policy, corpus, and evidence identities, with exact pins for counted use.
+  5. TypeScript, Python, Rust, and Zig expose the same ABI envelope, resource-budget units, measurement boundaries, and failure semantics.
+**Plans:** TBD
+
+### Phase 259: Executable Four-Language and Chronicle Conformance
+**Goal:** Actual TypeScript, Python, Rust, and Zig execution and canonical Chronicle/replay processing produce equivalent, identity-bound full traces.
+**Depends on:** Phase 258
+**Requirements:** CONF-01, CONF-02, CONF-03, CONF-04, CONF-05, CHRN-01, CHRN-02, CHRN-03, CHRN-04, CHRN-05, CHRN-06
+**Success Criteria** (what must be TRUE):
+  1. Real TypeScript, Python, Rust, and Zig adapters execute the same hash-addressed positive and negative corpus and agree on full state, event sequence, memories, objectives, terminal data, and failure traces.
+  2. The corpus repeatedly covers boundary JSON, numeric, Unicode, depth, malformed output, timeout, resource, stale artifact, transport, differential, property, and mutation cases on every supported lane.
+  3. Counted eligibility derives only from a current passing conformance artifact hash, and any relevant engine, adapter, runtime, toolchain, ABI, policy, corpus, or artifact change automatically stales prior evidence.
+  4. Current Chronicles are version-strict and semantically validated per activation slot by runtime-service and persistence, including subject/state agreement, lifecycle, outcome, ordering, and transition postconditions.
+  5. Replay reconstruction matches engine transition and trace hashes while historical v1.4 evidence remains byte-immutable and readable only through explicit historical dispatch; any discovered semantic delta stops for compatibility approval.
+**Plans:** TBD
+
+### Phase 260: Truthful Strategy Inputs, Arena Authority, and Set Fairness
+**Goal:** Strategies observe the same authoritative evaluation facts in every language and counted Sets provide explicit, semantically distinct side-by-initiative coverage.
+**Depends on:** Phase 259
+**Requirements:** STRAT-01, STRAT-02, STRAT-03, STRAT-04, SET-01, SET-02, SET-03, SET-04, SET-05
+**Success Criteria** (what must be TRUE):
+  1. Every supported language receives explicit canonical initial initiative and scheduler-owned `hasAdvancedThisActivation`, with direct execution, services, generated contracts, examples, SDK, and Workshop documentation in agreement.
+  2. Strategy execution remains behind runtime-service, Runtime Broker, and provider boundaries and never enters web, API, or Go processes.
+  3. Engine, persistence, Go, replay, UI, fixtures, and scheduling derive official arenas from one versioned authority whose semantic geometry identity prevents duplicate empty arenas from masquerading as diversity.
+  4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
+  5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
+**Plans:** TBD
+
+### Phase 261: Integrated Service Proof, Drift Guards, and Release
+**Goal:** Maintainers have an end-to-end, privacy-safe proof that v1.37 has one transition authority, trustworthy runtime and replay evidence, fair Sets, and no unapproved gameplay change before release.
+**Depends on:** Phase 260
+**Requirements:** PROOF-01, PROOF-02, PROOF-03, PROOF-04, PROOF-05, PROOF-06, PROOF-07, PROOF-08
+**Success Criteria** (what must be TRUE):
+  1. Every persisted audit reproduction passes or retains an explicit compatibility ruling, and deterministic engine, spec, replay, runtime-service, and four-language suites pass repeatedly.
+  2. Service-backed proof covers success, player violation, system failure with no mutation, semantic Chronicle validation, reconstruction, replay, Set fairness, persistence, recomputation, idempotency, retry, rollback, and immutable historical evidence.
+  3. Public/default APIs, views, logs, fixtures, contracts, and proof artifacts pass privacy scans for source, artifacts, memories, objectives, diagnostics, host data, credentials, and security internals.
+  4. Boundary monitors detect duplicate transition ownership, mixed tuples, adapter-owned gameplay classification, stale identity, unsupported events, duplicate arenas, unfair scheduling, unproved counted lanes, and private-output leakage.
+  5. The final audit proves complete 56/56 traceability, one transition authority, passing drift guards, and no unapproved gameplay change; v1.37 is then archived and tagged before serious Strategy work begins.
+**Plans:** TBD
+
+## Optional Compatibility-Gated Simplifications
+
+These candidates are outside required completion and are not mapped to active phases:
+
+- **COND-01**: Remove Cycle-start Backstab scans only after complete reachable-state, outcome, event, terminal, and Strategy-observation equivalence proof; otherwise defer unchanged.
+- **COND-02**: Add `HOLD`/`END_ACTIVATION` after Advance only after separate approval and complete scheduling, Backstab, slot, Chronicle, replay, outcome, legality, and observation proof; otherwise defer.
+
+Neither candidate may change a valid v1.4 state, Action legality, event order, outcome, terminal semantic, or Strategy observation without an explicit compatibility ruling.
+
+## Deferred Beyond v1.37
+
+Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Advance-causal Backstab, competitive Strategy-factory, new-arena, durable-rating, prize, staffed-moderation, new-language, TinyGo, package, hidden-information, randomness, adaptive-rule, per-Match mutation, and broad-UI experiments remain outside all active phases.
+
+## Progress
+
+**Execution Order:** 256 → 257 → 258 → 259 → 260 → 261
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 256. Counted Safety and Canonical Authority | 0/TBD | Not started | - |
+| 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 0/TBD | Not started | - |
+| 258. Canonical JSON, Failure Semantics, and Artifact Identity | 0/TBD | Not started | - |
+| 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 0/TBD | Not started | - |
+| 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
