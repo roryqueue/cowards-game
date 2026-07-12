@@ -49,7 +49,7 @@ Archive:
 - [x] **Phase 249: Competition Surface Inventory and Policy Lock** - Lock v1.36 public beta posture, surface inventory, vocabulary, owners, privacy exclusions, and forbidden claims.
 - [x] **Phase 250: Counted Entry and One-Active-Revision Enforcement** - Enforce provider-proof-backed counted eligibility, one active counted revision per Season, and explicit exhibition separation.
 - [x] **Phase 251: Season Lifecycle and Scheduling Policy** - Define public-safe Season lifecycle, entry and scheduling windows, entrant snapshots, archive behavior, and reset semantics.
-- [ ] **Phase 252: Counted-State Classifier and Standings Recompute** - Classify result states and recompute Season standings from canonical counted evidence plus governance state.
+- [x] **Phase 252: Counted-State Classifier and Standings Recompute** - Classify result states and recompute Season standings from canonical counted evidence plus governance state.
 - [ ] **Phase 253: Governance, Dispute, Abuse, and Recovery Surfaces** - Add minimal public-safe reporting, dispute, governance, abuse-policy, and recovery-expectation behavior.
 - [ ] **Phase 254: Public Trust UX Projections** - Render policy-backed competition, standings, result, replay, player, Strategy, and entry trust projections without owning rules in UI.
 - [ ] **Phase 255: Service-Backed E2E Proof and Boundary Monitors** - Prove the full counted competition path, negative cases, governance scenarios, privacy, boundary monitors, and replay realism.
@@ -126,9 +126,9 @@ Plans:
   5. Repeated recomputation from the same canonical inputs produces deterministic, Season-scoped, stable standings rows with public-safe evidence availability, exclusion, tie-breaker, result, and replay links.
 **Plans**: 3 plans
 Plans:
-- [ ] 252-01-PLAN.md — Define the canonical counted-state classifier, DTOs, schemas, and storage vocabulary.
-- [ ] 252-02-PLAN.md — Recompute deterministic Season standings from canonical classified evidence.
-- [ ] 252-03-PLAN.md — Align public result and selected Go counted-state/standings projections.
+- [x] 252-01-PLAN.md — Define the canonical counted-state classifier, DTOs, schemas, and storage vocabulary.
+- [x] 252-02-PLAN.md — Recompute deterministic Season standings from canonical classified evidence.
+- [x] 252-03-PLAN.md — Align public result and selected Go counted-state/standings projections.
 **UI hint**: yes
 
 ### Phase 253: Governance, Dispute, Abuse, and Recovery Surfaces
@@ -177,7 +177,7 @@ Plans:
 | 249. Competition Surface Inventory and Policy Lock | 3/3 | Complete | 2026-06-16 |
 | 250. Counted Entry and One-Active-Revision Enforcement | 3/3 | Complete | 2026-07-11 |
 | 251. Season Lifecycle and Scheduling Policy | 3/3 | Complete | 2026-07-11 |
-| 252. Counted-State Classifier and Standings Recompute | 0/3 | Planned | - |
+| 252. Counted-State Classifier and Standings Recompute | 3/3 | Complete | 2026-07-11 |
 | 253. Governance, Dispute, Abuse, and Recovery Surfaces | 0/0 | Not started | - |
 | 254. Public Trust UX Projections | 0/0 | Not started | - |
 | 255. Service-Backed E2E Proof and Boundary Monitors | 0/0 | Not started | - |

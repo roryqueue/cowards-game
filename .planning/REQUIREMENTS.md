@@ -34,12 +34,12 @@ Requirements for the Competition Maturity milestone. Each maps to roadmap phases
 
 ### Result and Standings Integrity
 
-- [ ] **RESULT-01**: MatchSets expose a public-safe counted-state projection covering pending, counted, retrying, degraded/system failure, non-counted, non-competitive, disputed/under review, invalid, and invalidated outcomes.
-- [ ] **RESULT-02**: Public result pages explain why a MatchSet did or did not count and how that state affects standings.
-- [ ] **RESULT-03**: Standings are recomputed from canonical complete counted MatchSet evidence plus governance state rather than React-owned display state or manually edited rank rows.
-- [ ] **RESULT-04**: Degraded, failed, disputed, invalid, invalidated, non-counted, and non-competitive MatchSets do not silently pollute counted standings.
-- [ ] **RESULT-05**: Standings rows expose public-safe evidence availability, counted MatchSet counts, exclusions, tie-breaker inputs, and replay/result links.
-- [ ] **RESULT-06**: Recompute tests prove standings are deterministic, season-scoped, and stable across repeated recomputation from the same canonical inputs.
+- [x] **RESULT-01**: MatchSets expose a public-safe counted-state projection covering pending, counted, retrying, degraded/system failure, non-counted, non-competitive, disputed/under review, invalid, and invalidated outcomes.
+- [x] **RESULT-02**: Public result pages explain why a MatchSet did or did not count and how that state affects standings.
+- [x] **RESULT-03**: Standings are recomputed from canonical complete counted MatchSet evidence plus governance state rather than React-owned display state or manually edited rank rows.
+- [x] **RESULT-04**: Degraded, failed, disputed, invalid, invalidated, non-counted, and non-competitive MatchSets do not silently pollute counted standings.
+- [x] **RESULT-05**: Standings rows expose public-safe evidence availability, counted MatchSet counts, exclusions, tie-breaker inputs, and replay/result links.
+- [x] **RESULT-06**: Recompute tests prove standings are deterministic, season-scoped, and stable across repeated recomputation from the same canonical inputs.
 
 ### Governance, Dispute, Abuse, and Recovery
 
@@ -134,12 +134,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEAS-03 | Phase 251 | Complete |
 | SEAS-04 | Phase 251 | Complete |
 | SEAS-05 | Phase 251 | Complete |
-| RESULT-01 | Phase 252 | Pending |
-| RESULT-02 | Phase 252 | Pending |
-| RESULT-03 | Phase 252 | Pending |
-| RESULT-04 | Phase 252 | Pending |
-| RESULT-05 | Phase 252 | Pending |
-| RESULT-06 | Phase 252 | Pending |
+| RESULT-01 | Phase 252 | Complete |
+| RESULT-02 | Phase 252 | Complete |
+| RESULT-03 | Phase 252 | Complete |
+| RESULT-04 | Phase 252 | Complete |
+| RESULT-05 | Phase 252 | Complete |
+| RESULT-06 | Phase 252 | Complete |
 | GOV-01 | Phase 253 | Pending |
 | GOV-02 | Phase 253 | Pending |
 | GOV-03 | Phase 253 | Pending |

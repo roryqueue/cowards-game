@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.36
 milestone_name: Competition Maturity
 status: in_progress
-stopped_at: Phase 251 complete; ready to plan Phase 252
+stopped_at: Phase 252 complete; Phase 253 planning in progress
 last_updated: "2026-07-11T14:10:00.000Z"
 last_activity: 2026-07-11 -- Phase 251 verified complete
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 9
-  percent: 43
+  completed_plans: 12
+  percent: 57
 ---
 
 # State: Coward's Game
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-06-15)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 252 planning
+**Current focus:** Phase 253 governance planning
 
 ## Current Position
 
-Phase: 252 - Counted-State Classifier and Standings Recompute
+Phase: 253 - Governance, Dispute, Abuse, and Recovery Surfaces
 Plan: 0 of 3
-Status: Planned; ready for Plan 01
-Last activity: 2026-07-11 -- Phase 251 verified complete
+Status: Research complete; planning in progress
+Last activity: 2026-07-11 -- Phase 252 implementation and parity complete
 
-Progress: [####------] 43%
+Progress: [######----] 57%
 
 ## Performance Metrics
 
@@ -47,7 +47,7 @@ Progress: [####------] 43%
 | 249. Competition Surface Inventory and Policy Lock | Complete | 3/3 | 5 |
 | 250. Counted Entry and One-Active-Revision Enforcement | Complete | 3/3 | 6 |
 | 251. Season Lifecycle and Scheduling Policy | Complete | 3/3 | 5 |
-| 252. Counted-State Classifier and Standings Recompute | Planned | 0/3 | 6 |
+| 252. Counted-State Classifier and Standings Recompute | Complete | 3/3 | 6 |
 | 253. Governance, Dispute, Abuse, and Recovery Surfaces | Not started | 0/0 | 6 |
 | 254. Public Trust UX Projections | Not started | 0/0 | 5 |
 | 255. Service-Backed E2E Proof and Boundary Monitors | Not started | 0/0 | 6 |
@@ -70,7 +70,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Execute Phase 252 Plan 01 canonical counted-state contract.
+- Finish and execute Phase 253 governance plans.
 
 ### Blockers/Concerns
 
@@ -93,6 +93,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 ## Session Continuity
 
 Last session: 2026-06-16T01:28:27Z
-Stopped at: Phase 252 planned; ready for Plan 01
-Resume file: `.planning/phases/252-counted-state-classifier-and-standings-recompute/`
-Next command: execute `.planning/phases/252-counted-state-classifier-and-standings-recompute/252-01-PLAN.md`
+Stopped at: Phase 252 complete; Phase 253 planning in progress
+Resume file: `.planning/phases/253-governance-dispute-abuse-and-recovery-surfaces/`
+Next command: execute `.planning/phases/253-governance-dispute-abuse-and-recovery-surfaces/253-01-PLAN.md`
