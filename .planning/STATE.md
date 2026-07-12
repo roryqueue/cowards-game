@@ -9,7 +9,7 @@ last_activity: 2026-07-11 -- Phase 251 verified complete
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 12
+  total_plans: 16
   completed_plans: 12
   percent: 57
 ---
@@ -27,7 +27,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-15)
 
 Phase: 253 - Governance, Dispute, Abuse, and Recovery Surfaces
 Plan: 0 of 3
-Status: Research complete; planning in progress
+Status: Planned; Plan 01 execution in progress
 Last activity: 2026-07-11 -- Phase 252 implementation and parity complete
 
 Progress: [######----] 57%

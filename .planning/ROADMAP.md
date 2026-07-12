@@ -141,7 +141,12 @@ Plans:
   3. Public governance projections expose only coarse status, safe reason category, safe explanation, timestamp where appropriate, standings impact, and replay availability.
   4. Abuse, fair-play, and account recovery surfaces explain current product behavior and future limitations without promising automatic punishment, public sanction history, appeal SLAs, permanent rating repair, or full recovery.
   5. Public/default outputs exclude reporter identity, operator notes, raw diagnostics, recovery evidence, tokens, DB details, private runtime internals, Strategy-private data, dispute internals, and account-recovery payloads.
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 253-01-PLAN.md — Lock governance contracts, public projections, and report/audit storage invariants.
+- [ ] 253-02-PLAN.md — Implement atomic report/dispute and governance mutations behind strict routes.
+- [ ] 253-03-PLAN.md — Add the minimal report, fair-play, and policy-only recovery UX.
+- [ ] 253-04-PLAN.md — Align Go public-read parity and refresh privacy/boundary artifacts.
 **UI hint**: yes
 
 ### Phase 254: Public Trust UX Projections

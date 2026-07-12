@@ -12,3 +12,4 @@
 - Expose only coarse, constrained governance state publicly.
 - Treat account recovery as an honest expectation surface, not a sensitive recovery workflow.
 - Preserve deterministic standings recomputation and every v1.36 privacy/runtime boundary.
+- Retain the existing quarantined TypeScript/Next governance mutation path as an explicit temporary v1.36 exception; Go remains limited to selected public-read parity.

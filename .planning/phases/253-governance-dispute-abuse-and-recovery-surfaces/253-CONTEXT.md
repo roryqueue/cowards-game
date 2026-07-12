@@ -21,6 +21,7 @@ Add minimal signed-in competition reporting/dispute behavior, auditable governan
 
 ### governance mutations
 - Existing admin authorization remains the authority boundary; this phase does not invent public self-service governance powers.
+- The existing quarantined TypeScript persistence/Next route remains the mutation owner for this narrow v1.36 surface as an explicit temporary exception. Go remains the selected public-read owner; moving these mutations to the selected backend is future ownership work.
 - Governance can set canonical counted states supported by the milestone and records immutable before/after audit evidence with actor and reason.
 - Public explanations come from constrained safe categories/copy. Operator notes and raw evidence remain private.
 - Governance state changes trigger deterministic standings recomputation through canonical read inputs, not manual rank edits.
