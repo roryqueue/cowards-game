@@ -8,6 +8,7 @@ import { Buffer } from "node:buffer"
 import {
   assertPublicMatchSetResultLeakSafe,
   classifyCompetitionCountedState,
+  projectPublicCompetitionGovernance,
   describeStrategyRuntimeProductSemantics,
   evaluateStrategyRuntimeCountedEligibility,
   getCompetitionPreset,
@@ -735,7 +736,8 @@ export const buildPublicMatchSetResultDto = async (
     scoring: MatchSetScore | null
     ladder_season_id: string | null
     counted_status: LadderMatchSetCountedStatus
-    review_status: "none" | "under_review" | "resolved"
+    review_status: "none" | "under_review" | "disputed" | "resolved"
+    governance_changed_at: Date | null
   }>(
     `
       select
@@ -748,7 +750,8 @@ export const buildPublicMatchSetResultDto = async (
         scoring,
         ladder_season_id,
         counted_status,
-        review_status
+        review_status,
+        governance_changed_at
       from match_sets
       where id = $1
     `,
@@ -863,6 +866,14 @@ export const buildPublicMatchSetResultDto = async (
       .length,
     scoringAvailable: Array.isArray(score?.rankings),
   })
+  const governance = projectPublicCompetitionGovernance({
+    countedState,
+    reviewState: matchSet.review_status,
+    ...(matchSet.governance_changed_at
+      ? { changedAt: matchSet.governance_changed_at.toISOString() }
+      : {}),
+    replayAvailable: matches.some((match) => match.replayAvailable),
+  })
   const dto: PublicMatchSetResultDto = {
     matchSetId,
     preset: {
@@ -903,6 +914,7 @@ export const buildPublicMatchSetResultDto = async (
         ? { seasonId: matchSet.ladder_season_id }
         : {}),
       countedState,
+      governance,
     },
   }
   assertPublicMatchSetResultLeakSafe(dto)

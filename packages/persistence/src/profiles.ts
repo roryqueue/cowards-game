@@ -1,6 +1,7 @@
 import {
   assertPublicMatchSetResultLeakSafe,
   classifyCompetitionCountedState,
+  projectPublicCompetitionGovernance,
   describeStrategyRuntimeProductSemantics,
   normalizeStrategyRuntimeMetadata,
   type PublicPlayerProfileDto,
@@ -149,7 +150,8 @@ export const buildPublicPlayerProfileDto = async (
       | null
     public_counted_explanation: string | null
     scoring: { rankings?: MatchSetStrategyScore[] } | null
-    review_status: "none" | "under_review" | "resolved"
+    review_status: "none" | "under_review" | "disputed" | "resolved"
+    governance_changed_at: Date | null
     chronicle_count: number
     match_count: number
   }>(
@@ -163,6 +165,7 @@ export const buildPublicPlayerProfileDto = async (
         ms.public_counted_explanation,
         ms.scoring,
         ms.review_status,
+        ms.governance_changed_at,
         (select count(*)::integer from match_set_matches msm where msm.match_set_id = ms.id) as match_count,
         (select count(*)::integer from match_set_matches msm join chronicles c on c.match_id = msm.match_id where msm.match_set_id = ms.id) as chronicle_count
       from match_sets ms
@@ -202,12 +205,21 @@ export const buildPublicPlayerProfileDto = async (
         chronicleMatchCount: row.chronicle_count,
         scoringAvailable: Array.isArray(row.scoring?.rankings),
       })
+      const governance = projectPublicCompetitionGovernance({
+        countedState,
+        reviewState: row.review_status,
+        ...(row.governance_changed_at
+          ? { changedAt: row.governance_changed_at.toISOString() }
+          : {}),
+        replayAvailable: row.chronicle_count > 0,
+      })
       return {
         matchSetId: row.match_set_id,
         seasonId: row.season_id ?? "",
         status,
         countedStatus: countedState.state,
         countedState,
+        governance,
         ...(countedState.publicReason
           ? { publicReason: countedState.publicReason }
           : {}),

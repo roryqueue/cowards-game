@@ -1415,6 +1415,101 @@ export const CompetitionCountedStateProjectionSchema = z.object({
     .optional(),
 })
 
+export const PublicCompetitionGovernanceProjectionSchema = z.object({
+  status: z.enum([
+    "clear",
+    "under_review",
+    "disputed",
+    "resolved",
+    "non_counted",
+    "non_competitive",
+    "invalid",
+    "invalidated",
+  ]),
+  publicReason: z
+    .enum([
+      "system_failure",
+      "incomplete_evidence",
+      "invalid_result",
+      "governance_hold",
+      "non_counted",
+      "non_competitive",
+      "disputed",
+      "invalidated",
+    ])
+    .optional(),
+  publicExplanation: z.string().min(1),
+  changedAt: z.string().datetime().optional(),
+  standingsEffect: z.string().min(1),
+  replayAvailable: z.boolean(),
+})
+
+export const SubmitCompetitionReportRequestBodySchema = z
+  .object({
+    submissionType: z.enum(["report", "dispute"]),
+    category: z.enum([
+      "result_integrity",
+      "entry_eligibility",
+      "identity_or_coordination",
+      "abusive_conduct",
+      "other",
+    ]),
+    privateDetail: z
+      .string()
+      .trim()
+      .max(500)
+      .refine(
+        (value) => !/\p{Cc}/u.test(value),
+        "Unsupported control character",
+      )
+      .optional(),
+  })
+  .strict()
+
+export const CompetitionReportReceiptSchema = z
+  .object({
+    submissionId: z.string().min(1),
+    disposition: z.enum(["created", "already_open"]),
+    publicMessage: z.string().min(1),
+  })
+  .strict()
+
+export const CompetitionGovernanceActionRequestBodySchema = z
+  .object({
+    action: z.enum([
+      "under_review",
+      "counted",
+      "non_counted",
+      "non_competitive",
+      "invalid",
+      "invalidated",
+    ]),
+    category: z.enum([
+      "integrity_review",
+      "entrant_dispute",
+      "evidence_incomplete",
+      "competition_policy",
+      "result_invalid",
+      "result_invalidated",
+      "review_resolved_counted",
+    ]),
+    privateReason: z.string().trim().min(3).max(1000),
+  })
+  .strict()
+
+export const CompetitionGovernanceGroupRequestBodySchema =
+  CompetitionGovernanceActionRequestBodySchema.extend({
+    matchSetIds: z.array(z.string().min(1)).min(1).max(100),
+  }).superRefine((value, context) => {
+    if (new Set(value.matchSetIds).size !== value.matchSetIds.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["matchSetIds"],
+        message: "MatchSet ids must be unique.",
+      })
+    }
+  })
+
 const PublicStandingServiceDtoSchema = z.object({
   rank: z.number().int().positive(),
   entrantId: z.string().min(1),
@@ -1498,6 +1593,7 @@ export const PublicMatchSetResultServiceDtoSchema = z.object({
     .object({
       seasonId: z.string().min(1).optional(),
       countedState: CompetitionCountedStateProjectionSchema,
+      governance: PublicCompetitionGovernanceProjectionSchema.optional(),
     })
     .optional(),
   metadata: JsonValueSchema.optional(),
@@ -1731,6 +1827,7 @@ export const PublicLadderMatchSetSummaryDtoSchema = z.object({
     "invalidated",
   ]),
   countedState: CompetitionCountedStateProjectionSchema,
+  governance: PublicCompetitionGovernanceProjectionSchema.optional(),
   publicReason: z
     .enum([
       "system_failure",

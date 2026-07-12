@@ -18,6 +18,7 @@ import {
   isCountedEntrySupportedLane,
   normalizeStrategyRuntimeMetadata,
   projectTrialSeasonWindows,
+  projectPublicCompetitionGovernance,
   STRATEGY_RUNTIME_ABI_VERSION,
   trialSeasonOutcome,
   trialSeasonPublicLinks,
@@ -1240,7 +1241,8 @@ export const buildTrialLadderSeasonDto = async (
     ladder_pod_index: number | null
     counted_status: PublicLadderMatchSetSummaryDto["countedStatus"]
     public_counted_explanation: string | null
-    review_status: "none" | "under_review" | "resolved"
+    review_status: "none" | "under_review" | "disputed" | "resolved"
+    governance_changed_at: Date | null
     scoring: { rankings: MatchSetStrategyScore[] } | null
     chronicle_count: number
     match_count: number
@@ -1255,6 +1257,7 @@ export const buildTrialLadderSeasonDto = async (
         ms.counted_status,
         ms.public_counted_explanation,
         ms.review_status,
+        ms.governance_changed_at,
         ms.scoring,
         count(distinct c.match_id)::integer as chronicle_count,
         count(distinct msm.match_id)::integer as match_count,
@@ -1301,6 +1304,14 @@ export const buildTrialLadderSeasonDto = async (
     const replayHref = row.replay_match_id
       ? `/matches/${encodeURIComponent(row.replay_match_id)}/replay`
       : undefined
+    const governance = projectPublicCompetitionGovernance({
+      countedState,
+      reviewState: row.review_status,
+      ...(row.governance_changed_at
+        ? { changedAt: row.governance_changed_at.toISOString() }
+        : {}),
+      replayAvailable: Boolean(replayHref),
+    })
     recomputeInputs.push({
       matchSetId: row.id,
       strategyRevisionIds,
@@ -1321,11 +1332,11 @@ export const buildTrialLadderSeasonDto = async (
       status: mapMatchSetStatus(row.status),
       countedStatus: countedState.state,
       countedState,
+      governance,
       ...(countedState.publicReason
         ? { publicReason: countedState.publicReason }
         : {}),
-      publicExplanation:
-        row.public_counted_explanation ?? countedState.publicExplanation,
+      publicExplanation: countedState.publicExplanation,
       entrantIds,
       ...(replayHref ? { replayHref } : {}),
       resultHref,

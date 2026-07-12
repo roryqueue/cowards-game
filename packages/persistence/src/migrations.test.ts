@@ -35,7 +35,20 @@ describe("migrations", () => {
 
     expect(names).toContain("0001_initial.sql")
     expect(names).toContain("0002_match_side_completion_stats.sql")
+    expect(names).toContain("0011_competition_governance_surfaces.sql")
     expect(names).toEqual([...names].sort())
+  })
+
+  it("defines report deduplication and append-only governance audit", async () => {
+    const sql = await readFile(
+      new URL("0011_competition_governance_surfaces.sql", migrationsDirectory),
+      "utf8",
+    )
+    expect(sql).toContain("create table if not exists competition_reports")
+    expect(sql).toContain("where status = 'open'")
+    expect(sql).toContain("'disputed'")
+    expect(sql).toContain("governance_changed_at")
+    expect(sql).toContain("before update or delete on competition_audit_events")
   })
 
   it("initial schema defines every Phase 5 persistence table", async () => {

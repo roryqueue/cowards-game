@@ -22,6 +22,7 @@ import type {
   CompetitionEvidenceAvailability,
 } from "./competition-counted-state.js"
 import type { CompetitionPolicyV136CountedStatePublicProjection } from "./competition-policy-v1-36.js"
+import type { PublicCompetitionGovernanceProjection } from "./competition-governance.js"
 
 export const COMPETITION_PRESET_IDS = [
   "smoke-exhibition-v1",
@@ -124,6 +125,7 @@ export interface PublicLadderMatchSetSummaryDto {
   status: CompetitionStatus
   countedStatus: LadderMatchSetCountedStatus
   countedState: CompetitionCountedStateProjection
+  governance?: PublicCompetitionGovernanceProjection | undefined
   publicReason?: LadderNonCountedReason | undefined
   publicExplanation?: string | undefined
   entrantIds: string[]
@@ -367,6 +369,7 @@ export interface PublicMatchSetResultDto {
     | {
         seasonId?: string | undefined
         countedState: CompetitionCountedStateProjection
+        governance?: PublicCompetitionGovernanceProjection | undefined
       }
     | undefined
   metadata?: JsonValue | undefined
