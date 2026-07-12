@@ -46,7 +46,7 @@ export function AuthClient({ mode }: AuthClientProps) {
       <section className="app-panel auth-panel">
         <div className="app-section-header">
           <div>
-            <p className="workshop-muted">Coward's Game Competitive Alpha</p>
+            <p className="workshop-muted">Coward's Game public beta</p>
             <h1>{mode === "sign-in" ? "Sign in" : "Create account"}</h1>
           </div>
           <a href={mode === "sign-in" ? "/auth/sign-up" : "/auth/sign-in"}>
@@ -95,7 +95,8 @@ export function AuthClient({ mode }: AuthClientProps) {
           </label>
           {mode === "sign-up" ? (
             <p className="workshop-muted">
-              Alpha accounts have no password reset or recovery flow.
+              Self-service recovery is not available. Read the{" "}
+              <a href="/account/recovery">recovery expectations</a>.
             </p>
           ) : null}
           {error ? <p role="alert">{error}</p> : null}

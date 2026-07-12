@@ -57,6 +57,7 @@ export default async function AccountPage() {
             <a href="/workshop">Workshop</a>
             <a href="/watch">Watch</a>
             <a href="/competitions">Competitions</a>
+            <a href="/account/recovery">Recovery expectations</a>
             {user ? (
               <a href={`/players/${user.handle}`}>Public profile</a>
             ) : null}
