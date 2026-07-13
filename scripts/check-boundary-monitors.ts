@@ -23,6 +23,7 @@ import {
   type GenerateV135BoundarySurfaceInventoryOptions,
 } from "./evaluate-v1-35-boundary-surface-inventory.ts"
 import { checkV135AccountProviderEntryProofArtifacts } from "./evaluate-v1-35-account-provider-entry-proof.ts"
+import { analyzeV137IntegrityBoundaries } from "./check-v1-37-integrity-boundaries.ts"
 import {
   checkV136CompetitionPolicyScan,
   checkV136CompetitionSurfaceInventoryArtifacts,
@@ -5493,6 +5494,20 @@ const checkV127ResultReplayWorkbenchBoundary = (): string => {
 export const runBoundaryMonitorChecks = async (): Promise<
   BoundaryMonitorCheck[]
 > => [
+  await check("contract_drift", "v1.37 integrity creation inventory", () => {
+    const analysis = analyzeV137IntegrityBoundaries()
+    if (analysis.findings.length > 0) {
+      throw new Error(
+        analysis.findings
+          .map(
+            (finding) =>
+              `${finding.code} ${finding.path}:${finding.line} ${finding.detail}`,
+          )
+          .join("; "),
+      )
+    }
+    return `accounted for ${analysis.creationCalls} creation calls and ${analysis.sqlWriters} direct SQL writers`
+  }),
   await check("contract_drift", "OpenAPI public route artifact", () =>
     checkOpenApiContract(),
   ),

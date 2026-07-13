@@ -3,7 +3,11 @@ import type { Pool } from "pg"
 import { migrate } from "./migrations.js"
 import { createDevelopmentSeedData } from "./seed.js"
 import { createRepositories } from "./repositories.js"
-import { createMatchSetService } from "./matchset-service.js"
+import {
+  createMatchSetService,
+  resolveMatchSetExecutionEvidence,
+  type MatchSetExecutionEvidenceResolver,
+} from "./matchset-service.js"
 import { refreshMatchSetStatus } from "./matchset-status.js"
 import type { MatchSetStatus } from "./schema.js"
 
@@ -21,10 +25,30 @@ export const runDevelopmentMatchSetSmoke = async (
   options: {
     matchSetId?: MatchSetId | undefined
     runQueuedMatch?: (matchIds: readonly string[]) => Promise<unknown>
+    evidenceResolver?: MatchSetExecutionEvidenceResolver | undefined
   } = {},
 ): Promise<DevelopmentMatchSetSmokeResult> => {
-  await migrate(pool)
   const seed = createDevelopmentSeedData()
+  const [bottomRevision, topRevision] = seed.revisions
+  if (!bottomRevision || !topRevision) {
+    throw new Error("Development seed revisions missing")
+  }
+  if (options.evidenceResolver?.trustDomain !== "fixture") {
+    throw new Error(
+      "Development smoke requires explicit fixture-domain evidence authority.",
+    )
+  }
+  const integrityIdentity = await resolveMatchSetExecutionEvidence({
+    resolver: options.evidenceResolver,
+    purpose: "development",
+    evaluationInstant: "2026-05-20T00:00:00.000Z",
+    entrants: [bottomRevision, topRevision].map((revision) => ({
+      entrantKey: revision.id,
+      strategyRevisionId: revision.id,
+    })),
+  })
+
+  await migrate(pool)
   const repositories = createRepositories(pool)
   for (const user of seed.users) {
     await repositories.upsertUser(user)
@@ -39,10 +63,6 @@ export const runDevelopmentMatchSetSmoke = async (
     await repositories.upsertArenaVariant(arena)
   }
 
-  const [bottomRevision, topRevision] = seed.revisions
-  if (!bottomRevision || !topRevision) {
-    throw new Error("Development seed revisions missing")
-  }
   const matchSetId =
     options.matchSetId ?? ("match-set:dev-smoke:v1" as MatchSetId)
   const created = await createMatchSetService(pool).createFromPreset({
@@ -52,6 +72,7 @@ export const runDevelopmentMatchSetSmoke = async (
     topStrategyRevisionId: topRevision.id,
     bottomPlayerId: "player:bottom",
     topPlayerId: "player:top",
+    integrityIdentity,
   })
 
   await options.runQueuedMatch?.(created.matchIds)
