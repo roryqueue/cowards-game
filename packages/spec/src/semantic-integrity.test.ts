@@ -73,7 +73,9 @@ const applyMutation = (root: unknown, mutation: Mutation): void => {
   if (mutation.op === "append") {
     const target = cursor[leaf]
     if (!Array.isArray(target)) {
-      throw new Error(`append target is not an array: ${mutation.path.join(".")}`)
+      throw new Error(
+        `append target is not an array: ${mutation.path.join(".")}`,
+      )
     }
     target.push(clone(mutation.value))
     return
@@ -83,7 +85,8 @@ const applyMutation = (root: unknown, mutation: Mutation): void => {
 
 const mutatedValue = (vector: SemanticVector): unknown => {
   const value = clone(corpus.valid[vector.scope])
-  for (const mutation of vector.mutations ?? (vector.mutation ? [vector.mutation] : [])) {
+  for (const mutation of vector.mutations ??
+    (vector.mutation ? [vector.mutation] : [])) {
     applyMutation(value, mutation)
   }
   return value
@@ -168,9 +171,9 @@ describe("semantic integrity shared vectors", () => {
     const forward = createSemanticIntegrityResult(issues)
     const reverse = createSemanticIntegrityResult([...issues].reverse())
     expect(reverse).toEqual(forward)
-    expect(
-      forward.ok ? [] : forward.issues.map((issue) => issue.code),
-    ).toEqual(corpus.multiFault.expectedCodes)
+    expect(forward.ok ? [] : forward.issues.map((issue) => issue.code)).toEqual(
+      corpus.multiFault.expectedCodes,
+    )
     const samePath = [
       {
         code: "TRANSITION_HASH_MISMATCH" as const,
@@ -248,7 +251,9 @@ describe("semantic integrity shared vectors", () => {
     for (const vector of corpus.vectors) {
       const value = mutatedValue(vector)
       if (vector.scope === "arena") {
-        expect(ArenaVariantSchema.safeParse(value).success, vector.id).toBe(true)
+        expect(ArenaVariantSchema.safeParse(value).success, vector.id).toBe(
+          true,
+        )
       } else if (vector.scope === "state") {
         expect(
           RuntimeExecutionFinalStateSchema.safeParse(value).success,
@@ -260,7 +265,9 @@ describe("semantic integrity shared vectors", () => {
       expect(vector.expected.length, vector.id).toBeGreaterThan(0)
       expect(vector.expected.length).toBeLessThanOrEqual(corpus.limits.issues!)
       for (const issue of vector.expected) {
-        expect(issue.path.length).toBeLessThanOrEqual(corpus.limits.pathSegments!)
+        expect(issue.path.length).toBeLessThanOrEqual(
+          corpus.limits.pathSegments!,
+        )
         expect(Object.keys(issue.metadata).length).toBeLessThanOrEqual(
           corpus.limits.metadataEntries!,
         )
@@ -281,7 +288,9 @@ describe("semantic integrity shared vectors", () => {
       const value = mutatedValue(vector)
       const result =
         vector.scope === "arena"
-          ? validateCanonicalArena(value as Parameters<typeof validateCanonicalArena>[0])
+          ? validateCanonicalArena(
+              value as Parameters<typeof validateCanonicalArena>[0],
+            )
           : vector.scope === "transition"
             ? validateCanonicalTransition(value as CanonicalSemanticTransition)
             : vector.id === "arena-start-noncanonical"
@@ -328,7 +337,8 @@ describe("semantic integrity shared vectors", () => {
     expect(validateCanonicalGameState(stoned)).toMatchObject({ ok: true })
 
     const fallen = clone(corpus.valid.state) as CanonicalSemanticGameState
-    ;(fallen.soldiers[0] as { status: string; position: unknown }).status = "FALLEN"
+    ;(fallen.soldiers[0] as { status: string; position: unknown }).status =
+      "FALLEN"
     ;(fallen.soldiers[0] as { position: unknown }).position = null
     expect(fallen.soldiers[0]?.facing).toBe("UP")
     expect(validateCanonicalGameState(fallen)).toMatchObject({ ok: true })
@@ -336,5 +346,46 @@ describe("semantic integrity shared vectors", () => {
     expect(JSON.stringify(corpus.valid.arena)).toBe(arenaBefore)
     expect(JSON.stringify(corpus.valid.state)).toBe(stateBefore)
     expect(JSON.stringify(corpus.valid.transition)).toBe(transitionBefore)
+  })
+
+  it("allows a causal event prefix only when one final MATCH_ENDED closes the transition", () => {
+    const base = clone(
+      corpus.valid.transition,
+    ) as unknown as CanonicalSemanticTransition
+    const causalTerminal = {
+      ...base,
+      terminal: true,
+      events: [
+        { type: "SOLDIER_FELL", sequence: 0 },
+        { type: "MATCH_ENDED", sequence: 1 },
+      ],
+      afterStateHash:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    }
+    expect(validateCanonicalTransition(causalTerminal)).toMatchObject({
+      ok: true,
+    })
+
+    for (const events of [
+      [
+        { type: "MATCH_ENDED", sequence: 0 },
+        { type: "SOLDIER_FELL", sequence: 1 },
+      ],
+      [
+        { type: "MATCH_ENDED", sequence: 0 },
+        { type: "MATCH_ENDED", sequence: 1 },
+      ],
+    ]) {
+      const invalid = validateCanonicalTransition({
+        ...causalTerminal,
+        events,
+      })
+      expect(invalid.ok).toBe(false)
+      if (!invalid.ok) {
+        expect(invalid.issues.map((entry) => entry.code)).toContain(
+          "TRANSITION_POST_TERMINAL",
+        )
+      }
+    }
   })
 })

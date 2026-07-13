@@ -236,7 +236,8 @@ const normalizeMetadata = (
   const safeKeys = allKeys.filter((key) => SAFE_METADATA_KEY_SET.has(key))
   const selectedKeys = safeKeys.slice(0, limits.metadataEntries)
   let truncated =
-    safeKeys.length !== allKeys.length || selectedKeys.length !== safeKeys.length
+    safeKeys.length !== allKeys.length ||
+    selectedKeys.length !== safeKeys.length
   const output: Record<string, SemanticIntegrityMetadataValue> = {}
   for (const key of selectedKeys) {
     const original = metadata[key]!
@@ -245,7 +246,9 @@ const normalizeMetadata = (
       limits.metadataValueBytes,
     )
     output[key] =
-      typeof original === "string" || bounded.truncated ? bounded.value : original
+      typeof original === "string" || bounded.truncated
+        ? bounded.value
+        : original
     truncated ||= bounded.truncated
   }
   return { metadata: Object.freeze(output), truncated }
@@ -254,10 +257,16 @@ const normalizeMetadata = (
 const normalizeLimits = (
   input: Partial<SemanticIntegrityLimits> | undefined,
 ): Readonly<SemanticIntegrityLimits> => {
-  const positiveInteger = (value: number | undefined, fallback: number): number =>
+  const positiveInteger = (
+    value: number | undefined,
+    fallback: number,
+  ): number =>
     Number.isInteger(value) && (value ?? 0) >= 0 ? value! : fallback
   return Object.freeze({
-    issues: positiveInteger(input?.issues, DEFAULT_SEMANTIC_INTEGRITY_LIMITS.issues),
+    issues: positiveInteger(
+      input?.issues,
+      DEFAULT_SEMANTIC_INTEGRITY_LIMITS.issues,
+    ),
     pathSegments: positiveInteger(
       input?.pathSegments,
       DEFAULT_SEMANTIC_INTEGRITY_LIMITS.pathSegments,
@@ -364,11 +373,13 @@ export const projectRestrictedSemanticIntegrityFailure = (
       ? undefined
       : truncateUtf8(context.transitionKind, 64).value
   const beforeStateHash =
-    context.beforeStateHash !== undefined && HASH_PATTERN.test(context.beforeStateHash)
+    context.beforeStateHash !== undefined &&
+    HASH_PATTERN.test(context.beforeStateHash)
       ? context.beforeStateHash
       : undefined
   const afterStateHash =
-    context.afterStateHash !== undefined && HASH_PATTERN.test(context.afterStateHash)
+    context.afterStateHash !== undefined &&
+    HASH_PATTERN.test(context.afterStateHash)
       ? context.afterStateHash
       : undefined
   return Object.freeze({
@@ -442,8 +453,10 @@ const issue = (
   metadata: Readonly<Record<string, SemanticIntegrityMetadataValue>> = {},
 ): SemanticIntegrityIssueInput => ({ code, path, metadata })
 
-const positionKey = (position: { readonly x: number; readonly y: number }): string =>
-  `${position.x},${position.y}`
+const positionKey = (position: {
+  readonly x: number
+  readonly y: number
+}): string => `${position.x},${position.y}`
 
 const isWithinBounds = (
   position: { readonly x: number; readonly y: number },
@@ -501,18 +514,22 @@ const collectArenaIssues = (
 ): SemanticIntegrityIssueInput[] => {
   const issues: SemanticIntegrityIssueInput[] = []
   for (const axis of ["x", "y"] as const) {
-    const minimum = axis === "x" ? arena.initialBounds.minX : arena.initialBounds.minY
-    const maximum = axis === "x" ? arena.initialBounds.maxX : arena.initialBounds.maxY
+    const minimum =
+      axis === "x" ? arena.initialBounds.minX : arena.initialBounds.minY
+    const maximum =
+      axis === "x" ? arena.initialBounds.maxX : arena.initialBounds.maxY
     if (minimum > maximum) {
       issues.push(
-        issue("ARENA_BOUNDS_INVERTED", ["initialBounds", axis === "x" ? "maxX" : "maxY"], {
-          axis,
-        }),
+        issue(
+          "ARENA_BOUNDS_INVERTED",
+          ["initialBounds", axis === "x" ? "maxX" : "maxY"],
+          {
+            axis,
+          },
+        ),
       )
     } else if (minimum === maximum) {
-      issues.push(
-        issue("ARENA_BOUNDS_DEGENERATE", ["initialBounds"], { axis }),
-      )
+      issues.push(issue("ARENA_BOUNDS_DEGENERATE", ["initialBounds"], { axis }))
     }
   }
 
@@ -520,7 +537,9 @@ const collectArenaIssues = (
   arena.terrainStones.forEach((position, index) => {
     const key = positionKey(position)
     if (!isWithinBounds(position, arena.initialBounds)) {
-      issues.push(issue("ARENA_TERRAIN_OUT_OF_BOUNDS", ["terrainStones", index]))
+      issues.push(
+        issue("ARENA_TERRAIN_OUT_OF_BOUNDS", ["terrainStones", index]),
+      )
     }
     if (seenTerrain.has(key)) {
       issues.push(issue("ARENA_TERRAIN_DUPLICATE", ["terrainStones", index]))
@@ -552,8 +571,12 @@ const collectArenaIssues = (
       }
     })
     const admitted = [
-      ...BOTTOM_STARTING_POSITIONS.map((position) => ({ position, side: "bottom" } as const)),
-      ...TOP_STARTING_POSITIONS.map((position) => ({ position, side: "top" } as const)),
+      ...BOTTOM_STARTING_POSITIONS.map(
+        (position) => ({ position, side: "bottom" }) as const,
+      ),
+      ...TOP_STARTING_POSITIONS.map(
+        (position) => ({ position, side: "top" }) as const,
+      ),
     ]
     const missing = admitted.find(
       ({ position }) => !isWithinBounds(position, arena.initialBounds),
@@ -581,7 +604,9 @@ const collectStateIssues = (
 ): SemanticIntegrityIssueInput[] => {
   const issues = [
     ...collectTupleIssues(state.versions),
-    ...collectArenaIssues(state.arenaVariant, { includeCanonicalStarts: false }),
+    ...collectArenaIssues(state.arenaVariant, {
+      includeCanonicalStarts: false,
+    }),
   ]
   const playerIds = new Set<string>()
   const sideIds = new Set<string>()
@@ -668,7 +693,10 @@ const collectStateIssues = (
     state.players.map((player) => [player.id, 0]),
   )
   for (const soldier of state.soldiers) {
-    if (soldier.status === "ACTIVE" && activeCounts.has(soldier.ownerPlayerId)) {
+    if (
+      soldier.status === "ACTIVE" &&
+      activeCounts.has(soldier.ownerPlayerId)
+    ) {
       activeCounts.set(
         soldier.ownerPlayerId,
         activeCounts.get(soldier.ownerPlayerId)! + 1,
@@ -712,13 +740,16 @@ const collectStateIssues = (
 
 export const validateCanonicalGameState = (
   state: CanonicalSemanticGameState,
-): SemanticIntegrityResult => createSemanticIntegrityResult(collectStateIssues(state))
+): SemanticIntegrityResult =>
+  createSemanticIntegrityResult(collectStateIssues(state))
 
 export const validateCanonicalInitialGameState = (
   state: CanonicalSemanticGameState,
 ): SemanticIntegrityResult => {
   const issues = collectStateIssues(state)
-  const playersBySide = new Map(state.players.map((player) => [player.side, player.id]))
+  const playersBySide = new Map(
+    state.players.map((player) => [player.side, player.id]),
+  )
   const expectedBySide = {
     bottom: new Set(BOTTOM_STARTING_POSITIONS.map(positionKey)),
     top: new Set(TOP_STARTING_POSITIONS.map(positionKey)),
@@ -785,18 +816,24 @@ export const validateCanonicalTransition = (
     )
   }
   if (lifecycle.roundQuota !== lifecycle.activationCount) {
-    issues.push(
-      issue("LIFECYCLE_QUOTA_MISMATCH", ["lifecycle", "roundQuota"]),
-    )
+    issues.push(issue("LIFECYCLE_QUOTA_MISMATCH", ["lifecycle", "roundQuota"]))
   }
   if (lifecycle.pendingEffectId !== `effect:${lifecycle.activationId}`) {
     issues.push(
-      issue("LIFECYCLE_PENDING_EFFECT_IDENTITY", ["lifecycle", "pendingEffectId"]),
+      issue("LIFECYCLE_PENDING_EFFECT_IDENTITY", [
+        "lifecycle",
+        "pendingEffectId",
+      ]),
     )
   }
+  const terminalIndexes = transition.events
+    .map((event, index) => (event.type === "MATCH_ENDED" ? index : -1))
+    .filter((index) => index >= 0)
   if (
-    transition.terminal &&
-    transition.events.some((event) => event.type !== "MATCH_ENDED")
+    (transition.terminal &&
+      (terminalIndexes.length !== 1 ||
+        terminalIndexes[0] !== transition.events.length - 1)) ||
+    (!transition.terminal && terminalIndexes.length > 0)
   ) {
     issues.push(issue("TRANSITION_POST_TERMINAL", ["events", 0]))
   }

@@ -3,6 +3,7 @@ import type { CanonicalCompatibilityTuple } from "@cowards/spec"
 import * as enginePublic from "../index.js"
 import { createFakeRuntime } from "../test/fake-runtime.js"
 import { createCandidateInitialGameState } from "./create-initial-state.js"
+import { stepCandidateMatch } from "./step.js"
 import {
   createTransitionRecord,
   hashMatchMachine,
@@ -141,6 +142,41 @@ const candidateAuthority = (
   }
 ).CANDIDATE_MATCH_KERNEL
 
+const createDirectMachine = (): MatchMachine => {
+  const initial = createCandidateInitialGameState({
+    ...matchInput,
+    arenaVariant: {
+      ...matchInput.arenaVariant,
+      terrainStones: [...matchInput.arenaVariant.terrainStones],
+    },
+  })
+  if (!initial.ok) {
+    throw new Error("candidate test state failed semantic admission")
+  }
+  return {
+    state: initial.state,
+    initialState: initial.state,
+    semanticTuple: {
+      tupleId: EXPECTED_CANDIDATE_TUPLE_ID,
+      tuple: EXPECTED_CANDIDATE_TUPLE,
+    },
+    cursor: {
+      stage: "match_start",
+      ordinal: 0,
+      phaseNumber: 1,
+      roundNumber: 1,
+      cycleLayer: 0,
+      slotIndex: 0,
+    },
+    maxPhases: 100,
+    phasesRun: 0,
+    selections: { bottom: [], top: [] },
+    slots: [],
+    fullEvents: [],
+    consumedRequestIds: [],
+  }
+}
+
 const withoutRuntime = (): Readonly<Record<string, unknown>> => ({
   ...matchInput,
 })
@@ -260,37 +296,7 @@ const expectRecordContract = (record: KernelTransitionRecord): void => {
 
 describe("Phase 257 canonical Match kernel contract", () => {
   it("hashes a finite safe machine projection with cursor and tuple identity", () => {
-    const initial = createCandidateInitialGameState({
-      ...matchInput,
-      arenaVariant: {
-        ...matchInput.arenaVariant,
-        terrainStones: [...matchInput.arenaVariant.terrainStones],
-      },
-    })
-    expect(initial.ok).toBe(true)
-    if (!initial.ok) return
-    const machine: MatchMachine = {
-      state: initial.state,
-      initialState: initial.state,
-      semanticTuple: {
-        tupleId: EXPECTED_CANDIDATE_TUPLE_ID,
-        tuple: EXPECTED_CANDIDATE_TUPLE,
-      },
-      cursor: {
-        stage: "match_start",
-        ordinal: 0,
-        phaseNumber: 1,
-        roundNumber: 1,
-        cycleLayer: 0,
-        slotIndex: 0,
-      },
-      maxPhases: 100,
-      phasesRun: 0,
-      selections: { bottom: [], top: [] },
-      slots: [],
-      fullEvents: [],
-      consumedRequestIds: [],
-    }
+    const machine = createDirectMachine()
     const hash = hashMatchMachine(machine)
     expect(hash).toMatch(/^sha256:[0-9a-f]{64}$/u)
     expect(hashMatchMachine(machine)).toBe(hash)
@@ -339,6 +345,18 @@ describe("Phase 257 canonical Match kernel contract", () => {
     expect(record.beforeStateHash).toBe(record.afterStateHash)
     expect(record.beforeMachineHash).not.toBe(record.afterMachineHash)
     expectRecordContract(record)
+  })
+
+  it("advances exactly one deterministic lifecycle edge without runtime I/O", () => {
+    const machine = createDirectMachine()
+    const stepped = stepCandidateMatch(machine, { kind: "advance" })
+    expect(stepped.kind).toBe("transition")
+    if (stepped.kind !== "transition") return
+    expect(stepped.record.events.map((entry) => entry.type)).toEqual([
+      "MATCH_STARTED",
+    ])
+    expect(stepped.machine.cursor.stage).toBe("round_start")
+    expectRecordContract(stepped.record)
   })
 
   it("missing-kernel-authority: one driver owns transitions", () => {

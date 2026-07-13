@@ -24,10 +24,12 @@ export type KernelStage =
   | "select_top"
   | "prepare_slots"
   | "cycle_slot_start"
+  | "soldier_observation"
   | "soldier_effect"
   | "cycle_slot_finish"
   | "round_finish"
   | "contraction"
+  | "max_phases"
   | "completed"
 
 export interface KernelCursor {

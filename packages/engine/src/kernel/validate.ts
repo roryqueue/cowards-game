@@ -305,7 +305,9 @@ export const validateTransitionRecord = (
   if (
     terminalIndexes.length > 1 ||
     (terminalIndexes.length === 1 &&
-      terminalIndexes[0] !== record.events.length - 1)
+      terminalIndexes[0] !== record.events.length - 1) ||
+    (record.terminalStatus !== null && terminalIndexes.length !== 1) ||
+    (record.terminalStatus === null && terminalIndexes.length !== 0)
   ) {
     return integrityFailure("KERNEL_TERMINAL_EVENT_INVALID")
   }
