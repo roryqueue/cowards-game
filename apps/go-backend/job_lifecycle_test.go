@@ -106,6 +106,31 @@ func TestMatchExecutionQuarantineHelpers(t *testing.T) {
 	}
 }
 
+func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
+	for _, required := range []string{
+		"runtime_evidence_authority_publication_events",
+		"event_kind = 'installed'",
+		"authority_publication_id",
+		"authority_install_receipt_id",
+		"authority_source_manifest_hash",
+		"compatibility_tuple_id",
+		"bottom_execution_entrant_key",
+		"top_execution_entrant_key",
+		"bottom_containment",
+		"top_containment",
+		"scheduling_status = 'counted'",
+	} {
+		if !strings.Contains(claimNextMatchJobSQL, required) {
+			t.Fatalf("integrity claim SQL is missing %q", required)
+		}
+	}
+	selectIndex := strings.Index(claimNextMatchJobSQL, "runtime_evidence_authority_publication_events")
+	updateIndex := strings.Index(claimNextMatchJobSQL, "update match_jobs")
+	if selectIndex < 0 || (updateIndex >= 0 && updateIndex < selectIndex) {
+		t.Fatal("integrity rejection must precede lifecycle mutation")
+	}
+}
+
 func TestMatchJobLifecycleIntegration(t *testing.T) {
 	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
 	if databaseURL == "" {
