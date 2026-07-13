@@ -78,7 +78,7 @@ coverage:
         ref: "packages/engine/src/compatibility-fixtures.test.ts#arbitrary valid activation state"
         status: pass
     human_judgment: false
-duration: 18min
+duration: 22min
 completed: 2026-07-13
 status: complete
 ---
@@ -89,7 +89,7 @@ status: complete
 
 ## Performance
 
-- **Duration:** 18 min
+- **Duration:** 22 min
 - **Completed:** 2026-07-13
 - **Tasks:** 3
 - **Files modified:** 10
@@ -110,6 +110,7 @@ Each task was committed atomically:
 1. **Task 1: Define machine, effects, records, and hash projections** - `237ed9d`
 2. **Task 2: Implement the pure one-edge reducer** - `fbfbc7a`
 3. **Task 3: Add the inactive driver and integration seams** - `1787394`
+4. **Closeout: Preserve the owned executable-reference inventory** - `a1e5c94`
 
 ## Files Created/Modified
 
@@ -129,7 +130,7 @@ Each task was committed atomically:
 - Boundary records carry both state-only and machine hashes. A `ROUND_STARTED` edge may preserve board state while still advancing the controlled cursor, so conflating the hashes would either lose an edge or invent gameplay mutation.
 - The candidate preserves v1.4 activation IDs such as `1:1:0`. Kernel effect request IDs are separate and stage-specific; they do not rewrite historical event context.
 - Recorder boundaries retain privacy-safe before/after state projections so Chronicle can snapshot Round, Activation, and contraction boundaries and later compare reconstructed gameplay hashes directly.
-- The arbitrary-state Activation runner canonicalizes event sequence numbers. Its compatibility adapter normalizes the legacy primitive's all-zero placeholder sequences; complete Match execution compares exact assigned sequences and events.
+- The arbitrary-state Activation runner canonicalizes event sequence numbers. Its adapter consumes the existing locked Plan 03 terminal-push observation and normalizes that legacy observation's all-zero placeholder sequences; complete Match execution compares exact assigned sequences and events.
 
 ## Deviations from Plan
 
@@ -151,9 +152,17 @@ Each task was committed atomically:
 - **Verification:** Focused semantic integrity regression tests pass.
 - **Committed in:** `fbfbc7a`
 
+**3. [Rule 3 - Blocking] Removed unowned legacy executable references from the differential test**
+
+- **Found during:** Plan 15 executable-reference preflight after Plan 08 closeout
+- **Issue:** The new Activation differential imported and called the tracked legacy helper from `compatibility-fixtures.test.ts`, creating two unowned exact references outside the Plan 11 baseline.
+- **Fix:** Reused the already-captured terminal-push observation from the Plan 03 fixture module, which is the owned legacy evidence source, and removed both exact references from the test.
+- **Verification:** Reference inventory tests pass 12/12 and baseline mode reports exactly 69 executable references and 13 non-executable mentions.
+- **Committed in:** `a1e5c94`
+
 ---
 
-**Total deviations:** 2 auto-fixed (1 missing critical seam, 1 correctness repair)
+**Total deviations:** 3 auto-fixed (1 missing critical seam, 1 correctness repair, 1 blocking ownership repair)
 **Impact on plan:** Both changes are foundational for already-planned replay/fixture consumers and preserve current v1.4 observations.
 
 ## Issues Encountered
@@ -168,6 +177,7 @@ Each task was committed atomically:
 - Spec package test command: **72/72 passed**; focused semantic integrity suite: **8/8 passed**.
 - Engine and spec typechecks: passed.
 - Engine package lint and targeted Plan 08 lint/Prettier/diff checks: passed.
+- Plan 11 executable-reference inventory: **12/12 tests passed**; `--baseline` reports exactly **69 exact references and 13 non-executable mentions**.
 - Forbidden-loop inspection: candidate `step.ts` and `driver.ts` contain no `resolveRound`, `resolveActivationSelection`, or `resolveActivationCycle` call.
 - Current `packages/spec/src/versions.ts` remains exactly `98ac9b63482c0a392694551db9a5de2443aa3119f62387316457f03d64341821`; active `match.ts` and `activation.ts` have no diff.
 - Exact candidate tuple ID remains `sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae`.
@@ -194,6 +204,7 @@ None.
 
 - All four created kernel files exist and all three task commits are present.
 - Focused Plan 08 gates are green; broad-engine failures are exactly the locked next-plan RED set.
+- The Plan 11 executable-reference baseline remains exact with no new unowned reference.
 - Active Match/Activation sources and current version bytes remain unchanged.
 - Only the two protected pre-existing dirty files remain unstaged before this summary commit.
 
