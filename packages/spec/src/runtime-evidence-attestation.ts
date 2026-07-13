@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { createHash, verify as verifySignature } from "node:crypto"
 import {
   CANONICAL_COMPATIBILITY_TUPLE_FIELDS,

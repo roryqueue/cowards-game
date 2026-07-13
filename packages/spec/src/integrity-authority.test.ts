@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import path from "node:path"
@@ -39,7 +40,9 @@ describe("v1.37 canonical integrity authority", () => {
         ),
       ).size,
     ).toBe(CANONICAL_AUTHORITY_DOMAINS.length)
-    expect(() => assertCanonicalAuthorityRegistry(CANONICAL_AUTHORITY_REGISTRY)).not.toThrow()
+    expect(() =>
+      assertCanonicalAuthorityRegistry(CANONICAL_AUTHORITY_REGISTRY),
+    ).not.toThrow()
     expect(() =>
       assertCanonicalAuthorityRegistry([
         ...CANONICAL_AUTHORITY_REGISTRY,
@@ -80,7 +83,9 @@ describe("v1.37 canonical integrity authority", () => {
       const changed = cloneTuple(registered.tuple)
       changed[field] = `${changed[field]}-changed`
       expect(encodeCanonicalCompatibilityTuple(changed)).not.toEqual(encoded)
-      expect(hashCanonicalCompatibilityTuple(changed)).not.toBe(registered.sha256)
+      expect(hashCanonicalCompatibilityTuple(changed)).not.toBe(
+        registered.sha256,
+      )
     }
   })
 
@@ -99,10 +104,16 @@ describe("v1.37 canonical integrity authority", () => {
       { tuple: cloneTuple(registered.tuple) },
       { tupleId: "latest", tuple: cloneTuple(registered.tuple) },
       { tupleId: "*", tuple: cloneTuple(registered.tuple) },
-      { tupleId: `${registered.tupleId}..latest`, tuple: cloneTuple(registered.tuple) },
+      {
+        tupleId: `${registered.tupleId}..latest`,
+        tuple: cloneTuple(registered.tuple),
+      },
       {
         tupleId: registered.tupleId,
-        tuple: { ...registered.tuple, rules: `${registered.tuple.rules}-mixed` },
+        tuple: {
+          ...registered.tuple,
+          rules: `${registered.tuple.rules}-mixed`,
+        },
       },
       {
         tupleId: registered.tupleId,
@@ -120,8 +131,9 @@ describe("v1.37 canonical integrity authority", () => {
     const registeredBefore = CANONICAL_COMPATIBILITY_TUPLES[0]!
 
     expect(() => {
-      ;(CANONICAL_AUTHORITY_REGISTRY as unknown as Array<{ symbol: string }>)[0]!.symbol =
-        "mutated"
+      ;(
+        CANONICAL_AUTHORITY_REGISTRY as unknown as Array<{ symbol: string }>
+      )[0]!.symbol = "mutated"
     }).toThrow()
     expect(() => {
       ;(registeredBefore.tuple as { rules: string }).rules = "mutated"
@@ -140,7 +152,10 @@ describe("v1.37 canonical integrity authority", () => {
   })
 
   it("keeps the committed authority manifest byte-identical to deterministic rendering", () => {
-    const actual = readFileSync(path.join(repoRoot, authorityArtifactPath), "utf8")
+    const actual = readFileSync(
+      path.join(repoRoot, authorityArtifactPath),
+      "utf8",
+    )
     const parsed = JSON.parse(actual) as Record<string, unknown>
     expect(actual).toBe(`${JSON.stringify(parsed, null, 2)}\n`)
     expect(parsed).toMatchObject({
@@ -153,7 +168,12 @@ describe("v1.37 canonical integrity authority", () => {
     )
     const checked = spawnSync(
       "pnpm",
-      ["exec", "tsx", "scripts/generate-v1-37-integrity-authority.ts", "--check"],
+      [
+        "exec",
+        "tsx",
+        "scripts/generate-v1-37-integrity-authority.ts",
+        "--check",
+      ],
       { cwd: repoRoot, encoding: "utf8" },
     )
     expect(checked.status, checked.stderr).toBe(0)

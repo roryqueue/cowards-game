@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { generateKeyPairSync, sign, verify } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
