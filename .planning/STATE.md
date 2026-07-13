@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
-stopped_at: Completed 256-16-PLAN.md
-last_updated: "2026-07-13T05:56:00.000Z"
+stopped_at: Completed 256-08-PLAN.md
+last_updated: "2026-07-13T06:22:52.325Z"
 last_activity: 2026-07-13
-last_activity_desc: Plan 256-16 migrated every active TypeScript creation caller to exact per-entrant evidence and installed an exhaustive bypass inventory
+last_activity_desc: Plan 256-08 bound TypeScript scheduling and job claim to exact installed authority with zero-mutation drift rejection
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 12
-  percent: 63
+  completed_plans: 13
+  percent: 68
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
-Plan: 12 of 19
+Plan: 13 of 19
 Status: Ready to execute
-Last activity: 2026-07-13 — Plan 256-16 migrated every active TypeScript creation caller to exact per-entrant evidence and installed an exhaustive bypass inventory
+Last activity: 2026-07-13 — Plan 256-08 bound TypeScript scheduling and job claim to exact installed authority with zero-mutation drift rejection
 
-Progress: [██████░░░░] 63%
+Progress: [███████░░░] 68%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [██████░░░░] 63%
 
 **Resume file:** None
 
-Last session: 2026-07-13T04:57:05.523Z
-Stopped at: Completed 256-16-PLAN.md
+Last session: 2026-07-13T06:22:52.312Z
+Stopped at: Completed 256-08-PLAN.md
 Next command: `$gsd-execute-phase 256`
 
 ## Performance Metrics
@@ -81,9 +81,12 @@ Next command: `$gsd-execute-phase 256`
 | Phase 256 P07 | 12min | 2 tasks | 6 files |
 | Phase 256 P18 | 31min | 3 tasks | 7 files |
 | Phase 256 P16 | 16min | 2 tasks | 14 files |
+| Phase 256 P08 | 16min | 2 tasks | 4 files |
 
 ## Decisions
 
+- [Phase 256]: TypeScript ladder scheduling treats the installed publication receipt and exact append-only source set as authority; resolver output is only an entrant mapping that must match those published records. — Caller declarations, loose certificate rows, prepared/failed publications, and fixture trust cannot authorize counted work.
+- [Phase 256]: Job claim locks publication events and the generation head, then filters tuple, ordered snapshots, certificates, freshness, revocations, supersessions, and lane controls before any mutation. — Drift is a zero-mutation skip and valid claims carry the complete locked evidence snapshot.
 - [Phase 256]: Every active TypeScript MatchSet caller resolves the complete exact entrant evidence set before any write; production defaults to empty authority and fixture evidence cannot count. — Missing evidence now creates zero rows across competition, Workshop, ladder, and dev surfaces.
 - [Phase 256]: Canonical creation APIs, protected SQL inserts, and legacy worker consumers are governed by one AST-backed ownership inventory. — Newly introduced or incompletely wired callers fail the aggregate boundary monitor.
 - [Phase 256]: The retired v1.5 advanced demo is now an eight-entrant fixture-authority preflight that creates zero rows and reports execution unavailable. — Historical demo code cannot execute the retired worker or promote fixtures into counted evidence.
