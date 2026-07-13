@@ -4,6 +4,8 @@ import {
   verify,
 } from "node:crypto"
 import { describe, expect, it } from "vitest"
+import { CANONICAL_COMPATIBILITY_TUPLES } from "./integrity-authority.js"
+import { RuntimeExecutionEvidenceSnapshotSchema } from "./schemas.js"
 import {
   RUNTIME_EVIDENCE_AUTHORITY_ATOMIC_REFRESH_CONTRACT,
   RUNTIME_EVIDENCE_AUTHORITY_ENVELOPE_SCHEMA_VERSION,
@@ -279,5 +281,55 @@ describe("runtime evidence authority bundle", () => {
         "close-file-descriptor",
       ],
     })
+  })
+
+  it("allows execution requests to carry authority references but no trusted bodies", () => {
+    const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
+    const entrant = (side: "bottom" | "top") => ({
+      entrantKey: `entrant:${side}`,
+      strategyRevisionId: `revision:${side}`,
+      laneIdentityHash: `sha256:${side === "bottom" ? "5" : "6"}`.padEnd(
+        71,
+        side === "bottom" ? "5" : "6",
+      ),
+      containmentCertificateId: `containment:${side}`,
+      containmentCertificateHash: `sha256:${"7".repeat(64)}`,
+      conformanceCertificateId: `conformance:${side}`,
+      conformanceCertificateHash: `sha256:${"8".repeat(64)}`,
+    })
+    const snapshot = {
+      compatibility: {
+        tupleId: tuple.tupleId,
+        tuple: { ...tuple.tuple },
+      },
+      authorityBundleHash: `sha256:${"9".repeat(64)}`,
+      registryGeneration: "7",
+      entrants: {
+        bottom: entrant("bottom"),
+        top: entrant("top"),
+      },
+    }
+
+    expect(RuntimeExecutionEvidenceSnapshotSchema.parse(snapshot)).toEqual(
+      snapshot,
+    )
+    for (const forbidden of [
+      { laneIdentity: { providerId: "request-echo" } },
+      { containmentCertificateRef: { certificateId: "request-echo" } },
+      { certificateBodies: [] },
+      { graphNodes: [] },
+      { signature: "request-echo" },
+      { gateResults: [] },
+    ]) {
+      expect(
+        RuntimeExecutionEvidenceSnapshotSchema.safeParse({
+          ...snapshot,
+          entrants: {
+            ...snapshot.entrants,
+            bottom: { ...snapshot.entrants.bottom, ...forbidden },
+          },
+        }).success,
+      ).toBe(false)
+    }
   })
 })
