@@ -8,12 +8,14 @@ import {
 } from "@cowards/spec"
 import {
   buildExhibitionDuplicateKey,
+  createManualExhibitionMatchSet,
   evaluateRateLimit,
   generateCompetitionPairwiseMatrix,
   TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE,
   runtimeAllowsCountedPlay,
   validateManualExhibitionRevisionIds,
 } from "./competition.js"
+import type { Pool } from "pg"
 
 const TEST_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
@@ -222,15 +224,37 @@ describe("competition helpers", () => {
       matches.map((match) => [
         match.bottomStrategyRevisionId,
         match.topStrategyRevisionId,
+        match.bottomEntrantKey,
+        match.topEntrantKey,
       ]),
     ).toEqual([
-      ["strategy-revision:a", "strategy-revision:b"],
-      ["strategy-revision:b", "strategy-revision:a"],
-      ["strategy-revision:a", "strategy-revision:c"],
-      ["strategy-revision:c", "strategy-revision:a"],
-      ["strategy-revision:b", "strategy-revision:c"],
-      ["strategy-revision:c", "strategy-revision:b"],
+      ["strategy-revision:a", "strategy-revision:b", "strategy-revision:a", "strategy-revision:b"],
+      ["strategy-revision:b", "strategy-revision:a", "strategy-revision:b", "strategy-revision:a"],
+      ["strategy-revision:a", "strategy-revision:c", "strategy-revision:a", "strategy-revision:c"],
+      ["strategy-revision:c", "strategy-revision:a", "strategy-revision:c", "strategy-revision:a"],
+      ["strategy-revision:b", "strategy-revision:c", "strategy-revision:b", "strategy-revision:c"],
+      ["strategy-revision:c", "strategy-revision:b", "strategy-revision:c", "strategy-revision:b"],
     ])
+  })
+
+  it("fails closed on empty production authority before any exhibition database access", async () => {
+    let calls = 0
+    const pool = {
+      async query() {
+        calls += 1
+        throw new Error("database must not be reached")
+      },
+    } as unknown as Pool
+
+    await expect(
+      createManualExhibitionMatchSet(pool, {
+        creatorUserId: "user:alpha",
+        presetId: "smoke-exhibition-v1",
+        revisionIds: ["strategy-revision:a", "strategy-revision:b"],
+        now: new Date("2026-07-12T12:00:00.000Z"),
+      }),
+    ).rejects.toThrow(/containment.*unavailable|production.*empty/iu)
+    expect(calls).toBe(0)
   })
 
   it("returns retry-after information once exhibition create limits are exceeded", () => {

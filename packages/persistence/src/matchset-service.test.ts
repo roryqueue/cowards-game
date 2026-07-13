@@ -10,9 +10,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { createDatabasePool } from "./db.js"
 import { hashEntrantLaneIdentity } from "./integrity-evidence.js"
 import {
+  createFixtureMatchSetEvidenceResolver,
   createMatchSetService,
   generatePresetMatrix,
   insertMatchSetWithMatrixOnClient,
+  resolveMatchSetExecutionEvidence,
   type CreateMatchSetFromMatrixInput,
 } from "./matchset-service.js"
 import type { CreateMatchRecordInput } from "./match-service.js"
@@ -216,6 +218,69 @@ describe("MatchSet presets", () => {
 })
 
 describe("exact MatchSet creation", () => {
+  it.each([2, 3, 8])(
+    "resolves complete fixture-domain evidence for %i heterogeneous entrants without collapsing languages",
+    async (count) => {
+      const bindings = Array.from({ length: count }, (_, index) => ({
+        entrantKey: `fixture:entrant:${index}`,
+        strategyRevisionId: `fixture:revision:${index}`,
+      }))
+      const resolved = await resolveMatchSetExecutionEvidence({
+        resolver: createFixtureMatchSetEvidenceResolver({
+          languageIdsByRevision: Object.fromEntries(
+            bindings.map((binding, index) => [
+              binding.strategyRevisionId,
+              languages[index % languages.length],
+            ]),
+          ),
+        }),
+        purpose: "exhibition",
+        evaluationInstant: "2026-07-12T12:00:00.000Z",
+        entrants: bindings,
+      })
+
+      expect(Object.keys(resolved.executionEntrants)).toEqual(
+        bindings.map((binding) => binding.entrantKey),
+      )
+      expect(
+        Object.values(resolved.executionEntrants).map(
+          (evidence) => evidence.laneIdentity.languageId,
+        ),
+      ).toEqual(
+        Array.from(
+          { length: count },
+          (_, index) => languages[index % languages.length],
+        ),
+      )
+    },
+  )
+
+  it("rejects one missing entrant and fixture-domain counted scheduling before SQL", async () => {
+    const resolver = createFixtureMatchSetEvidenceResolver({
+      omitStrategyRevisionIds: ["fixture:revision:1"],
+    })
+    const entrants = [0, 1].map((index) => ({
+      entrantKey: `fixture:entrant:${index}`,
+      strategyRevisionId: `fixture:revision:${index}`,
+    }))
+    await expect(
+      resolveMatchSetExecutionEvidence({
+        resolver,
+        purpose: "exhibition",
+        evaluationInstant: "2026-07-12T12:00:00.000Z",
+        entrants,
+      }),
+    ).rejects.toThrow(/coverage|missing/iu)
+    await expect(
+      resolveMatchSetExecutionEvidence({
+        resolver: createFixtureMatchSetEvidenceResolver(),
+        purpose: "counted",
+        evaluationInstant: "2026-07-12T12:00:00.000Z",
+        entrants,
+      }),
+    ).rejects.toThrow(/fixture.*counted/iu)
+  })
+
   it.each([2, 3, 8])(
     "persists one tuple, %i heterogeneous entrants, and ordered Match/job pairs",
     async (count) => {

@@ -22,6 +22,7 @@ import {
 import {
   assertWorkshopRevisionCanBeTested,
   buildWorkshopRevision,
+  createWorkshopTestMatchSet,
   GET_WORKSHOP_REVISION_SOURCE_SQL,
   getWorkshopTestSummary,
   LIST_WORKSHOP_REVISIONS_SQL,
@@ -35,6 +36,7 @@ import {
   WORKSHOP_OPPONENTS,
   workshopTemplateSource,
 } from "./workshop.js"
+import type { Pool } from "pg"
 import {
   buildAdvancedStrategyRevision,
   listAdvancedStrategies,
@@ -117,6 +119,26 @@ const createStarterSmokeAdapter = (): StarterSmokeAdapter => {
 }
 
 describe("Workshop service contracts", () => {
+  it("fails closed on empty production authority before seeding Workshop rows", async () => {
+    let calls = 0
+    const pool = {
+      async query() {
+        calls += 1
+        throw new Error("database must not be reached")
+      },
+    } as unknown as Pool
+
+    await expect(
+      createWorkshopTestMatchSet(pool, {
+        revisionId: "strategy-revision:workshop:test",
+        opponentId: "opponent:cautious",
+        presetId: "smoke-v1",
+        matchSetId: "match-set:workshop:test",
+      }),
+    ).rejects.toThrow(/containment.*unavailable|production.*empty/iu)
+    expect(calls).toBe(0)
+  })
+
   it("ships valid built-in template and opponent sources", () => {
     expect(validateStrategySource(workshopTemplateSource).valid).toBe(true)
 
