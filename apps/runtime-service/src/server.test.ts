@@ -1,12 +1,13 @@
 import { once } from "node:events"
 import type { AddressInfo } from "node:net"
+import { Readable } from "node:stream"
 import { afterEach, describe, expect, it } from "vitest"
 import {
   RUNTIME_EXECUTION_SERVICE_VERSION,
   RuntimeExecutionServiceResponseSchema,
 } from "@cowards/spec"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
-import { createRuntimeExecutionHttpServer } from "./server.js"
+import { createRuntimeExecutionHttpServer, readBody } from "./server.js"
 
 process.env.COWARDS_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
@@ -66,6 +67,42 @@ afterEach(async () => {
 })
 
 describe("runtime execution HTTP boundary", () => {
+  it("decodes bounded UTF-8 independently of transport chunk boundaries", async () => {
+    const expected = {
+      sourceFormat: "typescript",
+      source: "const doctrine = 'é兵';",
+      strategyId: "strategy:utf8",
+    }
+    const encoded = Buffer.from(JSON.stringify(expected), "utf8")
+
+    for (let boundary = 1; boundary < encoded.byteLength; boundary += 1) {
+      const request = Readable.from([
+        encoded.subarray(0, boundary),
+        encoded.subarray(boundary),
+      ]) as unknown as Parameters<typeof readBody>[0]
+      await expect(readBody(request, encoded.byteLength)).resolves.toBe(
+        JSON.stringify(expected),
+      )
+    }
+
+    const exact = Readable.from([encoded]) as unknown as Parameters<
+      typeof readBody
+    >[0]
+    await expect(readBody(exact, encoded.byteLength)).resolves.toBe(
+      JSON.stringify(expected),
+    )
+    const oversized = Readable.from([encoded]) as unknown as Parameters<
+      typeof readBody
+    >[0]
+    await expect(readBody(oversized, encoded.byteLength - 1)).rejects.toThrow(
+      /exceeds service limit/i,
+    )
+    const invalid = Readable.from([
+      Buffer.from([0xc3, 0x28]),
+    ]) as unknown as Parameters<typeof readBody>[0]
+    await expect(readBody(invalid, 2)).rejects.toThrow(/not valid UTF-8/i)
+  })
+
   it("health labels the current HTTP+JSON isolated JS/TS runtime implementation", async () => {
     const server = await withServer()
     const response = await fetch(`${server.url}/health`)

@@ -55,18 +55,27 @@ const writeJson = (
   response.end(JSON.stringify(payload))
 }
 
-const readBody = async (
+export const readBody = async (
   request: IncomingMessage,
   limitBytes: number,
 ): Promise<string> => {
-  let body = ""
+  const chunks: Uint8Array[] = []
+  let receivedBytes = 0
   for await (const chunk of request) {
-    body += chunk
-    if (new TextEncoder().encode(body).length > limitBytes) {
+    const bytes = Buffer.from(chunk)
+    receivedBytes += bytes.byteLength
+    if (receivedBytes > limitBytes) {
       throw new Error("Runtime execution request body exceeds service limit.")
     }
+    chunks.push(bytes)
   }
-  return body
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(
+      Buffer.concat(chunks, receivedBytes),
+    )
+  } catch {
+    throw new Error("Runtime execution request body is not valid UTF-8.")
+  }
 }
 
 const malformedRequestResponse = (
