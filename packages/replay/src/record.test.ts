@@ -176,22 +176,26 @@ describe("recordChronicleFromExecution", () => {
     }, "RECORDER_EVENT_STREAM_INVALID"],
     ["boundary hash drift", (execution: ReturnType<typeof run>) => {
       if (execution.kind !== "completed") return execution
+      const transitions = execution.transitions.map((transition, index) =>
+        index === 0
+          ? { ...transition, beforeStateHash: `sha256:${"0".repeat(64)}` }
+          : transition,
+      )
       return {
         ...execution,
-        transitions: execution.transitions.map((transition, index) =>
-          index === 0
-            ? { ...transition, beforeStateHash: `sha256:${"0".repeat(64)}` }
-            : transition,
-        ),
+        transitions,
+        recorderMaterial: { ...execution.recorderMaterial, boundaries: transitions },
       }
     }, "RECORDER_BOUNDARY_INTEGRITY_INVALID"],
     ["semantic identity drift", (execution: ReturnType<typeof run>) => {
       if (execution.kind !== "completed") return execution
+      const transitions = execution.transitions.map((transition, index) =>
+        index === 0 ? { ...transition, semanticTupleId: "sha256:wrong" } : transition,
+      )
       return {
         ...execution,
-        transitions: execution.transitions.map((transition, index) =>
-          index === 0 ? { ...transition, semanticTupleId: "sha256:wrong" } : transition,
-        ),
+        transitions,
+        recorderMaterial: { ...execution.recorderMaterial, boundaries: transitions },
       }
     }, "RECORDER_SEMANTIC_IDENTITY_INVALID"],
   ] as const)("fails closed for %s", (_name, mutate, code) => {
