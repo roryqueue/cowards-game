@@ -166,6 +166,20 @@ describe("competition governance persistence", () => {
       ),
     ).rejects.toBeInstanceOf(GovernanceInputError)
   })
+
+  it("rejects mutable integrity correction in favor of append-only cohorts", async () => {
+    const { pool, calls } = createPool({ admin: true })
+    await expect(
+      applyCompetitionGovernanceAction(pool, {
+        matchSetIds: ["matchset:1"],
+        adminUserId: "admin:1",
+        action: "invalidated",
+        category: "result_invalidated",
+        privateReason: "Exact integrity finding.",
+      }),
+    ).rejects.toMatchObject({ status: 409 })
+    expect(calls).toEqual([])
+  })
 })
 
 const sha256 = (value: string): string =>
@@ -226,7 +240,7 @@ describe("append-only integrity cohort governance", () => {
       classificationEventId: restoration.eventId,
       compensatesEventId: classification.eventId,
     }]
-    expect(foldEffectiveIntegrityClassifications(events, [])).toEqual({
+    expect(foldEffectiveIntegrityClassifications([classification], [])).toEqual({
       "matchset:a": "invalidated",
       "matchset:b": "invalidated",
     })

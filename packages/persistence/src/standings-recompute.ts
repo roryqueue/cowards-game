@@ -5,6 +5,10 @@ import type {
   StrategyRevisionId,
 } from "@cowards/spec"
 import type { MatchSetStrategyScore } from "./scoring.js"
+import {
+  isStandingsIntegrityEligible,
+  type StandingsIntegrityResolution,
+} from "./integrity-evidence.js"
 
 export interface SeasonStandingEntrant {
   entrantId: string
@@ -21,7 +25,15 @@ export interface ClassifiedSeasonMatchSet {
   scoring: { rankings: MatchSetStrategyScore[] } | null
   resultHref: string
   replayHref?: string | undefined
+  integrityResolution?: Readonly<StandingsIntegrityResolution> | undefined
 }
+
+export type EffectiveIntegrityClassification =
+  | "counted"
+  | "non_counted"
+  | "under_review"
+  | "invalid"
+  | "invalidated"
 
 interface MutableStanding {
   entrant: SeasonStandingEntrant
@@ -89,6 +101,9 @@ const addCountedScore = (
 export const recomputeSeasonStandings = (input: {
   entrants: SeasonStandingEntrant[]
   matchSets: ClassifiedSeasonMatchSet[]
+  effectiveIntegrityClassifications?: Readonly<
+    Record<string, EffectiveIntegrityClassification>
+  >
 }): PublicStandingDto[] => {
   const totals = new Map(
     [...input.entrants]
@@ -101,12 +116,24 @@ export const recomputeSeasonStandings = (input: {
   for (const matchSet of [...input.matchSets].sort((left, right) =>
     left.matchSetId.localeCompare(right.matchSetId),
   )) {
+    const effectiveClassification =
+      input.effectiveIntegrityClassifications?.[matchSet.matchSetId]
+    const classificationAllowsCounting =
+      effectiveClassification === undefined
+        ? matchSet.countedState.state === "counted"
+        : effectiveClassification === "counted" &&
+          matchSet.countedState.state === "counted"
+    const integrityAllowsCounting = isStandingsIntegrityEligible(
+      matchSet.integrityResolution,
+      matchSet.strategyRevisionIds,
+    )
+    const counts = classificationAllowsCounting && integrityAllowsCounting
     for (const strategyRevisionId of [
       ...new Set(matchSet.strategyRevisionIds),
     ].sort()) {
       const standing = totals.get(strategyRevisionId)
       if (!standing) continue
-      if (matchSet.countedState.state === "counted") {
+      if (counts) {
         standing.countedMatchSetCount += 1
       } else {
         standing.excludedMatchSetCount += 1
@@ -116,7 +143,7 @@ export const recomputeSeasonStandings = (input: {
       if (matchSet.replayHref) standing.replayLinks.add(matchSet.replayHref)
     }
 
-    if (matchSet.countedState.state !== "counted" || !matchSet.scoring) {
+    if (!counts || !matchSet.scoring) {
       continue
     }
     for (const score of matchSet.scoring.rankings) {

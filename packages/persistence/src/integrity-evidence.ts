@@ -104,7 +104,29 @@ export type HistoricalIntegrityResolution =
       note: string
     })
 
+export type CurrentStandingsIntegrityRejectionReason =
+  | "missing"
+  | "unknown_tuple"
+  | "mixed_tuple"
+  | "uncertified"
+
+export type CurrentStandingsIntegrityResolution =
+  | {
+      kind: "current_certified"
+      identity: Readonly<MatchSetIntegrityIdentity>
+    }
+  | {
+      kind: "current_rejected"
+      reason: CurrentStandingsIntegrityRejectionReason
+    }
+
+export type StandingsIntegrityResolution =
+  | HistoricalIntegrityResolution
+  | CurrentStandingsIntegrityResolution
+
 const validatedIdentityInstances = new WeakSet<object>()
+const historicalResolutionInstances = new WeakSet<object>()
+const currentStandingsResolutionInstances = new WeakSet<object>()
 
 const assertValidatedIdentity = (
   identity: Readonly<MatchSetIntegrityIdentity>,
@@ -533,29 +555,111 @@ export const resolveHistoricalIntegrityEvidence = (input: {
 
   if (hasRequiredV14Anchors && matching.length === 1) {
     const manifest = matching[0]!
-    return Object.freeze({
+    const resolution = Object.freeze({
       ...base,
-      kind: "resolved_historical",
+      kind: "resolved_historical" as const,
       manifestId: manifest.manifestId,
       manifestHash: manifest.manifestHash,
       historicalCompatibility: manifest.compatibility,
       eligibleUnderOriginalSemantics: source.originalCounted,
     })
+    historicalResolutionInstances.add(resolution)
+    return resolution
   }
 
   if (matching.length > 0 && (source.rulesVersion === null || source.chronicleVersion === null)) {
-    return Object.freeze({
+    const resolution = Object.freeze({
       ...base,
-      kind: "legacy_incomplete",
+      kind: "legacy_incomplete" as const,
       note: "This historical result does not contain enough immutable version evidence for standings recomputation.",
     })
+    historicalResolutionInstances.add(resolution)
+    return resolution
   }
 
-  return Object.freeze({
+  const resolution = Object.freeze({
     ...base,
-    kind: "unresolved",
+    kind: "unresolved" as const,
     note: "This historical result remains readable under its recorded labels but its integrity identity is unresolved.",
   })
+  historicalResolutionInstances.add(resolution)
+  return resolution
+}
+
+const currentStandingsRejection = (
+  reason: CurrentStandingsIntegrityRejectionReason,
+): Readonly<CurrentStandingsIntegrityResolution> => {
+  const resolution = Object.freeze({ kind: "current_rejected" as const, reason })
+  currentStandingsResolutionInstances.add(resolution)
+  return resolution
+}
+
+export const resolveCurrentStandingsIntegrityEvidence = (
+  input: MatchSetIntegrityIdentityInput | unknown,
+): Readonly<CurrentStandingsIntegrityResolution> => {
+  if (input === null || input === undefined) {
+    return currentStandingsRejection("missing")
+  }
+  let identity: Readonly<MatchSetIntegrityIdentity>
+  try {
+    identity = createMatchSetIntegrityIdentity(input)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ""
+    if (/compatibility tuple is unknown/iu.test(message)) {
+      return currentStandingsRejection("unknown_tuple")
+    }
+    if (/mixed/iu.test(message)) {
+      return currentStandingsRejection("mixed_tuple")
+    }
+    return currentStandingsRejection("uncertified")
+  }
+  if (
+    identity.normalizedEntrants.some(
+      (entrant) =>
+        entrant.schedulingDecision.status !== "counted" ||
+        entrant.schedulingDecision.reasonCode !== "EVIDENCE_CURRENT" ||
+        entrant.containmentCertificateRef.registryGeneration !==
+          identity.registryGeneration ||
+        entrant.conformanceCertificateRef.registryGeneration !==
+          identity.registryGeneration,
+    )
+  ) {
+    return currentStandingsRejection("uncertified")
+  }
+  const resolution = Object.freeze({
+    kind: "current_certified" as const,
+    identity,
+  })
+  currentStandingsResolutionInstances.add(resolution)
+  return resolution
+}
+
+export const isStandingsIntegrityEligible = (
+  resolution: Readonly<StandingsIntegrityResolution> | undefined,
+  strategyRevisionIds: readonly string[],
+): boolean => {
+  if (!resolution || typeof resolution !== "object") return false
+  if (resolution.kind === "current_certified") {
+    if (!currentStandingsResolutionInstances.has(resolution as object)) return false
+    const expected = [...new Set(strategyRevisionIds)].sort()
+    const certified = [
+      ...new Set(
+        resolution.identity.normalizedEntrants.map(
+          (entrant) => entrant.strategyRevisionId,
+        ),
+      ),
+    ].sort()
+    return (
+      expected.length === certified.length &&
+      expected.every((revision, index) => revision === certified[index])
+    )
+  }
+  if (!historicalResolutionInstances.has(resolution as object)) return false
+  return (
+    resolution.kind === "resolved_historical" &&
+    resolution.originalCounted &&
+    resolution.eligibleUnderOriginalSemantics
+  )
 }
 
 const entrantHashValues = (

@@ -8,6 +8,7 @@ import {
 import {
   resolveCurrentStandingsIntegrityEvidence,
   resolveHistoricalIntegrityEvidence,
+  type StandingsIntegrityResolution,
 } from "./integrity-evidence.js"
 import {
   recomputeSeasonStandings,
@@ -117,7 +118,7 @@ const projection = (
 const matchSet = (
   id: string,
   countedState = projection("counted"),
-  integrityResolution = certifiedCurrent(),
+  integrityResolution: Readonly<StandingsIntegrityResolution> = certifiedCurrent(),
 ): ClassifiedSeasonMatchSet => ({
   matchSetId: id,
   strategyRevisionIds: ["revision:a", "revision:b"],
