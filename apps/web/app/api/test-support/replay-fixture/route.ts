@@ -17,34 +17,35 @@ const readScenario = (
   return scenarios.find((candidate) => candidate.id === scenario)?.id ?? null
 }
 
-type ReplayFixtureRouteDeps = {
+export type ReplayFixtureRouteDeps = {
   env?: Partial<Record<string, string | undefined>>
 }
 
-export async function GET(
-  request: Request,
-  deps: ReplayFixtureRouteDeps = {},
-): Promise<Response> {
-  const env = deps.env ?? process.env
+export const createReplayFixtureGetHandler =
+  (deps: ReplayFixtureRouteDeps = {}) =>
+  async (request: Request): Promise<Response> => {
+    const env = deps.env ?? process.env
 
-  if (!isReplayFixtureEnabled(env)) {
-    return Response.json({ error: "Not found" }, { status: 404 })
+    if (!isReplayFixtureEnabled(env)) {
+      return Response.json({ error: "Not found" }, { status: 404 })
+    }
+
+    const scenarios = createReplayFixtureCatalog()
+    const scenarioId = readScenario(request, scenarios)
+    if (scenarioId === null) {
+      return Response.json(
+        { error: "Unknown replay fixture scenario" },
+        { status: 404 },
+      )
+    }
+
+    const matchId = getReplayFixtureMatchId(scenarioId)
+    return Response.json({
+      matchId,
+      replayHref: `/matches/${encodeURIComponent(matchId)}/replay`,
+      scenarioId,
+      scenarios,
+    })
   }
 
-  const scenarios = createReplayFixtureCatalog()
-  const scenarioId = readScenario(request, scenarios)
-  if (scenarioId === null) {
-    return Response.json(
-      { error: "Unknown replay fixture scenario" },
-      { status: 404 },
-    )
-  }
-
-  const matchId = getReplayFixtureMatchId(scenarioId)
-  return Response.json({
-    matchId,
-    replayHref: `/matches/${encodeURIComponent(matchId)}/replay`,
-    scenarioId,
-    scenarios,
-  })
-}
+export const GET = createReplayFixtureGetHandler()
