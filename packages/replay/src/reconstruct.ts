@@ -12,6 +12,11 @@ import {
   type ReplayStateResult,
 } from "./replay-transition.js"
 import { validateChronicle } from "./validate.js"
+import {
+  validateCandidateReplaySemantics,
+  type CandidateReplaySemanticInput,
+  type CandidateReplaySemanticValidationResult,
+} from "./validate.js"
 
 export interface ReplayTimelineEntry {
   sequence: number
@@ -148,6 +153,32 @@ export const createReplay = (chronicle: Chronicle): CreateReplayResult => {
           if (!result.ok) {
             return
           }
+          yield { sequence: event.sequence, event, state: result.state }
+        }
+      },
+    },
+  }
+}
+
+export type CreateCandidateReplayResult =
+  | { readonly ok: true; readonly replay: Replay }
+  | Exclude<CandidateReplaySemanticValidationResult, { ok: true }>
+
+export const createCandidateReplay = (
+  input: CandidateReplaySemanticInput,
+): CreateCandidateReplayResult => {
+  const validation = validateCandidateReplaySemantics(input)
+  if (!validation.ok) return validation
+  const chronicle = input.chronicle as Chronicle
+  const stateAt = createStateAt(chronicle)
+  return {
+    ok: true,
+    replay: {
+      stateAt,
+      *iterateReplay() {
+        for (const event of chronicle.events) {
+          const result = stateAt(event.sequence)
+          if (!result.ok) return
           yield { sequence: event.sequence, event, state: result.state }
         }
       },

@@ -23,6 +23,7 @@ import { validateChronicleGrammar } from "./grammar.js"
 import { createChronicleContentHash } from "./hash.js"
 import {
   resolveReplayTransitionEventContract,
+  validateCandidateReplayReconstruction,
   validateChronicleTransitions,
 } from "./replay-transition.js"
 import type {
@@ -271,6 +272,9 @@ export const resolveReplayCompatibilityIdentity = (
 export const validateReplayInput = (
   input: unknown,
 ): ChronicleValidationResult | CandidateReplaySemanticValidationResult => {
+  if (isRecord(input) && input.profile === "candidate-v1.37") {
+    return validateCandidateReplaySemantics(input)
+  }
   const compatibility = resolveReplayCompatibilityIdentity(input)
   if (compatibility.status === "invalid") {
     return {
@@ -686,6 +690,17 @@ const CANDIDATE_PATH_LIMIT = 8
 const STATE_HASH_DOMAIN =
   "cowards-game:candidate-game-state-projection:v1" as const
 
+const codePointCompare = (left: string, right: string): number => {
+  const leftPoints = Array.from(left, (value) => value.codePointAt(0)!)
+  const rightPoints = Array.from(right, (value) => value.codePointAt(0)!)
+  const length = Math.min(leftPoints.length, rightPoints.length)
+  for (let index = 0; index < length; index += 1) {
+    const difference = leftPoints[index]! - rightPoints[index]!
+    if (difference !== 0) return difference
+  }
+  return leftPoints.length - rightPoints.length
+}
+
 const boundedCandidateIssue = (
   code: CandidateReplaySemanticCode,
   path: readonly (string | number)[] = [],
@@ -703,7 +718,7 @@ const boundedCandidateIssue = (
     metadata: Object.freeze(
       Object.fromEntries(
         Object.entries(metadata)
-          .sort(([left], [right]) => left.localeCompare(right))
+          .sort(([left], [right]) => codePointCompare(left, right))
           .slice(0, 4)
           .map(([key, value]) => [
             key.slice(0, 40),
@@ -810,9 +825,7 @@ const projectStateForRecording = (state: CanonicalSemanticGameState) => ({
       side,
       strategyRevisionId,
     }))
-    .sort((left, right) =>
-      left.id < right.id ? -1 : left.id > right.id ? 1 : 0,
-    ),
+    .sort((left, right) => codePointCompare(left.id, right.id)),
   phase: state.phase,
   phaseNumber: state.phaseNumber,
   roundNumber: state.roundNumber,
@@ -837,9 +850,7 @@ const projectStateForRecording = (state: CanonicalSemanticGameState) => ({
         lastSuccessfulMoveDirection,
       }),
     )
-    .sort((left, right) =>
-      left.id < right.id ? -1 : left.id > right.id ? 1 : 0,
-    ),
+    .sort((left, right) => codePointCompare(left.id, right.id)),
   terrainStones: [...state.terrainStones]
     .map(({ x, y }) => ({ x, y }))
     .sort((left, right) => left.x - right.x || left.y - right.y),
@@ -949,8 +960,24 @@ export const validateCandidateReplaySemantics = (
   }
 
   const eventMaterial = execution.recorderMaterial.events
+  const flattenedTransitionEvents = execution.transitions.flatMap(
+    ({ events }) => events,
+  )
+  const publicEventMaterial = eventMaterial.map(
+    ({ type, sequence, payload, context, privacy }) => ({
+      type,
+      sequence,
+      payload,
+      ...(context === undefined ? {} : { context }),
+      ...(privacy === undefined ? {} : { privacy }),
+    }),
+  )
   if (
     !Array.isArray(eventMaterial) ||
+    JSON.stringify(flattenedTransitionEvents) !==
+      JSON.stringify(execution.result.events) ||
+    JSON.stringify(publicEventMaterial) !==
+      JSON.stringify(execution.result.events) ||
     chronicle.events.length !== eventMaterial.length ||
     chronicle.events.some((event, index) => {
       const material = eventMaterial[index]
@@ -993,6 +1020,23 @@ export const validateCandidateReplaySemantics = (
       initialSemantic.truncated,
     )
   }
+  if (
+    JSON.stringify(execution.transitions[0]!.beforeState) !==
+      JSON.stringify(
+        projectStateForRecording(
+          parsedInitial.data as CanonicalSemanticGameState,
+        ),
+      ) ||
+    execution.recorderMaterial.boundaries.length !==
+      execution.transitions.length ||
+    JSON.stringify(execution.recorderMaterial.boundaries) !==
+      JSON.stringify(execution.transitions)
+  ) {
+    return candidateCodeFailure("CANDIDATE_BOUNDARY_STATE_INVALID", [
+      "execution",
+      "transitions",
+    ])
+  }
 
   for (let index = 0; index < execution.transitions.length; index += 1) {
     const transition = execution.transitions[index]!
@@ -1027,6 +1071,20 @@ export const validateCandidateReplaySemantics = (
         "execution",
         "transitions",
         index,
+      ])
+    }
+    const previous = execution.transitions[index - 1]
+    if (
+      previous !== undefined &&
+      (previous.afterStateHash !== transition.beforeStateHash ||
+        JSON.stringify(previous.afterState) !==
+          JSON.stringify(transition.beforeState))
+    ) {
+      return candidateCodeFailure("CANDIDATE_BOUNDARY_STATE_INVALID", [
+        "execution",
+        "transitions",
+        index,
+        "beforeState",
       ])
     }
   }
@@ -1064,14 +1122,32 @@ export const validateCandidateReplaySemantics = (
       anchor.stateHash !== stateHash ||
       JSON.stringify(snapshot.board) !==
         JSON.stringify(boardFromProjection(projection)) ||
-      JSON.stringify(snapshot.outcome ?? null) !==
-        JSON.stringify(projectionOutcome ?? null)
+      (snapshot.kind === "CONTRACTION"
+        ? snapshot.outcome !== undefined
+        : JSON.stringify(snapshot.outcome ?? null) !==
+          JSON.stringify(projectionOutcome ?? null))
     ) {
       return candidateCodeFailure("CANDIDATE_BOUNDARY_STATE_INVALID", [
         "boundaryAnchors",
         index,
       ])
     }
+  }
+
+  const reconstruction = validateCandidateReplayReconstruction({
+    chronicle,
+    execution,
+  })
+  if (!reconstruction.ok) {
+    return candidateCodeFailure(
+      reconstruction.code === "CANDIDATE_TERMINAL_EVENT_INVALID" ||
+        reconstruction.code === "CANDIDATE_TERMINAL_STATE_MISMATCH"
+        ? "CANDIDATE_TERMINAL_INVALID"
+        : "CANDIDATE_RECONSTRUCTION_INVALID",
+      reconstruction.transitionIndex === undefined
+        ? ["execution", "transitions"]
+        : ["execution", "transitions", reconstruction.transitionIndex],
+    )
   }
 
   const parsedFinal = RuntimeExecutionFinalStateSchema.safeParse(
@@ -1082,6 +1158,8 @@ export const validateCandidateReplaySemantics = (
   const terminalSnapshot = chronicle.snapshots.at(-1)
   if (
     !parsedFinal.success ||
+    JSON.stringify(execution.result.state) !==
+      JSON.stringify(execution.recorderMaterial.finalState) ||
     JSON.stringify(last.afterState) !==
       JSON.stringify(
         parsedFinal.success

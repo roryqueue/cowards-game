@@ -12,6 +12,7 @@ import type {
 } from "@cowards/spec"
 import { MatchOutcomeSchema } from "@cowards/spec"
 import { stableStringify } from "./hash.js"
+import type { ChronicleRecorderExecution } from "./record.js"
 
 const V1_37_CANDIDATE_TUPLE_ID =
   "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
@@ -585,4 +586,163 @@ export const validateChronicleTransitions = (
   }
 
   return errors
+}
+
+export type CandidateReplayReconstructionResult =
+  | {
+      readonly ok: true
+      readonly terminalStateHash: string
+      readonly outcome: MatchOutcome
+    }
+  | {
+      readonly ok: false
+      readonly code:
+        | "CANDIDATE_RECONSTRUCTION_SHAPE_INVALID"
+        | "CANDIDATE_TRANSITION_STATE_MISMATCH"
+        | "CANDIDATE_TERMINAL_EVENT_INVALID"
+        | "CANDIDATE_TERMINAL_STATE_MISMATCH"
+      readonly transitionIndex?: number | undefined
+    }
+
+export interface CandidateReplayReconstructionInput {
+  readonly chronicle: Chronicle
+  readonly execution: ChronicleRecorderExecution
+}
+
+const replayStateFromProjection = (
+  projection: Readonly<Record<string, unknown>>,
+): ReplayState | undefined => {
+  if (
+    !projection.bounds ||
+    !Array.isArray(projection.soldiers) ||
+    !Array.isArray(projection.terrainStones)
+  ) {
+    return undefined
+  }
+  return {
+    board: globalThis.structuredClone({
+      bounds: projection.bounds,
+      soldiers: projection.soldiers,
+      terrainStones: projection.terrainStones,
+    }) as FullBoardSnapshot,
+    ...(projection.outcome === null || projection.outcome === undefined
+      ? {}
+      : {
+          outcome: globalThis.structuredClone(
+            projection.outcome,
+          ) as MatchOutcome,
+        }),
+  }
+}
+
+const finalReplayState = (
+  execution: Extract<ChronicleRecorderExecution, { kind: "completed" }>,
+): ReplayState => ({
+  board: {
+    bounds: globalThis.structuredClone(
+      execution.recorderMaterial.finalState.bounds,
+    ),
+    soldiers: execution.recorderMaterial.finalState.soldiers.map(
+      ({
+        id,
+        ownerPlayerId,
+        status,
+        position,
+        facing,
+        lastSuccessfulMoveDirection,
+      }) => ({
+        id,
+        ownerPlayerId,
+        status,
+        position: position === null ? null : { ...position },
+        facing,
+        lastSuccessfulMoveDirection,
+      }),
+    ),
+    terrainStones: execution.recorderMaterial.finalState.terrainStones.map(
+      (position) => ({ ...position }),
+    ),
+  },
+  ...(execution.recorderMaterial.finalState.outcome === undefined
+    ? {}
+    : { outcome: execution.recorderMaterial.finalState.outcome }),
+})
+
+export const validateCandidateReplayReconstruction = ({
+  chronicle,
+  execution,
+}: CandidateReplayReconstructionInput): CandidateReplayReconstructionResult => {
+  if (execution.kind !== "completed" || execution.transitions.length === 0) {
+    return { ok: false, code: "CANDIDATE_RECONSTRUCTION_SHAPE_INVALID" }
+  }
+  const terminalEvents = chronicle.events.filter(
+    ({ type }) => type === "MATCH_ENDED",
+  )
+  if (
+    terminalEvents.length !== 1 ||
+    chronicle.events.at(-1)?.type !== "MATCH_ENDED"
+  ) {
+    return { ok: false, code: "CANDIDATE_TERMINAL_EVENT_INVALID" }
+  }
+
+  for (let index = 0; index < execution.transitions.length; index += 1) {
+    const transition = execution.transitions[index]!
+    const before = replayStateFromProjection(transition.beforeState)
+    const expectedAfter = replayStateFromProjection(transition.afterState)
+    if (before === undefined || expectedAfter === undefined) {
+      return {
+        ok: false,
+        code: "CANDIDATE_RECONSTRUCTION_SHAPE_INVALID",
+        transitionIndex: index,
+      }
+    }
+    let reconstructed = before
+    for (const summary of transition.events) {
+      const applied = applyReplayEvent(reconstructed, {
+        type: summary.type,
+        sequence: summary.sequence,
+        context: summary.context ?? {},
+        privacy: summary.privacy ?? "public",
+        payload: summary.payload,
+      })
+      if (!applied.ok) {
+        return {
+          ok: false,
+          code: "CANDIDATE_TRANSITION_STATE_MISMATCH",
+          transitionIndex: index,
+        }
+      }
+      reconstructed = applied.state
+    }
+    if (stableStringify(reconstructed) !== stableStringify(expectedAfter)) {
+      return {
+        ok: false,
+        code: "CANDIDATE_TRANSITION_STATE_MISMATCH",
+        transitionIndex: index,
+      }
+    }
+  }
+
+  const last = execution.transitions.at(-1)!
+  const finalState = finalReplayState(execution)
+  const projectedFinal = replayStateFromProjection(last.afterState)
+  const terminalSnapshot = chronicle.snapshots.at(-1)
+  const outcome = execution.recorderMaterial.finalState.outcome
+  if (
+    outcome === undefined ||
+    projectedFinal === undefined ||
+    stableStringify(projectedFinal) !== stableStringify(finalState) ||
+    terminalSnapshot?.kind !== "TERMINAL" ||
+    stableStringify(stateFromSnapshot(terminalSnapshot)) !==
+      stableStringify(finalState) ||
+    stableStringify(terminalEvents[0]!.payload) !== stableStringify(outcome) ||
+    stableStringify(last.terminalStatus) !== stableStringify(outcome)
+  ) {
+    return { ok: false, code: "CANDIDATE_TERMINAL_STATE_MISMATCH" }
+  }
+  return {
+    ok: true,
+    terminalStateHash: last.afterStateHash,
+    outcome,
+  }
 }

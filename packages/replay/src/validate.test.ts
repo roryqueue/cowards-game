@@ -215,6 +215,40 @@ const grammarErrorCodes = [
   "SNAPSHOT_BOUNDARY_INVALID",
 ] as const satisfies readonly ChronicleValidationErrorCode[]
 
+const withHistoricalPushAttempt = (chronicle: Chronicle): Chronicle => {
+  const actionIndex = chronicle.events.findIndex(
+    ({ type }) => type === "ACTION_EMITTED",
+  )
+  const action = chronicle.events[actionIndex]!
+  const insertionSequence = action.sequence + 1
+  return {
+    ...chronicle,
+    events: [
+      ...chronicle.events.slice(0, insertionSequence),
+      {
+        type: "PUSH_ATTEMPTED",
+        sequence: insertionSequence,
+        context: { ...action.context },
+        privacy: "public",
+        payload: {
+          soldierId: action.context.soldierId!,
+          targetSoldierId: "historical-target",
+        },
+      },
+      ...chronicle.events
+        .slice(insertionSequence)
+        .map((event) => ({ ...event, sequence: event.sequence + 1 })),
+    ],
+    snapshots: chronicle.snapshots.map((snapshot) => ({
+      ...snapshot,
+      sequence:
+        snapshot.sequence >= insertionSequence
+          ? snapshot.sequence + 1
+          : snapshot.sequence,
+    })),
+  }
+}
+
 describe("validateChronicle", () => {
   it("routes exact inactive candidate evidence without making it current or publishable", () => {
     const input = createCandidateReplayInput()
@@ -238,6 +272,22 @@ describe("validateChronicle", () => {
     })
   })
 
+  it("keeps the legacy PUSH_ATTEMPTED tail only on explicit active and historical routes", () => {
+    const input = createCandidateReplayInput()
+    const historical = withHistoricalPushAttempt(input.chronicle)
+
+    expect(validateChronicle(historical)).toEqual({ ok: true })
+    expect(validateHistoricalV14Chronicle(historical)).toEqual({ ok: true })
+    const candidate = validateCandidateReplaySemantics({
+      ...input,
+      chronicle: historical,
+    })
+    expect(candidate.ok).toBe(false)
+    expect(!candidate.ok && candidate.issues.map(({ code }) => code)).toEqual([
+      "CANDIDATE_EVENT_INVALID",
+    ])
+  })
+
   it.each([
     "rules",
     "engine",
@@ -256,6 +306,13 @@ describe("validateChronicle", () => {
           tuple: { ...input.compatibility.tuple, [field]: `${field}:wrong` },
         },
       })
+      const routed = validateReplayInput({
+        ...input,
+        compatibility: {
+          ...input.compatibility,
+          tuple: { ...input.compatibility.tuple, [field]: `${field}:wrong` },
+        },
+      })
 
       expect(result.ok).toBe(false)
       if (result.ok) return
@@ -268,6 +325,7 @@ describe("validateChronicle", () => {
         current: false,
         publishable: false,
       })
+      expect(routed).toEqual(result)
       expect(JSON.stringify(result)).not.toContain("ChronicleValidationError")
     },
   )
