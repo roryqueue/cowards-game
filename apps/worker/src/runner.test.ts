@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
+import { spawnSync } from "node:child_process"
+import path from "node:path"
 import { describe, expect, it, vi } from "vitest"
 import type { Pool } from "pg"
 import type { WorkerRunnerDependencies } from "./runner.js"
@@ -190,6 +192,27 @@ describe("retired direct TypeScript Match worker", () => {
     }
   })
 
+  it("launches with one safe retirement payload and no stack or host path", () => {
+    const workerRoot = path.resolve(__dirname, "..")
+    const tsx = path.resolve(workerRoot, "../../node_modules/.bin/tsx")
+    const result = spawnSync(tsx, ["src/index.ts"], {
+      cwd: workerRoot,
+      encoding: "utf8",
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stdout).toBe("")
+    expect(result.stderr).toBe(
+      `${JSON.stringify({
+        code: RETIRED_CODE,
+        message: RETIRED_MESSAGE,
+      })}\n`,
+    )
+    expect(result.stderr).not.toMatch(
+      /\/Users\/|postgres|database_url|source|artifact|memory|objective|credential|diagnostic|stack/i,
+    )
+  })
+
   it("does not accept an executable default dependency set", () => {
     const source = readFileSync(`${__dirname}/runner.ts`, "utf8")
     expect(source).not.toMatch(/const\s+defaultDependencies\s*=/)
@@ -197,4 +220,3 @@ describe("retired direct TypeScript Match worker", () => {
     expect(source).not.toMatch(/workerPurpose\s*===\s*["'](?:rollback|test|parity)/)
   })
 })
-
