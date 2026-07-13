@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 257
 current_phase_name: canonical-transition-kernel-and-v1-4-semantic-integrity
 status: executing
-stopped_at: Completed 257-02-PLAN.md
-last_updated: "2026-07-13T15:02:15.207Z"
+stopped_at: Completed 257-03-PLAN.md
+last_updated: "2026-07-13T15:36:22.000Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 257 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 41
-  completed_plans: 21
-  percent: 51
+  completed_plans: 22
+  percent: 54
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 257 (canonical-transition-kernel-and-v1-4-semantic-integrity) — EXECUTING
-Plan: 3 of 22
+Plan: 4 of 22
 Status: Ready to execute
 Last activity: 2026-07-13 — Phase 257 execution started
 
-Progress: [█████░░░░░] 51%
+Progress: [█████░░░░░] 54%
 
 ## Durable Decisions
 
@@ -62,7 +62,7 @@ Progress: [█████░░░░░] 51%
 **Resume file:** None
 
 Last session: 2026-07-13T15:02:15.191Z
-Stopped at: Completed 257-02-PLAN.md
+Stopped at: Completed 257-03-PLAN.md
 Next command: `$gsd-execute-phase 257`
 
 ## Performance Metrics
@@ -88,8 +88,13 @@ Next command: `$gsd-execute-phase 257`
 | Phase 256 P14 | 37min | 3 tasks | 20 files |
 | Phase 257 P01 | 12min | 2 tasks | 4 files |
 | Phase 257 P02 | 9min | 2 tasks | 2 files |
+| Phase 257 P03 | 17min | 3 tasks | 3 files |
 
 ## Decisions
+
+- [Phase 257]: Compatibility evidence locks twenty scenario hashes plus thirteen observation-dimension roots. — This detects both named-scenario drift and the affected state/event/runtime/observation dimension without silently rewriting a golden.
+- [Phase 257]: D-12 is preservation, not fixture-regeneration authority; only D-09, D-10, D-11, D-13, D-14, and D-15 are accepted. — Unknown, missing, duplicate, and preserved-ruling IDs fail closed at the update boundary.
+- [Phase 257]: System failure compatibility evidence retains the unchanged pre-transition state and zero canonical events. — Infrastructure failure never becomes gameplay mutation or a player penalty.
 
 - [Phase 257]: Only the exact `[EXPECTED_RED:MISSING_KERNEL_AUTHORITY]` assertion qualifies as the one-kernel RED. — Test discovery, imports, compilation, configuration, and timeout failures cannot counterfeit progress.
 - [Phase 257]: The inactive future authority is exercised through the candidate-branded `CANDIDATE_MATCH_KERNEL` seam while current `runMatch` remains unchanged. — This preserves atomic activation and makes D-01 through D-04 executable before authority moves.
