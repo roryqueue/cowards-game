@@ -35,7 +35,7 @@ v1.37 establishes the smallest complete trust substrate needed before serious co
   3. Operators can classify affected historical results, invalidate and recompute derived standings when needed, while the original Match evidence and v1.4 interpretation remain immutable.
   4. Public/default safety surfaces expose only safe classifications and evidence identifiers, and structural monitors reject duplicate authorities and stale execution entry points.
 
-**Plans:** 10/19 plans executed
+**Plans:** 11/19 plans executed
 
 Plans:
 **Wave 1**
@@ -65,7 +65,7 @@ Plans:
 - [x] 256-05-PLAN.md — Migrate the active TypeScript Match and MatchSet creation writers transactionally.
 - [x] 256-06-PLAN.md — Preserve exact identity through TypeScript completion and Chronicle insertion.
 - [x] 256-07-PLAN.md — Resolve history read-only and apply append-only, compensatable governance.
-- [ ] 256-18-PLAN.md — Publish verified append-only evidence, authenticated certificate status, and lane controls through failure-safe signed installation.
+- [x] 256-18-PLAN.md — Publish verified append-only evidence, authenticated certificate status, and lane controls through failure-safe signed installation.
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
