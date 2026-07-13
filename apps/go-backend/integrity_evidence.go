@@ -8,7 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
+	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -94,6 +97,325 @@ type executableLaneEvidenceInput struct {
 type executableLaneEvidenceResult struct {
 	Status     executableLaneEvidenceStatus
 	ReasonCode string
+}
+
+type integrityEvidenceGateResult struct {
+	GateID string `json:"gateId"`
+	Passed bool   `json:"passed"`
+}
+
+type integrityEvidenceCertificateProjectionInput struct {
+	Kind                  string
+	CertificateID         string
+	CertificateVersion    string
+	CertificateRecordHash string
+	Status                string
+	IssuedAt              string
+	FreshUntil            string
+	GateResults           []integrityEvidenceGateResult
+	RestrictedProofIDs    []string
+	RestrictedProofLinks  []string
+}
+
+type integrityEvidenceProjectionInput struct {
+	Status             executableLaneEvidenceStatus
+	ReasonCode         string
+	EvaluatedAt        string
+	RegistryGeneration string
+	SemanticTupleID    string
+	Identity           goExecutableLaneIdentity
+	Certificates       []integrityEvidenceCertificateProjectionInput
+	CohortImpact       string
+}
+
+type publicIntegrityEvidenceRecord struct {
+	Kind       string `json:"kind"`
+	Version    string `json:"version"`
+	Hash       string `json:"hash"`
+	FreshUntil string `json:"freshUntil"`
+}
+
+type publicIntegrityEvidenceProjection struct {
+	Status          executableLaneEvidenceStatus    `json:"status"`
+	ReasonCategory  string                          `json:"reasonCategory"`
+	Message         string                          `json:"message"`
+	SemanticTupleID string                          `json:"semanticTupleId"`
+	Evidence        []publicIntegrityEvidenceRecord `json:"evidence"`
+	FreshnessDate   string                          `json:"freshnessDate"`
+}
+
+type operatorIntegrityEvidenceCertificate struct {
+	Kind                  string                        `json:"kind"`
+	CertificateID         string                        `json:"certificateId"`
+	CertificateVersion    string                        `json:"certificateVersion"`
+	CertificateRecordHash string                        `json:"certificateRecordHash"`
+	Status                string                        `json:"status"`
+	IssuedAt              string                        `json:"issuedAt"`
+	FreshUntil            string                        `json:"freshUntil"`
+	GateResults           []integrityEvidenceGateResult `json:"gateResults"`
+	RestrictedProofIDs    []string                      `json:"restrictedProofIds"`
+	RestrictedProofLinks  []string                      `json:"restrictedProofLinks"`
+}
+
+type operatorIntegrityEvidenceProjection struct {
+	Status             executableLaneEvidenceStatus           `json:"status"`
+	ReasonCode         string                                 `json:"reasonCode"`
+	EvaluatedAt        string                                 `json:"evaluatedAt"`
+	RegistryGeneration string                                 `json:"registryGeneration"`
+	Identity           goExecutableLaneIdentity               `json:"identity"`
+	Gates              []operatorIntegrityEvidenceCertificate `json:"gates"`
+	Remediation        string                                 `json:"remediation"`
+	CohortImpact       string                                 `json:"cohortImpact"`
+}
+
+type integrityEvidenceReasonCopy struct {
+	Category    string
+	Message     string
+	Remediation string
+}
+
+var integrityEvidenceReasonPolicy = map[string]integrityEvidenceReasonCopy{
+	"EVIDENCE_CURRENT": {
+		Category: "ready", Message: "Current safety and competitive evidence is available.",
+		Remediation: "Keep the exact authority generation and both certificate references current.",
+	},
+	"OPERATOR_DISABLED": {
+		Category: "operator_disabled", Message: "This Strategy lane is temporarily unavailable.",
+		Remediation: "Remove the operator disable only after the incident is resolved; evidence will then be re-evaluated.",
+	},
+	"CONTAINMENT_MISSING": {
+		Category: "safety_evidence_unavailable", Message: "This Strategy lane is temporarily unavailable while current safety evidence is checked.",
+		Remediation: "Import a current containment certificate for the exact executable identity.",
+	},
+	"CONTAINMENT_STALE": {
+		Category: "safety_evidence_unavailable", Message: "This Strategy lane is temporarily unavailable while current safety evidence is refreshed.",
+		Remediation: "Refresh containment evidence and publish a current certificate reference.",
+	},
+	"CONTAINMENT_REVOKED": {
+		Category: "safety_evidence_unavailable", Message: "This Strategy lane is temporarily unavailable while safety evidence is reviewed.",
+		Remediation: "Resolve the revocation and import a new exact containment certificate.",
+	},
+	"CONTAINMENT_FAILED": {
+		Category: "safety_evidence_unavailable", Message: "This Strategy lane is unavailable because current safety checks did not pass.",
+		Remediation: "Repair the failed containment gates and recertify the exact lane identity.",
+	},
+	"CONTAINMENT_UNVERIFIABLE": {
+		Category: "safety_evidence_unavailable", Message: "This Strategy lane is temporarily unavailable while safety evidence is verified.",
+		Remediation: "Repair the trusted containment evidence path and publish a verifiable reference.",
+	},
+	"CONFORMANCE_MISSING": {
+		Category: "competitive_evidence_pending", Message: "This Strategy lane is available for exhibitions while current competitive evidence is checked.",
+		Remediation: "Run the required executable conformance corpus and import its exact certificate.",
+	},
+	"CONFORMANCE_STALE": {
+		Category: "competitive_evidence_pending", Message: "This Strategy lane is available for exhibitions while competitive evidence is refreshed.",
+		Remediation: "Re-run the executable conformance corpus and refresh the certificate.",
+	},
+	"CONFORMANCE_REVOKED": {
+		Category: "competitive_evidence_pending", Message: "This Strategy lane is available for exhibitions while competitive evidence is reviewed.",
+		Remediation: "Resolve the revocation and publish new exact conformance evidence.",
+	},
+	"CONFORMANCE_FAILED": {
+		Category: "competitive_evidence_pending", Message: "This Strategy lane remains exhibition-only because current competitive checks did not pass.",
+		Remediation: "Repair the failed conformance gates and rerun the complete corpus.",
+	},
+	"CONFORMANCE_UNVERIFIABLE": {
+		Category: "competitive_evidence_pending", Message: "This Strategy lane is available for exhibitions while competitive evidence is verified.",
+		Remediation: "Repair the trusted conformance evidence path and publish a verifiable reference.",
+	},
+	"IDENTITY_MISMATCH": {
+		Category: "safety_evidence_unavailable", Message: "This Strategy lane is temporarily unavailable while its current identity is verified.",
+		Remediation: "Rebuild evidence for the exact active provider, toolchain, adapter, artifact, build, and tuple identity.",
+	},
+	"TUPLE_UNKNOWN": {
+		Category: "safety_evidence_unavailable", Message: "This Strategy lane is unavailable for the requested compatibility profile.",
+		Remediation: "Use an exact registered semantic tuple identifier and complete expansion.",
+	},
+	"TUPLE_UNCERTIFIED": {
+		Category: "safety_evidence_unavailable", Message: "This Strategy lane is unavailable for the requested compatibility profile.",
+		Remediation: "Register and certify the exact semantic tuple before requesting execution.",
+	},
+	"REGISTRY_GENERATION_DRIFT": {
+		Category: "safety_evidence_unavailable", Message: "This Strategy lane is temporarily unavailable while current evidence is refreshed.",
+		Remediation: "Reload the active authority generation and obtain matching certificate references.",
+	},
+	"EVIDENCE_UNVERIFIABLE": {
+		Category: "safety_evidence_unavailable", Message: "This Strategy lane is temporarily unavailable while current evidence is verified.",
+		Remediation: "Restore the verified authority path before retrying.",
+	},
+}
+
+func projectPublicIntegrityEvidence(input integrityEvidenceProjectionInput) publicIntegrityEvidenceProjection {
+	status, reasonCode, copy := normalizedIntegrityEvidenceDecision(input.Status, input.ReasonCode)
+	_ = reasonCode
+	evidence := make([]publicIntegrityEvidenceRecord, 0, len(input.Certificates))
+	freshnessDate := ""
+	for _, certificate := range sortedIntegrityEvidenceCertificates(input.Certificates) {
+		evidence = append(evidence, publicIntegrityEvidenceRecord{
+			Kind: certificate.Kind, Version: certificate.CertificateVersion,
+			Hash: canonicalSafeEvidenceHash(certificate.CertificateRecordHash), FreshUntil: certificate.FreshUntil,
+		})
+		if parsed, err := time.Parse(canonicalJSONInstantLayout, certificate.FreshUntil); err == nil {
+			date := parsed.UTC().Format("2006-01-02")
+			if freshnessDate == "" || date < freshnessDate {
+				freshnessDate = date
+			}
+		}
+	}
+	projection := publicIntegrityEvidenceProjection{
+		Status: status, ReasonCategory: copy.Category, Message: copy.Message,
+		SemanticTupleID: input.SemanticTupleID, Evidence: evidence, FreshnessDate: freshnessDate,
+	}
+	if err := assertIntegrityEvidenceProjectionPrivacySafe(projection); err != nil {
+		return publicIntegrityEvidenceProjection{
+			Status: executableLaneEvidenceDisabled, ReasonCategory: integrityEvidenceReasonPolicy["EVIDENCE_UNVERIFIABLE"].Category,
+			Message:         integrityEvidenceReasonPolicy["EVIDENCE_UNVERIFIABLE"].Message,
+			SemanticTupleID: input.SemanticTupleID, Evidence: []publicIntegrityEvidenceRecord{}, FreshnessDate: "",
+		}
+	}
+	return projection
+}
+
+func projectOperatorIntegrityEvidence(input integrityEvidenceProjectionInput) operatorIntegrityEvidenceProjection {
+	status, reasonCode, copy := normalizedIntegrityEvidenceDecision(input.Status, input.ReasonCode)
+	certificates := sortedIntegrityEvidenceCertificates(input.Certificates)
+	gates := make([]operatorIntegrityEvidenceCertificate, 0, len(certificates))
+	for _, certificate := range certificates {
+		gates = append(gates, operatorIntegrityEvidenceCertificate{
+			Kind: certificate.Kind, CertificateID: certificate.CertificateID,
+			CertificateVersion:    certificate.CertificateVersion,
+			CertificateRecordHash: canonicalSafeEvidenceHash(certificate.CertificateRecordHash),
+			Status:                certificate.Status, IssuedAt: certificate.IssuedAt, FreshUntil: certificate.FreshUntil,
+			GateResults:          append([]integrityEvidenceGateResult{}, certificate.GateResults...),
+			RestrictedProofIDs:   append([]string{}, certificate.RestrictedProofIDs...),
+			RestrictedProofLinks: append([]string{}, certificate.RestrictedProofLinks...),
+		})
+	}
+	projection := operatorIntegrityEvidenceProjection{
+		Status: status, ReasonCode: reasonCode, EvaluatedAt: input.EvaluatedAt,
+		RegistryGeneration: input.RegistryGeneration, Identity: input.Identity, Gates: gates,
+		Remediation: copy.Remediation, CohortImpact: integrityEvidenceCohortImpact(status, input.CohortImpact),
+	}
+	if err := assertIntegrityEvidenceProjectionPrivacySafe(projection); err != nil {
+		return operatorIntegrityEvidenceProjection{
+			Status: executableLaneEvidenceDisabled, ReasonCode: "EVIDENCE_UNVERIFIABLE",
+			EvaluatedAt: input.EvaluatedAt, RegistryGeneration: input.RegistryGeneration,
+			Gates:        []operatorIntegrityEvidenceCertificate{},
+			Remediation:  integrityEvidenceReasonPolicy["EVIDENCE_UNVERIFIABLE"].Remediation,
+			CohortImpact: integrityEvidenceCohortImpact(executableLaneEvidenceDisabled, ""),
+		}
+	}
+	return projection
+}
+
+func normalizedIntegrityEvidenceDecision(status executableLaneEvidenceStatus, reasonCode string) (executableLaneEvidenceStatus, string, integrityEvidenceReasonCopy) {
+	copy, known := integrityEvidenceReasonPolicy[reasonCode]
+	if !known {
+		reasonCode = "EVIDENCE_UNVERIFIABLE"
+		copy = integrityEvidenceReasonPolicy[reasonCode]
+		status = executableLaneEvidenceDisabled
+	}
+	if status != executableLaneEvidenceDisabled && status != executableLaneEvidenceExhibitionOnly && status != executableLaneEvidenceCounted {
+		status = executableLaneEvidenceDisabled
+		reasonCode = "EVIDENCE_UNVERIFIABLE"
+		copy = integrityEvidenceReasonPolicy[reasonCode]
+	}
+	return status, reasonCode, copy
+}
+
+func sortedIntegrityEvidenceCertificates(values []integrityEvidenceCertificateProjectionInput) []integrityEvidenceCertificateProjectionInput {
+	cloned := append([]integrityEvidenceCertificateProjectionInput{}, values...)
+	sort.Slice(cloned, func(i, j int) bool {
+		return cloned[i].Kind < cloned[j].Kind || (cloned[i].Kind == cloned[j].Kind && cloned[i].CertificateID < cloned[j].CertificateID)
+	})
+	return cloned
+}
+
+func canonicalSafeEvidenceHash(value string) string {
+	if isPrefixedLowerSHA256(value) {
+		return value
+	}
+	if isLowerSHA256(value) {
+		return "sha256:" + value
+	}
+	return ""
+}
+
+func integrityEvidenceCohortImpact(status executableLaneEvidenceStatus, configured string) string {
+	if strings.TrimSpace(configured) != "" {
+		return configured
+	}
+	switch status {
+	case executableLaneEvidenceCounted:
+		return "New execution may produce counted results while evidence remains current."
+	case executableLaneEvidenceExhibitionOnly:
+		return "New execution may produce exhibition evidence only; counted results are blocked."
+	default:
+		return "New execution is disabled; no counted or exhibition result may be produced."
+	}
+}
+
+var integrityEvidenceForbiddenFields = []string{
+	"source", "sourceText", "bytesBase64", "artifactBytesBase64", "certificateBytes", "certificateBytesBase64",
+	"evidenceBytes", "evidenceBytesBase64", "originalSourceBytes", "normalizedSourceBytes", "strategySource",
+	"strategyMemory", "soldierMemory", "objective", "objectivePayload", "ownerDebug", "ownerPrivate",
+	"exactAwarenessGrid", "awarenessGrid", "rawAwarenessGrid", "rawRuntimeDetails", "runtimeDetails",
+	"privateRuntime", "privateDiagnostics", "toolchainDiagnostics", "hostDiagnostics", "privateError",
+	"stack", "stackTrace", "stderr", "password", "passwordHash", "authorization", "credential", "credentials",
+	"apiKey", "token", "tokens", "accessToken", "refreshToken", "session", "sessions", "sessionId",
+	"hostPath", "hostPaths", "artifactPath", "artifactPaths", "proofStoragePath", "proofStoragePaths",
+	"evidenceStoragePath", "evidenceStoragePaths", "packagePath", "packagePaths", "pythonRuntime",
+	"databaseUrl", "databaseURL", "dbDsn", "dbDSN", "dsn", "runtimeInternal", "runtimeInternals",
+	"privateRuntimeInternal", "privateRuntimeInternals", "securityInternals", "exploitDetails",
+}
+
+var integrityEvidenceForbiddenMarkers = []string{
+	"PRIVATE_", "GOLDEN_PRIVATE_", "DATABASE_URL", "postgres://", "postgresql://", "Bearer ",
+	"stack trace", "Traceback", "site-packages", "File \"", "/python_runtime_host.py",
+	"COWARDS_PROVIDER_VALIDATION_SECRET", "/var/lib/cowards/", "exploit payload",
+}
+
+func assertIntegrityEvidenceProjectionPrivacySafe(value any) error {
+	serialized, err := json.Marshal(value)
+	if err != nil {
+		return errors.New("integrity evidence projection is not serializable")
+	}
+	var decoded any
+	if err := json.Unmarshal(serialized, &decoded); err != nil {
+		return errors.New("integrity evidence projection is not valid JSON")
+	}
+	forbidden := make(map[string]struct{}, len(integrityEvidenceForbiddenFields))
+	for _, field := range integrityEvidenceForbiddenFields {
+		forbidden[normalizePublicOutputKey(field)] = struct{}{}
+	}
+	return visitIntegrityEvidenceProjection(decoded, "$", forbidden)
+}
+
+func visitIntegrityEvidenceProjection(value any, path string, forbidden map[string]struct{}) error {
+	switch typed := value.(type) {
+	case []any:
+		for index, item := range typed {
+			if err := visitIntegrityEvidenceProjection(item, fmt.Sprintf("%s[%d]", path, index), forbidden); err != nil {
+				return err
+			}
+		}
+	case map[string]any:
+		for key, item := range typed {
+			if _, denied := forbidden[normalizePublicOutputKey(key)]; denied {
+				return errors.New("integrity evidence projection contains a forbidden field")
+			}
+			if err := visitIntegrityEvidenceProjection(item, path+"."+key, forbidden); err != nil {
+				return err
+			}
+		}
+	case string:
+		for _, marker := range integrityEvidenceForbiddenMarkers {
+			if strings.Contains(typed, marker) {
+				return errors.New("integrity evidence projection contains a forbidden marker")
+			}
+		}
+	}
+	return nil
 }
 
 func parseIntegrityAuthorityManifest(serialized []byte) (*integrityAuthorityManifest, error) {
