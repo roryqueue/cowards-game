@@ -35,6 +35,10 @@ export type V137IntegrityBoundaryFindingCode =
   | "RUNTIME_REQUEST_ENVELOPE_DRIFT"
   | "GO_RECEIPT_AUTHORITY_DRIFT"
   | "KNOWN_PHASE_257_DEBT_DRIFT"
+  | "PHASE_257_REPLAY_SCHEDULER"
+  | "PHASE_257_RUNTIME_REPLAY_EXECUTION"
+  | "PHASE_257_CONTIGUOUS_ACTIVATION_ENTRY"
+  | "PHASE_257_DUPLICATE_LIFECYCLE_LOOP"
   | "AUDIT_ARTIFACT_MISSING"
   | "AUDIT_ARTIFACT_INVALID"
   | "AUDIT_METADATA_DRIFT"
@@ -61,6 +65,7 @@ export interface V137IntegrityBoundaryAnalysis {
 export interface AnalyzeV137IntegritySourcesOptions {
   enforceRepositoryContracts?: boolean
   enforceKnownDebtFingerprints?: boolean
+  enforcePhase257RedContracts?: boolean
 }
 
 const sha256 = (value: string): string =>
@@ -94,21 +99,29 @@ export const assertV137IntegrityPublicPayload = (value: unknown): void => {
   const visit = (candidate: unknown, pathParts: readonly string[]): void => {
     if (typeof candidate === "string") {
       if (/\/(?:Users|home)\//u.test(candidate)) {
-        throw new Error(`public integrity payload contains host path at ${pathParts.join(".")}`)
+        throw new Error(
+          `public integrity payload contains host path at ${pathParts.join(".")}`,
+        )
       }
       if (/BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY/u.test(candidate)) {
-        throw new Error(`public integrity payload contains private key at ${pathParts.join(".")}`)
+        throw new Error(
+          `public integrity payload contains private key at ${pathParts.join(".")}`,
+        )
       }
       return
     }
     if (Array.isArray(candidate)) {
-      candidate.forEach((entry, index) => visit(entry, [...pathParts, String(index)]))
+      candidate.forEach((entry, index) =>
+        visit(entry, [...pathParts, String(index)]),
+      )
       return
     }
     if (!candidate || typeof candidate !== "object") return
     for (const [key, nested] of Object.entries(candidate)) {
       if (restrictedPublicKeys.has(key)) {
-        throw new Error(`public integrity payload contains restricted key ${key}`)
+        throw new Error(
+          `public integrity payload contains restricted key ${key}`,
+        )
       }
       visit(nested, [...pathParts, key])
     }
@@ -118,8 +131,7 @@ export const assertV137IntegrityPublicPayload = (value: unknown): void => {
 
 const auditCommand =
   "pnpm exec tsx .planning/artifacts/v2.0-core-rules-audit/reproduce-core-rule-gaps.ts"
-const auditJsonPath =
-  ".planning/artifacts/v1.37-core-rules-audit-baseline.json"
+const auditJsonPath = ".planning/artifacts/v1.37-core-rules-audit-baseline.json"
 const auditMarkdownPath =
   ".planning/artifacts/v1.37-core-rules-audit-baseline.md"
 
@@ -216,7 +228,11 @@ export const analyzeV137CoreRulesAuditBaseline = (
     detail: string,
   ): void => findings.push({ code, path: repoPath, line: 1, detail })
   if (!isRecord(input.baseline)) {
-    add("AUDIT_ARTIFACT_INVALID", auditJsonPath, "Audit baseline must be an object.")
+    add(
+      "AUDIT_ARTIFACT_INVALID",
+      auditJsonPath,
+      "Audit baseline must be an object.",
+    )
     return {
       findings,
       inventoriedFiles: 0,
@@ -283,24 +299,26 @@ export const analyzeV137CoreRulesAuditBaseline = (
     )
   }
   const reproduced = isRecord(input.reproduced) ? input.reproduced : {}
-  exactAuditProbeMetadata.forEach(([id, classification, futurePhaseOwner], index) => {
-    const probe = probes[index]
-    const observed = exactAuditObservations[id]
-    if (
-      !isRecord(probe) ||
-      probe.id !== id ||
-      probe.classification !== classification ||
-      probe.futurePhaseOwner !== futurePhaseOwner ||
-      stableJson(probe.observed) !== stableJson(observed) ||
-      stableJson(reproduced[id]) !== stableJson(observed)
-    ) {
-      add(
-        "AUDIT_OBSERVATION_DRIFT",
-        auditJsonPath,
-        `Exact approved observation drifted for ${id}.`,
-      )
-    }
-  })
+  exactAuditProbeMetadata.forEach(
+    ([id, classification, futurePhaseOwner], index) => {
+      const probe = probes[index]
+      const observed = exactAuditObservations[id]
+      if (
+        !isRecord(probe) ||
+        probe.id !== id ||
+        probe.classification !== classification ||
+        probe.futurePhaseOwner !== futurePhaseOwner ||
+        stableJson(probe.observed) !== stableJson(observed) ||
+        stableJson(reproduced[id]) !== stableJson(observed)
+      ) {
+        add(
+          "AUDIT_OBSERVATION_DRIFT",
+          auditJsonPath,
+          `Exact approved observation drifted for ${id}.`,
+        )
+      }
+    },
+  )
   const summary = input.baseline.summary
   if (
     !isRecord(summary) ||
@@ -314,7 +332,9 @@ export const analyzeV137CoreRulesAuditBaseline = (
       "Audit summary counts must remain six defects plus one preserved ruling.",
     )
   }
-  if (input.markdown !== renderV137CoreRulesAuditBaselineMarkdown(input.baseline)) {
+  if (
+    input.markdown !== renderV137CoreRulesAuditBaselineMarkdown(input.baseline)
+  ) {
     add(
       "AUDIT_MARKDOWN_DRIFT",
       auditMarkdownPath,
@@ -337,12 +357,14 @@ export const checkV137CoreRulesAuditBaseline = (
   const markdownAbsolute = path.join(repoRoot, auditMarkdownPath)
   if (!existsSync(jsonAbsolute) || !existsSync(markdownAbsolute)) {
     return {
-      findings: [{
-        code: "AUDIT_ARTIFACT_MISSING",
-        path: !existsSync(jsonAbsolute) ? auditJsonPath : auditMarkdownPath,
-        line: 1,
-        detail: "The current-HEAD core-rules audit baseline is missing.",
-      }],
+      findings: [
+        {
+          code: "AUDIT_ARTIFACT_MISSING",
+          path: !existsSync(jsonAbsolute) ? auditJsonPath : auditMarkdownPath,
+          line: 1,
+          detail: "The current-HEAD core-rules audit baseline is missing.",
+        },
+      ],
       inventoriedFiles: 0,
       creationCalls: 0,
       sqlWriters: 0,
@@ -355,12 +377,14 @@ export const checkV137CoreRulesAuditBaseline = (
     baseline = JSON.parse(baselineJson) as unknown
   } catch {
     return {
-      findings: [{
-        code: "AUDIT_ARTIFACT_INVALID",
-        path: auditJsonPath,
-        line: 1,
-        detail: "The current-HEAD core-rules audit baseline is invalid JSON.",
-      }],
+      findings: [
+        {
+          code: "AUDIT_ARTIFACT_INVALID",
+          path: auditJsonPath,
+          line: 1,
+          detail: "The current-HEAD core-rules audit baseline is invalid JSON.",
+        },
+      ],
       inventoriedFiles: 1,
       creationCalls: 0,
       sqlWriters: 0,
@@ -386,12 +410,15 @@ export const checkV137CoreRulesAuditBaseline = (
   }
   if (reproduced === undefined) {
     return {
-      findings: [{
-        code: "AUDIT_REPRODUCTION_FAILED",
-        path: ".planning/artifacts/v2.0-core-rules-audit/reproduce-core-rule-gaps.ts",
-        line: 1,
-        detail: "The committed core-rules reproduction did not return valid JSON.",
-      }],
+      findings: [
+        {
+          code: "AUDIT_REPRODUCTION_FAILED",
+          path: ".planning/artifacts/v2.0-core-rules-audit/reproduce-core-rule-gaps.ts",
+          line: 1,
+          detail:
+            "The committed core-rules reproduction did not return valid JSON.",
+        },
+      ],
       inventoriedFiles: 2,
       creationCalls: 0,
       sqlWriters: 0,
@@ -406,12 +433,16 @@ export const checkV137CoreRulesAuditBaseline = (
   if (baselineJson !== `${JSON.stringify(baseline, null, 2)}\n`) {
     analysis = {
       ...analysis,
-      findings: [...analysis.findings, {
-        code: "AUDIT_ARTIFACT_INVALID",
-        path: auditJsonPath,
-        line: 1,
-        detail: "The machine audit artifact is not in canonical deterministic formatting.",
-      }],
+      findings: [
+        ...analysis.findings,
+        {
+          code: "AUDIT_ARTIFACT_INVALID",
+          path: auditJsonPath,
+          line: 1,
+          detail:
+            "The machine audit artifact is not in canonical deterministic formatting.",
+        },
+      ],
     }
   }
   if (isRecord(baseline) && isRecord(baseline.productionSourceDiffBasis)) {
@@ -430,22 +461,27 @@ export const checkV137CoreRulesAuditBaseline = (
       ],
       { cwd: repoRoot, encoding: "utf8", timeout: 10_000 },
     )
-    const sortedPaths = paths.status === 0
-      ? paths.stdout.split("\n").filter(Boolean).sort().join("\n") + "\n"
-      : ""
+    const sortedPaths =
+      paths.status === 0
+        ? paths.stdout.split("\n").filter(Boolean).sort().join("\n") + "\n"
+        : ""
     if (
       paths.status !== 0 ||
-      sortedPaths.split("\n").filter(Boolean).length !== basis.changedPathCount ||
+      sortedPaths.split("\n").filter(Boolean).length !==
+        basis.changedPathCount ||
       sha256(sortedPaths) !== basis.changedPathListSha256
     ) {
       return {
         ...analysis,
-        findings: [...analysis.findings, {
-          code: "AUDIT_METADATA_DRIFT",
-          path: auditJsonPath,
-          line: 1,
-          detail: "Production-source diff basis no longer resolves exactly.",
-        }],
+        findings: [
+          ...analysis.findings,
+          {
+            code: "AUDIT_METADATA_DRIFT",
+            path: auditJsonPath,
+            line: 1,
+            detail: "Production-source diff basis no longer resolves exactly.",
+          },
+        ],
       }
     }
   }
@@ -653,7 +689,8 @@ const analyzeSource = (
     }
     if (ts.isVariableStatement(statement)) {
       for (const declaration of statement.declarationList.declarations) {
-        if (ts.isIdentifier(declaration.name)) declarationNames.add(declaration.name.text)
+        if (ts.isIdentifier(declaration.name))
+          declarationNames.add(declaration.name.text)
       }
     }
   }
@@ -662,46 +699,80 @@ const analyzeSource = (
     declarationNames.has("CANONICAL_AUTHORITY_REGISTRY") &&
     repoPath !== "packages/spec/src/integrity-authority.ts"
   ) {
-    add("DUPLICATE_AUTHORITY_OWNER", fileNode, "Canonical owner registry may be declared only by @cowards/spec.")
+    add(
+      "DUPLICATE_AUTHORITY_OWNER",
+      fileNode,
+      "Canonical owner registry may be declared only by @cowards/spec.",
+    )
   }
   if (
     declarationNames.has("scheduleTrialLadderSeason") &&
     repoPath !== "packages/persistence/src/ladder.ts"
   ) {
-    add("DUPLICATE_SCHEDULER_AUTHORITY", fileNode, "Set scheduling policy has one persistence owner.")
+    add(
+      "DUPLICATE_SCHEDULER_AUTHORITY",
+      fileNode,
+      "Set scheduling policy has one persistence owner.",
+    )
   }
   if (
     repoPath.startsWith("apps/web/") &&
     /(?:from\s+["']@cowards\/engine["']|resolveAction\s*\()/u.test(source)
   ) {
-    add("UI_RULE_AUTHORITY", fileNode, "Web code may project rules but may not execute them.")
+    add(
+      "UI_RULE_AUTHORITY",
+      fileNode,
+      "Web code may project rules but may not execute them.",
+    )
   }
   if (
     declarationNames.has("evaluateExecutableLaneEligibility") &&
     repoPath !== "packages/spec/src/runtime-evidence.ts"
   ) {
-    add("DUPLICATE_ADAPTER_CLASSIFIER", fileNode, "Executable lane classification has one spec owner.")
+    add(
+      "DUPLICATE_ADAPTER_CLASSIFIER",
+      fileNode,
+      "Executable lane classification has one spec owner.",
+    )
   }
   if (
     declarationNames.has("ArenaVariantSchema") &&
     repoPath !== "packages/spec/src/schemas.ts"
   ) {
-    add("DUPLICATE_ARENA_AUTHORITY", fileNode, "Arena validation has one spec owner.")
+    add(
+      "DUPLICATE_ARENA_AUTHORITY",
+      fileNode,
+      "Arena validation has one spec owner.",
+    )
   }
   if (/countedResultsAllowed\s*\?\s*["']counted["']/u.test(source)) {
-    add("STATIC_PROMOTION_PATH", fileNode, "Descriptive registry flags cannot promote counted execution.")
+    add(
+      "STATIC_PROMOTION_PATH",
+      fileNode,
+      "Descriptive registry flags cannot promote counted execution.",
+    )
   }
   if (
-    /(?:accepted|eligible|supported)\s*=.*(?:input\.)?(?:rules|engine|runtimeAbi|chronicle|arenaCatalog|setPolicy)\s*===/u.test(source) &&
+    /(?:accepted|eligible|supported)\s*=.*(?:input\.)?(?:rules|engine|runtimeAbi|chronicle|arenaCatalog|setPolicy)\s*===/u.test(
+      source,
+    ) &&
     !source.includes("resolveCanonicalCompatibilityTuple")
   ) {
-    add("PARTIAL_TUPLE_ACCEPTANCE", fileNode, "Compatibility consumers must resolve the complete exact tuple.")
+    add(
+      "PARTIAL_TUPLE_ACCEPTANCE",
+      fileNode,
+      "Compatibility consumers must resolve the complete exact tuple.",
+    )
   }
   if (
     /apps\/web\/app\/api\/.+\/route\.tsx?$/u.test(repoPath) &&
     /\b(?:executeMatch|runMatch|runWorkerOnce|runWorkerLoop)\s*\(/u.test(source)
   ) {
-    add("PUBLIC_EXECUTION_ROUTE", fileNode, "Public web routes cannot own Strategy or Match execution.")
+    add(
+      "PUBLIC_EXECUTION_ROUTE",
+      fileNode,
+      "Public web routes cannot own Strategy or Match execution.",
+    )
   }
   if (
     /insert\s+into\s+runtime_evidence_(?:verified_attestations|certificates)\b/iu.test(
@@ -715,14 +786,38 @@ const analyzeSource = (
       "Verified attestations and certificates may be written only by verified attestation import.",
     )
   }
-  if (/trustDomain\s*===?\s*["']fixture["'][\s\S]{0,120}["']counted["']/u.test(source)) {
-    add("FIXTURE_PRODUCTION_PROMOTION", fileNode, "Fixture trust cannot grant production counted eligibility.")
+  if (
+    /trustDomain\s*===?\s*["']fixture["'][\s\S]{0,120}["']counted["']/u.test(
+      source,
+    )
+  ) {
+    add(
+      "FIXTURE_PRODUCTION_PROMOTION",
+      fileNode,
+      "Fixture trust cannot grant production counted eligibility.",
+    )
   }
-  if (/(?:gateName|documentation|docs)[\s\S]{0,100}(?:passed|approved)[\s\S]{0,100}["']counted["']/iu.test(source)) {
-    add("DECLARATION_PROMOTION_PATH", fileNode, "Gate names or documentation cannot mint executable evidence.")
+  if (
+    /(?:gateName|documentation|docs)[\s\S]{0,100}(?:passed|approved)[\s\S]{0,100}["']counted["']/iu.test(
+      source,
+    )
+  ) {
+    add(
+      "DECLARATION_PROMOTION_PATH",
+      fileNode,
+      "Gate names or documentation cannot mint executable evidence.",
+    )
   }
-  if (/request\.(?:containmentCertificate|conformanceCertificate|certificateBody|attestationBody)\b/u.test(source)) {
-    add("REQUEST_AUTHORITY_BODY", fileNode, "Runtime requests may carry references, never authority bodies.")
+  if (
+    /request\.(?:containmentCertificate|conformanceCertificate|certificateBody|attestationBody)\b/u.test(
+      source,
+    )
+  ) {
+    add(
+      "REQUEST_AUTHORITY_BODY",
+      fileNode,
+      "Runtime requests may carry references, never authority bodies.",
+    )
   }
 
   const sqlPattern =
@@ -745,6 +840,118 @@ const analyzeSource = (
   return { findings, creationCalls, sqlWriters, legacyWorkerConsumers }
 }
 
+const analyzePhase257RedSources = (
+  sources: Readonly<Record<string, string>>,
+): readonly V137IntegrityBoundaryFinding[] => {
+  const findings: V137IntegrityBoundaryFinding[] = []
+  const add = (
+    code: V137IntegrityBoundaryFindingCode,
+    repoPath: string,
+    sourceFile: ts.SourceFile,
+    node: ts.Node,
+    detail: string,
+  ): void => {
+    const line =
+      sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line +
+      1
+    findings.push({ code, path: repoPath, line, detail })
+  }
+
+  for (const [repoPath, source] of Object.entries(sources).sort(
+    ([left], [right]) => left.localeCompare(right),
+  )) {
+    const normalizedPath = normalized(repoPath)
+    const sourceFile = ts.createSourceFile(
+      normalizedPath,
+      source,
+      ts.ScriptTarget.Latest,
+      true,
+    )
+    const identifiers = new Set<string>()
+    const loops: ts.IterationStatement[] = []
+    const variableDeclarations = new Map<string, ts.VariableDeclaration>()
+
+    const visit = (node: ts.Node): void => {
+      if (ts.isIdentifier(node)) identifiers.add(node.text)
+      if (
+        ts.isForStatement(node) ||
+        ts.isForInStatement(node) ||
+        ts.isForOfStatement(node) ||
+        ts.isWhileStatement(node) ||
+        ts.isDoStatement(node)
+      ) {
+        loops.push(node)
+      }
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+        variableDeclarations.set(node.name.text, node)
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(sourceFile)
+
+    const contiguous = variableDeclarations.get("resolveActivation")
+    if (contiguous !== undefined) {
+      add(
+        "PHASE_257_CONTIGUOUS_ACTIVATION_ENTRY",
+        normalizedPath,
+        sourceFile,
+        contiguous,
+        "The stale contiguous resolveActivation entry remains executable.",
+      )
+    }
+
+    const replayBuilder = variableDeclarations.get("buildChronicleFromMatch")
+    if (
+      normalizedPath.startsWith("packages/replay/") &&
+      replayBuilder !== undefined &&
+      identifiers.has("resolveRound") &&
+      identifiers.has("resolveContraction")
+    ) {
+      add(
+        "PHASE_257_REPLAY_SCHEDULER",
+        normalizedPath,
+        sourceFile,
+        replayBuilder,
+        "Replay still advances gameplay through its own Match scheduler.",
+      )
+    }
+
+    if (
+      normalizedPath.startsWith("apps/runtime-service/") &&
+      identifiers.has("buildChronicleFromMatch")
+    ) {
+      const firstReference =
+        sourceFile.statements.find((statement) =>
+          statement.getText(sourceFile).includes("buildChronicleFromMatch"),
+        ) ?? sourceFile
+      add(
+        "PHASE_257_RUNTIME_REPLAY_EXECUTION",
+        normalizedPath,
+        sourceFile,
+        firstReference,
+        "Runtime-service still enters Match execution through replay authority.",
+      )
+    }
+
+    if (
+      !normalizedPath.startsWith("packages/engine/") &&
+      loops.length > 0 &&
+      identifiers.has("resolveRound") &&
+      identifiers.has("resolveContraction")
+    ) {
+      add(
+        "PHASE_257_DUPLICATE_LIFECYCLE_LOOP",
+        normalizedPath,
+        sourceFile,
+        loops[0]!,
+        "A non-engine lifecycle loop advances Round and Contraction behavior.",
+      )
+    }
+  }
+
+  return findings
+}
+
 export const analyzeV137IntegritySources = (
   sources: Readonly<Record<string, string>>,
   options: AnalyzeV137IntegritySourcesOptions = {},
@@ -753,8 +960,13 @@ export const analyzeV137IntegritySources = (
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([repoPath, source]) => analyzeSource(normalized(repoPath), source))
   const findings = analyses.flatMap((analysis) => analysis.findings)
+  if (options.enforcePhase257RedContracts) {
+    findings.push(...analyzePhase257RedSources(sources))
+  }
   if (options.enforceKnownDebtFingerprints) {
-    for (const [key, expected] of Object.entries(knownPhase257DebtFingerprints)) {
+    for (const [key, expected] of Object.entries(
+      knownPhase257DebtFingerprints,
+    )) {
       const separator = key.lastIndexOf("#")
       const repoPath = key.slice(0, separator)
       const symbol = key.slice(separator + 1)
@@ -767,7 +979,10 @@ export const analyzeV137IntegritySources = (
         for (const statement of file.statements) {
           if (!ts.isVariableStatement(statement)) continue
           for (const declaration of statement.declarationList.declarations) {
-            if (ts.isIdentifier(declaration.name) && declaration.name.text === symbol) {
+            if (
+              ts.isIdentifier(declaration.name) &&
+              declaration.name.text === symbol
+            ) {
               declarationText = declaration.getText(file)
             }
           }
@@ -817,12 +1032,22 @@ export const analyzeV137IntegritySources = (
     }
     requireMarkers(
       "packages/persistence/src/runtime-evidence-import.ts",
-      ["importVerifiedRuntimeEvidenceAttestation", "verifyRuntimeEvidenceAttestation(immutableInput)", "Sole application-level certificate writer"],
+      [
+        "importVerifiedRuntimeEvidenceAttestation",
+        "verifyRuntimeEvidenceAttestation(immutableInput)",
+        "Sole application-level certificate writer",
+      ],
       "AUTHORITY_CHAIN_DRIFT",
     )
     requireMarkers(
       "packages/persistence/src/runtime-evidence-authority-publisher.ts",
-      ["withSerializableTransaction", "verifyImport", "runtime_evidence_authority_publication_sources", "installRuntimeEvidenceAuthorityPublication", "v1.37-runtime-evidence-authority-install-receipt-v1"],
+      [
+        "withSerializableTransaction",
+        "verifyImport",
+        "runtime_evidence_authority_publication_sources",
+        "installRuntimeEvidenceAuthorityPublication",
+        "v1.37-runtime-evidence-authority-install-receipt-v1",
+      ],
       "AUTHORITY_CHAIN_DRIFT",
     )
     requireMarkers(
@@ -861,7 +1086,11 @@ export const analyzeV137IntegritySources = (
     )
     requireMarkers(
       "apps/go-backend/runtime_evidence_authority.go",
-      ["ed25519.Verify", "installRuntimeEvidenceAuthorityHighWater", "MinimumBundleHash"],
+      [
+        "ed25519.Verify",
+        "installRuntimeEvidenceAuthorityHighWater",
+        "MinimumBundleHash",
+      ],
       "AUTHORITY_CHAIN_DRIFT",
     )
     requireMarkers(
@@ -888,17 +1117,32 @@ export const analyzeV137IntegritySources = (
     )
     requireMarkers(
       "apps/runtime-service/src/execute-match.test.ts",
-      ["createFixtureRuntimeExecutionEvidenceSnapshot", "createFixtureRuntimeEvidenceAuthorityLoader", "evidenceSnapshot", "fixture-only:untrusted"],
+      [
+        "createFixtureRuntimeExecutionEvidenceSnapshot",
+        "createFixtureRuntimeEvidenceAuthorityLoader",
+        "evidenceSnapshot",
+        "fixture-only:untrusted",
+      ],
       "RUNTIME_REQUEST_ENVELOPE_DRIFT",
     )
     requireMarkers(
       "apps/runtime-service/src/counted-safety.test.ts",
-      ["createFixtureRuntimeExecutionAuthorityContext", "evidenceSnapshot", "authorityLoader", "exhibition_only"],
+      [
+        "createFixtureRuntimeExecutionAuthorityContext",
+        "evidenceSnapshot",
+        "authorityLoader",
+        "exhibition_only",
+      ],
       "RUNTIME_REQUEST_ENVELOPE_DRIFT",
     )
     requireMarkers(
       "apps/runtime-service/src/four-language-parity.test.ts",
-      ["createFixtureRuntimeExecutionEvidenceSnapshot", "createFixtureRuntimeEvidenceAuthorityLoader", "evidenceSnapshot", "fourLanguageGoldenPairs"],
+      [
+        "createFixtureRuntimeExecutionEvidenceSnapshot",
+        "createFixtureRuntimeEvidenceAuthorityLoader",
+        "evidenceSnapshot",
+        "fourLanguageGoldenPairs",
+      ],
       "RUNTIME_REQUEST_ENVELOPE_DRIFT",
     )
   }
@@ -973,7 +1217,8 @@ const collectTypeScriptSources = (
     "apps/go-backend/integrity_creation.go",
   ]) {
     const absolutePath = path.join(repoRoot, repoPath)
-    if (existsSync(absolutePath)) sources[repoPath] = readFileSync(absolutePath, "utf8")
+    if (existsSync(absolutePath))
+      sources[repoPath] = readFileSync(absolutePath, "utf8")
   }
   return sources
 }
@@ -981,10 +1226,13 @@ const collectTypeScriptSources = (
 export const analyzeV137IntegrityBoundaries = (
   repoRoot = defaultRepoRoot,
 ): V137IntegrityBoundaryAnalysis => {
-  const structural = analyzeV137IntegritySources(collectTypeScriptSources(repoRoot), {
-    enforceRepositoryContracts: true,
-    enforceKnownDebtFingerprints: true,
-  })
+  const structural = analyzeV137IntegritySources(
+    collectTypeScriptSources(repoRoot),
+    {
+      enforceRepositoryContracts: true,
+      enforceKnownDebtFingerprints: true,
+    },
+  )
   const audit = checkV137CoreRulesAuditBaseline(repoRoot)
   return {
     ...structural,

@@ -49,9 +49,7 @@ const expectRepositoryContractFinding = (
       enforceRepositoryContracts: true,
     }).findings,
   ).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({ path: repoPath, code }),
-    ]),
+    expect.arrayContaining([expect.objectContaining({ path: repoPath, code })]),
   )
 }
 
@@ -184,9 +182,12 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
       "const authority = request.containmentCertificate",
       "REQUEST_AUTHORITY_BODY",
     ],
-  ])("rejects focused integrity bypass in %s", (repoPath, source, expectedCode) => {
-    expectBypass(repoPath, source, expectedCode)
-  })
+  ])(
+    "rejects focused integrity bypass in %s",
+    (repoPath, source, expectedCode) => {
+      expectBypass(repoPath, source, expectedCode)
+    },
+  )
 
   it("rejects public payloads containing restricted evidence recursively", () => {
     expect(() =>
@@ -224,13 +225,95 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
       ...sources,
       "packages/engine/src/activation.ts": sources[
         "packages/engine/src/activation.ts"
-      ]!.replace("export const resolveActivation =", "export const resolveActivationChanged ="),
+      ]!.replace(
+        "export const resolveActivation =",
+        "export const resolveActivationChanged =",
+      ),
     }
     expect(
       analyzeV137IntegritySources(mutated, {
         enforceKnownDebtFingerprints: true,
       }).findings.map((finding) => finding.code),
     ).toContain("KNOWN_PHASE_257_DEBT_DRIFT")
+  })
+
+  describe("Phase 257 RED structural execution debt", () => {
+    it("reports every current execution bypass by stable finding code", () => {
+      const sources = Object.fromEntries(
+        [
+          "packages/engine/src/activation.ts",
+          "packages/engine/src/match.ts",
+          "packages/replay/src/build.ts",
+          "apps/runtime-service/src/execute-match.ts",
+        ].map((repoPath) => [
+          repoPath,
+          readFileSync(path.resolve(process.cwd(), repoPath), "utf8"),
+        ]),
+      )
+
+      const codes = analyzeV137IntegritySources(sources, {
+        enforcePhase257RedContracts: true,
+      }).findings.map((finding) => finding.code)
+
+      expect(codes).toEqual(
+        expect.arrayContaining([
+          "PHASE_257_REPLAY_SCHEDULER",
+          "PHASE_257_RUNTIME_REPLAY_EXECUTION",
+          "PHASE_257_CONTIGUOUS_ACTIVATION_ENTRY",
+          "PHASE_257_DUPLICATE_LIFECYCLE_LOOP",
+        ]),
+      )
+    })
+
+    it("uses exact executable identifiers and ignores near names", () => {
+      const clean = analyzeV137IntegritySources(
+        {
+          "packages/replay/src/near-names.ts": `
+            export const buildChronicleFromMatchResult = () => undefined
+            export const resolveRoundSummary = () => undefined
+            export const resolveContractionPreview = () => undefined
+            export const resolveActivationCycle = () => undefined
+          `,
+        },
+        { enforcePhase257RedContracts: true },
+      )
+      expect(
+        clean.findings.filter((finding) =>
+          finding.code.startsWith("PHASE_257_"),
+        ),
+      ).toEqual([])
+
+      const synthetic = analyzeV137IntegritySources(
+        {
+          "packages/replay/src/alternate-build.ts": `
+            export const buildChronicleFromMatch = (state: unknown) => {
+              while (state) {
+                state = resolveRound(state)
+                state = resolveContraction(state)
+              }
+              return state
+            }
+          `,
+          "apps/runtime-service/src/alternate-execute.ts": `
+            import { buildChronicleFromMatch } from "@cowards/replay"
+            export const execute = (input: unknown) => buildChronicleFromMatch(input)
+          `,
+          "packages/engine/src/alternate-activation.ts": `
+            export const resolveActivation = () => undefined
+          `,
+        },
+        { enforcePhase257RedContracts: true },
+      )
+
+      expect(synthetic.findings.map((finding) => finding.code)).toEqual(
+        expect.arrayContaining([
+          "PHASE_257_REPLAY_SCHEDULER",
+          "PHASE_257_RUNTIME_REPLAY_EXECUTION",
+          "PHASE_257_CONTIGUOUS_ACTIVATION_ENTRY",
+          "PHASE_257_DUPLICATE_LIFECYCLE_LOOP",
+        ]),
+      )
+    })
   })
 
   it("pins domain-separated payload-byte authority verification and its negative guards", () => {
@@ -265,8 +348,7 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
       "AUTHORITY_CHAIN_DRIFT",
     )
 
-    const runtimePath =
-      "apps/runtime-service/src/runtime-evidence-authority.ts"
+    const runtimePath = "apps/runtime-service/src/runtime-evidence-authority.ts"
     expectRepositoryContractFinding(
       {
         ...sources,
