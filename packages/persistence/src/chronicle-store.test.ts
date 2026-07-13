@@ -1,9 +1,103 @@
+import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
-import { COMPATIBILITY_VERSIONS, type Chronicle } from "@cowards/spec"
+import {
+  CANONICAL_COMPATIBILITY_TUPLES,
+  COMPATIBILITY_VERSIONS,
+  type Chronicle,
+  type ExecutableLaneIdentity,
+  type RuntimeEntrantExecutionEvidence,
+} from "@cowards/spec"
 import {
   ChronicleValidationSystemFailure,
+  createChronicleMetadata,
   createMemoryChronicleStoreForTests,
+  createPostgresChronicleStore,
 } from "./chronicle-store.js"
+import {
+  createMatchExecutionEvidencePair,
+  createMatchSetIntegrityIdentity,
+} from "./integrity-evidence.js"
+
+const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
+const sha256 = (value: string): string =>
+  createHash("sha256").update(value).digest("hex")
+
+const lane = (side: "bottom" | "top"): ExecutableLaneIdentity => ({
+  providerId: `fixture:provider:${side}`,
+  languageId: side === "bottom" ? "typescript" : "python",
+  runtimeId: `fixture:runtime:${side}`,
+  runtimeVersion: "1",
+  toolchainId: `fixture:toolchain:${side}`,
+  toolchainVersion: "1",
+  adapterId: `fixture:adapter:${side}`,
+  adapterVersion: "1",
+  policyId: "fixture:policy",
+  policyVersion: "1",
+  corpusId: "fixture:corpus",
+  corpusVersion: "1",
+  artifactId: `fixture:artifact:${side}`,
+  artifactSha256: sha256(`artifact:${side}`),
+  implementationId: `fixture:implementation:${side}`,
+  buildId: `fixture:build:${side}`,
+  semanticTupleId: tuple.tupleId,
+  semanticTuple: { ...tuple.tuple },
+})
+
+const entrant = (
+  side: "bottom" | "top",
+): RuntimeEntrantExecutionEvidence => ({
+  entrantKey: `entrant:${side}`,
+  strategyRevisionId: `strategy-revision:${side}`,
+  laneIdentity: lane(side),
+  containmentCertificateRef: {
+    kind: "containment",
+    certificateId: `certificate:containment:${side}`,
+    certificateVersion: "runtime-certificate-v1",
+    certificateRecordHash: sha256(`containment:${side}`),
+    registryGeneration: "fixture:generation:1",
+  },
+  conformanceCertificateRef: {
+    kind: "conformance",
+    certificateId: `certificate:conformance:${side}`,
+    certificateVersion: "runtime-certificate-v1",
+    certificateRecordHash: sha256(`conformance:${side}`),
+    registryGeneration: "fixture:generation:1",
+  },
+  schedulingDecision: {
+    status: "counted",
+    reasonCode: "EVIDENCE_CURRENT",
+    evaluatedAt: "2026-07-12T12:00:00.000Z",
+    freshUntil: "2099-08-12T12:00:00.000Z",
+    registryGeneration: "fixture:generation:1",
+  },
+})
+
+const currentIntegrityIdentity = () => {
+  const entrants = [entrant("bottom"), entrant("top")]
+  const identity = createMatchSetIntegrityIdentity({
+    compatibility: {
+      tupleId: tuple.tupleId,
+      tuple: { ...tuple.tuple },
+    },
+    authorityBundleHash: sha256("fixture:bundle"),
+    registryGeneration: "fixture:generation:1",
+    expectedEntrants: entrants.map((entry) => ({
+      entrantKey: entry.entrantKey,
+      strategyRevisionId: entry.strategyRevisionId,
+    })),
+    entrants,
+  })
+  return {
+    matchSetId: "match-set:chronicle:integrity",
+    identity,
+    evidencePair: createMatchExecutionEvidencePair(identity, {
+      bottomEntrantKey: "entrant:bottom",
+      topEntrantKey: "entrant:top",
+      bottomStrategyRevisionId: "strategy-revision:bottom",
+      topStrategyRevisionId: "strategy-revision:top",
+    }),
+  }
+}
 
 const board = {
   bounds: { minX: 0, maxX: 4, minY: 0, maxY: 4 },
@@ -159,7 +253,10 @@ const validChronicle = (): Chronicle => ({
 describe("Chronicle storage", () => {
   it("stores metadata and preserves unified private artifact sections", async () => {
     const store = createMemoryChronicleStoreForTests()
-    const stored = await store.put(validChronicle())
+    const stored = await store.put({
+      chronicle: validChronicle(),
+      integrityIdentity: currentIntegrityIdentity(),
+    })
 
     expect(stored.metadata.schemaVersion).toBe("chronicle-v1.4")
     expect(stored.metadata.hash).toMatch(/^[a-f0-9]{64}$/)
@@ -177,8 +274,9 @@ describe("Chronicle storage", () => {
 
   it("does not create a duplicate Chronicle for one Match", async () => {
     const store = createMemoryChronicleStoreForTests()
-    await store.put(validChronicle())
-    await store.put(validChronicle())
+    const integrityIdentity = currentIntegrityIdentity()
+    await store.put({ chronicle: validChronicle(), integrityIdentity })
+    await store.put({ chronicle: validChronicle(), integrityIdentity })
 
     expect(store.size()).toBe(1)
   })
@@ -190,8 +288,109 @@ describe("Chronicle storage", () => {
       events: [],
     }
 
-    await expect(store.put(invalid)).rejects.toBeInstanceOf(
+    await expect(
+      store.put({
+        chronicle: invalid,
+        integrityIdentity: currentIntegrityIdentity(),
+      }),
+    ).rejects.toBeInstanceOf(
       ChronicleValidationSystemFailure,
     )
+  })
+
+  it("rejects partial, swapped, singular, wrong-revision, and independently supplied identity without a row", async () => {
+    const valid = currentIntegrityIdentity()
+    const cases: unknown[] = [
+      { chronicle: validChronicle() },
+      {
+        chronicle: validChronicle(),
+        integrityIdentity: {
+          ...valid,
+          evidencePair: {
+            ...valid.evidencePair,
+            bottom: valid.evidencePair.top,
+            top: valid.evidencePair.bottom,
+          },
+        },
+      },
+      {
+        chronicle: validChronicle(),
+        integrityIdentity: {
+          ...valid,
+          evidencePair: {
+            ...valid.evidencePair,
+            top: valid.evidencePair.bottom,
+          },
+        },
+      },
+      {
+        chronicle: validChronicle(),
+        integrityIdentity: {
+          ...valid,
+          evidencePair: {
+            ...valid.evidencePair,
+            bottom: {
+              ...valid.evidencePair.bottom,
+              strategyRevisionId: "strategy-revision:wrong",
+            },
+          },
+        },
+      },
+      {
+        chronicle: validChronicle(),
+        integrityIdentity: {
+          ...valid,
+          evidencePair: {
+            ...valid.evidencePair,
+            bottom: { ...valid.evidencePair.bottom },
+            top: { ...valid.evidencePair.top },
+          },
+        },
+      },
+    ]
+
+    for (const input of cases) {
+      const store = createMemoryChronicleStoreForTests()
+      await expect(store.put(input as never)).rejects.toThrow(/identity|pair/iu)
+      expect(store.size()).toBe(0)
+    }
+  })
+
+  it("persists the semantic tuple and exact ordered evidence relationship for new rows", async () => {
+    const calls: Array<{ sql: string; values: readonly unknown[] }> = []
+    const pool = {
+      async query(sql: string, values: readonly unknown[] = []) {
+        calls.push({ sql: sql.replace(/\s+/gu, " ").trim(), values })
+        return { rows: [], rowCount: 1 }
+      },
+    }
+    const integrityIdentity = currentIntegrityIdentity()
+
+    await createPostgresChronicleStore(pool).put({
+      chronicle: validChronicle(),
+      integrityIdentity,
+    })
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0]!.sql).toContain("integrity_match_set_id")
+    expect(calls[0]!.sql).toContain("compatibility_tuple_id")
+    expect(calls[0]!.sql).toContain("authority_bundle_hash")
+    expect(calls[0]!.sql).toContain("authority_registry_generation")
+    expect(calls[0]!.sql).toContain("bottom_execution_evidence")
+    expect(calls[0]!.sql).toContain("top_execution_evidence")
+    expect(calls[0]!.values).toContain(integrityIdentity.matchSetId)
+    expect(calls[0]!.values).toContain(tuple.tupleId)
+    expect(calls[0]!.values).toContain(integrityIdentity.identity.authorityBundleHash)
+    expect(calls[0]!.values).toContain(integrityIdentity.identity.registryGeneration)
+  })
+
+  it("keeps tuple-less v1.4 Chronicle bytes and content hashes unchanged", () => {
+    const historical = validChronicle()
+    const before = JSON.stringify(historical)
+    const hash = createChronicleMetadata(historical).hash
+
+    expect(JSON.stringify(historical)).toBe(before)
+    expect(createChronicleMetadata(historical).hash).toBe(hash)
+    expect(hash).toMatch(/^[0-9a-f]{64}$/u)
   })
 })
