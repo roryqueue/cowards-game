@@ -1,5 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
+import { createHash } from "node:crypto"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
@@ -17,6 +18,22 @@ export type V137IntegrityBoundaryFindingCode =
   | "UNRECOGNIZED_CREATION_CALLER"
   | "UNRECOGNIZED_SQL_WRITER"
   | "UNRECOGNIZED_LEGACY_WORKER_CONSUMER"
+  | "DUPLICATE_AUTHORITY_OWNER"
+  | "DUPLICATE_SCHEDULER_AUTHORITY"
+  | "UI_RULE_AUTHORITY"
+  | "DUPLICATE_ADAPTER_CLASSIFIER"
+  | "DUPLICATE_ARENA_AUTHORITY"
+  | "STATIC_PROMOTION_PATH"
+  | "PARTIAL_TUPLE_ACCEPTANCE"
+  | "PUBLIC_EXECUTION_ROUTE"
+  | "RAW_CERTIFICATE_WRITER"
+  | "FIXTURE_PRODUCTION_PROMOTION"
+  | "DECLARATION_PROMOTION_PATH"
+  | "REQUEST_AUTHORITY_BODY"
+  | "AUTHORITY_CHAIN_DRIFT"
+  | "RUNTIME_REQUEST_ENVELOPE_DRIFT"
+  | "GO_RECEIPT_AUTHORITY_DRIFT"
+  | "KNOWN_PHASE_257_DEBT_DRIFT"
 
 export interface V137IntegrityBoundaryFinding {
   code: V137IntegrityBoundaryFindingCode
@@ -31,6 +48,64 @@ export interface V137IntegrityBoundaryAnalysis {
   creationCalls: number
   sqlWriters: number
   legacyWorkerConsumers: number
+}
+
+export interface AnalyzeV137IntegritySourcesOptions {
+  enforceRepositoryContracts?: boolean
+  enforceKnownDebtFingerprints?: boolean
+}
+
+const sha256 = (value: string): string =>
+  createHash("sha256").update(value).digest("hex")
+
+const knownPhase257DebtFingerprints = {
+  "packages/engine/src/activation.ts#resolveActivation":
+    "368d4edf7b6eef40bf741ef2d60eff069ff241ecd552b92f640018be122b1425",
+  "packages/engine/src/match.ts#runMatch":
+    "d2e1602d5a5525d28ada0947fd40e2b3264c3c900741854aed8f1bf91dcf3036",
+  "packages/replay/src/build.ts#buildChronicleFromMatch":
+    "ca1547295c8efece5e624b8d39cf2fbe7564f1f715d16c2e9c7ecc3796b6fb4a",
+} as const
+
+const restrictedPublicKeys = new Set([
+  "source",
+  "sourceBytes",
+  "artifactBytes",
+  "strategyMemory",
+  "soldierMemory",
+  "objectivePayload",
+  "rawDiagnostics",
+  "hostPath",
+  "privateKey",
+  "certificateBody",
+  "attestationBody",
+  "securityInternals",
+])
+
+export const assertV137IntegrityPublicPayload = (value: unknown): void => {
+  const visit = (candidate: unknown, pathParts: readonly string[]): void => {
+    if (typeof candidate === "string") {
+      if (/\/(?:Users|home)\//u.test(candidate)) {
+        throw new Error(`public integrity payload contains host path at ${pathParts.join(".")}`)
+      }
+      if (/BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY/u.test(candidate)) {
+        throw new Error(`public integrity payload contains private key at ${pathParts.join(".")}`)
+      }
+      return
+    }
+    if (Array.isArray(candidate)) {
+      candidate.forEach((entry, index) => visit(entry, [...pathParts, String(index)]))
+      return
+    }
+    if (!candidate || typeof candidate !== "object") return
+    for (const [key, nested] of Object.entries(candidate)) {
+      if (restrictedPublicKeys.has(key)) {
+        throw new Error(`public integrity payload contains restricted key ${key}`)
+      }
+      visit(nested, [...pathParts, key])
+    }
+  }
+  visit(value, ["$"])
 }
 
 const creationNames = new Set([
@@ -227,6 +302,79 @@ const analyzeSource = (
   }
   visit(file)
 
+  const declarationNames = new Set<string>()
+  for (const statement of file.statements) {
+    if (ts.isFunctionDeclaration(statement) && statement.name) {
+      declarationNames.add(statement.name.text)
+    }
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name)) declarationNames.add(declaration.name.text)
+      }
+    }
+  }
+  const fileNode = file.statements[0] ?? file
+  if (
+    declarationNames.has("CANONICAL_AUTHORITY_REGISTRY") &&
+    repoPath !== "packages/spec/src/integrity-authority.ts"
+  ) {
+    add("DUPLICATE_AUTHORITY_OWNER", fileNode, "Canonical owner registry may be declared only by @cowards/spec.")
+  }
+  if (
+    declarationNames.has("scheduleTrialLadderSeason") &&
+    repoPath !== "packages/persistence/src/ladder.ts"
+  ) {
+    add("DUPLICATE_SCHEDULER_AUTHORITY", fileNode, "Set scheduling policy has one persistence owner.")
+  }
+  if (
+    repoPath.startsWith("apps/web/") &&
+    /(?:from\s+["']@cowards\/engine["']|resolveAction\s*\()/u.test(source)
+  ) {
+    add("UI_RULE_AUTHORITY", fileNode, "Web code may project rules but may not execute them.")
+  }
+  if (
+    declarationNames.has("evaluateExecutableLaneEligibility") &&
+    repoPath !== "packages/spec/src/runtime-evidence.ts"
+  ) {
+    add("DUPLICATE_ADAPTER_CLASSIFIER", fileNode, "Executable lane classification has one spec owner.")
+  }
+  if (
+    declarationNames.has("ArenaVariantSchema") &&
+    repoPath !== "packages/spec/src/schemas.ts"
+  ) {
+    add("DUPLICATE_ARENA_AUTHORITY", fileNode, "Arena validation has one spec owner.")
+  }
+  if (/countedResultsAllowed\s*\?\s*["']counted["']/u.test(source)) {
+    add("STATIC_PROMOTION_PATH", fileNode, "Descriptive registry flags cannot promote counted execution.")
+  }
+  if (
+    /(?:accepted|eligible|supported)\s*=.*(?:input\.)?(?:rules|engine|runtimeAbi|chronicle|arenaCatalog|setPolicy)\s*===/u.test(source) &&
+    !source.includes("resolveCanonicalCompatibilityTuple")
+  ) {
+    add("PARTIAL_TUPLE_ACCEPTANCE", fileNode, "Compatibility consumers must resolve the complete exact tuple.")
+  }
+  if (
+    /apps\/web\/app\/api\/.+\/route\.tsx?$/u.test(repoPath) &&
+    /\b(?:executeMatch|runMatch|runWorkerOnce|runWorkerLoop)\s*\(/u.test(source)
+  ) {
+    add("PUBLIC_EXECUTION_ROUTE", fileNode, "Public web routes cannot own Strategy or Match execution.")
+  }
+  if (
+    /insert\s+into\s+runtime_evidence_certificates\b/iu.test(source) &&
+    repoPath !== "packages/persistence/src/runtime-evidence-import.ts"
+  ) {
+    add("RAW_CERTIFICATE_WRITER", fileNode, "Certificates may be written only by verified attestation import.")
+  }
+  if (/trustDomain\s*===?\s*["']fixture["'][\s\S]{0,120}["']counted["']/u.test(source)) {
+    add("FIXTURE_PRODUCTION_PROMOTION", fileNode, "Fixture trust cannot grant production counted eligibility.")
+  }
+  if (/(?:gateName|documentation|docs)[\s\S]{0,100}(?:passed|approved)[\s\S]{0,100}["']counted["']/iu.test(source)) {
+    add("DECLARATION_PROMOTION_PATH", fileNode, "Gate names or documentation cannot mint executable evidence.")
+  }
+  if (/request\.(?:containmentCertificate|conformanceCertificate|certificateBody|attestationBody)\b/u.test(source)) {
+    add("REQUEST_AUTHORITY_BODY", fileNode, "Runtime requests may carry references, never authority bodies.")
+  }
+
   const sqlPattern =
     /insert\s+into\s+(match_sets|match_set_execution_entrants|competition_entrants|matches|match_jobs|chronicles)\b/giu
   for (const match of source.matchAll(sqlPattern)) {
@@ -249,12 +397,108 @@ const analyzeSource = (
 
 export const analyzeV137IntegritySources = (
   sources: Readonly<Record<string, string>>,
+  options: AnalyzeV137IntegritySourcesOptions = {},
 ): V137IntegrityBoundaryAnalysis => {
   const analyses = Object.entries(sources)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([repoPath, source]) => analyzeSource(normalized(repoPath), source))
+  const findings = analyses.flatMap((analysis) => analysis.findings)
+  if (options.enforceKnownDebtFingerprints) {
+    for (const [key, expected] of Object.entries(knownPhase257DebtFingerprints)) {
+      const separator = key.lastIndexOf("#")
+      const repoPath = key.slice(0, separator)
+      const symbol = key.slice(separator + 1)
+      const source = sources[repoPath]
+      const file = source
+        ? ts.createSourceFile(repoPath, source, ts.ScriptTarget.Latest, true)
+        : undefined
+      let declarationText: string | undefined
+      if (file) {
+        for (const statement of file.statements) {
+          if (!ts.isVariableStatement(statement)) continue
+          for (const declaration of statement.declarationList.declarations) {
+            if (ts.isIdentifier(declaration.name) && declaration.name.text === symbol) {
+              declarationText = declaration.getText(file)
+            }
+          }
+        }
+      }
+      if (!declarationText || sha256(declarationText) !== expected) {
+        findings.push({
+          code: "KNOWN_PHASE_257_DEBT_DRIFT",
+          path: repoPath,
+          line: 1,
+          detail: `Known Phase-257 debt fingerprint changed for ${symbol}.`,
+        })
+      }
+    }
+  }
+  if (options.enforceRepositoryContracts) {
+    const requireMarkers = (
+      repoPath: string,
+      markers: readonly string[],
+      code: V137IntegrityBoundaryFindingCode,
+    ): void => {
+      const source = sources[repoPath] ?? ""
+      const missing = markers.filter((marker) => !source.includes(marker))
+      if (missing.length > 0) {
+        findings.push({
+          code,
+          path: repoPath,
+          line: 1,
+          detail: `Required integrity markers missing: ${missing.join(", ")}.`,
+        })
+      }
+    }
+    requireMarkers(
+      "packages/persistence/src/runtime-evidence-import.ts",
+      ["importVerifiedRuntimeEvidenceAttestation", "verifyRuntimeEvidenceAttestation(immutableInput)", "Sole application-level certificate writer"],
+      "AUTHORITY_CHAIN_DRIFT",
+    )
+    requireMarkers(
+      "packages/persistence/src/runtime-evidence-authority-publisher.ts",
+      ["withSerializableTransaction", "verifyImport", "runtime_evidence_authority_publication_sources", "installRuntimeEvidenceAuthorityPublication", "v1.37-runtime-evidence-authority-install-receipt-v1"],
+      "AUTHORITY_CHAIN_DRIFT",
+    )
+    requireMarkers(
+      "apps/runtime-service/src/runtime-evidence-authority.ts",
+      ["readBoundedDescriptor", "verify(null", "installHighWater", "deploymentPin"],
+      "AUTHORITY_CHAIN_DRIFT",
+    )
+    requireMarkers(
+      "apps/go-backend/runtime_evidence_authority.go",
+      ["ed25519.Verify", "installRuntimeEvidenceAuthorityHighWater", "MinimumBundleHash"],
+      "AUTHORITY_CHAIN_DRIFT",
+    )
+    requireMarkers(
+      "apps/go-backend/integrity_creation.go",
+      ["lockInstalledAuthorityReceipt", "for share of h, p", "sourceManifestHash", "sourceSetCount"],
+      "GO_RECEIPT_AUTHORITY_DRIFT",
+    )
+    requireMarkers(
+      "apps/runtime-service/src/execute-match.test.ts",
+      ["createFixtureRuntimeExecutionEvidenceSnapshot", "createFixtureRuntimeEvidenceAuthorityLoader", "evidenceSnapshot", "fixture-only:untrusted"],
+      "RUNTIME_REQUEST_ENVELOPE_DRIFT",
+    )
+    requireMarkers(
+      "apps/runtime-service/src/counted-safety.test.ts",
+      ["createFixtureRuntimeExecutionAuthorityContext", "evidenceSnapshot", "authorityLoader", "exhibition_only"],
+      "RUNTIME_REQUEST_ENVELOPE_DRIFT",
+    )
+    requireMarkers(
+      "apps/runtime-service/src/four-language-parity.test.ts",
+      ["createFixtureRuntimeExecutionEvidenceSnapshot", "createFixtureRuntimeEvidenceAuthorityLoader", "evidenceSnapshot", "fourLanguageGoldenPairs"],
+      "RUNTIME_REQUEST_ENVELOPE_DRIFT",
+    )
+  }
+  findings.sort(
+    (left, right) =>
+      left.path.localeCompare(right.path) ||
+      left.line - right.line ||
+      left.code.localeCompare(right.code),
+  )
   return {
-    findings: analyses.flatMap((analysis) => analysis.findings),
+    findings,
     inventoriedFiles: analyses.length,
     creationCalls: analyses.reduce(
       (total, analysis) => total + analysis.creationCalls,
@@ -309,13 +553,26 @@ const collectTypeScriptSources = (
   for (const root of ["apps", "packages", "scripts"]) {
     walk(path.join(repoRoot, root))
   }
+  for (const repoPath of [
+    "apps/runtime-service/src/execute-match.test.ts",
+    "apps/runtime-service/src/counted-safety.test.ts",
+    "apps/runtime-service/src/four-language-parity.test.ts",
+    "apps/go-backend/runtime_evidence_authority.go",
+    "apps/go-backend/integrity_creation.go",
+  ]) {
+    const absolutePath = path.join(repoRoot, repoPath)
+    if (existsSync(absolutePath)) sources[repoPath] = readFileSync(absolutePath, "utf8")
+  }
   return sources
 }
 
 export const analyzeV137IntegrityBoundaries = (
   repoRoot = defaultRepoRoot,
 ): V137IntegrityBoundaryAnalysis =>
-  analyzeV137IntegritySources(collectTypeScriptSources(repoRoot))
+  analyzeV137IntegritySources(collectTypeScriptSources(repoRoot), {
+    enforceRepositoryContracts: true,
+    enforceKnownDebtFingerprints: true,
+  })
 
 const isDirectExecution = (): boolean =>
   process.argv[1] !== undefined &&

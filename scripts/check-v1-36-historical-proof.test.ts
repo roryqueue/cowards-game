@@ -1,6 +1,7 @@
 import {
   cpSync,
   mkdtempSync,
+  mkdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -108,6 +109,7 @@ describe("version-pinned v1.36 historical proof", () => {
     try {
       for (const entry of manifest().artifacts) {
         const target = path.join(workingRoot, entry.path)
+        mkdirSync(path.dirname(target), { recursive: true })
         cpSync(path.join(root, entry.path), target, { recursive: false })
       }
       const target = path.join(workingRoot, manifest().artifacts[0]!.path)
