@@ -391,6 +391,6 @@ describe("Chronicle storage", () => {
 
     expect(JSON.stringify(historical)).toBe(before)
     expect(createChronicleMetadata(historical).hash).toBe(hash)
-    expect(hash).toMatch(/^[0-9a-f]{64}$/u)
+    expect(hash).toMatchInlineSnapshot(`"346826ba49aec61740499b1bcf0aea8dc6860ef04b865f72101a01b604d83aaa"`)
   })
 })
