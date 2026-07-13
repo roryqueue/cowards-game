@@ -9,6 +9,8 @@ import {
   PublicMatchSetSummaryServiceDtoSchema,
   PublicReplayEvidenceServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
+  RuntimeExecutionCompatibilityIdentitySchema,
+  RuntimeExecutionEvidenceSnapshotSchema,
 } from "./schemas.js"
 import {
   assertPublicServiceDtoLeakSafe,
@@ -123,6 +125,86 @@ export const MatchExecutionRuntimeEvidenceV1Schema = z.object({
   }),
 })
 
+export const MATCH_EXECUTION_EXACT_EVIDENCE_VERSION =
+  "match-execution-integrity-evidence-v1.37" as const
+
+export const MatchExecutionExactEvidenceV137Schema = z
+  .object({
+    schemaVersion: z.literal(MATCH_EXECUTION_EXACT_EVIDENCE_VERSION),
+    profile: z.literal("current-exact"),
+    matchId: z.string().min(1),
+    bottomEntrantKey: z.string().min(1),
+    topEntrantKey: z.string().min(1),
+    evidenceSnapshot: RuntimeExecutionEvidenceSnapshotSchema,
+  })
+  .strict()
+  .superRefine((evidence, ctx) => {
+    if (
+      evidence.bottomEntrantKey !==
+        evidence.evidenceSnapshot.entrants.bottom.entrantKey ||
+      evidence.topEntrantKey !==
+        evidence.evidenceSnapshot.entrants.top.entrantKey
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evidenceSnapshot", "entrants"],
+        message:
+          "ordered entrant evidence must match the Match bottom/top bindings",
+      })
+    }
+  })
+
+const MatchExecutionPublicCertificateRefV137Schema = z
+  .object({
+    kind: z.enum(["containment", "conformance"]),
+    version: z.string().min(1),
+    hash: z.string().min(1),
+  })
+  .strict()
+
+const MatchExecutionPublicEntrantIntegrityV137Schema = z
+  .object({
+    entrantKey: z.string().min(1),
+    status: z.enum(["disabled", "exhibition_only", "counted"]),
+    reasonCode: z.string().min(1),
+    evaluatedAt: z.string().datetime({ offset: true }),
+    freshUntil: z.string().datetime({ offset: true }),
+    evidence: z.tuple([
+      MatchExecutionPublicCertificateRefV137Schema.extend({
+        kind: z.literal("containment"),
+      }).strict(),
+      MatchExecutionPublicCertificateRefV137Schema.extend({
+        kind: z.literal("conformance"),
+      }).strict(),
+    ]),
+  })
+  .strict()
+
+export const MatchExecutionPublicIntegrityEvidenceV137Schema = z
+  .object({
+    profile: z.literal("current-exact"),
+    compatibility: RuntimeExecutionCompatibilityIdentitySchema,
+    authorityBundleHash: z.string().min(1),
+    registryGeneration: z.string().min(1),
+    entrants: z
+      .object({
+        bottom: MatchExecutionPublicEntrantIntegrityV137Schema,
+        top: MatchExecutionPublicEntrantIntegrityV137Schema,
+      })
+      .strict(),
+  })
+  .strict()
+
+export const MatchExecutionHistoricalEvidenceV14Schema = z
+  .object({
+    profile: z.literal("historical-v1.4"),
+    matchId: z.string().min(1),
+    rulesVersion: z.literal("cowards-rules-v1.4"),
+    chronicleVersion: z.literal("chronicle-v1.4"),
+    originalCountedStatus: z.enum(["counted", "non_counted"]),
+  })
+  .strict()
+
 export const MatchExecutionFailureEvidenceV1Schema = z.object({
   category: MatchExecutionFailureCategoryV1Schema,
   retryDisposition: MatchExecutionRetryDispositionV1Schema,
@@ -222,6 +304,12 @@ export type MatchExecutionLifecycleV1 = z.infer<
 export type MatchExecutionRuntimeEvidenceV1 = z.infer<
   typeof MatchExecutionRuntimeEvidenceV1Schema
 >
+export type MatchExecutionExactEvidenceV137 = z.infer<
+  typeof MatchExecutionExactEvidenceV137Schema
+>
+export type MatchExecutionPublicIntegrityEvidenceV137 = z.infer<
+  typeof MatchExecutionPublicIntegrityEvidenceV137Schema
+>
 export type MatchExecutionFailureEvidenceV1 = z.infer<
   typeof MatchExecutionFailureEvidenceV1Schema
 >
@@ -250,6 +338,91 @@ type LifecycleOverride = {
 }
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+
+export const createMatchExecutionExactEvidenceV137 = (
+  input: Omit<
+    z.input<typeof MatchExecutionExactEvidenceV137Schema>,
+    "schemaVersion" | "profile"
+  >,
+): MatchExecutionExactEvidenceV137 =>
+  MatchExecutionExactEvidenceV137Schema.parse({
+    schemaVersion: MATCH_EXECUTION_EXACT_EVIDENCE_VERSION,
+    profile: "current-exact",
+    ...input,
+  })
+
+const projectPublicEntrantIntegrity = (
+  entrant: MatchExecutionExactEvidenceV137["evidenceSnapshot"]["entrants"]["bottom"],
+) => ({
+  entrantKey: entrant.entrantKey,
+  status: entrant.schedulingDecision.status,
+  reasonCode: entrant.schedulingDecision.reasonCode,
+  evaluatedAt: entrant.schedulingDecision.evaluatedAt,
+  freshUntil: entrant.schedulingDecision.freshUntil,
+  evidence: [
+    {
+      kind: "containment" as const,
+      version: entrant.containmentCertificateRef.certificateVersion,
+      hash: entrant.containmentCertificateRef.certificateRecordHash,
+    },
+    {
+      kind: "conformance" as const,
+      version: entrant.conformanceCertificateRef.certificateVersion,
+      hash: entrant.conformanceCertificateRef.certificateRecordHash,
+    },
+  ] as const,
+})
+
+export const projectPublicMatchExecutionIntegrityEvidenceV137 = (
+  evidence: MatchExecutionExactEvidenceV137,
+): MatchExecutionPublicIntegrityEvidenceV137 => {
+  const parsed = MatchExecutionExactEvidenceV137Schema.parse(evidence)
+  const projection =
+    MatchExecutionPublicIntegrityEvidenceV137Schema.parse({
+      profile: "current-exact",
+      compatibility: parsed.evidenceSnapshot.compatibility,
+      authorityBundleHash: parsed.evidenceSnapshot.authorityBundleHash,
+      registryGeneration: parsed.evidenceSnapshot.registryGeneration,
+      entrants: {
+        bottom: projectPublicEntrantIntegrity(
+          parsed.evidenceSnapshot.entrants.bottom,
+        ),
+        top: projectPublicEntrantIntegrity(
+          parsed.evidenceSnapshot.entrants.top,
+        ),
+      },
+    })
+  assertPublicServiceDtoLeakSafe(projection)
+  return projection
+}
+
+export const parseMatchExecutionEvidenceByVersion = (
+  value: unknown,
+):
+  | {
+      classification: "current_exact"
+      evidence: MatchExecutionExactEvidenceV137
+    }
+  | {
+      classification: "historical_original_semantics"
+      evidence: z.infer<typeof MatchExecutionHistoricalEvidenceV14Schema>
+    } => {
+  if (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    (value as { profile?: unknown }).profile === "current-exact"
+  ) {
+    return {
+      classification: "current_exact",
+      evidence: MatchExecutionExactEvidenceV137Schema.parse(value),
+    }
+  }
+  return {
+    classification: "historical_original_semantics",
+    evidence: MatchExecutionHistoricalEvidenceV14Schema.parse(value),
+  }
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)

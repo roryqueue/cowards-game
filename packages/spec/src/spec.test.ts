@@ -1824,6 +1824,7 @@ describe("Coward's Game spec contracts", () => {
         status: "counted",
         reasonCode: "EVIDENCE_CURRENT",
         evaluatedAt: "2026-07-13T00:00:00.000Z",
+        freshUntil: "2026-08-13T00:00:00.000Z",
         registryGeneration: "registry-generation:1",
       },
     })
@@ -1972,6 +1973,7 @@ describe("Coward's Game spec contracts", () => {
         status: "counted",
         reasonCode: "EVIDENCE_CURRENT",
         evaluatedAt: "2026-07-13T00:00:00.000Z",
+        freshUntil: "2026-08-13T00:00:00.000Z",
         registryGeneration: "registry-generation:1",
       },
     })

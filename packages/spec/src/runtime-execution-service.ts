@@ -168,6 +168,7 @@ export interface RuntimeExecutionSchedulingDecisionSnapshot {
   status: ExecutableLaneEvidenceStatus
   reasonCode: ExecutableLaneEvidenceReasonCode
   evaluatedAt: string
+  freshUntil: string
   registryGeneration: string
 }
 

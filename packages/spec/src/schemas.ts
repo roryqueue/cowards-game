@@ -2399,10 +2399,18 @@ const RuntimeExecutionSchedulingDecisionSchema = z
     status: z.enum(EXECUTABLE_LANE_EVIDENCE_STATUSES),
     reasonCode: z.enum(EXECUTABLE_LANE_EVIDENCE_REASON_CODES),
     evaluatedAt: z.string().datetime({ offset: true }),
+    freshUntil: z.string().datetime({ offset: true }),
     registryGeneration: z.string().min(1),
   })
   .strict()
   .superRefine((decision, ctx) => {
+    if (Date.parse(decision.freshUntil) < Date.parse(decision.evaluatedAt)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["freshUntil"],
+        message: "scheduling evidence freshness cannot precede evaluation",
+      })
+    }
     if (
       (decision.status === "counted") !==
       (decision.reasonCode === "EVIDENCE_CURRENT")
