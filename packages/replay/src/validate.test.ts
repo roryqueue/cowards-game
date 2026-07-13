@@ -396,7 +396,7 @@ describe("validateChronicle", () => {
     }
     const forged = {
       ...relabeled,
-      contentHash: createChronicleContentHash(relabeled),
+      integrity: createChronicleContentHash(relabeled),
     }
     expect(JSON.stringify(projectOwnerChronicle(forged, "top"))).toContain(
       privateRef,
