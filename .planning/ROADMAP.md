@@ -71,7 +71,7 @@ Plans:
 
 - [x] 256-08-PLAN.md — Enforce exact evidence at TypeScript entry, scheduling, and claim boundaries.
 - [ ] 256-09-PLAN.md — Revalidate exact independently signed authority around every runtime-service execution.
-- [ ] 256-10-PLAN.md — Prove Go tuple hashing and exact evidence-classification parity.
+- [x] 256-10-PLAN.md — Prove Go tuple hashing and exact evidence-classification parity.
 - [x] 256-16-PLAN.md — Migrate every TypeScript creation caller to complete per-entrant evidence and inventory future bypasses.
 
 **Wave 8** *(blocked on Wave 7 completion)*
