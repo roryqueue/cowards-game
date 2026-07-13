@@ -1791,6 +1791,13 @@ describe("Coward's Game spec contracts", () => {
       effectiveStatus: "exhibition_only" as const,
       schedulingDecisionId: `scheduling-decision:${side}`,
       schedulingDecisionHash: `sha256:${"f".repeat(64)}`,
+      schedulingDecision: {
+        status: "exhibition_only" as const,
+        reasonCode: "CONFORMANCE_MISSING" as const,
+        evaluatedAt: "2026-07-12T00:00:00.000Z",
+        freshUntil: "2026-07-14T00:00:00.000Z",
+        registryGeneration: "1",
+      },
       containmentCertificateId: `containment:${side}`,
       containmentCertificateHash: `sha256:${"c".repeat(64)}`,
     })
@@ -1820,6 +1827,13 @@ describe("Coward's Game spec contracts", () => {
         },
         authorityBundleHash: `sha256:${"e".repeat(64)}`,
         registryGeneration: "1",
+        publication: {
+          publicationId: "publication:runtime-service-spec",
+          installReceiptId: "install-receipt:runtime-service-spec",
+          payloadSha256: `sha256:${"e".repeat(64)}`,
+          envelopeSha256: `sha256:${"d".repeat(64)}`,
+          sourceManifestHash: `sha256:${"9".repeat(64)}`,
+        },
         entrants: {
           bottom: evidenceEntrant("bottom"),
           top: evidenceEntrant("top"),
@@ -1902,6 +1916,13 @@ describe("Coward's Game spec contracts", () => {
       effectiveStatus: "exhibition_only" as const,
       schedulingDecisionId: `scheduling-decision:${side}`,
       schedulingDecisionHash: `sha256:${"6".repeat(64)}`,
+      schedulingDecision: {
+        status: "exhibition_only" as const,
+        reasonCode: "CONFORMANCE_UNVERIFIABLE" as const,
+        evaluatedAt: "2026-07-12T00:00:00.000Z",
+        freshUntil: "2026-07-14T00:00:00.000Z",
+        registryGeneration: "1",
+      },
       containmentCertificateId: `certificate:containment:${side}`,
       containmentCertificateHash: `sha256:${"3".repeat(64)}`,
     })
@@ -1930,6 +1951,13 @@ describe("Coward's Game spec contracts", () => {
         },
         authorityBundleHash: `sha256:${"5".repeat(64)}`,
         registryGeneration: "1",
+        publication: {
+          publicationId: "publication:evidence-identity",
+          installReceiptId: "install-receipt:evidence-identity",
+          payloadSha256: `sha256:${"5".repeat(64)}`,
+          envelopeSha256: `sha256:${"7".repeat(64)}`,
+          sourceManifestHash: `sha256:${"8".repeat(64)}`,
+        },
         entrants: {
           bottom: entrant("bottom", "typescript"),
           top: entrant("top", "python"),
@@ -1948,12 +1976,22 @@ describe("Coward's Game spec contracts", () => {
             bottom: {
               ...request.evidenceSnapshot.entrants.bottom,
               effectiveStatus: "counted",
+              schedulingDecision: {
+                ...request.evidenceSnapshot.entrants.bottom.schedulingDecision,
+                status: "counted",
+                reasonCode: "EVIDENCE_CURRENT",
+              },
               conformanceCertificateId: "certificate:conformance:bottom",
               conformanceCertificateHash: `sha256:${"4".repeat(64)}`,
             },
             top: {
               ...request.evidenceSnapshot.entrants.top,
               effectiveStatus: "counted",
+              schedulingDecision: {
+                ...request.evidenceSnapshot.entrants.top.schedulingDecision,
+                status: "counted",
+                reasonCode: "EVIDENCE_CURRENT",
+              },
               conformanceCertificateId: "certificate:conformance:top",
               conformanceCertificateHash: `sha256:${"4".repeat(64)}`,
             },
@@ -1966,6 +2004,16 @@ describe("Coward's Game spec contracts", () => {
       {
         ...request,
         evidenceSnapshot: undefined,
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          publication: {
+            ...request.evidenceSnapshot.publication,
+            installReceiptId: undefined,
+          },
+        },
       },
       {
         ...request,
@@ -2028,6 +2076,8 @@ describe("Coward's Game spec contracts", () => {
             top: {
               ...request.evidenceSnapshot.entrants.top,
               effectiveStatus: "counted",
+              conformanceCertificateId: "certificate:conformance:top",
+              conformanceCertificateHash: `sha256:${"4".repeat(64)}`,
             },
           },
         },

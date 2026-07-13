@@ -2599,6 +2599,24 @@ const RuntimeEntrantAuthorityReferenceSchema = z
         "counted authority requires conformance evidence",
       )
     }
+    if (
+      entrant.effectiveStatus !== "counted" &&
+      (entrant.conformanceCertificateId !== undefined ||
+        entrant.conformanceCertificateHash !== undefined)
+    ) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["conformanceCertificateId"],
+        "only counted authority may carry conformance evidence",
+      )
+    }
+    if (entrant.schedulingDecision.status !== entrant.effectiveStatus) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["schedulingDecision", "status"],
+        "scheduling decision status must match effective authority status",
+      )
+    }
   })
 
 export const RuntimeExecutionEvidenceSnapshotSchema = z
@@ -2625,7 +2643,11 @@ export const RuntimeExecutionEvidenceSnapshotSchema = z
   .strict()
   .superRefine((snapshot, ctx) => {
     if (snapshot.publication.payloadSha256 !== snapshot.authorityBundleHash) {
-      addExecutionIdentityIssue(ctx, ["publication", "payloadSha256"], "publication payload must match authority bundle")
+      addExecutionIdentityIssue(
+        ctx,
+        ["publication", "payloadSha256"],
+        "publication payload must match authority bundle",
+      )
     }
     if (
       snapshot.entrants.bottom.entrantKey === snapshot.entrants.top.entrantKey
