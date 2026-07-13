@@ -131,6 +131,59 @@ describe("recordChronicleFromExecution", () => {
     )
   })
 
+  it.each(["top", "unknown-player"])(
+    "rejects private owner relabeling to %s",
+    (playerId) => {
+      const execution = run()
+      if (execution.kind !== "completed") return
+      const events = execution.recorderMaterial.events.map((event) =>
+        event.type === "STRATEGY_EVALUATED" &&
+        event.context?.actingPlayerId === "bottom"
+          ? { ...event, privatePayload: { playerId, strategyMemory: {} } }
+          : event,
+      )
+      const recorded = recordChronicleFromExecution({
+        execution: {
+          ...execution,
+          recorderMaterial: { ...execution.recorderMaterial, events },
+        },
+        metadata,
+      })
+      expect(recorded).toMatchObject({
+        ok: false,
+        failure: { code: "RECORDER_PRIVATE_OWNER_INVALID" },
+      })
+    },
+  )
+
+  it("rejects private-memory tampering even when owner labels remain canonical", () => {
+    const execution = run()
+    if (execution.kind !== "completed") return
+    const events = execution.recorderMaterial.events.map((event) =>
+      event.type === "STRATEGY_EVALUATED" &&
+      event.context?.actingPlayerId === "bottom"
+        ? {
+            ...event,
+            privatePayload: {
+              playerId: "bottom",
+              strategyMemory: { tampered: true },
+            },
+          }
+        : event,
+    )
+    const recorded = recordChronicleFromExecution({
+      execution: {
+        ...execution,
+        recorderMaterial: { ...execution.recorderMaterial, events },
+      },
+      metadata,
+    })
+    expect(recorded).toMatchObject({
+      ok: false,
+      failure: { code: "RECORDER_MATERIAL_INVALID" },
+    })
+  })
+
   it("returns a typed no-Chronicle result for failed execution", () => {
     const execution = CANDIDATE_MATCH_KERNEL.runMatch({
       matchId: "failed-recorder-match",
@@ -189,6 +242,55 @@ describe("recordChronicleFromExecution", () => {
         const transitions = execution.transitions.map((transition, index) =>
           index === 0
             ? { ...transition, beforeStateHash: `sha256:${"0".repeat(64)}` }
+            : transition,
+        )
+        return {
+          ...execution,
+          transitions,
+          recorderMaterial: {
+            ...execution.recorderMaterial,
+            boundaries: transitions,
+          },
+        }
+      },
+      "RECORDER_BOUNDARY_INTEGRITY_INVALID",
+    ],
+    [
+      "machine hash drift",
+      (execution: ReturnType<typeof run>) => {
+        if (execution.kind !== "completed") return execution
+        const transitions = execution.transitions.map((transition, index) =>
+          index === 0
+            ? { ...transition, beforeMachineHash: `sha256:${"0".repeat(64)}` }
+            : transition,
+        )
+        return {
+          ...execution,
+          transitions,
+          recorderMaterial: {
+            ...execution.recorderMaterial,
+            boundaries: transitions,
+          },
+        }
+      },
+      "RECORDER_MATERIAL_INVALID",
+    ],
+    [
+      "activation coordinate drift",
+      (execution: ReturnType<typeof run>) => {
+        if (execution.kind !== "completed") return execution
+        const target = execution.transitions.findIndex(
+          ({ coordinates }) => coordinates.activationId !== undefined,
+        )
+        const transitions = execution.transitions.map((transition, index) =>
+          index === target
+            ? {
+                ...transition,
+                coordinates: {
+                  ...transition.coordinates,
+                  activationId: "forged",
+                },
+              }
             : transition,
         )
         return {

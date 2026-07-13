@@ -255,20 +255,46 @@ const drive = (
 export const runCandidateMatch = (
   input: CandidateMatchInput,
 ): CandidateExecution => {
+  let machine: MatchMachine
   try {
-    return drive(createCandidateMatchMachine(input), input.runtime, false)
+    machine = createCandidateMatchMachine(input)
   } catch {
     return failedExecution(
       null,
       restrictedIntegrityFailure("CANDIDATE_MATCH_ADMISSION_FAILED"),
     )
   }
+  try {
+    return drive(machine, input.runtime, false)
+  } catch {
+    return failedExecution(
+      globalThis.structuredClone(machine.initialState),
+      restrictedIntegrityFailure("KERNEL_DRIVER_UNEXPECTED"),
+    )
+  }
 }
 
 export const runCandidateActivationFromState = (
   input: CandidateActivationInput,
-): CandidateActivationExecution =>
-  drive(createCandidateActivationMachine(input), input.runtime, true)
+): CandidateActivationExecution => {
+  let machine: MatchMachine
+  try {
+    machine = createCandidateActivationMachine(input)
+  } catch {
+    return failedExecution(
+      globalThis.structuredClone(input.state),
+      restrictedIntegrityFailure("CANDIDATE_ACTIVATION_ADMISSION_FAILED"),
+    )
+  }
+  try {
+    return drive(machine, input.runtime, true)
+  } catch {
+    return failedExecution(
+      globalThis.structuredClone(machine.initialState),
+      restrictedIntegrityFailure("KERNEL_DRIVER_UNEXPECTED"),
+    )
+  }
+}
 
 /**
  * Inactive integration seam. The current `runMatch` export and authority

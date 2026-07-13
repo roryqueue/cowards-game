@@ -23,6 +23,7 @@ import { hashCanonicalCompatibilityTuple } from "@cowards/spec"
 const STATE_HASH_DOMAIN =
   "cowards-game:candidate-game-state-projection:v1" as const
 const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/u
+const TRANSITION_KIND_PATTERN = /^[A-Z][A-Z0-9_:-]{0,63}$/u
 const RECORDER_HASH_DOMAIN =
   "cowards-game:candidate-recorder-material:v1" as const
 
@@ -31,6 +32,11 @@ interface RecorderCoordinates {
   readonly roundNumber: 1 | 2 | 3 | 4
   readonly stage: string
   readonly ordinal: number
+  readonly cycleIndex?: number | undefined
+  readonly activationId?: string | undefined
+  readonly activationIndex?: number | undefined
+  readonly actingPlayerId?: string | undefined
+  readonly soldierId?: string | undefined
 }
 
 interface RecorderTransition {
@@ -299,6 +305,12 @@ const explicitOwner = (
   privatePayload: JsonValue | undefined,
 ): PlayerId | undefined => {
   const object = readObject(privatePayload)
+  if (
+    object?.ownerPlayerId !== undefined &&
+    object.playerId !== undefined
+  ) {
+    return undefined
+  }
   const owner = object?.ownerPlayerId ?? object?.playerId
   return typeof owner === "string" && owner.length > 0 ? owner : undefined
 }
@@ -346,7 +358,9 @@ const privateOwnerIsCanonical = (
     soldier.ownerPlayerId === owner &&
     (summary.context?.soldierId === undefined ||
       summary.context.soldierId === soldierId) &&
-    publicPayload?.soldierId === soldierId
+    publicPayload?.soldierId === soldierId &&
+    (publicPayload.ownerPlayerId === undefined ||
+      publicPayload.ownerPlayerId === owner)
   )
 }
 
@@ -551,7 +565,37 @@ const validateExecution = (
 
   for (let index = 0; index < transitions.length; index += 1) {
     const transition = transitions[index]!
+    const coordinates = transition.coordinates
+    const coordinateKeysValid = Object.keys(coordinates).every((key) =>
+      [
+        "phaseNumber",
+        "roundNumber",
+        "stage",
+        "ordinal",
+        "cycleIndex",
+        "activationId",
+        "activationIndex",
+        "actingPlayerId",
+        "soldierId",
+      ].includes(key),
+    )
+    const hasActivationCoordinates = coordinates.activationId !== undefined
+    const activationCoordinatesValid = hasActivationCoordinates
+      ? Number.isSafeInteger(coordinates.activationIndex) &&
+        coordinates.activationIndex! >= 0 &&
+        coordinates.activationId ===
+          `${coordinates.phaseNumber}:${coordinates.roundNumber}:${coordinates.activationIndex}` &&
+        typeof coordinates.actingPlayerId === "string" &&
+        coordinates.actingPlayerId.length > 0 &&
+        typeof coordinates.soldierId === "string" &&
+        coordinates.soldierId.length > 0
+      : coordinates.activationIndex === undefined &&
+        coordinates.actingPlayerId === undefined &&
+        coordinates.soldierId === undefined
     if (
+      !TRANSITION_KIND_PATTERN.test(transition.transitionKind) ||
+      !coordinateKeysValid ||
+      !activationCoordinatesValid ||
       transition.coordinates.ordinal !== index ||
       !Number.isSafeInteger(transition.coordinates.phaseNumber) ||
       transition.coordinates.phaseNumber < 1 ||
@@ -560,6 +604,9 @@ const validateExecution = (
       transition.coordinates.roundNumber > 4 ||
       typeof transition.coordinates.stage !== "string" ||
       transition.coordinates.stage.length === 0 ||
+      (transition.coordinates.cycleIndex !== undefined &&
+        (!Number.isSafeInteger(transition.coordinates.cycleIndex) ||
+          transition.coordinates.cycleIndex < 0)) ||
       !["success", "player_violation"].includes(
         transition.classification,
       ) ||
@@ -574,6 +621,8 @@ const validateExecution = (
         transition.terminalStatus,
         outcomeFromProjection(transition.afterState) ?? null,
       ) ||
+      (index < transitions.length - 1 &&
+        transition.terminalStatus !== null) ||
       transition.failureStatus !== null ||
       (index > 0 &&
         (transitions[index - 1]!.afterStateHash !==
