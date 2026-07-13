@@ -8,6 +8,7 @@ import type {
   StrategyInput,
 } from "@cowards/spec"
 import {
+  CANONICAL_COMPATIBILITY_TUPLES,
   ChronicleValidationErrorCodeSchema,
   COMPATIBILITY_VERSIONS,
 } from "@cowards/spec"
@@ -15,7 +16,12 @@ import { describe, expect, it } from "vitest"
 import type { StrategyRuntime } from "@cowards/engine"
 import { buildChronicleFromMatch } from "./build.js"
 import { createChronicleContentHash } from "./hash.js"
-import { migrateChronicle, validateChronicle } from "./validate.js"
+import {
+  migrateChronicle,
+  resolveReplayCompatibilityIdentity,
+  validateChronicle,
+  validateReplayInput,
+} from "./validate.js"
 
 const asJson = (value: unknown): JsonValue => value as JsonValue
 
@@ -112,6 +118,53 @@ const grammarErrorCodes = [
 ] as const satisfies readonly ChronicleValidationErrorCode[]
 
 describe("validateChronicle", () => {
+  it("atomically validates current tuples while preserving explicit historical dispatch", () => {
+    const chronicle = createChronicle()
+    const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
+    const current = {
+      profile: "current-exact" as const,
+      compatibility: {
+        tupleId: registered.tupleId,
+        tuple: { ...registered.tuple },
+      },
+      chronicle,
+    }
+
+    expect(validateReplayInput(current)).toEqual({ ok: true })
+    expect(
+      resolveReplayCompatibilityIdentity(current),
+    ).toMatchObject({ status: "current_exact", tupleId: registered.tupleId })
+    expect(
+      validateReplayInput({
+        ...current,
+        compatibility: {
+          ...current.compatibility,
+          tuple: { ...current.compatibility.tuple, engine: "engine:latest" },
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
+    })
+    expect(
+      validateReplayInput({ profile: "current-exact", chronicle }),
+    ).toMatchObject({
+      ok: false,
+      errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
+    })
+
+    const historical = {
+      profile: "historical-v1.4" as const,
+      chronicle,
+    }
+    const before = JSON.stringify(historical)
+    expect(validateReplayInput(historical)).toEqual({ ok: true })
+    expect(resolveReplayCompatibilityIdentity(historical)).toEqual({
+      status: "historical_original_semantics",
+      tupleResolution: "unresolved_legacy",
+    })
+    expect(JSON.stringify(historical)).toBe(before)
+  })
   it("accepts a valid Chronicle with matching integrity", () => {
     const chronicle = createChronicle()
     const withIntegrity = {
