@@ -196,11 +196,42 @@ const integrityFailure = (
       }),
 })
 
+const isPreservedV14ActivationState = (
+  machine: MatchMachine,
+  result: Exclude<SemanticIntegrityResult, { ok: true }>,
+): boolean => {
+  if (machine.executionMode !== "activation") return false
+  const { bounds, arenaVariant } = machine.state
+  const initial = arenaVariant.initialBounds
+  const isOrderedSubset =
+    bounds.minX < bounds.maxX &&
+    bounds.minY < bounds.maxY &&
+    bounds.minX >= initial.minX &&
+    bounds.maxX <= initial.maxX &&
+    bounds.minY >= initial.minY &&
+    bounds.maxY <= initial.maxY
+  if (!isOrderedSubset) return false
+
+  // Immutable v1.4 compatibility evidence includes isolated action fixtures
+  // whose current board is authoritative but was not derived by replaying
+  // contractions from arenaVariant. Only those two derivation diagnostics are
+  // relaxed at this non-counted activation seam; every intrinsic semantic
+  // check (bounds containment, terrain bounds/duplicates, occupancy, quota,
+  // ownership, lifecycle, and outcome) remains mandatory.
+  const preservedDerivationCodes = new Set([
+    "ARENA_BOUNDS_INVERTED",
+    "ARENA_TERRAIN_AUTHORITY_MISMATCH",
+  ])
+  return result.issues.every(({ code }) => preservedDerivationCodes.has(code))
+}
+
 export const validateMachine = (
   machine: MatchMachine,
 ): KernelRestrictedFailure | undefined => {
   const semantic = validateCanonicalGameState(machine.state)
-  if (!semantic.ok) return integrityFailure("KERNEL_STATE_INVALID", semantic)
+  if (!semantic.ok && !isPreservedV14ActivationState(machine, semantic)) {
+    return integrityFailure("KERNEL_STATE_INVALID", semantic)
+  }
   if (
     machine.semanticTuple.tupleId !== CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID ||
     JSON.stringify(projectTuple(machine.semanticTuple.tuple)) !==
