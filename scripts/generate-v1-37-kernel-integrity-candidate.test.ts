@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-imports -- The candidate is intentionally absent from the public spec barrel. */
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import { readFileSync } from "node:fs"

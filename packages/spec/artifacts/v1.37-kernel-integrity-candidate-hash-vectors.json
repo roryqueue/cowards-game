@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "v1.37-kernel-integrity-candidate-hash-vectors-v1",
+  "generatorVersion": "generate-v1-37-kernel-integrity-candidate-v1",
+  "generatedBy": "scripts/generate-v1-37-kernel-integrity-candidate.ts",
+  "domainTag": "cowards-game:canonical-compatibility-tuple:v1",
+  "fieldOrder": [
+    "rules",
+    "engine",
+    "runtimeAbi",
+    "chronicle",
+    "arenaCatalog",
+    "setPolicy"
+  ],
+  "vectors": [
+    {
+      "name": "valid-inactive-candidate",
+      "selector": {
+        "tupleId": "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+        "tuple": {
+          "rules": "cowards-rules-v1.4",
+          "engine": "engine-kernel-v1.37-candidate-1",
+          "runtimeAbi": "strategy-runtime-abi-v1.14",
+          "chronicle": "chronicle-recorder-current-events-v1.37-candidate-1",
+          "arenaCatalog": "semantic-arena-catalog-v1.37-candidate-1",
+          "setPolicy": "canonical-set-policy-v1.4"
+        }
+      },
+      "encodedBytesHex": "636f77617264732d67616d653a63616e6f6e6963616c2d636f6d7061746962696c6974792d7475706c653a76310072756c657300313800636f77617264732d72756c65732d76312e3400656e67696e6500333100656e67696e652d6b65726e656c2d76312e33372d63616e6469646174652d310072756e74696d654162690032360073747261746567792d72756e74696d652d6162692d76312e3134006368726f6e69636c65003531006368726f6e69636c652d7265636f726465722d63757272656e742d6576656e74732d76312e33372d63616e6469646174652d31006172656e61436174616c6f670034300073656d616e7469632d6172656e612d636174616c6f672d76312e33372d63616e6469646174652d3100736574506f6c6963790032350063616e6f6e6963616c2d7365742d706f6c6963792d76312e3400",
+      "encodedBytesBase64": "Y293YXJkcy1nYW1lOmNhbm9uaWNhbC1jb21wYXRpYmlsaXR5LXR1cGxlOnYxAHJ1bGVzADE4AGNvd2FyZHMtcnVsZXMtdjEuNABlbmdpbmUAMzEAZW5naW5lLWtlcm5lbC12MS4zNy1jYW5kaWRhdGUtMQBydW50aW1lQWJpADI2AHN0cmF0ZWd5LXJ1bnRpbWUtYWJpLXYxLjE0AGNocm9uaWNsZQA1MQBjaHJvbmljbGUtcmVjb3JkZXItY3VycmVudC1ldmVudHMtdjEuMzctY2FuZGlkYXRlLTEAYXJlbmFDYXRhbG9nADQwAHNlbWFudGljLWFyZW5hLWNhdGFsb2ctdjEuMzctY2FuZGlkYXRlLTEAc2V0UG9saWN5ADI1AGNhbm9uaWNhbC1zZXQtcG9saWN5LXYxLjQA",
+      "sha256": "922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+      "candidateAcceptance": "accept-inactive-only",
+      "currentAcceptance": "reject"
+    },
+    {
+      "name": "mixed-candidate-current-chronicle",
+      "selector": {
+        "tupleId": "sha256:32e8a684838299bc7c25803645ca241cb0242b0af6598c569c783fced1e85971",
+        "tuple": {
+          "rules": "cowards-rules-v1.4",
+          "engine": "engine-kernel-v1.37-candidate-1",
+          "runtimeAbi": "strategy-runtime-abi-v1.14",
+          "chronicle": "chronicle-v1.4",
+          "arenaCatalog": "semantic-arena-catalog-v1.37-candidate-1",
+          "setPolicy": "canonical-set-policy-v1.4"
+        }
+      },
+      "encodedBytesHex": "636f77617264732d67616d653a63616e6f6e6963616c2d636f6d7061746962696c6974792d7475706c653a76310072756c657300313800636f77617264732d72756c65732d76312e3400656e67696e6500333100656e67696e652d6b65726e656c2d76312e33372d63616e6469646174652d310072756e74696d654162690032360073747261746567792d72756e74696d652d6162692d76312e3134006368726f6e69636c65003134006368726f6e69636c652d76312e34006172656e61436174616c6f670034300073656d616e7469632d6172656e612d636174616c6f672d76312e33372d63616e6469646174652d3100736574506f6c6963790032350063616e6f6e6963616c2d7365742d706f6c6963792d76312e3400",
+      "encodedBytesBase64": "Y293YXJkcy1nYW1lOmNhbm9uaWNhbC1jb21wYXRpYmlsaXR5LXR1cGxlOnYxAHJ1bGVzADE4AGNvd2FyZHMtcnVsZXMtdjEuNABlbmdpbmUAMzEAZW5naW5lLWtlcm5lbC12MS4zNy1jYW5kaWRhdGUtMQBydW50aW1lQWJpADI2AHN0cmF0ZWd5LXJ1bnRpbWUtYWJpLXYxLjE0AGNocm9uaWNsZQAxNABjaHJvbmljbGUtdjEuNABhcmVuYUNhdGFsb2cANDAAc2VtYW50aWMtYXJlbmEtY2F0YWxvZy12MS4zNy1jYW5kaWRhdGUtMQBzZXRQb2xpY3kAMjUAY2Fub25pY2FsLXNldC1wb2xpY3ktdjEuNAA=",
+      "sha256": "32e8a684838299bc7c25803645ca241cb0242b0af6598c569c783fced1e85971",
+      "candidateAcceptance": "reject-mixed",
+      "currentAcceptance": "reject"
+    },
+    {
+      "name": "partial-candidate-missing-arena",
+      "selector": {
+        "tupleId": "sha256:partial-candidate-has-no-canonical-hash",
+        "tuple": {
+          "rules": "cowards-rules-v1.4",
+          "engine": "engine-kernel-v1.37-candidate-1",
+          "runtimeAbi": "strategy-runtime-abi-v1.14",
+          "chronicle": "chronicle-recorder-current-events-v1.37-candidate-1",
+          "setPolicy": "canonical-set-policy-v1.4"
+        }
+      },
+      "encodedBytesHex": null,
+      "encodedBytesBase64": null,
+      "sha256": null,
+      "candidateAcceptance": "reject-partial",
+      "currentAcceptance": "reject"
+    },
+    {
+      "name": "old-current-registered",
+      "selector": {
+        "tupleId": "sha256:be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+        "tuple": {
+          "rules": "cowards-rules-v1.4",
+          "engine": "0.1.4",
+          "runtimeAbi": "strategy-runtime-abi-v1.14",
+          "chronicle": "chronicle-v1.4",
+          "arenaCatalog": "canonical-arena-catalog-v1.4",
+          "setPolicy": "canonical-set-policy-v1.4"
+        }
+      },
+      "encodedBytesHex": "636f77617264732d67616d653a63616e6f6e6963616c2d636f6d7061746962696c6974792d7475706c653a76310072756c657300313800636f77617264732d72756c65732d76312e3400656e67696e65003500302e312e340072756e74696d654162690032360073747261746567792d72756e74696d652d6162692d76312e3134006368726f6e69636c65003134006368726f6e69636c652d76312e34006172656e61436174616c6f670032380063616e6f6e6963616c2d6172656e612d636174616c6f672d76312e3400736574506f6c6963790032350063616e6f6e6963616c2d7365742d706f6c6963792d76312e3400",
+      "encodedBytesBase64": "Y293YXJkcy1nYW1lOmNhbm9uaWNhbC1jb21wYXRpYmlsaXR5LXR1cGxlOnYxAHJ1bGVzADE4AGNvd2FyZHMtcnVsZXMtdjEuNABlbmdpbmUANQAwLjEuNABydW50aW1lQWJpADI2AHN0cmF0ZWd5LXJ1bnRpbWUtYWJpLXYxLjE0AGNocm9uaWNsZQAxNABjaHJvbmljbGUtdjEuNABhcmVuYUNhdGFsb2cAMjgAY2Fub25pY2FsLWFyZW5hLWNhdGFsb2ctdjEuNABzZXRQb2xpY3kAMjUAY2Fub25pY2FsLXNldC1wb2xpY3ktdjEuNAA=",
+      "sha256": "be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+      "candidateAcceptance": "reject-current",
+      "currentAcceptance": "accept-current-only"
+    }
+  ]
+}

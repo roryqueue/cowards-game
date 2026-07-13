@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "v1.37-kernel-integrity-candidate-v1",
+  "generatorVersion": "generate-v1-37-kernel-integrity-candidate-v1",
+  "generatedBy": "scripts/generate-v1-37-kernel-integrity-candidate.ts",
+  "status": "inactive-candidate",
+  "trustState": "untrusted-non-publishable",
+  "publicationAllowed": false,
+  "countedExecutionAllowed": false,
+  "activationPlan": "257-19-atomic-current-authority-flip",
+  "tupleEncoding": {
+    "domainTag": "cowards-game:canonical-compatibility-tuple:v1",
+    "fieldOrder": [
+      "rules",
+      "engine",
+      "runtimeAbi",
+      "chronicle",
+      "arenaCatalog",
+      "setPolicy"
+    ],
+    "separator": "NUL",
+    "lengthUnit": "UTF-8 bytes",
+    "hashAlgorithm": "sha256"
+  },
+  "candidate": {
+    "schemaVersion": "v1.37-kernel-integrity-candidate-v1",
+    "generatorVersion": "generate-v1-37-kernel-integrity-candidate-v1",
+    "kind": "kernel-integrity-authority-candidate",
+    "status": "inactive-candidate",
+    "trustState": "untrusted-non-publishable",
+    "candidateTuple": {
+      "rules": "cowards-rules-v1.4",
+      "engine": "engine-kernel-v1.37-candidate-1",
+      "runtimeAbi": "strategy-runtime-abi-v1.14",
+      "chronicle": "chronicle-recorder-current-events-v1.37-candidate-1",
+      "arenaCatalog": "semantic-arena-catalog-v1.37-candidate-1",
+      "setPolicy": "canonical-set-policy-v1.4"
+    },
+    "candidateTupleSha256": "922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+    "candidateTupleId": "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+    "authorityOwners": {
+      "rules": {
+        "packageName": "@cowards/spec",
+        "symbol": "COMPATIBILITY_VERSIONS"
+      },
+      "engineKernel": {
+        "packageName": "@cowards/engine",
+        "symbol": "runMatch"
+      },
+      "runtimeAbi": {
+        "packageName": "@cowards/spec",
+        "symbol": "STRATEGY_RUNTIME_ABI_VERSION"
+      },
+      "chronicleRecorder": {
+        "packageName": "@cowards/replay",
+        "symbol": "recordCanonicalMatchTransitions"
+      },
+      "currentEventValidator": {
+        "packageName": "@cowards/replay",
+        "symbol": "validateCurrentChronicle"
+      },
+      "semanticArenaValidator": {
+        "packageName": "@cowards/spec",
+        "symbol": "validateSemanticArena"
+      },
+      "setPolicy": {
+        "packageName": "@cowards/persistence",
+        "symbol": "scheduleTrialLadderSeason"
+      }
+    },
+    "eventVocabulary": {
+      "candidateCurrent": [
+        "MATCH_STARTED",
+        "ROUND_STARTED",
+        "STRATEGY_EVALUATED",
+        "ACTIVATION_STARTED",
+        "ACTIVATION_SKIPPED",
+        "ACTIVATION_ENDED",
+        "CYCLE_STARTED",
+        "CYCLE_ENDED",
+        "AWARENESS_GRID_OBSERVED",
+        "ACTION_EMITTED",
+        "MOVE_ADVANCED",
+        "MOVE_BLOCKED",
+        "TURN_RESOLVED",
+        "PUSH_RESOLVED",
+        "PUSH_BLOCKED",
+        "BACKSTAB_RESOLVED",
+        "SOLDIER_STONED",
+        "SOLDIER_FELL",
+        "CONTRACTION_RESOLVED",
+        "MATCH_ENDED",
+        "RUNTIME_VIOLATION"
+      ],
+      "removedFromCandidateCurrent": [
+        "PUSH_ATTEMPTED"
+      ],
+      "historicalOnly": []
+    },
+    "activation": {
+      "currentTuplePointer": false,
+      "currentSchema": false,
+      "currentArtifact": false,
+      "publication": false,
+      "receipt": false,
+      "countedExecution": false
+    },
+    "currentAuthorityByteBaseline": {
+      "packages/spec/src/versions.ts": "98ac9b63482c0a392694551db9a5de2443aa3119f62387316457f03d64341821",
+      "packages/spec/src/integrity-authority.ts": "11ed27e5646f8f908e2d2b9558a144b28f362ebe395c7a66b58c308953ca83b9",
+      "packages/spec/src/index.ts": "72f499746c548f53c27a5972d9e39463c2d36709611bbd88cde3d9bb1a7b4c16",
+      "packages/spec/artifacts/v1.37-integrity-authority.json": "90bd23acff825349ed80b3df6b8e350ecd91153de44e17c952f5a302c7d3499d",
+      "packages/spec/artifacts/v1.37-integrity-authority-hash-vectors.json": "cf8ac66719f06c7ebfb4db987524809495be6b6b5a2cbbb75fefbf1c06daafad"
+    }
+  }
+}
