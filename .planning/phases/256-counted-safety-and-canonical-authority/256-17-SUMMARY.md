@@ -98,6 +98,7 @@ status: complete
 2. **Task 1 GREEN: signed bundle and anti-rollback contract** - `9e410e2` (feat)
 3. **Task 2 RED: reference-only request test** - `5334294` (test)
 4. **Task 2 GREEN: request migration and deterministic vectors** - `2b94026` (feat)
+5. **Task 2 vector correction: length-preserving bad signature** - `32389b8` (fix)
 
 ## Files Created/Modified
 
@@ -126,9 +127,17 @@ status: complete
 - **Verification:** Full spec suite, runtime-service typecheck, and focused runtime execution tests passed.
 - **Committed in:** `2b94026`
 
+**2. [Rule 1 - Bug] Kept the bad-signature vector structurally valid**
+- **Found during:** Final vector self-check
+- **Issue:** Replacing base64 padding made the negative signature decode to 66 bytes, so consumers could reject its length before exercising Ed25519 verification.
+- **Fix:** Mutated one base64 character while preserving the canonical 64-byte signature shape and asserted the decoded length.
+- **Files modified:** vector generator, committed vector artifact, authority bundle test
+- **Verification:** Deterministic generation/check, focused authority tests, and spec typecheck passed.
+- **Committed in:** `32389b8`
+
 ---
 
-**Total deviations:** 1 auto-fixed (1 missing critical integrity separation).
+**Total deviations:** 2 auto-fixed (1 missing critical integrity separation, 1 vector bug).
 **Impact on plan:** The split closes request-echo authority without weakening complete persisted Match evidence or changing gameplay semantics.
 
 ## Issues Encountered
