@@ -1,0 +1,113 @@
+{
+  "schemaVersion": "v1.37-phase-257-red-baseline-v1",
+  "milestone": "v1.37",
+  "phase": 257,
+  "purpose": "Immutable pre-refactor authority and reproduction identity; this artifact authorizes no gameplay change.",
+  "preRefactorHead": "9c03328c8d939b82953f20c612ca49dbd1d5749d",
+  "sourceBasis": "Exact committed HEAD bytes for named sources; protected user-owned working-tree files were not read or modified.",
+  "semanticCompatibility": {
+    "tupleId": "sha256:be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+    "algorithm": "sha256",
+    "sha256": "be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+    "tuple": {
+      "rules": "cowards-rules-v1.4",
+      "engine": "0.1.4",
+      "runtimeAbi": "strategy-runtime-abi-v1.14",
+      "chronicle": "chronicle-v1.4",
+      "arenaCatalog": "canonical-arena-catalog-v1.4",
+      "setPolicy": "canonical-set-policy-v1.4"
+    }
+  },
+  "authoritySources": [
+    {
+      "role": "engineMatchLoop",
+      "path": "packages/engine/src/match.ts",
+      "symbol": "runMatch",
+      "fileSha256": "fefecf0b569971f31870a4dc624b25ff68968a106c21c291df896b928f22e677",
+      "declarationByteLength": 1382,
+      "declarationSha256": "d2e1602d5a5525d28ada0947fd40e2b3264c3c900741854aed8f1bf91dcf3036"
+    },
+    {
+      "role": "replayMatchLoop",
+      "path": "packages/replay/src/build.ts",
+      "symbol": "buildChronicleFromMatch",
+      "fileSha256": "baef6f0341a841d16d184b54f840a0a68002e74ef9c05c15da996807ae5ddd2a",
+      "declarationByteLength": 2904,
+      "declarationSha256": "ca1547295c8efece5e624b8d39cf2fbe7564f1f715d16c2e9c7ecc3796b6fb4a"
+    },
+    {
+      "role": "runtimeServiceReplayOwnedEntry",
+      "path": "apps/runtime-service/src/execute-match.ts",
+      "symbol": "executeParsedRequest",
+      "fileSha256": "446939e0e3992de7f54737a7d406626138a2e9bc2a348060ba153e95c8a4bb72",
+      "declarationByteLength": 4048,
+      "declarationSha256": "5a4f931bfbea1c8a334276d08143c36377d49c2da9e4de0deb8e6c1fbea9982f",
+      "publicEntrySymbol": "executeRuntimeServiceRequest",
+      "publicEntryDeclarationByteLength": 1171,
+      "publicEntryDeclarationSha256": "04e14ebcb4c0bd932c8350f2335409f4fc0a0ad0c4c349bc852db1d3b53edd7c"
+    },
+    {
+      "role": "staleContiguousActivationWrapper",
+      "path": "packages/engine/src/activation.ts",
+      "symbol": "resolveActivation",
+      "fileSha256": "102f9d3ba7dc47675229c4182c314a39f82111587dcb812fa80416513a004608",
+      "declarationByteLength": 991,
+      "declarationSha256": "368d4edf7b6eef40bf741ef2d60eff069ff241ecd552b92f640018be122b1425"
+    }
+  ],
+  "phase256AuditBaseline": {
+    "path": ".planning/artifacts/v1.37-core-rules-audit-baseline.json",
+    "sha256": "f069de5950030c59a04b9bf671ff7d149a54461690b766f8fd385a2c4dbb1a0b",
+    "schemaVersion": "v1.37-core-rules-audit-baseline-v1",
+    "implementationHead": "c28015b1cdf08b027fa373a07bf8394044282885"
+  },
+  "reproduction": {
+    "command": "pnpm exec tsx .planning/artifacts/v2.0-core-rules-audit/reproduce-core-rule-gaps.ts",
+    "probeCount": 7,
+    "output": {
+      "noAdvanceLastSoldier": {
+        "status": "STONE",
+        "outcome": null,
+        "matchEndedEvents": 0
+      },
+      "cycleEndBackstabActor": {
+        "status": "STONE",
+        "slotEnded": false,
+        "terminalReason": null
+      },
+      "excessMalformedOrder": {
+        "validOrdersRetained": 0,
+        "violationEvents": 1
+      },
+      "deepValidation": "threw:RangeError",
+      "overlappingArenaAccepted": true,
+      "legacyBoundaryAccepted": true,
+      "successfulPushPusherHistory": "RIGHT"
+    }
+  },
+  "classification": {
+    "phase257Defects": [
+      "noAdvanceLastSoldier",
+      "cycleEndBackstabActor",
+      "excessMalformedOrder",
+      "overlappingArenaAccepted"
+    ],
+    "laterPhaseDefects": [
+      {
+        "id": "deepValidation",
+        "owner": 258
+      },
+      {
+        "id": "legacyBoundaryAccepted",
+        "owner": 259
+      }
+    ],
+    "preservedV14Rulings": [
+      {
+        "id": "successfulPushPusherHistory",
+        "observed": "RIGHT"
+      }
+    ]
+  },
+  "compatibilityGate": "Any valid-v1.4 state, Action legality, event order, outcome, terminal timing or reason, runtime call sequence, or Strategy observation delta outside approved D-09 through D-15 requires explicit approval before expectations change."
+}
