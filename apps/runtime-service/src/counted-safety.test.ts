@@ -1,3 +1,8 @@
+import { once } from "node:events"
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import type { AddressInfo } from "node:net"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { describe, expect, it, vi } from "vitest"
 import {
   DEFAULT_RUNTIME_LIMITS,
@@ -23,6 +28,12 @@ import {
   type VerifiedMountedRuntimeEvidenceAuthority,
 } from "./runtime-evidence-authority.js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
+import {
+  DEPLOYMENT_LANE_REGISTRY_SCHEMA_VERSION,
+  type DeploymentLaneProfile,
+} from "./deployment-lane-registry.js"
+import { runtimeServiceConfigFromEnvironment } from "./production-runtime-config.js"
+import { createRuntimeExecutionHttpServer } from "./server.js"
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
@@ -85,6 +96,109 @@ const requestContext = (
       limits: DEFAULT_RUNTIME_LIMITS,
       evidenceSnapshot: context.evidenceSnapshot,
     },
+  }
+}
+
+const requestWithProviderIdentity = (
+  request: RuntimeExecutionServiceRequest,
+): RuntimeExecutionServiceRequest => ({
+  ...request,
+  strategies: Object.fromEntries(
+    Object.entries(request.strategies).map(([side, revision]) => {
+      const artifact =
+        revision.metadata.sourceArtifact ?? revision.metadata.compiledArtifact
+      return [
+        side,
+        {
+          ...revision,
+          metadata: {
+            ...revision.metadata,
+            providerValidation: {
+              providerId: `fixture-provider:${revision.runtime.language.id}`,
+              contractVersion: "fixture-provider-contract-v1",
+              sourceHash: revision.sourceHash,
+              sourceBytes: revision.sourceBytes,
+              ...(artifact === undefined
+                ? {}
+                : {
+                    artifactHash: artifact.hash,
+                    artifactBytes: artifact.bytes,
+                  }),
+              proof: "fixture-only-provider-proof",
+            },
+          },
+        },
+      ]
+    }),
+  ) as unknown as RuntimeExecutionServiceRequest["strategies"],
+})
+
+const registryForRequest = (request: RuntimeExecutionServiceRequest) => {
+  const revision = request.strategies.bottom
+  const identity = createFixtureDeploymentLaneIdentity(revision)
+  const profile: DeploymentLaneProfile = {
+    providerId: identity.providerId,
+    languageId: identity.languageId,
+    languageVersion: revision.runtime.language.version,
+    runtimeId: identity.runtimeId,
+    runtimeVersion: identity.runtimeVersion,
+    toolchainId: identity.toolchainId,
+    toolchainVersion: identity.toolchainVersion,
+    adapterId: identity.adapterId,
+    adapterVersion: identity.adapterVersion,
+    policyId: identity.policyId,
+    policyVersion: identity.policyVersion,
+    corpusId: identity.corpusId,
+    corpusVersion: identity.corpusVersion,
+    artifactKind: "source",
+    artifactIdPrefix: identity.artifactId.slice(0, -revision.id.length),
+    implementationId: identity.implementationId,
+    buildId: identity.buildId,
+    semanticTupleId: identity.semanticTupleId,
+    semanticTuple: { ...identity.semanticTuple },
+  }
+  return {
+    schemaVersion: DEPLOYMENT_LANE_REGISTRY_SCHEMA_VERSION,
+    registryId: "fixture-only:deployment-lanes",
+    lanes: [profile],
+  }
+}
+
+const executeOverProductionConfiguredHttp = async (input: {
+  request: RuntimeExecutionServiceRequest
+  authorityLoader: RuntimeEvidenceAuthorityLoader
+  registry: ReturnType<typeof registryForRequest>
+}): Promise<{ status: number; body: Record<string, unknown> }> => {
+  const directory = mkdtempSync(join(tmpdir(), "cowards-deployment-lanes-"))
+  const registryPath = join(directory, "registry.json")
+  writeFileSync(registryPath, JSON.stringify(input.registry), "utf8")
+  const runtimeConfig = runtimeServiceConfigFromEnvironment({
+    STRATEGY_EXECUTION_ADAPTER: "worker-thread",
+    COWARDS_RUNTIME_DEPLOYMENT_LANE_REGISTRY: registryPath,
+  })
+  const server = createRuntimeExecutionHttpServer({
+    runtimeConfig,
+    authorityLoader: input.authorityLoader,
+  })
+  try {
+    server.listen(0, "127.0.0.1")
+    await once(server, "listening")
+    const address = server.address() as AddressInfo
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/execute-match`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input.request),
+      },
+    )
+    return {
+      status: response.status,
+      body: (await response.json()) as Record<string, unknown>,
+    }
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+    rmSync(directory, { recursive: true, force: true })
   }
 }
 
@@ -156,6 +270,81 @@ const expectEvidenceFailure = (
 }
 
 describe("runtime-service counted safety", () => {
+  it("uses the production startup registry path for exact HTTP execution and rejects every identity component", async () => {
+    expect(() =>
+      runtimeServiceConfigFromEnvironment({
+        STRATEGY_EXECUTION_ADAPTER: "worker-thread",
+      }),
+    ).toThrow(/deployment.lane.registry/iu)
+
+    const exactContext = requestContext("counted")
+    const exactRequest = requestWithProviderIdentity(exactContext.request)
+    const exact = await executeOverProductionConfiguredHttp({
+      request: exactRequest,
+      authorityLoader: exactContext.context.authorityLoader,
+      registry: registryForRequest(exactRequest),
+    })
+    expect(exact.status).toBe(200)
+    expect(exact.body.ok).toBe(true)
+
+    const profileMutations: Array<
+      [
+        string,
+        keyof Omit<
+          DeploymentLaneProfile,
+          | "artifactKind"
+          | "languageVersion"
+          | "semanticTupleId"
+          | "semanticTuple"
+        >,
+      ]
+    > = [
+      ["provider", "providerId"],
+      ["language", "languageId"],
+      ["runtime", "runtimeId"],
+      ["runtime version", "runtimeVersion"],
+      ["toolchain", "toolchainId"],
+      ["toolchain version", "toolchainVersion"],
+      ["adapter", "adapterId"],
+      ["adapter version", "adapterVersion"],
+      ["policy", "policyId"],
+      ["policy version", "policyVersion"],
+      ["corpus", "corpusId"],
+      ["corpus version", "corpusVersion"],
+      ["artifact id", "artifactIdPrefix"],
+      ["implementation", "implementationId"],
+      ["build", "buildId"],
+    ]
+    for (const [name, field] of profileMutations) {
+      const context = requestContext("counted")
+      const request = requestWithProviderIdentity(context.request)
+      const registry = registryForRequest(request)
+      registry.lanes[0]![field] = `drifted:${name}`
+      const result = await executeOverProductionConfiguredHttp({
+        request,
+        authorityLoader: context.context.authorityLoader,
+        registry,
+      })
+      expect(result.status, name).toBe(422)
+      expect(result.body.ok, name).toBe(false)
+    }
+
+    const artifactContext = requestContext("counted")
+    const artifactRequest = requestWithProviderIdentity(artifactContext.request)
+    const sourceArtifact = artifactRequest.strategies.bottom.metadata.sourceArtifact!
+    artifactRequest.strategies.bottom.metadata.sourceArtifact = {
+      ...sourceArtifact,
+      hash: "7".repeat(64),
+    }
+    const artifactResult = await executeOverProductionConfiguredHttp({
+      request: artifactRequest,
+      authorityLoader: artifactContext.context.authorityLoader,
+      registry: registryForRequest(requestWithProviderIdentity(artifactContext.request)),
+    })
+    expect(artifactResult.status, "artifact sha256").toBe(422)
+    expect(artifactResult.body.ok, "artifact sha256").toBe(false)
+  })
+
   it.each(["exhibition_only", "counted"] as const)(
     "accepts exact current %s authority and independently reloads acceptance, pre-invocation, and post-execution",
     (status) => {

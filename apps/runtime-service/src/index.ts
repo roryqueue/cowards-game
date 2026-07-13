@@ -1,9 +1,9 @@
 import { runtimeJsWorkerEntrypoint } from "@cowards/runtime-js/worker"
 import { createRuntimeExecutionHttpServer } from "./server.js"
 import {
-  createRuntimeServiceConfig,
   formatRuntimeServiceConfigLogLines,
 } from "./runtime-config.js"
+import { runtimeServiceConfigFromEnvironment } from "./production-runtime-config.js"
 import {
   createRuntimeEvidenceAuthorityLoader,
   runtimeEvidenceAuthorityConfigFromEnvironment,
@@ -14,11 +14,7 @@ const startRuntimeExecutionService = (): void => {
     runtimeEvidenceAuthorityConfigFromEnvironment(),
   )
   authorityLoader.load()
-  const runtimeConfig = createRuntimeServiceConfig({
-    strategyExecutionAdapter: process.env.STRATEGY_EXECUTION_ADAPTER,
-    allowLocalWorkerThreadFallback:
-      process.env.COWARDS_RUNTIME_SERVICE_ALLOW_LOCAL_WORKER_THREAD === "1",
-  })
+  const runtimeConfig = runtimeServiceConfigFromEnvironment()
   const port = Number.parseInt(process.env.RUNTIME_SERVICE_PORT ?? "3107", 10)
   const host = process.env.RUNTIME_SERVICE_HOST ?? "127.0.0.1"
   const server = createRuntimeExecutionHttpServer({

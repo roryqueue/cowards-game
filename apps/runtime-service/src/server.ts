@@ -27,10 +27,8 @@ import {
   buildStrategyRevision,
   validateStrategySource,
 } from "@cowards/runtime-js"
-import {
-  createRuntimeServiceConfig,
-  type RuntimeServiceConfig,
-} from "./runtime-config.js"
+import type { RuntimeServiceConfig } from "./runtime-config.js"
+import { runtimeServiceConfigFromEnvironment } from "./production-runtime-config.js"
 import { executeRuntimeServiceRequest } from "./execute-match.js"
 import { redactedErrorMessage } from "./redaction.js"
 import type { RuntimeEvidenceAuthorityLoader } from "./runtime-evidence-authority.js"
@@ -317,11 +315,7 @@ export const createRuntimeExecutionHttpHandler = (
 ) => {
   const runtimeConfig =
     options.runtimeConfig ??
-    createRuntimeServiceConfig({
-      strategyExecutionAdapter: process.env.STRATEGY_EXECUTION_ADAPTER,
-      allowLocalWorkerThreadFallback:
-        process.env.COWARDS_RUNTIME_SERVICE_ALLOW_LOCAL_WORKER_THREAD === "1",
-    })
+    runtimeServiceConfigFromEnvironment()
   const bodyLimitBytes = options.bodyLimitBytes ?? DEFAULT_BODY_LIMIT_BYTES
   const configuredPrivateArtifactToken = privateArtifactToken(
     options.privateArtifactToken,

@@ -22,6 +22,7 @@ export interface RuntimeServiceConfigInput {
   resolveDeploymentLaneIdentity?:
     | ((revision: StrategyRevision) => ExecutableLaneIdentity | undefined)
     | undefined
+  deploymentLaneRegistryId?: string | undefined
 }
 
 export interface RuntimeServiceConfig {
@@ -30,6 +31,7 @@ export interface RuntimeServiceConfig {
   resolveDeploymentLaneIdentity(
     revision: StrategyRevision,
   ): ExecutableLaneIdentity | undefined
+  deploymentLaneRegistryId?: string | undefined
 }
 
 export const createRuntimeServiceConfig = (
@@ -60,6 +62,7 @@ export const createRuntimeServiceConfig = (
         adapter,
         metadata: adapter.metadata,
         resolveDeploymentLaneIdentity,
+        deploymentLaneRegistryId: input.deploymentLaneRegistryId,
       }
     }
     case "subprocess": {
@@ -68,6 +71,7 @@ export const createRuntimeServiceConfig = (
         adapter,
         metadata: adapter.metadata,
         resolveDeploymentLaneIdentity,
+        deploymentLaneRegistryId: input.deploymentLaneRegistryId,
       }
     }
     case "container-subprocess": {
@@ -76,6 +80,7 @@ export const createRuntimeServiceConfig = (
         adapter,
         metadata: adapter.metadata,
         resolveDeploymentLaneIdentity,
+        deploymentLaneRegistryId: input.deploymentLaneRegistryId,
       }
     }
     default:
@@ -90,4 +95,5 @@ export const formatRuntimeServiceConfigLogLines = (
 ): readonly string[] => [
   `Strategy execution adapter: ${runtimeConfig.metadata.id} (${runtimeConfig.metadata.label})`,
   `Strategy isolation boundary: ${runtimeConfig.metadata.isolationBoundary}`,
+  `Deployment lane registry: ${runtimeConfig.deploymentLaneRegistryId ?? "unconfigured (fail closed)"}`,
 ]
