@@ -1,14 +1,9 @@
 import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
-import {
-  resolveActivation,
-  resolveActivationCycle,
-  resolveActivationSelection,
-} from "./activation.js"
+import { CANDIDATE_MATCH_KERNEL } from "./kernel/driver.js"
 import { createInitialGameState } from "./state.js"
 import {
   success,
-  type ActivationSlotState,
   type GameState,
   type StrategyRuntime,
   type TransitionResult,
@@ -51,50 +46,75 @@ const publicEventContract = (events: TransitionResult["events"]) =>
     ...(context === undefined ? {} : { context }),
   }))
 
-describe("staged legacy lifecycle observations before candidate activation", () => {
-  it("keeps whole-output validation for malformed excess orders on the legacy path", () => {
-    const state = createInitialGameState(baseInput)
-    const retainedSoldierId = state.soldiers[0]!.id
-    const observations: unknown[] = []
-    const runtime: StrategyRuntime = {
-      selectActivations: (input) => {
-        observations.push(input)
-        return success({
-          activationOrders: [
-            { soldierId: retainedSoldierId },
-            { soldierId: 42 as never },
-          ],
-          strategyMemory: { selection: "retained-prefix" },
-        })
-      },
-      runSoldierBrain: () => {
-        throw new Error("selection must not execute SoldierBrain")
-      },
-    }
+const runActivation = (
+  state: GameState,
+  runtime: StrategyRuntime,
+  soldierId: string,
+): TransitionResult => {
+  const execution = CANDIDATE_MATCH_KERNEL.runActivationFromState({
+    state,
+    runtime,
+    soldierId,
+  })
+  expect(execution.kind).toBe("completed")
+  if (execution.kind !== "completed" || execution.result === undefined) {
+    throw new Error(
+      `candidate activation failed: ${execution.failure?.code ?? "missing result"}`,
+    )
+  }
+  return execution.result
+}
 
-    const result = resolveActivationSelection(state, runtime, "bottom")
+describe("approved lifecycle behavior through the candidate authority", () => {
+  it("ignores a malformed excess order after the retained prefix", () => {
+    const initial = CANDIDATE_MATCH_KERNEL.createMachine(baseInput)
+    const matchStarted = CANDIDATE_MATCH_KERNEL.stepMatch(initial, {
+      kind: "advance",
+    })
+    expect(matchStarted.kind).toBe("transition")
+    if (matchStarted.kind !== "transition") return
+    const roundStarted = CANDIDATE_MATCH_KERNEL.stepMatch(
+      matchStarted.machine,
+      { kind: "advance" },
+    )
+    expect(roundStarted.kind).toBe("transition")
+    if (roundStarted.kind !== "transition") return
+    const selectionEffect = CANDIDATE_MATCH_KERNEL.stepMatch(
+      roundStarted.machine,
+      { kind: "advance" },
+    )
+    expect(selectionEffect.kind).toBe("effect")
+    if (selectionEffect.kind !== "effect") return
 
-    expect(result.state.orders).toEqual([])
-    expect(result.state.state.players[0].strategyMemory).toEqual({})
-    expect(result.events).toMatchObject([
-      {
-        type: "RUNTIME_VIOLATION",
-        payload: { playerId: "bottom", type: "INVALID_OUTPUT" },
-        context: { actingPlayerId: "bottom" },
+    const retainedSoldierId = initial.state.soldiers[0]!.id
+    const resolved = CANDIDATE_MATCH_KERNEL.stepMatch(selectionEffect.machine, {
+      kind: "runtime_resume",
+      requestId: selectionEffect.request.requestId,
+      effectKind: selectionEffect.request.kind,
+      classification: "success",
+      value: {
+        activationOrders: [{ soldierId: retainedSoldierId }, { soldierId: 42 }],
+        strategyMemory: { selection: "retained-prefix" },
       },
+    })
+    expect(resolved.kind).toBe("transition")
+    if (resolved.kind !== "transition") return
+
+    expect(resolved.machine.selections.bottom).toEqual([
+      { soldierId: retainedSoldierId },
     ])
-    expect(
-      result.events.filter((event) => event.type === "RUNTIME_VIOLATION"),
-    ).toHaveLength(1)
-    expect(observations).toHaveLength(1)
+    expect(resolved.machine.state.players[0].strategyMemory).toEqual({
+      selection: "retained-prefix",
+    })
+    expect(resolved.record.classification).toBe("success")
+    expect(resolved.record.events.map(({ type }) => type)).toEqual([
+      "STRATEGY_EVALUATED",
+    ])
   })
 
-  it("stages the legacy no-Advance state without immediate outcome", () => {
+  it("closes no-Advance cleanup before the immediate outcome", () => {
     const state = stateWith([
-      soldier({
-        id: "last-bottom",
-        lastSuccessfulMoveDirection: "UP",
-      }),
+      soldier({ id: "last-bottom", lastSuccessfulMoveDirection: "UP" }),
       soldier({
         id: "last-top",
         ownerPlayerId: "top",
@@ -114,7 +134,7 @@ describe("staged legacy lifecycle observations before candidate activation", () 
       },
     }
 
-    const result = resolveActivation(state, runtime, "last-bottom")
+    const result = runActivation(state, runtime, "last-bottom")
     const activationContext = {
       activationId: "1:1:0",
       activationIndex: 0,
@@ -125,10 +145,12 @@ describe("staged legacy lifecycle observations before candidate activation", () 
 
     expect(result.state).toEqual({
       ...state,
+      phase: "COMPLETE",
       soldiers: [
         { ...state.soldiers[0]!, status: "STONE" },
         state.soldiers[1]!,
       ],
+      outcome: { type: "WIN", winnerPlayerId: "top" },
     })
     expect(publicEventContract(result.events)).toEqual([
       {
@@ -174,18 +196,19 @@ describe("staged legacy lifecycle observations before candidate activation", () 
         payload: { soldierId: "last-bottom", reason: "INVALID_MOVE" },
         context: activationContext,
       },
+      {
+        type: "MATCH_ENDED",
+        payload: { type: "WIN", winnerPlayerId: "top" },
+      },
     ])
     expect(observedCycles).toEqual([0])
     expect(
-      result.events.filter((event) => event.type === "MATCH_ENDED"),
-    ).toHaveLength(0)
-    expect(result.events.at(-1)?.type).toBe("ACTIVATION_ENDED")
-    expect(
-      result.events.some((event) => event.type === "ACTIVATION_SKIPPED"),
-    ).toBe(false)
+      result.events.filter(({ type }) => type === "MATCH_ENDED"),
+    ).toHaveLength(1)
+    expect(result.events.at(-1)?.type).toBe("MATCH_ENDED")
   })
 
-  it("stages the legacy Cycle-end Backstab MATCH_ENDED slot reason", () => {
+  it("closes a Cycle-end Backstabbed actor exactly once before outcome", () => {
     const state = stateWith([
       soldier({ id: "actor", position: { x: 5, y: 5 }, facing: "UP" }),
       soldier({
@@ -195,15 +218,6 @@ describe("staged legacy lifecycle observations before candidate activation", () 
         facing: "DOWN",
       }),
     ])
-    const slot: ActivationSlotState = {
-      activationId: "1:1:0",
-      activationIndex: 0,
-      actingPlayerId: "bottom",
-      soldierId: "actor",
-      cycleIndex: 0,
-      advanced: false,
-      ended: false,
-    }
     const observedCycles: number[] = []
     const runtime: StrategyRuntime = {
       selectActivations: () =>
@@ -217,7 +231,7 @@ describe("staged legacy lifecycle observations before candidate activation", () 
       },
     }
 
-    const result = resolveActivationCycle(state, runtime, slot, 0)
+    const result = runActivation(state, runtime, "actor")
     const activationContext = {
       activationId: "1:1:0",
       activationIndex: 0,
@@ -235,13 +249,12 @@ describe("staged legacy lifecycle observations before candidate activation", () 
       ],
       outcome: { type: "WIN", winnerPlayerId: "top" },
     })
-    expect(result.slot).toEqual({
-      ...slot,
-      cycleIndex: 1,
-      ended: true,
-      terminalReason: "MATCH_ENDED",
-    })
     expect(publicEventContract(result.events)).toEqual([
+      {
+        type: "ACTIVATION_STARTED",
+        payload: { soldierId: "actor" },
+        context: activationContext,
+      },
       {
         type: "CYCLE_STARTED",
         payload: { soldierId: "actor", cycleIndex: 0 },
@@ -284,17 +297,22 @@ describe("staged legacy lifecycle observations before candidate activation", () 
         context: cycleContext,
       },
       {
+        type: "ACTIVATION_ENDED",
+        payload: { soldierId: "actor", reason: "BACKSTABBED" },
+        context: activationContext,
+      },
+      {
         type: "MATCH_ENDED",
         payload: { type: "WIN", winnerPlayerId: "top" },
       },
     ])
     expect(observedCycles).toEqual([0])
     expect(
-      result.events.filter((event) => event.type === "ACTIVATION_ENDED"),
-    ).toHaveLength(0)
-    expect(
-      result.events.filter((event) => event.type === "MATCH_ENDED"),
+      result.events.filter(({ type }) => type === "ACTIVATION_ENDED"),
     ).toHaveLength(1)
-    expect(result.events.at(-1)?.type).toBe("MATCH_ENDED")
+    expect(result.events.at(-2)?.payload).toEqual({
+      soldierId: "actor",
+      reason: "BACKSTABBED",
+    })
   })
 })

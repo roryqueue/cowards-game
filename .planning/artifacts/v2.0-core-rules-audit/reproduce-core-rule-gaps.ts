@@ -10,15 +10,13 @@ import {
   type Soldier,
 } from "../../../packages/spec/src/index.ts"
 import {
+  CANDIDATE_MATCH_KERNEL,
   createInitialGameState,
   resolveAction,
-  resolveActivation,
-  resolveActivationCycle,
-  resolveActivationSelection,
   success,
-  type ActivationSlotState,
   type GameState,
   type StrategyRuntime,
+  type TransitionResult,
 } from "../../../packages/engine/src/index.ts"
 
 const baseInput = {
@@ -57,6 +55,24 @@ const brainRuntime = (action: unknown): StrategyRuntime => ({
   runSoldierBrain: () => success({ action, soldierMemory: {} } as never),
 })
 
+const runCandidateActivation = (
+  state: GameState,
+  runtime: StrategyRuntime,
+  soldierId: string,
+): TransitionResult => {
+  const execution = CANDIDATE_MATCH_KERNEL.runActivationFromState({
+    state,
+    runtime,
+    soldierId,
+  })
+  if (execution.kind !== "completed" || execution.result === undefined) {
+    throw new Error(
+      `candidate audit activation failed: ${execution.failure?.code ?? "missing result"}`,
+    )
+  }
+  return execution.result
+}
+
 const noAdvanceState = stateWith([
   soldier({
     id: "last-bottom",
@@ -68,7 +84,7 @@ const noAdvanceState = stateWith([
     position: { x: 9, y: 9 },
   }),
 ])
-const noAdvance = resolveActivation(
+const noAdvance = runCandidateActivation(
   noAdvanceState,
   brainRuntime({ type: "MOVE", direction: "DOWN" }),
   "last-bottom",
@@ -84,40 +100,55 @@ const backstabState = stateWith([
     facing: "DOWN",
   }),
 ])
-const slot: ActivationSlotState = {
-  activationId: "1:1:0",
-  activationIndex: 0,
-  actingPlayerId: "bottom",
-  soldierId: "actor",
-  cycleIndex: 0,
-  advanced: false,
-  ended: false,
-}
-const postBackstab = resolveActivationCycle(
+const postBackstab = runCandidateActivation(
   backstabState,
   brainRuntime({ type: "TURN", direction: "RIGHT" }),
-  slot,
-  0,
+  "actor",
+)
+const backstabClosure = postBackstab.events.find(
+  ({ type }) => type === "ACTIVATION_ENDED",
 )
 
-const selectionState = createInitialGameState(baseInput)
-const validSoldierId = selectionState.soldiers[0]!.id
-const excessMalformedRuntime: StrategyRuntime = {
-  selectActivations: () =>
-    success({
+const selectionMachine = CANDIDATE_MATCH_KERNEL.createMachine(baseInput)
+const validSoldierId = selectionMachine.state.soldiers[0]!.id
+const matchStarted = CANDIDATE_MATCH_KERNEL.stepMatch(selectionMachine, {
+  kind: "advance",
+})
+if (matchStarted.kind !== "transition") {
+  throw new Error("candidate audit match-start transition missing")
+}
+const roundStarted = CANDIDATE_MATCH_KERNEL.stepMatch(matchStarted.machine, {
+  kind: "advance",
+})
+if (roundStarted.kind !== "transition") {
+  throw new Error("candidate audit round-start transition missing")
+}
+const selectionEffect = CANDIDATE_MATCH_KERNEL.stepMatch(
+  roundStarted.machine,
+  { kind: "advance" },
+)
+if (selectionEffect.kind !== "effect") {
+  throw new Error("candidate audit selection effect missing")
+}
+const excessMalformed = CANDIDATE_MATCH_KERNEL.stepMatch(
+  selectionEffect.machine,
+  {
+    kind: "runtime_resume",
+    requestId: selectionEffect.request.requestId,
+    effectKind: selectionEffect.request.kind,
+    classification: "success",
+    value: {
       activationOrders: [
         { soldierId: validSoldierId },
-        { soldierId: 42 as never },
+        { soldierId: 42 },
       ],
       strategyMemory: {},
-    }),
-  runSoldierBrain: brainRuntime({ type: "TURN_TO_STONE" }).runSoldierBrain,
-}
-const excessMalformed = resolveActivationSelection(
-  selectionState,
-  excessMalformedRuntime,
-  "bottom",
+    },
+  },
 )
+if (excessMalformed.kind !== "transition") {
+  throw new Error("candidate audit selection transition missing")
+}
 
 let deep: unknown = null
 for (let index = 0; index < 3_000; index += 1) deep = [deep]
@@ -191,12 +222,16 @@ console.log(
         status: postBackstab.state.soldiers.find(
           (candidate) => candidate.id === "actor",
         )?.status,
-        slotEnded: postBackstab.slot.ended,
-        terminalReason: postBackstab.slot.terminalReason ?? null,
+        slotEnded: backstabClosure !== undefined,
+        terminalReason:
+          backstabClosure === undefined
+            ? null
+            : ((backstabClosure.payload as { reason?: unknown }).reason ??
+              null),
       },
       excessMalformedOrder: {
-        validOrdersRetained: excessMalformed.state.orders.length,
-        violationEvents: excessMalformed.events.filter(
+        validOrdersRetained: excessMalformed.machine.selections.bottom.length,
+        violationEvents: excessMalformed.record.events.filter(
           (event) => event.type === "RUNTIME_VIOLATION",
         ).length,
       },

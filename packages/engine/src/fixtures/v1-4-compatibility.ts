@@ -9,12 +9,12 @@ import type {
 } from "@cowards/spec"
 import {
   createActivationSlots,
-  resolveActivation,
   resolveActivationCycle,
   resolveActivationSelection,
 } from "../activation.js"
 import { resolveBackstabBoundary } from "../backstab.js"
 import { resolveContraction } from "../contraction.js"
+import { CANDIDATE_MATCH_KERNEL } from "../kernel/driver.js"
 import { resolveRound } from "../match.js"
 import { resolveAction } from "../movement.js"
 import { createInitialGameState } from "../state.js"
@@ -222,6 +222,36 @@ const observeTransition = (
   result: TransitionResult,
 ): V14CompatibilityObservation =>
   observe(initialState, result.state, result.events, [{ label, state: result }])
+
+const runCompatibilityActivation = (
+  state: GameState,
+  runtime: StrategyRuntime,
+  soldierId: string,
+): TransitionResult => {
+  const execution = CANDIDATE_MATCH_KERNEL.runActivationFromState({
+    state,
+    runtime,
+    soldierId,
+  })
+  if (
+    execution.kind !== "completed" ||
+    execution.result === undefined ||
+    execution.recorderMaterial === undefined
+  ) {
+    throw new Error(
+      `candidate compatibility activation failed: ${execution.failure?.code ?? "missing result"}`,
+    )
+  }
+  return {
+    state: execution.result.state,
+    // Immutable v1.4 evidence predates canonical event sequencing. Preserve its
+    // original bytes while sourcing the transition from the candidate authority.
+    events: execution.recorderMaterial.events.map((summary) => ({
+      ...summary,
+      sequence: 0,
+    })),
+  }
+}
 
 const makeSlot = (
   soldierId: string,
@@ -954,7 +984,7 @@ const scenarios: readonly Scenario[] = [
             soldierMemory: { cycle: input.cycleIndex },
           }),
       })
-      const result = resolveActivation(initial, runtime, "actor")
+      const result = runCompatibilityActivation(initial, runtime, "actor")
       return observe(
         initial,
         result.state,
@@ -989,7 +1019,7 @@ const scenarios: readonly Scenario[] = [
             soldierMemory: input.soldierMemory,
           }),
       })
-      const result = resolveActivation(initial, runtime, "mover")
+      const result = runCompatibilityActivation(initial, runtime, "mover")
       return observe(
         initial,
         result.state,

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
-import { resolveActivation } from "./activation.js"
 import { findBackstabPairs, resolveBackstabBoundary } from "./backstab.js"
+import { CANDIDATE_MATCH_KERNEL } from "./kernel/driver.js"
 import { resolveAction } from "./movement.js"
 import { checkImmediateMatchEnd } from "./outcome.js"
 import { createInitialGameState } from "./state.js"
 import { createFakeRuntime } from "./test/fake-runtime.js"
-import type { GameState } from "./types.js"
+import type { GameState, StrategyRuntime } from "./types.js"
 
 const baseInput = {
   matchId: "match-backstab",
@@ -38,6 +38,25 @@ const stateWith = (soldiers: Soldier[]): GameState => ({
   soldiers,
 })
 
+const runActivation = (
+  state: GameState,
+  runtime: StrategyRuntime,
+  soldierId: string,
+) => {
+  const execution = CANDIDATE_MATCH_KERNEL.runActivationFromState({
+    state,
+    runtime,
+    soldierId,
+  })
+  expect(execution.kind).toBe("completed")
+  if (execution.kind !== "completed" || execution.result === undefined) {
+    throw new Error(
+      `candidate activation failed: ${execution.failure?.code ?? "missing result"}`,
+    )
+  }
+  return execution.result
+}
+
 describe("activation-boundary Backstab", () => {
   it("finds all ACTIVE Soldiers behind enemy ACTIVE Soldiers", () => {
     const state = stateWith([
@@ -64,7 +83,7 @@ describe("activation-boundary Backstab", () => {
         facing: "UP",
       }),
     ])
-    const result = resolveActivation(
+    const result = runActivation(
       state,
       createFakeRuntime({ action: { type: "TURN", direction: "LEFT" } }),
       "attacker",
@@ -88,7 +107,7 @@ describe("activation-boundary Backstab", () => {
         facing: "UP",
       }),
     ])
-    const result = resolveActivation(
+    const result = runActivation(
       state,
       createFakeRuntime({ action: { type: "MOVE", direction: "RIGHT" } }),
       "active",
@@ -190,7 +209,7 @@ describe("activation-boundary Backstab", () => {
       }),
     ])
     let calls = 0
-    const result = resolveActivation(
+    const result = runActivation(
       state,
       createFakeRuntime({
         action: () => {
