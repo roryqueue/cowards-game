@@ -35,7 +35,7 @@ v1.37 establishes the smallest complete trust substrate needed before serious co
   3. Operators can classify affected historical results, invalidate and recompute derived standings when needed, while the original Match evidence and v1.4 interpretation remain immutable.
   4. Public/default safety surfaces expose only safe classifications and evidence identifiers, and structural monitors reject duplicate authorities and stale execution entry points.
 
-**Plans:** 13/19 plans executed
+**Plans:** 17/19 plans executed
 
 Plans:
 **Wave 1**
@@ -70,14 +70,14 @@ Plans:
 **Wave 7** *(blocked on Wave 6 completion)*
 
 - [x] 256-08-PLAN.md — Enforce exact evidence at TypeScript entry, scheduling, and claim boundaries.
-- [ ] 256-09-PLAN.md — Revalidate exact independently signed authority around every runtime-service execution.
+- [x] 256-09-PLAN.md — Revalidate exact independently signed authority around every runtime-service execution.
 - [x] 256-10-PLAN.md — Prove Go tuple hashing and exact evidence-classification parity.
 - [x] 256-16-PLAN.md — Migrate every TypeScript creation caller to complete per-entrant evidence and inventory future bypasses.
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
-- [ ] 256-11-PLAN.md — Enforce exact evidence through Go claim, transport, completion, and Chronicle writes.
-- [ ] 256-12-PLAN.md — Make normal Go MatchSet creation exact, transactional, and database-proved.
+- [x] 256-11-PLAN.md — Enforce exact evidence through Go claim, transport, completion, and Chronicle writes.
+- [x] 256-12-PLAN.md — Make normal Go MatchSet creation exact, transactional, and database-proved.
 
 **Wave 9** *(blocked on Wave 8 completion)*
 
@@ -181,7 +181,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 256. Counted Safety and Canonical Authority | 14/19 | In Progress|  |
+| 256. Counted Safety and Canonical Authority | 17/19 | In Progress|  |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 0/TBD | Not started | - |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 0/TBD | Not started | - |
 | 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |

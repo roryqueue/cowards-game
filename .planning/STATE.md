@@ -6,15 +6,15 @@ current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
 stopped_at: Completed 256-10-PLAN.md
-last_updated: "2026-07-13T07:31:03.000Z"
+last_updated: "2026-07-13T08:36:32.244Z"
 last_activity: 2026-07-13
 last_activity_desc: Plan 256-10 gave Go exact tuple and authority parity, evidence-derived readiness, and fail-closed live startup
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 15
-  percent: 79
+  completed_plans: 17
+  percent: 0
 ---
 
 # State: Coward's Game
