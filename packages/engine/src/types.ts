@@ -81,6 +81,7 @@ export interface StrategyRuntime {
 }
 
 export type ActivationTerminalReason =
+  | "BACKSTABBED"
   | "CYCLE_EXHAUSTED"
   | "MOVE_BLOCKED"
   | "INVALID_MOVE"

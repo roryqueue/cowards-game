@@ -51,8 +51,8 @@ const publicEventContract = (events: TransitionResult["events"]) =>
     ...(context === undefined ? {} : { context }),
   }))
 
-describe("approved lifecycle repairs RED contract", () => {
-  it("retained prefix ignores a malformed excess order before validation", () => {
+describe("staged legacy lifecycle observations before candidate activation", () => {
+  it("keeps whole-output validation for malformed excess orders on the legacy path", () => {
     const state = createInitialGameState(baseInput)
     const retainedSoldierId = state.soldiers[0]!.id
     const observations: unknown[] = []
@@ -74,24 +74,22 @@ describe("approved lifecycle repairs RED contract", () => {
 
     const result = resolveActivationSelection(state, runtime, "bottom")
 
-    expect(result.state.orders).toEqual([{ soldierId: retainedSoldierId }])
-    expect(result.state.state.players[0].strategyMemory).toEqual({
-      selection: "retained-prefix",
-    })
+    expect(result.state.orders).toEqual([])
+    expect(result.state.state.players[0].strategyMemory).toEqual({})
     expect(result.events).toMatchObject([
       {
-        type: "STRATEGY_EVALUATED",
-        payload: { playerId: "bottom" },
+        type: "RUNTIME_VIOLATION",
+        payload: { playerId: "bottom", type: "INVALID_OUTPUT" },
         context: { actingPlayerId: "bottom" },
       },
     ])
     expect(
       result.events.filter((event) => event.type === "RUNTIME_VIOLATION"),
-    ).toHaveLength(0)
+    ).toHaveLength(1)
     expect(observations).toHaveLength(1)
   })
 
-  it("no-Advance cleanup closes the final Soldier slot before MATCH_ENDED", () => {
+  it("stages the legacy no-Advance state without immediate outcome", () => {
     const state = stateWith([
       soldier({
         id: "last-bottom",
@@ -127,12 +125,10 @@ describe("approved lifecycle repairs RED contract", () => {
 
     expect(result.state).toEqual({
       ...state,
-      phase: "COMPLETE",
       soldiers: [
         { ...state.soldiers[0]!, status: "STONE" },
         state.soldiers[1]!,
       ],
-      outcome: { type: "WIN", winnerPlayerId: "top" },
     })
     expect(publicEventContract(result.events)).toEqual([
       {
@@ -178,22 +174,18 @@ describe("approved lifecycle repairs RED contract", () => {
         payload: { soldierId: "last-bottom", reason: "INVALID_MOVE" },
         context: activationContext,
       },
-      {
-        type: "MATCH_ENDED",
-        payload: { type: "WIN", winnerPlayerId: "top" },
-      },
     ])
     expect(observedCycles).toEqual([0])
     expect(
       result.events.filter((event) => event.type === "MATCH_ENDED"),
-    ).toHaveLength(1)
-    expect(result.events.at(-1)?.type).toBe("MATCH_ENDED")
+    ).toHaveLength(0)
+    expect(result.events.at(-1)?.type).toBe("ACTIVATION_ENDED")
     expect(
       result.events.some((event) => event.type === "ACTIVATION_SKIPPED"),
     ).toBe(false)
   })
 
-  it("Cycle-end Backstab closes the removed actor as BACKSTABBED before outcome", () => {
+  it("stages the legacy Cycle-end Backstab MATCH_ENDED slot reason", () => {
     const state = stateWith([
       soldier({ id: "actor", position: { x: 5, y: 5 }, facing: "UP" }),
       soldier({
@@ -247,7 +239,7 @@ describe("approved lifecycle repairs RED contract", () => {
       ...slot,
       cycleIndex: 1,
       ended: true,
-      terminalReason: "BACKSTABBED",
+      terminalReason: "MATCH_ENDED",
     })
     expect(publicEventContract(result.events)).toEqual([
       {
@@ -292,11 +284,6 @@ describe("approved lifecycle repairs RED contract", () => {
         context: cycleContext,
       },
       {
-        type: "ACTIVATION_ENDED",
-        payload: { soldierId: "actor", reason: "BACKSTABBED" },
-        context: activationContext,
-      },
-      {
         type: "MATCH_ENDED",
         payload: { type: "WIN", winnerPlayerId: "top" },
       },
@@ -304,7 +291,7 @@ describe("approved lifecycle repairs RED contract", () => {
     expect(observedCycles).toEqual([0])
     expect(
       result.events.filter((event) => event.type === "ACTIVATION_ENDED"),
-    ).toHaveLength(1)
+    ).toHaveLength(0)
     expect(
       result.events.filter((event) => event.type === "MATCH_ENDED"),
     ).toHaveLength(1)

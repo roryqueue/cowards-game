@@ -755,6 +755,8 @@ const resolveSoldierEffect = (
       })),
     )
     const advanced = slot.advanced || action.advanced
+    const actorWasActiveBeforeBackstab =
+      getSoldier(state, slot.soldierId)?.status === "ACTIVE"
     const backstab = resolveBackstabBoundary(state, "cycle-end")
     state = backstab.state
     events.push(
@@ -768,33 +770,50 @@ const resolveSoldierEffect = (
         { context },
       ),
     )
-    const ended = checkAndApplyMatchEnd(state)
-    state = ended.state
-    events.push(...ended.events)
-    if (state.outcome !== undefined) {
-      resolvedSlot = {
-        ...slot,
-        advanced,
-        cycleIndex: machine.cursor.cycleLayer + 1,
-        ended: true,
-        terminalReason: "MATCH_ENDED",
-      }
+    const actorWasBackstabbed =
+      actorWasActiveBeforeBackstab &&
+      getSoldier(state, slot.soldierId)?.status !== "ACTIVE"
+    resolvedSlot = {
+      ...slot,
+      advanced,
+      cycleIndex: machine.cursor.cycleLayer + 1,
+    }
+
+    if (actorWasBackstabbed) {
+      const closed = closeSlot(state, resolvedSlot, "BACKSTABBED")
+      state = closed.state
+      resolvedSlot = closed.slot
+      events.push(...closed.events)
+      const ended = checkAndApplyMatchEnd(state)
+      state = ended.state
+      events.push(...ended.events)
     } else {
-      resolvedSlot = {
-        ...slot,
-        advanced,
-        cycleIndex: machine.cursor.cycleLayer + 1,
-      }
-      const terminalReason =
-        action.terminalReason ??
-        (resolvedSlot.cycleIndex >= MAX_ACTIVATION_CYCLES
-          ? "CYCLE_EXHAUSTED"
-          : undefined)
-      if (terminalReason !== undefined) {
-        const closed = closeSlot(state, resolvedSlot, terminalReason)
-        state = closed.state
-        resolvedSlot = closed.slot
-        events.push(...closed.events)
+      const ended = checkAndApplyMatchEnd(state)
+      state = ended.state
+      events.push(...ended.events)
+      if (state.outcome !== undefined) {
+        resolvedSlot = {
+          ...resolvedSlot,
+          ended: true,
+          terminalReason: "MATCH_ENDED",
+        }
+      } else {
+        const terminalReason =
+          action.terminalReason ??
+          (resolvedSlot.cycleIndex >= MAX_ACTIVATION_CYCLES
+            ? "CYCLE_EXHAUSTED"
+            : undefined)
+        if (terminalReason !== undefined) {
+          const closed = closeSlot(state, resolvedSlot, terminalReason)
+          state = closed.state
+          resolvedSlot = closed.slot
+          events.push(...closed.events)
+          if (terminalReason === "INVALID_MOVE") {
+            const afterClosure = checkAndApplyMatchEnd(state)
+            state = afterClosure.state
+            events.push(...afterClosure.events)
+          }
+        }
       }
     }
   } else {
