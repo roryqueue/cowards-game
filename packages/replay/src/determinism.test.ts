@@ -1,9 +1,14 @@
 import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import type { RunMatchInput, StrategyRuntime } from "@cowards/engine"
-import { buildChronicleFromMatch } from "./build.js"
+import {
+  CANDIDATE_MATCH_KERNEL,
+  type RunMatchInput,
+  type StrategyRuntime,
+} from "@cowards/engine"
 import { createChronicleContentHash } from "./hash.js"
 import { normalizeChronicle } from "./normalize.js"
+import { recordChronicleFromExecution } from "./record.js"
+import { validateCandidateReplaySemantics } from "./validate.js"
 
 const deterministicRuntime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
@@ -57,7 +62,25 @@ const createMatchInput = (
 })
 
 const buildNormalized = (input: RunMatchInput) => {
-  const { chronicle } = buildChronicleFromMatch(input)
+  const execution = CANDIDATE_MATCH_KERNEL.runMatch(input)
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  const candidate = validateCandidateReplaySemantics({
+    profile: "candidate-v1.37",
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution,
+  })
+  if (!candidate.ok) throw new Error(candidate.issues[0]?.code)
+  const chronicle = recorded.chronicle
   return {
     normalized: normalizeChronicle(chronicle),
     hash: createChronicleContentHash(chronicle),

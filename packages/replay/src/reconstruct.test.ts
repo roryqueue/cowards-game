@@ -1,13 +1,18 @@
-import {
-  COMPATIBILITY_VERSIONS,
-  type Chronicle,
-  type SoldierBrainInput,
-  type StrategyInput,
-} from "@cowards/spec"
+import type { Chronicle, SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import type { StrategyRuntime } from "@cowards/engine"
-import { buildChronicleFromMatch } from "./build.js"
-import { createReplay } from "./reconstruct.js"
+import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { createCandidateReplay, createReplay } from "./reconstruct.js"
+import { recordChronicleFromExecution } from "./record.js"
+import { validateReplayInput } from "./validate.js"
+
+const HISTORICAL_V14_VERSIONS = Object.freeze({
+  spec: "cowards-rules-v1.4",
+  engine: "0.1.4",
+  runtimeJs: "0.1.0",
+  chronicle: "chronicle-v1.4",
+  strategyRevision: "0.1.4",
+  arenaVariant: "0.1.0",
+})
 
 const turnToStoneRuntime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
@@ -32,8 +37,8 @@ const turnToStoneRuntime: StrategyRuntime = {
   },
 }
 
-const createBuiltChronicle = () =>
-  buildChronicleFromMatch({
+const createBuiltCandidateInput = () => {
+  const execution = CANDIDATE_MATCH_KERNEL.runMatch({
     matchId: "reconstruct-match",
     seed: "reconstruct-seed",
     arenaVariant: {
@@ -47,7 +52,36 @@ const createBuiltChronicle = () =>
     bottomStrategyRevisionId: "bottom-rev",
     topStrategyRevisionId: "top-rev",
     runtime: turnToStoneRuntime,
-  }).chronicle
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  return {
+    profile: "candidate-v1.37" as const,
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution,
+  }
+}
+
+const createHistoricalReplay = (chronicle: Chronicle) => {
+  const validation = validateReplayInput({
+    profile: "historical-v1.4",
+    chronicle,
+  })
+  if (!validation.ok) {
+    if ("errors" in validation) return validation
+    throw new Error(validation.issues[0]?.code)
+  }
+  return createReplay(chronicle)
+}
 
 const movementChronicle = (): Chronicle => {
   const startBoard = {
@@ -110,7 +144,7 @@ const movementChronicle = (): Chronicle => {
       arenaVariantId: "arena",
       arenaVariantVersion: "0.1.0",
       strategyRevisionIds: ["bottom-rev", "top-rev"],
-      versions: COMPATIBILITY_VERSIONS,
+      versions: HISTORICAL_V14_VERSIONS,
     },
     events: [
       {
@@ -261,8 +295,9 @@ const movementChronicle = (): Chronicle => {
 
 describe("createReplay", () => {
   it("reconstructs built Chronicle states without StrategyRuntime", () => {
-    const chronicle = createBuiltChronicle()
-    const replay = createReplay(chronicle)
+    const input = createBuiltCandidateInput()
+    const chronicle = input.chronicle
+    const replay = createCandidateReplay(input)
 
     expect(replay.ok).toBe(true)
     if (!replay.ok) {
@@ -279,7 +314,7 @@ describe("createReplay", () => {
   })
 
   it("applies movement, push, Backstab, stone, and match-end effects", () => {
-    const replay = createReplay(movementChronicle())
+    const replay = createHistoricalReplay(movementChronicle())
 
     expect(replay.ok).toBe(true)
     if (!replay.ok) {
@@ -323,7 +358,7 @@ describe("createReplay", () => {
 
   it("iterates replay states in sequence order", () => {
     const chronicle = movementChronicle()
-    const replay = createReplay(chronicle)
+    const replay = createHistoricalReplay(chronicle)
 
     expect(replay.ok).toBe(true)
     if (!replay.ok) {
@@ -339,7 +374,7 @@ describe("createReplay", () => {
 
   it("returns typed errors for invalid Chronicles", () => {
     const chronicle = movementChronicle()
-    const replay = createReplay({
+    const replay = createHistoricalReplay({
       ...chronicle,
       snapshots: chronicle.snapshots.filter(
         (snapshot) => snapshot.kind !== "TERMINAL",

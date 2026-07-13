@@ -6,10 +6,11 @@ import type {
   SoldierBrainInput,
   StrategyInput,
 } from "@cowards/spec"
-import type { StrategyRuntime } from "@cowards/engine"
+import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { describe, expect, it } from "vitest"
-import { buildChronicleFromMatch } from "./build.js"
 import { validateChronicleGrammar } from "./grammar.js"
+import { recordChronicleFromExecution } from "./record.js"
+import { validateCandidateReplaySemantics } from "./validate.js"
 
 const runtime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
@@ -34,8 +35,8 @@ const runtime: StrategyRuntime = {
   },
 }
 
-const createChronicle = (): Chronicle =>
-  buildChronicleFromMatch({
+const createChronicle = (): Chronicle => {
+  const execution = CANDIDATE_MATCH_KERNEL.runMatch({
     matchId: "grammar-match",
     seed: "grammar-seed",
     arenaVariant: {
@@ -49,7 +50,26 @@ const createChronicle = (): Chronicle =>
     bottomStrategyRevisionId: "bottom-rev",
     topStrategyRevisionId: "top-rev",
     runtime,
-  }).chronicle
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  const candidate = validateCandidateReplaySemantics({
+    profile: "candidate-v1.37",
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution,
+  })
+  if (!candidate.ok) throw new Error(candidate.issues[0]?.code)
+  return recorded.chronicle
+}
 
 const cloneChronicle = (chronicle: Chronicle): Chronicle =>
   JSON.parse(JSON.stringify(chronicle)) as Chronicle

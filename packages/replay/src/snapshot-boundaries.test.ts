@@ -6,9 +6,10 @@ import type {
   StrategyInput,
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import type { StrategyRuntime } from "@cowards/engine"
-import { buildChronicleFromMatch } from "./build.js"
+import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { recordChronicleFromExecution } from "./record.js"
 import { validateSnapshotBoundaries } from "./snapshot-boundaries.js"
+import { validateCandidateReplaySemantics } from "./validate.js"
 
 const turnToStoneRuntime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
@@ -54,8 +55,10 @@ const passiveRuntime: StrategyRuntime = {
   },
 }
 
-const createChronicle = (runtime: StrategyRuntime = turnToStoneRuntime) =>
-  buildChronicleFromMatch({
+const createChronicle = (
+  runtime: StrategyRuntime = turnToStoneRuntime,
+): Chronicle => {
+  const execution = CANDIDATE_MATCH_KERNEL.runMatch({
     matchId: "snapshot-boundary-match",
     seed: "snapshot-boundary-seed",
     arenaVariant: {
@@ -70,7 +73,26 @@ const createChronicle = (runtime: StrategyRuntime = turnToStoneRuntime) =>
     topStrategyRevisionId: "top-rev",
     runtime,
     maxPhases: 1,
-  }).chronicle
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  const candidate = validateCandidateReplaySemantics({
+    profile: "candidate-v1.37",
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution,
+  })
+  if (!candidate.ok) throw new Error(candidate.issues[0]?.code)
+  return recorded.chronicle
+}
 
 const createContractionChronicle = (): Chronicle => {
   const chronicle = createChronicle(passiveRuntime)
