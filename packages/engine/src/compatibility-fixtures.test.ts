@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest"
 import {
   COMPATIBILITY_DIMENSIONS,
   LOCKED_V1_4_FIXTURE_HASHES,
+  authorizeCompatibilityRegeneration,
   captureV14CompatibilityCorpus,
+  compareCompatibilityObservation,
+  createCompatibilityRegenerationRecord,
   findLockedCompatibilityDrift,
 } from "./fixtures/v1-4-compatibility.js"
+import type { V14CompatibilityObservation } from "./fixtures/v1-4-compatibility.js"
 import type { GameState } from "./types.js"
 
 const byName = () =>
@@ -245,5 +249,75 @@ describe("v1.4 full-observation compatibility corpus", () => {
     )
     expect(serializedEvents).not.toContain("HOLD")
     expect(serializedEvents).not.toContain("END_ACTIVATION")
+  })
+})
+
+describe("compatibility delta approval boundary", () => {
+  it("reports a bounded KERN-11 finding for a mutation in every compared dimension", () => {
+    const fixture = captureV14CompatibilityCorpus()[0]
+    if (!fixture) {
+      throw new Error("Compatibility corpus is empty")
+    }
+
+    for (const dimension of COMPATIBILITY_DIMENSIONS) {
+      const mutated = structuredClone(fixture.observation)
+      ;(mutated as unknown as Record<string, unknown>)[dimension] = {
+        original: mutated[dimension],
+        compatibilityMutation: dimension,
+      }
+      const findings = compareCompatibilityObservation(
+        fixture,
+        mutated as V14CompatibilityObservation,
+      )
+
+      expect(findings).toHaveLength(1)
+      expect(findings[0]).toMatchObject({
+        fixture: fixture.name,
+        dimension,
+      })
+      expect(findings[0]?.message).toContain("KERN-11 approval required")
+      expect(findings[0]?.message.length).toBeLessThan(300)
+    }
+  })
+
+  it("accepts only the locked compatibility delta allowlist", () => {
+    expect(
+      authorizeCompatibilityRegeneration([
+        "D-15",
+        "D-09",
+        "D-14",
+        "D-10",
+        "D-13",
+        "D-11",
+      ]),
+    ).toEqual(["D-09", "D-10", "D-11", "D-13", "D-14", "D-15"])
+    expect(() => authorizeCompatibilityRegeneration([])).toThrow(
+      "requires at least one explicit approved delta ID",
+    )
+    expect(() => authorizeCompatibilityRegeneration(["D-12"])).toThrow(
+      "unknown or preserved approval IDs: D-12",
+    )
+    expect(() => authorizeCompatibilityRegeneration(["D-16"])).toThrow(
+      "unknown or preserved approval IDs: D-16",
+    )
+    expect(() => authorizeCompatibilityRegeneration(["D-09", "D-09"])).toThrow(
+      "duplicate approval IDs: D-09",
+    )
+  })
+
+  it("makes fixture write/update records fail closed without a named approved delta", () => {
+    const fixtures = captureV14CompatibilityCorpus()
+    expect(() => createCompatibilityRegenerationRecord([], fixtures)).toThrow(
+      "requires at least one explicit approved delta ID",
+    )
+
+    const record = createCompatibilityRegenerationRecord(["D-14"], fixtures)
+    expect(record.approvedDeltas).toEqual(["D-14"])
+    expect(record.fixtures).toHaveLength(20)
+    expect(
+      record.fixtures.every(({ overallHash }) =>
+        /^sha256:[0-9a-f]{64}$/u.test(overallHash),
+      ),
+    ).toBe(true)
   })
 })
