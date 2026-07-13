@@ -4,6 +4,7 @@ import {
   resolveCanonicalCompatibilityTuple,
   type CanonicalCompatibilityTuple,
 } from "./integrity-authority.js"
+import { parseCanonicalJsonInstant } from "./canonical-instant.js"
 import {
   EXECUTABLE_LANE_CERTIFICATE_KINDS,
   type ExecutableLaneCertificateKind,
@@ -384,8 +385,8 @@ export const parseExecutableLaneIdentity = (
 }
 
 const parseInstant = (value: string, label: string): number => {
-  const parsed = Date.parse(value)
-  if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== value) {
+  const parsed = parseCanonicalJsonInstant(value)
+  if (parsed === undefined) {
     return fail(`${label} must be a canonical ISO-8601 instant.`)
   }
   return parsed

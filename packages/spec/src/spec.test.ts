@@ -1842,6 +1842,53 @@ describe("Coward's Game spec contracts", () => {
     }
 
     expect(RuntimeExecutionServiceRequestSchema.parse(request)).toEqual(request)
+    const instantVectors = JSON.parse(
+      readFileSync(
+        new URL("./fixtures/canonical-instant-vectors.json", import.meta.url),
+        "utf8",
+      ),
+    ) as Array<{ name: string; value: string; valid: boolean }>
+    for (const vector of instantVectors) {
+      expect(
+        RuntimeExecutionServiceRequestSchema.safeParse({
+          ...request,
+          evidenceSnapshot: {
+            ...request.evidenceSnapshot,
+            entrants: {
+              ...request.evidenceSnapshot.entrants,
+              bottom: {
+                ...request.evidenceSnapshot.entrants.bottom,
+                schedulingDecision: {
+                  ...request.evidenceSnapshot.entrants.bottom.schedulingDecision,
+                  evaluatedAt: vector.value,
+                  freshUntil: vector.value,
+                },
+              },
+            },
+          },
+        }).success,
+        vector.name,
+      ).toBe(vector.valid)
+    }
+    expect(
+      RuntimeExecutionServiceRequestSchema.safeParse({
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            bottom: {
+              ...request.evidenceSnapshot.entrants.bottom,
+              schedulingDecision: {
+                ...request.evidenceSnapshot.entrants.bottom.schedulingDecision,
+                evaluatedAt: "2026-07-12T00:00:00.001Z",
+                freshUntil: "2026-07-12T00:00:00.000Z",
+              },
+            },
+          },
+        },
+      }).success,
+    ).toBe(false)
     expect(
       RuntimeExecutionServiceRequestSchema.safeParse({
         ...request,

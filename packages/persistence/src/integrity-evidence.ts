@@ -5,6 +5,7 @@ import {
   EXECUTABLE_LANE_EVIDENCE_REASON_CODES,
   EXECUTABLE_LANE_EVIDENCE_STATUSES,
   resolveCanonicalCompatibilityTuple,
+  parseCanonicalJsonInstant,
   type CanonicalCompatibilityTuple,
   type ExecutableLaneCertificateReference,
   type ExecutableLaneIdentity,
@@ -397,11 +398,11 @@ const validateEntrant = (
     value.schedulingDecision.freshUntil,
     "Scheduling freshness bound",
   )
-  const evaluatedTime = Date.parse(evaluatedAt)
-  const freshTime = Date.parse(freshUntil)
+  const evaluatedTime = parseCanonicalJsonInstant(evaluatedAt)
+  const freshTime = parseCanonicalJsonInstant(freshUntil)
   if (
-    !Number.isFinite(evaluatedTime) ||
-    !Number.isFinite(freshTime) ||
+    evaluatedTime === undefined ||
+    freshTime === undefined ||
     freshTime < evaluatedTime ||
     value.schedulingDecision.registryGeneration !== registryGeneration
   ) {

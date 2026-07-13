@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto"
+import { readFileSync } from "node:fs"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
   type ExecutableLaneIdentity,
@@ -232,6 +233,39 @@ describe("current standings integrity resolution", () => {
 })
 
 describe("exact MatchSet integrity identity", () => {
+  it("uses the shared strict scheduling-instant vectors and interval order", () => {
+    const vectors = JSON.parse(
+      readFileSync(
+        new URL(
+          "../../spec/src/fixtures/canonical-instant-vectors.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ) as Array<{ name: string; value: string; valid: boolean }>
+
+    for (const vector of vectors) {
+      const input = identityInput()
+      input.entrants[0]!.schedulingDecision.evaluatedAt = vector.value
+      input.entrants[0]!.schedulingDecision.freshUntil = vector.value
+      if (vector.valid) {
+        expect(() => createMatchSetIntegrityIdentity(input), vector.name).not.toThrow()
+      } else {
+        expect(() => createMatchSetIntegrityIdentity(input), vector.name).toThrow(
+          IntegrityEvidenceInputError,
+        )
+      }
+    }
+
+    const reversed = identityInput()
+    reversed.entrants[0]!.schedulingDecision.evaluatedAt =
+      "2026-07-12T12:00:00.001Z"
+    reversed.entrants[0]!.schedulingDecision.freshUntil =
+      "2026-07-12T12:00:00.000Z"
+    expect(() => createMatchSetIntegrityIdentity(reversed)).toThrow(
+      IntegrityEvidenceInputError,
+    )
+  })
   it.each([2, 3, 4, 5, 6, 7, 8])(
     "normalizes a complete heterogeneous %i-entrant set",
     (count) => {

@@ -46,6 +46,7 @@ import {
   STRATEGY_RUNTIME_VIOLATION_CODES,
 } from "./runtime.js"
 import { COUNTED_ENTRY_ELIGIBILITY_CATEGORIES } from "./competition-entry-eligibility.js"
+import { parseCanonicalJsonInstant } from "./canonical-instant.js"
 
 export const jsonByteLength = (value: unknown): number =>
   new TextEncoder().encode(JSON.stringify(value)).length
@@ -2398,13 +2399,23 @@ const RuntimeExecutionSchedulingDecisionSchema = z
   .object({
     status: z.enum(EXECUTABLE_LANE_EVIDENCE_STATUSES),
     reasonCode: z.enum(EXECUTABLE_LANE_EVIDENCE_REASON_CODES),
-    evaluatedAt: z.string().datetime({ offset: true }),
-    freshUntil: z.string().datetime({ offset: true }),
+    evaluatedAt: z.string().refine(isCanonicalJsonInstant, {
+      message: "must be an exact UTC millisecond instant",
+    }),
+    freshUntil: z.string().refine(isCanonicalJsonInstant, {
+      message: "must be an exact UTC millisecond instant",
+    }),
     registryGeneration: z.string().min(1),
   })
   .strict()
   .superRefine((decision, ctx) => {
-    if (Date.parse(decision.freshUntil) < Date.parse(decision.evaluatedAt)) {
+    const evaluatedAt = parseCanonicalJsonInstant(decision.evaluatedAt)
+    const freshUntil = parseCanonicalJsonInstant(decision.freshUntil)
+    if (
+      evaluatedAt !== undefined &&
+      freshUntil !== undefined &&
+      freshUntil < evaluatedAt
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["freshUntil"],
@@ -2422,6 +2433,10 @@ const RuntimeExecutionSchedulingDecisionSchema = z
       })
     }
   })
+
+function isCanonicalJsonInstant(value: string): boolean {
+  return parseCanonicalJsonInstant(value) !== undefined
+}
 
 const RuntimeEntrantExecutionEvidenceSchema = z
   .object({

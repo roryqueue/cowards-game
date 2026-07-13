@@ -34,6 +34,29 @@ type runtimeAuthorityVectorFile struct {
 	} `json:"invalidEnvelopeVectors"`
 }
 
+func TestCanonicalInstantMatchesSharedLanguageNeutralVectors(t *testing.T) {
+	bytes, err := os.ReadFile("../../packages/spec/src/fixtures/canonical-instant-vectors.json")
+	if err != nil {
+		t.Fatalf("read canonical instant vectors: %v", err)
+	}
+	var vectors []struct {
+		Name  string `json:"name"`
+		Value string `json:"value"`
+		Valid bool   `json:"valid"`
+	}
+	if err := json.Unmarshal(bytes, &vectors); err != nil {
+		t.Fatalf("parse canonical instant vectors: %v", err)
+	}
+	for _, vector := range vectors {
+		t.Run(vector.Name, func(t *testing.T) {
+			_, parseErr := parseCanonicalInstant(vector.Value)
+			if (parseErr == nil) != vector.Valid {
+				t.Fatalf("parse validity = %v, want %v (err=%v)", parseErr == nil, vector.Valid, parseErr)
+			}
+		})
+	}
+}
+
 func TestRuntimeEvidenceAuthorityMatchesCommittedNodeVectors(t *testing.T) {
 	manifest := mustIntegrityManifest(t)
 	vectors := readRuntimeAuthorityVectors(t)
