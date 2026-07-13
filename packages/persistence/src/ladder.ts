@@ -510,13 +510,6 @@ export const trialLadderStatusLabel = (
   }
 }
 
-const ensureCompetitionArenas = async (pool: Pool): Promise<void> => {
-  const repositories = createRepositories(pool)
-  for (const arena of createDevelopmentSeedData().arenas) {
-    await repositories.upsertArenaVariant(arena)
-  }
-}
-
 const stableEntryOrder = <
   T extends { id: string; snapshot: { sourceHash: string } },
 >(

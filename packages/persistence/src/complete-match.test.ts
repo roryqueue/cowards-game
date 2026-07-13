@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { createHash, randomUUID } from "node:crypto"
 import type { GameState, StrategyRuntime } from "@cowards/engine"
 import { buildChronicleFromMatch } from "@cowards/replay"
@@ -330,10 +331,10 @@ const seedCertificateAuthority = async (
 ): Promise<void> => {
   const laneHash = hashEntrantLaneIdentity(evidence.laneIdentity)
   for (const kind of ["containment", "conformance"] as const) {
-      const reference =
-        kind === "containment"
-          ? evidence.containmentCertificateRef
-          : evidence.conformanceCertificateRef!
+    const reference =
+      kind === "containment"
+        ? evidence.containmentCertificateRef
+        : evidence.conformanceCertificateRef!
     const producer = `${namespace}:producer:${kind}:${index}`
     const command = `${namespace}:command:${kind}:${index}`
     const graphHash = sha256(`${namespace}:graph:${kind}:${index}`)
@@ -551,7 +552,10 @@ const seedCompletionMatch = async (
          execution_snapshot, authority_bundle_hash
        ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
          $13, $14, $15, $16, $17, $18, $19, $20)`,
-      [...matchSetExecutionEntrantSqlValues(matchSetId, evidence), identity.authorityBundleHash],
+      [
+        ...matchSetExecutionEntrantSqlValues(matchSetId, evidence),
+        identity.authorityBundleHash,
+      ],
     )
   }
   const pairValues = matchExecutionEvidencePairSqlValues(matchSetId, pair)
@@ -597,109 +601,116 @@ const seedCompletionMatch = async (
 const databaseUrl = process.env.DATABASE_URL
 const describePostgres = databaseUrl ? describe : describe.skip
 
-describePostgres("PostgreSQL Match completion integrity identity and system failure", () => {
-  const schema = `completion_${randomUUID().replaceAll("-", "")}`
-  const namespace = `completion:${randomUUID()}`
-  const { identity, pair } = completionIdentity(namespace)
-  const built = builtMatch(namespace)
-  let admin: Pool
-  let pool: Pool
+describePostgres(
+  "PostgreSQL Match completion integrity identity and system failure",
+  () => {
+    const schema = `completion_${randomUUID().replaceAll("-", "")}`
+    const namespace = `completion:${randomUUID()}`
+    const { identity, pair } = completionIdentity(namespace)
+    const built = builtMatch(namespace)
+    let admin: Pool
+    let pool: Pool
 
-  beforeAll(async () => {
-    admin = new Pool({ connectionString: databaseUrl! })
-    await admin.query(`create schema ${schema}`)
-    pool = new Pool({
-      connectionString: databaseUrl!,
-      options: `-c search_path=${schema}`,
-      max: 1,
-    })
-    await migrate(pool)
-    await seedCompletionMatch(pool, namespace, identity, pair)
-  }, 30_000)
-
-  afterAll(async () => {
-    await pool.end()
-    await admin.query(`drop schema ${schema} cascade`)
-    await admin.end()
-  })
-
-  const input = (integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot) => ({
-    jobId: `${namespace}:job`,
-    leaseToken: `${namespace}:lease`,
-    chronicle: built.chronicle,
-    finalState: built.finalState,
-    integrityIdentity,
-  })
-
-  it("keeps Chronicle, gameplay, outcome, attempt, and player state unchanged for every side's drift", async () => {
-    const exact = responseSnapshot(identity, pair)
-    const driftCases: RuntimeExecutionResolvedEvidenceSnapshot[] = [
-      { ...exact, entrants: { bottom: exact.entrants.top, top: exact.entrants.bottom } },
-      {
-        ...exact,
-        entrants: {
-          ...exact.entrants,
-          bottom: {
-            ...exact.entrants.bottom,
-            schedulingDecision: {
-              ...exact.entrants.bottom.schedulingDecision,
-              freshUntil: "2026-07-12T12:00:00.000Z",
-            },
-          },
-        },
-      },
-      {
-        ...exact,
-        entrants: {
-          ...exact.entrants,
-          top: {
-            ...exact.entrants.top,
-            schedulingDecision: {
-              ...exact.entrants.top.schedulingDecision,
-              status: "disabled",
-              reasonCode: "CONTAINMENT_REVOKED",
-            },
-          },
-        },
-      },
-      { ...exact, registryGeneration: "2" },
-      {
-        ...exact,
-        entrants: {
-          ...exact.entrants,
-          bottom: {
-            ...exact.entrants.bottom,
-            conformanceCertificateRef: {
-              ...exact.entrants.bottom.conformanceCertificateRef!,
-              certificateRecordHash: sha256("drift-bottom"),
-            },
-          },
-        },
-      },
-      {
-        ...exact,
-        entrants: {
-          ...exact.entrants,
-          top: {
-            ...exact.entrants.top,
-            laneIdentity: {
-              ...exact.entrants.top.laneIdentity,
-              buildId: "drift-top",
-            },
-          },
-        },
-      },
-    ]
-
-    for (const drift of driftCases) {
-      await expect(completeMatch(pool, input(drift))).rejects.toMatchObject({
-        failureCategory: "system_failure",
-        playerPenalty: false,
+    beforeAll(async () => {
+      admin = new Pool({ connectionString: databaseUrl! })
+      await admin.query(`create schema ${schema}`)
+      pool = new Pool({
+        connectionString: databaseUrl!,
+        options: `-c search_path=${schema}`,
+        max: 1,
       })
-    }
+      await migrate(pool)
+      await seedCompletionMatch(pool, namespace, identity, pair)
+    }, 30_000)
 
-    const state = await pool.query(
-      `select m.status as match_status, m.outcome, m.winner_player_id,
+    afterAll(async () => {
+      await pool.end()
+      await admin.query(`drop schema ${schema} cascade`)
+      await admin.end()
+    })
+
+    const input = (
+      integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot,
+    ) => ({
+      jobId: `${namespace}:job`,
+      leaseToken: `${namespace}:lease`,
+      chronicle: built.chronicle,
+      finalState: built.finalState,
+      integrityIdentity,
+    })
+
+    it("keeps Chronicle, gameplay, outcome, attempt, and player state unchanged for every side's drift", async () => {
+      const exact = responseSnapshot(identity, pair)
+      const driftCases: RuntimeExecutionResolvedEvidenceSnapshot[] = [
+        {
+          ...exact,
+          entrants: { bottom: exact.entrants.top, top: exact.entrants.bottom },
+        },
+        {
+          ...exact,
+          entrants: {
+            ...exact.entrants,
+            bottom: {
+              ...exact.entrants.bottom,
+              schedulingDecision: {
+                ...exact.entrants.bottom.schedulingDecision,
+                freshUntil: "2026-07-12T12:00:00.000Z",
+              },
+            },
+          },
+        },
+        {
+          ...exact,
+          entrants: {
+            ...exact.entrants,
+            top: {
+              ...exact.entrants.top,
+              schedulingDecision: {
+                ...exact.entrants.top.schedulingDecision,
+                status: "disabled",
+                reasonCode: "CONTAINMENT_REVOKED",
+              },
+            },
+          },
+        },
+        { ...exact, registryGeneration: "2" },
+        {
+          ...exact,
+          entrants: {
+            ...exact.entrants,
+            bottom: {
+              ...exact.entrants.bottom,
+              conformanceCertificateRef: {
+                ...exact.entrants.bottom.conformanceCertificateRef!,
+                certificateRecordHash: sha256("drift-bottom"),
+              },
+            },
+          },
+        },
+        {
+          ...exact,
+          entrants: {
+            ...exact.entrants,
+            top: {
+              ...exact.entrants.top,
+              laneIdentity: {
+                ...exact.entrants.top.laneIdentity,
+                buildId: "drift-top",
+              },
+            },
+          },
+        },
+      ]
+
+      for (const drift of driftCases) {
+        await expect(completeMatch(pool, input(drift))).rejects.toMatchObject({
+          failureCategory: "system_failure",
+          playerPenalty: false,
+        })
+      }
+
+      const state = await pool.query(
+        `select m.status as match_status, m.outcome, m.winner_player_id,
               m.surviving_soldiers, j.status as job_status,
               a.status as attempt_status,
               (select count(*)::integer from chronicles where match_id = m.id) as chronicles
@@ -707,48 +718,51 @@ describePostgres("PostgreSQL Match completion integrity identity and system fail
          join match_jobs j on j.match_id = m.id
          join match_job_attempts a on a.job_id = j.id and a.attempt_number = 1
         where m.id = $1`,
-      [`${namespace}:match`],
-    )
-    expect(state.rows[0]).toEqual({
-      match_status: "running",
-      outcome: null,
-      winner_player_id: null,
-      surviving_soldiers: null,
-      job_status: "running",
-      attempt_status: "running",
-      chronicles: 0,
+        [`${namespace}:match`],
+      )
+      expect(state.rows[0]).toEqual({
+        match_status: "running",
+        outcome: null,
+        winner_player_id: null,
+        surviving_soldiers: null,
+        job_status: "running",
+        attempt_status: "running",
+        chronicles: 0,
+      })
     })
-  })
 
-  it("rolls back a late write and then copies the locked pair exactly on success", async () => {
-    await pool.query(`
+    it("rolls back a late write and then copies the locked pair exactly on success", async () => {
+      await pool.query(`
       create function reject_completion_update() returns trigger language plpgsql as $$
       begin raise exception 'forced late completion failure'; end; $$;
       create trigger reject_completion_update before update on matches
       for each row when (new.status = 'complete') execute function reject_completion_update();
     `)
-    await expect(
-      completeMatch(pool, input(responseSnapshot(identity, pair))),
-    ).rejects.toThrow(/forced late completion failure/iu)
-    let rows = await pool.query(
-      `select m.status as match_status, j.status as job_status,
+      await expect(
+        completeMatch(pool, input(responseSnapshot(identity, pair))),
+      ).rejects.toThrow(/forced late completion failure/iu)
+      let rows = await pool.query(
+        `select m.status as match_status, j.status as job_status,
               (select count(*)::integer from chronicles where match_id = m.id) as chronicles
          from matches m join match_jobs j on j.match_id = m.id where m.id = $1`,
-      [`${namespace}:match`],
-    )
-    expect(rows.rows[0]).toEqual({
-      match_status: "running",
-      job_status: "running",
-      chronicles: 0,
-    })
-    await pool.query("drop trigger reject_completion_update on matches")
-    await pool.query("drop function reject_completion_update()")
+        [`${namespace}:match`],
+      )
+      expect(rows.rows[0]).toEqual({
+        match_status: "running",
+        job_status: "running",
+        chronicles: 0,
+      })
+      await pool.query("drop trigger reject_completion_update on matches")
+      await pool.query("drop function reject_completion_update()")
 
-    await expect(
-      completeMatch(pool, input(responseSnapshot(identity, pair))),
-    ).resolves.toMatchObject({ status: "complete", matchId: `${namespace}:match` })
-    rows = await pool.query(
-      `select c.integrity_match_set_id, c.bottom_execution_entrant_key,
+      await expect(
+        completeMatch(pool, input(responseSnapshot(identity, pair))),
+      ).resolves.toMatchObject({
+        status: "complete",
+        matchId: `${namespace}:match`,
+      })
+      rows = await pool.query(
+        `select c.integrity_match_set_id, c.bottom_execution_entrant_key,
               c.top_execution_entrant_key, c.bottom_execution_evidence,
               c.top_execution_evidence, c.execution_evidence_pair_hash,
               c.authority_publication_id, c.authority_install_receipt_id,
@@ -761,30 +775,31 @@ describePostgres("PostgreSQL Match completion integrity identity and system fail
          join match_jobs j on j.match_id = m.id
          join match_job_attempts a on a.job_id = j.id and a.attempt_number = 1
         where c.match_id = $1`,
-      [`${namespace}:match`],
-    )
-    expect(rows.rows[0]).toMatchObject({
-      integrity_match_set_id: `${namespace}:match-set`,
-      bottom_execution_entrant_key: pair.bottom.entrantKey,
-      top_execution_entrant_key: pair.top.entrantKey,
-      bottom_execution_evidence: pair.bottom,
-      top_execution_evidence: pair.top,
-      execution_evidence_pair_hash: pair.pairHash,
-      authority_publication_id: `${namespace}:publication`,
-      authority_install_receipt_id: `${namespace}:install-receipt`,
-      authority_payload_sha256: `sha256:${identity.authorityBundleHash}`,
-      authority_envelope_sha256: `sha256:${sha256(`${namespace}:envelope`)}`,
-      authority_source_manifest_hash: `sha256:${sha256(`${namespace}:sources`)}`,
-      authority_source_set: {
-        attestationIds: [],
-        certificateIds: [],
-        revocationIds: [],
-        supersessionIds: [],
-        laneControlIds: [],
-      },
-      match_status: "complete",
-      job_status: "complete",
-      attempt_status: "complete",
+        [`${namespace}:match`],
+      )
+      expect(rows.rows[0]).toMatchObject({
+        integrity_match_set_id: `${namespace}:match-set`,
+        bottom_execution_entrant_key: pair.bottom.entrantKey,
+        top_execution_entrant_key: pair.top.entrantKey,
+        bottom_execution_evidence: pair.bottom,
+        top_execution_evidence: pair.top,
+        execution_evidence_pair_hash: pair.pairHash,
+        authority_publication_id: `${namespace}:publication`,
+        authority_install_receipt_id: `${namespace}:install-receipt`,
+        authority_payload_sha256: `sha256:${identity.authorityBundleHash}`,
+        authority_envelope_sha256: `sha256:${sha256(`${namespace}:envelope`)}`,
+        authority_source_manifest_hash: `sha256:${sha256(`${namespace}:sources`)}`,
+        authority_source_set: {
+          attestationIds: [],
+          certificateIds: [],
+          revocationIds: [],
+          supersessionIds: [],
+          laneControlIds: [],
+        },
+        match_status: "complete",
+        job_status: "complete",
+        attempt_status: "complete",
+      })
     })
-  })
-})
+  },
+)

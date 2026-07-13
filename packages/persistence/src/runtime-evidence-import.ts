@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import {
   getVerifiedRuntimeEvidenceAttestationSnapshot,
@@ -84,7 +85,7 @@ const cloneInput = (
   input: ImportRuntimeEvidenceAttestationInput,
 ): VerifyRuntimeEvidenceAttestationInput => ({
   mode: input.mode,
-  attestation: structuredClone(input.attestation),
+  attestation: globalThis.structuredClone(input.attestation),
   evidenceBytes: Object.freeze(
     Object.fromEntries(
       Object.entries(input.evidenceBytes).map(([nodeId, bytes]) => [
@@ -294,7 +295,11 @@ const persistVerified = async (
 ): Promise<ImportedRuntimeEvidenceAttestation> => {
   const attestationId = `attestation:${snapshot.attestationSha256}`
   const certificate = deriveRuntimeEvidenceCertificateReference(snapshot)
-  const attestationValues = attestationRowValues(snapshot, attestationId, certificate)
+  const attestationValues = attestationRowValues(
+    snapshot,
+    attestationId,
+    certificate,
+  )
   await insertImmutableRow(
     client,
     "runtime_evidence_verified_attestations",
@@ -315,7 +320,11 @@ const persistVerified = async (
     "Verified attestation",
   )
 
-  const certificateValues = certificateRowValues(snapshot, attestationId, certificate)
+  const certificateValues = certificateRowValues(
+    snapshot,
+    attestationId,
+    certificate,
+  )
   await insertImmutableRow(
     client,
     "runtime_evidence_certificates",

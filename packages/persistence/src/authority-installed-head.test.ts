@@ -1,4 +1,6 @@
+import { Buffer } from "node:buffer"
 import { randomUUID } from "node:crypto"
+import { setTimeout } from "node:timers"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { Pool, type PoolClient } from "pg"
 import { migrate } from "./migrations.js"
@@ -69,8 +71,7 @@ describePostgres("PostgreSQL monotonic installed authority head", () => {
     sequence: number
   }): Promise<void> => {
     const queryable = input.client ?? pool
-    const reason =
-      input.kind === "installed" ? null : `${input.kind}-reason`
+    const reason = input.kind === "installed" ? null : `${input.kind}-reason`
     await queryable.query(
       `insert into runtime_evidence_authority_publication_events
         (id,publication_id,event_kind,attempt_id,envelope_sha256,reason_code,

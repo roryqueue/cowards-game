@@ -270,7 +270,7 @@ const createFakePool = (
     }>
   } = {
     calls,
-    async query(sql: string, values?: unknown[]) {
+    async query(sql: string, _values?: unknown[]) {
       calls.push(sql)
       if (sql.includes("from trial_ladder_seasons")) {
         return {

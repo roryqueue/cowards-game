@@ -14,6 +14,7 @@ import {
 } from "@cowards/spec"
 import type {
   StrategyId,
+  CountedEntryEligibilityCategory,
   StrategyRevision,
   StrategyRevisionId,
   StrategyRuntimeProductSemantics,
@@ -52,7 +53,7 @@ export interface AccountStrategyRevisionSummary {
   valid: boolean
   runtime: StrategyRevision["runtime"]
   runtimeSemantics: StrategyRuntimeProductSemantics
-  countedEntryEligibilityCategory: import("@cowards/spec").CountedEntryEligibilityCategory
+  countedEntryEligibilityCategory: CountedEntryEligibilityCategory
   engineCompatibility: StrategyRevision["engineCompatibility"]
   createdAt: string
   lockedAt?: string | undefined

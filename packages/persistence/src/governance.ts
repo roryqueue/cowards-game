@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { createHash, randomUUID } from "node:crypto"
 import {
   classifyCompetitionCountedState,
@@ -299,7 +300,10 @@ export interface IntegrityCompensationEventProjection {
 
 type StandingsInput = Parameters<typeof recomputeSeasonStandings>[0]
 
-const integrityFramedHash = (domain: string, values: readonly string[]): string => {
+const integrityFramedHash = (
+  domain: string,
+  values: readonly string[],
+): string => {
   const hash = createHash("sha256")
   hash.update(domain, "utf8")
   hash.update("\0", "utf8")
@@ -333,7 +337,9 @@ const normalizeIntegrityPredicate = (
   }
   const matchSetIds = predicate.matchSetIds
     .map((id) => requiredGovernanceText(id, "Cohort MatchSet ID"))
-    .sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)))
+    .sort((left, right) =>
+      Buffer.compare(Buffer.from(left), Buffer.from(right)),
+    )
   if (
     matchSetIds.length === 0 ||
     matchSetIds.length > 10_000 ||
@@ -355,7 +361,9 @@ export const createIntegrityCohortPreview = (
   rawPredicate: IntegrityCohortPredicate,
 ): Readonly<IntegrityCohortPreview> => {
   const predicate = normalizeIntegrityPredicate(rawPredicate)
-  const byId = new Map(sourceRecords.map((record) => [record.matchSetId, record]))
+  const byId = new Map(
+    sourceRecords.map((record) => [record.matchSetId, record]),
+  )
   const selected = predicate.matchSetIds.map((id) => {
     const record = byId.get(id)
     if (!record) {
@@ -392,7 +400,11 @@ export const createIntegrityCohortPreview = (
 const normalizeEvidenceReferences = (
   references: readonly IntegrityEvidenceReference[],
 ): readonly Readonly<IntegrityEvidenceReference>[] => {
-  if (!Array.isArray(references) || references.length === 0 || references.length > 100) {
+  if (
+    !Array.isArray(references) ||
+    references.length === 0 ||
+    references.length > 100
+  ) {
     throw new GovernanceInputError(
       "A reproducible integrity evidence reference is required.",
     )
@@ -409,7 +421,9 @@ const normalizeEvidenceReferences = (
       ].includes(reference.kind) ||
       !/^[0-9a-f]{64}$/u.test(reference.sha256)
     ) {
-      throw new GovernanceInputError("Integrity evidence reference is malformed.")
+      throw new GovernanceInputError(
+        "Integrity evidence reference is malformed.",
+      )
     }
     return Object.freeze({
       kind: reference.kind,
@@ -504,7 +518,8 @@ export const previewIntegrityCohortClassification = async (
 
 const sequenceFromEventId = (eventId: string): number => {
   const match = /^integrity-classification:(\d+):/u.exec(eventId)
-  if (!match) throw new GovernanceInputError("Integrity event sequence is malformed.")
+  if (!match)
+    throw new GovernanceInputError("Integrity event sequence is malformed.")
   const sequence = Number(match[1])
   if (!Number.isSafeInteger(sequence) || sequence < 1) {
     throw new GovernanceInputError("Integrity event sequence is invalid.")
@@ -519,7 +534,9 @@ const nextIntegritySequence = async (client: Queryable): Promise<number> => {
   return result.rows[0] ? sequenceFromEventId(result.rows[0].id) + 1 : 1
 }
 
-const loadIntegrityEventFold = async (client: Queryable): Promise<{
+const loadIntegrityEventFold = async (
+  client: Queryable,
+): Promise<{
   events: IntegrityClassificationEventProjection[]
   compensations: IntegrityCompensationEventProjection[]
 }> => {
@@ -543,7 +560,9 @@ const loadIntegrityEventFold = async (client: Queryable): Promise<{
       return {
         eventId: row.id,
         sequence: sequenceFromEventId(row.id),
-        predicate: normalizeIntegrityPredicate(envelope.ast ?? (row.predicate as IntegrityCohortPredicate)),
+        predicate: normalizeIntegrityPredicate(
+          envelope.ast ?? (row.predicate as IntegrityCohortPredicate),
+        ),
         classification: row.classification,
       }
     }),
@@ -566,7 +585,9 @@ export const foldEffectiveIntegrityClassifications = (
     string,
     EffectiveIntegrityClassification
   >
-  for (const event of [...events].sort((left, right) => left.sequence - right.sequence)) {
+  for (const event of [...events].sort(
+    (left, right) => left.sequence - right.sequence,
+  )) {
     if (compensated.has(event.eventId)) continue
     const predicate = normalizeIntegrityPredicate(event.predicate)
     for (const matchSetId of predicate.matchSetIds) {
@@ -647,10 +668,15 @@ export const applyIntegrityCohortClassification = async (
   },
 ) => {
   const references = normalizeEvidenceReferences(input.evidenceReferences)
-  const reason = requiredGovernanceText(input.reason.trim(), "Integrity finding reason")
+  const reason = requiredGovernanceText(
+    input.reason.trim(),
+    "Integrity finding reason",
+  )
   return withTransaction(pool, async (client) => {
     await assertAdminUser(client, input.adminUserId)
-    await client.query("select pg_advisory_xact_lock(hashtext('cowards-game:integrity-cohort-governance:v1'))")
+    await client.query(
+      "select pg_advisory_xact_lock(hashtext('cowards-game:integrity-cohort-governance:v1'))",
+    )
     const current = createIntegrityCohortPreview(
       await loadIntegrityCohortSources(client, input.preview.predicate, true),
       input.preview.predicate,
@@ -671,7 +697,11 @@ export const applyIntegrityCohortClassification = async (
       ...input.standingsInput,
       effectiveIntegrityClassifications,
     })
-    return Object.freeze({ event, effectiveIntegrityClassifications, standings })
+    return Object.freeze({
+      event,
+      effectiveIntegrityClassifications,
+      standings,
+    })
   })
 }
 
@@ -688,10 +718,15 @@ export const compensateIntegrityCohortClassification = async (
   },
 ) => {
   const references = normalizeEvidenceReferences(input.evidenceReferences)
-  const reason = requiredGovernanceText(input.reason.trim(), "Compensation reason")
+  const reason = requiredGovernanceText(
+    input.reason.trim(),
+    "Compensation reason",
+  )
   return withTransaction(pool, async (client) => {
     await assertAdminUser(client, input.adminUserId)
-    await client.query("select pg_advisory_xact_lock(hashtext('cowards-game:integrity-cohort-governance:v1'))")
+    await client.query(
+      "select pg_advisory_xact_lock(hashtext('cowards-game:integrity-cohort-governance:v1'))",
+    )
     const target = await client.query<{
       id: string
       predicate: unknown
@@ -701,18 +736,24 @@ export const compensateIntegrityCohortClassification = async (
     )
     const targetRow = target.rows[0]
     if (!targetRow) {
-      throw new GovernanceInputError("Compensated integrity event was not found.", {
-        status: 404,
-      })
+      throw new GovernanceInputError(
+        "Compensated integrity event was not found.",
+        {
+          status: 404,
+        },
+      )
     }
     const priorCompensation = await client.query<{ id: string }>(
       "select id from integrity_compensation_events where compensates_event_id = $1",
       [input.compensatesEventId],
     )
     if (priorCompensation.rows[0]) {
-      throw new GovernanceInputError("Integrity event was already compensated.", {
-        status: 409,
-      })
+      throw new GovernanceInputError(
+        "Integrity event was already compensated.",
+        {
+          status: 409,
+        },
+      )
     }
     const envelope = targetRow.predicate as { ast?: IntegrityCohortPredicate }
     const predicate = normalizeIntegrityPredicate(
@@ -734,7 +775,12 @@ export const compensateIntegrityCohortClassification = async (
     })
     const compensationHash = integrityFramedHash(
       "cowards-game:integrity-compensation-event:v1",
-      [event.eventId, input.compensatesEventId, hashEvidenceReferences(references), reason],
+      [
+        event.eventId,
+        input.compensatesEventId,
+        hashEvidenceReferences(references),
+        reason,
+      ],
     )
     const compensationEventId = `integrity-compensation:${String(sequence).padStart(20, "0")}:${compensationHash}`
     await client.query(
