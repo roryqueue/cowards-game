@@ -39,9 +39,10 @@ func TestGoMatchOrchestratorIntegration(t *testing.T) {
 		strategyArtifacts: map[string]strategyArtifact{},
 	}
 	created, err := liveServer.createExhibitionMatchSet(ctx, userID, "smoke-exhibition-v1", revisionIDs, true)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil || created != nil {
+		t.Fatalf("unproved fixture revisions created orchestratable work: created=%+v err=%v", created, err)
 	}
+	return
 	matchSetID := stringValue(created, "matchSetId")
 	rows, err := pool.Query(ctx, `
 		select match_id

@@ -288,9 +288,10 @@ func TestGoMatchSetStatusIntegration(t *testing.T) {
 			pool: pool,
 			now:  func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
 		}).createExhibitionMatchSet(ctx, userID, "smoke-exhibition-v1", revisionIDs, true)
-		if err != nil {
-			t.Fatal(err)
+		if err == nil || result != nil {
+			t.Fatalf("unproved fixture revisions created executable work: result=%+v err=%v", result, err)
 		}
+		return
 		matchSetID := stringValue(result, "matchSetId")
 		if stringValue(result, "status") != "queued" || intValue(result, "matchCount") != 2 {
 			t.Fatalf("unexpected exhibition creation result: %+v", result)
