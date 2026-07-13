@@ -149,6 +149,7 @@ export interface KernelRecorderMaterial {
 }
 
 export interface MatchMachine {
+  readonly executionMode: "match" | "activation"
   readonly state: GameState
   readonly initialState: GameState
   readonly semanticTuple: KernelSemanticTuple
@@ -208,6 +209,15 @@ export interface CandidateRuntimeSystemFailureResult {
     readonly code: string
     readonly retryable: boolean
   }
+}
+
+export interface CandidateActivationExecution {
+  readonly kind: "completed" | "failure"
+  readonly result?: TransitionResult | undefined
+  readonly transitions: readonly KernelTransitionRecord[]
+  readonly recorderMaterial?: KernelRecorderMaterial | undefined
+  readonly failure?: KernelRestrictedFailure | undefined
+  readonly unchangedState?: GameState | undefined
 }
 
 export interface CandidateStrategyRuntime {

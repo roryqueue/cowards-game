@@ -125,6 +125,7 @@ interface CandidateExecution {
   result?: { state: unknown; events: readonly unknown[] }
   transitions: readonly KernelTransitionRecord[]
   failure?: Readonly<Record<string, unknown>>
+  unchangedState?: unknown
 }
 
 interface CandidateMatchKernelAuthority {
@@ -154,6 +155,7 @@ const createDirectMachine = (): MatchMachine => {
     throw new Error("candidate test state failed semantic admission")
   }
   return {
+    executionMode: "match",
     state: initial.state,
     initialState: initial.state,
     semanticTuple: {
@@ -480,5 +482,31 @@ describe("Phase 257 canonical Match kernel contract", () => {
       transitionEvents.filter((event) => event.type === "MATCH_ENDED"),
     ).toHaveLength(1)
     expectNoPrivateTransitionData(first.transitions)
+  })
+
+  it("driver discards every partial record when a runtime system failure occurs", () => {
+    if (candidateAuthority === undefined) return
+    const runtime = {
+      selectActivations: () => ({
+        ok: false as const,
+        systemFailure: { code: "TEST_HOST_FAILURE", retryable: true },
+      }),
+      runSoldierBrain: () => ({
+        ok: false as const,
+        systemFailure: { code: "TEST_HOST_FAILURE", retryable: true },
+      }),
+    }
+    const initial = candidateAuthority.createMachine(withoutRuntime())
+    const result = candidateAuthority.runMatch({ ...matchInput, runtime })
+    expect(result).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        category: "RUNTIME_SYSTEM_FAILURE",
+        code: "TEST_HOST_FAILURE",
+      },
+    })
+    expect(result.unchangedState).toEqual((initial as { state: unknown }).state)
   })
 })

@@ -282,6 +282,12 @@ const afterSlot = (
   state: GameState,
   slots: readonly ActivationSlotState[],
 ): MatchMachine => {
+  if (
+    machine.executionMode === "activation" &&
+    slots[machine.cursor.slotIndex]?.ended
+  ) {
+    return withCursor({ ...machine, state, slots }, { stage: "completed" })
+  }
   const nextSlotIndex = machine.cursor.slotIndex + 1
   if (nextSlotIndex < slots.length) {
     return withCursor(
@@ -880,6 +886,25 @@ export const stepCandidateMatch = (
       return yieldSelection(machine, machine.state.players[0].id)
     case "select_top":
       return yieldSelection(machine, machine.state.players[1].id)
+    case "prepare_slots": {
+      if (
+        machine.executionMode !== "activation" ||
+        machine.slots.length !== 1
+      ) {
+        return fail(machine, integrityFailure("KERNEL_STAGE_UNREACHABLE"))
+      }
+      return finishTransition(
+        machine,
+        withCursor(machine, {
+          stage: "cycle_slot_start",
+          cycleLayer: 0,
+          slotIndex: 0,
+        }),
+        "ACTIVATION_STARTED",
+        "success",
+        [activationStartedEvent(machine.slots[0]!)],
+      )
+    }
     case "cycle_slot_start":
       return advanceCycleStart(machine)
     case "soldier_observation":
@@ -892,7 +917,6 @@ export const stepCandidateMatch = (
       return advanceMaxPhases(machine)
     case "completed":
       return fail(machine, integrityFailure("KERNEL_ALREADY_COMPLETED"))
-    case "prepare_slots":
     case "cycle_slot_finish":
     case "round_finish":
       return fail(machine, integrityFailure("KERNEL_STAGE_UNREACHABLE"))

@@ -110,6 +110,7 @@ export const hashCanonicalState = (state: GameState): string =>
     .digest("hex")}`
 
 export const projectMatchMachineForHash = (machine: MatchMachine) => ({
+  executionMode: machine.executionMode,
   semanticTupleId: machine.semanticTuple.tupleId,
   semanticTuple: projectTuple(machine.semanticTuple.tuple),
   state: projectCanonicalStateForRecording(machine.state),
@@ -177,6 +178,10 @@ export const validateMachine = (
   const semantic = validateCanonicalGameState(machine.state)
   if (!semantic.ok) return integrityFailure("KERNEL_STATE_INVALID", semantic)
   if (
+    !Number.isSafeInteger(machine.maxPhases) ||
+    machine.maxPhases < 0 ||
+    !Number.isSafeInteger(machine.phasesRun) ||
+    machine.phasesRun < 0 ||
     !Number.isSafeInteger(machine.cursor.ordinal) ||
     machine.cursor.ordinal < 0 ||
     !Number.isSafeInteger(machine.cursor.cycleLayer) ||

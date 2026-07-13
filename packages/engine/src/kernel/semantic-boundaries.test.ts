@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { ArenaVariantSchema } from "@cowards/spec"
-import { createInitialGameState } from "../state.js"
+import { createCandidateInitialGameState } from "./create-initial-state.js"
 
 type SemanticCorpus = {
   valid: { arena: unknown }
@@ -34,7 +34,7 @@ describe("candidate semantic boundaries", () => {
     expect(vector?.expected.map((issue) => issue.code)).toEqual([
       "ARENA_TERRAIN_START_OVERLAP",
     ])
-    const arena = structuredClone(corpus.valid.arena) as {
+    const arena = globalThis.structuredClone(corpus.valid.arena) as {
       id: string
       name: string
       initialBounds: { minX: number; maxX: number; minY: number; maxY: number }
@@ -43,21 +43,19 @@ describe("candidate semantic boundaries", () => {
     arena.terrainStones.push(vector!.mutation!.value)
     expect(ArenaVariantSchema.safeParse(arena).success).toBe(true)
 
-    try {
-      createInitialGameState({
-        matchId: "match:missing-semantic-engine",
-        seed: "seed:missing-semantic-engine",
-        arenaVariant: arena,
-        bottomPlayerId: "player:bottom",
-        topPlayerId: "player:top",
-        bottomStrategyRevisionId: "revision:bottom",
-        topStrategyRevisionId: "revision:top",
-      })
-    } catch (error) {
-      expect(String(error)).toContain("ARENA_TERRAIN_START_OVERLAP")
-      return
-    }
-
-    throw new Error("[EXPECTED_RED:MISSING_SEMANTIC_CONTRACT:ENGINE]")
+    const result = createCandidateInitialGameState({
+      matchId: "match:missing-semantic-engine",
+      seed: "seed:missing-semantic-engine",
+      arenaVariant: arena,
+      bottomPlayerId: "player:bottom",
+      topPlayerId: "player:top",
+      bottomStrategyRevisionId: "revision:bottom",
+      topStrategyRevisionId: "revision:top",
+    })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.failure.issues.map((issue) => issue.code)).toContain(
+      "ARENA_TERRAIN_START_OVERLAP",
+    )
   })
 })
