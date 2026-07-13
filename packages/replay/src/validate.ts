@@ -126,6 +126,13 @@ const REQUIRED_COMPLETED_EVENT_TYPES = [
   "MATCH_ENDED",
 ] as const satisfies readonly ChronicleEventType[]
 
+const CANDIDATE_REQUIRED_COMPLETED_EVENT_TYPES = [
+  "MATCH_STARTED",
+  "ROUND_STARTED",
+  "STRATEGY_EVALUATED",
+  "MATCH_ENDED",
+] as const satisfies readonly ChronicleEventType[]
+
 const REQUIRED_COMPLETED_SNAPSHOT_KINDS = [
   "MATCH_START",
   "MATCH_END",
@@ -473,6 +480,24 @@ const validateRequiredEvents = (
           error(
             "REQUIRED_EVENT_MISSING",
             `Completed Chronicle is missing ${type}.`,
+            { expected: type },
+          ),
+        ],
+  )
+}
+
+const validateCandidateRequiredEvents = (
+  chronicle: Chronicle,
+): ChronicleValidationError[] => {
+  if (!chronicle.events.some(({ type }) => type === "MATCH_ENDED")) return []
+  const present = new Set(chronicle.events.map(({ type }) => type))
+  return CANDIDATE_REQUIRED_COMPLETED_EVENT_TYPES.flatMap((type) =>
+    present.has(type)
+      ? []
+      : [
+          error(
+            "REQUIRED_EVENT_MISSING",
+            `Completed candidate Chronicle is missing ${type}.`,
             { expected: type },
           ),
         ],
@@ -934,7 +959,7 @@ export const validateCandidateReplaySemantics = (
 
   const eventErrors = [
     ...validateEventOrder(chronicle),
-    ...validateRequiredEvents(chronicle),
+    ...validateCandidateRequiredEvents(chronicle),
     ...validateSnapshots(chronicle),
   ]
   if (

@@ -51,9 +51,30 @@ const runtime: StrategyRuntime = {
   },
 }
 
-const createCandidateReplayInput = () => {
+const passiveRuntime: StrategyRuntime = {
+  selectActivations() {
+    return {
+      ok: true,
+      value: { activationOrders: [], strategyMemory: {} },
+    }
+  },
+  runSoldierBrain() {
+    return {
+      ok: true,
+      value: {
+        action: { type: "TURN", direction: "RIGHT" },
+        soldierMemory: {},
+      },
+    }
+  },
+}
+
+const createCandidateReplayInput = (
+  candidateRuntime: StrategyRuntime = runtime,
+  overrides: { readonly matchId?: string; readonly maxPhases?: number } = {},
+) => {
   const execution = CANDIDATE_MATCH_KERNEL.runMatch({
-    matchId: "validation-match",
+    matchId: overrides.matchId ?? "validation-match",
     seed: "validation-seed",
     arenaVariant: {
       id: "arena",
@@ -65,7 +86,10 @@ const createCandidateReplayInput = () => {
     topPlayerId: "top",
     bottomStrategyRevisionId: "bottom-rev",
     topStrategyRevisionId: "top-rev",
-    runtime,
+    runtime: candidateRuntime,
+    ...(overrides.maxPhases === undefined
+      ? {}
+      : { maxPhases: overrides.maxPhases }),
   })
   const recorded = recordChronicleFromExecution({
     execution,
@@ -270,6 +294,48 @@ describe("validateChronicle", () => {
       publishable: false,
       current: false,
     })
+  })
+
+  it("accepts a passive empty-selection Match that reaches Contraction without an Activation window", () => {
+    const input = createCandidateReplayInput(passiveRuntime, {
+      matchId: "validation-passive-contraction",
+      maxPhases: 1,
+    })
+    const eventTypes = input.chronicle.events.map(({ type }) => type)
+
+    expect(eventTypes).toContain("CONTRACTION_RESOLVED")
+    expect(eventTypes).not.toContain("ACTIVATION_STARTED")
+    expect(eventTypes).not.toContain("AWARENESS_GRID_OBSERVED")
+    expect(eventTypes).not.toContain("ACTION_EMITTED")
+    expect(validateCandidateReplaySemantics(input)).toEqual({
+      ok: true,
+      profile: "candidate-v1.37",
+      publishable: false,
+      current: false,
+      issues: [],
+      truncated: false,
+    })
+  })
+
+  it.each([
+    "MATCH_STARTED",
+    "ROUND_STARTED",
+    "STRATEGY_EVALUATED",
+    "MATCH_ENDED",
+  ] as const)("rejects a candidate missing universal %s evidence", (type) => {
+    const input = createCandidateReplayInput()
+    const result = validateCandidateReplaySemantics({
+      ...input,
+      chronicle: {
+        ...input.chronicle,
+        events: input.chronicle.events.filter((event) => event.type !== type),
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.issues.map(({ code }) => code)).toEqual([
+      "CANDIDATE_EVENT_INVALID",
+    ])
   })
 
   it("keeps the legacy PUSH_ATTEMPTED tail only on explicit active and historical routes", () => {
