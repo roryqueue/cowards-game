@@ -3,9 +3,17 @@ import type {
   ChronicleEvent,
   FullBoardSnapshot,
   SoldierSnapshot,
+  SoldierBrainInput,
+  StrategyInput,
 } from "@cowards/spec"
+import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { describe, expect, it } from "vitest"
-import { validateChronicleTransitions } from "./replay-transition.js"
+import { createCandidateReplay } from "./reconstruct.js"
+import { recordChronicleFromExecution } from "./record.js"
+import {
+  validateCandidateReplayReconstruction,
+  validateChronicleTransitions,
+} from "./replay-transition.js"
 
 const soldier = (
   id: string,
@@ -246,5 +254,146 @@ describe("validateChronicleTransitions", () => {
         board([soldier("mover")]),
       ),
     )
+  })
+})
+
+const candidateInput = () => {
+  const runtime: StrategyRuntime = {
+    selectActivations(input: StrategyInput) {
+      return {
+        ok: true,
+        value: {
+          activationOrders: input.mySoldiers
+            .filter(({ status }) => status === "ACTIVE")
+            .slice(0, input.activationCount)
+            .map(({ id }) => ({ soldierId: id })),
+          strategyMemory: {},
+        },
+      }
+    },
+    runSoldierBrain(_input: SoldierBrainInput) {
+      return {
+        ok: true,
+        value: {
+          action: { type: "TURN_TO_STONE" },
+          soldierMemory: {},
+        },
+      }
+    },
+  }
+  const execution = CANDIDATE_MATCH_KERNEL.runMatch({
+    matchId: "candidate-reconstruction",
+    seed: "candidate-reconstruction-seed",
+    arenaVariant: {
+      id: "candidate-reconstruction-arena",
+      name: "Candidate Reconstruction Arena",
+      initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+      terrainStones: [],
+    },
+    bottomPlayerId: "bottom",
+    topPlayerId: "top",
+    bottomStrategyRevisionId: "bottom-revision",
+    topStrategyRevisionId: "top-revision",
+    runtime,
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  return {
+    profile: "candidate-v1.37" as const,
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution,
+  }
+}
+
+describe("candidate replay reconstruction equivalence", () => {
+  it("reconstructs every transition and the exact terminal outcome without scheduling", () => {
+    const input = candidateInput()
+    const result = validateCandidateReplayReconstruction(input)
+
+    expect(result).toMatchObject({
+      ok: true,
+      terminalStateHash: input.boundaryAnchors.at(-1)?.stateHash,
+      outcome:
+        input.execution.kind === "completed"
+          ? input.execution.recorderMaterial.finalState.outcome
+          : undefined,
+    })
+    const replay = createCandidateReplay(input)
+    expect(replay.ok).toBe(true)
+    if (!replay.ok) return
+    const terminalSequence = input.chronicle.events.at(-1)?.sequence ?? -1
+    expect(replay.replay.stateAt(terminalSequence)).toMatchObject({
+      ok: true,
+      state: { outcome: input.chronicle.snapshots.at(-1)?.outcome },
+    })
+  })
+
+  it("rejects an intermediate projection that contradicts its events", () => {
+    const input = candidateInput()
+    if (input.execution.kind !== "completed") throw new Error("not completed")
+    const transitionIndex = input.execution.transitions.findIndex(
+      ({ events }) => events.some(({ type }) => type === "SOLDIER_STONED"),
+    )
+    expect(transitionIndex).toBeGreaterThanOrEqual(0)
+    const transition = input.execution.transitions[transitionIndex]!
+    const soldierId = transition.events.find(
+      ({ type }) => type === "SOLDIER_STONED",
+    )?.payload as { soldierId?: string }
+    const afterState = globalThis.structuredClone(transition.afterState) as {
+      soldiers: Array<{ id: string; status: string }>
+    }
+    const soldier = afterState.soldiers.find(
+      ({ id }) => id === soldierId.soldierId,
+    )
+    if (soldier) soldier.status = "ACTIVE"
+    const transitions = input.execution.transitions.map((value, index) =>
+      index === transitionIndex ? { ...value, afterState } : value,
+    )
+    const result = validateCandidateReplayReconstruction({
+      ...input,
+      execution: {
+        ...input.execution,
+        transitions,
+        recorderMaterial: {
+          ...input.execution.recorderMaterial,
+          boundaries: transitions,
+        },
+      },
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      code: "CANDIDATE_TRANSITION_STATE_MISMATCH",
+      transitionIndex,
+    })
+  })
+
+  it("rejects any event after the one final MATCH_ENDED", () => {
+    const input = candidateInput()
+    const terminal = input.chronicle.events.at(-1)!
+    const result = validateCandidateReplayReconstruction({
+      ...input,
+      chronicle: {
+        ...input.chronicle,
+        events: [
+          ...input.chronicle.events,
+          { ...terminal, sequence: terminal.sequence + 1 },
+        ],
+      },
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      code: "CANDIDATE_TERMINAL_EVENT_INVALID",
+    })
   })
 })
