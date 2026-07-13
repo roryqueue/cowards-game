@@ -95,7 +95,7 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		return &goMatchOrchestrationResult{Status: "idle"}, nil
 	}
 
-	request, err := buildRuntimeServiceRequestForClaimedMatch(ctx, orchestrator.lifecycle.pool, claimed.MatchID, claimed.JobID)
+	request, err := buildRuntimeServiceRequestForClaimedJob(ctx, orchestrator.lifecycle.pool, claimed)
 	if err != nil {
 		status, recordErr := orchestrator.lifecycle.recordAttemptFailure(ctx, recordAttemptFailureInput{
 			JobID:        claimed.JobID,
@@ -134,6 +134,18 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		})
 		if err != nil {
 			return nil, err
+		}
+		return &goMatchOrchestrationResult{Status: status, JobID: claimed.JobID, MatchID: claimed.MatchID}, nil
+	}
+	if err := orchestrator.lifecycle.recheckClaimedMatchIntegrity(ctx, claimed); err != nil {
+		status, recordErr := orchestrator.lifecycle.recordAttemptFailure(ctx, recordAttemptFailureInput{
+			JobID: claimed.JobID, LeaseToken: claimed.LeaseToken,
+			ErrorClass: "RuntimeServiceEvidenceDrift", ErrorMessage: "Runtime execution evidence changed in flight",
+			Retryable: true, Category: matchFailureCategorySystemFailure,
+			Details: map[string]any{"matchId": claimed.MatchID, "workerId": workerID, "cause": "authority evidence drift"},
+		})
+		if recordErr != nil {
+			return nil, recordErr
 		}
 		return &goMatchOrchestrationResult{Status: status, JobID: claimed.JobID, MatchID: claimed.MatchID}, nil
 	}
@@ -190,6 +202,58 @@ func buildRuntimeServiceRequestForClaimedMatch(ctx context.Context, pool *pgxpoo
 	request.Strategies.Bottom = row.BottomStrategy
 	request.Strategies.Top = row.TopStrategy
 	return &request, nil
+}
+
+func buildRuntimeServiceRequestForClaimedJob(ctx context.Context, pool *pgxpool.Pool, claimed *claimedMatchJob) (*runtimeServiceRequest, error) {
+	if claimed == nil || claimed.Integrity == nil {
+		return nil, errors.New("claimed Match integrity identity is unavailable")
+	}
+	request, err := buildRuntimeServiceRequestForClaimedMatch(ctx, pool, claimed.MatchID, claimed.JobID)
+	if err != nil {
+		return nil, err
+	}
+	snapshot, err := runtimeServiceSnapshotForClaim(claimed.Integrity)
+	if err != nil {
+		return nil, err
+	}
+	request.EvidenceSnapshot = snapshot
+	if failure := validateRuntimeServiceRequest(*request); failure != nil {
+		return nil, errors.New("claimed Match integrity request is invalid")
+	}
+	return request, nil
+}
+
+func runtimeServiceSnapshotForClaim(identity *claimedMatchIntegrityIdentity) (runtimeServiceEvidenceSnapshot, error) {
+	if identity == nil {
+		return runtimeServiceEvidenceSnapshot{}, errors.New("claimed Match integrity identity is unavailable")
+	}
+	snapshot := runtimeServiceEvidenceSnapshot{
+		Compatibility:       runtimeServiceCompatibilityReference{TupleID: identity.CompatibilityTupleID, Tuple: identity.CompatibilityTuple},
+		AuthorityBundleHash: identity.AuthorityBundleHash, RegistryGeneration: identity.RegistryGeneration,
+		Publication: runtimeServicePublicationReference{PublicationID: identity.PublicationID, InstallReceiptID: identity.InstallReceiptID, PayloadSHA256: identity.PayloadSHA256, EnvelopeSHA256: identity.EnvelopeSHA256, SourceManifestHash: identity.SourceManifestHash},
+	}
+	snapshot.Entrants.Bottom = runtimeServiceEntrantReference(identity, identity.Bottom)
+	snapshot.Entrants.Top = runtimeServiceEntrantReference(identity, identity.Top)
+	return snapshot, nil
+}
+
+func runtimeServiceEntrantReference(identity *claimedMatchIntegrityIdentity, entrant goEntrantExecutionEvidence) runtimeServiceEntrantAuthorityReference {
+	decision := runtimeServiceSchedulingDecisionReference{Status: entrant.SchedulingDecision.Status, ReasonCode: entrant.SchedulingDecision.ReasonCode, EvaluatedAt: entrant.SchedulingDecision.EvaluatedAt, FreshUntil: entrant.SchedulingDecision.FreshUntil, RegistryGeneration: entrant.SchedulingDecision.RegistryGeneration}
+	decisionID := "scheduling-decision:sha256:" + framedCreationHash("cowards-game:runtime-authority-scheduling-decision:v1", []string{entrant.EntrantKey, entrant.StrategyRevisionID, string(decision.Status), decision.ReasonCode, decision.EvaluatedAt, decision.FreshUntil, decision.RegistryGeneration})
+	reference := runtimeServiceEntrantAuthorityReference{
+		EntrantKey: entrant.EntrantKey, StrategyRevisionID: entrant.StrategyRevisionID,
+		LaneIdentityHash: "sha256:" + hashCreationLaneIdentity(entrant.LaneIdentity), EffectiveStatus: entrant.SchedulingDecision.Status,
+		SchedulingDecisionID: decisionID, SchedulingDecision: decision,
+		ContainmentCertificateID:   entrant.ContainmentCertificateRef.CertificateID,
+		ContainmentCertificateHash: "sha256:" + entrant.ContainmentCertificateRef.CertificateRecordHash,
+	}
+	if entrant.ConformanceCertificateRef != nil {
+		reference.ConformanceCertificateID = entrant.ConformanceCertificateRef.CertificateID
+		reference.ConformanceCertificateHash = "sha256:" + entrant.ConformanceCertificateRef.CertificateRecordHash
+	}
+	temporary := runtimeServiceEvidenceSnapshot{Compatibility: runtimeServiceCompatibilityReference{TupleID: identity.CompatibilityTupleID, Tuple: identity.CompatibilityTuple}, AuthorityBundleHash: identity.AuthorityBundleHash, RegistryGeneration: identity.RegistryGeneration, Publication: runtimeServicePublicationReference{PublicationID: identity.PublicationID, InstallReceiptID: identity.InstallReceiptID, PayloadSHA256: identity.PayloadSHA256, EnvelopeSHA256: identity.EnvelopeSHA256, SourceManifestHash: identity.SourceManifestHash}}
+	reference.SchedulingDecisionHash = hashRuntimeServiceSchedulingDecision(temporary, reference)
+	return reference
 }
 
 func loadRuntimeServiceMatchInput(ctx context.Context, pool *pgxpool.Pool, matchID string) (runtimeServiceMatchInputRow, error) {

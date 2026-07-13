@@ -17,6 +17,13 @@ import type {
 
 const FIXTURE_REGISTRY_GENERATION = "0"
 const FIXTURE_AUTHORITY_BUNDLE_HASH = `sha256:${"e".repeat(64)}`
+const FIXTURE_PUBLICATION = {
+  publicationId: "fixture-only:publication",
+  installReceiptId: "fixture-only:install-receipt",
+  payloadSha256: FIXTURE_AUTHORITY_BUNDLE_HASH,
+  envelopeSha256: `sha256:${"f".repeat(64)}`,
+  sourceManifestHash: `sha256:${"9".repeat(64)}`,
+} as const
 
 const fixtureEntrantEvidence = (input: {
   fixtureId: string
@@ -36,6 +43,16 @@ const fixtureEntrantEvidence = (input: {
     effectiveStatus: input.effectiveStatus,
     schedulingDecisionId: `fixture-only:scheduling-decision:${identitySuffix}`,
     schedulingDecisionHash: `sha256:${"0".repeat(64)}`,
+    schedulingDecision: {
+      status: input.effectiveStatus,
+      reasonCode:
+        input.effectiveStatus === "counted"
+          ? "EVIDENCE_CURRENT"
+          : "CONFORMANCE_MISSING",
+      evaluatedAt: "2026-07-12T00:00:00.000Z",
+      freshUntil: "2026-07-14T00:00:00.000Z",
+      registryGeneration: FIXTURE_REGISTRY_GENERATION,
+    },
     containmentCertificateId: `fixture-only:untrusted-containment:${identitySuffix}`,
     containmentCertificateHash: `sha256:${"c".repeat(64)}`,
     ...(input.effectiveStatus === "counted"
@@ -52,6 +69,7 @@ const fixtureEntrantEvidence = (input: {
         compatibilityTupleId: input.compatibilityTupleId,
         authorityBundleHash: FIXTURE_AUTHORITY_BUNDLE_HASH,
         registryGeneration: FIXTURE_REGISTRY_GENERATION,
+        publication: FIXTURE_PUBLICATION,
         entrant,
       }),
   }
@@ -157,6 +175,7 @@ export const createFixtureRuntimeExecutionAuthorityContext = (input: {
     },
     authorityBundleHash: FIXTURE_AUTHORITY_BUNDLE_HASH,
     registryGeneration: FIXTURE_REGISTRY_GENERATION,
+    publication: FIXTURE_PUBLICATION,
     entrants: {
       bottom: fixtureEntrantEvidence({
         fixtureId: input.fixtureId,

@@ -2545,6 +2545,7 @@ const RuntimeEntrantAuthorityReferenceSchema = z
     effectiveStatus: z.enum(EXECUTABLE_LANE_EVIDENCE_STATUSES),
     schedulingDecisionId: z.string().min(1),
     schedulingDecisionHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    schedulingDecision: RuntimeExecutionSchedulingDecisionSchema,
     containmentCertificateId: z.string().min(1).optional(),
     containmentCertificateHash: z
       .string()
@@ -2605,6 +2606,15 @@ export const RuntimeExecutionEvidenceSnapshotSchema = z
     compatibility: RuntimeExecutionCompatibilityIdentitySchema,
     authorityBundleHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
     registryGeneration: z.string().regex(/^(?:0|[1-9][0-9]{0,15})$/u),
+    publication: z
+      .object({
+        publicationId: z.string().min(1),
+        installReceiptId: z.string().min(1),
+        payloadSha256: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+        envelopeSha256: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+        sourceManifestHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+      })
+      .strict(),
     entrants: z
       .object({
         bottom: RuntimeEntrantAuthorityReferenceSchema,
@@ -2614,6 +2624,9 @@ export const RuntimeExecutionEvidenceSnapshotSchema = z
   })
   .strict()
   .superRefine((snapshot, ctx) => {
+    if (snapshot.publication.payloadSha256 !== snapshot.authorityBundleHash) {
+      addExecutionIdentityIssue(ctx, ["publication", "payloadSha256"], "publication payload must match authority bundle")
+    }
     if (
       snapshot.entrants.bottom.entrantKey === snapshot.entrants.top.entrantKey
     ) {

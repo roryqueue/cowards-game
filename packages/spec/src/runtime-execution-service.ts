@@ -220,6 +220,7 @@ export interface RuntimeEntrantAuthorityReference {
   effectiveStatus: ExecutableLaneEvidenceStatus
   schedulingDecisionId: string
   schedulingDecisionHash: string
+  schedulingDecision: RuntimeExecutionSchedulingDecisionSnapshot
   containmentCertificateId?: string | undefined
   containmentCertificateHash?: string | undefined
   conformanceCertificateId?: string | undefined
@@ -230,6 +231,13 @@ export interface RuntimeExecutionEvidenceSnapshot {
   compatibility: RuntimeExecutionCompatibilityIdentity
   authorityBundleHash: string
   registryGeneration: string
+  publication: {
+    publicationId: string
+    installReceiptId: string
+    payloadSha256: string
+    envelopeSha256: string
+    sourceManifestHash: string
+  }
   entrants: {
     bottom: RuntimeEntrantAuthorityReference
     top: RuntimeEntrantAuthorityReference

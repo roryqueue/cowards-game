@@ -104,17 +104,27 @@ export const hashRuntimeAuthoritySchedulingDecisionReference = (input: {
   compatibilityTupleId: string
   authorityBundleHash: string
   registryGeneration: string
+  publication: RuntimeExecutionServiceRequest["evidenceSnapshot"]["publication"]
   entrant: RuntimeEntrantAuthorityReference
 }): string =>
   framedSha256("cowards-game:runtime-authority-decision-reference:v1", [
     input.compatibilityTupleId,
     input.authorityBundleHash,
     input.registryGeneration,
+    input.publication.publicationId,
+    input.publication.installReceiptId,
+    input.publication.payloadSha256,
+    input.publication.envelopeSha256,
+    input.publication.sourceManifestHash,
     input.entrant.entrantKey,
     input.entrant.strategyRevisionId,
     input.entrant.laneIdentityHash,
     input.entrant.effectiveStatus,
     input.entrant.schedulingDecisionId,
+    input.entrant.schedulingDecision.reasonCode,
+    input.entrant.schedulingDecision.evaluatedAt,
+    input.entrant.schedulingDecision.freshUntil,
+    input.entrant.schedulingDecision.registryGeneration,
     input.entrant.containmentCertificateId ?? "",
     input.entrant.containmentCertificateHash ?? "",
     input.entrant.conformanceCertificateId ?? "",
@@ -230,6 +240,7 @@ const verifyEntrantAgainstAuthority = (input: {
       authorityBundleHash:
         input.request.evidenceSnapshot.authorityBundleHash,
       registryGeneration: input.request.evidenceSnapshot.registryGeneration,
+      publication: input.request.evidenceSnapshot.publication,
       entrant,
     })
   if (entrant.schedulingDecisionHash !== expectedDecisionHash) {

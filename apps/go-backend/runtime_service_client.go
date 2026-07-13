@@ -61,7 +61,54 @@ type runtimeServiceRequest struct {
 		Bottom runtimeServiceStrategyRevision `json:"bottom"`
 		Top    runtimeServiceStrategyRevision `json:"top"`
 	} `json:"strategies"`
-	Limits map[string]any `json:"limits"`
+	Limits           map[string]any                 `json:"limits"`
+	EvidenceSnapshot runtimeServiceEvidenceSnapshot `json:"evidenceSnapshot"`
+}
+
+type runtimeServiceCompatibilityReference struct {
+	TupleID string                      `json:"tupleId"`
+	Tuple   canonicalCompatibilityTuple `json:"tuple"`
+}
+
+type runtimeServicePublicationReference struct {
+	PublicationID      string `json:"publicationId"`
+	InstallReceiptID   string `json:"installReceiptId"`
+	PayloadSHA256      string `json:"payloadSha256"`
+	EnvelopeSHA256     string `json:"envelopeSha256"`
+	SourceManifestHash string `json:"sourceManifestHash"`
+}
+
+type runtimeServiceSchedulingDecisionReference struct {
+	Status             executableLaneEvidenceStatus `json:"status"`
+	ReasonCode         string                       `json:"reasonCode"`
+	EvaluatedAt        string                       `json:"evaluatedAt"`
+	FreshUntil         string                       `json:"freshUntil"`
+	RegistryGeneration string                       `json:"registryGeneration"`
+}
+
+type runtimeServiceEntrantAuthorityReference struct {
+	EntrantKey                 string                                    `json:"entrantKey"`
+	StrategyRevisionID         string                                    `json:"strategyRevisionId"`
+	LaneIdentityHash           string                                    `json:"laneIdentityHash"`
+	EffectiveStatus            executableLaneEvidenceStatus              `json:"effectiveStatus"`
+	SchedulingDecisionID       string                                    `json:"schedulingDecisionId"`
+	SchedulingDecisionHash     string                                    `json:"schedulingDecisionHash"`
+	SchedulingDecision         runtimeServiceSchedulingDecisionReference `json:"schedulingDecision"`
+	ContainmentCertificateID   string                                    `json:"containmentCertificateId"`
+	ContainmentCertificateHash string                                    `json:"containmentCertificateHash"`
+	ConformanceCertificateID   string                                    `json:"conformanceCertificateId,omitempty"`
+	ConformanceCertificateHash string                                    `json:"conformanceCertificateHash,omitempty"`
+}
+
+type runtimeServiceEvidenceSnapshot struct {
+	Compatibility       runtimeServiceCompatibilityReference `json:"compatibility"`
+	AuthorityBundleHash string                               `json:"authorityBundleHash"`
+	RegistryGeneration  string                               `json:"registryGeneration"`
+	Publication         runtimeServicePublicationReference   `json:"publication"`
+	Entrants            struct {
+		Bottom runtimeServiceEntrantAuthorityReference `json:"bottom"`
+		Top    runtimeServiceEntrantAuthorityReference `json:"top"`
+	} `json:"entrants"`
 }
 
 type runtimeServiceResponse struct {
@@ -274,6 +321,9 @@ func validateRuntimeServiceRequest(request runtimeServiceRequest) *runtimeServic
 	if !hasRuntimeServiceLimits(request.Limits) {
 		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request limits are incomplete", false, nil)
 	}
+	if failure := validateRuntimeServiceEvidenceSnapshot(request); failure != nil {
+		return failure
+	}
 	if failure := validateRuntimeServiceStrategy("bottom", request.Strategies.Bottom); failure != nil {
 		return failure
 	}
@@ -281,6 +331,58 @@ func validateRuntimeServiceRequest(request runtimeServiceRequest) *runtimeServic
 		return failure
 	}
 	return nil
+}
+
+func validateRuntimeServiceEvidenceSnapshot(request runtimeServiceRequest) *runtimeServiceFailure {
+	snapshot := request.EvidenceSnapshot
+	tuple := snapshot.Compatibility.Tuple
+	if !isPrefixedLowerSHA256(snapshot.Compatibility.TupleID) || tuple.Rules == "" || tuple.Engine == "" || tuple.RuntimeABI == "" || tuple.Chronicle == "" || tuple.ArenaCatalog == "" || tuple.SetPolicy == "" ||
+		!isPrefixedLowerSHA256(snapshot.AuthorityBundleHash) ||
+		!validCanonicalGeneration(snapshot.RegistryGeneration) || snapshot.Publication.PublicationID == "" ||
+		snapshot.Publication.InstallReceiptID == "" || snapshot.Publication.PayloadSHA256 != snapshot.AuthorityBundleHash ||
+		!isPrefixedLowerSHA256(snapshot.Publication.EnvelopeSHA256) || !isPrefixedLowerSHA256(snapshot.Publication.SourceManifestHash) {
+		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request integrity identity is incomplete", false, nil)
+	}
+	for side, entrant := range map[string]runtimeServiceEntrantAuthorityReference{"bottom": snapshot.Entrants.Bottom, "top": snapshot.Entrants.Top} {
+		expectedRevision := request.Match.BottomStrategyRevisionID
+		if side == "top" {
+			expectedRevision = request.Match.TopStrategyRevisionID
+		}
+		if entrant.EntrantKey == "" || entrant.StrategyRevisionID != expectedRevision || !isPrefixedLowerSHA256(entrant.LaneIdentityHash) ||
+			entrant.EffectiveStatus == executableLaneEvidenceDisabled || entrant.SchedulingDecisionID == "" ||
+			!isPrefixedLowerSHA256(entrant.SchedulingDecisionHash) || entrant.ContainmentCertificateID == "" ||
+			!isPrefixedLowerSHA256(entrant.ContainmentCertificateHash) || entrant.SchedulingDecision.Status != entrant.EffectiveStatus ||
+			entrant.SchedulingDecision.RegistryGeneration != snapshot.RegistryGeneration {
+			return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request entrant integrity is incomplete", false, map[string]any{"side": side})
+		}
+		if _, err := parseCanonicalInstant(entrant.SchedulingDecision.EvaluatedAt); err != nil {
+			return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request decision instant is invalid", false, map[string]any{"side": side})
+		}
+		if _, err := parseCanonicalInstant(entrant.SchedulingDecision.FreshUntil); err != nil {
+			return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request decision freshness is invalid", false, map[string]any{"side": side})
+		}
+		if entrant.EffectiveStatus == executableLaneEvidenceCounted && (entrant.ConformanceCertificateID == "" || !isPrefixedLowerSHA256(entrant.ConformanceCertificateHash)) {
+			return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service counted request lacks conformance reference", false, map[string]any{"side": side})
+		}
+		if hashRuntimeServiceSchedulingDecision(snapshot, entrant) != entrant.SchedulingDecisionHash {
+			return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request decision reference is invalid", false, map[string]any{"side": side})
+		}
+	}
+	if snapshot.Entrants.Bottom.EntrantKey == snapshot.Entrants.Top.EntrantKey {
+		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request entrant keys must differ", false, nil)
+	}
+	return nil
+}
+
+func hashRuntimeServiceSchedulingDecision(snapshot runtimeServiceEvidenceSnapshot, entrant runtimeServiceEntrantAuthorityReference) string {
+	values := []string{snapshot.Compatibility.TupleID, snapshot.AuthorityBundleHash, snapshot.RegistryGeneration,
+		snapshot.Publication.PublicationID, snapshot.Publication.InstallReceiptID, snapshot.Publication.PayloadSHA256,
+		snapshot.Publication.EnvelopeSHA256, snapshot.Publication.SourceManifestHash,
+		entrant.EntrantKey, entrant.StrategyRevisionID, entrant.LaneIdentityHash, string(entrant.EffectiveStatus),
+		entrant.SchedulingDecisionID, entrant.SchedulingDecision.ReasonCode, entrant.SchedulingDecision.EvaluatedAt,
+		entrant.SchedulingDecision.FreshUntil, entrant.SchedulingDecision.RegistryGeneration,
+		entrant.ContainmentCertificateID, entrant.ContainmentCertificateHash, entrant.ConformanceCertificateID, entrant.ConformanceCertificateHash}
+	return "sha256:" + framedCreationHash("cowards-game:runtime-authority-decision-reference:v1", values)
 }
 
 func validateRuntimeServiceStrategy(side string, revision runtimeServiceStrategyRevision) *runtimeServiceFailure {

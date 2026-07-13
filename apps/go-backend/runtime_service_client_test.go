@@ -585,6 +585,21 @@ func validRuntimeServiceRequestForTest() runtimeServiceRequest {
 	if err := json.Unmarshal(bytes, &request); err != nil {
 		panic(err)
 	}
+	if request.EvidenceSnapshot.Publication.PublicationID == "" {
+		request.EvidenceSnapshot.Publication = runtimeServicePublicationReference{
+			PublicationID: "publication:fixture", InstallReceiptID: "receipt:fixture",
+			PayloadSHA256:  request.EvidenceSnapshot.AuthorityBundleHash,
+			EnvelopeSHA256: "sha256:" + strings.Repeat("e", 64), SourceManifestHash: "sha256:" + strings.Repeat("f", 64),
+		}
+	}
+	for _, entrant := range []*runtimeServiceEntrantAuthorityReference{&request.EvidenceSnapshot.Entrants.Bottom, &request.EvidenceSnapshot.Entrants.Top} {
+		entrant.SchedulingDecision = runtimeServiceSchedulingDecisionReference{
+			Status: entrant.EffectiveStatus, ReasonCode: "EVIDENCE_CURRENT",
+			EvaluatedAt: "2026-07-13T12:00:00.000Z", FreshUntil: "2026-07-14T12:00:00.000Z",
+			RegistryGeneration: request.EvidenceSnapshot.RegistryGeneration,
+		}
+		entrant.SchedulingDecisionHash = hashRuntimeServiceSchedulingDecision(request.EvidenceSnapshot, *entrant)
+	}
 	return request
 }
 

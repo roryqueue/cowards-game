@@ -251,6 +251,49 @@ const claimNextLegacyMatchJobWithAllowlistSQL = `
   limit 1
 `
 
+const recheckClaimedMatchIntegritySQL = `
+  select jsonb_build_object(
+    'matchSetId', ms.id,
+    'compatibilityTupleId', ms.compatibility_tuple_id,
+    'compatibilityTuple', jsonb_build_object(
+      'rules', ms.compatibility_rules_version, 'engine', ms.compatibility_engine_version,
+      'runtimeAbi', ms.compatibility_runtime_abi_version, 'chronicle', ms.compatibility_chronicle_version,
+      'arenaCatalog', ms.compatibility_arena_catalog_version, 'setPolicy', ms.compatibility_set_policy_version
+    ),
+    'authorityBundleHash', 'sha256:' || ms.authority_bundle_hash,
+    'registryGeneration', ms.authority_registry_generation,
+    'evidenceSetHash', ms.execution_evidence_set_hash,
+    'pairHash', j.execution_evidence_pair_hash,
+    'publicationId', ms.authority_publication_id,
+    'installReceiptId', ms.authority_install_receipt_id,
+    'payloadSha256', ms.authority_payload_sha256,
+    'envelopeSha256', ms.authority_envelope_sha256,
+    'sourceManifestHash', ms.authority_source_manifest_hash,
+    'sourceSet', ms.authority_source_set,
+    'bottom', bottom.execution_snapshot,
+    'top', top.execution_snapshot
+  )
+  from match_jobs j
+  join matches m on m.id = j.match_id
+  join match_sets ms on ms.id = j.integrity_match_set_id and ms.id = m.integrity_match_set_id
+  join match_set_execution_entrants bottom
+    on bottom.match_set_id = ms.id and bottom.entrant_key = j.bottom_execution_entrant_key
+   and bottom.entrant_key = m.bottom_execution_entrant_key and bottom.strategy_revision_id = m.bottom_strategy_revision_id
+   and bottom.execution_snapshot = j.bottom_execution_evidence and bottom.execution_snapshot = m.bottom_execution_evidence
+  join match_set_execution_entrants top
+    on top.match_set_id = ms.id and top.entrant_key = j.top_execution_entrant_key
+   and top.entrant_key = m.top_execution_entrant_key and top.strategy_revision_id = m.top_strategy_revision_id
+   and top.execution_snapshot = j.top_execution_evidence and top.execution_snapshot = m.top_execution_evidence
+  where j.id = $1 and j.lease_token = $2 and j.status = 'running'
+    and m.status = 'running'
+    and j.execution_evidence_pair_hash = m.execution_evidence_pair_hash
+    and ms.authority_bundle_hash = bottom.authority_bundle_hash
+    and ms.authority_bundle_hash = top.authority_bundle_hash
+    and ms.authority_registry_generation = bottom.authority_registry_generation
+    and ms.authority_registry_generation = top.authority_registry_generation
+  for share of j, m, ms, bottom, top
+`
+
 type matchJobLifecycle struct {
 	pool                  *pgxpool.Pool
 	now                   func() time.Time
@@ -515,6 +558,36 @@ func (lifecycle *matchJobLifecycle) heartbeatMatchJob(ctx context.Context, jobID
 		return false, err
 	}
 	return tag.RowsAffected() > 0, nil
+}
+
+func (lifecycle *matchJobLifecycle) recheckClaimedMatchIntegrity(ctx context.Context, claimed *claimedMatchJob) error {
+	if lifecycle == nil || lifecycle.pool == nil || lifecycle.loadAuthority == nil || claimed == nil || claimed.Integrity == nil {
+		return errors.New("claimed Match integrity recheck is unavailable")
+	}
+	authority, err := lifecycle.loadAuthority()
+	if err != nil || authority == nil {
+		return errors.New("claimed Match integrity recheck is unavailable")
+	}
+	tx, err := lifecycle.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead})
+	if err != nil {
+		return err
+	}
+	defer rollbackTx(ctx, tx)
+	var serialized []byte
+	if err := tx.QueryRow(ctx, recheckClaimedMatchIntegritySQL, claimed.JobID, claimed.LeaseToken).Scan(&serialized); err != nil {
+		return errors.New("claimed Match integrity changed in flight")
+	}
+	var current claimedMatchIntegrityIdentity
+	if err := decodeStrictJSON(serialized, &current); err != nil || validateClaimedMatchIntegrity(authority, &current, lifecycle.currentTime()) != nil || !jsonValuesEqual(current, *claimed.Integrity) {
+		return errors.New("claimed Match integrity changed in flight")
+	}
+	receipt, err := (&LiveServer{}).lockInstalledAuthorityReceipt(ctx, tx, authority, lifecycle.currentTime())
+	if err != nil || receipt.PublicationID != current.PublicationID || receipt.ReceiptID != current.InstallReceiptID ||
+		receipt.PayloadSHA256 != current.PayloadSHA256 || receipt.EnvelopeSHA256 != current.EnvelopeSHA256 ||
+		receipt.SourceManifestHash != current.SourceManifestHash || !jsonValuesEqual(receipt.SourceSet, current.SourceSet) {
+		return errors.New("claimed Match receipt changed in flight")
+	}
+	return tx.Commit(ctx)
 }
 
 func (lifecycle *matchJobLifecycle) recordAttemptFailure(ctx context.Context, input recordAttemptFailureInput) (string, error) {

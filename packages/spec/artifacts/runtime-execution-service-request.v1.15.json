@@ -160,8 +160,15 @@
         "setPolicy": "canonical-set-policy-v1.4"
       }
     },
-    "authorityBundleHash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-    "registryGeneration": "0",
+  "authorityBundleHash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "registryGeneration": "0",
+  "publication": {
+    "publicationId": "fixture-only:publication:golden-v1.15",
+    "installReceiptId": "fixture-only:install-receipt:golden-v1.15",
+    "payloadSha256": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "envelopeSha256": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "sourceManifestHash": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+  },
     "entrants": {
       "bottom": {
         "entrantKey": "fixture-only:entrant:golden-v1.15:bottom",
@@ -169,7 +176,14 @@
         "laneIdentityHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "effectiveStatus": "exhibition_only",
         "schedulingDecisionId": "fixture-only:scheduling-decision:golden-v1.15:bottom:typescript",
-        "schedulingDecisionHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "schedulingDecisionHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "schedulingDecision": {
+        "status": "exhibition_only",
+        "reasonCode": "CONFORMANCE_MISSING",
+        "evaluatedAt": "2026-07-12T00:00:00.000Z",
+        "freshUntil": "2026-07-14T00:00:00.000Z",
+        "registryGeneration": "0"
+      },
         "containmentCertificateId": "fixture-only:untrusted-containment:golden-v1.15:bottom:typescript",
         "containmentCertificateHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
       },
@@ -179,7 +193,14 @@
         "laneIdentityHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         "effectiveStatus": "exhibition_only",
         "schedulingDecisionId": "fixture-only:scheduling-decision:golden-v1.15:top:typescript",
-        "schedulingDecisionHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "schedulingDecisionHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "schedulingDecision": {
+        "status": "exhibition_only",
+        "reasonCode": "CONFORMANCE_MISSING",
+        "evaluatedAt": "2026-07-12T00:00:00.000Z",
+        "freshUntil": "2026-07-14T00:00:00.000Z",
+        "registryGeneration": "0"
+      },
         "containmentCertificateId": "fixture-only:untrusted-containment:golden-v1.15:top:typescript",
         "containmentCertificateHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
       }
