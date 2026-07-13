@@ -252,7 +252,7 @@ describe("competition helpers", () => {
     ).toEqual({ allowed: false, retryAfterSeconds: 300 })
   })
 
-  it("requires artifact provenance before counted Zig exhibition entry", () => {
+  it("keeps Zig exhibition entry quarantined even with legacy artifact provenance", () => {
     const sourceHash = "zig-source-hash"
     const sourceBytes = 192
 
@@ -265,14 +265,14 @@ describe("competition helpers", () => {
           version: "0.1.0-alpha",
         },
       }),
-    ).toThrow("provider-validated artifact provenance")
+    ).toThrow("not counted-play eligible")
 
     const artifactPayload = Buffer.from("zig-artifact")
     const artifactHash = createHash("sha256")
       .update(artifactPayload)
       .digest("hex")
     const artifactBytes = artifactPayload.byteLength
-    expect(
+    expect(() =>
       runtimeAllowsCountedPlay(
         {
           ...defaultRuntimeMetadata(),
@@ -314,11 +314,11 @@ describe("competition helpers", () => {
             },
           },
         },
-      ).language.id,
-    ).toBe("zig")
+      ),
+    ).toThrow("not counted-play eligible")
   })
 
-  it("requires provider provenance before counted Python exhibition entry", () => {
+  it("keeps Python exhibition entry quarantined even with legacy provider provenance", () => {
     const runtime = {
       ...defaultRuntimeMetadata(),
       language: { id: "python", version: "3.9" },
@@ -336,9 +336,9 @@ describe("competition helpers", () => {
     const artifactBytes = artifactPayload.byteLength
 
     expect(() => runtimeAllowsCountedPlay(runtime)).toThrow(
-      "provider-validated revision provenance",
+      "not counted-play eligible",
     )
-    expect(
+    expect(() =>
       runtimeAllowsCountedPlay(runtime, {
         sourceHash,
         sourceBytes,
@@ -381,11 +381,11 @@ describe("competition helpers", () => {
             ),
           },
         },
-      }).language.id,
-    ).toBe("python")
+      }),
+    ).toThrow("not counted-play eligible")
   })
 
-  it("requires private TypeScript artifact bytes before counted exhibition entry", () => {
+  it("keeps TypeScript exhibition entry quarantined regardless of legacy artifact bytes", () => {
     const runtime = {
       ...defaultRuntimeMetadata(),
       language: { id: "typescript", version: "0.1.0" },
@@ -442,7 +442,7 @@ describe("competition helpers", () => {
       ),
     }
 
-    expect(
+    expect(() =>
       runtimeAllowsCountedPlay(runtime, {
         sourceHash,
         sourceBytes,
@@ -450,8 +450,8 @@ describe("competition helpers", () => {
           sourceArtifact,
           providerValidation,
         },
-      }).language.id,
-    ).toBe("typescript")
+      }),
+    ).toThrow("not counted-play eligible")
     expect(() =>
       runtimeAllowsCountedPlay(runtime, {
         sourceHash,
@@ -461,10 +461,10 @@ describe("competition helpers", () => {
           providerValidation,
         },
       }),
-    ).toThrow("provider-validated artifact provenance")
+    ).toThrow("not counted-play eligible")
   })
 
-  it("requires artifact provenance before counted Rust exhibition entry", () => {
+  it("keeps Rust exhibition entry quarantined even with legacy artifact provenance", () => {
     const runtime = {
       ...defaultRuntimeMetadata(),
       language: { id: "rust", version: "1.95.0-wasm32-wasip1" },
@@ -482,9 +482,9 @@ describe("competition helpers", () => {
     const artifactBytes = artifactPayload.byteLength
 
     expect(() => runtimeAllowsCountedPlay(runtime)).toThrow(
-      "provider-validated artifact provenance",
+      "not counted-play eligible",
     )
-    expect(
+    expect(() =>
       runtimeAllowsCountedPlay(runtime, {
         sourceHash,
         sourceBytes,
@@ -515,7 +515,7 @@ describe("competition helpers", () => {
             ),
           },
         },
-      }).language.id,
-    ).toBe("rust")
+      }),
+    ).toThrow("not counted-play eligible")
   })
 })

@@ -546,12 +546,17 @@ describe("trial ladder contracts", () => {
   })
 
   it.each(["typescript", "python", "rust", "zig"] as const)(
-    "accepts immutable provider-proof-valid %s entries",
+    "quarantines provider-proof-valid %s entries without exact lane evidence",
     async (languageId) => {
-      await expectEligibilityCategory(
-        createFakePool({ revision: revisionRow({ languageId }) }),
-        "provider_validated",
-      )
+      const pool = createFakePool({ revision: revisionRow({ languageId }) })
+      await expectEligibilityCategory(pool, "runtime_service_unavailable")
+      expect(
+        pool.calls.some(
+          (sql) =>
+            sql.includes("insert into trial_ladder_entries") ||
+            sql.includes("update strategy_revisions"),
+        ),
+      ).toBe(false)
     },
   )
 
@@ -564,7 +569,7 @@ describe("trial ladder contracts", () => {
     [
       "missing proof",
       createFakePool({ revision: revisionRow({ metadata: {} }) }),
-      "provider_proof_missing",
+      "runtime_service_unavailable",
     ],
     [
       "mismatched proof",
@@ -575,7 +580,7 @@ describe("trial ladder contracts", () => {
           }),
         }),
       }),
-      "provider_proof_mismatched",
+      "runtime_service_unavailable",
     ],
     [
       "stale proof",
@@ -586,7 +591,7 @@ describe("trial ladder contracts", () => {
           }),
         }),
       }),
-      "provider_proof_stale",
+      "runtime_service_unavailable",
     ],
     [
       "unsupported JavaScript counted trial entry",
@@ -607,7 +612,7 @@ describe("trial ladder contracts", () => {
           }),
         }),
       }),
-      "unsupported_source_format",
+      "runtime_service_unavailable",
     ],
     [
       "incompatible runtime metadata",
@@ -634,7 +639,7 @@ describe("trial ladder contracts", () => {
           },
         }),
       }),
-      "incompatible_runtime_metadata",
+      "runtime_service_unavailable",
     ],
     [
       "invalid revision",
@@ -735,44 +740,35 @@ describe("trial ladder contracts", () => {
     ).toBe(false)
   })
 
-  it("maps PostgreSQL owner uniqueness races to public-safe categories", async () => {
-    const race = Object.assign(new Error("redacted database race"), {
-      code: "23505",
-      constraint: "trial_ladder_entries_season_id_owner_user_id_key",
-    })
-
-    await expect(
-      enterTrialLadderSeason(
-        createFakePool({
-          insertError: race,
-          existingEntryStatuses: [null, "withdrawn"],
-        }),
-        defaultEntryInput,
-      ),
-    ).rejects.toMatchObject({
-      category: "replacement_blocked",
-      publicMessage: getCountedEntryEligibilityPublicCopy("replacement_blocked")
-        .publicMessage,
-      message: getCountedEntryEligibilityPublicCopy("replacement_blocked")
-        .publicMessage,
-    })
-  })
-
-  it("retries entry-index races without misreporting a duplicate owner", async () => {
-    const indexRace = Object.assign(new Error("entry index race"), {
-      code: "23505",
-      constraint: "trial_ladder_entries_season_id_entry_index_key",
-    })
-    const pool = createFakePool({ insertErrors: [indexRace] })
-
+  it("does not reach owner uniqueness mutation while the lane is quarantined", async () => {
+    const pool = createFakePool({ existingEntryStatuses: [null, "withdrawn"] })
     await expect(
       enterTrialLadderSeason(pool, defaultEntryInput),
-    ).resolves.toMatch(/^trial-entry:/)
+    ).rejects.toMatchObject({
+      category: "runtime_service_unavailable",
+      publicMessage: getCountedEntryEligibilityPublicCopy(
+        "runtime_service_unavailable",
+      ).publicMessage,
+    })
+    expect(
+      pool.calls.some((sql) =>
+        sql.includes("insert into trial_ladder_entries"),
+      ),
+    ).toBe(false)
+  })
+
+  it("does not reach entry-index mutation while the lane is quarantined", async () => {
+    const pool = createFakePool()
+    await expect(
+      enterTrialLadderSeason(pool, defaultEntryInput),
+    ).rejects.toMatchObject({
+      category: "runtime_service_unavailable",
+    })
     expect(
       pool.calls.filter((sql) =>
         sql.includes("insert into trial_ladder_entries"),
       ),
-    ).toHaveLength(2)
+    ).toHaveLength(0)
   })
 
   it("keeps the migration full owner/Season uniqueness policy", () => {

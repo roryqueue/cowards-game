@@ -240,4 +240,19 @@ describe("counted entry eligibility contract", () => {
       evidenceReasonCode: "EVIDENCE_CURRENT",
     })
   })
+
+  it.each([
+    "provider_proof_missing",
+    "provider_proof_mismatched",
+    "provider_proof_stale",
+    "unsupported_source_format",
+    "incompatible_runtime_metadata",
+    "package_policy_violation",
+    "capability_policy_violation",
+  ] as const)("preserves intrinsic %s decisions independently", (category) => {
+    expect(countedEntryEligibilityDecision(category)).toEqual({
+      ok: false,
+      ...getCountedEntryEligibilityPublicCopy(category),
+    })
+  })
 })
