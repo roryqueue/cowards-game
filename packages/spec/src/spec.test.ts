@@ -92,6 +92,7 @@ import {
   RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,
   RUNTIME_EXECUTION_SERVICE_VERSION,
 } from "./runtime-execution-service.js"
+import { CANONICAL_COMPATIBILITY_TUPLES } from "./integrity-authority.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 import { STRATEGY_SOURCE_BYTES } from "./constants.js"
 import { readFileSync } from "node:fs"
@@ -1839,6 +1840,206 @@ describe("Coward's Game spec contracts", () => {
         },
       }).success,
     ).toBe(false)
+  })
+
+  it("RuntimeExecutionServiceRequestSchema atomically validates execution evidence identity", () => {
+    const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
+    const source =
+      "export default { selectActivations() {}, soldierBrain() {} }"
+    const sourceBytes = new TextEncoder().encode(source).length
+    const revision = (id: string) => ({
+      id,
+      source,
+      sourceHash: `hash:${id}`,
+      sourceBytes,
+      runtime: defaultRuntimeMetadata(),
+      engineCompatibility: {
+        spec: COMPATIBILITY_VERSIONS.spec,
+        engine: COMPATIBILITY_VERSIONS.engine,
+      },
+      validation: {
+        valid: true,
+        errors: [],
+        warnings: [],
+        sourceBytes,
+        forbiddenPatterns: [],
+        sourceHash: `hash:${id}`,
+        runtimeVersion: COMPATIBILITY_VERSIONS.runtimeJs,
+        engineCompatibility: {
+          spec: COMPATIBILITY_VERSIONS.spec,
+          engine: COMPATIBILITY_VERSIONS.engine,
+        },
+      },
+      metadata: {},
+    })
+    const laneIdentity = (
+      languageId: string,
+      suffix: string,
+    ) => ({
+      providerId: `provider:${suffix}`,
+      languageId,
+      runtimeId: `runtime:${suffix}`,
+      runtimeVersion: "1.0.0",
+      toolchainId: `toolchain:${suffix}`,
+      toolchainVersion: "1.0.0",
+      adapterId: `adapter:${suffix}`,
+      adapterVersion: "1.0.0",
+      policyId: "policy:package-none",
+      policyVersion: "1.0.0",
+      corpusId: "corpus:v1.37",
+      corpusVersion: "1.0.0",
+      artifactId: `artifact:${suffix}`,
+      artifactSha256: suffix.repeat(64).slice(0, 64),
+      implementationId: `implementation:${suffix}`,
+      buildId: `build:${suffix}`,
+      semanticTupleId: registered.tupleId,
+      semanticTuple: { ...registered.tuple },
+    })
+    const entrant = (
+      side: "bottom" | "top",
+      languageId: string,
+    ) => ({
+      entrantKey: `entrant:${side}`,
+      strategyRevisionId: `strategy-revision:${side}`,
+      laneIdentity: laneIdentity(languageId, side),
+      containmentCertificateRef: {
+        kind: "containment",
+        certificateId: `certificate:containment:${side}`,
+        certificateVersion: "1.0.0",
+        certificateRecordHash: side.repeat(64).slice(0, 64),
+        registryGeneration: "registry-generation:1",
+      },
+      conformanceCertificateRef: {
+        kind: "conformance",
+        certificateId: `certificate:conformance:${side}`,
+        certificateVersion: "1.0.0",
+        certificateRecordHash: `${side}:conformance`.repeat(8).slice(0, 64),
+        registryGeneration: "registry-generation:1",
+      },
+      schedulingDecision: {
+        status: "counted",
+        reasonCode: "EVIDENCE_CURRENT",
+        evaluatedAt: "2026-07-13T00:00:00.000Z",
+        registryGeneration: "registry-generation:1",
+      },
+    })
+    const request = {
+      contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+      kind: "executeMatch",
+      requestId: "runtime-request:evidence-identity",
+      match: {
+        matchId: "match:evidence-identity",
+        seed: "seed:evidence-identity",
+        arenaVariant: fixtures.valid.standardArenaVariant,
+        bottomPlayerId: "player:bottom",
+        topPlayerId: "player:top",
+        bottomStrategyRevisionId: "strategy-revision:bottom",
+        topStrategyRevisionId: "strategy-revision:top",
+      },
+      strategies: {
+        bottom: revision("strategy-revision:bottom"),
+        top: revision("strategy-revision:top"),
+      },
+      limits: defaultRuntimeMetadata().limits,
+      evidenceSnapshot: {
+        compatibility: {
+          tupleId: registered.tupleId,
+          tuple: { ...registered.tuple },
+        },
+        authorityBundleHash: "authority-bundle-hash:v1",
+        registryGeneration: "registry-generation:1",
+        entrants: {
+          bottom: entrant("bottom", "typescript"),
+          top: entrant("top", "python"),
+        },
+      },
+    }
+
+    expect(RuntimeExecutionServiceRequestSchema.parse(request)).toEqual(request)
+
+    const mutations = [
+      {
+        ...request,
+        evidenceSnapshot: undefined,
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          compatibility: {
+            ...request.evidenceSnapshot.compatibility,
+            tuple: {
+              ...request.evidenceSnapshot.compatibility.tuple,
+              engine: "engine-vlatest",
+            },
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            bottom: {
+              ...request.evidenceSnapshot.entrants.bottom,
+              strategyRevisionId: "strategy-revision:top",
+            },
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            top: {
+              ...request.evidenceSnapshot.entrants.top,
+              laneIdentity: {
+                ...request.evidenceSnapshot.entrants.top.laneIdentity,
+                semanticTupleId: "latest",
+              },
+            },
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            top: {
+              ...request.evidenceSnapshot.entrants.top,
+              conformanceCertificateRef: undefined,
+            },
+          },
+        },
+      },
+    ]
+    for (const mutation of mutations) {
+      expect(RuntimeExecutionServiceRequestSchema.safeParse(mutation).success).toBe(
+        false,
+      )
+    }
+
+    expect(
+      RuntimeExecutionServiceResponseSchema.safeParse({
+        contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+        ok: false,
+        kind: "systemFailure",
+        requestId: request.requestId,
+        matchId: request.match.matchId,
+        runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+        systemFailure: {
+          code: "EVIDENCE_REGISTRY_DRIFT",
+          message: "Execution evidence changed during execution.",
+          publicMessage: "Runtime execution could not be completed safely.",
+          retryable: true,
+        },
+      }).success,
+    ).toBe(true)
   })
 
   it("RuntimeExecutionServiceResponseSchema accepts success and system-failure envelopes", () => {
