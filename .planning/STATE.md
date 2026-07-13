@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
-stopped_at: Completed 256-02-PLAN.md
-last_updated: "2026-07-13T02:00:48.001Z"
+stopped_at: Completed 256-19-PLAN.md; next sequential plan is 256-03
+last_updated: "2026-07-13T02:17:44.374Z"
 last_activity: 2026-07-13
-last_activity_desc: Plan 256-02 established exact runtime evidence eligibility and safe projections
+last_activity_desc: Plan 256-19 retired the direct TypeScript Match worker behind executable fail-closed guards
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 2
-  percent: 11
+  completed_plans: 3
+  percent: 16
 ---
 
 # State: Coward's Game
@@ -31,9 +31,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
 Plan: 3 of 19
 Status: Ready to execute
-Last activity: 2026-07-13 — Plan 256-02 established exact runtime evidence eligibility and safe projections
+Last activity: 2026-07-13 — Plan 256-19 retired the direct TypeScript Match worker behind executable fail-closed guards
 
-Progress: [█░░░░░░░░░] 11%
+Progress: [██░░░░░░░░] 16%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [█░░░░░░░░░] 11%
 
 **Resume file:** None
 
-Last session: 2026-07-13T02:00:30.236Z
-Stopped at: Completed 256-02-PLAN.md
+Last session: 2026-07-13T02:17:44.360Z
+Stopped at: Completed 256-19-PLAN.md; next sequential plan is 256-03
 Next command: `$gsd-execute-phase 256`
 
 ## Performance Metrics
@@ -71,8 +71,12 @@ Next command: `$gsd-execute-phase 256`
 |-------|------|----------|-------|
 | Phase 256 P01 | 6 min | 2 tasks | 6 files |
 | Phase 256 P02 | 10min | 3 tasks | 10 files |
+| Phase 256 P19 | 10min | 2 tasks | 5 files |
 
 ## Decisions
 
 - [Phase 256]: Semantic tuple identity uses fixed-order domain-separated UTF-8 bytes and excludes executable evidence identity. — Toolchain, adapter, artifact, and certificate changes stale conformance evidence without fabricating a gameplay version.
 - [Phase 256]: Executable evidence authorities are runtime-branded and counted use requires exact current containment plus conformance certificates. — Arbitrary certificate-shaped objects, registry labels, and operator intent cannot manufacture counted eligibility.
+- [Phase 256]: The legacy direct TypeScript Match worker has no executable purpose. — Normal, rollback, test, parity, demo, malformed, and emergency labels all fail before startup or Match lifecycle effects.
+- [Phase 256]: Retired worker startup emits only a stable public-safe code and message. — Process failures suppress source locations, host paths, stacks, and diagnostics while remaining observable.
+- [Phase 256]: Worker retirement has a focused AST-backed sentinel; Plan 256-14 owns broad-chain integration. — The focused guard proves fatal ordering and forbidden route absence without duplicating the milestone-wide authority monitor.
