@@ -139,6 +139,7 @@ func (server *LiveServer) routes() http.Handler {
 	mux.HandleFunc("POST /internal/match-jobs/run-once", server.runMatchJobOnce)
 	mux.HandleFunc("POST /internal/match-execution/requeue", server.requeueMatchExecutionJob)
 	mux.HandleFunc("POST /internal/match-execution/rerun", server.rerunMatchExecutionJob)
+	mux.HandleFunc("GET /internal/integrity/matchsets/{matchSetId}/evidence", server.operatorMatchSetIntegrityEvidence)
 	return mux
 }
 
@@ -408,21 +409,28 @@ func (server *LiveServer) publicReplayMetadata(writer http.ResponseWriter, reque
 		writeStorageError(writer)
 		return
 	}
+	integrityEvidence, err := server.publicIntegrityEvidenceForMatch(request.Context(), matchID)
+	if err != nil {
+		writeStorageError(writer)
+		return
+	}
+	metadata := map[string]any{
+		"matchId":           matchID,
+		"chronicleId":       chronicleID,
+		"hash":              hash,
+		"schemaVersion":     schemaVersion,
+		"eventCount":        eventCount,
+		"snapshotCount":     snapshotCount,
+		"bottomPlayerId":    bottomPlayerID,
+		"topPlayerId":       topPlayerID,
+		"arenaVariantId":    arenaVariantID,
+		"integrityEvidence": integrityEvidence,
+	}
 	writeJSONValue(writer, http.StatusOK, map[string]any{
 		"apiVersion": serviceAPIVersion,
 		"kind":       "publicReplayMetadata",
 		"matchId":    matchID,
-		"metadata": map[string]any{
-			"matchId":        matchID,
-			"chronicleId":    chronicleID,
-			"hash":           hash,
-			"schemaVersion":  schemaVersion,
-			"eventCount":     eventCount,
-			"snapshotCount":  snapshotCount,
-			"bottomPlayerId": bottomPlayerID,
-			"topPlayerId":    topPlayerID,
-			"arenaVariantId": arenaVariantID,
-		},
+		"metadata":   metadata,
 	})
 }
 
@@ -438,6 +446,58 @@ func (server *LiveServer) publicReplayEvidence(writer http.ResponseWriter, reque
 		return
 	}
 	writeJSONValue(writer, http.StatusOK, result)
+}
+
+func (server *LiveServer) operatorMatchSetIntegrityEvidence(writer http.ResponseWriter, request *http.Request) {
+	token := os.Getenv("COWARDS_GO_BACKEND_INTERNAL_TOKEN")
+	if token == "" || request.Header.Get("X-Cowards-Internal-Token") != token {
+		writeServiceError(writer, http.StatusForbidden, "FORBIDDEN", "Forbidden.")
+		return
+	}
+	matchSetID := decodePathValue(request.PathValue("matchSetId"))
+	model, err := server.loadIntegrityEvidenceReadModel(request.Context(), matchSetID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeServiceError(writer, http.StatusNotFound, "NOT_FOUND", "Integrity evidence not found.")
+		return
+	}
+	if err != nil {
+		writeStorageError(writer)
+		return
+	}
+	response := map[string]any{
+		"apiVersion": serviceAPIVersion,
+		"kind":       "operatorIntegrityEvidence",
+		"matchSetId": matchSetID,
+		"profile":    model.Profile,
+	}
+	if model.Profile == "current" {
+		keys := make([]string, 0, len(model.OperatorByEntrant))
+		for key := range model.OperatorByEntrant {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		lanes := make([]map[string]any, 0, len(keys))
+		for _, key := range keys {
+			lanes = append(lanes, map[string]any{"entrantKey": key, "evidence": model.OperatorByEntrant[key]})
+		}
+		response["semanticTupleId"] = model.SemanticTupleID
+		response["lanes"] = lanes
+	} else {
+		response["historical"] = cloneIntegrityEvidenceMap(model.Historical)
+	}
+	if model.EffectiveFinding != nil {
+		response["effectiveFinding"] = map[string]any{
+			"eventId": model.EffectiveFinding.EventID, "classification": model.EffectiveFinding.Classification,
+			"evidenceHash":   canonicalSafeEvidenceHash(model.EffectiveFinding.EvidenceHash),
+			"effectiveAt":    model.EffectiveFinding.EffectiveAt,
+			"restrictedLink": "/internal/integrity/matchsets/" + urlPathEscape(matchSetID) + "/evidence#effective-finding",
+		}
+	}
+	if err := assertIntegrityEvidenceProjectionPrivacySafe(response); err != nil {
+		writeServiceError(writer, http.StatusInternalServerError, "INTERNAL", "Integrity evidence is unavailable.")
+		return
+	}
+	writePrivateJSONValue(writer, http.StatusOK, response)
 }
 
 func (server *LiveServer) signUp(writer http.ResponseWriter, request *http.Request) {
@@ -1735,14 +1795,20 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 		ChronicleMatchCount: chronicleCount,
 		ScoringAvailable:    scoringAvailable,
 	})
+	integrityModel, err := server.loadIntegrityEvidenceReadModel(ctx, matchSetID)
+	if err != nil {
+		return nil, err
+	}
 	entrants, err := server.matchSetEntrants(ctx, matchSetID)
 	if err != nil {
 		return nil, err
 	}
+	attachPublicIntegrityEvidenceToEntrants(entrants, integrityModel)
 	matches, err := server.matchSetEvidence(ctx, matchSetID, entrants)
 	if err != nil {
 		return nil, err
 	}
+	attachPublicIntegrityEvidenceToMatches(matches, integrityModel)
 	matchExecutionMetadata, err := server.matchSetExecutionMetadata(ctx, matchSetID)
 	if err != nil {
 		return nil, err
@@ -1757,13 +1823,18 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 	if len(matchExecutionMetadata) > 0 {
 		metadata["matchExecution"] = matchExecutionMetadata
 	}
+	integrityProjection := projectPublicMatchSetIntegrityEvidence(integrityModel)
 	competition := map[string]any{"countedState": countedState}
-	competition["governance"] = projectPublicCompetitionGovernance(
+	governance := projectPublicCompetitionGovernance(
 		countedState,
 		reviewStatus,
 		governanceChangedAt,
 		matchSetReplayAvailable(matches),
 	)
+	if warning, ok := integrityProjection["warning"].(map[string]any); ok {
+		governance["integrityWarning"] = cloneIntegrityEvidenceMap(warning)
+	}
+	competition["governance"] = governance
 	if seasonID != nil && *seasonID != "" {
 		competition["seasonId"] = *seasonID
 	}
@@ -1784,11 +1855,12 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 			"lossPoints":                   0,
 			"strategyFailurePenaltyPoints": -1,
 		},
-		"entrants":    entrants,
-		"standings":   standingsFromScoring(scoringRaw, entrants),
-		"matches":     matches,
-		"metadata":    metadata,
-		"competition": competition,
+		"entrants":          entrants,
+		"standings":         standingsFromScoring(scoringRaw, entrants),
+		"matches":           matches,
+		"metadata":          metadata,
+		"competition":       competition,
+		"integrityEvidence": integrityProjection,
 		"provenance": map[string]any{
 			"matchSetId":           matchSetID,
 			"presetId":             *competitionPresetID,
@@ -1854,21 +1926,26 @@ func (server *LiveServer) publicReplayEvidenceResult(ctx context.Context, matchI
 	if err := json.Unmarshal(row.outcome, &outcome); err != nil {
 		return nil, err
 	}
+	integrityEvidence, err := server.publicIntegrityEvidenceForMatch(ctx, resolvedMatchID)
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
 		"apiVersion": serviceAPIVersion,
 		"kind":       "publicReplayEvidence",
 		"matchId":    resolvedMatchID,
 		"metadata": map[string]any{
-			"matchId":        resolvedMatchID,
-			"chronicleId":    row.chronicleID,
-			"hash":           row.hash,
-			"schemaVersion":  row.schemaVersion,
-			"eventCount":     row.eventCount,
-			"snapshotCount":  row.snapshotCount,
-			"outcome":        outcome,
-			"bottomPlayerId": row.bottomPlayerID,
-			"topPlayerId":    row.topPlayerID,
-			"arenaVariantId": row.arenaVariantID,
+			"matchId":           resolvedMatchID,
+			"chronicleId":       row.chronicleID,
+			"hash":              row.hash,
+			"schemaVersion":     row.schemaVersion,
+			"eventCount":        row.eventCount,
+			"snapshotCount":     row.snapshotCount,
+			"outcome":           outcome,
+			"bottomPlayerId":    row.bottomPlayerID,
+			"topPlayerId":       row.topPlayerID,
+			"arenaVariantId":    row.arenaVariantID,
+			"integrityEvidence": integrityEvidence,
 		},
 		"projection": publicReplayProjectionFromChronicle(artifact),
 	}, nil
@@ -1976,7 +2053,8 @@ func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID strin
 	}
 	rows, err := server.pool.Query(ctx, `
 		select m.id, m.status, m.bottom_strategy_revision_id, m.top_strategy_revision_id,
-		       m.arena_variant_id, m.failure_category, c.hash
+		       m.arena_variant_id, m.failure_category, c.hash,
+		       m.bottom_execution_entrant_key, m.top_execution_entrant_key
 		from match_set_matches msm
 		join matches m on m.id = msm.match_id
 		left join chronicles c on c.match_id = m.id
@@ -1992,7 +2070,8 @@ func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID strin
 		var matchID, status, bottomRevisionID, topRevisionID, arenaVariantID string
 		var failureCategory *string
 		var chronicleHash *string
-		if err := rows.Scan(&matchID, &status, &bottomRevisionID, &topRevisionID, &arenaVariantID, &failureCategory, &chronicleHash); err != nil {
+		var bottomExecutionEntrantKey, topExecutionEntrantKey *string
+		if err := rows.Scan(&matchID, &status, &bottomRevisionID, &topRevisionID, &arenaVariantID, &failureCategory, &chronicleHash, &bottomExecutionEntrantKey, &topExecutionEntrantKey); err != nil {
 			return nil, err
 		}
 		dto := map[string]any{
@@ -2007,6 +2086,12 @@ func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID strin
 		}
 		if chronicleHash != nil {
 			dto["chronicleHash"] = *chronicleHash
+		}
+		if bottomExecutionEntrantKey != nil {
+			dto["_bottomExecutionEntrantKey"] = *bottomExecutionEntrantKey
+		}
+		if topExecutionEntrantKey != nil {
+			dto["_topExecutionEntrantKey"] = *topExecutionEntrantKey
 		}
 		if status == matchStatusFailedSystem {
 			dto["publicReason"] = publicReasonForMatchFailureCategory(valueOr(failureCategory, matchFailureCategorySystemFailure))
@@ -2040,6 +2125,244 @@ func (server *LiveServer) matchSetExecutionMetadata(ctx context.Context, matchSe
 		}
 	}
 	return nil, rows.Err()
+}
+
+type integrityEvidenceReadCertificateRow struct {
+	Kind          string
+	ID            string
+	Version       string
+	RecordHash    string
+	Status        string
+	IssuedAt      time.Time
+	FreshUntil    time.Time
+	AttestationID string
+}
+
+func (server *LiveServer) loadIntegrityEvidenceReadModel(ctx context.Context, matchSetID string) (integrityEvidenceReadModel, error) {
+	var tupleID, rulesVersion, chronicleVersion, registryGeneration *string
+	var originalCountedStatus string
+	err := server.pool.QueryRow(ctx, `
+		select ms.compatibility_tuple_id,
+		       coalesce(ms.compatibility_rules_version,
+		         (select min(nullif(c.artifact #>> '{reproducibility,specVersion}', ''))
+		            from match_set_matches msm join chronicles c on c.match_id=msm.match_id
+		           where msm.match_set_id=ms.id),
+		         (select min(nullif(sr.engine_compatibility ->> 'spec', ''))
+		            from competition_entrants ce join strategy_revisions sr on sr.id=ce.strategy_revision_id
+		           where ce.match_set_id=ms.id)),
+		       coalesce(ms.compatibility_chronicle_version,
+		         (select min(c.schema_version) from match_set_matches msm join chronicles c on c.match_id=msm.match_id where msm.match_set_id=ms.id)),
+		       ms.counted_status, ms.authority_registry_generation
+		  from match_sets ms where ms.id=$1
+	`, matchSetID).Scan(&tupleID, &rulesVersion, &chronicleVersion, &originalCountedStatus, &registryGeneration)
+	if err != nil {
+		return integrityEvidenceReadModel{}, err
+	}
+	finding, err := server.loadEffectiveIntegrityFinding(ctx, matchSetID)
+	if err != nil {
+		return integrityEvidenceReadModel{}, err
+	}
+	if tupleID == nil || *tupleID == "" {
+		historical := projectHistoricalIntegrityEvidence(historicalIntegrityEvidenceInput{
+			RulesVersion: valueOr(rulesVersion, ""), ChronicleVersion: valueOr(chronicleVersion, ""),
+			OriginalCountedStatus: originalCountedStatus, EffectiveFinding: finding,
+		})
+		return integrityEvidenceReadModel{Profile: "historical", Historical: historical, EffectiveFinding: finding}, nil
+	}
+
+	authority := server.authority
+	if server.loadAuthority != nil {
+		loaded, loadErr := server.loadAuthority()
+		if loadErr != nil {
+			authority = nil
+		} else {
+			authority = loaded
+		}
+	}
+	evaluationTime := time.Now().UTC()
+	if server.now != nil {
+		evaluationTime = server.now().UTC()
+	}
+	evaluatedAt := evaluationTime.Format(canonicalJSONInstantLayout)
+	rows, err := server.pool.Query(ctx, `
+		select e.entrant_key, e.lane_identity, e.lane_identity_hash,
+		       e.containment_certificate_kind, e.containment_certificate_id,
+		       e.containment_certificate_version, e.containment_certificate_hash,
+		       containment.certificate_status, containment.issued_at,
+		       containment.fresh_until, containment.verified_attestation_id,
+		       e.conformance_certificate_kind, e.conformance_certificate_id,
+		       e.conformance_certificate_version, e.conformance_certificate_hash,
+		       conformance.certificate_status, conformance.issued_at,
+		       conformance.fresh_until, conformance.verified_attestation_id,
+		       e.authority_registry_generation
+		  from match_set_execution_entrants e
+		  join runtime_evidence_certificates containment
+		    on containment.id=e.containment_certificate_id
+		   and containment.certificate_record_hash=e.containment_certificate_hash
+		  left join runtime_evidence_certificates conformance
+		    on conformance.id=e.conformance_certificate_id
+		   and conformance.certificate_record_hash=e.conformance_certificate_hash
+		 where e.match_set_id=$1 order by e.entrant_key
+	`, matchSetID)
+	if err != nil {
+		return integrityEvidenceReadModel{}, err
+	}
+	defer rows.Close()
+	model := integrityEvidenceReadModel{
+		Profile: "current", SemanticTupleID: *tupleID,
+		PublicByEntrant:   map[string]publicIntegrityEvidenceProjection{},
+		OperatorByEntrant: map[string]operatorIntegrityEvidenceProjection{},
+		EffectiveFinding:  finding,
+	}
+	for rows.Next() {
+		var entrantKey, laneHash, containmentKind, containmentID, containmentVersion, containmentHash, storedGeneration string
+		var laneJSON []byte
+		var containment integrityEvidenceReadCertificateRow
+		var conformanceKind, conformanceID, conformanceVersion, conformanceHash, conformanceStatus, conformanceAttestation *string
+		var conformanceIssuedAt, conformanceFreshUntil *time.Time
+		if err := rows.Scan(
+			&entrantKey, &laneJSON, &laneHash,
+			&containmentKind, &containmentID, &containmentVersion, &containmentHash,
+			&containment.Status, &containment.IssuedAt, &containment.FreshUntil, &containment.AttestationID,
+			&conformanceKind, &conformanceID, &conformanceVersion, &conformanceHash,
+			&conformanceStatus, &conformanceIssuedAt, &conformanceFreshUntil, &conformanceAttestation,
+			&storedGeneration,
+		); err != nil {
+			return integrityEvidenceReadModel{}, err
+		}
+		containment.Kind, containment.ID, containment.Version, containment.RecordHash = containmentKind, containmentID, containmentVersion, containmentHash
+		var identity goExecutableLaneIdentity
+		if err := decodeStrictJSON(laneJSON, &identity); err != nil {
+			return integrityEvidenceReadModel{}, errors.New("persisted integrity evidence is invalid")
+		}
+		containmentReference := runtimeEvidenceCertificateReference{
+			Kind: containmentKind, CertificateID: containmentID, CertificateVersion: containmentVersion,
+			CertificateRecordHash: canonicalSafeEvidenceHash(containmentHash), RegistryGeneration: storedGeneration,
+		}
+		var conformanceReference *runtimeEvidenceCertificateReference
+		certificates := []integrityEvidenceCertificateProjectionInput{
+			integrityEvidenceReadCertificateProjection(matchSetID, containment),
+		}
+		if conformanceID != nil && conformanceKind != nil && conformanceVersion != nil && conformanceHash != nil && conformanceStatus != nil && conformanceIssuedAt != nil && conformanceFreshUntil != nil && conformanceAttestation != nil {
+			conformanceReference = &runtimeEvidenceCertificateReference{
+				Kind: *conformanceKind, CertificateID: *conformanceID, CertificateVersion: *conformanceVersion,
+				CertificateRecordHash: canonicalSafeEvidenceHash(*conformanceHash), RegistryGeneration: storedGeneration,
+			}
+			certificates = append(certificates, integrityEvidenceReadCertificateProjection(matchSetID, integrityEvidenceReadCertificateRow{
+				Kind: *conformanceKind, ID: *conformanceID, Version: *conformanceVersion, RecordHash: *conformanceHash,
+				Status: *conformanceStatus, IssuedAt: *conformanceIssuedAt, FreshUntil: *conformanceFreshUntil,
+				AttestationID: *conformanceAttestation,
+			}))
+		}
+		decision := executableLaneEvidenceResult{Status: executableLaneEvidenceDisabled, ReasonCode: "EVIDENCE_UNVERIFIABLE"}
+		activeGeneration := valueOr(registryGeneration, storedGeneration)
+		if authority != nil {
+			activeGeneration = authority.RegistryGeneration
+			decision = classifyExecutableLaneEvidence(executableLaneEvidenceInput{
+				Authority: authority, ExpectedLaneIdentityHash: canonicalSafeEvidenceHash(laneHash),
+				EvaluationInstant: evaluatedAt, ActiveRegistryGeneration: activeGeneration,
+				ContainmentCertificate: &containmentReference, ConformanceCertificate: conformanceReference,
+			})
+			if authority.SemanticTupleManifestHash != *tupleID || identity.SemanticTupleID != *tupleID {
+				decision = executableLaneEvidenceResult{Status: executableLaneEvidenceDisabled, ReasonCode: "TUPLE_UNCERTIFIED"}
+			}
+		}
+		input := integrityEvidenceProjectionInput{
+			Status: decision.Status, ReasonCode: decision.ReasonCode, EvaluatedAt: evaluatedAt,
+			RegistryGeneration: activeGeneration, SemanticTupleID: *tupleID, Identity: identity,
+			Certificates: certificates,
+		}
+		model.PublicByEntrant[entrantKey] = projectPublicIntegrityEvidence(input)
+		model.OperatorByEntrant[entrantKey] = projectOperatorIntegrityEvidence(input)
+	}
+	if err := rows.Err(); err != nil {
+		return integrityEvidenceReadModel{}, err
+	}
+	return model, nil
+}
+
+func integrityEvidenceReadCertificateProjection(matchSetID string, row integrityEvidenceReadCertificateRow) integrityEvidenceCertificateProjectionInput {
+	fragment := strings.NewReplacer(":", "-", "/", "-", " ", "-").Replace(row.ID)
+	return integrityEvidenceCertificateProjectionInput{
+		Kind: row.Kind, CertificateID: row.ID, CertificateVersion: row.Version,
+		CertificateRecordHash: row.RecordHash, Status: row.Status,
+		IssuedAt:           row.IssuedAt.UTC().Format(canonicalJSONInstantLayout),
+		FreshUntil:         row.FreshUntil.UTC().Format(canonicalJSONInstantLayout),
+		GateResults:        []integrityEvidenceGateResult{{GateID: "certificate_status", Passed: row.Status == "passed"}},
+		RestrictedProofIDs: []string{row.AttestationID},
+		RestrictedProofLinks: []string{
+			"/internal/integrity/matchsets/" + urlPathEscape(matchSetID) + "/evidence#" + fragment,
+		},
+	}
+}
+
+func (server *LiveServer) loadEffectiveIntegrityFinding(ctx context.Context, matchSetID string) (*integrityEvidenceFinding, error) {
+	var finding integrityEvidenceFinding
+	var effectiveAt time.Time
+	err := server.pool.QueryRow(ctx, `
+		select e.id, e.classification, e.evidence_hash, e.created_at
+		  from integrity_cohort_classification_events e
+		  left join integrity_compensation_events compensation on compensation.compensates_event_id=e.id
+		 where compensation.id is null
+		   and (coalesce(e.predicate->'ast', e.predicate)->'matchSetIds') ? $1
+		 order by e.id desc limit 1
+	`, matchSetID).Scan(&finding.EventID, &finding.Classification, &finding.EvidenceHash, &effectiveAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	finding.EffectiveAt = effectiveAt.UTC().Format(canonicalJSONInstantLayout)
+	return &finding, nil
+}
+
+func (server *LiveServer) publicIntegrityEvidenceForMatch(ctx context.Context, matchID string) (map[string]any, error) {
+	var matchSetID *string
+	err := server.pool.QueryRow(ctx, `
+		select coalesce(m.integrity_match_set_id, msm.match_set_id)
+		  from matches m left join match_set_matches msm on msm.match_id=m.id
+		 where m.id=$1 order by msm.match_set_id limit 1
+	`, matchID).Scan(&matchSetID)
+	if err != nil {
+		return nil, err
+	}
+	if matchSetID == nil || *matchSetID == "" {
+		var schemaVersion string
+		var artifactRaw []byte
+		if err := server.pool.QueryRow(ctx, `select schema_version, artifact from chronicles where match_id=$1`, matchID).Scan(&schemaVersion, &artifactRaw); err != nil {
+			return nil, err
+		}
+		artifact := jsonMap(artifactRaw)
+		return projectHistoricalIntegrityEvidence(historicalIntegrityEvidenceInput{
+			RulesVersion:          stringValue(mapValue(artifact, "reproducibility"), "specVersion"),
+			ChronicleVersion:      schemaVersion,
+			OriginalCountedStatus: "unrecorded",
+		}), nil
+	}
+	model, err := server.loadIntegrityEvidenceReadModel(ctx, *matchSetID)
+	if err != nil {
+		return nil, err
+	}
+	if model.Profile != "current" {
+		return cloneIntegrityEvidenceMap(model.Historical), nil
+	}
+	var bottomKey, topKey *string
+	if err := server.pool.QueryRow(ctx, "select bottom_execution_entrant_key, top_execution_entrant_key from matches where id=$1", matchID).Scan(&bottomKey, &topKey); err != nil {
+		return nil, err
+	}
+	if bottomKey == nil || topKey == nil {
+		return projectPublicMatchSetIntegrityEvidence(model), nil
+	}
+	bottom, bottomOK := model.PublicByEntrant[*bottomKey]
+	top, topOK := model.PublicByEntrant[*topKey]
+	if !bottomOK || !topOK {
+		return projectPublicMatchSetIntegrityEvidence(model), nil
+	}
+	return map[string]any{
+		"profile": "current", "semanticTupleId": model.SemanticTupleID,
+		"bottom": bottom, "top": top,
+	}, nil
 }
 
 func (server *LiveServer) authenticatedUser(ctx context.Context, request *http.Request, updateLastSeen bool) (*publicUser, error) {

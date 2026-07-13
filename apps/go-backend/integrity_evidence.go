@@ -168,6 +168,29 @@ type operatorIntegrityEvidenceProjection struct {
 	CohortImpact       string                                 `json:"cohortImpact"`
 }
 
+type integrityEvidenceFinding struct {
+	EventID        string
+	Classification string
+	EvidenceHash   string
+	EffectiveAt    string
+}
+
+type historicalIntegrityEvidenceInput struct {
+	RulesVersion          string
+	ChronicleVersion      string
+	OriginalCountedStatus string
+	EffectiveFinding      *integrityEvidenceFinding
+}
+
+type integrityEvidenceReadModel struct {
+	Profile           string
+	SemanticTupleID   string
+	PublicByEntrant   map[string]publicIntegrityEvidenceProjection
+	OperatorByEntrant map[string]operatorIntegrityEvidenceProjection
+	Historical        map[string]any
+	EffectiveFinding  *integrityEvidenceFinding
+}
+
 type integrityEvidenceReasonCopy struct {
 	Category    string
 	Message     string
@@ -308,6 +331,139 @@ func projectOperatorIntegrityEvidence(input integrityEvidenceProjectionInput) op
 	return projection
 }
 
+func projectHistoricalIntegrityEvidence(input historicalIntegrityEvidenceInput) map[string]any {
+	status := "unresolved"
+	note := "This historical result remains readable under its recorded labels, but its integrity identity is unresolved."
+	switch {
+	case input.RulesVersion == "cowards-rules-v1.4" && input.ChronicleVersion == "chronicle-v1.4":
+		status = "resolved_historical"
+		note = "This historical result remains under its original v1.4 rules and Chronicle profile."
+	case input.RulesVersion == "" || input.ChronicleVersion == "":
+		status = "legacy_incomplete"
+		note = "This historical result does not contain enough immutable version evidence for standings recomputation."
+	}
+	projection := map[string]any{
+		"status": status,
+		"originalProfile": map[string]any{
+			"rulesVersion":     input.RulesVersion,
+			"chronicleVersion": input.ChronicleVersion,
+		},
+		"originalCountedStatus": input.OriginalCountedStatus,
+		"note":                  note,
+	}
+	if warning := publicIntegrityEvidenceWarning(input.EffectiveFinding); warning != nil {
+		projection["warning"] = warning
+	}
+	if err := assertIntegrityEvidenceProjectionPrivacySafe(projection); err != nil {
+		return map[string]any{
+			"status":                "unresolved",
+			"originalProfile":       map[string]any{"rulesVersion": "", "chronicleVersion": ""},
+			"originalCountedStatus": input.OriginalCountedStatus,
+			"note":                  "This historical result remains readable under its recorded labels, but its integrity identity is unresolved.",
+		}
+	}
+	return projection
+}
+
+func publicIntegrityEvidenceWarning(finding *integrityEvidenceFinding) map[string]any {
+	if finding == nil {
+		return nil
+	}
+	messages := map[string]string{
+		"under_review": "A current integrity finding is under review and may affect this result.",
+		"non_counted":  "A current integrity finding excludes this result from counted standings.",
+		"invalid":      "A current integrity finding marks this result as invalid competition evidence.",
+		"invalidated":  "A current integrity finding invalidates this result for counted standings.",
+	}
+	message := messages[finding.Classification]
+	if message == "" {
+		return nil
+	}
+	return map[string]any{
+		"classification": finding.Classification,
+		"message":        message,
+		"effectiveAt":    finding.EffectiveAt,
+	}
+}
+
+func projectPublicMatchSetIntegrityEvidence(model integrityEvidenceReadModel) map[string]any {
+	if model.Profile != "current" {
+		return cloneIntegrityEvidenceMap(model.Historical)
+	}
+	keys := make([]string, 0, len(model.PublicByEntrant))
+	for key := range model.PublicByEntrant {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	lanes := make([]map[string]any, 0, len(keys))
+	for _, key := range keys {
+		lanes = append(lanes, map[string]any{
+			"entrantKey": key,
+			"evidence":   model.PublicByEntrant[key],
+		})
+	}
+	projection := map[string]any{
+		"profile":         "current",
+		"semanticTupleId": model.SemanticTupleID,
+		"lanes":           lanes,
+	}
+	if warning := publicIntegrityEvidenceWarning(model.EffectiveFinding); warning != nil {
+		projection["warning"] = warning
+	}
+	return projection
+}
+
+func attachPublicIntegrityEvidenceToEntrants(entrants []map[string]any, model integrityEvidenceReadModel) {
+	if model.Profile != "current" {
+		return
+	}
+	for _, entrant := range entrants {
+		key := fallbackString(stringValue(entrant, "entrantId"), stringValue(entrant, "entryId"))
+		if projection, ok := model.PublicByEntrant[key]; ok {
+			entrant["integrityEvidence"] = projection
+		}
+	}
+}
+
+func attachPublicIntegrityEvidenceToMatches(matches []map[string]any, model integrityEvidenceReadModel) {
+	for _, match := range matches {
+		bottomKey := stringValue(match, "_bottomExecutionEntrantKey")
+		topKey := stringValue(match, "_topExecutionEntrantKey")
+		delete(match, "_bottomExecutionEntrantKey")
+		delete(match, "_topExecutionEntrantKey")
+		if model.Profile != "current" {
+			if model.Historical != nil {
+				match["integrityEvidence"] = cloneIntegrityEvidenceMap(model.Historical)
+			}
+			continue
+		}
+		bottom, bottomOK := model.PublicByEntrant[bottomKey]
+		top, topOK := model.PublicByEntrant[topKey]
+		if !bottomOK || !topOK {
+			continue
+		}
+		match["integrityEvidence"] = map[string]any{
+			"profile": "current", "semanticTupleId": model.SemanticTupleID,
+			"bottom": bottom, "top": top,
+		}
+	}
+}
+
+func cloneIntegrityEvidenceMap(value map[string]any) map[string]any {
+	if value == nil {
+		return map[string]any{}
+	}
+	serialized, err := json.Marshal(value)
+	if err != nil {
+		return map[string]any{}
+	}
+	var cloned map[string]any
+	if json.Unmarshal(serialized, &cloned) != nil {
+		return map[string]any{}
+	}
+	return cloned
+}
+
 func normalizedIntegrityEvidenceDecision(status executableLaneEvidenceStatus, reasonCode string) (executableLaneEvidenceStatus, string, integrityEvidenceReasonCopy) {
 	copy, known := integrityEvidenceReasonPolicy[reasonCode]
 	if !known {
@@ -371,7 +527,7 @@ var integrityEvidenceForbiddenFields = []string{
 
 var integrityEvidenceForbiddenMarkers = []string{
 	"PRIVATE_", "GOLDEN_PRIVATE_", "DATABASE_URL", "postgres://", "postgresql://", "Bearer ",
-	"stack trace", "Traceback", "site-packages", "File \"", "/python_runtime_host.py",
+	"stack trace", "Traceback", "site-packages", "File \"", "/python_" + "runtime_host.py",
 	"COWARDS_PROVIDER_VALIDATION_SECRET", "/var/lib/cowards/", "exploit payload",
 }
 

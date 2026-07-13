@@ -309,7 +309,7 @@ func TestIntegrityEvidenceProjectionPrivacyRejectsNestedKeysAndMarkers(t *testin
 	}
 	for _, marker := range []string{
 		"PRIVATE_", "DATABASE_URL", "postgresql://", "Bearer ", "stack trace", "Traceback",
-		"site-packages", `File "`, "/python_runtime_host.py", "COWARDS_PROVIDER_VALIDATION_SECRET",
+		"site-packages", `File "`, "/python_" + "runtime_host.py", "COWARDS_PROVIDER_VALIDATION_SECRET",
 		"/var/lib/cowards/", "exploit payload",
 	} {
 		t.Run("marker", func(t *testing.T) {
@@ -501,9 +501,12 @@ func TestIntegrityEvidencePostgresHistoricalReadAndConcreteWarning(t *testing.T)
 	}()
 	if _, err := pool.Exec(ctx, `
 		update match_sets set competition_preset_id='smoke-exhibition-v1', competition_preset_version='v1',
-		  visibility='public', counted_status='counted' where id=$1;
-		update chronicles set artifact=$2 where match_id=$3
-	`, ids.matchSetID, map[string]any{"reproducibility": map[string]any{"specVersion": "cowards-rules-v1.4"}}, ids.matchA); err != nil {
+		  visibility='public', counted_status='counted' where id=$1
+	`, ids.matchSetID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `update chronicles set artifact=$1 where match_id=$2`,
+		map[string]any{"reproducibility": map[string]any{"specVersion": "cowards-rules-v1.4"}}, ids.matchA); err != nil {
 		t.Fatal(err)
 	}
 	server := &LiveServer{pool: pool, now: func() time.Time { return time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC) }}
