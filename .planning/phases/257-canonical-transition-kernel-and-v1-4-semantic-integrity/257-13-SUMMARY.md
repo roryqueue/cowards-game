@@ -149,13 +149,13 @@ status: complete
 
 - A concurrent Plan-18 caller migration completed before the final inventory run, so `--replay-core-ready` correctly reports **36 exact references**, not the Plan-13 preflight estimate of 52. The mode passes, all Plan-13-owned builder references are gone, and the additional reduction belongs to the already-committed Plan-18 migration.
 - The post-implementation integrity review briefly made the locked compatibility corpus fail by applying arena-derivation checks to immutable isolated v1.4 Activation fixtures. Follow-up commit `065a811` narrowly preserved only those non-counted historical fixture derivation diagnostics while keeping the strict canonical validator and hostile-state rejection intact. The locked 20-fixture bytes and hashes remain unchanged; no compatibility ruling or golden update was needed.
-- Recorder-integrity hardening landed concurrently in `cb0b934`. Plan 13 was rerun after that settled commit, including typecheck, the full replay suite, and the compatibility corpus.
+- Recorder-integrity hardening landed concurrently in `cb0b934` and final failure/coordinate binding review landed in `97d6356`. Plan 13 was rerun after both settled commits, including typecheck, the full replay suite, and the compatibility corpus.
 
 ## Verification
 
 - Candidate semantic/reconstruction focus: **46/46 passed**.
 - Terminal/reconstruction/historical focus: **5/5 passed** with 40 unrelated tests skipped.
-- Full replay package: **147/147 passed** across 13 files.
+- Full replay package: **152/152 passed** across 13 files after final recorder review.
 - Locked v1.4 compatibility corpus: **14/14 passed**; fixture bytes/hashes unchanged.
 - v1.36 historical proof: passed with **8 artifacts and 11 sources**.
 - Replay TypeScript project build: passed.
