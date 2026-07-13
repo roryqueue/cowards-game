@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import {
   createServer,
   type IncomingMessage,
@@ -314,8 +315,7 @@ export const createRuntimeExecutionHttpHandler = (
   options: RuntimeExecutionHttpServerOptions = {},
 ) => {
   const runtimeConfig =
-    options.runtimeConfig ??
-    runtimeServiceConfigFromEnvironment()
+    options.runtimeConfig ?? runtimeServiceConfigFromEnvironment()
   const bodyLimitBytes = options.bodyLimitBytes ?? DEFAULT_BODY_LIMIT_BYTES
   const configuredPrivateArtifactToken = privateArtifactToken(
     options.privateArtifactToken,
