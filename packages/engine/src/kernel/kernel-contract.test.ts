@@ -1,10 +1,29 @@
 import { describe, expect, it } from "vitest"
-import { CANONICAL_COMPATIBILITY_TUPLES } from "@cowards/spec"
+import type { CanonicalCompatibilityTuple } from "@cowards/spec"
 import * as enginePublic from "../index.js"
 import { createFakeRuntime } from "../test/fake-runtime.js"
+import { createCandidateInitialGameState } from "./create-initial-state.js"
+import {
+  createTransitionRecord,
+  hashMatchMachine,
+  projectMatchMachineForHash,
+} from "./validate.js"
+import type { MatchMachine } from "./types.js"
 
 const MISSING_AUTHORITY_MARKER =
   "[EXPECTED_RED:MISSING_KERNEL_AUTHORITY]" as const
+
+const EXPECTED_CANDIDATE_TUPLE = {
+  rules: "cowards-rules-v1.4",
+  engine: "engine-kernel-v1.37-candidate-1",
+  runtimeAbi: "strategy-runtime-abi-v1.14",
+  chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+  arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+  setPolicy: "canonical-set-policy-v1.4",
+} as const satisfies CanonicalCompatibilityTuple
+
+const EXPECTED_CANDIDATE_TUPLE_ID =
+  "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae" as const
 
 const matchInput = {
   matchId: "phase-257-kernel-contract",
@@ -19,7 +38,7 @@ const matchInput = {
   topPlayerId: "phase-257-top",
   bottomStrategyRevisionId: "phase-257-bottom-revision",
   topStrategyRevisionId: "phase-257-top-revision",
-} as const
+}
 
 type KernelEffectKind = "selectActivations" | "soldierBrain"
 
@@ -60,9 +79,19 @@ interface KernelTransitionRecord {
   semanticTuple: Readonly<Record<string, string>>
   coordinates: Readonly<Record<string, unknown>>
   classification: string
-  events: readonly Readonly<Record<string, unknown>>[]
+  events: readonly {
+    readonly type: string
+    readonly sequence: number
+    readonly payload: unknown
+    readonly context?: unknown
+    readonly privacy?: unknown
+  }[]
+  beforeState: Readonly<Record<string, unknown>>
+  afterState: Readonly<Record<string, unknown>>
   beforeStateHash: string
   afterStateHash: string
+  beforeMachineHash: string
+  afterMachineHash: string
   terminalStatus: unknown
   failureStatus: unknown
 }
@@ -214,21 +243,104 @@ const expectNoPrivateTransitionData = (value: unknown): void => {
 }
 
 const expectRecordContract = (record: KernelTransitionRecord): void => {
-  const currentTuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
   expect(record.transitionKind.length).toBeGreaterThan(0)
-  expect(record.semanticTupleId).toBe(currentTuple.tupleId)
-  expect(record.semanticTuple).toEqual(currentTuple.tuple)
+  expect(record.semanticTupleId).toBe(EXPECTED_CANDIDATE_TUPLE_ID)
+  expect(record.semanticTuple).toEqual(EXPECTED_CANDIDATE_TUPLE)
   expect(record.coordinates).toEqual(expect.any(Object))
   expect(record.classification.length).toBeGreaterThan(0)
   expect(record.events).toEqual(expect.any(Array))
   expect(record.beforeStateHash).toMatch(/^sha256:[0-9a-f]{64}$/u)
   expect(record.afterStateHash).toMatch(/^sha256:[0-9a-f]{64}$/u)
+  expect(record.beforeMachineHash).toMatch(/^sha256:[0-9a-f]{64}$/u)
+  expect(record.afterMachineHash).toMatch(/^sha256:[0-9a-f]{64}$/u)
   expect(Object.hasOwn(record, "terminalStatus")).toBe(true)
   expect(Object.hasOwn(record, "failureStatus")).toBe(true)
   expectNoPrivateTransitionData(record)
 }
 
 describe("Phase 257 canonical Match kernel contract", () => {
+  it("hashes a finite safe machine projection with cursor and tuple identity", () => {
+    const initial = createCandidateInitialGameState({
+      ...matchInput,
+      arenaVariant: {
+        ...matchInput.arenaVariant,
+        terrainStones: [...matchInput.arenaVariant.terrainStones],
+      },
+    })
+    expect(initial.ok).toBe(true)
+    if (!initial.ok) return
+    const machine: MatchMachine = {
+      state: initial.state,
+      initialState: initial.state,
+      semanticTuple: {
+        tupleId: EXPECTED_CANDIDATE_TUPLE_ID,
+        tuple: EXPECTED_CANDIDATE_TUPLE,
+      },
+      cursor: {
+        stage: "match_start",
+        ordinal: 0,
+        phaseNumber: 1,
+        roundNumber: 1,
+        cycleLayer: 0,
+        slotIndex: 0,
+      },
+      maxPhases: 100,
+      phasesRun: 0,
+      selections: { bottom: [], top: [] },
+      slots: [],
+      fullEvents: [],
+      consumedRequestIds: [],
+    }
+    const hash = hashMatchMachine(machine)
+    expect(hash).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    expect(hashMatchMachine(machine)).toBe(hash)
+    expect(JSON.stringify(projectMatchMachineForHash(machine))).not.toMatch(
+      /strategyMemory|soldierMemory|objective|source|artifact|diagnostics|host/u,
+    )
+
+    const privateOnly = {
+      ...machine,
+      state: {
+        ...machine.state,
+        players: machine.state.players.map((player) => ({
+          ...player,
+          strategyMemory: { secret: "strategy" },
+        })) as unknown as typeof machine.state.players,
+        soldiers: machine.state.soldiers.map((soldier) => ({
+          ...soldier,
+          soldierMemory: { secret: "soldier" },
+        })),
+      },
+    }
+    expect(hashMatchMachine(privateOnly)).toBe(hash)
+
+    const nextCursor = {
+      ...machine,
+      cursor: { ...machine.cursor, ordinal: 1 },
+    }
+    expect(hashMatchMachine(nextCursor)).not.toBe(hash)
+
+    const record = createTransitionRecord({
+      before: machine,
+      after: nextCursor,
+      transitionKind: "MATCH_STARTED",
+      classification: "success",
+      events: [
+        {
+          type: "MATCH_STARTED",
+          sequence: 0,
+          payload: { matchId: machine.state.matchId },
+          privacy: "owner",
+          privatePayload: { strategyMemory: { secret: true } },
+        },
+      ],
+    })
+    expect(record.events[0]).not.toHaveProperty("privatePayload")
+    expect(record.beforeStateHash).toBe(record.afterStateHash)
+    expect(record.beforeMachineHash).not.toBe(record.afterMachineHash)
+    expectRecordContract(record)
+  })
+
   it("missing-kernel-authority: one driver owns transitions", () => {
     if (candidateAuthority === undefined) {
       throw new Error(MISSING_AUTHORITY_MARKER)
