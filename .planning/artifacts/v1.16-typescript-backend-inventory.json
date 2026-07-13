@@ -2865,6 +2865,79 @@
       "scannerFindings": []
     },
     {
+      "id": "packages-persistence-src-authority-installed-head-test",
+      "path": "packages/persistence/src/authority-installed-head.test.ts",
+      "kind": "persistence-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "persistence",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { randomUUID } from \"node:crypto\""
+        },
+        {
+          "line": 2,
+          "source": "vitest",
+          "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 3,
+          "source": "pg",
+          "statementText": "import { Pool, type PoolClient } from \"pg\""
+        },
+        {
+          "line": 4,
+          "source": "./migrations.js",
+          "statementText": "import { migrate } from \"./migrations.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "packages/persistence/src/db.ts",
+        "packages/persistence/src/migrations.ts"
+      ],
+      "usesDatabase": true,
+      "claimsJobs": true,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/persistence/src/authority-installed-head.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/migrations.ts"
+        }
+      ]
+    },
+    {
       "id": "packages-persistence-src-chronicle-store-test",
       "path": "packages/persistence/src/chronicle-store.test.ts",
       "kind": "persistence-module",
@@ -3504,26 +3577,36 @@
       "imports": [
         {
           "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { randomUUID } from \"node:crypto\""
+        },
+        {
+          "line": 2,
+          "source": "node:fs",
+          "statementText": "import { readFileSync } from \"node:fs\""
+        },
+        {
+          "line": 3,
           "source": "vitest",
           "statementText": "import { describe, expect, it } from \"vitest\""
         },
         {
-          "line": 2,
+          "line": 4,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 3,
+          "line": 5,
           "source": "./db.js",
           "statementText": "import { defaultDatabaseUrl } from \"./db.js\""
         },
         {
-          "line": 4,
+          "line": 6,
           "source": "./dev-smoke.js",
           "statementText": "import { runDevelopmentMatchSetSmoke } from \"./dev-smoke.js\""
         },
         {
-          "line": 5,
+          "line": 7,
           "source": "./matchset-service.js",
           "statementText": "import { createFixtureMatchSetEvidenceResolver } from \"./matchset-service.js\""
         }
@@ -3541,6 +3624,7 @@
         "packages/persistence/src/migrations.ts",
         "packages/persistence/src/presets.ts",
         "packages/persistence/src/repositories.ts",
+        "packages/persistence/src/runtime-evidence-import.ts",
         "packages/persistence/src/schema.ts",
         "packages/persistence/src/scoring.ts",
         "packages/persistence/src/seed.ts"
@@ -3565,7 +3649,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/dev-smoke.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/dev-smoke.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/runtime-evidence-import.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
         }
       ]
     },
@@ -3592,43 +3676,58 @@
       "imports": [
         {
           "line": 1,
-          "source": "@cowards/spec",
-          "statementText": "import type { MatchSetId } from \"@cowards/spec\""
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
-          "line": 11,
-          "source": "./matchset-status.js",
-          "statementText": "import { refreshMatchSetStatus } from \"./matchset-status.js\""
-        },
-        {
-          "line": 12,
-          "source": "./schema.js",
-          "statementText": "import type { MatchSetStatus } from \"./schema.js\""
-        },
-        {
-          "line": 2,
+          "line": 18,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 3,
+          "line": 19,
           "source": "./migrations.js",
           "statementText": "import { migrate } from \"./migrations.js\""
         },
         {
-          "line": 4,
+          "line": 2,
+          "source": "node:crypto",
+          "statementText": "import {\n  createHash,\n  createPrivateKey,\n  createPublicKey,\n  sign,\n} from \"node:crypto\""
+        },
+        {
+          "line": 20,
           "source": "./seed.js",
           "statementText": "import { createDevelopmentSeedData } from \"./seed.js\""
         },
         {
-          "line": 5,
+          "line": 21,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 6,
+          "line": 22,
           "source": "./matchset-service.js",
-          "statementText": "import {\n  createMatchSetService,\n  resolveMatchSetExecutionEvidence,\n  type MatchSetExecutionEvidenceResolver,\n} from \"./matchset-service.js\""
+          "statementText": "import {\n  createMatchSetService,\n  resolveMatchSetExecutionEvidence,\n  type IntegritySchedulingIdentity,\n  type MatchSetExecutionEvidenceResolver,\n} from \"./matchset-service.js\""
+        },
+        {
+          "line": 28,
+          "source": "./matchset-status.js",
+          "statementText": "import { refreshMatchSetStatus } from \"./matchset-status.js\""
+        },
+        {
+          "line": 29,
+          "source": "./schema.js",
+          "statementText": "import type { MatchSetStatus } from \"./schema.js\""
+        },
+        {
+          "line": 30,
+          "source": "./runtime-evidence-import.js",
+          "statementText": "import { importVerifiedRuntimeEvidenceAttestation } from \"./runtime-evidence-import.js\""
+        },
+        {
+          "line": 8,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  encodeRuntimeEvidenceAttestationPayload,\n  hashExecutableLaneIdentity,\n  hashRuntimeEvidenceGraph,\n  type MatchSetId,\n  type RuntimeEvidenceAttestationPayload,\n  type RuntimeEvidenceBytes,\n  type RuntimeEvidenceGraph,\n  type RuntimeEvidenceTrustedProducer,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -3643,6 +3742,7 @@
         "packages/persistence/src/migrations.ts",
         "packages/persistence/src/presets.ts",
         "packages/persistence/src/repositories.ts",
+        "packages/persistence/src/runtime-evidence-import.ts",
         "packages/persistence/src/schema.ts",
         "packages/persistence/src/scoring.ts",
         "packages/persistence/src/seed.ts"
@@ -3667,7 +3767,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/runtime-evidence-import.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
         }
       ]
     },
@@ -4049,33 +4149,38 @@
         },
         {
           "line": 10,
-          "source": "./integrity-evidence.js",
-          "statementText": "import {\n  IntegrityEvidenceInputError,\n  createMatchExecutionEvidencePair,\n  createMatchSetIntegrityIdentity,\n  matchExecutionEvidencePairSqlValues,\n  matchSetIntegritySqlValues,\n  parseMatchSetIntegrityIdentityRows,\n  persistMatchSetIntegrityIdentity,\n  resolveHistoricalIntegrityEvidence,\n  hashHistoricalIntegritySource,\n  resolveCurrentStandingsIntegrityEvidence,\n} from \"./integrity-evidence.js\""
-        },
-        {
-          "line": 2,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n} from \"@cowards/spec\""
-        },
-        {
-          "line": 22,
-          "source": "./migrations.js",
-          "statementText": "import { migrate } from \"./migrations.js\""
-        },
-        {
-          "line": 7,
-          "source": "pg",
-          "statementText": "import type { Pool } from \"pg\""
-        },
-        {
-          "line": 8,
           "source": "vitest",
           "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
         },
         {
-          "line": 9,
+          "line": 11,
           "source": "./db.js",
           "statementText": "import { createDatabasePool } from \"./db.js\""
+        },
+        {
+          "line": 12,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  IntegrityEvidenceInputError,\n  createMatchExecutionEvidencePair,\n  createMatchSetIntegrityIdentity,\n  matchExecutionEvidencePairSqlValues,\n  matchSetExecutionEntrantSqlValues,\n  matchSetIntegritySqlValues,\n  parseMatchSetIntegrityIdentityRows,\n  persistMatchSetIntegrityIdentity,\n  resolveHistoricalIntegrityEvidence,\n  hashHistoricalIntegritySource,\n  hashEntrantLaneIdentity,\n  resolveCurrentStandingsIntegrityEvidence,\n} from \"./integrity-evidence.js\""
+        },
+        {
+          "line": 2,
+          "source": "node:fs",
+          "statementText": "import { readFileSync } from \"node:fs\""
+        },
+        {
+          "line": 26,
+          "source": "./migrations.js",
+          "statementText": "import { migrate } from \"./migrations.js\""
+        },
+        {
+          "line": 3,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  hashExecutableLaneIdentity,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 9,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
         }
       ],
       "persistenceImports": [],
@@ -4133,28 +4238,33 @@
       "imports": [
         {
           "line": 1,
-          "source": "node:crypto",
-          "statementText": "import { createHash } from \"node:crypto\""
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
-          "line": 14,
+          "line": 17,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 15,
+          "line": 18,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
         },
         {
           "line": 2,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
+          "line": 3,
           "source": "node:util",
           "statementText": "import { isDeepStrictEqual } from \"node:util\""
         },
         {
-          "line": 3,
+          "line": 4,
           "source": "@cowards/spec",
-          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLE_FIELDS,\n  EXECUTABLE_LANE_EVIDENCE_REASON_CODES,\n  EXECUTABLE_LANE_EVIDENCE_STATUSES,\n  resolveCanonicalCompatibilityTuple,\n  type CanonicalCompatibilityTuple,\n  type ExecutableLaneCertificateReference,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n  type RuntimeExecutionCompatibilityIdentity,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLE_FIELDS,\n  EXECUTABLE_LANE_EVIDENCE_REASON_CODES,\n  EXECUTABLE_LANE_EVIDENCE_STATUSES,\n  hashExecutableLaneIdentity,\n  resolveCanonicalCompatibilityTuple,\n  parseCanonicalJsonInstant,\n  type CanonicalCompatibilityTuple,\n  type ExecutableLaneCertificateReference,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n  type RuntimeExecutionCompatibilityIdentity,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -4211,27 +4321,42 @@
         {
           "line": 1,
           "source": "node:crypto",
-          "statementText": "import { randomUUID } from \"node:crypto\""
+          "statementText": "import { createHash, randomUUID } from \"node:crypto\""
+        },
+        {
+          "line": 10,
+          "source": "./integrity-evidence.js",
+          "statementText": "import { hashEntrantLaneIdentity } from \"./integrity-evidence.js\""
+        },
+        {
+          "line": 11,
+          "source": "./matchset-service.js",
+          "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
+        },
+        {
+          "line": 12,
+          "source": "./jobs.js",
+          "statementText": "import {\n  CLAIM_NEXT_MATCH_JOB_SQL,\n  DEFAULT_LEASE_MS,\n  claimNextMatchJob,\n  shouldExhaustRetries,\n} from \"./jobs.js\""
         },
         {
           "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 7,
           "source": "vitest",
           "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
         },
         {
-          "line": 3,
+          "line": 8,
           "source": "pg",
           "statementText": "import { Pool } from \"pg\""
         },
         {
-          "line": 4,
+          "line": 9,
           "source": "./migrations.js",
           "statementText": "import { migrate } from \"./migrations.js\""
-        },
-        {
-          "line": 5,
-          "source": "./jobs.js",
-          "statementText": "import {\n  CLAIM_NEXT_MATCH_JOB_SQL,\n  DEFAULT_LEASE_MS,\n  claimNextMatchJob,\n  shouldExhaustRetries,\n} from \"./jobs.js\""
         }
       ],
       "persistenceImports": [],
@@ -4239,8 +4364,14 @@
       "runtimeImports": [],
       "localBackendImports": [
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/jobs.ts",
-        "packages/persistence/src/migrations.ts"
+        "packages/persistence/src/match-service.ts",
+        "packages/persistence/src/matchset-service.ts",
+        "packages/persistence/src/migrations.ts",
+        "packages/persistence/src/presets.ts",
+        "packages/persistence/src/repositories.ts",
+        "packages/persistence/src/schema.ts"
       ],
       "usesDatabase": true,
       "claimsJobs": true,
@@ -4262,7 +4393,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/jobs.ts, packages/persistence/src/migrations.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/jobs.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts"
         }
       ]
     },
@@ -5501,25 +5632,25 @@
         {
           "line": 20,
           "source": "@cowards/spec",
-          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  encodeRuntimeEvidenceAuthorityPayload,\n  inspectRuntimeEvidenceAuthorityBundle,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  encodeRuntimeEvidenceAuthorityPayload,\n  hashExecutableLaneIdentity,\n  inspectRuntimeEvidenceAuthorityBundle,\n} from \"@cowards/spec\""
         },
         {
-          "line": 26,
+          "line": 27,
           "source": "pg",
           "statementText": "import { Pool } from \"pg\""
         },
         {
-          "line": 27,
+          "line": 28,
           "source": "vitest",
           "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
         },
         {
-          "line": 28,
+          "line": 29,
           "source": "./migrations.js",
           "statementText": "import { migrate } from \"./migrations.js\""
         },
         {
-          "line": 29,
+          "line": 30,
           "source": "./runtime-evidence-authority-publisher.js",
           "statementText": "import {\n  RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION,\n  encodeRuntimeEvidenceAuthorityImportPayload,\n  importAuthenticatedCertificateRevocation,\n  importAuthenticatedCertificateSupersession,\n  importAuthenticatedRuntimeLaneControl,\n  installRuntimeEvidenceAuthorityPublication,\n  prepareRuntimeEvidenceAuthorityPublication,\n  type RuntimeEvidenceAuthorityInstallFileSystem,\n  type RuntimeEvidenceAuthorityImportEnvelope,\n  type RuntimeEvidenceAuthorityImportPayload,\n  type RuntimeEvidenceAuthorityImportTrustRoot,\n} from \"./runtime-evidence-authority-publisher.js\""
         },
@@ -5595,7 +5726,7 @@
         {
           "line": 11,
           "source": "@cowards/spec",
-          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  buildRuntimeEvidenceAuthorityEnvelope,\n  encodeRuntimeEvidenceAuthorityPayload,\n  hashRuntimeEvidenceAuthorityPayload,\n  inspectRuntimeEvidenceAuthorityBundle,\n  type RuntimeEvidenceAuthorityPayload,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  CANONICAL_COMPATIBILITY_TUPLE_FIELDS,\n  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  buildRuntimeEvidenceAuthorityEnvelope,\n  encodeRuntimeEvidenceAuthorityPayload,\n  encodeRuntimeEvidenceAuthoritySignatureMessage,\n  hashRuntimeEvidenceAuthorityPayload,\n  inspectRuntimeEvidenceAuthorityBundle,\n  parseExecutableLaneIdentity,\n  type ExecutableLaneIdentity,\n  type RuntimeEvidenceAuthorityPayload,\n} from \"@cowards/spec\""
         },
         {
           "line": 2,
@@ -5603,7 +5734,7 @@
           "statementText": "import {\n  createHash,\n  createPublicKey,\n  randomUUID,\n  verify as verifySignature,\n  type KeyObject,\n} from \"node:crypto\""
         },
         {
-          "line": 21,
+          "line": 25,
           "source": "pg",
           "statementText": "import type { Pool, PoolClient, QueryResultRow } from \"pg\""
         },
@@ -8831,50 +8962,90 @@
       "imports": [
         {
           "line": 1,
-          "source": "vitest",
-          "statementText": "import { describe, expect, it, vi } from \"vitest\""
-        },
-        {
-          "line": 10,
-          "source": "./execute-match.js",
-          "statementText": "import {\n  executeRuntimeServiceRequest,\n  type RuntimeExecutionServiceDependencies,\n} from \"./execute-match.js\""
+          "source": "node:events",
+          "statementText": "import { once } from \"node:events\""
         },
         {
           "line": 14,
-          "source": "./runtime-execution-evidence.test-support.js",
-          "statementText": "import {\n  createFixtureRuntimeExecutionAuthorityContext,\n  type FixtureRuntimeExecutionAuthorityContext,\n} from \"./runtime-execution-evidence.test-support.js\""
-        },
-        {
-          "line": 18,
-          "source": "./runtime-evidence-authority.js",
-          "statementText": "import {\n  RuntimeEvidenceAuthorityLoadError,\n  type RuntimeEvidenceAuthorityLoader,\n  type VerifiedMountedRuntimeEvidenceAuthority,\n} from \"./runtime-evidence-authority.js\""
-        },
-        {
-          "line": 2,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  DEFAULT_RUNTIME_LIMITS,\n  INITIAL_BOUNDS,\n  RUNTIME_EXECUTION_SERVICE_VERSION,\n  type RuntimeExecutionServiceRequest,\n} from \"@cowards/spec\""
-        },
-        {
-          "line": 23,
-          "source": "./runtime-config.js",
-          "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
-        },
-        {
-          "line": 8,
           "source": "@cowards/runtime-js",
           "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
         },
         {
-          "line": 9,
+          "line": 15,
           "source": "@cowards/replay",
           "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
+        },
+        {
+          "line": 16,
+          "source": "./execute-match.js",
+          "statementText": "import {\n  executeRuntimeServiceRequest,\n  type RuntimeExecutionServiceDependencies,\n} from \"./execute-match.js\""
+        },
+        {
+          "line": 2,
+          "source": "node:fs",
+          "statementText": "import { mkdtempSync, rmSync, writeFileSync } from \"node:fs\""
+        },
+        {
+          "line": 20,
+          "source": "./runtime-execution-evidence.test-support.js",
+          "statementText": "import {\n  createFixtureDeploymentLaneIdentity,\n  createFixtureRuntimeExecutionAuthorityContext,\n  type FixtureRuntimeExecutionAuthorityContext,\n} from \"./runtime-execution-evidence.test-support.js\""
+        },
+        {
+          "line": 25,
+          "source": "./runtime-evidence-authority.js",
+          "statementText": "import {\n  RuntimeEvidenceAuthorityLoadError,\n  type RuntimeEvidenceAuthorityLoader,\n  type VerifiedMountedRuntimeEvidenceAuthority,\n} from \"./runtime-evidence-authority.js\""
+        },
+        {
+          "line": 3,
+          "source": "node:net",
+          "statementText": "import type { AddressInfo } from \"node:net\""
+        },
+        {
+          "line": 30,
+          "source": "./runtime-config.js",
+          "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
+        },
+        {
+          "line": 31,
+          "source": "./deployment-lane-registry.js",
+          "statementText": "import {\n  DEPLOYMENT_LANE_REGISTRY_SCHEMA_VERSION,\n  type DeploymentLaneProfile,\n} from \"./deployment-lane-registry.js\""
+        },
+        {
+          "line": 35,
+          "source": "./production-runtime-config.js",
+          "statementText": "import { runtimeServiceConfigFromEnvironment } from \"./production-runtime-config.js\""
+        },
+        {
+          "line": 36,
+          "source": "./server.js",
+          "statementText": "import { createRuntimeExecutionHttpServer } from \"./server.js\""
+        },
+        {
+          "line": 4,
+          "source": "node:os",
+          "statementText": "import { tmpdir } from \"node:os\""
+        },
+        {
+          "line": 5,
+          "source": "node:path",
+          "statementText": "import { join } from \"node:path\""
+        },
+        {
+          "line": 6,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it, vi } from \"vitest\""
+        },
+        {
+          "line": 7,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  DEFAULT_RUNTIME_LIMITS,\n  INITIAL_BOUNDS,\n  RUNTIME_EXECUTION_SERVICE_VERSION,\n  type ExecutableLaneIdentity,\n  type RuntimeExecutionServiceRequest,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 8,
+          "line": 14,
           "source": "@cowards/runtime-js",
           "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
         }
@@ -8903,6 +9074,77 @@
           "detail": "@cowards/runtime-js"
         }
       ]
+    },
+    {
+      "id": "apps-runtime-service-src-deployment-lane-registry",
+      "path": "apps/runtime-service/src/deployment-lane-registry.ts",
+      "kind": "runtime-service-module",
+      "role": "runtime-service",
+      "retirementAction": "keep-runtime-service-boundary",
+      "owner": "typescript_runtime_service",
+      "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
+      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
+      "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
+      "currentOwner": "typescript_runtime_service",
+      "normalBackendOwner": "typescript_runtime_service_only",
+      "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "runtime-service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 10,
+          "source": "./runtime-config.js",
+          "statementText": "import { RuntimeServiceConfigError } from \"./runtime-config.js\""
+        },
+        {
+          "line": 2,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
+          "line": 3,
+          "source": "node:fs",
+          "statementText": "import { readFileSync } from \"node:fs\""
+        },
+        {
+          "line": 4,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  resolveCanonicalCompatibilityTuple,\n  type CanonicalCompatibilityTuple,\n  type ExecutableLaneIdentity,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/runtime-service/src/deployment-lane-registry.ts",
+        "strategy-runtime-abi-v1.14"
+      ],
+      "scannerFindings": []
     },
     {
       "id": "apps-runtime-service-src-execute-match-test",
@@ -8958,10 +9200,10 @@
         {
           "line": 24,
           "source": "./runtime-execution-evidence.test-support.js",
-          "statementText": "import {\n  createFixtureRuntimeEvidenceAuthorityLoader,\n  createFixtureRuntimeExecutionEvidenceSnapshot,\n} from \"./runtime-execution-evidence.test-support.js\""
+          "statementText": "import {\n  createFixtureRuntimeEvidenceAuthorityLoader,\n  createFixtureDeploymentLaneIdentity,\n  createFixtureRuntimeExecutionEvidenceSnapshot,\n} from \"./runtime-execution-evidence.test-support.js\""
         },
         {
-          "line": 28,
+          "line": 29,
           "source": "./runtime-config.js",
           "statementText": "import {\n  createRuntimeServiceConfig,\n  RuntimeServiceConfigError,\n} from \"./runtime-config.js\""
         },
@@ -9037,19 +9279,14 @@
           "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
-          "line": 17,
+          "line": 18,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 18,
+          "line": 19,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
-        },
-        {
-          "line": 19,
-          "source": "@cowards/runtime-python",
-          "statementText": "import { createPythonRuntimeFromRevision } from \"@cowards/runtime-python\""
         },
         {
           "line": 2,
@@ -9058,50 +9295,55 @@
         },
         {
           "line": 20,
+          "source": "@cowards/runtime-python",
+          "statementText": "import { createPythonRuntimeFromRevision } from \"@cowards/runtime-python\""
+        },
+        {
+          "line": 21,
           "source": "@cowards/runtime-wasm-wasi",
           "statementText": "import { createWasmWasiRuntimeFromRevision } from \"@cowards/runtime-wasm-wasi\""
         },
         {
-          "line": 21,
+          "line": 22,
           "source": "@cowards/replay",
           "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
         },
         {
-          "line": 22,
+          "line": 23,
           "source": "@cowards/engine",
           "statementText": "import {\n  violation,\n  type RunMatchInput,\n  type StrategyRuntime,\n} from \"@cowards/engine\""
         },
         {
-          "line": 27,
+          "line": 28,
           "source": "./runtime-config.js",
           "statementText": "import type { RuntimeServiceConfig } from \"./runtime-config.js\""
         },
         {
-          "line": 28,
+          "line": 29,
           "source": "./redaction.js",
           "statementText": "import { publicSystemFailureMessage, redactedDiagnostics } from \"./redaction.js\""
         },
         {
-          "line": 29,
-          "source": "./runtime-evidence-authority.js",
-          "statementText": "import type {\n  RuntimeEvidenceAuthorityLoader,\n  VerifiedMountedRuntimeEvidenceAuthority,\n} from \"./runtime-evidence-authority.js\""
-        },
-        {
           "line": 3,
           "source": "@cowards/spec",
-          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  validateStrategyLanguageProviderRuntimeCompatibility,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type RuntimeEntrantAuthorityReference,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  hashExecutableLaneIdentity,\n  validateStrategyLanguageProviderRuntimeCompatibility,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type RuntimeEntrantAuthorityReference,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 30,
+          "source": "./runtime-evidence-authority.js",
+          "statementText": "import type {\n  RuntimeEvidenceAuthorityLoader,\n  VerifiedMountedRuntimeEvidenceAuthority,\n} from \"./runtime-evidence-authority.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 17,
+          "line": 18,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 18,
+          "line": 19,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
         }
@@ -9196,10 +9438,10 @@
         {
           "line": 31,
           "source": "./runtime-execution-evidence.test-support.js",
-          "statementText": "import {\n  createFixtureRuntimeEvidenceAuthorityLoader,\n  createFixtureRuntimeExecutionEvidenceSnapshot,\n} from \"./runtime-execution-evidence.test-support.js\""
+          "statementText": "import {\n  createFixtureRuntimeEvidenceAuthorityLoader,\n  createFixtureDeploymentLaneIdentity,\n  createFixtureRuntimeExecutionEvidenceSnapshot,\n} from \"./runtime-execution-evidence.test-support.js\""
         },
         {
-          "line": 35,
+          "line": 36,
           "source": "./runtime-config.js",
           "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
         }
@@ -9272,7 +9514,12 @@
         {
           "line": 3,
           "source": "./runtime-config.js",
-          "statementText": "import {\n  createRuntimeServiceConfig,\n  formatRuntimeServiceConfigLogLines,\n} from \"./runtime-config.js\""
+          "statementText": "import {\n  formatRuntimeServiceConfigLogLines,\n} from \"./runtime-config.js\""
+        },
+        {
+          "line": 6,
+          "source": "./production-runtime-config.js",
+          "statementText": "import { runtimeServiceConfigFromEnvironment } from \"./production-runtime-config.js\""
         },
         {
           "line": 7,
@@ -9314,6 +9561,62 @@
           "detail": "@cowards/runtime-js/worker"
         }
       ]
+    },
+    {
+      "id": "apps-runtime-service-src-production-runtime-config",
+      "path": "apps/runtime-service/src/production-runtime-config.ts",
+      "kind": "runtime-service-module",
+      "role": "runtime-service",
+      "retirementAction": "keep-runtime-service-boundary",
+      "owner": "typescript_runtime_service",
+      "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
+      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
+      "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
+      "currentOwner": "typescript_runtime_service",
+      "normalBackendOwner": "typescript_runtime_service_only",
+      "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "runtime-service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "./deployment-lane-registry.js",
+          "statementText": "import {\n  createDeploymentLaneIdentityResolver,\n  loadDeploymentLaneRegistry,\n} from \"./deployment-lane-registry.js\""
+        },
+        {
+          "line": 5,
+          "source": "./runtime-config.js",
+          "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/runtime-service/src/production-runtime-config.ts",
+        "strategy-runtime-abi-v1.14"
+      ],
+      "scannerFindings": []
     },
     {
       "id": "apps-runtime-service-src-redaction-test",
@@ -9446,6 +9749,11 @@
           "line": 1,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import {\n  createContainerSubprocessStrategyExecutionAdapter,\n  createSubprocessStrategyExecutionAdapter,\n  createWorkerThreadStrategyExecutionAdapter,\n  type StrategyExecutionAdapter,\n  type StrategyExecutionAdapterMetadata,\n} from \"@cowards/runtime-js/worker\""
+        },
+        {
+          "line": 8,
+          "source": "@cowards/spec",
+          "statementText": "import type { ExecutableLaneIdentity, StrategyRevision } from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -9527,7 +9835,7 @@
         {
           "line": 13,
           "source": "@cowards/spec",
-          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  buildRuntimeEvidenceAuthorityEnvelope,\n  encodeRuntimeEvidenceAuthorityPayload,\n  hashRuntimeEvidenceAuthorityPayload,\n  type RuntimeEvidenceAuthorityPayload,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  buildRuntimeEvidenceAuthorityEnvelope,\n  encodeRuntimeEvidenceAuthorityPayload,\n  encodeRuntimeEvidenceAuthoritySignatureMessage,\n  hashRuntimeEvidenceAuthorityPayload,\n  type RuntimeEvidenceAuthorityPayload,\n} from \"@cowards/spec\""
         },
         {
           "line": 2,
@@ -9535,7 +9843,7 @@
           "statementText": "import {\n  existsSync,\n  mkdtempSync,\n  readFileSync,\n  rmSync,\n  writeFileSync,\n} from \"node:fs\""
         },
         {
-          "line": 23,
+          "line": 24,
           "source": "./runtime-evidence-authority.js",
           "statementText": "import {\n  RUNTIME_EVIDENCE_AUTHORITY_PUBLIC_KEY_SCHEMA_VERSION,\n  RuntimeEvidenceAuthorityLoadError,\n  createNodeRuntimeEvidenceAuthorityFileSystem,\n  createRuntimeEvidenceAuthorityLoader,\n  runtimeEvidenceAuthorityConfigFromEnvironment,\n  type RuntimeEvidenceAuthorityFileSystem,\n} from \"./runtime-evidence-authority.js\""
         },
@@ -9592,20 +9900,20 @@
         {
           "line": 1,
           "source": "node:crypto",
-          "statementText": "import {\n  createPublicKey,\n  verify,\n  type KeyObject,\n} from \"node:crypto\""
+          "statementText": "import { createPublicKey, verify, type KeyObject } from \"node:crypto\""
         },
         {
-          "line": 18,
+          "line": 14,
           "source": "node:path",
           "statementText": "import { dirname } from \"node:path\""
         },
         {
-          "line": 19,
+          "line": 15,
           "source": "@cowards/spec",
           "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_BOOTSTRAP_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_LIMITS,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  RuntimeEvidenceAuthorityBundleError,\n  assertRuntimeEvidenceAuthorityAnchorInstalled,\n  evaluateRuntimeEvidenceAuthorityAntiRollback,\n  inspectRuntimeEvidenceAuthorityBundle,\n  parseRuntimeEvidenceAuthorityHighWaterRecord,\n  type RuntimeEvidenceAuthorityHighWaterRecord,\n  type RuntimeEvidenceAuthorityPayload,\n} from \"@cowards/spec\""
         },
         {
-          "line": 6,
+          "line": 2,
           "source": "node:fs",
           "statementText": "import {\n  closeSync,\n  fstatSync,\n  fsyncSync,\n  mkdirSync,\n  openSync,\n  readFileSync,\n  renameSync,\n  rmdirSync,\n  unlinkSync,\n  writeFileSync,\n} from \"node:fs\""
         }
@@ -9661,19 +9969,19 @@
           "statementText": "import { vi } from \"vitest\""
         },
         {
-          "line": 12,
+          "line": 15,
           "source": "./execute-match.js",
           "statementText": "import { hashRuntimeAuthoritySchedulingDecisionReference } from \"./execute-match.js\""
         },
         {
-          "line": 13,
+          "line": 16,
           "source": "./runtime-evidence-authority.js",
           "statementText": "import type {\n  RuntimeEvidenceAuthorityLoader,\n  VerifiedMountedRuntimeEvidenceAuthority,\n} from \"./runtime-evidence-authority.js\""
         },
         {
           "line": 2,
           "source": "@cowards/spec",
-          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  parseRuntimeEvidenceAuthorityPayload,\n  type ExecutableLaneEvidenceStatus,\n  type RuntimeEntrantAuthorityReference,\n  type RuntimeExecutionEvidenceSnapshot,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  hashExecutableLaneIdentity,\n  parseRuntimeEvidenceAuthorityPayload,\n  type ExecutableLaneEvidenceStatus,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantAuthorityReference,\n  type RuntimeExecutionEvidenceSnapshot,\n  type RuntimeExecutionServiceRequest,\n  type StrategyRevision,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -9727,29 +10035,34 @@
           "statementText": "import { once } from \"node:events\""
         },
         {
+          "line": 10,
+          "source": "./server.js",
+          "statementText": "import { createRuntimeExecutionHttpServer, readBody } from \"./server.js\""
+        },
+        {
           "line": 2,
           "source": "node:net",
           "statementText": "import type { AddressInfo } from \"node:net\""
         },
         {
           "line": 3,
+          "source": "node:stream",
+          "statementText": "import { Readable } from \"node:stream\""
+        },
+        {
+          "line": 4,
           "source": "vitest",
           "statementText": "import { afterEach, describe, expect, it } from \"vitest\""
         },
         {
-          "line": 4,
+          "line": 5,
           "source": "@cowards/spec",
           "statementText": "import {\n  RUNTIME_EXECUTION_SERVICE_VERSION,\n  RuntimeExecutionServiceResponseSchema,\n} from \"@cowards/spec\""
         },
         {
-          "line": 8,
+          "line": 9,
           "source": "./runtime-config.js",
           "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
-        },
-        {
-          "line": 9,
-          "source": "./server.js",
-          "statementText": "import { createRuntimeExecutionHttpServer } from \"./server.js\""
         }
       ],
       "persistenceImports": [],
@@ -9819,20 +10132,25 @@
         {
           "line": 30,
           "source": "./runtime-config.js",
-          "statementText": "import {\n  createRuntimeServiceConfig,\n  type RuntimeServiceConfig,\n} from \"./runtime-config.js\""
+          "statementText": "import type { RuntimeServiceConfig } from \"./runtime-config.js\""
         },
         {
-          "line": 34,
+          "line": 31,
+          "source": "./production-runtime-config.js",
+          "statementText": "import { runtimeServiceConfigFromEnvironment } from \"./production-runtime-config.js\""
+        },
+        {
+          "line": 32,
           "source": "./execute-match.js",
           "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
         },
         {
-          "line": 35,
+          "line": 33,
           "source": "./redaction.js",
           "statementText": "import { redactedErrorMessage } from \"./redaction.js\""
         },
         {
-          "line": 36,
+          "line": 34,
           "source": "./runtime-evidence-authority.js",
           "statementText": "import type { RuntimeEvidenceAuthorityLoader } from \"./runtime-evidence-authority.js\""
         },

@@ -1,5 +1,20 @@
-import { createHash } from "node:crypto"
-import type { MatchSetId } from "@cowards/spec"
+import { Buffer } from "node:buffer"
+import {
+  createHash,
+  createPrivateKey,
+  createPublicKey,
+  sign,
+} from "node:crypto"
+import {
+  encodeRuntimeEvidenceAttestationPayload,
+  hashExecutableLaneIdentity,
+  hashRuntimeEvidenceGraph,
+  type MatchSetId,
+  type RuntimeEvidenceAttestationPayload,
+  type RuntimeEvidenceBytes,
+  type RuntimeEvidenceGraph,
+  type RuntimeEvidenceTrustedProducer,
+} from "@cowards/spec"
 import type { Pool } from "pg"
 import { migrate } from "./migrations.js"
 import { createDevelopmentSeedData } from "./seed.js"
@@ -7,11 +22,12 @@ import { createRepositories } from "./repositories.js"
 import {
   createMatchSetService,
   resolveMatchSetExecutionEvidence,
+  type IntegritySchedulingIdentity,
   type MatchSetExecutionEvidenceResolver,
 } from "./matchset-service.js"
 import { refreshMatchSetStatus } from "./matchset-status.js"
 import type { MatchSetStatus } from "./schema.js"
-import { hashEntrantLaneIdentity } from "./integrity-evidence.js"
+import { importVerifiedRuntimeEvidenceAttestation } from "./runtime-evidence-import.js"
 
 export interface DevelopmentMatchSetSmokeResult {
   matchSetId: MatchSetId
@@ -22,108 +38,237 @@ export interface DevelopmentMatchSetSmokeResult {
   degraded: boolean
 }
 
-const developmentEvidenceHash = (value: string): string =>
+const developmentEvidenceHash = (value: string | Uint8Array): string =>
   createHash("sha256").update(value).digest("hex")
+
+const developmentEvidenceEncoder = new TextEncoder()
+const developmentEvidencePrivateKey = createPrivateKey({
+  key: Buffer.concat([
+    Buffer.from("302e020100300506032b657004220420", "hex"),
+    createHash("sha256")
+      .update("cowards-game:development-smoke-evidence-key:v1", "utf8")
+      .digest(),
+  ]),
+  format: "der",
+  type: "pkcs8",
+})
+const developmentEvidencePublicKey = createPublicKey(
+  developmentEvidencePrivateKey,
+)
+
+const developmentEvidenceBytes = (
+  evidence: IntegritySchedulingIdentity["executionEntrants"][string],
+): RuntimeEvidenceBytes => {
+  const encode = (label: string): Uint8Array =>
+    developmentEvidenceEncoder.encode(
+      `cowards-game:development-smoke-evidence:v1:${evidence.strategyRevisionId}:${label}`,
+    )
+  const artifactLabel = evidence.laneIdentity.artifactId.startsWith("fixture:")
+    ? evidence.laneIdentity.artifactId.slice("fixture:".length)
+    : evidence.laneIdentity.artifactId
+  const artifact = developmentEvidenceEncoder.encode(
+    `fixture:v1.37:${artifactLabel}`,
+  )
+  if (
+    developmentEvidenceHash(artifact) !==
+    evidence.laneIdentity.artifactSha256
+  ) {
+    throw new Error(
+      "Development smoke fixture artifact bytes do not match the resolved lane identity.",
+    )
+  }
+  return Object.freeze({
+    root: encode("root"),
+    command: encode("command"),
+    corpus: encode("corpus"),
+    policy: encode("policy"),
+    toolchain: encode("toolchain"),
+    adapter: encode("adapter"),
+    artifact,
+    result: encode("result"),
+    trace: encode("trace"),
+    gate: encode("gate:containment"),
+  })
+}
+
+const developmentContainmentImport = (
+  evidence: IntegritySchedulingIdentity["executionEntrants"][string],
+): {
+  producer: RuntimeEvidenceTrustedProducer
+  payload: RuntimeEvidenceAttestationPayload
+  evidenceBytes: RuntimeEvidenceBytes
+} => {
+  const evidenceBytes = developmentEvidenceBytes(evidence)
+  const hashNode = (nodeId: string): string =>
+    developmentEvidenceHash(evidenceBytes[nodeId]!)
+  const nodeKinds = {
+    root: "attestation-root",
+    command: "command",
+    corpus: "corpus",
+    policy: "policy",
+    toolchain: "toolchain",
+    adapter: "adapter",
+    artifact: "artifact",
+    result: "result-manifest",
+    trace: "result-trace",
+    gate: "gate-result",
+  } as const
+  const graph: RuntimeEvidenceGraph = {
+    rootNodeId: "root",
+    nodes: Object.entries(nodeKinds).map(([nodeId, kind]) => ({
+      nodeId,
+      kind,
+      sha256: hashNode(nodeId),
+    })),
+    edges: Object.keys(nodeKinds)
+      .filter((nodeId) => nodeId !== "root")
+      .map((nodeId) => ({ fromNodeId: "root", toNodeId: nodeId })),
+  }
+  const producer: RuntimeEvidenceTrustedProducer = {
+    producerId: "fixture:development-smoke-producer:v1",
+    keyId: "fixture:development-smoke-ed25519-key:v1",
+    trustDomain: "fixture",
+    kind: "containment",
+    schemaVersion: "runtime-evidence-attestation-v1",
+    commandId: "fixture:development-smoke-command:v1",
+    commandSha256: hashNode("command"),
+    corpusId: evidence.laneIdentity.corpusId,
+    corpusSha256: hashNode("corpus"),
+    policyId: evidence.laneIdentity.policyId,
+    policySha256: hashNode("policy"),
+    requiredGateIds: ["containment"],
+    publicKeyPem: developmentEvidencePublicKey
+      .export({ type: "spki", format: "pem" })
+      .toString(),
+  }
+  return {
+    producer,
+    evidenceBytes,
+    payload: {
+      kind: "containment",
+      schemaVersion: producer.schemaVersion,
+      producerId: producer.producerId,
+      producerKeyId: producer.keyId,
+      trustDomain: "fixture",
+      command: {
+        id: producer.commandId,
+        sha256: producer.commandSha256,
+        nodeId: "command",
+      },
+      corpus: {
+        id: producer.corpusId,
+        sha256: producer.corpusSha256,
+        nodeId: "corpus",
+      },
+      policy: {
+        id: producer.policyId,
+        sha256: producer.policySha256,
+        nodeId: "policy",
+      },
+      laneIdentity: evidence.laneIdentity,
+      laneIdentitySha256: hashExecutableLaneIdentity(evidence.laneIdentity),
+      runtime: {
+        id: evidence.laneIdentity.runtimeId,
+        version: evidence.laneIdentity.runtimeVersion,
+      },
+      toolchain: {
+        id: evidence.laneIdentity.toolchainId,
+        version: evidence.laneIdentity.toolchainVersion,
+        nodeId: "toolchain",
+        sha256: hashNode("toolchain"),
+      },
+      adapter: {
+        id: evidence.laneIdentity.adapterId,
+        version: evidence.laneIdentity.adapterVersion,
+        nodeId: "adapter",
+        sha256: hashNode("adapter"),
+      },
+      artifact: {
+        id: evidence.laneIdentity.artifactId,
+        sha256: evidence.laneIdentity.artifactSha256,
+        nodeId: "artifact",
+      },
+      result: {
+        manifestId: `fixture:development-smoke-result:${evidence.strategyRevisionId}`,
+        manifestNodeId: "result",
+        manifestSha256: hashNode("result"),
+        originalEvidenceNodeId: "trace",
+        originalEvidenceSha256: hashNode("trace"),
+        graphSha256: hashRuntimeEvidenceGraph(graph),
+        digests: [
+          {
+            id: "containment-trace",
+            nodeId: "trace",
+            sha256: hashNode("trace"),
+          },
+        ],
+      },
+      gateResults: [
+        {
+          gateId: "containment",
+          passed: true,
+          nodeId: "gate",
+          sha256: hashNode("gate"),
+        },
+      ],
+      graph,
+      issuedAt: "2026-01-01T00:00:00.000Z",
+      validUntil: "2099-12-31T23:59:59.999Z",
+      registryGeneration:
+        evidence.containmentCertificateRef.registryGeneration,
+      derivedCertificateVersion: "fixture-runtime-certificate-v1",
+    },
+  }
+}
 
 const seedDevelopmentFixtureEvidence = async (
   pool: Pool,
-  executionEntrants: Awaited<
-    ReturnType<typeof resolveMatchSetExecutionEvidence>
-  >["executionEntrants"],
-): Promise<void> => {
-  for (const evidence of Object.values(executionEntrants)) {
-    const reference = evidence.containmentCertificateRef
-    const attestationId = `fixture:attestation:containment:${evidence.strategyRevisionId}`
-    const laneHash = hashEntrantLaneIdentity(evidence.laneIdentity)
-    const commandId = `fixture:command:containment:${evidence.strategyRevisionId}`
-    const evidenceHash = developmentEvidenceHash(
-      `fixture:evidence:${evidence.strategyRevisionId}`,
+  identity: IntegritySchedulingIdentity,
+): Promise<IntegritySchedulingIdentity> => {
+  const importedEntrants: Record<
+    string,
+    IntegritySchedulingIdentity["executionEntrants"][string]
+  > = {}
+  for (const [entrantKey, evidence] of Object.entries(
+    identity.executionEntrants,
+  )) {
+    const fixture = developmentContainmentImport(evidence)
+    const payloadBytes = encodeRuntimeEvidenceAttestationPayload(
+      fixture.payload,
     )
-    const graphHash = developmentEvidenceHash(
-      `fixture:graph:${evidence.strategyRevisionId}`,
-    )
-    await pool.query(
-      `insert into runtime_evidence_verified_attestations
-        (id,attestation_sha256,verification_status,certificate_kind,
-         producer_id,producer_key_id,trust_domain,schema_version,command_id,
-         command_digest,corpus_id,corpus_hash,policy_id,policy_hash,runtime_id,
-         runtime_version,toolchain_id,toolchain_version,adapter_id,
-         adapter_version,artifact_id,artifact_hash,lane_identity_hash,
-         semantic_tuple_id,result_manifest_hash,result_graph_hash,
-         original_evidence_hash,derived_certificate_version,
-         derived_certificate_record_hash,registry_generation,lane_identity,
-         issued_at,valid_until)
-       values ($1,$2,'passed','containment',$3,'fixture-key','fixture',$4,$5,
-         $6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,
-         $23,$24,$25,$26,$27,'2026-01-01T00:00:00Z','2099-12-31T23:59:59Z')
-       on conflict (id) do nothing`,
-      [
-        attestationId,
-        developmentEvidenceHash(attestationId),
-        evidence.laneIdentity.providerId,
-        "runtime-evidence-attestation-v1",
-        commandId,
-        developmentEvidenceHash(commandId),
-        evidence.laneIdentity.corpusId,
-        evidenceHash,
-        evidence.laneIdentity.policyId,
-        evidenceHash,
-        evidence.laneIdentity.runtimeId,
-        evidence.laneIdentity.runtimeVersion,
-        evidence.laneIdentity.toolchainId,
-        evidence.laneIdentity.toolchainVersion,
-        evidence.laneIdentity.adapterId,
-        evidence.laneIdentity.adapterVersion,
-        evidence.laneIdentity.artifactId,
-        evidence.laneIdentity.artifactSha256,
-        laneHash,
-        evidence.laneIdentity.semanticTupleId,
-        developmentEvidenceHash(`fixture:manifest:${evidence.strategyRevisionId}`),
-        graphHash,
-        evidenceHash,
-        reference.certificateVersion,
-        reference.certificateRecordHash,
-        reference.registryGeneration,
-        evidence.laneIdentity,
-      ],
-    )
-    await pool.query(
-      `insert into runtime_evidence_certificates
-        (id,certificate_kind,certificate_version,certificate_record_hash,
-         certificate_status,verified_attestation_id,
-         verified_attestation_status,producer_id,schema_version,command_id,
-         command_digest,corpus_id,corpus_hash,policy_id,policy_hash,
-         toolchain_id,toolchain_version,artifact_id,artifact_hash,
-         lane_identity_hash,lane_identity,result_graph_hash,
-         registry_generation,issued_at,fresh_until)
-       values ($1,'containment',$2,$3,'passed',$4,'passed',$5,$6,$7,$8,$9,
-         $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-         '2026-01-01T00:00:00Z','2099-12-31T23:59:59Z')
-       on conflict (id) do nothing`,
-      [
-        reference.certificateId,
-        reference.certificateVersion,
-        reference.certificateRecordHash,
-        attestationId,
-        evidence.laneIdentity.providerId,
-        "runtime-evidence-attestation-v1",
-        commandId,
-        developmentEvidenceHash(commandId),
-        evidence.laneIdentity.corpusId,
-        evidenceHash,
-        evidence.laneIdentity.policyId,
-        evidenceHash,
-        evidence.laneIdentity.toolchainId,
-        evidence.laneIdentity.toolchainVersion,
-        evidence.laneIdentity.artifactId,
-        evidence.laneIdentity.artifactSha256,
-        laneHash,
-        evidence.laneIdentity,
-        graphHash,
-        reference.registryGeneration,
-      ],
-    )
+    const imported = await importVerifiedRuntimeEvidenceAttestation(pool, {
+      mode: "fixture",
+      attestation: {
+        ...fixture.payload,
+        signatureBase64: sign(
+          null,
+          payloadBytes,
+          developmentEvidencePrivateKey,
+        ).toString("base64"),
+      },
+      evidenceBytes: fixture.evidenceBytes,
+      verificationInstant: "2026-05-20T00:00:00.000Z",
+      trustedProducers: [fixture.producer],
+    })
+    if (imported.certificate.kind !== "containment") {
+      throw new Error(
+        "Development smoke fixture import returned the wrong certificate kind.",
+      )
+    }
+    importedEntrants[entrantKey] = Object.freeze({
+      ...evidence,
+      containmentCertificateRef: Object.freeze({
+        ...imported.certificate,
+        kind: "containment" as const,
+      }),
+    })
   }
+  return Object.freeze({
+    compatibility: identity.compatibility,
+    authorityBundleHash: identity.authorityBundleHash,
+    registryGeneration: identity.registryGeneration,
+    executionEntrants: Object.freeze(importedEntrants),
+  })
 }
 
 export const runDevelopmentMatchSetSmoke = async (
@@ -144,7 +289,7 @@ export const runDevelopmentMatchSetSmoke = async (
       "Development smoke requires explicit fixture-domain evidence authority.",
     )
   }
-  const integrityIdentity = await resolveMatchSetExecutionEvidence({
+  const resolvedIntegrityIdentity = await resolveMatchSetExecutionEvidence({
     resolver: options.evidenceResolver,
     purpose: "development",
     evaluationInstant: "2026-05-20T00:00:00.000Z",
@@ -156,9 +301,9 @@ export const runDevelopmentMatchSetSmoke = async (
 
   await migrate(pool)
 
-  await seedDevelopmentFixtureEvidence(
+  const integrityIdentity = await seedDevelopmentFixtureEvidence(
     pool,
-    integrityIdentity.executionEntrants,
+    resolvedIntegrityIdentity,
   )
   const repositories = createRepositories(pool)
   for (const user of seed.users) {

@@ -18,6 +18,43 @@ const expectBypass = (
   expect(result.findings.map((finding) => finding.code)).toContain(expectedCode)
 }
 
+const repositoryContractPaths = [
+  "packages/persistence/src/runtime-evidence-import.ts",
+  "packages/persistence/src/runtime-evidence-authority-publisher.ts",
+  "packages/spec/src/runtime-evidence-authority-bundle.ts",
+  "packages/spec/src/runtime-evidence-authority-bundle.test.ts",
+  "apps/runtime-service/src/runtime-evidence-authority.ts",
+  "apps/runtime-service/src/execute-match.test.ts",
+  "apps/runtime-service/src/counted-safety.test.ts",
+  "apps/runtime-service/src/four-language-parity.test.ts",
+  "apps/go-backend/runtime_evidence_authority.go",
+  "apps/go-backend/integrity_creation.go",
+] as const
+
+const repositoryContractSources = (): Record<string, string> =>
+  Object.fromEntries(
+    repositoryContractPaths.map((repoPath) => [
+      repoPath,
+      readFileSync(path.resolve(process.cwd(), repoPath), "utf8"),
+    ]),
+  )
+
+const expectRepositoryContractFinding = (
+  sources: Readonly<Record<string, string>>,
+  repoPath: string,
+  code: string,
+): void => {
+  expect(
+    analyzeV137IntegritySources(sources, {
+      enforceRepositoryContracts: true,
+    }).findings,
+  ).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ path: repoPath, code }),
+    ]),
+  )
+}
+
 describe("v1.37 creation inventory and caller bypass monitor", () => {
   it("accounts for the repository creation inventory", () => {
     expect(analyzeV137IntegrityBoundaries().findings).toEqual([])
@@ -128,6 +165,11 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
       "RAW_CERTIFICATE_WRITER",
     ],
     [
+      "packages/persistence/src/raw-attestation.ts",
+      "await client.query('insert into runtime_evidence_verified_attestations values ($1)')",
+      "RAW_CERTIFICATE_WRITER",
+    ],
+    [
       "packages/persistence/src/fixture-promotion.ts",
       "if (evidence.trustDomain === 'fixture') return 'counted'",
       "FIXTURE_PRODUCTION_PROMOTION",
@@ -189,6 +231,92 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
         enforceKnownDebtFingerprints: true,
       }).findings.map((finding) => finding.code),
     ).toContain("KNOWN_PHASE_257_DEBT_DRIFT")
+  })
+
+  it("pins domain-separated payload-byte authority verification and its negative guards", () => {
+    const sources = repositoryContractSources()
+    expect(
+      analyzeV137IntegritySources(sources, {
+        enforceRepositoryContracts: true,
+      }).findings,
+    ).toEqual([])
+
+    const specPath = "packages/spec/src/runtime-evidence-authority-bundle.ts"
+    expectRepositoryContractFinding(
+      {
+        ...sources,
+        [specPath]: sources[specPath]!.replace(
+          "textEncoder.encode(RUNTIME_EVIDENCE_AUTHORITY_SIGNATURE_DOMAIN)",
+          'textEncoder.encode("removed-signature-domain")',
+        ),
+      },
+      specPath,
+      "AUTHORITY_CHAIN_DRIFT",
+    )
+    expectRepositoryContractFinding(
+      {
+        ...sources,
+        [specPath]: sources[specPath]!.replace(
+          "signedMessageBytes: encodeRuntimeEvidenceAuthoritySignatureMessage({",
+          "signedMessageBytes: payloadBytes, void ({",
+        ),
+      },
+      specPath,
+      "AUTHORITY_CHAIN_DRIFT",
+    )
+
+    const runtimePath =
+      "apps/runtime-service/src/runtime-evidence-authority.ts"
+    expectRepositoryContractFinding(
+      {
+        ...sources,
+        [runtimePath]: sources[runtimePath]!.replace(
+          "publicKeyDescriptor.publicKey,",
+          "createPublicKey('removed-pinned-key'),",
+        ),
+      },
+      runtimePath,
+      "AUTHORITY_CHAIN_DRIFT",
+    )
+
+    const negativePath =
+      "packages/spec/src/runtime-evidence-authority-bundle.test.ts"
+    expectRepositoryContractFinding(
+      {
+        ...sources,
+        [negativePath]: sources[negativePath]!.replace(
+          "relabeledDomain.trustDomain =",
+          "removedDomainGuard =",
+        ),
+      },
+      negativePath,
+      "AUTHORITY_CHAIN_DRIFT",
+    )
+  })
+
+  it("pins separate publication-head and installed-publication receipt locks", () => {
+    const sources = repositoryContractSources()
+    const goPath = "apps/go-backend/integrity_creation.go"
+
+    expectRepositoryContractFinding(
+      {
+        ...sources,
+        [goPath]: sources[goPath]!.replace(
+          "where singleton = true\n\t\t for share",
+          "where singleton = true",
+        ),
+      },
+      goPath,
+      "GO_RECEIPT_AUTHORITY_DRIFT",
+    )
+    expectRepositoryContractFinding(
+      {
+        ...sources,
+        [goPath]: sources[goPath]!.replace("for share of p", ""),
+      },
+      goPath,
+      "GO_RECEIPT_AUTHORITY_DRIFT",
+    )
   })
 })
 

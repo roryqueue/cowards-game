@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto"
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import type { Pool } from "pg"
 import { defaultDatabaseUrl } from "./db.js"
@@ -10,6 +12,14 @@ describe("development smoke helper", () => {
       "postgresql://cowards:cowards@localhost:5432/cowards_game",
     )
     expect(runDevelopmentMatchSetSmoke).toBeTypeOf("function")
+  })
+
+  it("routes fixture evidence through the sole verified import authority", () => {
+    const source = readFileSync(new URL("./dev-smoke.ts", import.meta.url), "utf8")
+    expect(source).toContain("importVerifiedRuntimeEvidenceAttestation")
+    expect(source).not.toMatch(
+      /insert\s+into\s+runtime_evidence_(?:verified_attestations|certificates)/iu,
+    )
   })
 
   it("fails before touching PostgreSQL without explicit fixture authority", async () => {
@@ -48,10 +58,24 @@ describe("development smoke helper", () => {
           result.status,
         )
         expect(result.chronicleCount).toBeGreaterThanOrEqual(0)
+        const imported = await pool.query<{ count: number }>(
+          `select count(*)::integer as count
+             from match_set_execution_entrants entrant
+             join runtime_evidence_certificates certificate
+               on certificate.id = entrant.containment_certificate_id
+             join runtime_evidence_verified_attestations attestation
+               on attestation.id = certificate.verified_attestation_id
+            where entrant.match_set_id = $1
+              and certificate.certificate_kind = 'containment'
+              and certificate.certificate_status = 'passed'
+              and attestation.verification_status = 'passed'
+              and attestation.trust_domain = 'fixture'`,
+          [result.matchSetId],
+        )
+        expect(imported.rows[0]?.count).toBe(2)
       } finally {
         await pool.end()
       }
     },
   )
 })
-import { randomUUID } from "node:crypto"

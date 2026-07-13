@@ -704,10 +704,16 @@ const analyzeSource = (
     add("PUBLIC_EXECUTION_ROUTE", fileNode, "Public web routes cannot own Strategy or Match execution.")
   }
   if (
-    /insert\s+into\s+runtime_evidence_certificates\b/iu.test(source) &&
+    /insert\s+into\s+runtime_evidence_(?:verified_attestations|certificates)\b/iu.test(
+      source,
+    ) &&
     repoPath !== "packages/persistence/src/runtime-evidence-import.ts"
   ) {
-    add("RAW_CERTIFICATE_WRITER", fileNode, "Certificates may be written only by verified attestation import.")
+    add(
+      "RAW_CERTIFICATE_WRITER",
+      fileNode,
+      "Verified attestations and certificates may be written only by verified attestation import.",
+    )
   }
   if (/trustDomain\s*===?\s*["']fixture["'][\s\S]{0,120}["']counted["']/u.test(source)) {
     add("FIXTURE_PRODUCTION_PROMOTION", fileNode, "Fixture trust cannot grant production counted eligibility.")
@@ -794,6 +800,21 @@ export const analyzeV137IntegritySources = (
         })
       }
     }
+    const requirePattern = (
+      repoPath: string,
+      pattern: RegExp,
+      expectation: string,
+      code: V137IntegrityBoundaryFindingCode,
+    ): void => {
+      if (!pattern.test(sources[repoPath] ?? "")) {
+        findings.push({
+          code,
+          path: repoPath,
+          line: 1,
+          detail: `Required integrity protocol missing: ${expectation}.`,
+        })
+      }
+    }
     requireMarkers(
       "packages/persistence/src/runtime-evidence-import.ts",
       ["importVerifiedRuntimeEvidenceAttestation", "verifyRuntimeEvidenceAttestation(immutableInput)", "Sole application-level certificate writer"],
@@ -806,7 +827,36 @@ export const analyzeV137IntegritySources = (
     )
     requireMarkers(
       "apps/runtime-service/src/runtime-evidence-authority.ts",
-      ["readBoundedDescriptor", "verify(null", "installHighWater", "deploymentPin"],
+      ["readBoundedDescriptor", "installHighWater", "deploymentPin"],
+      "AUTHORITY_CHAIN_DRIFT",
+    )
+    requirePattern(
+      "packages/spec/src/runtime-evidence-authority-bundle.ts",
+      /encodeRuntimeEvidenceAuthoritySignatureMessage[\s\S]{0,1800}RUNTIME_EVIDENCE_AUTHORITY_SIGNATURE_DOMAIN[\s\S]{0,800}hashRuntimeEvidenceAuthorityPayload\(input\.payloadBytes\)[\s\S]{0,200}input\.payloadBytes/gu,
+      "domain-separated signature framing must bind the payload hash and exact payload bytes",
+      "AUTHORITY_CHAIN_DRIFT",
+    )
+    requirePattern(
+      "packages/spec/src/runtime-evidence-authority-bundle.ts",
+      /signedMessageBytes:\s*encodeRuntimeEvidenceAuthoritySignatureMessage\([\s\S]{0,500}payloadBytes/gu,
+      "bundle inspection must verify the canonical signature message built from exact payload bytes",
+      "AUTHORITY_CHAIN_DRIFT",
+    )
+    requirePattern(
+      "apps/runtime-service/src/runtime-evidence-authority.ts",
+      /verifySignature:\s*\(\{\s*signedMessageBytes,\s*signature\s*\}\)[\s\S]{0,240}signedMessageBytes[\s\S]{0,160}publicKeyDescriptor\.publicKey[\s\S]{0,160}signature/gu,
+      "runtime-service must verify the inspector-provided canonical message bytes with the pinned public key",
+      "AUTHORITY_CHAIN_DRIFT",
+    )
+    requireMarkers(
+      "packages/spec/src/runtime-evidence-authority-bundle.test.ts",
+      [
+        "trustedKeyIds: []",
+        "verifySignature: () => false",
+        "parsed.payloadSha256 =",
+        "relabeledDomain.trustDomain =",
+        "relabeledKey.keyId =",
+      ],
       "AUTHORITY_CHAIN_DRIFT",
     )
     requireMarkers(
@@ -816,7 +866,24 @@ export const analyzeV137IntegritySources = (
     )
     requireMarkers(
       "apps/go-backend/integrity_creation.go",
-      ["lockInstalledAuthorityReceipt", "for share of h, p", "sourceManifestHash", "sourceSetCount"],
+      [
+        "lockAuthorityPublicationTransitions",
+        "lockInstalledAuthorityReceipt",
+        "sourceManifestHash",
+        "sourceSetCount",
+      ],
+      "GO_RECEIPT_AUTHORITY_DRIFT",
+    )
+    requirePattern(
+      "apps/go-backend/integrity_creation.go",
+      /func lockAuthorityPublicationTransitions[\s\S]{0,700}runtime_evidence_authority_publication_head[\s\S]{0,220}for share/gu,
+      "authority publication transitions require their own shared head lock",
+      "GO_RECEIPT_AUTHORITY_DRIFT",
+    )
+    requirePattern(
+      "apps/go-backend/integrity_creation.go",
+      /func \(server \*LiveServer\) lockInstalledAuthorityReceipt[\s\S]{0,500}lockAuthorityPublicationTransitions[\s\S]{0,2200}runtime_evidence_authority_installed_head installed_head[\s\S]{0,900}for share of p/gu,
+      "installed receipt validation must first lock publication transitions and then lock the selected publication row",
       "GO_RECEIPT_AUTHORITY_DRIFT",
     )
     requireMarkers(
@@ -898,6 +965,7 @@ const collectTypeScriptSources = (
     walk(path.join(repoRoot, root))
   }
   for (const repoPath of [
+    "packages/spec/src/runtime-evidence-authority-bundle.test.ts",
     "apps/runtime-service/src/execute-match.test.ts",
     "apps/runtime-service/src/counted-safety.test.ts",
     "apps/runtime-service/src/four-language-parity.test.ts",

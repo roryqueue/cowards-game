@@ -1,9 +1,11 @@
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { isDeepStrictEqual } from "node:util"
 import {
   CANONICAL_COMPATIBILITY_TUPLE_FIELDS,
   EXECUTABLE_LANE_EVIDENCE_REASON_CODES,
   EXECUTABLE_LANE_EVIDENCE_STATUSES,
+  hashExecutableLaneIdentity,
   resolveCanonicalCompatibilityTuple,
   parseCanonicalJsonInstant,
   type CanonicalCompatibilityTuple,
@@ -711,13 +713,7 @@ const entrantHashValues = (
 
 export const hashEntrantLaneIdentity = (
   identity: Readonly<ExecutableLaneIdentity>,
-): string =>
-  framedHash("cowards-game:executable-lane-identity:v1", [
-    ...LANE_IDENTITY_STRING_FIELDS.map((field) => identity[field]),
-    ...CANONICAL_COMPATIBILITY_TUPLE_FIELDS.map(
-      (field) => identity.semanticTuple[field],
-    ),
-  ])
+): string => hashExecutableLaneIdentity(identity)
 
 export const createMatchSetIntegrityIdentity = (
   input: MatchSetIntegrityIdentityInput | unknown,

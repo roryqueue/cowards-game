@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto"
 import { readFileSync } from "node:fs"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  hashExecutableLaneIdentity,
   type ExecutableLaneIdentity,
   type RuntimeEntrantExecutionEvidence,
 } from "@cowards/spec"
@@ -19,6 +20,7 @@ import {
   persistMatchSetIntegrityIdentity,
   resolveHistoricalIntegrityEvidence,
   hashHistoricalIntegritySource,
+  hashEntrantLaneIdentity,
   resolveCurrentStandingsIntegrityEvidence,
 } from "./integrity-evidence.js"
 import { migrate } from "./migrations.js"
@@ -233,6 +235,13 @@ describe("current standings integrity resolution", () => {
 })
 
 describe("exact MatchSet integrity identity", () => {
+  it("uses the canonical spec-owned executable lane identity hash", () => {
+    const lane = laneIdentity(0)
+    expect(hashEntrantLaneIdentity(lane)).toBe(
+      hashExecutableLaneIdentity(lane),
+    )
+  })
+
   it("uses the shared strict scheduling-instant vectors and interval order", () => {
     const vectors = JSON.parse(
       readFileSync(
