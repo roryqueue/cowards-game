@@ -35,7 +35,7 @@ v1.37 establishes the smallest complete trust substrate needed before serious co
   3. Operators can classify affected historical results, invalidate and recompute derived standings when needed, while the original Match evidence and v1.4 interpretation remain immutable.
   4. Public/default safety surfaces expose only safe classifications and evidence identifiers, and structural monitors reject duplicate authorities and stale execution entry points.
 
-**Plans:** 1/19 plans executed
+**Plans:** 2/19 plans executed
 
 Plans:
 **Wave 1**
@@ -44,7 +44,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 256-02-PLAN.md — Derive lane status and safe projections from exact current containment and conformance evidence.
+- [x] 256-02-PLAN.md — Derive lane status and safe projections from exact current containment and conformance evidence.
 - [ ] 256-19-PLAN.md — Retire every direct TypeScript worker purpose before claim and guard the boundary structurally.
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -181,7 +181,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 256. Counted Safety and Canonical Authority | 1/19 | In Progress|  |
+| 256. Counted Safety and Canonical Authority | 2/19 | In Progress|  |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 0/TBD | Not started | - |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 0/TBD | Not started | - |
 | 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |

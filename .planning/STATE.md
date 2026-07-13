@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
-stopped_at: Completed 256-01-PLAN.md
-last_updated: "2026-07-13T01:21:19.632Z"
+stopped_at: Completed 256-02-PLAN.md
+last_updated: "2026-07-13T02:00:48.001Z"
 last_activity: 2026-07-13
-last_activity_desc: Plan 256-01 established canonical authority and semantic tuple identity
+last_activity_desc: Plan 256-02 established exact runtime evidence eligibility and safe projections
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 1
-  percent: 5
+  completed_plans: 2
+  percent: 11
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
-Plan: 2 of 19
+Plan: 3 of 19
 Status: Ready to execute
-Last activity: 2026-07-13 — Plan 256-01 established canonical authority and semantic tuple identity
+Last activity: 2026-07-13 — Plan 256-02 established exact runtime evidence eligibility and safe projections
 
-Progress: [█░░░░░░░░░] 5%
+Progress: [█░░░░░░░░░] 11%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [█░░░░░░░░░] 5%
 
 **Resume file:** None
 
-Last session: 2026-07-13T01:21:09.702Z
-Stopped at: Completed 256-01-PLAN.md
+Last session: 2026-07-13T02:00:30.236Z
+Stopped at: Completed 256-02-PLAN.md
 Next command: `$gsd-execute-phase 256`
 
 ## Performance Metrics
@@ -70,7 +70,9 @@ Next command: `$gsd-execute-phase 256`
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
 | Phase 256 P01 | 6 min | 2 tasks | 6 files |
+| Phase 256 P02 | 10min | 3 tasks | 10 files |
 
 ## Decisions
 
 - [Phase 256]: Semantic tuple identity uses fixed-order domain-separated UTF-8 bytes and excludes executable evidence identity. — Toolchain, adapter, artifact, and certificate changes stale conformance evidence without fabricating a gameplay version.
+- [Phase 256]: Executable evidence authorities are runtime-branded and counted use requires exact current containment plus conformance certificates. — Arbitrary certificate-shaped objects, registry labels, and operator intent cannot manufacture counted eligibility.
