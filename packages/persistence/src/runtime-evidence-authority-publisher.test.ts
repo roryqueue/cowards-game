@@ -17,12 +17,14 @@ import {
 } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   encodeRuntimeEvidenceAuthorityPayload,
   hashExecutableLaneIdentity,
   inspectRuntimeEvidenceAuthorityBundle,
+  type CanonicalCompatibilityTuple,
 } from "@cowards/spec"
 import { Pool } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -278,6 +280,13 @@ describePostgres(
         issuedAt?: string
         freshUntil?: string
       } = {},
+      semanticIdentity: {
+        tupleId: string
+        tuple: CanonicalCompatibilityTuple
+      } = {
+        tupleId: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+        tuple: CANONICAL_COMPATIBILITY_TUPLES[0]!.tuple,
+      },
     ): Promise<void> => {
       const attestationId = `attestation:${suffix}`
       const rawHash = recordHash.slice("sha256:".length)
@@ -298,8 +307,8 @@ describePostgres(
         artifactSha256: rawHash,
         implementationId: "fixture-implementation",
         buildId: `fixture-build:${suffix}`,
-        semanticTupleId: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
-        semanticTuple: CANONICAL_COMPATIBILITY_TUPLES[0]!.tuple,
+        semanticTupleId: semanticIdentity.tupleId,
+        semanticTuple: semanticIdentity.tuple,
       }
       const certificateLaneIdentityHash = `sha256:${hashExecutableLaneIdentity(lane)}`
       const common = [
@@ -602,6 +611,83 @@ describePostgres(
           { source_type: "lane-control", source_id: disablePayload.eventId },
         ]),
       )
+    })
+
+    it("rejects the inactive candidate schema and trust state with zero publication or receipt rows", async () => {
+      const candidateArtifact = JSON.parse(
+        await readFile(
+          path.resolve(
+            path.dirname(fileURLToPath(import.meta.url)),
+            "../../spec/artifacts/v1.37-kernel-integrity-candidate.json",
+          ),
+          "utf8",
+        ),
+      ) as {
+        schemaVersion: string
+        status: string
+        trustState: string
+        publicationAllowed: boolean
+        countedExecutionAllowed: boolean
+        candidate: {
+          candidateTupleId: string
+          candidateTuple: CanonicalCompatibilityTuple
+        }
+      }
+      expect(candidateArtifact).toMatchObject({
+        schemaVersion: "v1.37-kernel-integrity-candidate-v1",
+        status: "inactive-candidate",
+        trustState: "untrusted-non-publishable",
+        publicationAllowed: false,
+        countedExecutionAllowed: false,
+      })
+
+      await seedCertificate(
+        "certificate:fixture:inactive-kernel-candidate",
+        sha256("certificate:inactive-kernel-candidate"),
+        "inactive-kernel-candidate",
+        {},
+        {
+          tupleId: candidateArtifact.candidate.candidateTupleId,
+          tuple: candidateArtifact.candidate.candidateTuple,
+        },
+      )
+
+      const before = await pool.query(
+        `select
+          (select count(*)::integer from runtime_evidence_authority_publications) as publications,
+          (select count(*)::integer from runtime_evidence_authority_publication_sources) as sources,
+          (select count(*)::integer from runtime_evidence_authority_publication_events) as events,
+          (select count(*)::integer from strategy_revisions) as revisions,
+          (select next_generation::text from runtime_evidence_authority_publication_head where singleton = true) as next_generation`,
+      )
+
+      await expect(
+        prepareRuntimeEvidenceAuthorityPublication(pool, {
+          bundleVersion: candidateArtifact.schemaVersion,
+          issuedAt: "2026-07-13T12:00:00.000Z",
+          validFrom: "2026-07-13T12:00:00.000Z",
+          validUntil: "2026-07-14T12:00:00.000Z",
+          trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+          signerKeyId: trustRoot.keyId,
+          trustedImportAuthorities: [trustRoot],
+          signMessage: (bytes) => sign(null, bytes, keys.privateKey),
+        }),
+      ).rejects.toMatchObject({ code: "CLOSED_GRAPH" })
+
+      const after = await pool.query(
+        `select
+          (select count(*)::integer from runtime_evidence_authority_publications) as publications,
+          (select count(*)::integer from runtime_evidence_authority_publication_sources) as sources,
+          (select count(*)::integer from runtime_evidence_authority_publication_events) as events,
+          (select count(*)::integer from strategy_revisions) as revisions,
+          (select next_generation::text from runtime_evidence_authority_publication_head where singleton = true) as next_generation`,
+      )
+      expect(after.rows[0]).toEqual(before.rows[0])
+
+      const conformance = await pool.query(
+        "select count(*)::integer as count from runtime_evidence_certificates where certificate_kind = 'conformance'",
+      )
+      expect(conformance.rows[0]?.count).toBe(0)
     })
 
     it("publishes only certificates covering the complete authority interval", async () => {
