@@ -545,8 +545,8 @@ describePostgres(
         trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
         signerKeyId: trustRoot.keyId,
         trustedImportAuthorities: [trustRoot],
-        signPayload: (payloadBytes) =>
-          sign(null, payloadBytes, keys.privateKey),
+        signMessage: (messageBytes) =>
+          sign(null, messageBytes, keys.privateKey),
       })
       const inspected = inspectRuntimeEvidenceAuthorityBundle(
         prepared.envelopeBytes,
@@ -554,8 +554,8 @@ describePostgres(
           expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
           evaluationInstant: "2026-07-13T12:00:00.000Z",
           trustedKeyIds: [trustRoot.keyId],
-          verifySignature: ({ payloadBytes, signature }) =>
-            verify(null, payloadBytes, keys.publicKey, signature),
+          verifySignature: ({ signedMessageBytes, signature }) =>
+            verify(null, signedMessageBytes, keys.publicKey, signature),
         },
       )
       expect(inspected.payload.registryGeneration).toBe(prepared.generation)
@@ -613,7 +613,7 @@ describePostgres(
       await expect(
         prepareRuntimeEvidenceAuthorityPublication(pool, {
           ...common,
-          signPayload: () => {
+          signMessage: () => {
             throw new Error("signer unavailable")
           },
         }),
@@ -626,11 +626,11 @@ describePostgres(
       const [left, right] = await Promise.all([
         prepareRuntimeEvidenceAuthorityPublication(pool, {
           ...common,
-          signPayload: (bytes) => sign(null, bytes, keys.privateKey),
+          signMessage: (bytes) => sign(null, bytes, keys.privateKey),
         }),
         prepareRuntimeEvidenceAuthorityPublication(pool, {
           ...common,
-          signPayload: (bytes) => sign(null, bytes, keys.privateKey),
+          signMessage: (bytes) => sign(null, bytes, keys.privateKey),
         }),
       ])
       expect(new Set([left.generation, right.generation]).size).toBe(2)
@@ -649,7 +649,7 @@ describePostgres(
         trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
         signerKeyId: trustRoot.keyId,
         trustedImportAuthorities: [trustRoot],
-        signPayload: (bytes) => sign(null, bytes, keys.privateKey),
+        signMessage: (bytes) => sign(null, bytes, keys.privateKey),
       })
 
     const installInput = (

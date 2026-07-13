@@ -19,7 +19,7 @@
         "algorithm": "Ed25519",
         "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
         "payloadSha256": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1",
-        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+        "signatureBase64": "jqVM4Q5WLwaMxLOtFECdKQC5hjSBQe5QYkPlScnRCI63nRF+zZFKcOtBznh6YYlo7iTTKtI4MWvfLlDG0Fx+Cw=="
       },
       "expected": {
         "structural": "accept",
@@ -35,7 +35,7 @@
         "algorithm": "Ed25519",
         "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
         "payloadSha256": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1",
-        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+        "signatureBase64": "BmJ7mxulay2bKtUHf16rEb2CCKkaP6AeOHrE+G+FWnORO44ceZ0vPx858L3iayILKgKjLs8hkmfKfYqitE8FAA=="
       },
       "evaluationInstant": "2026-07-13T00:00:00.000Z",
       "expected": {
@@ -55,7 +55,7 @@
         "algorithm": "Ed25519",
         "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
         "payloadSha256": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1",
-        "signatureBase64": "AHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+        "signatureBase64": "AmJ7mxulay2bKtUHf16rEb2CCKkaP6AeOHrE+G+FWnORO44ceZ0vPx858L3iayILKgKjLs8hkmfKfYqitE8FAA=="
       },
       "expected": {
         "node": "reject-signature",
@@ -71,7 +71,7 @@
         "algorithm": "Ed25519",
         "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
         "payloadSha256": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+        "signatureBase64": "BmJ7mxulay2bKtUHf16rEb2CCKkaP6AeOHrE+G+FWnORO44ceZ0vPx858L3iayILKgKjLs8hkmfKfYqitE8FAA=="
       },
       "expected": {
         "node": "reject-hash",
@@ -87,7 +87,7 @@
         "algorithm": "Ed25519",
         "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
         "payloadSha256": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1",
-        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+        "signatureBase64": "BmJ7mxulay2bKtUHf16rEb2CCKkaP6AeOHrE+G+FWnORO44ceZ0vPx858L3iayILKgKjLs8hkmfKfYqitE8FAA=="
       },
       "expected": {
         "node": "reject-key",
@@ -103,7 +103,7 @@
         "algorithm": "Ed25519",
         "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
         "payloadSha256": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1",
-        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+        "signatureBase64": "BmJ7mxulay2bKtUHf16rEb2CCKkaP6AeOHrE+G+FWnORO44ceZ0vPx858L3iayILKgKjLs8hkmfKfYqitE8FAA=="
       },
       "evaluationInstant": "2026-08-13T00:00:00.000Z",
       "expected": {
@@ -120,7 +120,7 @@
         "algorithm": "Ed25519",
         "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
         "payloadSha256": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1",
-        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+        "signatureBase64": "BmJ7mxulay2bKtUHf16rEb2CCKkaP6AeOHrE+G+FWnORO44ceZ0vPx858L3iayILKgKjLs8hkmfKfYqitE8FAA=="
       },
       "evaluationInstant": "2026-07-11T00:00:00.000Z",
       "expected": {

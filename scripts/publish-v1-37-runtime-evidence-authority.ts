@@ -128,15 +128,15 @@ export const runRuntimeEvidenceAuthorityPublisherCli = async (
       trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production,
       signerKeyId,
       trustedImportAuthorities,
-      signPayload: (payloadBytes) => sign(null, payloadBytes, privateKey),
+      signMessage: (messageBytes) => sign(null, messageBytes, privateKey),
     })
 
     inspectRuntimeEvidenceAuthorityBundle(prepared.envelopeBytes, {
       expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production,
       evaluationInstant: validFrom,
       trustedKeyIds: [signerKeyId],
-      verifySignature: ({ payloadBytes, signature }) =>
-        verify(null, payloadBytes, publicKey, signature),
+      verifySignature: ({ signedMessageBytes, signature }) =>
+        verify(null, signedMessageBytes, publicKey, signature),
     })
     const installed = await installPublication(pool, {
       publicationId: prepared.publicationId,

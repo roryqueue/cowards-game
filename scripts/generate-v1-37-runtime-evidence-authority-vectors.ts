@@ -9,6 +9,7 @@ import {
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   buildRuntimeEvidenceAuthorityEnvelope,
   encodeRuntimeEvidenceAuthorityPayload,
+  encodeRuntimeEvidenceAuthoritySignatureMessage,
   type RuntimeEvidenceAuthorityPayload,
 } from "../packages/spec/src/index.js"
 
@@ -55,7 +56,15 @@ const envelope = (trustDomain: string, registryGeneration = "7") => {
     trustDomain,
     keyId: "fixture-only-ed25519-key-v1",
     payloadBytes,
-    signature: sign(null, payloadBytes, fixturePrivateKey),
+    signature: sign(
+      null,
+      encodeRuntimeEvidenceAuthoritySignatureMessage({
+        trustDomain,
+        keyId: "fixture-only-ed25519-key-v1",
+        payloadBytes,
+      }),
+      fixturePrivateKey,
+    ),
   })
 }
 

@@ -11,6 +11,7 @@ import {
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   assertRuntimeEvidenceAuthorityAnchorInstalled,
   buildRuntimeEvidenceAuthorityEnvelope,
+  encodeRuntimeEvidenceAuthoritySignatureMessage,
   encodeRuntimeEvidenceAuthorityPayload,
   evaluateRuntimeEvidenceAuthorityAntiRollback,
   hashRuntimeEvidenceAuthorityPayload,
@@ -48,11 +49,16 @@ const signedBundle = (
 ) => {
   const keys = generateKeyPairSync("ed25519")
   const payloadBytes = encodeRuntimeEvidenceAuthorityPayload(payload)
+  const signatureMessage = encodeRuntimeEvidenceAuthoritySignatureMessage({
+    trustDomain,
+    keyId: "fixture-ed25519-key",
+    payloadBytes,
+  })
   const envelope = buildRuntimeEvidenceAuthorityEnvelope({
     trustDomain,
     keyId: "fixture-ed25519-key",
     payloadBytes,
-    signature: sign(null, payloadBytes, keys.privateKey),
+    signature: sign(null, signatureMessage, keys.privateKey),
   })
   return {
     keys,
@@ -87,8 +93,8 @@ describe("runtime evidence authority bundle", () => {
         expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
         evaluationInstant: "2026-07-12T12:00:00.000Z",
         trustedKeyIds: ["fixture-ed25519-key"],
-        verifySignature: ({ payloadBytes, signature }) =>
-          verify(null, payloadBytes, fixture.keys.publicKey, signature),
+        verifySignature: ({ signedMessageBytes, signature }) =>
+          verify(null, signedMessageBytes, fixture.keys.publicKey, signature),
       },
     )
 
@@ -109,12 +115,12 @@ describe("runtime evidence authority bundle", () => {
       evaluationInstant: "2026-07-12T12:00:00.000Z",
       trustedKeyIds: ["fixture-ed25519-key"] as const,
       verifySignature: ({
-        payloadBytes,
+        signedMessageBytes,
         signature,
       }: {
-        payloadBytes: Uint8Array
+        signedMessageBytes: Uint8Array
         signature: Uint8Array
-      }) => verify(null, payloadBytes, fixture.keys.publicKey, signature),
+      }) => verify(null, signedMessageBytes, fixture.keys.publicKey, signature),
     }
 
     expect(() =>
@@ -148,6 +154,47 @@ describe("runtime evidence authority bundle", () => {
     expect(() =>
       inspectRuntimeEvidenceAuthorityBundle(JSON.stringify(parsed), base),
     ).toThrow(/payload hash/i)
+  })
+
+  it("cryptographically binds envelope trust and key labels", () => {
+    const fixture = signedBundle()
+    const verifyWithSameKey = ({
+      signedMessageBytes,
+      signature,
+    }: {
+      signedMessageBytes: Uint8Array
+      signature: Uint8Array
+    }) => verify(null, signedMessageBytes, fixture.keys.publicKey, signature)
+
+    const relabeledDomain = JSON.parse(fixture.serialized) as Record<
+      string,
+      unknown
+    >
+    relabeledDomain.trustDomain =
+      RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production
+    expect(() =>
+      inspectRuntimeEvidenceAuthorityBundle(JSON.stringify(relabeledDomain), {
+        expectedTrustDomain:
+          RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production,
+        evaluationInstant: "2026-07-12T12:00:00.000Z",
+        trustedKeyIds: ["fixture-ed25519-key"],
+        verifySignature: verifyWithSameKey,
+      }),
+    ).toThrow(/signature/i)
+
+    const relabeledKey = JSON.parse(fixture.serialized) as Record<
+      string,
+      unknown
+    >
+    relabeledKey.keyId = "same-public-key-alias"
+    expect(() =>
+      inspectRuntimeEvidenceAuthorityBundle(JSON.stringify(relabeledKey), {
+        expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+        evaluationInstant: "2026-07-12T12:00:00.000Z",
+        trustedKeyIds: ["same-public-key-alias"],
+        verifySignature: verifyWithSameKey,
+      }),
+    ).toThrow(/signature/i)
   })
 
   it("rejects dangling, duplicate, unverified, revoked, and production-conformance graphs", () => {
@@ -207,8 +254,8 @@ describe("runtime evidence authority bundle", () => {
           RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production,
         evaluationInstant: "2026-07-12T12:00:00.000Z",
         trustedKeyIds: ["fixture-ed25519-key"],
-        verifySignature: ({ payloadBytes, signature }) =>
-          verify(null, payloadBytes, bundle.keys.publicKey, signature),
+        verifySignature: ({ signedMessageBytes, signature }) =>
+          verify(null, signedMessageBytes, bundle.keys.publicKey, signature),
       }),
     ).toThrow(/conformance.*phase 259/i)
   })

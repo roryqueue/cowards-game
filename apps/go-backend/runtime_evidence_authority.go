@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -30,6 +31,7 @@ const runtimeEvidenceAuthorityPublicKeySchemaVersion = "v1.37-runtime-evidence-a
 const runtimeEvidenceAuthorityProductionTrustDomain = "cowards-game:runtime-evidence-authority:production:v1"
 const runtimeEvidenceAuthorityFixtureTrustDomain = "cowards-game:runtime-evidence-authority:fixture:v1"
 const runtimeEvidenceAuthorityPublicationEnvelopeDomain = "cowards-game:runtime-evidence-authority-publication-envelope:v1"
+const runtimeEvidenceAuthoritySignatureDomain = "cowards-game:runtime-evidence-authority-signature:v1"
 const runtimeEvidenceAuthorityEnvelopeByteLimit = 1_500_000
 const runtimeEvidenceAuthorityPayloadByteLimit = 1_000_000
 const runtimeEvidenceAuthorityPublicKeyByteLimit = 16 * 1024
@@ -280,7 +282,8 @@ func inspectRuntimeEvidenceAuthorityBundle(serialized []byte, options runtimeEvi
 	if payloadHash != envelope.PayloadSHA256 {
 		return nil, authorityError("PAYLOAD_HASH")
 	}
-	if !ed25519.Verify(publicKey, payloadBytes, signature) {
+	signatureMessage := encodeRuntimeEvidenceAuthoritySignatureMessage(envelope, payloadBytes)
+	if !ed25519.Verify(publicKey, signatureMessage, signature) {
 		return nil, authorityError("SIGNATURE")
 	}
 	payload, err := parseRuntimeEvidenceAuthorityPayload(payloadBytes)
@@ -318,6 +321,31 @@ func inspectRuntimeEvidenceAuthorityBundle(serialized []byte, options runtimeEvi
 		KeyID:                     envelope.KeyID,
 		Payload:                   payload,
 	}, nil
+}
+
+func encodeRuntimeEvidenceAuthoritySignatureMessage(envelope runtimeEvidenceAuthorityEnvelope, payloadBytes []byte) []byte {
+	fields := [][]byte{
+		[]byte(runtimeEvidenceAuthoritySignatureDomain),
+		[]byte(envelope.SchemaVersion),
+		[]byte(envelope.TrustDomain),
+		[]byte(envelope.KeyID),
+		[]byte(envelope.Algorithm),
+		[]byte(envelope.PayloadSHA256),
+		payloadBytes,
+	}
+	total := 0
+	for _, field := range fields {
+		total += 4 + len(field)
+	}
+	framed := make([]byte, total)
+	offset := 0
+	for _, field := range fields {
+		binary.BigEndian.PutUint32(framed[offset:offset+4], uint32(len(field)))
+		offset += 4
+		copy(framed[offset:offset+len(field)], field)
+		offset += len(field)
+	}
+	return framed
 }
 
 func hashRuntimeEvidenceAuthorityPublicationEnvelope(serialized []byte) string {

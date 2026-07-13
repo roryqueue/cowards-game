@@ -17,6 +17,7 @@ import {
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   buildRuntimeEvidenceAuthorityEnvelope,
   encodeRuntimeEvidenceAuthorityPayload,
+  encodeRuntimeEvidenceAuthoritySignatureMessage,
   hashRuntimeEvidenceAuthorityPayload,
   type RuntimeEvidenceAuthorityPayload,
 } from "@cowards/spec"
@@ -72,8 +73,7 @@ const createFixture = (input: {
   const highWaterPath = join(root, "authority-high-water.json")
   const keys = generateKeyPairSync("ed25519")
   const keyId = "fixture-runtime-authority-ed25519-v1"
-  const payload =
-    input.payload ?? payloadFor(input.generation ?? "7")
+  const payload = input.payload ?? payloadFor(input.generation ?? "7")
   const payloadBytes = encodeRuntimeEvidenceAuthorityPayload(payload)
   const payloadSha256 = hashRuntimeEvidenceAuthorityPayload(payloadBytes)
   const envelope = buildRuntimeEvidenceAuthorityEnvelope({
@@ -81,7 +81,16 @@ const createFixture = (input: {
       input.trustDomain ?? RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
     keyId,
     payloadBytes,
-    signature: sign(null, payloadBytes, keys.privateKey),
+    signature: sign(
+      null,
+      encodeRuntimeEvidenceAuthoritySignatureMessage({
+        trustDomain:
+          input.trustDomain ?? RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+        keyId,
+        payloadBytes,
+      }),
+      keys.privateKey,
+    ),
   })
   writeFileSync(bundlePath, `${JSON.stringify(envelope)}\n`, { mode: 0o600 })
   writeFileSync(
@@ -172,20 +181,19 @@ describe("mounted runtime evidence authority", () => {
       registryGeneration: "7",
       trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
       keyId: fixture.keyId,
-      semanticTupleManifestHash:
-        CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+      semanticTupleManifestHash: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
     })
     expect(Object.isFrozen(authority)).toBe(true)
     expect(Object.isFrozen(authority.payload)).toBe(true)
     expect(
       operations.filter((entry) => entry === `open:${fixture.bundlePath}`),
     ).toHaveLength(1)
-    expect(operations.filter((entry) => entry.startsWith("read:"))).toHaveLength(
-      4,
-    )
-    expect(operations.filter((entry) => entry.startsWith("close:"))).toHaveLength(
-      4,
-    )
+    expect(
+      operations.filter((entry) => entry.startsWith("read:")),
+    ).toHaveLength(4)
+    expect(
+      operations.filter((entry) => entry.startsWith("close:")),
+    ).toHaveLength(4)
   })
 
   it("fails closed for missing, oversized, malformed, wrong-key, wrong-signature, stale, and open-graph authority", () => {
@@ -375,12 +383,21 @@ describe("mounted runtime evidence authority", () => {
     const fixture = createFixture({})
     const generation8 = payloadFor("8")
     const generation8Bytes = encodeRuntimeEvidenceAuthorityPayload(generation8)
-    const generation8Hash = hashRuntimeEvidenceAuthorityPayload(generation8Bytes)
+    const generation8Hash =
+      hashRuntimeEvidenceAuthorityPayload(generation8Bytes)
     const envelope8 = buildRuntimeEvidenceAuthorityEnvelope({
       trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
       keyId: fixture.keyId,
       payloadBytes: generation8Bytes,
-      signature: sign(null, generation8Bytes, fixture.keys.privateKey),
+      signature: sign(
+        null,
+        encodeRuntimeEvidenceAuthoritySignatureMessage({
+          trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+          keyId: fixture.keyId,
+          payloadBytes: generation8Bytes,
+        }),
+        fixture.keys.privateKey,
+      ),
     })
     writeFileSync(fixture.bundlePath, JSON.stringify(envelope8))
     const loader = createRuntimeEvidenceAuthorityLoader({

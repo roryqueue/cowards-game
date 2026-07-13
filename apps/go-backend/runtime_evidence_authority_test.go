@@ -88,6 +88,59 @@ func TestRuntimeEvidenceAuthorityMatchesCommittedNodeVectors(t *testing.T) {
 	}
 }
 
+func TestRuntimeEvidenceAuthoritySignatureBindsEnvelopeIdentity(t *testing.T) {
+	dir := t.TempDir()
+	manifest := mustIntegrityManifest(t)
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths := writeRuntimeAuthorityFiles(t, dir, manifest, publicKey, privateKey, authorityFixtureOptions{Generation: "7"})
+	serialized, err := os.ReadFile(paths.bundle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var original runtimeEvidenceAuthorityEnvelope
+	if err := json.Unmarshal(serialized, &original); err != nil {
+		t.Fatal(err)
+	}
+
+	for name, change := range map[string]func(*runtimeEvidenceAuthorityEnvelope){
+		"trust-domain": func(envelope *runtimeEvidenceAuthorityEnvelope) {
+			envelope.TrustDomain = runtimeEvidenceAuthorityFixtureTrustDomain
+		},
+		"key-id":    func(envelope *runtimeEvidenceAuthorityEnvelope) { envelope.KeyID = "same-public-key-alias" },
+		"algorithm": func(envelope *runtimeEvidenceAuthorityEnvelope) { envelope.Algorithm = "Ed448" },
+		"schema": func(envelope *runtimeEvidenceAuthorityEnvelope) {
+			envelope.SchemaVersion = "v1.37-runtime-evidence-authority-envelope-v2"
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			relabeled := original
+			change(&relabeled)
+			bytes, err := json.Marshal(relabeled)
+			if err != nil {
+				t.Fatal(err)
+			}
+			expectedDomain := runtimeEvidenceAuthorityProductionTrustDomain
+			if name == "trust-domain" {
+				expectedDomain = runtimeEvidenceAuthorityFixtureTrustDomain
+			}
+			if _, err := inspectRuntimeEvidenceAuthorityBundle(bytes, runtimeEvidenceAuthorityInspectOptions{
+				ExpectedTrustDomain: expectedDomain,
+				EvaluationInstant:   "2026-07-13T00:00:00.000Z",
+				TrustedKeys: map[string]ed25519.PublicKey{
+					original.KeyID:          publicKey,
+					"same-public-key-alias": publicKey,
+				},
+				IntegrityManifest: manifest,
+			}); err == nil {
+				t.Fatal("relabeled envelope retained authority without resigning")
+			}
+		})
+	}
+}
+
 func TestRuntimeEvidenceAuthorityBootstrapRefreshRestartAndRollback(t *testing.T) {
 	dir := t.TempDir()
 	manifest := mustIntegrityManifest(t)
@@ -351,14 +404,14 @@ func writeRuntimeAuthorityFiles(t *testing.T, dir string, manifest *integrityAut
 	}
 	payloadHash := hashRuntimeEvidenceAuthorityPayload(payloadBytes)
 	envelope := runtimeEvidenceAuthorityEnvelope{
-		SchemaVersion:   runtimeEvidenceAuthorityEnvelopeSchemaVersion,
-		TrustDomain:     runtimeEvidenceAuthorityProductionTrustDomain,
-		KeyID:           "go-test-ed25519-key",
-		Algorithm:       "Ed25519",
-		PayloadBase64:   base64.StdEncoding.EncodeToString(payloadBytes),
-		PayloadSHA256:   payloadHash,
-		SignatureBase64: base64.StdEncoding.EncodeToString(ed25519.Sign(privateKey, payloadBytes)),
+		SchemaVersion: runtimeEvidenceAuthorityEnvelopeSchemaVersion,
+		TrustDomain:   runtimeEvidenceAuthorityProductionTrustDomain,
+		KeyID:         "go-test-ed25519-key",
+		Algorithm:     "Ed25519",
+		PayloadBase64: base64.StdEncoding.EncodeToString(payloadBytes),
+		PayloadSHA256: payloadHash,
 	}
+	envelope.SignatureBase64 = base64.StdEncoding.EncodeToString(ed25519.Sign(privateKey, encodeRuntimeEvidenceAuthoritySignatureMessage(envelope, payloadBytes)))
 	envelopeBytes, err := json.Marshal(envelope)
 	if err != nil {
 		t.Fatal(err)

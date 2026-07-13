@@ -10,6 +10,7 @@ import {
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   buildRuntimeEvidenceAuthorityEnvelope,
   encodeRuntimeEvidenceAuthorityPayload,
+  encodeRuntimeEvidenceAuthoritySignatureMessage,
   hashRuntimeEvidenceAuthorityPayload,
   type RuntimeEvidenceAuthorityPayload,
 } from "../packages/spec/src/index.js"
@@ -82,7 +83,13 @@ describe("v1.37 runtime evidence authority publisher CLI", () => {
         preparePublication: async (_pool, input) => {
           const payloadBytes =
             encodeRuntimeEvidenceAuthorityPayload(emptyPayload())
-          const signature = await input.signPayload(payloadBytes)
+          const signature = await input.signMessage(
+            encodeRuntimeEvidenceAuthoritySignatureMessage({
+              trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production,
+              keyId: "operator-key:v1",
+              payloadBytes,
+            }),
+          )
           const envelope = buildRuntimeEvidenceAuthorityEnvelope({
             trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production,
             keyId: "operator-key:v1",
@@ -159,7 +166,13 @@ describe("v1.37 runtime evidence authority publisher CLI", () => {
         preparePublication: async (_pool, input) => {
           const payloadBytes =
             encodeRuntimeEvidenceAuthorityPayload(emptyPayload())
-          const signature = await input.signPayload(payloadBytes)
+          const signature = await input.signMessage(
+            encodeRuntimeEvidenceAuthoritySignatureMessage({
+              trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production,
+              keyId: "operator-key:v1",
+              payloadBytes,
+            }),
+          )
           const envelope = buildRuntimeEvidenceAuthorityEnvelope({
             trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production,
             keyId: "operator-key:v1",

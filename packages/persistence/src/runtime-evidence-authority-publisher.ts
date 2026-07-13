@@ -14,6 +14,7 @@ import {
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   buildRuntimeEvidenceAuthorityEnvelope,
   encodeRuntimeEvidenceAuthorityPayload,
+  encodeRuntimeEvidenceAuthoritySignatureMessage,
   hashRuntimeEvidenceAuthorityPayload,
   inspectRuntimeEvidenceAuthorityBundle,
   type RuntimeEvidenceAuthorityPayload,
@@ -795,8 +796,8 @@ export interface PrepareRuntimeEvidenceAuthorityPublicationInput {
   trustDomain: string
   signerKeyId: string
   trustedImportAuthorities: readonly RuntimeEvidenceAuthorityImportTrustRoot[]
-  signPayload(
-    payloadBytes: Uint8Array,
+  signMessage(
+    messageBytes: Uint8Array,
   ): Uint8Array | Buffer | Promise<Uint8Array | Buffer>
 }
 
@@ -1249,10 +1250,15 @@ export const prepareRuntimeEvidenceAuthorityPublication = async (
       registryGeneration: generation,
     }
     const payloadBytes = encodeRuntimeEvidenceAuthorityPayload(payload)
+    const signatureMessage = encodeRuntimeEvidenceAuthoritySignatureMessage({
+      trustDomain: input.trustDomain,
+      keyId: input.signerKeyId,
+      payloadBytes,
+    })
     let signature: Uint8Array
     try {
       signature = new Uint8Array(
-        await input.signPayload(new Uint8Array(payloadBytes)),
+        await input.signMessage(new Uint8Array(signatureMessage)),
       )
     } catch {
       return fail("SIGNER_FAILURE", "External authority signer failed.")
@@ -1533,8 +1539,8 @@ const verifyInstallPublication = (
       expectedTrustDomain: input.expectedTrustDomain,
       evaluationInstant: input.evaluationInstant,
       trustedKeyIds: [input.signerKeyId],
-      verifySignature: ({ payloadBytes, signature }) =>
-        verifySignature(null, payloadBytes, publicKey, signature),
+      verifySignature: ({ signedMessageBytes, signature }) =>
+        verifySignature(null, signedMessageBytes, publicKey, signature),
     },
   )
   if (

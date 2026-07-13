@@ -8,6 +8,8 @@ export const RUNTIME_EVIDENCE_AUTHORITY_BOOTSTRAP_SCHEMA_VERSION =
   "v1.37-runtime-evidence-authority-bootstrap-v1" as const
 export const RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_SCHEMA_VERSION =
   "v1.37-runtime-evidence-authority-high-water-v1" as const
+export const RUNTIME_EVIDENCE_AUTHORITY_SIGNATURE_DOMAIN =
+  "cowards-game:runtime-evidence-authority-signature:v1" as const
 
 export const RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS = Object.freeze({
   production: "cowards-game:runtime-evidence-authority:production:v1",
@@ -207,10 +209,7 @@ const parseInstant = (value: unknown, label: string): string => {
     )
   }
   const parsed = Date.parse(instant)
-  if (
-    !Number.isFinite(parsed) ||
-    new Date(parsed).toISOString() !== instant
-  ) {
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== instant) {
     fail("INVALID_INSTANT", `${label} is not a valid instant.`)
   }
   return instant
@@ -640,6 +639,45 @@ export const hashRuntimeEvidenceAuthorityPayload = (
   bytes: Uint8Array,
 ): string => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
+export const encodeRuntimeEvidenceAuthoritySignatureMessage = (input: {
+  schemaVersion?: typeof RUNTIME_EVIDENCE_AUTHORITY_ENVELOPE_SCHEMA_VERSION
+  trustDomain: string
+  keyId: string
+  algorithm?: "Ed25519"
+  payloadBytes: Uint8Array
+}): Uint8Array => {
+  if (
+    input.payloadBytes.byteLength === 0 ||
+    input.payloadBytes.byteLength >
+      RUNTIME_EVIDENCE_AUTHORITY_LIMITS.payloadBytes
+  ) {
+    fail("PAYLOAD_LIMIT", "Authority payload byte length is invalid.")
+  }
+  const fields = [
+    textEncoder.encode(RUNTIME_EVIDENCE_AUTHORITY_SIGNATURE_DOMAIN),
+    textEncoder.encode(
+      input.schemaVersion ?? RUNTIME_EVIDENCE_AUTHORITY_ENVELOPE_SCHEMA_VERSION,
+    ),
+    textEncoder.encode(assertString(input.trustDomain, "trustDomain")),
+    textEncoder.encode(assertString(input.keyId, "keyId")),
+    textEncoder.encode(input.algorithm ?? "Ed25519"),
+    textEncoder.encode(hashRuntimeEvidenceAuthorityPayload(input.payloadBytes)),
+    input.payloadBytes,
+  ]
+  const framed = new Uint8Array(
+    fields.reduce((total, field) => total + 4 + field.byteLength, 0),
+  )
+  const view = new DataView(framed.buffer)
+  let offset = 0
+  for (const field of fields) {
+    view.setUint32(offset, field.byteLength, false)
+    offset += 4
+    framed.set(field, offset)
+    offset += field.byteLength
+  }
+  return framed
+}
+
 const encodeBase64 = (bytes: Uint8Array): string =>
   Buffer.from(bytes).toString("base64")
 
@@ -756,7 +794,7 @@ export const inspectRuntimeEvidenceAuthorityBundle = (
     verifySignature(input: {
       algorithm: "Ed25519"
       keyId: string
-      payloadBytes: Uint8Array
+      signedMessageBytes: Uint8Array
       signature: Uint8Array
     }): boolean
   },
@@ -785,7 +823,13 @@ export const inspectRuntimeEvidenceAuthorityBundle = (
     signatureValid = options.verifySignature({
       algorithm: "Ed25519",
       keyId: envelope.keyId,
-      payloadBytes,
+      signedMessageBytes: encodeRuntimeEvidenceAuthoritySignatureMessage({
+        schemaVersion: envelope.schemaVersion,
+        trustDomain: envelope.trustDomain,
+        keyId: envelope.keyId,
+        algorithm: envelope.algorithm,
+        payloadBytes,
+      }),
       signature,
     })
   } catch {

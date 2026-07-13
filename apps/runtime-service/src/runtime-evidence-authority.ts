@@ -1,8 +1,4 @@
-import {
-  createPublicKey,
-  verify,
-  type KeyObject,
-} from "node:crypto"
+import { createPublicKey, verify, type KeyObject } from "node:crypto"
 import {
   closeSync,
   fstatSync,
@@ -361,8 +357,13 @@ export const createRuntimeEvidenceAuthorityLoader = (
         expectedTrustDomain: config.expectedTrustDomain,
         evaluationInstant: config.evaluationInstant(),
         trustedKeyIds: [publicKeyDescriptor.keyId],
-        verifySignature: ({ payloadBytes, signature }) =>
-          verify(null, payloadBytes, publicKeyDescriptor.publicKey, signature),
+        verifySignature: ({ signedMessageBytes, signature }) =>
+          verify(
+            null,
+            signedMessageBytes,
+            publicKeyDescriptor.publicKey,
+            signature,
+          ),
       })
       if (
         !CANONICAL_COMPATIBILITY_TUPLES.some(
@@ -436,8 +437,7 @@ export const createRuntimeEvidenceAuthorityLoader = (
       const verified = Object.freeze({
         authorityBundleHash: inspected.payloadSha256,
         registryGeneration: inspected.payload.registryGeneration,
-        semanticTupleManifestHash:
-          inspected.payload.semanticTupleManifestHash,
+        semanticTupleManifestHash: inspected.payload.semanticTupleManifestHash,
         trustDomain: inspected.envelope.trustDomain,
         keyId: inspected.envelope.keyId,
         payload: inspected.payload,
