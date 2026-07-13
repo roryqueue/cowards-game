@@ -2356,8 +2356,6 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 	if err != nil || installedReceipt == nil {
 		return nil, errors.New("creation integrity unavailable")
 	}
-	_ = integrityIdentity
-	_ = installedReceipt
 	var activeDuplicate string
 	err = tx.QueryRow(ctx, `
 		select id
@@ -2387,26 +2385,80 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 			competition_preset_id, competition_preset_version, scoring_policy_version,
 			visibility, entrant_snapshot_set, publication_policy, duplicate_key,
 			counted_status, public_counted_reason, public_counted_explanation,
-			locked_at
+			locked_at,
+			compatibility_tuple_id, compatibility_rules_version,
+			compatibility_engine_version, compatibility_runtime_abi_version,
+			compatibility_chronicle_version, compatibility_arena_catalog_version,
+			compatibility_set_policy_version, authority_bundle_hash,
+			authority_registry_generation, execution_evidence_set,
+			execution_evidence_set_hash, authority_publication_id,
+			authority_install_receipt_id, authority_payload_sha256,
+			authority_envelope_sha256, authority_source_manifest_hash,
+			authority_source_set
 		)
 		values ($1, 'pending', $2, 'v1', $3, $4, $5, 'v1',
-		        'exhibition-points-v1:v1', 'public', $6, $7, $8, $9, $10, $11, $12)
+		        'exhibition-points-v1:v1', 'public', $6, $7, $8, $9, $10, $11, $12,
+		        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23,
+		        $24, $25, $26, $27, $28, $29)
 	`, matchSetID, matchSetPresetID, matches, userID, presetID, entrants, map[string]any{
 		"publicResults":               true,
 		"publicReplayEvidence":        true,
 		"excludesPrivateStrategyData": true,
-	}, duplicateKey, exhibitionCountedStatus(counted), exhibitionCountedReason(counted), exhibitionCountedExplanation(counted), now); err != nil {
+	}, duplicateKey, exhibitionCountedStatus(counted), exhibitionCountedReason(counted), exhibitionCountedExplanation(counted), now,
+		integrityIdentity.Tuple.TupleID, integrityIdentity.Tuple.Tuple.Rules,
+		integrityIdentity.Tuple.Tuple.Engine, integrityIdentity.Tuple.Tuple.RuntimeABI,
+		integrityIdentity.Tuple.Tuple.Chronicle, integrityIdentity.Tuple.Tuple.ArenaCatalog,
+		integrityIdentity.Tuple.Tuple.SetPolicy, integrityIdentity.AuthorityBundleHash,
+		integrityIdentity.RegistryGeneration, integrityIdentity.Entrants,
+		integrityIdentity.EvidenceSetHash, installedReceipt.PublicationID,
+		installedReceipt.ReceiptID, installedReceipt.PayloadSHA256,
+		installedReceipt.EnvelopeSHA256, installedReceipt.SourceManifestHash,
+		installedReceipt.SourceSet); err != nil {
 		return nil, err
 	}
 	for _, entrant := range entrants {
+		evidence, ok := integrityIdentity.ByKey[stringValue(entrant, "entrantId")]
+		if !ok || evidence.StrategyRevisionID != stringValue(entrant, "strategyRevisionId") {
+			return nil, errors.New("creation integrity unavailable")
+		}
+		var conformanceKind, conformanceID, conformanceVersion, conformanceHash any
+		if evidence.ConformanceCertificateRef != nil {
+			conformanceKind = evidence.ConformanceCertificateRef.Kind
+			conformanceID = evidence.ConformanceCertificateRef.CertificateID
+			conformanceVersion = evidence.ConformanceCertificateRef.CertificateVersion
+			conformanceHash = evidence.ConformanceCertificateRef.CertificateRecordHash
+		}
+		if _, err := tx.Exec(ctx, `
+			insert into match_set_execution_entrants (
+				match_set_id, entrant_key, strategy_revision_id,
+				lane_identity, lane_identity_hash,
+				containment_certificate_kind, containment_certificate_id,
+				containment_certificate_version, containment_certificate_hash,
+				conformance_certificate_kind, conformance_certificate_id,
+				conformance_certificate_version, conformance_certificate_hash,
+				scheduling_status, scheduling_reason_code, scheduling_evaluated_at,
+				scheduling_fresh_until, authority_bundle_hash,
+				authority_registry_generation, execution_snapshot
+			)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+		`, matchSetID, evidence.EntrantKey, evidence.StrategyRevisionID,
+			evidence.LaneIdentity, hashCreationLaneIdentity(evidence.LaneIdentity),
+			evidence.ContainmentCertificateRef.Kind, evidence.ContainmentCertificateRef.CertificateID,
+			evidence.ContainmentCertificateRef.CertificateVersion, evidence.ContainmentCertificateRef.CertificateRecordHash,
+			conformanceKind, conformanceID, conformanceVersion, conformanceHash,
+			string(evidence.SchedulingDecision.Status), evidence.SchedulingDecision.ReasonCode,
+			evidence.SchedulingDecision.EvaluatedAt, evidence.SchedulingDecision.FreshUntil,
+			integrityIdentity.AuthorityBundleHash, integrityIdentity.RegistryGeneration, evidence); err != nil {
+			return nil, err
+		}
 		if _, err := tx.Exec(ctx, `
 			insert into competition_entrants (
 				id, match_set_id, entrant_index, strategy_revision_id, owner_user_id,
 				owner_handle, display_label, source_hash, source_bytes, runtime,
-				engine_compatibility, snapshot
+				engine_compatibility, snapshot, execution_entrant_key
 			)
-			values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-		`, matchSetID+":"+stringValue(entrant, "entrantId"), matchSetID, intValue(entrant, "entrantIndex"), stringValue(entrant, "strategyRevisionId"), stringValue(entrant, "ownerUserId"), stringValue(entrant, "ownerHandle"), stringValue(entrant, "displayLabel"), stringValue(entrant, "sourceHash"), intValue(entrant, "sourceBytes"), entrant["runtime"], entrant["engineCompatibility"], entrant); err != nil {
+			values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		`, matchSetID+":"+stringValue(entrant, "entrantId"), matchSetID, intValue(entrant, "entrantIndex"), stringValue(entrant, "strategyRevisionId"), stringValue(entrant, "ownerUserId"), stringValue(entrant, "ownerHandle"), stringValue(entrant, "displayLabel"), stringValue(entrant, "sourceHash"), intValue(entrant, "sourceBytes"), entrant["runtime"], entrant["engineCompatibility"], entrant, evidence.EntrantKey); err != nil {
 			return nil, err
 		}
 		if _, err := tx.Exec(ctx, "update strategy_revisions set locked_at = coalesce(locked_at, $2) where id = $1", stringValue(entrant, "strategyRevisionId"), now); err != nil {
@@ -2414,16 +2466,35 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 		}
 	}
 	for index, match := range matches {
+		pair, err := integrityIdentity.pair(
+			stringValue(match, "bottomExecutionEntrantKey"),
+			stringValue(match, "topExecutionEntrantKey"),
+			stringValue(match, "bottomStrategyRevisionId"),
+			stringValue(match, "topStrategyRevisionId"),
+		)
+		if err != nil {
+			return nil, err
+		}
 		if _, err := tx.Exec(ctx, `
 			insert into matches (
 				id, bottom_strategy_revision_id, top_strategy_revision_id,
-				arena_variant_id, seed, bottom_player_id, top_player_id, status
+				arena_variant_id, seed, bottom_player_id, top_player_id, status,
+				integrity_match_set_id, bottom_execution_entrant_key,
+				top_execution_entrant_key, bottom_execution_evidence,
+				top_execution_evidence, execution_evidence_pair_hash
 			)
-			values ($1, $2, $3, $4, $5, $6, $7, 'pending')
-		`, match["id"], match["bottomStrategyRevisionId"], match["topStrategyRevisionId"], match["arenaVariantId"], match["seed"], match["bottomPlayerId"], match["topPlayerId"]); err != nil {
+			values ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10, $11, $12, $13)
+		`, match["id"], match["bottomStrategyRevisionId"], match["topStrategyRevisionId"], match["arenaVariantId"], match["seed"], match["bottomPlayerId"], match["topPlayerId"], matchSetID, pair.Bottom.EntrantKey, pair.Top.EntrantKey, pair.Bottom, pair.Top, pair.PairHash); err != nil {
 			return nil, err
 		}
-		if _, err := tx.Exec(ctx, "insert into match_jobs (id, match_id, status) values ($1, $2, 'queued')", "match-job:"+stringValue(match, "id"), match["id"]); err != nil {
+		if _, err := tx.Exec(ctx, `
+			insert into match_jobs (
+				id, match_id, status, integrity_match_set_id,
+				bottom_execution_entrant_key, top_execution_entrant_key,
+				bottom_execution_evidence, top_execution_evidence,
+				execution_evidence_pair_hash
+			) values ($1, $2, 'queued', $3, $4, $5, $6, $7, $8)
+		`, "match-job:"+stringValue(match, "id"), match["id"], matchSetID, pair.Bottom.EntrantKey, pair.Top.EntrantKey, pair.Bottom, pair.Top, pair.PairHash); err != nil {
 			return nil, err
 		}
 		if _, err := tx.Exec(ctx, "insert into match_set_matches (match_set_id, match_id, matrix_index) values ($1, $2, $3)", matchSetID, match["id"], index); err != nil {
@@ -3315,13 +3386,15 @@ func generatePairwiseMatches(matchSetID string, matchSetPresetID string, entrant
 							seedSuffix += ":mirror"
 						}
 						matches = append(matches, map[string]any{
-							"id":                       fmt.Sprintf("match:%s:%d", matchSetID, index),
-							"bottomStrategyRevisionId": stringValue(bottom, "strategyRevisionId"),
-							"topStrategyRevisionId":    stringValue(top, "strategyRevisionId"),
-							"arenaVariantId":           arenaVariantID,
-							"seed":                     seed + ":" + seedSuffix,
-							"bottomPlayerId":           fmt.Sprintf("player:%s:entrant:%d", matchSetID, intValue(bottom, "entrantIndex")),
-							"topPlayerId":              fmt.Sprintf("player:%s:entrant:%d", matchSetID, intValue(top, "entrantIndex")),
+							"id":                        fmt.Sprintf("match:%s:%d", matchSetID, index),
+							"bottomStrategyRevisionId":  stringValue(bottom, "strategyRevisionId"),
+							"topStrategyRevisionId":     stringValue(top, "strategyRevisionId"),
+							"arenaVariantId":            arenaVariantID,
+							"seed":                      seed + ":" + seedSuffix,
+							"bottomPlayerId":            fmt.Sprintf("player:%s:entrant:%d", matchSetID, intValue(bottom, "entrantIndex")),
+							"topPlayerId":               fmt.Sprintf("player:%s:entrant:%d", matchSetID, intValue(top, "entrantIndex")),
+							"bottomExecutionEntrantKey": stringValue(bottom, "entrantId"),
+							"topExecutionEntrantKey":    stringValue(top, "entrantId"),
 						})
 						index++
 					}
