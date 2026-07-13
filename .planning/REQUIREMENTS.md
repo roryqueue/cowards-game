@@ -17,7 +17,7 @@
 - [x] **AUTH-01**: Maintainers have one documented canonical owner for rules, transition semantics, runtime classification, Chronicle validation, arena authority, and Set scheduling policy.
 - [x] **AUTH-02**: Every new Match and persisted evidence record carries one atomic rules, engine, runtime ABI, Chronicle, arena-catalog, and Set-policy version tuple.
 - [x] **AUTH-03**: Scheduling, execution, persistence, replay, and standings reject missing, unknown, mixed, or uncertified version tuples rather than validating tuple members independently.
-- [ ] **AUTH-04**: Existing v1.4 Chronicles and results remain immutable and are interpreted only through their original rules, Chronicle, and compatibility semantics.
+- [x] **AUTH-04**: Existing v1.4 Chronicles and results remain immutable and are interpreted only through their original rules, Chronicle, and compatibility semantics.
 - [x] **AUTH-05**: Boundary monitors fail when duplicate Match schedulers, UI-owned rules, adapter-owned gameplay classification, duplicated arena authorities, or stale public execution entry points reappear.
 
 ### Transition and Semantic Integrity
@@ -128,7 +128,7 @@ These candidates are optional and are not required for v1.37 completion.
 | AUTH-01 | Phase 256 | Complete |
 | AUTH-02 | Phase 256 | Complete |
 | AUTH-03 | Phase 256 | Complete |
-| AUTH-04 | Phase 256 | Pending |
+| AUTH-04 | Phase 256 | Complete |
 | AUTH-05 | Phase 256 | Complete |
 | KERN-01 | Phase 257 | Pending |
 | KERN-02 | Phase 257 | Pending |

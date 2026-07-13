@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
-stopped_at: Completed 256-05-PLAN.md
-last_updated: "2026-07-13T04:18:54.527Z"
+stopped_at: Completed 256-06-PLAN.md
+last_updated: "2026-07-13T04:39:08.360Z"
 last_activity: 2026-07-13
-last_activity_desc: Plan 256-05 made direct Match and matrix MatchSet writers identity-complete and transactionally exact
+last_activity_desc: Plan 256-06 made completion and Chronicle insertion preserve the locked exact identity and fail without gameplay mutation
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 8
-  percent: 42
+  completed_plans: 9
+  percent: 47
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
-Plan: 8 of 19
+Plan: 9 of 19
 Status: Ready to execute
-Last activity: 2026-07-13 — Plan 256-05 made direct Match and matrix MatchSet writers identity-complete and transactionally exact
+Last activity: 2026-07-13 — Plan 256-06 made completion and Chronicle insertion preserve the locked exact identity and fail without gameplay mutation
 
-Progress: [████░░░░░░] 42%
+Progress: [█████░░░░░] 47%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [████░░░░░░] 42%
 
 **Resume file:** None
 
-Last session: 2026-07-13T04:18:54.514Z
-Stopped at: Completed 256-05-PLAN.md
+Last session: 2026-07-13T04:38:55.625Z
+Stopped at: Completed 256-06-PLAN.md
 Next command: `$gsd-execute-phase 256`
 
 ## Performance Metrics
@@ -77,6 +77,7 @@ Next command: `$gsd-execute-phase 256`
 | Phase 256 P17 | 19min | 2 tasks | 12 files |
 | Phase 256 P15 | 11min | 2 tasks | 6 files |
 | Phase 256 P05 | 18min | 2 tasks | 4 files |
+| Phase 256 P06 | 13min | 2 tasks | 5 files |
 
 ## Decisions
 
@@ -99,3 +100,5 @@ Next command: `$gsd-execute-phase 256`
 - [Phase 256]: Matrix writers mint one validator-branded identity from a deterministic entrant-key map before SQL. — Complete coverage, tuple, revision, side, freshness, and competition-link checks fail before any row can be created.
 - [Phase 256]: Direct and matrix Match writers derive each ordered bottom/top evidence pair from the same MatchSet identity. — Match and queued job snapshots remain byte-for-byte attributable without inventing a MatchSet-wide runtime lane.
 - [Phase 256]: Competition entrants link to generic execution evidence by exact entrant key. — Existing runtime and snapshot JSON cannot imply or substitute for certified executable identity.
+- [Phase 256]: Completion persists only the locked Match tuple and ordered evidence pair; runtime response identity is comparison input, never Chronicle authority. — This closes in-flight drift without allowing request or response certificate-shaped data to authorize gameplay persistence.
+- [Phase 256]: Identity drift at completion is a retryable system failure with no player penalty and a fully rolled-back completion transaction. — Evidence expiry, revocation, mismatch, or generation drift is system-owned and must never mutate gameplay or create a player violation.

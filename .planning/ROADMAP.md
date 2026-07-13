@@ -35,7 +35,7 @@ v1.37 establishes the smallest complete trust substrate needed before serious co
   3. Operators can classify affected historical results, invalidate and recompute derived standings when needed, while the original Match evidence and v1.4 interpretation remain immutable.
   4. Public/default safety surfaces expose only safe classifications and evidence identifiers, and structural monitors reject duplicate authorities and stale execution entry points.
 
-**Plans:** 8/19 plans executed
+**Plans:** 9/19 plans executed
 
 Plans:
 **Wave 1**
@@ -63,7 +63,7 @@ Plans:
 **Wave 6** *(blocked on Wave 5 completion)*
 
 - [x] 256-05-PLAN.md — Migrate the active TypeScript Match and MatchSet creation writers transactionally.
-- [ ] 256-06-PLAN.md — Preserve exact identity through TypeScript completion and Chronicle insertion.
+- [x] 256-06-PLAN.md — Preserve exact identity through TypeScript completion and Chronicle insertion.
 - [ ] 256-07-PLAN.md — Resolve history read-only and apply append-only, compensatable governance.
 - [ ] 256-18-PLAN.md — Publish verified append-only evidence, authenticated certificate status, and lane controls through failure-safe signed installation.
 
@@ -181,7 +181,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 256. Counted Safety and Canonical Authority | 8/19 | In Progress|  |
+| 256. Counted Safety and Canonical Authority | 9/19 | In Progress|  |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 0/TBD | Not started | - |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 0/TBD | Not started | - |
 | 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |
