@@ -10,6 +10,7 @@ import {
   verifyRuntimeEvidenceAttestation,
   type RuntimeEvidenceAttestation,
   type RuntimeEvidenceBytes,
+  type RuntimeEvidenceGraph,
   type RuntimeEvidenceTrustedProducer,
 } from "./runtime-evidence-attestation.js"
 
@@ -71,7 +72,7 @@ const makeUnsigned = (): Omit<RuntimeEvidenceAttestation, "signatureBase64"> => 
     semanticTupleId: tuple.tupleId,
     semanticTuple: { ...tuple.tuple },
   }
-  const graph = {
+  const graph: RuntimeEvidenceGraph = {
     rootNodeId: "root",
     nodes: Object.entries(nodeBytes).map(([nodeId, bytes]) => ({
       nodeId,
@@ -100,7 +101,7 @@ const makeUnsigned = (): Omit<RuntimeEvidenceAttestation, "signatureBase64"> => 
     edges: Object.keys(nodeBytes)
       .filter((nodeId) => nodeId !== "root")
       .map((nodeId) => ({ fromNodeId: "root", toNodeId: nodeId })),
-  } as const
+  }
   return {
     kind: "conformance",
     schemaVersion: producer.schemaVersion,
