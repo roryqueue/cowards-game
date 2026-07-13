@@ -4,17 +4,17 @@ milestone: v1.37
 milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
-status: ready_to_execute
-stopped_at: Phase 256 planned and independently verified; ready to execute Plan 256-01
-last_updated: "2026-07-13T01:10:00.000Z"
-last_activity: 2026-07-12
-last_activity_desc: Phase 256 planned with 19 plans across 10 waves; plan verification passed
+status: executing
+stopped_at: Completed 256-01-PLAN.md
+last_updated: "2026-07-13T01:21:19.632Z"
+last_activity: 2026-07-13
+last_activity_desc: Plan 256-01 established canonical authority and semantic tuple identity
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 5
 ---
 
 # State: Coward's Game
@@ -24,16 +24,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 256 execution — Counted Safety and Canonical Authority.
+**Current focus:** Phase 256 — Counted Safety and Canonical Authority
 
 ## Current Position
 
-Phase: 256 of 261 (Counted Safety and Canonical Authority)
-Plan: 0 of 19
-Status: Ready to execute Plan 256-01
-Last activity: 2026-07-12 — Phase 256 planned with 19 plans across 10 waves; plan verification passed
+Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
+Plan: 2 of 19
+Status: Ready to execute
+Last activity: 2026-07-13 — Plan 256-01 established canonical authority and semantic tuple identity
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 5%
 
 ## Durable Decisions
 
@@ -59,8 +59,18 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/256-counted-safety-and-canonical-authority/256-CONTEXT.md
+**Resume file:** None
 
-Last session: 2026-07-13T01:10:00.000Z
-Stopped at: Phase 256 planned and independently verified; ready to execute Plan 256-01
+Last session: 2026-07-13T01:21:09.702Z
+Stopped at: Completed 256-01-PLAN.md
 Next command: `$gsd-execute-phase 256`
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase 256 P01 | 6 min | 2 tasks | 6 files |
+
+## Decisions
+
+- [Phase 256]: Semantic tuple identity uses fixed-order domain-separated UTF-8 bytes and excludes executable evidence identity. — Toolchain, adapter, artifact, and certificate changes stale conformance evidence without fabricating a gameplay version.
