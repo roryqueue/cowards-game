@@ -6,6 +6,10 @@ import {
 import {
   createNonProductionExecutableLaneEvidenceAuthority,
   evaluateExecutableLaneEligibility,
+  assertOperatorLaneEvidenceProjectionLeakSafe,
+  assertPublicLaneEvidenceProjectionLeakSafe,
+  projectOperatorLaneEvidence,
+  projectPublicLaneEvidence,
   type EvaluateExecutableLaneEligibilityInput,
   type ExecutableLaneCertificate,
   type ExecutableLaneIdentity,
@@ -16,6 +20,7 @@ import {
   evaluateStrategyRuntimeCountedEligibility,
   RUNTIME_BROKER_REGISTRY,
 } from "./runtime.js"
+import { assertPublicOutputLeakSafe } from "./public-output-privacy.js"
 
 const evaluationInstant = "2026-07-12T12:00:00.000Z"
 const registryGeneration = "runtime-registry-generation-v1.37-test"
@@ -351,5 +356,109 @@ describe("v1.37 executable lane evidence", () => {
         wrongLaneEvidence,
       ),
     ).toMatchObject({ ok: false, code: "NON_COUNTED_RUNTIME" })
+  })
+
+  it("D-13/D-15 constructs a calm public allowlist from canonical reason codes", () => {
+    const projection = projectPublicLaneEvidence(evaluate())
+    expect(projection).toEqual({
+      status: "counted",
+      reasonCategory: "ready",
+      publicMessage:
+        "Current safety and competitive evidence is available.",
+      semanticTupleId: identity.semanticTupleId,
+      evidence: [
+        {
+          kind: "containment",
+          version: "containment-certificate-v1",
+          hash: "containment-record-hash",
+          freshUntil: "2026-07-13T00:00:00.000Z",
+        },
+        {
+          kind: "conformance",
+          version: "conformance-certificate-v1",
+          hash: "conformance-record-hash",
+          freshUntil: "2026-07-13T00:00:00.000Z",
+        },
+      ],
+      freshnessDate: "2026-07-13",
+    })
+    expect(Object.keys(projection)).toEqual([
+      "status",
+      "reasonCategory",
+      "publicMessage",
+      "semanticTupleId",
+      "evidence",
+      "freshnessDate",
+    ])
+    expect(JSON.stringify(projection)).not.toMatch(
+      /providerId|toolchain|buildId|restrictedProof|gateResults/u,
+    )
+    expect(() =>
+      assertPublicLaneEvidenceProjectionLeakSafe(projection),
+    ).not.toThrow()
+
+    expect(
+      projectPublicLaneEvidence(evaluate({ conformance: null })),
+    ).toMatchObject({
+      status: "exhibition_only",
+      reasonCategory: "competitive_evidence_pending",
+    })
+    expect(
+      projectPublicLaneEvidence(
+        evaluate({ containment: null, conformance: null }),
+      ),
+    ).toMatchObject({
+      status: "disabled",
+      reasonCategory: "safety_evidence_unavailable",
+    })
+  })
+
+  it("D-14 constructs a useful restricted operator view without forbidden internals", () => {
+    const projection = projectOperatorLaneEvidence(evaluate())
+    expect(projection).toMatchObject({
+      status: "counted",
+      reasonCode: "EVIDENCE_CURRENT",
+      identity: {
+        providerId: identity.providerId,
+        toolchainId: identity.toolchainId,
+        semanticTupleId: identity.semanticTupleId,
+      },
+      gates: {
+        containment: {
+          certificateId: "containment-certificate",
+          restrictedProofIds: ["containment-proof-id"],
+          restrictedProofLinks: ["proof://containment/record"],
+        },
+        conformance: {
+          certificateId: "conformance-certificate",
+          restrictedProofIds: ["conformance-proof-id"],
+          restrictedProofLinks: ["proof://conformance/record"],
+        },
+      },
+    })
+    expect(projection.remediation.length).toBeGreaterThan(20)
+    expect(projection.cohortImpact).toContain("counted")
+    expect(() =>
+      assertOperatorLaneEvidenceProjectionLeakSafe(projection),
+    ).not.toThrow()
+  })
+
+  it.each([
+    { certificateBytes: "PRIVATE_CERTIFICATE_BYTES" },
+    { nested: { proofStoragePath: "/var/lib/cowards/proofs/secret" } },
+    { nested: { toolchainDiagnostics: "Traceback: host detail" } },
+    { nested: { credentials: "Bearer private" } },
+    { nested: { strategySource: "private source" } },
+    { nested: { strategyMemory: { secret: true } } },
+    { nested: { objectivePayload: { secret: true } } },
+    { nested: { exploitDetails: "exploit payload" } },
+  ])("SAFE-04 rejects nested evidence/security leaks: %j", (payload) => {
+    expect(() => assertPublicOutputLeakSafe(payload)).toThrow(/leaks/u)
+    expect(() =>
+      assertPublicLaneEvidenceProjectionLeakSafe(payload),
+    ).toThrow(/leaks/u)
+    expect(() =>
+      assertOperatorLaneEvidenceProjectionLeakSafe(payload),
+    ).toThrow(/leaks/u)
   })
 })
