@@ -109,6 +109,11 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		return nil, err
 	}
 	defer rollbackTx(ctx, tx)
+	if !service.allowLegacyTestCompletion {
+		if err := lockAuthorityPublicationTransitions(ctx, tx); err != nil {
+			return nil, err
+		}
+	}
 
 	var jobID string
 	var jobMatchID string

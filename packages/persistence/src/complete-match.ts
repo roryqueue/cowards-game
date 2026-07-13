@@ -177,6 +177,9 @@ export const completeMatch = async (
   let chronicleId: string | undefined
 
   await withTransaction(pool, async (client) => {
+    await client.query(
+      "select next_generation from runtime_evidence_authority_publication_head where singleton = true for share",
+    )
     const job = await client.query<LockedCompletionRow>(
       `
         select
@@ -209,6 +212,10 @@ export const completeMatch = async (
         from match_jobs j
         join matches m on m.id = j.match_id
         join match_sets ms on ms.id = m.integrity_match_set_id
+        join runtime_evidence_authority_installed_head installed_head
+          on installed_head.publication_id = ms.authority_publication_id
+         and installed_head.install_receipt_id = ms.authority_install_receipt_id
+         and installed_head.generation::text = ms.authority_registry_generation
         where j.id = $1
           and j.lease_token = $2
           and j.status = 'running'

@@ -25,9 +25,11 @@ describe("job claiming", () => {
 
   it("binds candidates to the exact installed authority, ordered evidence, and current per-side certificates", () => {
     expect(CLAIM_NEXT_MATCH_JOB_SQL).toContain(
-      "runtime_evidence_authority_publication_events",
+      "runtime_evidence_authority_installed_head",
     )
-    expect(CLAIM_NEXT_MATCH_JOB_SQL).toContain("event_kind = 'installed'")
+    expect(CLAIM_NEXT_MATCH_JOB_SQL).not.toContain(
+      "event_kind = 'installed'",
+    )
     expect(CLAIM_NEXT_MATCH_JOB_SQL).toContain(
       "runtime_evidence_authority_publication_sources",
     )

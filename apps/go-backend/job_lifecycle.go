@@ -72,24 +72,11 @@ const claimNextMatchJobSQL = `
    and publication.envelope_sha256 = ms.authority_envelope_sha256
    and publication.source_manifest_hash = ms.authority_source_manifest_hash
    and publication.trust_domain = 'cowards-game:runtime-evidence-authority:production:v1'
-  join lateral (
-    select event.id, event.event_kind, event.envelope_sha256,
-           event.reason_code, event.receipt
-      from runtime_evidence_authority_publication_events event
-     where event.publication_id = publication.id
-       and event.event_kind in ('installed', 'failed', 'uncertain')
-     order by event.occurred_at desc, event.id desc
-     limit 1
-  ) installed_receipt
-    on installed_receipt.id = ms.authority_install_receipt_id
-   and installed_receipt.event_kind = 'installed'
-   and installed_receipt.reason_code is null
-   and installed_receipt.envelope_sha256 = publication.envelope_sha256
-   and installed_receipt.receipt ->> 'generation' = publication.generation::text
-   and installed_receipt.receipt ->> 'payloadSha256' = publication.payload_sha256
-   and installed_receipt.receipt ->> 'envelopeSha256' = publication.envelope_sha256
-   and installed_receipt.receipt ->> 'sourceManifestHash' = publication.source_manifest_hash
-   and installed_receipt.receipt -> 'sourceIds' = ms.authority_source_set
+  join runtime_evidence_authority_installed_head installed_head
+    on installed_head.publication_id = publication.id
+   and installed_head.install_receipt_id = ms.authority_install_receipt_id
+   and installed_head.generation::text = ms.authority_registry_generation
+   and installed_head.receipt -> 'sourceIds' = ms.authority_source_set
   left join runtime_evidence_certificates bottom_containment
     on bottom_containment.id = bottom_execution_entrant.containment_certificate_id
    and bottom_containment.certificate_kind = 'containment'
@@ -170,19 +157,6 @@ const claimNextMatchJobSQL = `
       + jsonb_array_length(publication.revocation_ids)
       + jsonb_array_length(publication.supersession_ids)
       + jsonb_array_length(publication.lane_control_ids)
-    and not exists (
-      select 1
-        from runtime_evidence_authority_publications newer_publication
-        join lateral (
-          select newer_event.event_kind
-            from runtime_evidence_authority_publication_events newer_event
-           where newer_event.publication_id = newer_publication.id
-             and newer_event.event_kind in ('installed', 'failed', 'uncertain')
-           order by newer_event.occurred_at desc, newer_event.id desc
-           limit 1
-        ) newer_terminal on newer_terminal.event_kind = 'installed'
-       where newer_publication.generation > publication.generation
-    )
     and not exists (
       select 1
         from runtime_evidence_authority_publication_sources source
@@ -291,18 +265,12 @@ const recheckClaimedMatchIntegritySQL = `
     and ms.authority_bundle_hash = top.authority_bundle_hash
     and ms.authority_registry_generation = bottom.authority_registry_generation
     and ms.authority_registry_generation = top.authority_registry_generation
-    and not exists (
+    and exists (
       select 1
-        from runtime_evidence_authority_publications newer
-        join lateral (
-          select terminal.event_kind
-            from runtime_evidence_authority_publication_events terminal
-           where terminal.publication_id = newer.id
-             and terminal.event_kind in ('installed','failed','uncertain')
-           order by terminal.occurred_at desc, terminal.id desc
-           limit 1
-        ) newer_terminal on newer_terminal.event_kind = 'installed'
-       where newer.generation > ms.authority_registry_generation::bigint
+        from runtime_evidence_authority_installed_head installed_head
+       where installed_head.publication_id = ms.authority_publication_id
+         and installed_head.install_receipt_id = ms.authority_install_receipt_id
+         and installed_head.generation::text = ms.authority_registry_generation
     )
   for share of j, m, ms, bottom, top
 `
@@ -409,6 +377,11 @@ func (lifecycle *matchJobLifecycle) claimNextMatchJob(ctx context.Context, input
 		return nil, err
 	}
 	defer rollbackTx(ctx, tx)
+	if !lifecycle.allowLegacyTestClaims {
+		if err := lockAuthorityPublicationTransitions(ctx, tx); err != nil {
+			return nil, err
+		}
+	}
 
 	var row struct {
 		id            string
@@ -581,11 +554,16 @@ func (lifecycle *matchJobLifecycle) recheckClaimedMatchIntegrity(ctx context.Con
 	if err != nil || authority == nil {
 		return errors.New("claimed Match integrity recheck is unavailable")
 	}
-	tx, err := lifecycle.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead})
+	// READ COMMITTED is deliberate: if a terminal writer acquired the head
+	// first, the post-lock evidence query must see that writer's commit.
+	tx, err := lifecycle.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err
 	}
 	defer rollbackTx(ctx, tx)
+	if err := lockAuthorityPublicationTransitions(ctx, tx); err != nil {
+		return err
+	}
 	var serialized []byte
 	if err := tx.QueryRow(ctx, recheckClaimedMatchIntegritySQL, claimed.JobID, claimed.LeaseToken).Scan(&serialized); err != nil {
 		return errors.New("claimed Match integrity changed in flight")

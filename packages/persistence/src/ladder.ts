@@ -1067,9 +1067,6 @@ const loadInstalledAuthorityPublication = async (
   client: PoolClient,
   evaluationInstant: string,
 ): Promise<InstalledAuthorityPublication> => {
-  await client.query(
-    "lock table runtime_evidence_authority_publication_events in share mode",
-  )
   const head = await client.query<{ next_generation: string | number }>(
     `select next_generation
        from runtime_evidence_authority_publication_head
@@ -1104,7 +1101,7 @@ const loadInstalledAuthorityPublication = async (
             p.source_manifest_hash, p.payload_sha256, p.envelope_sha256,
             p.payload_bytes, p.envelope_bytes, p.attestation_ids,
             p.certificate_ids, p.revocation_ids, p.supersession_ids,
-            p.lane_control_ids, installed.receipt,
+            p.lane_control_ids, installed_head.receipt,
             coalesce((
               select jsonb_agg(
                 jsonb_build_object(
@@ -1143,17 +1140,9 @@ const loadInstalledAuthorityPublication = async (
                and lane_control.verification_status = 'passed'
               where source.publication_id = p.id
             ), '[]'::jsonb) as publication_sources
-       from runtime_evidence_authority_publications p
-       join lateral (
-         select event.receipt
-           from runtime_evidence_authority_publication_events event
-          where event.publication_id = p.id
-            and event.event_kind = 'installed'
-            and event.reason_code is null
-            and event.envelope_sha256 = p.envelope_sha256
-          order by event.occurred_at desc, event.id desc
-          limit 1
-       ) installed on true
+       from runtime_evidence_authority_installed_head installed_head
+       join runtime_evidence_authority_publications p
+         on p.id = installed_head.publication_id
       where p.generation < $1::bigint
         and p.issued_at <= $2::timestamptz
         and p.valid_from <= $2::timestamptz

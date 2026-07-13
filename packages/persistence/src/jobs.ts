@@ -29,31 +29,12 @@ export const DEFAULT_LEASE_MS = 30_000
 export const CLAIM_NEXT_MATCH_JOB_SQL = `
   with current_authority as materialized (
     select publication.*
-      from runtime_evidence_authority_publications publication
+      from runtime_evidence_authority_installed_head installed_head
+      join runtime_evidence_authority_publications publication
+        on publication.id = installed_head.publication_id
       join runtime_evidence_authority_publication_head authority_head
         on authority_head.singleton = true
        and publication.generation < authority_head.next_generation
-      join lateral (
-        select event.receipt
-          from runtime_evidence_authority_publication_events event
-         where event.publication_id = publication.id
-           and event.event_kind = 'installed'
-           and event.reason_code is null
-           and event.envelope_sha256 = publication.envelope_sha256
-           and event.receipt->>'schemaVersion' =
-             'v1.37-runtime-evidence-authority-install-receipt-v1'
-           and event.receipt->>'generation' = publication.generation::text
-           and event.receipt->>'payloadSha256' = publication.payload_sha256
-           and event.receipt->>'envelopeSha256' = publication.envelope_sha256
-           and event.receipt->>'sourceManifestHash' = publication.source_manifest_hash
-           and event.receipt->'sourceIds'->'attestationIds' = publication.attestation_ids
-           and event.receipt->'sourceIds'->'certificateIds' = publication.certificate_ids
-           and event.receipt->'sourceIds'->'revocationIds' = publication.revocation_ids
-           and event.receipt->'sourceIds'->'supersessionIds' = publication.supersession_ids
-           and event.receipt->'sourceIds'->'laneControlIds' = publication.lane_control_ids
-         order by event.occurred_at desc, event.id desc
-         limit 1
-      ) installed on true
      where publication.issued_at <= $1
        and publication.valid_from <= $1
        and publication.valid_until >= $1
@@ -324,9 +305,6 @@ export const claimNextMatchJob = async (
   const leaseExpiresAt = new Date(now.getTime() + leaseMs)
 
   return withTransaction(pool, async (client) => {
-    await client.query(
-      "lock table runtime_evidence_authority_publication_events in share mode",
-    )
     await client.query(
       "select next_generation from runtime_evidence_authority_publication_head where singleton = true for share",
     )

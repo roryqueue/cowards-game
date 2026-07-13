@@ -109,8 +109,7 @@ func TestMatchExecutionQuarantineHelpers(t *testing.T) {
 
 func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
 	for _, required := range []string{
-		"runtime_evidence_authority_publication_events",
-		"event_kind = 'installed'",
+		"runtime_evidence_authority_installed_head",
 		"authority_publication_id",
 		"authority_install_receipt_id",
 		"authority_source_manifest_hash",
@@ -127,14 +126,14 @@ func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
 			t.Fatalf("integrity claim SQL is missing %q", required)
 		}
 	}
-	selectIndex := strings.Index(claimNextMatchJobSQL, "runtime_evidence_authority_publication_events")
+	selectIndex := strings.Index(claimNextMatchJobSQL, "runtime_evidence_authority_installed_head")
 	updateIndex := strings.Index(claimNextMatchJobSQL, "update match_jobs")
 	if selectIndex < 0 || (updateIndex >= 0 && updateIndex < selectIndex) {
 		t.Fatal("integrity rejection must precede lifecycle mutation")
 	}
-	if !strings.Contains(recheckClaimedMatchIntegritySQL, "newer.generation > ms.authority_registry_generation::bigint") ||
-		!strings.Contains(recheckClaimedMatchIntegritySQL, "newer_terminal.event_kind = 'installed'") {
-		t.Fatal("in-flight recheck must reject an older installed authority generation")
+	if !strings.Contains(recheckClaimedMatchIntegritySQL, "runtime_evidence_authority_installed_head") ||
+		!strings.Contains(recheckClaimedMatchIntegritySQL, "installed_head.install_receipt_id = ms.authority_install_receipt_id") {
+		t.Fatal("in-flight recheck must require the canonical installed authority head")
 	}
 }
 

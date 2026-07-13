@@ -576,10 +576,8 @@ describe("trial ladder contracts", () => {
       ),
     ).toBe(true)
     expect(
-      lifecycle.calls.some(
-        (sql) =>
-          sql.includes("runtime_evidence_authority_publication_events") &&
-          sql.includes("event_kind = 'installed'"),
+      lifecycle.calls.some((sql) =>
+        sql.includes("runtime_evidence_authority_installed_head"),
       ),
     ).toBe(true)
     expect(

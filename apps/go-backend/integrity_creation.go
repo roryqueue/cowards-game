@@ -314,43 +314,40 @@ func (identity *goMatchSetIntegrityIdentity) pair(bottomKey string, topKey strin
 	return goExecutionEvidencePair{Bottom: bottom, Top: top, PairHash: framedCreationHash(creationEvidencePairDomain, []string{identity.EvidenceSetHash, bottomKey, bottomRevision, topKey, topRevision})}, nil
 }
 
+func lockAuthorityPublicationTransitions(ctx context.Context, tx pgx.Tx) error {
+	var nextGeneration int64
+	if err := tx.QueryRow(ctx, `
+		select next_generation
+		  from runtime_evidence_authority_publication_head
+		 where singleton = true
+		 for share
+	`).Scan(&nextGeneration); err != nil || nextGeneration <= 0 {
+		return errors.New("runtime evidence authority publication head is unavailable")
+	}
+	return nil
+}
+
 func (server *LiveServer) lockInstalledAuthorityReceipt(ctx context.Context, tx pgx.Tx, authority *verifiedRuntimeEvidenceAuthority, now time.Time) (*installedAuthorityReceipt, error) {
+	if err := lockAuthorityPublicationTransitions(ctx, tx); err != nil {
+		return nil, errors.New("creation integrity unavailable")
+	}
 	var publicationID, generation, tupleID, sourceHash, payloadHash, envelopeHash, trustDomain string
-	var receiptID, eventKind, eventEnvelope string
-	var reasonCode *string
+	var receiptID string
 	var receiptJSON, attestationIDs, certificateIDs, revocationIDs, supersessionIDs, laneControlIDs []byte
 	err := tx.QueryRow(ctx, `
 		select p.id, p.generation::text, p.semantic_tuple_manifest_hash,
 		       p.source_manifest_hash, p.payload_sha256, p.envelope_sha256,
 		       p.trust_domain, p.attestation_ids, p.certificate_ids,
 		       p.revocation_ids, p.supersession_ids, p.lane_control_ids,
-		       e.id, e.event_kind, e.envelope_sha256, e.reason_code, e.receipt
-		  from runtime_evidence_authority_publication_head h
+		       installed_head.install_receipt_id, installed_head.receipt
+		  from runtime_evidence_authority_installed_head installed_head
 		  join runtime_evidence_authority_publications p
-		    on p.generation = $1::bigint and p.generation < h.next_generation
-		  join lateral (
-		    select id, event_kind, envelope_sha256, reason_code, receipt
-		      from runtime_evidence_authority_publication_events
-		     where publication_id = p.id and event_kind in ('installed','failed','uncertain')
-		     order by occurred_at desc, id desc limit 1
-		  ) e on true
-		 where h.singleton = true and p.issued_at <= $2 and p.valid_from <= $2 and p.valid_until >= $2
-		   and not exists (
-		     select 1
-		       from runtime_evidence_authority_publications newer
-		       join lateral (
-		         select terminal.event_kind
-		           from runtime_evidence_authority_publication_events terminal
-		          where terminal.publication_id = newer.id
-		            and terminal.event_kind in ('installed','failed','uncertain')
-		          order by terminal.occurred_at desc, terminal.id desc
-		          limit 1
-		       ) newer_terminal on newer_terminal.event_kind = 'installed'
-		      where newer.generation > p.generation
-		   )
-		 for share of h, p
-	`, authority.RegistryGeneration, now).Scan(&publicationID, &generation, &tupleID, &sourceHash, &payloadHash, &envelopeHash, &trustDomain, &attestationIDs, &certificateIDs, &revocationIDs, &supersessionIDs, &laneControlIDs, &receiptID, &eventKind, &eventEnvelope, &reasonCode, &receiptJSON)
-	if err != nil || eventKind != "installed" || reasonCode != nil || generation != authority.RegistryGeneration || tupleID != authority.SemanticTupleManifestHash || payloadHash != authority.AuthorityBundleHash || envelopeHash != authority.EnvelopeSHA256 || eventEnvelope != envelopeHash || trustDomain != runtimeEvidenceAuthorityProductionTrustDomain {
+		    on p.id = installed_head.publication_id
+		 where p.generation = $1::bigint
+		   and p.issued_at <= $2 and p.valid_from <= $2 and p.valid_until >= $2
+		 for share of p
+	`, authority.RegistryGeneration, now).Scan(&publicationID, &generation, &tupleID, &sourceHash, &payloadHash, &envelopeHash, &trustDomain, &attestationIDs, &certificateIDs, &revocationIDs, &supersessionIDs, &laneControlIDs, &receiptID, &receiptJSON)
+	if err != nil || generation != authority.RegistryGeneration || tupleID != authority.SemanticTupleManifestHash || payloadHash != authority.AuthorityBundleHash || envelopeHash != authority.EnvelopeSHA256 || trustDomain != runtimeEvidenceAuthorityProductionTrustDomain {
 		return nil, errors.New("creation integrity unavailable")
 	}
 	var receipt map[string]any
