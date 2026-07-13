@@ -3,6 +3,7 @@ import {
   resolveCanonicalCompatibilityTuple,
   type CanonicalCompatibilityTuple,
 } from "./integrity-authority.js"
+import { assertPublicOutputLeakSafe } from "./public-output-privacy.js"
 
 /**
  * Exact executable identity is intentionally separate from the semantic tuple.
@@ -493,3 +494,298 @@ export const evaluateExecutableLaneEligibility = (
     conformanceCertificate: conformance.certificate,
   })
 }
+
+export const PUBLIC_LANE_EVIDENCE_REASON_CATEGORIES = Object.freeze([
+  "ready",
+  "operator_disabled",
+  "safety_evidence_unavailable",
+  "competitive_evidence_pending",
+] as const)
+export type PublicLaneEvidenceReasonCategory =
+  (typeof PUBLIC_LANE_EVIDENCE_REASON_CATEGORIES)[number]
+
+export interface PublicLaneEvidenceRecordProjection {
+  kind: ExecutableLaneCertificateKind
+  version: string
+  hash: string
+  freshUntil: string
+}
+
+export interface PublicLaneEvidenceProjection {
+  status: ExecutableLaneEvidenceStatus
+  reasonCategory: PublicLaneEvidenceReasonCategory
+  publicMessage: string
+  semanticTupleId: string
+  evidence: readonly Readonly<PublicLaneEvidenceRecordProjection>[]
+  freshnessDate?: string | undefined
+}
+
+const PUBLIC_REASON_POLICY: Record<
+  ExecutableLaneEvidenceReasonCode,
+  {
+    reasonCategory: PublicLaneEvidenceReasonCategory
+    publicMessage: string
+  }
+> = {
+  EVIDENCE_CURRENT: {
+    reasonCategory: "ready",
+    publicMessage:
+      "Current safety and competitive evidence is available.",
+  },
+  OPERATOR_DISABLED: {
+    reasonCategory: "operator_disabled",
+    publicMessage: "This Strategy lane is temporarily unavailable.",
+  },
+  CONTAINMENT_MISSING: {
+    reasonCategory: "safety_evidence_unavailable",
+    publicMessage:
+      "This Strategy lane is temporarily unavailable while current safety evidence is checked.",
+  },
+  CONTAINMENT_STALE: {
+    reasonCategory: "safety_evidence_unavailable",
+    publicMessage:
+      "This Strategy lane is temporarily unavailable while current safety evidence is refreshed.",
+  },
+  CONTAINMENT_REVOKED: {
+    reasonCategory: "safety_evidence_unavailable",
+    publicMessage:
+      "This Strategy lane is temporarily unavailable while safety evidence is reviewed.",
+  },
+  CONTAINMENT_FAILED: {
+    reasonCategory: "safety_evidence_unavailable",
+    publicMessage:
+      "This Strategy lane is unavailable because current safety checks did not pass.",
+  },
+  CONTAINMENT_UNVERIFIABLE: {
+    reasonCategory: "safety_evidence_unavailable",
+    publicMessage:
+      "This Strategy lane is temporarily unavailable while safety evidence is verified.",
+  },
+  CONFORMANCE_MISSING: {
+    reasonCategory: "competitive_evidence_pending",
+    publicMessage:
+      "This Strategy lane is available for exhibitions while current competitive evidence is checked.",
+  },
+  CONFORMANCE_STALE: {
+    reasonCategory: "competitive_evidence_pending",
+    publicMessage:
+      "This Strategy lane is available for exhibitions while competitive evidence is refreshed.",
+  },
+  CONFORMANCE_REVOKED: {
+    reasonCategory: "competitive_evidence_pending",
+    publicMessage:
+      "This Strategy lane is available for exhibitions while competitive evidence is reviewed.",
+  },
+  CONFORMANCE_FAILED: {
+    reasonCategory: "competitive_evidence_pending",
+    publicMessage:
+      "This Strategy lane remains exhibition-only because current competitive checks did not pass.",
+  },
+  CONFORMANCE_UNVERIFIABLE: {
+    reasonCategory: "competitive_evidence_pending",
+    publicMessage:
+      "This Strategy lane is available for exhibitions while competitive evidence is verified.",
+  },
+  IDENTITY_MISMATCH: {
+    reasonCategory: "safety_evidence_unavailable",
+    publicMessage:
+      "This Strategy lane is temporarily unavailable while its current identity is verified.",
+  },
+  TUPLE_UNKNOWN: {
+    reasonCategory: "safety_evidence_unavailable",
+    publicMessage:
+      "This Strategy lane is unavailable for the requested compatibility profile.",
+  },
+  TUPLE_UNCERTIFIED: {
+    reasonCategory: "safety_evidence_unavailable",
+    publicMessage:
+      "This Strategy lane is unavailable for the requested compatibility profile.",
+  },
+  REGISTRY_GENERATION_DRIFT: {
+    reasonCategory: "safety_evidence_unavailable",
+    publicMessage:
+      "This Strategy lane is temporarily unavailable while current evidence is refreshed.",
+  },
+  EVIDENCE_UNVERIFIABLE: {
+    reasonCategory: "safety_evidence_unavailable",
+    publicMessage:
+      "This Strategy lane is temporarily unavailable while current evidence is verified.",
+  },
+}
+
+const publicCertificate = (
+  certificate: Readonly<ExecutableLaneCertificate>,
+): Readonly<PublicLaneEvidenceRecordProjection> =>
+  Object.freeze({
+    kind: certificate.kind,
+    version: certificate.certificateVersion,
+    hash: certificate.certificateRecordHash,
+    freshUntil: certificate.freshUntil,
+  })
+
+export const projectPublicLaneEvidence = (
+  laneEligibility: ExecutableLaneEligibility,
+): Readonly<PublicLaneEvidenceProjection> => {
+  const policy = PUBLIC_REASON_POLICY[laneEligibility.reasonCode]
+  const evidence = Object.freeze(
+    [
+      laneEligibility.containmentCertificate,
+      laneEligibility.conformanceCertificate,
+    ]
+      .filter(
+        (
+          certificate,
+        ): certificate is Readonly<ExecutableLaneCertificate> =>
+          certificate !== undefined,
+      )
+      .map(publicCertificate),
+  )
+  const freshnessDate = evidence
+    .map((certificate) => certificate.freshUntil)
+    .sort()[0]
+    ?.slice(0, 10)
+  const projection = Object.freeze({
+    status: laneEligibility.status,
+    reasonCategory: policy.reasonCategory,
+    publicMessage: policy.publicMessage,
+    semanticTupleId: laneEligibility.expectedIdentity.semanticTupleId,
+    evidence,
+    ...(freshnessDate ? { freshnessDate } : {}),
+  })
+  assertPublicLaneEvidenceProjectionLeakSafe(projection)
+  return projection
+}
+
+export interface OperatorLaneCertificateProjection {
+  certificateId: string
+  certificateVersion: string
+  certificateRecordHash: string
+  issuedAt: string
+  freshUntil: string
+  status: ExecutableLaneCertificateStatus
+  gateResults: readonly Readonly<ExecutableLaneGateResult>[]
+  restrictedProofIds: readonly string[]
+  restrictedProofLinks: readonly string[]
+}
+
+export interface OperatorLaneEvidenceProjection {
+  status: ExecutableLaneEvidenceStatus
+  reasonCode: ExecutableLaneEvidenceReasonCode
+  evaluatedAt: string
+  registryGeneration: string
+  identity: Readonly<ExecutableLaneIdentity>
+  gates: {
+    containment?: Readonly<OperatorLaneCertificateProjection> | undefined
+    conformance?: Readonly<OperatorLaneCertificateProjection> | undefined
+  }
+  remediation: string
+  cohortImpact: string
+}
+
+const OPERATOR_REMEDIATION: Record<
+  ExecutableLaneEvidenceReasonCode,
+  string
+> = {
+  EVIDENCE_CURRENT:
+    "Keep the exact authority generation and both certificate references current.",
+  OPERATOR_DISABLED:
+    "Remove the operator disable only after the incident is resolved; evidence will then be re-evaluated.",
+  CONTAINMENT_MISSING:
+    "Import a current containment certificate for the exact executable identity.",
+  CONTAINMENT_STALE:
+    "Refresh containment evidence and publish a current certificate reference.",
+  CONTAINMENT_REVOKED:
+    "Resolve the revocation and import a new exact containment certificate.",
+  CONTAINMENT_FAILED:
+    "Repair the failed containment gates and recertify the exact lane identity.",
+  CONTAINMENT_UNVERIFIABLE:
+    "Repair the trusted containment evidence path and publish a verifiable reference.",
+  CONFORMANCE_MISSING:
+    "Run the required executable conformance corpus and import its exact certificate.",
+  CONFORMANCE_STALE:
+    "Re-run the executable conformance corpus and refresh the certificate.",
+  CONFORMANCE_REVOKED:
+    "Resolve the revocation and publish new exact conformance evidence.",
+  CONFORMANCE_FAILED:
+    "Repair the failed conformance gates and rerun the complete corpus.",
+  CONFORMANCE_UNVERIFIABLE:
+    "Repair the trusted conformance evidence path and publish a verifiable reference.",
+  IDENTITY_MISMATCH:
+    "Rebuild the evidence bundle for the exact active provider, toolchain, adapter, artifact, build, and tuple identity.",
+  TUPLE_UNKNOWN:
+    "Use an exact registered semantic tuple identifier and complete expansion.",
+  TUPLE_UNCERTIFIED:
+    "Register and certify the exact semantic tuple before requesting execution.",
+  REGISTRY_GENERATION_DRIFT:
+    "Reload the active authority generation and obtain matching certificate references.",
+  EVIDENCE_UNVERIFIABLE:
+    "Restore the verified authority import or signed-bundle path before retrying.",
+}
+
+const operatorCertificate = (
+  certificate: Readonly<ExecutableLaneCertificate>,
+): Readonly<OperatorLaneCertificateProjection> =>
+  Object.freeze({
+    certificateId: certificate.certificateId,
+    certificateVersion: certificate.certificateVersion,
+    certificateRecordHash: certificate.certificateRecordHash,
+    issuedAt: certificate.issuedAt,
+    freshUntil: certificate.freshUntil,
+    status: certificate.status,
+    gateResults: Object.freeze(
+      certificate.gateResults.map((gate) => Object.freeze({ ...gate })),
+    ),
+    restrictedProofIds: Object.freeze([...certificate.restrictedProofIds]),
+    restrictedProofLinks: Object.freeze([
+      ...certificate.restrictedProofLinks,
+    ]),
+  })
+
+export const projectOperatorLaneEvidence = (
+  laneEligibility: ExecutableLaneEligibility,
+): Readonly<OperatorLaneEvidenceProjection> => {
+  const gates = Object.freeze({
+    ...(laneEligibility.containmentCertificate
+      ? {
+          containment: operatorCertificate(
+            laneEligibility.containmentCertificate,
+          ),
+        }
+      : {}),
+    ...(laneEligibility.conformanceCertificate
+      ? {
+          conformance: operatorCertificate(
+            laneEligibility.conformanceCertificate,
+          ),
+        }
+      : {}),
+  })
+  const cohortImpact =
+    laneEligibility.status === "counted"
+      ? "New execution may produce counted results while evidence remains current."
+      : laneEligibility.status === "exhibition_only"
+        ? "New execution may produce exhibition evidence only; counted results are blocked."
+        : "New execution is disabled; no counted or exhibition result may be produced."
+  const projection = Object.freeze({
+    status: laneEligibility.status,
+    reasonCode: laneEligibility.reasonCode,
+    evaluatedAt: laneEligibility.evaluatedAt,
+    registryGeneration: laneEligibility.registryGeneration,
+    identity: cloneIdentity(laneEligibility.expectedIdentity),
+    gates,
+    remediation: OPERATOR_REMEDIATION[laneEligibility.reasonCode],
+    cohortImpact,
+  })
+  assertOperatorLaneEvidenceProjectionLeakSafe(projection)
+  return projection
+}
+
+export const assertPublicLaneEvidenceProjectionLeakSafe = (
+  value: unknown,
+): void =>
+  assertPublicOutputLeakSafe(value, "public lane evidence projection")
+
+export const assertOperatorLaneEvidenceProjectionLeakSafe = (
+  value: unknown,
+): void =>
+  assertPublicOutputLeakSafe(value, "restricted operator lane evidence")
