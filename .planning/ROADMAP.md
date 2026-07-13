@@ -35,7 +35,7 @@ v1.37 establishes the smallest complete trust substrate needed before serious co
   3. Operators can classify affected historical results, invalidate and recompute derived standings when needed, while the original Match evidence and v1.4 interpretation remain immutable.
   4. Public/default safety surfaces expose only safe classifications and evidence identifiers, and structural monitors reject duplicate authorities and stale execution entry points.
 
-**Plans:** 5/19 plans executed
+**Plans:** 6/19 plans executed
 
 Plans:
 **Wave 1**
@@ -54,7 +54,7 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 256-04-PLAN.md — Add exact identity schema, immutable evidence storage, and PostgreSQL constraints.
-- [ ] 256-17-PLAN.md — Define the signed, atomically replaceable authority bundle independently verified by Node and Go.
+- [x] 256-17-PLAN.md — Define the signed, atomically replaceable authority bundle independently verified by Node and Go.
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -181,7 +181,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 256. Counted Safety and Canonical Authority | 4/19 | In Progress|  |
+| 256. Counted Safety and Canonical Authority | 6/19 | In Progress|  |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 0/TBD | Not started | - |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 0/TBD | Not started | - |
 | 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |

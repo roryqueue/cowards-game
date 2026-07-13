@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
-stopped_at: Completed 256-04-PLAN.md; next dependency-ready plan is 256-17
-last_updated: "2026-07-13T03:03:30.000Z"
+stopped_at: Completed 256-17-PLAN.md
+last_updated: "2026-07-13T03:28:22.221Z"
 last_activity: 2026-07-13
-last_activity_desc: Plan 256-04 added exact immutable identity persistence and PostgreSQL rollback proof
+last_activity_desc: Plan 256-17 added signed authority bundles, durable anti-rollback anchors, and reference-only runtime requests
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 5
-  percent: 26
+  completed_plans: 6
+  percent: 32
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
-Plan: 5 of 19
+Plan: 6 of 19
 Status: Ready to execute
-Last activity: 2026-07-13 — Plan 256-04 added exact immutable identity persistence and PostgreSQL rollback proof
+Last activity: 2026-07-13 — Plan 256-17 added signed authority bundles, durable anti-rollback anchors, and reference-only runtime requests
 
-Progress: [███░░░░░░░] 26%
+Progress: [███░░░░░░░] 32%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [███░░░░░░░] 26%
 
 **Resume file:** None
 
-Last session: 2026-07-13T03:03:30.000Z
-Stopped at: Completed 256-04-PLAN.md; next dependency-ready plan is 256-17
+Last session: 2026-07-13T03:28:22.208Z
+Stopped at: Completed 256-17-PLAN.md
 Next command: `$gsd-execute-phase 256`
 
 ## Performance Metrics
@@ -74,6 +74,7 @@ Next command: `$gsd-execute-phase 256`
 | Phase 256 P19 | 10min | 2 tasks | 5 files |
 | Phase 256 P03 | 11min | 3 tasks | 7 files |
 | Phase 256 P04 | 14min | 2 tasks | 5 files |
+| Phase 256 P17 | 19min | 2 tasks | 12 files |
 
 ## Decisions
 
@@ -87,3 +88,6 @@ Next command: `$gsd-execute-phase 256`
 - [Phase 256]: Worker retirement has a focused AST-backed sentinel; Plan 256-14 owns broad-chain integration. — The focused guard proves fatal ordering and forbidden route absence without duplicating the milestone-wide authority monitor.
 - [Phase 256]: MatchSet semantic identity is singular while executable evidence is normalized per entrant and ordered per Match side. — Exact heterogeneous lanes remain independently attributable without collapsing them into a fabricated Match-wide runtime identity.
 - [Phase 256]: Historical integrity identity remains nullable and unresolved while current validated identity becomes immutable after first persistence. — No migration default, backfill, or resolver may manufacture proof for existing v1.4 rows.
+- [Phase 256]: Authority payload bytes are the signed unit, while Node and Go configure and invoke Ed25519 verification independently. — Both consumers share exact bytes and vectors without sharing a mutable trust decision.
+- [Phase 256]: A newer authority generation remains non-executable until its high-water anchor is durably installed. — Deployment pins, restart anchors, and same-generation fork rejection prevent rollback after process restart.
+- [Phase 256]: Runtime requests carry authority references only; complete resolved evidence remains a separate internal and persisted contract. — Request-echoed certificate bodies, graph nodes, signatures, and gate results cannot become execution authority.
