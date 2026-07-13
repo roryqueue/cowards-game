@@ -190,11 +190,31 @@ export interface RuntimeExecutionEvidencePair {
   top: RuntimeEntrantExecutionEvidence
 }
 
-export interface RuntimeExecutionEvidenceSnapshot {
+export interface RuntimeExecutionResolvedEvidenceSnapshot {
   compatibility: RuntimeExecutionCompatibilityIdentity
   authorityBundleHash: string
   registryGeneration: string
   entrants: RuntimeExecutionEvidencePair
+}
+
+export interface RuntimeEntrantAuthorityReference {
+  entrantKey: string
+  strategyRevisionId: StrategyRevisionId
+  laneIdentityHash: string
+  containmentCertificateId: string
+  containmentCertificateHash: string
+  conformanceCertificateId: string
+  conformanceCertificateHash: string
+}
+
+export interface RuntimeExecutionEvidenceSnapshot {
+  compatibility: RuntimeExecutionCompatibilityIdentity
+  authorityBundleHash: string
+  registryGeneration: string
+  entrants: {
+    bottom: RuntimeEntrantAuthorityReference
+    top: RuntimeEntrantAuthorityReference
+  }
 }
 
 export interface RuntimeExecutionServiceRequest {

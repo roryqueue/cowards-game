@@ -218,14 +218,17 @@ describe("runtime execution service", () => {
 
   it("validates and executes a complete request as a schema-valid success", () => {
     const request = requestFor()
-    expect(request.evidenceSnapshot.authorityBundleHash).toContain(
-      "fixture-only:untrusted",
+    expect(request.evidenceSnapshot.authorityBundleHash).toMatch(
+      /^sha256:[0-9a-f]{64}$/u,
     )
     expect(
       Object.values(request.evidenceSnapshot.entrants).map(
-        (entrant) => entrant.schedulingDecision.status,
+        (entrant) => entrant.containmentCertificateId,
       ),
-    ).toEqual(["disabled", "disabled"])
+    ).toEqual([
+      expect.stringContaining("fixture-only:untrusted"),
+      expect.stringContaining("fixture-only:untrusted"),
+    ])
     const response = executeRuntimeServiceRequest(request, runtimeConfig)
 
     expect(response.ok).toBe(true)

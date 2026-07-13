@@ -1,0 +1,251 @@
+{
+  "schemaVersion": "v1.37-runtime-evidence-authority-vectors-v1",
+  "generatedBy": "scripts/generate-v1-37-runtime-evidence-authority-vectors.ts",
+  "nonProduction": true,
+  "notice": "The committed Ed25519 key is fixture-only and is rejected by every production trust store.",
+  "fixtureKey": {
+    "keyId": "fixture-only-ed25519-key-v1",
+    "algorithm": "Ed25519",
+    "trustDomain": "cowards-game:runtime-evidence-authority:fixture:v1",
+    "publicKeySpkiBase64": "MCowBQYDK2VwAyEAXgrWpdGHFNO5Z+VoS28vWLcygYyLwCv4Ovkfyf4Z610=",
+    "privateKeyClassification": "committed-non-production-test-fixture"
+  },
+  "valid": {
+    "emptyProduction": {
+      "envelope": {
+        "schemaVersion": "v1.37-runtime-evidence-authority-envelope-v1",
+        "trustDomain": "cowards-game:runtime-evidence-authority:production:v1",
+        "keyId": "fixture-only-ed25519-key-v1",
+        "algorithm": "Ed25519",
+        "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
+        "payloadSha256": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1",
+        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+      },
+      "expected": {
+        "structural": "accept",
+        "fixtureKeyAsProductionTrust": "reject-unknown-key",
+        "grantsProductionConformance": false
+      }
+    },
+    "fixtureDomain": {
+      "envelope": {
+        "schemaVersion": "v1.37-runtime-evidence-authority-envelope-v1",
+        "trustDomain": "cowards-game:runtime-evidence-authority:fixture:v1",
+        "keyId": "fixture-only-ed25519-key-v1",
+        "algorithm": "Ed25519",
+        "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
+        "payloadSha256": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1",
+        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+      },
+      "evaluationInstant": "2026-07-13T00:00:00.000Z",
+      "expected": {
+        "node": "accept",
+        "go": "accept",
+        "production": "reject"
+      }
+    }
+  },
+  "invalidEnvelopeVectors": [
+    {
+      "name": "bad-signature",
+      "envelope": {
+        "schemaVersion": "v1.37-runtime-evidence-authority-envelope-v1",
+        "trustDomain": "cowards-game:runtime-evidence-authority:fixture:v1",
+        "keyId": "fixture-only-ed25519-key-v1",
+        "algorithm": "Ed25519",
+        "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
+        "payloadSha256": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1",
+        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDwAA"
+      },
+      "expected": {
+        "node": "reject-signature",
+        "go": "reject-signature"
+      }
+    },
+    {
+      "name": "bad-payload-hash",
+      "envelope": {
+        "schemaVersion": "v1.37-runtime-evidence-authority-envelope-v1",
+        "trustDomain": "cowards-game:runtime-evidence-authority:fixture:v1",
+        "keyId": "fixture-only-ed25519-key-v1",
+        "algorithm": "Ed25519",
+        "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
+        "payloadSha256": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+      },
+      "expected": {
+        "node": "reject-hash",
+        "go": "reject-hash"
+      }
+    },
+    {
+      "name": "unknown-key",
+      "envelope": {
+        "schemaVersion": "v1.37-runtime-evidence-authority-envelope-v1",
+        "trustDomain": "cowards-game:runtime-evidence-authority:fixture:v1",
+        "keyId": "unknown-key",
+        "algorithm": "Ed25519",
+        "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
+        "payloadSha256": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1",
+        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+      },
+      "expected": {
+        "node": "reject-key",
+        "go": "reject-key"
+      }
+    },
+    {
+      "name": "stale",
+      "envelope": {
+        "schemaVersion": "v1.37-runtime-evidence-authority-envelope-v1",
+        "trustDomain": "cowards-game:runtime-evidence-authority:fixture:v1",
+        "keyId": "fixture-only-ed25519-key-v1",
+        "algorithm": "Ed25519",
+        "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
+        "payloadSha256": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1",
+        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+      },
+      "evaluationInstant": "2026-08-13T00:00:00.000Z",
+      "expected": {
+        "node": "reject-validity",
+        "go": "reject-validity"
+      }
+    },
+    {
+      "name": "future",
+      "envelope": {
+        "schemaVersion": "v1.37-runtime-evidence-authority-envelope-v1",
+        "trustDomain": "cowards-game:runtime-evidence-authority:fixture:v1",
+        "keyId": "fixture-only-ed25519-key-v1",
+        "algorithm": "Ed25519",
+        "payloadBase64": "eyJzY2hlbWFWZXJzaW9uIjoidjEuMzctcnVudGltZS1ldmlkZW5jZS1hdXRob3JpdHktcGF5bG9hZC12MSIsImJ1bmRsZVZlcnNpb24iOiJ2MS4zNy1lbXB0eS1hdXRob3JpdHktdjEiLCJyZWdpc3RyeUdlbmVyYXRpb24iOiI3IiwiaXNzdWVkQXQiOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZEZyb20iOiIyMDI2LTA3LTEyVDAwOjAwOjAwLjAwMFoiLCJ2YWxpZFVudGlsIjoiMjAyNi0wOC0xMlQwMDowMDowMC4wMDBaIiwic2VtYW50aWNUdXBsZU1hbmlmZXN0SGFzaCI6InNoYTI1NjpiZTU0ZWI1MzE3YWYwYTg3MTkwNDMzZjY0OWY5YmVlZjQ0OTA0OTNkOGMyYTg4MTVhMzIzYjA4MjY1MWI1MTRjIiwiYXR0ZXN0YXRpb25zIjpbXSwiY2VydGlmaWNhdGVzIjpbXSwicmV2b2NhdGlvbnMiOltdLCJzdXBlcnNlc3Npb25zIjpbXSwib3BlcmF0b3JMYW5lRGlzYWJsZXMiOltdfQ==",
+        "payloadSha256": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1",
+        "signatureBase64": "kHh7DaINjaThoIcmS8Cl1VKRVJUtP+Z591l2iRp/8k0N3jo7vOFkWktpdWo/QtzzTZ6avJfBptyUbZ/mtk4HDw=="
+      },
+      "evaluationInstant": "2026-07-11T00:00:00.000Z",
+      "expected": {
+        "node": "reject-validity",
+        "go": "reject-validity"
+      }
+    }
+  ],
+  "graphAndReferenceVectors": [
+    {
+      "name": "revoked-certificate",
+      "expected": {
+        "node": "reject",
+        "go": "reject"
+      }
+    },
+    {
+      "name": "dangling-attestation-import",
+      "expected": {
+        "node": "reject",
+        "go": "reject"
+      }
+    },
+    {
+      "name": "unverified-import",
+      "expected": {
+        "node": "reject",
+        "go": "reject"
+      }
+    },
+    {
+      "name": "duplicate-id",
+      "expected": {
+        "node": "reject",
+        "go": "reject"
+      }
+    },
+    {
+      "name": "unknown-request-certificate-reference",
+      "expected": {
+        "node": "reject",
+        "go": "reject"
+      }
+    },
+    {
+      "name": "operator-kill-switch",
+      "expected": {
+        "node": "reject",
+        "go": "reject"
+      }
+    }
+  ],
+  "antiRollbackVectors": [
+    {
+      "name": "exact-bootstrap",
+      "bootstrap": true,
+      "pin": {
+        "generation": "7",
+        "hash": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1"
+      },
+      "candidate": {
+        "generation": "7",
+        "hash": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1"
+      },
+      "expected": "require-durable-install"
+    },
+    {
+      "name": "restart-rollback",
+      "bootstrap": false,
+      "highWater": {
+        "generation": "8",
+        "hash": "sha256:21fc8a63e6b4b929578fdcf66ed968544aa80f3bead83feec5b3378e92b59093"
+      },
+      "candidate": {
+        "generation": "7",
+        "hash": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1"
+      },
+      "expected": "reject-rollback"
+    },
+    {
+      "name": "same-generation-fork",
+      "bootstrap": false,
+      "highWater": {
+        "generation": "7",
+        "hash": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1"
+      },
+      "candidate": {
+        "generation": "7",
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expected": "reject-fork"
+    },
+    {
+      "name": "corrupt-anchor",
+      "anchorBytesBase64": "e2Jyb2tlbg==",
+      "expected": "reject-anchor"
+    },
+    {
+      "name": "newer-generation",
+      "highWater": {
+        "generation": "7",
+        "hash": "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1"
+      },
+      "candidate": {
+        "generation": "8",
+        "hash": "sha256:21fc8a63e6b4b929578fdcf66ed968544aa80f3bead83feec5b3378e92b59093"
+      },
+      "expected": "require-durable-install-before-executable"
+    }
+  ],
+  "replacementVectors": [
+    {
+      "name": "complete-atomic-replacement",
+      "observed": [
+        "old-complete-envelope",
+        "new-complete-envelope"
+      ],
+      "expected": "accept-only-complete-files"
+    },
+    {
+      "name": "half-written-temporary-file",
+      "observed": [
+        "old-complete-envelope"
+      ],
+      "expected": "old-remains-authoritative"
+    }
+  ]
+}

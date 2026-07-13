@@ -2448,7 +2448,7 @@ const addExecutionIdentityIssue = (
   ctx.addIssue({ code: "custom", path, message })
 }
 
-export const RuntimeExecutionEvidenceSnapshotSchema = z
+export const RuntimeExecutionResolvedEvidenceSnapshotSchema = z
   .object({
     compatibility: RuntimeExecutionCompatibilityIdentitySchema,
     authorityBundleHash: z.string().min(1),
@@ -2465,8 +2465,7 @@ export const RuntimeExecutionEvidenceSnapshotSchema = z
     for (const side of ["bottom", "top"] as const) {
       const entrant = snapshot.entrants[side]
       if (
-        entrant.laneIdentity.semanticTupleId !==
-        snapshot.compatibility.tupleId
+        entrant.laneIdentity.semanticTupleId !== snapshot.compatibility.tupleId
       ) {
         addExecutionIdentityIssue(
           ctx,
@@ -2501,8 +2500,44 @@ export const RuntimeExecutionEvidenceSnapshotSchema = z
       }
     }
     if (
-      snapshot.entrants.bottom.entrantKey ===
-      snapshot.entrants.top.entrantKey
+      snapshot.entrants.bottom.entrantKey === snapshot.entrants.top.entrantKey
+    ) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["entrants", "top", "entrantKey"],
+        "bottom and top entrant keys must differ",
+      )
+    }
+  })
+
+const RuntimeEntrantAuthorityReferenceSchema = z
+  .object({
+    entrantKey: z.string().min(1),
+    strategyRevisionId: z.string().min(1),
+    laneIdentityHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    containmentCertificateId: z.string().min(1),
+    containmentCertificateHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    conformanceCertificateId: z.string().min(1),
+    conformanceCertificateHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+  })
+  .strict()
+
+export const RuntimeExecutionEvidenceSnapshotSchema = z
+  .object({
+    compatibility: RuntimeExecutionCompatibilityIdentitySchema,
+    authorityBundleHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    registryGeneration: z.string().regex(/^(?:0|[1-9][0-9]{0,15})$/u),
+    entrants: z
+      .object({
+        bottom: RuntimeEntrantAuthorityReferenceSchema,
+        top: RuntimeEntrantAuthorityReferenceSchema,
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((snapshot, ctx) => {
+    if (
+      snapshot.entrants.bottom.entrantKey === snapshot.entrants.top.entrantKey
     ) {
       addExecutionIdentityIssue(
         ctx,
@@ -2600,12 +2635,7 @@ export const RuntimeExecutionServiceRequestSchema = z
       ) {
         ctx.addIssue({
           code: "custom",
-          path: [
-            "evidenceSnapshot",
-            "entrants",
-            side,
-            "strategyRevisionId",
-          ],
+          path: ["evidenceSnapshot", "entrants", side, "strategyRevisionId"],
           message: `${side} execution evidence must bind the Match Strategy Revision`,
         })
       }

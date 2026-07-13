@@ -22,8 +22,8 @@ export const RUNTIME_EVIDENCE_AUTHORITY_LIMITS = Object.freeze({
   identifierBytes: 512,
 })
 
-export const RUNTIME_EVIDENCE_AUTHORITY_ATOMIC_REFRESH_CONTRACT =
-  Object.freeze({
+export const RUNTIME_EVIDENCE_AUTHORITY_ATOMIC_REFRESH_CONTRACT = Object.freeze(
+  {
     schemaVersion: "v1.37-runtime-evidence-authority-refresh-v1" as const,
     writerSteps: Object.freeze([
       "write-complete-envelope-to-same-filesystem-temporary-file",
@@ -37,7 +37,8 @@ export const RUNTIME_EVIDENCE_AUTHORITY_ATOMIC_REFRESH_CONTRACT =
       "read-to-eof-from-one-file-descriptor",
       "close-file-descriptor",
     ] as const),
-  })
+  },
+)
 
 export interface RuntimeEvidenceAuthorityAttestation {
   attestationId: string
@@ -132,7 +133,8 @@ const fail = (code: string, message: string): never => {
 
 const SHA256 = /^sha256:[0-9a-f]{64}$/u
 const GENERATION = /^(?:0|[1-9][0-9]{0,15})$/u
-const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u
+const BASE64 =
+  /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u
 const textEncoder = new TextEncoder()
 const strictTextDecoder = new TextDecoder("utf-8", { fatal: true })
 
@@ -158,7 +160,10 @@ const assertExactKeys = (
     actual.length !== expected.length ||
     expected.some((key) => !Object.hasOwn(value, key))
   ) {
-    fail("STRICT_SHAPE", `${label} must contain exactly: ${expected.join(", ")}.`)
+    fail(
+      "STRICT_SHAPE",
+      `${label} must contain exactly: ${expected.join(", ")}.`,
+    )
   }
 }
 
@@ -177,13 +182,17 @@ const assertString = (value: unknown, label: string): string => {
 
 const assertHash = (value: unknown, label: string): string => {
   const hash = assertString(value, label)
-  if (!SHA256.test(hash)) fail("INVALID_HASH", `${label} must be a sha256 identity.`)
+  if (!SHA256.test(hash))
+    fail("INVALID_HASH", `${label} must be a sha256 identity.`)
   return hash
 }
 
 const assertGeneration = (value: unknown, label: string): string => {
   const generation = assertString(value, label)
-  if (!GENERATION.test(generation) || !Number.isSafeInteger(Number(generation))) {
+  if (
+    !GENERATION.test(generation) ||
+    !Number.isSafeInteger(Number(generation))
+  ) {
     fail("INVALID_GENERATION", `${label} must be a canonical safe generation.`)
   }
   return generation
@@ -192,7 +201,10 @@ const assertGeneration = (value: unknown, label: string): string => {
 const parseInstant = (value: unknown, label: string): string => {
   const instant = assertString(value, label)
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(instant)) {
-    fail("INVALID_INSTANT", `${label} must be an exact UTC millisecond instant.`)
+    fail(
+      "INVALID_INSTANT",
+      `${label} must be an exact UTC millisecond instant.`,
+    )
   }
   if (!Number.isFinite(Date.parse(instant))) {
     fail("INVALID_INSTANT", `${label} is not a valid instant.`)
@@ -204,9 +216,12 @@ const assertCollection = (
   value: unknown,
   label: string,
 ): readonly unknown[] => {
-  if (!Array.isArray(value)) fail("INVALID_COLLECTION", `${label} must be an array.`)
+  if (!Array.isArray(value))
+    fail("INVALID_COLLECTION", `${label} must be an array.`)
   const collection = value as unknown[]
-  if (collection.length > RUNTIME_EVIDENCE_AUTHORITY_LIMITS.recordsPerCollection) {
+  if (
+    collection.length > RUNTIME_EVIDENCE_AUTHORITY_LIMITS.recordsPerCollection
+  ) {
     fail("COLLECTION_LIMIT", `${label} exceeds the record limit.`)
   }
   return collection
@@ -244,8 +259,14 @@ const parseAttestation = (
     fail("UNVERIFIED_ATTESTATION", `attestations[${index}] must be verified.`)
   }
   return Object.freeze({
-    attestationId: assertString(record.attestationId, `attestations[${index}].attestationId`),
-    attestationHash: assertHash(record.attestationHash, `attestations[${index}].attestationHash`),
+    attestationId: assertString(
+      record.attestationId,
+      `attestations[${index}].attestationId`,
+    ),
+    attestationHash: assertHash(
+      record.attestationHash,
+      `attestations[${index}].attestationHash`,
+    ),
     verified: true,
     imports: assertReferences(record.imports, `attestations[${index}].imports`),
   })
@@ -280,14 +301,29 @@ const parseCertificate = (
     `certificates[${index}].attestationIds`,
   )
   if (attestationIds.length === 0) {
-    fail("EMPTY_EVIDENCE_GRAPH", `certificates[${index}] requires an attestation.`)
+    fail(
+      "EMPTY_EVIDENCE_GRAPH",
+      `certificates[${index}] requires an attestation.`,
+    )
   }
   return Object.freeze({
     kind: record.kind as "containment" | "conformance",
-    certificateId: assertString(record.certificateId, `certificates[${index}].certificateId`),
-    certificateVersion: assertString(record.certificateVersion, `certificates[${index}].certificateVersion`),
-    certificateRecordHash: assertHash(record.certificateRecordHash, `certificates[${index}].certificateRecordHash`),
-    laneIdentityHash: assertHash(record.laneIdentityHash, `certificates[${index}].laneIdentityHash`),
+    certificateId: assertString(
+      record.certificateId,
+      `certificates[${index}].certificateId`,
+    ),
+    certificateVersion: assertString(
+      record.certificateVersion,
+      `certificates[${index}].certificateVersion`,
+    ),
+    certificateRecordHash: assertHash(
+      record.certificateRecordHash,
+      `certificates[${index}].certificateRecordHash`,
+    ),
+    laneIdentityHash: assertHash(
+      record.laneIdentityHash,
+      `certificates[${index}].laneIdentityHash`,
+    ),
     attestationIds,
   })
 }
@@ -296,17 +332,33 @@ const parseRevocation = (
   value: unknown,
   index: number,
 ): Readonly<RuntimeEvidenceAuthorityRevocation> => {
-  const record = requireRecord(value, "INVALID_REVOCATION", `revocations[${index}] must be an object.`)
+  const record = requireRecord(
+    value,
+    "INVALID_REVOCATION",
+    `revocations[${index}] must be an object.`,
+  )
   assertExactKeys(
     record,
     ["certificateId", "certificateRecordHash", "revokedAt", "reasonCode"],
     `revocations[${index}]`,
   )
   return Object.freeze({
-    certificateId: assertString(record.certificateId, `revocations[${index}].certificateId`),
-    certificateRecordHash: assertHash(record.certificateRecordHash, `revocations[${index}].certificateRecordHash`),
-    revokedAt: parseInstant(record.revokedAt, `revocations[${index}].revokedAt`),
-    reasonCode: assertString(record.reasonCode, `revocations[${index}].reasonCode`),
+    certificateId: assertString(
+      record.certificateId,
+      `revocations[${index}].certificateId`,
+    ),
+    certificateRecordHash: assertHash(
+      record.certificateRecordHash,
+      `revocations[${index}].certificateRecordHash`,
+    ),
+    revokedAt: parseInstant(
+      record.revokedAt,
+      `revocations[${index}].revokedAt`,
+    ),
+    reasonCode: assertString(
+      record.reasonCode,
+      `revocations[${index}].reasonCode`,
+    ),
   })
 }
 
@@ -314,14 +366,21 @@ const parseSupersession = (
   value: unknown,
   index: number,
 ): Readonly<RuntimeEvidenceAuthoritySupersession> => {
-  const record = requireRecord(value, "INVALID_SUPERSESSION", `supersessions[${index}] must be an object.`)
+  const record = requireRecord(
+    value,
+    "INVALID_SUPERSESSION",
+    `supersessions[${index}] must be an object.`,
+  )
   assertExactKeys(
     record,
     ["certificateId", "supersededByCertificateId"],
     `supersessions[${index}]`,
   )
   return Object.freeze({
-    certificateId: assertString(record.certificateId, `supersessions[${index}].certificateId`),
+    certificateId: assertString(
+      record.certificateId,
+      `supersessions[${index}].certificateId`,
+    ),
     supersededByCertificateId: assertString(
       record.supersededByCertificateId,
       `supersessions[${index}].supersededByCertificateId`,
@@ -333,16 +392,29 @@ const parseLaneDisable = (
   value: unknown,
   index: number,
 ): Readonly<RuntimeEvidenceAuthorityLaneDisable> => {
-  const record = requireRecord(value, "INVALID_LANE_DISABLE", `operatorLaneDisables[${index}] must be an object.`)
+  const record = requireRecord(
+    value,
+    "INVALID_LANE_DISABLE",
+    `operatorLaneDisables[${index}] must be an object.`,
+  )
   assertExactKeys(
     record,
     ["laneIdentityHash", "disabledAt", "reasonCode"],
     `operatorLaneDisables[${index}]`,
   )
   return Object.freeze({
-    laneIdentityHash: assertHash(record.laneIdentityHash, `operatorLaneDisables[${index}].laneIdentityHash`),
-    disabledAt: parseInstant(record.disabledAt, `operatorLaneDisables[${index}].disabledAt`),
-    reasonCode: assertString(record.reasonCode, `operatorLaneDisables[${index}].reasonCode`),
+    laneIdentityHash: assertHash(
+      record.laneIdentityHash,
+      `operatorLaneDisables[${index}].laneIdentityHash`,
+    ),
+    disabledAt: parseInstant(
+      record.disabledAt,
+      `operatorLaneDisables[${index}].disabledAt`,
+    ),
+    reasonCode: assertString(
+      record.reasonCode,
+      `operatorLaneDisables[${index}].reasonCode`,
+    ),
   })
 }
 
@@ -370,7 +442,9 @@ const validateClosedGraph = (
     payload.certificates.map((entry) => [entry.certificateId, entry]),
   )
   assertUnique(
-    payload.revocations.map((entry) => `${entry.certificateId}\0${entry.certificateRecordHash}`),
+    payload.revocations.map(
+      (entry) => `${entry.certificateId}\0${entry.certificateRecordHash}`,
+    ),
     "revocations",
   )
   assertUnique(
@@ -385,21 +459,33 @@ const validateClosedGraph = (
   for (const attestation of payload.attestations) {
     for (const importedId of attestation.imports) {
       if (!attestations.has(importedId)) {
-        fail("DANGLING_GRAPH", `Attestation ${attestation.attestationId} has dangling import ${importedId}.`)
+        fail(
+          "DANGLING_GRAPH",
+          `Attestation ${attestation.attestationId} has dangling import ${importedId}.`,
+        )
       }
     }
   }
   for (const certificate of payload.certificates) {
     for (const attestationId of certificate.attestationIds) {
       if (!attestations.has(attestationId)) {
-        fail("DANGLING_GRAPH", `Certificate ${certificate.certificateId} has dangling attestation ${attestationId}.`)
+        fail(
+          "DANGLING_GRAPH",
+          `Certificate ${certificate.certificateId} has dangling attestation ${attestationId}.`,
+        )
       }
     }
   }
   for (const revocation of payload.revocations) {
     const certificate = certificates.get(revocation.certificateId)
-    if (!certificate || certificate.certificateRecordHash !== revocation.certificateRecordHash) {
-      fail("DANGLING_GRAPH", `Revocation has dangling certificate ${revocation.certificateId}.`)
+    if (
+      !certificate ||
+      certificate.certificateRecordHash !== revocation.certificateRecordHash
+    ) {
+      fail(
+        "DANGLING_GRAPH",
+        `Revocation has dangling certificate ${revocation.certificateId}.`,
+      )
     }
   }
   const supersededBy = new Map<string, string>()
@@ -422,7 +508,8 @@ const validateClosedGraph = (
     const seen = new Set<string>()
     let cursor: string | undefined = origin
     while (cursor !== undefined) {
-      if (seen.has(cursor)) fail("SUPERSESSION_CYCLE", "Supersession graph contains a cycle.")
+      if (seen.has(cursor))
+        fail("SUPERSESSION_CYCLE", "Supersession graph contains a cycle.")
       seen.add(cursor)
       cursor = supersededBy.get(cursor)
     }
@@ -432,7 +519,11 @@ const validateClosedGraph = (
 export const parseRuntimeEvidenceAuthorityPayload = (
   value: unknown,
 ): Readonly<RuntimeEvidenceAuthorityPayload> => {
-  const record = requireRecord(value, "INVALID_PAYLOAD", "Authority payload must be an object.")
+  const record = requireRecord(
+    value,
+    "INVALID_PAYLOAD",
+    "Authority payload must be an object.",
+  )
   assertExactKeys(
     record,
     [
@@ -451,38 +542,57 @@ export const parseRuntimeEvidenceAuthorityPayload = (
     ],
     "Authority payload",
   )
-  if (record.schemaVersion !== RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION) {
+  if (
+    record.schemaVersion !== RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION
+  ) {
     fail("PAYLOAD_VERSION", "Authority payload schema version is unknown.")
   }
   const payload: RuntimeEvidenceAuthorityPayload = {
     schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
     bundleVersion: assertString(record.bundleVersion, "bundleVersion"),
-    registryGeneration: assertGeneration(record.registryGeneration, "registryGeneration"),
+    registryGeneration: assertGeneration(
+      record.registryGeneration,
+      "registryGeneration",
+    ),
     issuedAt: parseInstant(record.issuedAt, "issuedAt"),
     validFrom: parseInstant(record.validFrom, "validFrom"),
     validUntil: parseInstant(record.validUntil, "validUntil"),
-    semanticTupleManifestHash: assertHash(record.semanticTupleManifestHash, "semanticTupleManifestHash"),
+    semanticTupleManifestHash: assertHash(
+      record.semanticTupleManifestHash,
+      "semanticTupleManifestHash",
+    ),
     attestations: Object.freeze(
-      assertCollection(record.attestations, "attestations").map(parseAttestation),
+      assertCollection(record.attestations, "attestations").map(
+        parseAttestation,
+      ),
     ),
     certificates: Object.freeze(
-      assertCollection(record.certificates, "certificates").map(parseCertificate),
+      assertCollection(record.certificates, "certificates").map(
+        parseCertificate,
+      ),
     ),
     revocations: Object.freeze(
       assertCollection(record.revocations, "revocations").map(parseRevocation),
     ),
     supersessions: Object.freeze(
-      assertCollection(record.supersessions, "supersessions").map(parseSupersession),
+      assertCollection(record.supersessions, "supersessions").map(
+        parseSupersession,
+      ),
     ),
     operatorLaneDisables: Object.freeze(
-      assertCollection(record.operatorLaneDisables, "operatorLaneDisables").map(parseLaneDisable),
+      assertCollection(record.operatorLaneDisables, "operatorLaneDisables").map(
+        parseLaneDisable,
+      ),
     ),
   }
   if (
     Date.parse(payload.issuedAt) > Date.parse(payload.validFrom) ||
     Date.parse(payload.validFrom) >= Date.parse(payload.validUntil)
   ) {
-    fail("INVALID_VALIDITY", "Authority payload validity interval is incoherent.")
+    fail(
+      "INVALID_VALIDITY",
+      "Authority payload validity interval is incoherent.",
+    )
   }
   validateClosedGraph(payload)
   return Object.freeze(payload)
@@ -526,7 +636,8 @@ export const hashRuntimeEvidenceAuthorityPayload = (
   bytes: Uint8Array,
 ): string => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
-const encodeBase64 = (bytes: Uint8Array): string => Buffer.from(bytes).toString("base64")
+const encodeBase64 = (bytes: Uint8Array): string =>
+  Buffer.from(bytes).toString("base64")
 
 const decodeBase64 = (value: unknown, label: string): Uint8Array => {
   if (typeof value !== "string" || value.length === 0) {
@@ -551,7 +662,8 @@ export const buildRuntimeEvidenceAuthorityEnvelope = (input: {
 }): Readonly<RuntimeEvidenceAuthorityEnvelope> => {
   if (
     input.payloadBytes.byteLength === 0 ||
-    input.payloadBytes.byteLength > RUNTIME_EVIDENCE_AUTHORITY_LIMITS.payloadBytes
+    input.payloadBytes.byteLength >
+      RUNTIME_EVIDENCE_AUTHORITY_LIMITS.payloadBytes
   ) {
     fail("PAYLOAD_LIMIT", "Authority payload byte length is invalid.")
   }
@@ -586,7 +698,11 @@ export const parseRuntimeEvidenceAuthorityEnvelope = (
   } catch {
     return fail("ENVELOPE_JSON", "Authority envelope JSON is malformed.")
   }
-  const record = requireRecord(value, "INVALID_ENVELOPE", "Authority envelope must be an object.")
+  const record = requireRecord(
+    value,
+    "INVALID_ENVELOPE",
+    "Authority envelope must be an object.",
+  )
   assertExactKeys(
     record,
     [
@@ -600,7 +716,9 @@ export const parseRuntimeEvidenceAuthorityEnvelope = (
     ],
     "Authority envelope",
   )
-  if (record.schemaVersion !== RUNTIME_EVIDENCE_AUTHORITY_ENVELOPE_SCHEMA_VERSION) {
+  if (
+    record.schemaVersion !== RUNTIME_EVIDENCE_AUTHORITY_ENVELOPE_SCHEMA_VERSION
+  ) {
     fail("ENVELOPE_VERSION", "Authority envelope schema version is unknown.")
   }
   if (record.algorithm !== "Ed25519") {
@@ -641,7 +759,10 @@ export const inspectRuntimeEvidenceAuthorityBundle = (
 ) => {
   const envelope = parseRuntimeEvidenceAuthorityEnvelope(serialized)
   if (envelope.trustDomain !== options.expectedTrustDomain) {
-    fail("TRUST_DOMAIN", "Authority bundle trust domain does not match the consumer mode.")
+    fail(
+      "TRUST_DOMAIN",
+      "Authority bundle trust domain does not match the consumer mode.",
+    )
   }
   if (!options.trustedKeyIds.includes(envelope.keyId)) {
     fail("UNKNOWN_KEY", "Authority bundle uses an unknown key ID.")
@@ -650,7 +771,10 @@ export const inspectRuntimeEvidenceAuthorityBundle = (
   const signature = decodeBase64(envelope.signatureBase64, "signatureBase64")
   const payloadSha256 = hashRuntimeEvidenceAuthorityPayload(payloadBytes)
   if (payloadSha256 !== envelope.payloadSha256) {
-    fail("PAYLOAD_HASH", "Authority bundle payload hash does not match exact bytes.")
+    fail(
+      "PAYLOAD_HASH",
+      "Authority bundle payload hash does not match exact bytes.",
+    )
   }
   let signatureValid = false
   try {
@@ -663,7 +787,8 @@ export const inspectRuntimeEvidenceAuthorityBundle = (
   } catch {
     signatureValid = false
   }
-  if (!signatureValid) fail("SIGNATURE", "Authority bundle signature is invalid.")
+  if (!signatureValid)
+    fail("SIGNATURE", "Authority bundle signature is invalid.")
   const payload = parseRuntimeEvidenceAuthorityPayloadBytes(payloadBytes)
   const evaluationInstant = parseInstant(
     options.evaluationInstant,
@@ -680,7 +805,9 @@ export const inspectRuntimeEvidenceAuthorityBundle = (
   if (
     options.expectedTrustDomain ===
       RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production &&
-    payload.certificates.some((certificate) => certificate.kind === "conformance")
+    payload.certificates.some(
+      (certificate) => certificate.kind === "conformance",
+    )
   ) {
     fail(
       "CONFORMANCE_NOT_ENABLED",
@@ -701,18 +828,28 @@ const generationNumber = (value: string): number =>
 const parseHighWaterObject = (
   value: unknown,
 ): Readonly<RuntimeEvidenceAuthorityHighWaterRecord> => {
-  const record = requireRecord(value, "HIGH_WATER", "High-water record must be an object.")
+  const record = requireRecord(
+    value,
+    "HIGH_WATER",
+    "High-water record must be an object.",
+  )
   assertExactKeys(
     record,
     ["schemaVersion", "registryGeneration", "payloadSha256"],
     "High-water record",
   )
-  if (record.schemaVersion !== RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_SCHEMA_VERSION) {
+  if (
+    record.schemaVersion !==
+    RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_SCHEMA_VERSION
+  ) {
     fail("HIGH_WATER", "High-water record schema version is unknown.")
   }
   return Object.freeze({
     schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_SCHEMA_VERSION,
-    registryGeneration: assertGeneration(record.registryGeneration, "registryGeneration"),
+    registryGeneration: assertGeneration(
+      record.registryGeneration,
+      "registryGeneration",
+    ),
     payloadSha256: assertHash(record.payloadSha256, "payloadSha256"),
   })
 }
@@ -722,7 +859,9 @@ export const parseRuntimeEvidenceAuthorityHighWaterRecord = (
 ): Readonly<RuntimeEvidenceAuthorityHighWaterRecord> => {
   try {
     const bytes =
-      typeof serialized === "string" ? textEncoder.encode(serialized) : serialized
+      typeof serialized === "string"
+        ? textEncoder.encode(serialized)
+        : serialized
     if (bytes.byteLength === 0 || bytes.byteLength > 4_096) {
       return fail("HIGH_WATER", "High-water record byte length is invalid.")
     }
@@ -745,8 +884,13 @@ export const evaluateRuntimeEvidenceAuthorityAntiRollback = (input: {
   ) {
     fail("BOOTSTRAP_PIN", "Deployment bootstrap pin schema is invalid.")
   }
-  const candidateGeneration = generationNumber(input.candidate.registryGeneration)
-  const candidateHash = assertHash(input.candidate.payloadSha256, "candidate.payloadSha256")
+  const candidateGeneration = generationNumber(
+    input.candidate.registryGeneration,
+  )
+  const candidateHash = assertHash(
+    input.candidate.payloadSha256,
+    "candidate.payloadSha256",
+  )
   const pinGeneration = generationNumber(
     input.deploymentPin.minimumRegistryGeneration,
   )
@@ -755,7 +899,10 @@ export const evaluateRuntimeEvidenceAuthorityAntiRollback = (input: {
     "deploymentPin.minimumPayloadSha256",
   )
   if (candidateGeneration < pinGeneration) {
-    fail("ROLLBACK", "Authority bundle is below the deployment-pinned generation.")
+    fail(
+      "ROLLBACK",
+      "Authority bundle is below the deployment-pinned generation.",
+    )
   }
   if (candidateGeneration === pinGeneration && candidateHash !== pinHash) {
     fail("PIN_FORK", "Authority bundle conflicts with the deployment pin.")
@@ -769,10 +916,16 @@ export const evaluateRuntimeEvidenceAuthorityAntiRollback = (input: {
   const highWater = input.durableHighWater
   if (!highWater) {
     if (!input.bootstrapMode) {
-      fail("HIGH_WATER_MISSING", "Normal startup requires a durable high-water record.")
+      fail(
+        "HIGH_WATER_MISSING",
+        "Normal startup requires a durable high-water record.",
+      )
     }
     if (candidateGeneration !== pinGeneration || candidateHash !== pinHash) {
-      fail("BOOTSTRAP_PIN", "Initial bootstrap requires the exact deployment-pinned bundle.")
+      fail(
+        "BOOTSTRAP_PIN",
+        "Initial bootstrap requires the exact deployment-pinned bundle.",
+      )
     }
     return Object.freeze({
       executable: false,
@@ -783,7 +936,10 @@ export const evaluateRuntimeEvidenceAuthorityAntiRollback = (input: {
   const highWaterRecord = parseHighWaterObject(highWater)
   const highGeneration = generationNumber(highWaterRecord.registryGeneration)
   if (candidateGeneration < highGeneration) {
-    fail("ROLLBACK", "Authority bundle is below the durable high-water generation.")
+    fail(
+      "ROLLBACK",
+      "Authority bundle is below the durable high-water generation.",
+    )
   }
   if (
     candidateGeneration === highGeneration &&

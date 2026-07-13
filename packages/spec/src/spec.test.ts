@@ -182,9 +182,7 @@ describe("Coward's Game spec contracts", () => {
       ])
       for (const claim of COMPETITION_POLICY_V1_36_FORBIDDEN_CLAIMS) {
         expect(claim.examples.length).toBeGreaterThanOrEqual(2)
-        expect(claim.examples.every((example) => example.length > 0)).toBe(
-          true,
-        )
+        expect(claim.examples.every((example) => example.length > 0)).toBe(true)
       }
     })
 
@@ -218,9 +216,9 @@ describe("Coward's Game spec contracts", () => {
         webProjection: expect.stringContaining("public projections only"),
         staticMonitorProof: expect.stringContaining("static drift checks"),
       })
-      expect(
-        COMPETITION_POLICY_V1_36_AUTHORITY_OWNERS.webProjection,
-      ).toContain("no game rules")
+      expect(COMPETITION_POLICY_V1_36_AUTHORITY_OWNERS.webProjection).toContain(
+        "no game rules",
+      )
       expect(
         COMPETITION_POLICY_V1_36_AUTHORITY_OWNERS.goBackendOrchestration,
       ).toContain("no Strategy execution")
@@ -1786,47 +1784,14 @@ describe("Coward's Game spec contracts", () => {
     const evidenceEntrant = (side: "bottom" | "top") => ({
       entrantKey: `entrant:${side}`,
       strategyRevisionId: `strategy-revision:${side}`,
-      laneIdentity: {
-        providerId: `provider:${side}`,
-        languageId: "typescript",
-        runtimeId: "runtime:node",
-        runtimeVersion: "26.0.0",
-        toolchainId: "toolchain:typescript",
-        toolchainVersion: "6.0.3",
-        adapterId: "runtime-js-worker-thread",
-        adapterVersion: "0.1.0",
-        policyId: "package-none",
-        policyVersion: "1.0.0",
-        corpusId: "corpus:v1.37",
-        corpusVersion: "1.0.0",
-        artifactId: `artifact:${side}`,
-        artifactSha256: side.repeat(64).slice(0, 64),
-        implementationId: "runtime-service",
-        buildId: "build:v1.37",
-        semanticTupleId: registered.tupleId,
-        semanticTuple: { ...registered.tuple },
-      },
-      containmentCertificateRef: {
-        kind: "containment",
-        certificateId: `containment:${side}`,
-        certificateVersion: "1.0.0",
-        certificateRecordHash: `containment:${side}:hash`,
-        registryGeneration: "registry-generation:1",
-      },
-      conformanceCertificateRef: {
-        kind: "conformance",
-        certificateId: `conformance:${side}`,
-        certificateVersion: "1.0.0",
-        certificateRecordHash: `conformance:${side}:hash`,
-        registryGeneration: "registry-generation:1",
-      },
-      schedulingDecision: {
-        status: "counted",
-        reasonCode: "EVIDENCE_CURRENT",
-        evaluatedAt: "2026-07-13T00:00:00.000Z",
-        freshUntil: "2026-08-13T00:00:00.000Z",
-        registryGeneration: "registry-generation:1",
-      },
+      laneIdentityHash: `sha256:${side === "bottom" ? "a" : "b"}`.padEnd(
+        71,
+        side === "bottom" ? "a" : "b",
+      ),
+      containmentCertificateId: `containment:${side}`,
+      containmentCertificateHash: `sha256:${"c".repeat(64)}`,
+      conformanceCertificateId: `conformance:${side}`,
+      conformanceCertificateHash: `sha256:${"d".repeat(64)}`,
     })
     const request = {
       contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
@@ -1852,8 +1817,8 @@ describe("Coward's Game spec contracts", () => {
           tupleId: registered.tupleId,
           tuple: { ...registered.tuple },
         },
-        authorityBundleHash: "authority-bundle-hash:v1",
-        registryGeneration: "registry-generation:1",
+        authorityBundleHash: `sha256:${"e".repeat(64)}`,
+        registryGeneration: "1",
         entrants: {
           bottom: evidenceEntrant("bottom"),
           top: evidenceEntrant("top"),
@@ -1925,57 +1890,18 @@ describe("Coward's Game spec contracts", () => {
       },
       metadata: {},
     })
-    const laneIdentity = (
-      languageId: string,
-      suffix: string,
-    ) => ({
-      providerId: `provider:${suffix}`,
-      languageId,
-      runtimeId: `runtime:${suffix}`,
-      runtimeVersion: "1.0.0",
-      toolchainId: `toolchain:${suffix}`,
-      toolchainVersion: "1.0.0",
-      adapterId: `adapter:${suffix}`,
-      adapterVersion: "1.0.0",
-      policyId: "policy:package-none",
-      policyVersion: "1.0.0",
-      corpusId: "corpus:v1.37",
-      corpusVersion: "1.0.0",
-      artifactId: `artifact:${suffix}`,
-      artifactSha256: suffix.repeat(64).slice(0, 64),
-      implementationId: `implementation:${suffix}`,
-      buildId: `build:${suffix}`,
-      semanticTupleId: registered.tupleId,
-      semanticTuple: { ...registered.tuple },
-    })
-    const entrant = (
-      side: "bottom" | "top",
-      languageId: string,
-    ) => ({
+    const entrant = (side: "bottom" | "top", languageId: string) => ({
       entrantKey: `entrant:${side}`,
       strategyRevisionId: `strategy-revision:${side}`,
-      laneIdentity: laneIdentity(languageId, side),
-      containmentCertificateRef: {
-        kind: "containment",
-        certificateId: `certificate:containment:${side}`,
-        certificateVersion: "1.0.0",
-        certificateRecordHash: side.repeat(64).slice(0, 64),
-        registryGeneration: "registry-generation:1",
-      },
-      conformanceCertificateRef: {
-        kind: "conformance",
-        certificateId: `certificate:conformance:${side}`,
-        certificateVersion: "1.0.0",
-        certificateRecordHash: `${side}:conformance`.repeat(8).slice(0, 64),
-        registryGeneration: "registry-generation:1",
-      },
-      schedulingDecision: {
-        status: "counted",
-        reasonCode: "EVIDENCE_CURRENT",
-        evaluatedAt: "2026-07-13T00:00:00.000Z",
-        freshUntil: "2026-08-13T00:00:00.000Z",
-        registryGeneration: "registry-generation:1",
-      },
+      laneIdentityHash:
+        `sha256:${languageId === "typescript" ? "1" : "2"}`.padEnd(
+          71,
+          languageId === "typescript" ? "1" : "2",
+        ),
+      containmentCertificateId: `certificate:containment:${side}`,
+      containmentCertificateHash: `sha256:${"3".repeat(64)}`,
+      conformanceCertificateId: `certificate:conformance:${side}`,
+      conformanceCertificateHash: `sha256:${"4".repeat(64)}`,
     })
     const request = {
       contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
@@ -2000,8 +1926,8 @@ describe("Coward's Game spec contracts", () => {
           tupleId: registered.tupleId,
           tuple: { ...registered.tuple },
         },
-        authorityBundleHash: "authority-bundle-hash:v1",
-        registryGeneration: "registry-generation:1",
+        authorityBundleHash: `sha256:${"5".repeat(64)}`,
+        registryGeneration: "1",
         entrants: {
           bottom: entrant("bottom", "typescript"),
           top: entrant("top", "python"),
@@ -2050,10 +1976,7 @@ describe("Coward's Game spec contracts", () => {
             ...request.evidenceSnapshot.entrants,
             top: {
               ...request.evidenceSnapshot.entrants.top,
-              laneIdentity: {
-                ...request.evidenceSnapshot.entrants.top.laneIdentity,
-                semanticTupleId: "latest",
-              },
+              laneIdentityHash: "latest",
             },
           },
         },
@@ -2066,16 +1989,16 @@ describe("Coward's Game spec contracts", () => {
             ...request.evidenceSnapshot.entrants,
             top: {
               ...request.evidenceSnapshot.entrants.top,
-              conformanceCertificateRef: undefined,
+              conformanceCertificateId: undefined,
             },
           },
         },
       },
     ]
     for (const mutation of mutations) {
-      expect(RuntimeExecutionServiceRequestSchema.safeParse(mutation).success).toBe(
-        false,
-      )
+      expect(
+        RuntimeExecutionServiceRequestSchema.safeParse(mutation).success,
+      ).toBe(false)
     }
 
     expect(

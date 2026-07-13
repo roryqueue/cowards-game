@@ -1,8 +1,5 @@
-import {
-  generateKeyPairSync,
-  sign,
-  verify,
-} from "node:crypto"
+import { generateKeyPairSync, sign, verify } from "node:crypto"
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { CANONICAL_COMPATIBILITY_TUPLES } from "./integrity-authority.js"
 import { RuntimeExecutionEvidenceSnapshotSchema } from "./schemas.js"
@@ -67,13 +64,16 @@ const signedBundle = (
 describe("runtime evidence authority bundle", () => {
   it("binds one bounded signed envelope to the exact payload bytes and hash", () => {
     const fixture = signedBundle()
-    const inspected = inspectRuntimeEvidenceAuthorityBundle(fixture.serialized, {
-      expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
-      evaluationInstant: "2026-07-12T12:00:00.000Z",
-      trustedKeyIds: ["fixture-ed25519-key"],
-      verifySignature: ({ payloadBytes, signature }) =>
-        verify(null, payloadBytes, fixture.keys.publicKey, signature),
-    })
+    const inspected = inspectRuntimeEvidenceAuthorityBundle(
+      fixture.serialized,
+      {
+        expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+        evaluationInstant: "2026-07-12T12:00:00.000Z",
+        trustedKeyIds: ["fixture-ed25519-key"],
+        verifySignature: ({ payloadBytes, signature }) =>
+          verify(null, payloadBytes, fixture.keys.publicKey, signature),
+      },
+    )
 
     expect(inspected.envelope.schemaVersion).toBe(
       RUNTIME_EVIDENCE_AUTHORITY_ENVELOPE_SCHEMA_VERSION,
@@ -171,7 +171,9 @@ describe("runtime evidence authority bundle", () => {
         ],
       }),
     ]) {
-      expect(() => signedBundle(payload)).toThrow(/dangling|duplicate|verified/i)
+      expect(() => signedBundle(payload)).toThrow(
+        /dangling|duplicate|verified/i,
+      )
     }
 
     const productionConformance = fixturePayload({
@@ -212,9 +214,9 @@ describe("runtime evidence authority bundle", () => {
       executable: false,
       durableInstallRequired: true,
     })
-    expect(() => assertRuntimeEvidenceAuthorityAnchorInstalled(bootstrap)).toThrow(
-      /durably installed/i,
-    )
+    expect(() =>
+      assertRuntimeEvidenceAuthorityAnchorInstalled(bootstrap),
+    ).toThrow(/durably installed/i)
 
     const anchor = parseRuntimeEvidenceAuthorityHighWaterRecord(
       JSON.stringify({
@@ -331,5 +333,44 @@ describe("runtime evidence authority bundle", () => {
         }).success,
       ).toBe(false)
     }
+  })
+
+  it("publishes byte-stable cross-language negative and anti-rollback vectors", () => {
+    const vectors = JSON.parse(
+      readFileSync(
+        new URL(
+          "../artifacts/v1.37-runtime-evidence-authority-vectors.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ) as {
+      invalidEnvelopeVectors: { name: string }[]
+      antiRollbackVectors: { name: string }[]
+      notice: string
+      valid: {
+        emptyProduction: {
+          expected: {
+            fixtureKeyAsProductionTrust: string
+            grantsProductionConformance: boolean
+          }
+        }
+      }
+    }
+    expect(vectors.invalidEnvelopeVectors.map((vector) => vector.name)).toEqual(
+      ["bad-signature", "bad-payload-hash", "unknown-key", "stale", "future"],
+    )
+    expect(vectors.antiRollbackVectors.map((vector) => vector.name)).toEqual([
+      "exact-bootstrap",
+      "restart-rollback",
+      "same-generation-fork",
+      "corrupt-anchor",
+      "newer-generation",
+    ])
+    expect(vectors.notice).toMatch(/fixture-only/i)
+    expect(vectors.valid.emptyProduction.expected).toMatchObject({
+      fixtureKeyAsProductionTrust: "reject-unknown-key",
+      grantsProductionConformance: false,
+    })
   })
 })

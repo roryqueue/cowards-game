@@ -10,7 +10,7 @@ import {
   PublicReplayEvidenceServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   RuntimeExecutionCompatibilityIdentitySchema,
-  RuntimeExecutionEvidenceSnapshotSchema,
+  RuntimeExecutionResolvedEvidenceSnapshotSchema,
 } from "./schemas.js"
 import {
   assertPublicServiceDtoLeakSafe,
@@ -135,7 +135,7 @@ export const MatchExecutionExactEvidenceV137Schema = z
     matchId: z.string().min(1),
     bottomEntrantKey: z.string().min(1),
     topEntrantKey: z.string().min(1),
-    evidenceSnapshot: RuntimeExecutionEvidenceSnapshotSchema,
+    evidenceSnapshot: RuntimeExecutionResolvedEvidenceSnapshotSchema,
   })
   .strict()
   .superRefine((evidence, ctx) => {
@@ -377,21 +377,18 @@ export const projectPublicMatchExecutionIntegrityEvidenceV137 = (
   evidence: MatchExecutionExactEvidenceV137,
 ): MatchExecutionPublicIntegrityEvidenceV137 => {
   const parsed = MatchExecutionExactEvidenceV137Schema.parse(evidence)
-  const projection =
-    MatchExecutionPublicIntegrityEvidenceV137Schema.parse({
-      profile: "current-exact",
-      compatibility: parsed.evidenceSnapshot.compatibility,
-      authorityBundleHash: parsed.evidenceSnapshot.authorityBundleHash,
-      registryGeneration: parsed.evidenceSnapshot.registryGeneration,
-      entrants: {
-        bottom: projectPublicEntrantIntegrity(
-          parsed.evidenceSnapshot.entrants.bottom,
-        ),
-        top: projectPublicEntrantIntegrity(
-          parsed.evidenceSnapshot.entrants.top,
-        ),
-      },
-    })
+  const projection = MatchExecutionPublicIntegrityEvidenceV137Schema.parse({
+    profile: "current-exact",
+    compatibility: parsed.evidenceSnapshot.compatibility,
+    authorityBundleHash: parsed.evidenceSnapshot.authorityBundleHash,
+    registryGeneration: parsed.evidenceSnapshot.registryGeneration,
+    entrants: {
+      bottom: projectPublicEntrantIntegrity(
+        parsed.evidenceSnapshot.entrants.bottom,
+      ),
+      top: projectPublicEntrantIntegrity(parsed.evidenceSnapshot.entrants.top),
+    },
+  })
   assertPublicServiceDtoLeakSafe(projection)
   return projection
 }
