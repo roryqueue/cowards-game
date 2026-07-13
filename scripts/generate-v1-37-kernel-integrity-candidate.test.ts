@@ -119,6 +119,20 @@ describe("v1.37 kernel integrity candidate generator", () => {
       ),
     ).toEqual(CURRENT_AUTHORITY_BYTE_BASELINE)
 
+    const publicBarrel = readFileSync(
+      path.join(repoRoot, "packages/spec/src/index.ts"),
+      "utf8",
+    )
+    expect(publicBarrel).not.toContain(
+      "integrity-authority-candidate-v1-37",
+    )
+    expect(publicBarrel).not.toContain(
+      "INACTIVE_V1_37_KERNEL_INTEGRITY_CANDIDATE",
+    )
+    expect(publicBarrel).not.toContain(
+      "V1_37_KERNEL_CANDIDATE_EVENT_VOCABULARY",
+    )
+
     const checked = spawnSync(
       "pnpm",
       [

@@ -11,8 +11,9 @@ import {
 /**
  * Inactive migration material for the Phase 257 atomic authority flip.
  *
- * This module is deliberately absent from `src/index.ts`. Nothing here is a
- * current tuple, schema, publication source, receipt, or execution grant.
+ * Candidate symbols from this module are deliberately absent from
+ * `src/index.ts`. Nothing here is a current tuple, schema, publication source,
+ * receipt, or execution grant.
  */
 
 export const INACTIVE_V1_37_KERNEL_CANDIDATE_SCHEMA_VERSION =
@@ -26,8 +27,6 @@ export const CURRENT_AUTHORITY_BYTE_BASELINE = Object.freeze({
     "98ac9b63482c0a392694551db9a5de2443aa3119f62387316457f03d64341821",
   "packages/spec/src/integrity-authority.ts":
     "11ed27e5646f8f908e2d2b9558a144b28f362ebe395c7a66b58c308953ca83b9",
-  "packages/spec/src/index.ts":
-    "72f499746c548f53c27a5972d9e39463c2d36709611bbd88cde3d9bb1a7b4c16",
   "packages/spec/artifacts/v1.37-integrity-authority.json":
     "90bd23acff825349ed80b3df6b8e350ecd91153de44e17c952f5a302c7d3499d",
   "packages/spec/artifacts/v1.37-integrity-authority-hash-vectors.json":
