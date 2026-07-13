@@ -50,6 +50,7 @@ type runtimeServiceStrategyRevision struct {
 	EngineCompatibility map[string]any `json:"engineCompatibility"`
 	Validation          map[string]any `json:"validation"`
 	Metadata            map[string]any `json:"metadata,omitempty"`
+	LockedAt            *time.Time     `json:"-"`
 }
 
 type runtimeServiceRequest struct {

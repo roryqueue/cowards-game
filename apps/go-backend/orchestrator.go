@@ -213,6 +213,11 @@ func buildRuntimeServiceRequestForClaimedJob(ctx context.Context, pool *pgxpool.
 	if err != nil {
 		return nil, err
 	}
+	claimedTuple := registeredCompatibilityTuple{TupleID: claimed.Integrity.CompatibilityTupleID, Tuple: claimed.Integrity.CompatibilityTuple}
+	if !runtimeServiceStrategyMatchesClaim(request.Strategies.Bottom, claimed.Integrity.Bottom, claimedTuple) ||
+		!runtimeServiceStrategyMatchesClaim(request.Strategies.Top, claimed.Integrity.Top, claimedTuple) {
+		return nil, errors.New("claimed Match Strategy Revision drifted from its executable lane evidence")
+	}
 	snapshot, err := runtimeServiceSnapshotForClaim(claimed.Integrity)
 	if err != nil {
 		return nil, err
@@ -222,6 +227,21 @@ func buildRuntimeServiceRequestForClaimedJob(ctx context.Context, pool *pgxpool.
 		return nil, errors.New("claimed Match integrity request is invalid")
 	}
 	return request, nil
+}
+
+func runtimeServiceStrategyMatchesClaim(strategy runtimeServiceStrategyRevision, evidence goEntrantExecutionEvidence, tuple registeredCompatibilityTuple) bool {
+	if strategy.LockedAt == nil || strategy.ID != evidence.StrategyRevisionID {
+		return false
+	}
+	configuredLane := mapValue(strategy.Metadata, "executableLaneIdentity")
+	if len(configuredLane) == 0 {
+		return false
+	}
+	return creationLaneMatchesEntrant(evidence.LaneIdentity, map[string]any{
+		"_creationLaneIdentity": configuredLane,
+		"_creationRuntime":      strategy.Runtime,
+		"_creationMetadata":     strategy.Metadata,
+	}, tuple)
 }
 
 func runtimeServiceSnapshotForClaim(identity *claimedMatchIntegrityIdentity) (runtimeServiceEvidenceSnapshot, error) {
@@ -285,6 +305,7 @@ func loadRuntimeServiceMatchInput(ctx context.Context, pool *pgxpool.Pool, match
 		  bottom.engine_compatibility,
 		  bottom.validation,
 		  bottom.metadata,
+		  bottom.locked_at,
 		  top.id,
 		  top.source,
 		  top.source_hash,
@@ -292,7 +313,8 @@ func loadRuntimeServiceMatchInput(ctx context.Context, pool *pgxpool.Pool, match
 		  top.runtime,
 		  top.engine_compatibility,
 		  top.validation,
-		  top.metadata
+		  top.metadata,
+		  top.locked_at
 		from matches m
 		join arena_variants av on av.id = m.arena_variant_id
 		join strategy_revisions bottom on bottom.id = m.bottom_strategy_revision_id
@@ -314,6 +336,7 @@ func loadRuntimeServiceMatchInput(ctx context.Context, pool *pgxpool.Pool, match
 		&bottomEngineRaw,
 		&bottomValidationRaw,
 		&bottomMetadataRaw,
+		&row.BottomStrategy.LockedAt,
 		&row.TopStrategy.ID,
 		&row.TopStrategy.Source,
 		&row.TopStrategy.SourceHash,
@@ -322,6 +345,7 @@ func loadRuntimeServiceMatchInput(ctx context.Context, pool *pgxpool.Pool, match
 		&topEngineRaw,
 		&topValidationRaw,
 		&topMetadataRaw,
+		&row.TopStrategy.LockedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

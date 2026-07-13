@@ -19,9 +19,9 @@ const creationEvidencePairDomain = "cowards-game:match-execution-evidence-pair:v
 const creationLaneIdentityDomain = "cowards-game:executable-lane-identity:v1"
 
 type exhibitionCreationDependencies struct {
-	loadEntrants    func(context.Context, string, []string, time.Time) ([]map[string]any, error)
+	loadEntrants    func(context.Context, pgx.Tx, string, []string, time.Time) ([]map[string]any, error)
 	loadAuthority   func() (*verifiedRuntimeEvidenceAuthority, error)
-	resolveEvidence func(context.Context, *verifiedRuntimeEvidenceAuthority, []map[string]any, bool, time.Time) (*goMatchSetIntegrityIdentity, error)
+	resolveEvidence func(context.Context, pgx.Tx, *verifiedRuntimeEvidenceAuthority, []map[string]any, bool, time.Time) (*goMatchSetIntegrityIdentity, error)
 	begin           func(context.Context) (pgx.Tx, error)
 }
 
@@ -117,8 +117,8 @@ func creationPurposeAllowsStatus(counted bool, status executableLaneEvidenceStat
 
 func (server *LiveServer) defaultExhibitionCreationDependencies() exhibitionCreationDependencies {
 	return exhibitionCreationDependencies{
-		loadEntrants: func(ctx context.Context, userID string, revisionIDs []string, lockedAt time.Time) ([]map[string]any, error) {
-			return server.loadOwnedEntrants(ctx, userID, revisionIDs, lockedAt)
+		loadEntrants: func(ctx context.Context, tx pgx.Tx, userID string, revisionIDs []string, lockedAt time.Time) ([]map[string]any, error) {
+			return server.loadOwnedEntrants(ctx, tx, userID, revisionIDs, lockedAt)
 		},
 		loadAuthority: func() (*verifiedRuntimeEvidenceAuthority, error) {
 			if server.loadAuthority != nil {
@@ -139,8 +139,8 @@ func (server *LiveServer) defaultExhibitionCreationDependencies() exhibitionCrea
 	}
 }
 
-func (server *LiveServer) resolveCreationEvidence(ctx context.Context, authority *verifiedRuntimeEvidenceAuthority, entrants []map[string]any, counted bool, now time.Time) (*goMatchSetIntegrityIdentity, error) {
-	if server.pool == nil || authority == nil || authority.TrustDomain != runtimeEvidenceAuthorityProductionTrustDomain || authority.RegistryGeneration == "" || authority.CompatibilityTuple.TupleID == "" {
+func (server *LiveServer) resolveCreationEvidence(ctx context.Context, tx pgx.Tx, authority *verifiedRuntimeEvidenceAuthority, entrants []map[string]any, counted bool, now time.Time) (*goMatchSetIntegrityIdentity, error) {
+	if tx == nil || authority == nil || authority.TrustDomain != runtimeEvidenceAuthorityProductionTrustDomain || authority.RegistryGeneration == "" || authority.CompatibilityTuple.TupleID == "" {
 		return nil, errors.New("creation integrity unavailable")
 	}
 	certificateIDs := make([]string, 0, len(authority.Payload.Certificates))
@@ -152,7 +152,7 @@ func (server *LiveServer) resolveCreationEvidence(ctx context.Context, authority
 	if len(certificateIDs) == 0 {
 		return nil, errors.New("creation integrity unavailable")
 	}
-	rows, err := server.pool.Query(ctx, `
+	rows, err := tx.Query(ctx, `
 		select id, certificate_kind, certificate_version,
 		       certificate_record_hash, lane_identity_hash, lane_identity,
 		       registry_generation, issued_at, fresh_until

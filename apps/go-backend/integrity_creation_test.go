@@ -17,31 +17,27 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func TestCreateExhibitionMatchSetIntegrityRejectsBeforeBegin(t *testing.T) {
+func TestCreateExhibitionMatchSetBeginsBeforeIntegritySnapshot(t *testing.T) {
 	order := []string{}
-	beginCalls := 0
 	server := &LiveServer{now: func() time.Time {
 		return time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)
 	}}
 	dependencies := exhibitionCreationDependencies{
-		loadEntrants: func(context.Context, string, []string, time.Time) ([]map[string]any, error) {
+		loadEntrants: func(context.Context, pgx.Tx, string, []string, time.Time) ([]map[string]any, error) {
 			order = append(order, "entrants")
-			return []map[string]any{
-				{"strategyRevisionId": "revision:bottom", "entrantId": "entrant:0", "entrantIndex": 0},
-				{"strategyRevisionId": "revision:top", "entrantId": "entrant:1", "entrantIndex": 1},
-			}, nil
+			return nil, errors.New("must not load without a transaction")
 		},
 		loadAuthority: func() (*verifiedRuntimeEvidenceAuthority, error) {
 			order = append(order, "authority")
 			return &verifiedRuntimeEvidenceAuthority{}, nil
 		},
-		resolveEvidence: func(context.Context, *verifiedRuntimeEvidenceAuthority, []map[string]any, bool, time.Time) (*goMatchSetIntegrityIdentity, error) {
+		resolveEvidence: func(context.Context, pgx.Tx, *verifiedRuntimeEvidenceAuthority, []map[string]any, bool, time.Time) (*goMatchSetIntegrityIdentity, error) {
 			order = append(order, "evidence")
 			return nil, errors.New("provider proof is not executable evidence")
 		},
 		begin: func(context.Context) (pgx.Tx, error) {
-			beginCalls++
-			return nil, errors.New("Begin must not be reached")
+			order = append(order, "begin")
+			return nil, errors.New("database unavailable")
 		},
 	}
 
@@ -53,14 +49,11 @@ func TestCreateExhibitionMatchSetIntegrityRejectsBeforeBegin(t *testing.T) {
 		false,
 		dependencies,
 	)
-	if err == nil || !strings.Contains(err.Error(), "integrity") {
-		t.Fatalf("expected safe integrity rejection, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "database") {
+		t.Fatalf("expected transaction failure, got %v", err)
 	}
-	if beginCalls != 0 {
-		t.Fatalf("rejected exact evidence called Begin %d time(s)", beginCalls)
-	}
-	if !reflect.DeepEqual(order, []string{"entrants", "authority", "evidence"}) {
-		t.Fatalf("creation preflight order drifted: %v", order)
+	if !reflect.DeepEqual(order, []string{"begin"}) {
+		t.Fatalf("creation did work before opening its transaction: %v", order)
 	}
 }
 
@@ -188,6 +181,9 @@ func TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropag
 	if _, err := pool.Exec(ctx, "insert into users (id, display_name) values ($1,'Owner')", userID); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := pool.Exec(ctx, "update users set handle='owner' where id=$1", userID); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := pool.Exec(ctx, "insert into strategies (id, owner_user_id, name) values ($1,$2,'Integrity')", strategyID, userID); err != nil {
 		t.Fatal(err)
 	}
@@ -259,11 +255,21 @@ func TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropag
 		t.Fatal(err)
 	}
 
+	revisionIDs := []string{stringValue(entrants[0], "strategyRevisionId"), stringValue(entrants[1], "strategyRevisionId")}
 	server := &LiveServer{pool: pool, now: func() time.Time { return now }}
-	dependencies := exhibitionCreationDependencies{loadEntrants: func(context.Context, string, []string, time.Time) ([]map[string]any, error) { return entrants, nil }, loadAuthority: func() (*verifiedRuntimeEvidenceAuthority, error) { return authority, nil }, resolveEvidence: func(context.Context, *verifiedRuntimeEvidenceAuthority, []map[string]any, bool, time.Time) (*goMatchSetIntegrityIdentity, error) {
+	tracedConcurrentMutation := false
+	dependencies := exhibitionCreationDependencies{loadEntrants: func(ctx context.Context, tx pgx.Tx, userID string, revisionIDs []string, lockedAt time.Time) ([]map[string]any, error) {
+		return server.loadOwnedEntrants(ctx, tx, userID, revisionIDs, lockedAt)
+	}, loadAuthority: func() (*verifiedRuntimeEvidenceAuthority, error) { return authority, nil }, resolveEvidence: func(context.Context, pgx.Tx, *verifiedRuntimeEvidenceAuthority, []map[string]any, bool, time.Time) (*goMatchSetIntegrityIdentity, error) {
+		mutationCtx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+		_, mutationErr := pool.Exec(mutationCtx, "update strategy_revisions set source_hash=$2 where id=$1", revisionIDs[0], strings.Repeat("9", 64))
+		if !errors.Is(mutationErr, context.DeadlineExceeded) && !errors.Is(mutationCtx.Err(), context.DeadlineExceeded) {
+			return nil, fmt.Errorf("concurrent revision mutation was not blocked by creation lock: %v", mutationErr)
+		}
+		tracedConcurrentMutation = true
 		return identity, nil
 	}, begin: func(ctx context.Context) (pgx.Tx, error) { return pool.Begin(ctx) }}
-	revisionIDs := []string{stringValue(entrants[0], "strategyRevisionId"), stringValue(entrants[1], "strategyRevisionId")}
 	if _, err := server.createExhibitionMatchSetWithDependencies(ctx, userID, "smoke-exhibition-v1", revisionIDs, false, dependencies); err == nil {
 		t.Fatal("uncertain receipt unexpectedly created a MatchSet")
 	}
@@ -277,6 +283,14 @@ func TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropag
 	created, err := server.createExhibitionMatchSetWithDependencies(ctx, userID, "smoke-exhibition-v1", revisionIDs, false, dependencies)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !tracedConcurrentMutation {
+		t.Fatal("creation did not exercise the concurrent revision mutation proof")
+	}
+	var lockedAt *time.Time
+	var persistedSourceHash string
+	if err := pool.QueryRow(ctx, "select locked_at,source_hash from strategy_revisions where id=$1", revisionIDs[0]).Scan(&lockedAt, &persistedSourceHash); err != nil || lockedAt == nil || persistedSourceHash != stringValue(entrants[0], "sourceHash") {
+		t.Fatalf("locked revision changed during creation: lockedAt=%v sourceHash=%q err=%v", lockedAt, persistedSourceHash, err)
 	}
 	matchSetID := stringValue(created, "matchSetId")
 	var publicationID, receiptID, persistedSetHash string

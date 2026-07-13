@@ -2647,7 +2647,14 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 	if dependencies.loadEntrants == nil || dependencies.loadAuthority == nil || dependencies.resolveEvidence == nil || dependencies.begin == nil {
 		return nil, errors.New("creation integrity unavailable")
 	}
-	entrants, err := dependencies.loadEntrants(ctx, userID, revisionIDs, now)
+	tx, err := dependencies.begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+	entrants, err := dependencies.loadEntrants(ctx, tx, userID, revisionIDs, now)
 	if err != nil {
 		return nil, err
 	}
@@ -2658,27 +2665,21 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 	if err != nil || authority == nil {
 		return nil, errors.New("creation integrity unavailable")
 	}
-	integrityIdentity, err := dependencies.resolveEvidence(ctx, authority, entrants, counted, now)
+	installedReceipt, err := server.lockInstalledAuthorityReceipt(ctx, tx, authority, now)
+	if err != nil || installedReceipt == nil {
+		return nil, errors.New("creation integrity unavailable")
+	}
+	integrityIdentity, err := dependencies.resolveEvidence(ctx, tx, authority, entrants, counted, now)
 	if err != nil || integrityIdentity == nil {
 		return nil, errors.New("creation integrity unavailable")
 	}
 	for _, entrant := range entrants {
 		delete(entrant, "_creationRuntime")
 		delete(entrant, "_creationMetadata")
+		delete(entrant, "_creationLaneIdentity")
 	}
 	matches := generatePairwiseMatches(matchSetID, matchSetPresetID, entrants)
 	duplicateKey := buildDuplicateKey(userID, presetID, revisionIDs)
-	tx, err := dependencies.begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = tx.Rollback(ctx)
-	}()
-	installedReceipt, err := server.lockInstalledAuthorityReceipt(ctx, tx, authority, now)
-	if err != nil || installedReceipt == nil {
-		return nil, errors.New("creation integrity unavailable")
-	}
 	var activeDuplicate string
 	err = tx.QueryRow(ctx, `
 		select id
@@ -2784,9 +2785,6 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 		`, matchSetID+":"+stringValue(entrant, "entrantId"), matchSetID, intValue(entrant, "entrantIndex"), stringValue(entrant, "strategyRevisionId"), stringValue(entrant, "ownerUserId"), stringValue(entrant, "ownerHandle"), stringValue(entrant, "displayLabel"), stringValue(entrant, "sourceHash"), intValue(entrant, "sourceBytes"), entrant["runtime"], entrant["engineCompatibility"], entrant, evidence.EntrantKey); err != nil {
 			return nil, err
 		}
-		if _, err := tx.Exec(ctx, "update strategy_revisions set locked_at = coalesce(locked_at, $2) where id = $1", stringValue(entrant, "strategyRevisionId"), now); err != nil {
-			return nil, err
-		}
 	}
 	for index, match := range matches {
 		pair, err := integrityIdentity.pair(
@@ -2845,8 +2843,11 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 	}, nil
 }
 
-func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, revisionIDs []string, lockedAt time.Time) ([]map[string]any, error) {
-	rows, err := server.pool.Query(ctx, `
+func (server *LiveServer) loadOwnedEntrants(ctx context.Context, tx pgx.Tx, userID string, revisionIDs []string, lockedAt time.Time) ([]map[string]any, error) {
+	if tx == nil {
+		return nil, errors.New("creation transaction unavailable")
+	}
+	rows, err := tx.Query(ctx, `
 		select sr.id, sr.source_hash, sr.source_bytes, sr.runtime,
 		       sr.engine_compatibility, sr.validation, sr.metadata,
 		       s.owner_user_id, u.handle
@@ -2854,6 +2855,8 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, 
 		join strategies s on s.id = sr.strategy_id
 		join users u on u.id = s.owner_user_id
 		where sr.id = any($1::text[]) and s.owner_user_id = $2
+		order by sr.id
+		for update of sr
 	`, revisionIDs, userID)
 	if err != nil {
 		return nil, err
@@ -2878,21 +2881,30 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, 
 			label = id
 		}
 		byID[id] = map[string]any{
-			"strategyRevisionId":  id,
-			"ownerUserId":         ownerUserID,
-			"ownerHandle":         handle,
-			"displayLabel":        "@" + handle + " / \"" + label + "\" / " + shortHash(sourceHash),
-			"sourceHash":          sourceHash,
-			"sourceBytes":         sourceBytes,
-			"runtime":             publicRuntimeMetadata(runtime),
-			"_creationRuntime":    runtime,
-			"_creationMetadata":   metadata,
-			"runtimeSemantics":    runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes),
-			"engineCompatibility": jsonMap(engineRaw),
-			"lockedAt":            lockedAt.Format(time.RFC3339Nano),
+			"strategyRevisionId":    id,
+			"ownerUserId":           ownerUserID,
+			"ownerHandle":           handle,
+			"displayLabel":          "@" + handle + " / \"" + label + "\" / " + shortHash(sourceHash),
+			"sourceHash":            sourceHash,
+			"sourceBytes":           sourceBytes,
+			"runtime":               publicRuntimeMetadata(runtime),
+			"_creationRuntime":      runtime,
+			"_creationMetadata":     metadata,
+			"_creationLaneIdentity": mapValue(metadata, "executableLaneIdentity"),
+			"runtimeSemantics":      runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes),
+			"engineCompatibility":   jsonMap(engineRaw),
+			"lockedAt":              lockedAt.Format(time.RFC3339Nano),
 		}
 	}
 	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	if _, err := tx.Exec(ctx, `
+		update strategy_revisions
+		set locked_at = coalesce(locked_at, $2)
+		where id = any($1::text[])
+	`, revisionIDs, lockedAt); err != nil {
 		return nil, err
 	}
 	entrants := []map[string]any{}
