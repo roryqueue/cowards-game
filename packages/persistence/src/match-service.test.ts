@@ -149,6 +149,7 @@ const fakePool = () => {
   }
   return {
     pool: { connect: async () => client } as unknown as Pool,
+    client,
     calls,
   }
 }
@@ -265,14 +266,17 @@ describe("match creation contracts", () => {
 
   it("rolls back both rows when the queued-job insert fails", async () => {
     const fake = fakePool()
-    const client = await fake.pool.connect()
+    const client = fake.client
     const baseQuery = client.query.bind(client)
     client.query = (async (sql: string, values?: readonly unknown[]) => {
       if (sql.replace(/\s+/gu, " ").trim().startsWith("insert into match_jobs")) {
         throw new Error("late job failure")
       }
-      return baseQuery(sql, values)
-    }) as typeof client.query
+      if (values === undefined) {
+        return baseQuery(sql)
+      }
+      return baseQuery(sql, [...values])
+    })
 
     await expect(createMatchService(fake.pool).createMatch(validInput())).rejects.toThrow(
       "late job failure",
