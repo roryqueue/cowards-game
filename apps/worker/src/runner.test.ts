@@ -1,636 +1,200 @@
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import type { Pool } from "pg"
-import type { StrategyRuntime } from "@cowards/engine"
-import { createRepositories } from "@cowards/persistence/repositories"
-import type * as PersistenceRepositories from "@cowards/persistence/repositories"
-import type * as PersistenceQuarantine from "@cowards/persistence/quarantine-lifecycle"
-import { buildStrategyRevision } from "@cowards/runtime-js"
-import {
-  SubprocessSystemFailure,
-  type StrategyExecutionRequest,
-} from "@cowards/runtime-js/worker"
-import { fixtures } from "@cowards/spec"
-import type { ArenaVariant, MatchId, StrategyRevision } from "@cowards/spec"
 import type { WorkerRunnerDependencies } from "./runner.js"
 import {
   assertTypeScriptWorkerEntrypointAllowed,
   assertTypeScriptWorkerJobOwnershipAllowed,
-  createClaimedMatchJobForTest,
-  createSideDispatchRuntime,
-  createTypeScriptWorkerJobOwnershipConfig,
-  formatTypeScriptWorkerOwnershipLogLine,
-  loadRunMatchInput,
+  runWorkerLoop,
   runWorkerOnce,
-  TypeScriptWorkerOwnershipError,
+  TypeScriptWorkerRetiredError,
 } from "./runner.js"
-import {
-  createWorkerRuntimeConfig,
-  formatWorkerRuntimeConfigLogLines,
-  WorkerRuntimeConfigError,
-  type WorkerRuntimeConfig,
-} from "./runtime-config.js"
-
-vi.mock("@cowards/persistence/quarantine-lifecycle", async (importOriginal) => {
-  const actual = await importOriginal<typeof PersistenceQuarantine>()
-  return actual
-})
-
-vi.mock("@cowards/persistence/repositories", async (importOriginal) => {
-  const actual = await importOriginal<typeof PersistenceRepositories>()
-  return {
-    ...actual,
-    createRepositories: vi.fn(),
-  }
-})
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url))
 const pool = {} as Pool
-const explicitTestJobOwnership = {
-  lifecycleOwner: "go",
-  workerPurpose: "test",
-} as const
 
-const baseDependencies = (): WorkerRunnerDependencies => ({
-  claimNextMatchJob: vi.fn().mockResolvedValue(createClaimedMatchJobForTest()),
-  loadRunMatchInput: vi.fn().mockResolvedValue({}),
-  buildChronicleFromMatch: vi.fn().mockReturnValue({
-    chronicle: {
-      events: [{ type: "RUNTIME_VIOLATION" }],
-    },
-    finalState: {},
-  }),
-  completeMatch: vi.fn().mockResolvedValue({
-    status: "complete",
-    matchId: "match:test",
-    chronicleId: "chronicle:test",
-  }),
-  recordAttemptFailure: vi.fn().mockResolvedValue("retry_queued"),
+const RETIRED_CODE = "TYPESCRIPT_WORKER_RETIRED"
+const RETIRED_MESSAGE = "Direct TypeScript Match worker execution is retired."
+
+const allDependencies = () => ({
+  claimNextMatchJob: vi.fn(),
+  loadRunMatchInput: vi.fn(),
+  createRuntimeFromRevision: vi.fn(),
+  createRuntimeConfig: vi.fn(),
+  buildChronicleFromMatch: vi.fn(),
+  completeMatch: vi.fn(),
+  recordAttemptFailure: vi.fn(),
+  mutateMatchFailure: vi.fn(),
+  recordPlayerPenalty: vi.fn(),
 })
 
-const executableStrategySource = (label: string): string => `
-export default {
-  selectActivations() {
-    throw new Error("${label} default adapter executed")
-  },
-  soldierBrain() {
-    throw new Error("${label} default adapter executed")
-  },
-}
-`
-
-const strategyRevision = (
-  id: string,
-  source: string = executableStrategySource(id),
-): StrategyRevision => ({
-  ...buildStrategyRevision({ source }),
-  id,
-})
-
-const createCapturingRuntimeConfig = (): WorkerRuntimeConfig => {
-  const metadata = createWorkerRuntimeConfig().metadata
-  return {
-    metadata,
-    adapter: {
-      metadata,
-      execute: vi
-        .fn()
-        .mockImplementation((request: StrategyExecutionRequest) => {
-          if (request.methodName === "soldierBrain") {
-            return {
-              ok: true,
-              value: {
-                action: { type: "TURN_TO_STONE" },
-                soldierMemory: {},
-              },
-            }
-          }
-
-          return {
-            ok: true,
-            value: {
-              activationOrders: [],
-              strategyMemory: {},
-            },
-          }
-        }),
-    },
-  }
-}
-
-const stubRepositories = (
-  input: {
-    bottomRevision?: StrategyRevision
-    topRevision?: StrategyRevision
-    arenaVariant?: ArenaVariant
-  } = {},
-) => {
-  const bottomRevision =
-    input.bottomRevision ?? strategyRevision("strategy-revision:bottom")
-  const topRevision =
-    input.topRevision ?? strategyRevision("strategy-revision:top")
-  const arenaVariant = input.arenaVariant ?? fixtures.valid.standardArenaVariant
-  const repositories = {
-    getMatch: vi.fn().mockResolvedValue({
-      seed: "seed:test",
-      bottom_player_id: "bottom",
-      top_player_id: "top",
-      bottom_strategy_revision_id: bottomRevision.id,
-      top_strategy_revision_id: topRevision.id,
-      arena_variant_id: arenaVariant.id,
-    }),
-    getStrategyRevision: vi.fn().mockImplementation((id: string) => {
-      if (id === bottomRevision.id) {
-        return Promise.resolve(bottomRevision)
-      }
-      if (id === topRevision.id) {
-        return Promise.resolve(topRevision)
-      }
-      return Promise.resolve(null)
-    }),
-    getArenaVariant: vi.fn().mockResolvedValue(arenaVariant),
-  }
-  vi.mocked(createRepositories).mockReturnValue(repositories as never)
-  return repositories
-}
-
-describe("worker runner", () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it("resolves worker-thread as the default Strategy execution adapter", () => {
-    const runtimeConfig = createWorkerRuntimeConfig()
-
-    expect(runtimeConfig.metadata.id).toBe("worker-thread")
-    expect(runtimeConfig.metadata.default).toBe(true)
-  })
-
-  it("resolves explicit subprocess Strategy execution adapter config", () => {
-    const runtimeConfig = createWorkerRuntimeConfig({
-      strategyExecutionAdapter: "subprocess",
+const expectRetired = (run: () => unknown): void => {
+  try {
+    run()
+    throw new Error("Expected TypeScript worker retirement")
+  } catch (error) {
+    expect(error).toBeInstanceOf(TypeScriptWorkerRetiredError)
+    expect(error).toMatchObject({
+      name: "TypeScriptWorkerRetiredError",
+      code: RETIRED_CODE,
+      message: RETIRED_MESSAGE,
     })
+  }
+}
 
-    expect(runtimeConfig.metadata.id).toBe("subprocess")
-    expect(runtimeConfig.metadata.default).toBe(false)
-  })
-
-  it("fails closed for unknown Strategy execution adapter ids", () => {
-    expect(() =>
-      createWorkerRuntimeConfig({
-        strategyExecutionAdapter: "surprise-process",
-      }),
-    ).toThrow(WorkerRuntimeConfigError)
-  })
-
-  it("exposes active adapter id, label, and isolation boundary metadata", () => {
-    const runtimeConfig = createWorkerRuntimeConfig()
-
-    expect(runtimeConfig.metadata.id).toBeTruthy()
-    expect(runtimeConfig.metadata.label).toBeTruthy()
-    expect(runtimeConfig.metadata.isolationBoundary).toContain(
-      "Strategy execution",
+describe("retired direct TypeScript Match worker", () => {
+  it.each([
+    undefined,
+    null,
+    {},
+    { lifecycleOwner: "go", workerPurpose: "normal" },
+    { lifecycleOwner: "go", workerPurpose: "rollback" },
+    { lifecycleOwner: "go", workerPurpose: "test" },
+    { lifecycleOwner: "go", workerPurpose: "parity" },
+    { lifecycleOwner: "typescript", workerPurpose: "normal" },
+    { lifecycleOwner: "typescript", workerPurpose: "rollback" },
+    { lifecycleOwner: "unspecified", workerPurpose: "test" },
+    { lifecycleOwner: "unknown", workerPurpose: "surprise" },
+    "malformed",
+  ])("rejects every direct ownership config before inspection: %j", (config) => {
+    expectRetired(() =>
+      assertTypeScriptWorkerJobOwnershipAllowed(config as never),
     )
   })
 
-  it("formats startup logs with active adapter id and isolation boundary", () => {
-    const runtimeConfig = createWorkerRuntimeConfig({
-      strategyExecutionAdapter: "subprocess",
-    })
-
-    expect(formatWorkerRuntimeConfigLogLines(runtimeConfig)).toEqual([
-      expect.stringContaining("subprocess"),
-      expect.stringContaining(runtimeConfig.metadata.isolationBoundary),
-    ])
+  it.each([
+    undefined,
+    {},
+    { COWARDS_MATCH_JOB_LIFECYCLE_OWNER: "go" },
+    { COWARDS_BACKEND_OWNER: "typescript" },
+    { COWARDS_TYPESCRIPT_WORKER_PURPOSE: "normal" },
+    { COWARDS_TYPESCRIPT_WORKER_PURPOSE: "rollback" },
+    { COWARDS_TYPESCRIPT_WORKER_PURPOSE: "test" },
+    { COWARDS_TYPESCRIPT_WORKER_PURPOSE: "parity" },
+    {
+      COWARDS_MATCH_JOB_LIFECYCLE_OWNER: "typescript",
+      COWARDS_TYPESCRIPT_WORKER_PURPOSE: "rollback",
+      STRATEGY_EXECUTION_ADAPTER: "subprocess",
+      NODE_ENV: "test",
+    },
+  ])("rejects every executable environment with one stable error: %j", (env) => {
+    expectRetired(() =>
+      assertTypeScriptWorkerEntrypointAllowed(env as never),
+    )
   })
 
-  it("resolves TypeScript worker ownership guard config from environment", () => {
-    expect(
-      createTypeScriptWorkerJobOwnershipConfig({
-        COWARDS_BACKEND_OWNER: "go",
-        COWARDS_TYPESCRIPT_WORKER_PURPOSE: "parity",
-      }),
-    ).toEqual({
-      lifecycleOwner: "go",
-      workerPurpose: "parity",
-    })
-    expect(
-      createTypeScriptWorkerJobOwnershipConfig({
-        COWARDS_MATCH_JOB_LIFECYCLE_OWNER: "typescript",
-        COWARDS_TYPESCRIPT_WORKER_PURPOSE: "surprise",
-      }),
-    ).toEqual({
-      lifecycleOwner: "typescript",
-      workerPurpose: "normal",
-    })
-  })
+  it.each([
+    undefined,
+    null,
+    {},
+    { workerId: "worker:normal" },
+    {
+      workerId: "worker:rollback",
+      jobOwnership: { lifecycleOwner: "go", workerPurpose: "rollback" },
+    },
+    {
+      workerId: "worker:test",
+      jobOwnership: { lifecycleOwner: "typescript", workerPurpose: "test" },
+      runtimeConfig: { metadata: { id: "forged" } },
+    },
+    {
+      workerId: "worker:parity",
+      jobOwnership: { lifecycleOwner: "unspecified", workerPurpose: "parity" },
+      once: true,
+      matchIds: ["match:target"],
+    },
+    "malformed",
+  ])(
+    "rejects runWorkerOnce before claim, input, runtime, Chronicle, or mutation: %j",
+    async (options) => {
+      const dependencies = allDependencies()
 
-  it("blocks normal TypeScript job ownership when lifecycle owner is Go or unspecified", async () => {
-    const dependencies = baseDependencies()
+      await expect(
+        runWorkerOnce(pool, options as never, dependencies as never),
+      ).rejects.toMatchObject({
+        code: RETIRED_CODE,
+        message: RETIRED_MESSAGE,
+      })
+
+      for (const dependency of Object.values(dependencies)) {
+        expect(dependency).not.toHaveBeenCalled()
+      }
+    },
+  )
+
+  it("rejects the loop before polling or any injected execution dependency", async () => {
+    const dependencies = allDependencies()
 
     await expect(
-      runWorkerOnce(
+      runWorkerLoop(
         pool,
         {
-          workerId: "worker:test",
-          jobOwnership: { lifecycleOwner: "go", workerPurpose: "normal" },
+          workerId: "worker:loop",
+          pollMs: 0,
+          once: true,
+          jobOwnership: { lifecycleOwner: "go", workerPurpose: "test" },
         },
-        dependencies,
+        dependencies as never,
       ),
-    ).rejects.toThrow(TypeScriptWorkerOwnershipError)
-    expect(dependencies.claimNextMatchJob).not.toHaveBeenCalled()
+    ).rejects.toMatchObject({ code: RETIRED_CODE })
 
-    await expect(
-      runWorkerOnce(
-        pool,
-        {
-          workerId: "worker:test",
-          jobOwnership: {
-            lifecycleOwner: "unspecified",
-            workerPurpose: "normal",
-          },
-        },
-        dependencies,
-      ),
-    ).rejects.toThrow(TypeScriptWorkerOwnershipError)
-    expect(dependencies.claimNextMatchJob).not.toHaveBeenCalled()
-  })
-
-  it("allows explicit rollback test and parity TypeScript worker purposes", () => {
-    for (const workerPurpose of ["rollback", "test", "parity"] as const) {
-      expect(() =>
-        assertTypeScriptWorkerJobOwnershipAllowed({
-          lifecycleOwner: "go",
-          workerPurpose,
-        }),
-      ).not.toThrow()
+    for (const dependency of Object.values(dependencies)) {
+      expect(dependency).not.toHaveBeenCalled()
     }
   })
 
-  it("blocks normal TypeScript job ownership even when TypeScript lifecycle owner is explicitly selected", () => {
-    expect(() =>
-      assertTypeScriptWorkerJobOwnershipAllowed({
-        lifecycleOwner: "typescript",
-        workerPurpose: "normal",
-      }),
-    ).toThrow(TypeScriptWorkerOwnershipError)
-    expect(() =>
-      assertTypeScriptWorkerJobOwnershipAllowed({
-        lifecycleOwner: "typescript",
-        workerPurpose: "normal",
-      }),
-    ).toThrow(
-      "TypeScript Match job claiming is disabled for normal backend ownership",
-    )
-  })
-
-  it("requires an explicit non-normal worker purpose at executable startup", () => {
-    expect(() =>
+  it("keeps the retirement payload public-safe and non-diagnostic", () => {
+    let retirement: TypeScriptWorkerRetiredError | undefined
+    try {
       assertTypeScriptWorkerEntrypointAllowed({
-        COWARDS_MATCH_JOB_LIFECYCLE_OWNER: "typescript",
-      }),
-    ).toThrow(TypeScriptWorkerOwnershipError)
-    expect(() =>
-      assertTypeScriptWorkerEntrypointAllowed({
-        COWARDS_BACKEND_OWNER: "typescript",
-        COWARDS_TYPESCRIPT_WORKER_PURPOSE: "unexpected",
-      }),
-    ).toThrow(TypeScriptWorkerOwnershipError)
-
-    expect(
-      assertTypeScriptWorkerEntrypointAllowed({
-        COWARDS_MATCH_JOB_LIFECYCLE_OWNER: "typescript",
-        COWARDS_TYPESCRIPT_WORKER_PURPOSE: "rollback",
-      }),
-    ).toEqual({
-      lifecycleOwner: "typescript",
-      workerPurpose: "rollback",
-    })
-    expect(
-      assertTypeScriptWorkerEntrypointAllowed({
-        COWARDS_BACKEND_OWNER: "go",
+        DATABASE_URL: "postgres://secret@host/private",
+        COWARDS_PROVIDER_VALIDATION_SECRET: "secret",
         COWARDS_TYPESCRIPT_WORKER_PURPOSE: "test",
-      }),
-    ).toEqual({
-      lifecycleOwner: "go",
-      workerPurpose: "test",
+      })
+    } catch (error) {
+      retirement = error as TypeScriptWorkerRetiredError
+    }
+
+    expect(retirement).toBeDefined()
+    const payload = JSON.stringify({
+      name: retirement?.name,
+      code: retirement?.code,
+      message: retirement?.message,
     })
-    expect(
-      assertTypeScriptWorkerEntrypointAllowed({
-        COWARDS_TYPESCRIPT_WORKER_PURPOSE: "parity",
+    expect(payload).toBe(
+      JSON.stringify({
+        name: "TypeScriptWorkerRetiredError",
+        code: RETIRED_CODE,
+        message: RETIRED_MESSAGE,
       }),
-    ).toEqual({
-      lifecycleOwner: "unspecified",
-      workerPurpose: "parity",
-    })
+    )
+    expect(payload).not.toMatch(
+      /postgres|secret|host|source|artifact|memory|objective|credential|stack|diagnostic/i,
+    )
   })
 
-  it("labels worker startup as non-normal rollback test or parity infrastructure", () => {
-    expect(
-      formatTypeScriptWorkerOwnershipLogLine({
-        lifecycleOwner: "typescript",
-        workerPurpose: "rollback",
-      }),
-    ).toContain("rollback")
-    expect(
-      formatTypeScriptWorkerOwnershipLogLine({
-        lifecycleOwner: "typescript",
-        workerPurpose: "rollback",
-      }),
-    ).not.toContain("normal backend")
+  it("asserts retirement before every startup side effect", () => {
+    const source = readFileSync(`${__dirname}/index.ts`, "utf8")
+    const assertion = source.indexOf("assertTypeScriptWorkerEntrypointAllowed(")
+    expect(assertion).toBeGreaterThan(-1)
+    for (const effect of [
+      "createWorkerRuntimeConfig(",
+      "createDatabasePool(",
+      "process.once(",
+      "console.log(",
+      "runWorkerLoop(",
+    ]) {
+      const offset = source.indexOf(effect)
+      expect(offset === -1 || assertion < offset).toBe(true)
+    }
   })
 
-  it("imports lifecycle persistence helpers through the explicit quarantine subpath", () => {
+  it("does not accept an executable default dependency set", () => {
     const source = readFileSync(`${__dirname}/runner.ts`, "utf8")
-
-    expect(source).toContain("@cowards/persistence/quarantine-lifecycle")
-    const rootImportBlocks = source.match(
-      /import\s+\{[\s\S]*?\}\s+from\s+["']@cowards\/persistence["']/g,
-    )
-    expect(rootImportBlocks ?? []).not.toEqual(
-      expect.arrayContaining([expect.stringContaining("claimNextMatchJob")]),
-    )
-  })
-
-  it("routes strategy calls using persisted Match player IDs", () => {
-    const bottomRuntime: StrategyRuntime = {
-      selectActivations: vi.fn().mockReturnValue({ ok: true, value: {} }),
-      runSoldierBrain: vi.fn().mockReturnValue({ ok: true, value: {} }),
-    }
-    const topRuntime: StrategyRuntime = {
-      selectActivations: vi.fn().mockReturnValue({ ok: true, value: {} }),
-      runSoldierBrain: vi.fn().mockReturnValue({ ok: true, value: {} }),
-    }
-    const runtime = createSideDispatchRuntime(bottomRuntime, topRuntime, {
-      bottomPlayerId: "player:a",
-      topPlayerId: "player:b",
-    })
-
-    runtime.selectActivations({
-      mySoldiers: [{ ownerPlayerId: "player:a" }],
-    } as never)
-    runtime.runSoldierBrain({
-      self: { ownerPlayerId: "player:b" },
-    } as never)
-
-    expect(bottomRuntime.selectActivations).toHaveBeenCalledOnce()
-    expect(topRuntime.runSoldierBrain).toHaveBeenCalledOnce()
-  })
-
-  it("passes the selected adapter into bottom and top Strategy runtimes", async () => {
-    stubRepositories()
-    const runtimeConfig = createCapturingRuntimeConfig()
-    const bottomInput = fixtures.valid.standardStrategyInput
-    const topInput = {
-      ...bottomInput,
-      mySoldiers: bottomInput.enemySoldiers,
-      enemySoldiers: bottomInput.mySoldiers,
-    }
-
-    const input = await loadRunMatchInput(pool, "match:test", runtimeConfig)
-
-    expect(input.runtime.selectActivations(bottomInput)).toEqual({
-      ok: true,
-      value: {
-        activationOrders: [],
-        strategyMemory: {},
-      },
-    })
-    expect(input.runtime.selectActivations(topInput)).toEqual({
-      ok: true,
-      value: {
-        activationOrders: [],
-        strategyMemory: {},
-      },
-    })
-    expect(runtimeConfig.adapter.execute).toHaveBeenCalledTimes(2)
-    expect(runtimeConfig.adapter.execute).toHaveBeenCalledWith(
-      expect.objectContaining({
-        methodName: "selectActivations",
-      }),
-    )
-  })
-
-  it("completes Matches whose Chronicle includes RUNTIME_VIOLATION gameplay events", async () => {
-    const dependencies = baseDependencies()
-
-    await expect(
-      runWorkerOnce(
-        pool,
-        { workerId: "worker:test", jobOwnership: explicitTestJobOwnership },
-        dependencies,
-      ),
-    ).resolves.toBe("completed")
-    expect(dependencies.completeMatch).toHaveBeenCalledOnce()
-    expect(dependencies.recordAttemptFailure).not.toHaveBeenCalled()
-    expect(
-      dependencies.buildChronicleFromMatch({} as never).chronicle.events[0]
-        ?.type,
-    ).toBe("RUNTIME_VIOLATION")
-  })
-
-  it("keeps RuntimeResult validation violations on the completion path", async () => {
-    const dependencies = baseDependencies()
-    vi.mocked(dependencies.loadRunMatchInput).mockResolvedValue({
-      runtime: {
-        selectActivations: vi.fn().mockReturnValue({
-          ok: false,
-          violation: {
-            type: "INVALID_OUTPUT",
-            message: "Strategy method must return a plain synchronous object",
-          },
-        }),
-        runSoldierBrain: vi.fn(),
-      },
-    } as never)
-
-    await expect(
-      runWorkerOnce(
-        pool,
-        { workerId: "worker:test", jobOwnership: explicitTestJobOwnership },
-        dependencies,
-      ),
-    ).resolves.toBe("completed")
-    expect(dependencies.completeMatch).toHaveBeenCalledOnce()
-    expect(dependencies.recordAttemptFailure).not.toHaveBeenCalled()
-  })
-
-  it("records unexpected orchestration errors as system failures", async () => {
-    const dependencies = baseDependencies()
-    vi.mocked(dependencies.buildChronicleFromMatch).mockImplementation(() => {
-      throw new Error("database write unavailable")
-    })
-
-    await expect(
-      runWorkerOnce(
-        pool,
-        { workerId: "worker:test", jobOwnership: explicitTestJobOwnership },
-        dependencies,
-      ),
-    ).resolves.toBe("idle")
-    expect(dependencies.recordAttemptFailure).toHaveBeenCalledWith(
-      pool,
-      expect.objectContaining({
-        errorClass: "Error",
-        errorMessage: "database write unavailable",
-        retryable: true,
-        details: expect.objectContaining({
-          strategyExecutionAdapterId: "worker-thread",
-        }),
-      }),
-    )
-  })
-
-  it("records malformed subprocess IPC as retryable system failure details", async () => {
-    const dependencies = baseDependencies()
-    const runtimeConfig = createWorkerRuntimeConfig({
-      strategyExecutionAdapter: "subprocess",
-    })
-    vi.mocked(dependencies.buildChronicleFromMatch).mockImplementation(() => {
-      throw new SubprocessSystemFailure(
-        "MALFORMED_IPC",
-        "Subprocess stdout was not valid JSON",
-        {
-          cause: "Unexpected token",
-          stderr: "do not persist Strategy source",
-        },
-      )
-    })
-
-    await expect(
-      runWorkerOnce(
-        pool,
-        {
-          workerId: "worker:test",
-          runtimeConfig,
-          jobOwnership: explicitTestJobOwnership,
-        },
-        dependencies,
-      ),
-    ).resolves.toBe("idle")
-
-    expect(dependencies.recordAttemptFailure).toHaveBeenCalledWith(
-      pool,
-      expect.objectContaining({
-        errorClass: "SubprocessSystemFailure",
-        errorMessage: "Subprocess stdout was not valid JSON",
-        retryable: true,
-        details: expect.objectContaining({
-          strategyExecutionAdapterId: "subprocess",
-          strategyExecutionSystemFailureCode: "MALFORMED_IPC",
-          strategyExecutionSystemFailureDetails: {
-            cause: "Unexpected token",
-          },
-        }),
-      }),
-    )
-    expect(
-      JSON.stringify(
-        vi.mocked(dependencies.recordAttemptFailure).mock.calls[0]?.[1].details,
-      ),
-    ).not.toContain("Strategy source")
-  })
-
-  it("records subprocess signal failures and returns failed_system after retry exhaustion", async () => {
-    const dependencies = baseDependencies()
-    const runtimeConfig = createWorkerRuntimeConfig({
-      strategyExecutionAdapter: "subprocess",
-    })
-    vi.mocked(dependencies.buildChronicleFromMatch).mockImplementation(() => {
-      throw new SubprocessSystemFailure(
-        "SUBPROCESS_SIGNAL",
-        "Subprocess terminated by signal SIGKILL",
-        { signal: "SIGKILL" },
-      )
-    })
-    vi.mocked(dependencies.recordAttemptFailure).mockResolvedValue(
-      "failed_system",
-    )
-
-    await expect(
-      runWorkerOnce(
-        pool,
-        {
-          workerId: "worker:test",
-          runtimeConfig,
-          jobOwnership: explicitTestJobOwnership,
-        },
-        dependencies,
-      ),
-    ).resolves.toBe("failed_system")
-    expect(dependencies.recordAttemptFailure).toHaveBeenCalledWith(
-      pool,
-      expect.objectContaining({
-        details: expect.objectContaining({
-          strategyExecutionAdapterId: "subprocess",
-          strategyExecutionSystemFailureCode: "SUBPROCESS_SIGNAL",
-        }),
-      }),
-    )
-  })
-
-  it("returns failed_system when retry exhaustion marks the Match failed_system", async () => {
-    const dependencies = baseDependencies()
-    vi.mocked(dependencies.buildChronicleFromMatch).mockImplementation(() => {
-      throw new Error("chronicle validation failed")
-    })
-    vi.mocked(dependencies.recordAttemptFailure).mockResolvedValue(
-      "failed_system",
-    )
-
-    await expect(
-      runWorkerOnce(
-        pool,
-        { workerId: "worker:test", jobOwnership: explicitTestJobOwnership },
-        dependencies,
-      ),
-    ).resolves.toBe("failed_system")
-  })
-
-  it("can receive a reclaimed expired running job from the claim dependency", async () => {
-    const dependencies = baseDependencies()
-    vi.mocked(dependencies.claimNextMatchJob).mockResolvedValue(
-      createClaimedMatchJobForTest({
-        jobId: "match-job:expired",
-        leaseToken: "lease:reclaimed",
-      }),
-    )
-
-    await runWorkerOnce(
-      pool,
-      { workerId: "worker:next", jobOwnership: explicitTestJobOwnership },
-      dependencies,
-    )
-    expect(dependencies.claimNextMatchJob).toHaveBeenCalledWith(pool, {
-      workerId: "worker:next",
-    })
-    expect(dependencies.completeMatch).toHaveBeenCalledWith(
-      pool,
-      expect.objectContaining({
-        jobId: "match-job:expired",
-        leaseToken: "lease:reclaimed",
-      }),
-    )
-  })
-
-  it("passes an optional match allowlist to the claim dependency", async () => {
-    const dependencies = baseDependencies()
-    const matchIds = ["match:target" as MatchId] as const
-
-    await runWorkerOnce(
-      pool,
-      {
-        workerId: "worker:targeted",
-        matchIds,
-        jobOwnership: explicitTestJobOwnership,
-      },
-      dependencies,
-    )
-
-    expect(dependencies.claimNextMatchJob).toHaveBeenCalledWith(pool, {
-      workerId: "worker:targeted",
-      matchIds,
-    })
+    expect(source).not.toMatch(/const\s+defaultDependencies\s*=/)
+    expect(source).not.toMatch(/allowedTypeScriptWorkerPurposes/)
+    expect(source).not.toMatch(/workerPurpose\s*===\s*["'](?:rollback|test|parity)/)
   })
 })
+
