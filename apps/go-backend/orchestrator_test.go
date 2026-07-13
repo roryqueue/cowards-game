@@ -137,6 +137,22 @@ func TestMatchJobLeaseForRuntimeServiceBudget(t *testing.T) {
 	}
 }
 
+func TestGoMatchOrchestratorIntegrityPostResponseContract(t *testing.T) {
+	source, err := os.ReadFile("orchestrator.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	recheckIndex := strings.Index(text, "recheckClaimedMatchIntegrity")
+	completionIndex := strings.Index(text, "completion.completeMatch")
+	if recheckIndex < 0 || completionIndex < 0 || recheckIndex > completionIndex {
+		t.Fatal("orchestrator must recheck exact claimed identity before completion")
+	}
+	if !strings.Contains(text, "RuntimeServiceEvidenceDrift") || !strings.Contains(text, "recordAttemptFailure") {
+		t.Fatal("in-flight integrity drift must route through system-failure recording")
+	}
+}
+
 func TestStrategyFailureRevisionIDFromChronicle(t *testing.T) {
 	artifact, err := json.Marshal(map[string]any{
 		"events": []any{

@@ -42,6 +42,31 @@ func TestRuntimeServiceClientSuccess(t *testing.T) {
 	}
 }
 
+func TestRuntimeServiceRequestIntegrityReferenceContract(t *testing.T) {
+	request := validRuntimeServiceRequestForTest()
+	encoded, err := json.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(encoded)
+	for _, required := range []string{
+		`"evidenceSnapshot"`, `"compatibility"`, `"tupleId"`,
+		`"authorityBundleHash"`, `"registryGeneration"`,
+		`"publicationId"`, `"installReceiptId"`, `"sourceManifestHash"`,
+		`"laneIdentityHash"`, `"containmentCertificateId"`,
+		`"schedulingDecision"`, `"reasonCode"`, `"evaluatedAt"`, `"freshUntil"`,
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("runtime request omitted exact integrity reference %s: %s", required, text)
+		}
+	}
+	for _, forbidden := range []string{`"laneIdentity":`, `"certificates":`, `"attestations":`, `"signatureBase64":`, `"sourceIds":`} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("runtime request carried authority payload %s: %s", forbidden, text)
+		}
+	}
+}
+
 func TestRuntimeServiceClientValidatesPythonProviderSource(t *testing.T) {
 	source := "def select_activations(input):\n    return {\"activationOrders\": [], \"strategyMemory\": input[\"strategyMemory\"]}\n\ndef soldier_brain(input):\n    return {\"action\": {\"type\": \"TURN_TO_STONE\"}, \"soldierMemory\": input[\"soldierMemory\"]}\n"
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, httpRequest *http.Request) {
