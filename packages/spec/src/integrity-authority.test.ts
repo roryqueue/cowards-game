@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import {
   CANONICAL_AUTHORITY_DOMAINS,
@@ -9,6 +12,19 @@ import {
   resolveCanonicalCompatibilityTuple,
   type CanonicalCompatibilityTuple,
 } from "./integrity-authority.js"
+import {
+  authorityArtifactPath,
+  buildV137IntegrityAuthorityArtifact,
+  buildV137IntegrityAuthorityHashVectorsArtifact,
+  hashVectorsArtifactPath,
+  renderV137IntegrityAuthorityArtifact,
+  renderV137IntegrityAuthorityHashVectorsArtifact,
+} from "../../../scripts/generate-v1-37-integrity-authority.js"
+
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+)
 
 const cloneTuple = (
   tuple: CanonicalCompatibilityTuple,
@@ -124,5 +140,64 @@ describe("v1.37 canonical integrity authority", () => {
 
     expect(CANONICAL_AUTHORITY_REGISTRY[0]!.symbol).toBe(ownerBefore)
     expect(CANONICAL_COMPATIBILITY_TUPLES[0]).toEqual(registeredBefore)
+  })
+
+  it("keeps the committed authority manifest byte-identical to deterministic rendering", () => {
+    const expected = renderV137IntegrityAuthorityArtifact(
+      buildV137IntegrityAuthorityArtifact(),
+    )
+    const actual = readFileSync(path.join(repoRoot, authorityArtifactPath), "utf8")
+    expect(actual).toBe(expected)
+
+    const parsed = JSON.parse(actual) as Record<string, unknown>
+    expect(parsed).toMatchObject({
+      schemaVersion: "v1.37-integrity-authority-v1",
+      generatorVersion: "generate-v1-37-integrity-authority-v1",
+      generatedBy: "scripts/generate-v1-37-integrity-authority.ts",
+    })
+    expect(JSON.stringify(parsed)).not.toMatch(
+      /provider|toolchain|adapter|artifactBytes|buildIdentity|hostPath|secret/i,
+    )
+  })
+
+  it("publishes directly consumable base and per-component hash vectors", () => {
+    const expected = renderV137IntegrityAuthorityHashVectorsArtifact(
+      buildV137IntegrityAuthorityHashVectorsArtifact(),
+    )
+    const actual = readFileSync(
+      path.join(repoRoot, hashVectorsArtifactPath),
+      "utf8",
+    )
+    expect(actual).toBe(expected)
+
+    const parsed = JSON.parse(actual) as {
+      vectors: Array<{
+        name: string
+        tuple: CanonicalCompatibilityTuple
+        encodedBytesHex: string
+        encodedBytesBase64: string
+        sha256: string
+        tupleId: string
+      }>
+    }
+    expect(parsed.vectors.map(({ name }) => name)).toEqual([
+      "registered-v1.4",
+      "rules-mutated",
+      "engine-mutated",
+      "runtimeAbi-mutated",
+      "chronicle-mutated",
+      "arenaCatalog-mutated",
+      "setPolicy-mutated",
+    ])
+    for (const vector of parsed.vectors) {
+      const encoded = encodeCanonicalCompatibilityTuple(vector.tuple)
+      expect(Buffer.from(encoded).toString("hex")).toBe(vector.encodedBytesHex)
+      expect(Buffer.from(encoded).toString("base64")).toBe(
+        vector.encodedBytesBase64,
+      )
+      expect(hashCanonicalCompatibilityTuple(vector.tuple)).toBe(vector.sha256)
+      expect(vector.tupleId).toBe(`sha256:${vector.sha256}`)
+      expect(vector.sha256).toMatch(/^[0-9a-f]{64}$/)
+    }
   })
 })
