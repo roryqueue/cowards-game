@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -12,19 +13,15 @@ import {
   resolveCanonicalCompatibilityTuple,
   type CanonicalCompatibilityTuple,
 } from "./integrity-authority.js"
-import {
-  authorityArtifactPath,
-  buildV137IntegrityAuthorityArtifact,
-  buildV137IntegrityAuthorityHashVectorsArtifact,
-  hashVectorsArtifactPath,
-  renderV137IntegrityAuthorityArtifact,
-  renderV137IntegrityAuthorityHashVectorsArtifact,
-} from "../../../scripts/generate-v1-37-integrity-authority.js"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../..",
 )
+const authorityArtifactPath =
+  "packages/spec/artifacts/v1.37-integrity-authority.json"
+const hashVectorsArtifactPath =
+  "packages/spec/artifacts/v1.37-integrity-authority-hash-vectors.json"
 
 const cloneTuple = (
   tuple: CanonicalCompatibilityTuple,
@@ -143,13 +140,9 @@ describe("v1.37 canonical integrity authority", () => {
   })
 
   it("keeps the committed authority manifest byte-identical to deterministic rendering", () => {
-    const expected = renderV137IntegrityAuthorityArtifact(
-      buildV137IntegrityAuthorityArtifact(),
-    )
     const actual = readFileSync(path.join(repoRoot, authorityArtifactPath), "utf8")
-    expect(actual).toBe(expected)
-
     const parsed = JSON.parse(actual) as Record<string, unknown>
+    expect(actual).toBe(`${JSON.stringify(parsed, null, 2)}\n`)
     expect(parsed).toMatchObject({
       schemaVersion: "v1.37-integrity-authority-v1",
       generatorVersion: "generate-v1-37-integrity-authority-v1",
@@ -158,18 +151,19 @@ describe("v1.37 canonical integrity authority", () => {
     expect(JSON.stringify(parsed)).not.toMatch(
       /provider|toolchain|adapter|artifactBytes|buildIdentity|hostPath|secret/i,
     )
+    const checked = spawnSync(
+      "pnpm",
+      ["exec", "tsx", "scripts/generate-v1-37-integrity-authority.ts", "--check"],
+      { cwd: repoRoot, encoding: "utf8" },
+    )
+    expect(checked.status, checked.stderr).toBe(0)
   })
 
   it("publishes directly consumable base and per-component hash vectors", () => {
-    const expected = renderV137IntegrityAuthorityHashVectorsArtifact(
-      buildV137IntegrityAuthorityHashVectorsArtifact(),
-    )
     const actual = readFileSync(
       path.join(repoRoot, hashVectorsArtifactPath),
       "utf8",
     )
-    expect(actual).toBe(expected)
-
     const parsed = JSON.parse(actual) as {
       vectors: Array<{
         name: string
@@ -180,6 +174,7 @@ describe("v1.37 canonical integrity authority", () => {
         tupleId: string
       }>
     }
+    expect(actual).toBe(`${JSON.stringify(parsed, null, 2)}\n`)
     expect(parsed.vectors.map(({ name }) => name)).toEqual([
       "registered-v1.4",
       "rules-mutated",
