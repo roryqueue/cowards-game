@@ -1754,6 +1754,7 @@ describe("Coward's Game spec contracts", () => {
   })
 
   it("RuntimeExecutionServiceRequestSchema accepts complete v1.15 Match execution inputs", () => {
+    const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
     const source =
       "export default { selectActivations() {}, soldierBrain() {} }"
     const sourceBytes = new TextEncoder().encode(source).length
@@ -1782,6 +1783,50 @@ describe("Coward's Game spec contracts", () => {
       },
       metadata: {},
     })
+    const evidenceEntrant = (side: "bottom" | "top") => ({
+      entrantKey: `entrant:${side}`,
+      strategyRevisionId: `strategy-revision:${side}`,
+      laneIdentity: {
+        providerId: `provider:${side}`,
+        languageId: "typescript",
+        runtimeId: "runtime:node",
+        runtimeVersion: "26.0.0",
+        toolchainId: "toolchain:typescript",
+        toolchainVersion: "6.0.3",
+        adapterId: "runtime-js-worker-thread",
+        adapterVersion: "0.1.0",
+        policyId: "package-none",
+        policyVersion: "1.0.0",
+        corpusId: "corpus:v1.37",
+        corpusVersion: "1.0.0",
+        artifactId: `artifact:${side}`,
+        artifactSha256: side.repeat(64).slice(0, 64),
+        implementationId: "runtime-service",
+        buildId: "build:v1.37",
+        semanticTupleId: registered.tupleId,
+        semanticTuple: { ...registered.tuple },
+      },
+      containmentCertificateRef: {
+        kind: "containment",
+        certificateId: `containment:${side}`,
+        certificateVersion: "1.0.0",
+        certificateRecordHash: `containment:${side}:hash`,
+        registryGeneration: "registry-generation:1",
+      },
+      conformanceCertificateRef: {
+        kind: "conformance",
+        certificateId: `conformance:${side}`,
+        certificateVersion: "1.0.0",
+        certificateRecordHash: `conformance:${side}:hash`,
+        registryGeneration: "registry-generation:1",
+      },
+      schedulingDecision: {
+        status: "counted",
+        reasonCode: "EVIDENCE_CURRENT",
+        evaluatedAt: "2026-07-13T00:00:00.000Z",
+        registryGeneration: "registry-generation:1",
+      },
+    })
     const request = {
       contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
       kind: "executeMatch",
@@ -1801,11 +1846,23 @@ describe("Coward's Game spec contracts", () => {
         top: revision("strategy-revision:top"),
       },
       limits: defaultRuntimeMetadata().limits,
+      evidenceSnapshot: {
+        compatibility: {
+          tupleId: registered.tupleId,
+          tuple: { ...registered.tuple },
+        },
+        authorityBundleHash: "authority-bundle-hash:v1",
+        registryGeneration: "registry-generation:1",
+        entrants: {
+          bottom: evidenceEntrant("bottom"),
+          top: evidenceEntrant("top"),
+        },
+      },
     }
 
     expect(RuntimeExecutionServiceRequestSchema.parse(request)).toEqual(request)
     expect(
-      RuntimeExecutionServiceRequestSchema.parse({
+      RuntimeExecutionServiceRequestSchema.safeParse({
         ...request,
         match: {
           ...request.match,
@@ -1815,13 +1872,8 @@ describe("Coward's Game spec contracts", () => {
           ...request.strategies,
           top: request.strategies.bottom,
         },
-      }),
-    ).toMatchObject({
-      match: {
-        bottomStrategyRevisionId: "strategy-revision:bottom",
-        topStrategyRevisionId: "strategy-revision:bottom",
-      },
-    })
+      }).success,
+    ).toBe(false)
     expect(
       RuntimeExecutionServiceRequestSchema.safeParse({
         ...request,

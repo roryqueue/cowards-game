@@ -15,6 +15,13 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   type StrategyRuntimeLimits,
 } from "./runtime.js"
+import type { CanonicalCompatibilityTuple } from "./integrity-authority.js"
+import type {
+  ExecutableLaneCertificateReference,
+  ExecutableLaneEvidenceReasonCode,
+  ExecutableLaneEvidenceStatus,
+  ExecutableLaneIdentity,
+} from "./runtime-evidence.js"
 
 export const RUNTIME_EXECUTION_SERVICE_VERSION =
   "runtime-execution-service-v1.15" as const
@@ -125,6 +132,11 @@ export const RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES = [
   "UNSUPPORTED_RUNTIME_ADAPTER",
   "EXECUTION_EXCEPTION",
   "RESPONSE_SCHEMA_INVALID",
+  "EVIDENCE_STALE",
+  "EVIDENCE_REVOKED",
+  "EVIDENCE_IDENTITY_MISMATCH",
+  "EVIDENCE_UNVERIFIABLE",
+  "EVIDENCE_REGISTRY_DRIFT",
 ] as const
 
 export type RuntimeExecutionServiceSystemFailureCode =
@@ -147,6 +159,43 @@ export interface RuntimeExecutionMatchInput {
   maxPhases?: number | undefined
 }
 
+export interface RuntimeExecutionCompatibilityIdentity {
+  tupleId: string
+  tuple: CanonicalCompatibilityTuple
+}
+
+export interface RuntimeExecutionSchedulingDecisionSnapshot {
+  status: ExecutableLaneEvidenceStatus
+  reasonCode: ExecutableLaneEvidenceReasonCode
+  evaluatedAt: string
+  registryGeneration: string
+}
+
+export interface RuntimeEntrantExecutionEvidence {
+  entrantKey: string
+  strategyRevisionId: StrategyRevisionId
+  laneIdentity: ExecutableLaneIdentity
+  containmentCertificateRef: ExecutableLaneCertificateReference & {
+    kind: "containment"
+  }
+  conformanceCertificateRef: ExecutableLaneCertificateReference & {
+    kind: "conformance"
+  }
+  schedulingDecision: RuntimeExecutionSchedulingDecisionSnapshot
+}
+
+export interface RuntimeExecutionEvidencePair {
+  bottom: RuntimeEntrantExecutionEvidence
+  top: RuntimeEntrantExecutionEvidence
+}
+
+export interface RuntimeExecutionEvidenceSnapshot {
+  compatibility: RuntimeExecutionCompatibilityIdentity
+  authorityBundleHash: string
+  registryGeneration: string
+  entrants: RuntimeExecutionEvidencePair
+}
+
 export interface RuntimeExecutionServiceRequest {
   contractVersion: typeof RUNTIME_EXECUTION_SERVICE_VERSION
   kind: "executeMatch"
@@ -157,6 +206,7 @@ export interface RuntimeExecutionServiceRequest {
     top: StrategyRevision
   }
   limits: StrategyRuntimeLimits
+  evidenceSnapshot: RuntimeExecutionEvidenceSnapshot
 }
 
 export interface RuntimeExecutionEnginePlayer {

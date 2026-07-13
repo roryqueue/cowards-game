@@ -29,6 +29,14 @@ import {
   type RuntimeExecutionServiceRequest,
 } from "./runtime-execution-service.js"
 import {
+  CANONICAL_COMPATIBILITY_TUPLE_FIELDS,
+  resolveCanonicalCompatibilityTuple,
+} from "./integrity-authority.js"
+import {
+  EXECUTABLE_LANE_EVIDENCE_REASON_CODES,
+  EXECUTABLE_LANE_EVIDENCE_STATUSES,
+} from "./runtime-evidence.js"
+import {
   DEFAULT_RUNTIME_LIMITS,
   STRATEGY_LANGUAGE_IDS,
   STRATEGY_RUNTIME_ABI_VERSION,
@@ -2311,6 +2319,191 @@ export const RuntimeExecutionServiceSystemFailureCodeSchema = z.enum(
   RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES,
 )
 
+const RuntimeExecutionCanonicalTupleSchema = z
+  .object({
+    rules: z.string().min(1),
+    engine: z.string().min(1),
+    runtimeAbi: z.string().min(1),
+    chronicle: z.string().min(1),
+    arenaCatalog: z.string().min(1),
+    setPolicy: z.string().min(1),
+  })
+  .strict()
+
+export const RuntimeExecutionCompatibilityIdentitySchema = z
+  .object({
+    tupleId: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    tuple: RuntimeExecutionCanonicalTupleSchema,
+  })
+  .strict()
+  .superRefine((identity, ctx) => {
+    if (!resolveCanonicalCompatibilityTuple(identity)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["tupleId"],
+        message:
+          "compatibility tuple id and expansion must resolve as one registered exact tuple",
+      })
+    }
+  })
+
+const RuntimeExecutionLaneIdentitySchema = z
+  .object({
+    providerId: z.string().min(1),
+    languageId: z.string().min(1),
+    runtimeId: z.string().min(1),
+    runtimeVersion: z.string().min(1),
+    toolchainId: z.string().min(1),
+    toolchainVersion: z.string().min(1),
+    adapterId: z.string().min(1),
+    adapterVersion: z.string().min(1),
+    policyId: z.string().min(1),
+    policyVersion: z.string().min(1),
+    corpusId: z.string().min(1),
+    corpusVersion: z.string().min(1),
+    artifactId: z.string().min(1),
+    artifactSha256: z.string().min(1),
+    implementationId: z.string().min(1),
+    buildId: z.string().min(1),
+    semanticTupleId: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    semanticTuple: RuntimeExecutionCanonicalTupleSchema,
+  })
+  .strict()
+  .superRefine((identity, ctx) => {
+    if (
+      !resolveCanonicalCompatibilityTuple({
+        tupleId: identity.semanticTupleId,
+        tuple: identity.semanticTuple,
+      })
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["semanticTupleId"],
+        message: "lane identity must name one registered exact semantic tuple",
+      })
+    }
+  })
+
+const RuntimeExecutionCertificateReferenceSchema = z
+  .object({
+    kind: z.enum(["containment", "conformance"]),
+    certificateId: z.string().min(1),
+    certificateVersion: z.string().min(1),
+    certificateRecordHash: z.string().min(1),
+    registryGeneration: z.string().min(1),
+  })
+  .strict()
+
+const RuntimeExecutionSchedulingDecisionSchema = z
+  .object({
+    status: z.enum(EXECUTABLE_LANE_EVIDENCE_STATUSES),
+    reasonCode: z.enum(EXECUTABLE_LANE_EVIDENCE_REASON_CODES),
+    evaluatedAt: z.string().datetime({ offset: true }),
+    registryGeneration: z.string().min(1),
+  })
+  .strict()
+  .superRefine((decision, ctx) => {
+    if (
+      (decision.status === "counted") !==
+      (decision.reasonCode === "EVIDENCE_CURRENT")
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reasonCode"],
+        message: "counted scheduling requires current executable evidence",
+      })
+    }
+  })
+
+const RuntimeEntrantExecutionEvidenceSchema = z
+  .object({
+    entrantKey: z.string().min(1),
+    strategyRevisionId: z.string().min(1),
+    laneIdentity: RuntimeExecutionLaneIdentitySchema,
+    containmentCertificateRef:
+      RuntimeExecutionCertificateReferenceSchema.extend({
+        kind: z.literal("containment"),
+      }).strict(),
+    conformanceCertificateRef:
+      RuntimeExecutionCertificateReferenceSchema.extend({
+        kind: z.literal("conformance"),
+      }).strict(),
+    schedulingDecision: RuntimeExecutionSchedulingDecisionSchema,
+  })
+  .strict()
+
+const addExecutionIdentityIssue = (
+  ctx: z.RefinementCtx,
+  path: PropertyKey[],
+  message: string,
+): void => {
+  ctx.addIssue({ code: "custom", path, message })
+}
+
+export const RuntimeExecutionEvidenceSnapshotSchema = z
+  .object({
+    compatibility: RuntimeExecutionCompatibilityIdentitySchema,
+    authorityBundleHash: z.string().min(1),
+    registryGeneration: z.string().min(1),
+    entrants: z
+      .object({
+        bottom: RuntimeEntrantExecutionEvidenceSchema,
+        top: RuntimeEntrantExecutionEvidenceSchema,
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((snapshot, ctx) => {
+    for (const side of ["bottom", "top"] as const) {
+      const entrant = snapshot.entrants[side]
+      if (
+        entrant.laneIdentity.semanticTupleId !==
+        snapshot.compatibility.tupleId
+      ) {
+        addExecutionIdentityIssue(
+          ctx,
+          ["entrants", side, "laneIdentity", "semanticTupleId"],
+          "entrant lane tuple id must match the request compatibility tuple",
+        )
+      }
+      for (const field of CANONICAL_COMPATIBILITY_TUPLE_FIELDS) {
+        if (
+          entrant.laneIdentity.semanticTuple[field] !==
+          snapshot.compatibility.tuple[field]
+        ) {
+          addExecutionIdentityIssue(
+            ctx,
+            ["entrants", side, "laneIdentity", "semanticTuple", field],
+            "entrant lane tuple expansion must match the request compatibility tuple",
+          )
+        }
+      }
+      for (const generation of [
+        entrant.containmentCertificateRef.registryGeneration,
+        entrant.conformanceCertificateRef.registryGeneration,
+        entrant.schedulingDecision.registryGeneration,
+      ]) {
+        if (generation !== snapshot.registryGeneration) {
+          addExecutionIdentityIssue(
+            ctx,
+            ["entrants", side],
+            "all entrant evidence must use the snapshot registry generation",
+          )
+        }
+      }
+    }
+    if (
+      snapshot.entrants.bottom.entrantKey ===
+      snapshot.entrants.top.entrantKey
+    ) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["entrants", "top", "entrantKey"],
+        "bottom and top entrant keys must differ",
+      )
+    }
+  })
+
 export const RuntimeExecutionMatchInputSchema = z
   .object({
     matchId: z.string().min(1),
@@ -2368,7 +2561,9 @@ export const RuntimeExecutionServiceRequestSchema = z
         }
       }
     }),
+    evidenceSnapshot: RuntimeExecutionEvidenceSnapshotSchema,
   })
+  .strict()
   .superRefine((request, ctx) => {
     if (
       request.match.bottomStrategyRevisionId !== request.strategies.bottom.id
@@ -2385,6 +2580,27 @@ export const RuntimeExecutionServiceRequestSchema = z
         path: ["strategies", "top", "id"],
         message: "top Strategy Revision id must match Match input",
       })
+    }
+    for (const side of ["bottom", "top"] as const) {
+      const expectedRevisionId =
+        side === "bottom"
+          ? request.match.bottomStrategyRevisionId
+          : request.match.topStrategyRevisionId
+      if (
+        request.evidenceSnapshot.entrants[side].strategyRevisionId !==
+        expectedRevisionId
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: [
+            "evidenceSnapshot",
+            "entrants",
+            side,
+            "strategyRevisionId",
+          ],
+          message: `${side} execution evidence must bind the Match Strategy Revision`,
+        })
+      }
     }
   }) satisfies z.ZodType<RuntimeExecutionServiceRequest>
 
