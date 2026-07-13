@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
-stopped_at: Completed 256-03-PLAN.md; next sequential plan is 256-04
-last_updated: "2026-07-13T02:40:11.601Z"
+stopped_at: Completed 256-04-PLAN.md; next dependency-ready plan is 256-17
+last_updated: "2026-07-13T03:03:30.000Z"
 last_activity: 2026-07-13
-last_activity_desc: Plan 256-03 bound execution, Match evidence, and replay to one atomic tuple plus ordered entrant proof
+last_activity_desc: Plan 256-04 added exact immutable identity persistence and PostgreSQL rollback proof
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 4
-  percent: 21
+  completed_plans: 5
+  percent: 26
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
-Plan: 4 of 19
+Plan: 5 of 19
 Status: Ready to execute
-Last activity: 2026-07-13 — Plan 256-03 bound execution, Match evidence, and replay to one atomic tuple plus ordered entrant proof
+Last activity: 2026-07-13 — Plan 256-04 added exact immutable identity persistence and PostgreSQL rollback proof
 
-Progress: [██░░░░░░░░] 21%
+Progress: [███░░░░░░░] 26%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [██░░░░░░░░] 21%
 
 **Resume file:** None
 
-Last session: 2026-07-13T02:40:11.586Z
-Stopped at: Completed 256-03-PLAN.md; next sequential plan is 256-04
+Last session: 2026-07-13T03:03:30.000Z
+Stopped at: Completed 256-04-PLAN.md; next dependency-ready plan is 256-17
 Next command: `$gsd-execute-phase 256`
 
 ## Performance Metrics
@@ -73,6 +73,7 @@ Next command: `$gsd-execute-phase 256`
 | Phase 256 P02 | 10min | 3 tasks | 10 files |
 | Phase 256 P19 | 10min | 2 tasks | 5 files |
 | Phase 256 P03 | 11min | 3 tasks | 7 files |
+| Phase 256 P04 | 14min | 2 tasks | 5 files |
 
 ## Decisions
 
@@ -84,3 +85,5 @@ Next command: `$gsd-execute-phase 256`
 - [Phase 256]: The legacy direct TypeScript Match worker has no executable purpose. — Normal, rollback, test, parity, demo, malformed, and emergency labels all fail before startup or Match lifecycle effects.
 - [Phase 256]: Retired worker startup emits only a stable public-safe code and message. — Process failures suppress source locations, host paths, stacks, and diagnostics while remaining observable.
 - [Phase 256]: Worker retirement has a focused AST-backed sentinel; Plan 256-14 owns broad-chain integration. — The focused guard proves fatal ordering and forbidden route absence without duplicating the milestone-wide authority monitor.
+- [Phase 256]: MatchSet semantic identity is singular while executable evidence is normalized per entrant and ordered per Match side. — Exact heterogeneous lanes remain independently attributable without collapsing them into a fabricated Match-wide runtime identity.
+- [Phase 256]: Historical integrity identity remains nullable and unresolved while current validated identity becomes immutable after first persistence. — No migration default, backfill, or resolver may manufacture proof for existing v1.4 rows.

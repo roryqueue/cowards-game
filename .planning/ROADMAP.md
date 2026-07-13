@@ -35,7 +35,7 @@ v1.37 establishes the smallest complete trust substrate needed before serious co
   3. Operators can classify affected historical results, invalidate and recompute derived standings when needed, while the original Match evidence and v1.4 interpretation remain immutable.
   4. Public/default safety surfaces expose only safe classifications and evidence identifiers, and structural monitors reject duplicate authorities and stale execution entry points.
 
-**Plans:** 4/19 plans executed
+**Plans:** 5/19 plans executed
 
 Plans:
 **Wave 1**
@@ -53,7 +53,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 256-04-PLAN.md — Add exact identity schema, immutable evidence storage, and PostgreSQL constraints.
+- [x] 256-04-PLAN.md — Add exact identity schema, immutable evidence storage, and PostgreSQL constraints.
 - [ ] 256-17-PLAN.md — Define the signed, atomically replaceable authority bundle independently verified by Node and Go.
 
 **Wave 5** *(blocked on Wave 4 completion)*
