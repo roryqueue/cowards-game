@@ -15,8 +15,11 @@ import {
   EXHIBITION_SCORING_POLICY_V1,
   evaluateStrategyRuntimeCountedEligibility,
   getCountedEntryEligibilityPublicCopy,
+  hashExecutableLaneIdentity,
+  hashRuntimeEvidenceAuthorityPayload,
   isCountedEntrySupportedLane,
   normalizeStrategyRuntimeMetadata,
+  parseRuntimeEvidenceAuthorityPayloadBytes,
   projectTrialSeasonWindows,
   projectPublicCompetitionGovernance,
   STRATEGY_RUNTIME_ABI_VERSION,
@@ -30,6 +33,7 @@ import {
   type PublicStandingDto,
   type PublicTrialLadderSeasonDto,
   type StrategyRevisionId,
+  type RuntimeEvidenceAuthorityPayload,
   type TrialLadderEntrySnapshot,
   type TrialLadderEntryStatus,
   type TrialLadderSeasonStatus,
@@ -973,6 +977,415 @@ const readSeasonEntries = async (
   return result.rows
 }
 
+type InstalledAuthoritySourceType =
+  | "attestation"
+  | "certificate"
+  | "revocation"
+  | "supersession"
+  | "lane-control"
+
+interface InstalledAuthoritySourceRow {
+  type: InstalledAuthoritySourceType
+  id: string
+  recordHash: string
+  currentRecordHash: string
+}
+
+interface InstalledAuthorityPublication {
+  publicationId: string
+  generation: string
+  payloadSha256: string
+  envelopeSha256: string
+  sourceManifestHash: string
+  semanticTupleManifestHash: string
+  payload: Readonly<RuntimeEvidenceAuthorityPayload>
+}
+
+const AUTHORITY_SOURCE_DOMAIN =
+  "cowards-game:runtime-evidence-authority-publication-sources:v1"
+const AUTHORITY_ENVELOPE_DOMAIN =
+  "cowards-game:runtime-evidence-authority-publication-envelope:v1"
+
+const prefixedPublicationHash = (domain: string, bytes: Uint8Array): string =>
+  `sha256:${createHash("sha256")
+    .update(domain)
+    .update("\0")
+    .update(bytes)
+    .digest("hex")}`
+
+const exactStringArray = (value: unknown, label: string): string[] => {
+  if (
+    !Array.isArray(value) ||
+    value.some((entry) => typeof entry !== "string" || entry.length === 0) ||
+    new Set(value).size !== value.length
+  ) {
+    throw new LadderInputError(
+      `Installed authority publication ${label} is invalid.`,
+    )
+  }
+  return [...value]
+}
+
+const exactSourceRows = (value: unknown): InstalledAuthoritySourceRow[] => {
+  if (!Array.isArray(value)) {
+    throw new LadderInputError(
+      "Installed authority publication source ledger is invalid.",
+    )
+  }
+  return value.map((entry) => {
+    if (
+      !isRecord(entry) ||
+      ![
+        "attestation",
+        "certificate",
+        "revocation",
+        "supersession",
+        "lane-control",
+      ].includes(String(entry.type)) ||
+      typeof entry.id !== "string" ||
+      typeof entry.recordHash !== "string" ||
+      typeof entry.currentRecordHash !== "string"
+    ) {
+      throw new LadderInputError(
+        "Installed authority publication source ledger is invalid.",
+      )
+    }
+    return {
+      type: entry.type as InstalledAuthoritySourceType,
+      id: entry.id,
+      recordHash: entry.recordHash,
+      currentRecordHash: entry.currentRecordHash,
+    }
+  })
+}
+
+const sameStrings = (left: readonly string[], right: readonly string[]) =>
+  left.length === right.length &&
+  left.every((value, index) => value === right[index])
+
+const loadInstalledAuthorityPublication = async (
+  client: PoolClient,
+  evaluationInstant: string,
+): Promise<InstalledAuthorityPublication> => {
+  const head = await client.query<{ next_generation: string | number }>(
+    `select next_generation
+       from runtime_evidence_authority_publication_head
+      where singleton = true
+      for share`,
+  )
+  const nextGeneration = String(head.rows[0]?.next_generation ?? "")
+  if (!/^[1-9][0-9]{0,15}$/u.test(nextGeneration)) {
+    throw new LadderInputError(
+      "Installed authority publication head is unavailable.",
+    )
+  }
+
+  const publicationResult = await client.query<{
+    id: string
+    generation: string | number
+    semantic_tuple_manifest_hash: string
+    source_manifest_hash: string
+    payload_sha256: string
+    envelope_sha256: string
+    payload_bytes: Buffer
+    envelope_bytes: Buffer
+    attestation_ids: unknown
+    certificate_ids: unknown
+    revocation_ids: unknown
+    supersession_ids: unknown
+    lane_control_ids: unknown
+    receipt: unknown
+    publication_sources: unknown
+  }>(
+    `select p.id, p.generation, p.semantic_tuple_manifest_hash,
+            p.source_manifest_hash, p.payload_sha256, p.envelope_sha256,
+            p.payload_bytes, p.envelope_bytes, p.attestation_ids,
+            p.certificate_ids, p.revocation_ids, p.supersession_ids,
+            p.lane_control_ids, installed.receipt,
+            coalesce((
+              select jsonb_agg(
+                jsonb_build_object(
+                  'type', source.source_type,
+                  'id', source.source_id,
+                  'recordHash', source.source_record_hash,
+                  'currentRecordHash', case source.source_type
+                    when 'attestation' then 'sha256:' || attestation.attestation_sha256
+                    when 'certificate' then 'sha256:' || certificate.certificate_record_hash
+                    when 'revocation' then 'sha256:' || revocation.envelope_hash
+                    when 'supersession' then 'sha256:' || supersession.envelope_hash
+                    when 'lane-control' then 'sha256:' || lane_control.envelope_hash
+                  end
+                ) order by source.source_type, source.source_id
+              )
+              from runtime_evidence_authority_publication_sources source
+              left join runtime_evidence_verified_attestations attestation
+                on source.source_type = 'attestation'
+               and attestation.id = source.attestation_id
+               and attestation.verification_status = 'passed'
+              left join runtime_evidence_certificates certificate
+                on source.source_type = 'certificate'
+               and certificate.id = source.certificate_id
+               and certificate.certificate_status = 'passed'
+              left join runtime_evidence_certificate_revocations revocation
+                on source.source_type = 'revocation'
+               and revocation.id = source.revocation_id
+               and revocation.verification_status = 'passed'
+              left join runtime_evidence_certificate_supersessions supersession
+                on source.source_type = 'supersession'
+               and supersession.id = source.supersession_id
+               and supersession.verification_status = 'passed'
+              left join runtime_evidence_lane_controls lane_control
+                on source.source_type = 'lane-control'
+               and lane_control.id = source.lane_control_id
+               and lane_control.verification_status = 'passed'
+              where source.publication_id = p.id
+            ), '[]'::jsonb) as publication_sources
+       from runtime_evidence_authority_publications p
+       join lateral (
+         select event.receipt
+           from runtime_evidence_authority_publication_events event
+          where event.publication_id = p.id
+            and event.event_kind = 'installed'
+            and event.reason_code is null
+            and event.envelope_sha256 = p.envelope_sha256
+          order by event.occurred_at desc, event.id desc
+          limit 1
+       ) installed on true
+      where p.generation < $1::bigint
+        and p.issued_at <= $2::timestamptz
+        and p.valid_from <= $2::timestamptz
+        and p.valid_until >= $2::timestamptz
+      order by p.generation desc
+      limit 1`,
+    [nextGeneration, evaluationInstant],
+  )
+  const row = publicationResult.rows[0]
+  if (!row) {
+    throw new LadderInputError(
+      "A current installed authority publication is required before scheduling.",
+    )
+  }
+
+  const generation = String(row.generation)
+  const payloadBytes = new Uint8Array(row.payload_bytes)
+  const envelopeBytes = new Uint8Array(row.envelope_bytes)
+  const payload = parseRuntimeEvidenceAuthorityPayloadBytes(payloadBytes)
+  const sourceIds = {
+    attestationIds: exactStringArray(row.attestation_ids, "attestation IDs"),
+    certificateIds: exactStringArray(row.certificate_ids, "certificate IDs"),
+    revocationIds: exactStringArray(row.revocation_ids, "revocation IDs"),
+    supersessionIds: exactStringArray(row.supersession_ids, "supersession IDs"),
+    laneControlIds: exactStringArray(row.lane_control_ids, "lane-control IDs"),
+  }
+  const receipt = row.receipt
+  if (!isRecord(receipt) || !isRecord(receipt.sourceIds)) {
+    throw new LadderInputError(
+      "Installed authority publication receipt is invalid.",
+    )
+  }
+  const receiptSourceIds = {
+    attestationIds: exactStringArray(
+      receipt.sourceIds.attestationIds,
+      "receipt attestation IDs",
+    ),
+    certificateIds: exactStringArray(
+      receipt.sourceIds.certificateIds,
+      "receipt certificate IDs",
+    ),
+    revocationIds: exactStringArray(
+      receipt.sourceIds.revocationIds,
+      "receipt revocation IDs",
+    ),
+    supersessionIds: exactStringArray(
+      receipt.sourceIds.supersessionIds,
+      "receipt supersession IDs",
+    ),
+    laneControlIds: exactStringArray(
+      receipt.sourceIds.laneControlIds,
+      "receipt lane-control IDs",
+    ),
+  }
+  if (
+    receipt.schemaVersion !==
+      "v1.37-runtime-evidence-authority-install-receipt-v1" ||
+    receipt.generation !== generation ||
+    receipt.payloadSha256 !== row.payload_sha256 ||
+    receipt.envelopeSha256 !== row.envelope_sha256 ||
+    receipt.sourceManifestHash !== row.source_manifest_hash ||
+    payload.registryGeneration !== generation ||
+    payload.semanticTupleManifestHash !== row.semantic_tuple_manifest_hash ||
+    hashRuntimeEvidenceAuthorityPayload(payloadBytes) !== row.payload_sha256 ||
+    prefixedPublicationHash(AUTHORITY_ENVELOPE_DOMAIN, envelopeBytes) !==
+      row.envelope_sha256 ||
+    !sameStrings(sourceIds.attestationIds, receiptSourceIds.attestationIds) ||
+    !sameStrings(sourceIds.certificateIds, receiptSourceIds.certificateIds) ||
+    !sameStrings(sourceIds.revocationIds, receiptSourceIds.revocationIds) ||
+    !sameStrings(sourceIds.supersessionIds, receiptSourceIds.supersessionIds) ||
+    !sameStrings(sourceIds.laneControlIds, receiptSourceIds.laneControlIds)
+  ) {
+    throw new LadderInputError(
+      "Installed authority publication receipt or bytes drifted.",
+    )
+  }
+
+  const sourceRows = exactSourceRows(row.publication_sources).sort(
+    (left, right) =>
+      left.type === right.type
+        ? left.id.localeCompare(right.id)
+        : left.type.localeCompare(right.type),
+  )
+  const expectedSources = [
+    ...sourceIds.attestationIds.map((id) => ({
+      type: "attestation" as const,
+      id,
+    })),
+    ...sourceIds.certificateIds.map((id) => ({
+      type: "certificate" as const,
+      id,
+    })),
+    ...sourceIds.revocationIds.map((id) => ({
+      type: "revocation" as const,
+      id,
+    })),
+    ...sourceIds.supersessionIds.map((id) => ({
+      type: "supersession" as const,
+      id,
+    })),
+    ...sourceIds.laneControlIds.map((id) => ({
+      type: "lane-control" as const,
+      id,
+    })),
+  ].sort((left, right) =>
+    left.type === right.type
+      ? left.id.localeCompare(right.id)
+      : left.type.localeCompare(right.type),
+  )
+  if (
+    sourceRows.length !== expectedSources.length ||
+    sourceRows.some(
+      (source, index) =>
+        source.type !== expectedSources[index]?.type ||
+        source.id !== expectedSources[index]?.id ||
+        source.recordHash !== source.currentRecordHash,
+    )
+  ) {
+    throw new LadderInputError(
+      "Installed authority publication source set drifted.",
+    )
+  }
+  const sourceManifest = sourceRows.map(({ type, id, recordHash }) => ({
+    type,
+    id,
+    recordHash,
+  }))
+  if (
+    prefixedPublicationHash(
+      AUTHORITY_SOURCE_DOMAIN,
+      new TextEncoder().encode(JSON.stringify(sourceManifest)),
+    ) !== row.source_manifest_hash
+  ) {
+    throw new LadderInputError(
+      "Installed authority publication source manifest drifted.",
+    )
+  }
+
+  return {
+    publicationId: row.id,
+    generation,
+    payloadSha256: row.payload_sha256,
+    envelopeSha256: row.envelope_sha256,
+    sourceManifestHash: row.source_manifest_hash,
+    semanticTupleManifestHash: row.semantic_tuple_manifest_hash,
+    payload,
+  }
+}
+
+const assertSchedulingIdentityMatchesInstalledPublication = (
+  identity: Awaited<ReturnType<typeof resolveMatchSetExecutionEvidence>>,
+  publication: InstalledAuthorityPublication,
+  purpose: "counted" | "exhibition",
+  evaluationInstant: string,
+): void => {
+  const payload = publication.payload
+  const certificates = new Map(
+    payload.certificates.map((certificate) => [
+      certificate.certificateId,
+      certificate,
+    ]),
+  )
+  const revoked = new Set(
+    payload.revocations.map(
+      (entry) => `${entry.certificateId}\0${entry.certificateRecordHash}`,
+    ),
+  )
+  const superseded = new Set(
+    payload.supersessions.map((entry) => entry.certificateId),
+  )
+  const disabled = new Set(
+    payload.operatorLaneDisables.map((entry) => entry.laneIdentityHash),
+  )
+  if (
+    identity.registryGeneration !== publication.generation ||
+    identity.authorityBundleHash !==
+      publication.payloadSha256.slice("sha256:".length) ||
+    identity.compatibility.tupleId !== publication.semanticTupleManifestHash
+  ) {
+    throw new LadderInputError(
+      "Scheduling identity does not match the installed authority publication.",
+    )
+  }
+  for (const entrant of Object.values(identity.executionEntrants)) {
+    const laneIdentityHash = `sha256:${hashExecutableLaneIdentity(entrant.laneIdentity)}`
+    const containment = certificates.get(
+      entrant.containmentCertificateRef.certificateId,
+    )
+    const conformance = certificates.get(
+      entrant.conformanceCertificateRef.certificateId,
+    )
+    const certificateMatches = (
+      certificate: typeof containment,
+      kind: "containment" | "conformance",
+      reference: {
+        certificateId: string
+        certificateVersion: string
+        certificateRecordHash: string
+      },
+    ) =>
+      certificate?.kind === kind &&
+      certificate.certificateVersion === reference.certificateVersion &&
+      certificate.certificateRecordHash ===
+        `sha256:${reference.certificateRecordHash}` &&
+      certificate.laneIdentityHash === laneIdentityHash &&
+      !revoked.has(
+        `${reference.certificateId}\0sha256:${reference.certificateRecordHash}`,
+      ) &&
+      !superseded.has(reference.certificateId)
+    if (
+      disabled.has(laneIdentityHash) ||
+      !certificateMatches(
+        containment,
+        "containment",
+        entrant.containmentCertificateRef,
+      ) ||
+      (purpose === "counted" &&
+        !certificateMatches(
+          conformance,
+          "conformance",
+          entrant.conformanceCertificateRef,
+        )) ||
+      entrant.schedulingDecision.evaluatedAt !== evaluationInstant ||
+      entrant.schedulingDecision.registryGeneration !==
+        publication.generation ||
+      Date.parse(entrant.schedulingDecision.freshUntil) <
+        Date.parse(evaluationInstant)
+    ) {
+      throw new LadderInputError(
+        "Scheduling evidence is stale, revoked, disabled, or absent from the installed authority publication.",
+      )
+    }
+  }
+}
+
 export const scheduleTrialLadderSeason = async (
   pool: Pool,
   input: {
@@ -1097,6 +1510,11 @@ export const scheduleTrialLadderSeason = async (
     }
 
     const now = input.now ?? new Date()
+    const evaluationInstant = now.toISOString()
+    const publication = await loadInstalledAuthorityPublication(
+      client,
+      evaluationInstant,
+    )
     const preparedPods = []
     for (let podIndex = 0; podIndex < fullPodCount; podIndex += 1) {
       const pod = entries.slice(podIndex * podSize, (podIndex + 1) * podSize)
@@ -1114,12 +1532,18 @@ export const scheduleTrialLadderSeason = async (
       const integrityIdentity = await resolveMatchSetExecutionEvidence({
         resolver: input.evidenceResolver,
         purpose: "counted",
-        evaluationInstant: now.toISOString(),
+        evaluationInstant,
         entrants: entrants.map((entrant) => ({
           entrantKey: entrant.strategyRevisionId,
           strategyRevisionId: entrant.strategyRevisionId,
         })),
       })
+      assertSchedulingIdentityMatchesInstalledPublication(
+        integrityIdentity,
+        publication,
+        "counted",
+        evaluationInstant,
+      )
       preparedPods.push({
         podIndex,
         matchSetId,

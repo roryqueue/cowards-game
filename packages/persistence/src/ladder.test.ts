@@ -398,6 +398,9 @@ const createLifecyclePool = (input: {
       if (sql.includes("from trial_ladder_entries")) {
         return { rows: input.entries ?? [] }
       }
+      if (sql.includes("runtime_evidence_authority_publication_head")) {
+        return { rows: [{ next_generation: 1 }] }
+      }
       return { rows: [] }
     },
     release() {},
