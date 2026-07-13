@@ -1,0 +1,139 @@
+import {
+  ArenaVariantSchema,
+  BOTTOM_STARTING_POSITIONS,
+  COMPATIBILITY_VERSIONS,
+  ROUND_ACTIVATION_COUNTS,
+  TOP_STARTING_POSITIONS,
+  type ArenaVariant,
+  type BoardBounds,
+  type CompatibilityVersions,
+  type Direction,
+  type Position,
+  type SemanticIntegrityResult,
+  type Soldier,
+} from "@cowards/spec"
+import { getInitialInitiativePlayerId } from "../state.js"
+import type {
+  CreateInitialGameStateInput,
+  EnginePlayer,
+  GameState,
+  PlayerSide,
+} from "../types.js"
+
+export type CandidateInitialGameStateResult =
+  | { readonly ok: true; readonly state: GameState }
+  | {
+      readonly ok: false
+      readonly failure: Exclude<SemanticIntegrityResult, { ok: true }>
+    }
+
+const clonePosition = ({ x, y }: Position): Position => ({ x, y })
+
+const cloneBounds = ({ minX, maxX, minY, maxY }: BoardBounds): BoardBounds => ({
+  minX,
+  maxX,
+  minY,
+  maxY,
+})
+
+const cloneVersions = (
+  versions: CompatibilityVersions,
+): CompatibilityVersions =>
+  Object.freeze({
+    spec: versions.spec,
+    engine: versions.engine,
+    runtimeJs: versions.runtimeJs,
+    chronicle: versions.chronicle,
+    strategyRevision: versions.strategyRevision,
+    arenaVariant: versions.arenaVariant,
+  })
+
+const cloneArena = (arena: ArenaVariant): ArenaVariant => ({
+  id: arena.id,
+  name: arena.name,
+  initialBounds: cloneBounds(arena.initialBounds),
+  terrainStones: arena.terrainStones.map(clonePosition),
+})
+
+const createPlayer = (
+  id: string,
+  side: PlayerSide,
+  strategyRevisionId: string,
+): EnginePlayer => ({
+  id,
+  side,
+  strategyRevisionId,
+  strategyMemory: {},
+})
+
+const createStartingSoldiers = (
+  ownerPlayerId: string,
+  side: PlayerSide,
+  positions: readonly Readonly<Position>[],
+  facing: Direction,
+): Soldier[] =>
+  positions.map((position, index) => ({
+    id: `${side}-soldier-${index + 1}`,
+    ownerPlayerId,
+    status: "ACTIVE",
+    position: clonePosition(position),
+    facing,
+    lastSuccessfulMoveDirection: null,
+    soldierMemory: {},
+  }))
+
+/**
+ * Inactive Phase-257 candidate factory. Plan 257-19 owns switching the public
+ * facade after the kernel, tuple, and boundary gates are complete.
+ */
+export const createCandidateInitialGameState = (
+  input: CreateInitialGameStateInput,
+): CandidateInitialGameStateResult => {
+  const arenaVariant = cloneArena(ArenaVariantSchema.parse(input.arenaVariant))
+  const bottomPlayer = createPlayer(
+    input.bottomPlayerId,
+    "bottom",
+    input.bottomStrategyRevisionId,
+  )
+  const topPlayer = createPlayer(
+    input.topPlayerId,
+    "top",
+    input.topStrategyRevisionId,
+  )
+
+  return {
+    ok: true,
+    state: {
+      matchId: input.matchId,
+      seed: input.seed,
+      versions: cloneVersions(COMPATIBILITY_VERSIONS),
+      arenaVariant,
+      players: [bottomPlayer, topPlayer],
+      phase: "ROUND",
+      phaseNumber: 1,
+      roundNumber: 1,
+      activationCount: ROUND_ACTIVATION_COUNTS[1],
+      initiativePlayerId: getInitialInitiativePlayerId(
+        input.seed,
+        input.bottomPlayerId,
+        input.topPlayerId,
+      ),
+      bounds: cloneBounds(arenaVariant.initialBounds),
+      soldiers: [
+        ...createStartingSoldiers(
+          input.bottomPlayerId,
+          "bottom",
+          BOTTOM_STARTING_POSITIONS,
+          "UP",
+        ),
+        ...createStartingSoldiers(
+          input.topPlayerId,
+          "top",
+          TOP_STARTING_POSITIONS,
+          "DOWN",
+        ),
+      ],
+      terrainStones: arenaVariant.terrainStones.map(clonePosition),
+    },
+  }
+}

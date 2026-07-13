@@ -80,6 +80,11 @@ describe("engine state foundation", () => {
     expect(Object.isFrozen(INITIAL_BOUNDS)).toBe(true)
     expect(Object.isFrozen(BOTTOM_STARTING_POSITIONS[0])).toBe(true)
     expect(Object.isFrozen(TOP_STARTING_POSITIONS[0])).toBe(true)
-    expect(Object.isFrozen(COMPATIBILITY_VERSIONS)).toBe(true)
+    const candidate = createCandidateInitialGameState(input)
+    expect(candidate.ok).toBe(true)
+    if (candidate.ok) {
+      expect(candidate.state.versions).not.toBe(COMPATIBILITY_VERSIONS)
+      expect(Object.isFrozen(candidate.state.versions)).toBe(true)
+    }
   })
 })

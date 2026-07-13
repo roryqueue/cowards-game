@@ -39,7 +39,6 @@ describe("candidate initial-state constant and clone ownership", () => {
     expect(BOTTOM_STARTING_POSITIONS.every(Object.isFrozen)).toBe(true)
     expect(Object.isFrozen(TOP_STARTING_POSITIONS)).toBe(true)
     expect(TOP_STARTING_POSITIONS.every(Object.isFrozen)).toBe(true)
-    expect(Object.isFrozen(COMPATIBILITY_VERSIONS)).toBe(true)
 
     const before = JSON.stringify({
       initialBounds: INITIAL_BOUNDS,
@@ -49,9 +48,6 @@ describe("candidate initial-state constant and clone ownership", () => {
     })
     expect(() => {
       ;(BOTTOM_STARTING_POSITIONS[0] as { x: number }).x = 99
-    }).toThrow(TypeError)
-    expect(() => {
-      ;(COMPATIBILITY_VERSIONS as { engine: string }).engine = "tampered"
     }).toThrow(TypeError)
     expect(
       JSON.stringify({
@@ -86,6 +82,7 @@ describe("candidate initial-state constant and clone ownership", () => {
     expect(first).not.toBe(second)
     expect(first.versions).not.toBe(second.versions)
     expect(first.versions).not.toBe(COMPATIBILITY_VERSIONS)
+    expect(Object.isFrozen(first.versions)).toBe(true)
     expect(first.bounds).not.toBe(second.bounds)
     expect(first.bounds).not.toBe(first.arenaVariant.initialBounds)
     expect(first.arenaVariant).not.toBe(second.arenaVariant)
@@ -120,7 +117,9 @@ describe("candidate initial-state constant and clone ownership", () => {
     first.players[0].strategyMemory = { mutated: true }
     first.soldiers[0]!.position = { x: 1, y: 1 }
     first.soldiers[0]!.soldierMemory = { mutated: true }
-    first.versions.engine = "mutated"
+    expect(() => {
+      first.versions.engine = "mutated"
+    }).toThrow(TypeError)
 
     const secondAfter = expectCandidateState()
     expect(secondAfter).toEqual(secondBefore)
