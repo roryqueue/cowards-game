@@ -1,5 +1,16 @@
-import { createHash, generateKeyPairSync, randomUUID, sign } from "node:crypto"
-import { CANONICAL_COMPATIBILITY_TUPLES } from "@cowards/spec"
+import {
+  createHash,
+  generateKeyPairSync,
+  randomUUID,
+  sign,
+  verify,
+} from "node:crypto"
+import {
+  CANONICAL_COMPATIBILITY_TUPLES,
+  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
+  encodeRuntimeEvidenceAuthorityPayload,
+  inspectRuntimeEvidenceAuthorityBundle,
+} from "@cowards/spec"
 import { Pool } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { migrate } from "./migrations.js"
@@ -9,6 +20,7 @@ import {
   importAuthenticatedCertificateRevocation,
   importAuthenticatedCertificateSupersession,
   importAuthenticatedRuntimeLaneControl,
+  prepareRuntimeEvidenceAuthorityPublication,
   type RuntimeEvidenceAuthorityImportEnvelope,
   type RuntimeEvidenceAuthorityImportPayload,
   type RuntimeEvidenceAuthorityImportTrustRoot,
@@ -431,6 +443,123 @@ describePostgres(
           "update runtime_evidence_certificate_revocations set reason_code = 'changed'",
         ),
       ).rejects.toThrow(/append-only/iu)
+    })
+
+    it("builds and signs a deterministic locked snapshot with exact source provenance", async () => {
+      const certificateId = "certificate:fixture:snapshot"
+      await seedCertificate(
+        certificateId,
+        sha256("certificate:snapshot"),
+        "snapshot",
+      )
+      const disablePayload = lanePayload({
+        eventId: "fixture:lane-control:disable:snapshot",
+      })
+      await importAuthenticatedRuntimeLaneControl(pool, {
+        envelope: envelope(disablePayload),
+        verificationInstant,
+        expectedLaneIdentityHash: laneIdentityHash,
+        trustedOperators: [trustRoot],
+      })
+
+      const prepared = await prepareRuntimeEvidenceAuthorityPublication(pool, {
+        bundleVersion: "v1.37-fixture-publication-v1",
+        issuedAt: "2026-07-13T12:00:00.000Z",
+        validFrom: "2026-07-13T12:00:00.000Z",
+        validUntil: "2026-07-14T12:00:00.000Z",
+        trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+        signerKeyId: trustRoot.keyId,
+        trustedImportAuthorities: [trustRoot],
+        signPayload: (payloadBytes) => sign(null, payloadBytes, keys.privateKey),
+      })
+      const inspected = inspectRuntimeEvidenceAuthorityBundle(
+        prepared.envelopeBytes,
+        {
+          expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+          evaluationInstant: "2026-07-13T12:00:00.000Z",
+          trustedKeyIds: [trustRoot.keyId],
+          verifySignature: ({ payloadBytes, signature }) =>
+            verify(null, payloadBytes, keys.publicKey, signature),
+        },
+      )
+      expect(inspected.payload.registryGeneration).toBe(prepared.generation)
+      expect(
+        inspected.payload.certificates.some(
+          (certificate) => certificate.certificateId === certificateId,
+        ),
+      ).toBe(true)
+      expect(inspected.payload.operatorLaneDisables).toEqual([
+        expect.objectContaining({ laneIdentityHash }),
+      ])
+      expect(inspected.payload.certificates).not.toContainEqual(
+        expect.objectContaining({ kind: "conformance" }),
+      )
+
+      const persisted = await pool.query(
+        `select payload_bytes, attestation_ids, certificate_ids,
+                revocation_ids, supersession_ids, lane_control_ids
+           from runtime_evidence_authority_publications where id = $1`,
+        [prepared.publicationId],
+      )
+      expect(Buffer.from(persisted.rows[0]!.payload_bytes)).toEqual(
+        Buffer.from(encodeRuntimeEvidenceAuthorityPayload(inspected.payload)),
+      )
+      expect(persisted.rows[0]!.certificate_ids).toContain(certificateId)
+      expect(persisted.rows[0]!.lane_control_ids).toContain(disablePayload.eventId)
+      const sourceRows = await pool.query(
+        `select source_type, source_id from runtime_evidence_authority_publication_sources
+          where publication_id = $1 order by source_type, source_id`,
+        [prepared.publicationId],
+      )
+      expect(sourceRows.rows).toEqual(
+        expect.arrayContaining([
+          { source_type: "certificate", source_id: certificateId },
+          { source_type: "lane-control", source_id: disablePayload.eventId },
+        ]),
+      )
+    })
+
+    it("rolls back signer failure and serializes concurrent snapshot generations", async () => {
+      const common = {
+        bundleVersion: "v1.37-fixture-publication-v1",
+        issuedAt: "2026-07-13T12:00:00.000Z",
+        validFrom: "2026-07-13T12:00:00.000Z",
+        validUntil: "2026-07-14T12:00:00.000Z",
+        trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+        signerKeyId: trustRoot.keyId,
+        trustedImportAuthorities: [trustRoot],
+      } as const
+      const before = await pool.query(
+        "select next_generation from runtime_evidence_authority_publication_head where singleton = true",
+      )
+      await expect(
+        prepareRuntimeEvidenceAuthorityPublication(pool, {
+          ...common,
+          signPayload: () => {
+            throw new Error("signer unavailable")
+          },
+        }),
+      ).rejects.toThrow(/signer/iu)
+      const afterFailure = await pool.query(
+        "select next_generation from runtime_evidence_authority_publication_head where singleton = true",
+      )
+      expect(afterFailure.rows[0]).toEqual(before.rows[0])
+
+      const [left, right] = await Promise.all([
+        prepareRuntimeEvidenceAuthorityPublication(pool, {
+          ...common,
+          signPayload: (bytes) => sign(null, bytes, keys.privateKey),
+        }),
+        prepareRuntimeEvidenceAuthorityPublication(pool, {
+          ...common,
+          signPayload: (bytes) => sign(null, bytes, keys.privateKey),
+        }),
+      ])
+      expect(new Set([left.generation, right.generation]).size).toBe(2)
+      expect(
+        Math.abs(Number(left.generation) - Number(right.generation)),
+      ).toBe(1)
+      expect(left.payloadSha256).not.toBe(right.payloadSha256)
     })
   },
 )
