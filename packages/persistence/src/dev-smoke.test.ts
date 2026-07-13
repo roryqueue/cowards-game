@@ -38,10 +38,11 @@ describe("development smoke helper", () => {
       const pool = createDatabasePool()
       try {
         const result = await runDevelopmentMatchSetSmoke(pool, {
+          matchSetId: `match-set:dev-smoke:${randomUUID()}`,
           evidenceResolver: createFixtureMatchSetEvidenceResolver(),
           runQueuedMatch: async () => undefined,
         })
-        expect(result.matchSetId).toBe("match-set:dev-smoke:v1")
+        expect(result.matchSetId).toMatch(/^match-set:dev-smoke:/u)
         expect(result.matchIds.length).toBe(result.matchCount)
         expect(["complete", "degraded", "pending", "running"]).toContain(
           result.status,
@@ -53,3 +54,4 @@ describe("development smoke helper", () => {
     },
   )
 })
+import { randomUUID } from "node:crypto"
