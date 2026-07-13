@@ -471,12 +471,14 @@ describePostgres("PostgreSQL MatchSet integrity identity and zero rows", () => {
   it("persists exact MatchSet, entrant, Match, and job identities in PostgreSQL", async () => {
     await insertMatchSetWithMatrixOnClient(client, postgresInput)
     const matchSet = await client.query(
-      `select compatibility_tuple_id, execution_evidence_set_hash
+      `select compatibility_tuple_id, execution_evidence_set,
+              execution_evidence_set_hash
          from match_sets where id = $1`,
       [postgresInput.id],
     )
     const executionEntrants = await client.query(
-      `select entrant_key, strategy_revision_id from match_set_execution_entrants
+      `select entrant_key, strategy_revision_id, execution_snapshot
+         from match_set_execution_entrants
          where match_set_id = $1 order by entrant_key`,
       [postgresInput.id],
     )
@@ -488,9 +490,12 @@ describePostgres("PostgreSQL MatchSet integrity identity and zero rows", () => {
     const pairs = await client.query(
       `select m.id, m.bottom_execution_entrant_key,
               m.top_execution_entrant_key, m.execution_evidence_pair_hash,
+              m.bottom_execution_evidence, m.top_execution_evidence,
               j.bottom_execution_entrant_key as job_bottom,
               j.top_execution_entrant_key as job_top,
-              j.execution_evidence_pair_hash as job_hash
+              j.execution_evidence_pair_hash as job_hash,
+              j.bottom_execution_evidence as job_bottom_evidence,
+              j.top_execution_evidence as job_top_evidence
          from matches m join match_jobs j on j.match_id = m.id
         where m.integrity_match_set_id = $1 order by m.id`,
       [postgresInput.id],
@@ -499,10 +504,18 @@ describePostgres("PostgreSQL MatchSet integrity identity and zero rows", () => {
     expect(matchSet.rows).toEqual([
       expect.objectContaining({
         compatibility_tuple_id: tuple.tupleId,
+        execution_evidence_set: expect.arrayContaining(
+          Object.values(postgresInput.integrityIdentity.executionEntrants),
+        ),
         execution_evidence_set_hash: expect.stringMatching(/^[0-9a-f]{64}$/u),
       }),
     ])
     expect(executionEntrants.rows).toHaveLength(4)
+    for (const row of executionEntrants.rows) {
+      expect(row.execution_snapshot).toEqual(
+        postgresInput.integrityIdentity.executionEntrants[row.entrant_key],
+      )
+    }
     expect(competitionEntrants.rows.map((row) => row.execution_entrant_key)).toEqual(
       Object.keys(postgresInput.integrityIdentity.executionEntrants),
     )
@@ -511,6 +524,8 @@ describePostgres("PostgreSQL MatchSet integrity identity and zero rows", () => {
       expect(pair.bottom_execution_entrant_key).toBe(pair.job_bottom)
       expect(pair.top_execution_entrant_key).toBe(pair.job_top)
       expect(pair.execution_evidence_pair_hash).toBe(pair.job_hash)
+      expect(pair.bottom_execution_evidence).toEqual(pair.job_bottom_evidence)
+      expect(pair.top_execution_evidence).toEqual(pair.job_top_evidence)
     }
   })
 
