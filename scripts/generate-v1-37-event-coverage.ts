@@ -4,6 +4,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
+import { CANONICAL_COMPATIBILITY_TUPLES } from "../packages/spec/src/integrity-authority.js"
+import { ChronicleEventTypeSchema } from "../packages/spec/src/schemas.js"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -12,6 +14,8 @@ const repoRoot = path.resolve(
 
 export const candidateEventCoverageArtifactPath =
   "packages/spec/artifacts/v1.37-candidate-event-coverage.json" as const
+export const currentEventCoverageArtifactPath =
+  "packages/spec/artifacts/v1.37-current-event-coverage.json" as const
 const candidateAuthorityArtifactPath =
   "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json" as const
 
@@ -37,6 +41,7 @@ const ENGINE_PRODUCER_FILES = [
   "packages/engine/src/match.ts",
   "packages/engine/src/movement.ts",
   "packages/engine/src/outcome.ts",
+  "packages/engine/src/kernel/step.ts",
 ] as const
 
 export const CANDIDATE_CONSUMER_SURFACES = [
@@ -539,31 +544,293 @@ export const checkV137CandidateEventCoverageArtifact = (): string[] => {
   return actual === expected ? [] : [candidateEventCoverageArtifactPath]
 }
 
+export const RETAINED_CANDIDATE_EVENT_ARTIFACT_HASH =
+  "84055ef93ed8c73c89bcf19087bbba8904c2f5bc62c1ec1ba8bd10aa632b9f96" as const
+
+export const CURRENT_CONSUMER_SURFACES = [
+  {
+    name: "chronicle-grammar",
+    relativePath: "packages/replay/src/grammar.ts",
+    currentSetSymbol: "V1_37_CURRENT_GRAMMAR_EVENT_TYPES",
+    tupleSymbol: "V1_37_CURRENT_TUPLE_ID",
+    disposition: "semantic-validator",
+  },
+  {
+    name: "replay-transition",
+    relativePath: "packages/replay/src/replay-transition.ts",
+    currentSetSymbol: "V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES",
+    tupleSymbol: "V1_37_CURRENT_TUPLE_ID",
+    disposition: "state-reconstructor-or-explicit-no-op",
+  },
+  {
+    name: "match-intelligence",
+    relativePath: "apps/web/app/match-intelligence.ts",
+    currentSetSymbol: "V1_37_CURRENT_MATCH_INTELLIGENCE_EVENT_TYPES",
+    tupleSymbol: "V1_37_CURRENT_TUPLE_ID",
+    disposition: "annotation-consumer-or-no-special-annotation",
+  },
+  {
+    name: "replay-ready",
+    relativePath: "apps/web/app/matches/replay-ready.ts",
+    currentSetSymbol: "V1_37_CURRENT_REPLAY_READY_EVENT_TYPES",
+    tupleSymbol: "V1_37_CURRENT_TUPLE_ID",
+    disposition: "timeline-consumer-or-generic-label",
+  },
+  {
+    name: "replay-board",
+    relativePath: "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+    currentSetSymbol: "V1_37_CURRENT_REPLAY_BOARD_EVENT_TYPES",
+    tupleSymbol: "V1_37_CURRENT_TUPLE_ID",
+    disposition: "board-consumer-or-no-callout",
+  },
+] as const
+
+export type CurrentEventCoverageFindingCode =
+  | "CURRENT_TUPLE_INVALID"
+  | "CURRENT_VOCABULARY_INVALID"
+  | "UNDECLARED_PRODUCER"
+  | "UNPRODUCED_EVENT"
+  | "MISSING_CONSUMER_DISPOSITION"
+  | "STALE_CONSUMER_DISPOSITION"
+  | "TUPLE_ROUTE_INVALID"
+  | "RETAINED_CANDIDATE_DRIFT"
+
+export interface CurrentEventCoverageFinding {
+  readonly code: CurrentEventCoverageFindingCode
+  readonly message: string
+  readonly eventType?: string | undefined
+  readonly relativePath?: string | undefined
+}
+
+export class CurrentEventCoverageError extends Error {
+  readonly findings: readonly CurrentEventCoverageFinding[]
+
+  constructor(findings: readonly CurrentEventCoverageFinding[]) {
+    super(
+      `Current event coverage failed closed:\n${findings
+        .map((finding) => `- ${finding.code}: ${finding.message}`)
+        .join("\n")}`,
+    )
+    this.name = "CurrentEventCoverageError"
+    this.findings = findings
+  }
+}
+
+interface CurrentBuildOptions {
+  readonly sourceOverrides?: Readonly<Record<string, string>>
+  readonly currentVocabulary?: readonly string[]
+  readonly currentTupleId?: string
+}
+
+const currentVocabulary = (): readonly string[] =>
+  ChronicleEventTypeSchema.options
+
+const retainedCandidateHash = (): string =>
+  sha256(
+    readFileSync(path.join(repoRoot, candidateEventCoverageArtifactPath)),
+  )
+
+export const checkRetainedCandidateEventCoverageProvenance = (): string[] =>
+  retainedCandidateHash() === RETAINED_CANDIDATE_EVENT_ARTIFACT_HASH
+    ? []
+    : [candidateEventCoverageArtifactPath]
+
+export const buildV137CurrentEventCoverage = (
+  options: CurrentBuildOptions = {},
+) => {
+  const findings: CurrentEventCoverageFinding[] = []
+  const sourceOverrides = options.sourceOverrides ?? {}
+  const tupleId =
+    options.currentTupleId ?? CANONICAL_COMPATIBILITY_TUPLES[0]?.tupleId
+  if (
+    tupleId !==
+    "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
+  ) {
+    findings.push({
+      code: "CURRENT_TUPLE_INVALID",
+      message: "Current event coverage requires the exact activated tuple.",
+    })
+  }
+
+  const vocabulary = [...(options.currentVocabulary ?? currentVocabulary())]
+  const vocabularySet = new Set(vocabulary)
+  if (
+    vocabularySet.size !== vocabulary.length ||
+    vocabularySet.has(REMOVED_EVENT)
+  ) {
+    findings.push({
+      code: "CURRENT_VOCABULARY_INVALID",
+      message: `${REMOVED_EVENT} must be absent and current vocabulary unique.`,
+      eventType: REMOVED_EVENT,
+    })
+  }
+
+  const producers = collectEngineProducers(sourceOverrides)
+  for (const [eventType, locations] of producers) {
+    if (!vocabularySet.has(eventType)) {
+      findings.push({
+        code: "UNDECLARED_PRODUCER",
+        message: `Engine emits event outside current vocabulary: ${eventType}.`,
+        eventType,
+        relativePath: locations[0]?.relativePath,
+      })
+    }
+  }
+  for (const eventType of vocabulary) {
+    if ((producers.get(eventType)?.length ?? 0) === 0) {
+      findings.push({
+        code: "UNPRODUCED_EVENT",
+        message: `Current event has no executable engine producer: ${eventType}.`,
+        eventType,
+      })
+    }
+  }
+
+  const consumerLocations = new Map<string, Map<string, SourceLocation>>()
+  for (const surface of CURRENT_CONSUMER_SURFACES) {
+    const source = readRepoFile(surface.relativePath, sourceOverrides)
+    const sourceFile = sourceFileFor(surface.relativePath, source)
+    const entries = extractStringSet(sourceFile, surface.currentSetSymbol)
+    const byEvent = new Map<string, SourceLocation>()
+    if (entries === null) {
+      findings.push({
+        code: "TUPLE_ROUTE_INVALID",
+        message: `${surface.currentSetSymbol} must be an AST-readable Set literal.`,
+        relativePath: surface.relativePath,
+      })
+    } else {
+      for (const entry of entries) {
+        byEvent.set(entry.eventType, {
+          relativePath: surface.relativePath,
+          line: entry.line,
+        })
+        if (!vocabularySet.has(entry.eventType)) {
+          findings.push({
+            code: "STALE_CONSUMER_DISPOSITION",
+            message: `${surface.name} retains non-current ${entry.eventType}.`,
+            eventType: entry.eventType,
+            relativePath: surface.relativePath,
+          })
+        }
+      }
+      for (const eventType of vocabulary) {
+        if (!byEvent.has(eventType)) {
+          findings.push({
+            code: "MISSING_CONSUMER_DISPOSITION",
+            message: `${surface.name} has no disposition for ${eventType}.`,
+            eventType,
+            relativePath: surface.relativePath,
+          })
+        }
+      }
+    }
+    if (extractStringConstant(sourceFile, surface.tupleSymbol) !== tupleId) {
+      findings.push({
+        code: "TUPLE_ROUTE_INVALID",
+        message: `${surface.name} is not pinned to the exact current tuple.`,
+        relativePath: surface.relativePath,
+      })
+    }
+    consumerLocations.set(surface.name, byEvent)
+  }
+
+  if (checkRetainedCandidateEventCoverageProvenance().length > 0) {
+    findings.push({
+      code: "RETAINED_CANDIDATE_DRIFT",
+      message: "Retained preactivation event evidence changed bytes.",
+      relativePath: candidateEventCoverageArtifactPath,
+    })
+  }
+  if (findings.length > 0) throw new CurrentEventCoverageError(findings)
+
+  return {
+    schemaVersion: "v1.37-current-event-coverage-v1" as const,
+    generatorVersion: "generate-v1-37-event-coverage-v2" as const,
+    generatedBy: "scripts/generate-v1-37-event-coverage.ts" as const,
+    status: "current-exact" as const,
+    tupleId,
+    currentEventVocabulary: vocabulary,
+    removedFromCurrent: [REMOVED_EVENT],
+    historicalOnly: [REMOVED_EVENT],
+    retainedCandidateEvidence: {
+      relativePath: candidateEventCoverageArtifactPath,
+      sha256: RETAINED_CANDIDATE_EVENT_ARTIFACT_HASH,
+      status: "immutable-preactivation-provenance" as const,
+    },
+    producerFiles: ENGINE_PRODUCER_FILES.map((relativePath) => ({
+      relativePath,
+      sha256: sha256(readRepoFile(relativePath, sourceOverrides)),
+    })),
+    consumerSurfaces: CURRENT_CONSUMER_SURFACES.map((surface) => ({
+      name: surface.name,
+      relativePath: surface.relativePath,
+      disposition: surface.disposition,
+      sourceSha256: sha256(readRepoFile(surface.relativePath, sourceOverrides)),
+    })),
+    coverage: vocabulary.map((eventType) => ({
+      eventType,
+      producers: [...(producers.get(eventType) ?? [])],
+      consumerDispositions: CURRENT_CONSUMER_SURFACES.map((surface) => ({
+        surface: surface.name,
+        disposition: surface.disposition,
+        evidence: consumerLocations.get(surface.name)?.get(eventType),
+      })),
+    })),
+  }
+}
+
+export const renderV137CurrentEventCoverageArtifact = (
+  artifact = buildV137CurrentEventCoverage(),
+): string => `${JSON.stringify(artifact, null, 2)}\n`
+
+export const writeV137CurrentEventCoverageArtifact = (): void => {
+  const absolutePath = path.join(repoRoot, currentEventCoverageArtifactPath)
+  mkdirSync(path.dirname(absolutePath), { recursive: true })
+  writeFileSync(
+    absolutePath,
+    renderV137CurrentEventCoverageArtifact(),
+    "utf8",
+  )
+}
+
+export const checkV137CurrentEventCoverageArtifact = (): string[] => {
+  const expected = renderV137CurrentEventCoverageArtifact()
+  try {
+    return readFileSync(
+      path.join(repoRoot, currentEventCoverageArtifactPath),
+      "utf8",
+    ) === expected
+      ? []
+      : [currentEventCoverageArtifactPath]
+  } catch {
+    return [currentEventCoverageArtifactPath]
+  }
+}
+
 const main = (): void => {
   const args = new Set(process.argv.slice(2))
-  if (!args.has("--candidate")) {
-    console.error(
-      "Candidate mode is required; this generator cannot claim the current contract.",
-    )
-    process.exitCode = 1
-    return
-  }
   try {
-    if (args.has("--write")) {
-      writeV137CandidateEventCoverageArtifact()
-      console.log("v1.37 inactive candidate event coverage artifact written")
+    if (args.has("--candidate") && args.has("--check")) {
+      const stale = checkRetainedCandidateEventCoverageProvenance()
+      if (stale.length > 0) throw new Error("Retained candidate evidence drifted.")
+      console.log("v1.37 retained candidate event evidence is byte-exact")
       return
     }
-    if (args.has("--check")) {
-      const stale = checkV137CandidateEventCoverageArtifact()
+    if (args.has("--current") && args.has("--write")) {
+      writeV137CurrentEventCoverageArtifact()
+      console.log("v1.37 current event coverage artifact written")
+      return
+    }
+    if (args.has("--current") && args.has("--check")) {
+      const stale = checkV137CurrentEventCoverageArtifact()
       if (stale.length > 0) {
         console.error(
-          `v1.37 candidate event coverage is stale: ${stale.join(", ")}`,
+          `v1.37 current event coverage is stale: ${stale.join(", ")}`,
         )
         process.exitCode = 1
         return
       }
-      console.log("v1.37 inactive candidate event coverage artifact is current")
+      console.log("v1.37 current event coverage artifact is current")
       return
     }
   } catch (error) {
@@ -572,7 +839,7 @@ const main = (): void => {
     return
   }
   console.error(
-    "Usage: generate-v1-37-event-coverage.ts --candidate --write | --candidate --check",
+    "Usage: generate-v1-37-event-coverage.ts --current --write | --current --check | --candidate --check",
   )
   process.exitCode = 1
 }

@@ -27,9 +27,13 @@ const workerScriptUrl = (): URL =>
     )}`,
   )
 
-const thrown = (message: string): RuntimeResult<unknown> => ({
+const malformedIpc = (): RuntimeResult<unknown> => ({
   ok: false,
-  violation: { type: "THROWN_EXCEPTION", message },
+  violation: {
+    type: "THROWN_EXCEPTION",
+    message: "Runtime system failure.",
+  },
+  systemFailure: { code: "MALFORMED_IPC", retryable: true },
 })
 
 const isWorkerResult = (value: unknown): value is WorkerResult => {
@@ -91,7 +95,7 @@ export const runStrategyMethodInWorker = (args: {
   port1.close()
 
   if (!received || !isWorkerResult(received.message)) {
-    return thrown("Worker did not return a valid runtime message")
+    return malformedIpc()
   }
 
   return received.message

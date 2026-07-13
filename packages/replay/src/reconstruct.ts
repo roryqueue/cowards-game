@@ -16,9 +16,9 @@ import {
   validateHistoricalV14Chronicle,
 } from "./validate.js"
 import {
-  validateCandidateReplaySemantics,
-  type CandidateReplaySemanticInput,
-  type CandidateReplaySemanticValidationResult,
+  type CurrentChronicleSemanticInput,
+  type CurrentChronicleSemanticValidationResult,
+  validateCurrentChronicle,
 } from "./validate.js"
 
 export interface ReplayTimelineEntry {
@@ -177,15 +177,16 @@ export const createHistoricalV14Replay = (
   return validation.ok ? createValidatedReplay(input.chronicle) : validation
 }
 
-export type CreateCandidateReplayResult =
+export type CreateCurrentReplayResult =
   | { readonly ok: true; readonly replay: Replay }
-  | Exclude<CandidateReplaySemanticValidationResult, { ok: true }>
+  | Exclude<CurrentChronicleSemanticValidationResult, { ok: true }>
 
-export const createCandidateReplay = (
-  input: CandidateReplaySemanticInput,
-): CreateCandidateReplayResult => {
-  const validation = validateCandidateReplaySemantics(input)
+export const createCurrentReplay = (
+  input: CurrentChronicleSemanticInput,
+): CreateCurrentReplayResult => {
+  const validation = validateCurrentChronicle(input)
   if (!validation.ok) return validation
-  const chronicle = input.chronicle as Chronicle
-  return createValidatedReplay(chronicle) as CreateCandidateReplayResult
+  return createValidatedReplay(
+    input.chronicle as Chronicle,
+  ) as CreateCurrentReplayResult
 }

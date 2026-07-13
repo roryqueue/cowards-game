@@ -144,9 +144,9 @@ interface CandidateMatchKernelAuthority {
 
 const candidateAuthority = (
   enginePublic as unknown as {
-    CANDIDATE_MATCH_KERNEL?: CandidateMatchKernelAuthority
+    MATCH_KERNEL?: CandidateMatchKernelAuthority
   }
-).CANDIDATE_MATCH_KERNEL
+).MATCH_KERNEL
 
 const createDirectMachine = (): MatchMachine => {
   const initial = createCandidateInitialGameState({

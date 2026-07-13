@@ -15,14 +15,14 @@ import {
   createMatchExecutionExactEvidenceV137,
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { createChronicleContentHash } from "./hash.js"
 import { projectOwnerChronicle } from "./project.js"
 import { recordChronicleFromExecution } from "./record.js"
 import {
   migrateChronicle,
   resolveReplayCompatibilityIdentity,
-  validateCandidateReplaySemantics,
+  validateCurrentChronicle,
   validateChronicle,
   validateHistoricalV14Chronicle,
   validateReplayInput,
@@ -97,11 +97,11 @@ const playerViolationRuntime: StrategyRuntime = {
   },
 }
 
-const createCandidateReplayInput = (
+const createCurrentReplayInput = (
   candidateRuntime: StrategyRuntime = runtime,
   overrides: { readonly matchId?: string; readonly maxPhases?: number } = {},
 ) => {
-  const execution = CANDIDATE_MATCH_KERNEL.runMatch({
+  const execution = MATCH_KERNEL.runMatch({
     matchId: overrides.matchId ?? "validation-match",
     seed: "validation-seed",
     arenaVariant: {
@@ -123,13 +123,13 @@ const createCandidateReplayInput = (
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      semanticTuple: MATCH_KERNEL.tuple,
     },
   })
   if (!recorded.ok) throw new Error(recorded.failure.code)
   return {
-    profile: "candidate-v1.37" as const,
+    profile: "current-exact" as const,
     compatibility: recorded.semanticIdentity,
     chronicle: recorded.chronicle,
     boundaryAnchors: recorded.boundaryAnchors,
@@ -137,7 +137,7 @@ const createCandidateReplayInput = (
   }
 }
 
-const createChronicle = () => createCandidateReplayInput().chronicle
+const createChronicle = () => createCurrentReplayInput().chronicle
 
 const createExecutionEvidence = (
   matchId: string,
@@ -275,6 +275,17 @@ const withHistoricalPushAttempt = (chronicle: Chronicle): Chronicle => {
   const insertionSequence = action.sequence + 1
   return {
     ...chronicle,
+    reproducibility: {
+      ...chronicle.reproducibility,
+      versions: {
+        spec: "cowards-rules-v1.4",
+        engine: "0.1.4",
+        runtimeJs: "0.1.0",
+        chronicle: "chronicle-v1.4",
+        strategyRevision: "0.1.4",
+        arenaVariant: "0.1.0",
+      },
+    },
     events: [
       ...chronicle.events.slice(0, insertionSequence),
       {
@@ -302,30 +313,32 @@ const withHistoricalPushAttempt = (chronicle: Chronicle): Chronicle => {
 }
 
 describe("validateChronicle", () => {
-  it("routes exact inactive candidate evidence without making it current or publishable", () => {
-    const input = createCandidateReplayInput()
+  it("routes exact current evidence as current and publishable", () => {
+    const input = createCurrentReplayInput()
 
-    expect(validateCandidateReplaySemantics(input)).toEqual({
+    expect(validateCurrentChronicle(input)).toEqual({
       ok: true,
-      profile: "candidate-v1.37",
-      publishable: false,
-      current: false,
+      profile: "current-exact",
+      publishable: true,
+      current: true,
       issues: [],
       truncated: false,
     })
     expect(validateReplayInput(input)).toEqual(
-      validateCandidateReplaySemantics(input),
+      validateCurrentChronicle(input),
     )
-    expect(resolveReplayCompatibilityIdentity(input)).toEqual({
-      status: "candidate_inactive",
-      tupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-      publishable: false,
-      current: false,
+    expect(resolveReplayCompatibilityIdentity({
+      profile: "current-exact",
+      compatibility: input.compatibility,
+      chronicle: input.chronicle,
+    })).toEqual({
+      status: "current_exact",
+      tupleId: MATCH_KERNEL.tupleId,
     })
   })
 
   it("accepts a passive empty-selection Match that reaches Contraction without an Activation window", () => {
-    const input = createCandidateReplayInput(passiveRuntime, {
+    const input = createCurrentReplayInput(passiveRuntime, {
       matchId: "validation-passive-contraction",
       maxPhases: 1,
     })
@@ -335,18 +348,18 @@ describe("validateChronicle", () => {
     expect(eventTypes).not.toContain("ACTIVATION_STARTED")
     expect(eventTypes).not.toContain("AWARENESS_GRID_OBSERVED")
     expect(eventTypes).not.toContain("ACTION_EMITTED")
-    expect(validateCandidateReplaySemantics(input)).toEqual({
+    expect(validateCurrentChronicle(input)).toEqual({
       ok: true,
-      profile: "candidate-v1.37",
-      publishable: false,
-      current: false,
+      profile: "current-exact",
+      publishable: true,
+      current: true,
       issues: [],
       truncated: false,
     })
   })
 
   it("accepts recorder-bound player violations with owner-private evidence", () => {
-    const input = createCandidateReplayInput(playerViolationRuntime, {
+    const input = createCurrentReplayInput(playerViolationRuntime, {
       matchId: "validation-player-violation",
       maxPhases: 1,
     })
@@ -360,18 +373,18 @@ describe("validateChronicle", () => {
         }),
       ]),
     )
-    expect(validateCandidateReplaySemantics(input)).toEqual({
+    expect(validateCurrentChronicle(input)).toEqual({
       ok: true,
-      profile: "candidate-v1.37",
-      publishable: false,
-      current: false,
+      profile: "current-exact",
+      publishable: true,
+      current: true,
       issues: [],
       truncated: false,
     })
   })
 
   it("rejects owner-private relabeling before it can leak through owner projection", () => {
-    const input = createCandidateReplayInput()
+    const input = createCurrentReplayInput()
     const bottomPrivate = input.chronicle.private?.byPlayerId.bottom ?? {}
     const topPrivate =
       (input.chronicle.private?.byPlayerId.top as
@@ -402,33 +415,33 @@ describe("validateChronicle", () => {
       privateRef,
     )
     expect(
-      validateCandidateReplaySemantics({ ...input, chronicle: forged }),
+      validateCurrentChronicle({ ...input, chronicle: forged }),
     ).toMatchObject({
       ok: false,
-      issues: [{ code: "CANDIDATE_EVENT_INVALID" }],
+      issues: [{ code: "CURRENT_EVENT_INVALID" }],
     })
   })
 
   it("rejects forged event context even when public event identity is unchanged", () => {
-    const input = createCandidateReplayInput()
+    const input = createCurrentReplayInput()
     const events = input.chronicle.events.map((event) =>
       event.type === "MATCH_STARTED"
         ? { ...event, context: { actingPlayerId: "top" } }
         : event,
     )
     expect(
-      validateCandidateReplaySemantics({
+      validateCurrentChronicle({
         ...input,
         chronicle: { ...input.chronicle, events },
       }),
     ).toMatchObject({
       ok: false,
-      issues: [{ code: "CANDIDATE_EVENT_INVALID" }],
+      issues: [{ code: "CURRENT_EVENT_INVALID" }],
     })
   })
 
   it("rejects in-place initiative drift despite recomputed public hashes", () => {
-    const input = createCandidateReplayInput()
+    const input = createCurrentReplayInput()
     if (input.execution.kind !== "completed") throw new Error("not completed")
     const transition = input.execution.transitions[0]!
     const beforeState = transition.beforeState as Record<string, unknown>
@@ -442,9 +455,9 @@ describe("validateChronicle", () => {
       input.execution.recorderMaterial as { integrityHash: string }
     ).integrityHash = `sha256:${"f".repeat(64)}`
 
-    expect(validateCandidateReplaySemantics(input)).toMatchObject({
+    expect(validateCurrentChronicle(input)).toMatchObject({
       ok: false,
-      issues: [{ code: "CANDIDATE_BOUNDARY_HASH_INVALID" }],
+      issues: [{ code: "CURRENT_BOUNDARY_HASH_INVALID" }],
     })
   })
 
@@ -454,8 +467,8 @@ describe("validateChronicle", () => {
     "STRATEGY_EVALUATED",
     "MATCH_ENDED",
   ] as const)("rejects a candidate missing universal %s evidence", (type) => {
-    const input = createCandidateReplayInput()
-    const result = validateCandidateReplaySemantics({
+    const input = createCurrentReplayInput()
+    const result = validateCurrentChronicle({
       ...input,
       chronicle: {
         ...input.chronicle,
@@ -465,23 +478,26 @@ describe("validateChronicle", () => {
 
     expect(result.ok).toBe(false)
     expect(!result.ok && result.issues.map(({ code }) => code)).toEqual([
-      "CANDIDATE_EVENT_INVALID",
+      "CURRENT_EVENT_INVALID",
     ])
   })
 
   it("keeps the legacy PUSH_ATTEMPTED tail only on explicit active and historical routes", () => {
-    const input = createCandidateReplayInput()
+    const input = createCurrentReplayInput()
     const historical = withHistoricalPushAttempt(input.chronicle)
 
-    expect(validateChronicle(historical)).toEqual({ ok: true })
+    expect(validateChronicle(historical)).toMatchObject({
+      ok: false,
+      errors: [{ code: "SCHEMA_INVALID" }],
+    })
     expect(validateHistoricalV14Chronicle(historical)).toEqual({ ok: true })
-    const candidate = validateCandidateReplaySemantics({
+    const candidate = validateCurrentChronicle({
       ...input,
       chronicle: historical,
     })
     expect(candidate.ok).toBe(false)
     expect(!candidate.ok && candidate.issues.map(({ code }) => code)).toEqual([
-      "CANDIDATE_EVENT_INVALID",
+      "CURRENT_SHAPE_INVALID",
     ])
   })
 
@@ -495,8 +511,8 @@ describe("validateChronicle", () => {
   ] as const)(
     "rejects candidate %s identity drift with candidate-only codes",
     (field) => {
-      const input = createCandidateReplayInput()
-      const result = validateCandidateReplaySemantics({
+      const input = createCurrentReplayInput()
+      const result = validateCurrentChronicle({
         ...input,
         compatibility: {
           ...input.compatibility,
@@ -514,12 +530,12 @@ describe("validateChronicle", () => {
       expect(result.ok).toBe(false)
       if (result.ok) return
       expect(result.issues.map(({ code }) => code)).toEqual([
-        "CANDIDATE_TUPLE_INVALID",
+        "CURRENT_TUPLE_INVALID",
       ])
       expect(result).toMatchObject({
         category: "CANONICAL_INTEGRITY_FAILURE",
         ownership: "system_integrity",
-        current: false,
+        current: true,
         publishable: false,
       })
       expect(routed).toEqual(result)
@@ -528,7 +544,7 @@ describe("validateChronicle", () => {
   )
 
   it("rejects the first invalid candidate state with bounded semantic codes", () => {
-    const input = createCandidateReplayInput()
+    const input = createCurrentReplayInput()
     if (input.execution.kind !== "completed") throw new Error("not completed")
     const initialState = globalThis.structuredClone(
       input.execution.recorderMaterial.initialState,
@@ -541,12 +557,12 @@ describe("validateChronicle", () => {
         initialState,
       },
     }
-    const result = validateCandidateReplaySemantics({ ...input, execution })
+    const result = validateCurrentChronicle({ ...input, execution })
 
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.issues.map(({ code }) => code)).toContain(
-      "CANDIDATE_BOUNDARY_HASH_INVALID",
+      "CURRENT_BOUNDARY_HASH_INVALID",
     )
     expect(result.issues.length).toBeLessThanOrEqual(16)
     expect(result.issues.every(({ path }) => path.length <= 8)).toBe(true)
@@ -644,13 +660,29 @@ describe("validateChronicle", () => {
       errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
     })
 
+    const historicalChronicle = {
+      ...chronicle,
+      reproducibility: {
+        ...chronicle.reproducibility,
+        versions: {
+          spec: "cowards-rules-v1.4",
+          engine: "0.1.4",
+          runtimeJs: "0.1.0",
+          chronicle: "chronicle-v1.4",
+          strategyRevision: "0.1.4",
+          arenaVariant: "0.1.0",
+        },
+      },
+    }
     const historical = {
       profile: "historical-v1.4" as const,
-      chronicle,
+      chronicle: historicalChronicle,
     }
     const before = JSON.stringify(historical)
     expect(validateReplayInput(historical)).toEqual({ ok: true })
-    expect(validateHistoricalV14Chronicle(chronicle)).toEqual({ ok: true })
+    expect(validateHistoricalV14Chronicle(historicalChronicle)).toEqual({
+      ok: true,
+    })
     expect(resolveReplayCompatibilityIdentity(historical)).toEqual({
       status: "historical_original_semantics",
       tupleResolution: "unresolved_legacy",

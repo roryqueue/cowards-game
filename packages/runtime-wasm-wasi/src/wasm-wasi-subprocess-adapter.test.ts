@@ -131,6 +131,48 @@ describe("WASM/WASI runtime alpha", () => {
     },
   )
 
+  it.skipIf(!rustCompileProbe.ok)(
+    "normalizes corrupt artifact identity as a retryable system failure",
+    () => {
+      const revision = buildRustStrategyRevision({ source: rustSource })
+      const artifact = revision.metadata.compiledArtifact
+      expect(artifact).toBeDefined()
+      if (artifact?.bytesBase64 === undefined) return
+      const corruptRevision = {
+        ...revision,
+        metadata: {
+          ...revision.metadata,
+          compiledArtifact: {
+            ...artifact,
+            bytesBase64: `${artifact.bytesBase64.startsWith("A") ? "B" : "A"}${artifact.bytesBase64.slice(1)}`,
+          },
+        },
+      }
+
+      const result = createWasmWasiRuntimeFromRevision(
+        corruptRevision,
+      ).runSoldierBrain({
+        self: {
+          id: "soldier:1",
+          ownerPlayerId: "player:1",
+          status: "ACTIVE",
+          position: { x: 0, y: 0 },
+          facing: "UP",
+          lastSuccessfulMoveDirection: null,
+        },
+        awarenessGrid: { cells: [] },
+        cycleIndex: 0,
+        maxCycles: 12,
+        soldierMemory: null,
+      })
+
+      expect(result).toMatchObject({
+        ok: false,
+        systemFailure: { code: "MALFORMED_IPC", retryable: true },
+      })
+    },
+  )
+
   it.skipIf(!zigCompileProbe.ok)(
     "compiles and runs Zig through the same WASI JSON artifact contract",
     () => {

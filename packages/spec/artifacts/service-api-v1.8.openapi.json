@@ -2720,7 +2720,6 @@
                         "MOVE_ADVANCED",
                         "MOVE_BLOCKED",
                         "TURN_RESOLVED",
-                        "PUSH_ATTEMPTED",
                         "PUSH_RESOLVED",
                         "PUSH_BLOCKED",
                         "BACKSTAB_RESOLVED",

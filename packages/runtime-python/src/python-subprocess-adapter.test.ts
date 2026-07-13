@@ -200,5 +200,27 @@ describe("Python subprocess Strategy provider ABI", () => {
         ? undefined
         : response.systemFailure.code,
     ).toBe("STDIO_CAP_EXCEEDED")
+
+    const runtime = createPythonRuntimeFromRevision(revision, {
+      stdoutBytes: 64,
+    })
+    const normalized = runtime.runSoldierBrain({
+      self: {
+        id: "soldier:1",
+        ownerPlayerId: "player:bottom",
+        status: "ACTIVE",
+        position: { x: 0, y: 0 },
+        facing: "UP",
+        lastSuccessfulMoveDirection: null,
+      },
+      awarenessGrid: { cells: [] },
+      cycleIndex: 0,
+      maxCycles: 12,
+      soldierMemory: {},
+    })
+    expect(normalized).toMatchObject({
+      ok: false,
+      systemFailure: { code: "STDIO_CAP_EXCEEDED", retryable: true },
+    })
   })
 })

@@ -7,9 +7,9 @@ import type {
 } from "@cowards/spec"
 import { MAX_ACTIVATION_CYCLES, ROUND_ACTIVATION_COUNTS } from "@cowards/spec"
 
-const V1_37_CANDIDATE_TUPLE_ID =
+const V1_37_CURRENT_TUPLE_ID =
   "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
-const V1_37_CANDIDATE_GRAMMAR_EVENT_TYPES = new Set<string>([
+const V1_37_CURRENT_GRAMMAR_EVENT_TYPES = new Set<string>([
   "MATCH_STARTED",
   "ROUND_STARTED",
   "STRATEGY_EVALUATED",
@@ -36,12 +36,12 @@ const V1_37_CANDIDATE_GRAMMAR_EVENT_TYPES = new Set<string>([
 export const resolveGrammarEventContract = (
   semanticTupleId: string,
   eventType: string,
-): "candidate-current" | "historical-or-unknown" | "active-current" =>
-  semanticTupleId === V1_37_CANDIDATE_TUPLE_ID
-    ? V1_37_CANDIDATE_GRAMMAR_EVENT_TYPES.has(eventType)
-      ? "candidate-current"
+): "current-exact" | "historical-or-unknown" =>
+  semanticTupleId === V1_37_CURRENT_TUPLE_ID
+    ? V1_37_CURRENT_GRAMMAR_EVENT_TYPES.has(eventType)
+      ? "current-exact"
       : "historical-or-unknown"
-    : "active-current"
+    : "historical-or-unknown"
 
 type GrammarState = {
   matchStarted: boolean

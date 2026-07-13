@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
-import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { recordChronicleFromExecution } from "./record.js"
-import { validateCandidateReplaySemantics } from "./validate.js"
+import { validateCurrentChronicle } from "./validate.js"
 
 describe("replay semantic integrity", () => {
   it("rejects cloned intermediate-state evidence before semantic use", () => {
@@ -31,7 +31,7 @@ describe("replay semantic integrity", () => {
         }
       },
     }
-    const execution = CANDIDATE_MATCH_KERNEL.runMatch({
+    const execution = MATCH_KERNEL.runMatch({
       matchId: "match:replay-semantic-red",
       seed: "seed:replay-semantic-red",
       arenaVariant: {
@@ -50,8 +50,8 @@ describe("replay semantic integrity", () => {
       execution,
       metadata: {
         schemaVersion: "chronicle-v1.4",
-        semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-        semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+        semanticTupleId: MATCH_KERNEL.tupleId,
+        semanticTuple: MATCH_KERNEL.tuple,
       },
     })
     if (!recorded.ok || execution.kind !== "completed") {
@@ -70,8 +70,8 @@ describe("replay semantic integrity", () => {
     }
 
     runtimeCalls = 0
-    const validation = validateCandidateReplaySemantics({
-      profile: "candidate-v1.37",
+    const validation = validateCurrentChronicle({
+      profile: "current-exact",
       compatibility: recorded.semanticIdentity,
       chronicle: recorded.chronicle,
       boundaryAnchors: recorded.boundaryAnchors,
@@ -82,7 +82,7 @@ describe("replay semantic integrity", () => {
     )
     if (!validation.ok) {
       expect(validation.issues.map((issue) => issue.code)).toContain(
-        "CANDIDATE_BOUNDARY_HASH_INVALID",
+        "CURRENT_BOUNDARY_HASH_INVALID",
       )
       return
     }

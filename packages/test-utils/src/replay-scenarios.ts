@@ -1,5 +1,5 @@
 import {
-  CANDIDATE_MATCH_KERNEL,
+  MATCH_KERNEL,
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
@@ -210,13 +210,13 @@ const buildScenario = (
     assertions: string[]
   }>,
 ): CanonicalReplayScenario => {
-  const execution = CANDIDATE_MATCH_KERNEL.runMatch(input)
+  const execution = MATCH_KERNEL.runMatch(input)
   const recorded = recordChronicleFromExecution({
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      semanticTuple: MATCH_KERNEL.tuple,
     },
   })
   if (!recorded.ok) {

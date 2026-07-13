@@ -438,6 +438,68 @@ describe("candidate-only approved lifecycle repairs", () => {
     ])
   })
 
+  it("closes a no-Advance cycle exhaustion before evaluating the immediate outcome", () => {
+    const seedMachine = createCandidateMatchMachine(baseInput)
+    const state: GameState = {
+      ...seedMachine.state,
+      soldiers: [
+        soldier({ id: "last-bottom" }),
+        soldier({
+          id: "last-top",
+          ownerPlayerId: "top",
+          position: { x: 9, y: 9 },
+        }),
+      ],
+    }
+    const completed = requireCompleted(
+      runCandidateActivationFromState({
+        state,
+        soldierId: "last-bottom",
+        runtime: createFakeRuntime({
+          action: { type: "TURN", direction: "UP" },
+        }),
+      }),
+    )
+
+    expect(completed.result.state).toEqual({
+      ...state,
+      phase: "COMPLETE",
+      soldiers: [
+        { ...state.soldiers[0]!, status: "STONE" },
+        state.soldiers[1]!,
+      ],
+      outcome: { type: "WIN", winnerPlayerId: "top" },
+    })
+    expect(
+      publicEvents(completed.recorderMaterial.events).slice(-3),
+    ).toEqual([
+      {
+        type: "SOLDIER_STONED",
+        payload: { soldierId: "last-bottom", reason: "NO_ADVANCE" },
+        context: {
+          activationId: "1:1:0",
+          activationIndex: 0,
+          actingPlayerId: "bottom",
+          soldierId: "last-bottom",
+        },
+      },
+      {
+        type: "ACTIVATION_ENDED",
+        payload: { soldierId: "last-bottom", reason: "CYCLE_EXHAUSTED" },
+        context: {
+          activationId: "1:1:0",
+          activationIndex: 0,
+          actingPlayerId: "bottom",
+          soldierId: "last-bottom",
+        },
+      },
+      {
+        type: "MATCH_ENDED",
+        payload: { type: "WIN", winnerPlayerId: "top" },
+      },
+    ])
+  })
+
   it("closes a Cycle-end Backstabbed actor after the simultaneous scan and before outcome", () => {
     const machine = createCandidateMatchMachine(baseInput)
     const state: GameState = {

@@ -1,14 +1,14 @@
 import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import {
-  CANDIDATE_MATCH_KERNEL,
+  MATCH_KERNEL,
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
 import { createChronicleContentHash } from "./hash.js"
 import { normalizeChronicle } from "./normalize.js"
 import { recordChronicleFromExecution } from "./record.js"
-import { validateCandidateReplaySemantics } from "./validate.js"
+import { validateCurrentChronicle } from "./validate.js"
 
 const deterministicRuntime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
@@ -62,18 +62,18 @@ const createMatchInput = (
 })
 
 const buildNormalized = (input: RunMatchInput) => {
-  const execution = CANDIDATE_MATCH_KERNEL.runMatch(input)
+  const execution = MATCH_KERNEL.runMatch(input)
   const recorded = recordChronicleFromExecution({
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      semanticTuple: MATCH_KERNEL.tuple,
     },
   })
   if (!recorded.ok) throw new Error(recorded.failure.code)
-  const candidate = validateCandidateReplaySemantics({
-    profile: "candidate-v1.37",
+  const candidate = validateCurrentChronicle({
+    profile: "current-exact",
     compatibility: recorded.semanticIdentity,
     chronicle: recorded.chronicle,
     boundaryAnchors: recorded.boundaryAnchors,

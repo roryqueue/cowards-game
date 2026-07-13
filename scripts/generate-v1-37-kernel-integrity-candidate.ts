@@ -1,7 +1,8 @@
 #!/usr/bin/env -S pnpm exec tsx
 /* eslint-disable no-restricted-imports -- The candidate is intentionally absent from the public spec barrel. */
 import { Buffer } from "node:buffer"
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
@@ -31,6 +32,12 @@ export const candidateHashVectorSchemaVersion =
   "v1.37-kernel-integrity-candidate-hash-vectors-v1" as const
 export const generatedBy =
   "scripts/generate-v1-37-kernel-integrity-candidate.ts" as const
+export const RETAINED_V1_37_CANDIDATE_HASHES = Object.freeze({
+  [candidateArtifactPath]:
+    "4234567bc758b6fcc27085b523d642ad765803ce5e97a301e272ab351a208d11",
+  [candidateHashVectorsArtifactPath]:
+    "6af19cb7adb123fbd4eff74ebc66d184847153444b046565eeba870519ff2f60",
+} as const)
 
 export const buildV137KernelIntegrityCandidateArtifact = () => ({
   schemaVersion: INACTIVE_V1_37_KERNEL_CANDIDATE_SCHEMA_VERSION,
@@ -166,36 +173,19 @@ export const renderV137KernelIntegrityCandidateHashVectors = (
   artifact = buildV137KernelIntegrityCandidateHashVectors(),
 ): string => renderJson(artifact)
 
-const outputs = () => [
-  {
-    relativePath: candidateArtifactPath,
-    content: renderV137KernelIntegrityCandidateArtifact(),
-  },
-  {
-    relativePath: candidateHashVectorsArtifactPath,
-    content: renderV137KernelIntegrityCandidateHashVectors(),
-  },
-]
-
-export const writeV137KernelIntegrityCandidateArtifacts = (): void => {
-  for (const output of outputs()) {
-    const absolutePath = path.join(repoRoot, output.relativePath)
-    mkdirSync(path.dirname(absolutePath), { recursive: true })
-    writeFileSync(absolutePath, output.content, "utf8")
-  }
-}
-
 export const checkV137KernelIntegrityCandidateArtifacts = (): string[] => {
   const stale: string[] = []
-  for (const output of outputs()) {
-    let actual: string | undefined
+  for (const [relativePath, expected] of Object.entries(
+    RETAINED_V1_37_CANDIDATE_HASHES,
+  )) {
     try {
-      actual = readFileSync(path.join(repoRoot, output.relativePath), "utf8")
+      const actual = createHash("sha256")
+        .update(readFileSync(path.join(repoRoot, relativePath)))
+        .digest("hex")
+      if (actual !== expected) stale.push(relativePath)
     } catch {
-      stale.push(output.relativePath)
-      continue
+      stale.push(relativePath)
     }
-    if (actual !== output.content) stale.push(output.relativePath)
   }
   return stale
 }
@@ -203,8 +193,10 @@ export const checkV137KernelIntegrityCandidateArtifacts = (): string[] => {
 const main = (): void => {
   const args = new Set(process.argv.slice(2))
   if (args.has("--write")) {
-    writeV137KernelIntegrityCandidateArtifacts()
-    console.log("v1.37 inactive kernel integrity candidate artifacts written")
+    console.error(
+      "Retained v1.37 preactivation candidate evidence is immutable and cannot be regenerated.",
+    )
+    process.exitCode = 1
     return
   }
   if (args.has("--check")) {
@@ -217,7 +209,7 @@ const main = (): void => {
       return
     }
     console.log(
-      "v1.37 inactive kernel integrity candidate artifacts are current",
+      "v1.37 retained preactivation candidate artifacts are byte-exact",
     )
     return
   }

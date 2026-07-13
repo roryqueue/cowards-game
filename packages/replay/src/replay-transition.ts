@@ -15,19 +15,19 @@ import { MatchOutcomeSchema } from "@cowards/spec"
 import { stableStringify } from "./hash.js"
 import type { ChronicleRecorderExecution } from "./record.js"
 
-const V1_37_CANDIDATE_TUPLE_ID =
+const V1_37_CURRENT_TUPLE_ID =
   "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
-const CANDIDATE_STATE_HASH_DOMAIN =
+const CURRENT_STATE_HASH_DOMAIN =
   "cowards-game:candidate-game-state-projection:v1" as const
 
-const hashCandidateStateProjection = (
+const hashCurrentStateProjection = (
   projection: Readonly<Record<string, unknown>>,
 ): string =>
   `sha256:${createHash("sha256")
-    .update(`${CANDIDATE_STATE_HASH_DOMAIN}\0`, "utf8")
+    .update(`${CURRENT_STATE_HASH_DOMAIN}\0`, "utf8")
     .update(JSON.stringify(projection), "utf8")
     .digest("hex")}`
-const V1_37_CANDIDATE_REPLAY_TRANSITION_EVENT_TYPES = new Set<string>([
+const V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES = new Set<string>([
   "MATCH_STARTED",
   "ROUND_STARTED",
   "STRATEGY_EVALUATED",
@@ -54,12 +54,12 @@ const V1_37_CANDIDATE_REPLAY_TRANSITION_EVENT_TYPES = new Set<string>([
 export const resolveReplayTransitionEventContract = (
   semanticTupleId: string,
   eventType: string,
-): "candidate-current" | "historical-or-unknown" | "active-current" =>
-  semanticTupleId === V1_37_CANDIDATE_TUPLE_ID
-    ? V1_37_CANDIDATE_REPLAY_TRANSITION_EVENT_TYPES.has(eventType)
-      ? "candidate-current"
+): "current-exact" | "historical-or-unknown" =>
+  semanticTupleId === V1_37_CURRENT_TUPLE_ID
+    ? V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES.has(eventType)
+      ? "current-exact"
       : "historical-or-unknown"
-    : "active-current"
+    : "historical-or-unknown"
 
 export interface ReplayState {
   board: FullBoardSnapshot
@@ -599,7 +599,7 @@ export const validateChronicleTransitions = (
   return errors
 }
 
-export type CandidateReplayReconstructionResult =
+export type CurrentReplayReconstructionResult =
   | {
       readonly ok: true
       readonly terminalStateHash: string
@@ -608,14 +608,14 @@ export type CandidateReplayReconstructionResult =
   | {
       readonly ok: false
       readonly code:
-        | "CANDIDATE_RECONSTRUCTION_SHAPE_INVALID"
-        | "CANDIDATE_TRANSITION_STATE_MISMATCH"
-        | "CANDIDATE_TERMINAL_EVENT_INVALID"
-        | "CANDIDATE_TERMINAL_STATE_MISMATCH"
+        | "CURRENT_RECONSTRUCTION_SHAPE_INVALID"
+        | "CURRENT_TRANSITION_STATE_MISMATCH"
+        | "CURRENT_TERMINAL_EVENT_INVALID"
+        | "CURRENT_TERMINAL_STATE_MISMATCH"
       readonly transitionIndex?: number | undefined
     }
 
-export interface CandidateReplayReconstructionInput {
+export interface CurrentReplayReconstructionInput {
   readonly chronicle: Chronicle
   readonly execution: ChronicleRecorderExecution
 }
@@ -679,12 +679,12 @@ const finalReplayState = (
     : { outcome: execution.recorderMaterial.finalState.outcome }),
 })
 
-export const validateCandidateReplayReconstruction = ({
+export const validateCurrentReplayReconstruction = ({
   chronicle,
   execution,
-}: CandidateReplayReconstructionInput): CandidateReplayReconstructionResult => {
+}: CurrentReplayReconstructionInput): CurrentReplayReconstructionResult => {
   if (execution.kind !== "completed" || execution.transitions.length === 0) {
-    return { ok: false, code: "CANDIDATE_RECONSTRUCTION_SHAPE_INVALID" }
+    return { ok: false, code: "CURRENT_RECONSTRUCTION_SHAPE_INVALID" }
   }
   if (
     execution.recorderMaterial.boundaries.length !==
@@ -692,7 +692,7 @@ export const validateCandidateReplayReconstruction = ({
     stableStringify(execution.recorderMaterial.boundaries) !==
       stableStringify(execution.transitions)
   ) {
-    return { ok: false, code: "CANDIDATE_RECONSTRUCTION_SHAPE_INVALID" }
+    return { ok: false, code: "CURRENT_RECONSTRUCTION_SHAPE_INVALID" }
   }
   const terminalEvents = chronicle.events.filter(
     ({ type }) => type === "MATCH_ENDED",
@@ -701,16 +701,16 @@ export const validateCandidateReplayReconstruction = ({
     terminalEvents.length !== 1 ||
     chronicle.events.at(-1)?.type !== "MATCH_ENDED"
   ) {
-    return { ok: false, code: "CANDIDATE_TERMINAL_EVENT_INVALID" }
+    return { ok: false, code: "CURRENT_TERMINAL_EVENT_INVALID" }
   }
 
   for (let index = 0; index < execution.transitions.length; index += 1) {
     const transition = execution.transitions[index]!
     const previous = execution.transitions[index - 1]
     if (
-      hashCandidateStateProjection(transition.beforeState) !==
+      hashCurrentStateProjection(transition.beforeState) !==
         transition.beforeStateHash ||
-      hashCandidateStateProjection(transition.afterState) !==
+      hashCurrentStateProjection(transition.afterState) !==
         transition.afterStateHash ||
       (previous !== undefined &&
         (previous.afterStateHash !== transition.beforeStateHash ||
@@ -719,7 +719,7 @@ export const validateCandidateReplayReconstruction = ({
     ) {
       return {
         ok: false,
-        code: "CANDIDATE_TRANSITION_STATE_MISMATCH",
+        code: "CURRENT_TRANSITION_STATE_MISMATCH",
         transitionIndex: index,
       }
     }
@@ -728,7 +728,7 @@ export const validateCandidateReplayReconstruction = ({
     if (before === undefined || expectedAfter === undefined) {
       return {
         ok: false,
-        code: "CANDIDATE_RECONSTRUCTION_SHAPE_INVALID",
+        code: "CURRENT_RECONSTRUCTION_SHAPE_INVALID",
         transitionIndex: index,
       }
     }
@@ -744,7 +744,7 @@ export const validateCandidateReplayReconstruction = ({
       if (!applied.ok) {
         return {
           ok: false,
-          code: "CANDIDATE_TRANSITION_STATE_MISMATCH",
+          code: "CURRENT_TRANSITION_STATE_MISMATCH",
           transitionIndex: index,
         }
       }
@@ -753,7 +753,7 @@ export const validateCandidateReplayReconstruction = ({
     if (stableStringify(reconstructed) !== stableStringify(expectedAfter)) {
       return {
         ok: false,
-        code: "CANDIDATE_TRANSITION_STATE_MISMATCH",
+        code: "CURRENT_TRANSITION_STATE_MISMATCH",
         transitionIndex: index,
       }
     }
@@ -774,7 +774,7 @@ export const validateCandidateReplayReconstruction = ({
     stableStringify(terminalEvents[0]!.payload) !== stableStringify(outcome) ||
     stableStringify(last.terminalStatus) !== stableStringify(outcome)
   ) {
-    return { ok: false, code: "CANDIDATE_TERMINAL_STATE_MISMATCH" }
+    return { ok: false, code: "CURRENT_TERMINAL_STATE_MISMATCH" }
   }
   return {
     ok: true,

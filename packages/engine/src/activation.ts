@@ -138,6 +138,9 @@ export const resolveActivationSelection = (
   }
   const result = runtime.selectActivations(createStrategyInput(state, playerId))
   if (!result.ok) {
+    if ("systemFailure" in result) {
+      throw new Error(result.systemFailure.code)
+    }
     return {
       state: { state, orders: [] },
       events: [
@@ -411,6 +414,9 @@ export const resolveActivationCycle = (
 
   const runtimeResult = runtime.runSoldierBrain(input)
   if (!runtimeResult.ok) {
+    if ("systemFailure" in runtimeResult) {
+      throw new Error(runtimeResult.systemFailure.code)
+    }
     const violationResult = applyRuntimeViolation(
       current,
       soldier,
@@ -546,47 +552,4 @@ export const resolveActivationCycle = (
   }
 
   return { state: current, slot: nextSlot, events }
-}
-
-export const resolveActivation = (
-  state: GameState,
-  runtime: StrategyRuntime,
-  soldierId: string,
-  objective?: JsonValue,
-): TransitionResult => {
-  const soldier = getSoldier(state, soldierId)
-  const slot: ActivationSlotState = {
-    activationId: `${state.phaseNumber}:${state.roundNumber}:0`,
-    activationIndex: 0,
-    actingPlayerId: soldier?.ownerPlayerId ?? state.players[0].id,
-    soldierId,
-    objective,
-    cycleIndex: 0,
-    advanced: false,
-    ended: false,
-  }
-  let current = state
-  let currentSlot = slot
-  const events = [activationStartedEvent(slot)]
-
-  for (
-    let cycleLayer = 0;
-    cycleLayer < MAX_ACTIVATION_CYCLES;
-    cycleLayer += 1
-  ) {
-    const resolved = resolveActivationCycle(
-      current,
-      runtime,
-      currentSlot,
-      cycleLayer,
-    )
-    current = resolved.state
-    currentSlot = resolved.slot
-    events.push(...resolved.events)
-    if (current.outcome || currentSlot.ended) {
-      break
-    }
-  }
-
-  return { state: current, events }
 }

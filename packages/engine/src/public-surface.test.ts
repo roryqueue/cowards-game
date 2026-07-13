@@ -17,23 +17,23 @@ const migratedCallerSources = [
 ].map((url) => readFileSync(url, "utf8"))
 
 describe("candidate and current engine public surfaces", () => {
-  it("keeps the candidate authority explicitly non-current before atomic activation", () => {
+  it("exposes the current facade over the sole kernel authority", () => {
     expect(enginePublic.runMatch).not.toBe(
-      enginePublic.CANDIDATE_MATCH_KERNEL.runMatch,
+      enginePublic.MATCH_KERNEL.runMatch,
     )
     expect(
       enginePublic[contiguousActivationKey as keyof typeof enginePublic],
-    ).toBeTypeOf("function")
+    ).toBeUndefined()
   })
 
-  it("specifies the post-activation authority without the contiguous helper", () => {
+  it("keeps the kernel authority free of the retired contiguous helper", () => {
     expect(
       Object.hasOwn(
-        enginePublic.CANDIDATE_MATCH_KERNEL,
+        enginePublic.MATCH_KERNEL,
         contiguousActivationKey,
       ),
     ).toBe(false)
-    expect(Object.keys(enginePublic.CANDIDATE_MATCH_KERNEL).sort()).toEqual(
+    expect(Object.keys(enginePublic.MATCH_KERNEL).sort()).toEqual(
       [
         "createActivationMachine",
         "createMachine",

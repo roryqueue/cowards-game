@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-  CANDIDATE_MATCH_KERNEL,
+  MATCH_KERNEL,
   runMatch,
   type RunMatchInput,
 } from "@cowards/engine"
@@ -69,13 +69,13 @@ export default {
 `
 
 const recordInput = (input: RunMatchInput) => {
-  const execution = CANDIDATE_MATCH_KERNEL.runMatch(input)
+  const execution = MATCH_KERNEL.runMatch(input)
   const recorded = recordChronicleFromExecution({
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      semanticTuple: MATCH_KERNEL.tuple,
     },
   })
   if (!recorded.ok) throw new Error(recorded.failure.code)

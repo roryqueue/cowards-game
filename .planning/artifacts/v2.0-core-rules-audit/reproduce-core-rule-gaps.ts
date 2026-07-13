@@ -10,7 +10,7 @@ import {
   type Soldier,
 } from "../../../packages/spec/src/index.ts"
 import {
-  CANDIDATE_MATCH_KERNEL,
+  MATCH_KERNEL,
   createInitialGameState,
   resolveAction,
   success,
@@ -60,7 +60,7 @@ const runCandidateActivation = (
   runtime: StrategyRuntime,
   soldierId: string,
 ): TransitionResult => {
-  const execution = CANDIDATE_MATCH_KERNEL.runActivationFromState({
+  const execution = MATCH_KERNEL.runActivationFromState({
     state,
     runtime,
     soldierId,
@@ -109,28 +109,28 @@ const backstabClosure = postBackstab.events.find(
   ({ type }) => type === "ACTIVATION_ENDED",
 )
 
-const selectionMachine = CANDIDATE_MATCH_KERNEL.createMachine(baseInput)
+const selectionMachine = MATCH_KERNEL.createMachine(baseInput)
 const validSoldierId = selectionMachine.state.soldiers[0]!.id
-const matchStarted = CANDIDATE_MATCH_KERNEL.stepMatch(selectionMachine, {
+const matchStarted = MATCH_KERNEL.stepMatch(selectionMachine, {
   kind: "advance",
 })
 if (matchStarted.kind !== "transition") {
   throw new Error("candidate audit match-start transition missing")
 }
-const roundStarted = CANDIDATE_MATCH_KERNEL.stepMatch(matchStarted.machine, {
+const roundStarted = MATCH_KERNEL.stepMatch(matchStarted.machine, {
   kind: "advance",
 })
 if (roundStarted.kind !== "transition") {
   throw new Error("candidate audit round-start transition missing")
 }
-const selectionEffect = CANDIDATE_MATCH_KERNEL.stepMatch(
+const selectionEffect = MATCH_KERNEL.stepMatch(
   roundStarted.machine,
   { kind: "advance" },
 )
 if (selectionEffect.kind !== "effect") {
   throw new Error("candidate audit selection effect missing")
 }
-const excessMalformed = CANDIDATE_MATCH_KERNEL.stepMatch(
+const excessMalformed = MATCH_KERNEL.stepMatch(
   selectionEffect.machine,
   {
     kind: "runtime_resume",

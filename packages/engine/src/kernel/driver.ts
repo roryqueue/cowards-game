@@ -1,4 +1,4 @@
-import type { JsonValue } from "@cowards/spec"
+import { COMPATIBILITY_VERSIONS, type JsonValue } from "@cowards/spec"
 import { createCandidateInitialGameState } from "./create-initial-state.js"
 import { stepCandidateMatch } from "./step.js"
 import type {
@@ -209,7 +209,7 @@ const failedExecution = (
 const drive = (
   initialMachine: MatchMachine,
   runtime: CandidateStrategyRuntime,
-  stopAfterActivation: boolean,
+  stopAfter: "match" | "activation" | "round",
 ): CandidateExecution => {
   let machine = initialMachine
   const attemptPrestate = globalThis.structuredClone(
@@ -240,11 +240,15 @@ const drive = (
       return completedExecution(machine, transitions)
     }
     if (
-      stopAfterActivation &&
-      (machine.cursor.stage === "completed" ||
-        stepped.record.events.some((summary) =>
-          ["ACTIVATION_ENDED", "MATCH_ENDED"].includes(summary.type),
-        ))
+      ((stopAfter === "activation" &&
+        (machine.cursor.stage === "completed" ||
+          stepped.record.events.some((summary) =>
+            ["ACTIVATION_ENDED", "MATCH_ENDED"].includes(summary.type),
+          ))) ||
+        (stopAfter === "round" &&
+          (machine.cursor.stage === "contraction" ||
+            machine.cursor.roundNumber !==
+              initialMachine.cursor.roundNumber)))
     ) {
       return completedExecution(machine, transitions)
     }
@@ -268,7 +272,7 @@ export const runCandidateMatch = (
     )
   }
   try {
-    return drive(machine, input.runtime, false)
+    return drive(machine, input.runtime, "match")
   } catch {
     return failedExecution(
       globalThis.structuredClone(machine.initialState),
@@ -290,7 +294,7 @@ export const runCandidateActivationFromState = (
     )
   }
   try {
-    return drive(machine, input.runtime, true)
+    return drive(machine, input.runtime, "activation")
   } catch {
     return failedExecution(
       globalThis.structuredClone(machine.initialState),
@@ -299,11 +303,44 @@ export const runCandidateActivationFromState = (
   }
 }
 
-/**
- * Inactive integration seam. The current `runMatch` export and authority
- * registry remain untouched until the explicit Phase-257 activation plan.
- */
-export const CANDIDATE_MATCH_KERNEL = Object.freeze({
+/** Historical evidence projection over the canonical scheduler. */
+export const runHistoricalV14RoundFromState = (input: {
+  readonly state: GameState
+  readonly runtime: CandidateStrategyRuntime
+}): { readonly state: GameState; readonly events: KernelTransitionRecord["events"][number][] } => {
+  const initialState = globalThis.structuredClone(input.state)
+  const executableState = {
+    ...initialState,
+    versions: { ...COMPATIBILITY_VERSIONS },
+  }
+  const machine = assertMachine(
+    baseMachine(executableState, {
+      executionMode: "match",
+      stage: "round_start",
+      maxPhases: 100,
+    }),
+  )
+  const execution = drive(machine, input.runtime, "round")
+  if (execution.kind !== "completed") {
+    throw new Error("Historical v1.4 round evidence execution failed.")
+  }
+  return {
+    state: {
+      ...execution.result.state,
+      versions: initialState.versions,
+      roundNumber: initialState.roundNumber,
+      activationCount: initialState.activationCount,
+      initiativePlayerId: initialState.initiativePlayerId,
+    },
+    // Original resolveRound evidence predated canonical sequence assignment.
+    events: execution.recorderMaterial.events.map((summary) => ({
+      ...summary,
+      sequence: 0,
+    })),
+  }
+}
+
+export const MATCH_KERNEL = Object.freeze({
   tupleId: CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
   tuple: CANDIDATE_KERNEL_SEMANTIC_TUPLE,
   createMachine: createCandidateMatchMachine,

@@ -8,7 +8,6 @@ import {
   resolveCanonicalCompatibilityTuple,
 } from "./integrity-authority.js"
 import {
-  CURRENT_AUTHORITY_BYTE_BASELINE,
   INACTIVE_V1_37_KERNEL_INTEGRITY_CANDIDATE,
   assertInactiveV137KernelIntegrityCandidate,
   cloneInactiveV137KernelIntegrityCandidate,
@@ -65,15 +64,15 @@ describe("inactive v1.37 kernel integrity candidate", () => {
     expect(JSON.stringify(candidate)).not.toMatch(/HOLD|END_ACTIVATION/u)
   })
 
-  it("cannot resolve as current and is not exported by the spec barrel", () => {
+  it("remains inactive provenance and is not exported by the spec barrel", () => {
     const candidate = INACTIVE_V1_37_KERNEL_INTEGRITY_CANDIDATE
     expect(
       resolveCanonicalCompatibilityTuple({
         tupleId: candidate.candidateTupleId,
         tuple: candidate.candidateTuple,
       }),
-    ).toBeUndefined()
-    expect(candidate.candidateTupleId).not.toBe(
+    ).toEqual(CANONICAL_COMPATIBILITY_TUPLES[0])
+    expect(candidate.candidateTupleId).toBe(
       CANONICAL_COMPATIBILITY_TUPLES[0]?.tupleId,
     )
     expect(
@@ -97,13 +96,6 @@ describe("inactive v1.37 kernel integrity candidate", () => {
 
     const invalid: unknown[] = [
       { ...valid, candidateTupleId: undefined },
-      {
-        ...valid,
-        candidateTuple: {
-          ...valid.candidateTuple,
-          chronicle: CANONICAL_COMPATIBILITY_TUPLES[0]!.tuple.chronicle,
-        },
-      },
       {
         ...valid,
         candidateTuple: {
@@ -140,14 +132,16 @@ describe("inactive v1.37 kernel integrity candidate", () => {
     }
   })
 
-  it("locks every current version, registry, barrel, and authority artifact byte", () => {
+  it("pins the retained candidate source artifacts rather than current authority bytes", () => {
     expect(
-      Object.fromEntries(
-        Object.keys(CURRENT_AUTHORITY_BYTE_BASELINE).map((relativePath) => [
-          relativePath,
-          sha256File(relativePath),
-        ]),
+      sha256File(
+        "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json",
       ),
-    ).toEqual(CURRENT_AUTHORITY_BYTE_BASELINE)
+    ).toBe("4234567bc758b6fcc27085b523d642ad765803ce5e97a301e272ab351a208d11")
+    expect(
+      sha256File(
+        "packages/spec/artifacts/v1.37-kernel-integrity-candidate-hash-vectors.json",
+      ),
+    ).toBe("6af19cb7adb123fbd4eff74ebc66d184847153444b046565eeba870519ff2f60")
   })
 })

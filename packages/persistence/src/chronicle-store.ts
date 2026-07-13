@@ -1,14 +1,8 @@
 import { isDeepStrictEqual } from "node:util"
-import type { GameState } from "@cowards/engine"
 import {
-  createCandidateReplay,
   createChronicleContentHash,
-  INACTIVE_V1_37_REPLAY_TUPLE,
-  validateCandidateReplayReconstruction,
-  validateCandidateReplaySemantics,
   validateChronicle,
-  type CandidateReplaySemanticInput,
-  type ChronicleBoundaryAnchor,
+  validateHistoricalV14Chronicle,
 } from "@cowards/replay"
 import type {
   ArenaVariantId,
@@ -16,7 +10,6 @@ import type {
   ChronicleEvent,
   JsonValue,
   MatchId,
-  MatchOutcome,
   PlayerId,
   StrategyRevisionId,
 } from "@cowards/spec"
@@ -60,29 +53,7 @@ export interface CurrentPutChronicleInput {
   integrityIdentity: Readonly<ChronicleIntegrityIdentity>
 }
 
-/**
- * A candidate Chronicle may only cross the persistence boundary after the
- * trusted execution, every boundary, and reconstruction have been admitted as
- * one object. The WeakSet brand deliberately cannot be serialized or forged.
- */
-export interface CandidateChronicleAdmission {
-  readonly profile: "candidate-v1.37"
-  readonly compatibility: typeof INACTIVE_V1_37_REPLAY_TUPLE
-  readonly chronicle: Chronicle
-  readonly finalState: GameState
-  readonly terminalStateHash: string
-  readonly outcome: MatchOutcome
-  readonly boundaryAnchors: readonly ChronicleBoundaryAnchor[]
-}
-
-export interface CandidatePutChronicleInput {
-  candidateAdmission: Readonly<CandidateChronicleAdmission>
-  integrityIdentity: Readonly<ChronicleIntegrityIdentity>
-}
-
-export type PutChronicleInput =
-  | CurrentPutChronicleInput
-  | CandidatePutChronicleInput
+export type PutChronicleInput = CurrentPutChronicleInput
 
 export interface ChronicleStore {
   put(input: PutChronicleInput | unknown): Promise<StoredChronicle>
@@ -94,60 +65,6 @@ export class ChronicleValidationSystemFailure extends Error {
     super(message)
     this.name = "ChronicleValidationSystemFailure"
   }
-}
-
-const candidateAdmissionBrand = new WeakSet<object>()
-
-const cloneFrozen = <T>(value: T): T => {
-  const clone = globalThis.structuredClone(value)
-  const freeze = (candidate: unknown): void => {
-    if (candidate === null || typeof candidate !== "object") return
-    for (const nested of Object.values(candidate)) freeze(nested)
-    Object.freeze(candidate)
-  }
-  freeze(clone)
-  return clone
-}
-
-export const createCandidateChronicleAdmission = (
-  input: CandidateReplaySemanticInput,
-): Readonly<CandidateChronicleAdmission> => {
-  const validation = validateCandidateReplaySemantics(input)
-  if (!validation.ok) {
-    throw new ChronicleValidationSystemFailure(
-      validation.issues[0]?.code ?? "Candidate Chronicle validation failed.",
-    )
-  }
-  if (input.execution.kind !== "completed") {
-    throw new ChronicleValidationSystemFailure(
-      "Candidate Chronicle execution did not complete.",
-    )
-  }
-  const chronicle = input.chronicle as Chronicle
-  const reconstruction = validateCandidateReplayReconstruction({
-    chronicle,
-    execution: input.execution,
-  })
-  const replay = createCandidateReplay(input)
-  if (!reconstruction.ok || !replay.ok) {
-    throw new ChronicleValidationSystemFailure(
-      !reconstruction.ok
-        ? reconstruction.code
-        : "Candidate Chronicle reconstruction failed.",
-    )
-  }
-  const admission: CandidateChronicleAdmission = {
-    profile: "candidate-v1.37",
-    compatibility: cloneFrozen(INACTIVE_V1_37_REPLAY_TUPLE),
-    chronicle: cloneFrozen(chronicle),
-    finalState: cloneFrozen(input.execution.recorderMaterial.finalState),
-    terminalStateHash: reconstruction.terminalStateHash,
-    outcome: cloneFrozen(reconstruction.outcome),
-    boundaryAnchors: cloneFrozen(input.boundaryAnchors),
-  }
-  Object.freeze(admission)
-  candidateAdmissionBrand.add(admission)
-  return admission
 }
 
 const terminalOutcome = (chronicle: Chronicle): JsonValue => {
@@ -180,7 +97,6 @@ const hasExactKeys = (
 interface ValidatedPutInput {
   chronicle: Chronicle
   integrityIdentity: Readonly<ChronicleIntegrityIdentity>
-  profile: "current-exact" | "candidate-v1.37"
 }
 
 const validatePutInput = (
@@ -191,17 +107,13 @@ const validatePutInput = (
       "Current Chronicle insertion requires one exact integrity identity.",
     )
   }
-  const candidateEnvelope = hasExactKeys(input, [
-    "candidateAdmission",
-    "integrityIdentity",
-  ])
   const currentEnvelope = hasExactKeys(input, [
     "chronicle",
     "integrityIdentity",
   ])
-  if (!candidateEnvelope && !currentEnvelope) {
+  if (!currentEnvelope) {
     throw new ChronicleValidationSystemFailure(
-      "Chronicle insertion requires one exact current or candidate integrity identity route.",
+      "Chronicle insertion requires one exact current integrity identity route.",
     )
   }
   const integrityIdentity = input.integrityIdentity
@@ -225,49 +137,27 @@ const validatePutInput = (
   const evidencePair =
     integrityIdentity.evidencePair as Readonly<MatchExecutionEvidencePair>
 
-  let candidateRoute: boolean
   try {
     // The SQL-value helper is also the validator-brand gate. A caller cannot
     // authorize a Chronicle with a merely certificate-shaped identity.
     matchSetIntegritySqlValues(identity)
-    const candidateTuple =
-      identity.compatibility.tupleId === INACTIVE_V1_37_REPLAY_TUPLE.tupleId &&
-      isDeepStrictEqual(
-        identity.compatibility.tuple,
-        INACTIVE_V1_37_REPLAY_TUPLE.tuple,
-      )
     const activeCurrent = CANONICAL_COMPATIBILITY_TUPLES[0]
     const currentTuple =
       activeCurrent !== undefined &&
       identity.compatibility.tupleId === activeCurrent.tupleId &&
       isDeepStrictEqual(identity.compatibility.tuple, activeCurrent.tuple)
     if (
-      (candidateTuple && !candidateEnvelope) ||
-      (currentTuple && !currentEnvelope) ||
-      (!candidateTuple && !currentTuple)
+      !currentTuple
     ) {
       throw new Error("route tuple mismatch")
     }
-    candidateRoute = candidateTuple
   } catch {
     throw new ChronicleValidationSystemFailure(
       "Current Chronicle integrity identity is not the exact ordered Match pair.",
     )
   }
 
-  const candidateAdmission = input.candidateAdmission
-  if (
-    candidateRoute &&
-    (!isRecord(candidateAdmission) ||
-      !candidateAdmissionBrand.has(candidateAdmission))
-  ) {
-    throw new ChronicleValidationSystemFailure(
-      "Candidate Chronicle insertion requires a trusted semantic admission.",
-    )
-  }
-  const chronicle = candidateRoute
-    ? (candidateAdmission as unknown as CandidateChronicleAdmission).chronicle
-    : (input.chronicle as Chronicle)
+  const chronicle = input.chronicle as Chronicle
 
   try {
     const [bottomStrategyRevisionId, topStrategyRevisionId] =
@@ -298,7 +188,6 @@ const validatePutInput = (
       identity,
       evidencePair,
     },
-    profile: candidateRoute ? "candidate-v1.37" : "current-exact",
   }
 }
 
@@ -326,7 +215,18 @@ const playerIdsFromChronicle = (chronicle: Chronicle): [PlayerId, PlayerId] => {
 export const createChronicleMetadata = (
   chronicle: Chronicle,
 ): ChronicleMetadata => {
-  const validation = validateChronicle(chronicle)
+  const versions = chronicle.reproducibility.versions
+  const historicalV14 =
+    chronicle.schemaVersion === "chronicle-v1.4" &&
+    versions.spec === "cowards-rules-v1.4" &&
+    versions.engine === "0.1.4" &&
+    versions.runtimeJs === "0.1.0" &&
+    versions.chronicle === "chronicle-v1.4" &&
+    versions.strategyRevision === "0.1.4" &&
+    versions.arenaVariant === "0.1.0"
+  const validation = historicalV14
+    ? validateHistoricalV14Chronicle(chronicle)
+    : validateChronicle(chronicle)
   if (!validation.ok) {
     throw new ChronicleValidationSystemFailure(
       validation.errors[0]?.message ?? "Chronicle validation failed.",
@@ -337,29 +237,6 @@ export const createChronicleMetadata = (
     chronicle.reproducibility.strategyRevisionIds
   const [bottomPlayerId, topPlayerId] = playerIdsFromChronicle(chronicle)
 
-  return {
-    id: `chronicle:${hash}`,
-    matchId: chronicle.reproducibility.matchId,
-    schemaVersion: chronicle.schemaVersion,
-    hash,
-    outcome: terminalOutcome(chronicle),
-    eventCount: chronicle.events.length,
-    snapshotCount: chronicle.snapshots.length,
-    bottomPlayerId,
-    topPlayerId,
-    bottomStrategyRevisionId,
-    topStrategyRevisionId,
-    arenaVariantId: chronicle.reproducibility.arenaVariantId,
-  }
-}
-
-const createAdmittedCandidateMetadata = (
-  chronicle: Chronicle,
-): ChronicleMetadata => {
-  const hash = createChronicleContentHash(chronicle).normalizedContentHash
-  const [bottomStrategyRevisionId, topStrategyRevisionId] =
-    chronicle.reproducibility.strategyRevisionIds
-  const [bottomPlayerId, topPlayerId] = playerIdsFromChronicle(chronicle)
   return {
     id: `chronicle:${hash}`,
     matchId: chronicle.reproducibility.matchId,
@@ -452,11 +329,8 @@ export const createPostgresChronicleStore = (
   pool: Queryable,
 ): ChronicleStore => ({
   async put(rawInput) {
-    const { chronicle, integrityIdentity, profile } = validatePutInput(rawInput)
-    const metadata =
-      profile === "candidate-v1.37"
-        ? createAdmittedCandidateMetadata(chronicle)
-        : createChronicleMetadata(chronicle)
+    const { chronicle, integrityIdentity } = validatePutInput(rawInput)
+    const metadata = createChronicleMetadata(chronicle)
     const identityValues = matchSetIntegritySqlValues(
       integrityIdentity.identity,
     )
@@ -609,12 +483,8 @@ export const createMemoryChronicleStoreForTests = (): ChronicleStore & {
   >()
   return {
     async put(rawInput) {
-      const { chronicle, integrityIdentity, profile } =
-        validatePutInput(rawInput)
-      const metadata =
-        profile === "candidate-v1.37"
-          ? createAdmittedCandidateMetadata(chronicle)
-          : createChronicleMetadata(chronicle)
+      const { chronicle, integrityIdentity } = validatePutInput(rawInput)
+      const metadata = createChronicleMetadata(chronicle)
       const existing = rows.get(metadata.matchId)
       if (existing) {
         if (

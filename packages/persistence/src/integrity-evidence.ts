@@ -452,6 +452,42 @@ const HISTORICAL_TUPLE_FIELDS = [
   keyof CanonicalCompatibilityTuple,
 ])[]
 
+const HISTORICAL_V14_COMPATIBILITY = Object.freeze({
+  tupleId:
+    "sha256:be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+  tuple: Object.freeze({
+    rules: "cowards-rules-v1.4",
+    engine: "0.1.4",
+    runtimeAbi: "strategy-runtime-abi-v1.14",
+    chronicle: "chronicle-v1.4",
+    arenaCatalog: "canonical-arena-catalog-v1.4",
+    setPolicy: "canonical-set-policy-v1.4",
+  }),
+}) satisfies Readonly<RuntimeExecutionCompatibilityIdentity>
+
+const validateHistoricalCompatibility = (
+  value: unknown,
+): Readonly<RuntimeExecutionCompatibilityIdentity> => {
+  if (!isRecord(value)) {
+    throw new IntegrityEvidenceInputError(
+      "Historical compatibility tuple is required.",
+    )
+  }
+  assertExactKeys(value, ["tupleId", "tuple"], "Historical compatibility")
+  if (
+    value.tupleId !== HISTORICAL_V14_COMPATIBILITY.tupleId ||
+    !isDeepStrictEqual(value.tuple, HISTORICAL_V14_COMPATIBILITY.tuple)
+  ) {
+    throw new IntegrityEvidenceInputError(
+      "Historical compatibility tuple is unknown or mixed.",
+    )
+  }
+  return Object.freeze({
+    tupleId: HISTORICAL_V14_COMPATIBILITY.tupleId,
+    tuple: cloneTuple({ ...HISTORICAL_V14_COMPATIBILITY.tuple }),
+  })
+}
+
 const cloneFrozenJsonValue = (value: unknown): unknown => {
   if (value === null || typeof value !== "object") return value
   if (Array.isArray(value)) {
@@ -544,7 +580,7 @@ const validateHistoricalManifest = (
   return Object.freeze({
     manifestId: requiredString(value.manifestId, "Historical manifest ID"),
     manifestHash: assertSha256(value.manifestHash, "Historical manifest hash"),
-    compatibility: validateCompatibility(value.compatibility),
+    compatibility: validateHistoricalCompatibility(value.compatibility),
   })
 }
 

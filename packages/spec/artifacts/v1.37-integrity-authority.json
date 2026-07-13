@@ -36,12 +36,12 @@
     {
       "domain": "chronicle-validation",
       "packageName": "@cowards/replay",
-      "symbol": "validateChronicle"
+      "symbol": "validateCurrentChronicle"
     },
     {
       "domain": "arena-authority",
       "packageName": "@cowards/spec",
-      "symbol": "ArenaVariantSchema"
+      "symbol": "validateCanonicalArena"
     },
     {
       "domain": "set-scheduling-policy",
@@ -51,15 +51,15 @@
   ],
   "compatibilityTuples": [
     {
-      "tupleId": "sha256:be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+      "tupleId": "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
       "algorithm": "sha256",
-      "sha256": "be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+      "sha256": "922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
       "tuple": {
         "rules": "cowards-rules-v1.4",
-        "engine": "0.1.4",
+        "engine": "engine-kernel-v1.37-candidate-1",
         "runtimeAbi": "strategy-runtime-abi-v1.14",
-        "chronicle": "chronicle-v1.4",
-        "arenaCatalog": "canonical-arena-catalog-v1.4",
+        "chronicle": "chronicle-recorder-current-events-v1.37-candidate-1",
+        "arenaCatalog": "semantic-arena-catalog-v1.37-candidate-1",
         "setPolicy": "canonical-set-policy-v1.4"
       }
     }

@@ -417,7 +417,21 @@ describe("Chronicle storage", () => {
   })
 
   it("keeps tuple-less v1.4 Chronicle bytes and content hashes unchanged", () => {
-    const historical = validChronicle()
+    const current = validChronicle()
+    const historical = {
+      ...current,
+      reproducibility: {
+        ...current.reproducibility,
+        versions: {
+          spec: "cowards-rules-v1.4",
+          engine: "0.1.4",
+          runtimeJs: "0.1.0",
+          chronicle: "chronicle-v1.4",
+          strategyRevision: "0.1.4",
+          arenaVariant: "0.1.0",
+        },
+      },
+    }
     const before = JSON.stringify(historical)
     const hash = createChronicleMetadata(historical).hash
 

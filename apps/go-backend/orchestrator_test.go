@@ -183,33 +183,21 @@ func TestGoMatchOrchestratorIntegrityPostResponseContract(t *testing.T) {
 	}
 }
 
-func TestGoMatchOrchestratorRejectsInactiveCandidateBeforeCompletion(t *testing.T) {
-	if failure := rejectInactiveCandidateCompletion(&runtimeServiceResponse{OK: true}); failure != nil {
-		t.Fatalf("active old-current response changed behavior: %+v", failure)
-	}
-	response := &runtimeServiceResponse{
-		OK:                true,
-		Profile:           "candidate_exhibition",
-		CandidateEvidence: &candidateRuntimeEvidence{Compatibility: runtimeServiceCompatibilityReference{TupleID: inactiveCandidateTupleID, Tuple: inactiveCandidateTuple}},
-	}
-	failure := rejectInactiveCandidateCompletion(response)
-	if failure == nil || failure.ErrorClass != "RuntimeServiceSemanticIntegrity" || !failure.Retryable {
-		t.Fatalf("inactive candidate response reached canonical completion: %+v", failure)
-	}
-	if failure.Details["status"] != semanticIntegrityPublicCategory {
-		t.Fatalf("inactive candidate rejection was not bounded: %+v", failure)
-	}
-	assertRuntimeServiceFailureSafe(t, failure)
-
+func TestGoMatchOrchestratorHasNoCandidateCompletionRoute(t *testing.T) {
 	source, err := os.ReadFile("orchestrator.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 	text := string(source)
-	rejectIndex := strings.Index(text, "rejectInactiveCandidateCompletion(response)")
+	for _, retired := range []string{"rejectInactiveCandidateCompletion", "CandidateEvidence", "candidate_exhibition"} {
+		if strings.Contains(text, retired) {
+			t.Fatalf("retired candidate completion route remains executable: %s", retired)
+		}
+	}
 	completionIndex := strings.Index(text, "completion.completeMatch")
-	if rejectIndex < 0 || completionIndex < 0 || rejectIndex > completionIndex {
-		t.Fatal("inactive candidate admission must fail before canonical completion")
+	decodeIndex := strings.Index(text, "runtime.executeMatch")
+	if decodeIndex < 0 || completionIndex < 0 || decodeIndex > completionIndex {
+		t.Fatal("current runtime response must be admitted before canonical completion")
 	}
 }
 

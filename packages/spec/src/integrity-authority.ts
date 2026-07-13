@@ -50,12 +50,12 @@ const authorityRegistry = [
   {
     domain: "chronicle-validation",
     packageName: "@cowards/replay",
-    symbol: "validateChronicle",
+    symbol: "validateCurrentChronicle",
   },
   {
     domain: "arena-authority",
     packageName: "@cowards/spec",
-    symbol: "ArenaVariantSchema",
+    symbol: "validateCanonicalArena",
   },
   {
     domain: "set-scheduling-policy",
@@ -234,7 +234,7 @@ const canonicalV14Tuple: CanonicalCompatibilityTuple = {
   engine: COMPATIBILITY_VERSIONS.engine,
   runtimeAbi: STRATEGY_RUNTIME_ABI_VERSION,
   chronicle: COMPATIBILITY_VERSIONS.chronicle,
-  arenaCatalog: "canonical-arena-catalog-v1.4",
+  arenaCatalog: COMPATIBILITY_VERSIONS.arenaVariant,
   setPolicy: "canonical-set-policy-v1.4",
 }
 

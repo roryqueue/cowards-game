@@ -72,17 +72,14 @@ func TestRuntimeEvidenceAuthorityMatchesCommittedNodeVectors(t *testing.T) {
 	if !ok {
 		t.Fatal("fixture key is not Ed25519")
 	}
-	verified, err := inspectRuntimeEvidenceAuthorityBundle(vectors.Valid.FixtureDomain.Envelope, runtimeEvidenceAuthorityInspectOptions{
+	_, err = inspectRuntimeEvidenceAuthorityBundle(vectors.Valid.FixtureDomain.Envelope, runtimeEvidenceAuthorityInspectOptions{
 		ExpectedTrustDomain: vectors.FixtureKey.TrustDomain,
 		EvaluationInstant:   vectors.Valid.FixtureDomain.EvaluationInstant,
 		TrustedKeys:         map[string]ed25519.PublicKey{vectors.FixtureKey.KeyID: publicKey},
 		IntegrityManifest:   manifest,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if verified.RegistryGeneration != "7" || verified.AuthorityBundleHash != "sha256:77bc327fcec0903a40b46135a0364735b96f44999c81a435277b317f7c1e24c1" {
-		t.Fatalf("Go reported different bundle identity: %+v", verified)
+	if err == nil || err.Error() != "runtime evidence authority is unavailable" {
+		t.Fatalf("historical authority vector was not rejected by current manifest: %v", err)
 	}
 
 	for _, vector := range vectors.InvalidEnvelopeVectors {

@@ -1,15 +1,15 @@
 import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import {
-  CANDIDATE_MATCH_KERNEL,
+  MATCH_KERNEL,
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
 import { createChronicleContentHash } from "./hash.js"
 import { projectOwnerChronicle, projectPublicChronicle } from "./project.js"
-import { createCandidateReplay } from "./reconstruct.js"
+import { createCurrentReplay } from "./reconstruct.js"
 import { recordChronicleFromExecution } from "./record.js"
-import { validateCandidateReplaySemantics } from "./validate.js"
+import { validateCurrentChronicle } from "./validate.js"
 
 const PRIVATE_STRATEGY_MEMORY_MARKER = "INTEGRATION_PRIVATE_STRATEGY_MEMORY"
 const PRIVATE_SOLDIER_MEMORY_MARKER = "INTEGRATION_PRIVATE_SOLDIER_MEMORY"
@@ -68,13 +68,13 @@ const createMatchInput = (): RunMatchInput => ({
 
 describe("replay package integration", () => {
   it("builds, validates, hashes, reconstructs, iterates, and projects a deterministic Match", () => {
-    const execution = CANDIDATE_MATCH_KERNEL.runMatch(createMatchInput())
+    const execution = MATCH_KERNEL.runMatch(createMatchInput())
     const recorded = recordChronicleFromExecution({
       execution,
       metadata: {
         schemaVersion: "chronicle-v1.4",
-        semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-        semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+        semanticTupleId: MATCH_KERNEL.tupleId,
+        semanticTuple: MATCH_KERNEL.tuple,
       },
     })
     if (!recorded.ok) throw new Error(recorded.failure.code)
@@ -84,23 +84,23 @@ describe("replay package integration", () => {
       integrity: createChronicleContentHash(chronicle),
     }
     const candidateInput = {
-      profile: "candidate-v1.37" as const,
+      profile: "current-exact" as const,
       compatibility: recorded.semanticIdentity,
       chronicle: chronicleWithIntegrity,
       boundaryAnchors: recorded.boundaryAnchors,
       execution,
     }
 
-    expect(validateCandidateReplaySemantics(candidateInput)).toEqual({
+    expect(validateCurrentChronicle(candidateInput)).toEqual({
       ok: true,
-      profile: "candidate-v1.37",
-      publishable: false,
-      current: false,
+      profile: "current-exact",
+      publishable: true,
+      current: true,
       issues: [],
       truncated: false,
     })
 
-    const replay = createCandidateReplay(candidateInput)
+    const replay = createCurrentReplay(candidateInput)
     expect(replay.ok).toBe(true)
     if (!replay.ok) {
       return

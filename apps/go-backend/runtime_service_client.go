@@ -127,7 +127,6 @@ type runtimeServiceResponse struct {
 	Compatibility     *runtimeServiceCompatibilityReference `json:"compatibility,omitempty"`
 	Result            map[string]any                        `json:"result,omitempty"`
 	SystemFailure     *runtimeServiceFailure                `json:"systemFailure,omitempty"`
-	CandidateEvidence *candidateRuntimeEvidence             `json:"-"`
 }
 
 type runtimeServiceValidationResponse struct {
@@ -232,12 +231,6 @@ func (client *runtimeServiceClient) executeMatch(ctx context.Context, request ru
 		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service response did not match the execution contract", true, nil)
 	}
 	if decoded.SystemFailure != nil {
-		if decoded.Profile == "candidate_exhibition" {
-			candidateFailure := *decoded.SystemFailure
-			candidateFailure.ErrorMessage = redactRuntimeServiceMessage(candidateFailure.ErrorMessage)
-			candidateFailure.Details = sanitizeRuntimeServiceDetails(candidateFailure.Details)
-			return decoded, &candidateFailure
-		}
 		failure := sanitizeRuntimeServiceFailure(*decoded.SystemFailure)
 		return decoded, &failure
 	}
@@ -500,12 +493,9 @@ func runtimeBrokerMetadataIsRegistered(runtime map[string]any) bool {
 
 func validateRuntimeServiceResponse(request runtimeServiceRequest, response *runtimeServiceResponse) *runtimeServiceFailure {
 	if response != nil && response.Profile != "" {
-		if response.Profile != "candidate_exhibition" || response.CandidateEvidence == nil || !response.OK || response.Counted || response.Publishable || response.Privacy != "internal_candidate_exhibition" {
-			return semanticIntegrityFailure(createSemanticIntegrityResult([]semanticIntegrityIssue{
-				semanticIssue("TUPLE_SHAPE_INVALID", []any{"response"}, nil),
-			}))
-		}
-		return validateCandidateRuntimeEvidence(request, response.CandidateEvidence, int64(runtimeServiceIntValue(response.Result, "runtimeViolationEventCount")))
+		return semanticIntegrityFailure(createSemanticIntegrityResult([]semanticIntegrityIssue{
+			semanticIssue("TUPLE_SHAPE_INVALID", []any{"response"}, nil),
+		}))
 	}
 	if response.ContractVersion != runtimeExecutionServiceVersion || response.RequestID != request.RequestID || response.RuntimeABIVersion != strategyRuntimeABIVersion {
 		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service response contract is not supported", true, nil)

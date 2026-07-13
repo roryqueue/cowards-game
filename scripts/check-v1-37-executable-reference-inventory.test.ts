@@ -15,23 +15,11 @@ const analyze = (
   })
 
 describe("v1.37 executable reference ownership inventory", () => {
-  it("freezes the exact post-compatibility repository baseline", () => {
-    const result = checkV137ExecutableReferenceInventory("baseline")
+  it("proves the activated repository has no executable legacy references", () => {
+    const result = checkV137ExecutableReferenceInventory("current")
     expect(result.findings).toEqual([])
-    expect(result.references.length).toBeGreaterThan(40)
-    expect(
-      new Set(result.references.map((reference) => reference.owner)),
-    ).toEqual(
-      new Set([
-        "257-10",
-        "257-13",
-        "257-14",
-        "257-15",
-        "257-16",
-        "257-18",
-        "257-19",
-      ]),
-    )
+    expect(result.references).toEqual([])
+    expect(result.nonExecutableMentions.length).toBeGreaterThan(0)
   })
 
   it.each([

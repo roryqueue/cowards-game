@@ -1,23 +1,14 @@
 import { Buffer } from "node:buffer"
 import { createHash, randomUUID } from "node:crypto"
 import { gunzipSync } from "node:zlib"
-import {
-  CANDIDATE_MATCH_KERNEL,
-  type GameState,
-  type StrategyRuntime,
-} from "@cowards/engine"
-import {
-  recordChronicleFromExecution,
-  validateCandidateReplaySemantics,
-} from "@cowards/replay"
+import type { GameState } from "@cowards/engine"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  COMPATIBILITY_VERSIONS,
   type Chronicle,
   type ExecutableLaneIdentity,
   type RuntimeEntrantExecutionEvidence,
   type RuntimeExecutionResolvedEvidenceSnapshot,
-  type SoldierBrainInput,
-  type StrategyInput,
 } from "@cowards/spec"
 import { Pool } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -25,7 +16,6 @@ import {
   MatchCompletionIntegritySystemFailure,
   completeMatch,
   deriveMatchCompletionFields,
-  type CandidateCompleteMatchInput,
   validateCompletionIntegritySnapshot,
 } from "./complete-match.js"
 import { migrate } from "./migrations.js"
@@ -130,42 +120,6 @@ const responseSnapshot = (
   entrants: { bottom: pair.bottom, top: pair.top },
 })
 
-const passiveRuntime: StrategyRuntime = {
-  selectActivations(input: StrategyInput) {
-    return {
-      ok: true,
-      value: {
-        activationOrders: input.mySoldiers
-          .filter((soldier) => soldier.status === "ACTIVE")
-          .map((soldier) => ({ soldierId: soldier.id })),
-        strategyMemory: {},
-      },
-    }
-  },
-  runSoldierBrain(_input: SoldierBrainInput) {
-    return {
-      ok: true,
-      value: { action: { type: "TURN_TO_STONE" }, soldierMemory: {} },
-    }
-  },
-}
-
-const matchInput = (namespace: string) => ({
-  matchId: `${namespace}:match`,
-  seed: `${namespace}:seed`,
-  arenaVariant: {
-    id: `${namespace}:arena`,
-    name: "Completion integrity",
-    initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-    terrainStones: [],
-  },
-  bottomPlayerId: `${namespace}:player:bottom`,
-  topPlayerId: `${namespace}:player:top`,
-  bottomStrategyRevisionId: `${namespace}:revision:bottom`,
-  topStrategyRevisionId: `${namespace}:revision:top`,
-  runtime: passiveRuntime,
-})
-
 const ACTIVE_OLD_COMPLETION_TEMPLATE = gunzipSync(
   Buffer.from(ACTIVE_OLD_COMPLETION_GZIP_BASE64, "base64"),
 ).toString("utf8")
@@ -173,58 +127,27 @@ const ACTIVE_OLD_COMPLETION_TEMPLATE = gunzipSync(
 const builtMatch = (
   namespace: string,
   seed = `${namespace}:seed`,
-): { chronicle: Chronicle; finalState: GameState } =>
-  JSON.parse(
+): { chronicle: Chronicle; finalState: GameState } => {
+  const built = JSON.parse(
     ACTIVE_OLD_COMPLETION_TEMPLATE.replaceAll("__NS__", namespace).replaceAll(
       "__SEED__",
       seed,
     ),
   ) as { chronicle: Chronicle; finalState: GameState }
-
-const builtCandidateMatch = (namespace: string) => {
-  const execution = CANDIDATE_MATCH_KERNEL.runMatch(matchInput(namespace))
-  const recorded = recordChronicleFromExecution({
-    execution,
-    metadata: {
-      schemaVersion: "chronicle-v1.4",
-      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
-    },
-  })
-  if (!recorded.ok) throw new Error(recorded.failure.code)
-  const candidate = validateCandidateReplaySemantics({
-    profile: "candidate-v1.37",
-    compatibility: recorded.semanticIdentity,
-    chronicle: recorded.chronicle,
-    boundaryAnchors: recorded.boundaryAnchors,
-    execution,
-  })
-  if (!candidate.ok) throw new Error(candidate.issues[0]?.code)
-  return { execution, ...recorded }
-}
-
-const candidateCompletionInput = (
-  namespace: string,
-  integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot,
-): CandidateCompleteMatchInput => {
-  const built = builtCandidateMatch(namespace)
-  if (built.execution.kind !== "completed") {
-    throw new Error("candidate execution did not complete")
-  }
-  const outcome = built.finalState.outcome
-  if (!outcome) throw new Error("candidate execution has no outcome")
+  const versions = { ...COMPATIBILITY_VERSIONS }
   return {
-    profile: "candidate-v1.37",
-    compatibility: built.semanticIdentity,
-    chronicle: built.chronicle,
-    boundaryAnchors: built.boundaryAnchors,
-    execution: built.execution,
-    jobId: `${namespace}:job`,
-    leaseToken: `${namespace}:lease`,
-    finalState: built.finalState,
-    terminalStateHash: built.execution.transitions.at(-1)!.afterStateHash,
-    outcome,
-    integrityIdentity,
+    chronicle: {
+      ...built.chronicle,
+      reproducibility: {
+        ...built.chronicle.reproducibility,
+        arenaVariantVersion: versions.arenaVariant,
+        versions,
+      },
+    },
+    finalState: {
+      ...built.finalState,
+      versions,
+    },
   }
 }
 
@@ -394,53 +317,6 @@ describe("Match completion integrity identity", () => {
     }
   })
 
-  it("rejects partial, relabeled, and mixed candidate provenance before opening the database", async () => {
-    const namespace = "completion:route-unit"
-    const { identity, pair } = completionIdentity(namespace)
-    const snapshot = responseSnapshot(identity, pair)
-    const candidate = candidateCompletionInput(namespace, snapshot)
-    const pool = {
-      async connect() {
-        throw new Error("database connection must not open")
-      },
-    } as unknown as Pool
-
-    await expect(
-      completeMatch(pool, {
-        ...candidate,
-        integrityIdentity: {
-          compatibility: candidate.compatibility,
-          authorityBundleHash: snapshot.authorityBundleHash,
-          registryGeneration: snapshot.registryGeneration,
-          entrants: {
-            bottom: { strategyRevisionId: pair.bottom.strategyRevisionId },
-            top: { strategyRevisionId: pair.top.strategyRevisionId },
-          },
-        } as unknown as RuntimeExecutionResolvedEvidenceSnapshot,
-      }),
-    ).rejects.toMatchObject({
-      code: "COMPLETION_EVIDENCE_SHAPE_INVALID",
-      failureCategory: "system_failure",
-      playerPenalty: false,
-    })
-
-    await expect(
-      completeMatch(pool, {
-        ...candidate,
-        profile: "current-exact",
-      } as unknown as CandidateCompleteMatchInput),
-    ).rejects.toMatchObject({
-      code: "CANDIDATE_ROUTE_INVALID",
-      failureCategory: "system_failure",
-      playerPenalty: false,
-    })
-
-    await expect(completeMatch(pool, candidate)).rejects.toMatchObject({
-      code: "CANDIDATE_CROSS_DOCUMENT_IDENTITY_INVALID",
-      failureCategory: "system_failure",
-      playerPenalty: false,
-    })
-  })
 })
 
 const seedCertificateAuthority = async (

@@ -1,0 +1,1276 @@
+{
+  "schemaVersion": "v1.37-current-event-coverage-v1",
+  "generatorVersion": "generate-v1-37-event-coverage-v2",
+  "generatedBy": "scripts/generate-v1-37-event-coverage.ts",
+  "status": "current-exact",
+  "tupleId": "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+  "currentEventVocabulary": [
+    "MATCH_STARTED",
+    "ROUND_STARTED",
+    "STRATEGY_EVALUATED",
+    "ACTIVATION_STARTED",
+    "ACTIVATION_SKIPPED",
+    "ACTIVATION_ENDED",
+    "CYCLE_STARTED",
+    "CYCLE_ENDED",
+    "AWARENESS_GRID_OBSERVED",
+    "ACTION_EMITTED",
+    "MOVE_ADVANCED",
+    "MOVE_BLOCKED",
+    "TURN_RESOLVED",
+    "PUSH_RESOLVED",
+    "PUSH_BLOCKED",
+    "BACKSTAB_RESOLVED",
+    "SOLDIER_STONED",
+    "SOLDIER_FELL",
+    "CONTRACTION_RESOLVED",
+    "MATCH_ENDED",
+    "RUNTIME_VIOLATION"
+  ],
+  "removedFromCurrent": [
+    "PUSH_ATTEMPTED"
+  ],
+  "historicalOnly": [
+    "PUSH_ATTEMPTED"
+  ],
+  "retainedCandidateEvidence": {
+    "relativePath": "packages/spec/artifacts/v1.37-candidate-event-coverage.json",
+    "sha256": "84055ef93ed8c73c89bcf19087bbba8904c2f5bc62c1ec1ba8bd10aa632b9f96",
+    "status": "immutable-preactivation-provenance"
+  },
+  "producerFiles": [
+    {
+      "relativePath": "packages/engine/src/activation.ts",
+      "sha256": "061c1d6687c742948daa1bf1532e6892b09007621f7a21735a09ec373f851509"
+    },
+    {
+      "relativePath": "packages/engine/src/backstab.ts",
+      "sha256": "c76ccfa5eaedb5d622c8debff6ae790b68c7eab15e812f4933125b509200c31f"
+    },
+    {
+      "relativePath": "packages/engine/src/contraction.ts",
+      "sha256": "2dc0bfb9f61cc5eadf235c56c6c0c996d00bff279b29e1fa45e92f9e05a16835"
+    },
+    {
+      "relativePath": "packages/engine/src/match.ts",
+      "sha256": "e9f9b0adb96672d97be63e7f13513fd7d4cf7922626e4be83c57ba5e5042204a"
+    },
+    {
+      "relativePath": "packages/engine/src/movement.ts",
+      "sha256": "a987e8ba4658e2cb77d55684b5911fb021e5cfd4610e9cd9704db9d74ff29065"
+    },
+    {
+      "relativePath": "packages/engine/src/outcome.ts",
+      "sha256": "96313f9b698a8156e1d4fa77077dfa7603f0a98660486a40bc9fbdc25492e5c4"
+    },
+    {
+      "relativePath": "packages/engine/src/kernel/step.ts",
+      "sha256": "0602e497bab6647784de0ec2a2fe337f2fb30cbe4a3ac507b4b00800815ee733"
+    }
+  ],
+  "consumerSurfaces": [
+    {
+      "name": "chronicle-grammar",
+      "relativePath": "packages/replay/src/grammar.ts",
+      "disposition": "semantic-validator",
+      "sourceSha256": "19938808428d274665565b3a8cc09a878997ef143f4acb29dfbbec4f6a06ddb3"
+    },
+    {
+      "name": "replay-transition",
+      "relativePath": "packages/replay/src/replay-transition.ts",
+      "disposition": "state-reconstructor-or-explicit-no-op",
+      "sourceSha256": "c7e0eadc1bbedc1ae7eb8c24b4d0e1bc0af60fe9d5dd17c07dbf65ebd23f241b"
+    },
+    {
+      "name": "match-intelligence",
+      "relativePath": "apps/web/app/match-intelligence.ts",
+      "disposition": "annotation-consumer-or-no-special-annotation",
+      "sourceSha256": "25e23535ffa8cb9be119f805de4cb001523d6d0c1646acf348297f47f4b00d2a"
+    },
+    {
+      "name": "replay-ready",
+      "relativePath": "apps/web/app/matches/replay-ready.ts",
+      "disposition": "timeline-consumer-or-generic-label",
+      "sourceSha256": "eddc4dab2cd5915dce70345eafbd1168f429f59f3ece3afc210b14ce52e25412"
+    },
+    {
+      "name": "replay-board",
+      "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+      "disposition": "board-consumer-or-no-callout",
+      "sourceSha256": "1da6d8a085df8f043fa145f1c7e481336cae6c93a389ea09190f69a9f828a769"
+    }
+  ],
+  "coverage": [
+    {
+      "eventType": "MATCH_STARTED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 932
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 13
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 31
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 18
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 34
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 13
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "ROUND_STARTED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 944
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 14
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 32
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 19
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 35
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 14
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "STRATEGY_EVALUATED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 203
+        },
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 411
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 15
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 33
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 20
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 36
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 15
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "ACTIVATION_STARTED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 308
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 16
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 34
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 21
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 37
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 16
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "ACTIVATION_SKIPPED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 328
+        },
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 503
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 17
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 35
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 22
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 38
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 17
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "ACTIVATION_ENDED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 250
+        },
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 155
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 18
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 36
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 23
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 39
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 18
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "CYCLE_STARTED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 349
+        },
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 536
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 19
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 37
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 24
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 40
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 19
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "CYCLE_ENDED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 511
+        },
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 774
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 20
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 38
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 25
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 41
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 20
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "AWARENESS_GRID_OBSERVED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 398
+        },
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 614
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 21
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 39
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 26
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 42
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 21
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "ACTION_EMITTED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 470
+        },
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 740
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 22
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 40
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 27
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 43
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 22
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "MOVE_ADVANCED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 149
+        },
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 207
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 23
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 41
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 28
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 44
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 23
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "MOVE_BLOCKED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 77
+        },
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 91
+        },
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 168
+        },
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 194
+        },
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 214
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 24
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 42
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 29
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 45
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 24
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "TURN_RESOLVED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 46
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 25
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 43
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 30
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 46
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 25
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "PUSH_RESOLVED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 136
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 26
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 44
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 31
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 47
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 26
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "PUSH_BLOCKED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 111
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 27
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 45
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 32
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 48
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 27
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "BACKSTAB_RESOLVED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/backstab.ts",
+          "line": 56
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 28
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 46
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 33
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 49
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 28
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "SOLDIER_STONED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 126
+        },
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 242
+        },
+        {
+          "relativePath": "packages/engine/src/backstab.ts",
+          "line": 58
+        },
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 61
+        },
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 147
+        },
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 278
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 29
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 47
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 34
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 50
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 29
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "SOLDIER_FELL",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/contraction.ts",
+          "line": 74
+        },
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 143
+        },
+        {
+          "relativePath": "packages/engine/src/movement.ts",
+          "line": 186
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 30
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 48
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 35
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 51
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 30
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "CONTRACTION_RESOLVED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/contraction.ts",
+          "line": 72
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 31
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 49
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 36
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 52
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 31
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "MATCH_ENDED",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/contraction.ts",
+          "line": 85
+        },
+        {
+          "relativePath": "packages/engine/src/outcome.ts",
+          "line": 45
+        },
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 891
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 32
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 50
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 37
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 53
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 32
+          }
+        }
+      ]
+    },
+    {
+      "eventType": "RUNTIME_VIOLATION",
+      "producers": [
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 100
+        },
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 148
+        },
+        {
+          "relativePath": "packages/engine/src/activation.ts",
+          "line": 169
+        },
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 238
+        },
+        {
+          "relativePath": "packages/engine/src/kernel/step.ts",
+          "line": 255
+        }
+      ],
+      "consumerDispositions": [
+        {
+          "surface": "chronicle-grammar",
+          "disposition": "semantic-validator",
+          "evidence": {
+            "relativePath": "packages/replay/src/grammar.ts",
+            "line": 33
+          }
+        },
+        {
+          "surface": "replay-transition",
+          "disposition": "state-reconstructor-or-explicit-no-op",
+          "evidence": {
+            "relativePath": "packages/replay/src/replay-transition.ts",
+            "line": 51
+          }
+        },
+        {
+          "surface": "match-intelligence",
+          "disposition": "annotation-consumer-or-no-special-annotation",
+          "evidence": {
+            "relativePath": "apps/web/app/match-intelligence.ts",
+            "line": 38
+          }
+        },
+        {
+          "surface": "replay-ready",
+          "disposition": "timeline-consumer-or-generic-label",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/replay-ready.ts",
+            "line": 54
+          }
+        },
+        {
+          "surface": "replay-board",
+          "disposition": "board-consumer-or-no-callout",
+          "evidence": {
+            "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
+            "line": 33
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -2,10 +2,6 @@ import { isDeepStrictEqual } from "node:util"
 import type { GameState } from "@cowards/engine"
 import {
   createChronicleContentHash,
-  INACTIVE_V1_37_REPLAY_TUPLE,
-  type CandidateReplaySemanticInput,
-  type ChronicleBoundaryAnchor,
-  type ChronicleRecorderExecution,
 } from "@cowards/replay"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
@@ -14,14 +10,11 @@ import {
   validateCanonicalGameState,
   type Chronicle,
   type MatchId,
-  type MatchOutcome,
   type RuntimeExecutionResolvedEvidenceSnapshot,
 } from "@cowards/spec"
 import type { Pool } from "pg"
 import {
-  createCandidateChronicleAdmission,
   createPostgresChronicleStore,
-  type CandidateChronicleAdmission,
 } from "./chronicle-store.js"
 import { withTransaction } from "./db.js"
 import {
@@ -42,23 +35,7 @@ export interface CompleteMatchInput {
   integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot
 }
 
-export interface CandidateCompleteMatchInput {
-  profile: "candidate-v1.37"
-  compatibility: CandidateReplaySemanticInput["compatibility"]
-  chronicle: Chronicle
-  boundaryAnchors: readonly ChronicleBoundaryAnchor[]
-  execution: ChronicleRecorderExecution
-  jobId: string
-  leaseToken: string
-  finalState: GameState
-  terminalStateHash: string
-  outcome: MatchOutcome
-  integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot
-}
-
-export type CompleteMatchRequest =
-  | CompleteMatchInput
-  | CandidateCompleteMatchInput
+export type CompleteMatchRequest = CompleteMatchInput
 
 export class MatchCompletionIntegritySystemFailure extends Error {
   readonly code = "EVIDENCE_IDENTITY_MISMATCH"
@@ -119,28 +96,12 @@ const hasExactKeys = (
 }
 
 interface PreparedCompletion {
-  readonly profile: "current-exact" | "candidate-v1.37"
   readonly jobId: string
   readonly leaseToken: string
   readonly chronicle: Chronicle
   readonly finalState: GameState
   readonly integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot
-  readonly candidateAdmission?: Readonly<CandidateChronicleAdmission>
 }
-
-const candidateCompleteKeys = [
-  "profile",
-  "compatibility",
-  "chronicle",
-  "boundaryAnchors",
-  "execution",
-  "jobId",
-  "leaseToken",
-  "finalState",
-  "terminalStateHash",
-  "outcome",
-  "integrityIdentity",
-] as const
 
 const currentCompleteKeys = [
   "jobId",
@@ -175,7 +136,6 @@ const prepareCompletion = (input: CompleteMatchRequest): PreparedCompletion => {
     )
   }
   const integrityIdentity = globalThis.structuredClone(parsedIdentity.data)
-  const candidateEnvelope = hasExactKeys(input, candidateCompleteKeys)
   const currentEnvelope = hasExactKeys(input, currentCompleteKeys)
 
   if (currentEnvelope) {
@@ -189,108 +149,29 @@ const prepareCompletion = (input: CompleteMatchRequest): PreparedCompletion => {
       )
     }
     const current = input as unknown as CompleteMatchInput
+    const finalState = globalThis.structuredClone(current.finalState)
+    const parsedFinal = RuntimeExecutionFinalStateSchema.safeParse(finalState)
+    if (!parsedFinal.success) {
+      throw new MatchCompletionSemanticSystemFailure(
+        "CURRENT_FINAL_STATE_SHAPE_INVALID",
+      )
+    }
+    const finalSemantic = validateCanonicalGameState(parsedFinal.data)
+    if (!finalSemantic.ok) {
+      throw new MatchCompletionSemanticSystemFailure(
+        finalSemantic.issues[0]?.code ?? "CURRENT_FINAL_STATE_INVALID",
+      )
+    }
     return {
-      profile: "current-exact",
       jobId: current.jobId,
       leaseToken: current.leaseToken,
       chronicle: globalThis.structuredClone(current.chronicle),
-      finalState: globalThis.structuredClone(current.finalState),
+      finalState,
       integrityIdentity,
     }
   }
 
-  // Candidate routing is established by the exact candidate envelope and the
-  // engine/replay admission brand below. The caller-controlled profile string
-  // is never sufficient to select this route.
-  if (!candidateEnvelope) {
-    throw new MatchCompletionSemanticSystemFailure("CANDIDATE_ROUTE_INVALID")
-  }
-  const candidate = input as unknown as CandidateCompleteMatchInput
-  if (candidate.profile !== "candidate-v1.37") {
-    throw new MatchCompletionSemanticSystemFailure("CANDIDATE_ROUTE_INVALID")
-  }
-  let admission: Readonly<CandidateChronicleAdmission>
-  try {
-    const semanticInput: CandidateReplaySemanticInput = {
-      profile: "candidate-v1.37",
-      compatibility: candidate.compatibility,
-      chronicle: candidate.chronicle,
-      boundaryAnchors: candidate.boundaryAnchors,
-      execution: candidate.execution,
-    }
-    admission = createCandidateChronicleAdmission(semanticInput)
-  } catch (error) {
-    throw new MatchCompletionSemanticSystemFailure(
-      error instanceof Error ? error.message : "CANDIDATE_SEMANTIC_INVALID",
-    )
-  }
-  const finalState = globalThis.structuredClone(candidate.finalState)
-  const parsedFinal = RuntimeExecutionFinalStateSchema.safeParse(finalState)
-  if (!parsedFinal.success) {
-    throw new MatchCompletionSemanticSystemFailure(
-      "CANDIDATE_FINAL_STATE_SHAPE_INVALID",
-    )
-  }
-  const finalSemantic = validateCanonicalGameState(parsedFinal.data)
-  if (!finalSemantic.ok) {
-    throw new MatchCompletionSemanticSystemFailure(
-      finalSemantic.issues[0]?.code ?? "CANDIDATE_FINAL_STATE_INVALID",
-    )
-  }
-  const bottom = finalState.players.filter((player) => player.side === "bottom")
-  const top = finalState.players.filter((player) => player.side === "top")
-  const chronicle = admission.chronicle
-  if (
-    finalState.phase !== "COMPLETE" ||
-    finalState.outcome === undefined ||
-    !isDeepStrictEqual(finalState, admission.finalState) ||
-    candidate.terminalStateHash !== admission.terminalStateHash ||
-    !isDeepStrictEqual(candidate.outcome, admission.outcome) ||
-    !isDeepStrictEqual(finalState.outcome, admission.outcome) ||
-    chronicle.reproducibility.matchId !== finalState.matchId ||
-    chronicle.reproducibility.seed !== finalState.seed ||
-    chronicle.reproducibility.arenaVariantId !== finalState.arenaVariant.id ||
-    chronicle.reproducibility.arenaVariantVersion !==
-      finalState.versions.arenaVariant ||
-    !isDeepStrictEqual(
-      chronicle.reproducibility.versions,
-      finalState.versions,
-    ) ||
-    bottom.length !== 1 ||
-    top.length !== 1 ||
-    chronicle.reproducibility.strategyRevisionIds[0] !==
-      bottom[0]!.strategyRevisionId ||
-    chronicle.reproducibility.strategyRevisionIds[1] !==
-      top[0]!.strategyRevisionId ||
-    !isRecord(integrityIdentity) ||
-    !isRecord(integrityIdentity.compatibility) ||
-    integrityIdentity.compatibility.tupleId !==
-      INACTIVE_V1_37_REPLAY_TUPLE.tupleId ||
-    !isDeepStrictEqual(
-      integrityIdentity.compatibility.tuple,
-      INACTIVE_V1_37_REPLAY_TUPLE.tuple,
-    ) ||
-    !isRecord(integrityIdentity.entrants) ||
-    !isRecord(integrityIdentity.entrants.bottom) ||
-    !isRecord(integrityIdentity.entrants.top) ||
-    integrityIdentity.entrants.bottom.strategyRevisionId !==
-      bottom[0]!.strategyRevisionId ||
-    integrityIdentity.entrants.top.strategyRevisionId !==
-      top[0]!.strategyRevisionId
-  ) {
-    throw new MatchCompletionSemanticSystemFailure(
-      "CANDIDATE_CROSS_DOCUMENT_IDENTITY_INVALID",
-    )
-  }
-  return {
-    profile: "candidate-v1.37",
-    jobId: candidate.jobId,
-    leaseToken: candidate.leaseToken,
-    chronicle,
-    finalState,
-    integrityIdentity,
-    candidateAdmission: admission,
-  }
+  throw new MatchCompletionSemanticSystemFailure("COMPLETION_ROUTE_INVALID")
 }
 
 export const validateCompletionIntegritySnapshot = (
@@ -493,32 +374,6 @@ const assertLockedOrderedPair = (
   }
 }
 
-const assertCandidateDatabaseIdentity = (
-  prepared: PreparedCompletion,
-  locked: LockedCompletionRow,
-): void => {
-  if (prepared.profile !== "candidate-v1.37") return
-  const bottom = prepared.finalState.players.find(
-    (player) => player.side === "bottom",
-  )!
-  const top = prepared.finalState.players.find(
-    (player) => player.side === "top",
-  )!
-  if (
-    locked.match_id !== prepared.finalState.matchId ||
-    locked.match_seed !== prepared.finalState.seed ||
-    locked.arena_variant_id !== prepared.finalState.arenaVariant.id ||
-    locked.bottom_player_id !== bottom.id ||
-    locked.top_player_id !== top.id ||
-    locked.bottom_strategy_revision_id !== bottom.strategyRevisionId ||
-    locked.top_strategy_revision_id !== top.strategyRevisionId
-  ) {
-    throw new MatchCompletionSemanticSystemFailure(
-      "CANDIDATE_DATABASE_IDENTITY_INVALID",
-    )
-  }
-}
-
 const assertLockedAuthorityClaim = (row: LockedCompletionRow): void => {
   const sourceSet = {
     attestationIds: [],
@@ -631,8 +486,8 @@ export const completeMatch = async (
   pool: Pool,
   input: CompleteMatchRequest,
 ): Promise<{ status: "complete"; matchId: MatchId; chronicleId: string }> => {
-  // Candidate evidence is fully admitted and cloned before any derived result
-  // is computed and before a database connection/transaction is opened.
+  // The exact current envelope is admitted and cloned before derived result
+  // computation or opening a database transaction.
   const prepared = prepareCompletion(input)
   const fields = deriveMatchCompletionFields(prepared.finalState)
   let chronicleId: string | undefined
@@ -1009,7 +864,6 @@ export const completeMatch = async (
           { identity, pair },
           prepared.integrityIdentity,
         )
-        assertCandidateDatabaseIdentity(prepared, row)
       } catch (error) {
         if (error instanceof MatchCompletionSemanticSystemFailure) throw error
         throw new MatchCompletionIntegritySystemFailure()
@@ -1126,7 +980,6 @@ export const completeMatch = async (
       prepared.integrityIdentity,
     )
     assertLockedAuthorityClaim(locked)
-    assertCandidateDatabaseIdentity(prepared, locked)
 
     const store = createPostgresChronicleStore(client)
     const integrityIdentity = {
@@ -1134,14 +987,10 @@ export const completeMatch = async (
       identity,
       evidencePair: pair,
     }
-    const stored = await store.put(
-      prepared.profile === "candidate-v1.37"
-        ? {
-            candidateAdmission: prepared.candidateAdmission!,
-            integrityIdentity,
-          }
-        : { chronicle: prepared.chronicle, integrityIdentity },
-    )
+    const stored = await store.put({
+      chronicle: prepared.chronicle,
+      integrityIdentity,
+    })
     chronicleId = stored.metadata.id
     const completedMatch = await client.query(
       `

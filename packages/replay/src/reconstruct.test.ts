@@ -1,8 +1,8 @@
 import type { Chronicle, SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import {
-  createCandidateReplay,
+  createCurrentReplay,
   createHistoricalV14Replay,
 } from "./reconstruct.js"
 import { recordChronicleFromExecution } from "./record.js"
@@ -39,8 +39,8 @@ const turnToStoneRuntime: StrategyRuntime = {
   },
 }
 
-const createBuiltCandidateInput = () => {
-  const execution = CANDIDATE_MATCH_KERNEL.runMatch({
+const createBuiltCurrentInput = () => {
+  const execution = MATCH_KERNEL.runMatch({
     matchId: "reconstruct-match",
     seed: "reconstruct-seed",
     arenaVariant: {
@@ -59,13 +59,13 @@ const createBuiltCandidateInput = () => {
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      semanticTuple: MATCH_KERNEL.tuple,
     },
   })
   if (!recorded.ok) throw new Error(recorded.failure.code)
   return {
-    profile: "candidate-v1.37" as const,
+    profile: "current-exact" as const,
     compatibility: recorded.semanticIdentity,
     chronicle: recorded.chronicle,
     boundaryAnchors: recorded.boundaryAnchors,
@@ -291,9 +291,9 @@ const movementChronicle = (): Chronicle => {
 
 describe("createReplay", () => {
   it("reconstructs built Chronicle states without StrategyRuntime", () => {
-    const input = createBuiltCandidateInput()
+    const input = createBuiltCurrentInput()
     const chronicle = input.chronicle
-    const replay = createCandidateReplay(input)
+    const replay = createCurrentReplay(input)
 
     expect(replay.ok).toBe(true)
     if (!replay.ok) {

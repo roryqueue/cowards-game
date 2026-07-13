@@ -236,6 +236,39 @@ describe("StrategyExecutionAdapter contract", () => {
     ).toEqual({ ok: true, value: { activationOrders: [], strategyMemory: {} } })
   })
 
+  it("preserves system failure classification through the v1.14 ABI bridge", () => {
+    const revision = buildStrategyRevision({ source: validStrategySource })
+    const adapter = {
+      metadata: workerThreadStrategyExecutionAdapterMetadata,
+      execute: () => ({
+        ok: false as const,
+        violation: {
+          type: "THROWN_EXCEPTION" as const,
+          message: "Runtime system failure.",
+        },
+        systemFailure: {
+          code: "MALFORMED_IPC",
+          retryable: true,
+        },
+      }),
+    } satisfies StrategyExecutionAdapter
+
+    const result = executeStrategyRuntimeAbiV114({
+      adapter,
+      revision,
+      executableSource: transpileOrThrow(validStrategySource),
+      methodName: "selectActivations",
+      input: runtimeInput,
+      timeoutMs: 25,
+      outputByteLimit: 512,
+    })
+
+    expect(result).toMatchObject({
+      ok: false,
+      systemFailure: { code: "MALFORMED_IPC", retryable: true },
+    })
+  })
+
   it("worker-thread adapter delegates valid calls to the worker bridge", () => {
     const adapter = createWorkerThreadStrategyExecutionAdapter()
 

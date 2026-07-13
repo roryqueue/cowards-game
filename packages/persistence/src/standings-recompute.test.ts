@@ -34,6 +34,18 @@ const entrants: SeasonStandingEntrant[] = [
 ]
 
 const tupleRecord = CANONICAL_COMPATIBILITY_TUPLES[0]!
+const historicalV14Tuple = {
+  tupleId:
+    "sha256:be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+  tuple: {
+    rules: "cowards-rules-v1.4",
+    engine: "0.1.4",
+    runtimeAbi: "strategy-runtime-abi-v1.14",
+    chronicle: "chronicle-v1.4",
+    arenaCatalog: "canonical-arena-catalog-v1.4",
+    setPolicy: "canonical-set-policy-v1.4",
+  },
+} as const
 const currentIntegrityInput = () => {
   const evidence = ["a", "b"].map((suffix, index) => ({
     entrantKey: `entrant:${suffix}`,
@@ -241,7 +253,7 @@ describe("Season standings recompute", () => {
     const manifest = {
       manifestId: "release:v1.4",
       manifestHash: createHash("sha256").update("release:v1.4").digest("hex"),
-      compatibility: { tupleId: tupleRecord.tupleId, tuple: { ...tupleRecord.tuple } },
+      compatibility: historicalV14Tuple,
     }
     const source = (originalCounted: boolean, chronicleVersion: string | null) => ({
       matchSetId: "historical:v1.4",

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { COMPATIBILITY_VERSIONS } from "@cowards/spec"
 import type {
   Action,
   JsonValue,
@@ -14,8 +15,8 @@ import {
 } from "../activation.js"
 import { resolveBackstabBoundary } from "../backstab.js"
 import { resolveContraction } from "../contraction.js"
-import { CANDIDATE_MATCH_KERNEL } from "../kernel/driver.js"
-import { resolveRound } from "../match.js"
+import { MATCH_KERNEL } from "../kernel/driver.js"
+import { runHistoricalV14RoundFromState } from "../kernel/driver.js"
 import { resolveAction } from "../movement.js"
 import { createInitialGameState } from "../state.js"
 import {
@@ -125,6 +126,15 @@ const baseInput = {
   topStrategyRevisionId: "top-revision",
 }
 
+const HISTORICAL_V1_4_VERSIONS = Object.freeze({
+  spec: "cowards-rules-v1.4",
+  engine: "0.1.4",
+  runtimeJs: "0.1.0",
+  chronicle: "chronicle-v1.4",
+  strategyRevision: "0.1.4",
+  arenaVariant: "0.1.0",
+})
+
 const soldier = (overrides: Partial<Soldier> & { id: string }): Soldier => ({
   ownerPlayerId: "bottom",
   status: "ACTIVE",
@@ -140,6 +150,7 @@ const stateWith = (
   overrides: Partial<GameState> = {},
 ): GameState => ({
   ...createInitialGameState(baseInput),
+  versions: HISTORICAL_V1_4_VERSIONS,
   soldiers,
   ...overrides,
 })
@@ -228,8 +239,8 @@ const runCompatibilityActivation = (
   runtime: StrategyRuntime,
   soldierId: string,
 ): TransitionResult => {
-  const execution = CANDIDATE_MATCH_KERNEL.runActivationFromState({
-    state,
+  const execution = MATCH_KERNEL.runActivationFromState({
+    state: { ...state, versions: { ...COMPATIBILITY_VERSIONS } },
     runtime,
     soldierId,
   })
@@ -243,7 +254,7 @@ const runCompatibilityActivation = (
     )
   }
   return {
-    state: execution.result.state,
+    state: { ...execution.result.state, versions: state.versions },
     // Immutable v1.4 evidence predates canonical event sequencing. Preserve its
     // original bytes while sourcing the transition from the candidate authority.
     events: execution.recorderMaterial.events.map((summary) => ({
@@ -564,7 +575,10 @@ const scenarios: readonly Scenario[] = [
             soldierMemory: input.soldierMemory,
           }),
       })
-      const result = resolveRound(initial, runtime)
+      const result = runHistoricalV14RoundFromState({
+        state: initial,
+        runtime,
+      })
       return observe(
         initial,
         result.state,

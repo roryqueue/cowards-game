@@ -3,7 +3,7 @@ import { createHash } from "node:crypto"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { CANDIDATE_MATCH_KERNEL } from "../packages/engine/src/index.ts"
+import { MATCH_KERNEL } from "../packages/engine/src/index.ts"
 import {
   projectPublicChronicle,
   recordChronicleFromExecution,
@@ -102,13 +102,13 @@ const runtimeSemantics = {
 const PUBLIC_STRATEGY_ID = "strategy:go-parity:sentinel"
 
 const recordGoldenChronicle = () => {
-  const execution = CANDIDATE_MATCH_KERNEL.runMatch(createGoldenMatchInput())
+  const execution = MATCH_KERNEL.runMatch(createGoldenMatchInput())
   const recorded = recordChronicleFromExecution({
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      semanticTuple: MATCH_KERNEL.tuple,
     },
   })
   if (!recorded.ok) throw new Error(recorded.failure.code)

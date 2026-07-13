@@ -273,24 +273,23 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 		t.Skip("set COWARDS_GO_BACKEND_TEST_DATABASE_URL for semantic completion PostgreSQL proof")
 	}
 	ctx := context.Background()
-	pool := semanticCandidateIsolatedPool(t, ctx, databaseURL)
+	pool := semanticCurrentIsolatedPool(t, ctx, databaseURL)
 	now := time.Date(2026, 7, 13, 16, 0, 0, 0, time.UTC)
-	fixture := seedSemanticCandidateAuthority(t, ctx, pool, now)
+	fixture := seedSemanticCurrentAuthority(t, ctx, pool, now)
 	service := newMatchCompletionService(pool)
 	service.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
 	service.now = func() time.Time { return now }
 
 	t.Run("early invalidity leaves canonical rows exact", func(t *testing.T) {
-		candidate := fixture.seedMatch(t, ctx, pool, "early")
+		current := fixture.seedMatch(t, ctx, pool, "early")
 		before := semanticCompletionSnapshot(t, ctx, pool)
-		tampered := *candidate.evidence
-		tampered.FinalState = semanticCloneMap(candidate.evidence.FinalState)
-		tampered.FinalState["matchId"] = "match:tampered"
+		tampered := semanticCloneValue(t, current.finalState).(map[string]any)
+		tampered["matchId"] = "match:tampered"
 		if _, err := service.completeMatch(ctx, completeMatchInput{
-			JobID: candidate.jobID, LeaseToken: candidate.leaseToken, Chronicle: candidate.evidence.Chronicle,
-			FinalState: candidate.evidence.FinalState, Integrity: fixture.identity, CandidateEvidence: &tampered,
+			JobID: current.jobID, LeaseToken: current.leaseToken, Chronicle: current.chronicle,
+			FinalState: tampered, Integrity: fixture.identity,
 		}); err == nil {
-			t.Fatal("semantically mutated candidate reached completion")
+			t.Fatal("semantically invalid current state reached completion")
 		}
 		after := semanticCompletionSnapshot(t, ctx, pool)
 		if !jsonValuesEqual(before, after) {
@@ -325,14 +324,14 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 		}
 	})
 
-	t.Run("exact candidate stores one locked Chronicle and is idempotent", func(t *testing.T) {
+	t.Run("exact current input stores one locked Chronicle and is idempotent", func(t *testing.T) {
 		candidate := fixture.seedMatch(t, ctx, pool, "success")
 		result, err := service.completeMatch(ctx, candidate.input(fixture.identity))
 		if err != nil {
 			t.Fatal(err)
 		}
 		if result.Status != "complete" || result.MatchID != candidate.matchID || result.ChronicleID == "" {
-			t.Fatalf("unexpected candidate completion result: %+v", result)
+			t.Fatalf("unexpected current completion result: %+v", result)
 		}
 		first := semanticCompletionSnapshot(t, ctx, pool)
 		duplicate, err := service.completeMatch(ctx, candidate.input(fixture.identity))
@@ -341,21 +340,21 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 		}
 		second := semanticCompletionSnapshot(t, ctx, pool)
 		if duplicate.ChronicleID != result.ChronicleID || !jsonValuesEqual(first, second) {
-			t.Fatalf("candidate completion was not exact/idempotent: first=%s second=%s duplicate=%+v", first, second, duplicate)
+			t.Fatalf("current completion was not exact/idempotent: first=%s second=%s duplicate=%+v", first, second, duplicate)
 		}
 		var tupleID, engine, publicationID string
 		if err := pool.QueryRow(ctx, `select compatibility_tuple_id,compatibility_engine_version,authority_publication_id from chronicles where match_id=$1`, candidate.matchID).Scan(&tupleID, &engine, &publicationID); err != nil {
 			t.Fatal(err)
 		}
-		if tupleID != inactiveCandidateTupleID || engine != inactiveCandidateTuple.Engine || publicationID != fixture.identity.PublicationID {
-			t.Fatalf("persisted Chronicle lost locked candidate identity: %q %q %q", tupleID, engine, publicationID)
+		if tupleID != currentCanonicalTupleID || engine != currentCanonicalTuple.Engine || publicationID != fixture.identity.PublicationID {
+			t.Fatalf("persisted Chronicle lost locked current identity: %q %q %q", tupleID, engine, publicationID)
 		}
 	})
 
 	t.Run("late installed receipt drift leaves gameplay exact", func(t *testing.T) {
 		candidate := fixture.seedMatch(t, ctx, pool, "receipt-drift")
 		before := semanticCompletionSnapshot(t, ctx, pool)
-		receipt := semanticCandidateReceipt(fixture.identity)
+		receipt := semanticCurrentReceipt(fixture.identity)
 		if _, err := pool.Exec(ctx, `insert into runtime_evidence_authority_publication_events
 			(id,publication_id,event_kind,attempt_id,envelope_sha256,reason_code,receipt,occurred_at)
 			values ($1,$2,'uncertain','attempt:late',$3,'RENAME_UNCONFIRMED',$4,$5)`,
@@ -372,29 +371,30 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 	})
 }
 
-type semanticCandidateAuthorityFixture struct {
+type semanticCurrentAuthorityFixture struct {
 	authority *verifiedRuntimeEvidenceAuthority
 	identity  *claimedMatchIntegrityIdentity
 	request   runtimeServiceRequest
 	nextIndex int
 }
 
-type semanticCandidateMatchFixture struct {
+type semanticCurrentMatchFixture struct {
 	matchID    string
 	jobID      string
 	leaseToken string
-	evidence   *candidateRuntimeEvidence
+	chronicle  map[string]any
+	finalState map[string]any
 }
 
-func (candidate semanticCandidateMatchFixture) input(identity *claimedMatchIntegrityIdentity) completeMatchInput {
+func (current semanticCurrentMatchFixture) input(identity *claimedMatchIntegrityIdentity) completeMatchInput {
 	return completeMatchInput{
-		JobID: candidate.jobID, LeaseToken: candidate.leaseToken,
-		Chronicle: candidate.evidence.Chronicle, FinalState: candidate.evidence.FinalState,
-		Integrity: identity, CandidateEvidence: candidate.evidence,
+		JobID: current.jobID, LeaseToken: current.leaseToken,
+		Chronicle: current.chronicle, FinalState: current.finalState,
+		Integrity: identity,
 	}
 }
 
-func semanticCandidateIsolatedPool(t *testing.T, ctx context.Context, databaseURL string) *pgxpool.Pool {
+func semanticCurrentIsolatedPool(t *testing.T, ctx context.Context, databaseURL string) *pgxpool.Pool {
 	t.Helper()
 	admin, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
@@ -436,9 +436,9 @@ func semanticCandidateIsolatedPool(t *testing.T, ctx context.Context, databaseUR
 	return pool
 }
 
-func seedSemanticCandidateAuthority(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) *semanticCandidateAuthorityFixture {
+func seedSemanticCurrentAuthority(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) *semanticCurrentAuthorityFixture {
 	t.Helper()
-	tuple := registeredCompatibilityTuple{TupleID: inactiveCandidateTupleID, Tuple: inactiveCandidateTuple}
+	tuple := registeredCompatibilityTuple{TupleID: currentCanonicalTupleID, Tuple: currentCanonicalTuple}
 	authority := &verifiedRuntimeEvidenceAuthority{
 		AuthorityBundleHash: "sha256:" + strings.Repeat("b", 64), EnvelopeSHA256: "sha256:" + strings.Repeat("c", 64),
 		RegistryGeneration: "1", SemanticTupleManifestHash: tuple.TupleID, CompatibilityTuple: tuple,
@@ -540,7 +540,7 @@ func seedSemanticCandidateAuthority(t *testing.T, ctx context.Context, pool *pgx
 		EnvelopeSHA256: authority.EnvelopeSHA256, SourceManifestHash: "sha256:" + strings.Repeat("e", 64), SourceSet: sourceSet,
 		Bottom: entrants[0], Top: entrants[1],
 	}
-	receipt := semanticCandidateReceipt(identity)
+	receipt := semanticCurrentReceipt(identity)
 	if _, err := pool.Exec(ctx, `insert into runtime_evidence_authority_publications
 		(id,generation,semantic_tuple_manifest_hash,source_manifest_hash,payload_sha256,envelope_sha256,signer_key_id,trust_domain,issued_at,valid_from,valid_until,payload_bytes,envelope_bytes,attestation_ids,certificate_ids,revocation_ids,supersession_ids,lane_control_ids)
 		values ($1,1,$2,$3,$4,$5,'candidate:key',$6,$7,$7,$8,'candidate-payload','candidate-envelope',$9,$10,'[]','[]','[]')`,
@@ -579,10 +579,10 @@ func seedSemanticCandidateAuthority(t *testing.T, ctx context.Context, pool *pgx
 			t.Fatal(err)
 		}
 	}
-	return &semanticCandidateAuthorityFixture{authority: authority, identity: identity, request: baseRequest}
+	return &semanticCurrentAuthorityFixture{authority: authority, identity: identity, request: baseRequest}
 }
 
-func semanticCandidateReceipt(identity *claimedMatchIntegrityIdentity) map[string]any {
+func semanticCurrentReceipt(identity *claimedMatchIntegrityIdentity) map[string]any {
 	return map[string]any{
 		"schemaVersion": "v1.37-runtime-evidence-authority-install-receipt-v1", "generation": identity.RegistryGeneration,
 		"payloadSha256": identity.PayloadSHA256, "envelopeSha256": identity.EnvelopeSHA256,
@@ -590,28 +590,60 @@ func semanticCandidateReceipt(identity *claimedMatchIntegrityIdentity) map[strin
 	}
 }
 
-func (fixture *semanticCandidateAuthorityFixture) seedMatch(t *testing.T, ctx context.Context, pool *pgxpool.Pool, suffix string) semanticCandidateMatchFixture {
+func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx context.Context, pool *pgxpool.Pool, suffix string) semanticCurrentMatchFixture {
 	t.Helper()
-	request := semanticCloneRuntimeServiceRequest(fixture.request)
-	request.RequestID = "candidate:request:" + suffix
-	request.Match.MatchID = "candidate:match:" + suffix
-	request.Match.Seed = "candidate:seed:" + suffix
-	response := candidateRuntimeResponseForTest(t, request)
-	serialized, err := json.Marshal(response)
-	if err != nil {
-		t.Fatal(err)
-	}
-	decoded, failure := decodeRuntimeServiceResponseBytes(request, serialized)
-	if failure != nil || decoded == nil || decoded.CandidateEvidence == nil {
-		t.Fatalf("candidate response setup failed: response=%+v failure=%+v", decoded, failure)
-	}
-	matchID := request.Match.MatchID
+	request := fixture.request
+	matchID := "current:match:" + suffix
+	seed := "current:seed:" + suffix
 	jobID := "candidate:job:" + suffix
 	leaseToken := "candidate:lease:" + suffix
+	bottomPlayerID := request.Match.BottomPlayerID
+	topPlayerID := request.Match.TopPlayerID
+	bottomSoldierID := "current:soldier:bottom:" + suffix
+	topSoldierID := "current:soldier:top:" + suffix
+	outcome := map[string]any{"type": "WIN", "winnerPlayerId": bottomPlayerID}
+	board := map[string]any{
+		"bounds": map[string]any{"minX": 0, "maxX": 4, "minY": 0, "maxY": 4},
+		"soldiers": []any{
+			map[string]any{"id": bottomSoldierID, "ownerPlayerId": bottomPlayerID, "status": "ACTIVE", "position": map[string]any{"x": 1, "y": 3}},
+			map[string]any{"id": topSoldierID, "ownerPlayerId": topPlayerID, "status": "FALLEN", "position": map[string]any{"x": 3, "y": 1}},
+		},
+		"terrainStones": []any{},
+	}
+	finalState := map[string]any{
+		"matchId": matchID, "seed": seed, "phaseNumber": 2, "roundNumber": 3, "activationCount": 4,
+		"players": []any{
+			map[string]any{"id": bottomPlayerID, "side": "bottom", "strategyRevisionId": request.Match.BottomStrategyRevisionID, "strategyMemory": map[string]any{}},
+			map[string]any{"id": topPlayerID, "side": "top", "strategyRevisionId": request.Match.TopStrategyRevisionID, "strategyMemory": map[string]any{}},
+		},
+		"soldiers": []any{
+			map[string]any{"id": bottomSoldierID, "ownerPlayerId": bottomPlayerID, "status": "ACTIVE"},
+			map[string]any{"id": topSoldierID, "ownerPlayerId": topPlayerID, "status": "FALLEN"},
+		},
+		"outcome": outcome,
+	}
+	chronicle := map[string]any{
+		"schemaVersion": "chronicle-v1.4",
+		"reproducibility": map[string]any{
+			"matchId": matchID, "seed": seed, "arenaVariantId": request.Match.ArenaVariant["id"], "arenaVariantVersion": "0.1.0",
+			"strategyRevisionIds": []any{request.Match.BottomStrategyRevisionID, request.Match.TopStrategyRevisionID},
+			"versions":            map[string]any{"spec": "cowards-rules-v1.4", "engine": "engine-kernel-v1.37-candidate-1", "runtimeJs": "0.1.0", "chronicle": "chronicle-v1.4", "strategyRevision": "0.1.4", "arenaVariant": "0.1.0"},
+		},
+		"events": []any{
+			map[string]any{"type": "MATCH_STARTED", "sequence": 0, "context": map[string]any{}, "privacy": "public", "payload": map[string]any{"matchId": matchID}},
+			map[string]any{"type": "STRATEGY_EVALUATED", "sequence": 1, "context": map[string]any{"actingPlayerId": bottomPlayerID}, "privacy": "private", "privateRef": "private:event:1", "payload": map[string]any{"playerId": bottomPlayerID}},
+			map[string]any{"type": "STRATEGY_EVALUATED", "sequence": 2, "context": map[string]any{"actingPlayerId": topPlayerID}, "privacy": "private", "privateRef": "private:event:2", "payload": map[string]any{"playerId": topPlayerID}},
+			map[string]any{"type": "MATCH_ENDED", "sequence": 3, "context": map[string]any{}, "privacy": "public", "payload": outcome},
+		},
+		"snapshots": []any{
+			map[string]any{"kind": "MATCH_START", "sequence": 0, "context": map[string]any{}, "board": board},
+			map[string]any{"kind": "TERMINAL", "sequence": 3, "context": map[string]any{}, "outcome": outcome, "board": board},
+		},
+	}
 	if _, err := pool.Exec(ctx, `insert into matches
 		(id,bottom_strategy_revision_id,top_strategy_revision_id,arena_variant_id,seed,status,bottom_player_id,top_player_id,integrity_match_set_id,bottom_execution_entrant_key,top_execution_entrant_key,bottom_execution_evidence,top_execution_evidence,execution_evidence_pair_hash)
 		values ($1,$2,$3,$4,$5,'running',$6,$7,$8,$9,$10,$11,$12,$13)`,
-		matchID, request.Match.BottomStrategyRevisionID, request.Match.TopStrategyRevisionID, request.Match.ArenaVariant["id"], request.Match.Seed,
+		matchID, request.Match.BottomStrategyRevisionID, request.Match.TopStrategyRevisionID, request.Match.ArenaVariant["id"], seed,
 		request.Match.BottomPlayerID, request.Match.TopPlayerID, fixture.identity.MatchSetID, fixture.identity.Bottom.EntrantKey, fixture.identity.Top.EntrantKey,
 		fixture.identity.Bottom, fixture.identity.Top, fixture.identity.PairHash); err != nil {
 		t.Fatal(err)
@@ -630,7 +662,7 @@ func (fixture *semanticCandidateAuthorityFixture) seedMatch(t *testing.T, ctx co
 	if _, err := pool.Exec(ctx, `insert into match_job_attempts(id,job_id,attempt_number,worker_id,status) values ($1,$2,1,'candidate:worker','running')`, "candidate:attempt:"+suffix, jobID); err != nil {
 		t.Fatal(err)
 	}
-	return semanticCandidateMatchFixture{matchID: matchID, jobID: jobID, leaseToken: leaseToken, evidence: decoded.CandidateEvidence}
+	return semanticCurrentMatchFixture{matchID: matchID, jobID: jobID, leaseToken: leaseToken, chronicle: chronicle, finalState: finalState}
 }
 
 func semanticCompletionSnapshot(t *testing.T, ctx context.Context, pool *pgxpool.Pool) map[string]any {

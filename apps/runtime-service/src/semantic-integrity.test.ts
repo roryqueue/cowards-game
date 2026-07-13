@@ -1,23 +1,16 @@
 import { describe, expect, it, vi } from "vitest"
 import {
-  COMPATIBILITY_VERSIONS,
   DEFAULT_RUNTIME_LIMITS,
   INITIAL_BOUNDS,
-  runtimeCompatibilityKey,
+  RUNTIME_EXECUTION_SERVICE_VERSION,
+  type RuntimeExecutionServiceRequest,
   type SoldierBrainInput,
   type StrategyInput,
-  type StrategyRevision,
 } from "@cowards/spec"
-import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
-import { INACTIVE_V1_37_REPLAY_TUPLE } from "@cowards/replay"
-import {
-  buildStrategyRevision,
-  createStrategyRevisionId,
-} from "@cowards/runtime-js"
-import {
-  executeCandidateExhibitionForTest,
-  type CandidateExhibitionExecutionRequest,
-} from "./execute-match.js"
+import type { StrategyRuntime } from "@cowards/engine"
+import { recordChronicleFromExecution } from "@cowards/replay"
+import { buildStrategyRevision } from "@cowards/runtime-js"
+import { executeRuntimeServiceRequest } from "./execute-match.js"
 import {
   createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeExecutionAuthorityContext,
@@ -35,75 +28,29 @@ export default {
 }
 `
 
-const candidateRevision = (
-  strategyId: string,
-  _side: "bottom" | "top",
-): StrategyRevision => {
-  const revision = buildStrategyRevision({ source: passiveSource, strategyId })
-  const candidate: StrategyRevision = {
-    ...revision,
-    engineCompatibility: {
-      spec: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
-      engine: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
-    },
-    validation: {
-      ...revision.validation,
-      engineCompatibility: {
-        spec: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
-        engine: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
-      },
-    },
-  }
-  const artifact = candidate.metadata.sourceArtifact
-  const runtimeCompatibility = runtimeCompatibilityKey({
-    runtime: candidate.runtime,
-    sourceHash: candidate.sourceHash,
-    ...(artifact === undefined ? {} : { artifactHash: artifact.hash }),
-    specVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
-    engineVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
-  })
-  return {
-    ...candidate,
-    id: createStrategyRevisionId({
-      sourceHash: candidate.sourceHash,
-      runtimeVersion: candidate.runtime.adapter.version,
-      specVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
-      engineVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
-      strategyRevisionVersion: COMPATIBILITY_VERSIONS.strategyRevision,
-      strategyId,
-      runtimeCompatibility,
-    }),
-  }
-}
-
-const bottom = candidateRevision("strategy:semantic-bottom", "bottom")
-const top = candidateRevision("strategy:semantic-top", "top")
+const bottom = buildStrategyRevision({
+  source: passiveSource,
+  strategyId: "strategy:semantic-bottom",
+})
+const top = buildStrategyRevision({
+  source: passiveSource,
+  strategyId: "strategy:semantic-top",
+})
 const authority = createFixtureRuntimeExecutionAuthorityContext({
-  fixtureId: "semantic-integrity-candidate",
+  fixtureId: "semantic-integrity-current",
   bottom,
   top,
 })
-const entrant = (side: "bottom" | "top") => {
-  const value = authority.evidenceSnapshot.entrants[side]
-  return {
-    entrantKey: value.entrantKey,
-    strategyRevisionId: value.strategyRevisionId,
-    laneIdentityHash: value.laneIdentityHash,
-    containmentCertificateId: value.containmentCertificateId!,
-    containmentCertificateHash: value.containmentCertificateHash!,
-  }
-}
-const request: CandidateExhibitionExecutionRequest = {
-  profile: "candidate_exhibition",
-  counted: false,
-  requestId: "request:semantic-candidate",
-  compatibility: INACTIVE_V1_37_REPLAY_TUPLE,
+const request: RuntimeExecutionServiceRequest = {
+  contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+  kind: "executeMatch",
+  requestId: "request:semantic-current",
   match: {
-    matchId: "match:semantic-candidate",
-    seed: "seed:semantic-candidate",
+    matchId: "match:semantic-current",
+    seed: "seed:semantic-current",
     arenaVariant: {
-      id: "arena:semantic-candidate",
-      name: "Runtime semantic candidate",
+      id: "arena:semantic-current",
+      name: "Runtime semantic current",
       initialBounds: INITIAL_BOUNDS,
       terrainStones: [],
     },
@@ -115,11 +62,7 @@ const request: CandidateExhibitionExecutionRequest = {
   },
   strategies: { bottom, top },
   limits: DEFAULT_RUNTIME_LIMITS,
-  runtimeAuthority: {
-    authorityBundleHash: authority.evidenceSnapshot.authorityBundleHash,
-    registryGeneration: authority.evidenceSnapshot.registryGeneration,
-    entrants: { bottom: entrant("bottom"), top: entrant("top") },
-  },
+  evidenceSnapshot: authority.evidenceSnapshot,
 }
 
 const passiveRuntime: StrategyRuntime = {
@@ -135,38 +78,10 @@ const passiveRuntime: StrategyRuntime = {
 }
 
 describe("runtime-service semantic integrity", () => {
-  it("rejects an invalid candidate final state before recording any Chronicle", () => {
-    const runCandidateMatch = vi.fn((input) => {
-      const execution = CANDIDATE_MATCH_KERNEL.runMatch(input)
-      if (execution.kind !== "completed") return execution
-      const ownerPlayerId = execution.result.state.players[0]!.id
-      const duplicateOccupants = ["a", "b"].map((suffix) => ({
-        id: `soldier:semantic-duplicate:${suffix}`,
-        ownerPlayerId,
-        status: "ACTIVE" as const,
-        position: { x: 5, y: 5 },
-        facing: "UP" as const,
-        lastSuccessfulMoveDirection: null,
-        soldierMemory: {},
-      }))
-      return {
-        ...execution,
-        result: {
-          ...execution.result,
-          state: {
-            ...execution.result.state,
-            soldiers: [
-              ...execution.result.state.soldiers,
-              ...duplicateOccupants,
-            ],
-          },
-        },
-      }
-    })
-    const recordCandidateExecution = vi.fn(() => {
-      throw new Error("recorder must not run after invalid final state")
-    })
-    const response = executeCandidateExhibitionForTest(
+  it("fails closed when current semantic admission rejects a recorded Chronicle", () => {
+    const recordChronicle = vi.fn(recordChronicleFromExecution)
+    const reconstructChronicle = vi.fn()
+    const response = executeRuntimeServiceRequest(
       request,
       createRuntimeServiceConfig({
         strategyExecutionAdapter: "worker-thread",
@@ -175,23 +90,32 @@ describe("runtime-service semantic integrity", () => {
       {
         authorityLoader: authority.authorityLoader,
         createRuntimeForRevision: () => ({ ok: true, runtime: passiveRuntime }),
-        runCandidateMatch,
-        recordCandidateExecution,
+        recordChronicle,
+        validateChronicle: vi.fn(() => ({
+          ok: false as const,
+          profile: "current-exact" as const,
+          publishable: false as const,
+          current: true as const,
+          category: "CANONICAL_INTEGRITY_FAILURE" as const,
+          ownership: "system_integrity" as const,
+          issues: [],
+          truncated: false,
+        })),
+        reconstructChronicle,
       },
     )
 
     expect(response).toMatchObject({
       ok: false,
-      failure: {
-        ownership: "system_integrity",
-        code: "CANDIDATE_FINAL_STATE_INVALID",
+      kind: "systemFailure",
+      systemFailure: {
+        code: "CHRONICLE_INTEGRITY_FAILED",
         retryable: false,
-        playerPenalty: false,
       },
     })
     expect(authority.authorityLoader.load).toHaveBeenCalledTimes(2)
-    expect(runCandidateMatch).toHaveBeenCalledTimes(1)
-    expect(recordCandidateExecution).not.toHaveBeenCalled()
+    expect(recordChronicle).toHaveBeenCalledTimes(1)
+    expect(reconstructChronicle).not.toHaveBeenCalled()
     expect(response).not.toHaveProperty("result")
     expect(JSON.stringify(response)).not.toContain(passiveSource.trim())
   })

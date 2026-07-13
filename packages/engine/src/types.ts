@@ -74,6 +74,12 @@ export interface TransitionResult<TState = GameState> {
 export type RuntimeResult<T> =
   | { ok: true; value: T }
   | { ok: false; violation: RuntimeViolation }
+  | {
+      ok: false
+      /** Compatibility projection for non-gameplay runtime diagnostics. */
+      violation: RuntimeViolation
+      systemFailure: { readonly code: string; readonly retryable: boolean }
+    }
 
 export interface StrategyRuntime {
   selectActivations(input: StrategyInput): RuntimeResult<StrategyResult>

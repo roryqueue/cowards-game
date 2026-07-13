@@ -2056,7 +2056,8 @@ export const MatchOutcomeSchema = z.discriminatedUnion("type", [
   }),
 ])
 
-export const ChronicleEventTypeSchema = z.enum([
+/** Literal decoder vocabulary retained for immutable v1.4 evidence. */
+export const HistoricalV14ChronicleEventTypeSchema = z.enum([
   "MATCH_STARTED",
   "ROUND_STARTED",
   "STRATEGY_EVALUATED",
@@ -2080,6 +2081,10 @@ export const ChronicleEventTypeSchema = z.enum([
   "MATCH_ENDED",
   "RUNTIME_VIOLATION",
 ])
+
+/** Current Chronicle vocabulary. PUSH_ATTEMPTED was never emitted canonically. */
+export const ChronicleEventTypeSchema =
+  HistoricalV14ChronicleEventTypeSchema.exclude(["PUSH_ATTEMPTED"])
 
 export const ChronicleSchemaVersionSchema = z.union([
   z.literal("chronicle-v1"),
@@ -2127,7 +2132,7 @@ const OptionalReasonPayloadSchema = SoldierIdPayloadSchema.extend({
   reason: z.string().min(1).optional(),
 })
 
-export const ChronicleEventSchema = z.discriminatedUnion("type", [
+export const HistoricalV14ChronicleEventSchema = z.discriminatedUnion("type", [
   ChronicleEventBaseSchema.extend({
     type: z.literal("MATCH_STARTED"),
     payload: z.object({
@@ -2279,6 +2284,11 @@ export const ChronicleEventSchema = z.discriminatedUnion("type", [
   }),
 ])
 
+export const ChronicleEventSchema = HistoricalV14ChronicleEventSchema.refine(
+  (event) => event.type !== "PUSH_ATTEMPTED",
+  { message: "PUSH_ATTEMPTED is historical-only Chronicle vocabulary." },
+)
+
 export const ChronicleBoundarySnapshotSchema = z.object({
   kind: ChronicleSnapshotKindSchema,
   sequence: z.number().int().nonnegative(),
@@ -2314,6 +2324,24 @@ export const ChronicleSchema = z.object({
   private: ChroniclePrivateSectionsSchema.optional(),
   integrity: ChronicleIntegritySchema.optional(),
   storageMetadata: JsonValueSchema.optional(),
+})
+
+const HistoricalV14CompatibilityVersionsSchema = z.object({
+  spec: z.literal("cowards-rules-v1.4"),
+  engine: z.literal("0.1.4"),
+  runtimeJs: z.literal("0.1.0"),
+  chronicle: z.literal("chronicle-v1.4"),
+  strategyRevision: z.literal("0.1.4"),
+  arenaVariant: z.literal("0.1.0"),
+})
+
+/** Frozen original-semantics decoder; never used for current publication. */
+export const HistoricalV14ChronicleSchema = ChronicleSchema.extend({
+  schemaVersion: z.literal("chronicle-v1.4"),
+  reproducibility: ChronicleReproducibilityEnvelopeSchema.extend({
+    versions: HistoricalV14CompatibilityVersionsSchema,
+  }),
+  events: z.array(HistoricalV14ChronicleEventSchema),
 })
 
 export const RuntimeExecutionServiceSystemFailureCodeSchema = z.enum(

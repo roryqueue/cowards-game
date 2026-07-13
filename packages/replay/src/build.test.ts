@@ -5,7 +5,7 @@ import type {
   StrategyInput,
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { recordChronicleFromExecution } from "./record.js"
 
 const createRecordingRuntime = (
@@ -63,12 +63,12 @@ const createMatchInput = (runtime: StrategyRuntime) => ({
 
 const metadata = {
   schemaVersion: "chronicle-v1.4" as const,
-  semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-  semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+  semanticTupleId: MATCH_KERNEL.tupleId,
+  semanticTuple: MATCH_KERNEL.tuple,
 }
 
 const createRecorded = (runtime: StrategyRuntime) => {
-  const execution = CANDIDATE_MATCH_KERNEL.runMatch(createMatchInput(runtime))
+  const execution = MATCH_KERNEL.runMatch(createMatchInput(runtime))
   if (execution.kind !== "completed") {
     throw new Error(execution.failure.code)
   }
@@ -169,7 +169,7 @@ describe("candidate Chronicle recording", () => {
         }
       },
     } as unknown as StrategyRuntime
-    const execution = CANDIDATE_MATCH_KERNEL.runMatch(
+    const execution = MATCH_KERNEL.runMatch(
       createMatchInput(systemFailureRuntime),
     )
     const recorded = recordChronicleFromExecution({ execution, metadata })

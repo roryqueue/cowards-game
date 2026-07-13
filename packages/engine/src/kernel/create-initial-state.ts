@@ -15,7 +15,6 @@ import {
   type SemanticIntegrityResult,
   type Soldier,
 } from "@cowards/spec"
-import { getInitialInitiativePlayerId } from "../state.js"
 import type {
   CreateInitialGameStateInput,
   EnginePlayer,
@@ -29,6 +28,20 @@ export type CandidateInitialGameStateResult =
       readonly ok: false
       readonly failure: Exclude<SemanticIntegrityResult, { ok: true }>
     }
+
+const seedHash = (seed: string): number => {
+  let hash = 0
+  for (const char of seed) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0
+  }
+  return hash
+}
+
+export const getInitialInitiativePlayerId = (
+  seed: string,
+  bottomPlayerId: string,
+  topPlayerId: string,
+): string => (seedHash(seed) % 2 === 0 ? bottomPlayerId : topPlayerId)
 
 const clonePosition = ({ x, y }: Position): Position => ({ x, y })
 
@@ -85,10 +98,6 @@ const createStartingSoldiers = (
     soldierMemory: {},
   }))
 
-/**
- * Inactive Phase-257 candidate factory. Plan 257-19 owns switching the public
- * facade after the kernel, tuple, and boundary gates are complete.
- */
 export const createCandidateInitialGameState = (
   input: CreateInitialGameStateInput,
 ): CandidateInitialGameStateResult => {

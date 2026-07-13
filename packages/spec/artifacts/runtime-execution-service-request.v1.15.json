@@ -18,13 +18,13 @@
     },
     "bottomPlayerId": "bottom",
     "topPlayerId": "top",
-    "bottomStrategyRevisionId": "strategy-revision:f08e50c1402199af006e4da2656cc10b36ea91671a9cdc1ddb0a40eeddd7e923",
-    "topStrategyRevisionId": "strategy-revision:bdcfaed6956b2d7ad2a4491cec252efb60a7faaa797d85fd34a6238fb5dc8f91",
+    "bottomStrategyRevisionId": "strategy-revision:193798ed69b6692a2e05aa330ed457ce4cd02f909f018bb8a56d80791209142c",
+    "topStrategyRevisionId": "strategy-revision:3aa6dbe47d9542b6880ed660dd3d15eca34209f61d53e490de4902f2b764365d",
     "maxPhases": 1
   },
   "strategies": {
     "bottom": {
-      "id": "strategy-revision:f08e50c1402199af006e4da2656cc10b36ea91671a9cdc1ddb0a40eeddd7e923",
+      "id": "strategy-revision:193798ed69b6692a2e05aa330ed457ce4cd02f909f018bb8a56d80791209142c",
       "strategyId": "strategy:runtime-service:bottom",
       "source": "export default {\n  selectActivations() { return { activationOrders: [], strategyMemory: {} } },\n  soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: {} } },\n}\n",
       "sourceHash": "e95417480e6c6c00b1c2c370775804167aea994aa7db545f47f89e8b635bb27d",
@@ -61,7 +61,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -73,13 +73,13 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "metadata": {}
     },
     "top": {
-      "id": "strategy-revision:bdcfaed6956b2d7ad2a4491cec252efb60a7faaa797d85fd34a6238fb5dc8f91",
+      "id": "strategy-revision:3aa6dbe47d9542b6880ed660dd3d15eca34209f61d53e490de4902f2b764365d",
       "strategyId": "strategy:runtime-service:top",
       "source": "export default {\n  selectActivations() { return { activationOrders: [], strategyMemory: {} } },\n  soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: {} } },\n}\n",
       "sourceHash": "e95417480e6c6c00b1c2c370775804167aea994aa7db545f47f89e8b635bb27d",
@@ -116,7 +116,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -128,7 +128,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "metadata": {}
@@ -150,13 +150,13 @@
   },
   "evidenceSnapshot": {
     "compatibility": {
-      "tupleId": "sha256:be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+      "tupleId": "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
       "tuple": {
         "rules": "cowards-rules-v1.4",
-        "engine": "0.1.4",
+        "engine": "engine-kernel-v1.37-candidate-1",
         "runtimeAbi": "strategy-runtime-abi-v1.14",
-        "chronicle": "chronicle-v1.4",
-        "arenaCatalog": "canonical-arena-catalog-v1.4",
+        "chronicle": "chronicle-recorder-current-events-v1.37-candidate-1",
+        "arenaCatalog": "semantic-arena-catalog-v1.37-candidate-1",
         "setPolicy": "canonical-set-policy-v1.4"
       }
     },
@@ -172,7 +172,7 @@
     "entrants": {
       "bottom": {
         "entrantKey": "fixture-only:entrant:golden-v1.15:bottom",
-        "strategyRevisionId": "strategy-revision:f08e50c1402199af006e4da2656cc10b36ea91671a9cdc1ddb0a40eeddd7e923",
+        "strategyRevisionId": "strategy-revision:193798ed69b6692a2e05aa330ed457ce4cd02f909f018bb8a56d80791209142c",
         "laneIdentityHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "effectiveStatus": "exhibition_only",
         "schedulingDecisionId": "fixture-only:scheduling-decision:golden-v1.15:bottom:typescript",
@@ -189,7 +189,7 @@
       },
       "top": {
         "entrantKey": "fixture-only:entrant:golden-v1.15:top",
-        "strategyRevisionId": "strategy-revision:bdcfaed6956b2d7ad2a4491cec252efb60a7faaa797d85fd34a6238fb5dc8f91",
+        "strategyRevisionId": "strategy-revision:3aa6dbe47d9542b6880ed660dd3d15eca34209f61d53e490de4902f2b764365d",
         "laneIdentityHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         "effectiveStatus": "exhibition_only",
         "schedulingDecisionId": "fixture-only:scheduling-decision:golden-v1.15:top:typescript",

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import { recordChronicleFromExecution } from "./record.js"
@@ -33,7 +33,7 @@ const runtime: StrategyRuntime = {
 }
 
 const run = () =>
-  CANDIDATE_MATCH_KERNEL.runMatch({
+  MATCH_KERNEL.runMatch({
     matchId: "recorder-match",
     seed: "recorder-seed",
     arenaVariant: {
@@ -52,8 +52,8 @@ const run = () =>
 
 const metadata = {
   schemaVersion: "chronicle-v1.4" as const,
-  semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-  semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+  semanticTupleId: MATCH_KERNEL.tupleId,
+  semanticTuple: MATCH_KERNEL.tuple,
 }
 
 describe("recordChronicleFromExecution", () => {
@@ -101,8 +101,8 @@ describe("recordChronicleFromExecution", () => {
     ).toBe(true)
     expect(recorded.finalState).toEqual(execution.result.state)
     expect(recorded.semanticIdentity).toEqual({
-      tupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-      tuple: CANDIDATE_MATCH_KERNEL.tuple,
+      tupleId: MATCH_KERNEL.tupleId,
+      tuple: MATCH_KERNEL.tuple,
     })
   })
 
@@ -185,7 +185,7 @@ describe("recordChronicleFromExecution", () => {
   })
 
   it("returns a typed no-Chronicle result for failed execution", () => {
-    const execution = CANDIDATE_MATCH_KERNEL.runMatch({
+    const execution = MATCH_KERNEL.runMatch({
       matchId: "failed-recorder-match",
       seed: "failed-recorder-seed",
       arenaVariant: {

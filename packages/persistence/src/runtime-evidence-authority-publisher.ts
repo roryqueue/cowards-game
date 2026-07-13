@@ -964,8 +964,15 @@ const loadPublicationSnapshot = async (
       where c.certificate_status = 'passed'
         and c.issued_at <= $1::timestamptz
         and c.fresh_until >= $2::timestamptz
+        and c.lane_identity->>'semanticTupleId' = $3
+        and c.lane_identity->'semanticTuple' = $4::jsonb
       order by c.id`,
-    [input.validFrom, input.validUntil],
+    [
+      input.validFrom,
+      input.validUntil,
+      CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+      JSON.stringify(CANONICAL_COMPATIBILITY_TUPLES[0]!.tuple),
+    ],
   )
   const certificates = certificatesResult.rows
   const certificateIds = certificates.map((row) => row.id)
@@ -1284,6 +1291,12 @@ export const prepareRuntimeEvidenceAuthorityPublication = async (
   pool: Pool,
   input: PrepareRuntimeEvidenceAuthorityPublicationInput,
 ): Promise<Readonly<PreparedRuntimeEvidenceAuthorityPublication>> => {
+  if (input.bundleVersion === "v1.37-kernel-integrity-candidate-v1") {
+    fail(
+      "CLOSED_GRAPH",
+      "Retained preactivation candidate evidence is not a publication source.",
+    )
+  }
   assertString(input.trustDomain, "trustDomain")
   assertString(input.signerKeyId, "signerKeyId")
   assertInstant(input.issuedAt, "issuedAt")

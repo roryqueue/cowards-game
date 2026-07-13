@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
 import { getRoundPlayerOrder } from "./activation.js"
-import { CANDIDATE_MATCH_KERNEL } from "./kernel/driver.js"
+import { MATCH_KERNEL } from "./kernel/driver.js"
 import type { MatchMachine } from "./kernel/types.js"
 import { createInitialGameState } from "./state.js"
 import {
@@ -36,7 +36,7 @@ const runActivation = (
   runtime: StrategyRuntime,
   soldierId: string,
 ) => {
-  const execution = CANDIDATE_MATCH_KERNEL.runActivationFromState({
+  const execution = MATCH_KERNEL.runActivationFromState({
     state,
     runtime,
     soldierId,
@@ -51,7 +51,7 @@ const runActivation = (
 }
 
 const bottomSelectionEffect = (state: GameState) => {
-  const created = CANDIDATE_MATCH_KERNEL.createMachine(baseInput)
+  const created = MATCH_KERNEL.createMachine(baseInput)
   let machine: MatchMachine = {
     ...created,
     state,
@@ -62,20 +62,20 @@ const bottomSelectionEffect = (state: GameState) => {
       roundNumber: state.roundNumber,
     },
   }
-  const matchStarted = CANDIDATE_MATCH_KERNEL.stepMatch(machine, {
+  const matchStarted = MATCH_KERNEL.stepMatch(machine, {
     kind: "advance",
   })
   if (matchStarted.kind !== "transition") {
     throw new Error("candidate match-start transition missing")
   }
   machine = matchStarted.machine
-  const roundStarted = CANDIDATE_MATCH_KERNEL.stepMatch(machine, {
+  const roundStarted = MATCH_KERNEL.stepMatch(machine, {
     kind: "advance",
   })
   if (roundStarted.kind !== "transition") {
     throw new Error("candidate round-start transition missing")
   }
-  const effect = CANDIDATE_MATCH_KERNEL.stepMatch(roundStarted.machine, {
+  const effect = MATCH_KERNEL.stepMatch(roundStarted.machine, {
     kind: "advance",
   })
   if (effect.kind !== "effect") {
@@ -105,7 +105,7 @@ describe("activation selection and runtime inputs", () => {
       ),
     }
     const effect = bottomSelectionEffect(withStatuses)
-    const result = CANDIDATE_MATCH_KERNEL.stepMatch(effect.machine, {
+    const result = MATCH_KERNEL.stepMatch(effect.machine, {
       kind: "runtime_resume",
       requestId: effect.request.requestId,
       effectKind: effect.request.kind,
@@ -401,7 +401,7 @@ describe.each(retainedPrefixCases)(
       }
       const caseId = `${classification}-${position}`
       const effect = bottomSelectionEffect(state)
-      const result = CANDIDATE_MATCH_KERNEL.stepMatch(effect.machine, {
+      const result = MATCH_KERNEL.stepMatch(effect.machine, {
         kind: "runtime_resume",
         requestId: effect.request.requestId,
         effectKind: effect.request.kind,

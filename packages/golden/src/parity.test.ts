@@ -1,4 +1,4 @@
-import { CANDIDATE_MATCH_KERNEL } from "@cowards/engine"
+import { MATCH_KERNEL } from "@cowards/engine"
 import {
   createChronicleContentHash,
   projectPublicChronicle,
@@ -25,13 +25,13 @@ import {
 } from "./v1-7-fixtures.js"
 
 const recordGoldenChronicle = () => {
-  const execution = CANDIDATE_MATCH_KERNEL.runMatch(createGoldenMatchInput())
+  const execution = MATCH_KERNEL.runMatch(createGoldenMatchInput())
   const recorded = recordChronicleFromExecution({
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      semanticTuple: MATCH_KERNEL.tuple,
     },
   })
   if (!recorded.ok) throw new Error(recorded.failure.code)
@@ -194,7 +194,7 @@ describe("v1.7 golden parity harness", () => {
     expect(violation.failureKind).toBe("runtimeViolation")
     expect(systemFailure.failureKind).toBe("systemFailure")
     expect(GOLDEN_PARITY_VERSION).toBe("golden-parity-v1.7")
-    const execution = CANDIDATE_MATCH_KERNEL.runMatch(createGoldenMatchInput())
+    const execution = MATCH_KERNEL.runMatch(createGoldenMatchInput())
     expect(execution.kind).toBe("completed")
     expect(
       execution.kind === "completed"

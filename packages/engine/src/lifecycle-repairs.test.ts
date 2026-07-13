@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
-import { CANDIDATE_MATCH_KERNEL } from "./kernel/driver.js"
+import { MATCH_KERNEL } from "./kernel/driver.js"
 import { createInitialGameState } from "./state.js"
 import {
   success,
@@ -51,7 +51,7 @@ const runActivation = (
   runtime: StrategyRuntime,
   soldierId: string,
 ): TransitionResult => {
-  const execution = CANDIDATE_MATCH_KERNEL.runActivationFromState({
+  const execution = MATCH_KERNEL.runActivationFromState({
     state,
     runtime,
     soldierId,
@@ -67,19 +67,19 @@ const runActivation = (
 
 describe("approved lifecycle behavior through the candidate authority", () => {
   it("ignores a malformed excess order after the retained prefix", () => {
-    const initial = CANDIDATE_MATCH_KERNEL.createMachine(baseInput)
-    const matchStarted = CANDIDATE_MATCH_KERNEL.stepMatch(initial, {
+    const initial = MATCH_KERNEL.createMachine(baseInput)
+    const matchStarted = MATCH_KERNEL.stepMatch(initial, {
       kind: "advance",
     })
     expect(matchStarted.kind).toBe("transition")
     if (matchStarted.kind !== "transition") return
-    const roundStarted = CANDIDATE_MATCH_KERNEL.stepMatch(
+    const roundStarted = MATCH_KERNEL.stepMatch(
       matchStarted.machine,
       { kind: "advance" },
     )
     expect(roundStarted.kind).toBe("transition")
     if (roundStarted.kind !== "transition") return
-    const selectionEffect = CANDIDATE_MATCH_KERNEL.stepMatch(
+    const selectionEffect = MATCH_KERNEL.stepMatch(
       roundStarted.machine,
       { kind: "advance" },
     )
@@ -87,7 +87,7 @@ describe("approved lifecycle behavior through the candidate authority", () => {
     if (selectionEffect.kind !== "effect") return
 
     const retainedSoldierId = initial.state.soldiers[0]!.id
-    const resolved = CANDIDATE_MATCH_KERNEL.stepMatch(selectionEffect.machine, {
+    const resolved = MATCH_KERNEL.stepMatch(selectionEffect.machine, {
       kind: "runtime_resume",
       requestId: selectionEffect.request.requestId,
       effectKind: selectionEffect.request.kind,

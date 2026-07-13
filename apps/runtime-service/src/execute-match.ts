@@ -1,19 +1,11 @@
 import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
-import { isDeepStrictEqual } from "node:util"
 import {
-  COMPATIBILITY_VERSIONS,
-  DEFAULT_RUNTIME_LIMITS,
-  RuntimeExecutionMatchInputSchema,
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
-  StrategyRuntimeLimitsSchema,
-  StrategyRevisionSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
   findRuntimeBrokerRegistryEntry,
   hashExecutableLaneIdentity,
-  runtimeCompatibilityKey,
-  validateCanonicalGameState,
   validateStrategyLanguageProviderRuntimeCompatibility,
   type MatchId,
   type PlayerId,
@@ -21,40 +13,22 @@ import {
   type RuntimeExecutionServiceResponse,
   type RuntimeExecutionServiceSystemFailureCode,
   type RuntimeEntrantAuthorityReference,
-  type CanonicalCompatibilityTuple,
   type Chronicle,
-  type MatchOutcome,
   type StrategyRevision,
-  type StrategyRevisionValidationReport,
 } from "@cowards/spec"
-import {
-  buildTypeScriptSourceArtifact,
-  createStrategyRevisionId,
-  hashStrategySource,
-  validateStrategySource,
-} from "@cowards/runtime-js"
+import { hashStrategySource } from "@cowards/runtime-js"
 import { createRuntimeFromRevision } from "@cowards/runtime-js/worker"
+import { createPythonRuntimeFromRevision } from "@cowards/runtime-python"
+import { createWasmWasiRuntimeFromRevision } from "@cowards/runtime-wasm-wasi"
 import {
-  buildPythonSourceArtifact,
-  createPythonRuntimeFromRevision,
-  validatePythonStrategySource,
-} from "@cowards/runtime-python"
-import {
-  createWasmWasiRuntimeFromRevision,
-  validateRustStrategySource,
-  validateZigStrategySource,
-} from "@cowards/runtime-wasm-wasi"
-import {
-  INACTIVE_V1_37_REPLAY_TUPLE,
-  buildChronicleFromMatch,
-  createCandidateReplay,
+  createCurrentReplay,
   recordChronicleFromExecution,
-  validateCandidateReplaySemantics,
+  validateCurrentChronicle,
 } from "@cowards/replay"
 import {
-  CANDIDATE_MATCH_KERNEL,
+  MatchExecutionFailure,
+  runMatch,
   violation,
-  type GameState,
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
@@ -666,13 +640,19 @@ const createRuntimeForRevision = (
 }
 
 export interface RuntimeExecutionServiceDependencies {
-  buildChronicleFromMatch: typeof buildChronicleFromMatch
+  runMatch: typeof runMatch
+  recordChronicle: typeof recordChronicleFromExecution
+  validateChronicle: typeof validateCurrentChronicle
+  reconstructChronicle: typeof createCurrentReplay
   createRuntimeForRevision: typeof createRuntimeForRevision
   authorityLoader?: RuntimeEvidenceAuthorityLoader | undefined
 }
 
 const defaultDependencies: RuntimeExecutionServiceDependencies = {
-  buildChronicleFromMatch,
+  runMatch,
+  recordChronicle: recordChronicleFromExecution,
+  validateChronicle: validateCurrentChronicle,
+  reconstructChronicle: createCurrentReplay,
   createRuntimeForRevision,
 }
 
@@ -705,10 +685,9 @@ export const createSideDispatchRuntime = (
 })
 
 const runtimeViolationEventCount = (
-  result: ReturnType<typeof buildChronicleFromMatch>,
+  chronicle: Chronicle,
 ): number =>
-  result.chronicle.events.filter((event) => event.type === "RUNTIME_VIOLATION")
-    .length
+  chronicle.events.filter((event) => event.type === "RUNTIME_VIOLATION").length
 
 const executeParsedRequest = (
   request: RuntimeExecutionServiceRequest,
@@ -800,7 +779,78 @@ const executeParsedRequest = (
       },
     ),
   }
-  const result = dependencies.buildChronicleFromMatch(runMatchInput)
+  let result: ReturnType<typeof runMatch>
+  try {
+    result = dependencies.runMatch(runMatchInput)
+  } catch (error) {
+    return systemFailureResponse({
+      rawRequest: request,
+      code: "MATCH_EXECUTION_FAILED",
+      message: "Canonical Match execution failed.",
+      retryable:
+        error instanceof MatchExecutionFailure
+          ? error.failure.retryable
+          : true,
+      diagnostics: {
+        reason: "match-execution-failed",
+        failureCode:
+          error instanceof MatchExecutionFailure
+            ? error.failure.code
+            : "UNEXPECTED_THROW",
+      },
+    })
+  }
+  const recorded = dependencies.recordChronicle({
+    execution: result.execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: request.evidenceSnapshot.compatibility.tupleId,
+      semanticTuple: request.evidenceSnapshot.compatibility.tuple,
+    },
+  })
+  if (!recorded.ok) {
+    return systemFailureResponse({
+      rawRequest: request,
+      code: "CHRONICLE_INTEGRITY_FAILED",
+      message: "Canonical Chronicle recording failed.",
+      retryable: false,
+      diagnostics: {
+        reason: "chronicle-recording-failed",
+        failureCode: recorded.failure.code,
+      },
+    })
+  }
+  const semanticInput = {
+    profile: "current-exact" as const,
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution: result.execution,
+  }
+  const validated = dependencies.validateChronicle(semanticInput)
+  if (!validated.ok) {
+    return systemFailureResponse({
+      rawRequest: request,
+      code: "CHRONICLE_INTEGRITY_FAILED",
+      message: "Canonical Chronicle semantic validation failed.",
+      retryable: false,
+      diagnostics: {
+        reason: "chronicle-semantic-validation-failed",
+      },
+    })
+  }
+  const reconstructed = dependencies.reconstructChronicle(semanticInput)
+  if (!reconstructed.ok) {
+    return systemFailureResponse({
+      rawRequest: request,
+      code: "CHRONICLE_INTEGRITY_FAILED",
+      message: "Canonical Chronicle reconstruction failed.",
+      retryable: false,
+      diagnostics: {
+        reason: "chronicle-reconstruction-failed",
+      },
+    })
+  }
   const completionAuthority = loadAndVerifyRequestAuthority({
     request,
     runtimeConfig,
@@ -819,9 +869,11 @@ const executeParsedRequest = (
     runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
     result: {
       privacy: "internal_runtime_result",
-      chronicle: result.chronicle,
-      finalState: result.finalState,
-      runtimeViolationEventCount: runtimeViolationEventCount(result),
+      chronicle: recorded.chronicle,
+      finalState: recorded.finalState,
+      runtimeViolationEventCount: runtimeViolationEventCount(
+        recorded.chronicle,
+      ),
     },
   } satisfies RuntimeExecutionServiceResponse
 
@@ -879,734 +931,4 @@ export const executeRuntimeServiceRequest = (
       },
     })
   }
-}
-
-type CandidateCompatibilityIdentity = Readonly<{
-  tupleId: string
-  tuple: Readonly<CanonicalCompatibilityTuple>
-}>
-
-interface CandidateExhibitionAuthorityEntrant {
-  readonly entrantKey: string
-  readonly strategyRevisionId: string
-  readonly laneIdentityHash: string
-  readonly containmentCertificateId: string
-  readonly containmentCertificateHash: string
-}
-
-interface CandidateExhibitionRuntimeAuthority {
-  readonly authorityBundleHash: string
-  readonly registryGeneration: string
-  readonly entrants: Readonly<{
-    bottom: CandidateExhibitionAuthorityEntrant
-    top: CandidateExhibitionAuthorityEntrant
-  }>
-}
-
-/** @internal Test-only candidate staging input. Never parse this as HTTP. */
-export interface CandidateExhibitionExecutionRequest {
-  readonly profile: "candidate_exhibition"
-  readonly counted: false
-  readonly requestId: string
-  readonly compatibility: CandidateCompatibilityIdentity
-  readonly match: RuntimeExecutionServiceRequest["match"]
-  readonly strategies: RuntimeExecutionServiceRequest["strategies"]
-  readonly limits: RuntimeExecutionServiceRequest["limits"]
-  readonly runtimeAuthority: CandidateExhibitionRuntimeAuthority
-}
-
-export type CandidateExhibitionFailureCode =
-  | "CANDIDATE_REQUEST_INVALID"
-  | AuthorityFailureCode
-  | "CANDIDATE_REVISION_INCOMPATIBLE"
-  | "UNSUPPORTED_RUNTIME_ADAPTER"
-  | "CANDIDATE_DRIVER_FAILURE"
-  | "CANDIDATE_FINAL_STATE_INVALID"
-  | "CANDIDATE_RECORDER_FAILURE"
-  | "CANDIDATE_REPLAY_INVALID"
-  | "EXECUTION_EXCEPTION"
-
-export type CandidateExhibitionExecutionResult =
-  | {
-      readonly ok: true
-      readonly profile: "candidate_exhibition"
-      readonly counted: false
-      readonly publishable: false
-      readonly privacy: "internal_candidate_exhibition"
-      readonly requestId: string
-      readonly matchId: string
-      readonly compatibility: CandidateCompatibilityIdentity
-      readonly result: Readonly<{
-        chronicle: Chronicle
-        finalState: GameState
-        terminalStateHash: string
-        outcome: MatchOutcome
-        runtimeViolationEventCount: number
-      }>
-    }
-  | {
-      readonly ok: false
-      readonly profile: "candidate_exhibition"
-      readonly counted: false
-      readonly publishable: false
-      readonly privacy: "internal_candidate_exhibition"
-      readonly failure: Readonly<{
-        classification: "system_failure"
-        ownership: "system_integrity" | "runtime_system" | "authority_system"
-        code: CandidateExhibitionFailureCode
-        retryable: boolean
-        playerPenalty: false
-      }>
-    }
-
-export interface CandidateExhibitionExecutionDependencies {
-  readonly authorityLoader?: RuntimeEvidenceAuthorityLoader | undefined
-  readonly createRuntimeForRevision: typeof createRuntimeForRevision
-  readonly runCandidateMatch: typeof CANDIDATE_MATCH_KERNEL.runMatch
-  readonly validateFinalState: typeof validateCanonicalGameState
-  readonly recordCandidateExecution: typeof recordChronicleFromExecution
-  readonly validateCandidateReplay: typeof validateCandidateReplaySemantics
-  readonly reconstructCandidateReplay: typeof createCandidateReplay
-}
-
-const defaultCandidateDependencies: CandidateExhibitionExecutionDependencies = {
-  createRuntimeForRevision,
-  runCandidateMatch: CANDIDATE_MATCH_KERNEL.runMatch,
-  validateFinalState: validateCanonicalGameState,
-  recordCandidateExecution: recordChronicleFromExecution,
-  validateCandidateReplay: validateCandidateReplaySemantics,
-  reconstructCandidateReplay: createCandidateReplay,
-}
-
-const hasExactKeys = (
-  value: Record<string, unknown>,
-  expected: readonly string[],
-): boolean => {
-  const keys = Object.keys(value)
-  return (
-    keys.length === expected.length &&
-    expected.every((key) => Object.hasOwn(value, key))
-  )
-}
-
-const sameJson = (left: unknown, right: unknown): boolean =>
-  isDeepStrictEqual(left, right)
-
-const candidateLimitFields = [
-  "timeoutMs",
-  "stdoutBytes",
-  "stderrBytes",
-  "sourceBytes",
-  "strategyMemoryBytes",
-  "soldierMemoryBytes",
-  "objectivePayloadBytes",
-] as const
-
-const CandidateRuntimeLimitsSchema = StrategyRuntimeLimitsSchema.superRefine(
-  (limits, context) => {
-    for (const field of candidateLimitFields) {
-      if (limits[field] > DEFAULT_RUNTIME_LIMITS[field]) {
-        context.addIssue({
-          code: "too_big",
-          maximum: DEFAULT_RUNTIME_LIMITS[field],
-          inclusive: true,
-          origin: "number",
-          path: [field],
-          message: `${field} exceeds candidate runtime service maximum`,
-        })
-      }
-    }
-  },
-)
-
-const candidateMatchAndLimitsAreExact = (
-  request: Record<string, unknown>,
-): boolean => {
-  const match = RuntimeExecutionMatchInputSchema.safeParse(request.match)
-  const limits = CandidateRuntimeLimitsSchema.safeParse(request.limits)
-  return (
-    match.success &&
-    limits.success &&
-    sameJson(match.data, request.match) &&
-    sameJson(limits.data, request.limits)
-  )
-}
-
-const candidateAuthorityEntrantIsExact = (value: unknown): boolean => {
-  const entrant = readRecord(value)
-  return (
-    entrant !== undefined &&
-    hasExactKeys(entrant, [
-      "entrantKey",
-      "strategyRevisionId",
-      "laneIdentityHash",
-      "containmentCertificateId",
-      "containmentCertificateHash",
-    ]) &&
-    [
-      entrant.entrantKey,
-      entrant.strategyRevisionId,
-      entrant.laneIdentityHash,
-      entrant.containmentCertificateId,
-      entrant.containmentCertificateHash,
-    ].every((entry) => typeof entry === "string" && entry.length > 0)
-  )
-}
-
-const candidateRequestIsExact = (
-  value: unknown,
-): value is CandidateExhibitionExecutionRequest => {
-  const request = readRecord(value)
-  if (
-    request === undefined ||
-    !hasExactKeys(request, [
-      "profile",
-      "counted",
-      "requestId",
-      "compatibility",
-      "match",
-      "strategies",
-      "limits",
-      "runtimeAuthority",
-    ]) ||
-    request.profile !== "candidate_exhibition" ||
-    request.counted !== false ||
-    typeof request.requestId !== "string" ||
-    request.requestId.length === 0
-  ) {
-    return false
-  }
-  const compatibility = readRecord(request.compatibility)
-  if (
-    compatibility === undefined ||
-    !hasExactKeys(compatibility, ["tupleId", "tuple"]) ||
-    compatibility.tupleId !== INACTIVE_V1_37_REPLAY_TUPLE.tupleId ||
-    !sameJson(compatibility.tuple, INACTIVE_V1_37_REPLAY_TUPLE.tuple)
-  ) {
-    return false
-  }
-  const match = readRecord(request.match)
-  const strategies = readRecord(request.strategies)
-  const runtimeAuthority = readRecord(request.runtimeAuthority)
-  const entrants = readRecord(runtimeAuthority?.entrants)
-  const bottomRevision = StrategyRevisionSchema.safeParse(strategies?.bottom)
-  const topRevision = StrategyRevisionSchema.safeParse(strategies?.top)
-  if (
-    match === undefined ||
-    strategies === undefined ||
-    runtimeAuthority === undefined ||
-    entrants === undefined ||
-    !hasExactKeys(strategies, ["bottom", "top"]) ||
-    !hasExactKeys(runtimeAuthority, [
-      "authorityBundleHash",
-      "registryGeneration",
-      "entrants",
-    ]) ||
-    !hasExactKeys(entrants, ["bottom", "top"]) ||
-    !candidateAuthorityEntrantIsExact(entrants.bottom) ||
-    !candidateAuthorityEntrantIsExact(entrants.top) ||
-    !bottomRevision.success ||
-    !topRevision.success ||
-    !sameJson(bottomRevision.data, strategies.bottom) ||
-    !sameJson(topRevision.data, strategies.top) ||
-    !candidateMatchAndLimitsAreExact(request)
-  ) {
-    return false
-  }
-  const bottom = strategies.bottom as StrategyRevision
-  const top = strategies.top as StrategyRevision
-  return (
-    match.bottomStrategyRevisionId === bottom.id &&
-    match.topStrategyRevisionId === top.id &&
-    (entrants.bottom as Record<string, unknown>).strategyRevisionId ===
-      bottom.id &&
-    (entrants.top as Record<string, unknown>).strategyRevisionId === top.id &&
-    typeof runtimeAuthority.authorityBundleHash === "string" &&
-    typeof runtimeAuthority.registryGeneration === "string"
-  )
-}
-
-const normalizeCandidateSource = (source: string): string =>
-  source.replace(/\r\n?/g, "\n")
-
-const candidatePackageEntrypoint = (
-  languageId: StrategyRevision["runtime"]["language"]["id"],
-): string | undefined => {
-  switch (languageId) {
-    case "typescript":
-      return "default"
-    case "python":
-      return "module"
-    case "rust":
-    case "zig":
-      return "_start"
-    default:
-      return undefined
-  }
-}
-
-const candidateRuntimeMetadataIsCanonical = (
-  revision: StrategyRevision,
-): boolean => {
-  const broker = findRuntimeBrokerRegistryEntry(revision.runtime)
-  const entrypoint = candidatePackageEntrypoint(revision.runtime.language.id)
-  return (
-    broker !== null &&
-    entrypoint !== undefined &&
-    revision.runtime.abiVersion ===
-      INACTIVE_V1_37_REPLAY_TUPLE.tuple.runtimeAbi &&
-    validateStrategyLanguageProviderRuntimeCompatibility(revision.runtime)
-      .length === 0 &&
-    sameJson(revision.runtime.package, { mode: "none", entrypoint }) &&
-    revision.runtime.requiredCapabilities.length === 0 &&
-    sameJson(revision.runtime.limits, broker.limits)
-  )
-}
-
-const candidateValidationReportFor = (
-  revision: StrategyRevision,
-  normalizedSource: string,
-): StrategyRevisionValidationReport | undefined => {
-  let activeReport: StrategyRevisionValidationReport
-  switch (revision.runtime.language.id) {
-    case "typescript":
-      activeReport = validateStrategySource(normalizedSource, {
-        runtime: revision.runtime,
-      })
-      break
-    case "python":
-      activeReport = validatePythonStrategySource(normalizedSource)
-      break
-    case "rust":
-      activeReport = validateRustStrategySource(normalizedSource)
-      break
-    case "zig":
-      activeReport = validateZigStrategySource(normalizedSource)
-      break
-    default:
-      return undefined
-  }
-  return {
-    ...activeReport,
-    engineCompatibility: {
-      spec: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
-      engine: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
-    },
-  }
-}
-
-const candidateRevisionIdentity = (
-  revision: StrategyRevision,
-  sourceHash: string,
-): string => {
-  const artifact =
-    revision.metadata.sourceArtifact ?? revision.metadata.compiledArtifact
-  const runtimeCompatibility = runtimeCompatibilityKey({
-    runtime: revision.runtime,
-    sourceHash,
-    ...(artifact === undefined ? {} : { artifactHash: artifact.hash }),
-    ...(revision.metadata.compiledArtifact === undefined
-      ? {}
-      : {
-          artifactTargetTriple: revision.metadata.compiledArtifact.targetTriple,
-          artifactWasiProfile: revision.metadata.compiledArtifact.wasiProfile,
-        }),
-    specVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
-    engineVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
-  })
-  return createStrategyRevisionId({
-    sourceHash,
-    runtimeVersion: revision.runtime.adapter.version,
-    specVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
-    engineVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
-    strategyRevisionVersion: COMPATIBILITY_VERSIONS.strategyRevision,
-    ...(revision.strategyId === undefined
-      ? {}
-      : { strategyId: revision.strategyId }),
-    runtimeCompatibility,
-  })
-}
-
-const candidateSourceArtifactIsCanonical = (
-  revision: StrategyRevision,
-  validation: StrategyRevisionValidationReport,
-): boolean => {
-  if (revision.runtime.language.id === "typescript") {
-    const expected = buildTypeScriptSourceArtifact({
-      source: revision.source,
-      validation,
-      runtime: revision.runtime,
-    })
-    return (
-      expected !== null && sameJson(revision.metadata.sourceArtifact, expected)
-    )
-  }
-  if (revision.runtime.language.id === "python") {
-    return sameJson(
-      revision.metadata.sourceArtifact,
-      buildPythonSourceArtifact({ source: revision.source, validation }),
-    )
-  }
-  return true
-}
-
-const candidateRevisionIsCompatible = (revision: StrategyRevision): boolean => {
-  const normalizedSource = normalizeCandidateSource(revision.source)
-  const sourceHash = hashStrategySource(normalizedSource)
-  const sourceBytes = new TextEncoder().encode(normalizedSource).byteLength
-  const validation = candidateValidationReportFor(revision, normalizedSource)
-  const source = validateRevisionSource("bottom", revision)
-  const artifact = validateRevisionArtifact("bottom", revision)
-  return (
-    revision.source === normalizedSource &&
-    revision.sourceHash === sourceHash &&
-    revision.sourceBytes === sourceBytes &&
-    candidateRuntimeMetadataIsCanonical(revision) &&
-    validation !== undefined &&
-    validation.valid &&
-    validation.runtimeVersion === revision.runtime.adapter.version &&
-    sameJson(revision.validation, validation) &&
-    revision.engineCompatibility.spec ===
-      INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules &&
-    revision.engineCompatibility.engine ===
-      INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine &&
-    revision.id === candidateRevisionIdentity(revision, sourceHash) &&
-    source.ok &&
-    artifact.ok &&
-    candidateSourceArtifactIsCanonical(revision, validation)
-  )
-}
-
-const candidateFailure = (
-  code: CandidateExhibitionFailureCode,
-  retryable: boolean,
-  ownership:
-    | "system_integrity"
-    | "runtime_system"
-    | "authority_system" = "system_integrity",
-): CandidateExhibitionExecutionResult =>
-  Object.freeze({
-    ok: false,
-    profile: "candidate_exhibition",
-    counted: false,
-    publishable: false,
-    privacy: "internal_candidate_exhibition",
-    failure: Object.freeze({
-      classification: "system_failure",
-      ownership,
-      code,
-      retryable,
-      playerPenalty: false,
-    }),
-  })
-
-type CandidateAuthorityCheck =
-  | {
-      readonly ok: true
-      readonly authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>
-    }
-  | { readonly ok: false; readonly code: AuthorityFailureCode }
-
-const verifyCandidateAuthorityEntrant = (input: {
-  request: CandidateExhibitionExecutionRequest
-  authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>
-  runtimeConfig: RuntimeServiceConfig
-  side: "bottom" | "top"
-}): { ok: true } | { ok: false; code: AuthorityFailureCode } => {
-  const entrant = input.request.runtimeAuthority.entrants[input.side]
-  if (
-    input.authority.payload.operatorLaneDisables.some(
-      ({ laneIdentityHash }) => laneIdentityHash === entrant.laneIdentityHash,
-    )
-  ) {
-    return { ok: false, code: "EVIDENCE_REVOKED" }
-  }
-  const certificate = input.authority.payload.certificates.find(
-    ({ certificateId }) => certificateId === entrant.containmentCertificateId,
-  )
-  if (
-    certificate === undefined ||
-    certificate.kind !== "containment" ||
-    certificate.certificateRecordHash !== entrant.containmentCertificateHash ||
-    certificate.laneIdentityHash !== entrant.laneIdentityHash
-  ) {
-    return { ok: false, code: "EVIDENCE_IDENTITY_MISMATCH" }
-  }
-  if (certificateIsInactive(input.authority, certificate)) {
-    return { ok: false, code: "EVIDENCE_REVOKED" }
-  }
-  if (hasCurrentConformanceForLane(input.authority, entrant.laneIdentityHash)) {
-    return { ok: false, code: "EVIDENCE_IDENTITY_MISMATCH" }
-  }
-  const deployed = input.runtimeConfig.resolveDeploymentLaneIdentity(
-    input.request.strategies[input.side],
-  )
-  if (deployed === undefined) {
-    return { ok: false, code: "EVIDENCE_UNVERIFIABLE" }
-  }
-  let deployedHash: string
-  try {
-    deployedHash = `sha256:${hashExecutableLaneIdentity(deployed)}`
-  } catch {
-    return { ok: false, code: "EVIDENCE_UNVERIFIABLE" }
-  }
-  return deployedHash === entrant.laneIdentityHash
-    ? { ok: true }
-    : { ok: false, code: "EVIDENCE_IDENTITY_MISMATCH" }
-}
-
-const loadAndVerifyCandidateAuthority = (input: {
-  request: CandidateExhibitionExecutionRequest
-  runtimeConfig: RuntimeServiceConfig
-  loader: RuntimeEvidenceAuthorityLoader | undefined
-  baseline?: Readonly<VerifiedMountedRuntimeEvidenceAuthority> | undefined
-}): CandidateAuthorityCheck => {
-  if (input.loader === undefined) {
-    return { ok: false, code: "EVIDENCE_UNVERIFIABLE" }
-  }
-  let authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>
-  try {
-    authority = input.loader.load()
-  } catch {
-    return { ok: false, code: "EVIDENCE_UNVERIFIABLE" }
-  }
-  if (
-    input.baseline !== undefined &&
-    authorityIdentity(authority) !== authorityIdentity(input.baseline)
-  ) {
-    return { ok: false, code: "EVIDENCE_REGISTRY_DRIFT" }
-  }
-  if (
-    authority.authorityBundleHash !==
-      input.request.runtimeAuthority.authorityBundleHash ||
-    authority.registryGeneration !==
-      input.request.runtimeAuthority.registryGeneration ||
-    authority.payload.registryGeneration !== authority.registryGeneration ||
-    authority.semanticTupleManifestHash !==
-      authority.payload.semanticTupleManifestHash ||
-    authority.semanticTupleManifestHash === INACTIVE_V1_37_REPLAY_TUPLE.tupleId
-  ) {
-    return { ok: false, code: "EVIDENCE_IDENTITY_MISMATCH" }
-  }
-  for (const side of ["bottom", "top"] as const) {
-    const verified = verifyCandidateAuthorityEntrant({
-      request: input.request,
-      authority,
-      runtimeConfig: input.runtimeConfig,
-      side,
-    })
-    if (!verified.ok) return verified
-  }
-  return { ok: true, authority }
-}
-
-/**
- * @internal TEST-ONLY. Candidate staging is deliberately absent from HTTP,
- * public request/response schemas, counted scheduling, and publication paths.
- */
-export const executeCandidateExhibitionForTest = (
-  rawRequest: unknown,
-  runtimeConfig: RuntimeServiceConfig,
-  dependencyOverrides: Partial<CandidateExhibitionExecutionDependencies> = {},
-): CandidateExhibitionExecutionResult => {
-  const dependencies = {
-    ...defaultCandidateDependencies,
-    ...dependencyOverrides,
-  }
-  if (!candidateRequestIsExact(rawRequest)) {
-    return candidateFailure("CANDIDATE_REQUEST_INVALID", false)
-  }
-  const request = rawRequest
-  try {
-    for (const side of ["bottom", "top"] as const) {
-      if (!candidateRevisionIsCompatible(request.strategies[side])) {
-        return candidateFailure("CANDIDATE_REVISION_INCOMPATIBLE", false)
-      }
-    }
-  } catch {
-    return candidateFailure("CANDIDATE_REVISION_INCOMPATIBLE", false)
-  }
-
-  let acceptedAuthority: CandidateAuthorityCheck
-  try {
-    acceptedAuthority = loadAndVerifyCandidateAuthority({
-      request,
-      runtimeConfig,
-      loader: dependencies.authorityLoader,
-    })
-  } catch {
-    return candidateFailure("EVIDENCE_UNVERIFIABLE", true, "authority_system")
-  }
-  if (!acceptedAuthority.ok) {
-    return candidateFailure(acceptedAuthority.code, true, "authority_system")
-  }
-  let invocationAuthority: CandidateAuthorityCheck
-  try {
-    invocationAuthority = loadAndVerifyCandidateAuthority({
-      request,
-      runtimeConfig,
-      loader: dependencies.authorityLoader,
-      baseline: acceptedAuthority.authority,
-    })
-  } catch {
-    return candidateFailure("EVIDENCE_UNVERIFIABLE", true, "authority_system")
-  }
-  if (!invocationAuthority.ok) {
-    return candidateFailure(invocationAuthority.code, true, "authority_system")
-  }
-
-  let bottomRuntime: ReturnType<typeof createRuntimeForRevision>
-  try {
-    bottomRuntime = dependencies.createRuntimeForRevision(
-      request.strategies.bottom,
-      runtimeConfig,
-      request.limits,
-    )
-  } catch {
-    return candidateFailure("EXECUTION_EXCEPTION", true, "runtime_system")
-  }
-  if (!bottomRuntime.ok) {
-    return candidateFailure(
-      "UNSUPPORTED_RUNTIME_ADAPTER",
-      false,
-      "runtime_system",
-    )
-  }
-
-  let topRuntime: ReturnType<typeof createRuntimeForRevision>
-  try {
-    topRuntime = dependencies.createRuntimeForRevision(
-      request.strategies.top,
-      runtimeConfig,
-      request.limits,
-    )
-  } catch {
-    return candidateFailure("EXECUTION_EXCEPTION", true, "runtime_system")
-  }
-  if (!topRuntime.ok) {
-    return candidateFailure(
-      "UNSUPPORTED_RUNTIME_ADAPTER",
-      false,
-      "runtime_system",
-    )
-  }
-
-  let execution: ReturnType<typeof CANDIDATE_MATCH_KERNEL.runMatch>
-  try {
-    execution = dependencies.runCandidateMatch({
-      ...request.match,
-      runtime: createSideDispatchRuntime(
-        bottomRuntime.runtime,
-        topRuntime.runtime,
-        {
-          bottomPlayerId: request.match.bottomPlayerId,
-          topPlayerId: request.match.topPlayerId,
-        },
-      ),
-    })
-  } catch {
-    return candidateFailure("EXECUTION_EXCEPTION", true, "runtime_system")
-  }
-  if (execution.kind !== "completed") {
-    return candidateFailure(
-      "CANDIDATE_DRIVER_FAILURE",
-      execution.failure.retryable,
-      execution.failure.ownership === "runtime_system"
-        ? "runtime_system"
-        : "system_integrity",
-    )
-  }
-
-  let finalSemantic: ReturnType<typeof validateCanonicalGameState>
-  try {
-    finalSemantic = dependencies.validateFinalState(execution.result.state)
-  } catch {
-    return candidateFailure("CANDIDATE_FINAL_STATE_INVALID", false)
-  }
-  if (!finalSemantic.ok) {
-    return candidateFailure("CANDIDATE_FINAL_STATE_INVALID", false)
-  }
-
-  let recorded: ReturnType<typeof recordChronicleFromExecution>
-  try {
-    recorded = dependencies.recordCandidateExecution({
-      execution,
-      metadata: {
-        schemaVersion: "chronicle-v1.4",
-        semanticTupleId: INACTIVE_V1_37_REPLAY_TUPLE.tupleId,
-        semanticTuple: INACTIVE_V1_37_REPLAY_TUPLE.tuple,
-      },
-    })
-  } catch {
-    return candidateFailure("CANDIDATE_RECORDER_FAILURE", false)
-  }
-  if (!recorded.ok) {
-    return candidateFailure("CANDIDATE_RECORDER_FAILURE", false)
-  }
-  const replayInput = {
-    profile: "candidate-v1.37" as const,
-    compatibility: recorded.semanticIdentity,
-    chronicle: recorded.chronicle,
-    boundaryAnchors: recorded.boundaryAnchors,
-    execution,
-  }
-  try {
-    const validated = dependencies.validateCandidateReplay(replayInput)
-    if (!validated.ok) {
-      return candidateFailure("CANDIDATE_REPLAY_INVALID", false)
-    }
-  } catch {
-    return candidateFailure("CANDIDATE_REPLAY_INVALID", false)
-  }
-  try {
-    const reconstructed = dependencies.reconstructCandidateReplay(replayInput)
-    if (!reconstructed.ok) {
-      return candidateFailure("CANDIDATE_REPLAY_INVALID", false)
-    }
-  } catch {
-    return candidateFailure("CANDIDATE_REPLAY_INVALID", false)
-  }
-  const terminal = execution.transitions.at(-1)
-  const outcome = execution.result.state.outcome
-  if (
-    terminal === undefined ||
-    outcome === undefined ||
-    terminal.terminalStatus === null ||
-    !sameJson(terminal.terminalStatus, outcome)
-  ) {
-    return candidateFailure("CANDIDATE_REPLAY_INVALID", false)
-  }
-  let completionAuthority: CandidateAuthorityCheck
-  try {
-    completionAuthority = loadAndVerifyCandidateAuthority({
-      request,
-      runtimeConfig,
-      loader: dependencies.authorityLoader,
-      baseline: invocationAuthority.authority,
-    })
-  } catch {
-    return candidateFailure("EVIDENCE_UNVERIFIABLE", true, "authority_system")
-  }
-  if (!completionAuthority.ok) {
-    return candidateFailure(completionAuthority.code, true, "authority_system")
-  }
-  return Object.freeze({
-    ok: true,
-    profile: "candidate_exhibition",
-    counted: false,
-    publishable: false,
-    privacy: "internal_candidate_exhibition",
-    requestId: request.requestId,
-    matchId: request.match.matchId,
-    compatibility: INACTIVE_V1_37_REPLAY_TUPLE,
-    result: Object.freeze({
-      chronicle: recorded.chronicle,
-      finalState: recorded.finalState,
-      terminalStateHash: terminal.afterStateHash,
-      outcome,
-      runtimeViolationEventCount: recorded.chronicle.events.filter(
-        ({ type }) => type === "RUNTIME_VIOLATION",
-      ).length,
-    }),
-  })
 }

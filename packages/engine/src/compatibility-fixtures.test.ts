@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { CANDIDATE_MATCH_KERNEL } from "./kernel/driver.js"
+import { COMPATIBILITY_VERSIONS } from "@cowards/spec"
+import { MATCH_KERNEL } from "./kernel/driver.js"
 import { runMatch } from "./match.js"
 import { createFakeRuntime } from "./test/fake-runtime.js"
 import {
@@ -28,7 +29,7 @@ const finalStateOf = (name: string): GameState => {
 }
 
 describe("v1.4 full-observation compatibility corpus", () => {
-  it("executes an explicit active/candidate full-match adapter without changing the locked 20-fixture corpus", () => {
+  it("executes the current facade and sole kernel authority without changing the locked 20-fixture corpus", () => {
     const corpusBefore = captureV14CompatibilityCorpus()
     const baseInput = {
       matchId: "v1.4-active-candidate-differential",
@@ -48,7 +49,7 @@ describe("v1.4 full-observation compatibility corpus", () => {
       ...baseInput,
       runtime: createFakeRuntime({ action: { type: "TURN_TO_STONE" } }),
     })
-    const candidate = CANDIDATE_MATCH_KERNEL.runMatch({
+    const candidate = MATCH_KERNEL.runMatch({
       ...baseInput,
       runtime: createFakeRuntime({ action: { type: "TURN_TO_STONE" } }),
     })
@@ -56,20 +57,23 @@ describe("v1.4 full-observation compatibility corpus", () => {
     expect(candidate.kind).toBe("completed")
     if (candidate.kind !== "completed") return
     expect(candidate.recorderMaterial.finalState).toEqual(active.state)
-    expect(candidate.recorderMaterial.events).toEqual(active.events)
+    expect(candidate.result.events).toEqual(active.events)
     expect(candidate.result.events).toEqual(
       candidate.transitions.flatMap((transition) => transition.events),
     )
     expect(captureV14CompatibilityCorpus()).toEqual(corpusBefore)
   })
 
-  it("drives an arbitrary valid activation state through the candidate seam without test-owned scheduling", () => {
+  it("drives an arbitrary valid activation state through the current seam without test-owned scheduling", () => {
     const legacy = byName().get("terminal-push-emits-one-match-ended")
     if (!legacy) {
       throw new Error("missing terminal-push legacy observation")
     }
-    const candidate = CANDIDATE_MATCH_KERNEL.runActivationFromState({
-      state: legacy.observation.initialState as GameState,
+    const candidate = MATCH_KERNEL.runActivationFromState({
+      state: {
+        ...(legacy.observation.initialState as GameState),
+        versions: { ...COMPATIBILITY_VERSIONS },
+      },
       runtime: createFakeRuntime({
         action: { type: "MOVE", direction: "RIGHT" },
       }),
@@ -77,9 +81,10 @@ describe("v1.4 full-observation compatibility corpus", () => {
     })
 
     expect(candidate.kind).toBe("completed")
-    expect(candidate.recorderMaterial?.finalState).toEqual(
-      legacy.observation.finalState,
-    )
+    expect({
+      ...candidate.recorderMaterial?.finalState,
+      versions: (legacy.observation.finalState as GameState).versions,
+    }).toEqual(legacy.observation.finalState)
     expect(
       candidate.recorderMaterial?.events.map((summary) => ({
         ...summary,

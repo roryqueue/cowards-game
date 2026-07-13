@@ -73,7 +73,18 @@ export const executeStrategyRuntimeAbiV114 = (
           abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
           value: result.value,
         }
-      : {
+        : "systemFailure" in result
+          ? {
+              ok: false,
+              abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+              failureKind: "systemFailure",
+              systemFailure: {
+                code: result.systemFailure.code,
+                message: "Runtime system failure.",
+                publicMessage: "Runtime system failure.",
+              },
+            }
+          : {
           ok: false,
           abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
           failureKind: "runtimeViolation",

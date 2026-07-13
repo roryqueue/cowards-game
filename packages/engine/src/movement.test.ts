@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
-import { CANDIDATE_MATCH_KERNEL } from "./kernel/driver.js"
+import { MATCH_KERNEL } from "./kernel/driver.js"
 import { resolveAction } from "./movement.js"
 import { createInitialGameState } from "./state.js"
 import { createFakeRuntime } from "./test/fake-runtime.js"
@@ -226,7 +226,7 @@ describe("movement rules", () => {
       }),
     ])
     let calls = 0
-    const execution = CANDIDATE_MATCH_KERNEL.runActivationFromState({
+    const execution = MATCH_KERNEL.runActivationFromState({
       state,
       soldierId: "pusher",
       runtime: createFakeRuntime({

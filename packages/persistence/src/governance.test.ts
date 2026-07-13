@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto"
-import { CANONICAL_COMPATIBILITY_TUPLES, classifyCompetitionCountedState } from "@cowards/spec"
+import { classifyCompetitionCountedState } from "@cowards/spec"
 import { Pool } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import {
@@ -285,7 +285,6 @@ describePostgres("PostgreSQL append-only integrity cohort governance", () => {
   let admin: Pool
   let pool: Pool
   const adminId = "user:integrity-admin"
-  const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
 
   beforeAll(async () => {
     admin = new Pool({ connectionString: databaseUrl! })
@@ -328,7 +327,18 @@ describePostgres("PostgreSQL append-only integrity cohort governance", () => {
       releaseManifests: [{
         manifestId: "release:v1.4",
         manifestHash: sha256("release:v1.4"),
-        compatibility: { tupleId: tuple.tupleId, tuple: { ...tuple.tuple } },
+        compatibility: {
+          tupleId:
+            "sha256:be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+          tuple: {
+            rules: "cowards-rules-v1.4",
+            engine: "0.1.4",
+            runtimeAbi: "strategy-runtime-abi-v1.14",
+            chronicle: "chronicle-v1.4",
+            arenaCatalog: "canonical-arena-catalog-v1.4",
+            setPolicy: "canonical-set-policy-v1.4",
+          },
+        },
       }],
     })
     return {

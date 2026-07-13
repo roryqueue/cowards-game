@@ -3,7 +3,7 @@
   "generatedBy": "scripts/generate-strategy-artifact-manifest.ts",
   "sourceOfTruth": "typescript-registries",
   "artifactCount": 26,
-  "contentHash": "sha256:3f9e3845aa161d5880177a90b2f42a35d9b4fe2eb7f05cfd91271bb1ec7f641c",
+  "contentHash": "sha256:22d43f361c768592db1fcac9d5f238ae129f4eb8860d91f8cf27aa88cc4ef135",
   "artifacts": [
     {
       "id": "strategy-artifact:advanced:center-gravity",
@@ -51,7 +51,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -63,7 +63,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -99,14 +99,14 @@
         "sourceHash": "c0462afc35863ae47e3cff9d4b2878a8aff1a282981f6c25ee4fb30afd02bece",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:14242baf4dd68fb4fd533df6464debd562e82bf673558bc03724f9d5123fc3a3",
+        "runtimeCompatibility": "sha256:e83867e18dee063a67ea755160adbecf276a04ce14dfd12cd5581a53ced712bc",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:14242baf4dd68fb4fd533df6464debd562e82bf673558bc03724f9d5123fc3a3",
+        "compatibilityKey": "sha256:e83867e18dee063a67ea755160adbecf276a04ce14dfd12cd5581a53ced712bc",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -162,7 +162,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -174,7 +174,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -211,14 +211,14 @@
         "sourceHash": "0fa96cb53ab429e1599feb0cdae182e7b1cb2981be4b49a60ae6b7a9b4db2455",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:7088883a8ab0c710c8c21350d3a9a28fcb778e0e8303e0baf710d726fbcb877f",
+        "runtimeCompatibility": "sha256:3d25fb5586d9162c859f94973feac62883383ab9081cbcac88d131fde6a04e90",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:7088883a8ab0c710c8c21350d3a9a28fcb778e0e8303e0baf710d726fbcb877f",
+        "compatibilityKey": "sha256:3d25fb5586d9162c859f94973feac62883383ab9081cbcac88d131fde6a04e90",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -274,7 +274,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -286,7 +286,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -323,14 +323,14 @@
         "sourceHash": "32b7b1433098d58b03303c8fb64c5b0eddb70a04207ef47b1a2b280f9f4d3d54",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:d63ba3ef672a888924c584f5df4b1225fa1c280c71ed157d62534110b12644d9",
+        "runtimeCompatibility": "sha256:8c11a7bf002ac4f7ee46fa8c537371eef5f2f8bd1e72373055aac994e70d70bb",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:d63ba3ef672a888924c584f5df4b1225fa1c280c71ed157d62534110b12644d9",
+        "compatibilityKey": "sha256:8c11a7bf002ac4f7ee46fa8c537371eef5f2f8bd1e72373055aac994e70d70bb",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -386,7 +386,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -398,7 +398,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -435,14 +435,14 @@
         "sourceHash": "13ca40eee8c359879ced75e99cec8135cfa8e8693ef759aa3c0948c07863b03d",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:d27911a70bb3a1b420813990e775f004f8cc83e9466a01f0902c6cac0a60cd96",
+        "runtimeCompatibility": "sha256:b3d959191cd0902a0897983b6a8efa02b13fd21771c4f7fea44e7bce8b0b71df",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:d27911a70bb3a1b420813990e775f004f8cc83e9466a01f0902c6cac0a60cd96",
+        "compatibilityKey": "sha256:b3d959191cd0902a0897983b6a8efa02b13fd21771c4f7fea44e7bce8b0b71df",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -498,7 +498,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -510,7 +510,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -547,14 +547,14 @@
         "sourceHash": "4acfb6683438c816bbd668e82b3d96d7a18cc912483ac5a9c2fcdd625ca4e224",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:8fff2aef5da2eb7d03954c2285bf435b5de59b14933d6bba76e2b7c21a94edb7",
+        "runtimeCompatibility": "sha256:7192883c9ae4034e8b2eb19ea75d2cff7ceba0c3d4ee6feb573ee01cf8321333",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:8fff2aef5da2eb7d03954c2285bf435b5de59b14933d6bba76e2b7c21a94edb7",
+        "compatibilityKey": "sha256:7192883c9ae4034e8b2eb19ea75d2cff7ceba0c3d4ee6feb573ee01cf8321333",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -610,7 +610,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -622,7 +622,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -659,14 +659,14 @@
         "sourceHash": "b0e6878325f869c56b1444905cb86051e5b8c65974294717bb41def92aa0e3e0",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:4e7d9b06bdfa04bcbd1dab763c8ecc40746678f30011d3bec0be14c79ee06b9e",
+        "runtimeCompatibility": "sha256:08af96a6748df9ed132115c22318680e5b70467b2e9e9f4a57a7ba8ec39311b6",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:4e7d9b06bdfa04bcbd1dab763c8ecc40746678f30011d3bec0be14c79ee06b9e",
+        "compatibilityKey": "sha256:08af96a6748df9ed132115c22318680e5b70467b2e9e9f4a57a7ba8ec39311b6",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -722,7 +722,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -734,7 +734,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -771,14 +771,14 @@
         "sourceHash": "fb848a6651bf7f53056d3435cddd273ed3c12f0f6383d1202cc0cbadc8bff8b5",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:12ea1f2f25d04bbfc60c3a02da7535e44a597d4fcb129b11457ad3372a52b6b6",
+        "runtimeCompatibility": "sha256:b3a80e4ee5f0f0c9d43d4b589c2e39890440116718b015ef7054b649632a7a6e",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:12ea1f2f25d04bbfc60c3a02da7535e44a597d4fcb129b11457ad3372a52b6b6",
+        "compatibilityKey": "sha256:b3a80e4ee5f0f0c9d43d4b589c2e39890440116718b015ef7054b649632a7a6e",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -834,7 +834,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -846,7 +846,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -883,14 +883,14 @@
         "sourceHash": "eff43a1b44f254a22726c5337608d7c64d25cc5e30800f00c2c63117789964ad",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:bb79fd6be3ab09edc51fa6f6651f426ac602ef9529149503a4526e293f2d5baf",
+        "runtimeCompatibility": "sha256:0f3e38fdaf39c46a097923672e7c673c59e3e958d9c3cec0b435e74f1934a179",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:bb79fd6be3ab09edc51fa6f6651f426ac602ef9529149503a4526e293f2d5baf",
+        "compatibilityKey": "sha256:0f3e38fdaf39c46a097923672e7c673c59e3e958d9c3cec0b435e74f1934a179",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -946,7 +946,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -958,7 +958,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -995,14 +995,14 @@
         "sourceHash": "27ebb4b1bd2510a7ed283ab12b6a444e8caad8821ad1f6da1cb639f6930183c1",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:6d57b525ccae8d273453011fd32fb16e50bcf8fde2fe6aba1c6d34a40a147a64",
+        "runtimeCompatibility": "sha256:c32a0afc11b265694d4e6847665aedeffc2f2147dae515a529c296f74809e79c",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:6d57b525ccae8d273453011fd32fb16e50bcf8fde2fe6aba1c6d34a40a147a64",
+        "compatibilityKey": "sha256:c32a0afc11b265694d4e6847665aedeffc2f2147dae515a529c296f74809e79c",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1058,7 +1058,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -1070,7 +1070,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -1106,14 +1106,14 @@
         "sourceHash": "02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:88f636197cacb3f6cc1a20f4464ab8f7793ff5abaf9d207327454a1dc91d952e",
+        "runtimeCompatibility": "sha256:7002295e61f58ec5de6591f7341a70d48d7abae7277a39546730e3b060f1014c",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:88f636197cacb3f6cc1a20f4464ab8f7793ff5abaf9d207327454a1dc91d952e",
+        "compatibilityKey": "sha256:7002295e61f58ec5de6591f7341a70d48d7abae7277a39546730e3b060f1014c",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1169,7 +1169,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -1181,7 +1181,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -1208,14 +1208,14 @@
         "sourceHash": "5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:45e9b4d1d810d82eb57bdbec011d334ef52fe97bcb9405f0a7f1ed61140cc33c",
+        "runtimeCompatibility": "sha256:295523e1697611a85ff1d6ec8ee5f334868b510ec598073b8baf38fbd2a73535",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:45e9b4d1d810d82eb57bdbec011d334ef52fe97bcb9405f0a7f1ed61140cc33c",
+        "compatibilityKey": "sha256:295523e1697611a85ff1d6ec8ee5f334868b510ec598073b8baf38fbd2a73535",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1271,7 +1271,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -1283,7 +1283,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -1310,14 +1310,14 @@
         "sourceHash": "d4b2d480a743ae3f5f4bbcb167385183a03d1fc0e52a8fb8c333014fbe3e2b39",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:2e7e6a1ec7a1368a3144d08292be44ad93c8ac63f156f77b52ffbf0fea3a671e",
+        "runtimeCompatibility": "sha256:3a73ab73fc58a94dbaf4122d48d80add4279eb3c9fdf51f2440670c4aa0a28f6",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:2e7e6a1ec7a1368a3144d08292be44ad93c8ac63f156f77b52ffbf0fea3a671e",
+        "compatibilityKey": "sha256:3a73ab73fc58a94dbaf4122d48d80add4279eb3c9fdf51f2440670c4aa0a28f6",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1373,7 +1373,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -1385,7 +1385,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -1412,14 +1412,14 @@
         "sourceHash": "659d6906c2857f7e0d60553ace1d58e84ac9fec5e5bd4bd2e695d7a0797423d0",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:10545d2ef6a43c450a094dbbb806937fee03380a31883fb4f052c939ac4825c0",
+        "runtimeCompatibility": "sha256:41c9be6aae0161884d6226eb598f5329071ff47fad30227d5b10e32a11a9b920",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:10545d2ef6a43c450a094dbbb806937fee03380a31883fb4f052c939ac4825c0",
+        "compatibilityKey": "sha256:41c9be6aae0161884d6226eb598f5329071ff47fad30227d5b10e32a11a9b920",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1475,7 +1475,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -1487,7 +1487,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -1514,14 +1514,14 @@
         "sourceHash": "9d6f04a2520f1c5e406a49d6bad6200429b4b48481d55d23b97a2ac4e97c27c5",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:4a989bcaed18b3f52f8dabc8273b62b9d3270bfd1bc4c9d09e1de7024b478d3c",
+        "runtimeCompatibility": "sha256:85cd93f3904514811bafc5a554242e857461ab6453fb758af1b2cdd59bcab43a",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:4a989bcaed18b3f52f8dabc8273b62b9d3270bfd1bc4c9d09e1de7024b478d3c",
+        "compatibilityKey": "sha256:85cd93f3904514811bafc5a554242e857461ab6453fb758af1b2cdd59bcab43a",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1577,7 +1577,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -1589,7 +1589,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -1616,14 +1616,14 @@
         "sourceHash": "017f99e5ea2502eb6ba8bbf44e861fbb38b0092f93e7cf3a1c6859b385ce0916",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:4e788ec1573ada177dabb5dd93c519aa2224ce77008d5efb5a4ec4ef9372d5fb",
+        "runtimeCompatibility": "sha256:c0d1ef92710cfc28bc9939af2425e0ca51b7ea0fdd19e7d6d9f424c8e9e65879",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:4e788ec1573ada177dabb5dd93c519aa2224ce77008d5efb5a4ec4ef9372d5fb",
+        "compatibilityKey": "sha256:c0d1ef92710cfc28bc9939af2425e0ca51b7ea0fdd19e7d6d9f424c8e9e65879",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1679,7 +1679,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -1691,7 +1691,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -1718,14 +1718,14 @@
         "sourceHash": "8c40a5163b2ce42cceda4ea864c5cd56b31311550e9b871d438aeae58b9667ad",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:d78664c600300a26619dd345622fce9396471c695138dd852b51bfbed55940e4",
+        "runtimeCompatibility": "sha256:4c7488a1407a09e91227dd27700215f6eb5000450c96dc324cb122cb6be351cd",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:d78664c600300a26619dd345622fce9396471c695138dd852b51bfbed55940e4",
+        "compatibilityKey": "sha256:4c7488a1407a09e91227dd27700215f6eb5000450c96dc324cb122cb6be351cd",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1781,7 +1781,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -1793,7 +1793,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -1820,14 +1820,14 @@
         "sourceHash": "caf829a7338cef862e3eeac7ef6f527f251924688c470376453e2f7c458445e7",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:445a52349978a0c38fe117b549019a8af8809b4a428cc195e8a5764fd8473dfb",
+        "runtimeCompatibility": "sha256:1dd7170fee2421d95bb10acda7880e210ad889cd97952217dc8c9a20201a39b1",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:445a52349978a0c38fe117b549019a8af8809b4a428cc195e8a5764fd8473dfb",
+        "compatibilityKey": "sha256:1dd7170fee2421d95bb10acda7880e210ad889cd97952217dc8c9a20201a39b1",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1883,7 +1883,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -1895,7 +1895,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -1922,14 +1922,14 @@
         "sourceHash": "76cfb902ba1090855f0aa18b6fb39d861b1417373bbd6c22b89284dd2c914348",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:8299710afdecaef49a78290c4deb8253bb2727be46d43885b90ae6004a287de5",
+        "runtimeCompatibility": "sha256:ce9ea5d537cf244802fd026e96aa4495a4dfafe6874ab327093fee374c7d6c6e",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:8299710afdecaef49a78290c4deb8253bb2727be46d43885b90ae6004a287de5",
+        "compatibilityKey": "sha256:ce9ea5d537cf244802fd026e96aa4495a4dfafe6874ab327093fee374c7d6c6e",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -1985,7 +1985,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -1997,7 +1997,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -2024,14 +2024,14 @@
         "sourceHash": "7cc3d77b33d4a0be36b63145766789177ef561449741a9d8062d83849dafcee4",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:eec4b3ca3920f59380a80f87fcba9d32aa2e22d6ed79b173c182fb54590c64b1",
+        "runtimeCompatibility": "sha256:e16161dd7edbc5e62f889d81d7bd2389db481f32fb934228fae2b3158e207419",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:eec4b3ca3920f59380a80f87fcba9d32aa2e22d6ed79b173c182fb54590c64b1",
+        "compatibilityKey": "sha256:e16161dd7edbc5e62f889d81d7bd2389db481f32fb934228fae2b3158e207419",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -2087,7 +2087,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -2099,7 +2099,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -2126,14 +2126,14 @@
         "sourceHash": "5d8d25942b8c36ee938305c7b7cffeace1cd9a15d0377db1156cf9bc28c97762",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:d7fae251d3790d25f1dcee0da163164f8c466786376aa849eaa0048f8049df5f",
+        "runtimeCompatibility": "sha256:02bf71b6eb43a94502133e017f998b6c7b9a10b73c7191924cc19605aa0e95e9",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:d7fae251d3790d25f1dcee0da163164f8c466786376aa849eaa0048f8049df5f",
+        "compatibilityKey": "sha256:02bf71b6eb43a94502133e017f998b6c7b9a10b73c7191924cc19605aa0e95e9",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -2189,7 +2189,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -2201,7 +2201,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -2216,14 +2216,14 @@
         "sourceHash": "c85f2f2acd3bff9a304aeebb778524173691a031ef470360915d109a202c6b3a",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:ed12d07e6dbfd961c8567c93c23da33721937d5a28171a8111b399718425583d",
+        "runtimeCompatibility": "sha256:597cda8d15d86d0dd83a22f7af2dbf58cfb97e8d836ebbdeeb92808310ef1607",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:ed12d07e6dbfd961c8567c93c23da33721937d5a28171a8111b399718425583d",
+        "compatibilityKey": "sha256:597cda8d15d86d0dd83a22f7af2dbf58cfb97e8d836ebbdeeb92808310ef1607",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -2279,7 +2279,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -2291,7 +2291,7 @@
         "runtimeVersion": "0.1.0-experimental",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -2306,14 +2306,14 @@
         "sourceHash": "0f5964451211ee5e6557907fe52a507b8875bb6d023b490926f74450280b10d0",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:c581a3b462da45c0557f4939c72738f0f8d93b58a2d38f4644f2259f488797ff",
+        "runtimeCompatibility": "sha256:5536ae5c196d56eff2fe6b315f24382d79fa10f485f8b6511aa4112723d5db0f",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:c581a3b462da45c0557f4939c72738f0f8d93b58a2d38f4644f2259f488797ff",
+        "compatibilityKey": "sha256:5536ae5c196d56eff2fe6b315f24382d79fa10f485f8b6511aa4112723d5db0f",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -2369,7 +2369,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -2381,7 +2381,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -2396,14 +2396,14 @@
         "sourceHash": "3743b3c9bf715c72440df783ac216aa83b307d6cc5c6218ceddaa4d368493aed",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:e3a9225c90f87ea8a15523ce9d647932e771966bd60fd637453e9586af2c916b",
+        "runtimeCompatibility": "sha256:c6966b4a1c25c305fcfc04b2393c482c069ea68b65ed900470e93e804d6f1db6",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:e3a9225c90f87ea8a15523ce9d647932e771966bd60fd637453e9586af2c916b",
+        "compatibilityKey": "sha256:c6966b4a1c25c305fcfc04b2393c482c069ea68b65ed900470e93e804d6f1db6",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -2459,7 +2459,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -2486,14 +2486,14 @@
         "sourceHash": "95823f05757cf8287121cd4309f3f3635e856611531b18c906fbadc0ff04044e",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:5791438281b5d910de89a748fff8e19786aac01e2373621fd549c2d7d33ff740",
+        "runtimeCompatibility": "sha256:8ac8d2555b89b94fb201ab36a36a30d83d6af4d9d25772f5e3fc94f8285c3853",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:5791438281b5d910de89a748fff8e19786aac01e2373621fd549c2d7d33ff740",
+        "compatibilityKey": "sha256:8ac8d2555b89b94fb201ab36a36a30d83d6af4d9d25772f5e3fc94f8285c3853",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -2549,7 +2549,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -2561,7 +2561,7 @@
         "runtimeVersion": "0.1.0",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "publicMetadata": {
@@ -2576,14 +2576,14 @@
         "sourceHash": "4dab8daa65d4c974538cdaa0c57f81cbde9bbfa2e405ea187cbc05adf785742d",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:1f714e08014441bc2628eda664ae426f1ee47bec12c4c4309afaa23045c34a40",
+        "runtimeCompatibility": "sha256:5b64f420384386bd09c8f2d085b83e0e999d0494ac6ea5a634c5bddc6c88f37a",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:1f714e08014441bc2628eda664ae426f1ee47bec12c4c4309afaa23045c34a40",
+        "compatibilityKey": "sha256:5b64f420384386bd09c8f2d085b83e0e999d0494ac6ea5a634c5bddc6c88f37a",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",
@@ -2639,7 +2639,7 @@
       },
       "engineCompatibility": {
         "spec": "cowards-rules-v1.4",
-        "engine": "0.1.4"
+        "engine": "engine-kernel-v1.37-candidate-1"
       },
       "validation": {
         "valid": true,
@@ -2666,14 +2666,14 @@
         "sourceHash": "1ac605b97efb720c59b6b04e027a0ebac19ee3d80a75842fca2ed13d7ab1726a",
         "validationStatus": "valid",
         "countedRuntimeEligible": true,
-        "runtimeCompatibility": "sha256:fc9d6458072c6c455cc8494756ff8bcc7ebc5486ee371281ec5e8ad7f5c1652f",
+        "runtimeCompatibility": "sha256:6f2696f180900517e9dfa81f25e2e4122c5fbe07df50e0e8e21c3c90a25ff513",
         "engineCompatibility": {
           "spec": "cowards-rules-v1.4",
-          "engine": "0.1.4"
+          "engine": "engine-kernel-v1.37-candidate-1"
         }
       },
       "behaviorCompatibility": {
-        "compatibilityKey": "sha256:fc9d6458072c6c455cc8494756ff8bcc7ebc5486ee371281ec5e8ad7f5c1652f",
+        "compatibilityKey": "sha256:6f2696f180900517e9dfa81f25e2e4122c5fbe07df50e0e8e21c3c90a25ff513",
         "behaviorSignificantFields": [
           "source.hash",
           "source.bytes",

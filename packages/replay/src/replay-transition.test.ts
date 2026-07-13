@@ -6,12 +6,12 @@ import type {
   SoldierBrainInput,
   StrategyInput,
 } from "@cowards/spec"
-import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { describe, expect, it } from "vitest"
-import { createCandidateReplay } from "./reconstruct.js"
+import { createCurrentReplay } from "./reconstruct.js"
 import { recordChronicleFromExecution } from "./record.js"
 import {
-  validateCandidateReplayReconstruction,
+  validateCurrentReplayReconstruction,
   validateChronicleTransitions,
 } from "./replay-transition.js"
 
@@ -281,12 +281,12 @@ const candidateInput = () => {
       }
     },
   }
-  const execution = CANDIDATE_MATCH_KERNEL.runMatch({
+  const execution = MATCH_KERNEL.runMatch({
     matchId: "candidate-reconstruction",
     seed: "candidate-reconstruction-seed",
     arenaVariant: {
       id: "candidate-reconstruction-arena",
-      name: "Candidate Reconstruction Arena",
+      name: "Current Reconstruction Arena",
       initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
       terrainStones: [],
     },
@@ -300,13 +300,13 @@ const candidateInput = () => {
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
-      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      semanticTuple: MATCH_KERNEL.tuple,
     },
   })
   if (!recorded.ok) throw new Error(recorded.failure.code)
   return {
-    profile: "candidate-v1.37" as const,
+    profile: "current-exact" as const,
     compatibility: recorded.semanticIdentity,
     chronicle: recorded.chronicle,
     boundaryAnchors: recorded.boundaryAnchors,
@@ -317,7 +317,7 @@ const candidateInput = () => {
 describe("candidate replay reconstruction equivalence", () => {
   it("reconstructs every transition and the exact terminal outcome without scheduling", () => {
     const input = candidateInput()
-    const result = validateCandidateReplayReconstruction(input)
+    const result = validateCurrentReplayReconstruction(input)
 
     expect(result).toMatchObject({
       ok: true,
@@ -327,7 +327,7 @@ describe("candidate replay reconstruction equivalence", () => {
           ? input.execution.recorderMaterial.finalState.outcome
           : undefined,
     })
-    const replay = createCandidateReplay(input)
+    const replay = createCurrentReplay(input)
     expect(replay.ok).toBe(true)
     if (!replay.ok) return
     const terminalSequence = input.chronicle.events.at(-1)?.sequence ?? -1
@@ -358,7 +358,7 @@ describe("candidate replay reconstruction equivalence", () => {
     const transitions = input.execution.transitions.map((value, index) =>
       index === transitionIndex ? { ...value, afterState } : value,
     )
-    const result = validateCandidateReplayReconstruction({
+    const result = validateCurrentReplayReconstruction({
       ...input,
       execution: {
         ...input.execution,
@@ -372,7 +372,7 @@ describe("candidate replay reconstruction equivalence", () => {
 
     expect(result).toEqual({
       ok: false,
-      code: "CANDIDATE_TRANSITION_STATE_MISMATCH",
+      code: "CURRENT_TRANSITION_STATE_MISMATCH",
       transitionIndex,
     })
   })
@@ -380,7 +380,7 @@ describe("candidate replay reconstruction equivalence", () => {
   it("rejects any event after the one final MATCH_ENDED", () => {
     const input = candidateInput()
     const terminal = input.chronicle.events.at(-1)!
-    const result = validateCandidateReplayReconstruction({
+    const result = validateCurrentReplayReconstruction({
       ...input,
       chronicle: {
         ...input.chronicle,
@@ -393,7 +393,7 @@ describe("candidate replay reconstruction equivalence", () => {
 
     expect(result).toEqual({
       ok: false,
-      code: "CANDIDATE_TERMINAL_EVENT_INVALID",
+      code: "CURRENT_TERMINAL_EVENT_INVALID",
     })
   })
 
@@ -407,7 +407,7 @@ describe("candidate replay reconstruction equivalence", () => {
         : transition,
     )
     expect(
-      validateCandidateReplayReconstruction({
+      validateCurrentReplayReconstruction({
         ...input,
         execution: {
           ...input.execution,
@@ -420,7 +420,7 @@ describe("candidate replay reconstruction equivalence", () => {
       }),
     ).toMatchObject({
       ok: false,
-      code: "CANDIDATE_TRANSITION_STATE_MISMATCH",
+      code: "CURRENT_TRANSITION_STATE_MISMATCH",
       transitionIndex: lastIndex,
     })
   })

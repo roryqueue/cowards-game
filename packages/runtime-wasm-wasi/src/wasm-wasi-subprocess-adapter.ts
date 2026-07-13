@@ -312,17 +312,24 @@ const normalizeStrategyOutput = (
   envelope: StrategyRuntimeResponseEnvelope,
 ): RuntimeResult<StrategyResult> => {
   if (!envelope.ok) {
+    if (envelope.failureKind === "systemFailure") {
+      return {
+        ok: false,
+        violation: {
+          type: "THROWN_EXCEPTION",
+          message: "Runtime system failure.",
+        },
+        systemFailure: {
+          code: envelope.systemFailure.code,
+          retryable: true,
+        },
+      }
+    }
     return {
       ok: false,
       violation: {
-        type:
-          envelope.failureKind === "runtimeViolation"
-            ? envelope.violation.code
-            : "THROWN_EXCEPTION",
-        message:
-          envelope.failureKind === "runtimeViolation"
-            ? envelope.violation.publicMessage
-            : envelope.systemFailure.publicMessage,
+        type: envelope.violation.code,
+        message: envelope.violation.publicMessage,
       },
     }
   }
@@ -343,17 +350,24 @@ const normalizeSoldierBrainOutput = (
   envelope: StrategyRuntimeResponseEnvelope,
 ): RuntimeResult<SoldierBrainResult> => {
   if (!envelope.ok) {
+    if (envelope.failureKind === "systemFailure") {
+      return {
+        ok: false,
+        violation: {
+          type: "THROWN_EXCEPTION",
+          message: "Runtime system failure.",
+        },
+        systemFailure: {
+          code: envelope.systemFailure.code,
+          retryable: true,
+        },
+      }
+    }
     return {
       ok: false,
       violation: {
-        type:
-          envelope.failureKind === "runtimeViolation"
-            ? envelope.violation.code
-            : "THROWN_EXCEPTION",
-        message:
-          envelope.failureKind === "runtimeViolation"
-            ? envelope.violation.publicMessage
-            : envelope.systemFailure.publicMessage,
+        type: envelope.violation.code,
+        message: envelope.violation.publicMessage,
       },
     }
   }

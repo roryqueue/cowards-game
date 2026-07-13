@@ -814,11 +814,9 @@ const resolveSoldierEffect = (
           state = closed.state
           resolvedSlot = closed.slot
           events.push(...closed.events)
-          if (terminalReason === "INVALID_MOVE") {
-            const afterClosure = checkAndApplyMatchEnd(state)
-            state = afterClosure.state
-            events.push(...afterClosure.events)
-          }
+          const afterClosure = checkAndApplyMatchEnd(state)
+          state = afterClosure.state
+          events.push(...afterClosure.events)
         }
       }
     }
