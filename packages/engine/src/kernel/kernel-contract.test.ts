@@ -382,9 +382,7 @@ describe("Phase 257 canonical Match kernel contract", () => {
         },
       },
     } as MatchMachine
-    expect(validateMachine(forged)?.code).toBe(
-      "KERNEL_SEMANTIC_TUPLE_INVALID",
-    )
+    expect(validateMachine(forged)?.code).toBe("KERNEL_SEMANTIC_TUPLE_INVALID")
     expect(stepCandidateMatch(forged, { kind: "advance" })).toMatchObject({
       kind: "failure",
       failure: { code: "KERNEL_SEMANTIC_TUPLE_INVALID" },

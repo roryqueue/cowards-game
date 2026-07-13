@@ -305,10 +305,7 @@ const explicitOwner = (
   privatePayload: JsonValue | undefined,
 ): PlayerId | undefined => {
   const object = readObject(privatePayload)
-  if (
-    object?.ownerPlayerId !== undefined &&
-    object.playerId !== undefined
-  ) {
+  if (object?.ownerPlayerId !== undefined && object.playerId !== undefined) {
     return undefined
   }
   const owner = object?.ownerPlayerId ?? object?.playerId
@@ -607,9 +604,7 @@ const validateExecution = (
       (transition.coordinates.cycleIndex !== undefined &&
         (!Number.isSafeInteger(transition.coordinates.cycleIndex) ||
           transition.coordinates.cycleIndex < 0)) ||
-      !["success", "player_violation"].includes(
-        transition.classification,
-      ) ||
+      !["success", "player_violation"].includes(transition.classification) ||
       !HASH_PATTERN.test(transition.beforeStateHash) ||
       !HASH_PATTERN.test(transition.afterStateHash) ||
       hashProjection(transition.beforeState) !== transition.beforeStateHash ||
@@ -621,8 +616,7 @@ const validateExecution = (
         transition.terminalStatus,
         outcomeFromProjection(transition.afterState) ?? null,
       ) ||
-      (index < transitions.length - 1 &&
-        transition.terminalStatus !== null) ||
+      (index < transitions.length - 1 && transition.terminalStatus !== null) ||
       transition.failureStatus !== null ||
       (index > 0 &&
         (transitions[index - 1]!.afterStateHash !==

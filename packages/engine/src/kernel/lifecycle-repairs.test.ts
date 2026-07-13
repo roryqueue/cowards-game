@@ -325,9 +325,7 @@ describe("candidate-only approved lifecycle repairs", () => {
       phase: "COMPLETE",
       outcome: { type: "WIN", winnerPlayerId: "top" },
     })
-    expect(
-      completed.recorderMaterial.events.map(({ type }) => type),
-    ).toEqual([
+    expect(completed.recorderMaterial.events.map(({ type }) => type)).toEqual([
       "ACTIVATION_STARTED",
       "CYCLE_STARTED",
       "AWARENESS_GRID_OBSERVED",

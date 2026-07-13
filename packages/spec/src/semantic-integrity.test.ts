@@ -419,13 +419,16 @@ describe("semantic integrity shared vectors", () => {
       (state: CanonicalSemanticGameState) => ({ ...state, phaseNumber: 2 }),
       "ARENA_BOUNDS_INVERTED",
     ],
-  ] as const)("rejects %s with a stable semantic code", (_name, mutate, code) => {
-    const result = validateCanonicalGameState(
-      mutate(clone(corpus.valid.state) as CanonicalSemanticGameState),
-    )
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.issues.map((entry) => entry.code)).toContain(code)
-    }
-  })
+  ] as const)(
+    "rejects %s with a stable semantic code",
+    (_name, mutate, code) => {
+      const result = validateCanonicalGameState(
+        mutate(clone(corpus.valid.state) as CanonicalSemanticGameState),
+      )
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.issues.map((entry) => entry.code)).toContain(code)
+      }
+    },
+  )
 })

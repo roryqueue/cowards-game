@@ -672,9 +672,7 @@ const collectStateIssues = (
     !boundsAreNondegenerate(state.bounds) ||
     !contractionDepths.every(
       (depth) =>
-        Number.isSafeInteger(depth) &&
-        depth >= 0 &&
-        depth === contractionDepth,
+        Number.isSafeInteger(depth) && depth >= 0 && depth === contractionDepth,
     ) ||
     !allowedDepths.has(contractionDepth)
   ) {
@@ -702,9 +700,7 @@ const collectStateIssues = (
     currentTerrainSet.size !== authoritativeTerrain.size ||
     [...authoritativeTerrain].some((key) => !currentTerrainSet.has(key))
   ) {
-    issues.push(
-      issue("ARENA_TERRAIN_AUTHORITY_MISMATCH", ["terrainStones"]),
-    )
+    issues.push(issue("ARENA_TERRAIN_AUTHORITY_MISMATCH", ["terrainStones"]))
   }
 
   if (

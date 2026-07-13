@@ -211,7 +211,9 @@ const drive = (
   stopAfterActivation: boolean,
 ): CandidateExecution => {
   let machine = initialMachine
-  const attemptPrestate = globalThis.structuredClone(initialMachine.initialState)
+  const attemptPrestate = globalThis.structuredClone(
+    initialMachine.initialState,
+  )
   const transitions: KernelTransitionRecord[] = []
   const maximumSteps = Math.max(10_000, (machine.maxPhases + 1) * 10_000)
   for (let stepIndex = 0; stepIndex < maximumSteps; stepIndex += 1) {
