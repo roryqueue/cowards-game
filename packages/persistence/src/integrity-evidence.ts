@@ -60,6 +60,50 @@ export interface MatchExecutionEvidencePairSelector {
   topStrategyRevisionId: string
 }
 
+export interface HistoricalIntegritySource {
+  matchSetId: string
+  rulesVersion: string | null
+  engineVersion: string | null
+  runtimeAbiVersion: string | null
+  chronicleVersion: string | null
+  arenaCatalogVersion: string | null
+  setPolicyVersion: string | null
+  originalCounted: boolean
+  originalOutcome: unknown
+}
+
+export interface ImmutableHistoricalReleaseManifest {
+  manifestId: string
+  manifestHash: string
+  compatibility: RuntimeExecutionCompatibilityIdentity
+}
+
+interface HistoricalIntegrityResolutionBase {
+  matchSetId: string
+  originalCounted: boolean
+  originalOutcome: unknown
+  rulesVersion: string | null
+  chronicleVersion: string | null
+  sourceHash: string
+  eligibleUnderOriginalSemantics: boolean
+}
+
+export type HistoricalIntegrityResolution =
+  | (HistoricalIntegrityResolutionBase & {
+      kind: "resolved_historical"
+      manifestId: string
+      manifestHash: string
+      historicalCompatibility: Readonly<RuntimeExecutionCompatibilityIdentity>
+    })
+  | (HistoricalIntegrityResolutionBase & {
+      kind: "legacy_incomplete"
+      note: string
+    })
+  | (HistoricalIntegrityResolutionBase & {
+      kind: "unresolved"
+      note: string
+    })
+
 const validatedIdentityInstances = new WeakSet<object>()
 
 const assertValidatedIdentity = (
@@ -347,6 +391,171 @@ const framedHash = (domain: string, values: readonly string[]): string => {
     hash.update("\0", "utf8")
   }
   return hash.digest("hex")
+}
+
+const HISTORICAL_TUPLE_FIELDS = [
+  ["rulesVersion", "rules"],
+  ["engineVersion", "engine"],
+  ["runtimeAbiVersion", "runtimeAbi"],
+  ["chronicleVersion", "chronicle"],
+  ["arenaCatalogVersion", "arenaCatalog"],
+  ["setPolicyVersion", "setPolicy"],
+] as const satisfies readonly (readonly [
+  keyof HistoricalIntegritySource,
+  keyof CanonicalCompatibilityTuple,
+])[]
+
+const cloneFrozenJsonValue = (value: unknown): unknown => {
+  if (value === null || typeof value !== "object") return value
+  if (Array.isArray(value)) {
+    return Object.freeze(value.map((entry) => cloneFrozenJsonValue(entry)))
+  }
+  const clone = Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+      key,
+      cloneFrozenJsonValue(entry),
+    ]),
+  )
+  return Object.freeze(clone)
+}
+
+const historicalSourceValues = (
+  source: Readonly<HistoricalIntegritySource>,
+): string[] => [
+  source.matchSetId,
+  ...HISTORICAL_TUPLE_FIELDS.map(([sourceField]) =>
+    source[sourceField] === null ? "<null>" : String(source[sourceField]),
+  ),
+  source.originalCounted ? "counted" : "not-counted",
+  JSON.stringify(source.originalOutcome),
+]
+
+export const hashHistoricalIntegritySource = (
+  source: Readonly<HistoricalIntegritySource>,
+): string =>
+  framedHash(
+    "cowards-game:historical-integrity-source:v1",
+    historicalSourceValues(source),
+  )
+
+const validateHistoricalSource = (
+  value: Readonly<HistoricalIntegritySource>,
+): Readonly<HistoricalIntegritySource> => {
+  if (!isRecord(value)) {
+    throw new IntegrityEvidenceInputError("Historical integrity source is required.")
+  }
+  assertExactKeys(
+    value,
+    [
+      "matchSetId",
+      "rulesVersion",
+      "engineVersion",
+      "runtimeAbiVersion",
+      "chronicleVersion",
+      "arenaCatalogVersion",
+      "setPolicyVersion",
+      "originalCounted",
+      "originalOutcome",
+    ],
+    "Historical integrity source",
+  )
+  const versions = Object.fromEntries(
+    HISTORICAL_TUPLE_FIELDS.map(([sourceField]) => {
+      const field = value[sourceField]
+      if (field !== null && (typeof field !== "string" || field.length === 0)) {
+        throw new IntegrityEvidenceInputError(
+          `Historical ${sourceField} must be a non-empty string or null.`,
+        )
+      }
+      return [sourceField, field]
+    }),
+  ) as Pick<HistoricalIntegritySource, (typeof HISTORICAL_TUPLE_FIELDS)[number][0]>
+  if (typeof value.originalCounted !== "boolean") {
+    throw new IntegrityEvidenceInputError(
+      "Historical original counted meaning must be explicit.",
+    )
+  }
+  return Object.freeze({
+    matchSetId: requiredString(value.matchSetId, "Historical MatchSet ID"),
+    ...versions,
+    originalCounted: value.originalCounted,
+    originalOutcome: cloneFrozenJsonValue(value.originalOutcome),
+  })
+}
+
+const validateHistoricalManifest = (
+  value: Readonly<ImmutableHistoricalReleaseManifest>,
+): Readonly<ImmutableHistoricalReleaseManifest> => {
+  if (!isRecord(value)) {
+    throw new IntegrityEvidenceInputError("Historical release manifest is required.")
+  }
+  assertExactKeys(
+    value,
+    ["manifestId", "manifestHash", "compatibility"],
+    "Historical release manifest",
+  )
+  return Object.freeze({
+    manifestId: requiredString(value.manifestId, "Historical manifest ID"),
+    manifestHash: assertSha256(value.manifestHash, "Historical manifest hash"),
+    compatibility: validateCompatibility(value.compatibility),
+  })
+}
+
+export const resolveHistoricalIntegrityEvidence = (input: {
+  source: Readonly<HistoricalIntegritySource>
+  releaseManifests: readonly Readonly<ImmutableHistoricalReleaseManifest>[]
+}): Readonly<HistoricalIntegrityResolution> => {
+  const source = validateHistoricalSource(input.source)
+  if (!Array.isArray(input.releaseManifests)) {
+    throw new IntegrityEvidenceInputError(
+      "Historical release manifests must be an immutable list.",
+    )
+  }
+  const manifests = input.releaseManifests.map(validateHistoricalManifest)
+  const matching = manifests.filter((manifest) =>
+    HISTORICAL_TUPLE_FIELDS.every(([sourceField, tupleField]) => {
+      const persisted = source[sourceField]
+      return persisted === null || persisted === manifest.compatibility.tuple[tupleField]
+    }),
+  )
+  const base: HistoricalIntegrityResolutionBase = {
+    matchSetId: source.matchSetId,
+    originalCounted: source.originalCounted,
+    originalOutcome: source.originalOutcome,
+    rulesVersion: source.rulesVersion,
+    chronicleVersion: source.chronicleVersion,
+    sourceHash: hashHistoricalIntegritySource(source),
+    eligibleUnderOriginalSemantics: false,
+  }
+  const hasRequiredV14Anchors =
+    source.rulesVersion === "cowards-rules-v1.4" &&
+    source.chronicleVersion === "chronicle-v1.4"
+
+  if (hasRequiredV14Anchors && matching.length === 1) {
+    const manifest = matching[0]!
+    return Object.freeze({
+      ...base,
+      kind: "resolved_historical",
+      manifestId: manifest.manifestId,
+      manifestHash: manifest.manifestHash,
+      historicalCompatibility: manifest.compatibility,
+      eligibleUnderOriginalSemantics: source.originalCounted,
+    })
+  }
+
+  if (matching.length > 0 && (source.rulesVersion === null || source.chronicleVersion === null)) {
+    return Object.freeze({
+      ...base,
+      kind: "legacy_incomplete",
+      note: "This historical result does not contain enough immutable version evidence for standings recomputation.",
+    })
+  }
+
+  return Object.freeze({
+    ...base,
+    kind: "unresolved",
+    note: "This historical result remains readable under its recorded labels but its integrity identity is unresolved.",
+  })
 }
 
 const entrantHashValues = (
