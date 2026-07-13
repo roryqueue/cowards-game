@@ -62,6 +62,23 @@ const signedBundle = (
 }
 
 describe("runtime evidence authority bundle", () => {
+  it("rejects impossible canonical instants and accepts real leap days", () => {
+    expect(() =>
+      encodeRuntimeEvidenceAuthorityPayload(
+        fixturePayload({ issuedAt: "2026-02-30T00:00:00.000Z" }),
+      ),
+    ).toThrow(/valid instant/i)
+    expect(() =>
+      encodeRuntimeEvidenceAuthorityPayload(
+        fixturePayload({
+          issuedAt: "2024-02-29T00:00:00.000Z",
+          validFrom: "2024-02-29T00:00:00.000Z",
+          validUntil: "2024-03-01T00:00:00.000Z",
+        }),
+      ),
+    ).not.toThrow()
+  })
+
   it("binds one bounded signed envelope to the exact payload bytes and hash", () => {
     const fixture = signedBundle()
     const inspected = inspectRuntimeEvidenceAuthorityBundle(

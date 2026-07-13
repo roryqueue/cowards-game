@@ -206,7 +206,11 @@ const parseInstant = (value: unknown, label: string): string => {
       `${label} must be an exact UTC millisecond instant.`,
     )
   }
-  if (!Number.isFinite(Date.parse(instant))) {
+  const parsed = Date.parse(instant)
+  if (
+    !Number.isFinite(parsed) ||
+    new Date(parsed).toISOString() !== instant
+  ) {
     fail("INVALID_INSTANT", `${label} is not a valid instant.`)
   }
   return instant

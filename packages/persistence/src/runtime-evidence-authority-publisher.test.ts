@@ -131,6 +131,14 @@ const rejectingPool = () => {
 }
 
 describe("authenticated runtime evidence authority controls", () => {
+  it("rejects impossible calendar instants before persistence", () => {
+    const fake = rejectingPool()
+    expect(() =>
+      envelope(lanePayload({ issuedAt: "2026-02-30T00:00:00.000Z" })),
+    ).toThrow(/exact UTC millisecond instant/i)
+    expect(fake.calls).toEqual([])
+  })
+
   it("rejects forged, unknown-key, wrong-domain, stale, partial, and lane-mismatched controls with zero rows", async () => {
     const otherKeys = generateKeyPairSync("ed25519")
     const candidates = [

@@ -119,7 +119,12 @@ const assertHash = (value: unknown, label: string): string => {
 
 const assertInstant = (value: unknown, label: string): string => {
   const instant = assertString(value, label)
-  if (!INSTANT.test(instant) || !Number.isFinite(Date.parse(instant))) {
+  const parsed = Date.parse(instant)
+  if (
+    !INSTANT.test(instant) ||
+    !Number.isFinite(parsed) ||
+    new Date(parsed).toISOString() !== instant
+  ) {
     fail("INVALID_IMPORT", `${label} must be an exact UTC millisecond instant.`)
   }
   return instant
