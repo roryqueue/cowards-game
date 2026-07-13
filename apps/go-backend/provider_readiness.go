@@ -1,9 +1,13 @@
 package main
 
+import "strings"
+
 type revisionReadinessState string
 
 const (
 	revisionReadinessExecutionReady    revisionReadinessState = "execution_ready"
+	revisionReadinessExhibitionReady   revisionReadinessState = "exhibition_ready"
+	revisionReadinessExecutionDisabled revisionReadinessState = "execution_disabled"
 	revisionReadinessNonExecutionDraft revisionReadinessState = "non_execution_draft"
 	revisionReadinessInvalid           revisionReadinessState = "invalid"
 	revisionReadinessUnavailable       revisionReadinessState = "runtime_service_unavailable"
@@ -25,6 +29,7 @@ type revisionReadinessInput struct {
 	SourceHash          string
 	SourceBytes         int
 	Failure             *runtimeServiceFailure
+	ExecutionEvidence   *executableLaneEvidenceInput
 }
 
 func classifyRevisionReadiness(input revisionReadinessInput) revisionReadinessResult {
@@ -78,36 +83,38 @@ func classifyRevisionReadiness(input revisionReadinessInput) revisionReadinessRe
 			PublicCategory: "capability_policy_violation",
 		}
 	}
-	if !runtimeMetadataMatchesCountedLane(runtime, languageID) ||
-		!engineCompatibilityMatches(input.EngineCompatibility) {
+	if !engineCompatibilityMatches(input.EngineCompatibility) {
 		return revisionReadinessResult{
 			State:          revisionReadinessInvalid,
 			PublicCategory: "incompatible_runtime_metadata",
 		}
 	}
-	if !providerProofPresent(input.Metadata, languageID) {
+	if input.ExecutionEvidence == nil {
 		return revisionReadinessResult{
-			State:          revisionReadinessInvalid,
-			PublicCategory: "provider_proof_missing",
+			State:          revisionReadinessExecutionDisabled,
+			PublicCategory: "containment_missing",
 		}
 	}
-	if providerProofIsStale(input.Metadata, input.SourceHash, input.SourceBytes, languageID) {
+	evidence := classifyExecutableLaneEvidence(*input.ExecutionEvidence)
+	switch evidence.Status {
+	case executableLaneEvidenceCounted:
 		return revisionReadinessResult{
-			State:          revisionReadinessInvalid,
-			PublicCategory: "provider_proof_stale",
+			State:           revisionReadinessExecutionReady,
+			PublicCategory:  "evidence_current",
+			EntryEligible:   true,
+			CountedEligible: true,
 		}
-	}
-	if !providerProofMatches(input.Metadata, input.SourceHash, input.SourceBytes, languageID) {
+	case executableLaneEvidenceExhibitionOnly:
 		return revisionReadinessResult{
-			State:          revisionReadinessInvalid,
-			PublicCategory: "provider_proof_mismatched",
+			State:          revisionReadinessExhibitionReady,
+			PublicCategory: strings.ToLower(evidence.ReasonCode),
+			EntryEligible:  true,
 		}
-	}
-	return revisionReadinessResult{
-		State:           revisionReadinessExecutionReady,
-		PublicCategory:  "provider_validated",
-		EntryEligible:   true,
-		CountedEligible: true,
+	default:
+		return revisionReadinessResult{
+			State:          revisionReadinessExecutionDisabled,
+			PublicCategory: strings.ToLower(evidence.ReasonCode),
+		}
 	}
 }
 
@@ -117,20 +124,6 @@ func hasRequiredCapabilities(value any) bool {
 		return len(capabilities) > 0
 	case []any:
 		return len(capabilities) > 0
-	default:
-		return false
-	}
-}
-
-func runtimeMetadataMatchesCountedLane(runtime map[string]any, languageID string) bool {
-	adapterID := stringValue(mapValue(runtime, "adapter"), "id")
-	switch languageID {
-	case "typescript":
-		return adapterID == "runtime-js-worker-thread" || adapterID == "runtime-js-subprocess"
-	case "python":
-		return adapterID == "runtime-python-subprocess-experimental"
-	case "rust", "zig":
-		return adapterID == "runtime-wasm-wasi-wasmtime-preview1"
 	default:
 		return false
 	}

@@ -66,6 +66,36 @@ type integrityAuthorityManifest struct {
 	byTupleID map[string]registeredCompatibilityTuple
 }
 
+type executableLaneEvidenceStatus string
+
+const (
+	executableLaneEvidenceDisabled       executableLaneEvidenceStatus = "disabled"
+	executableLaneEvidenceExhibitionOnly executableLaneEvidenceStatus = "exhibition_only"
+	executableLaneEvidenceCounted        executableLaneEvidenceStatus = "counted"
+)
+
+type runtimeEvidenceCertificateReference struct {
+	Kind                  string
+	CertificateID         string
+	CertificateVersion    string
+	CertificateRecordHash string
+	RegistryGeneration    string
+}
+
+type executableLaneEvidenceInput struct {
+	Authority                *verifiedRuntimeEvidenceAuthority
+	ExpectedLaneIdentityHash string
+	EvaluationInstant        string
+	ActiveRegistryGeneration string
+	ContainmentCertificate   *runtimeEvidenceCertificateReference
+	ConformanceCertificate   *runtimeEvidenceCertificateReference
+}
+
+type executableLaneEvidenceResult struct {
+	Status     executableLaneEvidenceStatus
+	ReasonCode string
+}
+
 func parseIntegrityAuthorityManifest(serialized []byte) (*integrityAuthorityManifest, error) {
 	var manifest integrityAuthorityManifest
 	if err := decodeStrictJSON(serialized, &manifest); err != nil {
@@ -163,6 +193,102 @@ func (manifest *integrityAuthorityManifest) hasTupleID(tupleID string) bool {
 	}
 	_, exists := manifest.byTupleID[tupleID]
 	return exists
+}
+
+func runtimeEvidenceCertificateReferenceFor(certificate runtimeEvidenceAuthorityCertificate, generation string) runtimeEvidenceCertificateReference {
+	return runtimeEvidenceCertificateReference{
+		Kind:                  certificate.Kind,
+		CertificateID:         certificate.CertificateID,
+		CertificateVersion:    certificate.CertificateVersion,
+		CertificateRecordHash: certificate.CertificateRecordHash,
+		RegistryGeneration:    generation,
+	}
+}
+
+func classifyExecutableLaneEvidence(input executableLaneEvidenceInput) executableLaneEvidenceResult {
+	disabled := func(reason string) executableLaneEvidenceResult {
+		return executableLaneEvidenceResult{Status: executableLaneEvidenceDisabled, ReasonCode: reason}
+	}
+	authority := input.Authority
+	if authority == nil || authority.TrustDomain != runtimeEvidenceAuthorityProductionTrustDomain || !isPrefixedLowerSHA256(authority.AuthorityBundleHash) {
+		return disabled("EVIDENCE_UNVERIFIABLE")
+	}
+	if !isPrefixedLowerSHA256(input.ExpectedLaneIdentityHash) {
+		return disabled("IDENTITY_MISMATCH")
+	}
+	if !validCanonicalGeneration(input.ActiveRegistryGeneration) ||
+		authority.RegistryGeneration != input.ActiveRegistryGeneration ||
+		authority.Payload.RegistryGeneration != input.ActiveRegistryGeneration {
+		return disabled("REGISTRY_GENERATION_DRIFT")
+	}
+	evaluatedAt, err := parseCanonicalInstant(input.EvaluationInstant)
+	if err != nil {
+		return disabled("EVIDENCE_UNVERIFIABLE")
+	}
+	issuedAt, issuedErr := parseCanonicalInstant(authority.Payload.IssuedAt)
+	validFrom, fromErr := parseCanonicalInstant(authority.Payload.ValidFrom)
+	validUntil, untilErr := parseCanonicalInstant(authority.Payload.ValidUntil)
+	if issuedErr != nil || fromErr != nil || untilErr != nil || evaluatedAt.Before(issuedAt) || evaluatedAt.Before(validFrom) || evaluatedAt.After(validUntil) {
+		return disabled("EVIDENCE_UNVERIFIABLE")
+	}
+	for _, laneDisable := range authority.Payload.OperatorLaneDisables {
+		if laneDisable.LaneIdentityHash == input.ExpectedLaneIdentityHash {
+			return disabled("OPERATOR_DISABLED")
+		}
+	}
+	containment, reason := resolveRuntimeEvidenceCertificate(authority, input.ExpectedLaneIdentityHash, "containment", input.ContainmentCertificate)
+	if reason != "" {
+		return disabled(reason)
+	}
+	conformance, reason := resolveRuntimeEvidenceCertificate(authority, input.ExpectedLaneIdentityHash, "conformance", input.ConformanceCertificate)
+	if reason != "" {
+		return executableLaneEvidenceResult{Status: executableLaneEvidenceExhibitionOnly, ReasonCode: reason}
+	}
+	if containment == nil || conformance == nil {
+		return disabled("EVIDENCE_UNVERIFIABLE")
+	}
+	return executableLaneEvidenceResult{Status: executableLaneEvidenceCounted, ReasonCode: "EVIDENCE_CURRENT"}
+}
+
+func resolveRuntimeEvidenceCertificate(authority *verifiedRuntimeEvidenceAuthority, expectedLaneHash string, kind string, reference *runtimeEvidenceCertificateReference) (*runtimeEvidenceAuthorityCertificate, string) {
+	prefix := "CONTAINMENT"
+	if kind == "conformance" {
+		prefix = "CONFORMANCE"
+	}
+	if reference == nil {
+		return nil, prefix + "_MISSING"
+	}
+	if reference.Kind != kind || reference.RegistryGeneration != authority.RegistryGeneration || !validAuthorityIdentifier(reference.CertificateID) || !validAuthorityIdentifier(reference.CertificateVersion) || !isPrefixedLowerSHA256(reference.CertificateRecordHash) {
+		return nil, prefix + "_UNVERIFIABLE"
+	}
+	var resolved *runtimeEvidenceAuthorityCertificate
+	for index := range authority.Payload.Certificates {
+		certificate := &authority.Payload.Certificates[index]
+		if certificate.CertificateID == reference.CertificateID {
+			if resolved != nil {
+				return nil, prefix + "_UNVERIFIABLE"
+			}
+			resolved = certificate
+		}
+	}
+	if resolved == nil || resolved.Kind != kind || resolved.CertificateVersion != reference.CertificateVersion || resolved.CertificateRecordHash != reference.CertificateRecordHash {
+		return nil, prefix + "_UNVERIFIABLE"
+	}
+	if resolved.LaneIdentityHash != expectedLaneHash {
+		return nil, "IDENTITY_MISMATCH"
+	}
+	for _, revocation := range authority.Payload.Revocations {
+		if revocation.CertificateID == resolved.CertificateID && revocation.CertificateRecordHash == resolved.CertificateRecordHash {
+			return nil, prefix + "_REVOKED"
+		}
+	}
+	for _, supersession := range authority.Payload.Supersessions {
+		if supersession.CertificateID == resolved.CertificateID {
+			return nil, prefix + "_UNVERIFIABLE"
+		}
+	}
+	copy := *resolved
+	return &copy, ""
 }
 
 func decodeStrictJSON(serialized []byte, destination any) error {

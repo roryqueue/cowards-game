@@ -30,7 +30,7 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 		entryEligible bool
 	}{
 		{
-			name: "D-02 TypeScript provider proof with private artifact bytes is execution ready",
+			name: "D-02 TypeScript provider proof without containment stays disabled",
 			input: revisionReadinessInput{
 				SourceFormat: "typescript",
 				Runtime:      validRuntime,
@@ -39,9 +39,8 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 				SourceHash:   sourceHash,
 				SourceBytes:  sourceBytes,
 			},
-			state:         revisionReadinessExecutionReady,
-			category:      "provider_validated",
-			entryEligible: true,
+			state:    revisionReadinessExecutionDisabled,
+			category: "containment_missing",
 		},
 		{
 			name: "D-04 public-redacted artifact identity is not execution ready",
@@ -53,8 +52,8 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 				SourceHash:   sourceHash,
 				SourceBytes:  sourceBytes,
 			},
-			state:    revisionReadinessInvalid,
-			category: "provider_proof_mismatched",
+			state:    revisionReadinessExecutionDisabled,
+			category: "containment_missing",
 		},
 		{
 			name: "D-04 missing provider proof is not eligible",
@@ -66,8 +65,8 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 				SourceHash:   sourceHash,
 				SourceBytes:  sourceBytes,
 			},
-			state:    revisionReadinessInvalid,
-			category: "provider_proof_missing",
+			state:    revisionReadinessExecutionDisabled,
+			category: "containment_missing",
 		},
 		{
 			name: "D-04 stale source identity has a distinct public category",
@@ -79,8 +78,8 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 				SourceHash:   sourceHash + ":stale",
 				SourceBytes:  sourceBytes,
 			},
-			state:    revisionReadinessInvalid,
-			category: "provider_proof_stale",
+			state:    revisionReadinessExecutionDisabled,
+			category: "containment_missing",
 		},
 		{
 			name: "D-03 invalid validation persists only as non-execution draft",
@@ -185,8 +184,8 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 				SourceHash:  sourceHash,
 				SourceBytes: sourceBytes,
 			},
-			state:    revisionReadinessInvalid,
-			category: "incompatible_runtime_metadata",
+			state:    revisionReadinessExecutionDisabled,
+			category: "containment_missing",
 		},
 		{
 			name: "D-11 TinyGo stays hidden unsupported provider",
@@ -219,7 +218,7 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 	}
 }
 
-func TestProviderReadinessAcceptsCurrentCountedLanguages(t *testing.T) {
+func TestProviderReadinessQuarantinesCurrentLanguagesWithoutCanonicalCertificates(t *testing.T) {
 	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
 	sourceHash := hashString("current provider proof")
 	sourceBytes := len([]byte("current provider proof"))
@@ -263,8 +262,8 @@ func TestProviderReadinessAcceptsCurrentCountedLanguages(t *testing.T) {
 				SourceHash:          sourceHash,
 				SourceBytes:         sourceBytes,
 			})
-			if result.State != revisionReadinessExecutionReady || result.PublicCategory != "provider_validated" || !result.EntryEligible || !result.CountedEligible {
-				t.Fatalf("expected current %s evidence to be counted eligible, got %+v", test.language, result)
+			if result.State != revisionReadinessExecutionDisabled || result.PublicCategory != "containment_missing" || result.EntryEligible || result.CountedEligible {
+				t.Fatalf("expected current %s provider proof to remain quarantined, got %+v", test.language, result)
 			}
 		})
 	}
@@ -295,8 +294,8 @@ func TestProviderReadinessAccountSaveAssemblyD02D03(t *testing.T) {
 		SourceBytes:         sourceBytes,
 	})
 
-	if readiness.State != revisionReadinessExecutionReady || !readiness.EntryEligible || !readiness.CountedEligible {
-		t.Fatalf("expected execution-ready account save assembly, got %+v", readiness)
+	if readiness.State != revisionReadinessExecutionDisabled || readiness.EntryEligible || readiness.CountedEligible {
+		t.Fatalf("expected account save assembly to remain quarantined, got %+v", readiness)
 	}
 	if input.Runtime == nil || input.Validation == nil || input.EngineCompatibility == nil || input.Metadata == nil {
 		t.Fatalf("save assembly omitted provider fields: %+v", input)
@@ -307,10 +306,10 @@ func TestProviderReadinessAccountSaveAssemblyD02D03(t *testing.T) {
 	if mapValue(input.Metadata, "sourceArtifact") == nil || mapValue(input.Metadata, "providerValidation") == nil {
 		t.Fatalf("save assembly omitted artifact identity or provider validation: %+v", input.Metadata)
 	}
-	if input.Metadata["readinessState"] != string(revisionReadinessExecutionReady) ||
-		input.Metadata["readinessCategory"] != "provider_validated" ||
-		input.Metadata["entryEligible"] != true ||
-		input.Metadata["countedEligible"] != true {
+	if input.Metadata["readinessState"] != string(revisionReadinessExecutionDisabled) ||
+		input.Metadata["readinessCategory"] != "containment_missing" ||
+		input.Metadata["entryEligible"] != false ||
+		input.Metadata["countedEligible"] != false {
 		t.Fatalf("save assembly omitted readiness labels: %+v", input.Metadata)
 	}
 }

@@ -102,11 +102,11 @@ func TestPhase244AccountProviderProofPersistsThroughDBEntryAndRuntimeRequest(t *
 	}
 	for _, revisionID := range revisionIDs {
 		metadata := phase244RevisionMetadata(t, ctx, pool, revisionID)
-		if stringValue(metadata, "readinessState") != string(revisionReadinessExecutionReady) ||
-			stringValue(metadata, "readinessCategory") != "provider_validated" ||
-			metadata["entryEligible"] != true ||
-			metadata["countedEligible"] != true {
-			t.Fatalf("persisted metadata omitted execution-ready labels: %+v", metadata)
+		if stringValue(metadata, "readinessState") != string(revisionReadinessExecutionDisabled) ||
+			stringValue(metadata, "readinessCategory") != "containment_missing" ||
+			metadata["entryEligible"] != false ||
+			metadata["countedEligible"] != false {
+			t.Fatalf("persisted metadata promoted provider proof without canonical containment evidence: %+v", metadata)
 		}
 		sourceArtifact := mapValue(metadata, "sourceArtifact")
 		if stringValue(sourceArtifact, "bytesBase64") == "" {
