@@ -73,15 +73,19 @@ status: complete
 
 1. **Install exact reference inventory, staged modes, and mutation proof** — `a32a64c` (test)
 
+Additional classification fix: `c39321d` explicitly records Markdown/README mentions as non-executable documentation evidence.
+
 ## Verification
 
 - `pnpm exec vitest run scripts/check-v1-37-executable-reference-inventory.test.ts` — 12/12 passed.
-- `pnpm exec tsx scripts/check-v1-37-executable-reference-inventory.ts --baseline` — passed with 69 exact references and 11 non-executable mentions.
+- `pnpm exec tsx scripts/check-v1-37-executable-reference-inventory.ts --baseline` — passed with 69 exact references and 13 non-executable mentions.
 - Prettier, ESLint, and `git diff --check` — passed.
 
 ## Deviations from Plan
 
-None. The plan's single implementation task was delivered without production behavior changes.
+### Auto-fixed Issue
+
+- README/Markdown mentions were initially outside the TypeScript source walk. They are now explicitly classified as non-executable documentation evidence, with a focused mutation test. No production behavior changed.
 
 ## Protected Files
 
