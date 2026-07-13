@@ -11,6 +11,7 @@ import {
   type RuntimeExecutionServiceRequest,
   type RuntimeExecutionServiceResponse,
   type RuntimeExecutionServiceSystemFailureCode,
+  type RuntimeEntrantAuthorityReference,
   type StrategyRevision,
 } from "@cowards/spec"
 import { hashStrategySource } from "@cowards/runtime-js"
@@ -25,14 +26,10 @@ import {
 } from "@cowards/engine"
 import type { RuntimeServiceConfig } from "./runtime-config.js"
 import { publicSystemFailureMessage, redactedDiagnostics } from "./redaction.js"
-
-type RuntimeExecutionServiceDependencies = {
-  buildChronicleFromMatch: typeof buildChronicleFromMatch
-}
-
-const defaultDependencies: RuntimeExecutionServiceDependencies = {
-  buildChronicleFromMatch,
-}
+import type {
+  RuntimeEvidenceAuthorityLoader,
+  VerifiedMountedRuntimeEvidenceAuthority,
+} from "./runtime-evidence-authority.js"
 
 const readRecord = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === "object" && !Array.isArray(value)
@@ -83,6 +80,244 @@ const systemFailureResponse = (input: {
     response,
   ) as RuntimeExecutionServiceResponse
 }
+
+const framedSha256 = (domain: string, values: readonly string[]): string => {
+  const hash = createHash("sha256")
+  hash.update(domain, "utf8")
+  hash.update("\0", "utf8")
+  for (const value of values) {
+    const bytes = Buffer.from(value, "utf8")
+    hash.update(String(bytes.byteLength), "utf8")
+    hash.update("\0", "utf8")
+    hash.update(bytes)
+    hash.update("\0", "utf8")
+  }
+  return `sha256:${hash.digest("hex")}`
+}
+
+/**
+ * Binds an opaque scheduling-decision identifier to the exact signed authority
+ * references used for one entrant. The identifier remains a scheduler trace;
+ * the hash prevents any field from being changed independently in transit.
+ */
+export const hashRuntimeAuthoritySchedulingDecisionReference = (input: {
+  compatibilityTupleId: string
+  authorityBundleHash: string
+  registryGeneration: string
+  entrant: RuntimeEntrantAuthorityReference
+}): string =>
+  framedSha256("cowards-game:runtime-authority-decision-reference:v1", [
+    input.compatibilityTupleId,
+    input.authorityBundleHash,
+    input.registryGeneration,
+    input.entrant.entrantKey,
+    input.entrant.strategyRevisionId,
+    input.entrant.laneIdentityHash,
+    input.entrant.effectiveStatus,
+    input.entrant.schedulingDecisionId,
+    input.entrant.containmentCertificateId ?? "",
+    input.entrant.containmentCertificateHash ?? "",
+    input.entrant.conformanceCertificateId ?? "",
+    input.entrant.conformanceCertificateHash ?? "",
+  ])
+
+type AuthorityFailureCode = Extract<
+  RuntimeExecutionServiceSystemFailureCode,
+  | "EVIDENCE_IDENTITY_MISMATCH"
+  | "EVIDENCE_REGISTRY_DRIFT"
+  | "EVIDENCE_REVOKED"
+  | "EVIDENCE_UNVERIFIABLE"
+>
+
+type AuthorityCheck =
+  | {
+      ok: true
+      authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>
+    }
+  | { ok: false; code: AuthorityFailureCode }
+
+const authorityIdentity = (
+  authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>,
+): string =>
+  [
+    authority.authorityBundleHash,
+    authority.registryGeneration,
+    authority.semanticTupleManifestHash,
+    authority.trustDomain,
+    authority.keyId,
+  ].join("\0")
+
+const certificateIsInactive = (
+  authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>,
+  certificate: Readonly<
+    VerifiedMountedRuntimeEvidenceAuthority["payload"]["certificates"][number]
+  >,
+): boolean =>
+  authority.payload.revocations.some(
+    (revocation) =>
+      revocation.certificateId === certificate.certificateId &&
+      revocation.certificateRecordHash === certificate.certificateRecordHash,
+  ) ||
+  authority.payload.supersessions.some(
+    (supersession) =>
+      supersession.certificateId === certificate.certificateId,
+  )
+
+const exactCertificate = (input: {
+  authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>
+  entrant: RuntimeEntrantAuthorityReference
+  kind: "containment" | "conformance"
+}):
+  | { ok: true }
+  | { ok: false; code: AuthorityFailureCode } => {
+  const certificateId =
+    input.kind === "containment"
+      ? input.entrant.containmentCertificateId
+      : input.entrant.conformanceCertificateId
+  const certificateHash =
+    input.kind === "containment"
+      ? input.entrant.containmentCertificateHash
+      : input.entrant.conformanceCertificateHash
+  if (!certificateId || !certificateHash) {
+    return { ok: false, code: "EVIDENCE_IDENTITY_MISMATCH" }
+  }
+  const certificate = input.authority.payload.certificates.find(
+    (candidate) => candidate.certificateId === certificateId,
+  )
+  if (
+    !certificate ||
+    certificate.kind !== input.kind ||
+    certificate.certificateRecordHash !== certificateHash ||
+    certificate.laneIdentityHash !== input.entrant.laneIdentityHash
+  ) {
+    return { ok: false, code: "EVIDENCE_IDENTITY_MISMATCH" }
+  }
+  if (certificateIsInactive(input.authority, certificate)) {
+    return { ok: false, code: "EVIDENCE_REVOKED" }
+  }
+  return { ok: true }
+}
+
+const hasCurrentConformanceForLane = (
+  authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>,
+  laneIdentityHash: string,
+): boolean =>
+  authority.payload.certificates.some(
+    (certificate) =>
+      certificate.kind === "conformance" &&
+      certificate.laneIdentityHash === laneIdentityHash &&
+      !certificateIsInactive(authority, certificate),
+  )
+
+const verifyEntrantAgainstAuthority = (input: {
+  request: RuntimeExecutionServiceRequest
+  authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>
+  side: "bottom" | "top"
+}): { ok: true } | { ok: false; code: AuthorityFailureCode } => {
+  const entrant = input.request.evidenceSnapshot.entrants[input.side]
+  if (
+    input.authority.payload.operatorLaneDisables.some(
+      (disable) => disable.laneIdentityHash === entrant.laneIdentityHash,
+    )
+  ) {
+    return { ok: false, code: "EVIDENCE_REVOKED" }
+  }
+
+  const expectedDecisionHash =
+    hashRuntimeAuthoritySchedulingDecisionReference({
+      compatibilityTupleId:
+        input.request.evidenceSnapshot.compatibility.tupleId,
+      authorityBundleHash:
+        input.request.evidenceSnapshot.authorityBundleHash,
+      registryGeneration: input.request.evidenceSnapshot.registryGeneration,
+      entrant,
+    })
+  if (entrant.schedulingDecisionHash !== expectedDecisionHash) {
+    return { ok: false, code: "EVIDENCE_IDENTITY_MISMATCH" }
+  }
+
+  const containment = exactCertificate({
+    authority: input.authority,
+    entrant,
+    kind: "containment",
+  })
+  if (!containment.ok) return containment
+
+  if (entrant.effectiveStatus === "exhibition_only") {
+    if (
+      entrant.conformanceCertificateId !== undefined ||
+      entrant.conformanceCertificateHash !== undefined ||
+      hasCurrentConformanceForLane(
+        input.authority,
+        entrant.laneIdentityHash,
+      )
+    ) {
+      return { ok: false, code: "EVIDENCE_IDENTITY_MISMATCH" }
+    }
+    return { ok: true }
+  }
+  if (entrant.effectiveStatus !== "counted") {
+    return { ok: false, code: "EVIDENCE_REVOKED" }
+  }
+  return exactCertificate({
+    authority: input.authority,
+    entrant,
+    kind: "conformance",
+  })
+}
+
+const loadAndVerifyRequestAuthority = (input: {
+  request: RuntimeExecutionServiceRequest
+  loader: RuntimeEvidenceAuthorityLoader | undefined
+  baseline?: Readonly<VerifiedMountedRuntimeEvidenceAuthority> | undefined
+}): AuthorityCheck => {
+  if (!input.loader) return { ok: false, code: "EVIDENCE_UNVERIFIABLE" }
+  let authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>
+  try {
+    authority = input.loader.load()
+  } catch {
+    return { ok: false, code: "EVIDENCE_UNVERIFIABLE" }
+  }
+  if (
+    input.baseline !== undefined &&
+    authorityIdentity(authority) !== authorityIdentity(input.baseline)
+  ) {
+    return { ok: false, code: "EVIDENCE_REGISTRY_DRIFT" }
+  }
+  if (
+    authority.authorityBundleHash !==
+      input.request.evidenceSnapshot.authorityBundleHash ||
+    authority.registryGeneration !==
+      input.request.evidenceSnapshot.registryGeneration ||
+    authority.payload.registryGeneration !== authority.registryGeneration ||
+    authority.semanticTupleManifestHash !==
+      input.request.evidenceSnapshot.compatibility.tupleId ||
+    authority.payload.semanticTupleManifestHash !==
+      input.request.evidenceSnapshot.compatibility.tupleId
+  ) {
+    return { ok: false, code: "EVIDENCE_IDENTITY_MISMATCH" }
+  }
+  for (const side of ["bottom", "top"] as const) {
+    const entrant = verifyEntrantAgainstAuthority({
+      request: input.request,
+      authority,
+      side,
+    })
+    if (!entrant.ok) return entrant
+  }
+  return { ok: true, authority }
+}
+
+const authorityFailureResponse = (
+  request: RuntimeExecutionServiceRequest,
+  code: AuthorityFailureCode,
+): RuntimeExecutionServiceResponse =>
+  systemFailureResponse({
+    rawRequest: request,
+    code,
+    message: "Runtime execution authority verification failed.",
+    retryable: true,
+  })
 
 const validateRevisionSource = (
   slot: "bottom" | "top",
@@ -365,6 +600,17 @@ const createRuntimeForRevision = (
   }
 }
 
+export interface RuntimeExecutionServiceDependencies {
+  buildChronicleFromMatch: typeof buildChronicleFromMatch
+  createRuntimeForRevision: typeof createRuntimeForRevision
+  authorityLoader?: RuntimeEvidenceAuthorityLoader | undefined
+}
+
+const defaultDependencies: RuntimeExecutionServiceDependencies = {
+  buildChronicleFromMatch,
+  createRuntimeForRevision,
+}
+
 export const createSideDispatchRuntime = (
   bottomRuntime: StrategyRuntime,
   topRuntime: StrategyRuntime,
@@ -404,6 +650,14 @@ const executeParsedRequest = (
   runtimeConfig: RuntimeServiceConfig,
   dependencies: RuntimeExecutionServiceDependencies,
 ): RuntimeExecutionServiceResponse => {
+  const acceptedAuthority = loadAndVerifyRequestAuthority({
+    request,
+    loader: dependencies.authorityLoader,
+  })
+  if (!acceptedAuthority.ok) {
+    return authorityFailureResponse(request, acceptedAuthority.code)
+  }
+
   for (const slot of ["bottom", "top"] as const) {
     const validation = validateRevisionSource(slot, request.strategies[slot])
     if (!validation.ok) {
@@ -431,7 +685,16 @@ const executeParsedRequest = (
     }
   }
 
-  const bottomRuntime = createRuntimeForRevision(
+  const invocationAuthority = loadAndVerifyRequestAuthority({
+    request,
+    loader: dependencies.authorityLoader,
+    baseline: acceptedAuthority.authority,
+  })
+  if (!invocationAuthority.ok) {
+    return authorityFailureResponse(request, invocationAuthority.code)
+  }
+
+  const bottomRuntime = dependencies.createRuntimeForRevision(
     request.strategies.bottom,
     runtimeConfig,
     request.limits,
@@ -445,7 +708,7 @@ const executeParsedRequest = (
       diagnostics: bottomRuntime.diagnostics,
     })
   }
-  const topRuntime = createRuntimeForRevision(
+  const topRuntime = dependencies.createRuntimeForRevision(
     request.strategies.top,
     runtimeConfig,
     request.limits,
@@ -471,6 +734,14 @@ const executeParsedRequest = (
     ),
   }
   const result = dependencies.buildChronicleFromMatch(runMatchInput)
+  const completionAuthority = loadAndVerifyRequestAuthority({
+    request,
+    loader: dependencies.authorityLoader,
+    baseline: invocationAuthority.authority,
+  })
+  if (!completionAuthority.ok) {
+    return authorityFailureResponse(request, completionAuthority.code)
+  }
   const response = {
     contractVersion: request.contractVersion,
     ok: true,
@@ -506,7 +777,7 @@ const executeParsedRequest = (
 export const executeRuntimeServiceRequest = (
   rawRequest: unknown,
   runtimeConfig: RuntimeServiceConfig,
-  dependencies: RuntimeExecutionServiceDependencies = defaultDependencies,
+  dependencyOverrides: Partial<RuntimeExecutionServiceDependencies> = {},
 ): RuntimeExecutionServiceResponse => {
   const parsedRequest =
     RuntimeExecutionServiceRequestSchema.safeParse(rawRequest)
@@ -524,7 +795,10 @@ export const executeRuntimeServiceRequest = (
   }
 
   try {
-    return executeParsedRequest(parsedRequest.data, runtimeConfig, dependencies)
+    return executeParsedRequest(parsedRequest.data, runtimeConfig, {
+      ...defaultDependencies,
+      ...dependencyOverrides,
+    })
   } catch (error) {
     return systemFailureResponse({
       rawRequest: parsedRequest.data,

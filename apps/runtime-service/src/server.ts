@@ -388,7 +388,9 @@ export const createRuntimeExecutionHttpHandler = (
     try {
       const body = await readBody(request, bodyLimitBytes)
       const rawRequest = JSON.parse(body) as unknown
-      const result = executeRuntimeServiceRequest(rawRequest, runtimeConfig)
+      const result = executeRuntimeServiceRequest(rawRequest, runtimeConfig, {
+        authorityLoader: options.authorityLoader,
+      })
       writeJson(response, result.ok ? 200 : 422, result)
     } catch (error) {
       writeJson(

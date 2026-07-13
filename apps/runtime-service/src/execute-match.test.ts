@@ -17,8 +17,14 @@ import {
   compileRustWasmArtifact,
   compileZigWasmArtifact,
 } from "@cowards/runtime-wasm-wasi"
-import { executeRuntimeServiceRequest } from "./execute-match.js"
-import { createFixtureRuntimeExecutionEvidenceSnapshot } from "./runtime-execution-evidence.test-support.js"
+import {
+  executeRuntimeServiceRequest as executeRuntimeServiceRequestWithAuthority,
+  type RuntimeExecutionServiceDependencies,
+} from "./execute-match.js"
+import {
+  createFixtureRuntimeEvidenceAuthorityLoader,
+  createFixtureRuntimeExecutionEvidenceSnapshot,
+} from "./runtime-execution-evidence.test-support.js"
 import {
   createRuntimeServiceConfig,
   RuntimeServiceConfigError,
@@ -27,6 +33,24 @@ import {
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
 })
+
+const executeRuntimeServiceRequest = (
+  rawRequest: unknown,
+  config = runtimeConfig,
+  dependencies: Partial<RuntimeExecutionServiceDependencies> = {},
+) => {
+  const parsed = RuntimeExecutionServiceRequestSchema.safeParse(rawRequest)
+  return executeRuntimeServiceRequestWithAuthority(rawRequest, config, {
+    ...dependencies,
+    ...(parsed.success
+      ? {
+          authorityLoader: createFixtureRuntimeEvidenceAuthorityLoader(
+            parsed.data.evidenceSnapshot,
+          ),
+        }
+      : {}),
+  })
+}
 
 const arenaVariant = {
   id: "runtime-service-test-arena",

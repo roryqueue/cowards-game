@@ -95,7 +95,7 @@ const sequencedLoader = (
   let current: Readonly<VerifiedMountedRuntimeEvidenceAuthority> | undefined
   return {
     load: vi.fn(() => {
-      const value = values[Math.min(index, values.length - 1)]
+      const value = values[Math.min(index, values.length - 1)]!
       index += 1
       if (value instanceof Error) throw value
       current = value
@@ -107,7 +107,10 @@ const sequencedLoader = (
 
 const authorityWith = (
   authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>,
-  overrides: Partial<VerifiedMountedRuntimeEvidenceAuthority> & {
+  overrides: Omit<
+    Partial<VerifiedMountedRuntimeEvidenceAuthority>,
+    "payload"
+  > & {
     payload?: Partial<VerifiedMountedRuntimeEvidenceAuthority["payload"]>
   },
 ): Readonly<VerifiedMountedRuntimeEvidenceAuthority> =>
@@ -173,19 +176,6 @@ describe("runtime-service counted safety", () => {
   )
 
   it.each([
-    {
-      name: "tuple",
-      mutate: (request: RuntimeExecutionServiceRequest) => ({
-        ...request,
-        evidenceSnapshot: {
-          ...request.evidenceSnapshot,
-          compatibility: {
-            ...request.evidenceSnapshot.compatibility,
-            tupleId: `sha256:${"9".repeat(64)}`,
-          },
-        },
-      }),
-    },
     {
       name: "registry generation",
       mutate: (request: RuntimeExecutionServiceRequest) => ({
@@ -254,6 +244,25 @@ describe("runtime-service counted safety", () => {
       context.authorityLoader,
       { createRuntimeForRevision: runtimeFactory },
     )
+
+    expectEvidenceFailure(response, "EVIDENCE_IDENTITY_MISMATCH")
+    expect(runtimeFactory).not.toHaveBeenCalled()
+  })
+
+  it("rejects a mounted semantic tuple mismatch before runtime creation", () => {
+    const { request, context } = requestContext()
+    const runtimeFactory = vi.fn(() => {
+      throw new Error("runtime factory must not run")
+    })
+    const tupleMismatch = authorityWith(context.authority, {
+      semanticTupleManifestHash: `sha256:${"9".repeat(64)}`,
+      payload: {
+        semanticTupleManifestHash: `sha256:${"9".repeat(64)}`,
+      },
+    })
+    const response = executeWith(request, sequencedLoader([tupleMismatch]), {
+      createRuntimeForRevision: runtimeFactory,
+    })
 
     expectEvidenceFailure(response, "EVIDENCE_IDENTITY_MISMATCH")
     expect(runtimeFactory).not.toHaveBeenCalled()

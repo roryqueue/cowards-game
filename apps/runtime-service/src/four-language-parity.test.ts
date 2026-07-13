@@ -27,13 +27,26 @@ import {
   createChronicleContentHash,
   projectPublicChronicle,
 } from "@cowards/replay"
-import { executeRuntimeServiceRequest } from "./execute-match.js"
-import { createFixtureRuntimeExecutionEvidenceSnapshot } from "./runtime-execution-evidence.test-support.js"
+import { executeRuntimeServiceRequest as executeRuntimeServiceRequestWithAuthority } from "./execute-match.js"
+import {
+  createFixtureRuntimeEvidenceAuthorityLoader,
+  createFixtureRuntimeExecutionEvidenceSnapshot,
+} from "./runtime-execution-evidence.test-support.js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
 })
+
+const executeRuntimeServiceRequest = (
+  request: RuntimeExecutionServiceRequest,
+  _config = runtimeConfig,
+) =>
+  executeRuntimeServiceRequestWithAuthority(request, runtimeConfig, {
+    authorityLoader: createFixtureRuntimeEvidenceAuthorityLoader(
+      request.evidenceSnapshot,
+    ),
+  })
 
 const sourceFor = (
   languageId: FourLanguageGoldenLanguageId,
