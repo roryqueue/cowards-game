@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 257
 current_phase_name: canonical-transition-kernel-and-v1-4-semantic-integrity
 status: executing
-stopped_at: Completed 257-19-PLAN.md; Plan 20 structural and audit convergence next
-last_updated: "2026-07-13T21:39:52.000Z"
+stopped_at: Completed 257-20-PLAN.md; Plan 21 browser realism and privacy proof next
+last_updated: "2026-07-13T23:54:00.000Z"
 last_activity: 2026-07-13
-last_activity_desc: Phase 257 execution started
+last_activity_desc: Phase 257 Plan 20 structural and audit convergence completed
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 41
-  completed_plans: 38
-  percent: 93
+  completed_plans: 39
+  percent: 95
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 257 (canonical-transition-kernel-and-v1-4-semantic-integrity) — EXECUTING
-Plan: 19 of 22 complete; structural and audit convergence next
-Status: Current kernel activated; preparing Wave 11 drift guards
-Last activity: 2026-07-13 — Phase 257 Plan 19 atomic activation completed
+Plan: 20 of 22 complete; browser realism and privacy proof next
+Status: Structural and audit convergence complete; preparing Wave 12 browser proof
+Last activity: 2026-07-13 — Phase 257 Plan 20 structural and audit convergence completed
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 95%
 
 ## Durable Decisions
 
@@ -62,7 +62,7 @@ Progress: [█████████░] 93%
 **Resume file:** None
 
 Last session: 2026-07-13T15:02:15.191Z
-Stopped at: Completed 257-19-PLAN.md; Plan 20 structural and audit convergence next
+Stopped at: Completed 257-20-PLAN.md; Plan 21 browser realism and privacy proof next
 Next command: `$gsd-execute-phase 257`
 
 ## Performance Metrics
@@ -90,6 +90,7 @@ Next command: `$gsd-execute-phase 257`
 | Phase 257 P02 | 9min | 2 tasks | 2 files |
 | Phase 257 P03 | 17min | 3 tasks | 3 files |
 | Phase 257 P19 | 101min | 1 task | 93 source/artifact files |
+| Phase 257 P20 | 113min | 1 task | 6 implementation/result/boundary files |
 
 ## Decisions
 
@@ -148,3 +149,7 @@ Next command: `$gsd-execute-phase 257`
 - [Phase 257]: Every terminal slot closure performs immediate canonical outcome detection after closure events. — This preserves approved closure reasons and prevents semantically invalid zero-active nonterminal states after Cycle exhaustion.
 - [Phase 257]: The current Chronicle and replay routes record, validate, and reconstruct the sole engine transition stream without scheduling gameplay. — Historical v1.4 bytes remain under their literal tuple and PUSH-inclusive grammar.
 - [Phase 257]: Disposable exact-current publication/install proof may use fixture trust only and must produce zero production receipts. — Production conformance remains empty until executable four-language proof exists.
+- [Phase 257]: Immutable Phase-256 and pre-refactor audit bytes are never rebaselined against current HEAD; current observations live in a separate deterministic result. — Approved repairs remain attributable without rewriting historical evidence.
+- [Phase 257]: The v1.16 semantic receipt binds schema-normalized TypeScript JSON wire bytes and a fixed lowercase signature form verified independently by Go. — Semantically equivalent rewrites, forbidden Chronicle fields, and receipt-identity drift fail before completion mutation.
+- [Phase 257]: Exactly one production source consumes the kernel step primitive; replay, runtime-service, persistence, public lifecycle surfaces, and Go may not recreate scheduling authority. — AST/call-graph guards reject aliases, computed access, re-exports, reducers, recursion, and forbidden dependency edges.
+- [Phase 257]: Compact audit probes are claims only when bound to lifecycle tests, event coverage, tuple authority, executable inventory, Go AST, historical proof, and receipt evidence. — The seven observations do not independently overclaim event-order or cross-language conformance proof.
