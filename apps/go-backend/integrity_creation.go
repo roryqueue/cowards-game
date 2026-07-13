@@ -189,7 +189,7 @@ func (server *LiveServer) resolveCreationEvidence(ctx context.Context, tx pgx.Tx
 	for _, entrant := range entrants {
 		matching := map[string][]creationCertificateRow{}
 		for _, certificate := range certificateRows {
-			if creationLaneMatchesEntrant(certificate.Lane, entrant, authority.CompatibilityTuple) {
+			if creationLaneMatchesEntrant(certificate.Lane, entrant, authority.CompatibilityTuple, server.deploymentLanes) {
 				matching[certificate.Kind] = append(matching[certificate.Kind], certificate)
 			}
 		}
@@ -243,36 +243,15 @@ func creationCertificateSnapshot(reference runtimeEvidenceCertificateReference) 
 	return goExecutionCertificateReference{Kind: reference.Kind, CertificateID: reference.CertificateID, CertificateVersion: reference.CertificateVersion, CertificateRecordHash: strings.TrimPrefix(reference.CertificateRecordHash, "sha256:"), RegistryGeneration: reference.RegistryGeneration}
 }
 
-func creationLaneMatchesEntrant(lane goExecutableLaneIdentity, entrant map[string]any, tuple registeredCompatibilityTuple) bool {
+func creationLaneMatchesEntrant(lane goExecutableLaneIdentity, entrant map[string]any, tuple registeredCompatibilityTuple, registry *goDeploymentLaneRegistry) bool {
 	if lane.SemanticTupleID != tuple.TupleID || lane.SemanticTuple != tuple.Tuple {
 		return false
 	}
-	expectedMap := mapValue(entrant, "_creationLaneIdentity")
-	if len(expectedMap) == 0 {
-		return false
-	}
-	expectedBytes, err := json.Marshal(expectedMap)
-	if err != nil {
-		return false
-	}
-	var expected goExecutableLaneIdentity
-	if err := decodeStrictJSON(expectedBytes, &expected); err != nil || expected != lane || hashCreationLaneIdentity(expected) != hashCreationLaneIdentity(lane) {
-		return false
-	}
-	runtime := mapValue(entrant, "_creationRuntime")
-	metadata := mapValue(entrant, "_creationMetadata")
-	if lane.LanguageID != stringValue(mapValue(runtime, "language"), "id") || lane.AdapterID != stringValue(mapValue(runtime, "adapter"), "id") || lane.AdapterVersion != stringValue(mapValue(runtime, "adapter"), "version") || lane.SemanticTuple.RuntimeABI != stringValue(runtime, "abiVersion") {
-		return false
-	}
-	provider := mapValue(metadata, "providerValidation")
-	if lane.ProviderID != stringValue(provider, "providerId") {
-		return false
-	}
-	artifact := mapValue(metadata, "sourceArtifact")
-	if len(artifact) == 0 {
-		artifact = mapValue(metadata, "compiledArtifact")
-	}
-	return lane.ArtifactSHA256 != "" && lane.ArtifactSHA256 == stringValue(artifact, "hash")
+	expected, ok := registry.resolveRevision(
+		stringValue(entrant, "strategyRevisionId"), stringValue(entrant, "sourceHash"), intValue(entrant, "sourceBytes"),
+		mapValue(entrant, "_creationRuntime"), mapValue(entrant, "engineCompatibility"), mapValue(entrant, "_creationMetadata"), tuple,
+	)
+	return ok && expected != nil && *expected == lane && hashCreationLaneIdentity(*expected) == hashCreationLaneIdentity(lane)
 }
 
 func createGoMatchSetIntegrityIdentity(authority *verifiedRuntimeEvidenceAuthority, entrants []goEntrantExecutionEvidence) (*goMatchSetIntegrityIdentity, error) {

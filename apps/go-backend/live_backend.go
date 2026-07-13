@@ -35,6 +35,7 @@ type LiveServer struct {
 	pool              *pgxpool.Pool
 	now               func() time.Time
 	strategyArtifacts map[string]strategyArtifact
+	deploymentLanes   *goDeploymentLaneRegistry
 	authority         *verifiedRuntimeEvidenceAuthority
 	loadAuthority     func() (*verifiedRuntimeEvidenceAuthority, error)
 	orchestrator      *goMatchOrchestrator
@@ -42,15 +43,17 @@ type LiveServer struct {
 }
 
 type liveServerDependencies struct {
-	loadAuthority   func() (*verifiedRuntimeEvidenceAuthority, error)
-	connectPool     func(context.Context, string) (*pgxpool.Pool, error)
-	loadArtifacts   func() (map[string]strategyArtifact, error)
-	newOrchestrator func(*pgxpool.Pool, string) *goMatchOrchestrator
+	loadAuthority       func() (*verifiedRuntimeEvidenceAuthority, error)
+	loadDeploymentLanes func() (*goDeploymentLaneRegistry, error)
+	connectPool         func(context.Context, string) (*pgxpool.Pool, error)
+	loadArtifacts       func() (map[string]strategyArtifact, error)
+	newOrchestrator     func(*pgxpool.Pool, string) *goMatchOrchestrator
 }
 
 func defaultLiveServerDependencies() liveServerDependencies {
 	return liveServerDependencies{
-		loadAuthority: loadProductionRuntimeEvidenceAuthorityFromEnvironment,
+		loadAuthority:       loadProductionRuntimeEvidenceAuthorityFromEnvironment,
+		loadDeploymentLanes: loadProductionDeploymentLaneRegistryFromEnvironment,
 		connectPool: func(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 			pool, err := pgxpool.New(ctx, databaseURL)
 			if err != nil {
@@ -81,6 +84,13 @@ func newLiveServerWithDependencies(ctx context.Context, databaseURL string, depe
 	if strings.TrimSpace(databaseURL) == "" {
 		return nil, errors.New("live Go backend requires DATABASE_URL")
 	}
+	if dependencies.loadDeploymentLanes == nil {
+		return nil, errors.New("live Go backend deployment lane registry unavailable")
+	}
+	deploymentLanes, err := dependencies.loadDeploymentLanes()
+	if err != nil || !deploymentLanes.matchesAuthority(authority) {
+		return nil, errors.New("live Go backend deployment lane registry unavailable")
+	}
 	pool, err := dependencies.connectPool(ctx, databaseURL)
 	if err != nil || pool == nil {
 		return nil, fmt.Errorf("connect live database")
@@ -94,10 +104,16 @@ func newLiveServerWithDependencies(ctx context.Context, databaseURL string, depe
 		pool:              pool,
 		now:               time.Now,
 		strategyArtifacts: artifacts,
+		deploymentLanes:   deploymentLanes,
 		authority:         authority,
 		loadAuthority:     dependencies.loadAuthority,
 		orchestrator:      dependencies.newOrchestrator(pool, os.Getenv("COWARDS_RUNTIME_SERVICE_URL")),
 	}
+	if server.orchestrator == nil {
+		pool.Close()
+		return nil, errors.New("live Go orchestration unavailable")
+	}
+	server.orchestrator.deploymentLanes = deploymentLanes
 	orchestrationMode := strings.TrimSpace(os.Getenv("COWARDS_GO_ORCHESTRATION"))
 	runtimeServiceURL := strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SERVICE_URL"))
 	if orchestrationMode != "0" && runtimeServiceURL != "" {
@@ -2686,7 +2702,6 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 	for _, entrant := range entrants {
 		delete(entrant, "_creationRuntime")
 		delete(entrant, "_creationMetadata")
-		delete(entrant, "_creationLaneIdentity")
 	}
 	matches := generatePairwiseMatches(matchSetID, matchSetPresetID, entrants)
 	duplicateKey := buildDuplicateKey(userID, presetID, revisionIDs)
@@ -2891,19 +2906,18 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, tx pgx.Tx, user
 			label = id
 		}
 		byID[id] = map[string]any{
-			"strategyRevisionId":    id,
-			"ownerUserId":           ownerUserID,
-			"ownerHandle":           handle,
-			"displayLabel":          "@" + handle + " / \"" + label + "\" / " + shortHash(sourceHash),
-			"sourceHash":            sourceHash,
-			"sourceBytes":           sourceBytes,
-			"runtime":               publicRuntimeMetadata(runtime),
-			"_creationRuntime":      runtime,
-			"_creationMetadata":     metadata,
-			"_creationLaneIdentity": mapValue(metadata, "executableLaneIdentity"),
-			"runtimeSemantics":      runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes),
-			"engineCompatibility":   jsonMap(engineRaw),
-			"lockedAt":              lockedAt.Format(time.RFC3339Nano),
+			"strategyRevisionId":  id,
+			"ownerUserId":         ownerUserID,
+			"ownerHandle":         handle,
+			"displayLabel":        "@" + handle + " / \"" + label + "\" / " + shortHash(sourceHash),
+			"sourceHash":          sourceHash,
+			"sourceBytes":         sourceBytes,
+			"runtime":             publicRuntimeMetadata(runtime),
+			"_creationRuntime":    runtime,
+			"_creationMetadata":   metadata,
+			"runtimeSemantics":    runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes),
+			"engineCompatibility": jsonMap(engineRaw),
+			"lockedAt":            lockedAt.Format(time.RFC3339Nano),
 		}
 	}
 	if err := rows.Err(); err != nil {

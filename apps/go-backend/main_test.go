@@ -44,6 +44,30 @@ func TestNewLiveServerRejectsAuthorityBeforePoolOrOrchestrator(t *testing.T) {
 	}
 }
 
+func TestNewLiveServerRejectsDeploymentRegistryBeforePool(t *testing.T) {
+	fixture := newDeploymentLaneFixture(t)
+	poolCalls := 0
+	dependencies := defaultLiveServerDependencies()
+	dependencies.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) {
+		return &verifiedRuntimeEvidenceAuthority{CompatibilityTuple: fixture.Tuple}, nil
+	}
+	dependencies.loadDeploymentLanes = func() (*goDeploymentLaneRegistry, error) {
+		return nil, errors.New("registry unavailable")
+	}
+	dependencies.connectPool = func(context.Context, string) (*pgxpool.Pool, error) {
+		poolCalls++
+		return nil, errors.New("database must not be reached")
+	}
+
+	_, err := newLiveServerWithDependencies(context.Background(), "postgres://must-not-connect", dependencies)
+	if err == nil || err.Error() != "live Go backend deployment lane registry unavailable" {
+		t.Fatalf("expected stable deployment registry failure, got %v", err)
+	}
+	if poolCalls != 0 {
+		t.Fatalf("deployment registry must fail before mutable database, calls=%d", poolCalls)
+	}
+}
+
 func TestHandlerFromEnvRejectsAuthorityBeforeReturningHandler(t *testing.T) {
 	t.Setenv("COWARDS_GO_BACKEND_DATA_MODE", "live")
 	t.Setenv("DATABASE_URL", "postgres://must-not-connect")

@@ -139,53 +139,27 @@ func TestMatchJobLeaseForRuntimeServiceBudget(t *testing.T) {
 }
 
 func TestRuntimeServiceStrategyRebindsLockedRevisionToClaimedLane(t *testing.T) {
-	lockedAt := time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)
-	tuple := registeredCompatibilityTuple{TupleID: "sha256:" + strings.Repeat("a", 64), Tuple: canonicalCompatibilityTuple{Rules: "rules-v1", Engine: "engine-v1", RuntimeABI: "abi-v1", Chronicle: "chronicle-v1", ArenaCatalog: "arenas-v1", SetPolicy: "set-v1"}}
-	lane := goExecutableLaneIdentity{ProviderID: "provider", LanguageID: "typescript", RuntimeID: "node", RuntimeVersion: "26", ToolchainID: "typescript", ToolchainVersion: "6", AdapterID: "adapter", AdapterVersion: "1", PolicyID: "policy", PolicyVersion: "1", CorpusID: "corpus", CorpusVersion: "1", ArtifactID: "artifact", ArtifactSHA256: strings.Repeat("b", 64), ImplementationID: "runtime-service", BuildID: "build", SemanticTupleID: tuple.TupleID, SemanticTuple: tuple.Tuple}
-	laneBytes, err := json.Marshal(lane)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var laneMap map[string]any
-	if err := json.Unmarshal(laneBytes, &laneMap); err != nil {
-		t.Fatal(err)
-	}
-	strategy := runtimeServiceStrategyRevision{
-		ID:       "revision:one",
-		LockedAt: &lockedAt,
-		Runtime: map[string]any{
-			"language":   map[string]any{"id": lane.LanguageID},
-			"adapter":    map[string]any{"id": lane.AdapterID, "version": lane.AdapterVersion},
-			"abiVersion": lane.SemanticTuple.RuntimeABI,
-		},
-		Metadata: map[string]any{
-			"executableLaneIdentity": laneMap,
-			"providerValidation":     map[string]any{"providerId": lane.ProviderID},
-			"sourceArtifact":         map[string]any{"hash": lane.ArtifactSHA256},
-		},
-	}
-	evidence := goEntrantExecutionEvidence{StrategyRevisionID: strategy.ID, LaneIdentity: lane}
-	if !runtimeServiceStrategyMatchesClaim(strategy, evidence, tuple) {
+	fixture := newDeploymentLaneFixture(t)
+	strategy := fixture.Strategy
+	evidence := goEntrantExecutionEvidence{StrategyRevisionID: strategy.ID, LaneIdentity: fixture.Lane}
+	if !runtimeServiceStrategyMatchesClaim(strategy, evidence, fixture.Tuple, fixture.Registry) {
 		t.Fatal("exact locked revision did not match its claimed executable lane")
 	}
 
 	unlocked := strategy
 	unlocked.LockedAt = nil
-	if runtimeServiceStrategyMatchesClaim(unlocked, evidence, tuple) {
+	if runtimeServiceStrategyMatchesClaim(unlocked, evidence, fixture.Tuple, fixture.Registry) {
 		t.Fatal("unlocked revision matched claimed executable lane")
 	}
 	swappedRevision := strategy
 	swappedRevision.ID = "revision:other"
-	if runtimeServiceStrategyMatchesClaim(swappedRevision, evidence, tuple) {
+	if runtimeServiceStrategyMatchesClaim(swappedRevision, evidence, fixture.Tuple, fixture.Registry) {
 		t.Fatal("swapped revision matched claimed executable lane")
 	}
 	swappedArtifact := strategy
-	swappedArtifact.Metadata = map[string]any{
-		"executableLaneIdentity": laneMap,
-		"providerValidation":     map[string]any{"providerId": lane.ProviderID},
-		"sourceArtifact":         map[string]any{"hash": strings.Repeat("c", 64)},
-	}
-	if runtimeServiceStrategyMatchesClaim(swappedArtifact, evidence, tuple) {
+	swappedArtifact.Metadata = cloneMap(strategy.Metadata)
+	mapValue(swappedArtifact.Metadata, "sourceArtifact")["hash"] = strings.Repeat("c", 64)
+	if runtimeServiceStrategyMatchesClaim(swappedArtifact, evidence, fixture.Tuple, fixture.Registry) {
 		t.Fatal("post-claim artifact swap matched claimed executable lane")
 	}
 }

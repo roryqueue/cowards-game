@@ -18,12 +18,13 @@ const (
 )
 
 type goMatchOrchestrator struct {
-	lifecycle    *matchJobLifecycle
-	completion   *matchCompletionService
-	runtime      *runtimeServiceClient
-	workerID     string
-	pollInterval time.Duration
-	logger       *log.Logger
+	lifecycle       *matchJobLifecycle
+	completion      *matchCompletionService
+	runtime         *runtimeServiceClient
+	deploymentLanes *goDeploymentLaneRegistry
+	workerID        string
+	pollInterval    time.Duration
+	logger          *log.Logger
 }
 
 type goMatchOrchestrationResult struct {
@@ -107,7 +108,7 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		return &goMatchOrchestrationResult{Status: status, JobID: claimed.JobID, MatchID: claimed.MatchID}, nil
 	}
 
-	request, err := buildRuntimeServiceRequestForClaimedJob(ctx, orchestrator.lifecycle.pool, claimed)
+	request, err := buildRuntimeServiceRequestForClaimedJob(ctx, orchestrator.lifecycle.pool, claimed, orchestrator.deploymentLanes)
 	if err != nil {
 		status, recordErr := orchestrator.lifecycle.recordAttemptFailure(ctx, recordAttemptFailureInput{
 			JobID:        claimed.JobID,
@@ -217,7 +218,7 @@ func buildRuntimeServiceRequestForClaimedMatch(ctx context.Context, pool *pgxpoo
 	return &request, nil
 }
 
-func buildRuntimeServiceRequestForClaimedJob(ctx context.Context, pool *pgxpool.Pool, claimed *claimedMatchJob) (*runtimeServiceRequest, error) {
+func buildRuntimeServiceRequestForClaimedJob(ctx context.Context, pool *pgxpool.Pool, claimed *claimedMatchJob, registry *goDeploymentLaneRegistry) (*runtimeServiceRequest, error) {
 	if claimed == nil || claimed.Integrity == nil {
 		return nil, errors.New("claimed Match integrity identity is unavailable")
 	}
@@ -226,8 +227,8 @@ func buildRuntimeServiceRequestForClaimedJob(ctx context.Context, pool *pgxpool.
 		return nil, err
 	}
 	claimedTuple := registeredCompatibilityTuple{TupleID: claimed.Integrity.CompatibilityTupleID, Tuple: claimed.Integrity.CompatibilityTuple}
-	if !runtimeServiceStrategyMatchesClaim(request.Strategies.Bottom, claimed.Integrity.Bottom, claimedTuple) ||
-		!runtimeServiceStrategyMatchesClaim(request.Strategies.Top, claimed.Integrity.Top, claimedTuple) {
+	if !runtimeServiceStrategyMatchesClaim(request.Strategies.Bottom, claimed.Integrity.Bottom, claimedTuple, registry) ||
+		!runtimeServiceStrategyMatchesClaim(request.Strategies.Top, claimed.Integrity.Top, claimedTuple, registry) {
 		return nil, errors.New("claimed Match Strategy Revision drifted from its executable lane evidence")
 	}
 	snapshot, err := runtimeServiceSnapshotForClaim(claimed.Integrity)
@@ -241,19 +242,18 @@ func buildRuntimeServiceRequestForClaimedJob(ctx context.Context, pool *pgxpool.
 	return request, nil
 }
 
-func runtimeServiceStrategyMatchesClaim(strategy runtimeServiceStrategyRevision, evidence goEntrantExecutionEvidence, tuple registeredCompatibilityTuple) bool {
+func runtimeServiceStrategyMatchesClaim(strategy runtimeServiceStrategyRevision, evidence goEntrantExecutionEvidence, tuple registeredCompatibilityTuple, registry *goDeploymentLaneRegistry) bool {
 	if strategy.LockedAt == nil || strategy.ID != evidence.StrategyRevisionID {
 		return false
 	}
-	configuredLane := mapValue(strategy.Metadata, "executableLaneIdentity")
-	if len(configuredLane) == 0 {
-		return false
-	}
 	return creationLaneMatchesEntrant(evidence.LaneIdentity, map[string]any{
-		"_creationLaneIdentity": configuredLane,
-		"_creationRuntime":      strategy.Runtime,
-		"_creationMetadata":     strategy.Metadata,
-	}, tuple)
+		"strategyRevisionId":  strategy.ID,
+		"sourceHash":          strategy.SourceHash,
+		"sourceBytes":         strategy.SourceBytes,
+		"engineCompatibility": strategy.EngineCompatibility,
+		"_creationRuntime":    strategy.Runtime,
+		"_creationMetadata":   strategy.Metadata,
+	}, tuple, registry)
 }
 
 func runtimeServiceSnapshotForClaim(identity *claimedMatchIntegrityIdentity) (runtimeServiceEvidenceSnapshot, error) {
