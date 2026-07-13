@@ -25,13 +25,13 @@
 - [x] **KERN-01**: Direct Match execution and Chronicle production consume one engine-owned transition kernel instead of independently implementing the Phase, Round, Cycle, Activation, and Contraction loop.
 - [x] **KERN-02**: Chronicle construction records canonical kernel transitions without independently advancing gameplay.
 - [ ] **KERN-03**: Arena, initial-state, transition-state, runtime-final-state, persisted-state, and reconstructed-state validation rejects inverted bounds, invalid terrain, duplicate identities or occupancy, unknown owners, invalid status/position/facing combinations, bad initiative, incompatible versions, and incoherent outcomes.
-- [ ] **KERN-04**: No-Advance cleanup that removes a player's final active Soldier immediately produces the canonical outcome and exactly one matching terminal event.
-- [ ] **KERN-05**: A Soldier stoned or fallen during Cycle-end Backstab has its activation slot closed with the exact approved terminal reason and cannot act again.
-- [ ] **KERN-06**: Excess activation-order handling follows one literal documented precedence and tests valid, invalid, duplicate, unknown, and malformed entries inside and outside the retained prefix.
+- [x] **KERN-04**: No-Advance cleanup that removes a player's final active Soldier immediately produces the canonical outcome and exactly one matching terminal event.
+- [x] **KERN-05**: A Soldier stoned or fallen during Cycle-end Backstab has its activation slot closed with the exact approved terminal reason and cannot act again.
+- [x] **KERN-06**: Excess activation-order handling follows one literal documented precedence and tests valid, invalid, duplicate, unknown, and malformed entries inside and outside the retained prefix.
 - [x] **KERN-07**: The stale contiguous-Activation public entry point is removed, and structural checks prevent production or tests from bypassing Cycle-interleaved scheduling.
 - [ ] **KERN-08**: Canonical constants are frozen or deeply cloned so caller mutation cannot affect later Matches, fixtures, or evidence.
 - [ ] **KERN-09**: Every declared canonical event is produced under documented conditions or removed from the active vocabulary, with version-strict tests.
-- [ ] **KERN-10**: Executable compatibility fixtures preserve current v1.4 behavior for same-direction collision, successful-push reversal history, blocked MOVE/PUSH, terminal timing, Backstab geometry/timing, and every other audited ambiguity.
+- [x] **KERN-10**: Executable compatibility fixtures preserve current v1.4 behavior for same-direction collision, successful-push reversal history, blocked MOVE/PUSH, terminal timing, Backstab geometry/timing, and every other audited ambiguity.
 - [x] **KERN-11**: Any implementation finding that would change a valid Match state, Action legality, event order, outcome, terminal timing/reason, or Strategy observation stops for an explicit compatibility ruling before expectations are changed.
 
 ### Runtime ABI, JSON, Identity, and Failure Safety
@@ -133,13 +133,13 @@ These candidates are optional and are not required for v1.37 completion.
 | KERN-01 | Phase 257 | Complete |
 | KERN-02 | Phase 257 | Complete |
 | KERN-03 | Phase 257 | Pending |
-| KERN-04 | Phase 257 | Pending |
-| KERN-05 | Phase 257 | Pending |
-| KERN-06 | Phase 257 | Pending |
+| KERN-04 | Phase 257 | Complete |
+| KERN-05 | Phase 257 | Complete |
+| KERN-06 | Phase 257 | Complete |
 | KERN-07 | Phase 257 | Complete |
 | KERN-08 | Phase 257 | Pending |
 | KERN-09 | Phase 257 | Pending |
-| KERN-10 | Phase 257 | Pending |
+| KERN-10 | Phase 257 | Complete |
 | KERN-11 | Phase 257 | Complete |
 | RABI-01 | Phase 258 | Pending |
 | RABI-02 | Phase 258 | Pending |

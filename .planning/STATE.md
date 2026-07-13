@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 257
 current_phase_name: canonical-transition-kernel-and-v1-4-semantic-integrity
 status: executing
-stopped_at: Completed 257-01-PLAN.md
-last_updated: "2026-07-13T14:47:29.537Z"
+stopped_at: Completed 257-02-PLAN.md
+last_updated: "2026-07-13T15:02:15.207Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 257 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 41
-  completed_plans: 20
-  percent: 49
+  completed_plans: 21
+  percent: 51
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 257 (canonical-transition-kernel-and-v1-4-semantic-integrity) — EXECUTING
-Plan: 2 of 22
-Status: Executing Phase 257
+Plan: 3 of 22
+Status: Ready to execute
 Last activity: 2026-07-13 — Phase 257 execution started
 
-Progress: [█████░░░░░] 49%
+Progress: [█████░░░░░] 51%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [█████░░░░░] 49%
 
 **Resume file:** None
 
-Last session: 2026-07-13T14:47:29.521Z
-Stopped at: Completed 257-01-PLAN.md
+Last session: 2026-07-13T15:02:15.191Z
+Stopped at: Completed 257-02-PLAN.md
 Next command: `$gsd-execute-phase 257`
 
 ## Performance Metrics
@@ -87,6 +87,7 @@ Next command: `$gsd-execute-phase 257`
 | Phase 256 P13 | 46min | 2 tasks | 3 files |
 | Phase 256 P14 | 37min | 3 tasks | 20 files |
 | Phase 257 P01 | 12min | 2 tasks | 4 files |
+| Phase 257 P02 | 9min | 2 tasks | 2 files |
 
 ## Decisions
 
@@ -134,3 +135,6 @@ Next command: `$gsd-execute-phase 257`
 - [Phase 256]: Competition entrants link to generic execution evidence by exact entrant key. — Existing runtime and snapshot JSON cannot imply or substitute for certified executable identity.
 - [Phase 256]: Completion persists only the locked Match tuple and ordered evidence pair; runtime response identity is comparison input, never Chronicle authority. — This closes in-flight drift without allowing request or response certificate-shaped data to authorize gameplay persistence.
 - [Phase 256]: Identity drift at completion is a retryable system failure with no player penalty and a fully rolled-back completion transaction. — Evidence expiry, revocation, mismatch, or generation drift is system-owned and must never mutate gameplay or create a player violation.
+- [Phase 257]: No-Advance preserves INVALID_MOVE slot closure and NO_ADVANCE status reason before immediate outcome. — This freezes D-11 without changing the existing invalid-reversal classification.
+- [Phase 257]: Cycle-end Backstab closes the removed actor once as BACKSTABBED after CYCLE_ENDED and before MATCH_ENDED. — This is the exact approved D-10 event and terminal ordering.
+- [Phase 257]: Invalid retained activation orders invalidate the full selection; ignored suffix entries are neither parsed nor replacement candidates. — This is the literal cap-then-validate D-09 precedence.
