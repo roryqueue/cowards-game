@@ -33,6 +33,7 @@ import {
 } from "./runtime-config.js"
 import { executeRuntimeServiceRequest } from "./execute-match.js"
 import { redactedErrorMessage } from "./redaction.js"
+import type { RuntimeEvidenceAuthorityLoader } from "./runtime-evidence-authority.js"
 
 const DEFAULT_BODY_LIMIT_BYTES = 8 * 1024 * 1024
 const PRIVATE_ARTIFACT_TOKEN_HEADER = "x-cowards-private-artifact-token"
@@ -41,6 +42,7 @@ export interface RuntimeExecutionHttpServerOptions {
   runtimeConfig?: RuntimeServiceConfig | undefined
   bodyLimitBytes?: number | undefined
   privateArtifactToken?: string | undefined
+  authorityLoader?: RuntimeEvidenceAuthorityLoader | undefined
 }
 
 const writeJson = (

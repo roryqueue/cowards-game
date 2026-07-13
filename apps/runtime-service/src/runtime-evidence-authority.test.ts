@@ -1,5 +1,6 @@
 import { generateKeyPairSync, sign } from "node:crypto"
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -7,6 +8,7 @@ import {
 } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { spawnSync } from "node:child_process"
 import { afterEach, describe, expect, it } from "vitest"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
@@ -179,10 +181,10 @@ describe("mounted runtime evidence authority", () => {
       operations.filter((entry) => entry === `open:${fixture.bundlePath}`),
     ).toHaveLength(1)
     expect(operations.filter((entry) => entry.startsWith("read:"))).toHaveLength(
-      3,
+      4,
     )
     expect(operations.filter((entry) => entry.startsWith("close:"))).toHaveLength(
-      3,
+      4,
     )
   })
 
@@ -280,6 +282,41 @@ describe("mounted runtime evidence authority", () => {
         COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BUNDLE_PATH: fixture.bundlePath,
       }),
     ).toThrow(RuntimeEvidenceAuthorityLoadError)
+  })
+
+  it("fails the production entrypoint safely before server creation or listen", () => {
+    const environment = { ...process.env }
+    for (const key of [
+      "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BUNDLE_PATH",
+      "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_PUBLIC_KEY_PATH",
+      "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_MIN_GENERATION",
+      "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_MIN_BUNDLE_HASH",
+      "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_PATH",
+      "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BOOTSTRAP",
+    ]) {
+      delete environment[key]
+    }
+    const result = spawnSync(
+      process.execPath,
+      ["--import", "tsx", "src/index.ts"],
+      {
+        cwd: new URL("..", import.meta.url).pathname,
+        env: environment,
+        encoding: "utf8",
+      },
+    )
+    const output = `${result.stdout}${result.stderr}`
+
+    expect(result.status).toBe(1)
+    expect(output).toContain(
+      "Coward's Game runtime execution service unavailable.",
+    )
+    expect(output).not.toContain(" ready")
+    expect(output).not.toContain("listening")
+    expect(output).not.toContain("/Users/")
+    expect(output).not.toContain(
+      "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BUNDLE_PATH",
+    )
   })
 
   it("bootstraps only the exact deployment pin through temp-write, fsync, rename, and directory fsync", () => {
@@ -403,5 +440,29 @@ describe("mounted runtime evidence authority", () => {
       "ANCHOR_IO",
     )
     expect(readFileSync(fixture.highWaterPath, "utf8")).toBe(before)
+  })
+
+  it("fails closed on a concurrent refresh without removing another installer's lock", () => {
+    const fixture = createFixture({ bootstrap: true, withAnchor: false })
+    const lockPath = `${fixture.highWaterPath}.lock`
+    const nodeFs = createNodeRuntimeEvidenceAuthorityFileSystem()
+    nodeFs.makeLock(lockPath)
+    let removeLockCalled = false
+    expectLoadCode(
+      () =>
+        createRuntimeEvidenceAuthorityLoader({
+          ...fixture.config,
+          fileSystem: {
+            ...nodeFs,
+            removeLock() {
+              removeLockCalled = true
+            },
+          },
+        }).load(),
+      "ANCHOR_IO",
+    )
+    expect(removeLockCalled).toBe(false)
+    expect(existsSync(lockPath)).toBe(true)
+    expect(() => readFileSync(fixture.highWaterPath)).toThrow()
   })
 })
