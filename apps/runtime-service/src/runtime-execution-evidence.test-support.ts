@@ -64,14 +64,13 @@ const fixtureEntrantEvidence = (input: {
   }
   return {
     ...entrant,
-    schedulingDecisionHash:
-      hashRuntimeAuthoritySchedulingDecisionReference({
-        compatibilityTupleId: input.compatibilityTupleId,
-        authorityBundleHash: FIXTURE_AUTHORITY_BUNDLE_HASH,
-        registryGeneration: FIXTURE_REGISTRY_GENERATION,
-        publication: FIXTURE_PUBLICATION,
-        entrant,
-      }),
+    schedulingDecisionHash: hashRuntimeAuthoritySchedulingDecisionReference({
+      compatibilityTupleId: input.compatibilityTupleId,
+      authorityBundleHash: FIXTURE_AUTHORITY_BUNDLE_HASH,
+      registryGeneration: FIXTURE_REGISTRY_GENERATION,
+      publication: FIXTURE_PUBLICATION,
+      entrant,
+    }),
   }
 }
 
@@ -99,6 +98,8 @@ const fixtureAuthorityForSnapshot = (
           certificateVersion: "fixture-only-containment-v1",
           certificateRecordHash: entrant.containmentCertificateHash!,
           laneIdentityHash: entrant.laneIdentityHash,
+          issuedAt: "2026-07-12T00:00:00.000Z",
+          freshUntil: "2026-07-14T00:00:00.000Z",
           attestationIds: [attestationId],
         },
         ...(entrant.effectiveStatus === "counted"
@@ -109,6 +110,8 @@ const fixtureAuthorityForSnapshot = (
                 certificateVersion: "fixture-only-conformance-v1",
                 certificateRecordHash: entrant.conformanceCertificateHash!,
                 laneIdentityHash: entrant.laneIdentityHash,
+                issuedAt: "2026-07-12T00:00:00.000Z",
+                freshUntil: "2026-07-14T00:00:00.000Z",
                 attestationIds: [attestationId],
               },
             ]

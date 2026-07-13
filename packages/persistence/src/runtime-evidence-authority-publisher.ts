@@ -725,6 +725,8 @@ interface SnapshotCertificateRow extends QueryResultRow {
   lane_identity_hash: string
   verified_attestation_id: string
   result_graph_hash: string
+  issued_at: Date | string
+  fresh_until: Date | string
 }
 
 interface SnapshotControlRow extends QueryResultRow {
@@ -909,16 +911,21 @@ const loadPublicationSnapshot = async (
   const certificatesResult = await client.query<SnapshotCertificateRow>(
     `select c.id, c.certificate_kind, c.certificate_version,
             c.certificate_record_hash, c.lane_identity_hash,
-            c.verified_attestation_id, c.result_graph_hash
+            c.verified_attestation_id, c.result_graph_hash,
+            c.issued_at, c.fresh_until
        from runtime_evidence_certificates c
        join runtime_evidence_verified_attestations a
          on a.id = c.verified_attestation_id
         and a.verification_status = 'passed'
         and a.result_graph_hash = c.result_graph_hash
       where c.certificate_status = 'passed'
+        and c.issued_at <= $1::timestamptz
+        and c.fresh_until >= $2::timestamptz
       order by c.id`,
+    [input.validFrom, input.validUntil],
   )
   const certificates = certificatesResult.rows
+  const certificateIds = certificates.map((row) => row.id)
   const attestationIds = [
     ...new Set(certificates.map((row) => row.verified_attestation_id)),
   ].sort((left, right) => left.localeCompare(right))
@@ -973,7 +980,9 @@ const loadPublicationSnapshot = async (
         and c.verified_attestation_id = r.verified_attestation_id
         and c.result_graph_hash = r.evidence_graph_hash
       where r.verification_status = 'passed'
+        and r.target_certificate_id = any($1::text[])
       order by r.id`,
+    [certificateIds],
   )
   for (const row of revocationsResult.rows) {
     const verified = parsePersistedImport(
@@ -998,7 +1007,10 @@ const loadPublicationSnapshot = async (
         and replacement.verified_attestation_id = s.replacement_verified_attestation_id
         and replacement.result_graph_hash = s.replacement_evidence_graph_hash
       where s.verification_status = 'passed'
+        and s.target_certificate_id = any($1::text[])
+        and s.replacement_certificate_id = any($1::text[])
       order by s.id`,
+    [certificateIds],
   )
   for (const row of supersessionsResult.rows) {
     const verified = parsePersistedImport(
@@ -1010,7 +1022,6 @@ const loadPublicationSnapshot = async (
     assertStatusRowMatchesPayload(row, verified)
   }
 
-  const certificateIds = certificates.map((row) => row.id)
   const certificateIdSet = new Set(certificateIds)
   for (const row of revocationsResult.rows) {
     if (!certificateIdSet.has(row.target_certificate_id)) {
@@ -1162,6 +1173,8 @@ const loadPublicationSnapshot = async (
               row.lane_identity_hash,
               "lane identity hash",
             ),
+            issuedAt: isoInstant(row.issued_at, "certificate issuedAt"),
+            freshUntil: isoInstant(row.fresh_until, "certificate freshUntil"),
             attestationIds: Object.freeze([row.verified_attestation_id]),
           }),
         ),

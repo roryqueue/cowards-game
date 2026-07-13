@@ -75,6 +75,8 @@ type runtimeEvidenceAuthorityCertificate struct {
 	CertificateVersion    string   `json:"certificateVersion"`
 	CertificateRecordHash string   `json:"certificateRecordHash"`
 	LaneIdentityHash      string   `json:"laneIdentityHash"`
+	IssuedAt              string   `json:"issuedAt"`
+	FreshUntil            string   `json:"freshUntil"`
 	AttestationIDs        []string `json:"attestationIds"`
 }
 
@@ -416,6 +418,13 @@ func validateRuntimeEvidenceAuthorityGraph(payload runtimeEvidenceAuthorityPaylo
 		}
 		if _, exists := certificates[certificate.CertificateID]; exists {
 			return authorityError("DUPLICATE_ID")
+		}
+		issuedAt, issuedErr := parseCanonicalInstant(certificate.IssuedAt)
+		freshUntil, freshErr := parseCanonicalInstant(certificate.FreshUntil)
+		validFrom, validFromErr := parseCanonicalInstant(payload.ValidFrom)
+		validUntil, validUntilErr := parseCanonicalInstant(payload.ValidUntil)
+		if issuedErr != nil || freshErr != nil || validFromErr != nil || validUntilErr != nil || issuedAt.After(freshUntil) || issuedAt.After(validFrom) || freshUntil.Before(validUntil) {
+			return authorityError("CERTIFICATE_VALIDITY")
 		}
 		certificates[certificate.CertificateID] = certificate
 	}

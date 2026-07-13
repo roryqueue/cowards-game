@@ -273,6 +273,10 @@ describePostgres(
       id: string,
       recordHash: string,
       suffix: string,
+      validity: {
+        issuedAt?: string
+        freshUntil?: string
+      } = {},
     ): Promise<void> => {
       const attestationId = `attestation:${suffix}`
       const rawHash = recordHash.slice("sha256:".length)
@@ -353,8 +357,7 @@ describePostgres(
          result_graph_hash, registry_generation, issued_at, fresh_until)
        values ($1,'containment','runtime-certificate-v1',$2,'passed',$3,'passed',
          $4,'runtime-evidence-attestation-v1','command',$5,'corpus',$5,'policy',$5,
-         'typescript','6',$6,$5,$7,$8,$5,'fixture:generation:1',
-         '2026-07-12T00:00:00.000Z','2026-08-12T00:00:00.000Z')`,
+         'typescript','6',$6,$5,$7,$8,$5,'fixture:generation:1',$9,$10)`,
         [
           id,
           rawHash,
@@ -364,6 +367,8 @@ describePostgres(
           lane.artifactId,
           laneIdentityHash,
           lane,
+          validity.issuedAt ?? "2026-07-12T00:00:00.000Z",
+          validity.freshUntil ?? "2026-08-12T00:00:00.000Z",
         ],
       )
     }
@@ -595,6 +600,66 @@ describePostgres(
           { source_type: "lane-control", source_id: disablePayload.eventId },
         ]),
       )
+    })
+
+    it("publishes only certificates covering the complete authority interval", async () => {
+      const candidates = [
+        {
+          id: "certificate:fixture:expired",
+          suffix: "expired",
+          validity: { freshUntil: "2026-07-13T11:59:59.999Z" },
+        },
+        {
+          id: "certificate:fixture:future",
+          suffix: "future",
+          validity: { issuedAt: "2026-07-13T12:00:00.001Z" },
+        },
+        {
+          id: "certificate:fixture:mid-window",
+          suffix: "mid-window",
+          validity: { freshUntil: "2026-07-14T00:00:00.000Z" },
+        },
+        {
+          id: "certificate:fixture:covering",
+          suffix: "covering",
+          validity: {},
+        },
+      ] as const
+      for (const candidate of candidates) {
+        await seedCertificate(
+          candidate.id,
+          sha256(`certificate:${candidate.suffix}`),
+          candidate.suffix,
+          candidate.validity,
+        )
+      }
+
+      const prepared = await prepareRuntimeEvidenceAuthorityPublication(pool, {
+        issuedAt: "2026-07-13T12:00:00.000Z",
+        validFrom: "2026-07-13T12:00:00.000Z",
+        validUntil: "2026-07-14T12:00:00.000Z",
+        trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+        signerKeyId: trustRoot.keyId,
+        trustedImportAuthorities: [trustRoot],
+        signMessage: (bytes) => sign(null, bytes, keys.privateKey),
+      })
+      const inspected = inspectRuntimeEvidenceAuthorityBundle(
+        prepared.envelopeBytes,
+        {
+          expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+          evaluationInstant: "2026-07-13T12:00:00.000Z",
+          trustedKeyIds: [trustRoot.keyId],
+          verifySignature: ({ signedMessageBytes, signature }) =>
+            verify(null, signedMessageBytes, keys.publicKey, signature),
+        },
+      )
+      const ids = inspected.payload.certificates.map(
+        (certificate) => certificate.certificateId,
+      )
+      expect(ids).toContain("certificate:fixture:covering")
+      expect(ids).not.toContain("certificate:fixture:expired")
+      expect(ids).not.toContain("certificate:fixture:future")
+      expect(ids).not.toContain("certificate:fixture:mid-window")
     })
 
     it("rolls back signer failure and serializes concurrent snapshot generations", async () => {

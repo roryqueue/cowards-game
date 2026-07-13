@@ -139,6 +139,32 @@ func TestRuntimeEvidenceAuthoritySignatureBindsEnvelopeIdentity(t *testing.T) {
 			}
 		})
 	}
+
+	payloadBytes, err := base64.StdEncoding.DecodeString(original.PayloadBase64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload runtimeEvidenceAuthorityPayload
+	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
+		t.Fatal(err)
+	}
+	for name, change := range map[string]func(*runtimeEvidenceAuthorityCertificate){
+		"future-issued": func(certificate *runtimeEvidenceAuthorityCertificate) {
+			certificate.IssuedAt = "2026-07-12T00:00:00.001Z"
+		},
+		"mid-window-expiry": func(certificate *runtimeEvidenceAuthorityCertificate) {
+			certificate.FreshUntil = "2026-08-11T23:59:59.999Z"
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			invalid := payload
+			invalid.Certificates = append([]runtimeEvidenceAuthorityCertificate(nil), payload.Certificates...)
+			change(&invalid.Certificates[0])
+			if err := validateRuntimeEvidenceAuthorityGraph(invalid); err == nil {
+				t.Fatal("certificate not covering the bundle interval was accepted")
+			}
+		})
+	}
 }
 
 func TestRuntimeEvidenceAuthorityBootstrapRefreshRestartAndRollback(t *testing.T) {
@@ -376,6 +402,8 @@ func writeRuntimeAuthorityFiles(t *testing.T, dir string, manifest *integrityAut
 		CertificateVersion:    "runtime-containment-certificate-v1",
 		CertificateRecordHash: "sha256:" + strings.Repeat("2", 64),
 		LaneIdentityHash:      "sha256:" + strings.Repeat("3", 64),
+		IssuedAt:              "2026-07-12T00:00:00.000Z",
+		FreshUntil:            "2026-08-12T00:00:00.000Z",
 		AttestationIDs:        []string{"attestation:fixture"},
 	}
 	payload := runtimeEvidenceAuthorityPayload{

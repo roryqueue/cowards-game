@@ -55,6 +55,8 @@ export interface RuntimeEvidenceAuthorityCertificate {
   certificateVersion: string
   certificateRecordHash: string
   laneIdentityHash: string
+  issuedAt: string
+  freshUntil: string
   attestationIds: readonly string[]
 }
 
@@ -292,6 +294,8 @@ const parseCertificate = (
       "certificateVersion",
       "certificateRecordHash",
       "laneIdentityHash",
+      "issuedAt",
+      "freshUntil",
       "attestationIds",
     ],
     `certificates[${index}]`,
@@ -307,6 +311,20 @@ const parseCertificate = (
     fail(
       "EMPTY_EVIDENCE_GRAPH",
       `certificates[${index}] requires an attestation.`,
+    )
+  }
+  const issuedAt = parseInstant(
+    record.issuedAt,
+    `certificates[${index}].issuedAt`,
+  )
+  const freshUntil = parseInstant(
+    record.freshUntil,
+    `certificates[${index}].freshUntil`,
+  )
+  if (Date.parse(issuedAt) > Date.parse(freshUntil)) {
+    fail(
+      "INVALID_CERTIFICATE_VALIDITY",
+      `certificates[${index}] has an incoherent validity interval.`,
     )
   }
   return Object.freeze({
@@ -327,6 +345,8 @@ const parseCertificate = (
       record.laneIdentityHash,
       `certificates[${index}].laneIdentityHash`,
     ),
+    issuedAt,
+    freshUntil,
     attestationIds,
   })
 }
@@ -470,6 +490,15 @@ const validateClosedGraph = (
     }
   }
   for (const certificate of payload.certificates) {
+    if (
+      Date.parse(certificate.issuedAt) > Date.parse(payload.validFrom) ||
+      Date.parse(certificate.freshUntil) < Date.parse(payload.validUntil)
+    ) {
+      fail(
+        "CERTIFICATE_VALIDITY",
+        `Certificate ${certificate.certificateId} does not cover the authority validity interval.`,
+      )
+    }
     for (const attestationId of certificate.attestationIds) {
       if (!attestations.has(attestationId)) {
         fail(

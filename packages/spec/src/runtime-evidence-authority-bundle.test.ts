@@ -210,6 +210,8 @@ describe("runtime evidence authority bundle", () => {
       certificateVersion: "containment-v1",
       certificateRecordHash,
       laneIdentityHash,
+      issuedAt: "2026-07-12T00:00:00.000Z",
+      freshUntil: "2026-07-13T00:00:00.000Z",
       attestationIds: [attestation.attestationId],
     }
 
@@ -258,6 +260,38 @@ describe("runtime evidence authority bundle", () => {
           verify(null, signedMessageBytes, bundle.keys.publicKey, signature),
       }),
     ).toThrow(/conformance.*phase 259/i)
+  })
+
+  it("requires every signed certificate to cover the bundle interval", () => {
+    const attestation = {
+      attestationId: "attestation-validity",
+      attestationHash,
+      verified: true,
+      imports: [] as string[],
+    }
+    const certificate = {
+      kind: "containment" as const,
+      certificateId: "certificate-validity",
+      certificateVersion: "containment-v1",
+      certificateRecordHash,
+      laneIdentityHash,
+      issuedAt: "2026-07-12T00:00:00.000Z",
+      freshUntil: "2026-07-13T00:00:00.000Z",
+      attestationIds: [attestation.attestationId],
+    }
+    for (const invalid of [
+      { ...certificate, issuedAt: "2026-07-12T00:00:00.001Z" },
+      { ...certificate, freshUntil: "2026-07-12T23:59:59.999Z" },
+    ]) {
+      expect(() =>
+        encodeRuntimeEvidenceAuthorityPayload(
+          fixturePayload({
+            attestations: [attestation],
+            certificates: [invalid],
+          }),
+        ),
+      ).toThrow(/cover the authority validity interval/i)
+    }
   })
 
   it("requires exact bootstrap pins and durable monotonic high-water anchors", () => {
