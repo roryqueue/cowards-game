@@ -85,6 +85,10 @@ describe("migrations", () => {
     expect(sql).toMatch(
       /before update or delete on runtime_evidence_certificates/u,
     )
+    expect(sql).toContain("derived_certificate_record_hash")
+    expect(sql).toContain("containment_certificate_kind")
+    expect(sql).toContain("conformance_certificate_kind")
+    expect(sql).toContain("prevent_integrity_identity_rewrite")
     expect(sql).not.toMatch(
       /compatibility_tuple_id\s+text\s+not null\s+default/iu,
     )

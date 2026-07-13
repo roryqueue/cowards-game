@@ -167,6 +167,11 @@ describe("exact MatchSet integrity identity", () => {
     const extra = identityInput()
     extra.entrants.push(entrant(2))
     expect(() => createMatchSetIntegrityIdentity(extra)).toThrow(/coverage/iu)
+
+    const validated = createMatchSetIntegrityIdentity(identityInput())
+    expect(() => matchSetIntegritySqlValues({ ...validated })).toThrow(
+      /exact validator/iu,
+    )
   })
 
   it("resolves exact ordered pairs and rejects swaps or unknown keys", () => {

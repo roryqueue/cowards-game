@@ -58,6 +58,10 @@ create table runtime_evidence_verified_attestations (
   result_manifest_hash text not null,
   result_graph_hash text not null,
   original_evidence_hash text not null,
+  derived_certificate_version text not null,
+  derived_certificate_record_hash text not null,
+  registry_generation text not null,
+  lane_identity jsonb not null,
   issued_at timestamptz not null,
   valid_until timestamptz not null,
   imported_at timestamptz not null default now(),
@@ -81,7 +85,10 @@ create table runtime_evidence_verified_attestations (
     artifact_id,
     artifact_hash,
     lane_identity_hash,
-    result_graph_hash
+    result_graph_hash,
+    derived_certificate_version,
+    derived_certificate_record_hash,
+    registry_generation
   )
 );
 
@@ -135,7 +142,10 @@ create table runtime_evidence_certificates (
     artifact_id,
     artifact_hash,
     lane_identity_hash,
-    result_graph_hash
+    result_graph_hash,
+    certificate_version,
+    certificate_record_hash,
+    registry_generation
   ) references runtime_evidence_verified_attestations (
     id,
     verification_status,
@@ -153,7 +163,18 @@ create table runtime_evidence_certificates (
     artifact_id,
     artifact_hash,
     lane_identity_hash,
-    result_graph_hash
+    result_graph_hash,
+    derived_certificate_version,
+    derived_certificate_record_hash,
+    registry_generation
+  ),
+  unique (
+    id,
+    certificate_kind,
+    certificate_version,
+    certificate_record_hash,
+    registry_generation,
+    lane_identity_hash
   )
 );
 
@@ -261,10 +282,12 @@ create table match_set_execution_entrants (
   strategy_revision_id text not null references strategy_revisions(id),
   lane_identity jsonb not null,
   lane_identity_hash text not null,
-  containment_certificate_id text not null references runtime_evidence_certificates(id),
+  containment_certificate_kind text not null check (containment_certificate_kind = 'containment'),
+  containment_certificate_id text not null,
   containment_certificate_version text not null,
   containment_certificate_hash text not null,
-  conformance_certificate_id text not null references runtime_evidence_certificates(id),
+  conformance_certificate_kind text not null check (conformance_certificate_kind = 'conformance'),
+  conformance_certificate_id text not null,
   conformance_certificate_version text not null,
   conformance_certificate_hash text not null,
   scheduling_status text not null check (scheduling_status in ('disabled', 'exhibition_only', 'counted')),
@@ -279,7 +302,37 @@ create table match_set_execution_entrants (
   unique (match_set_id, strategy_revision_id),
   check (entrant_key <> ''),
   check (containment_certificate_id <> conformance_certificate_id),
-  check (scheduling_fresh_until >= scheduling_evaluated_at)
+  check (scheduling_fresh_until >= scheduling_evaluated_at),
+  foreign key (
+    containment_certificate_id,
+    containment_certificate_kind,
+    containment_certificate_version,
+    containment_certificate_hash,
+    authority_registry_generation,
+    lane_identity_hash
+  ) references runtime_evidence_certificates (
+    id,
+    certificate_kind,
+    certificate_version,
+    certificate_record_hash,
+    registry_generation,
+    lane_identity_hash
+  ),
+  foreign key (
+    conformance_certificate_id,
+    conformance_certificate_kind,
+    conformance_certificate_version,
+    conformance_certificate_hash,
+    authority_registry_generation,
+    lane_identity_hash
+  ) references runtime_evidence_certificates (
+    id,
+    certificate_kind,
+    certificate_version,
+    certificate_record_hash,
+    registry_generation,
+    lane_identity_hash
+  )
 );
 
 create index match_set_execution_entrants_revision_idx
@@ -387,3 +440,62 @@ alter table chronicles
   foreign key (integrity_match_set_id, top_execution_entrant_key)
   references match_set_execution_entrants(match_set_id, entrant_key)
   not valid;
+
+create or replace function prevent_integrity_identity_rewrite()
+returns trigger language plpgsql as $$
+begin
+  if tg_table_name = 'match_sets' and (
+    old.compatibility_tuple_id is distinct from new.compatibility_tuple_id or
+    old.compatibility_rules_version is distinct from new.compatibility_rules_version or
+    old.compatibility_engine_version is distinct from new.compatibility_engine_version or
+    old.compatibility_runtime_abi_version is distinct from new.compatibility_runtime_abi_version or
+    old.compatibility_chronicle_version is distinct from new.compatibility_chronicle_version or
+    old.compatibility_arena_catalog_version is distinct from new.compatibility_arena_catalog_version or
+    old.compatibility_set_policy_version is distinct from new.compatibility_set_policy_version or
+    old.authority_bundle_hash is distinct from new.authority_bundle_hash or
+    old.authority_registry_generation is distinct from new.authority_registry_generation or
+    old.execution_evidence_set is distinct from new.execution_evidence_set or
+    old.execution_evidence_set_hash is distinct from new.execution_evidence_set_hash
+  ) and old.compatibility_tuple_id is not null then
+    raise exception 'persisted MatchSet integrity identity is immutable';
+  end if;
+
+  if tg_table_name in ('matches', 'match_jobs', 'chronicles') and (
+    old.integrity_match_set_id is distinct from new.integrity_match_set_id or
+    old.bottom_execution_entrant_key is distinct from new.bottom_execution_entrant_key or
+    old.top_execution_entrant_key is distinct from new.top_execution_entrant_key or
+    old.bottom_execution_evidence is distinct from new.bottom_execution_evidence or
+    old.top_execution_evidence is distinct from new.top_execution_evidence or
+    old.execution_evidence_pair_hash is distinct from new.execution_evidence_pair_hash
+  ) and old.integrity_match_set_id is not null then
+    raise exception 'persisted ordered execution evidence is immutable';
+  end if;
+
+  if tg_table_name = 'competition_entrants' and
+     old.execution_entrant_key is distinct from new.execution_entrant_key and
+     old.execution_entrant_key is not null then
+    raise exception 'persisted competition entrant evidence link is immutable';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger match_sets_integrity_identity_immutable
+before update on match_sets
+for each row execute function prevent_integrity_identity_rewrite();
+
+create trigger matches_execution_evidence_immutable
+before update on matches
+for each row execute function prevent_integrity_identity_rewrite();
+
+create trigger match_jobs_execution_evidence_immutable
+before update on match_jobs
+for each row execute function prevent_integrity_identity_rewrite();
+
+create trigger chronicles_execution_evidence_immutable
+before update on chronicles
+for each row execute function prevent_integrity_identity_rewrite();
+
+create trigger competition_entrants_execution_evidence_immutable
+before update on competition_entrants
+for each row execute function prevent_integrity_identity_rewrite();
