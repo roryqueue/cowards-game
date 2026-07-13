@@ -1,6 +1,7 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { createHash } from "node:crypto"
+import { spawnSync } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
@@ -34,6 +35,13 @@ export type V137IntegrityBoundaryFindingCode =
   | "RUNTIME_REQUEST_ENVELOPE_DRIFT"
   | "GO_RECEIPT_AUTHORITY_DRIFT"
   | "KNOWN_PHASE_257_DEBT_DRIFT"
+  | "AUDIT_ARTIFACT_MISSING"
+  | "AUDIT_ARTIFACT_INVALID"
+  | "AUDIT_METADATA_DRIFT"
+  | "AUDIT_OBSERVATION_DRIFT"
+  | "AUDIT_MARKDOWN_DRIFT"
+  | "AUDIT_PRIVACY_VIOLATION"
+  | "AUDIT_REPRODUCTION_FAILED"
 
 export interface V137IntegrityBoundaryFinding {
   code: V137IntegrityBoundaryFindingCode
@@ -106,6 +114,342 @@ export const assertV137IntegrityPublicPayload = (value: unknown): void => {
     }
   }
   visit(value, ["$"])
+}
+
+const auditCommand =
+  "pnpm exec tsx .planning/artifacts/v2.0-core-rules-audit/reproduce-core-rule-gaps.ts"
+const auditJsonPath =
+  ".planning/artifacts/v1.37-core-rules-audit-baseline.json"
+const auditMarkdownPath =
+  ".planning/artifacts/v1.37-core-rules-audit-baseline.md"
+
+const exactAuditObservations = {
+  noAdvanceLastSoldier: {
+    status: "STONE",
+    outcome: null,
+    matchEndedEvents: 0,
+  },
+  cycleEndBackstabActor: {
+    status: "STONE",
+    slotEnded: false,
+    terminalReason: null,
+  },
+  excessMalformedOrder: {
+    validOrdersRetained: 0,
+    violationEvents: 1,
+  },
+  deepValidation: "threw:RangeError",
+  overlappingArenaAccepted: true,
+  legacyBoundaryAccepted: true,
+  successfulPushPusherHistory: "RIGHT",
+} as const
+
+const exactAuditProbeMetadata = [
+  ["noAdvanceLastSoldier", "reproduced_defect", "257"],
+  ["cycleEndBackstabActor", "reproduced_defect", "257"],
+  ["excessMalformedOrder", "reproduced_defect", "257"],
+  ["deepValidation", "reproduced_defect", "258"],
+  ["overlappingArenaAccepted", "reproduced_defect", "257"],
+  ["legacyBoundaryAccepted", "reproduced_defect", "259"],
+  ["successfulPushPusherHistory", "preserved_v1.4_ruling", "257"],
+] as const
+
+const stableJson = (value: unknown): string => JSON.stringify(value)
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+
+export const renderV137CoreRulesAuditBaselineMarkdown = (
+  baseline: Record<string, unknown>,
+): string => {
+  const diffBasis = isRecord(baseline.productionSourceDiffBasis)
+    ? baseline.productionSourceDiffBasis
+    : {}
+  const probes = Array.isArray(baseline.probes) ? baseline.probes : []
+  const rows = probes
+    .filter(isRecord)
+    .map(
+      (probe) =>
+        `| \`${String(probe.id)}\` | \`${String(probe.classification)}\` | ${String(probe.futurePhaseOwner)} | \`${stableJson(probe.observed)}\` |`,
+    )
+    .join("\n")
+  return `# v1.37 Core-Rules Audit Baseline
+
+This is the exact Phase 256 compatibility baseline. Six confirmed defects remain routed to later phases; the successful-push reversal-history result is an immutable v1.4 compatibility ruling. This artifact records observations only and authorizes no gameplay change.
+
+## Reproduction identity
+
+- Command: \`${String(baseline.command)}\`
+- Planning baseline commit: \`${String(baseline.planningBaselineCommit)}\`
+- Implementation commit: \`${String(baseline.implementationHead)}\`
+- Reviewed v1.36 archive commit: \`${String(baseline.reviewedArchiveCommit)}\`
+- Production diff: \`${String(diffBasis.changedPathCount)}\` changed paths under \`${String(diffBasis.pathspec)}\`; sorted-path SHA-256 \`${String(diffBasis.changedPathListSha256)}\`
+
+## Exact observations
+
+| Probe | Classification | Future phase owner | Observed value |
+|---|---|---:|---|
+${rows}
+
+## Guardrails
+
+- Reruns must match all seven semantic observations exactly.
+- Transport formatting may be normalized; state, legality, event order, outcome, terminal behavior, and Strategy observation may not.
+- The artifacts contain no source or artifact bytes, memories, objectives, credentials, host paths, raw diagnostics, or security internals.
+- Any semantic delta requires an explicit compatibility ruling before expected values change.
+`
+}
+
+export interface AnalyzeV137CoreRulesAuditBaselineInput {
+  baseline: unknown
+  markdown: string
+  reproduced: unknown
+}
+
+export const analyzeV137CoreRulesAuditBaseline = (
+  input: AnalyzeV137CoreRulesAuditBaselineInput,
+): V137IntegrityBoundaryAnalysis => {
+  const findings: V137IntegrityBoundaryFinding[] = []
+  const add = (
+    code: V137IntegrityBoundaryFindingCode,
+    repoPath: string,
+    detail: string,
+  ): void => findings.push({ code, path: repoPath, line: 1, detail })
+  if (!isRecord(input.baseline)) {
+    add("AUDIT_ARTIFACT_INVALID", auditJsonPath, "Audit baseline must be an object.")
+    return {
+      findings,
+      inventoriedFiles: 0,
+      creationCalls: 0,
+      sqlWriters: 0,
+      legacyWorkerConsumers: 0,
+    }
+  }
+
+  try {
+    assertV137IntegrityPublicPayload(input.baseline)
+    assertV137IntegrityPublicPayload({ markdown: input.markdown })
+  } catch {
+    add(
+      "AUDIT_PRIVACY_VIOLATION",
+      auditJsonPath,
+      "Audit artifacts contain restricted public data.",
+    )
+  }
+  if (
+    input.baseline.schemaVersion !== "v1.37-core-rules-audit-baseline-v1" ||
+    input.baseline.milestone !== "v1.37" ||
+    input.baseline.phase !== 256 ||
+    input.baseline.command !== auditCommand ||
+    input.baseline.planningBaselineCommit !==
+      "8e301b2dca407fcceb2b2b02bfe8eba61b02c063" ||
+    input.baseline.reviewedArchiveCommit !==
+      "38f4a83db9298502c12db44cd66d026878803d20"
+  ) {
+    add(
+      "AUDIT_METADATA_DRIFT",
+      auditJsonPath,
+      "Audit command, version, phase, or reviewed commit identity drifted.",
+    )
+  }
+  const implementationHead = input.baseline.implementationHead
+  const diffBasis = input.baseline.productionSourceDiffBasis
+  if (
+    typeof implementationHead !== "string" ||
+    !/^[0-9a-f]{40}$/u.test(implementationHead) ||
+    !isRecord(diffBasis) ||
+    diffBasis.baseCommit !== input.baseline.planningBaselineCommit ||
+    diffBasis.implementationCommit !== implementationHead ||
+    diffBasis.pathspec !== "apps packages scripts" ||
+    typeof diffBasis.changedPathCount !== "number" ||
+    typeof diffBasis.changedPathListSha256 !== "string" ||
+    !/^[0-9a-f]{64}$/u.test(diffBasis.changedPathListSha256)
+  ) {
+    add(
+      "AUDIT_METADATA_DRIFT",
+      auditJsonPath,
+      "Production-source diff basis is incomplete or inconsistent.",
+    )
+  }
+
+  const probes = Array.isArray(input.baseline.probes)
+    ? input.baseline.probes
+    : []
+  if (probes.length !== exactAuditProbeMetadata.length) {
+    add(
+      "AUDIT_OBSERVATION_DRIFT",
+      auditJsonPath,
+      "Audit baseline must contain exactly seven probes.",
+    )
+  }
+  const reproduced = isRecord(input.reproduced) ? input.reproduced : {}
+  exactAuditProbeMetadata.forEach(([id, classification, futurePhaseOwner], index) => {
+    const probe = probes[index]
+    const observed = exactAuditObservations[id]
+    if (
+      !isRecord(probe) ||
+      probe.id !== id ||
+      probe.classification !== classification ||
+      probe.futurePhaseOwner !== futurePhaseOwner ||
+      stableJson(probe.observed) !== stableJson(observed) ||
+      stableJson(reproduced[id]) !== stableJson(observed)
+    ) {
+      add(
+        "AUDIT_OBSERVATION_DRIFT",
+        auditJsonPath,
+        `Exact approved observation drifted for ${id}.`,
+      )
+    }
+  })
+  const summary = input.baseline.summary
+  if (
+    !isRecord(summary) ||
+    summary.probeCount !== 7 ||
+    summary.reproducedDefectCount !== 6 ||
+    summary.preservedRulingCount !== 1
+  ) {
+    add(
+      "AUDIT_METADATA_DRIFT",
+      auditJsonPath,
+      "Audit summary counts must remain six defects plus one preserved ruling.",
+    )
+  }
+  if (input.markdown !== renderV137CoreRulesAuditBaselineMarkdown(input.baseline)) {
+    add(
+      "AUDIT_MARKDOWN_DRIFT",
+      auditMarkdownPath,
+      "Human-readable audit baseline does not match the machine artifact.",
+    )
+  }
+  return {
+    findings,
+    inventoriedFiles: 2,
+    creationCalls: 0,
+    sqlWriters: 0,
+    legacyWorkerConsumers: 0,
+  }
+}
+
+export const checkV137CoreRulesAuditBaseline = (
+  repoRoot = defaultRepoRoot,
+): V137IntegrityBoundaryAnalysis => {
+  const jsonAbsolute = path.join(repoRoot, auditJsonPath)
+  const markdownAbsolute = path.join(repoRoot, auditMarkdownPath)
+  if (!existsSync(jsonAbsolute) || !existsSync(markdownAbsolute)) {
+    return {
+      findings: [{
+        code: "AUDIT_ARTIFACT_MISSING",
+        path: !existsSync(jsonAbsolute) ? auditJsonPath : auditMarkdownPath,
+        line: 1,
+        detail: "The current-HEAD core-rules audit baseline is missing.",
+      }],
+      inventoriedFiles: 0,
+      creationCalls: 0,
+      sqlWriters: 0,
+      legacyWorkerConsumers: 0,
+    }
+  }
+  let baseline: unknown
+  const baselineJson = readFileSync(jsonAbsolute, "utf8")
+  try {
+    baseline = JSON.parse(baselineJson) as unknown
+  } catch {
+    return {
+      findings: [{
+        code: "AUDIT_ARTIFACT_INVALID",
+        path: auditJsonPath,
+        line: 1,
+        detail: "The current-HEAD core-rules audit baseline is invalid JSON.",
+      }],
+      inventoriedFiles: 1,
+      creationCalls: 0,
+      sqlWriters: 0,
+      legacyWorkerConsumers: 0,
+    }
+  }
+  const reproduction = spawnSync(
+    "pnpm",
+    [
+      "exec",
+      "tsx",
+      ".planning/artifacts/v2.0-core-rules-audit/reproduce-core-rule-gaps.ts",
+    ],
+    { cwd: repoRoot, encoding: "utf8", timeout: 30_000 },
+  )
+  let reproduced: unknown = undefined
+  if (reproduction.status === 0) {
+    try {
+      reproduced = JSON.parse(reproduction.stdout) as unknown
+    } catch {
+      reproduced = undefined
+    }
+  }
+  if (reproduced === undefined) {
+    return {
+      findings: [{
+        code: "AUDIT_REPRODUCTION_FAILED",
+        path: ".planning/artifacts/v2.0-core-rules-audit/reproduce-core-rule-gaps.ts",
+        line: 1,
+        detail: "The committed core-rules reproduction did not return valid JSON.",
+      }],
+      inventoriedFiles: 2,
+      creationCalls: 0,
+      sqlWriters: 0,
+      legacyWorkerConsumers: 0,
+    }
+  }
+  let analysis = analyzeV137CoreRulesAuditBaseline({
+    baseline,
+    markdown: readFileSync(markdownAbsolute, "utf8"),
+    reproduced,
+  })
+  if (baselineJson !== `${JSON.stringify(baseline, null, 2)}\n`) {
+    analysis = {
+      ...analysis,
+      findings: [...analysis.findings, {
+        code: "AUDIT_ARTIFACT_INVALID",
+        path: auditJsonPath,
+        line: 1,
+        detail: "The machine audit artifact is not in canonical deterministic formatting.",
+      }],
+    }
+  }
+  if (isRecord(baseline) && isRecord(baseline.productionSourceDiffBasis)) {
+    const basis = baseline.productionSourceDiffBasis
+    const paths = spawnSync(
+      "git",
+      [
+        "diff",
+        "--name-only",
+        String(basis.baseCommit),
+        String(basis.implementationCommit),
+        "--",
+        "apps",
+        "packages",
+        "scripts",
+      ],
+      { cwd: repoRoot, encoding: "utf8", timeout: 10_000 },
+    )
+    const sortedPaths = paths.status === 0
+      ? paths.stdout.split("\n").filter(Boolean).sort().join("\n") + "\n"
+      : ""
+    if (
+      paths.status !== 0 ||
+      sortedPaths.split("\n").filter(Boolean).length !== basis.changedPathCount ||
+      sha256(sortedPaths) !== basis.changedPathListSha256
+    ) {
+      return {
+        ...analysis,
+        findings: [...analysis.findings, {
+          code: "AUDIT_METADATA_DRIFT",
+          path: auditJsonPath,
+          line: 1,
+          detail: "Production-source diff basis no longer resolves exactly.",
+        }],
+      }
+    }
+  }
+  return analysis
 }
 
 const creationNames = new Set([
@@ -568,11 +912,18 @@ const collectTypeScriptSources = (
 
 export const analyzeV137IntegrityBoundaries = (
   repoRoot = defaultRepoRoot,
-): V137IntegrityBoundaryAnalysis =>
-  analyzeV137IntegritySources(collectTypeScriptSources(repoRoot), {
+): V137IntegrityBoundaryAnalysis => {
+  const structural = analyzeV137IntegritySources(collectTypeScriptSources(repoRoot), {
     enforceRepositoryContracts: true,
     enforceKnownDebtFingerprints: true,
   })
+  const audit = checkV137CoreRulesAuditBaseline(repoRoot)
+  return {
+    ...structural,
+    findings: [...structural.findings, ...audit.findings],
+    inventoriedFiles: structural.inventoriedFiles + audit.inventoriedFiles,
+  }
+}
 
 const isDirectExecution = (): boolean =>
   process.argv[1] !== undefined &&
