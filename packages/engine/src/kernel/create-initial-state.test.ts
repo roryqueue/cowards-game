@@ -7,6 +7,7 @@ import {
   fixtures,
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
+import { getInitialInitiativePlayerId } from "../state.js"
 import { createCandidateInitialGameState } from "./create-initial-state.js"
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
@@ -127,5 +128,109 @@ describe("candidate initial-state constant and clone ownership", () => {
       fixtureBefore,
     )
     expect(CANONICAL_COMPATIBILITY_TUPLES[0]!.sha256).toBe(authorityHash)
+  })
+})
+
+describe("candidate initial-state semantic admission", () => {
+  const invalidArenaCases = [
+    {
+      name: "starting-position overlap",
+      mutate: (arena: ReturnType<typeof candidateInput>["arenaVariant"]) => {
+        arena.terrainStones = [{ x: 2, y: 11 }]
+      },
+      expected: [
+        {
+          code: "ARENA_TERRAIN_START_OVERLAP",
+          path: ["terrainStones", 0],
+          metadata: { side: "bottom" },
+        },
+      ],
+    },
+    {
+      name: "out-of-bounds terrain",
+      mutate: (arena: ReturnType<typeof candidateInput>["arenaVariant"]) => {
+        arena.terrainStones = [{ x: 12, y: 4 }]
+      },
+      expected: [
+        {
+          code: "ARENA_TERRAIN_OUT_OF_BOUNDS",
+          path: ["terrainStones", 0],
+          metadata: {},
+        },
+      ],
+    },
+    {
+      name: "duplicate terrain",
+      mutate: (arena: ReturnType<typeof candidateInput>["arenaVariant"]) => {
+        arena.terrainStones = [
+          { x: 5, y: 5 },
+          { x: 5, y: 5 },
+        ]
+      },
+      expected: [
+        {
+          code: "ARENA_TERRAIN_DUPLICATE",
+          path: ["terrainStones", 1],
+          metadata: {},
+        },
+      ],
+    },
+  ] as const
+
+  for (const vector of invalidArenaCases) {
+    it(`rejects ${vector.name} before exposing any GameState`, () => {
+      const input = candidateInput()
+      vector.mutate(input.arenaVariant)
+      const before = JSON.stringify(input)
+      const result = createCandidateInitialGameState(input)
+
+      expect(result.ok).toBe(false)
+      if (result.ok) return
+      expect(Object.keys(result)).toEqual(["ok", "failure"])
+      expect(result.failure).toMatchObject({
+        category: "CANONICAL_INTEGRITY_FAILURE",
+        ownership: "system_integrity",
+        truncated: false,
+      })
+      expect(
+        result.failure.issues.map(({ code, path, metadata }) => ({
+          code,
+          path: [...path],
+          metadata: { ...metadata },
+        })),
+      ).toEqual(vector.expected)
+      expect(JSON.stringify(input)).toBe(before)
+    })
+  }
+
+  it("preserves deterministic v1.4 starts and initiative for both seed parities", () => {
+    for (const seed of [fixtures.valid.sampleSeed, "odd-seed"] as const) {
+      const input = { ...candidateInput(), seed }
+      const first = createCandidateInitialGameState(input)
+      const second = createCandidateInitialGameState(input)
+      expect(first).toEqual(second)
+      expect(first.ok).toBe(true)
+      if (!first.ok) continue
+
+      const bottom = first.state.soldiers.filter(
+        (soldier) => soldier.ownerPlayerId === input.bottomPlayerId,
+      )
+      const top = first.state.soldiers.filter(
+        (soldier) => soldier.ownerPlayerId === input.topPlayerId,
+      )
+      expect(bottom.map((soldier) => soldier.position)).toEqual(
+        BOTTOM_STARTING_POSITIONS,
+      )
+      expect(top.map((soldier) => soldier.position)).toEqual(
+        TOP_STARTING_POSITIONS,
+      )
+      expect(first.state.initiativePlayerId).toBe(
+        getInitialInitiativePlayerId(
+          seed,
+          input.bottomPlayerId,
+          input.topPlayerId,
+        ),
+      )
+    }
   })
 })
