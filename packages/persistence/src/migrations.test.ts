@@ -36,6 +36,7 @@ describe("migrations", () => {
     expect(names).toContain("0001_initial.sql")
     expect(names).toContain("0002_match_side_completion_stats.sql")
     expect(names).toContain("0011_competition_governance_surfaces.sql")
+    expect(names).toContain("0012_integrity_authority.sql")
     expect(names).toEqual([...names].sort())
   })
 
@@ -60,6 +61,33 @@ describe("migrations", () => {
     for (const table of requiredTables) {
       expect(sql).toContain(`create table ${table}`)
     }
+  })
+
+  it("defines exact per-entrant identity and append-only integrity authority", async () => {
+    const sql = await readFile(
+      new URL("0012_integrity_authority.sql", migrationsDirectory),
+      "utf8",
+    )
+
+    expect(sql).toContain("match_set_execution_entrants")
+    expect(sql).toContain("compatibility_tuple_id")
+    expect(sql).toContain("execution_evidence_set_hash")
+    expect(sql).toContain("bottom_execution_entrant_key")
+    expect(sql).toContain("top_execution_entrant_key")
+    expect(sql).toContain("runtime_evidence_verified_attestations")
+    expect(sql).toContain("runtime_evidence_certificates")
+    expect(sql).toContain("verified_attestation_id")
+    expect(sql).toContain("canonical_release_manifests")
+    expect(sql).toContain("runtime_lane_control_events")
+    expect(sql).toContain("integrity_cohort_classification_events")
+    expect(sql).toContain("integrity_compensation_events")
+    expect(sql).toContain("reject_integrity_authority_mutation")
+    expect(sql).toMatch(
+      /before update or delete on runtime_evidence_certificates/u,
+    )
+    expect(sql).not.toMatch(
+      /compatibility_tuple_id\s+text\s+not null\s+default/iu,
+    )
   })
 })
 
