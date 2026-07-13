@@ -173,7 +173,28 @@ func authorityError(code string) error {
 	return &runtimeEvidenceAuthorityError{Code: code}
 }
 
+var productionRuntimeEvidenceAuthorityState struct {
+	sync.Mutex
+	loader *runtimeEvidenceAuthorityLoader
+}
+
 func loadProductionRuntimeEvidenceAuthorityFromEnvironment() (*verifiedRuntimeEvidenceAuthority, error) {
+	productionRuntimeEvidenceAuthorityState.Lock()
+	loader := productionRuntimeEvidenceAuthorityState.loader
+	if loader == nil {
+		configured, err := newProductionRuntimeEvidenceAuthorityLoaderFromEnvironment()
+		if err != nil {
+			productionRuntimeEvidenceAuthorityState.Unlock()
+			return nil, err
+		}
+		productionRuntimeEvidenceAuthorityState.loader = configured
+		loader = configured
+	}
+	productionRuntimeEvidenceAuthorityState.Unlock()
+	return loader.Load()
+}
+
+func newProductionRuntimeEvidenceAuthorityLoaderFromEnvironment() (*runtimeEvidenceAuthorityLoader, error) {
 	manifestPath := strings.TrimSpace(os.Getenv(integrityAuthorityManifestPathEnvironment))
 	if manifestPath == "" {
 		manifestPath = defaultIntegrityAuthorityManifestPath()
@@ -193,7 +214,7 @@ func loadProductionRuntimeEvidenceAuthorityFromEnvironment() (*verifiedRuntimeEv
 	if bootstrapValue != "0" && bootstrapValue != "1" {
 		return nil, authorityError("CONFIGURATION")
 	}
-	loader := newRuntimeEvidenceAuthorityLoader(runtimeEvidenceAuthorityLoaderConfig{
+	return newRuntimeEvidenceAuthorityLoader(runtimeEvidenceAuthorityLoaderConfig{
 		BundlePath:                strings.TrimSpace(os.Getenv(runtimeEvidenceAuthorityBundlePathEnvironment)),
 		PublicKeyPath:             strings.TrimSpace(os.Getenv(runtimeEvidenceAuthorityPublicKeyPathEnvironment)),
 		HighWaterPath:             strings.TrimSpace(os.Getenv(runtimeEvidenceAuthorityHighWaterPathEnvironment)),
@@ -205,8 +226,7 @@ func loadProductionRuntimeEvidenceAuthorityFromEnvironment() (*verifiedRuntimeEv
 			return time.Now().UTC().Format(canonicalJSONInstantLayout)
 		},
 		IntegrityManifest: manifest,
-	})
-	return loader.Load()
+	}), nil
 }
 
 func defaultIntegrityAuthorityManifestPath() string {

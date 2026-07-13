@@ -271,6 +271,39 @@ func TestRuntimeEvidenceAuthorityLoaderReturnsDeepClones(t *testing.T) {
 	}
 }
 
+func TestProductionRuntimeEvidenceAuthorityLoaderKeepsUncertainLatch(t *testing.T) {
+	dir := t.TempDir()
+	manifest := mustIntegrityManifest(t)
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths := writeRuntimeAuthorityFiles(t, dir, manifest, publicKey, privateKey, authorityFixtureOptions{Generation: "7"})
+	fileSystem := &runtimeAuthorityFailingFileSystem{runtimeEvidenceAuthorityFileSystem: osRuntimeEvidenceAuthorityFileSystem{}, failOperation: "directory-sync", highWaterPath: paths.highWater}
+	loader := newAuthorityTestLoader(manifest, paths, true, fileSystem)
+
+	productionRuntimeEvidenceAuthorityState.Lock()
+	prior := productionRuntimeEvidenceAuthorityState.loader
+	productionRuntimeEvidenceAuthorityState.loader = loader
+	productionRuntimeEvidenceAuthorityState.Unlock()
+	defer func() {
+		productionRuntimeEvidenceAuthorityState.Lock()
+		productionRuntimeEvidenceAuthorityState.loader = prior
+		productionRuntimeEvidenceAuthorityState.Unlock()
+	}()
+
+	if _, err := loadProductionRuntimeEvidenceAuthorityFromEnvironment(); err == nil {
+		t.Fatal("post-rename directory-sync failure was accepted")
+	}
+	fileSystem.failOperation = ""
+	if _, err := loadProductionRuntimeEvidenceAuthorityFromEnvironment(); err == nil {
+		t.Fatal("environment wrapper forgot the process-long uncertain latch")
+	}
+	if _, err := loadProductionRuntimeEvidenceAuthorityFromEnvironment(); err == nil {
+		t.Fatal("later production load recovered without explicit repair")
+	}
+}
+
 type authorityFixtureOptions struct {
 	Generation   string
 	Revoked      bool
