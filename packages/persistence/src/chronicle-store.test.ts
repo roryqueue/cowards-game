@@ -366,7 +366,7 @@ describe("Chronicle storage", () => {
     }
     const integrityIdentity = currentIntegrityIdentity()
 
-    await createPostgresChronicleStore(pool).put({
+    await createPostgresChronicleStore(pool as never).put({
       chronicle: validChronicle(),
       integrityIdentity,
     })

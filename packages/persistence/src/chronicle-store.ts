@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util"
 import { createChronicleContentHash, validateChronicle } from "@cowards/replay"
 import type {
   ArenaVariantId,
@@ -197,7 +198,7 @@ export const createChronicleMetadata = (
   }
 }
 
-const rowToStored = (row: {
+interface ChronicleRow {
   id: string
   match_id: string
   schema_version: string
@@ -211,7 +212,15 @@ const rowToStored = (row: {
   top_strategy_revision_id: string
   arena_variant_id: string
   artifact: Chronicle
-}): StoredChronicle => ({
+  integrity_match_set_id?: string | null
+  bottom_execution_entrant_key?: string | null
+  top_execution_entrant_key?: string | null
+  bottom_execution_evidence?: unknown
+  top_execution_evidence?: unknown
+  execution_evidence_pair_hash?: string | null
+}
+
+const rowToStored = (row: ChronicleRow): StoredChronicle => ({
   metadata: {
     id: row.id,
     matchId: row.match_id,
@@ -298,11 +307,29 @@ export const createPostgresChronicleStore = (
       ],
     )
     if ((result.rowCount ?? 0) === 0) {
-      const existing = await this.getByMatchId(metadata.matchId)
-      if (!existing) {
-        throw new Error(`Chronicle insert conflicted but no row was found.`)
+      const existingResult = await pool.query<ChronicleRow>(
+        "select * from chronicles where match_id = $1",
+        [metadata.matchId],
+      )
+      const existing = existingResult.rows[0]
+      if (
+        !existing ||
+        existing.id !== metadata.id ||
+        existing.hash !== metadata.hash ||
+        existing.schema_version !== metadata.schemaVersion ||
+        !isDeepStrictEqual(existing.artifact, chronicle) ||
+        existing.integrity_match_set_id !== integrityIdentity.matchSetId ||
+        existing.bottom_execution_entrant_key !== pair.bottom.entrantKey ||
+        existing.top_execution_entrant_key !== pair.top.entrantKey ||
+        !isDeepStrictEqual(existing.bottom_execution_evidence, pair.bottom) ||
+        !isDeepStrictEqual(existing.top_execution_evidence, pair.top) ||
+        existing.execution_evidence_pair_hash !== pair.pairHash
+      ) {
+        throw new ChronicleValidationSystemFailure(
+          "Chronicle insertion did not match the exact persisted Match identity.",
+        )
       }
-      return existing
+      return rowToStored(existing)
     }
     return { metadata, artifact: chronicle }
   },

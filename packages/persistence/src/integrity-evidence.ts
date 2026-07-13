@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { isDeepStrictEqual } from "node:util"
 import {
   CANONICAL_COMPATIBILITY_TUPLE_FIELDS,
   EXECUTABLE_LANE_EVIDENCE_REASON_CODES,
@@ -603,6 +604,36 @@ export interface MatchSetExecutionEntrantRow {
   execution_snapshot: unknown
 }
 
+const canonicalizePersistedEntrantSnapshot = (
+  value: unknown,
+): EntrantExecutionEvidence => {
+  if (!isRecord(value) || !isRecord(value.laneIdentity)) {
+    throw new IntegrityEvidenceInputError(
+      "Persisted execution evidence snapshot is malformed.",
+    )
+  }
+  const laneIdentity = value.laneIdentity
+  const persistedTuple = laneIdentity.semanticTuple
+  if (!isRecord(persistedTuple)) {
+    throw new IntegrityEvidenceInputError(
+      "Persisted lane semantic tuple is malformed.",
+    )
+  }
+  const semanticTuple = Object.fromEntries(
+    CANONICAL_COMPATIBILITY_TUPLE_FIELDS.map((field) => [
+      field,
+      persistedTuple[field],
+    ]),
+  ) as unknown as CanonicalCompatibilityTuple
+  return {
+    ...(value as unknown as EntrantExecutionEvidence),
+    laneIdentity: {
+      ...(laneIdentity as unknown as ExecutableLaneIdentity),
+      semanticTuple,
+    },
+  }
+}
+
 export const parseMatchSetIntegrityIdentityRows = (
   matchSet: MatchSetIntegrityRow,
   entrantRows: readonly MatchSetExecutionEntrantRow[],
@@ -628,15 +659,14 @@ export const parseMatchSetIntegrityIdentityRows = (
       entrantKey: row.entrant_key,
       strategyRevisionId: row.strategy_revision_id,
     })),
-    entrants: entrantRows.map((row) => row.execution_snapshot) as EntrantExecutionEvidence[],
+    entrants: entrantRows.map((row) =>
+      canonicalizePersistedEntrantSnapshot(row.execution_snapshot),
+    ),
   })
   if (identity.evidenceSetHash !== matchSet.execution_evidence_set_hash) {
     throw new IntegrityEvidenceInputError("Persisted execution evidence set hash mismatches its rows.")
   }
-  if (
-    JSON.stringify(identity.normalizedEntrants) !==
-    JSON.stringify(matchSet.execution_evidence_set)
-  ) {
+  if (!isDeepStrictEqual(identity.normalizedEntrants, matchSet.execution_evidence_set)) {
     throw new IntegrityEvidenceInputError("Persisted normalized evidence set mismatches entrant rows.")
   }
   return identity
