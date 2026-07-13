@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
-stopped_at: Completed 256-15-PLAN.md
-last_updated: "2026-07-13T03:47:47.663Z"
+stopped_at: Completed 256-05-PLAN.md
+last_updated: "2026-07-13T04:18:54.527Z"
 last_activity: 2026-07-13
-last_activity_desc: Plan 256-15 added closed signed evidence verification and the sole derived certificate import path
+last_activity_desc: Plan 256-05 made direct Match and matrix MatchSet writers identity-complete and transactionally exact
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 7
-  percent: 37
+  completed_plans: 8
+  percent: 42
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
-Plan: 7 of 19
+Plan: 8 of 19
 Status: Ready to execute
-Last activity: 2026-07-13 — Plan 256-15 added closed signed evidence verification and the sole derived certificate import path
+Last activity: 2026-07-13 — Plan 256-05 made direct Match and matrix MatchSet writers identity-complete and transactionally exact
 
-Progress: [████░░░░░░] 37%
+Progress: [████░░░░░░] 42%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [████░░░░░░] 37%
 
 **Resume file:** None
 
-Last session: 2026-07-13T03:47:47.650Z
-Stopped at: Completed 256-15-PLAN.md
+Last session: 2026-07-13T04:18:54.514Z
+Stopped at: Completed 256-05-PLAN.md
 Next command: `$gsd-execute-phase 256`
 
 ## Performance Metrics
@@ -76,6 +76,7 @@ Next command: `$gsd-execute-phase 256`
 | Phase 256 P04 | 14min | 2 tasks | 5 files |
 | Phase 256 P17 | 19min | 2 tasks | 12 files |
 | Phase 256 P15 | 11min | 2 tasks | 6 files |
+| Phase 256 P05 | 18min | 2 tasks | 4 files |
 
 ## Decisions
 
@@ -95,3 +96,6 @@ Next command: `$gsd-execute-phase 256`
 - [Phase 256]: Authority payload bytes are the signed unit, while Node and Go configure and invoke Ed25519 verification independently. — Both consumers share exact bytes and vectors without sharing a mutable trust decision.
 - [Phase 256]: A newer authority generation remains non-executable until its high-water anchor is durably installed. — Deployment pins, restart anchors, and same-generation fork rejection prevent rollback after process restart.
 - [Phase 256]: Runtime requests carry authority references only; complete resolved evidence remains a separate internal and persisted contract. — Request-echoed certificate bodies, graph nodes, signatures, and gate results cannot become execution authority.
+- [Phase 256]: Matrix writers mint one validator-branded identity from a deterministic entrant-key map before SQL. — Complete coverage, tuple, revision, side, freshness, and competition-link checks fail before any row can be created.
+- [Phase 256]: Direct and matrix Match writers derive each ordered bottom/top evidence pair from the same MatchSet identity. — Match and queued job snapshots remain byte-for-byte attributable without inventing a MatchSet-wide runtime lane.
+- [Phase 256]: Competition entrants link to generic execution evidence by exact entrant key. — Existing runtime and snapshot JSON cannot imply or substitute for certified executable identity.
