@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
-stopped_at: Completed 256-17-PLAN.md
-last_updated: "2026-07-13T03:28:22.221Z"
+stopped_at: Completed 256-15-PLAN.md
+last_updated: "2026-07-13T03:47:47.663Z"
 last_activity: 2026-07-13
-last_activity_desc: Plan 256-17 added signed authority bundles, durable anti-rollback anchors, and reference-only runtime requests
+last_activity_desc: Plan 256-15 added closed signed evidence verification and the sole derived certificate import path
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 6
-  percent: 32
+  completed_plans: 7
+  percent: 37
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
-Plan: 6 of 19
+Plan: 7 of 19
 Status: Ready to execute
-Last activity: 2026-07-13 — Plan 256-17 added signed authority bundles, durable anti-rollback anchors, and reference-only runtime requests
+Last activity: 2026-07-13 — Plan 256-15 added closed signed evidence verification and the sole derived certificate import path
 
-Progress: [███░░░░░░░] 32%
+Progress: [████░░░░░░] 37%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [███░░░░░░░] 32%
 
 **Resume file:** None
 
-Last session: 2026-07-13T03:28:22.208Z
-Stopped at: Completed 256-17-PLAN.md
+Last session: 2026-07-13T03:47:47.650Z
+Stopped at: Completed 256-15-PLAN.md
 Next command: `$gsd-execute-phase 256`
 
 ## Performance Metrics
@@ -75,9 +75,13 @@ Next command: `$gsd-execute-phase 256`
 | Phase 256 P03 | 11min | 3 tasks | 7 files |
 | Phase 256 P04 | 14min | 2 tasks | 5 files |
 | Phase 256 P17 | 19min | 2 tasks | 12 files |
+| Phase 256 P15 | 11min | 2 tasks | 6 files |
 
 ## Decisions
 
+- [Phase 256]: Production runtime-evidence producer authority remains empty until Phase 259 adds separately reviewed executable conformance. — Caller-supplied trust is fixture-only and production rejects it before SQL.
+- [Phase 256]: Runtime evidence is signed as domain-separated fixed-field bytes over a byte-complete graph reachable from one root. — Certificate shape, prose, gate names, and missing or open artifacts cannot mint a verified value.
+- [Phase 256]: The only application certificate writer re-verifies inside one transaction and derives every persisted field. — Idempotent collisions must match exactly and late failures leave zero rows.
 - [Phase 256]: One semantic compatibility tuple is Match-wide, while exact executable lane and certificate identity remains ordered and per entrant. — Language, toolchain, adapter, artifact, and certificate differences stale evidence without inventing a gameplay version.
 - [Phase 256]: Current replay requires an exact registered tuple, while tuple-less v1.4 Chronicles remain explicitly unresolved under original semantics. — Historical evidence is never backfilled, upgraded, or rewritten to satisfy a current identity contract.
 - [Phase 256]: Public Match integrity evidence is an allowlist of tuple, status, freshness, and evidence hashes. — Exact lane, toolchain, artifact, build, and certificate identifiers remain internal rather than leaking through default projections.
