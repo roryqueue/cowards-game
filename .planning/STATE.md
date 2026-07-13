@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 257
 current_phase_name: canonical-transition-kernel-and-v1-4-semantic-integrity
 status: executing
-stopped_at: Completed 257-17-PLAN.md; activation readiness review in progress
-last_updated: "2026-07-13T20:34:00.000Z"
+stopped_at: Completed 257-19-PLAN.md; Plan 20 structural and audit convergence next
+last_updated: "2026-07-13T21:39:52.000Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 257 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 41
-  completed_plans: 22
-  percent: 54
+  completed_plans: 38
+  percent: 93
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 257 (canonical-transition-kernel-and-v1-4-semantic-integrity) — EXECUTING
-Plan: 18 of 22 complete; activation readiness review in progress
-Status: Preparing indivisible Wave 10 activation
-Last activity: 2026-07-13 — Phase 257 execution started
+Plan: 19 of 22 complete; structural and audit convergence next
+Status: Current kernel activated; preparing Wave 11 drift guards
+Last activity: 2026-07-13 — Phase 257 Plan 19 atomic activation completed
 
-Progress: [█████░░░░░] 54%
+Progress: [█████████░] 93%
 
 ## Durable Decisions
 
@@ -62,7 +62,7 @@ Progress: [█████░░░░░] 54%
 **Resume file:** None
 
 Last session: 2026-07-13T15:02:15.191Z
-Stopped at: Completed 257-17-PLAN.md; activation readiness review in progress
+Stopped at: Completed 257-19-PLAN.md; Plan 20 structural and audit convergence next
 Next command: `$gsd-execute-phase 257`
 
 ## Performance Metrics
@@ -89,6 +89,7 @@ Next command: `$gsd-execute-phase 257`
 | Phase 257 P01 | 12min | 2 tasks | 4 files |
 | Phase 257 P02 | 9min | 2 tasks | 2 files |
 | Phase 257 P03 | 17min | 3 tasks | 3 files |
+| Phase 257 P19 | 101min | 1 task | 93 source/artifact files |
 
 ## Decisions
 
@@ -143,3 +144,7 @@ Next command: `$gsd-execute-phase 257`
 - [Phase 257]: No-Advance preserves INVALID_MOVE slot closure and NO_ADVANCE status reason before immediate outcome. — This freezes D-11 without changing the existing invalid-reversal classification.
 - [Phase 257]: Cycle-end Backstab closes the removed actor once as BACKSTABBED after CYCLE_ENDED and before MATCH_ENDED. — This is the exact approved D-10 event and terminal ordering.
 - [Phase 257]: Invalid retained activation orders invalidate the full selection; ignored suffix entries are neither parsed nor replacement candidates. — This is the literal cap-then-validate D-09 precedence.
+- [Phase 257]: Currentness is the exact registered 922a tuple and authority status; candidate-era component strings remain unchanged because they are already-proved identity bytes, not lifecycle flags.
+- [Phase 257]: Every terminal slot closure performs immediate canonical outcome detection after closure events. — This preserves approved closure reasons and prevents semantically invalid zero-active nonterminal states after Cycle exhaustion.
+- [Phase 257]: The current Chronicle and replay routes record, validate, and reconstruct the sole engine transition stream without scheduling gameplay. — Historical v1.4 bytes remain under their literal tuple and PUSH-inclusive grammar.
+- [Phase 257]: Disposable exact-current publication/install proof may use fixture trust only and must produce zero production receipts. — Production conformance remains empty until executable four-language proof exists.
