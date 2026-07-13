@@ -138,13 +138,13 @@ Plans:
 
 - [ ] 257-14-PLAN.md — Migrate the bounded replay fixture/golden caller group.
 
-**Wave 8 — runtime and TypeScript persistence candidates**
+**Wave 8 — runtime-service candidate**
 
 - [ ] 257-15-PLAN.md — Stage the candidate runtime-service execution path.
-- [ ] 257-16-PLAN.md — Stage candidate-tuple TypeScript persistence admission and rollback.
 
-**Wave 9 — Go candidate response and rollback semantics**
+**Wave 9 — TypeScript and Go candidate persistence boundaries**
 
+- [ ] 257-16-PLAN.md — Stage candidate-tuple TypeScript persistence admission and rollback after the runtime producer exists.
 - [ ] 257-17-PLAN.md — Stage candidate-tuple semantic validation and rollback parity in Go after the candidate runtime-service producer exists.
 
 **Wave 10 — indivisible current activation**
