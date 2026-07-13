@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.37
 milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 257
-current_phase_name: Canonical Transition Kernel and v1.4 Semantic Integrity
-status: ready-to-execute
-stopped_at: Phase 257 planning complete — 22 plans ready
-last_updated: "2026-07-13T13:20:00.000Z"
+current_phase_name: canonical-transition-kernel-and-v1-4-semantic-integrity
+status: executing
+stopped_at: Completed 257-01-PLAN.md
+last_updated: "2026-07-13T14:47:29.537Z"
 last_activity: 2026-07-13
-last_activity_desc: Phase 256 complete, transitioned to Phase 257
+last_activity_desc: Phase 257 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 41
-  completed_plans: 19
-  percent: 17
+  completed_plans: 20
+  percent: 49
 ---
 
 # State: Coward's Game
@@ -24,16 +24,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 257 — Canonical Transition Kernel and v1.4 Semantic Integrity
+**Current focus:** Phase 257 — canonical-transition-kernel-and-v1-4-semantic-integrity
 
 ## Current Position
 
-Phase: 257 — Canonical Transition Kernel and v1.4 Semantic Integrity
-Plan: 0 of 22
-Status: Ready to execute
-Last activity: 2026-07-13 — Phase 257 planning complete; 22 verified plans ready
+Phase: 257 (canonical-transition-kernel-and-v1-4-semantic-integrity) — EXECUTING
+Plan: 2 of 22
+Status: Executing Phase 257
+Last activity: 2026-07-13 — Phase 257 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 49%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [░░░░░░░░░░] 0%
 
 **Resume file:** None
 
-Last session: 2026-07-13T13:20:00.000Z
-Stopped at: Phase 257 planning complete — 22 plans ready
+Last session: 2026-07-13T14:47:29.521Z
+Stopped at: Completed 257-01-PLAN.md
 Next command: `$gsd-execute-phase 257`
 
 ## Performance Metrics
@@ -86,8 +86,13 @@ Next command: `$gsd-execute-phase 257`
 | Phase 256 P10 | 17min | 3 tasks | 10 files |
 | Phase 256 P13 | 46min | 2 tasks | 3 files |
 | Phase 256 P14 | 37min | 3 tasks | 20 files |
+| Phase 257 P01 | 12min | 2 tasks | 4 files |
 
 ## Decisions
+
+- [Phase 257]: Only the exact `[EXPECTED_RED:MISSING_KERNEL_AUTHORITY]` assertion qualifies as the one-kernel RED. — Test discovery, imports, compilation, configuration, and timeout failures cannot counterfeit progress.
+- [Phase 257]: The inactive future authority is exercised through the candidate-branded `CANDIDATE_MATCH_KERNEL` seam while current `runMatch` remains unchanged. — This preserves atomic activation and makes D-01 through D-04 executable before authority moves.
+- [Phase 257]: Replay scheduling, runtime-service replay execution, contiguous Activation, and non-engine lifecycle loops have separate stable Wave-0 findings. — Later cleanup must remove each bypass independently rather than hiding debt behind one aggregate check.
 
 - [Phase 256]: Current v1.37 proof is evaluated from current source, while v1.36 proof executes only from the pinned annotated tag and archived blobs. — Current monitor edits cannot reinterpret or regenerate immutable history.
 - [Phase 256]: The seven-probe compatibility baseline remains six reproduced defects plus successful-push history `RIGHT`. — Phases 257-259 own later changes and any semantic delta requires explicit approval.
