@@ -140,6 +140,7 @@ func TestGoMatchCompletionIntegration(t *testing.T) {
 			t.Fatal(err)
 		}
 		service := newMatchCompletionService(pool)
+		service.allowLegacyTestCompletion = true
 		result, err := service.completeMatch(ctx, completeMatchInput{
 			JobID:      claimed.JobID,
 			LeaseToken: claimed.LeaseToken,
@@ -183,6 +184,7 @@ func TestGoMatchCompletionIntegration(t *testing.T) {
 			t.Fatal(err)
 		}
 		service := newMatchCompletionService(pool)
+		service.allowLegacyTestCompletion = true
 		if _, err := service.completeMatch(ctx, completeMatchInput{
 			JobID:      claimed.JobID,
 			LeaseToken: "wrong-token",
@@ -222,6 +224,7 @@ func TestGoMatchCompletionIntegration(t *testing.T) {
 			t.Fatalf("expected first seeded job to be claimed, got %s", claimed.JobID)
 		}
 		service := newMatchCompletionService(pool)
+		service.allowLegacyTestCompletion = true
 		if _, err := service.completeMatch(ctx, completeMatchInput{
 			JobID:      claimed.JobID,
 			LeaseToken: claimed.LeaseToken,
@@ -247,6 +250,7 @@ func TestGoMatchCompletionIntegration(t *testing.T) {
 		snapshots := chronicle["snapshots"].([]any)
 		snapshots[1].(map[string]any)["outcome"] = map[string]any{"type": "WIN", "winnerPlayerId": "player:top:" + strings.TrimPrefix(ids.matchID, "match:")}
 		service := newMatchCompletionService(pool)
+		service.allowLegacyTestCompletion = true
 		if _, err := service.completeMatch(ctx, completeMatchInput{
 			JobID:      claimed.JobID,
 			LeaseToken: claimed.LeaseToken,

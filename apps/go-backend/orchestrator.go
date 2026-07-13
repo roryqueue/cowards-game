@@ -159,6 +159,7 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		LeaseToken: claimed.LeaseToken,
 		Chronicle:  chronicle,
 		FinalState: finalState,
+		Integrity:  claimed.Integrity,
 	})
 	if err != nil {
 		return nil, err

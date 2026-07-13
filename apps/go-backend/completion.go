@@ -10,13 +10,17 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type matchCompletionService struct {
-	pool *pgxpool.Pool
+	pool                      *pgxpool.Pool
+	loadAuthority             func() (*verifiedRuntimeEvidenceAuthority, error)
+	now                       func() time.Time
+	allowLegacyTestCompletion bool
 }
 
 type completeMatchInput struct {
@@ -24,6 +28,7 @@ type completeMatchInput struct {
 	LeaseToken string
 	Chronicle  map[string]any
 	FinalState map[string]any
+	Integrity  *claimedMatchIntegrityIdentity
 }
 
 type completeMatchResult struct {
@@ -68,7 +73,7 @@ type matchCompletionOwnershipRow struct {
 }
 
 func newMatchCompletionService(pool *pgxpool.Pool) *matchCompletionService {
-	return &matchCompletionService{pool: pool}
+	return &matchCompletionService{pool: pool, loadAuthority: loadProductionRuntimeEvidenceAuthorityFromEnvironment, now: time.Now}
 }
 
 func (service *matchCompletionService) completeMatch(ctx context.Context, input completeMatchInput) (*completeMatchResult, error) {
@@ -138,8 +143,16 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 	if err := validateCompletionOwnership(ownership, metadata); err != nil {
 		return nil, err
 	}
+	var lockedIntegrity *claimedMatchIntegrityIdentity
+	if !service.allowLegacyTestCompletion {
+		lockedIntegrity, err = service.lockCompletionIntegrity(ctx, tx, input.JobID, input.LeaseToken, input.Integrity)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	if _, err := tx.Exec(ctx, `
+	if service.allowLegacyTestCompletion {
+		if _, err := tx.Exec(ctx, `
 		insert into chronicles (
 		  id, match_id, schema_version, hash, outcome, event_count,
 		  snapshot_count, bottom_player_id, top_player_id,
@@ -148,6 +161,40 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		)
 		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`, metadata.ID, metadata.MatchID, metadata.SchemaVersion, metadata.Hash, outcome, metadata.EventCount, metadata.SnapshotCount, metadata.BottomPlayerID, metadata.TopPlayerID, metadata.BottomStrategyRevisionID, metadata.TopStrategyRevisionID, metadata.ArenaVariantID, artifact); err != nil {
+			return nil, err
+		}
+	} else if _, err := tx.Exec(ctx, `
+		insert into chronicles (
+		  id, match_id, schema_version, hash, outcome, event_count,
+		  snapshot_count, bottom_player_id, top_player_id,
+		  bottom_strategy_revision_id, top_strategy_revision_id,
+		  arena_variant_id, artifact,
+		  compatibility_tuple_id, compatibility_rules_version,
+		  compatibility_engine_version, compatibility_runtime_abi_version,
+		  compatibility_chronicle_version, compatibility_arena_catalog_version,
+		  compatibility_set_policy_version, authority_bundle_hash,
+		  authority_registry_generation, authority_publication_id,
+		  authority_install_receipt_id, authority_payload_sha256,
+		  authority_envelope_sha256, authority_source_manifest_hash,
+		  authority_source_set, integrity_match_set_id,
+		  bottom_execution_entrant_key, top_execution_entrant_key,
+		  bottom_execution_evidence, top_execution_evidence,
+		  execution_evidence_pair_hash
+		)
+		values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,
+		        $14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,
+		        $29,$30,$31,$32,$33,$34)
+	`, metadata.ID, metadata.MatchID, metadata.SchemaVersion, metadata.Hash, outcome,
+		metadata.EventCount, metadata.SnapshotCount, metadata.BottomPlayerID, metadata.TopPlayerID,
+		metadata.BottomStrategyRevisionID, metadata.TopStrategyRevisionID, metadata.ArenaVariantID, artifact,
+		lockedIntegrity.CompatibilityTupleID, lockedIntegrity.CompatibilityTuple.Rules,
+		lockedIntegrity.CompatibilityTuple.Engine, lockedIntegrity.CompatibilityTuple.RuntimeABI,
+		lockedIntegrity.CompatibilityTuple.Chronicle, lockedIntegrity.CompatibilityTuple.ArenaCatalog,
+		lockedIntegrity.CompatibilityTuple.SetPolicy, strings.TrimPrefix(lockedIntegrity.AuthorityBundleHash, "sha256:"),
+		lockedIntegrity.RegistryGeneration, lockedIntegrity.PublicationID, lockedIntegrity.InstallReceiptID,
+		lockedIntegrity.PayloadSHA256, lockedIntegrity.EnvelopeSHA256, lockedIntegrity.SourceManifestHash,
+		lockedIntegrity.SourceSet, lockedIntegrity.MatchSetID, lockedIntegrity.Bottom.EntrantKey,
+		lockedIntegrity.Top.EntrantKey, lockedIntegrity.Bottom, lockedIntegrity.Top, lockedIntegrity.PairHash); err != nil {
 		return nil, err
 	}
 	tag, err := tx.Exec(ctx, `
@@ -204,6 +251,35 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		return nil, err
 	}
 	return &completeMatchResult{Status: "complete", MatchID: metadata.MatchID, ChronicleID: metadata.ID}, nil
+}
+
+func (service *matchCompletionService) lockCompletionIntegrity(ctx context.Context, tx pgx.Tx, jobID string, leaseToken string, expected *claimedMatchIntegrityIdentity) (*claimedMatchIntegrityIdentity, error) {
+	if expected == nil || service.loadAuthority == nil {
+		return nil, errors.New("completion integrity identity is unavailable")
+	}
+	authority, err := service.loadAuthority()
+	if err != nil || authority == nil {
+		return nil, errors.New("completion integrity identity is unavailable")
+	}
+	var serialized []byte
+	if err := tx.QueryRow(ctx, recheckClaimedMatchIntegritySQL, jobID, leaseToken).Scan(&serialized); err != nil {
+		return nil, errors.New("completion integrity identity changed")
+	}
+	var current claimedMatchIntegrityIdentity
+	now := time.Now()
+	if service.now != nil {
+		now = service.now()
+	}
+	if err := decodeStrictJSON(serialized, &current); err != nil || validateClaimedMatchIntegrity(authority, &current, now) != nil || !jsonValuesEqual(current, *expected) {
+		return nil, errors.New("completion integrity identity changed")
+	}
+	receipt, err := (&LiveServer{}).lockInstalledAuthorityReceipt(ctx, tx, authority, now)
+	if err != nil || receipt.PublicationID != current.PublicationID || receipt.ReceiptID != current.InstallReceiptID ||
+		receipt.PayloadSHA256 != current.PayloadSHA256 || receipt.EnvelopeSHA256 != current.EnvelopeSHA256 ||
+		receipt.SourceManifestHash != current.SourceManifestHash || !jsonValuesEqual(receipt.SourceSet, current.SourceSet) {
+		return nil, errors.New("completion installed receipt changed")
+	}
+	return &current, nil
 }
 
 func deriveGoMatchCompletionFields(finalState map[string]any) (matchCompletionFields, error) {
