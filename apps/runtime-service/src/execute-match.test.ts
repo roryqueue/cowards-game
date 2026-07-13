@@ -18,6 +18,7 @@ import {
   compileZigWasmArtifact,
 } from "@cowards/runtime-wasm-wasi"
 import { executeRuntimeServiceRequest } from "./execute-match.js"
+import { createFixtureRuntimeExecutionEvidenceSnapshot } from "./runtime-execution-evidence.test-support.js"
 import {
   createRuntimeServiceConfig,
   RuntimeServiceConfigError,
@@ -194,6 +195,11 @@ const requestFor = (
       timeoutMs: DEFAULT_RUNTIME_LIMITS.timeoutMs,
       stdoutBytes: 32 * 1024,
     },
+    evidenceSnapshot: createFixtureRuntimeExecutionEvidenceSnapshot({
+      fixtureId: "execute-match",
+      bottom,
+      top,
+    }),
   }
 }
 
@@ -211,7 +217,16 @@ describe("runtime execution service", () => {
   })
 
   it("validates and executes a complete request as a schema-valid success", () => {
-    const response = executeRuntimeServiceRequest(requestFor(), runtimeConfig)
+    const request = requestFor()
+    expect(request.evidenceSnapshot.authorityBundleHash).toContain(
+      "fixture-only:untrusted",
+    )
+    expect(
+      Object.values(request.evidenceSnapshot.entrants).map(
+        (entrant) => entrant.schedulingDecision.status,
+      ),
+    ).toEqual(["disabled", "disabled"])
+    const response = executeRuntimeServiceRequest(request, runtimeConfig)
 
     expect(response.ok).toBe(true)
     if (!response.ok) {

@@ -147,5 +147,126 @@
     "network": "inherited",
     "shell": "disabled",
     "packagePolicy": "none"
+  },
+  "evidenceSnapshot": {
+    "compatibility": {
+      "tupleId": "sha256:be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+      "tuple": {
+        "rules": "cowards-rules-v1.4",
+        "engine": "0.1.4",
+        "runtimeAbi": "strategy-runtime-abi-v1.14",
+        "chronicle": "chronicle-v1.4",
+        "arenaCatalog": "canonical-arena-catalog-v1.4",
+        "setPolicy": "canonical-set-policy-v1.4"
+      }
+    },
+    "authorityBundleHash": "fixture-only:untrusted-authority-bundle:no-production-signature",
+    "registryGeneration": "fixture-only:untrusted-registry-generation:0",
+    "entrants": {
+      "bottom": {
+        "entrantKey": "fixture-only:entrant:golden-v1.15:bottom",
+        "strategyRevisionId": "strategy-revision:f08e50c1402199af006e4da2656cc10b36ea91671a9cdc1ddb0a40eeddd7e923",
+        "laneIdentity": {
+          "providerId": "fixture-only:provider:typescript",
+          "languageId": "typescript",
+          "runtimeId": "fixture-only:runtime:runtime-js-worker-thread",
+          "runtimeVersion": "0.1.0",
+          "toolchainId": "fixture-only:toolchain:typescript",
+          "toolchainVersion": "0.1.0",
+          "adapterId": "runtime-js-worker-thread",
+          "adapterVersion": "0.1.0",
+          "policyId": "fixture-only:package-none",
+          "policyVersion": "0",
+          "corpusId": "fixture-only:corpus:golden-v1.15",
+          "corpusVersion": "0",
+          "artifactId": "fixture-only:artifact:golden-v1.15:bottom:typescript",
+          "artifactSha256": "e95417480e6c6c00b1c2c370775804167aea994aa7db545f47f89e8b635bb27d",
+          "implementationId": "fixture-only:runtime-service-test-harness",
+          "buildId": "fixture-only:build:golden-v1.15:bottom:typescript",
+          "semanticTupleId": "sha256:be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+          "semanticTuple": {
+            "rules": "cowards-rules-v1.4",
+            "engine": "0.1.4",
+            "runtimeAbi": "strategy-runtime-abi-v1.14",
+            "chronicle": "chronicle-v1.4",
+            "arenaCatalog": "canonical-arena-catalog-v1.4",
+            "setPolicy": "canonical-set-policy-v1.4"
+          }
+        },
+        "containmentCertificateRef": {
+          "kind": "containment",
+          "certificateId": "fixture-only:untrusted-containment:golden-v1.15:bottom:typescript",
+          "certificateVersion": "0",
+          "certificateRecordHash": "fixture-only:untrusted-containment-hash:golden-v1.15:bottom:typescript",
+          "registryGeneration": "fixture-only:untrusted-registry-generation:0"
+        },
+        "conformanceCertificateRef": {
+          "kind": "conformance",
+          "certificateId": "fixture-only:untrusted-conformance:golden-v1.15:bottom:typescript",
+          "certificateVersion": "0",
+          "certificateRecordHash": "fixture-only:untrusted-conformance-hash:golden-v1.15:bottom:typescript",
+          "registryGeneration": "fixture-only:untrusted-registry-generation:0"
+        },
+        "schedulingDecision": {
+          "status": "disabled",
+          "reasonCode": "OPERATOR_DISABLED",
+          "evaluatedAt": "2026-07-13T00:00:00.000Z",
+          "freshUntil": "2026-07-14T00:00:00.000Z",
+          "registryGeneration": "fixture-only:untrusted-registry-generation:0"
+        }
+      },
+      "top": {
+        "entrantKey": "fixture-only:entrant:golden-v1.15:top",
+        "strategyRevisionId": "strategy-revision:bdcfaed6956b2d7ad2a4491cec252efb60a7faaa797d85fd34a6238fb5dc8f91",
+        "laneIdentity": {
+          "providerId": "fixture-only:provider:typescript",
+          "languageId": "typescript",
+          "runtimeId": "fixture-only:runtime:runtime-js-worker-thread",
+          "runtimeVersion": "0.1.0",
+          "toolchainId": "fixture-only:toolchain:typescript",
+          "toolchainVersion": "0.1.0",
+          "adapterId": "runtime-js-worker-thread",
+          "adapterVersion": "0.1.0",
+          "policyId": "fixture-only:package-none",
+          "policyVersion": "0",
+          "corpusId": "fixture-only:corpus:golden-v1.15",
+          "corpusVersion": "0",
+          "artifactId": "fixture-only:artifact:golden-v1.15:top:typescript",
+          "artifactSha256": "e95417480e6c6c00b1c2c370775804167aea994aa7db545f47f89e8b635bb27d",
+          "implementationId": "fixture-only:runtime-service-test-harness",
+          "buildId": "fixture-only:build:golden-v1.15:top:typescript",
+          "semanticTupleId": "sha256:be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c",
+          "semanticTuple": {
+            "rules": "cowards-rules-v1.4",
+            "engine": "0.1.4",
+            "runtimeAbi": "strategy-runtime-abi-v1.14",
+            "chronicle": "chronicle-v1.4",
+            "arenaCatalog": "canonical-arena-catalog-v1.4",
+            "setPolicy": "canonical-set-policy-v1.4"
+          }
+        },
+        "containmentCertificateRef": {
+          "kind": "containment",
+          "certificateId": "fixture-only:untrusted-containment:golden-v1.15:top:typescript",
+          "certificateVersion": "0",
+          "certificateRecordHash": "fixture-only:untrusted-containment-hash:golden-v1.15:top:typescript",
+          "registryGeneration": "fixture-only:untrusted-registry-generation:0"
+        },
+        "conformanceCertificateRef": {
+          "kind": "conformance",
+          "certificateId": "fixture-only:untrusted-conformance:golden-v1.15:top:typescript",
+          "certificateVersion": "0",
+          "certificateRecordHash": "fixture-only:untrusted-conformance-hash:golden-v1.15:top:typescript",
+          "registryGeneration": "fixture-only:untrusted-registry-generation:0"
+        },
+        "schedulingDecision": {
+          "status": "disabled",
+          "reasonCode": "OPERATOR_DISABLED",
+          "evaluatedAt": "2026-07-13T00:00:00.000Z",
+          "freshUntil": "2026-07-14T00:00:00.000Z",
+          "registryGeneration": "fixture-only:untrusted-registry-generation:0"
+        }
+      }
+    }
   }
 }

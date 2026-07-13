@@ -28,6 +28,7 @@ import {
   projectPublicChronicle,
 } from "@cowards/replay"
 import { executeRuntimeServiceRequest } from "./execute-match.js"
+import { createFixtureRuntimeExecutionEvidenceSnapshot } from "./runtime-execution-evidence.test-support.js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
 
 const runtimeConfig = createRuntimeServiceConfig({
@@ -117,6 +118,11 @@ const requestForPair = (input: {
     ...DEFAULT_RUNTIME_LIMITS,
     stdoutBytes: 32 * 1024,
   },
+  evidenceSnapshot: createFixtureRuntimeExecutionEvidenceSnapshot({
+    fixtureId: `four-language:${input.pairId}`,
+    bottom: input.bottom,
+    top: input.top,
+  }),
 })
 
 const markerValues = Object.values(fourLanguagePrivateMarkers)
