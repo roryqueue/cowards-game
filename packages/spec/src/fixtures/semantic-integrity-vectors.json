@@ -85,6 +85,14 @@
     },
     "transition": {
       "kind": "ACTIVATION_SLOT",
+      "versions": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "0.1.4",
+        "runtimeJs": "0.1.0",
+        "chronicle": "chronicle-v1.4",
+        "strategyRevision": "0.1.4",
+        "arenaVariant": "0.1.0"
+      },
       "lifecycle": {
         "phaseNumber": 1,
         "roundNumber": 1,
@@ -113,13 +121,23 @@
     { "id": "arena-terrain-duplicate", "scope": "arena", "mutation": { "op": "set", "path": ["terrainStones"], "value": [{ "x": 1, "y": 1 }, { "x": 1, "y": 1 }] }, "expected": [{ "code": "ARENA_TERRAIN_DUPLICATE", "path": ["terrainStones", 1], "metadata": {} }] },
     { "id": "arena-terrain-start-overlap", "scope": "arena", "mutation": { "op": "append", "path": ["terrainStones"], "value": { "x": 2, "y": 11 } }, "expected": [{ "code": "ARENA_TERRAIN_START_OVERLAP", "path": ["terrainStones", 0], "metadata": { "side": "bottom" } }] },
     { "id": "arena-start-noncanonical", "scope": "state", "mutation": { "op": "set", "path": ["soldiers", 0, "position"], "value": { "x": 1, "y": 10 } }, "expected": [{ "code": "ARENA_START_NONCANONICAL", "path": ["soldiers", 0, "position"], "metadata": { "side": "bottom" } }] },
-    { "id": "player-id-duplicate", "scope": "state", "mutation": { "op": "set", "path": ["players", 1, "id"], "value": "player:bottom" }, "expected": [{ "code": "PLAYER_ID_DUPLICATE", "path": ["players", 1, "id"], "metadata": {} }] },
+    { "id": "player-id-duplicate", "scope": "state", "mutation": { "op": "set", "path": ["players", 1, "id"], "value": "player:bottom" }, "expected": [
+      { "code": "PLAYER_ID_DUPLICATE", "path": ["players", 1, "id"], "metadata": {} },
+      { "code": "SOLDIER_OWNER_UNKNOWN", "path": ["soldiers", 8, "ownerPlayerId"], "metadata": {} },
+      { "code": "SOLDIER_OWNER_UNKNOWN", "path": ["soldiers", 9, "ownerPlayerId"], "metadata": {} },
+      { "code": "SOLDIER_OWNER_UNKNOWN", "path": ["soldiers", 10, "ownerPlayerId"], "metadata": {} },
+      { "code": "SOLDIER_OWNER_UNKNOWN", "path": ["soldiers", 11, "ownerPlayerId"], "metadata": {} },
+      { "code": "SOLDIER_OWNER_UNKNOWN", "path": ["soldiers", 12, "ownerPlayerId"], "metadata": {} },
+      { "code": "SOLDIER_OWNER_UNKNOWN", "path": ["soldiers", 13, "ownerPlayerId"], "metadata": {} },
+      { "code": "SOLDIER_OWNER_UNKNOWN", "path": ["soldiers", 14, "ownerPlayerId"], "metadata": {} },
+      { "code": "SOLDIER_OWNER_UNKNOWN", "path": ["soldiers", 15, "ownerPlayerId"], "metadata": {} }
+    ] },
     { "id": "initiative-player-unknown", "scope": "state", "mutation": { "op": "set", "path": ["initiativePlayerId"], "value": "player:unknown" }, "expected": [{ "code": "PLAYER_INITIATIVE_UNKNOWN", "path": ["initiativePlayerId"], "metadata": {} }] },
     { "id": "soldier-id-duplicate", "scope": "state", "mutation": { "op": "set", "path": ["soldiers", 1, "id"], "value": "bottom-soldier-1" }, "expected": [{ "code": "SOLDIER_ID_DUPLICATE", "path": ["soldiers", 1, "id"], "metadata": {} }] },
     { "id": "soldier-owner-unknown", "scope": "state", "mutation": { "op": "set", "path": ["soldiers", 0, "ownerPlayerId"], "value": "player:unknown" }, "expected": [{ "code": "SOLDIER_OWNER_UNKNOWN", "path": ["soldiers", 0, "ownerPlayerId"], "metadata": {} }] },
     { "id": "soldier-active-position-null", "scope": "state", "mutation": { "op": "set", "path": ["soldiers", 0, "position"], "value": null }, "expected": [{ "code": "SOLDIER_STATUS_POSITION_INCOHERENT", "path": ["soldiers", 0, "position"], "metadata": { "status": "ACTIVE" } }] },
     { "id": "soldier-active-facing-null", "scope": "state", "mutation": { "op": "set", "path": ["soldiers", 0, "facing"], "value": null }, "expected": [{ "code": "SOLDIER_STATUS_FACING_INCOHERENT", "path": ["soldiers", 0, "facing"], "metadata": { "status": "ACTIVE" } }] },
-    { "id": "soldier-stone-facing-present", "scope": "state", "mutations": [{ "op": "set", "path": ["soldiers", 0, "status"], "value": "STONE" }, { "op": "set", "path": ["soldiers", 0, "facing"], "value": "UP" }], "expected": [{ "code": "SOLDIER_STATUS_FACING_INCOHERENT", "path": ["soldiers", 0, "facing"], "metadata": { "status": "STONE" } }] },
+    { "id": "soldier-stone-position-null", "scope": "state", "mutations": [{ "op": "set", "path": ["soldiers", 0, "status"], "value": "STONE" }, { "op": "set", "path": ["soldiers", 0, "position"], "value": null }], "expected": [{ "code": "SOLDIER_STATUS_POSITION_INCOHERENT", "path": ["soldiers", 0, "position"], "metadata": { "status": "STONE" } }] },
     { "id": "soldier-fallen-position-present", "scope": "state", "mutations": [{ "op": "set", "path": ["soldiers", 0, "status"], "value": "FALLEN" }, { "op": "set", "path": ["soldiers", 0, "facing"], "value": null }], "expected": [{ "code": "SOLDIER_STATUS_POSITION_INCOHERENT", "path": ["soldiers", 0, "position"], "metadata": { "status": "FALLEN" } }] },
     { "id": "position-occupancy-duplicate", "scope": "state", "mutation": { "op": "set", "path": ["soldiers", 1, "position"], "value": { "x": 2, "y": 11 } }, "expected": [{ "code": "POSITION_OCCUPANCY_DUPLICATE", "path": ["soldiers", 1, "position"], "metadata": {} }] },
     { "id": "position-out-of-bounds", "scope": "state", "mutation": { "op": "set", "path": ["soldiers", 0, "position"], "value": { "x": -1, "y": 11 } }, "expected": [{ "code": "POSITION_OUT_OF_BOUNDS", "path": ["soldiers", 0, "position"], "metadata": {} }] },

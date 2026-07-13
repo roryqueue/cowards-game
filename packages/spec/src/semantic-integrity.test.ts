@@ -11,6 +11,12 @@ import {
   createSemanticIntegrityResult,
   projectPublicSemanticIntegrityFailure,
   projectRestrictedSemanticIntegrityFailure,
+  validateCanonicalArena,
+  validateCanonicalGameState,
+  validateCanonicalInitialGameState,
+  validateCanonicalTransition,
+  type CanonicalSemanticGameState,
+  type CanonicalSemanticTransition,
   type SemanticIntegrityIssueInput,
 } from "./semantic-integrity.js"
 
@@ -165,6 +171,21 @@ describe("semantic integrity shared vectors", () => {
     expect(
       forward.ok ? [] : forward.issues.map((issue) => issue.code),
     ).toEqual(corpus.multiFault.expectedCodes)
+    const samePath = [
+      {
+        code: "TRANSITION_HASH_MISMATCH" as const,
+        path: ["afterStateHash"],
+        metadata: { rule: "zeta" },
+      },
+      {
+        code: "TRANSITION_HASH_MISMATCH" as const,
+        path: ["afterStateHash"],
+        metadata: { rule: "alpha" },
+      },
+    ]
+    expect(createSemanticIntegrityResult(samePath)).toEqual(
+      createSemanticIntegrityResult([...samePath].reverse()),
+    )
   })
 
   it("projection separates public category from bounded restricted evidence", () => {
@@ -255,16 +276,65 @@ describe("semantic integrity shared vectors", () => {
     )
   })
 
-  it("missing-semantic-contract: shared vectors require validator", () => {
-    expect(ArenaVariantSchema.safeParse(mutatedValue(corpus.vectors[2]!)).success).toBe(
-      true,
-    )
-    expect(
-      RuntimeExecutionFinalStateSchema.safeParse(
-        mutatedValue(corpus.vectors.find((vector) => vector.id === "position-occupancy-duplicate")!),
-      ).success,
-    ).toBe(true)
+  it("validates every shared semantic vector with exact stable issues", () => {
+    for (const vector of corpus.vectors) {
+      const value = mutatedValue(vector)
+      const result =
+        vector.scope === "arena"
+          ? validateCanonicalArena(value as Parameters<typeof validateCanonicalArena>[0])
+          : vector.scope === "transition"
+            ? validateCanonicalTransition(value as CanonicalSemanticTransition)
+            : vector.id === "arena-start-noncanonical"
+              ? validateCanonicalInitialGameState(
+                  value as CanonicalSemanticGameState,
+                )
+              : validateCanonicalGameState(value as CanonicalSemanticGameState)
+      expect(result.ok, vector.id).toBe(false)
+      if (result.ok) continue
+      expect(
+        result.issues.map(({ code, path, metadata }) => ({
+          code,
+          path: [...path],
+          metadata: { ...metadata },
+        })),
+        vector.id,
+      ).toEqual(vector.expected)
+      expect(result.category).toBe("CANONICAL_INTEGRITY_FAILURE")
+      expect(result.ownership).toBe("system_integrity")
+    }
+  })
 
-    throw new Error("[EXPECTED_RED:MISSING_SEMANTIC_CONTRACT:SPEC]")
+  it("admits valid current starts and facing-preserving v1.4 STONE and FALLEN states", () => {
+    const arenaBefore = JSON.stringify(corpus.valid.arena)
+    const stateBefore = JSON.stringify(corpus.valid.state)
+    const transitionBefore = JSON.stringify(corpus.valid.transition)
+    expect(validateCanonicalArena(corpus.valid.arena as never)).toMatchObject({
+      ok: true,
+    })
+    expect(
+      validateCanonicalInitialGameState(
+        corpus.valid.state as CanonicalSemanticGameState,
+      ),
+    ).toMatchObject({ ok: true })
+    expect(
+      validateCanonicalTransition(
+        corpus.valid.transition as unknown as CanonicalSemanticTransition,
+      ),
+    ).toMatchObject({ ok: true })
+
+    const stoned = clone(corpus.valid.state) as CanonicalSemanticGameState
+    ;(stoned.soldiers[0] as { status: string }).status = "STONE"
+    expect(stoned.soldiers[0]?.facing).toBe("UP")
+    expect(validateCanonicalGameState(stoned)).toMatchObject({ ok: true })
+
+    const fallen = clone(corpus.valid.state) as CanonicalSemanticGameState
+    ;(fallen.soldiers[0] as { status: string; position: unknown }).status = "FALLEN"
+    ;(fallen.soldiers[0] as { position: unknown }).position = null
+    expect(fallen.soldiers[0]?.facing).toBe("UP")
+    expect(validateCanonicalGameState(fallen)).toMatchObject({ ok: true })
+
+    expect(JSON.stringify(corpus.valid.arena)).toBe(arenaBefore)
+    expect(JSON.stringify(corpus.valid.state)).toBe(stateBefore)
+    expect(JSON.stringify(corpus.valid.transition)).toBe(transitionBefore)
   })
 })
