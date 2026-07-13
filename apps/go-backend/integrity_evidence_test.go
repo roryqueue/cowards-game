@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -208,6 +209,149 @@ func TestIntegrityEvidenceClassifierMatchesCanonicalStatusFloor(t *testing.T) {
 	disabledResult := classifyExecutableLaneEvidence(executableLaneEvidenceInput{Authority: &disabled, ExpectedLaneIdentityHash: laneHash, EvaluationInstant: "2026-07-13T00:00:00.000Z", ActiveRegistryGeneration: "9", ContainmentCertificate: &containmentRef, ConformanceCertificate: &conformanceRef})
 	if disabledResult.Status != executableLaneEvidenceDisabled || disabledResult.ReasonCode != "OPERATOR_DISABLED" {
 		t.Fatalf("operator switch promoted evidence: %+v", disabledResult)
+	}
+}
+
+func TestIntegrityEvidencePublicProjectionUsesExactCalmAllowlist(t *testing.T) {
+	input := integrityEvidenceProjectionFixture()
+	input.ReasonCode = "CONFORMANCE_MISSING"
+	input.Status = executableLaneEvidenceExhibitionOnly
+	input.Certificates = input.Certificates[:1]
+
+	projection := projectPublicIntegrityEvidence(input)
+	serialized, err := json.Marshal(projection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(serialized, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	keys := make([]string, 0, len(decoded))
+	for key := range decoded {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	expected := []string{"evidence", "freshnessDate", "message", "reasonCategory", "semanticTupleId", "status"}
+	if !reflect.DeepEqual(keys, expected) {
+		t.Fatalf("public integrity keys=%v, want exact allowlist %v", keys, expected)
+	}
+	if decoded["status"] != "exhibition_only" || decoded["reasonCategory"] != "competitive_evidence_pending" {
+		t.Fatalf("public integrity status/copy drifted: %s", serialized)
+	}
+	message, _ := decoded["message"].(string)
+	if message == "" || strings.Contains(message, "panic") || strings.Contains(message, "runtime") || strings.Contains(message, "CONFORMANCE_MISSING") {
+		t.Fatalf("public integrity copy is not calm and stable: %q", message)
+	}
+	if decoded["freshnessDate"] != "2026-08-12" {
+		t.Fatalf("public freshness date drifted: %s", serialized)
+	}
+	if err := assertIntegrityEvidenceProjectionPrivacySafe(projection); err != nil {
+		t.Fatalf("public projection was not privacy safe: %v", err)
+	}
+}
+
+func TestIntegrityEvidenceOperatorProjectionIsDistinctAndRestrictedSafe(t *testing.T) {
+	input := integrityEvidenceProjectionFixture()
+	projection := projectOperatorIntegrityEvidence(input)
+	serialized, err := json.Marshal(projection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(serialized)
+	for _, required := range []string{
+		`"reasonCode":"EVIDENCE_CURRENT"`,
+		`"providerId":"provider:typescript"`,
+		`"toolchainVersion":"26.0.0"`,
+		`"certificateId":"certificate:containment:current"`,
+		`"gateId":"certificate_status"`,
+		`"restrictedProofIds"`,
+		`"remediation"`,
+		`"cohortImpact"`,
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("operator projection omitted %s: %s", required, text)
+		}
+	}
+	for _, publicOnly := range []string{`"reasonCategory"`, `"message"`} {
+		if strings.Contains(text, publicOnly) {
+			t.Fatalf("operator projection reused public DTO field %s: %s", publicOnly, text)
+		}
+	}
+	if err := assertIntegrityEvidenceProjectionPrivacySafe(projection); err != nil {
+		t.Fatalf("operator projection was not restricted-safe: %v", err)
+	}
+}
+
+func TestIntegrityEvidenceProjectionPrivacyRejectsNestedKeysAndMarkers(t *testing.T) {
+	forbiddenKeys := []string{
+		"source", "sourceText", "bytesBase64", "artifactBytesBase64", "certificateBytes",
+		"evidenceBytes", "originalSourceBytes", "normalizedSourceBytes", "strategySource",
+		"strategyMemory", "soldierMemory", "objective", "objectivePayload", "rawRuntimeDetails",
+		"privateDiagnostics", "toolchainDiagnostics", "hostDiagnostics", "privateError", "stackTrace",
+		"stderr", "password", "authorization", "credential", "apiKey", "token", "sessionId",
+		"hostPath", "artifactPath", "proofStoragePath", "evidenceStoragePath", "packagePath",
+		"databaseURL", "runtimeInternal", "securityInternals", "exploitDetails",
+	}
+	for _, key := range forbiddenKeys {
+		t.Run("key_"+key, func(t *testing.T) {
+			value := map[string]any{"safe": []any{map[string]any{key: "redacted-value"}}}
+			if err := assertIntegrityEvidenceProjectionPrivacySafe(value); err == nil {
+				t.Fatalf("privacy scan accepted nested forbidden field %q", key)
+			}
+		})
+	}
+	for _, marker := range []string{
+		"PRIVATE_", "DATABASE_URL", "postgresql://", "Bearer ", "stack trace", "Traceback",
+		"site-packages", `File "`, "/python_runtime_host.py", "COWARDS_PROVIDER_VALIDATION_SECRET",
+		"/var/lib/cowards/", "exploit payload",
+	} {
+		t.Run("marker", func(t *testing.T) {
+			value := map[string]any{"safe": []any{map[string]any{"detail": "prefix " + marker + " suffix"}}}
+			if err := assertIntegrityEvidenceProjectionPrivacySafe(value); err == nil {
+				t.Fatalf("privacy scan accepted nested forbidden marker %q", marker)
+			}
+		})
+	}
+}
+
+func integrityEvidenceProjectionFixture() integrityEvidenceProjectionInput {
+	tuple := canonicalCompatibilityTuple{
+		Rules: "cowards-rules-v1.4", Engine: "0.1.4", RuntimeABI: "strategy-runtime-abi-v1.14",
+		Chronicle: "chronicle-v1.4", ArenaCatalog: "arena-catalog-v1.4", SetPolicy: "set-policy-v1.4",
+	}
+	return integrityEvidenceProjectionInput{
+		Status: executableLaneEvidenceCounted, ReasonCode: "EVIDENCE_CURRENT",
+		EvaluatedAt: "2026-07-13T12:00:00.000Z", RegistryGeneration: "9",
+		SemanticTupleID: "sha256:" + strings.Repeat("a", 64),
+		Identity: goExecutableLaneIdentity{
+			ProviderID: "provider:typescript", LanguageID: "typescript", RuntimeID: "runtime:node",
+			RuntimeVersion: "26.0.0", ToolchainID: "toolchain:node", ToolchainVersion: "26.0.0",
+			AdapterID: "adapter:subprocess", AdapterVersion: "1", PolicyID: "policy:containment",
+			PolicyVersion: "1", CorpusID: "corpus:conformance", CorpusVersion: "1",
+			ArtifactID: "artifact:typescript", ArtifactSHA256: strings.Repeat("b", 64),
+			ImplementationID: "implementation:typescript", BuildID: "build:typescript:1",
+			SemanticTupleID: "sha256:" + strings.Repeat("a", 64), SemanticTuple: tuple,
+		},
+		Certificates: []integrityEvidenceCertificateProjectionInput{
+			{
+				Kind: "containment", CertificateID: "certificate:containment:current",
+				CertificateVersion: "runtime-containment-certificate-v1", CertificateRecordHash: strings.Repeat("c", 64),
+				Status: "passed", IssuedAt: "2026-07-12T00:00:00.000Z", FreshUntil: "2026-08-12T00:00:00.000Z",
+				GateResults:          []integrityEvidenceGateResult{{GateID: "certificate_status", Passed: true}},
+				RestrictedProofIDs:   []string{"attestation:containment"},
+				RestrictedProofLinks: []string{"/internal/integrity/matchsets/match-set%3Acurrent/evidence#certificate-containment-current"},
+			},
+			{
+				Kind: "conformance", CertificateID: "certificate:conformance:current",
+				CertificateVersion: "runtime-conformance-certificate-v1", CertificateRecordHash: strings.Repeat("d", 64),
+				Status: "passed", IssuedAt: "2026-07-12T00:00:00.000Z", FreshUntil: "2026-08-13T00:00:00.000Z",
+				GateResults:          []integrityEvidenceGateResult{{GateID: "certificate_status", Passed: true}},
+				RestrictedProofIDs:   []string{"attestation:conformance"},
+				RestrictedProofLinks: []string{"/internal/integrity/matchsets/match-set%3Acurrent/evidence#certificate-conformance-current"},
+			},
+		},
+		CohortImpact: "New execution may produce counted results while evidence remains current.",
 	}
 }
 
