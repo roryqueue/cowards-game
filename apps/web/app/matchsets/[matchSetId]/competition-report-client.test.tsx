@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { readFileSync } from "node:fs"
 
 const source = readFileSync(
-  "apps/web/app/matchsets/[matchSetId]/competition-report-client.tsx",
+  new URL("./competition-report-client.tsx", import.meta.url),
   "utf8",
 )
 
