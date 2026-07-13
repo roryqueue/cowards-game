@@ -100,7 +100,7 @@ Plans:
   4. Executable compatibility fixtures preserve same-direction collision, successful-push reversal history, blocked MOVE/PUSH, terminal timing, Backstab behavior, and every other audited valid v1.4 ruling.
   5. If any clarification or refactor would change a valid state, Action legality, event order, outcome, terminal timing/reason, or Strategy observation, work stops for an explicit compatibility ruling before expectations change.
 
-**Plans:** 5/22 plans executed
+**Plans:** 6/22 plans executed
 
 **Wave 1 — permanent RED and compatibility evidence**
 
@@ -112,7 +112,7 @@ Plans:
 **Wave 2 — semantic contracts and reference ownership**
 
 - [ ] 257-05-PLAN.md — Implement bounded deterministic semantic validators and failure ownership.
-- [ ] 257-07-PLAN.md — Prepare an inactive semantic tuple/event/arena candidate without activating it.
+- [x] 257-07-PLAN.md — Prepare an inactive semantic tuple/event/arena candidate without activating it.
 - [x] 257-11-PLAN.md — Freeze the AST-aware executable-reference ownership inventory.
 
 **Wave 3 — immutable admission and candidate event coverage**
@@ -242,7 +242,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 256. Counted Safety and Canonical Authority | 19/19 | Complete    | 2026-07-13 |
-| 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 2/22 | In Progress|  |
+| 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 6/22 | In Progress|  |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 0/TBD | Not started | - |
 | 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 0/TBD | Not started | - |
