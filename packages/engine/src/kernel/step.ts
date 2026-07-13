@@ -14,12 +14,7 @@ import { resolveBackstabBoundary } from "../backstab.js"
 import { resolveContraction } from "../contraction.js"
 import { resolveAction } from "../movement.js"
 import { applyMatchOutcome, checkAndApplyMatchEnd } from "../outcome.js"
-import {
-  getActiveSoldiers,
-  getOpponentPlayer,
-  getSoldier,
-  replaceSoldier,
-} from "../selectors.js"
+import { getOpponentPlayer, getSoldier, replaceSoldier } from "../selectors.js"
 import {
   createSoldierBrainInput,
   createStrategyInput,
@@ -169,27 +164,70 @@ const closeSlot = (
   }
 }
 
-const validOrders = (
+const parseRetainedStrategyResult = (
   state: GameState,
   playerId: PlayerId,
-  orders: Array<{ soldierId: string; objective?: JsonValue | undefined }>,
-): ActivationOrder[] => {
+  value: unknown,
+):
+  | {
+      success: true
+      orders: ActivationOrder[]
+      strategyMemory: JsonValue
+    }
+  | { success: false; message: string } => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    const parsed = StrategyResultSchema.safeParse(value)
+    return {
+      success: false,
+      message: parsed.success
+        ? "Strategy result must be an object."
+        : parsed.error.message,
+    }
+  }
+  const rawOrders = (value as { activationOrders?: unknown }).activationOrders
+  if (!Array.isArray(rawOrders)) {
+    const parsed = StrategyResultSchema.safeParse(value)
+    return {
+      success: false,
+      message: parsed.success
+        ? "activationOrders must be an array."
+        : parsed.error.message,
+    }
+  }
+  const parsed = StrategyResultSchema.safeParse({
+    ...value,
+    activationOrders: rawOrders.slice(0, state.activationCount),
+  })
+  if (!parsed.success) {
+    return { success: false, message: parsed.error.message }
+  }
+
   const seen = new Set<string>()
-  const activeIds = new Set(
-    getActiveSoldiers(state, playerId).map((soldier) => soldier.id),
-  )
-  const filtered: ActivationOrder[] = []
-  for (const order of orders) {
-    if (filtered.length >= state.activationCount) break
-    if (seen.has(order.soldierId) || !activeIds.has(order.soldierId)) continue
+  for (const order of parsed.data.activationOrders) {
+    const soldier = getSoldier(state, order.soldierId)
+    if (
+      seen.has(order.soldierId) ||
+      soldier === undefined ||
+      soldier.ownerPlayerId !== playerId ||
+      soldier.status !== "ACTIVE"
+    ) {
+      return {
+        success: false,
+        message:
+          "A retained activation order is duplicate, unknown, wrong-owner, or inactive.",
+      }
+    }
     seen.add(order.soldierId)
-    filtered.push(
+  }
+  return {
+    success: true,
+    orders: parsed.data.activationOrders.map((order) =>
       order.objective === undefined
         ? { soldierId: order.soldierId }
         : { soldierId: order.soldierId, objective: order.objective },
-    )
+    ),
+    strategyMemory: parsed.data.strategyMemory,
   }
-  return filtered
 }
 
 const runtimeViolationEvent = (
@@ -349,13 +387,13 @@ const resolveSelection = (
   if (input.classification === "player_violation") {
     events = [runtimeViolationEvent(player.id, input.violation)]
   } else if (input.classification === "success") {
-    const parsed = StrategyResultSchema.safeParse(input.value)
+    const parsed = parseRetainedStrategyResult(state, player.id, input.value)
     if (!parsed.success) {
       classification = "player_violation"
       events = [
         runtimeViolationEvent(player.id, {
           type: "INVALID_OUTPUT",
-          message: parsed.error.message,
+          message: parsed.message,
         }),
       ]
     } else {
@@ -363,11 +401,11 @@ const resolveSelection = (
         ...state,
         players: state.players.map((candidate) =>
           candidate.id === player.id
-            ? { ...candidate, strategyMemory: parsed.data.strategyMemory }
+            ? { ...candidate, strategyMemory: parsed.strategyMemory }
             : candidate,
         ) as GameState["players"],
       }
-      orders = validOrders(state, player.id, parsed.data.activationOrders)
+      orders = parsed.orders
       events = [
         event(
           "STRATEGY_EVALUATED",
@@ -377,7 +415,7 @@ const resolveSelection = (
             privacy: "owner",
             privatePayload: {
               playerId: player.id,
-              strategyMemory: parsed.data.strategyMemory,
+              strategyMemory: parsed.strategyMemory,
             },
           },
         ),
