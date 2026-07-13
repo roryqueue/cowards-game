@@ -29,7 +29,7 @@ const identity = {
   toolchainId: "typescript",
   toolchainVersion: "6.0.3",
   adapterId: "runtime-js-worker-thread",
-  adapterVersion: "runtime-js-v1.14",
+  adapterVersion: "0.1.0",
   policyId: "runtime-policy",
   policyVersion: "v1.37",
   corpusId: "four-language-conformance",

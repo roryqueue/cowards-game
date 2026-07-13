@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto"
-import { STRATEGY_RUNTIME_ABI_VERSION } from "./runtime.js"
-import { COMPATIBILITY_VERSIONS } from "./versions.js"
+import {
+  COMPATIBILITY_VERSIONS,
+  STRATEGY_RUNTIME_ABI_VERSION,
+} from "./versions.js"
 
 /**
  * Canonical ownership and semantic identity for v1.37 integrity decisions.

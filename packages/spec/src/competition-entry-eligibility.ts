@@ -1,5 +1,11 @@
 import { assertPublicOutputLeakSafe } from "./public-output-privacy.js"
 import type { StrategyLanguageId } from "./runtime.js"
+import {
+  evaluateExecutableLaneEligibility,
+  type EvaluateExecutableLaneEligibilityInput,
+  type ExecutableLaneEvidenceReasonCode,
+  type ExecutableLaneEvidenceStatus,
+} from "./runtime-evidence.js"
 
 export const COUNTED_ENTRY_ELIGIBILITY_CONTRACT_ID =
   "counted-entry-eligibility-v1.36" as const
@@ -16,6 +22,8 @@ export type CountedEntryEligibilitySupportedLane =
 
 export const COUNTED_ENTRY_ELIGIBILITY_CATEGORIES = [
   "provider_validated",
+  "runtime_lane_disabled",
+  "runtime_lane_exhibition_only",
   "season_not_open",
   "owner_mismatch",
   "invalid_strategy_revision",
@@ -45,6 +53,8 @@ export interface CountedEntryEligibilityPublicCopy {
 export interface CountedEntryEligibilityDecision
   extends CountedEntryEligibilityPublicCopy {
   ok: boolean
+  evidenceStatus?: ExecutableLaneEvidenceStatus | undefined
+  evidenceReasonCode?: ExecutableLaneEvidenceReasonCode | undefined
 }
 
 export const COUNTED_ENTRY_ELIGIBILITY_PUBLIC_COPY = {
@@ -53,6 +63,20 @@ export const COUNTED_ENTRY_ELIGIBILITY_PUBLIC_COPY = {
     publicMessage:
       "This Strategy Revision is ready for counted trial entry.",
     remediation: "No action is needed before entering an open counted Season.",
+  },
+  runtime_lane_disabled: {
+    category: "runtime_lane_disabled",
+    publicMessage:
+      "This Strategy lane is temporarily unavailable for execution.",
+    remediation:
+      "Try again after current runtime safety evidence is available.",
+  },
+  runtime_lane_exhibition_only: {
+    category: "runtime_lane_exhibition_only",
+    publicMessage:
+      "This Strategy lane is currently available for exhibitions only.",
+    remediation:
+      "Use an exhibition path until current competitive evidence is available.",
   },
   season_not_open: {
     category: "season_not_open",
@@ -198,10 +222,46 @@ export const getCountedEntryEligibilityPublicCopy = (
 
 export const countedEntryEligibilityDecision = (
   category: CountedEntryEligibilityCategory,
-): CountedEntryEligibilityDecision => ({
-  ok: category === "provider_validated",
-  ...getCountedEntryEligibilityPublicCopy(category),
-})
+  evidence?: EvaluateExecutableLaneEligibilityInput | undefined,
+): CountedEntryEligibilityDecision => {
+  if (category !== "provider_validated") {
+    return {
+      ok: false,
+      ...getCountedEntryEligibilityPublicCopy(category),
+    }
+  }
+  if (!evidence) {
+    return {
+      ok: false,
+      ...getCountedEntryEligibilityPublicCopy("runtime_lane_disabled"),
+      evidenceStatus: "disabled",
+      evidenceReasonCode: "CONTAINMENT_MISSING",
+    }
+  }
+  const canonical = evaluateExecutableLaneEligibility(evidence)
+  if (canonical.status === "disabled") {
+    return {
+      ok: false,
+      ...getCountedEntryEligibilityPublicCopy("runtime_lane_disabled"),
+      evidenceStatus: canonical.status,
+      evidenceReasonCode: canonical.reasonCode,
+    }
+  }
+  if (canonical.status === "exhibition_only") {
+    return {
+      ok: false,
+      ...getCountedEntryEligibilityPublicCopy("runtime_lane_exhibition_only"),
+      evidenceStatus: canonical.status,
+      evidenceReasonCode: canonical.reasonCode,
+    }
+  }
+  return {
+    ok: true,
+    ...getCountedEntryEligibilityPublicCopy("provider_validated"),
+    evidenceStatus: canonical.status,
+    evidenceReasonCode: canonical.reasonCode,
+  }
+}
 
 export const isCountedEntrySupportedLane = (
   value: unknown,

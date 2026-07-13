@@ -3,9 +3,16 @@ import type {
   StrategyArtifactSourceFormat,
   StrategyRevisionValidationIssue,
 } from "./types.js"
-import { COMPATIBILITY_VERSIONS } from "./versions.js"
+import {
+  COMPATIBILITY_VERSIONS,
+  STRATEGY_RUNTIME_ABI_VERSION,
+} from "./versions.js"
+import {
+  evaluateExecutableLaneEligibility,
+  type EvaluateExecutableLaneEligibilityInput,
+} from "./runtime-evidence.js"
 
-export const STRATEGY_RUNTIME_ABI_VERSION = "strategy-runtime-abi-v1.14"
+export { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 
 export const STRATEGY_LANGUAGE_IDS = [
   "javascript",
@@ -1504,8 +1511,9 @@ export const RUNTIME_BROKER_REGISTRY =
           readiness: adapter.readiness,
           enabledForNormalPlay:
             language.enabledForNormalPlay && adapter.enabledForNormalPlay,
-          countedResultsAllowed:
-            language.enabledForNormalPlay && adapter.countedResultsAllowed,
+          // Compatibility-only field. Exact current containment and conformance
+          // evidence, not registry labels, is the sole counted authority.
+          countedResultsAllowed: false,
           limits: adapter.limits,
         }
       }),
@@ -1681,8 +1689,7 @@ export const validateStrategyRuntimeMetadataPolicy = (
     language &&
     adapter &&
     (!language.enabledForNormalPlay ||
-      !adapter.enabledForNormalPlay ||
-      !adapter.countedResultsAllowed)
+      !adapter.enabledForNormalPlay)
   ) {
     issues.push(productIssue("NON_COUNTED_RUNTIME", "warning"))
   }
@@ -1692,6 +1699,7 @@ export const validateStrategyRuntimeMetadataPolicy = (
 
 export const evaluateStrategyRuntimeCountedEligibility = (
   value: unknown,
+  evidence?: EvaluateExecutableLaneEligibilityInput | undefined,
 ): StrategyRuntimeCountedEligibility => {
   const issue =
     validateStrategyRuntimeMetadataPolicy(value).find((candidate) =>
@@ -1704,17 +1712,51 @@ export const evaluateStrategyRuntimeCountedEligibility = (
       ].includes(candidate.code),
     ) ?? null
 
-  return issue
-    ? {
-        ok: false,
-        code: issue.code as StrategyRuntimeProductValidationCode,
-        publicMessage: issue.message,
-      }
-    : { ok: true, code: null, publicMessage: null }
+  if (issue) {
+    return {
+      ok: false,
+      code: issue.code as StrategyRuntimeProductValidationCode,
+      publicMessage: issue.message,
+    }
+  }
+
+  const runtime = coerceStrategyRuntimeMetadata(value)
+  const provider = runtime
+    ? getStrategyLanguageProviderRecord(runtime.language.id)
+    : null
+  const identityMatchesRuntime = Boolean(
+    runtime &&
+      provider &&
+      evidence &&
+      evidence.expectedIdentity.providerId === provider.id &&
+      evidence.expectedIdentity.languageId === runtime.language.id &&
+      evidence.expectedIdentity.adapterId === runtime.adapter.id &&
+      evidence.expectedIdentity.adapterVersion === runtime.adapter.version &&
+      evidence.expectedIdentity.semanticTuple.runtimeAbi === runtime.abiVersion,
+  )
+  if (!evidence || !identityMatchesRuntime) {
+    const nonCounted = countedMessage("NON_COUNTED_RUNTIME")
+    return {
+      ok: false,
+      code: nonCounted.code,
+      publicMessage: nonCounted.message,
+    }
+  }
+  const canonicalEligibility = evaluateExecutableLaneEligibility(evidence)
+  if (canonicalEligibility.status !== "counted") {
+    const nonCounted = countedMessage("NON_COUNTED_RUNTIME")
+    return {
+      ok: false,
+      code: nonCounted.code,
+      publicMessage: nonCounted.message,
+    }
+  }
+  return { ok: true, code: null, publicMessage: null }
 }
 
 export const describeStrategyRuntimeProductSemantics = (
   value: unknown,
+  evidence?: EvaluateExecutableLaneEligibilityInput | undefined,
 ): StrategyRuntimeProductSemantics => {
   const runtime = normalizeStrategyRuntimeMetadata(value)
   const language = getStrategyLanguageRecord(runtime.language.id)
@@ -1722,7 +1764,7 @@ export const describeStrategyRuntimeProductSemantics = (
     runtime.language.id,
   )
   const adapter = getStrategyRuntimeAdapterRecord(runtime.adapter.id)
-  const eligibility = evaluateStrategyRuntimeCountedEligibility(value)
+  const eligibility = evaluateStrategyRuntimeCountedEligibility(value, evidence)
   const issues = validateStrategyRuntimeMetadataPolicy(value)
   const readiness = adapter?.readiness ?? "unknown"
   const experimental =
