@@ -2,9 +2,11 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
+  analyzeV137CoreRulesAuditBaseline,
   analyzeV137IntegrityBoundaries,
   analyzeV137IntegritySources,
   assertV137IntegrityPublicPayload,
+  checkV137CoreRulesAuditBaseline,
 } from "./check-v1-37-integrity-boundaries.js"
 
 const expectBypass = (
@@ -187,5 +189,78 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
         enforceKnownDebtFingerprints: true,
       }).findings.map((finding) => finding.code),
     ).toContain("KNOWN_PHASE_257_DEBT_DRIFT")
+  })
+})
+
+describe("v1.37 core-rules audit baseline", () => {
+  const expectedReproduction = {
+    noAdvanceLastSoldier: {
+      status: "STONE",
+      outcome: null,
+      matchEndedEvents: 0,
+    },
+    cycleEndBackstabActor: {
+      status: "STONE",
+      slotEnded: false,
+      terminalReason: null,
+    },
+    excessMalformedOrder: {
+      validOrdersRetained: 0,
+      violationEvents: 1,
+    },
+    deepValidation: "threw:RangeError",
+    overlappingArenaAccepted: true,
+    legacyBoundaryAccepted: true,
+    successfulPushPusherHistory: "RIGHT",
+  } as const
+
+  it("matches the exact seven current-HEAD reproductions", () => {
+    expect(checkV137CoreRulesAuditBaseline().findings).toEqual([])
+  })
+
+  it("rejects semantic drift in any probe", () => {
+    const baseline = JSON.parse(
+      readFileSync(
+        path.resolve(
+          process.cwd(),
+          ".planning/artifacts/v1.37-core-rules-audit-baseline.json",
+        ),
+        "utf8",
+      ),
+    ) as unknown
+    const markdown = readFileSync(
+      path.resolve(
+        process.cwd(),
+        ".planning/artifacts/v1.37-core-rules-audit-baseline.md",
+      ),
+      "utf8",
+    )
+    const drifted = {
+      ...expectedReproduction,
+      successfulPushPusherHistory: "LEFT",
+    }
+    expect(
+      analyzeV137CoreRulesAuditBaseline({
+        baseline,
+        markdown,
+        reproduced: drifted,
+      }).findings.map((finding) => finding.code),
+    ).toContain("AUDIT_OBSERVATION_DRIFT")
+  })
+
+  it("rejects restricted data in the persisted baseline", () => {
+    const unsafe = {
+      schemaVersion: 1,
+      implementationHead: "c28015b",
+      sourceBytes: "private",
+      probes: [],
+    }
+    expect(
+      analyzeV137CoreRulesAuditBaseline({
+        baseline: unsafe,
+        markdown: "# audit baseline\n",
+        reproduced: expectedReproduction,
+      }).findings.map((finding) => finding.code),
+    ).toContain("AUDIT_PRIVACY_VIOLATION")
   })
 })
