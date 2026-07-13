@@ -5,7 +5,7 @@ import { recordChronicleFromExecution } from "./record.js"
 import { validateCandidateReplaySemantics } from "./validate.js"
 
 describe("replay semantic integrity", () => {
-  it("missing-semantic-enforcement: replay rejects invalid intermediate state", () => {
+  it("rejects cloned intermediate-state evidence before semantic use", () => {
     let runtimeCalls = 0
     const runtime: StrategyRuntime = {
       selectActivations(input: StrategyInput) {
@@ -82,11 +82,11 @@ describe("replay semantic integrity", () => {
     )
     if (!validation.ok) {
       expect(validation.issues.map((issue) => issue.code)).toContain(
-        "ARENA_TERRAIN_START_OVERLAP",
+        "CANDIDATE_BOUNDARY_HASH_INVALID",
       )
       return
     }
 
-    throw new Error("[EXPECTED_RED:MISSING_SEMANTIC_ENFORCEMENT:REPLAY]")
+    throw new Error("forged execution evidence was accepted")
   })
 })
