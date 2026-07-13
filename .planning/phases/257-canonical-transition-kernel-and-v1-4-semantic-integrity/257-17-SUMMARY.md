@@ -77,6 +77,7 @@ status: complete
 - Added a standard-library-only Go semantic validator with the committed 34-code vocabulary, exact family/code/path ordering, bounded safe metadata, JavaScript-safe integers, immutable inputs, and every applicable shared arena/state/cascade/valid vector.
 - Strictly decodes original runtime response bytes with duplicate-key, UTF-8, unknown-field, safe-number, and EOF enforcement. Only the exact candidate ID plus all six exact tuple fields can enter the candidate branch; partial and mixed shapes fail closed.
 - Validates request/result identity, semantic final state, outcome, terminal projection hash, Chronicle metadata, final event, runtime-violation count, terminal outcome, and terminal-board agreement. It deliberately makes no transition parity claim because the response has no transition stream.
+- Enforces the exact 21-event candidate vocabulary, event/context/payload/privacy shapes, contiguous sequences, lifecycle windows, selection success-or-player-violation slots, private-reference ownership, semantic snapshot boards, recorder snapshot order, and unique final terminal evidence.
 - Preserves current old-response handling, but rejects the inactive candidate before canonical completion and records only a bounded retryable system failure. Candidate-declared retryability is preserved and never becomes a player penalty.
 - Added a recursive Go-AST guard against Match scheduling/rule-resolution entry points and declarations, including aliases and recursion, while proving validator purity and deep equality.
 - Revalidates locked candidate bytes before completion derivation and again after authority/job transaction locks.
@@ -86,6 +87,7 @@ status: complete
 
 1. **Task 1: Validate shared semantics before Go orchestration** — `4591eb8`
 2. **Task 2: Prove Go real-PostgreSQL rollback and exact success** — `87e46f2`
+3. **Code-review closure: strict candidate failure, Chronicle, scheduler, reversal-history, and rollback contracts** — `7fb1a13`
 
 ## Files Created/Modified
 
@@ -97,6 +99,14 @@ status: complete
 - `apps/go-backend/orchestrator_test.go` — Old-current preservation and pre-completion ordering proof.
 - `apps/go-backend/completion.go` — Pre-derive and in-transaction candidate evidence revalidation.
 - `apps/go-backend/completion_test.go` — Random-schema exact snapshots for invalidity, receipt drift, post-insert rollback, success, and idempotence.
+
+## Code Review Closure
+
+- Candidate system failures now preserve `classification`, `ownership`, `code`, `retryable`, and `playerPenalty` exactly and accept all 12 TypeScript candidate codes, including the four `authority_system` evidence codes and `EVIDENCE_REGISTRY_DRIFT`.
+- Replaced the hand-built terminal-at-start false positive with a byte-exact TypeScript-recorder-derived corpus guarded by Chronicle hash `8fe1c8a5a534edb8f035000333acd605513ca81ac6ae27fe5807a0ecd42e64df` and final-state hash `cc3219c3daa7df0113d04379487f31fd17ce15f04eac17efc1a43e860d5d7a25`.
+- Candidate Chronicle admission now rejects unknown, duplicate, missing, extra, post-terminal, privacy-mismatched, semantically invalid, and reconstruction-incoherent material. Executable tests cover every candidate event payload, two-slot cycle interleaving, victim-oriented stoning/fall events, and a full player-violation Chronicle.
+- The no-scheduler AST guard now walks every non-test Go subtree and catches `run`, `step`, `resolve`, `advance`, and `schedule` aliases for Phase/Round/Cycle/Activation/Contraction while allowing service Match-job scheduling.
+- Canonical state admission now rejects invalid non-null `lastSuccessfulMoveDirection`; PostgreSQL rollback snapshots compare complete rows for Matches, jobs, attempts, Chronicles, Set membership, result flags, and ladder entries.
 
 ## Decisions Made
 
@@ -118,6 +128,11 @@ status: complete
 
 **Total deviations:** 1 auto-fixed source-of-truth correction. No gameplay behavior changed.
 
+### Review-discovered compatibility correction
+
+- A first strict Chronicle lifecycle model assumed one contiguous Activation. A real candidate recorder trace proved that v1.4 starts multiple slots before cycle-interleaving them, may emit later `ACTIVATION_SKIPPED` events after `ACTIVATION_ENDED`, and may report a stoned/fallen victim distinct from the acting Soldier in context.
+- The validator was corrected to track each Activation independently. Selection slots accept exactly the canonical bottom/top `STRATEGY_EVALUATED` or `RUNTIME_VIOLATION` result, preserving player-violation Matches without weakening lifecycle ordering.
+
 ## Issues Encountered
 
 - `scripts/dev-local-postgres.sh --setup-only` found PostgreSQL already listening but attempted local-user password authentication and exited before setup. The required explicit DSN `postgresql://cowards:cowards@localhost:5432/cowards_game` was healthy; all focused and full DSN-backed Go suites passed against it.
@@ -129,7 +144,8 @@ status: complete
 - Plan Task-2 PostgreSQL command with explicit DSN: passed.
 - Full `go test ./... -count=1` with explicit DSN: passed in 5.4 seconds.
 - Random isolated schema semantic completion test: all 4 cases passed.
-- `git diff --check`, bounded failure/privacy assertions, active-old preservation, and recursive no-scheduler AST guard: passed.
+- Exact 12-code candidate system-failure vectors, 21-event payload contracts, recorder-corpus binding, malformed Chronicle mutations, player-violation round trip, and cycle-interleaving lifecycle: passed.
+- `git diff --check`, bounded failure/privacy assertions, active-old preservation, and recursive no-scheduler AST guard plus mutation tests: passed.
 
 ## Protected Working Bytes
 
