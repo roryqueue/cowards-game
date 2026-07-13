@@ -747,6 +747,8 @@ func collectGoStateIssues(state map[string]any) []semanticIntegrityIssue {
 		positionNull := soldier["position"] == nil
 		facing, facingIsString := soldier["facing"].(string)
 		facingNull := soldier["facing"] == nil
+		lastDirection, lastDirectionIsString := soldier["lastSuccessfulMoveDirection"].(string)
+		lastDirectionNull := soldier["lastSuccessfulMoveDirection"] == nil
 		if (status == "ACTIVE" || status == "STONE") && positionNull {
 			issues = append(issues, semanticIssue("SOLDIER_STATUS_POSITION_INCOHERENT", []any{"soldiers", index, "position"}, map[string]any{"status": status}))
 		}
@@ -758,6 +760,9 @@ func collectGoStateIssues(state map[string]any) []semanticIntegrityIssue {
 		}
 		if !facingNull && (!facingIsString || (facing != "UP" && facing != "RIGHT" && facing != "DOWN" && facing != "LEFT")) {
 			issues = append(issues, semanticIssue("SOLDIER_SHAPE_INVALID", []any{"soldiers", index, "facing"}, nil))
+		}
+		if !lastDirectionNull && (!lastDirectionIsString || (lastDirection != "UP" && lastDirection != "RIGHT" && lastDirection != "DOWN" && lastDirection != "LEFT")) {
+			issues = append(issues, semanticIssue("SOLDIER_SHAPE_INVALID", []any{"soldiers", index, "lastSuccessfulMoveDirection"}, nil))
 		}
 		if status == "ACTIVE" && playerIDs[owner] {
 			activeCounts[owner]++
@@ -961,7 +966,7 @@ type candidateRuntimeFailureWire struct {
 
 var candidateRuntimeFailureCodes = map[string]bool{
 	"CANDIDATE_REQUEST_INVALID": true, "EVIDENCE_UNVERIFIABLE": true,
-	"EVIDENCE_IDENTITY_MISMATCH": true, "EVIDENCE_REVOKED": true,
+	"EVIDENCE_IDENTITY_MISMATCH": true, "EVIDENCE_REGISTRY_DRIFT": true, "EVIDENCE_REVOKED": true,
 	"CANDIDATE_REVISION_INCOMPATIBLE": true, "UNSUPPORTED_RUNTIME_ADAPTER": true,
 	"CANDIDATE_DRIVER_FAILURE": true, "CANDIDATE_FINAL_STATE_INVALID": true,
 	"CANDIDATE_RECORDER_FAILURE": true, "CANDIDATE_REPLAY_INVALID": true,
@@ -1007,7 +1012,7 @@ func decodeCandidateRuntimeServiceResponse(request runtimeServiceRequest, payloa
 		if err := decodeStrictJSONUseNumber(payload, &failureWire); err != nil ||
 			failureWire.OK || failureWire.Profile != "candidate_exhibition" || failureWire.Counted || failureWire.Publishable ||
 			failureWire.Privacy != "internal_candidate_exhibition" || failureWire.Failure.Classification != "system_failure" ||
-			(failureWire.Failure.Ownership != "system_integrity" && failureWire.Failure.Ownership != "runtime_system") ||
+			(failureWire.Failure.Ownership != "system_integrity" && failureWire.Failure.Ownership != "runtime_system" && failureWire.Failure.Ownership != "authority_system") ||
 			!candidateRuntimeFailureCodes[failureWire.Failure.Code] || failureWire.Failure.PlayerPenalty {
 			return nil, semanticIntegrityFailure(createSemanticIntegrityResult([]semanticIntegrityIssue{
 				semanticIssue("TUPLE_SHAPE_INVALID", []any{"response"}, nil),
@@ -1017,8 +1022,10 @@ func decodeCandidateRuntimeServiceResponse(request runtimeServiceRequest, payloa
 			OK: false, Profile: failureWire.Profile, Counted: failureWire.Counted,
 			Publishable: failureWire.Publishable, Privacy: failureWire.Privacy,
 			SystemFailure: &runtimeServiceFailure{
+				Classification: failureWire.Failure.Classification, Ownership: failureWire.Failure.Ownership,
 				Code: failureWire.Failure.Code, ErrorClass: failureWire.Failure.Code,
 				ErrorMessage: "Candidate runtime execution failed", Retryable: failureWire.Failure.Retryable,
+				PlayerPenalty: failureWire.Failure.PlayerPenalty,
 			},
 		}, nil
 	}
@@ -1170,7 +1177,812 @@ func candidateFinalPlayersMatchRequest(finalState map[string]any, request runtim
 	return true
 }
 
+var candidateChronicleEventTypes = map[string]bool{
+	"MATCH_STARTED": true, "ROUND_STARTED": true, "STRATEGY_EVALUATED": true,
+	"ACTIVATION_STARTED": true, "ACTIVATION_SKIPPED": true, "ACTIVATION_ENDED": true,
+	"CYCLE_STARTED": true, "CYCLE_ENDED": true, "AWARENESS_GRID_OBSERVED": true,
+	"ACTION_EMITTED": true, "MOVE_ADVANCED": true, "MOVE_BLOCKED": true,
+	"TURN_RESOLVED": true, "PUSH_RESOLVED": true, "PUSH_BLOCKED": true,
+	"BACKSTAB_RESOLVED": true, "SOLDIER_STONED": true, "SOLDIER_FELL": true,
+	"CONTRACTION_RESOLVED": true, "MATCH_ENDED": true, "RUNTIME_VIOLATION": true,
+}
+
+var candidatePrivateEventTypes = map[string]bool{
+	"STRATEGY_EVALUATED": true, "AWARENESS_GRID_OBSERVED": true,
+	"ACTION_EMITTED": true, "RUNTIME_VIOLATION": true,
+}
+
+var candidateSnapshotKinds = map[string]bool{
+	"MATCH_START": true, "MATCH_END": true, "ROUND_START": true, "ROUND_END": true,
+	"CONTRACTION": true, "TERMINAL": true,
+}
+
+type candidateChronicleGrammarState struct {
+	phaseNumber       int64
+	roundNumber       int64
+	nextActivation    int64
+	activations       map[string]candidateChronicleActivation
+	selectionOrder    []string
+	selectionIndex    int
+	contractionOpen   bool
+	matchStarted      bool
+	matchEnded        bool
+	seenEventTypes    map[string]bool
+	referencedPrivate map[string]string
+}
+
+type candidateChronicleActivation struct {
+	index           int64
+	actingPlayerID  string
+	soldierID       string
+	nextCycle       int64
+	cycleOpen       bool
+	cycleClosed     bool
+	observationSeen bool
+	actionSeen      bool
+	ended           bool
+}
+
+func candidateNonemptyString(value any) bool {
+	text, ok := value.(string)
+	return ok && text != ""
+}
+
+func candidateDirection(value any, nullable bool) bool {
+	if value == nil {
+		return nullable
+	}
+	direction, ok := value.(string)
+	return ok && (direction == "UP" || direction == "RIGHT" || direction == "DOWN" || direction == "LEFT")
+}
+
+func candidateContext(value any) (map[string]any, bool) {
+	context, ok := semanticMap(value)
+	if !ok || !semanticOptionalKeys(context, []string{}, "phaseNumber", "roundNumber", "activationId", "activationIndex", "cycleIndex", "actingPlayerId", "soldierId") {
+		return nil, false
+	}
+	for key, raw := range context {
+		switch key {
+		case "phaseNumber":
+			parsed, valid := semanticSafeInteger(raw)
+			if !valid || parsed < 1 {
+				return nil, false
+			}
+		case "roundNumber":
+			parsed, valid := semanticSafeInteger(raw)
+			if !valid || parsed < 1 || parsed > 4 {
+				return nil, false
+			}
+		case "activationIndex", "cycleIndex":
+			parsed, valid := semanticSafeInteger(raw)
+			if !valid || parsed < 0 {
+				return nil, false
+			}
+		default:
+			if !candidateNonemptyString(raw) {
+				return nil, false
+			}
+		}
+	}
+	return context, true
+}
+
+func candidateContextHasExactKeys(context map[string]any, keys ...string) bool {
+	return semanticExactKeys(context, keys...)
+}
+
+func candidatePayloadKeys(payload map[string]any, required []string, optional ...string) bool {
+	return semanticOptionalKeys(payload, required, optional...)
+}
+
+func candidateStringFields(payload map[string]any, fields ...string) bool {
+	for _, field := range fields {
+		if !candidateNonemptyString(payload[field]) {
+			return false
+		}
+	}
+	return true
+}
+
+func candidateBoundsShape(value any) bool {
+	bounds, ok := semanticMap(value)
+	if !ok || !semanticExactKeys(bounds, "minX", "maxX", "minY", "maxY") {
+		return false
+	}
+	_, valid := semanticBoundsValue(bounds)
+	return valid
+}
+
+func candidateOutcomeShape(value any) bool {
+	outcome, ok := semanticMap(value)
+	if !ok {
+		return false
+	}
+	switch stringValue(outcome, "type") {
+	case "WIN":
+		return semanticExactKeys(outcome, "type", "winnerPlayerId") && candidateNonemptyString(outcome["winnerPlayerId"])
+	case "DRAW":
+		return semanticExactKeys(outcome, "type")
+	case "FAILED":
+		return semanticExactKeys(outcome, "type", "reason") && candidateNonemptyString(outcome["reason"])
+	default:
+		return false
+	}
+}
+
+func candidateActionShape(value any) bool {
+	action, ok := semanticMap(value)
+	if !ok {
+		return false
+	}
+	switch stringValue(action, "type") {
+	case "TURN_TO_STONE":
+		return semanticExactKeys(action, "type")
+	case "MOVE", "TURN":
+		return semanticExactKeys(action, "type", "direction") && candidateDirection(action["direction"], false)
+	default:
+		return false
+	}
+}
+
+func candidateEventPayloadShape(eventType string, payload map[string]any) bool {
+	switch eventType {
+	case "MATCH_STARTED":
+		return candidatePayloadKeys(payload, []string{"matchId", "seed"}) && candidateStringFields(payload, "matchId", "seed")
+	case "ROUND_STARTED":
+		round, ok := semanticSafeInteger(payload["roundNumber"])
+		return candidatePayloadKeys(payload, []string{"roundNumber"}) && ok && round >= 1 && round <= 4
+	case "STRATEGY_EVALUATED", "ACTIVATION_STARTED":
+		field := "playerId"
+		if eventType == "ACTIVATION_STARTED" {
+			field = "soldierId"
+		}
+		return candidatePayloadKeys(payload, []string{field}) && candidateStringFields(payload, field)
+	case "ACTIVATION_SKIPPED":
+		cycle, ok := semanticSafeInteger(payload["cycleIndex"])
+		return candidatePayloadKeys(payload, []string{"soldierId", "cycleIndex", "reason"}) && candidateStringFields(payload, "soldierId", "reason") && ok && cycle >= 0
+	case "ACTIVATION_ENDED":
+		return candidatePayloadKeys(payload, []string{"soldierId", "reason"}) && candidateStringFields(payload, "soldierId", "reason")
+	case "CYCLE_STARTED", "CYCLE_ENDED", "AWARENESS_GRID_OBSERVED":
+		cycle, ok := semanticSafeInteger(payload["cycleIndex"])
+		return candidatePayloadKeys(payload, []string{"soldierId", "cycleIndex"}) && candidateStringFields(payload, "soldierId") && ok && cycle >= 0
+	case "ACTION_EMITTED":
+		return candidatePayloadKeys(payload, []string{"soldierId", "action"}) && candidateStringFields(payload, "soldierId") && candidateActionShape(payload["action"])
+	case "MOVE_ADVANCED", "TURN_RESOLVED":
+		return candidatePayloadKeys(payload, []string{"soldierId", "direction"}) && candidateStringFields(payload, "soldierId") && candidateDirection(payload["direction"], false)
+	case "MOVE_BLOCKED":
+		if !candidatePayloadKeys(payload, []string{"soldierId", "reason"}, "targetSoldierId") || !candidateStringFields(payload, "soldierId", "reason") {
+			return false
+		}
+		target, exists := payload["targetSoldierId"]
+		return !exists || candidateNonemptyString(target)
+	case "PUSH_RESOLVED":
+		_, boolean := payload["pushedOffBoard"].(bool)
+		return candidatePayloadKeys(payload, []string{"soldierId", "targetSoldierId", "pushedOffBoard"}) && candidateStringFields(payload, "soldierId", "targetSoldierId") && boolean
+	case "PUSH_BLOCKED":
+		return candidatePayloadKeys(payload, []string{"soldierId", "targetSoldierId"}) && candidateStringFields(payload, "soldierId", "targetSoldierId")
+	case "BACKSTAB_RESOLVED":
+		if !candidatePayloadKeys(payload, []string{"boundary", "pairs"}) {
+			return false
+		}
+		boundary := stringValue(payload, "boundary")
+		if boundary != "activation-start" && boundary != "activation-end" && boundary != "post-advance" && boundary != "cycle-start" && boundary != "cycle-end" {
+			return false
+		}
+		pairs, ok := semanticSlice(payload["pairs"])
+		if !ok {
+			return false
+		}
+		for _, raw := range pairs {
+			pair, pairOK := semanticMap(raw)
+			if !pairOK || !semanticExactKeys(pair, "attackerId", "victimId") || !candidateStringFields(pair, "attackerId", "victimId") {
+				return false
+			}
+		}
+		return true
+	case "SOLDIER_STONED", "SOLDIER_FELL":
+		if !candidatePayloadKeys(payload, []string{"soldierId"}, "reason") || !candidateStringFields(payload, "soldierId") {
+			return false
+		}
+		reason, exists := payload["reason"]
+		return !exists || candidateNonemptyString(reason)
+	case "CONTRACTION_RESOLVED":
+		return candidatePayloadKeys(payload, []string{"bounds"}) && candidateBoundsShape(payload["bounds"])
+	case "MATCH_ENDED":
+		return candidateOutcomeShape(payload)
+	case "RUNTIME_VIOLATION":
+		if !candidatePayloadKeys(payload, []string{"type"}, "category", "playerId", "ownerPlayerId", "soldierId") || !candidateNonemptyString(payload["type"]) {
+			return false
+		}
+		violationType := stringValue(payload, "type")
+		if violationType != "INVALID_OUTPUT" && violationType != "TIMEOUT" && violationType != "THROWN_EXCEPTION" && violationType != "FORBIDDEN_CAPABILITY" && violationType != "OVERSIZED_OUTPUT" {
+			return false
+		}
+		for _, field := range []string{"category", "playerId", "ownerPlayerId", "soldierId"} {
+			if raw, exists := payload[field]; exists && !candidateNonemptyString(raw) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
+}
+
+func candidateFullActivationContext(context map[string]any, soldierRequired bool) bool {
+	required := []string{"phaseNumber", "roundNumber", "activationId", "activationIndex", "actingPlayerId"}
+	optional := []string{"cycleIndex"}
+	if soldierRequired {
+		required = append(required, "soldierId")
+	} else {
+		optional = append(optional, "soldierId")
+	}
+	return semanticOptionalKeys(context, required, optional...)
+}
+
+func candidateActivationContextMatches(state *candidateChronicleGrammarState, context map[string]any, soldierRequired bool) bool {
+	if !candidateFullActivationContext(context, soldierRequired) {
+		return false
+	}
+	activationID := stringValue(context, "activationId")
+	activation, exists := state.activations[activationID]
+	if !exists {
+		return false
+	}
+	phase, _ := semanticSafeInteger(context["phaseNumber"])
+	round, _ := semanticSafeInteger(context["roundNumber"])
+	index, _ := semanticSafeInteger(context["activationIndex"])
+	if phase != state.phaseNumber || round != state.roundNumber || index != activation.index || stringValue(context, "actingPlayerId") != activation.actingPlayerID {
+		return false
+	}
+	return context["soldierId"] == nil || stringValue(context, "soldierId") == activation.soldierID
+}
+
+func candidateSelectionMatches(state *candidateChronicleGrammarState, playerID string) bool {
+	if state.selectionIndex >= len(state.selectionOrder) || playerID != state.selectionOrder[state.selectionIndex] {
+		return false
+	}
+	state.selectionIndex++
+	return true
+}
+
+func candidatePayloadContextAgrees(eventType string, context map[string]any, payload map[string]any) bool {
+	if playerID := stringValue(payload, "playerId"); playerID != "" && playerID != stringValue(context, "actingPlayerId") {
+		return false
+	}
+	if ownerID := stringValue(payload, "ownerPlayerId"); ownerID != "" && ownerID != stringValue(context, "actingPlayerId") {
+		return false
+	}
+	if soldierID := stringValue(payload, "soldierId"); soldierID != "" && context["soldierId"] != nil {
+		victimPayload := eventType == "SOLDIER_STONED" || eventType == "SOLDIER_FELL"
+		if !victimPayload && soldierID != stringValue(context, "soldierId") {
+			return false
+		}
+	}
+	if payloadCycle, ok := semanticSafeInteger(payload["cycleIndex"]); ok {
+		contextCycle, contextOK := semanticSafeInteger(context["cycleIndex"])
+		if !contextOK || payloadCycle != contextCycle {
+			return false
+		}
+	}
+	if eventType == "ROUND_STARTED" {
+		payloadRound, _ := semanticSafeInteger(payload["roundNumber"])
+		contextRound, contextOK := semanticSafeInteger(context["roundNumber"])
+		return contextOK && payloadRound == contextRound
+	}
+	return true
+}
+
+func validateCandidateEventWindow(state *candidateChronicleGrammarState, eventType string, context map[string]any, payload map[string]any) bool {
+	if state.matchEnded || (eventType != "MATCH_STARTED" && !state.matchStarted) {
+		return false
+	}
+	phase, _ := semanticSafeInteger(context["phaseNumber"])
+	round, _ := semanticSafeInteger(context["roundNumber"])
+	activationIndex, _ := semanticSafeInteger(context["activationIndex"])
+	cycleIndex, cycleOK := semanticSafeInteger(context["cycleIndex"])
+	switch eventType {
+	case "MATCH_STARTED":
+		if state.matchStarted || !candidateContextHasExactKeys(context) {
+			return false
+		}
+		state.matchStarted = true
+	case "ROUND_STARTED":
+		if !candidateContextHasExactKeys(context, "phaseNumber", "roundNumber") {
+			return false
+		}
+		if state.phaseNumber != 0 {
+			if state.selectionIndex != len(state.selectionOrder) {
+				return false
+			}
+			if state.contractionOpen {
+				if phase != state.phaseNumber+1 || round != 1 {
+					return false
+				}
+			} else if phase != state.phaseNumber || round != state.roundNumber+1 {
+				return false
+			}
+		} else if phase != 1 || round != 1 {
+			return false
+		}
+		state.phaseNumber, state.roundNumber, state.nextActivation, state.contractionOpen = phase, round, 0, false
+		state.selectionIndex = 0
+		state.activations = map[string]candidateChronicleActivation{}
+	case "STRATEGY_EVALUATED":
+		if !candidateContextHasExactKeys(context, "phaseNumber", "roundNumber", "actingPlayerId") || phase != state.phaseNumber || round != state.roundNumber || !candidateSelectionMatches(state, stringValue(context, "actingPlayerId")) {
+			return false
+		}
+	case "ACTIVATION_STARTED":
+		if !candidateContextHasExactKeys(context, "phaseNumber", "roundNumber", "activationId", "activationIndex", "actingPlayerId", "soldierId") || phase != state.phaseNumber || round != state.roundNumber || state.selectionIndex != len(state.selectionOrder) {
+			return false
+		}
+		quota := map[int64]int64{1: 1, 2: 2, 3: 3, 4: 4}[round]
+		activationID := stringValue(context, "activationId")
+		if activationIndex != state.nextActivation || activationIndex >= quota*2 || activationID != fmt.Sprintf("%d:%d:%d", phase, round, activationIndex) || stringValue(context, "soldierId") != stringValue(payload, "soldierId") {
+			return false
+		}
+		if _, duplicate := state.activations[activationID]; duplicate {
+			return false
+		}
+		state.activations[activationID] = candidateChronicleActivation{
+			index: activationIndex, actingPlayerID: stringValue(context, "actingPlayerId"), soldierID: stringValue(context, "soldierId"),
+		}
+		state.nextActivation++
+	case "ACTIVATION_SKIPPED", "ACTIVATION_ENDED":
+		if !candidateActivationContextMatches(state, context, true) {
+			return false
+		}
+		activationID := stringValue(context, "activationId")
+		activation := state.activations[activationID]
+		if eventType == "ACTIVATION_SKIPPED" {
+			if !cycleOK || cycleIndex > 11 || !activation.ended || cycleIndex != activation.nextCycle {
+				return false
+			}
+			activation.nextCycle++
+			activation.cycleClosed = false
+		} else {
+			if activation.ended || cycleOK {
+				return false
+			}
+			activation.ended = true
+			if activation.cycleOpen || !activation.cycleClosed {
+				activation.nextCycle++
+			}
+			activation.cycleOpen = false
+			activation.cycleClosed = false
+		}
+		state.activations[activationID] = activation
+	case "CYCLE_STARTED", "CYCLE_ENDED", "AWARENESS_GRID_OBSERVED", "ACTION_EMITTED":
+		if !candidateActivationContextMatches(state, context, true) || !cycleOK || cycleIndex > 11 {
+			return false
+		}
+		activationID := stringValue(context, "activationId")
+		activation := state.activations[activationID]
+		switch eventType {
+		case "CYCLE_STARTED":
+			if activation.ended || activation.cycleOpen || cycleIndex != activation.nextCycle {
+				return false
+			}
+			activation.cycleOpen, activation.cycleClosed = true, false
+			activation.observationSeen, activation.actionSeen = false, false
+		case "AWARENESS_GRID_OBSERVED":
+			if activation.ended || !activation.cycleOpen || activation.observationSeen || activation.actionSeen || cycleIndex != activation.nextCycle {
+				return false
+			}
+			activation.observationSeen = true
+		case "ACTION_EMITTED":
+			if activation.ended || !activation.cycleOpen || !activation.observationSeen || activation.actionSeen || cycleIndex != activation.nextCycle {
+				return false
+			}
+			activation.actionSeen = true
+		case "CYCLE_ENDED":
+			if activation.ended || !activation.cycleOpen || !activation.actionSeen || cycleIndex != activation.nextCycle {
+				return false
+			}
+			activation.cycleOpen, activation.cycleClosed = false, true
+			activation.nextCycle++
+		}
+		state.activations[activationID] = activation
+	case "MOVE_ADVANCED", "MOVE_BLOCKED", "TURN_RESOLVED", "PUSH_RESOLVED", "PUSH_BLOCKED", "SOLDIER_STONED":
+		if !candidateActivationContextMatches(state, context, true) {
+			return false
+		}
+	case "BACKSTAB_RESOLVED":
+		if !candidateActivationContextMatches(state, context, false) {
+			return false
+		}
+	case "SOLDIER_FELL":
+		if context["activationId"] != nil {
+			if !candidateActivationContextMatches(state, context, true) {
+				return false
+			}
+		} else if !state.contractionOpen || !candidateContextHasExactKeys(context, "phaseNumber") || phase != state.phaseNumber {
+			return false
+		}
+	case "CONTRACTION_RESOLVED":
+		if !candidateContextHasExactKeys(context, "phaseNumber") || phase != state.phaseNumber || state.roundNumber != 4 || state.selectionIndex != len(state.selectionOrder) {
+			return false
+		}
+		state.contractionOpen = true
+		state.roundNumber = 0
+		state.activations = map[string]candidateChronicleActivation{}
+	case "RUNTIME_VIOLATION":
+		strategyContext := candidateContextHasExactKeys(context, "phaseNumber", "roundNumber", "actingPlayerId")
+		activationContext := context["soldierId"] != nil && candidateActivationContextMatches(state, context, true)
+		if phase != state.phaseNumber || round != state.roundNumber || stringValue(context, "actingPlayerId") == "" || (!strategyContext && !activationContext) {
+			return false
+		}
+		if strategyContext && !candidateSelectionMatches(state, stringValue(context, "actingPlayerId")) {
+			return false
+		}
+	case "MATCH_ENDED":
+		validContext := candidateContextHasExactKeys(context) || candidateContextHasExactKeys(context, "phaseNumber") || candidateContextHasExactKeys(context, "phaseNumber", "roundNumber") || candidateFullActivationContext(context, false) || candidateFullActivationContext(context, true)
+		if !validContext {
+			return false
+		}
+		if context["phaseNumber"] != nil && phase != state.phaseNumber {
+			return false
+		}
+		if context["roundNumber"] != nil && round != state.roundNumber {
+			return false
+		}
+		if state.roundNumber != 0 && state.selectionIndex != len(state.selectionOrder) {
+			return false
+		}
+		if context["activationId"] != nil && !candidateActivationContextMatches(state, context, context["soldierId"] != nil) {
+			return false
+		}
+		state.matchEnded = true
+		state.activations = map[string]candidateChronicleActivation{}
+	default:
+		return false
+	}
+	state.seenEventTypes[eventType] = true
+	return true
+}
+
+func validateCandidateChronicleEvents(chronicle map[string]any, request runtimeServiceRequest) (map[string]string, error) {
+	events, ok := semanticSlice(chronicle["events"])
+	if !ok || len(events) < 2 {
+		return nil, errors.New("candidate Chronicle events are missing")
+	}
+	state := candidateChronicleGrammarState{
+		activations: map[string]candidateChronicleActivation{}, selectionOrder: []string{request.Match.BottomPlayerID, request.Match.TopPlayerID},
+		seenEventTypes: map[string]bool{}, referencedPrivate: map[string]string{},
+	}
+	for index, raw := range events {
+		event, eventOK := semanticMap(raw)
+		if !eventOK || !semanticOptionalKeys(event, []string{"type", "sequence", "context", "privacy", "payload"}, "privateRef") {
+			return nil, errors.New("candidate Chronicle event shape is invalid")
+		}
+		eventType := stringValue(event, "type")
+		sequence, sequenceOK := semanticSafeInteger(event["sequence"])
+		context, contextOK := candidateContext(event["context"])
+		payload, payloadOK := semanticMap(event["payload"])
+		privacy := stringValue(event, "privacy")
+		if !candidateChronicleEventTypes[eventType] || !sequenceOK || sequence != int64(index) || !contextOK || !payloadOK || !candidateEventPayloadShape(eventType, payload) || !candidatePayloadContextAgrees(eventType, context, payload) {
+			return nil, errors.New("candidate Chronicle event contract is invalid")
+		}
+		_, hasPrivateRef := event["privateRef"]
+		if candidatePrivateEventTypes[eventType] {
+			reference := stringValue(event, "privateRef")
+			if privacy != "owner" || !hasPrivateRef || reference != fmt.Sprintf("private:event:%d", index) {
+				return nil, errors.New("candidate Chronicle private event contract is invalid")
+			}
+			if _, duplicate := state.referencedPrivate[reference]; duplicate {
+				return nil, errors.New("candidate Chronicle private reference is duplicated")
+			}
+			state.referencedPrivate[reference] = stringValue(context, "actingPlayerId")
+		} else if privacy != "public" || hasPrivateRef {
+			return nil, errors.New("candidate Chronicle public event contract is invalid")
+		}
+		if eventType == "MATCH_STARTED" && (stringValue(payload, "matchId") != request.Match.MatchID || stringValue(payload, "seed") != request.Match.Seed) {
+			return nil, errors.New("candidate Chronicle Match identity is invalid")
+		}
+		if !validateCandidateEventWindow(&state, eventType, context, payload) {
+			return nil, errors.New("candidate Chronicle event window is invalid")
+		}
+	}
+	for _, required := range []string{"MATCH_STARTED", "ROUND_STARTED", "MATCH_ENDED"} {
+		if !state.seenEventTypes[required] {
+			return nil, errors.New("candidate Chronicle required event is missing")
+		}
+	}
+	if !state.matchEnded || stringValue(events[0].(map[string]any), "type") != "MATCH_STARTED" || stringValue(events[len(events)-1].(map[string]any), "type") != "MATCH_ENDED" {
+		return nil, errors.New("candidate Chronicle terminal event is invalid")
+	}
+	return state.referencedPrivate, nil
+}
+
+func candidateSnapshotBoard(value any) (map[string]any, bool) {
+	board, ok := semanticMap(value)
+	if !ok || !semanticExactKeys(board, "bounds", "soldiers", "terrainStones") || !candidateBoundsShape(board["bounds"]) {
+		return nil, false
+	}
+	bounds, _ := semanticBoundsValue(board["bounds"])
+	soldiers, soldiersOK := semanticSlice(board["soldiers"])
+	terrain, terrainOK := semanticSlice(board["terrainStones"])
+	if !soldiersOK || !terrainOK {
+		return nil, false
+	}
+	terrainPositions := map[string]bool{}
+	for _, raw := range terrain {
+		position, positionOK := semanticPositionValue(raw)
+		if !positionOK || !semanticWithinBounds(position, bounds) || terrainPositions[semanticPositionKey(position)] {
+			return nil, false
+		}
+		terrainPositions[semanticPositionKey(position)] = true
+	}
+	seen := map[string]bool{}
+	occupied := map[string]bool{}
+	for _, raw := range soldiers {
+		soldier, soldierOK := semanticMap(raw)
+		if !soldierOK || !semanticExactKeys(soldier, "id", "ownerPlayerId", "status", "position", "facing", "lastSuccessfulMoveDirection") || !candidateStringFields(soldier, "id", "ownerPlayerId") {
+			return nil, false
+		}
+		status := stringValue(soldier, "status")
+		if (status != "ACTIVE" && status != "STONE" && status != "FALLEN") || !candidateDirection(soldier["facing"], true) || !candidateDirection(soldier["lastSuccessfulMoveDirection"], true) {
+			return nil, false
+		}
+		position, positionOK := semanticPositionValue(soldier["position"])
+		if status == "FALLEN" {
+			if soldier["position"] != nil {
+				return nil, false
+			}
+		} else {
+			if !positionOK || soldier["facing"] == nil || !semanticWithinBounds(position, bounds) {
+				return nil, false
+			}
+			positionKey := semanticPositionKey(position)
+			if occupied[positionKey] || terrainPositions[positionKey] {
+				return nil, false
+			}
+			occupied[positionKey] = true
+		}
+		if seen[stringValue(soldier, "id")] {
+			return nil, false
+		}
+		seen[stringValue(soldier, "id")] = true
+	}
+	return board, true
+}
+
+func candidateInitialBoard(finalState map[string]any) (map[string]any, error) {
+	arena, arenaOK := semanticMap(finalState["arenaVariant"])
+	initialBounds, boundsOK := semanticMap(arena["initialBounds"])
+	if !arenaOK || !boundsOK {
+		return nil, errors.New("candidate initial arena is invalid")
+	}
+	playersByID := map[string]string{}
+	for _, raw := range sliceValue(finalState, "players") {
+		player, ok := semanticMap(raw)
+		if ok {
+			playersByID[stringValue(player, "id")] = stringValue(player, "side")
+		}
+	}
+	counts := map[string]int64{"bottom": 0, "top": 0}
+	soldiers := []any{}
+	for _, raw := range sliceValue(finalState, "soldiers") {
+		soldier, ok := semanticMap(raw)
+		if !ok {
+			return nil, errors.New("candidate initial Soldier is invalid")
+		}
+		side := playersByID[stringValue(soldier, "ownerPlayerId")]
+		if side != "bottom" && side != "top" {
+			return nil, errors.New("candidate initial Soldier owner is invalid")
+		}
+		bounds, validBounds := semanticBoundsValue(initialBounds)
+		if !validBounds {
+			return nil, errors.New("candidate initial bounds are invalid")
+		}
+		position := map[string]any{"x": bounds.MinX + 2 + counts[side], "y": bounds.MinY}
+		facing := "DOWN"
+		if side == "bottom" {
+			position["y"] = bounds.MaxY
+			facing = "UP"
+		}
+		counts[side]++
+		soldiers = append(soldiers, map[string]any{
+			"id": stringValue(soldier, "id"), "ownerPlayerId": stringValue(soldier, "ownerPlayerId"),
+			"status": "ACTIVE", "position": position, "facing": facing, "lastSuccessfulMoveDirection": nil,
+		})
+	}
+	return map[string]any{"bounds": initialBounds, "soldiers": soldiers, "terrainStones": arena["terrainStones"]}, nil
+}
+
+func candidateEventSameRound(event map[string]any, phase int64, round int64) bool {
+	context, ok := semanticMap(event["context"])
+	if !ok {
+		return false
+	}
+	eventPhase, phaseOK := semanticSafeInteger(context["phaseNumber"])
+	eventRound, roundOK := semanticSafeInteger(context["roundNumber"])
+	return phaseOK && roundOK && eventPhase == phase && eventRound == round
+}
+
+func candidateRoundEndSequence(events []any, startIndex int) (int64, bool) {
+	start := events[startIndex].(map[string]any)
+	context := start["context"].(map[string]any)
+	phase, _ := semanticSafeInteger(context["phaseNumber"])
+	round, _ := semanticSafeInteger(context["roundNumber"])
+	last := int64(-1)
+	for index := startIndex; index < len(events); index++ {
+		event := events[index].(map[string]any)
+		typeName := stringValue(event, "type")
+		if index > startIndex && (typeName == "ROUND_STARTED" || typeName == "CONTRACTION_RESOLVED") {
+			return last, last >= 0
+		}
+		if typeName == "MATCH_ENDED" {
+			if candidateEventSameRound(event, phase, round) {
+				return int64(index), true
+			}
+			return last, last >= 0
+		}
+		if candidateEventSameRound(event, phase, round) {
+			last = int64(index)
+		}
+	}
+	return last, last >= 0
+}
+
+type candidateExpectedSnapshot struct {
+	kind     string
+	sequence int64
+	context  map[string]any
+}
+
+func candidateExpectedSnapshots(events []any) ([]candidateExpectedSnapshot, error) {
+	expected := []candidateExpectedSnapshot{{kind: "MATCH_START", sequence: 0, context: map[string]any{}}}
+	for index, raw := range events {
+		event := raw.(map[string]any)
+		context := event["context"].(map[string]any)
+		switch stringValue(event, "type") {
+		case "ROUND_STARTED":
+			end, ok := candidateRoundEndSequence(events, index)
+			if !ok {
+				return nil, errors.New("candidate Chronicle Round boundary is invalid")
+			}
+			roundContext := map[string]any{"phaseNumber": context["phaseNumber"], "roundNumber": context["roundNumber"]}
+			expected = append(expected,
+				candidateExpectedSnapshot{kind: "ROUND_START", sequence: int64(index), context: roundContext},
+				candidateExpectedSnapshot{kind: "ROUND_END", sequence: end, context: roundContext},
+			)
+		case "CONTRACTION_RESOLVED":
+			expected = append(expected, candidateExpectedSnapshot{kind: "CONTRACTION", sequence: int64(index), context: map[string]any{"phaseNumber": context["phaseNumber"]}})
+		}
+	}
+	terminal := int64(len(events) - 1)
+	expected = append(expected,
+		candidateExpectedSnapshot{kind: "MATCH_END", sequence: terminal, context: map[string]any{}},
+		candidateExpectedSnapshot{kind: "TERMINAL", sequence: terminal, context: map[string]any{}},
+	)
+	return expected, nil
+}
+
+func validateCandidateChronicleSnapshots(chronicle map[string]any, finalState map[string]any, outcome any) error {
+	events := sliceValue(chronicle, "events")
+	snapshots, ok := semanticSlice(chronicle["snapshots"])
+	if !ok {
+		return errors.New("candidate Chronicle snapshots are missing")
+	}
+	expected, err := candidateExpectedSnapshots(events)
+	if err != nil || len(snapshots) != len(expected) {
+		return errors.New("candidate Chronicle snapshot set is invalid")
+	}
+	initialBoard, err := candidateInitialBoard(finalState)
+	if err != nil {
+		return err
+	}
+	finalBoard := candidateFinalBoard(finalState)
+	expectedSoldiers := map[string]string{}
+	for _, raw := range sliceValue(finalState, "soldiers") {
+		soldier, soldierOK := semanticMap(raw)
+		if !soldierOK {
+			return errors.New("candidate final Soldier set is invalid")
+		}
+		expectedSoldiers[stringValue(soldier, "id")] = stringValue(soldier, "ownerPlayerId")
+	}
+	for index, raw := range snapshots {
+		snapshot, snapshotOK := semanticMap(raw)
+		if !snapshotOK || !semanticOptionalKeys(snapshot, []string{"kind", "sequence", "context", "board"}, "outcome") {
+			return errors.New("candidate Chronicle snapshot shape is invalid")
+		}
+		kind := stringValue(snapshot, "kind")
+		sequence, sequenceOK := semanticSafeInteger(snapshot["sequence"])
+		context, contextOK := candidateContext(snapshot["context"])
+		board, boardOK := candidateSnapshotBoard(snapshot["board"])
+		want := expected[index]
+		if !candidateSnapshotKinds[kind] || !sequenceOK || !contextOK || !boardOK || kind != want.kind || sequence != want.sequence || !semanticStableJSONEqual(context, want.context) {
+			return errors.New("candidate Chronicle snapshot boundary is invalid")
+		}
+		boardSoldiers := sliceValue(board, "soldiers")
+		if len(boardSoldiers) != len(expectedSoldiers) || !semanticStableJSONEqual(board["terrainStones"], finalState["terrainStones"]) {
+			return errors.New("candidate Chronicle snapshot authority is invalid")
+		}
+		for _, rawSoldier := range boardSoldiers {
+			soldier := rawSoldier.(map[string]any)
+			if expectedSoldiers[stringValue(soldier, "id")] != stringValue(soldier, "ownerPlayerId") {
+				return errors.New("candidate Chronicle snapshot Soldier identity is invalid")
+			}
+		}
+		if kind == "MATCH_START" && !semanticStableJSONEqual(board, initialBoard) {
+			return errors.New("candidate Chronicle Match-start reconstruction is invalid")
+		}
+		if kind == "MATCH_END" || kind == "TERMINAL" {
+			if !semanticStableJSONEqual(board, finalBoard) || !semanticStableJSONEqual(snapshot["outcome"], outcome) {
+				return errors.New("candidate Chronicle terminal reconstruction is invalid")
+			}
+		} else if _, hasOutcome := snapshot["outcome"]; hasOutcome {
+			return errors.New("candidate Chronicle nonterminal outcome is invalid")
+		}
+	}
+	return nil
+}
+
+func validateCandidateChroniclePrivate(chronicle map[string]any, references map[string]string) error {
+	rawPrivate, hasPrivate := chronicle["private"]
+	if len(references) == 0 {
+		if hasPrivate {
+			return errors.New("candidate Chronicle has unreferenced private data")
+		}
+		return nil
+	}
+	private, ok := semanticMap(rawPrivate)
+	if !hasPrivate || !ok || !semanticExactKeys(private, "byPlayerId") {
+		return errors.New("candidate Chronicle private section is invalid")
+	}
+	byPlayer, ok := semanticMap(private["byPlayerId"])
+	if !ok {
+		return errors.New("candidate Chronicle private ownership is invalid")
+	}
+	seen := map[string]bool{}
+	for playerID, raw := range byPlayer {
+		entries, entriesOK := semanticMap(raw)
+		if !entriesOK || playerID == "" || len(entries) == 0 {
+			return errors.New("candidate Chronicle private owner is invalid")
+		}
+		for reference := range entries {
+			if references[reference] != playerID || seen[reference] {
+				return errors.New("candidate Chronicle private reference is invalid")
+			}
+			seen[reference] = true
+		}
+	}
+	if len(seen) != len(references) {
+		return errors.New("candidate Chronicle private reference is missing")
+	}
+	return nil
+}
+
+func validateCandidateChronicleContract(request runtimeServiceRequest, evidence *candidateRuntimeEvidence) error {
+	chronicle := evidence.Chronicle
+	if !semanticOptionalKeys(chronicle, []string{"schemaVersion", "reproducibility", "events", "snapshots"}, "private") || stringValue(chronicle, "schemaVersion") != "chronicle-v1.4" {
+		return errors.New("candidate Chronicle shape is invalid")
+	}
+	reproducibility, ok := semanticMap(chronicle["reproducibility"])
+	if !ok || !semanticExactKeys(reproducibility, "matchId", "seed", "arenaVariantId", "arenaVariantVersion", "strategyRevisionIds", "versions") {
+		return errors.New("candidate Chronicle reproducibility is invalid")
+	}
+	revisions, revisionsOK := semanticSlice(reproducibility["strategyRevisionIds"])
+	if !revisionsOK || len(revisions) != 2 || stringValue(reproducibility, "matchId") != request.Match.MatchID || stringValue(reproducibility, "seed") != request.Match.Seed || stringValue(reproducibility, "arenaVariantId") != stringValue(request.Match.ArenaVariant, "id") || stringValue(reproducibility, "arenaVariantVersion") != stringValue(mapValue(evidence.FinalState, "versions"), "arenaVariant") || stringFromAny(revisions[0]) != request.Match.BottomStrategyRevisionID || stringFromAny(revisions[1]) != request.Match.TopStrategyRevisionID || !semanticStableJSONEqual(reproducibility["versions"], evidence.FinalState["versions"]) {
+		return errors.New("candidate Chronicle reproducibility identity is invalid")
+	}
+	references, err := validateCandidateChronicleEvents(chronicle, request)
+	if err != nil {
+		return err
+	}
+	if err := validateCandidateChroniclePrivate(chronicle, references); err != nil {
+		return err
+	}
+	return validateCandidateChronicleSnapshots(chronicle, evidence.FinalState, evidence.Outcome)
+}
+
 func validateCandidateChronicleAgreement(request runtimeServiceRequest, evidence *candidateRuntimeEvidence, expectedViolationCount int64) *runtimeServiceFailure {
+	if err := validateCandidateChronicleContract(request, evidence); err != nil {
+		return semanticIntegrityFailure(createSemanticIntegrityResult([]semanticIntegrityIssue{
+			semanticIssue("TRANSITION_EVENT_STATE_MISMATCH", []any{"result", "chronicle"}, nil),
+		}))
+	}
 	metadata, err := createGoChronicleMetadata(evidence.Chronicle)
 	if err != nil || metadata.MatchID != request.Match.MatchID || metadata.ArenaVariantID != stringValue(request.Match.ArenaVariant, "id") ||
 		metadata.BottomPlayerID != request.Match.BottomPlayerID || metadata.TopPlayerID != request.Match.TopPlayerID ||

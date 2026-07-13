@@ -637,13 +637,14 @@ func semanticCompletionSnapshot(t *testing.T, ctx context.Context, pool *pgxpool
 	t.Helper()
 	var serialized []byte
 	if err := pool.QueryRow(ctx, `select jsonb_build_object(
-		'matches',coalesce((select jsonb_agg(jsonb_build_object('id',id,'status',status,'outcome',outcome,'winner',winner_player_id,'surviving',surviving_soldiers) order by id) from matches),'[]'::jsonb),
-		'jobs',coalesce((select jsonb_agg(jsonb_build_object('id',id,'status',status,'attempts',attempts,'worker',worker_id,'lease',lease_token) order by id) from match_jobs),'[]'::jsonb),
-		'attempts',coalesce((select jsonb_agg(jsonb_build_object('id',id,'status',status,'errorClass',error_class,'retryable',retryable,'details',details) order by id) from match_job_attempts),'[]'::jsonb),
-		'chronicles',coalesce((select jsonb_agg(jsonb_build_object('id',id,'matchId',match_id,'hash',hash,'outcome',outcome,'tupleId',compatibility_tuple_id,'publicationId',authority_publication_id) order by id) from chronicles),'[]'::jsonb),
-		'matchSets',coalesce((select jsonb_agg(jsonb_build_object('id',id,'status',status,'scoring',scoring,'degraded',degraded) order by id) from match_sets),'[]'::jsonb),
-		'resultFlags',(select count(*) from result_flags),
-		'standings',(select count(*) from trial_ladder_entries)
+		'matches',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from matches row),'[]'::jsonb),
+		'jobs',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from match_jobs row),'[]'::jsonb),
+		'attempts',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from match_job_attempts row),'[]'::jsonb),
+		'chronicles',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from chronicles row),'[]'::jsonb),
+		'matchSets',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from match_sets row),'[]'::jsonb),
+		'matchSetMatches',coalesce((select jsonb_agg(to_jsonb(row) order by row.match_set_id,row.match_id) from match_set_matches row),'[]'::jsonb),
+		'resultFlags',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from result_flags row),'[]'::jsonb),
+		'standings',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from trial_ladder_entries row),'[]'::jsonb)
 	)`).Scan(&serialized); err != nil {
 		t.Fatal(err)
 	}

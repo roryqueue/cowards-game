@@ -70,6 +70,51 @@ func TestRuntimeServiceCandidateSemanticFailureIsSystemOwnedAndRetryExact(t *tes
 	assertRuntimeServiceFailureSafe(t, failure)
 }
 
+func TestRuntimeServiceCandidateFailureContractVectors(t *testing.T) {
+	request := validRuntimeServiceRequestForTest()
+	vectors := []struct {
+		code      string
+		ownership string
+		retryable bool
+	}{
+		{"CANDIDATE_REQUEST_INVALID", "system_integrity", false},
+		{"EVIDENCE_UNVERIFIABLE", "authority_system", true},
+		{"EVIDENCE_IDENTITY_MISMATCH", "authority_system", true},
+		{"EVIDENCE_REGISTRY_DRIFT", "authority_system", true},
+		{"EVIDENCE_REVOKED", "authority_system", true},
+		{"CANDIDATE_REVISION_INCOMPATIBLE", "system_integrity", false},
+		{"UNSUPPORTED_RUNTIME_ADAPTER", "runtime_system", false},
+		{"CANDIDATE_DRIVER_FAILURE", "runtime_system", true},
+		{"CANDIDATE_FINAL_STATE_INVALID", "system_integrity", false},
+		{"CANDIDATE_RECORDER_FAILURE", "system_integrity", false},
+		{"CANDIDATE_REPLAY_INVALID", "system_integrity", false},
+		{"EXECUTION_EXCEPTION", "runtime_system", true},
+	}
+	for _, vector := range vectors {
+		t.Run(vector.code, func(t *testing.T) {
+			payload, err := json.Marshal(map[string]any{
+				"ok": false, "profile": "candidate_exhibition", "counted": false,
+				"publishable": false, "privacy": "internal_candidate_exhibition",
+				"failure": map[string]any{
+					"classification": "system_failure", "ownership": vector.ownership,
+					"code": vector.code, "retryable": vector.retryable, "playerPenalty": false,
+				},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			response, failure := decodeRuntimeServiceResponseBytes(request, payload)
+			if failure != nil || response == nil || response.SystemFailure == nil {
+				t.Fatalf("exact candidate failure rejected: response=%+v failure=%+v", response, failure)
+			}
+			actual := response.SystemFailure
+			if actual.Classification != "system_failure" || actual.Ownership != vector.ownership || actual.Code != vector.code || actual.ErrorClass != vector.code || actual.Retryable != vector.retryable || actual.PlayerPenalty {
+				t.Fatalf("candidate failure contract drifted: %+v", actual)
+			}
+		})
+	}
+}
+
 func TestRuntimeServiceRequestIntegrityReferenceContract(t *testing.T) {
 	request := validRuntimeServiceRequestForTest()
 	encoded, err := json.Marshal(request)

@@ -144,12 +144,15 @@ type runtimeServiceValidationResponse struct {
 }
 
 type runtimeServiceFailure struct {
-	Code          string         `json:"code"`
-	ErrorClass    string         `json:"-"`
-	ErrorMessage  string         `json:"message"`
-	PublicMessage string         `json:"publicMessage,omitempty"`
-	Retryable     bool           `json:"retryable"`
-	Details       map[string]any `json:"diagnostics,omitempty"`
+	Classification string         `json:"classification,omitempty"`
+	Ownership      string         `json:"ownership,omitempty"`
+	Code           string         `json:"code"`
+	ErrorClass     string         `json:"-"`
+	ErrorMessage   string         `json:"message"`
+	PublicMessage  string         `json:"publicMessage,omitempty"`
+	Retryable      bool           `json:"retryable"`
+	PlayerPenalty  bool           `json:"playerPenalty,omitempty"`
+	Details        map[string]any `json:"diagnostics,omitempty"`
 }
 
 func newRuntimeServiceClient(endpoint string) *runtimeServiceClient {
