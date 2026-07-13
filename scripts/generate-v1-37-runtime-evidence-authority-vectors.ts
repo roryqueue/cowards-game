@@ -148,6 +148,52 @@ export const buildV137RuntimeEvidenceAuthorityVectors = () => {
       name,
       expected: { node: "reject", go: "reject" },
     })),
+    authorityDecisionVectors: [
+      {
+        name: "disabled-runtime-request",
+        reference: {
+          effectiveStatus: "disabled",
+          schedulingDecisionId: "fixture-only:decision:disabled",
+          schedulingDecisionHash: `sha256:${"b".repeat(64)}`,
+        },
+        expected: "reject-execution",
+      },
+      {
+        name: "containment-only-exhibition",
+        reference: {
+          effectiveStatus: "exhibition_only",
+          schedulingDecisionId: "fixture-only:decision:exhibition",
+          schedulingDecisionHash: `sha256:${"c".repeat(64)}`,
+          containmentCertificateId: "fixture-only:containment:exhibition",
+          containmentCertificateHash: `sha256:${"d".repeat(64)}`,
+        },
+        expected: "accept-reference",
+      },
+      {
+        name: "counted-missing-conformance",
+        reference: {
+          effectiveStatus: "counted",
+          schedulingDecisionId: "fixture-only:decision:counted-incomplete",
+          schedulingDecisionHash: `sha256:${"e".repeat(64)}`,
+          containmentCertificateId: "fixture-only:containment:counted",
+          containmentCertificateHash: `sha256:${"f".repeat(64)}`,
+        },
+        expected: "reject-reference",
+      },
+      {
+        name: "counted-complete",
+        reference: {
+          effectiveStatus: "counted",
+          schedulingDecisionId: "fixture-only:decision:counted-complete",
+          schedulingDecisionHash: `sha256:${"1".repeat(64)}`,
+          containmentCertificateId: "fixture-only:containment:counted",
+          containmentCertificateHash: `sha256:${"2".repeat(64)}`,
+          conformanceCertificateId: "fixture-only:conformance:counted",
+          conformanceCertificateHash: `sha256:${"3".repeat(64)}`,
+        },
+        expected: "accept-reference",
+      },
+    ],
     antiRollbackVectors: [
       {
         name: "exact-bootstrap",

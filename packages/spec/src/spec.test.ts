@@ -1788,10 +1788,11 @@ describe("Coward's Game spec contracts", () => {
         71,
         side === "bottom" ? "a" : "b",
       ),
+      effectiveStatus: "exhibition_only" as const,
+      schedulingDecisionId: `scheduling-decision:${side}`,
+      schedulingDecisionHash: `sha256:${"f".repeat(64)}`,
       containmentCertificateId: `containment:${side}`,
       containmentCertificateHash: `sha256:${"c".repeat(64)}`,
-      conformanceCertificateId: `conformance:${side}`,
-      conformanceCertificateHash: `sha256:${"d".repeat(64)}`,
     })
     const request = {
       contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
@@ -1898,10 +1899,11 @@ describe("Coward's Game spec contracts", () => {
           71,
           languageId === "typescript" ? "1" : "2",
         ),
+      effectiveStatus: "exhibition_only" as const,
+      schedulingDecisionId: `scheduling-decision:${side}`,
+      schedulingDecisionHash: `sha256:${"6".repeat(64)}`,
       containmentCertificateId: `certificate:containment:${side}`,
       containmentCertificateHash: `sha256:${"3".repeat(64)}`,
-      conformanceCertificateId: `certificate:conformance:${side}`,
-      conformanceCertificateHash: `sha256:${"4".repeat(64)}`,
     })
     const request = {
       contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
@@ -1936,6 +1938,29 @@ describe("Coward's Game spec contracts", () => {
     }
 
     expect(RuntimeExecutionServiceRequestSchema.parse(request)).toEqual(request)
+    expect(
+      RuntimeExecutionServiceRequestSchema.safeParse({
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            bottom: {
+              ...request.evidenceSnapshot.entrants.bottom,
+              effectiveStatus: "counted",
+              conformanceCertificateId: "certificate:conformance:bottom",
+              conformanceCertificateHash: `sha256:${"4".repeat(64)}`,
+            },
+            top: {
+              ...request.evidenceSnapshot.entrants.top,
+              effectiveStatus: "counted",
+              conformanceCertificateId: "certificate:conformance:top",
+              conformanceCertificateHash: `sha256:${"4".repeat(64)}`,
+            },
+          },
+        },
+      }).success,
+    ).toBe(true)
 
     const mutations = [
       {
@@ -1989,7 +2014,46 @@ describe("Coward's Game spec contracts", () => {
             ...request.evidenceSnapshot.entrants,
             top: {
               ...request.evidenceSnapshot.entrants.top,
-              conformanceCertificateId: undefined,
+              containmentCertificateId: undefined,
+            },
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            top: {
+              ...request.evidenceSnapshot.entrants.top,
+              effectiveStatus: "counted",
+            },
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            top: {
+              ...request.evidenceSnapshot.entrants.top,
+              effectiveStatus: "disabled",
+            },
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            top: {
+              ...request.evidenceSnapshot.entrants.top,
+              purpose: "exhibition",
             },
           },
         },

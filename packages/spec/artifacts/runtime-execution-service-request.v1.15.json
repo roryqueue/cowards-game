@@ -167,19 +167,21 @@
         "entrantKey": "fixture-only:entrant:golden-v1.15:bottom",
         "strategyRevisionId": "strategy-revision:f08e50c1402199af006e4da2656cc10b36ea91671a9cdc1ddb0a40eeddd7e923",
         "laneIdentityHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "effectiveStatus": "exhibition_only",
+        "schedulingDecisionId": "fixture-only:scheduling-decision:golden-v1.15:bottom:typescript",
+        "schedulingDecisionHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
         "containmentCertificateId": "fixture-only:untrusted-containment:golden-v1.15:bottom:typescript",
-        "containmentCertificateHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-        "conformanceCertificateId": "fixture-only:untrusted-conformance:golden-v1.15:bottom:typescript",
-        "conformanceCertificateHash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        "containmentCertificateHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
       },
       "top": {
         "entrantKey": "fixture-only:entrant:golden-v1.15:top",
         "strategyRevisionId": "strategy-revision:bdcfaed6956b2d7ad2a4491cec252efb60a7faaa797d85fd34a6238fb5dc8f91",
         "laneIdentityHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "effectiveStatus": "exhibition_only",
+        "schedulingDecisionId": "fixture-only:scheduling-decision:golden-v1.15:top:typescript",
+        "schedulingDecisionHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
         "containmentCertificateId": "fixture-only:untrusted-containment:golden-v1.15:top:typescript",
-        "containmentCertificateHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-        "conformanceCertificateId": "fixture-only:untrusted-conformance:golden-v1.15:top:typescript",
-        "conformanceCertificateHash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        "containmentCertificateHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
       }
     }
   }

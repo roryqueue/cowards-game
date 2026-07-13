@@ -229,6 +229,16 @@ describe("runtime execution service", () => {
       expect.stringContaining("fixture-only:untrusted"),
       expect.stringContaining("fixture-only:untrusted"),
     ])
+    expect(
+      Object.values(request.evidenceSnapshot.entrants).map(
+        (entrant) => entrant.effectiveStatus,
+      ),
+    ).toEqual(["exhibition_only", "exhibition_only"])
+    expect(
+      Object.values(request.evidenceSnapshot.entrants).every(
+        (entrant) => entrant.conformanceCertificateId === undefined,
+      ),
+    ).toBe(true)
     const response = executeRuntimeServiceRequest(request, runtimeConfig)
 
     expect(response.ok).toBe(true)

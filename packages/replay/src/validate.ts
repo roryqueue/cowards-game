@@ -1,6 +1,7 @@
 import {
   ChronicleSchema,
   COMPATIBILITY_VERSIONS,
+  MatchExecutionExactEvidenceV137Schema,
   resolveCanonicalCompatibilityTuple,
   type Chronicle,
   type ChronicleEventType,
@@ -67,7 +68,10 @@ export type ReplayCompatibilityIdentityResolution =
     }
   | {
       status: "invalid"
-      reason: "missing_or_mixed_current_tuple" | "unsupported_profile"
+      reason:
+        | "missing_or_mixed_current_tuple"
+        | "invalid_current_execution_evidence"
+        | "unsupported_profile"
     }
 
 export const resolveReplayCompatibilityIdentity = (
@@ -86,7 +90,15 @@ export const resolveReplayCompatibilityIdentity = (
   }
   if (
     input.profile !== "current-exact" ||
-    !hasExactKeys(input, ["profile", "compatibility", "chronicle"])
+    !(
+      hasExactKeys(input, ["profile", "compatibility", "chronicle"]) ||
+      hasExactKeys(input, [
+        "profile",
+        "compatibility",
+        "executionEvidence",
+        "chronicle",
+      ])
+    )
   ) {
     return {
       status: "invalid",
@@ -97,9 +109,36 @@ export const resolveReplayCompatibilityIdentity = (
     }
   }
   const resolved = resolveCanonicalCompatibilityTuple(input.compatibility)
-  return resolved
-    ? { status: "current_exact", tupleId: resolved.tupleId }
-    : { status: "invalid", reason: "missing_or_mixed_current_tuple" }
+  if (!resolved) {
+    return { status: "invalid", reason: "missing_or_mixed_current_tuple" }
+  }
+  if (Object.hasOwn(input, "executionEvidence")) {
+    const parsed = MatchExecutionExactEvidenceV137Schema.safeParse(
+      input.executionEvidence,
+    )
+    if (
+      !parsed.success ||
+      parsed.data.evidenceSnapshot.compatibility.tupleId !== resolved.tupleId
+    ) {
+      return {
+        status: "invalid",
+        reason: "invalid_current_execution_evidence",
+      }
+    }
+    const chronicle = input.chronicle
+    if (
+      isRecord(chronicle) &&
+      isRecord(chronicle.reproducibility) &&
+      typeof chronicle.reproducibility.matchId === "string" &&
+      parsed.data.matchId !== chronicle.reproducibility.matchId
+    ) {
+      return {
+        status: "invalid",
+        reason: "invalid_current_execution_evidence",
+      }
+    }
+  }
+  return { status: "current_exact", tupleId: resolved.tupleId }
 }
 
 export const validateReplayInput = (
@@ -114,7 +153,9 @@ export const validateReplayInput = (
           "VERSION_INCOMPATIBLE",
           compatibility.reason === "missing_or_mixed_current_tuple"
             ? "Current replay requires one exact registered compatibility tuple."
-            : "Replay compatibility profile is unsupported.",
+            : compatibility.reason === "invalid_current_execution_evidence"
+              ? "Current replay execution evidence is invalid or does not match the replay identity."
+              : "Replay compatibility profile is unsupported.",
         ),
       ],
     }

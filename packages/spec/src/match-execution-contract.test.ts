@@ -145,6 +145,60 @@ describe("match execution app contract v1", () => {
       /toolchainId|artifactSha256|buildId|certificateId|strategyMemory|objective/i,
     )
 
+    const {
+      conformanceCertificateRef: _omittedConformance,
+      ...bottomContainmentOnly
+    } = evidenceSnapshot.entrants.bottom
+    const exhibition = createMatchExecutionExactEvidenceV137({
+      matchId: "match:exhibition-evidence",
+      bottomEntrantKey: "entrant:bottom",
+      topEntrantKey: "entrant:top",
+      evidenceSnapshot: {
+        ...evidenceSnapshot,
+        entrants: {
+          ...evidenceSnapshot.entrants,
+          bottom: {
+            ...bottomContainmentOnly,
+            schedulingDecision: {
+              ...bottomContainmentOnly.schedulingDecision,
+              status: "exhibition_only",
+              reasonCode: "CONFORMANCE_UNVERIFIABLE",
+            },
+          },
+        },
+      },
+    })
+    expect(
+      projectPublicMatchExecutionIntegrityEvidenceV137(exhibition).entrants
+        .bottom.evidence,
+    ).toEqual([
+      {
+        kind: "containment",
+        version: "1.0.0",
+        hash: "containment:bottom:hash",
+      },
+    ])
+    expect(
+      MatchExecutionExactEvidenceV137Schema.safeParse({
+        ...exhibition,
+        evidenceSnapshot: {
+          ...exhibition.evidenceSnapshot,
+          entrants: {
+            ...exhibition.evidenceSnapshot.entrants,
+            bottom: {
+              ...exhibition.evidenceSnapshot.entrants.bottom,
+              schedulingDecision: {
+                ...exhibition.evidenceSnapshot.entrants.bottom
+                  .schedulingDecision,
+                status: "counted",
+                reasonCode: "EVIDENCE_CURRENT",
+              },
+            },
+          },
+        },
+      }).success,
+    ).toBe(false)
+
     const historical = {
       profile: "historical-v1.4" as const,
       matchId: "match:historical-v1.4",

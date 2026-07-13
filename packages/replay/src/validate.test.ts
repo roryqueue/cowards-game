@@ -11,6 +11,7 @@ import {
   CANONICAL_COMPATIBILITY_TUPLES,
   ChronicleValidationErrorCodeSchema,
   COMPATIBILITY_VERSIONS,
+  createMatchExecutionExactEvidenceV137,
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import type { StrategyRuntime } from "@cowards/engine"
@@ -64,6 +65,82 @@ const createChronicle = () =>
     topStrategyRevisionId: "top-rev",
     runtime,
   }).chronicle
+
+const createExecutionEvidence = (
+  matchId: string,
+  status: "exhibition_only" | "counted" = "exhibition_only",
+) => {
+  const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
+  const entrant = (side: "bottom" | "top") => ({
+    entrantKey: `entrant:${side}`,
+    strategyRevisionId: `${side}-rev`,
+    laneIdentity: {
+      providerId: `provider:${side}`,
+      languageId: "typescript",
+      runtimeId: "runtime:node",
+      runtimeVersion: "1.0.0",
+      toolchainId: "toolchain:typescript",
+      toolchainVersion: "1.0.0",
+      adapterId: "adapter:node",
+      adapterVersion: "1.0.0",
+      policyId: "package-none",
+      policyVersion: "1.0.0",
+      corpusId: "corpus:v1.37",
+      corpusVersion: "1.0.0",
+      artifactId: `artifact:${side}`,
+      artifactSha256: `${side}:artifact:hash`,
+      implementationId: `implementation:${side}`,
+      buildId: `build:${side}`,
+      semanticTupleId: registered.tupleId,
+      semanticTuple: { ...registered.tuple },
+    },
+    containmentCertificateRef: {
+      kind: "containment" as const,
+      certificateId: `containment:${side}`,
+      certificateVersion: "1.0.0",
+      certificateRecordHash: `containment:${side}:hash`,
+      registryGeneration: "registry-generation:1",
+    },
+    ...(status === "counted"
+      ? {
+          conformanceCertificateRef: {
+            kind: "conformance" as const,
+            certificateId: `conformance:${side}`,
+            certificateVersion: "1.0.0",
+            certificateRecordHash: `conformance:${side}:hash`,
+            registryGeneration: "registry-generation:1",
+          },
+        }
+      : {}),
+    schedulingDecision: {
+      status,
+      reasonCode:
+        status === "counted"
+          ? ("EVIDENCE_CURRENT" as const)
+          : ("CONFORMANCE_UNVERIFIABLE" as const),
+      evaluatedAt: "2026-07-13T00:00:00.000Z",
+      freshUntil: "2026-08-13T00:00:00.000Z",
+      registryGeneration: "registry-generation:1",
+    },
+  })
+  return createMatchExecutionExactEvidenceV137({
+    matchId,
+    bottomEntrantKey: "entrant:bottom",
+    topEntrantKey: "entrant:top",
+    evidenceSnapshot: {
+      compatibility: {
+        tupleId: registered.tupleId,
+        tuple: { ...registered.tuple },
+      },
+      authorityBundleHash: "authority-bundle-hash:v1",
+      registryGeneration: "registry-generation:1",
+      entrants: {
+        bottom: entrant("bottom"),
+        top: entrant("top"),
+      },
+    },
+  })
+}
 
 const errorCodes = (value: unknown) => {
   const result = validateChronicle(value)
@@ -131,9 +208,66 @@ describe("validateChronicle", () => {
     }
 
     expect(validateReplayInput(current)).toEqual({ ok: true })
+    expect(resolveReplayCompatibilityIdentity(current)).toMatchObject({
+      status: "current_exact",
+      tupleId: registered.tupleId,
+    })
+    const exhibitionEvidence = createExecutionEvidence(
+      chronicle.reproducibility.matchId,
+    )
     expect(
-      resolveReplayCompatibilityIdentity(current),
-    ).toMatchObject({ status: "current_exact", tupleId: registered.tupleId })
+      validateReplayInput({
+        ...current,
+        executionEvidence: exhibitionEvidence,
+      }),
+    ).toEqual({ ok: true })
+    expect(
+      validateReplayInput({
+        ...current,
+        executionEvidence: createExecutionEvidence(
+          chronicle.reproducibility.matchId,
+          "counted",
+        ),
+      }),
+    ).toEqual({ ok: true })
+    expect(
+      validateReplayInput({
+        ...current,
+        executionEvidence: {
+          ...exhibitionEvidence,
+          evidenceSnapshot: {
+            ...exhibitionEvidence.evidenceSnapshot,
+            entrants: {
+              ...exhibitionEvidence.evidenceSnapshot.entrants,
+              bottom: {
+                ...exhibitionEvidence.evidenceSnapshot.entrants.bottom,
+                schedulingDecision: {
+                  ...exhibitionEvidence.evidenceSnapshot.entrants.bottom
+                    .schedulingDecision,
+                  status: "counted",
+                  reasonCode: "EVIDENCE_CURRENT",
+                },
+              },
+            },
+          },
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
+    })
+    expect(
+      validateReplayInput({
+        ...current,
+        executionEvidence: {
+          ...exhibitionEvidence,
+          matchId: "match:other",
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
+    })
     expect(
       validateReplayInput({
         ...current,

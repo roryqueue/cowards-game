@@ -294,10 +294,11 @@ describe("runtime evidence authority bundle", () => {
         71,
         side === "bottom" ? "5" : "6",
       ),
+      effectiveStatus: "exhibition_only" as const,
+      schedulingDecisionId: `scheduling-decision:${side}`,
+      schedulingDecisionHash: `sha256:${"a".repeat(64)}`,
       containmentCertificateId: `containment:${side}`,
       containmentCertificateHash: `sha256:${"7".repeat(64)}`,
-      conformanceCertificateId: `conformance:${side}`,
-      conformanceCertificateHash: `sha256:${"8".repeat(64)}`,
     })
     const snapshot = {
       compatibility: {
@@ -315,6 +316,49 @@ describe("runtime evidence authority bundle", () => {
     expect(RuntimeExecutionEvidenceSnapshotSchema.parse(snapshot)).toEqual(
       snapshot,
     )
+    expect(
+      RuntimeExecutionEvidenceSnapshotSchema.safeParse({
+        ...snapshot,
+        entrants: {
+          ...snapshot.entrants,
+          bottom: {
+            ...snapshot.entrants.bottom,
+            effectiveStatus: "counted",
+          },
+        },
+      }).success,
+    ).toBe(false)
+    expect(
+      RuntimeExecutionEvidenceSnapshotSchema.safeParse({
+        ...snapshot,
+        entrants: {
+          ...snapshot.entrants,
+          bottom: {
+            ...snapshot.entrants.bottom,
+            effectiveStatus: "counted",
+            conformanceCertificateId: "conformance:bottom",
+            conformanceCertificateHash: `sha256:${"8".repeat(64)}`,
+          },
+        },
+      }).success,
+    ).toBe(true)
+    expect(
+      RuntimeExecutionEvidenceSnapshotSchema.safeParse({
+        ...snapshot,
+        entrants: {
+          ...snapshot.entrants,
+          bottom: {
+            entrantKey: snapshot.entrants.bottom.entrantKey,
+            strategyRevisionId: snapshot.entrants.bottom.strategyRevisionId,
+            laneIdentityHash: snapshot.entrants.bottom.laneIdentityHash,
+            effectiveStatus: "disabled",
+            schedulingDecisionId: snapshot.entrants.bottom.schedulingDecisionId,
+            schedulingDecisionHash:
+              snapshot.entrants.bottom.schedulingDecisionHash,
+          },
+        },
+      }).success,
+    ).toBe(true)
     for (const forbidden of [
       { laneIdentity: { providerId: "request-echo" } },
       { containmentCertificateRef: { certificateId: "request-echo" } },
@@ -322,6 +366,7 @@ describe("runtime evidence authority bundle", () => {
       { graphNodes: [] },
       { signature: "request-echo" },
       { gateResults: [] },
+      { purpose: "exhibition" },
     ]) {
       expect(
         RuntimeExecutionEvidenceSnapshotSchema.safeParse({
@@ -350,6 +395,7 @@ describe("runtime evidence authority bundle", () => {
         envelope: { signatureBase64: string }
       }[]
       antiRollbackVectors: { name: string }[]
+      authorityDecisionVectors: { name: string; expected: string }[]
       notice: string
       valid: {
         emptyProduction: {
@@ -375,6 +421,23 @@ describe("runtime evidence authority bundle", () => {
       "same-generation-fork",
       "corrupt-anchor",
       "newer-generation",
+    ])
+    expect(
+      vectors.authorityDecisionVectors.map(({ name, expected }) => ({
+        name,
+        expected,
+      })),
+    ).toEqual([
+      { name: "disabled-runtime-request", expected: "reject-execution" },
+      {
+        name: "containment-only-exhibition",
+        expected: "accept-reference",
+      },
+      {
+        name: "counted-missing-conformance",
+        expected: "reject-reference",
+      },
+      { name: "counted-complete", expected: "accept-reference" },
     ])
     expect(vectors.notice).toMatch(/fixture-only/i)
     expect(vectors.valid.emptyProduction.expected).toMatchObject({

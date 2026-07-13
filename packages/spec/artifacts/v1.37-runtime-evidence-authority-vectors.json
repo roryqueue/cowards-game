@@ -173,6 +173,52 @@
       }
     }
   ],
+  "authorityDecisionVectors": [
+    {
+      "name": "disabled-runtime-request",
+      "reference": {
+        "effectiveStatus": "disabled",
+        "schedulingDecisionId": "fixture-only:decision:disabled",
+        "schedulingDecisionHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "expected": "reject-execution"
+    },
+    {
+      "name": "containment-only-exhibition",
+      "reference": {
+        "effectiveStatus": "exhibition_only",
+        "schedulingDecisionId": "fixture-only:decision:exhibition",
+        "schedulingDecisionHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "containmentCertificateId": "fixture-only:containment:exhibition",
+        "containmentCertificateHash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "expected": "accept-reference"
+    },
+    {
+      "name": "counted-missing-conformance",
+      "reference": {
+        "effectiveStatus": "counted",
+        "schedulingDecisionId": "fixture-only:decision:counted-incomplete",
+        "schedulingDecisionHash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "containmentCertificateId": "fixture-only:containment:counted",
+        "containmentCertificateHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "expected": "reject-reference"
+    },
+    {
+      "name": "counted-complete",
+      "reference": {
+        "effectiveStatus": "counted",
+        "schedulingDecisionId": "fixture-only:decision:counted-complete",
+        "schedulingDecisionHash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "containmentCertificateId": "fixture-only:containment:counted",
+        "containmentCertificateHash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "conformanceCertificateId": "fixture-only:conformance:counted",
+        "conformanceCertificateHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+      },
+      "expected": "accept-reference"
+    }
+  ],
   "antiRollbackVectors": [
     {
       "name": "exact-bootstrap",

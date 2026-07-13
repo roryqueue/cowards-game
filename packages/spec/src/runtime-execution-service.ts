@@ -185,6 +185,19 @@ export interface RuntimeEntrantExecutionEvidence {
   schedulingDecision: RuntimeExecutionSchedulingDecisionSnapshot
 }
 
+export interface RuntimeResolvedEntrantExecutionEvidence {
+  entrantKey: string
+  strategyRevisionId: StrategyRevisionId
+  laneIdentity: ExecutableLaneIdentity
+  containmentCertificateRef?:
+    | (ExecutableLaneCertificateReference & { kind: "containment" })
+    | undefined
+  conformanceCertificateRef?:
+    | (ExecutableLaneCertificateReference & { kind: "conformance" })
+    | undefined
+  schedulingDecision: RuntimeExecutionSchedulingDecisionSnapshot
+}
+
 export interface RuntimeExecutionEvidencePair {
   bottom: RuntimeEntrantExecutionEvidence
   top: RuntimeEntrantExecutionEvidence
@@ -194,17 +207,23 @@ export interface RuntimeExecutionResolvedEvidenceSnapshot {
   compatibility: RuntimeExecutionCompatibilityIdentity
   authorityBundleHash: string
   registryGeneration: string
-  entrants: RuntimeExecutionEvidencePair
+  entrants: {
+    bottom: RuntimeResolvedEntrantExecutionEvidence
+    top: RuntimeResolvedEntrantExecutionEvidence
+  }
 }
 
 export interface RuntimeEntrantAuthorityReference {
   entrantKey: string
   strategyRevisionId: StrategyRevisionId
   laneIdentityHash: string
-  containmentCertificateId: string
-  containmentCertificateHash: string
-  conformanceCertificateId: string
-  conformanceCertificateHash: string
+  effectiveStatus: ExecutableLaneEvidenceStatus
+  schedulingDecisionId: string
+  schedulingDecisionHash: string
+  containmentCertificateId?: string | undefined
+  containmentCertificateHash?: string | undefined
+  conformanceCertificateId?: string | undefined
+  conformanceCertificateHash?: string | undefined
 }
 
 export interface RuntimeExecutionEvidenceSnapshot {

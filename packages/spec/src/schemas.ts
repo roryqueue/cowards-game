@@ -2431,14 +2431,41 @@ const RuntimeEntrantExecutionEvidenceSchema = z
     containmentCertificateRef:
       RuntimeExecutionCertificateReferenceSchema.extend({
         kind: z.literal("containment"),
-      }).strict(),
+      })
+        .strict()
+        .optional(),
     conformanceCertificateRef:
       RuntimeExecutionCertificateReferenceSchema.extend({
         kind: z.literal("conformance"),
-      }).strict(),
+      })
+        .strict()
+        .optional(),
     schedulingDecision: RuntimeExecutionSchedulingDecisionSchema,
   })
   .strict()
+  .superRefine((entrant, ctx) => {
+    if (
+      entrant.schedulingDecision.status !== "disabled" &&
+      !entrant.containmentCertificateRef
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["containmentCertificateRef"],
+        message:
+          "exhibition-only and counted execution evidence requires containment",
+      })
+    }
+    if (
+      entrant.schedulingDecision.status === "counted" &&
+      !entrant.conformanceCertificateRef
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["conformanceCertificateRef"],
+        message: "counted execution evidence requires conformance",
+      })
+    }
+  })
 
 const addExecutionIdentityIssue = (
   ctx: z.RefinementCtx,
@@ -2486,10 +2513,10 @@ export const RuntimeExecutionResolvedEvidenceSnapshotSchema = z
         }
       }
       for (const generation of [
-        entrant.containmentCertificateRef.registryGeneration,
-        entrant.conformanceCertificateRef.registryGeneration,
+        entrant.containmentCertificateRef?.registryGeneration,
+        entrant.conformanceCertificateRef?.registryGeneration,
         entrant.schedulingDecision.registryGeneration,
-      ]) {
+      ].filter((value): value is string => value !== undefined)) {
         if (generation !== snapshot.registryGeneration) {
           addExecutionIdentityIssue(
             ctx,
@@ -2515,12 +2542,63 @@ const RuntimeEntrantAuthorityReferenceSchema = z
     entrantKey: z.string().min(1),
     strategyRevisionId: z.string().min(1),
     laneIdentityHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
-    containmentCertificateId: z.string().min(1),
-    containmentCertificateHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
-    conformanceCertificateId: z.string().min(1),
-    conformanceCertificateHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    effectiveStatus: z.enum(EXECUTABLE_LANE_EVIDENCE_STATUSES),
+    schedulingDecisionId: z.string().min(1),
+    schedulingDecisionHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    containmentCertificateId: z.string().min(1).optional(),
+    containmentCertificateHash: z
+      .string()
+      .regex(/^sha256:[0-9a-f]{64}$/u)
+      .optional(),
+    conformanceCertificateId: z.string().min(1).optional(),
+    conformanceCertificateHash: z
+      .string()
+      .regex(/^sha256:[0-9a-f]{64}$/u)
+      .optional(),
   })
   .strict()
+  .superRefine((entrant, ctx) => {
+    const containmentPair =
+      entrant.containmentCertificateId !== undefined &&
+      entrant.containmentCertificateHash !== undefined
+    const conformancePair =
+      entrant.conformanceCertificateId !== undefined &&
+      entrant.conformanceCertificateHash !== undefined
+    if (
+      (entrant.containmentCertificateId === undefined) !==
+      (entrant.containmentCertificateHash === undefined)
+    ) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["containmentCertificateId"],
+        "containment certificate id and hash must be supplied together",
+      )
+    }
+    if (
+      (entrant.conformanceCertificateId === undefined) !==
+      (entrant.conformanceCertificateHash === undefined)
+    ) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["conformanceCertificateId"],
+        "conformance certificate id and hash must be supplied together",
+      )
+    }
+    if (entrant.effectiveStatus !== "disabled" && !containmentPair) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["containmentCertificateId"],
+        "exhibition-only and counted authority requires containment evidence",
+      )
+    }
+    if (entrant.effectiveStatus === "counted" && !conformancePair) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["conformanceCertificateId"],
+        "counted authority requires conformance evidence",
+      )
+    }
+  })
 
 export const RuntimeExecutionEvidenceSnapshotSchema = z
   .object({
@@ -2629,6 +2707,15 @@ export const RuntimeExecutionServiceRequestSchema = z
         side === "bottom"
           ? request.match.bottomStrategyRevisionId
           : request.match.topStrategyRevisionId
+      if (
+        request.evidenceSnapshot.entrants[side].effectiveStatus === "disabled"
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["evidenceSnapshot", "entrants", side, "effectiveStatus"],
+          message: `${side} disabled authority cannot execute`,
+        })
+      }
       if (
         request.evidenceSnapshot.entrants[side].strategyRevisionId !==
         expectedRevisionId

@@ -152,6 +152,24 @@ export const MatchExecutionExactEvidenceV137Schema = z
           "ordered entrant evidence must match the Match bottom/top bindings",
       })
     }
+    for (const side of ["bottom", "top"] as const) {
+      if (
+        evidence.evidenceSnapshot.entrants[side].schedulingDecision.status ===
+        "disabled"
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: [
+            "evidenceSnapshot",
+            "entrants",
+            side,
+            "schedulingDecision",
+            "status",
+          ],
+          message: "disabled authority cannot produce Match execution evidence",
+        })
+      }
+    }
   })
 
 const MatchExecutionPublicCertificateRefV137Schema = z
@@ -169,16 +187,33 @@ const MatchExecutionPublicEntrantIntegrityV137Schema = z
     reasonCode: z.string().min(1),
     evaluatedAt: z.string().datetime({ offset: true }),
     freshUntil: z.string().datetime({ offset: true }),
-    evidence: z.tuple([
-      MatchExecutionPublicCertificateRefV137Schema.extend({
-        kind: z.literal("containment"),
-      }).strict(),
-      MatchExecutionPublicCertificateRefV137Schema.extend({
-        kind: z.literal("conformance"),
-      }).strict(),
-    ]),
+    evidence: z.array(MatchExecutionPublicCertificateRefV137Schema).max(2),
   })
   .strict()
+  .superRefine((entrant, ctx) => {
+    const kinds = entrant.evidence.map((reference) => reference.kind)
+    if (new Set(kinds).size !== kinds.length) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evidence"],
+        message: "public certificate evidence kinds must be unique",
+      })
+    }
+    if (entrant.status !== "disabled" && !kinds.includes("containment")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evidence"],
+        message: "exhibition-only and counted evidence requires containment",
+      })
+    }
+    if (entrant.status === "counted" && !kinds.includes("conformance")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evidence"],
+        message: "counted evidence requires conformance",
+      })
+    }
+  })
 
 export const MatchExecutionPublicIntegrityEvidenceV137Schema = z
   .object({
@@ -353,25 +388,35 @@ export const createMatchExecutionExactEvidenceV137 = (
 
 const projectPublicEntrantIntegrity = (
   entrant: MatchExecutionExactEvidenceV137["evidenceSnapshot"]["entrants"]["bottom"],
-) => ({
-  entrantKey: entrant.entrantKey,
-  status: entrant.schedulingDecision.status,
-  reasonCode: entrant.schedulingDecision.reasonCode,
-  evaluatedAt: entrant.schedulingDecision.evaluatedAt,
-  freshUntil: entrant.schedulingDecision.freshUntil,
-  evidence: [
-    {
-      kind: "containment" as const,
+) => {
+  const evidence: {
+    kind: "containment" | "conformance"
+    version: string
+    hash: string
+  }[] = []
+  if (entrant.containmentCertificateRef) {
+    evidence.push({
+      kind: "containment",
       version: entrant.containmentCertificateRef.certificateVersion,
       hash: entrant.containmentCertificateRef.certificateRecordHash,
-    },
-    {
-      kind: "conformance" as const,
+    })
+  }
+  if (entrant.conformanceCertificateRef) {
+    evidence.push({
+      kind: "conformance",
       version: entrant.conformanceCertificateRef.certificateVersion,
       hash: entrant.conformanceCertificateRef.certificateRecordHash,
-    },
-  ] as const,
-})
+    })
+  }
+  return {
+    entrantKey: entrant.entrantKey,
+    status: entrant.schedulingDecision.status,
+    reasonCode: entrant.schedulingDecision.reasonCode,
+    evaluatedAt: entrant.schedulingDecision.evaluatedAt,
+    freshUntil: entrant.schedulingDecision.freshUntil,
+    evidence,
+  }
+}
 
 export const projectPublicMatchExecutionIntegrityEvidenceV137 = (
   evidence: MatchExecutionExactEvidenceV137,

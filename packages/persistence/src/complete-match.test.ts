@@ -284,7 +284,7 @@ describe("Match completion integrity identity", () => {
           bottom: {
             ...exact.entrants.bottom,
             containmentCertificateRef: {
-              ...exact.entrants.bottom.containmentCertificateRef,
+              ...exact.entrants.bottom.containmentCertificateRef!,
               certificateRecordHash: sha256("stale-bottom-certificate"),
             },
           },
@@ -605,7 +605,7 @@ describePostgres("PostgreSQL Match completion integrity identity and system fail
           bottom: {
             ...exact.entrants.bottom,
             conformanceCertificateRef: {
-              ...exact.entrants.bottom.conformanceCertificateRef,
+              ...exact.entrants.bottom.conformanceCertificateRef!,
               certificateRecordHash: sha256("drift-bottom"),
             },
           },

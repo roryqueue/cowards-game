@@ -21,19 +21,20 @@ const fixtureEntrantEvidence = (input: {
       71,
       input.side === "bottom" ? "a" : "b",
     ),
+    effectiveStatus: "exhibition_only",
+    schedulingDecisionId: `fixture-only:scheduling-decision:${identitySuffix}`,
+    schedulingDecisionHash: `sha256:${"f".repeat(64)}`,
     containmentCertificateId: `fixture-only:untrusted-containment:${identitySuffix}`,
     containmentCertificateHash: `sha256:${"c".repeat(64)}`,
-    conformanceCertificateId: `fixture-only:untrusted-conformance:${identitySuffix}`,
-    conformanceCertificateHash: `sha256:${"d".repeat(64)}`,
   }
 }
 
 /**
  * Shape-only request evidence for runtime-service execution fixtures.
  *
- * Every identity is fixture-only, untrusted, and explicitly disabled. This
- * helper proves transport/schema completeness only; it cannot establish
- * production containment, conformance, or counted eligibility.
+ * Every identity is fixture-only, untrusted, and explicitly exhibition-only.
+ * The containment reference proves the transport shape only; this helper
+ * cannot establish production containment, conformance, or counted eligibility.
  */
 export const createFixtureRuntimeExecutionEvidenceSnapshot = (input: {
   fixtureId: string
