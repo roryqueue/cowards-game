@@ -17,6 +17,7 @@ import {
   persistMatchSetIntegrityIdentity,
   resolveHistoricalIntegrityEvidence,
   hashHistoricalIntegritySource,
+  resolveCurrentStandingsIntegrityEvidence,
 } from "./integrity-evidence.js"
 import { migrate } from "./migrations.js"
 
@@ -170,6 +171,62 @@ describe("historical and legacy integrity resolution", () => {
     expect(resolution).not.toHaveProperty("compatibility")
     expect(resolution).not.toHaveProperty("authorityBundleHash")
     expect(resolution).not.toHaveProperty("registryGeneration")
+  })
+})
+
+describe("current standings integrity resolution", () => {
+  it("admits only an exact registered tuple with certified evidence for every entrant", () => {
+    expect(resolveCurrentStandingsIntegrityEvidence(identityInput())).toMatchObject({
+      kind: "current_certified",
+      identity: {
+        compatibility: { tupleId: tupleRecord.tupleId },
+        normalizedEntrants: [
+          { strategyRevisionId: "revision:0" },
+          { strategyRevisionId: "revision:1" },
+        ],
+      },
+    })
+  })
+
+  it("classifies missing, unknown, mixed, and uncertified current evidence fail closed", () => {
+    expect(resolveCurrentStandingsIntegrityEvidence(null)).toEqual({
+      kind: "current_rejected",
+      reason: "missing",
+    })
+
+    const unknown = identityInput()
+    unknown.compatibility.tupleId = `sha256:${"f".repeat(64)}`
+    expect(resolveCurrentStandingsIntegrityEvidence(unknown)).toMatchObject({
+      kind: "current_rejected",
+      reason: "unknown_tuple",
+    })
+
+    const mixed = identityInput()
+    mixed.entrants[1] = {
+      ...mixed.entrants[1]!,
+      laneIdentity: {
+        ...mixed.entrants[1]!.laneIdentity,
+        semanticTupleId: `sha256:${"e".repeat(64)}`,
+      },
+    }
+    expect(resolveCurrentStandingsIntegrityEvidence(mixed)).toMatchObject({
+      kind: "current_rejected",
+      reason: "mixed_tuple",
+    })
+
+    const uncertified = identityInput()
+    uncertified.entrants[0] = {
+      ...uncertified.entrants[0]!,
+      schedulingDecision: {
+        ...uncertified.entrants[0]!.schedulingDecision,
+        status: "exhibition_only",
+        reasonCode: "CONFORMANCE_MISSING",
+      },
+    }
+    expect(resolveCurrentStandingsIntegrityEvidence(uncertified)).toMatchObject({
+      kind: "current_rejected",
+      reason: "uncertified",
+    })
   })
 })
 
