@@ -200,3 +200,204 @@ describe("activation selection and runtime inputs", () => {
     )
   })
 })
+
+const orderMatrixInitialState = createInitialGameState(baseInput)
+const firstBottomId = orderMatrixInitialState.soldiers[0]!.id
+const secondBottomId = orderMatrixInitialState.soldiers[1]!.id
+const inactiveBottomId = orderMatrixInitialState.soldiers[2]!.id
+const firstTopId = orderMatrixInitialState.soldiers[8]!.id
+
+const retainedPrefixCases: Array<{
+  classification: string
+  position: "inside" | "outside"
+  quota: 1 | 2
+  rawOrders: unknown[]
+  expectedViolation: boolean
+  expectedOrderIds: string[]
+}> = [
+  {
+    classification: "valid",
+    position: "inside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+  {
+    classification: "valid",
+    position: "outside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }, { soldierId: secondBottomId }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+  {
+    classification: "malformed",
+    position: "inside",
+    quota: 1,
+    rawOrders: [{ soldierId: 42 }, { soldierId: firstBottomId }],
+    expectedViolation: true,
+    expectedOrderIds: [],
+  },
+  {
+    classification: "malformed",
+    position: "outside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }, { soldierId: 42 }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+  {
+    classification: "duplicate",
+    position: "inside",
+    quota: 2,
+    rawOrders: [
+      { soldierId: firstBottomId },
+      { soldierId: firstBottomId },
+      { soldierId: secondBottomId },
+    ],
+    expectedViolation: true,
+    expectedOrderIds: [],
+  },
+  {
+    classification: "duplicate",
+    position: "outside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }, { soldierId: firstBottomId }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+  {
+    classification: "unknown",
+    position: "inside",
+    quota: 1,
+    rawOrders: [{ soldierId: "unknown-soldier" }, { soldierId: firstBottomId }],
+    expectedViolation: true,
+    expectedOrderIds: [],
+  },
+  {
+    classification: "unknown",
+    position: "outside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }, { soldierId: "unknown-soldier" }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+  {
+    classification: "wrong-owner",
+    position: "inside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstTopId }, { soldierId: firstBottomId }],
+    expectedViolation: true,
+    expectedOrderIds: [],
+  },
+  {
+    classification: "wrong-owner",
+    position: "outside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }, { soldierId: firstTopId }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+  {
+    classification: "inactive",
+    position: "inside",
+    quota: 1,
+    rawOrders: [{ soldierId: inactiveBottomId }, { soldierId: firstBottomId }],
+    expectedViolation: true,
+    expectedOrderIds: [],
+  },
+  {
+    classification: "inactive",
+    position: "outside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }, { soldierId: inactiveBottomId }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+]
+
+describe.each(retainedPrefixCases)(
+  "retained prefix: $classification order $position the quota",
+  ({
+    classification,
+    position,
+    quota,
+    rawOrders,
+    expectedViolation,
+    expectedOrderIds,
+  }) => {
+    it("caps raw entries before shape and semantic validation", () => {
+      const state: GameState = {
+        ...orderMatrixInitialState,
+        roundNumber: quota === 2 ? 2 : 1,
+        activationCount: quota,
+        soldiers: orderMatrixInitialState.soldiers.map((candidate) =>
+          candidate.id === inactiveBottomId
+            ? { ...candidate, status: "STONE" as const }
+            : candidate,
+        ),
+      }
+      const caseId = `${classification}-${position}`
+      const observations: unknown[] = []
+      let soldierBrainCalls = 0
+      const runtime: StrategyRuntime = {
+        selectActivations: (input) => {
+          observations.push(input)
+          return {
+            ok: true,
+            value: {
+              activationOrders: rawOrders,
+              strategyMemory: { caseId },
+            } as never,
+          }
+        },
+        runSoldierBrain: () => {
+          soldierBrainCalls += 1
+          throw new Error("activation selection must not run SoldierBrain")
+        },
+      }
+
+      const result = resolveActivationSelection(state, runtime, "bottom-player")
+      const expectedState = expectedViolation
+        ? state
+        : {
+            ...state,
+            players: state.players.map((player) =>
+              player.id === "bottom-player"
+                ? { ...player, strategyMemory: { caseId } }
+                : player,
+            ),
+          }
+
+      expect(result.state.orders).toEqual(
+        expectedOrderIds.map((soldierId) => ({ soldierId })),
+      )
+      expect(result.state.state).toEqual(expectedState)
+      expect(
+        result.events.map(({ type, payload, context, privacy }) => ({
+          type,
+          payload,
+          context,
+          privacy,
+        })),
+      ).toEqual([
+        expectedViolation
+          ? {
+              type: "RUNTIME_VIOLATION",
+              payload: { playerId: "bottom-player", type: "INVALID_OUTPUT" },
+              context: { actingPlayerId: "bottom-player" },
+              privacy: "owner",
+            }
+          : {
+              type: "STRATEGY_EVALUATED",
+              payload: { playerId: "bottom-player" },
+              context: { actingPlayerId: "bottom-player" },
+              privacy: "owner",
+            },
+      ])
+      expect(observations).toHaveLength(1)
+      expect(soldierBrainCalls).toBe(0)
+    })
+  },
+)

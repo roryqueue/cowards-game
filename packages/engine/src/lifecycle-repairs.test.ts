@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
-import { resolveActivation, resolveActivationCycle } from "./activation.js"
+import {
+  resolveActivation,
+  resolveActivationCycle,
+  resolveActivationSelection,
+} from "./activation.js"
 import { createInitialGameState } from "./state.js"
 import {
   success,
@@ -48,6 +52,45 @@ const publicEventContract = (events: TransitionResult["events"]) =>
   }))
 
 describe("approved lifecycle repairs RED contract", () => {
+  it("retained prefix ignores a malformed excess order before validation", () => {
+    const state = createInitialGameState(baseInput)
+    const retainedSoldierId = state.soldiers[0]!.id
+    const observations: unknown[] = []
+    const runtime: StrategyRuntime = {
+      selectActivations: (input) => {
+        observations.push(input)
+        return success({
+          activationOrders: [
+            { soldierId: retainedSoldierId },
+            { soldierId: 42 as never },
+          ],
+          strategyMemory: { selection: "retained-prefix" },
+        })
+      },
+      runSoldierBrain: () => {
+        throw new Error("selection must not execute SoldierBrain")
+      },
+    }
+
+    const result = resolveActivationSelection(state, runtime, "bottom")
+
+    expect(result.state.orders).toEqual([{ soldierId: retainedSoldierId }])
+    expect(result.state.state.players[0].strategyMemory).toEqual({
+      selection: "retained-prefix",
+    })
+    expect(result.events).toMatchObject([
+      {
+        type: "STRATEGY_EVALUATED",
+        payload: { playerId: "bottom" },
+        context: { actingPlayerId: "bottom" },
+      },
+    ])
+    expect(
+      result.events.filter((event) => event.type === "RUNTIME_VIOLATION"),
+    ).toHaveLength(0)
+    expect(observations).toHaveLength(1)
+  })
+
   it("no-Advance cleanup closes the final Soldier slot before MATCH_ENDED", () => {
     const state = stateWith([
       soldier({
