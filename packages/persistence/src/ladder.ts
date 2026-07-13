@@ -1067,6 +1067,9 @@ const loadInstalledAuthorityPublication = async (
   client: PoolClient,
   evaluationInstant: string,
 ): Promise<InstalledAuthorityPublication> => {
+  await client.query(
+    "lock table runtime_evidence_authority_publication_events in share mode",
+  )
   const head = await client.query<{ next_generation: string | number }>(
     `select next_generation
        from runtime_evidence_authority_publication_head
