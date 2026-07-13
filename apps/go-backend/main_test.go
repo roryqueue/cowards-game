@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,7 +15,99 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+func TestNewLiveServerRejectsAuthorityBeforePoolOrOrchestrator(t *testing.T) {
+	poolCalls := 0
+	orchestratorCalls := 0
+	dependencies := defaultLiveServerDependencies()
+	dependencies.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) {
+		return nil, authorityError("SIGNATURE")
+	}
+	dependencies.connectPool = func(context.Context, string) (*pgxpool.Pool, error) {
+		poolCalls++
+		return nil, errors.New("database connection must not be attempted")
+	}
+	dependencies.newOrchestrator = func(*pgxpool.Pool, string) *goMatchOrchestrator {
+		orchestratorCalls++
+		return nil
+	}
+
+	_, err := newLiveServerWithDependencies(context.Background(), "postgres://must-not-connect", dependencies)
+	if err == nil || err.Error() != "live Go backend authority unavailable" {
+		t.Fatalf("expected stable public-safe authority failure, got %v", err)
+	}
+	if poolCalls != 0 || orchestratorCalls != 0 {
+		t.Fatalf("authority must fail before mutable dependencies, pool=%d orchestrator=%d", poolCalls, orchestratorCalls)
+	}
+}
+
+func TestHandlerFromEnvRejectsAuthorityBeforeReturningHandler(t *testing.T) {
+	t.Setenv("COWARDS_GO_BACKEND_DATA_MODE", "live")
+	t.Setenv("DATABASE_URL", "postgres://must-not-connect")
+	dependencies := defaultLiveServerDependencies()
+	dependencies.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) {
+		return nil, authorityError("ROLLBACK")
+	}
+	dependencies.connectPool = func(context.Context, string) (*pgxpool.Pool, error) {
+		t.Fatal("handlerFromEnv reached the database after invalid authority")
+		return nil, nil
+	}
+
+	handler, closeHandler, err := handlerFromEnvWithDependencies(context.Background(), dependencies)
+	if handler != nil {
+		t.Fatal("invalid authority returned a live handler")
+	}
+	closeHandler()
+	if err == nil || err.Error() != "live Go backend authority unavailable" {
+		t.Fatalf("expected stable public-safe authority failure, got %v", err)
+	}
+}
+
+func TestRunGoBackendDoesNotListenWhenAuthorityInvalid(t *testing.T) {
+	t.Setenv("COWARDS_GO_BACKEND_DATA_MODE", "live")
+	t.Setenv("DATABASE_URL", "postgres://must-not-connect")
+	dependencies := defaultLiveServerDependencies()
+	dependencies.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) {
+		return nil, authorityError("GENERATION_FORK")
+	}
+	listenCalls := 0
+	err := runGoBackendWithDependencies(context.Background(), dependencies, func(string, http.Handler) error {
+		listenCalls++
+		return nil
+	})
+	if err == nil || err.Error() != "live Go backend authority unavailable" {
+		t.Fatalf("expected stable public-safe authority failure, got %v", err)
+	}
+	if listenCalls != 0 {
+		t.Fatalf("listener started %d time(s) after authority failure", listenCalls)
+	}
+}
+
+func TestRunGoBackendFixtureModeDoesNotLoadProductionAuthority(t *testing.T) {
+	t.Setenv("COWARDS_GO_BACKEND_DATA_MODE", "fixtures")
+	dependencies := defaultLiveServerDependencies()
+	dependencies.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) {
+		t.Fatal("fixture mode attempted to load production authority")
+		return nil, nil
+	}
+	listenCalls := 0
+	err := runGoBackendWithDependencies(context.Background(), dependencies, func(_ string, handler http.Handler) error {
+		listenCalls++
+		if handler == nil {
+			t.Fatal("fixture mode returned a nil handler")
+		}
+		return http.ErrServerClosed
+	})
+	if err != nil {
+		t.Fatalf("fixture backend failed: %v", err)
+	}
+	if listenCalls != 1 {
+		t.Fatalf("expected one fixture listener, got %d", listenCalls)
+	}
+}
 
 func TestEndpointFixturesMatchCanonicalJSON(t *testing.T) {
 	tests := []struct {
