@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
-stopped_at: Completed 256-13-PLAN.md
-last_updated: "2026-07-13T09:06:32.630Z"
+stopped_at: Completed 256-14-PLAN.md
+last_updated: "2026-07-13T09:56:19.738Z"
 last_activity: 2026-07-13
-last_activity_desc: Plan 256-10 gave Go exact tuple and authority parity, evidence-derived readiness, and fail-closed live startup
+last_activity_desc: Plan 256-14 installed version-aware drift guards, preserved the exact audit baseline, and passed the complete Phase-256 gate
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 19
-  completed_plans: 18
-  percent: 0
+  completed_plans: 19
+  percent: 17
 ---
 
 # State: Coward's Game
@@ -28,12 +28,12 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 ## Current Position
 
-Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
-Plan: 15 of 19
-Status: Ready to execute
-Last activity: 2026-07-13 — Plan 256-10 gave Go exact tuple and authority parity, evidence-derived readiness, and fail-closed live startup
+Phase: 256 (Counted Safety and Canonical Authority) — COMPLETE
+Plan: 19 of 19
+Status: Complete; ready for Phase 257 planning
+Last activity: 2026-07-13 — Plan 256-14 installed version-aware drift guards, preserved the exact audit baseline, and passed the complete Phase-256 gate
 
-Progress: [████████░░] 79%
+Progress: [██████████] 100%
 
 ## Durable Decisions
 
@@ -61,9 +61,9 @@ Progress: [████████░░] 79%
 
 **Resume file:** None
 
-Last session: 2026-07-13T09:06:32.617Z
-Stopped at: Completed 256-13-PLAN.md
-Next command: `$gsd-execute-phase 256`
+Last session: 2026-07-13T09:56:01.434Z
+Stopped at: Completed 256-14-PLAN.md
+Next command: `$gsd-plan-phase 257`
 
 ## Performance Metrics
 
@@ -85,8 +85,14 @@ Next command: `$gsd-execute-phase 256`
 | Phase 256 P09 | 34min | 2 tasks | 9 files |
 | Phase 256 P10 | 17min | 3 tasks | 10 files |
 | Phase 256 P13 | 46min | 2 tasks | 3 files |
+| Phase 256 P14 | 37min | 3 tasks | 20 files |
 
 ## Decisions
+
+- [Phase 256]: Current v1.37 proof is evaluated from current source, while v1.36 proof executes only from the pinned annotated tag and archived blobs. — Current monitor edits cannot reinterpret or regenerate immutable history.
+- [Phase 256]: The seven-probe compatibility baseline remains six reproduced defects plus successful-push history `RIGHT`. — Phases 257-259 own later changes and any semantic delta requires explicit approval.
+- [Phase 256]: Static runtime and broker support labels never grant counted execution. — Counted eligibility requires exact current executable evidence for every entrant.
+- [Phase 256]: Current Chronicles copy the exact locked MatchSet publication/install receipt and source set. — Runtime response identity is comparison input and cannot authorize persistence.
 
 - [Phase 256]: Go independently verifies the canonical tuple and signed runtime authority, then durably anchors generation and hash before any live startup side effect. — Provider proof cannot promote readiness, fixture trust cannot promote production, and startup failures remain redacted.
 - [Phase 256]: Runtime-service loads the signed mounted authority at acceptance, immediately before invocation, and after execution; request references never become authority. — Exact tuple, bundle, generation, lane, decision, certificate, revocation, supersession, and disable drift fails closed.

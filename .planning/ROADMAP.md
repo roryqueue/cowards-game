@@ -14,7 +14,7 @@ v1.37 establishes the smallest complete trust substrate needed before serious co
 
 ## Phases
 
-- [ ] **Phase 256: Counted Safety and Canonical Authority** - Fail closed on unproved lanes and establish one atomic compatibility and ownership authority.
+- [x] **Phase 256: Counted Safety and Canonical Authority** - Fail closed on unproved lanes and establish one atomic compatibility and ownership authority. (completed 2026-07-13)
 - [ ] **Phase 257: Canonical Transition Kernel and v1.4 Semantic Integrity** - Make one validated kernel authoritative and close every confirmed rules-lifecycle defect without changing valid v1.4 behavior.
 - [ ] **Phase 258: Canonical JSON, Failure Semantics, and Artifact Identity** - Define a bounded language-neutral ABI with exact identity and atomic three-way failure behavior.
 - [ ] **Phase 259: Executable Four-Language and Chronicle Conformance** - Prove full-trace parity through real adapters and version-strict, reconstruction-equivalent Chronicles.
@@ -35,7 +35,7 @@ v1.37 establishes the smallest complete trust substrate needed before serious co
   3. Operators can classify affected historical results, invalidate and recompute derived standings when needed, while the original Match evidence and v1.4 interpretation remain immutable.
   4. Public/default safety surfaces expose only safe classifications and evidence identifiers, and structural monitors reject duplicate authorities and stale execution entry points.
 
-**Plans:** 18/19 plans executed
+**Plans:** 19/19 plans complete
 
 Plans:
 **Wave 1**
@@ -85,7 +85,7 @@ Plans:
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
-- [ ] 256-14-PLAN.md — Install current and version-aware historical drift guards, persist the unchanged audit baseline, and run the full phase gate.
+- [x] 256-14-PLAN.md — Install current and version-aware historical drift guards, persist the unchanged audit baseline, and run the full phase gate.
 
 ### Phase 257: Canonical Transition Kernel and v1.4 Semantic Integrity
 
@@ -181,7 +181,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 256. Counted Safety and Canonical Authority | 18/19 | In Progress|  |
+| 256. Counted Safety and Canonical Authority | 19/19 | Complete   | 2026-07-13 |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 0/TBD | Not started | - |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 0/TBD | Not started | - |
 | 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |
