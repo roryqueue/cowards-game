@@ -766,5 +766,86 @@ describePostgres(
         await rm(directory, { recursive: true, force: true })
       }
     })
+
+    it("reconciles a durable install after database receipt failure and serializes concurrent installers", async () => {
+      const directory = await mkdtemp(path.join(tmpdir(), "cowards-authority-"))
+      const targetPath = path.join(directory, "authority.json")
+      const prepared = await prepareInstallFixture()
+      let rejectedReceipt = false
+      const receiptFailingPool = {
+        async connect() {
+          const client = await pool.connect()
+          return {
+            async query(sql: string, values?: readonly unknown[]) {
+              if (
+                !rejectedReceipt &&
+                /insert into runtime_evidence_authority_publication_events/iu.test(
+                  sql,
+                ) &&
+                values?.[2] === "installed"
+              ) {
+                rejectedReceipt = true
+                throw new Error("receipt database unavailable")
+              }
+              return client.query(sql, values ? [...values] : [])
+            },
+            release: () => client.release(),
+          }
+        },
+      } as unknown as Pool
+      try {
+        await expect(
+          installRuntimeEvidenceAuthorityPublication(
+            receiptFailingPool,
+            installInput(
+              prepared.publicationId,
+              targetPath,
+              "install:receipt-failure",
+            ),
+          ),
+        ).rejects.toThrow(/receipt reconciliation/iu)
+        expect(await readFile(targetPath)).toEqual(
+          Buffer.from(prepared.envelopeBytes),
+        )
+        const retry = await installRuntimeEvidenceAuthorityPublication(
+          pool,
+          installInput(
+            prepared.publicationId,
+            targetPath,
+            "install:receipt-retry",
+          ),
+        )
+        expect(retry.reconciled).toBe(true)
+
+        await rm(targetPath)
+        const [left, right] = await Promise.all([
+          installRuntimeEvidenceAuthorityPublication(
+            pool,
+            installInput(
+              prepared.publicationId,
+              targetPath,
+              "install:concurrent:left",
+            ),
+          ),
+          installRuntimeEvidenceAuthorityPublication(
+            pool,
+            installInput(
+              prepared.publicationId,
+              targetPath,
+              "install:concurrent:right",
+            ),
+          ),
+        ])
+        expect([left.reconciled, right.reconciled].sort()).toEqual([
+          false,
+          true,
+        ])
+        expect(await readFile(targetPath)).toEqual(
+          Buffer.from(prepared.envelopeBytes),
+        )
+      } finally {
+        await rm(directory, { recursive: true, force: true })
+      }
+    })
   },
 )

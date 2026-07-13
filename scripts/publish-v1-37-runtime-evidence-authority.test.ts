@@ -1,12 +1,9 @@
 import { Buffer } from "node:buffer"
-import {
-  createHash,
-  generateKeyPairSync,
-  type KeyObject,
-} from "node:crypto"
+import { createHash, generateKeyPairSync, type KeyObject } from "node:crypto"
 import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+// eslint-disable-next-line no-restricted-imports -- Root-level script tests use source entrypoints.
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
   RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,

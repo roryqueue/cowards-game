@@ -48,6 +48,7 @@
     "v1.36:competition-boundaries:check": "pnpm exec tsx scripts/evaluate-v1-36-competition-boundaries.ts --check",
     "v1.36:final-proof": "pnpm exec tsx scripts/evaluate-v1-36-final-proof.ts --write",
     "v1.36:final-proof:check": "pnpm exec tsx scripts/evaluate-v1-36-final-proof.ts --check",
+    "v1.37:runtime-authority:publish": "pnpm exec tsx scripts/publish-v1-37-runtime-evidence-authority.ts",
     "wasm-wasi:beta-evaluate": "pnpm exec tsx scripts/evaluate-v1-23-wasm-wasi-beta.ts",
     "wasm-wasi:beta-evaluate:check": "pnpm exec tsx scripts/evaluate-v1-23-wasm-wasi-beta.ts --check",
     "runtime-abuse:evaluate": "pnpm exec tsx scripts/evaluate-v1-24-runtime-abuse-lab.ts",

@@ -2,9 +2,12 @@ import { Buffer } from "node:buffer"
 import {
   createHash,
   createPublicKey,
+  randomUUID,
   verify as verifySignature,
   type KeyObject,
 } from "node:crypto"
+import { open as openFile, readFile, rename, unlink } from "node:fs/promises"
+import path from "node:path"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
   RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
@@ -12,6 +15,7 @@ import {
   buildRuntimeEvidenceAuthorityEnvelope,
   encodeRuntimeEvidenceAuthorityPayload,
   hashRuntimeEvidenceAuthorityPayload,
+  inspectRuntimeEvidenceAuthorityBundle,
   type RuntimeEvidenceAuthorityPayload,
 } from "@cowards/spec"
 import type { Pool, PoolClient, QueryResultRow } from "pg"
@@ -1335,4 +1339,427 @@ export const prepareRuntimeEvidenceAuthorityPublication = async (
       sourceIds: snapshot.sourceIds,
     })
   })
+}
+
+export interface RuntimeEvidenceAuthorityInstallFileHandle {
+  writeFile(bytes: Uint8Array): Promise<unknown>
+  sync(): Promise<unknown>
+  close(): Promise<unknown>
+}
+
+export interface RuntimeEvidenceAuthorityInstallFileSystem {
+  readFile(filePath: string): Promise<Uint8Array>
+  open(
+    filePath: string,
+    flags: "wx" | "r",
+    mode?: number,
+  ): Promise<RuntimeEvidenceAuthorityInstallFileHandle>
+  rename(fromPath: string, toPath: string): Promise<unknown>
+  unlink(filePath: string): Promise<unknown>
+}
+
+const nodeInstallFileSystem: RuntimeEvidenceAuthorityInstallFileSystem = {
+  readFile,
+  open: (filePath, flags, mode) => openFile(filePath, flags, mode),
+  rename,
+  unlink,
+}
+
+export interface InstallRuntimeEvidenceAuthorityPublicationInput {
+  publicationId: string
+  targetPath: string
+  attemptId?: string
+  evaluationInstant: string
+  expectedTrustDomain: string
+  signerKeyId: string
+  publicKeyPem: string
+  fileSystem?: RuntimeEvidenceAuthorityInstallFileSystem
+}
+
+export interface InstalledRuntimeEvidenceAuthorityPublication {
+  publicationId: string
+  generation: string
+  envelopeSha256: string
+  reconciled: boolean
+}
+
+interface PublicationInstallRow extends QueryResultRow {
+  id: string
+  generation: string | number
+  semantic_tuple_manifest_hash: string
+  source_manifest_hash: string
+  payload_sha256: string
+  envelope_sha256: string
+  signer_key_id: string
+  trust_domain: string
+  envelope_bytes: Buffer
+  attestation_ids: readonly string[]
+  certificate_ids: readonly string[]
+  revocation_ids: readonly string[]
+  supersession_ids: readonly string[]
+  lane_control_ids: readonly string[]
+}
+
+const readIfPresent = async (
+  fileSystem: RuntimeEvidenceAuthorityInstallFileSystem,
+  filePath: string,
+): Promise<Uint8Array | undefined> => {
+  try {
+    return new Uint8Array(await fileSystem.readFile(filePath))
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "ENOENT"
+    ) {
+      return undefined
+    }
+    throw error
+  }
+}
+
+const bytesEqual = (left: Uint8Array, right: Uint8Array): boolean =>
+  left.byteLength === right.byteLength && Buffer.from(left).equals(right)
+
+const eventId = (
+  publicationId: string,
+  eventKind: "installed" | "failed" | "uncertain",
+  attemptId: string,
+): string =>
+  `${publicationId}:${eventKind}:${createHash("sha256")
+    .update(attemptId)
+    .digest("hex")}`
+
+const normalizeJson = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(normalizeJson)
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entry]) => [key, normalizeJson(entry)]),
+    )
+  }
+  return value
+}
+
+const appendInstallEvent = async (
+  client: PoolClient,
+  publication: PublicationInstallRow,
+  eventKind: "installed" | "failed" | "uncertain",
+  attemptId: string,
+  reasonCode: string | null,
+  reconciled: boolean,
+): Promise<void> => {
+  const receipt = {
+    schemaVersion:
+      "v1.37-runtime-evidence-authority-install-receipt-v1" as const,
+    generation: String(publication.generation),
+    payloadSha256: publication.payload_sha256,
+    envelopeSha256: publication.envelope_sha256,
+    sourceManifestHash: publication.source_manifest_hash,
+    sourceIds: {
+      attestationIds: publication.attestation_ids,
+      certificateIds: publication.certificate_ids,
+      revocationIds: publication.revocation_ids,
+      supersessionIds: publication.supersession_ids,
+      laneControlIds: publication.lane_control_ids,
+    },
+    reconciled,
+  }
+  await client.query(
+    `insert into runtime_evidence_authority_publication_events
+      (id, publication_id, event_kind, attempt_id, envelope_sha256,
+       reason_code, receipt)
+     values ($1,$2,$3,$4,$5,$6,$7)
+     on conflict (publication_id, event_kind, attempt_id) do nothing`,
+    [
+      eventId(publication.id, eventKind, attemptId),
+      publication.id,
+      eventKind,
+      attemptId,
+      publication.envelope_sha256,
+      reasonCode,
+      JSON.stringify(receipt),
+    ],
+  )
+  const existing = await client.query<{
+    envelope_sha256: string
+    reason_code: string | null
+    receipt: unknown
+  }>(
+    `select envelope_sha256, reason_code, receipt
+       from runtime_evidence_authority_publication_events
+      where publication_id = $1 and event_kind = $2 and attempt_id = $3`,
+    [publication.id, eventKind, attemptId],
+  )
+  if (
+    existing.rows[0]?.envelope_sha256 !== publication.envelope_sha256 ||
+    existing.rows[0]?.reason_code !== reasonCode ||
+    JSON.stringify(normalizeJson(existing.rows[0]?.receipt)) !==
+      JSON.stringify(normalizeJson(receipt))
+  ) {
+    fail("INSTALL_EVENT_CONFLICT", "Install event collision is not exact.")
+  }
+}
+
+const verifyInstallPublication = (
+  publication: PublicationInstallRow,
+  input: InstallRuntimeEvidenceAuthorityPublicationInput,
+): void => {
+  if (
+    publication.signer_key_id !== input.signerKeyId ||
+    publication.trust_domain !== input.expectedTrustDomain
+  ) {
+    fail(
+      "INSTALL_IDENTITY",
+      "Publication signer identity does not match install trust.",
+    )
+  }
+  let publicKey: KeyObject
+  try {
+    publicKey = createPublicKey(input.publicKeyPem)
+  } catch {
+    return fail("INSTALL_KEY", "Configured authority public key is invalid.")
+  }
+  const inspected = inspectRuntimeEvidenceAuthorityBundle(
+    publication.envelope_bytes,
+    {
+      expectedTrustDomain: input.expectedTrustDomain,
+      evaluationInstant: input.evaluationInstant,
+      trustedKeyIds: [input.signerKeyId],
+      verifySignature: ({ payloadBytes, signature }) =>
+        verifySignature(null, payloadBytes, publicKey, signature),
+    },
+  )
+  if (
+    inspected.envelope.keyId !== publication.signer_key_id ||
+    inspected.payload.registryGeneration !== String(publication.generation) ||
+    inspected.payload.semanticTupleManifestHash !==
+      publication.semantic_tuple_manifest_hash ||
+    inspected.payloadSha256 !== publication.payload_sha256 ||
+    hashPublicationBytes(
+      PUBLICATION_ENVELOPE_DOMAIN,
+      publication.envelope_bytes,
+    ) !== publication.envelope_sha256
+  ) {
+    fail(
+      "INSTALL_PROVENANCE",
+      "Publication bytes do not match persisted provenance.",
+    )
+  }
+}
+
+const bestEffortInstallEvent = async (
+  client: PoolClient,
+  publication: PublicationInstallRow,
+  eventKind: "failed" | "uncertain",
+  attemptId: string,
+  reasonCode: string,
+): Promise<void> => {
+  try {
+    await appendInstallEvent(
+      client,
+      publication,
+      eventKind,
+      attemptId,
+      reasonCode,
+      false,
+    )
+  } catch {
+    // A failed event is supplementary evidence. Never mask the install failure.
+  }
+}
+
+export const installRuntimeEvidenceAuthorityPublication = async (
+  pool: Pool,
+  input: InstallRuntimeEvidenceAuthorityPublicationInput,
+): Promise<Readonly<InstalledRuntimeEvidenceAuthorityPublication>> => {
+  const publicationId = assertString(input.publicationId, "publicationId")
+  const targetPath = assertString(input.targetPath, "targetPath")
+  const attemptId = assertString(
+    input.attemptId ?? `install:${randomUUID()}`,
+    "attemptId",
+  )
+  assertInstant(input.evaluationInstant, "evaluationInstant")
+  assertString(input.expectedTrustDomain, "expectedTrustDomain")
+  assertString(input.signerKeyId, "signerKeyId")
+  const fileSystem = input.fileSystem ?? nodeInstallFileSystem
+  const client = await pool.connect()
+  const lockIdentity = createHash("sha256")
+    .update("cowards-game:runtime-evidence-authority-install-lock:v1\0")
+    .update(targetPath)
+    .digest("hex")
+  let locked = false
+  try {
+    await client.query("select pg_advisory_lock(hashtext($1))", [lockIdentity])
+    locked = true
+    const publicationResult = await client.query<PublicationInstallRow>(
+      `select id, generation, semantic_tuple_manifest_hash, source_manifest_hash,
+              payload_sha256, envelope_sha256, signer_key_id, trust_domain,
+              envelope_bytes, attestation_ids, certificate_ids, revocation_ids,
+              supersession_ids, lane_control_ids
+         from runtime_evidence_authority_publications where id = $1`,
+      [publicationId],
+    )
+    const publication = publicationResult.rows[0]
+    if (!publication)
+      fail("UNKNOWN_PUBLICATION", "Authority publication does not exist.")
+    verifyInstallPublication(publication, input)
+    const expectedBytes = new Uint8Array(publication.envelope_bytes)
+    const existingBytes = await readIfPresent(fileSystem, targetPath)
+    if (existingBytes && bytesEqual(existingBytes, expectedBytes)) {
+      let directoryHandle: RuntimeEvidenceAuthorityInstallFileHandle | undefined
+      try {
+        directoryHandle = await fileSystem.open(path.dirname(targetPath), "r")
+        await directoryHandle.sync()
+        await directoryHandle.close()
+        directoryHandle = undefined
+      } catch {
+        try {
+          await directoryHandle?.close()
+        } catch {
+          // Preserve the primary durability uncertainty.
+        }
+        await bestEffortInstallEvent(
+          client,
+          publication,
+          "uncertain",
+          attemptId,
+          "directory-fsync-uncertain",
+        )
+        return fail(
+          "INSTALL_UNCERTAIN",
+          "Authority installation remains uncertain until reconciliation.",
+        )
+      }
+      try {
+        await appendInstallEvent(
+          client,
+          publication,
+          "installed",
+          attemptId,
+          null,
+          true,
+        )
+      } catch {
+        return fail(
+          "INSTALL_RECEIPT_FAILURE",
+          "Durable authority requires receipt reconciliation.",
+        )
+      }
+      return Object.freeze({
+        publicationId,
+        generation: String(publication.generation),
+        envelopeSha256: publication.envelope_sha256,
+        reconciled: true,
+      })
+    }
+
+    const temporaryPath = path.join(
+      path.dirname(targetPath),
+      `.${path.basename(targetPath)}.tmp-${process.pid}-${randomUUID()}`,
+    )
+    let temporaryHandle: RuntimeEvidenceAuthorityInstallFileHandle | undefined
+    let renamed = false
+    try {
+      temporaryHandle = await fileSystem.open(temporaryPath, "wx", 0o600)
+      await temporaryHandle.writeFile(expectedBytes)
+      await temporaryHandle.sync()
+      await temporaryHandle.close()
+      temporaryHandle = undefined
+      await fileSystem.rename(temporaryPath, targetPath)
+      renamed = true
+    } catch {
+      try {
+        await temporaryHandle?.close()
+      } catch {
+        // Preserve the primary pre-rename failure.
+      }
+      if (!renamed) {
+        try {
+          await fileSystem.unlink(temporaryPath)
+        } catch {
+          // The temp file may not have been created or may already be gone.
+        }
+        await bestEffortInstallEvent(
+          client,
+          publication,
+          "failed",
+          attemptId,
+          "pre-rename-failure",
+        )
+        return fail(
+          "INSTALL_PRE_RENAME_FAILURE",
+          "Authority installation failed before replacement.",
+        )
+      }
+      throw new Error("unreachable post-rename failure")
+    }
+
+    let directoryHandle: RuntimeEvidenceAuthorityInstallFileHandle | undefined
+    try {
+      directoryHandle = await fileSystem.open(path.dirname(targetPath), "r")
+      await directoryHandle.sync()
+      await directoryHandle.close()
+      directoryHandle = undefined
+    } catch {
+      try {
+        await directoryHandle?.close()
+      } catch {
+        // Preserve the primary durability uncertainty.
+      }
+      await bestEffortInstallEvent(
+        client,
+        publication,
+        "uncertain",
+        attemptId,
+        "directory-fsync-uncertain",
+      )
+      return fail(
+        "INSTALL_UNCERTAIN",
+        "Authority installation remains uncertain until reconciliation.",
+      )
+    }
+
+    try {
+      await appendInstallEvent(
+        client,
+        publication,
+        "installed",
+        attemptId,
+        null,
+        false,
+      )
+    } catch {
+      await bestEffortInstallEvent(
+        client,
+        publication,
+        "failed",
+        attemptId,
+        "install-receipt-failed",
+      )
+      return fail(
+        "INSTALL_RECEIPT_FAILURE",
+        "Durable authority requires receipt reconciliation.",
+      )
+    }
+    return Object.freeze({
+      publicationId,
+      generation: String(publication.generation),
+      envelopeSha256: publication.envelope_sha256,
+      reconciled: false,
+    })
+  } finally {
+    if (locked) {
+      try {
+        await client.query("select pg_advisory_unlock(hashtext($1))", [
+          lockIdentity,
+        ])
+      } catch {
+        // Releasing the connection also releases a session advisory lock.
+      }
+    }
+    client.release()
+  }
 }
