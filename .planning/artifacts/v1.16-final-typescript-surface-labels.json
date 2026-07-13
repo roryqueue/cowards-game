@@ -5,7 +5,7 @@
   "generatedAt": "2026-05-24",
   "generatedBy": "scripts/generate-typescript-surface-labels.ts",
   "sourceInventoryPath": ".planning/artifacts/v1.16-typescript-backend-inventory.json",
-  "sourceInventorySurfaceCount": 240,
+  "sourceInventorySurfaceCount": 243,
   "globalPolicies": {
     "normalTypeScriptBackendAllowed": false,
     "publicOutputPrivacyRequired": true,
@@ -21,8 +21,8 @@
     "quarantined": 1,
     "rollback-only": 5,
     "runtime-adapter": 19,
-    "runtime-service": 7,
-    "test-only": 76
+    "runtime-service": 9,
+    "test-only": 77
   },
   "capabilityGroups": {
     "fixture": 6,
@@ -33,8 +33,8 @@
     "parity": 18,
     "rollback": 6,
     "runtime-adapter": 19,
-    "runtime-service": 6,
-    "test-support": 52,
+    "runtime-service": 8,
+    "test-support": 53,
     "Workshop": 47
   },
   "publicOutputForbiddenMarkers": [
@@ -1350,6 +1350,37 @@
         "taxonomyRole": "deferred",
         "surfaceLabel": "deferred-account-private-source",
         "capabilityGroup": "Workshop",
+        "selectedNormal": false,
+        "noPublicFallback": true
+      }
+    },
+    {
+      "id": "packages-persistence-src-authority-installed-head-test",
+      "path": "packages/persistence/src/authority-installed-head.test.ts",
+      "kind": "persistence-module",
+      "taxonomyRole": "test-only",
+      "surfaceLabel": "test-only",
+      "capabilityGroup": "test-support",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic. Phase 107 final label: Tests cannot serve product runtime traffic.",
+      "risk": "test or fixture path exposed to product runtime; Tests cannot serve product runtime traffic.",
+      "privacyClass": "test-only",
+      "gate": "Vitest/Playwright-only test infrastructure gate",
+      "futureMigration": "Keep only while focused monitors and tests require it.",
+      "monitorStatus": "phase-107-monitor-enforced",
+      "selectedNormal": false,
+      "selectedNormalJustification": "Tests cannot serve product runtime traffic.",
+      "publicOutputPrivacy": "not-public-output",
+      "noPublicFallback": true,
+      "normalBackendAuthority": false,
+      "routeMethods": [],
+      "routeFamily": "persistence",
+      "sourceInventoryRole": "test-only",
+      "publicOutputExample": {
+        "path": "packages/persistence/src/authority-installed-head.test.ts",
+        "taxonomyRole": "test-only",
+        "surfaceLabel": "test-only",
+        "capabilityGroup": "test-support",
         "selectedNormal": false,
         "noPublicFallback": true
       }
@@ -3680,6 +3711,37 @@
       }
     },
     {
+      "id": "apps-runtime-service-src-deployment-lane-registry",
+      "path": "apps/runtime-service/src/deployment-lane-registry.ts",
+      "kind": "runtime-service-module",
+      "taxonomyRole": "runtime-service",
+      "surfaceLabel": "runtime-service-execution-boundary",
+      "capabilityGroup": "runtime-service",
+      "owner": "typescript_runtime_service",
+      "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary. Phase 107 final label: Allowed selected TypeScript role is isolated runtime execution service with no backend authority.",
+      "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics; Allowed selected TypeScript role is isolated runtime execution service with no backend authority.",
+      "privacyClass": "internal-runtime-redacted",
+      "gate": "runtime-execution-service-v1.15 schema, DB-free boundary, and no backend authority",
+      "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker.",
+      "monitorStatus": "phase-107-monitor-enforced",
+      "selectedNormal": true,
+      "selectedNormalJustification": "Allowed selected TypeScript role is isolated runtime execution service with no backend authority.",
+      "publicOutputPrivacy": "not-public-output",
+      "noPublicFallback": true,
+      "normalBackendAuthority": false,
+      "routeMethods": [],
+      "routeFamily": "runtime-service",
+      "sourceInventoryRole": "runtime-service",
+      "publicOutputExample": {
+        "path": "apps/runtime-service/src/deployment-lane-registry.ts",
+        "taxonomyRole": "runtime-service",
+        "surfaceLabel": "runtime-service-execution-boundary",
+        "capabilityGroup": "runtime-service",
+        "selectedNormal": true,
+        "noPublicFallback": true
+      }
+    },
+    {
       "id": "apps-runtime-service-src-execute-match-test",
       "path": "apps/runtime-service/src/execute-match.test.ts",
       "kind": "runtime-service-module",
@@ -3796,6 +3858,37 @@
       "sourceInventoryRole": "runtime-service",
       "publicOutputExample": {
         "path": "apps/runtime-service/src/index.ts",
+        "taxonomyRole": "runtime-service",
+        "surfaceLabel": "runtime-service-execution-boundary",
+        "capabilityGroup": "runtime-service",
+        "selectedNormal": true,
+        "noPublicFallback": true
+      }
+    },
+    {
+      "id": "apps-runtime-service-src-production-runtime-config",
+      "path": "apps/runtime-service/src/production-runtime-config.ts",
+      "kind": "runtime-service-module",
+      "taxonomyRole": "runtime-service",
+      "surfaceLabel": "runtime-service-execution-boundary",
+      "capabilityGroup": "runtime-service",
+      "owner": "typescript_runtime_service",
+      "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary. Phase 107 final label: Allowed selected TypeScript role is isolated runtime execution service with no backend authority.",
+      "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics; Allowed selected TypeScript role is isolated runtime execution service with no backend authority.",
+      "privacyClass": "internal-runtime-redacted",
+      "gate": "runtime-execution-service-v1.15 schema, DB-free boundary, and no backend authority",
+      "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker.",
+      "monitorStatus": "phase-107-monitor-enforced",
+      "selectedNormal": true,
+      "selectedNormalJustification": "Allowed selected TypeScript role is isolated runtime execution service with no backend authority.",
+      "publicOutputPrivacy": "not-public-output",
+      "noPublicFallback": true,
+      "normalBackendAuthority": false,
+      "routeMethods": [],
+      "routeFamily": "runtime-service",
+      "sourceInventoryRole": "runtime-service",
+      "publicOutputExample": {
+        "path": "apps/runtime-service/src/production-runtime-config.ts",
         "taxonomyRole": "runtime-service",
         "surfaceLabel": "runtime-service-execution-boundary",
         "capabilityGroup": "runtime-service",
