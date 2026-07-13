@@ -100,7 +100,67 @@ Plans:
   4. Executable compatibility fixtures preserve same-direction collision, successful-push reversal history, blocked MOVE/PUSH, terminal timing, Backstab behavior, and every other audited valid v1.4 ruling.
   5. If any clarification or refactor would change a valid state, Action legality, event order, outcome, terminal timing/reason, or Strategy observation, work stops for an explicit compatibility ruling before expectations change.
 
-**Plans:** TBD
+**Plans:** 22 plans across 12 waves
+
+**Wave 1 — permanent RED and compatibility evidence**
+
+- [ ] 257-01-PLAN.md — Freeze pre-refactor authority evidence and one-kernel RED contracts.
+- [ ] 257-02-PLAN.md — Freeze approved lifecycle and excess-order repair RED cases.
+- [ ] 257-03-PLAN.md — Capture the complete valid-v1.4 compatibility corpus and companion addendum.
+- [ ] 257-04-PLAN.md — Establish cross-boundary semantic-integrity RED vectors with precise failure markers.
+
+**Wave 2 — semantic contracts and reference ownership**
+
+- [ ] 257-05-PLAN.md — Implement bounded deterministic semantic validators and failure ownership.
+- [ ] 257-07-PLAN.md — Prepare an inactive semantic tuple/event/arena candidate without activating it.
+- [ ] 257-11-PLAN.md — Freeze the AST-aware executable-reference ownership inventory.
+
+**Wave 3 — immutable admission and candidate event coverage**
+
+- [ ] 257-06-PLAN.md — Deep-freeze constants and enforce semantic initial-state admission.
+- [ ] 257-12-PLAN.md — Generate candidate-mode event producer/consumer/validator coverage.
+
+**Wave 4 — one transition authority**
+
+- [ ] 257-08-PLAN.md — Implement the pure resumable kernel, effects-as-data, and sole Match driver.
+
+**Wave 5 — approved repairs and recorder migration**
+
+- [ ] 257-09-PLAN.md — Implement only the approved lifecycle and excess-order repairs.
+- [ ] 257-10-PLAN.md — Add the public recorder and migrate its assigned caller group.
+
+**Wave 6 — replay semantics and stale Activation callers**
+
+- [ ] 257-13-PLAN.md — Stage semantic replay validation/reconstruction with no scheduling authority.
+- [ ] 257-18-PLAN.md — Migrate exact contiguous-Activation callers and the permanent probe.
+
+**Wave 7 — replay fixtures and Go semantic candidate**
+
+- [ ] 257-14-PLAN.md — Migrate the bounded replay fixture/golden caller group.
+- [ ] 257-17-PLAN.md — Stage candidate-tuple semantic validation and rollback parity in Go.
+
+**Wave 8 — runtime and TypeScript persistence candidates**
+
+- [ ] 257-15-PLAN.md — Stage the candidate runtime-service execution path.
+- [ ] 257-16-PLAN.md — Stage candidate-tuple TypeScript persistence admission and rollback.
+
+**Wave 9 — indivisible current activation**
+
+- [ ] 257-19-PLAN.md — Atomically activate tuple, contracts, artifacts, receipts, event coverage, callers, and retired definitions after the full compatibility gate.
+
+**Wave 10 — structural and audit convergence**
+
+- [ ] 257-20-PLAN.md — Replace known debt with structural negatives and persist the exact audit delta.
+
+**Wave 11 — browser realism and privacy**
+
+- [ ] 257-21-PLAN.md — Prove canonical board realism, terminal agreement, and public privacy in the root Playwright matrix.
+
+**Wave 12 — final evaluator and default boundary chain**
+
+- [ ] 257-22-PLAN.md — Persist deterministic Phase-257 proof and wire it into the serialized default boundary chain.
+
+**Cross-cutting constraints:** preserve every valid v1.4 state/event/observation unless D-09 through D-15 expressly approve the delta; keep current identity unchanged until the one Plan-19 activation commit; any unexpected compatibility delta stops for KERN-11 approval; Cycle-start Backstab removal and HOLD/END_ACTIVATION remain deferred.
 
 ### Phase 258: Canonical JSON, Failure Semantics, and Artifact Identity
 
