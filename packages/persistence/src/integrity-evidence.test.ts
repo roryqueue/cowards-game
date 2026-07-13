@@ -289,6 +289,12 @@ describePostgres("PostgreSQL integrity schema", () => {
   const strategyId = `integrity:strategy:${suffix}`
   const matchSetId = `integrity:matchset:${suffix}`
   const legacyMatchSetId = `integrity:legacy:${suffix}`
+  const lifecycleMatchSetId = `integrity:lifecycle:${suffix}`
+  const lifecycleEntrantId = `integrity:entrant:${suffix}`
+  const arenaId = `integrity:arena:${suffix}`
+  const matchId = `integrity:match:${suffix}`
+  const jobId = `integrity:job:${suffix}`
+  const chronicleId = `integrity:chronicle:${suffix}`
 
   beforeAll(async () => {
     pool = createDatabasePool({ connectionString: databaseUrl! })
@@ -311,17 +317,114 @@ describePostgres("PostgreSQL integrity schema", () => {
       )
     }
     await pool.query(
-      "insert into match_sets (id, matrix) values ($1, '[]'::jsonb), ($2, '[]'::jsonb)",
-      [matchSetId, legacyMatchSetId],
+      "insert into match_sets (id, matrix) values ($1, '[]'::jsonb), ($2, '[]'::jsonb), ($3, '[]'::jsonb)",
+      [matchSetId, legacyMatchSetId, lifecycleMatchSetId],
     )
   })
 
   afterAll(async () => {
-    await pool.query("delete from match_sets where id in ($1, $2)", [matchSetId, legacyMatchSetId])
+    await pool.query("delete from chronicles where id = $1", [chronicleId])
+    await pool.query("delete from match_jobs where id = $1", [jobId])
+    await pool.query("delete from matches where id = $1", [matchId])
+    await pool.query("delete from competition_entrants where id = $1", [lifecycleEntrantId])
+    await pool.query("delete from arena_variants where id = $1", [arenaId])
+    await pool.query("delete from match_sets where id in ($1, $2, $3)", [matchSetId, legacyMatchSetId, lifecycleMatchSetId])
     await pool.query("delete from strategy_revisions where strategy_id = $1", [strategyId])
     await pool.query("delete from strategies where id = $1", [strategyId])
     await pool.query("delete from users where id = $1", [userId])
     await pool.end()
+  })
+
+  it("PostgreSQL permits legal lifecycle updates while immutable identity remains protected", async () => {
+    await expect(
+      pool.query("update match_sets set status = 'running' where id = $1", [lifecycleMatchSetId]),
+    ).resolves.toMatchObject({ rowCount: 1 })
+
+    const identityHash = createHash("sha256").update(lifecycleMatchSetId).digest("hex")
+    await pool.query(
+      `update match_sets set
+         compatibility_tuple_id = $2,
+         compatibility_rules_version = $3,
+         compatibility_engine_version = $4,
+         compatibility_runtime_abi_version = $5,
+         compatibility_chronicle_version = $6,
+         compatibility_arena_catalog_version = $7,
+         compatibility_set_policy_version = $8,
+         authority_bundle_hash = $9,
+         authority_registry_generation = 'generation:lifecycle',
+         execution_evidence_set = '[]'::jsonb,
+         execution_evidence_set_hash = $10
+       where id = $1`,
+      [
+        lifecycleMatchSetId,
+        tupleRecord.tupleId,
+        tupleRecord.tuple.rules,
+        tupleRecord.tuple.engine,
+        tupleRecord.tuple.runtimeAbi,
+        tupleRecord.tuple.chronicle,
+        tupleRecord.tuple.arenaCatalog,
+        tupleRecord.tuple.setPolicy,
+        identityHash,
+        identityHash,
+      ],
+    )
+    await expect(
+      pool.query("update match_sets set status = 'complete' where id = $1", [lifecycleMatchSetId]),
+    ).resolves.toMatchObject({ rowCount: 1 })
+    await expect(
+      pool.query(
+        "update match_sets set authority_registry_generation = 'changed' where id = $1",
+        [lifecycleMatchSetId],
+      ),
+    ).rejects.toThrow(/immutable/iu)
+
+    await pool.query(
+      `insert into competition_entrants
+        (id, match_set_id, entrant_index, strategy_revision_id, owner_user_id,
+         owner_handle, display_label, source_hash, source_bytes, runtime,
+         engine_compatibility, snapshot)
+       values ($1, $2, 0, $3, $4, 'integrity', 'Before', 'source', 6,
+         '{}'::jsonb, '{}'::jsonb, '{}'::jsonb)`,
+      [lifecycleEntrantId, lifecycleMatchSetId, `revision:0:${suffix}`, userId],
+    )
+    await expect(
+      pool.query("update competition_entrants set display_label = 'After' where id = $1", [lifecycleEntrantId]),
+    ).resolves.toMatchObject({ rowCount: 1 })
+
+    await pool.query(
+      "insert into arena_variants (id, name, config) values ($1, 'Integrity', '{}'::jsonb)",
+      [arenaId],
+    )
+    await pool.query(
+      `insert into matches
+        (id, bottom_strategy_revision_id, top_strategy_revision_id,
+         arena_variant_id, seed, bottom_player_id, top_player_id)
+       values ($1, $2, $3, $4, 'seed', 'bottom', 'top')`,
+      [matchId, `revision:0:${suffix}`, `revision:1:${suffix}`, arenaId],
+    )
+    await pool.query(
+      "insert into match_jobs (id, match_id) values ($1, $2)",
+      [jobId, matchId],
+    )
+    await pool.query(
+      `insert into chronicles
+        (id, match_id, schema_version, hash, outcome, event_count,
+         snapshot_count, bottom_player_id, top_player_id,
+         bottom_strategy_revision_id, top_strategy_revision_id,
+         arena_variant_id, artifact)
+       values ($1, $2, 'chronicle-v1.4', 'hash', '{}'::jsonb, 0, 0,
+         'bottom', 'top', $3, $4, $5, '{}'::jsonb)`,
+      [chronicleId, matchId, `revision:0:${suffix}`, `revision:1:${suffix}`, arenaId],
+    )
+    await expect(
+      pool.query("update matches set status = 'running' where id = $1", [matchId]),
+    ).resolves.toMatchObject({ rowCount: 1 })
+    await expect(
+      pool.query("update match_jobs set attempts = attempts + 1 where id = $1", [jobId]),
+    ).resolves.toMatchObject({ rowCount: 1 })
+    await expect(
+      pool.query("update chronicles set event_count = event_count + 1 where id = $1", [chronicleId]),
+    ).resolves.toMatchObject({ rowCount: 1 })
   })
 
   it("PostgreSQL rejects direct certificates, forbidden mutation, and partial identity", async () => {

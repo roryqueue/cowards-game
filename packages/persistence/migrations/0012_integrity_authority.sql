@@ -441,10 +441,10 @@ alter table chronicles
   references match_set_execution_entrants(match_set_id, entrant_key)
   not valid;
 
-create or replace function prevent_integrity_identity_rewrite()
+create or replace function prevent_match_set_integrity_identity_rewrite()
 returns trigger language plpgsql as $$
 begin
-  if tg_table_name = 'match_sets' and (
+  if (
     old.compatibility_tuple_id is distinct from new.compatibility_tuple_id or
     old.compatibility_rules_version is distinct from new.compatibility_rules_version or
     old.compatibility_engine_version is distinct from new.compatibility_engine_version or
@@ -459,8 +459,14 @@ begin
   ) and old.compatibility_tuple_id is not null then
     raise exception 'persisted MatchSet integrity identity is immutable';
   end if;
+  return new;
+end;
+$$;
 
-  if tg_table_name in ('matches', 'match_jobs', 'chronicles') and (
+create or replace function prevent_ordered_execution_evidence_rewrite()
+returns trigger language plpgsql as $$
+begin
+  if (
     old.integrity_match_set_id is distinct from new.integrity_match_set_id or
     old.bottom_execution_entrant_key is distinct from new.bottom_execution_entrant_key or
     old.top_execution_entrant_key is distinct from new.top_execution_entrant_key or
@@ -470,9 +476,14 @@ begin
   ) and old.integrity_match_set_id is not null then
     raise exception 'persisted ordered execution evidence is immutable';
   end if;
+  return new;
+end;
+$$;
 
-  if tg_table_name = 'competition_entrants' and
-     old.execution_entrant_key is distinct from new.execution_entrant_key and
+create or replace function prevent_competition_entrant_evidence_rewrite()
+returns trigger language plpgsql as $$
+begin
+  if old.execution_entrant_key is distinct from new.execution_entrant_key and
      old.execution_entrant_key is not null then
     raise exception 'persisted competition entrant evidence link is immutable';
   end if;
@@ -482,20 +493,20 @@ $$;
 
 create trigger match_sets_integrity_identity_immutable
 before update on match_sets
-for each row execute function prevent_integrity_identity_rewrite();
+for each row execute function prevent_match_set_integrity_identity_rewrite();
 
 create trigger matches_execution_evidence_immutable
 before update on matches
-for each row execute function prevent_integrity_identity_rewrite();
+for each row execute function prevent_ordered_execution_evidence_rewrite();
 
 create trigger match_jobs_execution_evidence_immutable
 before update on match_jobs
-for each row execute function prevent_integrity_identity_rewrite();
+for each row execute function prevent_ordered_execution_evidence_rewrite();
 
 create trigger chronicles_execution_evidence_immutable
 before update on chronicles
-for each row execute function prevent_integrity_identity_rewrite();
+for each row execute function prevent_ordered_execution_evidence_rewrite();
 
 create trigger competition_entrants_execution_evidence_immutable
 before update on competition_entrants
-for each row execute function prevent_integrity_identity_rewrite();
+for each row execute function prevent_competition_entrant_evidence_rewrite();
