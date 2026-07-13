@@ -290,6 +290,66 @@ describe("candidate-only approved lifecycle repairs", () => {
     },
   )
 
+  it("ends immediately after a violation stones the final active Soldier", () => {
+    const seedMachine = createCandidateMatchMachine(baseInput)
+    const state: GameState = {
+      ...seedMachine.state,
+      soldiers: [
+        soldier({ id: "last-bottom" }),
+        soldier({
+          id: "last-top",
+          ownerPlayerId: "top",
+          position: { x: 9, y: 9 },
+          facing: "DOWN",
+        }),
+      ],
+    }
+    const completed = requireCompleted(
+      runCandidateActivationFromState({
+        state,
+        soldierId: "last-bottom",
+        runtime: {
+          selectActivations: () => ({
+            ok: true,
+            value: { activationOrders: [], strategyMemory: {} },
+          }),
+          runSoldierBrain: () => ({
+            ok: false,
+            violation: { type: "TIMEOUT", message: "fixture timeout" },
+          }),
+        },
+      }),
+    )
+
+    expect(completed.result.state).toMatchObject({
+      phase: "COMPLETE",
+      outcome: { type: "WIN", winnerPlayerId: "top" },
+    })
+    expect(
+      completed.recorderMaterial.events.map(({ type }) => type),
+    ).toEqual([
+      "ACTIVATION_STARTED",
+      "CYCLE_STARTED",
+      "AWARENESS_GRID_OBSERVED",
+      "RUNTIME_VIOLATION",
+      "SOLDIER_STONED",
+      "ACTIVATION_ENDED",
+      "MATCH_ENDED",
+    ])
+    expect(
+      completed.recorderMaterial.events.find(
+        ({ type }) => type === "ACTIVATION_ENDED",
+      )?.payload,
+    ).toEqual({ soldierId: "last-bottom", reason: "RUNTIME_VIOLATION" })
+    expect(
+      completed.recorderMaterial.boundaries.find(
+        ({ classification }) => classification === "player_violation",
+      ),
+    ).toMatchObject({
+      terminalStatus: { type: "WIN", winnerPlayerId: "top" },
+    })
+  })
+
   it("closes a no-Advance invalid move before evaluating the immediate outcome", () => {
     const seedMachine = createCandidateMatchMachine(baseInput)
     const state: GameState = {

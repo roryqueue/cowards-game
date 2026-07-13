@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import type { CanonicalCompatibilityTuple } from "@cowards/spec"
+import {
+  validateCanonicalTransition,
+  type CanonicalCompatibilityTuple,
+  type CanonicalKernelSemanticTransition,
+} from "@cowards/spec"
 import * as enginePublic from "../index.js"
 import { createFakeRuntime } from "../test/fake-runtime.js"
 import { createCandidateInitialGameState } from "./create-initial-state.js"
@@ -498,7 +502,14 @@ describe("Phase 257 canonical Match kernel contract", () => {
     expect(first).toEqual(second)
     expect(first.kind).toBe("completed")
     expect(first.transitions.length).toBeGreaterThan(0)
-    first.transitions.forEach(expectRecordContract)
+    first.transitions.forEach((transition) => {
+      expectRecordContract(transition)
+      expect(
+        validateCanonicalTransition(
+          transition as unknown as CanonicalKernelSemanticTransition,
+        ),
+      ).toMatchObject({ ok: true })
+    })
 
     const transitionEvents = first.transitions.flatMap(
       (transition) => transition.events,
@@ -555,5 +566,104 @@ describe("Phase 257 canonical Match kernel contract", () => {
       },
     })
     expect(result.unchangedState).toEqual((initial as { state: unknown }).state)
+  })
+
+  it("rolls back after multiple successful Soldier effects before a late host failure", () => {
+    if (candidateAuthority === undefined) return
+    let soldierCall = 0
+    const initial = candidateAuthority.createMachine(withoutRuntime())
+    const result = candidateAuthority.runMatch({
+      ...matchInput,
+      runtime: {
+        selectActivations: (input: {
+          activationCount: number
+          mySoldiers: readonly { id: string; status: string }[]
+          roundNumber: number
+        }) => ({
+          ok: true,
+          value: {
+            activationOrders: input.mySoldiers
+              .filter(({ status }) => status === "ACTIVE")
+              .slice(0, input.activationCount)
+              .map(({ id }) => ({ soldierId: id })),
+            strategyMemory: { observedRound: input.roundNumber },
+          },
+        }),
+        runSoldierBrain: () => {
+          soldierCall += 1
+          return soldierCall < 3
+            ? {
+                ok: true,
+                value: {
+                  action: { type: "TURN_TO_STONE" },
+                  soldierMemory: { completedCall: soldierCall },
+                },
+              }
+            : {
+                ok: false,
+                systemFailure: {
+                  code: "LATE_TEST_HOST_FAILURE",
+                  retryable: false,
+                },
+              }
+        },
+      },
+    })
+    expect(soldierCall).toBe(3)
+    expect(result).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        category: "RUNTIME_SYSTEM_FAILURE",
+        code: "LATE_TEST_HOST_FAILURE",
+      },
+      unchangedState: (initial as { state: unknown }).state,
+    })
+  })
+
+  it("separates typed admission rejection from bounded host invocation failure", () => {
+    if (candidateAuthority === undefined) return
+    const admission = candidateAuthority.runMatch({
+      ...withRuntime(),
+      arenaVariant: {
+        id: "invalid-admission",
+        name: "Invalid admission",
+        initialBounds: { minX: 0, maxX: 1, minY: 0, maxY: 1 },
+        terrainStones: [],
+      },
+    })
+    expect(admission).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      unchangedState: null,
+      failure: {
+        category: "CANONICAL_INTEGRITY_FAILURE",
+        code: "CANDIDATE_MATCH_ADMISSION_FAILED",
+      },
+    })
+
+    const initial = candidateAuthority.createMachine(withoutRuntime())
+    const hostFailure = candidateAuthority.runMatch({
+      ...matchInput,
+      runtime: {
+        selectActivations: () => {
+          throw new Error("private host diagnostic")
+        },
+        runSoldierBrain: () => {
+          throw new Error("private host diagnostic")
+        },
+      },
+    })
+    expect(hostFailure).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      unchangedState: (initial as { state: unknown }).state,
+      failure: {
+        category: "RUNTIME_SYSTEM_FAILURE",
+        code: "RUNTIME_INVOCATION_THROWN",
+      },
+    })
+    expect(JSON.stringify(hostFailure)).not.toContain("private host diagnostic")
   })
 })

@@ -388,4 +388,44 @@ describe("semantic integrity shared vectors", () => {
       }
     }
   })
+
+  it.each([
+    [
+      "expanded current bounds",
+      (state: CanonicalSemanticGameState) => ({
+        ...state,
+        bounds: { ...state.bounds, maxX: state.bounds.maxX + 1 },
+      }),
+      "ARENA_BOUNDS_INVERTED",
+    ],
+    [
+      "terrain authority drift",
+      (state: CanonicalSemanticGameState) => ({
+        ...state,
+        terrainStones: [...state.terrainStones, { x: 1, y: 1 }],
+      }),
+      "ARENA_TERRAIN_AUTHORITY_MISMATCH",
+    ],
+    [
+      "round quota drift",
+      (state: CanonicalSemanticGameState) => ({
+        ...state,
+        roundNumber: 2 as const,
+      }),
+      "LIFECYCLE_QUOTA_MISMATCH",
+    ],
+    [
+      "phase/contraction drift",
+      (state: CanonicalSemanticGameState) => ({ ...state, phaseNumber: 2 }),
+      "ARENA_BOUNDS_INVERTED",
+    ],
+  ] as const)("rejects %s with a stable semantic code", (_name, mutate, code) => {
+    const result = validateCanonicalGameState(
+      mutate(clone(corpus.valid.state) as CanonicalSemanticGameState),
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.issues.map((entry) => entry.code)).toContain(code)
+    }
+  })
 })
