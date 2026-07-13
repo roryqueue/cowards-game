@@ -71,7 +71,7 @@ export const buildV137RuntimeEvidenceAuthorityVectors = () => {
   const productionEnvelope = envelope(
     RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production,
   )
-  const badSignature = `${fixtureEnvelope.signatureBase64.slice(0, -2)}AA`
+  const badSignature = `${fixtureEnvelope.signatureBase64[0] === "A" ? "B" : "A"}${fixtureEnvelope.signatureBase64.slice(1)}`
   const hash7 = productionEnvelope.payloadSha256
   const hash8 = envelope(
     RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production,

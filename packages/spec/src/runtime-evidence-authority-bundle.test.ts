@@ -345,7 +345,10 @@ describe("runtime evidence authority bundle", () => {
         "utf8",
       ),
     ) as {
-      invalidEnvelopeVectors: { name: string }[]
+      invalidEnvelopeVectors: {
+        name: string
+        envelope: { signatureBase64: string }
+      }[]
       antiRollbackVectors: { name: string }[]
       notice: string
       valid: {
@@ -360,6 +363,12 @@ describe("runtime evidence authority bundle", () => {
     expect(vectors.invalidEnvelopeVectors.map((vector) => vector.name)).toEqual(
       ["bad-signature", "bad-payload-hash", "unknown-key", "stale", "future"],
     )
+    expect(
+      Buffer.from(
+        vectors.invalidEnvelopeVectors[0]!.envelope.signatureBase64,
+        "base64",
+      ),
+    ).toHaveLength(64)
     expect(vectors.antiRollbackVectors.map((vector) => vector.name)).toEqual([
       "exact-bootstrap",
       "restart-rollback",
