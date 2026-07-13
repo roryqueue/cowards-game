@@ -1,9 +1,11 @@
 import type { Chronicle, SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
-import { createCandidateReplay, createReplay } from "./reconstruct.js"
+import {
+  createCandidateReplay,
+  createHistoricalV14Replay,
+} from "./reconstruct.js"
 import { recordChronicleFromExecution } from "./record.js"
-import { validateReplayInput } from "./validate.js"
 
 const HISTORICAL_V14_VERSIONS = Object.freeze({
   spec: "cowards-rules-v1.4",
@@ -71,17 +73,11 @@ const createBuiltCandidateInput = () => {
   }
 }
 
-const createHistoricalReplay = (chronicle: Chronicle) => {
-  const validation = validateReplayInput({
+const createHistoricalReplay = (chronicle: Chronicle) =>
+  createHistoricalV14Replay({
     profile: "historical-v1.4",
     chronicle,
   })
-  if (!validation.ok) {
-    if ("errors" in validation) return validation
-    throw new Error(validation.issues[0]?.code)
-  }
-  return createReplay(chronicle)
-}
 
 const movementChronicle = (): Chronicle => {
   const startBoard = {

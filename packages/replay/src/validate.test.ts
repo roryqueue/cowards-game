@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type {
   Chronicle,
   ChronicleBoundarySnapshot,
@@ -16,6 +17,7 @@ import {
 import { describe, expect, it } from "vitest"
 import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { createChronicleContentHash } from "./hash.js"
+import { projectOwnerChronicle } from "./project.js"
 import { recordChronicleFromExecution } from "./record.js"
 import {
   migrateChronicle,
@@ -64,6 +66,32 @@ const passiveRuntime: StrategyRuntime = {
       value: {
         action: { type: "TURN", direction: "RIGHT" },
         soldierMemory: {},
+      },
+    }
+  },
+}
+
+const playerViolationRuntime: StrategyRuntime = {
+  selectActivations(input) {
+    return input.mySoldiers[0]?.ownerPlayerId === "bottom"
+      ? {
+          ok: false,
+          violation: {
+            type: "INVALID_OUTPUT",
+            message: "fixture player violation",
+          },
+        }
+      : {
+          ok: true,
+          value: { activationOrders: [], strategyMemory: {} },
+        }
+  },
+  runSoldierBrain() {
+    return {
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "fixture player violation",
       },
     }
   },
@@ -317,6 +345,109 @@ describe("validateChronicle", () => {
     })
   })
 
+  it("accepts recorder-bound player violations with owner-private evidence", () => {
+    const input = createCandidateReplayInput(playerViolationRuntime, {
+      matchId: "validation-player-violation",
+      maxPhases: 1,
+    })
+
+    expect(input.chronicle.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "RUNTIME_VIOLATION",
+          privacy: "owner",
+          privateRef: expect.stringMatching(/^private:event:/u),
+        }),
+      ]),
+    )
+    expect(validateCandidateReplaySemantics(input)).toEqual({
+      ok: true,
+      profile: "candidate-v1.37",
+      publishable: false,
+      current: false,
+      issues: [],
+      truncated: false,
+    })
+  })
+
+  it("rejects owner-private relabeling before it can leak through owner projection", () => {
+    const input = createCandidateReplayInput()
+    const bottomPrivate = input.chronicle.private?.byPlayerId.bottom ?? {}
+    const topPrivate =
+      (input.chronicle.private?.byPlayerId.top as
+        | Record<string, JsonValue>
+        | undefined) ?? {}
+    const [privateRef, privatePayload] = Object.entries(bottomPrivate)[0] ?? []
+    expect(privateRef).toBeDefined()
+    const relabeled = {
+      ...input.chronicle,
+      private: {
+        byPlayerId: {
+          ...(input.chronicle.private?.byPlayerId ?? {}),
+          bottom: Object.fromEntries(
+            Object.entries(bottomPrivate).filter(([ref]) => ref !== privateRef),
+          ),
+          top: {
+            ...topPrivate,
+            [privateRef!]: privatePayload!,
+          },
+        },
+      },
+    }
+    const forged = {
+      ...relabeled,
+      contentHash: createChronicleContentHash(relabeled),
+    }
+    expect(JSON.stringify(projectOwnerChronicle(forged, "top"))).toContain(
+      privateRef,
+    )
+    expect(
+      validateCandidateReplaySemantics({ ...input, chronicle: forged }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "CANDIDATE_EVENT_INVALID" }],
+    })
+  })
+
+  it("rejects forged event context even when public event identity is unchanged", () => {
+    const input = createCandidateReplayInput()
+    const events = input.chronicle.events.map((event) =>
+      event.type === "MATCH_STARTED"
+        ? { ...event, context: { actingPlayerId: "top" } }
+        : event,
+    )
+    expect(
+      validateCandidateReplaySemantics({
+        ...input,
+        chronicle: { ...input.chronicle, events },
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "CANDIDATE_EVENT_INVALID" }],
+    })
+  })
+
+  it("rejects in-place initiative drift despite recomputed public hashes", () => {
+    const input = createCandidateReplayInput()
+    if (input.execution.kind !== "completed") throw new Error("not completed")
+    const transition = input.execution.transitions[0]!
+    const beforeState = transition.beforeState as Record<string, unknown>
+    beforeState.initiativePlayerId = "top"
+    ;(transition as { beforeStateHash: string }).beforeStateHash =
+      `sha256:${createHash("sha256")
+        .update("cowards-game:candidate-game-state-projection:v1\0", "utf8")
+        .update(JSON.stringify(beforeState), "utf8")
+        .digest("hex")}`
+    ;(
+      input.execution.recorderMaterial as { integrityHash: string }
+    ).integrityHash = `sha256:${"f".repeat(64)}`
+
+    expect(validateCandidateReplaySemantics(input)).toMatchObject({
+      ok: false,
+      issues: [{ code: "CANDIDATE_BOUNDARY_HASH_INVALID" }],
+    })
+  })
+
   it.each([
     "MATCH_STARTED",
     "ROUND_STARTED",
@@ -415,7 +546,7 @@ describe("validateChronicle", () => {
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.issues.map(({ code }) => code)).toContain(
-      "ARENA_TERRAIN_START_OVERLAP",
+      "CANDIDATE_BOUNDARY_HASH_INVALID",
     )
     expect(result.issues.length).toBeLessThanOrEqual(16)
     expect(result.issues.every(({ path }) => path.length <= 8)).toBe(true)

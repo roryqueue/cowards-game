@@ -11,7 +11,10 @@ import {
   type ReplayState,
   type ReplayStateResult,
 } from "./replay-transition.js"
-import { validateChronicle } from "./validate.js"
+import {
+  validateChronicle,
+  validateHistoricalV14Chronicle,
+} from "./validate.js"
 import {
   validateCandidateReplaySemantics,
   type CandidateReplaySemanticInput,
@@ -137,11 +140,7 @@ const createStateAt =
     return { ok: true, state: current }
   }
 
-export const createReplay = (chronicle: Chronicle): CreateReplayResult => {
-  const validation = validateChronicle(chronicle)
-  if (!validation.ok) {
-    return validation
-  }
+const createValidatedReplay = (chronicle: Chronicle): CreateReplayResult => {
   const stateAt = createStateAt(chronicle)
   return {
     ok: true,
@@ -160,6 +159,24 @@ export const createReplay = (chronicle: Chronicle): CreateReplayResult => {
   }
 }
 
+export const createReplay = (chronicle: Chronicle): CreateReplayResult => {
+  const validation = validateChronicle(chronicle)
+  return validation.ok ? createValidatedReplay(chronicle) : validation
+}
+
+export interface HistoricalV14ReplayInput {
+  readonly profile: "historical-v1.4"
+  readonly chronicle: Chronicle
+}
+
+/** Frozen historical route; intentionally never dispatches through current. */
+export const createHistoricalV14Replay = (
+  input: HistoricalV14ReplayInput,
+): CreateReplayResult => {
+  const validation = validateHistoricalV14Chronicle(input.chronicle)
+  return validation.ok ? createValidatedReplay(input.chronicle) : validation
+}
+
 export type CreateCandidateReplayResult =
   | { readonly ok: true; readonly replay: Replay }
   | Exclude<CandidateReplaySemanticValidationResult, { ok: true }>
@@ -170,18 +187,5 @@ export const createCandidateReplay = (
   const validation = validateCandidateReplaySemantics(input)
   if (!validation.ok) return validation
   const chronicle = input.chronicle as Chronicle
-  const stateAt = createStateAt(chronicle)
-  return {
-    ok: true,
-    replay: {
-      stateAt,
-      *iterateReplay() {
-        for (const event of chronicle.events) {
-          const result = stateAt(event.sequence)
-          if (!result.ok) return
-          yield { sequence: event.sequence, event, state: result.state }
-        }
-      },
-    },
-  }
+  return createValidatedReplay(chronicle) as CreateCandidateReplayResult
 }

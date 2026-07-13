@@ -396,4 +396,32 @@ describe("candidate replay reconstruction equivalence", () => {
       code: "CANDIDATE_TERMINAL_EVENT_INVALID",
     })
   })
+
+  it("standalone reconstruction rejects a forged terminal state hash", () => {
+    const input = candidateInput()
+    if (input.execution.kind !== "completed") throw new Error("not completed")
+    const lastIndex = input.execution.transitions.length - 1
+    const transitions = input.execution.transitions.map((transition, index) =>
+      index === lastIndex
+        ? { ...transition, afterStateHash: `sha256:${"0".repeat(64)}` }
+        : transition,
+    )
+    expect(
+      validateCandidateReplayReconstruction({
+        ...input,
+        execution: {
+          ...input.execution,
+          transitions,
+          recorderMaterial: {
+            ...input.execution.recorderMaterial,
+            boundaries: transitions,
+          },
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      code: "CANDIDATE_TRANSITION_STATE_MISMATCH",
+      transitionIndex: lastIndex,
+    })
+  })
 })

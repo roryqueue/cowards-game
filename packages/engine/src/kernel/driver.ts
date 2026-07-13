@@ -16,6 +16,7 @@ import {
   CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
 } from "./types.js"
 import { hashKernelRecorderMaterial, validateMachine } from "./validate.js"
+import { issueCandidateExecutionEvidence } from "./recorder-evidence-authority.js"
 import type {
   ActivationSlotState,
   CreateInitialGameStateInput,
@@ -181,7 +182,7 @@ const completedExecution = (
     finalState: machine.state,
     boundaries: transitions,
   }
-  return {
+  return issueCandidateExecutionEvidence({
     kind: "completed",
     result: {
       state: machine.state,
@@ -192,7 +193,7 @@ const completedExecution = (
       ...material,
       integrityHash: hashKernelRecorderMaterial(material),
     },
-  }
+  })
 }
 
 const failedExecution = (

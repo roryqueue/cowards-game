@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type {
   Chronicle,
   ChronicleBoundarySnapshot,
@@ -16,6 +17,16 @@ import type { ChronicleRecorderExecution } from "./record.js"
 
 const V1_37_CANDIDATE_TUPLE_ID =
   "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
+const CANDIDATE_STATE_HASH_DOMAIN =
+  "cowards-game:candidate-game-state-projection:v1" as const
+
+const hashCandidateStateProjection = (
+  projection: Readonly<Record<string, unknown>>,
+): string =>
+  `sha256:${createHash("sha256")
+    .update(`${CANDIDATE_STATE_HASH_DOMAIN}\0`, "utf8")
+    .update(JSON.stringify(projection), "utf8")
+    .digest("hex")}`
 const V1_37_CANDIDATE_REPLAY_TRANSITION_EVENT_TYPES = new Set<string>([
   "MATCH_STARTED",
   "ROUND_STARTED",
@@ -675,6 +686,14 @@ export const validateCandidateReplayReconstruction = ({
   if (execution.kind !== "completed" || execution.transitions.length === 0) {
     return { ok: false, code: "CANDIDATE_RECONSTRUCTION_SHAPE_INVALID" }
   }
+  if (
+    execution.recorderMaterial.boundaries.length !==
+      execution.transitions.length ||
+    stableStringify(execution.recorderMaterial.boundaries) !==
+      stableStringify(execution.transitions)
+  ) {
+    return { ok: false, code: "CANDIDATE_RECONSTRUCTION_SHAPE_INVALID" }
+  }
   const terminalEvents = chronicle.events.filter(
     ({ type }) => type === "MATCH_ENDED",
   )
@@ -687,6 +706,23 @@ export const validateCandidateReplayReconstruction = ({
 
   for (let index = 0; index < execution.transitions.length; index += 1) {
     const transition = execution.transitions[index]!
+    const previous = execution.transitions[index - 1]
+    if (
+      hashCandidateStateProjection(transition.beforeState) !==
+        transition.beforeStateHash ||
+      hashCandidateStateProjection(transition.afterState) !==
+        transition.afterStateHash ||
+      (previous !== undefined &&
+        (previous.afterStateHash !== transition.beforeStateHash ||
+          stableStringify(previous.afterState) !==
+            stableStringify(transition.beforeState)))
+    ) {
+      return {
+        ok: false,
+        code: "CANDIDATE_TRANSITION_STATE_MISMATCH",
+        transitionIndex: index,
+      }
+    }
     const before = replayStateFromProjection(transition.beforeState)
     const expectedAfter = replayStateFromProjection(transition.afterState)
     if (before === undefined || expectedAfter === undefined) {

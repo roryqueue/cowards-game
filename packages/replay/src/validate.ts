@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { verifyCandidateExecutionEvidence } from "@cowards/engine/recorder-evidence"
 import {
   ChronicleSchema,
   COMPATIBILITY_VERSIONS,
@@ -20,15 +21,16 @@ import {
   type SemanticIntegrityIssue,
 } from "@cowards/spec"
 import { validateChronicleGrammar } from "./grammar.js"
-import { createChronicleContentHash } from "./hash.js"
+import { createChronicleContentHash, stableStringify } from "./hash.js"
 import {
   resolveReplayTransitionEventContract,
   validateCandidateReplayReconstruction,
   validateChronicleTransitions,
 } from "./replay-transition.js"
-import type {
-  ChronicleBoundaryAnchor,
-  ChronicleRecorderExecution,
+import {
+  recordChronicleFromExecution,
+  type ChronicleBoundaryAnchor,
+  type ChronicleRecorderExecution,
 } from "./record.js"
 import { validateSnapshotBoundaries } from "./snapshot-boundaries.js"
 
@@ -934,6 +936,12 @@ export const validateCandidateReplaySemantics = (
   ) {
     return candidateCodeFailure("CANDIDATE_SHAPE_INVALID", ["execution"])
   }
+  if (!verifyCandidateExecutionEvidence(execution)) {
+    return candidateCodeFailure("CANDIDATE_BOUNDARY_HASH_INVALID", [
+      "execution",
+      "receipt",
+    ])
+  }
   const parsedChronicle = ChronicleSchema.safeParse(input.chronicle)
   if (!parsedChronicle.success || !Array.isArray(input.boundaryAnchors)) {
     return candidateCodeFailure("CANDIDATE_SHAPE_INVALID", ["chronicle"])
@@ -955,6 +963,32 @@ export const validateCandidateReplaySemantics = (
     )
   ) {
     return candidateCodeFailure("CANDIDATE_TUPLE_INVALID", ["execution"])
+  }
+
+  const trustedRecording = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: INACTIVE_V1_37_REPLAY_TUPLE.tupleId,
+      semanticTuple: INACTIVE_V1_37_REPLAY_TUPLE.tuple,
+    },
+  })
+  if (!trustedRecording.ok) {
+    return candidateCodeFailure("CANDIDATE_BOUNDARY_HASH_INVALID", [
+      "execution",
+      "recorderMaterial",
+    ])
+  }
+  if (
+    stableStringify((input.chronicle as Chronicle).events) !==
+      stableStringify(trustedRecording.chronicle.events) ||
+    stableStringify((input.chronicle as Chronicle).private ?? null) !==
+      stableStringify(trustedRecording.chronicle.private ?? null)
+  ) {
+    return candidateCodeFailure("CANDIDATE_EVENT_INVALID", [
+      "chronicle",
+      "events",
+    ])
   }
 
   const eventErrors = [
@@ -999,10 +1033,10 @@ export const validateCandidateReplaySemantics = (
   )
   if (
     !Array.isArray(eventMaterial) ||
-    JSON.stringify(flattenedTransitionEvents) !==
-      JSON.stringify(execution.result.events) ||
-    JSON.stringify(publicEventMaterial) !==
-      JSON.stringify(execution.result.events) ||
+    stableStringify(flattenedTransitionEvents) !==
+      stableStringify(execution.result.events) ||
+    stableStringify(publicEventMaterial) !==
+      stableStringify(execution.result.events) ||
     chronicle.events.length !== eventMaterial.length ||
     chronicle.events.some((event, index) => {
       const material = eventMaterial[index]
@@ -1011,7 +1045,7 @@ export const validateCandidateReplaySemantics = (
         event.type !== material.type ||
         event.sequence !== material.sequence ||
         event.privacy !== (material.privacy ?? "public") ||
-        JSON.stringify(event.payload) !== JSON.stringify(material.payload)
+        stableStringify(event.payload) !== stableStringify(material.payload)
       )
     })
   ) {
