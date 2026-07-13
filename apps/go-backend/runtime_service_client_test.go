@@ -42,6 +42,34 @@ func TestRuntimeServiceClientSuccess(t *testing.T) {
 	}
 }
 
+func TestRuntimeServiceCandidateSemanticFailureIsSystemOwnedAndRetryExact(t *testing.T) {
+	request := validRuntimeServiceRequestForTest()
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writeRuntimeServiceTestJSON(t, writer, map[string]any{
+			"ok": false, "profile": "candidate_exhibition", "counted": false,
+			"publishable": false, "privacy": "internal_candidate_exhibition",
+			"failure": map[string]any{
+				"classification": "system_failure", "ownership": "system_integrity",
+				"code": "CANDIDATE_FINAL_STATE_INVALID", "retryable": false, "playerPenalty": false,
+			},
+		})
+	}))
+	defer server.Close()
+
+	response, failure := newRuntimeServiceClient(server.URL).executeMatch(context.Background(), request)
+	if response == nil || response.Profile != "candidate_exhibition" {
+		t.Fatalf("candidate failure routing was erased: %+v", response)
+	}
+	if failure == nil || failure.ErrorClass != "CANDIDATE_FINAL_STATE_INVALID" || failure.Retryable {
+		t.Fatalf("candidate retry contract drifted: %+v", failure)
+	}
+	classification := classifyMatchFailure(failure.ErrorClass, failure.Retryable, failure.Details)
+	if classification.Category != matchFailureCategorySystemFailure || classification.PublicReason != "system_failure" {
+		t.Fatalf("candidate semantic failure became a player penalty: %+v", classification)
+	}
+	assertRuntimeServiceFailureSafe(t, failure)
+}
+
 func TestRuntimeServiceRequestIntegrityReferenceContract(t *testing.T) {
 	request := validRuntimeServiceRequestForTest()
 	encoded, err := json.Marshal(request)

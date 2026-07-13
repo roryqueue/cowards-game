@@ -162,6 +162,26 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		}
 		return &goMatchOrchestrationResult{Status: status, JobID: claimed.JobID, MatchID: claimed.MatchID}, nil
 	}
+	if failure := rejectInactiveCandidateCompletion(response); failure != nil {
+		status, recordErr := orchestrator.lifecycle.recordAttemptFailure(ctx, recordAttemptFailureInput{
+			JobID:        claimed.JobID,
+			LeaseToken:   claimed.LeaseToken,
+			ErrorClass:   failure.Code,
+			ErrorMessage: failure.ErrorMessage,
+			Retryable:    failure.Retryable,
+			Category:     matchFailureCategorySystemFailure,
+			Details: map[string]any{
+				"matchId":                               claimed.MatchID,
+				"workerId":                              workerID,
+				"strategyExecutionSystemFailureCode":    failure.Code,
+				"strategyExecutionSystemFailureDetails": failure.Details,
+			},
+		})
+		if recordErr != nil {
+			return nil, recordErr
+		}
+		return &goMatchOrchestrationResult{Status: status, JobID: claimed.JobID, MatchID: claimed.MatchID}, nil
+	}
 
 	chronicle, finalState, err := runtimeServiceCompletionPayload(response)
 	if err != nil {
@@ -183,6 +203,15 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		MatchID:     completed.MatchID,
 		ChronicleID: completed.ChronicleID,
 	}, nil
+}
+
+func rejectInactiveCandidateCompletion(response *runtimeServiceResponse) *runtimeServiceFailure {
+	if response == nil || response.CandidateEvidence == nil {
+		return nil
+	}
+	return semanticIntegrityFailure(createSemanticIntegrityResult([]semanticIntegrityIssue{
+		semanticIssue("TUPLE_MIXED_COMPONENTS", []any{"compatibility"}, nil),
+	}))
 }
 
 func matchJobLeaseForRuntimeService() time.Duration {

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -113,14 +114,20 @@ type runtimeServiceEvidenceSnapshot struct {
 }
 
 type runtimeServiceResponse struct {
-	ContractVersion   string                 `json:"contractVersion"`
-	OK                bool                   `json:"ok"`
-	Kind              string                 `json:"kind"`
-	RequestID         string                 `json:"requestId"`
-	MatchID           string                 `json:"matchId,omitempty"`
-	RuntimeABIVersion string                 `json:"runtimeAbiVersion"`
-	Result            map[string]any         `json:"result,omitempty"`
-	SystemFailure     *runtimeServiceFailure `json:"systemFailure,omitempty"`
+	ContractVersion   string                                `json:"contractVersion"`
+	OK                bool                                  `json:"ok"`
+	Kind              string                                `json:"kind"`
+	Profile           string                                `json:"profile,omitempty"`
+	Counted           bool                                  `json:"counted,omitempty"`
+	Publishable       bool                                  `json:"publishable,omitempty"`
+	Privacy           string                                `json:"privacy,omitempty"`
+	RequestID         string                                `json:"requestId"`
+	MatchID           string                                `json:"matchId,omitempty"`
+	RuntimeABIVersion string                                `json:"runtimeAbiVersion"`
+	Compatibility     *runtimeServiceCompatibilityReference `json:"compatibility,omitempty"`
+	Result            map[string]any                        `json:"result,omitempty"`
+	SystemFailure     *runtimeServiceFailure                `json:"systemFailure,omitempty"`
+	CandidateEvidence *candidateRuntimeEvidence             `json:"-"`
 }
 
 type runtimeServiceValidationResponse struct {
@@ -214,20 +221,24 @@ func (client *runtimeServiceClient) executeMatch(ctx context.Context, request ru
 		return nil, newRuntimeServiceFailure("RuntimeServiceOversizedResponse", "Runtime service response exceeded the configured byte limit", true, map[string]any{"status": response.StatusCode, "capBytes": maxBytes})
 	}
 
-	var decoded runtimeServiceResponse
-	decoder := json.NewDecoder(bytes.NewReader(payload))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&decoded); err != nil {
-		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service response did not match the execution contract", true, map[string]any{"actualBytes": len(payload)})
-	}
-	if failure := validateRuntimeServiceResponse(request, &decoded); failure != nil {
+	decoded, failure := decodeRuntimeServiceResponseBytes(request, payload)
+	if failure != nil {
 		return nil, failure
 	}
-	if decoded.SystemFailure != nil {
-		failure := sanitizeRuntimeServiceFailure(*decoded.SystemFailure)
-		return &decoded, &failure
+	if decoded == nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service response did not match the execution contract", true, nil)
 	}
-	return &decoded, nil
+	if decoded.SystemFailure != nil {
+		if decoded.Profile == "candidate_exhibition" {
+			candidateFailure := *decoded.SystemFailure
+			candidateFailure.ErrorMessage = redactRuntimeServiceMessage(candidateFailure.ErrorMessage)
+			candidateFailure.Details = sanitizeRuntimeServiceDetails(candidateFailure.Details)
+			return decoded, &candidateFailure
+		}
+		failure := sanitizeRuntimeServiceFailure(*decoded.SystemFailure)
+		return decoded, &failure
+	}
+	return decoded, nil
 }
 
 func (client *runtimeServiceClient) validateStrategy(ctx context.Context, sourceFormat string, source string, strategyID string) (*runtimeServiceValidationResponse, *runtimeServiceFailure) {
@@ -485,6 +496,14 @@ func runtimeBrokerMetadataIsRegistered(runtime map[string]any) bool {
 }
 
 func validateRuntimeServiceResponse(request runtimeServiceRequest, response *runtimeServiceResponse) *runtimeServiceFailure {
+	if response != nil && response.Profile != "" {
+		if response.Profile != "candidate_exhibition" || response.CandidateEvidence == nil || !response.OK || response.Counted || response.Publishable || response.Privacy != "internal_candidate_exhibition" {
+			return semanticIntegrityFailure(createSemanticIntegrityResult([]semanticIntegrityIssue{
+				semanticIssue("TUPLE_SHAPE_INVALID", []any{"response"}, nil),
+			}))
+		}
+		return validateCandidateRuntimeEvidence(request, response.CandidateEvidence, int64(runtimeServiceIntValue(response.Result, "runtimeViolationEventCount")))
+	}
 	if response.ContractVersion != runtimeExecutionServiceVersion || response.RequestID != request.RequestID || response.RuntimeABIVersion != strategyRuntimeABIVersion {
 		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service response contract is not supported", true, nil)
 	}
@@ -670,6 +689,12 @@ func runtimeServiceIntValue(value map[string]any, key string) int {
 		return int(typed)
 	case float64:
 		return int(typed)
+	case json.Number:
+		parsed, err := strconv.ParseInt(string(typed), 10, 64)
+		if err == nil && parsed >= math.MinInt && parsed <= math.MaxInt {
+			return int(parsed)
+		}
+		return 0
 	default:
 		return 0
 	}
