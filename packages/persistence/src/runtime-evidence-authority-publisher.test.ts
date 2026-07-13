@@ -7,6 +7,17 @@ import {
   verify,
 } from "node:crypto"
 import {
+  mkdtemp,
+  open,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import {
   CANONICAL_COMPATIBILITY_TUPLES,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   encodeRuntimeEvidenceAuthorityPayload,
@@ -21,7 +32,9 @@ import {
   importAuthenticatedCertificateRevocation,
   importAuthenticatedCertificateSupersession,
   importAuthenticatedRuntimeLaneControl,
+  installRuntimeEvidenceAuthorityPublication,
   prepareRuntimeEvidenceAuthorityPublication,
+  type RuntimeEvidenceAuthorityInstallFileSystem,
   type RuntimeEvidenceAuthorityImportEnvelope,
   type RuntimeEvidenceAuthorityImportPayload,
   type RuntimeEvidenceAuthorityImportTrustRoot,
@@ -564,6 +577,194 @@ describePostgres(
         1,
       )
       expect(left.payloadSha256).not.toBe(right.payloadSha256)
+    })
+
+    const prepareInstallFixture = () =>
+      prepareRuntimeEvidenceAuthorityPublication(pool, {
+        bundleVersion: "v1.37-fixture-install-v1",
+        issuedAt: "2026-07-13T12:00:00.000Z",
+        validFrom: "2026-07-13T12:00:00.000Z",
+        validUntil: "2026-07-14T12:00:00.000Z",
+        trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+        signerKeyId: trustRoot.keyId,
+        trustedImportAuthorities: [trustRoot],
+        signPayload: (bytes) => sign(null, bytes, keys.privateKey),
+      })
+
+    const installInput = (
+      publicationId: string,
+      targetPath: string,
+      attemptId: string,
+      fileSystem?: RuntimeEvidenceAuthorityInstallFileSystem,
+    ) => ({
+      publicationId,
+      targetPath,
+      attemptId,
+      evaluationInstant: "2026-07-13T12:00:00.000Z",
+      expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+      signerKeyId: trustRoot.keyId,
+      publicKeyPem: trustRoot.publicKeyPem,
+      ...(fileSystem ? { fileSystem } : {}),
+    })
+
+    it("installs restrictive complete bytes and reconciles an exact last-good target idempotently", async () => {
+      const directory = await mkdtemp(path.join(tmpdir(), "cowards-authority-"))
+      const targetPath = path.join(directory, "authority.json")
+      try {
+        const prepared = await prepareInstallFixture()
+        await writeFile(targetPath, "last-good", { mode: 0o600 })
+        const installed = await installRuntimeEvidenceAuthorityPublication(
+          pool,
+          installInput(prepared.publicationId, targetPath, "install:first"),
+        )
+        expect(installed.reconciled).toBe(false)
+        expect(await readFile(targetPath)).toEqual(
+          Buffer.from(prepared.envelopeBytes),
+        )
+        expect((await stat(targetPath)).mode & 0o777).toBe(0o600)
+
+        const reconciled = await installRuntimeEvidenceAuthorityPublication(
+          pool,
+          installInput(prepared.publicationId, targetPath, "install:retry"),
+        )
+        expect(reconciled.reconciled).toBe(true)
+        const receipts = await pool.query(
+          `select event_kind, attempt_id, receipt
+             from runtime_evidence_authority_publication_events
+            where publication_id = $1 and event_kind = 'installed'
+            order by attempt_id`,
+          [prepared.publicationId],
+        )
+        expect(receipts.rows).toHaveLength(2)
+        expect(
+          receipts.rows.every((row) => row.receipt.targetPath === undefined),
+        ).toBe(true)
+      } finally {
+        await rm(directory, { recursive: true, force: true })
+      }
+    })
+
+    it.each(["temp-write", "file-fsync", "close", "rename"] as const)(
+      "preserves last-good bytes and removes temporary files on %s failure",
+      async (failureStage) => {
+        const directory = await mkdtemp(
+          path.join(tmpdir(), "cowards-authority-"),
+        )
+        const targetPath = path.join(directory, "authority.json")
+        const lastGood = Buffer.from("last-good-authority", "utf8")
+        const prepared = await prepareInstallFixture()
+        await writeFile(targetPath, lastGood, { mode: 0o600 })
+        const fileSystem: RuntimeEvidenceAuthorityInstallFileSystem = {
+          readFile,
+          unlink: (filePath) => rm(filePath, { force: true }),
+          rename: async (from, to) => {
+            if (failureStage === "rename") throw new Error("rename failure")
+            await import("node:fs/promises").then((fs) => fs.rename(from, to))
+          },
+          async open(filePath, flags, mode) {
+            const handle = await open(filePath, flags, mode)
+            const temporary = flags === "wx"
+            return {
+              writeFile: async (bytes) => {
+                if (temporary && failureStage === "temp-write") {
+                  throw new Error("temp write failure")
+                }
+                await handle.writeFile(bytes)
+              },
+              sync: async () => {
+                if (temporary && failureStage === "file-fsync") {
+                  throw new Error("file fsync failure")
+                }
+                await handle.sync()
+              },
+              close: async () => {
+                await handle.close()
+                if (temporary && failureStage === "close") {
+                  throw new Error("close failure")
+                }
+              },
+            }
+          },
+        }
+        try {
+          await expect(
+            installRuntimeEvidenceAuthorityPublication(
+              pool,
+              installInput(
+                prepared.publicationId,
+                targetPath,
+                `install:${failureStage}`,
+                fileSystem,
+              ),
+            ),
+          ).rejects.toThrow()
+          expect(await readFile(targetPath)).toEqual(lastGood)
+          expect((await readdir(directory)).sort()).toEqual(["authority.json"])
+        } finally {
+          await rm(directory, { recursive: true, force: true })
+        }
+      },
+    )
+
+    it("reports directory-fsync uncertainty and reconciles only verified new bytes", async () => {
+      const directory = await mkdtemp(path.join(tmpdir(), "cowards-authority-"))
+      const targetPath = path.join(directory, "authority.json")
+      const prepared = await prepareInstallFixture()
+      let directoryFsyncs = 0
+      const fileSystem: RuntimeEvidenceAuthorityInstallFileSystem = {
+        readFile,
+        unlink: (filePath) => rm(filePath, { force: true }),
+        rename: (from, to) =>
+          import("node:fs/promises").then((fs) => fs.rename(from, to)),
+        async open(filePath, flags, mode) {
+          const handle = await open(filePath, flags, mode)
+          const directoryHandle = flags === "r"
+          return {
+            writeFile: (bytes) => handle.writeFile(bytes),
+            sync: async () => {
+              if (directoryHandle && directoryFsyncs++ === 0) {
+                throw new Error("directory fsync uncertain")
+              }
+              await handle.sync()
+            },
+            close: () => handle.close(),
+          }
+        },
+      }
+      try {
+        await expect(
+          installRuntimeEvidenceAuthorityPublication(
+            pool,
+            installInput(
+              prepared.publicationId,
+              targetPath,
+              "install:uncertain",
+              fileSystem,
+            ),
+          ),
+        ).rejects.toThrow(/uncertain/iu)
+        expect(await readFile(targetPath)).toEqual(
+          Buffer.from(prepared.envelopeBytes),
+        )
+        const uncertain = await pool.query(
+          `select event_kind from runtime_evidence_authority_publication_events
+            where publication_id = $1 and event_kind = 'uncertain'`,
+          [prepared.publicationId],
+        )
+        expect(uncertain.rows).toHaveLength(1)
+        const retry = await installRuntimeEvidenceAuthorityPublication(
+          pool,
+          installInput(
+            prepared.publicationId,
+            targetPath,
+            "install:uncertain-retry",
+            fileSystem,
+          ),
+        )
+        expect(retry.reconciled).toBe(true)
+      } finally {
+        await rm(directory, { recursive: true, force: true })
+      }
     })
   },
 )
