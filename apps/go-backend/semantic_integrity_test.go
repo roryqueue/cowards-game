@@ -477,6 +477,39 @@ func TestRuntimeServiceCandidateSemanticIdentityAndAgreement(t *testing.T) {
 	}
 }
 
+func TestSemanticIntegrityCandidateEvidenceRevalidatesFromOriginalBytes(t *testing.T) {
+	request := validRuntimeServiceRequestForTest()
+	response := candidateRuntimeResponseForTest(t, request)
+	serialized, err := json.Marshal(response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, failure := decodeRuntimeServiceResponseBytes(request, serialized)
+	if failure != nil || decoded == nil || decoded.CandidateEvidence == nil {
+		t.Fatalf("candidate evidence setup failed: response=%+v failure=%+v", decoded, failure)
+	}
+	evidence := decoded.CandidateEvidence
+	before := append([]byte(nil), evidence.RawResponse...)
+	if failure := revalidateCandidateRuntimeEvidence(evidence); failure != nil {
+		t.Fatalf("original candidate evidence failed revalidation: %+v", failure)
+	}
+	if !reflect.DeepEqual(before, evidence.RawResponse) {
+		t.Fatal("candidate revalidation mutated original response bytes")
+	}
+
+	tampered := *evidence
+	tampered.FinalState = semanticCloneMap(evidence.FinalState)
+	tampered.FinalState["matchId"] = "match:tampered"
+	if failure := revalidateCandidateRuntimeEvidence(&tampered); failure == nil || failure.ErrorClass != "RuntimeServiceSemanticIntegrity" {
+		t.Fatalf("post-validation candidate mutation was admitted: %+v", failure)
+	}
+	if err := validateCandidateCompletionInput(completeMatchInput{
+		Chronicle: evidence.Chronicle, FinalState: tampered.FinalState, CandidateEvidence: evidence,
+	}); err == nil {
+		t.Fatal("completion admitted fields that diverged from locked candidate bytes")
+	}
+}
+
 func candidateRuntimeResponseForTest(t *testing.T, request runtimeServiceRequest) map[string]any {
 	t.Helper()
 	corpus := loadSemanticIntegrityCorpus(t)

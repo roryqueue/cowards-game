@@ -24,11 +24,12 @@ type matchCompletionService struct {
 }
 
 type completeMatchInput struct {
-	JobID      string
-	LeaseToken string
-	Chronicle  map[string]any
-	FinalState map[string]any
-	Integrity  *claimedMatchIntegrityIdentity
+	JobID             string
+	LeaseToken        string
+	Chronicle         map[string]any
+	FinalState        map[string]any
+	Integrity         *claimedMatchIntegrityIdentity
+	CandidateEvidence *candidateRuntimeEvidence
 }
 
 type completeMatchResult struct {
@@ -79,6 +80,9 @@ func newMatchCompletionService(pool *pgxpool.Pool) *matchCompletionService {
 func (service *matchCompletionService) completeMatch(ctx context.Context, input completeMatchInput) (*completeMatchResult, error) {
 	if service == nil || service.pool == nil {
 		return nil, errors.New("match completion requires a database pool")
+	}
+	if err := validateCandidateCompletionInput(input); err != nil {
+		return nil, err
 	}
 	fields, err := deriveGoMatchCompletionFields(input.FinalState)
 	if err != nil {
@@ -154,6 +158,9 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		if err != nil {
 			return nil, err
 		}
+	}
+	if err := validateCandidateCompletionInput(input); err != nil {
+		return nil, err
 	}
 
 	if service.allowLegacyTestCompletion {
@@ -256,6 +263,18 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		return nil, err
 	}
 	return &completeMatchResult{Status: "complete", MatchID: metadata.MatchID, ChronicleID: metadata.ID}, nil
+}
+
+func validateCandidateCompletionInput(input completeMatchInput) error {
+	if input.CandidateEvidence == nil {
+		return nil
+	}
+	if failure := revalidateCandidateRuntimeEvidence(input.CandidateEvidence); failure != nil ||
+		!semanticStableJSONEqual(input.CandidateEvidence.Chronicle, input.Chronicle) ||
+		!semanticStableJSONEqual(input.CandidateEvidence.FinalState, input.FinalState) {
+		return errors.New("candidate completion evidence failed semantic validation")
+	}
+	return nil
 }
 
 func (service *matchCompletionService) lockCompletionIntegrity(ctx context.Context, tx pgx.Tx, jobID string, leaseToken string, expected *claimedMatchIntegrityIdentity) (*claimedMatchIntegrityIdentity, error) {

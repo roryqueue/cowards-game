@@ -917,11 +917,13 @@ func semanticHashBytes(domain string, payload []byte) string {
 
 type candidateRuntimeEvidence struct {
 	RawResponse       []byte
+	Request           runtimeServiceRequest
 	Compatibility     runtimeServiceCompatibilityReference
 	Chronicle         map[string]any
 	FinalState        map[string]any
 	TerminalStateHash string
 	Outcome           any
+	ViolationCount    int64
 }
 
 type candidateRuntimeSuccessWire struct {
@@ -1051,8 +1053,9 @@ func decodeCandidateRuntimeServiceResponse(request runtimeServiceRequest, payloa
 		}))
 	}
 	evidence := &candidateRuntimeEvidence{
-		RawResponse: append([]byte(nil), payload...), Compatibility: wire.Compatibility,
+		RawResponse: append([]byte(nil), payload...), Request: semanticCloneRuntimeServiceRequest(request), Compatibility: wire.Compatibility,
 		Chronicle: chronicle, FinalState: finalState, TerminalStateHash: wire.Result.TerminalStateHash, Outcome: outcome,
+		ViolationCount: violationCount,
 	}
 	if failure := validateCandidateRuntimeEvidence(request, evidence, violationCount); failure != nil {
 		return nil, failure
@@ -1065,6 +1068,46 @@ func decodeCandidateRuntimeServiceResponse(request runtimeServiceRequest, payloa
 			"outcome": outcome, "runtimeViolationEventCount": violationCount,
 		}, CandidateEvidence: evidence,
 	}, nil
+}
+
+func semanticCloneRuntimeServiceRequest(request runtimeServiceRequest) runtimeServiceRequest {
+	serialized, err := json.Marshal(request)
+	if err != nil {
+		return runtimeServiceRequest{}
+	}
+	var clone runtimeServiceRequest
+	if decodeStrictJSONUseNumber(serialized, &clone) != nil {
+		return runtimeServiceRequest{}
+	}
+	return clone
+}
+
+func revalidateCandidateRuntimeEvidence(evidence *candidateRuntimeEvidence) *runtimeServiceFailure {
+	if evidence == nil || len(evidence.RawResponse) == 0 {
+		return semanticIntegrityFailure(createSemanticIntegrityResult([]semanticIntegrityIssue{
+			semanticIssue("TUPLE_SHAPE_INVALID", []any{"response"}, nil),
+		}))
+	}
+	decoded, failure := decodeRuntimeServiceResponseBytes(evidence.Request, append([]byte(nil), evidence.RawResponse...))
+	if failure != nil {
+		return failure
+	}
+	if decoded == nil || decoded.CandidateEvidence == nil || decoded.CandidateEvidence == evidence {
+		return semanticIntegrityFailure(createSemanticIntegrityResult([]semanticIntegrityIssue{
+			semanticIssue("TUPLE_SHAPE_INVALID", []any{"response"}, nil),
+		}))
+	}
+	revalidated := decoded.CandidateEvidence
+	if revalidated.Compatibility != evidence.Compatibility || revalidated.TerminalStateHash != evidence.TerminalStateHash ||
+		revalidated.ViolationCount != evidence.ViolationCount || !bytes.Equal(revalidated.RawResponse, evidence.RawResponse) ||
+		!semanticStableJSONEqual(revalidated.Chronicle, evidence.Chronicle) ||
+		!semanticStableJSONEqual(revalidated.FinalState, evidence.FinalState) ||
+		!semanticStableJSONEqual(revalidated.Outcome, evidence.Outcome) {
+		return semanticIntegrityFailure(createSemanticIntegrityResult([]semanticIntegrityIssue{
+			semanticIssue("TRANSITION_EVENT_STATE_MISMATCH", []any{"result"}, nil),
+		}))
+	}
+	return nil
 }
 
 func validateCandidateRuntimeEvidence(request runtimeServiceRequest, evidence *candidateRuntimeEvidence, expectedViolationCount int64) *runtimeServiceFailure {
