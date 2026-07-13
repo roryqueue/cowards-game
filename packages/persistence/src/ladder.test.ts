@@ -776,23 +776,22 @@ describe("trial ladder contracts", () => {
   })
 
   it("keeps the migration full owner/Season uniqueness policy", () => {
-    expect(
-      readFileSync(
-        "packages/persistence/migrations/0004_competition_trust_beta.sql",
-        "utf8",
+    const migrationSource = readFileSync(
+      new URL(
+        "../migrations/0004_competition_trust_beta.sql",
+        import.meta.url,
       ),
-    ).toContain("unique(season_id, owner_user_id)")
-    expect(
-      readFileSync(
-        "packages/persistence/migrations/0004_competition_trust_beta.sql",
-        "utf8",
-      ),
-    ).not.toMatch(/unique\s*\([^)]*owner_user_id[^)]*\)\s*where/i)
+      "utf8",
+    )
+    expect(migrationSource).toContain("unique(season_id, owner_user_id)")
+    expect(migrationSource).not.toMatch(
+      /unique\s*\([^)]*owner_user_id[^)]*\)\s*where/i,
+    )
   })
 
   it("keeps public Season reads scoped and mutation-free", () => {
     const ladderSource = readFileSync(
-      "packages/persistence/src/ladder.ts",
+      new URL("./ladder.ts", import.meta.url),
       "utf8",
     )
     const publicRead = ladderSource.slice(

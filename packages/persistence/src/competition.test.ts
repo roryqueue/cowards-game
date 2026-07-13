@@ -164,7 +164,7 @@ describe("competition helpers", () => {
 
   it("classifies public result evidence without mutating MatchSet lifecycle", () => {
     const source = readFileSync(
-      "packages/persistence/src/competition.ts",
+      new URL("./competition.ts", import.meta.url),
       "utf8",
     )
     const publicRead = source.slice(
