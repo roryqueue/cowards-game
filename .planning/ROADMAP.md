@@ -134,29 +134,32 @@ Plans:
 - [ ] 257-13-PLAN.md — Stage semantic replay validation/reconstruction with no scheduling authority.
 - [ ] 257-18-PLAN.md — Migrate exact contiguous-Activation callers and the permanent probe.
 
-**Wave 7 — replay fixtures and Go semantic candidate**
+**Wave 7 — replay fixtures**
 
 - [ ] 257-14-PLAN.md — Migrate the bounded replay fixture/golden caller group.
-- [ ] 257-17-PLAN.md — Stage candidate-tuple semantic validation and rollback parity in Go.
 
 **Wave 8 — runtime and TypeScript persistence candidates**
 
 - [ ] 257-15-PLAN.md — Stage the candidate runtime-service execution path.
 - [ ] 257-16-PLAN.md — Stage candidate-tuple TypeScript persistence admission and rollback.
 
-**Wave 9 — indivisible current activation**
+**Wave 9 — Go candidate response and rollback semantics**
+
+- [ ] 257-17-PLAN.md — Stage candidate-tuple semantic validation and rollback parity in Go after the candidate runtime-service producer exists.
+
+**Wave 10 — indivisible current activation**
 
 - [ ] 257-19-PLAN.md — Atomically activate tuple, contracts, artifacts, receipts, event coverage, callers, and retired definitions after the full compatibility gate.
 
-**Wave 10 — structural and audit convergence**
+**Wave 11 — structural and audit convergence**
 
 - [ ] 257-20-PLAN.md — Replace known debt with structural negatives and persist the exact audit delta.
 
-**Wave 11 — browser realism and privacy**
+**Wave 12 — browser realism and privacy**
 
 - [ ] 257-21-PLAN.md — Prove canonical board realism, terminal agreement, and public privacy in the root Playwright matrix.
 
-**Wave 12 — final evaluator and default boundary chain**
+**Wave 13 — final evaluator and default boundary chain**
 
 - [ ] 257-22-PLAN.md — Persist deterministic Phase-257 proof and wire it into the serialized default boundary chain.
 
