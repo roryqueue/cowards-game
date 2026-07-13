@@ -1,4 +1,4 @@
-import type { CanonicalCompatibilityTuple, JsonValue } from "@cowards/spec"
+import type { JsonValue } from "@cowards/spec"
 import { createCandidateInitialGameState } from "./create-initial-state.js"
 import { stepCandidateMatch } from "./step.js"
 import type {
@@ -11,25 +11,17 @@ import type {
   KernelTransitionRecord,
   MatchMachine,
 } from "./types.js"
-import { validateMachine } from "./validate.js"
+import {
+  CANDIDATE_KERNEL_SEMANTIC_TUPLE,
+  CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
+} from "./types.js"
+import { hashKernelRecorderMaterial, validateMachine } from "./validate.js"
 import type {
   ActivationSlotState,
   CreateInitialGameStateInput,
   GameState,
 } from "../types.js"
 import { getSoldier } from "../selectors.js"
-
-const CANDIDATE_TUPLE = Object.freeze({
-  rules: "cowards-rules-v1.4",
-  engine: "engine-kernel-v1.37-candidate-1",
-  runtimeAbi: "strategy-runtime-abi-v1.14",
-  chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
-  arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
-  setPolicy: "canonical-set-policy-v1.4",
-}) satisfies Readonly<CanonicalCompatibilityTuple>
-
-const CANDIDATE_TUPLE_ID =
-  "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae" as const
 
 interface CandidateMatchInput extends CreateInitialGameStateInput {
   readonly runtime: CandidateStrategyRuntime
@@ -64,8 +56,8 @@ const baseMachine = (
   state,
   initialState: state,
   semanticTuple: {
-    tupleId: CANDIDATE_TUPLE_ID,
-    tuple: CANDIDATE_TUPLE,
+    tupleId: CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
+    tuple: CANDIDATE_KERNEL_SEMANTIC_TUPLE,
   },
   cursor: {
     stage: input.stage,
@@ -182,29 +174,35 @@ const runtimeResume = (
 const completedExecution = (
   machine: MatchMachine,
   transitions: readonly KernelTransitionRecord[],
-): CandidateExecution => ({
-  kind: "completed",
-  result: {
-    state: machine.state,
-    events: transitions.flatMap((record) => record.events),
-  },
-  transitions,
-  recorderMaterial: {
+): CandidateExecution => {
+  const material = {
     events: machine.fullEvents,
     initialState: machine.initialState,
     finalState: machine.state,
     boundaries: transitions,
-  },
-})
+  }
+  return {
+    kind: "completed",
+    result: {
+      state: machine.state,
+      events: transitions.flatMap((record) => record.events),
+    },
+    transitions,
+    recorderMaterial: {
+      ...material,
+      integrityHash: hashKernelRecorderMaterial(material),
+    },
+  }
+}
 
 const failedExecution = (
-  machine: MatchMachine,
+  unchangedState: GameState | null,
   failure: KernelRestrictedFailure,
 ): CandidateExecution => ({
   kind: "failure",
   transitions: [],
   failure,
-  unchangedState: machine.state,
+  unchangedState,
 })
 
 const drive = (
@@ -213,6 +211,7 @@ const drive = (
   stopAfterActivation: boolean,
 ): CandidateExecution => {
   let machine = initialMachine
+  const attemptPrestate = globalThis.structuredClone(initialMachine.initialState)
   const transitions: KernelTransitionRecord[] = []
   const maximumSteps = Math.max(10_000, (machine.maxPhases + 1) * 10_000)
   for (let stepIndex = 0; stepIndex < maximumSteps; stepIndex += 1) {
@@ -224,11 +223,11 @@ const drive = (
       )
     }
     if (stepped.kind === "failure") {
-      return failedExecution(stepped.machine, stepped.failure)
+      return failedExecution(attemptPrestate, stepped.failure)
     }
     if (stepped.kind === "effect") {
       return failedExecution(
-        stepped.machine,
+        attemptPrestate,
         restrictedIntegrityFailure("KERNEL_NESTED_EFFECT_INVALID"),
       )
     }
@@ -248,7 +247,7 @@ const drive = (
     }
   }
   return failedExecution(
-    machine,
+    attemptPrestate,
     restrictedIntegrityFailure("KERNEL_DRIVER_STEP_LIMIT_EXCEEDED"),
   )
 }
@@ -259,7 +258,10 @@ export const runCandidateMatch = (
   try {
     return drive(createCandidateMatchMachine(input), input.runtime, false)
   } catch {
-    throw new Error("CANDIDATE_MATCH_ADMISSION_FAILED")
+    return failedExecution(
+      null,
+      restrictedIntegrityFailure("CANDIDATE_MATCH_ADMISSION_FAILED"),
+    )
   }
 }
 
@@ -273,8 +275,8 @@ export const runCandidateActivationFromState = (
  * registry remain untouched until the explicit Phase-257 activation plan.
  */
 export const CANDIDATE_MATCH_KERNEL = Object.freeze({
-  tupleId: CANDIDATE_TUPLE_ID,
-  tuple: CANDIDATE_TUPLE,
+  tupleId: CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
+  tuple: CANDIDATE_KERNEL_SEMANTIC_TUPLE,
   createMachine: createCandidateMatchMachine,
   stepMatch: stepCandidateMatch,
   runMatch: runCandidateMatch,

@@ -8,6 +8,7 @@ import {
   createTransitionRecord,
   hashMatchMachine,
   projectMatchMachineForHash,
+  validateMachine,
 } from "./validate.js"
 import type { MatchMachine } from "./types.js"
 
@@ -361,6 +362,31 @@ describe("Phase 257 canonical Match kernel contract", () => {
     expectRecordContract(stepped.record)
   })
 
+  it("rejects a co-forged semantic tuple before any lifecycle edge", () => {
+    const machine = createDirectMachine()
+    const forged = {
+      ...machine,
+      semanticTuple: {
+        tupleId: `sha256:${"0".repeat(64)}`,
+        tuple: {
+          rules: "evil",
+          engine: "evil",
+          runtimeAbi: "evil",
+          chronicle: "evil",
+          arenaCatalog: "evil",
+          setPolicy: "evil",
+        },
+      },
+    } as MatchMachine
+    expect(validateMachine(forged)?.code).toBe(
+      "KERNEL_SEMANTIC_TUPLE_INVALID",
+    )
+    expect(stepCandidateMatch(forged, { kind: "advance" })).toMatchObject({
+      kind: "failure",
+      failure: { code: "KERNEL_SEMANTIC_TUPLE_INVALID" },
+    })
+  })
+
   it("missing-kernel-authority: one driver owns transitions", () => {
     if (candidateAuthority === undefined) {
       throw new Error(MISSING_AUTHORITY_MARKER)
@@ -486,11 +512,32 @@ describe("Phase 257 canonical Match kernel contract", () => {
 
   it("driver discards every partial record when a runtime system failure occurs", () => {
     if (candidateAuthority === undefined) return
+    let selectionCall = 0
     const runtime = {
-      selectActivations: () => ({
-        ok: false as const,
-        systemFailure: { code: "TEST_HOST_FAILURE", retryable: true },
-      }),
+      selectActivations: (input: {
+        activationCount: number
+        mySoldiers: readonly { id: string; status: string }[]
+      }) => {
+        selectionCall += 1
+        return selectionCall === 1
+          ? {
+              ok: true as const,
+              value: {
+                activationOrders: input.mySoldiers
+                  .filter(({ status }) => status === "ACTIVE")
+                  .slice(0, input.activationCount)
+                  .map(({ id }) => ({ soldierId: id })),
+                strategyMemory: { partialMutationMustRollback: true },
+              },
+            }
+          : {
+              ok: false as const,
+              systemFailure: {
+                code: "TEST_HOST_FAILURE",
+                retryable: true,
+              },
+            }
+      },
       runSoldierBrain: () => ({
         ok: false as const,
         systemFailure: { code: "TEST_HOST_FAILURE", retryable: true },

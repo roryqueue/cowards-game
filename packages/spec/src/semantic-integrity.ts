@@ -8,9 +8,15 @@ import type {
 } from "./types.js"
 import {
   BOTTOM_STARTING_POSITIONS,
+  ROUND_ACTIVATION_COUNTS,
   TOP_STARTING_POSITIONS,
 } from "./constants.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
+import { ChronicleEventTypeSchema } from "./schemas.js"
+import {
+  hashCanonicalCompatibilityTuple,
+  type CanonicalCompatibilityTuple,
+} from "./integrity-authority.js"
 
 export const SEMANTIC_INTEGRITY_PUBLIC_CATEGORY =
   "CANONICAL_INTEGRITY_FAILURE" as const
@@ -39,6 +45,7 @@ export const SEMANTIC_INTEGRITY_CODE_ORDER = [
   "ARENA_BOUNDS_DEGENERATE",
   "ARENA_TERRAIN_OUT_OF_BOUNDS",
   "ARENA_TERRAIN_DUPLICATE",
+  "ARENA_TERRAIN_AUTHORITY_MISMATCH",
   "ARENA_TERRAIN_START_OVERLAP",
   "ARENA_START_NONCANONICAL",
   "PLAYER_SHAPE_INVALID",
@@ -436,7 +443,7 @@ export interface CanonicalSemanticTransitionEvent {
   readonly soldierId?: string | undefined
 }
 
-export interface CanonicalSemanticTransition {
+export interface CanonicalLegacySemanticTransition {
   readonly kind: string
   readonly versions?: CompatibilityVersions | undefined
   readonly lifecycle: CanonicalSemanticLifecycle
@@ -446,6 +453,33 @@ export interface CanonicalSemanticTransition {
   readonly afterStateHash: string
   readonly terminal: boolean
 }
+
+export interface CanonicalKernelSemanticTransition {
+  readonly transitionKind: string
+  readonly semanticTupleId: string
+  readonly semanticTuple: Readonly<CanonicalCompatibilityTuple>
+  readonly coordinates: Readonly<{
+    phaseNumber: number
+    roundNumber: number
+    stage: string
+    ordinal: number
+    cycleIndex?: number | undefined
+    activationId?: string | undefined
+    activationIndex?: number | undefined
+  }>
+  readonly classification: string
+  readonly events: readonly CanonicalSemanticTransitionEvent[]
+  readonly beforeStateHash: string
+  readonly afterStateHash: string
+  readonly beforeMachineHash: string
+  readonly afterMachineHash: string
+  readonly terminalStatus: MatchOutcome | null
+  readonly failureStatus: null
+}
+
+export type CanonicalSemanticTransition =
+  | CanonicalLegacySemanticTransition
+  | CanonicalKernelSemanticTransition
 
 const issue = (
   code: SemanticIntegrityCode,
@@ -621,6 +655,71 @@ const collectStateIssues = (
     issues.push(issue("PLAYER_INITIATIVE_UNKNOWN", ["initiativePlayerId"]))
   }
 
+  const initial = state.arenaVariant.initialBounds
+  const contractionDepths = [
+    state.bounds.minX - initial.minX,
+    initial.maxX - state.bounds.maxX,
+    state.bounds.minY - initial.minY,
+    initial.maxY - state.bounds.maxY,
+  ]
+  const contractionDepth = contractionDepths[0]!
+  const allowedDepths =
+    state.phase === "COMPLETE"
+      ? new Set([state.phaseNumber - 1, state.phaseNumber])
+      : new Set([state.phaseNumber - 1])
+  if (
+    !boundsAreOrdered(state.bounds) ||
+    !boundsAreNondegenerate(state.bounds) ||
+    !contractionDepths.every(
+      (depth) =>
+        Number.isSafeInteger(depth) &&
+        depth >= 0 &&
+        depth === contractionDepth,
+    ) ||
+    !allowedDepths.has(contractionDepth)
+  ) {
+    issues.push(issue("ARENA_BOUNDS_INVERTED", ["bounds"]))
+  }
+
+  const currentTerrainKeys = state.terrainStones.map(positionKey)
+  const currentTerrainSet = new Set(currentTerrainKeys)
+  state.terrainStones.forEach((position, index) => {
+    if (!isWithinBounds(position, state.bounds)) {
+      issues.push(
+        issue("ARENA_TERRAIN_OUT_OF_BOUNDS", ["terrainStones", index]),
+      )
+    }
+    if (currentTerrainKeys.indexOf(positionKey(position)) !== index) {
+      issues.push(issue("ARENA_TERRAIN_DUPLICATE", ["terrainStones", index]))
+    }
+  })
+  const authoritativeTerrain = new Set(
+    state.arenaVariant.terrainStones
+      .filter((position) => isWithinBounds(position, state.bounds))
+      .map(positionKey),
+  )
+  if (
+    currentTerrainSet.size !== authoritativeTerrain.size ||
+    [...authoritativeTerrain].some((key) => !currentTerrainSet.has(key))
+  ) {
+    issues.push(
+      issue("ARENA_TERRAIN_AUTHORITY_MISMATCH", ["terrainStones"]),
+    )
+  }
+
+  if (
+    !Number.isSafeInteger(state.phaseNumber) ||
+    state.phaseNumber < 1 ||
+    !Number.isSafeInteger(state.roundNumber) ||
+    state.roundNumber < 1 ||
+    state.roundNumber > 4
+  ) {
+    issues.push(issue("LIFECYCLE_CURSOR_INVALID", ["phaseNumber"]))
+  }
+  if (state.activationCount !== ROUND_ACTIVATION_COUNTS[state.roundNumber]) {
+    issues.push(issue("LIFECYCLE_QUOTA_MISMATCH", ["activationCount"]))
+  }
+
   const soldierIds = new Set<string>()
   const occupied = new Set<string>()
   const terrain = new Set(state.terrainStones.map(positionKey))
@@ -793,6 +892,85 @@ export const validateCanonicalTransition = (
   transition: CanonicalSemanticTransition,
 ): SemanticIntegrityResult => {
   const issues: SemanticIntegrityIssueInput[] = []
+  if ("semanticTupleId" in transition) {
+    const tuple = transition.semanticTuple
+    const tupleKeys = Object.keys(tuple).sort()
+    const expectedTupleKeys = [
+      "arenaCatalog",
+      "chronicle",
+      "engine",
+      "rules",
+      "runtimeAbi",
+      "setPolicy",
+    ]
+    const tupleValues = expectedTupleKeys.map(
+      (key) => tuple[key as keyof CanonicalCompatibilityTuple],
+    )
+    if (
+      JSON.stringify(tupleKeys) !== JSON.stringify(expectedTupleKeys) ||
+      tupleValues.some((value) => typeof value !== "string" || value === "") ||
+      transition.semanticTupleId !==
+        `sha256:${hashCanonicalCompatibilityTuple(tuple)}`
+    ) {
+      issues.push(issue("TUPLE_SHAPE_INVALID", ["semanticTupleId"]))
+    }
+    const coordinates = transition.coordinates
+    const activationCoordinatesValid =
+      coordinates.activationIndex === undefined ||
+      (Number.isSafeInteger(coordinates.activationIndex) &&
+        coordinates.activationIndex >= 0 &&
+        coordinates.activationId ===
+          `${coordinates.phaseNumber}:${coordinates.roundNumber}:${coordinates.activationIndex}`)
+    if (
+      !Number.isSafeInteger(coordinates.phaseNumber) ||
+      coordinates.phaseNumber < 1 ||
+      !Number.isSafeInteger(coordinates.roundNumber) ||
+      coordinates.roundNumber < 1 ||
+      coordinates.roundNumber > 4 ||
+      !Number.isSafeInteger(coordinates.ordinal) ||
+      coordinates.ordinal < 0 ||
+      !TRANSITION_KIND_PATTERN.test(transition.transitionKind) ||
+      !activationCoordinatesValid
+    ) {
+      issues.push(issue("LIFECYCLE_CURSOR_INVALID", ["coordinates"]))
+    }
+    if (
+      !HASH_PATTERN.test(transition.beforeStateHash) ||
+      !HASH_PATTERN.test(transition.afterStateHash) ||
+      !HASH_PATTERN.test(transition.beforeMachineHash) ||
+      !HASH_PATTERN.test(transition.afterMachineHash) ||
+      transition.beforeMachineHash === transition.afterMachineHash ||
+      transition.failureStatus !== null
+    ) {
+      issues.push(issue("TRANSITION_HASH_MISMATCH", ["afterMachineHash"]))
+    }
+    const firstSequence = transition.events[0]?.sequence
+    if (
+      transition.events.length === 0 ||
+      firstSequence === undefined ||
+      !Number.isSafeInteger(firstSequence) ||
+      transition.events.some(
+        (event, index) =>
+          !ChronicleEventTypeSchema.safeParse(event.type).success ||
+          !Number.isSafeInteger(event.sequence) ||
+          event.sequence !== firstSequence + index,
+      )
+    ) {
+      issues.push(issue("TRANSITION_SHAPE_INVALID", ["events"]))
+    }
+    const terminalIndexes = transition.events
+      .map((event, index) => (event.type === "MATCH_ENDED" ? index : -1))
+      .filter((index) => index >= 0)
+    if (
+      terminalIndexes.length > 1 ||
+      (terminalIndexes.length === 1 &&
+        terminalIndexes[0] !== transition.events.length - 1) ||
+      (transition.terminalStatus === null) !== (terminalIndexes.length === 0)
+    ) {
+      issues.push(issue("TRANSITION_POST_TERMINAL", ["events", 0]))
+    }
+    return createSemanticIntegrityResult(issues)
+  }
   if (transition.versions !== undefined) {
     issues.push(...collectTupleIssues(transition.versions))
   }

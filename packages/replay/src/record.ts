@@ -18,10 +18,13 @@ import type {
   MatchOutcome,
   PlayerId,
 } from "@cowards/spec"
+import { hashCanonicalCompatibilityTuple } from "@cowards/spec"
 
 const STATE_HASH_DOMAIN =
   "cowards-game:candidate-game-state-projection:v1" as const
 const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/u
+const RECORDER_HASH_DOMAIN =
+  "cowards-game:candidate-recorder-material:v1" as const
 
 interface RecorderCoordinates {
   readonly phaseNumber: number
@@ -35,6 +38,7 @@ interface RecorderTransition {
   readonly semanticTupleId: string
   readonly semanticTuple: Readonly<CanonicalCompatibilityTuple>
   readonly coordinates: RecorderCoordinates
+  readonly classification: string
   readonly events: readonly TransitionEventSummary[]
   readonly beforeState: Readonly<Record<string, unknown>>
   readonly afterState: Readonly<Record<string, unknown>>
@@ -55,6 +59,7 @@ interface CompletedRecorderExecution {
     readonly initialState: GameState
     readonly finalState: GameState
     readonly boundaries: readonly RecorderTransition[]
+    readonly integrityHash: string
   }
 }
 
@@ -62,7 +67,7 @@ interface FailedRecorderExecution {
   readonly kind: "failure"
   readonly transitions: readonly []
   readonly failure: unknown
-  readonly unchangedState: GameState
+  readonly unchangedState: GameState | null
 }
 
 export type ChronicleRecorderExecution =
@@ -212,6 +217,24 @@ const hashProjection = (
     .update(JSON.stringify(projection), "utf8")
     .digest("hex")}`
 
+const hashRecorderMaterial = (
+  material: CompletedRecorderExecution["recorderMaterial"],
+  semanticTupleId: string,
+): string =>
+  `sha256:${createHash("sha256")
+    .update(`${RECORDER_HASH_DOMAIN}\0`, "utf8")
+    .update(
+      JSON.stringify({
+        semanticTupleId,
+        events: material.events,
+        initialState: projectState(material.initialState),
+        finalState: projectState(material.finalState),
+        boundaries: material.boundaries,
+      }),
+      "utf8",
+    )
+    .digest("hex")}`
+
 const same = (left: unknown, right: unknown): boolean =>
   JSON.stringify(left) === JSON.stringify(right)
 
@@ -229,23 +252,38 @@ const safeEvent = ({
   ...(privacy === undefined ? {} : { privacy }),
 })
 
-const metadataIsSafe = (metadata: ChronicleRecordingMetadata): boolean =>
-  same(Object.keys(metadata).sort(), [
-    "schemaVersion",
-    "semanticTuple",
-    "semanticTupleId",
-  ]) &&
-  metadata.schemaVersion === "chronicle-v1.4" &&
-  typeof metadata.semanticTupleId === "string" &&
-  metadata.semanticTupleId.length > 0 &&
-  same(Object.keys(metadata.semanticTuple).sort(), [
-    "arenaCatalog",
-    "chronicle",
-    "engine",
-    "rules",
-    "runtimeAbi",
-    "setPolicy",
-  ])
+const metadataIsSafe = (metadata: ChronicleRecordingMetadata): boolean => {
+  if (
+    !same(Object.keys(metadata).sort(), [
+      "schemaVersion",
+      "semanticTuple",
+      "semanticTupleId",
+    ]) ||
+    metadata.schemaVersion !== "chronicle-v1.4" ||
+    !HASH_PATTERN.test(metadata.semanticTupleId) ||
+    !same(Object.keys(metadata.semanticTuple).sort(), [
+      "arenaCatalog",
+      "chronicle",
+      "engine",
+      "rules",
+      "runtimeAbi",
+      "setPolicy",
+    ]) ||
+    Object.values(metadata.semanticTuple).some(
+      (value) => typeof value !== "string" || value.length === 0,
+    )
+  ) {
+    return false
+  }
+  try {
+    return (
+      metadata.semanticTupleId ===
+      `sha256:${hashCanonicalCompatibilityTuple(metadata.semanticTuple)}`
+    )
+  } catch {
+    return false
+  }
+}
 
 const readObject = (
   value: JsonValue | undefined,
@@ -263,6 +301,53 @@ const explicitOwner = (
   const object = readObject(privatePayload)
   const owner = object?.ownerPlayerId ?? object?.playerId
   return typeof owner === "string" && owner.length > 0 ? owner : undefined
+}
+
+const privateOwnerIsCanonical = (
+  summary: TransitionEventSummary,
+  initialState: GameState,
+): boolean => {
+  if (summary.privatePayload === undefined) return true
+  if (summary.privacy !== "owner") return false
+  if (
+    ![
+      "STRATEGY_EVALUATED",
+      "AWARENESS_GRID_OBSERVED",
+      "ACTION_EMITTED",
+      "RUNTIME_VIOLATION",
+    ].includes(summary.type)
+  ) {
+    return false
+  }
+  const payload = readObject(summary.privatePayload)
+  const owner = explicitOwner(summary.privatePayload)
+  if (payload === undefined || owner === undefined) return false
+  const players = new Set(initialState.players.map(({ id }) => id))
+  if (!players.has(owner)) return false
+  if (
+    summary.context?.actingPlayerId !== undefined &&
+    summary.context.actingPlayerId !== owner
+  ) {
+    return false
+  }
+  const publicPayload = readObject(summary.payload)
+  if (payload.playerId !== undefined) {
+    return (
+      typeof payload.playerId === "string" &&
+      payload.playerId === owner &&
+      publicPayload?.playerId === owner
+    )
+  }
+  const soldierId = payload.soldierId
+  if (typeof soldierId !== "string") return false
+  const soldier = initialState.soldiers.find(({ id }) => id === soldierId)
+  return (
+    soldier !== undefined &&
+    soldier.ownerPlayerId === owner &&
+    (summary.context?.soldierId === undefined ||
+      summary.context.soldierId === soldierId) &&
+    publicPayload?.soldierId === soldierId
+  )
 }
 
 const cloneControlledJson = (value: JsonValue): JsonValue =>
@@ -425,7 +510,6 @@ const validateExecution = (
   ) {
     return "RECORDER_MATERIAL_INVALID"
   }
-
   const first = transitions[0]!
   if (
     first.semanticTupleId !== metadata.semanticTupleId ||
@@ -468,10 +552,28 @@ const validateExecution = (
   for (let index = 0; index < transitions.length; index += 1) {
     const transition = transitions[index]!
     if (
+      transition.coordinates.ordinal !== index ||
+      !Number.isSafeInteger(transition.coordinates.phaseNumber) ||
+      transition.coordinates.phaseNumber < 1 ||
+      !Number.isSafeInteger(transition.coordinates.roundNumber) ||
+      transition.coordinates.roundNumber < 1 ||
+      transition.coordinates.roundNumber > 4 ||
+      typeof transition.coordinates.stage !== "string" ||
+      transition.coordinates.stage.length === 0 ||
+      !["success", "player_violation"].includes(
+        transition.classification,
+      ) ||
       !HASH_PATTERN.test(transition.beforeStateHash) ||
       !HASH_PATTERN.test(transition.afterStateHash) ||
       hashProjection(transition.beforeState) !== transition.beforeStateHash ||
       hashProjection(transition.afterState) !== transition.afterStateHash ||
+      !HASH_PATTERN.test(transition.beforeMachineHash) ||
+      !HASH_PATTERN.test(transition.afterMachineHash) ||
+      transition.beforeMachineHash === transition.afterMachineHash ||
+      !same(
+        transition.terminalStatus,
+        outcomeFromProjection(transition.afterState) ?? null,
+      ) ||
       transition.failureStatus !== null ||
       (index > 0 &&
         (transitions[index - 1]!.afterStateHash !==
@@ -483,12 +585,16 @@ const validateExecution = (
   }
 
   for (const summary of recorderMaterial.events) {
-    if (
-      summary.privatePayload !== undefined &&
-      explicitOwner(summary.privatePayload) === undefined
-    ) {
+    if (!privateOwnerIsCanonical(summary, recorderMaterial.initialState)) {
       return "RECORDER_PRIVATE_OWNER_INVALID"
     }
+  }
+  if (
+    !HASH_PATTERN.test(recorderMaterial.integrityHash) ||
+    hashRecorderMaterial(recorderMaterial, metadata.semanticTupleId) !==
+      recorderMaterial.integrityHash
+  ) {
+    return "RECORDER_MATERIAL_INVALID"
   }
   return undefined
 }

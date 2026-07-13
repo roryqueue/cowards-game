@@ -724,6 +724,12 @@ const resolveSoldierEffect = (
     state = closed.state
     resolvedSlot = closed.slot
     events.push(...closed.events)
+    // A violation can stone the player's final ACTIVE Soldier. The penalty and
+    // activation closure remain player-owned; canonical terminal detection is
+    // then applied immediately and MATCH_ENDED is the final causal event.
+    const ended = checkAndApplyMatchEnd(state)
+    state = ended.state
+    events.push(...ended.events)
   } else if (parsed?.success) {
     state = replaceSoldier(state, {
       ...soldier,

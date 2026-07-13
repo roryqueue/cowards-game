@@ -1,6 +1,9 @@
+import {
+  hashCanonicalCompatibilityTuple,
+  type CanonicalCompatibilityTuple,
+} from "@cowards/spec"
 import type {
   ActivationOrder,
-  CanonicalCompatibilityTuple,
   JsonValue,
   MatchOutcome,
   RuntimeViolation,
@@ -14,6 +17,23 @@ import type {
   TransitionEventSummary,
   TransitionResult,
 } from "../types.js"
+
+/**
+ * Single executable identity for the inactive v1.37 candidate kernel. Every
+ * request, machine, transition, and recorder boundary is checked against this
+ * exact six-component tuple and its recomputed identifier.
+ */
+export const CANDIDATE_KERNEL_SEMANTIC_TUPLE = Object.freeze({
+  rules: "cowards-rules-v1.4",
+  engine: "engine-kernel-v1.37-candidate-1",
+  runtimeAbi: "strategy-runtime-abi-v1.14",
+  chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+  arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+  setPolicy: "canonical-set-policy-v1.4",
+}) satisfies Readonly<CanonicalCompatibilityTuple>
+
+export const CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID =
+  `sha256:${hashCanonicalCompatibilityTuple(CANDIDATE_KERNEL_SEMANTIC_TUPLE)}` as const
 
 export type KernelEffectKind = "selectActivations" | "soldierBrain"
 
@@ -146,6 +166,8 @@ export interface KernelRecorderMaterial {
   readonly initialState: GameState
   readonly finalState: GameState
   readonly boundaries: readonly KernelTransitionRecord[]
+  /** Engine-produced, domain-separated binding over public and private material. */
+  readonly integrityHash: string
 }
 
 export interface MatchMachine {
@@ -200,7 +222,8 @@ export type CandidateExecution =
       readonly kind: "failure"
       readonly transitions: readonly []
       readonly failure: KernelRestrictedFailure
-      readonly unchangedState: GameState
+      /** Null means admission failed before a gameplay state existed. */
+      readonly unchangedState: GameState | null
     }
 
 export interface CandidateRuntimeSystemFailureResult {
@@ -217,7 +240,7 @@ export interface CandidateActivationExecution {
   readonly transitions: readonly KernelTransitionRecord[]
   readonly recorderMaterial?: KernelRecorderMaterial | undefined
   readonly failure?: KernelRestrictedFailure | undefined
-  readonly unchangedState?: GameState | undefined
+  readonly unchangedState?: GameState | null | undefined
 }
 
 export interface CandidateStrategyRuntime {

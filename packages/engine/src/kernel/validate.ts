@@ -11,15 +11,22 @@ import type {
   KernelEffectRequest,
   KernelInput,
   KernelRestrictedFailure,
+  KernelRecorderMaterial,
   KernelSemanticTuple,
   KernelTransitionRecord,
   MatchMachine,
+} from "./types.js"
+import {
+  CANDIDATE_KERNEL_SEMANTIC_TUPLE,
+  CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
 } from "./types.js"
 
 const MACHINE_HASH_DOMAIN =
   "cowards-game:candidate-match-machine-projection:v1" as const
 const STATE_HASH_DOMAIN =
   "cowards-game:candidate-game-state-projection:v1" as const
+const RECORDER_HASH_DOMAIN =
+  "cowards-game:candidate-recorder-material:v1" as const
 const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/u
 
 const codePointCompare = (left: string, right: string): number => {
@@ -156,6 +163,23 @@ export const hashMatchMachine = (machine: MatchMachine): string =>
     .update(JSON.stringify(projectMatchMachineForHash(machine)), "utf8")
     .digest("hex")}`
 
+export const hashKernelRecorderMaterial = (
+  material: Omit<KernelRecorderMaterial, "integrityHash">,
+): string =>
+  `sha256:${createHash("sha256")
+    .update(`${RECORDER_HASH_DOMAIN}\0`, "utf8")
+    .update(
+      JSON.stringify({
+        semanticTupleId: CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
+        events: material.events,
+        initialState: projectCanonicalStateForRecording(material.initialState),
+        finalState: projectCanonicalStateForRecording(material.finalState),
+        boundaries: material.boundaries,
+      }),
+      "utf8",
+    )
+    .digest("hex")}`
+
 const integrityFailure = (
   code: string,
   result?: Exclude<SemanticIntegrityResult, { ok: true }>,
@@ -178,6 +202,13 @@ export const validateMachine = (
   const semantic = validateCanonicalGameState(machine.state)
   if (!semantic.ok) return integrityFailure("KERNEL_STATE_INVALID", semantic)
   if (
+    machine.semanticTuple.tupleId !== CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID ||
+    JSON.stringify(projectTuple(machine.semanticTuple.tuple)) !==
+      JSON.stringify(CANDIDATE_KERNEL_SEMANTIC_TUPLE)
+  ) {
+    return integrityFailure("KERNEL_SEMANTIC_TUPLE_INVALID")
+  }
+  if (
     !Number.isSafeInteger(machine.maxPhases) ||
     machine.maxPhases < 0 ||
     !Number.isSafeInteger(machine.phasesRun) ||
@@ -190,6 +221,12 @@ export const validateMachine = (
     machine.cursor.slotIndex < 0
   ) {
     return integrityFailure("KERNEL_CURSOR_INVALID")
+  }
+  if (
+    machine.cursor.phaseNumber !== machine.state.phaseNumber ||
+    machine.cursor.roundNumber !== machine.state.roundNumber
+  ) {
+    return integrityFailure("KERNEL_CURSOR_STATE_MISMATCH")
   }
   if (
     machine.pendingEffect !== undefined &&
@@ -292,6 +329,9 @@ export const validateTransitionRecord = (
   expectedTuple: KernelSemanticTuple,
 ): KernelRestrictedFailure | undefined => {
   if (
+    expectedTuple.tupleId !== CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID ||
+    JSON.stringify(projectTuple(expectedTuple.tuple)) !==
+      JSON.stringify(CANDIDATE_KERNEL_SEMANTIC_TUPLE) ||
     record.semanticTupleId !== expectedTuple.tupleId ||
     JSON.stringify(record.semanticTuple) !==
       JSON.stringify(expectedTuple.tuple) ||
@@ -300,7 +340,15 @@ export const validateTransitionRecord = (
     !HASH_PATTERN.test(record.beforeMachineHash) ||
     !HASH_PATTERN.test(record.afterMachineHash) ||
     record.events.length === 0 ||
-    record.beforeMachineHash === record.afterMachineHash
+    record.beforeMachineHash === record.afterMachineHash ||
+    !Number.isSafeInteger(record.coordinates.phaseNumber) ||
+    record.coordinates.phaseNumber < 1 ||
+    !Number.isSafeInteger(record.coordinates.roundNumber) ||
+    record.coordinates.roundNumber < 1 ||
+    record.coordinates.roundNumber > 4 ||
+    !Number.isSafeInteger(record.coordinates.ordinal) ||
+    record.coordinates.ordinal < 0 ||
+    record.failureStatus !== null
   ) {
     return integrityFailure("KERNEL_TRANSITION_RECORD_INVALID")
   }
