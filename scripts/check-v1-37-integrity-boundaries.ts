@@ -168,6 +168,10 @@ const PHASE_19_REVIEW_CORRECTION_COMMIT =
   "bd38bf249861f90c43c6eee97e2fcfd428fc5e6d"
 const PHASE_19_REVIEW_CLOSURE_COMMIT =
   "aefb289bbf1f868253b197679c1febe235cc642d"
+const PHASE_19_RECEIPT_REREVIEW_CORRECTION_COMMIT =
+  "34491b2d632b351ee8ca4802dc574a27eeb68b1c"
+const PHASE_19_RECEIPT_REREVIEW_CLOSURE_COMMIT =
+  "f5741fb726828a507d4e7e1dd7dfac4a05902ab9"
 const CURRENT_TUPLE_ID =
   "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
 
@@ -625,6 +629,8 @@ export const buildV137Phase257CoreRulesResult = (
     "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json"
   const receiptContractPath =
     "packages/spec/src/runtime-execution-service.ts"
+  const receiptWireGoldenPath =
+    "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json"
   const receiptMigrationPath =
     "packages/persistence/migrations/0017_runtime_semantic_receipts.sql"
   const receiptContract = readFileSync(
@@ -635,6 +641,16 @@ export const buildV137Phase257CoreRulesResult = (
     path.join(repoRoot, receiptMigrationPath),
     "utf8",
   )
+  const receiptWireGolden = readJson(repoRoot, receiptWireGoldenPath)
+  const receiptWireGoldenResult =
+    isRecord(receiptWireGolden) && isRecord(receiptWireGolden.result)
+      ? receiptWireGolden.result
+      : undefined
+  const receiptWireGoldenClaims =
+    isRecord(receiptWireGoldenResult) &&
+    isRecord(receiptWireGoldenResult.semanticReceipt)
+      ? receiptWireGoldenResult.semanticReceipt
+      : undefined
   const authority = readJson(repoRoot, authorityPath)
   const eventCoverage = readJson(repoRoot, eventCoveragePath)
   const candidate = readJson(repoRoot, candidatePath)
@@ -664,8 +680,27 @@ export const buildV137Phase257CoreRulesResult = (
   if (
     !receiptContract.includes("runtime-execution-service-v1.16") ||
     !receiptContract.includes("runtime-semantic-receipt-v1") ||
+    !receiptContract.includes(
+      "cowards-game:runtime-semantic-chronicle-json-wire:v1",
+    ) ||
+    !receiptContract.includes(
+      "cowards-game:runtime-semantic-final-state-json-wire:v1",
+    ) ||
+    !receiptContract.includes(
+      "cowards-game:runtime-semantic-outcome-json-wire:v1",
+    ) ||
     !receiptMigration.includes("runtime_semantic_receipt") ||
-    !receiptMigration.includes("runtime_semantic_receipt_hash")
+    !receiptMigration.includes("runtime_semantic_receipt_hash") ||
+    !isRecord(receiptWireGolden) ||
+    receiptWireGolden.contractVersion !== "runtime-execution-service-v1.16" ||
+    receiptWireGolden.ok !== true ||
+    !isRecord(receiptWireGoldenClaims) ||
+    receiptWireGoldenClaims.schemaVersion !== "runtime-semantic-receipt-v1" ||
+    typeof receiptWireGoldenClaims.chronicleWireBytesHash !== "string" ||
+    typeof receiptWireGoldenClaims.finalStateWireBytesHash !== "string" ||
+    typeof receiptWireGoldenClaims.outcomeWireBytesHash !== "string" ||
+    typeof receiptWireGoldenClaims.signature !== "string" ||
+    !/^hmac-sha256:[0-9a-f]{64}$/u.test(receiptWireGoldenClaims.signature)
   ) {
     throw new Error("v1.16 semantic receipt or migration drifted")
   }
@@ -702,6 +737,16 @@ export const buildV137Phase257CoreRulesResult = (
         ),
       },
       reviewClosureCommit: PHASE_19_REVIEW_CLOSURE_COMMIT,
+      receiptRereview: {
+        correction: {
+          commit: PHASE_19_RECEIPT_REREVIEW_CORRECTION_COMMIT,
+          sourceManifest: commitSourceManifest(
+            repoRoot,
+            PHASE_19_RECEIPT_REREVIEW_CORRECTION_COMMIT,
+          ),
+        },
+        closureCommit: PHASE_19_RECEIPT_REREVIEW_CLOSURE_COMMIT,
+      },
       tupleId: CURRENT_TUPLE_ID,
       runtimeExecutionContract: "runtime-execution-service-v1.16",
       semanticReceipt: "runtime-semantic-receipt-v1",
@@ -855,6 +900,11 @@ export const buildV137Phase257CoreRulesResult = (
         path: receiptMigrationPath,
         sha256: fileSha256(repoRoot, receiptMigrationPath),
       },
+      {
+        id: "v1.16-semantic-receipt-wire-golden",
+        path: receiptWireGoldenPath,
+        sha256: fileSha256(repoRoot, receiptWireGoldenPath),
+      },
     ],
     checks: [
       "phase256-baseline-immutable",
@@ -870,6 +920,9 @@ export const buildV137Phase257CoreRulesResult = (
       "activation-review-findings-closed",
       "v1.16-semantic-receipt-bound",
       "v1.16-semantic-receipt-migration-bound",
+      "v1.16-semantic-receipt-wire-bytes-bound",
+      "v1.16-typescript-go-receipt-golden-bound",
+      "receipt-rereview-warnings-closed",
     ],
   }
 }
@@ -884,6 +937,12 @@ export const renderV137Phase257CoreRulesResultMarkdown = (
   const activation = isRecord(result.activation) ? result.activation : {}
   const reviewCorrection = isRecord(activation.reviewCorrection)
     ? activation.reviewCorrection
+    : {}
+  const receiptRereview = isRecord(activation.receiptRereview)
+    ? activation.receiptRereview
+    : {}
+  const receiptCorrection = isRecord(receiptRereview.correction)
+    ? receiptRereview.correction
     : {}
   const observations = isRecord(result.observations) ? result.observations : {}
   const approvedDelta = isRecord(result.approvedDelta)
@@ -904,9 +963,12 @@ This is the deterministic current result after the Plan 19 atomic activation. It
 - Commit: \`${String(activation.commit)}\`
 - Corrective source commit: \`${String(reviewCorrection.commit)}\`
 - Review-closure commit: \`${String(activation.reviewClosureCommit)}\`
+- Receipt re-review corrective commit: \`${String(receiptCorrection.commit)}\`
+- Receipt re-review closure commit: \`${String(receiptRereview.closureCommit)}\`
 - Current tuple: \`${String(activation.tupleId)}\`
 - Source manifest: \`${stableJson(activation.sourceManifest)}\`
 - Corrective source manifest: \`${stableJson(reviewCorrection.sourceManifest)}\`
+- Receipt corrective source manifest: \`${stableJson(receiptCorrection.sourceManifest)}\`
 - Runtime contract / receipt / migration: \`${String(activation.runtimeExecutionContract)}\` / \`${String(activation.semanticReceipt)}\` / \`${String(activation.receiptMigration)}\`
 
 ## Exact seven-probe result

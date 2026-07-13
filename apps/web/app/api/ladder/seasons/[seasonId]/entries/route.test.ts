@@ -6,7 +6,6 @@ import {
 } from "@cowards/spec"
 import { CompetitiveInputError } from "../../../../../../lib/competitive-errors.js"
 import { competitiveErrorResponse } from "../../../../../competitive/http.js"
-import type * as CompetitiveServerModule from "../../../../../competitive/server.js"
 
 const mocks = vi.hoisted(() => ({
   enterTrialLadderSeason: vi.fn(),
@@ -14,7 +13,10 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock("../../../../../competitive/server.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof CompetitiveServerModule>()
+  const actual = (await importOriginal()) as {
+    competitiveServer: Record<string, unknown>
+    getCurrentCompetitiveUser: unknown
+  }
   return {
     ...actual,
     competitiveServer: {

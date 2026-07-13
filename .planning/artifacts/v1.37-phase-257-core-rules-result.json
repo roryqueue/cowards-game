@@ -1,0 +1,216 @@
+{
+  "schemaVersion": "v1.37-phase-257-core-rules-result-v1",
+  "milestone": "v1.37",
+  "phase": 257,
+  "status": "current-exact",
+  "generatedAt": "2026-07-13",
+  "immutableBaselines": {
+    "phase256Audit": {
+      "jsonPath": ".planning/artifacts/v1.37-core-rules-audit-baseline.json",
+      "jsonSha256": "f069de5950030c59a04b9bf671ff7d149a54461690b766f8fd385a2c4dbb1a0b",
+      "markdownPath": ".planning/artifacts/v1.37-core-rules-audit-baseline.md",
+      "markdownSha256": "4ebee5c0be4cdb4b554ce8f56483b8c5a11a3e3630c80e3f30460021ad09bdf2"
+    },
+    "phase257PreRefactor": {
+      "path": ".planning/artifacts/v1.37-phase-257-red-baseline.json",
+      "sha256": "bd2a7575282ca7df86bf3a6fc2602a9797660b0ab27bdb0f2def203ddba58f0d"
+    }
+  },
+  "activation": {
+    "commit": "3642493db803a8f68e3863777cc66dd6609ee93d",
+    "sourceManifest": {
+      "pathCount": 93,
+      "sortedPathListSha256": "470e33afef8c14592197b626182107966869134799b5b91d40e0d8fc9ef15c4f"
+    },
+    "reviewCorrection": {
+      "commit": "bd38bf249861f90c43c6eee97e2fcfd428fc5e6d",
+      "sourceManifest": {
+        "pathCount": 53,
+        "sortedPathListSha256": "e83f7da9840b727b3c93d38cb8e3e4c2b17c023aab15f147d9fad892cacea8c9"
+      }
+    },
+    "reviewClosureCommit": "aefb289bbf1f868253b197679c1febe235cc642d",
+    "receiptRereview": {
+      "correction": {
+        "commit": "34491b2d632b351ee8ca4802dc574a27eeb68b1c",
+        "sourceManifest": {
+          "pathCount": 14,
+          "sortedPathListSha256": "a486951f03ff4bd1739dfbfe1865389f6900ed3d7f836aea4244f2325260bbe0"
+        }
+      },
+      "closureCommit": "f5741fb726828a507d4e7e1dd7dfac4a05902ab9"
+    },
+    "tupleId": "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+    "runtimeExecutionContract": "runtime-execution-service-v1.16",
+    "semanticReceipt": "runtime-semantic-receipt-v1",
+    "receiptMigration": "0017_runtime_semantic_receipts.sql"
+  },
+  "observations": {
+    "noAdvanceLastSoldier": {
+      "status": "STONE",
+      "outcome": {
+        "type": "WIN",
+        "winnerPlayerId": "top"
+      },
+      "matchEndedEvents": 1
+    },
+    "cycleEndBackstabActor": {
+      "status": "STONE",
+      "slotEnded": true,
+      "terminalReason": "BACKSTABBED"
+    },
+    "excessMalformedOrder": {
+      "validOrdersRetained": 1,
+      "violationEvents": 0
+    },
+    "deepValidation": "threw:RangeError",
+    "overlappingArenaAccepted": false,
+    "legacyBoundaryAccepted": true,
+    "successfulPushPusherHistory": "RIGHT"
+  },
+  "approvedDelta": {
+    "semanticRepairs": [
+      {
+        "decision": "D-09",
+        "probe": "excessMalformedOrder",
+        "meaning": "cap raw orders before validating the retained prefix"
+      },
+      {
+        "decision": "D-10",
+        "probe": "cycleEndBackstabActor",
+        "meaning": "close a Cycle-end Backstabbed actor before outcome"
+      },
+      {
+        "decision": "D-11",
+        "probe": "noAdvanceLastSoldier",
+        "meaning": "close no-Advance removal before immediate outcome"
+      },
+      {
+        "decision": "KERN-03",
+        "probe": "overlappingArenaAccepted",
+        "meaning": "reject invalid arena occupancy at admission"
+      }
+    ],
+    "structuralAndVersion": [
+      {
+        "decision": "D-13",
+        "meaning": "remove contiguous Activation and duplicate scheduler surfaces"
+      },
+      {
+        "decision": "D-14",
+        "meaning": "remove PUSH_ATTEMPTED from current vocabulary only"
+      },
+      {
+        "decision": "D-15",
+        "meaning": "activate the exact 922a tuple while preserving historical v1.4"
+      }
+    ],
+    "preserved": {
+      "decision": "D-12",
+      "probe": "successfulPushPusherHistory",
+      "observed": "RIGHT"
+    },
+    "deferred": [
+      {
+        "probe": "deepValidation",
+        "ownerPhase": 258,
+        "observed": "threw:RangeError"
+      },
+      {
+        "probe": "legacyBoundaryAccepted",
+        "ownerPhase": 259,
+        "observed": true
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "lifecycle-repairs",
+      "path": "packages/engine/src/kernel/lifecycle-repairs.test.ts",
+      "sha256": "eeb9e3a5c7682ac47b1d8ba19a1bb89d588b371ee25fc9ceee5fe408a6f8aaee"
+    },
+    {
+      "id": "v1.4-compatibility",
+      "path": "packages/engine/src/compatibility-fixtures.test.ts",
+      "sha256": "754a94eedd9c310d73be63eb3be76b8bbee409f4bda78303ba8228b6ac3055f5"
+    },
+    {
+      "id": "current-event-coverage",
+      "path": "packages/spec/artifacts/v1.37-current-event-coverage.json",
+      "sha256": "96be0ea4809c6b802142e6164dc9f10639cfe7a97f0918b822a191972b9c3a44"
+    },
+    {
+      "id": "current-authority",
+      "path": "packages/spec/artifacts/v1.37-integrity-authority.json",
+      "sha256": "afa81345bb2d697befa590a07e613649c7b759bb9a471887104c83bfeaea1b1e"
+    },
+    {
+      "id": "executable-reference-inventory",
+      "path": "scripts/check-v1-37-executable-reference-inventory.ts",
+      "sha256": "d8953add4704512604a394309495496f7ed0581b51098257e792509f82476066"
+    },
+    {
+      "id": "go-no-scheduler-ast",
+      "path": "apps/go-backend/semantic_integrity_test.go",
+      "sha256": "ce31dd73e569f22c53ec127589d380ce7f14cfeb2e1060d15aa86c47ec021637"
+    },
+    {
+      "id": "historical-read-only-dispatch",
+      "path": ".planning/artifacts/v1.37-v1.36-historical-proof-dispatch.json",
+      "sha256": "108e3df9c07ed3f99a4907a8ef455ee8653169dffd1a9e4797c10a3621745e12"
+    },
+    {
+      "id": "inactive-candidate-provenance",
+      "path": "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json",
+      "sha256": "4234567bc758b6fcc27085b523d642ad765803ce5e97a301e272ab351a208d11"
+    },
+    {
+      "id": "activation-review-closure",
+      "path": ".planning/phases/257-canonical-transition-kernel-and-v1-4-semantic-integrity/257-19-ACTIVATION-REVIEW-CLOSURE.md",
+      "sha256": "67d39bca990ff583d52ac114c808edc3fa57ddb573bc183035dbe11e3463efa5"
+    },
+    {
+      "id": "v1.16-semantic-receipt-contract",
+      "path": "packages/spec/src/runtime-execution-service.ts",
+      "sha256": "9a0a0411056d06ce4b426b7749256460369124fa752c6c2f81912b8b0bfb31fc"
+    },
+    {
+      "id": "v1.16-typescript-semantic-receipt",
+      "path": "apps/runtime-service/src/semantic-receipt.ts",
+      "sha256": "f97482b7824658579fcaf33f310613103da5afd93ccee09f6c0dc49cf82722ec"
+    },
+    {
+      "id": "v1.16-go-semantic-receipt",
+      "path": "apps/go-backend/runtime_semantic_receipt.go",
+      "sha256": "36052047a870068ab81ced8c78f3b7f4e8130034a57ee8d16bc3873a50507d1d"
+    },
+    {
+      "id": "v1.16-semantic-receipt-migration",
+      "path": "packages/persistence/migrations/0017_runtime_semantic_receipts.sql",
+      "sha256": "ac19e1d825217dfb72142685eb65e62933cea49541ceb39338235b32d2430a69"
+    },
+    {
+      "id": "v1.16-semantic-receipt-wire-golden",
+      "path": "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
+      "sha256": "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97"
+    }
+  ],
+  "checks": [
+    "phase256-baseline-immutable",
+    "phase257-pre-refactor-baseline-immutable",
+    "single-transition-authority",
+    "stale-reference-inventory-empty",
+    "current-event-coverage-closed",
+    "exact-current-tuple",
+    "inactive-candidate-provenance-immutable",
+    "go-no-scheduler-ast",
+    "historical-proof-read-only",
+    "recursive-public-payload-privacy",
+    "activation-review-findings-closed",
+    "v1.16-semantic-receipt-bound",
+    "v1.16-semantic-receipt-migration-bound",
+    "v1.16-semantic-receipt-wire-bytes-bound",
+    "v1.16-typescript-go-receipt-golden-bound",
+    "receipt-rereview-warnings-closed"
+  ]
+}

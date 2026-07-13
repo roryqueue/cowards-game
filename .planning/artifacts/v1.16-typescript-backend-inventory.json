@@ -11140,7 +11140,7 @@
           "statementText": "import {\n  getCountedEntryEligibilityPublicCopy,\n  type CountedEntryEligibilityCategory,\n  type UserId,\n} from \"@cowards/spec\""
         },
         {
-          "line": 28,
+          "line": 30,
           "source": "./route.js",
           "statementText": "import { POST } from \"./route.js\""
         },
@@ -11153,11 +11153,6 @@
           "line": 8,
           "source": "../../../../../competitive/http.js",
           "statementText": "import { competitiveErrorResponse } from \"../../../../../competitive/http.js\""
-        },
-        {
-          "line": 9,
-          "source": "../../../../../competitive/server.js",
-          "statementText": "import type * as CompetitiveServerModule from \"../../../../../competitive/server.js\""
         }
       ],
       "persistenceImports": [],

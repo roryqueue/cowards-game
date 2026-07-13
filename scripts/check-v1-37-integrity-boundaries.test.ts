@@ -579,6 +579,12 @@ describe("v1.37 Phase-257 current core-rules result", () => {
           commit: "bd38bf249861f90c43c6eee97e2fcfd428fc5e6d",
         },
         reviewClosureCommit: "aefb289bbf1f868253b197679c1febe235cc642d",
+        receiptRereview: {
+          correction: {
+            commit: "34491b2d632b351ee8ca4802dc574a27eeb68b1c",
+          },
+          closureCommit: "f5741fb726828a507d4e7e1dd7dfac4a05902ab9",
+        },
         tupleId:
           "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
         runtimeExecutionContract: "runtime-execution-service-v1.16",
