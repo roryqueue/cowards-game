@@ -1015,7 +1015,12 @@ const analyzePhase257RedSources = (
       (call) =>
         ts.isPropertyAccessExpression(call.expression) &&
         combinatorNames.has(call.expression.name.text) &&
-        call.arguments.some(repeatedCallIn),
+        call.arguments.some(
+          (argument) =>
+            repeatedCallIn(argument) ||
+            (ts.isIdentifier(argument) &&
+              schedulingFunctions.has(argument.text)),
+        ),
     )
     const recursiveSite = [...functions.entries()].find(
       ([name, declaration]) =>

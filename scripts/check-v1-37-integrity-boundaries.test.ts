@@ -336,6 +336,50 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
         }),
       ])
     })
+
+    it.each([
+      [
+        "namespace aliases called through a helper loop",
+        `
+          const advance = kernel.stepMatch
+          const tick = (machine: unknown) =>
+            advance(
+              machine,
+              { kind: "advance" },
+            )
+          while (true) tick({})
+        `,
+      ],
+      [
+        "scheduler callbacks passed to an array combinator",
+        `
+          const advance = (machine: unknown) =>
+            kernel.runActivationFromState(machine, {})
+          machines.forEach(advance)
+        `,
+      ],
+      [
+        "recursive scheduler drivers",
+        `
+          function drive(machine: unknown) {
+            stepMatch(machine, { kind: "advance" })
+            return drive(machine)
+          }
+        `,
+      ],
+    ])("rejects %s", (_label, source) => {
+      const result = analyzeV137IntegritySources(
+        { "packages/replay/src/copied-scheduler.ts": source },
+        { enforcePhase257RedContracts: true },
+      )
+
+      expect(result.findings).toEqual([
+        expect.objectContaining({
+          code: "PHASE_257_DUPLICATE_LIFECYCLE_LOOP",
+          path: "packages/replay/src/copied-scheduler.ts",
+        }),
+      ])
+    })
   })
 
   it("pins domain-separated payload-byte authority verification and its negative guards", () => {
