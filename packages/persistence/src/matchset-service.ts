@@ -10,14 +10,35 @@ import { withTransaction } from "./db.js"
 import {
   createMatchJobId,
   validateCreateMatchInput,
-  type CreateMatchInput,
+  validateCreateMatchRecordInput,
+  type CreateMatchRecordInput,
 } from "./match-service.js"
+import {
+  IntegrityEvidenceInputError,
+  createMatchExecutionEvidencePair,
+  createMatchSetIntegrityIdentity,
+  matchExecutionEvidencePairSqlValues,
+  matchSetExecutionEntrantSqlValues,
+  matchSetIntegritySqlValues,
+  type EntrantExecutionEvidence,
+  type MatchExecutionEvidencePair,
+  type MatchSetIntegrityIdentity,
+} from "./integrity-evidence.js"
+import type { RuntimeExecutionCompatibilityIdentity } from "@cowards/spec"
 import { getMatchSetPreset, type MatchSetPresetId } from "./presets.js"
 import type { MatchSetStatus } from "./schema.js"
 
+export interface IntegritySchedulingIdentity {
+  compatibility: RuntimeExecutionCompatibilityIdentity
+  authorityBundleHash: string
+  registryGeneration: string
+  executionEntrants: Readonly<Record<string, EntrantExecutionEvidence>>
+}
+
 export interface CreateMatchSetFromMatrixInput {
   id: MatchSetId
-  matches: CreateMatchInput[]
+  matches: CreateMatchRecordInput[]
+  integrityIdentity: IntegritySchedulingIdentity
   matchSet?: {
     presetId?: MatchSetPresetId | undefined
     presetVersion?: "v1" | undefined
@@ -34,6 +55,7 @@ export interface CreateMatchSetFromMatrixInput {
   competitionEntrants?: Array<{
     id: string
     entrantIndex: number
+    executionEntrantKey: string
     strategyRevisionId: StrategyRevisionId
     ownerUserId: string
     ownerHandle: string
@@ -53,13 +75,14 @@ export interface CreateMatchSetFromPresetInput {
   topStrategyRevisionId: StrategyRevisionId
   bottomPlayerId: PlayerId
   topPlayerId: PlayerId
+  integrityIdentity: IntegritySchedulingIdentity
 }
 
 export const generatePresetMatrix = (
   input: CreateMatchSetFromPresetInput,
-): CreateMatchInput[] => {
+): CreateMatchRecordInput[] => {
   const preset = getMatchSetPreset(input.presetId)
-  const matches: CreateMatchInput[] = []
+  const matches: CreateMatchRecordInput[] = []
   let index = 0
 
   for (const arenaVariantId of preset.arenaVariantIds) {
@@ -72,6 +95,8 @@ export const generatePresetMatrix = (
         seed,
         bottomPlayerId: input.bottomPlayerId,
         topPlayerId: input.topPlayerId,
+        bottomEntrantKey: input.bottomStrategyRevisionId,
+        topEntrantKey: input.topStrategyRevisionId,
       })
       index += 1
       if (preset.mirrorSides) {
@@ -83,6 +108,8 @@ export const generatePresetMatrix = (
           seed: `${seed}:mirror`,
           bottomPlayerId: input.topPlayerId,
           topPlayerId: input.bottomPlayerId,
+          bottomEntrantKey: input.topStrategyRevisionId,
+          topEntrantKey: input.bottomStrategyRevisionId,
         })
         index += 1
       }
@@ -92,13 +119,119 @@ export const generatePresetMatrix = (
   return matches
 }
 
+interface ValidatedMatchSetCreation {
+  identity: Readonly<MatchSetIntegrityIdentity>
+  pairs: readonly Readonly<MatchExecutionEvidencePair>[]
+}
+
+const utf8KeyOrder = (left: string, right: string): number =>
+  Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"))
+
+const validateMatchSetCreation = (
+  input: CreateMatchSetFromMatrixInput,
+  now = new Date(),
+): ValidatedMatchSetCreation => {
+  if (!input.integrityIdentity || typeof input.integrityIdentity !== "object") {
+    throw new IntegrityEvidenceInputError(
+      "MatchSet creation requires exact integrity identity.",
+    )
+  }
+  if (
+    !input.integrityIdentity.executionEntrants ||
+    typeof input.integrityIdentity.executionEntrants !== "object" ||
+    Array.isArray(input.integrityIdentity.executionEntrants)
+  ) {
+    throw new IntegrityEvidenceInputError(
+      "MatchSet execution entrants must be a deterministic key map.",
+    )
+  }
+
+  const expectedByKey = new Map<string, string>()
+  for (const match of input.matches) {
+    validateCreateMatchRecordInput(match)
+    for (const [entrantKey, strategyRevisionId] of [
+      [match.bottomEntrantKey, match.bottomStrategyRevisionId],
+      [match.topEntrantKey, match.topStrategyRevisionId],
+    ] as const) {
+      const existing = expectedByKey.get(entrantKey)
+      if (existing && existing !== strategyRevisionId) {
+        throw new IntegrityEvidenceInputError(
+          `Entrant ${entrantKey} has mixed Strategy Revision bindings.`,
+        )
+      }
+      expectedByKey.set(entrantKey, strategyRevisionId)
+    }
+  }
+
+  const executionEntrants = Object.entries(
+    input.integrityIdentity.executionEntrants,
+  ).sort(([left], [right]) => utf8KeyOrder(left, right))
+  for (const [key, evidence] of executionEntrants) {
+    if (!evidence || typeof evidence !== "object" || evidence.entrantKey !== key) {
+      throw new IntegrityEvidenceInputError(
+        "Execution entrant map keys must exactly match entrant evidence keys.",
+      )
+    }
+  }
+
+  const identity = createMatchSetIntegrityIdentity({
+    compatibility: input.integrityIdentity.compatibility,
+    authorityBundleHash: input.integrityIdentity.authorityBundleHash,
+    registryGeneration: input.integrityIdentity.registryGeneration,
+    expectedEntrants: [...expectedByKey.entries()].map(
+      ([entrantKey, strategyRevisionId]) => ({
+        entrantKey,
+        strategyRevisionId,
+      }),
+    ),
+    entrants: executionEntrants.map(([, evidence]) => evidence),
+  })
+
+  const pairs = input.matches.map((match) => {
+    const evidencePair = createMatchExecutionEvidencePair(identity, {
+      bottomEntrantKey: match.bottomEntrantKey,
+      topEntrantKey: match.topEntrantKey,
+      bottomStrategyRevisionId: match.bottomStrategyRevisionId,
+      topStrategyRevisionId: match.topStrategyRevisionId,
+    })
+    validateCreateMatchInput(
+      {
+        ...match,
+        integrityIdentity: {
+          matchSetId: input.id,
+          identity,
+          evidencePair,
+        },
+      },
+      now,
+    )
+    return evidencePair
+  })
+
+  const linkedEntrantKeys = new Set<string>()
+  for (const entrant of input.competitionEntrants ?? []) {
+    const evidence = identity.entrantsByKey[entrant.executionEntrantKey]
+    if (!evidence || evidence.strategyRevisionId !== entrant.strategyRevisionId) {
+      throw new IntegrityEvidenceInputError(
+        "Competition entrant execution evidence binding is missing or invalid.",
+      )
+    }
+    if (linkedEntrantKeys.has(entrant.executionEntrantKey)) {
+      throw new IntegrityEvidenceInputError(
+        "Competition entrant execution evidence links must be distinct.",
+      )
+    }
+    linkedEntrantKeys.add(entrant.executionEntrantKey)
+  }
+
+  return Object.freeze({ identity, pairs: Object.freeze(pairs) })
+}
+
 export const insertMatchSetWithMatrixOnClient = async (
   client: PoolClient,
   input: CreateMatchSetFromMatrixInput,
 ): Promise<void> => {
-  for (const match of input.matches) {
-    validateCreateMatchInput(match)
-  }
+  const validated = validateMatchSetCreation(input)
 
   const repositories = createRepositories(client)
   const revisionIds = new Set<StrategyRevisionId>()
@@ -123,6 +256,10 @@ export const insertMatchSetWithMatrixOnClient = async (
   }
 
   const matchSet = input.matchSet ?? {}
+  const integritySqlValues = [...matchSetIntegritySqlValues(validated.identity)]
+  // node-postgres serializes JavaScript arrays as PostgreSQL arrays. The
+  // normalized entrant set is one JSONB document, so serialize it explicitly.
+  integritySqlValues[9] = JSON.stringify(integritySqlValues[9])
   await client.query(
     `
         insert into match_sets (
@@ -139,7 +276,18 @@ export const insertMatchSetWithMatrixOnClient = async (
           entrant_snapshot_set,
           publication_policy,
           duplicate_key,
-          locked_at
+          locked_at,
+          compatibility_tuple_id,
+          compatibility_rules_version,
+          compatibility_engine_version,
+          compatibility_runtime_abi_version,
+          compatibility_chronicle_version,
+          compatibility_arena_catalog_version,
+          compatibility_set_policy_version,
+          authority_bundle_hash,
+          authority_registry_generation,
+          execution_evidence_set,
+          execution_evidence_set_hash
         )
         values (
           $1,
@@ -155,7 +303,8 @@ export const insertMatchSetWithMatrixOnClient = async (
           $10,
           $11,
           $12,
-          $13
+          $13,
+          $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
         )
       `,
     [
@@ -172,8 +321,34 @@ export const insertMatchSetWithMatrixOnClient = async (
       JSON.stringify(matchSet.publicationPolicy ?? {}),
       matchSet.duplicateKey ?? null,
       matchSet.lockedAt ?? null,
+      ...integritySqlValues,
     ],
   )
+
+  for (const entrant of validated.identity.normalizedEntrants) {
+    await client.query(
+      `
+        insert into match_set_execution_entrants (
+          match_set_id, entrant_key, strategy_revision_id, lane_identity,
+          lane_identity_hash, containment_certificate_kind,
+          containment_certificate_id, containment_certificate_version,
+          containment_certificate_hash, conformance_certificate_kind,
+          conformance_certificate_id, conformance_certificate_version,
+          conformance_certificate_hash, scheduling_status,
+          scheduling_reason_code, scheduling_evaluated_at,
+          scheduling_fresh_until, authority_registry_generation,
+          execution_snapshot, authority_bundle_hash
+        ) values (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+          $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+        )
+      `,
+      [
+        ...matchSetExecutionEntrantSqlValues(input.id, entrant),
+        validated.identity.authorityBundleHash,
+      ],
+    )
+  }
 
   for (const entrant of input.competitionEntrants ?? []) {
     await client.query(
@@ -190,9 +365,10 @@ export const insertMatchSetWithMatrixOnClient = async (
             source_bytes,
             runtime,
             engine_compatibility,
-            snapshot
+            snapshot,
+            execution_entrant_key
           )
-          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         `,
       [
         entrant.id,
@@ -207,18 +383,26 @@ export const insertMatchSetWithMatrixOnClient = async (
         entrant.runtime,
         entrant.engineCompatibility,
         entrant.snapshot,
+        entrant.executionEntrantKey,
       ],
     )
   }
 
   for (const [matrixIndex, match] of input.matches.entries()) {
+    const evidencePair = validated.pairs[matrixIndex]!
     await client.query(
       `
           insert into matches (
             id, bottom_strategy_revision_id, top_strategy_revision_id,
-            arena_variant_id, seed, bottom_player_id, top_player_id, status
+            arena_variant_id, seed, bottom_player_id, top_player_id, status,
+            integrity_match_set_id, bottom_execution_entrant_key,
+            top_execution_entrant_key, bottom_execution_evidence,
+            top_execution_evidence, execution_evidence_pair_hash
           )
-          values ($1, $2, $3, $4, $5, $6, $7, 'pending')
+          values (
+            $1, $2, $3, $4, $5, $6, $7, 'pending',
+            $8, $9, $10, $11, $12, $13
+          )
         `,
       [
         match.id,
@@ -228,14 +412,24 @@ export const insertMatchSetWithMatrixOnClient = async (
         match.seed,
         match.bottomPlayerId,
         match.topPlayerId,
+        ...matchExecutionEvidencePairSqlValues(input.id, evidencePair),
       ],
     )
     await client.query(
       `
-          insert into match_jobs (id, match_id, status)
-          values ($1, $2, 'queued')
+          insert into match_jobs (
+            id, match_id, status, integrity_match_set_id,
+            bottom_execution_entrant_key, top_execution_entrant_key,
+            bottom_execution_evidence, top_execution_evidence,
+            execution_evidence_pair_hash
+          )
+          values ($1, $2, 'queued', $3, $4, $5, $6, $7, $8)
         `,
-      [createMatchJobId(match.id), match.id],
+      [
+        createMatchJobId(match.id),
+        match.id,
+        ...matchExecutionEvidencePairSqlValues(input.id, evidencePair),
+      ],
     )
     await client.query(
       `
@@ -274,6 +468,7 @@ export const createMatchSetService = (pool: Pool) => ({
     await insertMatchSetWithMatrix(pool, {
       id: input.id,
       matches,
+      integrityIdentity: input.integrityIdentity,
       matchSet: {
         presetId: preset.id,
         presetVersion: preset.version,
