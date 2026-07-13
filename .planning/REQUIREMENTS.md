@@ -9,7 +9,7 @@
 
 - [x] **SAFE-01**: Operators can count a runtime lane only when current executable containment and conformance evidence matches its exact provider, runtime, toolchain, adapter, policy, corpus, artifact, and compatibility-tuple identities.
 - [x] **SAFE-02**: Missing, stale, mismatched, downgraded, or unverifiable runtime evidence makes the affected lane explicitly non-counted before scheduling or execution.
-- [ ] **SAFE-03**: Operators can inventory affected historical results, classify their evidence status, invalidate when necessary, and recompute derived standings without rewriting the original Match evidence.
+- [x] **SAFE-03**: Operators can inventory affected historical results, classify their evidence status, invalidate when necessary, and recompute derived standings without rewriting the original Match evidence.
 - [x] **SAFE-04**: Public and default safety output exposes only privacy-safe classifications and evidence identifiers, never Strategy source, artifact bytes, memory, objectives, raw diagnostics, host data, credentials, or security internals.
 
 ### Canonical Authority and Compatibility
@@ -123,7 +123,7 @@ These candidates are optional and are not required for v1.37 completion.
 |-------------|-------|--------|
 | SAFE-01 | Phase 256 | Complete |
 | SAFE-02 | Phase 256 | Complete |
-| SAFE-03 | Phase 256 | Pending |
+| SAFE-03 | Phase 256 | Complete |
 | SAFE-04 | Phase 256 | Complete |
 | AUTH-01 | Phase 256 | Complete |
 | AUTH-02 | Phase 256 | Complete |

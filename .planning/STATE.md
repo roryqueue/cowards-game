@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
-stopped_at: Completed 256-06-PLAN.md
-last_updated: "2026-07-13T04:39:08.360Z"
+stopped_at: Completed 256-07-PLAN.md
+last_updated: "2026-07-13T04:57:05.536Z"
 last_activity: 2026-07-13
-last_activity_desc: Plan 256-06 made completion and Chronicle insertion preserve the locked exact identity and fail without gameplay mutation
+last_activity_desc: Plan 256-07 made historical resolution read-only and integrity correction append-only with exact standings gates
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 9
-  percent: 47
+  completed_plans: 10
+  percent: 53
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
-Plan: 9 of 19
+Plan: 10 of 19
 Status: Ready to execute
-Last activity: 2026-07-13 — Plan 256-06 made completion and Chronicle insertion preserve the locked exact identity and fail without gameplay mutation
+Last activity: 2026-07-13 — Plan 256-07 made historical resolution read-only and integrity correction append-only with exact standings gates
 
-Progress: [█████░░░░░] 47%
+Progress: [█████░░░░░] 53%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [█████░░░░░] 47%
 
 **Resume file:** None
 
-Last session: 2026-07-13T04:38:55.625Z
-Stopped at: Completed 256-06-PLAN.md
+Last session: 2026-07-13T04:57:05.523Z
+Stopped at: Completed 256-07-PLAN.md
 Next command: `$gsd-execute-phase 256`
 
 ## Performance Metrics
@@ -78,9 +78,12 @@ Next command: `$gsd-execute-phase 256`
 | Phase 256 P15 | 11min | 2 tasks | 6 files |
 | Phase 256 P05 | 18min | 2 tasks | 4 files |
 | Phase 256 P06 | 13min | 2 tasks | 5 files |
+| Phase 256 P07 | 12min | 2 tasks | 6 files |
 
 ## Decisions
 
+- [Phase 256]: Historical v1.4 eligibility is a read-only branded projection from persisted anchors plus an immutable release manifest; it never becomes current certification. — This preserves immutable historical meaning and makes partial or conflicting evidence explicitly ineligible.
+- [Phase 256]: Integrity correction authority is the append-only cohort event fold; mutable MatchSet status actions cannot perform counted, non-counted, invalid, or invalidated corrections. — Exact preview rechecks, reproducible evidence, compensation, and recomputation are required to change standings meaning.
 - [Phase 256]: Production runtime-evidence producer authority remains empty until Phase 259 adds separately reviewed executable conformance. — Caller-supplied trust is fixture-only and production rejects it before SQL.
 - [Phase 256]: Runtime evidence is signed as domain-separated fixed-field bytes over a byte-complete graph reachable from one root. — Certificate shape, prose, gate names, and missing or open artifacts cannot mint a verified value.
 - [Phase 256]: The only application certificate writer re-verifies inside one transaction and derives every persisted field. — Idempotent collisions must match exactly and late failures leave zero rows.
