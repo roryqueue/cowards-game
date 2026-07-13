@@ -24,7 +24,7 @@ const validationHostPath = decodeURIComponent(
   new URL("./python_validation_host.py", import.meta.url).pathname,
 )
 
-const pythonValidationHostEnvironment: NodeJS.ProcessEnv = Object.freeze({
+const pythonValidationHostEnvironment = Object.freeze({
   ...process.env,
   ...PYTHON_RUNTIME_ENVIRONMENT,
 })
