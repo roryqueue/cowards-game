@@ -24,6 +24,28 @@ func TestGoMatchCompletionFields(t *testing.T) {
 	}
 }
 
+func TestMatchCompletionIntegrityContract(t *testing.T) {
+	source, err := os.ReadFile("completion.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	lockIndex := strings.Index(text, "lockCompletionIntegrity")
+	insertIndex := strings.Index(text, "insert into chronicles")
+	if lockIndex < 0 || insertIndex < 0 || lockIndex > insertIndex {
+		t.Fatal("completion must lock and compare exact integrity before Chronicle insertion")
+	}
+	for _, required := range []string{
+		"integrity_match_set_id", "compatibility_tuple_id", "compatibility_rules_version",
+		"authority_publication_id", "authority_install_receipt_id", "authority_source_manifest_hash",
+		"bottom_execution_entrant_key", "top_execution_entrant_key", "execution_evidence_pair_hash",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("completion omitted Chronicle integrity field %q", required)
+		}
+	}
+}
+
 func TestGoChronicleMetadataValidation(t *testing.T) {
 	chronicle := completionChronicleForTest("match:complete:001")
 	metadata, err := createGoChronicleMetadata(chronicle)
