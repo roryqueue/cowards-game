@@ -45,7 +45,7 @@ describe("inactive v1.37 kernel integrity candidate", () => {
       engineKernel: { packageName: "@cowards/engine", symbol: "runMatch" },
       chronicleRecorder: {
         packageName: "@cowards/replay",
-        symbol: "recordCanonicalMatchTransitions",
+        symbol: "recordChronicleFromExecution",
       },
       currentEventValidator: {
         packageName: "@cowards/replay",
@@ -53,7 +53,7 @@ describe("inactive v1.37 kernel integrity candidate", () => {
       },
       semanticArenaValidator: {
         packageName: "@cowards/spec",
-        symbol: "validateSemanticArena",
+        symbol: "validateCanonicalArena",
       },
     })
     expect(candidate.eventVocabulary.removedFromCandidateCurrent).toEqual([

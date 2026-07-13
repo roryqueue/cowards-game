@@ -95,7 +95,7 @@ const candidateContract = {
     },
     chronicleRecorder: {
       packageName: "@cowards/replay",
-      symbol: "recordCanonicalMatchTransitions",
+      symbol: "recordChronicleFromExecution",
     },
     currentEventValidator: {
       packageName: "@cowards/replay",
@@ -103,7 +103,7 @@ const candidateContract = {
     },
     semanticArenaValidator: {
       packageName: "@cowards/spec",
-      symbol: "validateSemanticArena",
+      symbol: "validateCanonicalArena",
     },
     setPolicy: {
       packageName: "@cowards/persistence",
