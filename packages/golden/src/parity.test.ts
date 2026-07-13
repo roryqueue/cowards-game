@@ -9,6 +9,7 @@ import {
   assertPublicMatchSetResultLeakSafe,
   assertPublicServiceDtoLeakSafe,
   defaultRuntimeMetadata,
+  describeStrategyRuntimeProductSemantics,
   EXHIBITION_SCORING_POLICY_V1,
   SERVICE_API_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION,
@@ -45,6 +46,9 @@ const createGoldenPublicMatchSet = (): PublicMatchSetResultDto => ({
       sourceHash: "bottomhash",
       sourceBytes: 100,
       runtime: defaultRuntimeMetadata(),
+      runtimeSemantics: describeStrategyRuntimeProductSemantics(
+        defaultRuntimeMetadata(),
+      ),
       engineCompatibility: { spec: "cowards-rules-v1.4", engine: "engine-v1" },
       lockedAt: "2026-05-22T00:00:00.000Z",
     },
@@ -58,6 +62,9 @@ const createGoldenPublicMatchSet = (): PublicMatchSetResultDto => ({
       sourceHash: "tophash",
       sourceBytes: 100,
       runtime: defaultRuntimeMetadata(),
+      runtimeSemantics: describeStrategyRuntimeProductSemantics(
+        defaultRuntimeMetadata(),
+      ),
       engineCompatibility: { spec: "cowards-rules-v1.4", engine: "engine-v1" },
       lockedAt: "2026-05-22T00:00:00.000Z",
     },
