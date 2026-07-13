@@ -449,6 +449,26 @@ func newRuntimeEvidenceAuthorityLoader(config runtimeEvidenceAuthorityLoaderConf
 	return &runtimeEvidenceAuthorityLoader{config: config, fileSystem: fileSystem}
 }
 
+func cloneVerifiedRuntimeEvidenceAuthority(authority *verifiedRuntimeEvidenceAuthority) *verifiedRuntimeEvidenceAuthority {
+	if authority == nil {
+		return nil
+	}
+	clone := *authority
+	clone.Payload = authority.Payload
+	clone.Payload.Attestations = append([]runtimeEvidenceAuthorityAttestation(nil), authority.Payload.Attestations...)
+	for index := range clone.Payload.Attestations {
+		clone.Payload.Attestations[index].Imports = append([]string(nil), authority.Payload.Attestations[index].Imports...)
+	}
+	clone.Payload.Certificates = append([]runtimeEvidenceAuthorityCertificate(nil), authority.Payload.Certificates...)
+	for index := range clone.Payload.Certificates {
+		clone.Payload.Certificates[index].AttestationIDs = append([]string(nil), authority.Payload.Certificates[index].AttestationIDs...)
+	}
+	clone.Payload.Revocations = append([]runtimeEvidenceAuthorityRevocation(nil), authority.Payload.Revocations...)
+	clone.Payload.Supersessions = append([]runtimeEvidenceAuthoritySupersession(nil), authority.Payload.Supersessions...)
+	clone.Payload.OperatorLaneDisables = append([]runtimeEvidenceAuthorityLaneDisable(nil), authority.Payload.OperatorLaneDisables...)
+	return &clone
+}
+
 func (loader *runtimeEvidenceAuthorityLoader) Load() (*verifiedRuntimeEvidenceAuthority, error) {
 	loader.mutex.Lock()
 	defer loader.mutex.Unlock()
@@ -521,9 +541,8 @@ func (loader *runtimeEvidenceAuthorityLoader) Load() (*verifiedRuntimeEvidenceAu
 		return nil, authorityError("ANCHOR_IO")
 	}
 	lockRemoved = true
-	copy := *verified
-	loader.lastGood = &copy
-	return &copy, nil
+	loader.lastGood = cloneVerifiedRuntimeEvidenceAuthority(verified)
+	return cloneVerifiedRuntimeEvidenceAuthority(loader.lastGood), nil
 }
 
 func (loader *runtimeEvidenceAuthorityLoader) Current() *verifiedRuntimeEvidenceAuthority {
@@ -532,8 +551,7 @@ func (loader *runtimeEvidenceAuthorityLoader) Current() *verifiedRuntimeEvidence
 	if loader.lastGood == nil {
 		return nil
 	}
-	copy := *loader.lastGood
-	return &copy
+	return cloneVerifiedRuntimeEvidenceAuthority(loader.lastGood)
 }
 
 func validateRuntimeEvidenceAuthorityLoaderConfig(config runtimeEvidenceAuthorityLoaderConfig) error {

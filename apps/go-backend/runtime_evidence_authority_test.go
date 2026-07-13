@@ -240,6 +240,37 @@ func TestRuntimeEvidenceAuthorityConcurrentRefreshInstallsOneExactHighWater(t *t
 	assertHighWater(t, paths.highWater, "7", paths.payloadHash)
 }
 
+func TestRuntimeEvidenceAuthorityLoaderReturnsDeepClones(t *testing.T) {
+	dir := t.TempDir()
+	manifest := mustIntegrityManifest(t)
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths := writeRuntimeAuthorityFiles(t, dir, manifest, publicKey, privateKey, authorityFixtureOptions{Generation: "7", Revoked: true, LaneDisabled: true})
+	loader := newAuthorityTestLoader(manifest, paths, true, nil)
+	loaded, err := loader.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded.Payload.Attestations[0].Imports = append(loaded.Payload.Attestations[0].Imports, "attestation:mutated")
+	loaded.Payload.Certificates[0].AttestationIDs[0] = "attestation:mutated"
+	loaded.Payload.Revocations[0].ReasonCode = "MUTATED"
+	loaded.Payload.OperatorLaneDisables[0].ReasonCode = "MUTATED"
+
+	current := loader.Current()
+	if current == nil {
+		t.Fatal("loader lost its last-good authority")
+	}
+	if len(current.Payload.Attestations[0].Imports) != 0 || current.Payload.Certificates[0].AttestationIDs[0] != "attestation:fixture" || current.Payload.Revocations[0].ReasonCode != "FIXTURE_REVOKED" || current.Payload.OperatorLaneDisables[0].ReasonCode != "FIXTURE_DISABLED" {
+		t.Fatalf("caller mutation changed loader authority: %+v", current.Payload)
+	}
+	current.Payload.Certificates[0].CertificateID = "certificate:mutated"
+	if later := loader.Current(); later == nil || later.Payload.Certificates[0].CertificateID != "certificate:containment:fixture" {
+		t.Fatalf("Current returned a mutable alias: %+v", later)
+	}
+}
+
 type authorityFixtureOptions struct {
 	Generation   string
 	Revoked      bool
