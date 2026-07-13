@@ -1,7 +1,14 @@
 import { Buffer } from "node:buffer"
 import { createHash, randomUUID } from "node:crypto"
-import type { GameState, StrategyRuntime } from "@cowards/engine"
-import { buildChronicleFromMatch } from "@cowards/replay"
+import {
+  CANDIDATE_MATCH_KERNEL,
+  type GameState,
+  type StrategyRuntime,
+} from "@cowards/engine"
+import {
+  recordChronicleFromExecution,
+  validateCandidateReplaySemantics,
+} from "@cowards/replay"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
   type ExecutableLaneIdentity,
@@ -139,8 +146,8 @@ const passiveRuntime: StrategyRuntime = {
   },
 }
 
-const builtMatch = (namespace: string) =>
-  buildChronicleFromMatch({
+const builtMatch = (namespace: string) => {
+  const execution = CANDIDATE_MATCH_KERNEL.runMatch({
     matchId: `${namespace}:match`,
     seed: `${namespace}:seed`,
     arenaVariant: {
@@ -155,6 +162,25 @@ const builtMatch = (namespace: string) =>
     topStrategyRevisionId: `${namespace}:revision:top`,
     runtime: passiveRuntime,
   })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  const candidate = validateCandidateReplaySemantics({
+    profile: "candidate-v1.37",
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution,
+  })
+  if (!candidate.ok) throw new Error(candidate.issues[0]?.code)
+  return { execution, ...recorded }
+}
 
 const finalState = {
   matchId: "match:complete:001",
@@ -440,7 +466,10 @@ const seedCompletionMatch = async (
   const sourceManifestHash = `sha256:${sha256(`${namespace}:sources`)}`
   const sourceSet = {
     attestationIds: [],
-    certificateIds: [],
+    certificateIds: identity.normalizedEntrants.flatMap((evidence) => [
+      evidence.containmentCertificateRef.certificateId,
+      evidence.conformanceCertificateRef!.certificateId,
+    ]),
     revocationIds: [],
     supersessionIds: [],
     laneControlIds: [],
@@ -481,17 +510,41 @@ const seedCompletionMatch = async (
        lane_control_ids
      ) values ($1, 1, $2, $3, $4, $5, 'fixture-key', 'fixture',
        '2026-07-12T12:00:00Z', '2026-07-12T12:00:00Z',
-       '2099-08-12T12:00:00Z', $6, $7, '[]'::jsonb, '[]'::jsonb,
+       '2099-08-12T12:00:00Z', $6, $7, '[]'::jsonb, $8::jsonb,
        '[]'::jsonb, '[]'::jsonb, '[]'::jsonb)`,
     [
       publicationId,
-      `sha256:${sha256(`${namespace}:tuple-manifest`)}`,
+      tuple.tupleId,
       sourceManifestHash,
       `sha256:${identity.authorityBundleHash}`,
       envelopeSha256,
       Buffer.from("fixture payload"),
       Buffer.from("fixture envelope"),
+      JSON.stringify(sourceSet.certificateIds),
     ],
+  )
+  for (const evidence of identity.normalizedEntrants) {
+    for (const reference of [
+      evidence.containmentCertificateRef,
+      evidence.conformanceCertificateRef!,
+    ]) {
+      await pool.query(
+        `insert into runtime_evidence_authority_publication_sources
+           (publication_id, source_type, source_id, source_record_hash,
+            certificate_id)
+         values ($1, 'certificate', $2, $3, $2)`,
+        [
+          publicationId,
+          reference.certificateId,
+          `sha256:${reference.certificateRecordHash}`,
+        ],
+      )
+    }
+  }
+  await pool.query(
+    `update runtime_evidence_authority_publication_head
+        set next_generation = 2
+      where singleton = true`,
   )
   await pool.query(
     `insert into runtime_evidence_authority_publication_events
@@ -601,6 +654,30 @@ const seedCompletionMatch = async (
 const databaseUrl = process.env.DATABASE_URL
 const describePostgres = databaseUrl ? describe : describe.skip
 
+const canonicalMutationTables = [
+  "matches",
+  "match_jobs",
+  "match_job_attempts",
+  "chronicles",
+  "result_flags",
+  "trial_ladder_entries",
+] as const
+
+const snapshotCanonicalRows = async (pool: Pool) => {
+  const snapshot: Record<string, readonly unknown[]> = {}
+  for (const table of canonicalMutationTables) {
+    const result = await pool.query<{ rows: readonly unknown[] }>(
+      `select coalesce(
+         jsonb_agg(to_jsonb(row_data) order by to_jsonb(row_data)::text),
+         '[]'::jsonb
+       ) as rows
+       from (select * from ${table}) row_data`,
+    )
+    snapshot[table] = result.rows[0]!.rows
+  }
+  return snapshot
+}
+
 describePostgres(
   "PostgreSQL Match completion integrity identity and system failure",
   () => {
@@ -641,6 +718,7 @@ describePostgres(
 
     it("keeps Chronicle, gameplay, outcome, attempt, and player state unchanged for every side's drift", async () => {
       const exact = responseSnapshot(identity, pair)
+      const before = await snapshotCanonicalRows(pool)
       const driftCases: RuntimeExecutionResolvedEvidenceSnapshot[] = [
         {
           ...exact,
@@ -708,6 +786,7 @@ describePostgres(
           playerPenalty: false,
         })
       }
+      expect(await snapshotCanonicalRows(pool)).toEqual(before)
 
       const state = await pool.query(
         `select m.status as match_status, m.outcome, m.winner_player_id,
@@ -731,7 +810,28 @@ describePostgres(
       })
     })
 
-    it("rolls back a late write and then copies the locked pair exactly on success", async () => {
+    it("rolls back attempt mismatch and late writes, then proves exact success, idempotence, and conflict refusal", async () => {
+      await pool.query(
+        `update match_job_attempts
+            set status = 'failed_system'
+          where job_id = $1 and attempt_number = 1`,
+        [`${namespace}:job`],
+      )
+      const attemptMismatch = await snapshotCanonicalRows(pool)
+      await expect(
+        completeMatch(pool, input(responseSnapshot(identity, pair))),
+      ).rejects.toMatchObject({
+        code: "MATCH_COMPLETION_OPERATIONAL_FAILURE",
+        playerPenalty: false,
+      })
+      expect(await snapshotCanonicalRows(pool)).toEqual(attemptMismatch)
+      await pool.query(
+        `update match_job_attempts
+            set status = 'running'
+          where job_id = $1 and attempt_number = 1`,
+        [`${namespace}:job`],
+      )
+      const beforeLateFailure = await snapshotCanonicalRows(pool)
       await pool.query(`
       create function reject_completion_update() returns trigger language plpgsql as $$
       begin raise exception 'forced late completion failure'; end; $$;
@@ -741,6 +841,7 @@ describePostgres(
       await expect(
         completeMatch(pool, input(responseSnapshot(identity, pair))),
       ).rejects.toThrow(/forced late completion failure/iu)
+      expect(await snapshotCanonicalRows(pool)).toEqual(beforeLateFailure)
       let rows = await pool.query(
         `select m.status as match_status, j.status as job_status,
               (select count(*)::integer from chronicles where match_id = m.id) as chronicles
@@ -791,7 +892,10 @@ describePostgres(
         authority_source_manifest_hash: `sha256:${sha256(`${namespace}:sources`)}`,
         authority_source_set: {
           attestationIds: [],
-          certificateIds: [],
+          certificateIds: identity.normalizedEntrants.flatMap((evidence) => [
+            evidence.containmentCertificateRef.certificateId,
+            evidence.conformanceCertificateRef!.certificateId,
+          ]),
           revocationIds: [],
           supersessionIds: [],
           laneControlIds: [],
@@ -800,6 +904,33 @@ describePostgres(
         job_status: "complete",
         attempt_status: "complete",
       })
+
+      const completed = await snapshotCanonicalRows(pool)
+      await expect(
+        completeMatch(pool, input(responseSnapshot(identity, pair))),
+      ).resolves.toMatchObject({
+        status: "complete",
+        matchId: `${namespace}:match`,
+      })
+      expect(await snapshotCanonicalRows(pool)).toEqual(completed)
+
+      await expect(
+        completeMatch(pool, {
+          ...input(responseSnapshot(identity, pair)),
+          chronicle: {
+            ...built.chronicle,
+            reproducibility: {
+              ...built.chronicle.reproducibility,
+              seed: `${namespace}:conflicting-seed`,
+            },
+          },
+        }),
+      ).rejects.toMatchObject({
+        code: "EVIDENCE_IDENTITY_MISMATCH",
+        failureCategory: "system_failure",
+        playerPenalty: false,
+      })
+      expect(await snapshotCanonicalRows(pool)).toEqual(completed)
     })
   },
 )

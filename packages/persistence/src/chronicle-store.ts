@@ -1,11 +1,22 @@
 import { isDeepStrictEqual } from "node:util"
-import { createChronicleContentHash, validateChronicle } from "@cowards/replay"
+import type { GameState } from "@cowards/engine"
+import {
+  createCandidateReplay,
+  createChronicleContentHash,
+  INACTIVE_V1_37_REPLAY_TUPLE,
+  validateCandidateReplayReconstruction,
+  validateCandidateReplaySemantics,
+  validateChronicle,
+  type CandidateReplaySemanticInput,
+  type ChronicleBoundaryAnchor,
+} from "@cowards/replay"
 import type {
   ArenaVariantId,
   Chronicle,
   ChronicleEvent,
   JsonValue,
   MatchId,
+  MatchOutcome,
   PlayerId,
   StrategyRevisionId,
 } from "@cowards/spec"
@@ -43,10 +54,34 @@ export interface ChronicleIntegrityIdentity {
   evidencePair: Readonly<MatchExecutionEvidencePair>
 }
 
-export interface PutChronicleInput {
+export interface CurrentPutChronicleInput {
   chronicle: Chronicle
   integrityIdentity: Readonly<ChronicleIntegrityIdentity>
 }
+
+/**
+ * A candidate Chronicle may only cross the persistence boundary after the
+ * trusted execution, every boundary, and reconstruction have been admitted as
+ * one object. The WeakSet brand deliberately cannot be serialized or forged.
+ */
+export interface CandidateChronicleAdmission {
+  readonly profile: "candidate-v1.37"
+  readonly compatibility: typeof INACTIVE_V1_37_REPLAY_TUPLE
+  readonly chronicle: Chronicle
+  readonly finalState: GameState
+  readonly terminalStateHash: string
+  readonly outcome: MatchOutcome
+  readonly boundaryAnchors: readonly ChronicleBoundaryAnchor[]
+}
+
+export interface CandidatePutChronicleInput {
+  candidateAdmission: Readonly<CandidateChronicleAdmission>
+  integrityIdentity: Readonly<ChronicleIntegrityIdentity>
+}
+
+export type PutChronicleInput =
+  | CurrentPutChronicleInput
+  | CandidatePutChronicleInput
 
 export interface ChronicleStore {
   put(input: PutChronicleInput | unknown): Promise<StoredChronicle>
@@ -58,6 +93,60 @@ export class ChronicleValidationSystemFailure extends Error {
     super(message)
     this.name = "ChronicleValidationSystemFailure"
   }
+}
+
+const candidateAdmissionBrand = new WeakSet<object>()
+
+const cloneFrozen = <T>(value: T): T => {
+  const clone = globalThis.structuredClone(value)
+  const freeze = (candidate: unknown): void => {
+    if (candidate === null || typeof candidate !== "object") return
+    for (const nested of Object.values(candidate)) freeze(nested)
+    Object.freeze(candidate)
+  }
+  freeze(clone)
+  return clone
+}
+
+export const createCandidateChronicleAdmission = (
+  input: CandidateReplaySemanticInput,
+): Readonly<CandidateChronicleAdmission> => {
+  const validation = validateCandidateReplaySemantics(input)
+  if (!validation.ok) {
+    throw new ChronicleValidationSystemFailure(
+      validation.issues[0]?.code ?? "Candidate Chronicle validation failed.",
+    )
+  }
+  if (input.execution.kind !== "completed") {
+    throw new ChronicleValidationSystemFailure(
+      "Candidate Chronicle execution did not complete.",
+    )
+  }
+  const chronicle = input.chronicle as Chronicle
+  const reconstruction = validateCandidateReplayReconstruction({
+    chronicle,
+    execution: input.execution,
+  })
+  const replay = createCandidateReplay(input)
+  if (!reconstruction.ok || !replay.ok) {
+    throw new ChronicleValidationSystemFailure(
+      !reconstruction.ok
+        ? reconstruction.code
+        : "Candidate Chronicle reconstruction failed.",
+    )
+  }
+  const admission: CandidateChronicleAdmission = {
+    profile: "candidate-v1.37",
+    compatibility: cloneFrozen(INACTIVE_V1_37_REPLAY_TUPLE),
+    chronicle: cloneFrozen(chronicle),
+    finalState: cloneFrozen(input.execution.recorderMaterial.finalState),
+    terminalStateHash: reconstruction.terminalStateHash,
+    outcome: cloneFrozen(reconstruction.outcome),
+    boundaryAnchors: cloneFrozen(input.boundaryAnchors),
+  }
+  Object.freeze(admission)
+  candidateAdmissionBrand.add(admission)
+  return admission
 }
 
 const terminalOutcome = (chronicle: Chronicle): JsonValue => {
@@ -87,18 +176,38 @@ const hasExactKeys = (
   )
 }
 
+interface ValidatedPutInput {
+  chronicle: Chronicle
+  integrityIdentity: Readonly<ChronicleIntegrityIdentity>
+  profile: "current-exact" | "candidate-v1.37"
+}
+
 const validatePutInput = (
   input: PutChronicleInput | unknown,
-): PutChronicleInput => {
-  if (!isRecord(input) || !hasExactKeys(input, ["chronicle", "integrityIdentity"])) {
+): ValidatedPutInput => {
+  if (!isRecord(input)) {
     throw new ChronicleValidationSystemFailure(
       "Current Chronicle insertion requires one exact integrity identity.",
+    )
+  }
+  const candidateRoute = hasExactKeys(input, [
+    "candidateAdmission",
+    "integrityIdentity",
+  ])
+  const currentRoute = hasExactKeys(input, ["chronicle", "integrityIdentity"])
+  if (!candidateRoute && !currentRoute) {
+    throw new ChronicleValidationSystemFailure(
+      "Chronicle insertion requires one exact current or candidate integrity identity route.",
     )
   }
   const integrityIdentity = input.integrityIdentity
   if (
     !isRecord(integrityIdentity) ||
-    !hasExactKeys(integrityIdentity, ["matchSetId", "identity", "evidencePair"]) ||
+    !hasExactKeys(integrityIdentity, [
+      "matchSetId",
+      "identity",
+      "evidencePair",
+    ]) ||
     typeof integrityIdentity.matchSetId !== "string" ||
     integrityIdentity.matchSetId.length === 0 ||
     !isRecord(integrityIdentity.evidencePair)
@@ -107,8 +216,23 @@ const validatePutInput = (
       "Current Chronicle integrity identity is partial or malformed.",
     )
   }
-  const chronicle = input.chronicle as Chronicle
-  const identity = integrityIdentity.identity as Readonly<MatchSetIntegrityIdentity>
+  const candidateAdmission = input.candidateAdmission
+  if (
+    candidateRoute &&
+    (!isRecord(candidateAdmission) ||
+      !candidateAdmissionBrand.has(candidateAdmission))
+  ) {
+    throw new ChronicleValidationSystemFailure(
+      "Candidate Chronicle insertion requires a trusted semantic admission.",
+    )
+  }
+  const chronicle = (
+    candidateRoute
+      ? (candidateAdmission as unknown as CandidateChronicleAdmission).chronicle
+      : input.chronicle
+  ) as Chronicle
+  const identity =
+    integrityIdentity.identity as Readonly<MatchSetIntegrityIdentity>
   const evidencePair =
     integrityIdentity.evidencePair as Readonly<MatchExecutionEvidencePair>
 
@@ -131,6 +255,16 @@ const validatePutInput = (
     ) {
       throw new Error("pair mismatch")
     }
+    if (
+      candidateRoute &&
+      (identity.compatibility.tupleId !== INACTIVE_V1_37_REPLAY_TUPLE.tupleId ||
+        !isDeepStrictEqual(
+          identity.compatibility.tuple,
+          INACTIVE_V1_37_REPLAY_TUPLE.tuple,
+        ))
+    ) {
+      throw new Error("candidate tuple mismatch")
+    }
   } catch {
     throw new ChronicleValidationSystemFailure(
       "Current Chronicle integrity identity is not the exact ordered Match pair.",
@@ -144,6 +278,7 @@ const validatePutInput = (
       identity,
       evidencePair,
     },
+    profile: candidateRoute ? "candidate-v1.37" : "current-exact",
   }
 }
 
@@ -198,6 +333,29 @@ export const createChronicleMetadata = (
   }
 }
 
+const createAdmittedCandidateMetadata = (
+  chronicle: Chronicle,
+): ChronicleMetadata => {
+  const hash = createChronicleContentHash(chronicle).normalizedContentHash
+  const [bottomStrategyRevisionId, topStrategyRevisionId] =
+    chronicle.reproducibility.strategyRevisionIds
+  const [bottomPlayerId, topPlayerId] = playerIdsFromChronicle(chronicle)
+  return {
+    id: `chronicle:${hash}`,
+    matchId: chronicle.reproducibility.matchId,
+    schemaVersion: chronicle.schemaVersion,
+    hash,
+    outcome: terminalOutcome(chronicle),
+    eventCount: chronicle.events.length,
+    snapshotCount: chronicle.snapshots.length,
+    bottomPlayerId,
+    topPlayerId,
+    bottomStrategyRevisionId,
+    topStrategyRevisionId,
+    arenaVariantId: chronicle.reproducibility.arenaVariantId,
+  }
+}
+
 interface ChronicleRow {
   id: string
   match_id: string
@@ -218,7 +376,39 @@ interface ChronicleRow {
   bottom_execution_evidence?: unknown
   top_execution_evidence?: unknown
   execution_evidence_pair_hash?: string | null
+  compatibility_tuple_id?: string | null
+  compatibility_rules_version?: string | null
+  compatibility_engine_version?: string | null
+  compatibility_runtime_abi_version?: string | null
+  compatibility_chronicle_version?: string | null
+  compatibility_arena_catalog_version?: string | null
+  compatibility_set_policy_version?: string | null
+  authority_bundle_hash?: string | null
+  authority_registry_generation?: string | null
+  authority_publication_id?: string | null
+  authority_install_receipt_id?: string | null
+  authority_payload_sha256?: string | null
+  authority_envelope_sha256?: string | null
+  authority_source_manifest_hash?: string | null
+  authority_source_set?: unknown
 }
+
+const metadataMatchesRow = (
+  row: ChronicleRow,
+  metadata: ChronicleMetadata,
+): boolean =>
+  row.id === metadata.id &&
+  row.match_id === metadata.matchId &&
+  row.schema_version === metadata.schemaVersion &&
+  row.hash === metadata.hash &&
+  isDeepStrictEqual(row.outcome, metadata.outcome) &&
+  row.event_count === metadata.eventCount &&
+  row.snapshot_count === metadata.snapshotCount &&
+  row.bottom_player_id === metadata.bottomPlayerId &&
+  row.top_player_id === metadata.topPlayerId &&
+  row.bottom_strategy_revision_id === metadata.bottomStrategyRevisionId &&
+  row.top_strategy_revision_id === metadata.topStrategyRevisionId &&
+  row.arena_variant_id === metadata.arenaVariantId
 
 const rowToStored = (row: ChronicleRow): StoredChronicle => ({
   metadata: {
@@ -242,9 +432,14 @@ export const createPostgresChronicleStore = (
   pool: Queryable,
 ): ChronicleStore => ({
   async put(rawInput) {
-    const { chronicle, integrityIdentity } = validatePutInput(rawInput)
-    const metadata = createChronicleMetadata(chronicle)
-    const identityValues = matchSetIntegritySqlValues(integrityIdentity.identity)
+    const { chronicle, integrityIdentity, profile } = validatePutInput(rawInput)
+    const metadata =
+      profile === "candidate-v1.37"
+        ? createAdmittedCandidateMetadata(chronicle)
+        : createChronicleMetadata(chronicle)
+    const identityValues = matchSetIntegritySqlValues(
+      integrityIdentity.identity,
+    )
     const pair = integrityIdentity.evidencePair
     const result = await pool.query(
       `
@@ -348,16 +543,23 @@ export const createPostgresChronicleStore = (
       const existing = existingResult.rows[0]
       if (
         !existing ||
-        existing.id !== metadata.id ||
-        existing.hash !== metadata.hash ||
-        existing.schema_version !== metadata.schemaVersion ||
+        !metadataMatchesRow(existing, metadata) ||
         !isDeepStrictEqual(existing.artifact, chronicle) ||
         existing.integrity_match_set_id !== integrityIdentity.matchSetId ||
         existing.bottom_execution_entrant_key !== pair.bottom.entrantKey ||
         existing.top_execution_entrant_key !== pair.top.entrantKey ||
         !isDeepStrictEqual(existing.bottom_execution_evidence, pair.bottom) ||
         !isDeepStrictEqual(existing.top_execution_evidence, pair.top) ||
-        existing.execution_evidence_pair_hash !== pair.pairHash
+        existing.execution_evidence_pair_hash !== pair.pairHash ||
+        existing.compatibility_tuple_id !== identityValues[0] ||
+        existing.compatibility_rules_version !== identityValues[1] ||
+        existing.compatibility_engine_version !== identityValues[2] ||
+        existing.compatibility_runtime_abi_version !== identityValues[3] ||
+        existing.compatibility_chronicle_version !== identityValues[4] ||
+        existing.compatibility_arena_catalog_version !== identityValues[5] ||
+        existing.compatibility_set_policy_version !== identityValues[6] ||
+        existing.authority_bundle_hash !== identityValues[7] ||
+        existing.authority_registry_generation !== identityValues[8]
       ) {
         throw new ChronicleValidationSystemFailure(
           "Chronicle insertion did not match the exact persisted Match identity.",
@@ -387,19 +589,18 @@ export const createMemoryChronicleStoreForTests = (): ChronicleStore & {
   >()
   return {
     async put(rawInput) {
-      const { chronicle, integrityIdentity } = validatePutInput(rawInput)
-      const metadata = createChronicleMetadata(chronicle)
+      const { chronicle, integrityIdentity, profile } =
+        validatePutInput(rawInput)
+      const metadata =
+        profile === "candidate-v1.37"
+          ? createAdmittedCandidateMetadata(chronicle)
+          : createChronicleMetadata(chronicle)
       const existing = rows.get(metadata.matchId)
       if (existing) {
         if (
-          existing.integrityIdentity.matchSetId !== integrityIdentity.matchSetId ||
-          existing.integrityIdentity.identity !== integrityIdentity.identity ||
-          existing.integrityIdentity.evidencePair.bottom !==
-            integrityIdentity.evidencePair.bottom ||
-          existing.integrityIdentity.evidencePair.top !==
-            integrityIdentity.evidencePair.top ||
-          existing.integrityIdentity.evidencePair.pairHash !==
-            integrityIdentity.evidencePair.pairHash
+          !isDeepStrictEqual(existing.stored.metadata, metadata) ||
+          !isDeepStrictEqual(existing.stored.artifact, chronicle) ||
+          !isDeepStrictEqual(existing.integrityIdentity, integrityIdentity)
         ) {
           throw new ChronicleValidationSystemFailure(
             "Existing Chronicle identity differs from the exact Match identity.",

@@ -43,9 +43,7 @@ const lane = (side: "bottom" | "top"): ExecutableLaneIdentity => ({
   semanticTuple: { ...tuple.tuple },
 })
 
-const entrant = (
-  side: "bottom" | "top",
-): RuntimeEntrantExecutionEvidence => ({
+const entrant = (side: "bottom" | "top"): RuntimeEntrantExecutionEvidence => ({
   entrantKey: `entrant:${side}`,
   strategyRevisionId: `strategy-revision:${side}`,
   laneIdentity: lane(side),
@@ -281,6 +279,38 @@ describe("Chronicle storage", () => {
     expect(store.size()).toBe(1)
   })
 
+  it("rejects a conflicting artifact for an already stored Match", async () => {
+    const store = createMemoryChronicleStoreForTests()
+    const integrityIdentity = currentIntegrityIdentity()
+    await store.put({ chronicle: validChronicle(), integrityIdentity })
+    const conflicting = validChronicle()
+    const bottomPrivate = conflicting.private!.byPlayerId[
+      "player:bottom"
+    ] as Record<string, unknown>
+    bottomPrivate["private:event:2"] = {
+      plan: "conflicting-hidden-plan",
+    }
+
+    await expect(
+      store.put({ chronicle: conflicting, integrityIdentity }),
+    ).rejects.toBeInstanceOf(ChronicleValidationSystemFailure)
+    expect(store.size()).toBe(1)
+  })
+
+  it("rejects a serializable candidate-shaped object without the admission brand", async () => {
+    const store = createMemoryChronicleStoreForTests()
+    await expect(
+      store.put({
+        candidateAdmission: {
+          profile: "candidate-v1.37",
+          chronicle: validChronicle(),
+        },
+        integrityIdentity: currentIntegrityIdentity(),
+      } as never),
+    ).rejects.toThrow(/trusted semantic admission/iu)
+    expect(store.size()).toBe(0)
+  })
+
   it("throws a system failure for invalid Chronicle validation", async () => {
     const store = createMemoryChronicleStoreForTests()
     const invalid = {
@@ -293,9 +323,7 @@ describe("Chronicle storage", () => {
         chronicle: invalid,
         integrityIdentity: currentIntegrityIdentity(),
       }),
-    ).rejects.toBeInstanceOf(
-      ChronicleValidationSystemFailure,
-    )
+    ).rejects.toBeInstanceOf(ChronicleValidationSystemFailure)
   })
 
   it("rejects partial, swapped, singular, wrong-revision, and independently supplied identity without a row", async () => {
@@ -380,8 +408,12 @@ describe("Chronicle storage", () => {
     expect(calls[0]!.sql).toContain("top_execution_evidence")
     expect(calls[0]!.values).toContain(integrityIdentity.matchSetId)
     expect(calls[0]!.values).toContain(tuple.tupleId)
-    expect(calls[0]!.values).toContain(integrityIdentity.identity.authorityBundleHash)
-    expect(calls[0]!.values).toContain(integrityIdentity.identity.registryGeneration)
+    expect(calls[0]!.values).toContain(
+      integrityIdentity.identity.authorityBundleHash,
+    )
+    expect(calls[0]!.values).toContain(
+      integrityIdentity.identity.registryGeneration,
+    )
   })
 
   it("keeps tuple-less v1.4 Chronicle bytes and content hashes unchanged", () => {
@@ -391,6 +423,8 @@ describe("Chronicle storage", () => {
 
     expect(JSON.stringify(historical)).toBe(before)
     expect(createChronicleMetadata(historical).hash).toBe(hash)
-    expect(hash).toMatchInlineSnapshot(`"346826ba49aec61740499b1bcf0aea8dc6860ef04b865f72101a01b604d83aaa"`)
+    expect(hash).toMatchInlineSnapshot(
+      `"346826ba49aec61740499b1bcf0aea8dc6860ef04b865f72101a01b604d83aaa"`,
+    )
   })
 })
