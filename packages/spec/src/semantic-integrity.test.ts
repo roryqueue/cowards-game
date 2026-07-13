@@ -4,6 +4,15 @@ import {
   ArenaVariantSchema,
   RuntimeExecutionFinalStateSchema,
 } from "./schemas.js"
+import {
+  DEFAULT_SEMANTIC_INTEGRITY_LIMITS,
+  SEMANTIC_INTEGRITY_CODE_ORDER,
+  SEMANTIC_INTEGRITY_FAMILY_ORDER,
+  createSemanticIntegrityResult,
+  projectPublicSemanticIntegrityFailure,
+  projectRestrictedSemanticIntegrityFailure,
+  type SemanticIntegrityIssueInput,
+} from "./semantic-integrity.js"
 
 type Mutation = {
   op: "set" | "append"
@@ -86,6 +95,115 @@ const assertTransitionShape = (value: unknown): void => {
 }
 
 describe("semantic integrity shared vectors", () => {
+  it("codes have one explicit family and stable precedence", () => {
+    expect(SEMANTIC_INTEGRITY_FAMILY_ORDER).toEqual(corpus.familyOrder)
+    const knownCodes = new Set(SEMANTIC_INTEGRITY_CODE_ORDER)
+    for (const vector of corpus.vectors) {
+      for (const issue of vector.expected) {
+        expect(knownCodes.has(issue.code as never), issue.code).toBe(true)
+      }
+    }
+    expect(new Set(SEMANTIC_INTEGRITY_CODE_ORDER).size).toBe(
+      SEMANTIC_INTEGRITY_CODE_ORDER.length,
+    )
+  })
+
+  it("bounds issues, paths, metadata, and truncation deterministically", () => {
+    const unbounded = Array.from({ length: 24 }, (_, index) => ({
+      code: "POSITION_OUT_OF_BOUNDS" as const,
+      path: [
+        "soldiers",
+        index,
+        "position",
+        "x".repeat(400),
+        "tail-1",
+        "tail-2",
+        "tail-3",
+        "tail-4",
+        "tail-5",
+      ],
+      metadata: {
+        side: "bottom" as const,
+        actual: "é".repeat(100),
+        expected: "inside-bounds",
+        count: index,
+        rule: "position-admission",
+        hostPath: "/Users/private/source.ts",
+      },
+    })) satisfies SemanticIntegrityIssueInput[]
+    const result = createSemanticIntegrityResult(unbounded)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.truncated).toBe(true)
+    expect(result.issues).toHaveLength(DEFAULT_SEMANTIC_INTEGRITY_LIMITS.issues)
+    for (const issue of result.issues) {
+      expect(issue.path.length).toBeLessThanOrEqual(
+        DEFAULT_SEMANTIC_INTEGRITY_LIMITS.pathSegments,
+      )
+      expect(Object.keys(issue.metadata).length).toBeLessThanOrEqual(
+        DEFAULT_SEMANTIC_INTEGRITY_LIMITS.metadataEntries,
+      )
+      expect(issue.metadata).not.toHaveProperty("hostPath")
+      expect(Object.isFrozen(issue)).toBe(true)
+      expect(Object.isFrozen(issue.path)).toBe(true)
+      expect(Object.isFrozen(issue.metadata)).toBe(true)
+    }
+  })
+
+  it("order is invariant under insertion and locale-sensitive input order", () => {
+    const byCode = new Map(
+      corpus.vectors.flatMap((vector) =>
+        vector.expected.map((issue) => [issue.code, issue] as const),
+      ),
+    )
+    const issues = corpus.multiFault.expectedCodes.map(
+      (code) => byCode.get(code)!,
+    ) as SemanticIntegrityIssueInput[]
+    const forward = createSemanticIntegrityResult(issues)
+    const reverse = createSemanticIntegrityResult([...issues].reverse())
+    expect(reverse).toEqual(forward)
+    expect(
+      forward.ok ? [] : forward.issues.map((issue) => issue.code),
+    ).toEqual(corpus.multiFault.expectedCodes)
+  })
+
+  it("projection separates public category from bounded restricted evidence", () => {
+    const result = createSemanticIntegrityResult([
+      {
+        code: "TRANSITION_HASH_MISMATCH",
+        path: ["afterStateHash"],
+        metadata: {
+          rule: "state-hash",
+          actual: "private-but-bounded",
+          hostPath: "/Users/private/source.ts",
+        },
+      } as SemanticIntegrityIssueInput,
+    ])
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(projectPublicSemanticIntegrityFailure(result)).toEqual({
+      category: "CANONICAL_INTEGRITY_FAILURE",
+    })
+    const restricted = projectRestrictedSemanticIntegrityFailure(result, {
+      transitionKind: "ACTIVATION_SLOT",
+      beforeStateHash:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      afterStateHash:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    })
+    expect(Object.keys(restricted)).toEqual([
+      "category",
+      "ownership",
+      "issues",
+      "truncated",
+      "transitionKind",
+      "beforeStateHash",
+      "afterStateHash",
+    ])
+    expect(JSON.stringify(restricted)).not.toContain("/Users/private")
+    expect(JSON.stringify(restricted)).not.toContain("hostPath")
+  })
+
   it("keeps every adversarial value structurally valid and the corpus deterministic", () => {
     expect(corpus.profile).toBe("semantic-integrity-v1")
     expect(corpus.publicCategory).toBe("CANONICAL_INTEGRITY_FAILURE")
