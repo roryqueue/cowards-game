@@ -1,13 +1,19 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"sort"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type integrityTupleVectorFile struct {
@@ -353,6 +359,202 @@ func integrityEvidenceProjectionFixture() integrityEvidenceProjectionInput {
 		},
 		CohortImpact: "New execution may produce counted results while evidence remains current.",
 	}
+}
+
+func TestIntegrityEvidenceHistoricalProjectionPreservesOriginalMeaning(t *testing.T) {
+	resolved := projectHistoricalIntegrityEvidence(historicalIntegrityEvidenceInput{
+		RulesVersion: "cowards-rules-v1.4", ChronicleVersion: "chronicle-v1.4",
+		OriginalCountedStatus: "counted",
+	})
+	serialized, err := json.Marshal(resolved)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(serialized)
+	for _, required := range []string{
+		`"status":"resolved_historical"`, `"rulesVersion":"cowards-rules-v1.4"`,
+		`"chronicleVersion":"chronicle-v1.4"`, `"originalCountedStatus":"counted"`,
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("historical projection omitted %s: %s", required, text)
+		}
+	}
+	if strings.Contains(text, `"warning"`) {
+		t.Fatalf("historical evidence invented a warning without a finding: %s", text)
+	}
+
+	unresolved := projectHistoricalIntegrityEvidence(historicalIntegrityEvidenceInput{
+		RulesVersion: "cowards-rules-v1.4", OriginalCountedStatus: "counted",
+	})
+	unresolvedBytes, _ := json.Marshal(unresolved)
+	if !strings.Contains(string(unresolvedBytes), `"status":"legacy_incomplete"`) ||
+		!strings.Contains(string(unresolvedBytes), "does not contain enough immutable version evidence") {
+		t.Fatalf("legacy history was not left explicitly incomplete: %s", unresolvedBytes)
+	}
+
+	warning := projectHistoricalIntegrityEvidence(historicalIntegrityEvidenceInput{
+		RulesVersion: "cowards-rules-v1.4", ChronicleVersion: "chronicle-v1.4",
+		OriginalCountedStatus: "counted",
+		EffectiveFinding: &integrityEvidenceFinding{
+			EventID: "integrity-classification:0001:finding", Classification: "invalidated",
+			EvidenceHash: strings.Repeat("e", 64), EffectiveAt: "2026-07-13T12:00:00.000Z",
+		},
+	})
+	warningBytes, _ := json.Marshal(warning)
+	if !strings.Contains(string(warningBytes), `"warning"`) || strings.Contains(string(warningBytes), "private reason") {
+		t.Fatalf("concrete historical finding did not produce a calm warning: %s", warningBytes)
+	}
+	if err := assertIntegrityEvidenceProjectionPrivacySafe(warning); err != nil {
+		t.Fatalf("historical projection leaked restricted evidence: %v", err)
+	}
+}
+
+func TestIntegrityEvidenceCurrentModelAttachesOnlyPublicShape(t *testing.T) {
+	input := integrityEvidenceProjectionFixture()
+	bottom := projectPublicIntegrityEvidence(input)
+	input.Identity.LanguageID = "python"
+	input.Identity.ProviderID = "provider:python"
+	top := projectPublicIntegrityEvidence(input)
+	model := integrityEvidenceReadModel{
+		Profile: "current", SemanticTupleID: input.SemanticTupleID,
+		PublicByEntrant: map[string]publicIntegrityEvidenceProjection{"entrant:bottom": bottom, "entrant:top": top},
+	}
+	entrants := []map[string]any{
+		{"entrantId": "entrant:bottom"}, {"entrantId": "entrant:top"},
+	}
+	attachPublicIntegrityEvidenceToEntrants(entrants, model)
+	matches := []map[string]any{{
+		"matchId": "match:current", "_bottomExecutionEntrantKey": "entrant:bottom", "_topExecutionEntrantKey": "entrant:top",
+	}}
+	attachPublicIntegrityEvidenceToMatches(matches, model)
+	matchSet := projectPublicMatchSetIntegrityEvidence(model)
+	serialized, err := json.Marshal(map[string]any{"entrants": entrants, "matches": matches, "matchSet": matchSet})
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(serialized)
+	for _, forbidden := range []string{"reasonCode", "providerId", "toolchainVersion", "certificateId", "_bottomExecutionEntrantKey", "_topExecutionEntrantKey"} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("public current read leaked operator/internal field %q: %s", forbidden, text)
+		}
+	}
+	if strings.Count(text, `"status":"counted"`) < 4 {
+		t.Fatalf("public current evidence was not attached across entrant, Match, and MatchSet shapes: %s", text)
+	}
+	if err := assertIntegrityEvidenceProjectionPrivacySafe(map[string]any{"entrants": entrants, "matches": matches, "matchSet": matchSet}); err != nil {
+		t.Fatalf("attached public current evidence leaked restricted data: %v", err)
+	}
+}
+
+func TestIntegrityEvidenceRoutesSeparateAuthorizationAndProjectionShapes(t *testing.T) {
+	sourceBytes, err := os.ReadFile("live_backend.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(sourceBytes)
+	routes := goFunctionSource(t, source, "routes")
+	if !strings.Contains(routes, "/internal/integrity/matchsets/{matchSetId}/evidence") {
+		t.Fatal("authorized integrity-evidence route is not wired")
+	}
+	for _, functionName := range []string{"publicMatchSetResult", "publicReplayMetadata", "publicReplayEvidenceResult"} {
+		body := goFunctionSource(t, source, functionName)
+		if !strings.Contains(body, "publicIntegrityEvidence") && !strings.Contains(body, "IntegrityEvidence") {
+			t.Fatalf("public read %s does not wire integrity evidence", functionName)
+		}
+		if strings.Contains(body, "projectOperatorIntegrityEvidence") {
+			t.Fatalf("public read %s can construct the operator DTO", functionName)
+		}
+	}
+
+	t.Setenv("COWARDS_GO_BACKEND_INTERNAL_TOKEN", "operator-token")
+	request := httptest.NewRequest(http.MethodGet, "/internal/integrity/matchsets/match-set%3Asecret/evidence", nil)
+	response := httptest.NewRecorder()
+	(&LiveServer{}).routes().ServeHTTP(response, request)
+	if response.Code != http.StatusForbidden || strings.Contains(response.Body.String(), "reasonCode") {
+		t.Fatalf("unauthorized operator evidence did not fail before projection/query: code=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestIntegrityEvidencePostgresHistoricalReadAndConcreteWarning(t *testing.T) {
+	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("set COWARDS_GO_BACKEND_TEST_DATABASE_URL for integrity evidence PostgreSQL proof")
+	}
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	if err := ensurePersistenceSchema(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	prefix := "phase256-integrity-read-" + randomID()
+	cleanupPhase100Rows(t, ctx, pool, prefix)
+	ids := seedPhase100MatchSet(t, ctx, pool, prefix)
+	seedPhase100CompetitionEntrants(t, ctx, pool, ids)
+	insertPhase100ChronicleRow(t, ctx, pool, ids.matchA, "historical")
+	eventID := "integrity-classification:99999999999999999999:" + randomID()
+	defer func() {
+		_, _ = pool.Exec(ctx, "delete from integrity_cohort_classification_events where id = $1", eventID)
+		cleanupPhase100Rows(t, ctx, pool, prefix)
+	}()
+	if _, err := pool.Exec(ctx, `
+		update match_sets set competition_preset_id='smoke-exhibition-v1', competition_preset_version='v1',
+		  visibility='public', counted_status='counted' where id=$1;
+		update chronicles set artifact=$2 where match_id=$3
+	`, ids.matchSetID, map[string]any{"reproducibility": map[string]any{"specVersion": "cowards-rules-v1.4"}}, ids.matchA); err != nil {
+		t.Fatal(err)
+	}
+	server := &LiveServer{pool: pool, now: func() time.Time { return time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC) }}
+	result, err := server.publicMatchSetResult(ctx, ids.matchSetID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	historical := mapValue(result, "integrityEvidence")
+	if stringValue(historical, "status") != "resolved_historical" || stringValue(historical, "originalCountedStatus") != "counted" {
+		t.Fatalf("historical MatchSet meaning drifted: %+v", historical)
+	}
+	replay, err := server.publicReplayEvidenceResult(ctx, ids.matchA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replayHistorical := mapValue(mapValue(replay, "metadata"), "integrityEvidence")
+	if stringValue(replayHistorical, "status") != "resolved_historical" {
+		t.Fatalf("replay historical profile drifted: %+v", replayHistorical)
+	}
+	if _, present := historical["warning"]; present {
+		t.Fatalf("history invented a warning without concrete finding: %+v", historical)
+	}
+	if _, err := pool.Exec(ctx, `insert into integrity_cohort_classification_events
+		(id,predicate_version,predicate,preview_hash,preview_count,evidence_hash,classification,reason,created_at)
+		values ($1,'integrity-cohort-predicate-v1',$2,$3,1,$4,'invalidated','private reason must stay restricted',$5)`,
+		eventID,
+		map[string]any{"ast": map[string]any{"version": "integrity-cohort-predicate-v1", "operator": "match_set_ids", "matchSetIds": []string{ids.matchSetID}}},
+		strings.Repeat("a", 64), strings.Repeat("b", 64), time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	result, err = server.publicMatchSetResult(ctx, ids.matchSetID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	historical = mapValue(result, "integrityEvidence")
+	warning := mapValue(historical, "warning")
+	if stringValue(warning, "classification") != "invalidated" || strings.Contains(string(mustIntegrityJSON(t, result)), "private reason") {
+		t.Fatalf("concrete finding warning was missing or leaked private reason: %+v", historical)
+	}
+	if err := assertIntegrityEvidenceProjectionPrivacySafe(result); err != nil {
+		t.Fatalf("historical public read failed recursive privacy scan: %v", err)
+	}
+}
+
+func mustIntegrityJSON(t *testing.T, value any) []byte {
+	t.Helper()
+	serialized, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return serialized
 }
 
 func readGoBackendArtifact(t *testing.T, name string) []byte {
