@@ -6,9 +6,16 @@ import {
 import {
   createNonProductionExecutableLaneEvidenceAuthority,
   evaluateExecutableLaneEligibility,
+  type EvaluateExecutableLaneEligibilityInput,
   type ExecutableLaneCertificate,
   type ExecutableLaneIdentity,
 } from "./runtime-evidence.js"
+import {
+  defaultRuntimeMetadata,
+  describeStrategyRuntimeProductSemantics,
+  evaluateStrategyRuntimeCountedEligibility,
+  RUNTIME_BROKER_REGISTRY,
+} from "./runtime.js"
 
 const evaluationInstant = "2026-07-12T12:00:00.000Z"
 const registryGeneration = "runtime-registry-generation-v1.37-test"
@@ -90,6 +97,26 @@ const evaluate = (input?: {
       (reference) => reference.kind === "conformance",
     ),
   })
+}
+
+const exactEvidenceInput = (): EvaluateExecutableLaneEligibilityInput => {
+  const verified = createNonProductionExecutableLaneEvidenceAuthority({
+    registryGeneration,
+    certificates: [certificate("containment"), certificate("conformance")],
+  })
+  return {
+    expectedIdentity: identity,
+    evaluationInstant,
+    activeRegistryGeneration: registryGeneration,
+    operatorDisabled: false,
+    authority: verified.authority,
+    containmentCertificateRef: verified.references.find(
+      (reference) => reference.kind === "containment",
+    ),
+    conformanceCertificateRef: verified.references.find(
+      (reference) => reference.kind === "conformance",
+    ),
+  }
 }
 
 describe("v1.37 executable lane evidence", () => {
@@ -283,5 +310,46 @@ describe("v1.37 executable lane evidence", () => {
       status: "disabled",
       reasonCode: "CONTAINMENT_STALE",
     })
+  })
+
+  it("routes runtime compatibility facades through canonical evidence", () => {
+    const runtime = defaultRuntimeMetadata("typescript")
+    expect(evaluateStrategyRuntimeCountedEligibility(runtime)).toMatchObject({
+      ok: false,
+      code: "NON_COUNTED_RUNTIME",
+    })
+    expect(
+      describeStrategyRuntimeProductSemantics(runtime),
+    ).toMatchObject({
+      countedPlayEligible: false,
+      countedPlayLabel: "Not counted",
+    })
+
+    expect(
+      evaluateStrategyRuntimeCountedEligibility(runtime, exactEvidenceInput()),
+    ).toEqual({ ok: true, code: null, publicMessage: null })
+    expect(
+      describeStrategyRuntimeProductSemantics(runtime, exactEvidenceInput()),
+    ).toMatchObject({
+      countedPlayEligible: true,
+      countedPlayLabel: "Counted eligible",
+    })
+  })
+
+  it("keeps descriptive registries from manufacturing counted eligibility", () => {
+    expect(RUNTIME_BROKER_REGISTRY.length).toBeGreaterThan(0)
+    expect(
+      RUNTIME_BROKER_REGISTRY.every(
+        (entry) => entry.countedResultsAllowed === false,
+      ),
+    ).toBe(true)
+
+    const wrongLaneEvidence = exactEvidenceInput()
+    expect(
+      evaluateStrategyRuntimeCountedEligibility(
+        defaultRuntimeMetadata("javascript"),
+        wrongLaneEvidence,
+      ),
+    ).toMatchObject({ ok: false, code: "NON_COUNTED_RUNTIME" })
   })
 })

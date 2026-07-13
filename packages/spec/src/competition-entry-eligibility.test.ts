@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   assertCountedEntryEligibilityPublicLeakSafe,
+  countedEntryEligibilityDecision,
   COUNTED_ENTRY_ELIGIBILITY_CATEGORIES,
   COUNTED_ENTRY_ELIGIBILITY_PUBLIC_PAYLOAD,
   COUNTED_ENTRY_ELIGIBILITY_SUPPORTED_LANES,
@@ -8,9 +9,20 @@ import {
   getCountedEntryEligibilityPublicCopy,
   isCountedEntrySupportedLane,
 } from "./competition-entry-eligibility.js"
+import {
+  CANONICAL_COMPATIBILITY_TUPLES,
+} from "./integrity-authority.js"
+import {
+  createNonProductionExecutableLaneEvidenceAuthority,
+  type EvaluateExecutableLaneEligibilityInput,
+  type ExecutableLaneCertificate,
+  type ExecutableLaneIdentity,
+} from "./runtime-evidence.js"
 
 const expectedCategories = [
   "provider_validated",
+  "runtime_lane_disabled",
+  "runtime_lane_exhibition_only",
   "season_not_open",
   "owner_mismatch",
   "invalid_strategy_revision",
@@ -27,6 +39,70 @@ const expectedCategories = [
   "already_entered_season",
   "replacement_blocked",
 ] as const
+
+const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
+const laneIdentity = {
+  providerId: "strategy-language-provider-js-ts",
+  languageId: "typescript",
+  runtimeId: "node",
+  runtimeVersion: "26.0.0",
+  toolchainId: "typescript",
+  toolchainVersion: "6.0.3",
+  adapterId: "runtime-js-worker-thread",
+  adapterVersion: "runtime-js-v1.14",
+  policyId: "runtime-policy",
+  policyVersion: "v1.37",
+  corpusId: "four-language-conformance",
+  corpusVersion: "v1.37",
+  artifactId: "sha256:typescript-runtime-artifact",
+  artifactSha256: "a".repeat(64),
+  implementationId: "runtime-service",
+  buildId: "sha256:runtime-service-build",
+  semanticTupleId: tuple.tupleId,
+  semanticTuple: { ...tuple.tuple },
+} satisfies ExecutableLaneIdentity
+
+const laneEvidenceInput = (
+  includeConformance: boolean,
+): EvaluateExecutableLaneEligibilityInput => {
+  const registryGeneration = "entry-registry-generation"
+  const makeCertificate = (
+    kind: ExecutableLaneCertificate["kind"],
+  ): ExecutableLaneCertificate => ({
+    kind,
+    certificateId: `${kind}-certificate`,
+    certificateVersion: `${kind}-v1`,
+    certificateRecordHash: `${kind}-record-hash`,
+    identity: laneIdentity,
+    registryGeneration,
+    status: "passed",
+    issuedAt: "2026-07-12T00:00:00.000Z",
+    freshUntil: "2026-07-13T00:00:00.000Z",
+    gateResults: [{ gateId: `${kind}-gate`, passed: true }],
+    restrictedProofIds: [],
+    restrictedProofLinks: [],
+  })
+  const verified = createNonProductionExecutableLaneEvidenceAuthority({
+    registryGeneration,
+    certificates: [
+      makeCertificate("containment"),
+      ...(includeConformance ? [makeCertificate("conformance")] : []),
+    ],
+  })
+  return {
+    expectedIdentity: laneIdentity,
+    evaluationInstant: "2026-07-12T12:00:00.000Z",
+    activeRegistryGeneration: registryGeneration,
+    operatorDisabled: false,
+    authority: verified.authority,
+    containmentCertificateRef: verified.references.find(
+      (reference) => reference.kind === "containment",
+    ),
+    conformanceCertificateRef: verified.references.find(
+      (reference) => reference.kind === "conformance",
+    ),
+  }
+}
 
 const privateMarkerPayloads = [
   { strategySource: "private source text" },
@@ -132,5 +208,36 @@ describe("counted entry eligibility contract", () => {
         assertCountedEntryEligibilityPublicLeakSafe(marker),
       ).toThrow(/private|leaks/i)
     }
+  })
+
+  it("SAFE-02 fails provider proof closed without exact canonical lane evidence", () => {
+    expect(countedEntryEligibilityDecision("provider_validated")).toMatchObject({
+      ok: false,
+      category: "runtime_lane_disabled",
+      evidenceStatus: "disabled",
+      evidenceReasonCode: "CONTAINMENT_MISSING",
+    })
+    expect(
+      countedEntryEligibilityDecision(
+        "provider_validated",
+        laneEvidenceInput(false),
+      ),
+    ).toMatchObject({
+      ok: false,
+      category: "runtime_lane_exhibition_only",
+      evidenceStatus: "exhibition_only",
+      evidenceReasonCode: "CONFORMANCE_MISSING",
+    })
+    expect(
+      countedEntryEligibilityDecision(
+        "provider_validated",
+        laneEvidenceInput(true),
+      ),
+    ).toMatchObject({
+      ok: true,
+      category: "provider_validated",
+      evidenceStatus: "counted",
+      evidenceReasonCode: "EVIDENCE_CURRENT",
+    })
   })
 })
