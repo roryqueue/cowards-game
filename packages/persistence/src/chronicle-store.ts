@@ -9,6 +9,12 @@ import type {
   StrategyRevisionId,
 } from "@cowards/spec"
 import type { Queryable } from "./repositories.js"
+import {
+  createMatchExecutionEvidencePair,
+  matchSetIntegritySqlValues,
+  type MatchExecutionEvidencePair,
+  type MatchSetIntegrityIdentity,
+} from "./integrity-evidence.js"
 
 export interface ChronicleMetadata {
   id: string
@@ -30,8 +36,19 @@ export interface StoredChronicle {
   artifact: Chronicle
 }
 
+export interface ChronicleIntegrityIdentity {
+  matchSetId: string
+  identity: Readonly<MatchSetIntegrityIdentity>
+  evidencePair: Readonly<MatchExecutionEvidencePair>
+}
+
+export interface PutChronicleInput {
+  chronicle: Chronicle
+  integrityIdentity: Readonly<ChronicleIntegrityIdentity>
+}
+
 export interface ChronicleStore {
-  put(chronicle: Chronicle): Promise<StoredChronicle>
+  put(input: PutChronicleInput | unknown): Promise<StoredChronicle>
   getByMatchId(matchId: MatchId): Promise<StoredChronicle | null>
 }
 
@@ -52,6 +69,81 @@ const terminalOutcome = (chronicle: Chronicle): JsonValue => {
     )
   }
   return outcome as unknown as JsonValue
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value)
+
+const hasExactKeys = (
+  value: Record<string, unknown>,
+  fields: readonly string[],
+): boolean => {
+  const actual = Object.keys(value).sort()
+  const expected = [...fields].sort()
+  return (
+    actual.length === expected.length &&
+    actual.every((field, index) => field === expected[index])
+  )
+}
+
+const validatePutInput = (
+  input: PutChronicleInput | unknown,
+): PutChronicleInput => {
+  if (!isRecord(input) || !hasExactKeys(input, ["chronicle", "integrityIdentity"])) {
+    throw new ChronicleValidationSystemFailure(
+      "Current Chronicle insertion requires one exact integrity identity.",
+    )
+  }
+  const integrityIdentity = input.integrityIdentity
+  if (
+    !isRecord(integrityIdentity) ||
+    !hasExactKeys(integrityIdentity, ["matchSetId", "identity", "evidencePair"]) ||
+    typeof integrityIdentity.matchSetId !== "string" ||
+    integrityIdentity.matchSetId.length === 0 ||
+    !isRecord(integrityIdentity.evidencePair)
+  ) {
+    throw new ChronicleValidationSystemFailure(
+      "Current Chronicle integrity identity is partial or malformed.",
+    )
+  }
+  const chronicle = input.chronicle as Chronicle
+  const identity = integrityIdentity.identity as Readonly<MatchSetIntegrityIdentity>
+  const evidencePair =
+    integrityIdentity.evidencePair as Readonly<MatchExecutionEvidencePair>
+
+  try {
+    // The SQL-value helper is also the validator-brand gate. A caller cannot
+    // authorize a Chronicle with a merely certificate-shaped identity.
+    matchSetIntegritySqlValues(identity)
+    const [bottomStrategyRevisionId, topStrategyRevisionId] =
+      chronicle.reproducibility.strategyRevisionIds
+    const expectedPair = createMatchExecutionEvidencePair(identity, {
+      bottomEntrantKey: evidencePair.bottom?.entrantKey ?? "",
+      topEntrantKey: evidencePair.top?.entrantKey ?? "",
+      bottomStrategyRevisionId,
+      topStrategyRevisionId,
+    })
+    if (
+      evidencePair.bottom !== expectedPair.bottom ||
+      evidencePair.top !== expectedPair.top ||
+      evidencePair.pairHash !== expectedPair.pairHash
+    ) {
+      throw new Error("pair mismatch")
+    }
+  } catch {
+    throw new ChronicleValidationSystemFailure(
+      "Current Chronicle integrity identity is not the exact ordered Match pair.",
+    )
+  }
+
+  return {
+    chronicle,
+    integrityIdentity: {
+      matchSetId: integrityIdentity.matchSetId,
+      identity,
+      evidencePair,
+    },
+  }
 }
 
 const playerIdFromEvent = (event: ChronicleEvent): PlayerId | undefined => {
@@ -140,17 +232,46 @@ const rowToStored = (row: {
 export const createPostgresChronicleStore = (
   pool: Queryable,
 ): ChronicleStore => ({
-  async put(chronicle) {
+  async put(rawInput) {
+    const { chronicle, integrityIdentity } = validatePutInput(rawInput)
     const metadata = createChronicleMetadata(chronicle)
+    const identityValues = matchSetIntegritySqlValues(integrityIdentity.identity)
+    const pair = integrityIdentity.evidencePair
     const result = await pool.query(
       `
         insert into chronicles (
           id, match_id, schema_version, hash, outcome, event_count,
           snapshot_count, bottom_player_id, top_player_id,
           bottom_strategy_revision_id, top_strategy_revision_id,
-          arena_variant_id, artifact
+          arena_variant_id, artifact, integrity_match_set_id,
+          bottom_execution_entrant_key, top_execution_entrant_key,
+          bottom_execution_evidence, top_execution_evidence,
+          execution_evidence_pair_hash
         )
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        select
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+          $14, $15, $16, $17, $18, $19
+        from match_sets ms
+        join match_set_execution_entrants bottom_entrant
+          on bottom_entrant.match_set_id = ms.id
+         and bottom_entrant.entrant_key = $15
+        join match_set_execution_entrants top_entrant
+          on top_entrant.match_set_id = ms.id
+         and top_entrant.entrant_key = $16
+        where ms.id = $14
+          and ms.compatibility_tuple_id = $20
+          and ms.compatibility_rules_version = $21
+          and ms.compatibility_engine_version = $22
+          and ms.compatibility_runtime_abi_version = $23
+          and ms.compatibility_chronicle_version = $24
+          and ms.compatibility_arena_catalog_version = $25
+          and ms.compatibility_set_policy_version = $26
+          and ms.authority_bundle_hash = $27
+          and ms.authority_registry_generation = $28
+          and bottom_entrant.strategy_revision_id = $10
+          and top_entrant.strategy_revision_id = $11
+          and bottom_entrant.execution_snapshot = $17::jsonb
+          and top_entrant.execution_snapshot = $18::jsonb
         on conflict (match_id) do nothing
       `,
       [
@@ -167,6 +288,13 @@ export const createPostgresChronicleStore = (
         metadata.topStrategyRevisionId,
         metadata.arenaVariantId,
         chronicle,
+        integrityIdentity.matchSetId,
+        pair.bottom.entrantKey,
+        pair.top.entrantKey,
+        pair.bottom,
+        pair.top,
+        pair.pairHash,
+        ...identityValues.slice(0, 9),
       ],
     )
     if ((result.rowCount ?? 0) === 0) {
@@ -192,20 +320,38 @@ export const createPostgresChronicleStore = (
 export const createMemoryChronicleStoreForTests = (): ChronicleStore & {
   size(): number
 } => {
-  const rows = new Map<MatchId, StoredChronicle>()
+  const rows = new Map<
+    MatchId,
+    { stored: StoredChronicle; integrityIdentity: ChronicleIntegrityIdentity }
+  >()
   return {
-    async put(chronicle) {
+    async put(rawInput) {
+      const { chronicle, integrityIdentity } = validatePutInput(rawInput)
       const metadata = createChronicleMetadata(chronicle)
       const existing = rows.get(metadata.matchId)
       if (existing) {
-        return existing
+        if (
+          existing.integrityIdentity.matchSetId !== integrityIdentity.matchSetId ||
+          existing.integrityIdentity.identity !== integrityIdentity.identity ||
+          existing.integrityIdentity.evidencePair.bottom !==
+            integrityIdentity.evidencePair.bottom ||
+          existing.integrityIdentity.evidencePair.top !==
+            integrityIdentity.evidencePair.top ||
+          existing.integrityIdentity.evidencePair.pairHash !==
+            integrityIdentity.evidencePair.pairHash
+        ) {
+          throw new ChronicleValidationSystemFailure(
+            "Existing Chronicle identity differs from the exact Match identity.",
+          )
+        }
+        return existing.stored
       }
       const stored = { metadata, artifact: chronicle }
-      rows.set(metadata.matchId, stored)
+      rows.set(metadata.matchId, { stored, integrityIdentity })
       return stored
     },
     async getByMatchId(matchId) {
-      return rows.get(matchId) ?? null
+      return rows.get(matchId)?.stored ?? null
     },
     size() {
       return rows.size
