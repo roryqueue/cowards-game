@@ -90,6 +90,22 @@ describe("v1.37 executable reference ownership inventory", () => {
     )
     expect(monitor.references).toEqual([])
     expect(monitor.findings).toEqual([])
+
+    const documentation = analyzeV137ExecutableReferences(
+      {
+        "packages/replay/README.md":
+          "The buildChronicleFromMatch compatibility path is retiring.",
+      },
+      "baseline",
+      { enforceBaseline: false },
+    )
+    expect(documentation.references).toEqual([])
+    expect(documentation.nonExecutableMentions).toEqual([
+      expect.objectContaining({
+        symbol: "buildChronicleFromMatch",
+        kind: "documentation",
+      }),
+    ])
   })
 
   it("rejects a moved exact reference even when its owner has a similar file", () => {

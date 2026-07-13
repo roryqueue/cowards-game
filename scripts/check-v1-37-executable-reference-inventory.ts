@@ -51,7 +51,7 @@ export interface V137ExecutableReference {
 export interface V137NonExecutableMention {
   path: string
   symbol: V137TrackedSymbol
-  kind: "comment" | "string"
+  kind: "comment" | "documentation" | "string"
   line: number
 }
 
@@ -247,6 +247,21 @@ const analyzeFile = (
   repoPath: string,
   source: string,
 ): Pick<V137ReferenceAnalysis, "references" | "nonExecutableMentions"> => {
+  if (repoPath.endsWith(".md")) {
+    return {
+      references: [],
+      nonExecutableMentions: [...trackedSymbols].flatMap((symbol) =>
+        [...source.matchAll(new RegExp(`\\b${symbol}\\b`, "gu"))].map(
+          (match) => ({
+            path: repoPath,
+            symbol,
+            kind: "documentation" as const,
+            line: source.slice(0, match.index).split("\n").length,
+          }),
+        ),
+      ),
+    }
+  }
   if (negativeMonitorPaths.has(repoPath)) {
     return {
       references: [],
@@ -505,7 +520,7 @@ const walkSources = (repoRoot: string): Readonly<Record<string, string>> => {
       }
       return
     }
-    if (!stat.isFile() || !/\.tsx?$/u.test(absolutePath)) return
+    if (!stat.isFile() || !/(?:\.tsx?|\.md)$/u.test(absolutePath)) return
     const repoPath = normalized(path.relative(repoRoot, absolutePath))
     sources[repoPath] = readFileSync(absolutePath, "utf8")
   }
