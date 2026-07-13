@@ -100,7 +100,7 @@ Plans:
   4. Executable compatibility fixtures preserve same-direction collision, successful-push reversal history, blocked MOVE/PUSH, terminal timing, Backstab behavior, and every other audited valid v1.4 ruling.
   5. If any clarification or refactor would change a valid state, Action legality, event order, outcome, terminal timing/reason, or Strategy observation, work stops for an explicit compatibility ruling before expectations change.
 
-**Plans:** 16/22 plans executed
+**Plans:** 18/22 plans executed
 
 **Wave 1 — permanent RED and compatibility evidence**
 
@@ -144,8 +144,8 @@ Plans:
 
 **Wave 9 — TypeScript and Go candidate persistence boundaries**
 
-- [ ] 257-16-PLAN.md — Stage candidate-tuple TypeScript persistence admission and rollback after the runtime producer exists.
-- [ ] 257-17-PLAN.md — Stage candidate-tuple semantic validation and rollback parity in Go after the candidate runtime-service producer exists.
+- [x] 257-16-PLAN.md — Stage candidate-tuple TypeScript persistence admission and rollback after the runtime producer exists.
+- [x] 257-17-PLAN.md — Stage candidate-tuple semantic validation and rollback parity in Go after the candidate runtime-service producer exists.
 
 **Wave 10 — indivisible current activation**
 
@@ -245,7 +245,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 256. Counted Safety and Canonical Authority | 19/19 | Complete    | 2026-07-13 |
-| 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 16/22 | In Progress|  |
+| 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 18/22 | In Progress|  |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 0/TBD | Not started | - |
 | 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 0/TBD | Not started | - |
