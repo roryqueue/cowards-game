@@ -7,6 +7,42 @@ import type {
 } from "@cowards/spec"
 import type { ReplayReadyDto, ReplayTimelineEntryDto } from "../../types.js"
 
+const V1_37_CANDIDATE_TUPLE_ID =
+  "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
+const V1_37_CANDIDATE_REPLAY_BOARD_EVENT_TYPES = new Set<string>([
+  "MATCH_STARTED",
+  "ROUND_STARTED",
+  "STRATEGY_EVALUATED",
+  "ACTIVATION_STARTED",
+  "ACTIVATION_SKIPPED",
+  "ACTIVATION_ENDED",
+  "CYCLE_STARTED",
+  "CYCLE_ENDED",
+  "AWARENESS_GRID_OBSERVED",
+  "ACTION_EMITTED",
+  "MOVE_ADVANCED",
+  "MOVE_BLOCKED",
+  "TURN_RESOLVED",
+  "PUSH_RESOLVED",
+  "PUSH_BLOCKED",
+  "BACKSTAB_RESOLVED",
+  "SOLDIER_STONED",
+  "SOLDIER_FELL",
+  "CONTRACTION_RESOLVED",
+  "MATCH_ENDED",
+  "RUNTIME_VIOLATION",
+])
+
+export const resolveReplayBoardEventContract = (
+  semanticTupleId: string,
+  eventType: string,
+): "candidate-current" | "historical-or-unknown" | "active-current" =>
+  semanticTupleId === V1_37_CANDIDATE_TUPLE_ID
+    ? V1_37_CANDIDATE_REPLAY_BOARD_EVENT_TYPES.has(eventType)
+      ? "candidate-current"
+      : "historical-or-unknown"
+    : "active-current"
+
 export const ReplayBoardColors = {
   ownerBottom: "#256d85",
   ownerTop: "#b65a3a",

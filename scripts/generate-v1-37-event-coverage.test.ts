@@ -1,8 +1,14 @@
+/* eslint-disable no-restricted-imports -- Cross-surface tuple seams are the contract under test. */
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
+import { resolveMatchIntelligenceEventContract } from "../apps/web/app/match-intelligence.js"
+import { resolveReplayBoardEventContract } from "../apps/web/app/matches/[matchId]/replay/replay-board-model.js"
+import { resolveReplayReadyEventContract } from "../apps/web/app/matches/replay-ready.js"
+import { resolveGrammarEventContract } from "../packages/replay/src/grammar.js"
+import { resolveReplayTransitionEventContract } from "../packages/replay/src/replay-transition.js"
 import {
   ACTIVE_EVENT_BYTE_BASELINE,
   CANDIDATE_CONSUMER_SURFACES,
@@ -39,6 +45,34 @@ const findingCodes = (operation: () => unknown): string[] => {
 }
 
 describe("v1.37 candidate event coverage generator", () => {
+  it("routes exact candidate events without changing the active tuple seam", () => {
+    const candidateTupleId =
+      "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
+    const activeTupleId = "sha256:registered-v1.4-test-selector"
+    const resolvers = [
+      resolveGrammarEventContract,
+      resolveReplayTransitionEventContract,
+      resolveMatchIntelligenceEventContract,
+      resolveReplayReadyEventContract,
+      resolveReplayBoardEventContract,
+    ]
+
+    for (const resolveContract of resolvers) {
+      expect(resolveContract(candidateTupleId, "MATCH_STARTED")).toBe(
+        "candidate-current",
+      )
+      expect(resolveContract(candidateTupleId, "PUSH_ATTEMPTED")).toBe(
+        "historical-or-unknown",
+      )
+      expect(resolveContract(candidateTupleId, "FUTURE_UNKNOWN")).toBe(
+        "historical-or-unknown",
+      )
+      expect(resolveContract(activeTupleId, "PUSH_ATTEMPTED")).toBe(
+        "active-current",
+      )
+    }
+  })
+
   it("renders a byte-identical, inactive candidate-only coverage matrix", () => {
     const artifact = buildV137CandidateEventCoverage()
     const rendered = renderV137CandidateEventCoverageArtifact(artifact)
@@ -147,7 +181,7 @@ describe("v1.37 candidate event coverage generator", () => {
       }
     }
 
-    const missingDeclaration = structuredClone(candidate)
+    const missingDeclaration = globalThis.structuredClone(candidate)
     missingDeclaration.candidate.eventVocabulary.candidateCurrent =
       missingDeclaration.candidate.eventVocabulary.candidateCurrent.filter(
         (eventType) => eventType !== "MATCH_STARTED",
@@ -165,7 +199,7 @@ describe("v1.37 candidate event coverage generator", () => {
       ]),
     )
 
-    const reintroduced = structuredClone(candidate)
+    const reintroduced = globalThis.structuredClone(candidate)
     reintroduced.candidate.eventVocabulary.candidateCurrent.push(
       "PUSH_ATTEMPTED",
     )
