@@ -5,12 +5,8 @@ import type {
   StrategyInput,
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import {
-  runMatch,
-  type RunMatchInput,
-  type StrategyRuntime,
-} from "@cowards/engine"
-import { buildChronicleFromMatch, buildChronicleFromResult } from "./build.js"
+import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { recordChronicleFromExecution } from "./record.js"
 
 const createRecordingRuntime = (
   observedInputs: Map<string, SoldierBrainInput>,
@@ -49,7 +45,7 @@ const createRecordingRuntime = (
   },
 })
 
-const createMatchInput = (runtime: StrategyRuntime): RunMatchInput => ({
+const createMatchInput = (runtime: StrategyRuntime) => ({
   matchId: "chronicle-build-match",
   seed: "chronicle-seed",
   arenaVariant: {
@@ -64,6 +60,22 @@ const createMatchInput = (runtime: StrategyRuntime): RunMatchInput => ({
   topStrategyRevisionId: "top-rev",
   runtime,
 })
+
+const metadata = {
+  schemaVersion: "chronicle-v1.4" as const,
+  semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+  semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+}
+
+const createRecorded = (runtime: StrategyRuntime) => {
+  const execution = CANDIDATE_MATCH_KERNEL.runMatch(createMatchInput(runtime))
+  if (execution.kind !== "completed") {
+    throw new Error(execution.failure.code)
+  }
+  const recorded = recordChronicleFromExecution({ execution, metadata })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  return { execution, recorded }
+}
 
 const privatePayloadFor = (
   data: JsonValue | undefined,
@@ -84,13 +96,11 @@ const readAwarenessGrid = (
   return payload.awarenessGrid as AwarenessGrid5x5 | undefined
 }
 
-describe("buildChronicleFromMatch", () => {
-  it("constructs required events and terminal snapshots", () => {
+describe("candidate Chronicle recording", () => {
+  it("constructs required events and terminal snapshots from one execution", () => {
     const observedInputs = new Map<string, SoldierBrainInput>()
-    const { chronicle } = buildChronicleFromMatch(
-      createMatchInput(createRecordingRuntime(observedInputs)),
-    )
-    const eventTypes = chronicle.events.map((event) => event.type)
+    const { recorded } = createRecorded(createRecordingRuntime(observedInputs))
+    const eventTypes = recorded.chronicle.events.map((event) => event.type)
 
     expect(eventTypes).toContain("MATCH_STARTED")
     expect(eventTypes).toContain("ROUND_STARTED")
@@ -101,7 +111,9 @@ describe("buildChronicleFromMatch", () => {
     expect(eventTypes).toContain("SOLDIER_STONED")
     expect(eventTypes.filter((type) => type === "MATCH_ENDED")).toHaveLength(1)
 
-    const snapshotKinds = chronicle.snapshots.map((snapshot) => snapshot.kind)
+    const snapshotKinds = recorded.chronicle.snapshots.map(
+      (snapshot) => snapshot.kind,
+    )
     expect(snapshotKinds).toContain("MATCH_START")
     expect(snapshotKinds).toContain("ROUND_START")
     expect(snapshotKinds).toContain("MATCH_END")
@@ -110,10 +122,8 @@ describe("buildChronicleFromMatch", () => {
 
   it("stores exact owner-only 25-cell Awareness Grid data", () => {
     const observedInputs = new Map<string, SoldierBrainInput>()
-    const { chronicle } = buildChronicleFromMatch(
-      createMatchInput(createRecordingRuntime(observedInputs)),
-    )
-    const awarenessEvent = chronicle.events.find(
+    const { recorded } = createRecorded(createRecordingRuntime(observedInputs))
+    const awarenessEvent = recorded.chronicle.events.find(
       (event) =>
         event.type === "AWARENESS_GRID_OBSERVED" &&
         event.context.actingPlayerId === "bottom",
@@ -121,7 +131,7 @@ describe("buildChronicleFromMatch", () => {
 
     expect(awarenessEvent?.privateRef).toMatch(/^private:event:/)
     const privateRef = awarenessEvent?.privateRef ?? ""
-    const bottomPrivate = chronicle.private?.byPlayerId.bottom
+    const bottomPrivate = recorded.chronicle.private?.byPlayerId.bottom
     const privatePayload = privatePayloadFor(bottomPrivate, privateRef)
     const privateAwarenessGrid = readAwarenessGrid(privatePayload)
     const recordedInput = observedInputs.get(
@@ -136,27 +146,39 @@ describe("buildChronicleFromMatch", () => {
     })
   })
 
-  it("matches runMatch final outcome", () => {
-    const buildObservedInputs = new Map<string, SoldierBrainInput>()
-    const runObservedInputs = new Map<string, SoldierBrainInput>()
-    const built = buildChronicleFromMatch(
-      createMatchInput(createRecordingRuntime(buildObservedInputs)),
-    )
-    const direct = runMatch(
-      createMatchInput(createRecordingRuntime(runObservedInputs)),
+  it("records the final outcome of the same driver execution", () => {
+    const { execution, recorded } = createRecorded(
+      createRecordingRuntime(new Map()),
     )
 
-    expect(built.finalState.outcome).toEqual(direct.state.outcome)
+    expect(recorded.finalState.outcome).toEqual(execution.result.state.outcome)
   })
 
-  it("returns typed failure instead of a partial Chronicle for existing runMatch results", () => {
-    const result = runMatch(createMatchInput(createRecordingRuntime(new Map())))
-    const adapted = buildChronicleFromResult({
-      input: createMatchInput(createRecordingRuntime(new Map())),
-      result,
-    })
+  it("returns typed failure instead of a partial Chronicle for a failed execution", () => {
+    const systemFailureRuntime = {
+      selectActivations() {
+        return {
+          ok: false,
+          systemFailure: { code: "FIXTURE_SYSTEM_FAILURE", retryable: true },
+        }
+      },
+      runSoldierBrain() {
+        return {
+          ok: false,
+          systemFailure: { code: "FIXTURE_SYSTEM_FAILURE", retryable: true },
+        }
+      },
+    } as unknown as StrategyRuntime
+    const execution = CANDIDATE_MATCH_KERNEL.runMatch(
+      createMatchInput(systemFailureRuntime),
+    )
+    const recorded = recordChronicleFromExecution({ execution, metadata })
 
-    expect(adapted.ok).toBe(false)
-    expect(!adapted.ok && adapted.errors[0]?.code).toBe("SNAPSHOT_MISSING")
+    expect(execution.kind).toBe("failure")
+    expect(recorded.ok).toBe(false)
+    expect(!recorded.ok && recorded.failure.code).toBe(
+      "RECORDER_EXECUTION_NOT_COMPLETED",
+    )
+    expect(recorded).not.toHaveProperty("chronicle")
   })
 })

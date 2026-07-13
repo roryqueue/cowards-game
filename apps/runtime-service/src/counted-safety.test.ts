@@ -12,7 +12,6 @@ import {
   type RuntimeExecutionServiceRequest,
 } from "@cowards/spec"
 import { buildStrategyRevision } from "@cowards/runtime-js"
-import { buildChronicleFromMatch } from "@cowards/replay"
 import {
   executeRuntimeServiceRequest,
   type RuntimeExecutionServiceDependencies,
@@ -331,7 +330,8 @@ describe("runtime-service counted safety", () => {
 
     const artifactContext = requestContext("counted")
     const artifactRequest = requestWithProviderIdentity(artifactContext.request)
-    const sourceArtifact = artifactRequest.strategies.bottom.metadata.sourceArtifact!
+    const sourceArtifact =
+      artifactRequest.strategies.bottom.metadata.sourceArtifact!
     artifactRequest.strategies.bottom.metadata.sourceArtifact = {
       ...sourceArtifact,
       hash: "7".repeat(64),
@@ -339,7 +339,9 @@ describe("runtime-service counted safety", () => {
     const artifactResult = await executeOverProductionConfiguredHttp({
       request: artifactRequest,
       authorityLoader: artifactContext.context.authorityLoader,
-      registry: registryForRequest(requestWithProviderIdentity(artifactContext.request)),
+      registry: registryForRequest(
+        requestWithProviderIdentity(artifactContext.request),
+      ),
     })
     expect(artifactResult.status, "artifact sha256").toBe(422)
     expect(artifactResult.body.ok, "artifact sha256").toBe(false)
@@ -349,14 +351,10 @@ describe("runtime-service counted safety", () => {
     "accepts exact current %s authority and independently reloads acceptance, pre-invocation, and post-execution",
     (status) => {
       const { request, context } = requestContext(status)
-      const build = vi.fn(buildChronicleFromMatch)
-      const response = executeWith(request, context.authorityLoader, {
-        buildChronicleFromMatch: build,
-      })
+      const response = executeWith(request, context.authorityLoader)
 
       expect(response.ok).toBe(true)
       expect(context.authorityLoader.load).toHaveBeenCalledTimes(3)
-      expect(build).toHaveBeenCalledTimes(1)
       for (const entrant of Object.values(request.evidenceSnapshot.entrants)) {
         expect(entrant.effectiveStatus).toBe(status)
         expect(entrant.containmentCertificateId).toBeDefined()
@@ -548,15 +546,17 @@ describe("runtime-service counted safety", () => {
       registryGeneration: "8",
       payload: { registryGeneration: "8" },
     })
-    const build = vi.fn(buildChronicleFromMatch)
+    const runtimeFactory = vi.fn(() => {
+      throw new Error("runtime factory must not run")
+    })
     const response = executeWith(
       request,
       sequencedLoader([context.authority, drifted]),
-      { buildChronicleFromMatch: build },
+      { createRuntimeForRevision: runtimeFactory },
     )
 
     expectEvidenceFailure(response, "EVIDENCE_REGISTRY_DRIFT")
-    expect(build).not.toHaveBeenCalled()
+    expect(runtimeFactory).not.toHaveBeenCalled()
   })
 
   it("discards the complete in-memory result when authority drifts after execution", () => {
@@ -566,15 +566,12 @@ describe("runtime-service counted safety", () => {
       registryGeneration: "8",
       payload: { registryGeneration: "8" },
     })
-    const build = vi.fn(buildChronicleFromMatch)
     const response = executeWith(
       request,
       sequencedLoader([context.authority, context.authority, drifted]),
-      { buildChronicleFromMatch: build },
     )
 
     expectEvidenceFailure(response, "EVIDENCE_REGISTRY_DRIFT")
-    expect(build).toHaveBeenCalledTimes(1)
   })
 
   it("maps unavailable or unverifiable mounted authority to one redacted retryable system failure", () => {

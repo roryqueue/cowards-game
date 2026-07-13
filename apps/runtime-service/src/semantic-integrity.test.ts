@@ -1,24 +1,21 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import {
   DEFAULT_RUNTIME_LIMITS,
   INITIAL_BOUNDS,
-  RUNTIME_EXECUTION_SERVICE_VERSION,
-  RuntimeExecutionServiceRequestSchema,
-  type RuntimeExecutionServiceRequest,
   type SoldierBrainInput,
   type StrategyInput,
+  type StrategyRevision,
 } from "@cowards/spec"
-import type { StrategyRuntime } from "@cowards/engine"
-import { buildChronicleFromMatch } from "@cowards/replay"
+import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { INACTIVE_V1_37_REPLAY_TUPLE } from "@cowards/replay"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import {
-  executeRuntimeServiceRequest,
-  type RuntimeExecutionServiceDependencies,
+  executeCandidateExhibitionForTest,
+  type CandidateExhibitionExecutionRequest,
 } from "./execute-match.js"
 import {
-  createFixtureRuntimeEvidenceAuthorityLoader,
   createFixtureDeploymentLaneIdentity,
-  createFixtureRuntimeExecutionEvidenceSnapshot,
+  createFixtureRuntimeExecutionAuthorityContext,
 } from "./runtime-execution-evidence.test-support.js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
 
@@ -33,24 +30,56 @@ export default {
 }
 `
 
-const bottom = buildStrategyRevision({
-  source: passiveSource,
-  strategyId: "strategy:semantic-bottom",
+const candidateRevision = (
+  strategyId: string,
+  side: "bottom" | "top",
+): StrategyRevision => {
+  const revision = buildStrategyRevision({ source: passiveSource, strategyId })
+  return {
+    ...revision,
+    id: `${revision.id}:candidate:${side}`,
+    engineCompatibility: {
+      spec: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
+      engine: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
+    },
+    validation: {
+      ...revision.validation,
+      engineCompatibility: {
+        spec: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
+        engine: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
+      },
+    },
+  }
+}
+
+const bottom = candidateRevision("strategy:semantic-bottom", "bottom")
+const top = candidateRevision("strategy:semantic-top", "top")
+const authority = createFixtureRuntimeExecutionAuthorityContext({
+  fixtureId: "semantic-integrity-candidate",
+  bottom,
+  top,
 })
-const top = buildStrategyRevision({
-  source: passiveSource,
-  strategyId: "strategy:semantic-top",
-})
-const request = RuntimeExecutionServiceRequestSchema.parse({
-  contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
-  kind: "executeMatch",
-  requestId: "request:semantic-red",
+const entrant = (side: "bottom" | "top") => {
+  const value = authority.evidenceSnapshot.entrants[side]
+  return {
+    entrantKey: value.entrantKey,
+    strategyRevisionId: value.strategyRevisionId,
+    laneIdentityHash: value.laneIdentityHash,
+    containmentCertificateId: value.containmentCertificateId!,
+    containmentCertificateHash: value.containmentCertificateHash!,
+  }
+}
+const request: CandidateExhibitionExecutionRequest = {
+  profile: "candidate_exhibition",
+  counted: false,
+  requestId: "request:semantic-candidate",
+  compatibility: INACTIVE_V1_37_REPLAY_TUPLE,
   match: {
-    matchId: "match:semantic-red",
-    seed: "seed:semantic-red",
+    matchId: "match:semantic-candidate",
+    seed: "seed:semantic-candidate",
     arenaVariant: {
-      id: "arena:semantic-red",
-      name: "Runtime semantic RED",
+      id: "arena:semantic-candidate",
+      name: "Runtime semantic candidate",
       initialBounds: INITIAL_BOUNDS,
       terrainStones: [],
     },
@@ -62,12 +91,12 @@ const request = RuntimeExecutionServiceRequestSchema.parse({
   },
   strategies: { bottom, top },
   limits: DEFAULT_RUNTIME_LIMITS,
-  evidenceSnapshot: createFixtureRuntimeExecutionEvidenceSnapshot({
-    fixtureId: "semantic-integrity",
-    bottom,
-    top,
-  }),
-}) as RuntimeExecutionServiceRequest
+  runtimeAuthority: {
+    authorityBundleHash: authority.evidenceSnapshot.authorityBundleHash,
+    registryGeneration: authority.evidenceSnapshot.registryGeneration,
+    entrants: { bottom: entrant("bottom"), top: entrant("top") },
+  },
+}
 
 const passiveRuntime: StrategyRuntime = {
   selectActivations(_input: StrategyInput) {
@@ -82,58 +111,64 @@ const passiveRuntime: StrategyRuntime = {
 }
 
 describe("runtime-service semantic integrity", () => {
-  it("missing-semantic-enforcement: runtime final becomes system failure without Chronicle", () => {
-    let recorderCalls = 0
-    const dependencies: Partial<RuntimeExecutionServiceDependencies> = {
-      authorityLoader: createFixtureRuntimeEvidenceAuthorityLoader(
-        request.evidenceSnapshot,
-        request.strategies,
-      ),
-      createRuntimeForRevision: () => ({ ok: true, runtime: passiveRuntime }),
-      buildChronicleFromMatch(input) {
-        recorderCalls += 1
-        const built = buildChronicleFromMatch(input)
-        const ownerPlayerId = built.finalState.players[0].id
-        const duplicateOccupants = ["a", "b"].map((suffix) => ({
-          id: `soldier:semantic-duplicate:${suffix}`,
-          ownerPlayerId,
-          status: "ACTIVE" as const,
-          position: { x: 5, y: 5 },
-          facing: "UP" as const,
-          lastSuccessfulMoveDirection: null,
-          soldierMemory: {},
-        }))
-        return {
-          ...built,
-          finalState: {
-            ...built.finalState,
-            soldiers: [...built.finalState.soldiers, ...duplicateOccupants],
+  it("rejects an invalid candidate final state before recording any Chronicle", () => {
+    const runCandidateMatch = vi.fn((input) => {
+      const execution = CANDIDATE_MATCH_KERNEL.runMatch(input)
+      if (execution.kind !== "completed") return execution
+      const ownerPlayerId = execution.result.state.players[0]!.id
+      const duplicateOccupants = ["a", "b"].map((suffix) => ({
+        id: `soldier:semantic-duplicate:${suffix}`,
+        ownerPlayerId,
+        status: "ACTIVE" as const,
+        position: { x: 5, y: 5 },
+        facing: "UP" as const,
+        lastSuccessfulMoveDirection: null,
+        soldierMemory: {},
+      }))
+      return {
+        ...execution,
+        result: {
+          ...execution.result,
+          state: {
+            ...execution.result.state,
+            soldiers: [
+              ...execution.result.state.soldiers,
+              ...duplicateOccupants,
+            ],
           },
-        }
-      },
-    }
-    const response = executeRuntimeServiceRequest(
+        },
+      }
+    })
+    const recordCandidateExecution = vi.fn(() => {
+      throw new Error("recorder must not run after invalid final state")
+    })
+    const response = executeCandidateExhibitionForTest(
       request,
       createRuntimeServiceConfig({
         strategyExecutionAdapter: "worker-thread",
         resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
       }),
-      dependencies,
+      {
+        authorityLoader: authority.authorityLoader,
+        createRuntimeForRevision: () => ({ ok: true, runtime: passiveRuntime }),
+        runCandidateMatch,
+        recordCandidateExecution,
+      },
     )
 
-    expect(recorderCalls).toBe(1)
-    if (!response.ok) {
-      expect(response.kind).toBe("systemFailure")
-      expect(response.systemFailure.retryable).toBe(true)
-      expect(response).not.toHaveProperty("result")
-      return
-    }
-    const occupied = response.result.finalState.soldiers
-      .filter((soldier) => soldier.position !== null)
-      .map((soldier) => `${soldier.position!.x},${soldier.position!.y}`)
-    expect(new Set(occupied).size).toBeLessThan(occupied.length)
-    expect(response.result.chronicle.events.length).toBeGreaterThan(0)
-
-    throw new Error("[EXPECTED_RED:MISSING_SEMANTIC_ENFORCEMENT:RUNTIME]")
+    expect(response).toMatchObject({
+      ok: false,
+      failure: {
+        ownership: "system_integrity",
+        code: "CANDIDATE_FINAL_STATE_INVALID",
+        retryable: false,
+        playerPenalty: false,
+      },
+    })
+    expect(authority.authorityLoader.load).toHaveBeenCalledTimes(2)
+    expect(runCandidateMatch).toHaveBeenCalledTimes(1)
+    expect(recordCandidateExecution).not.toHaveBeenCalled()
+    expect(response).not.toHaveProperty("result")
+    expect(JSON.stringify(response)).not.toContain(passiveSource.trim())
   })
 })
