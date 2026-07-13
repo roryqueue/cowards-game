@@ -378,6 +378,14 @@ type runtimeAuthorityFailingFileSystem struct {
 	highWaterPath string
 }
 
+func (fileSystem *runtimeAuthorityFailingFileSystem) Open(path string) (runtimeEvidenceAuthorityFile, error) {
+	file, err := fileSystem.runtimeEvidenceAuthorityFileSystem.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return &runtimeAuthorityFailingFile{runtimeEvidenceAuthorityFile: file, path: path, owner: fileSystem}, nil
+}
+
 func (fileSystem *runtimeAuthorityFailingFileSystem) OpenFile(path string, flag int, permission os.FileMode) (runtimeEvidenceAuthorityFile, error) {
 	if fileSystem.failOperation == "open" && strings.HasPrefix(path, fileSystem.highWaterPath+".tmp-") {
 		return nil, errors.New("injected open failure")

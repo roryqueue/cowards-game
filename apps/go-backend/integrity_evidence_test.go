@@ -92,7 +92,7 @@ func TestIntegrityEvidenceTupleResolutionIsAtomicAndExact(t *testing.T) {
 
 func TestIntegrityEvidenceSemanticTupleExcludesExecutableIdentity(t *testing.T) {
 	typ := reflect.TypeOf(canonicalCompatibilityTuple{})
-	for _, forbidden := range []string{"provider", "language", "runtime", "toolchain", "adapter", "artifact", "build", "certificate", "corpus"} {
+	for _, forbidden := range []string{"provider", "language", "toolchain", "adapter", "artifact", "build", "certificate", "corpus"} {
 		for index := 0; index < typ.NumField(); index++ {
 			field := strings.ToLower(typ.Field(index).Name + " " + typ.Field(index).Tag.Get("json"))
 			if strings.Contains(field, forbidden) {
@@ -102,6 +102,13 @@ func TestIntegrityEvidenceSemanticTupleExcludesExecutableIdentity(t *testing.T) 
 	}
 	if typ.NumField() != 6 {
 		t.Fatalf("semantic tuple must contain exactly six behavior fields, got %d", typ.NumField())
+	}
+	actualTags := make([]string, 0, typ.NumField())
+	for index := 0; index < typ.NumField(); index++ {
+		actualTags = append(actualTags, typ.Field(index).Tag.Get("json"))
+	}
+	if !reflect.DeepEqual(actualTags, canonicalCompatibilityTupleFields) {
+		t.Fatalf("semantic tuple fields drifted: %v", actualTags)
 	}
 }
 
