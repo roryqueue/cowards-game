@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
-stopped_at: Completed 256-08-PLAN.md
-last_updated: "2026-07-13T06:22:52.325Z"
+stopped_at: Completed 256-09-PLAN.md
+last_updated: "2026-07-13T07:05:26.000Z"
 last_activity: 2026-07-13
-last_activity_desc: Plan 256-08 bound TypeScript scheduling and job claim to exact installed authority with zero-mutation drift rejection
+last_activity_desc: Plan 256-09 bound runtime-service startup and every Strategy invocation to exact mounted authority with failure-safe drift rejection
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 13
-  percent: 68
+  completed_plans: 14
+  percent: 74
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
-Plan: 13 of 19
+Plan: 14 of 19
 Status: Ready to execute
-Last activity: 2026-07-13 — Plan 256-08 bound TypeScript scheduling and job claim to exact installed authority with zero-mutation drift rejection
+Last activity: 2026-07-13 — Plan 256-09 bound runtime-service startup and every Strategy invocation to exact mounted authority with failure-safe drift rejection
 
-Progress: [███████░░░] 68%
+Progress: [███████░░░] 74%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [███████░░░] 68%
 
 **Resume file:** None
 
-Last session: 2026-07-13T06:22:52.312Z
-Stopped at: Completed 256-08-PLAN.md
+Last session: 2026-07-13T07:05:26.000Z
+Stopped at: Completed 256-09-PLAN.md
 Next command: `$gsd-execute-phase 256`
 
 ## Performance Metrics
@@ -82,9 +82,12 @@ Next command: `$gsd-execute-phase 256`
 | Phase 256 P18 | 31min | 3 tasks | 7 files |
 | Phase 256 P16 | 16min | 2 tasks | 14 files |
 | Phase 256 P08 | 16min | 2 tasks | 4 files |
+| Phase 256 P09 | 34min | 2 tasks | 9 files |
 
 ## Decisions
 
+- [Phase 256]: Runtime-service loads the signed mounted authority at acceptance, immediately before invocation, and after execution; request references never become authority. — Exact tuple, bundle, generation, lane, decision, certificate, revocation, supersession, and disable drift fails closed.
+- [Phase 256]: Exhibition execution requires current containment only, while counted execution requires current containment plus conformance for each side. — Any in-flight change returns a redacted retryable system failure and suppresses all computed gameplay or player-fault output.
 - [Phase 256]: TypeScript ladder scheduling treats the installed publication receipt and exact append-only source set as authority; resolver output is only an entrant mapping that must match those published records. — Caller declarations, loose certificate rows, prepared/failed publications, and fixture trust cannot authorize counted work.
 - [Phase 256]: Job claim locks publication events and the generation head, then filters tuple, ordered snapshots, certificates, freshness, revocations, supersessions, and lane controls before any mutation. — Drift is a zero-mutation skip and valid claims carry the complete locked evidence snapshot.
 - [Phase 256]: Every active TypeScript MatchSet caller resolves the complete exact entrant evidence set before any write; production defaults to empty authority and fixture evidence cannot count. — Missing evidence now creates zero rows across competition, Workshop, ladder, and dev surfaces.

@@ -181,7 +181,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 256. Counted Safety and Canonical Authority | 13/19 | In Progress|  |
+| 256. Counted Safety and Canonical Authority | 14/19 | In Progress|  |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 0/TBD | Not started | - |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 0/TBD | Not started | - |
 | 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |
