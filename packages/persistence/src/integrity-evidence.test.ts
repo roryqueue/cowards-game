@@ -12,6 +12,7 @@ import {
   createMatchExecutionEvidencePair,
   createMatchSetIntegrityIdentity,
   matchExecutionEvidencePairSqlValues,
+  matchSetExecutionEntrantSqlValues,
   matchSetIntegritySqlValues,
   parseMatchSetIntegrityIdentityRows,
   persistMatchSetIntegrityIdentity,
@@ -312,6 +313,42 @@ describe("exact MatchSet integrity identity", () => {
     const validated = createMatchSetIntegrityIdentity(identityInput())
     expect(() => matchSetIntegritySqlValues({ ...validated })).toThrow(
       /exact validator/iu,
+    )
+  })
+
+  it("normalizes containment-only exhibition evidence without a fabricated conformance certificate", () => {
+    const exhibition = identityInput()
+    exhibition.entrants = exhibition.entrants.map((entry) => {
+      const { conformanceCertificateRef: _omitted, ...containmentOnly } = entry
+      return {
+        ...containmentOnly,
+        schedulingDecision: {
+          ...entry.schedulingDecision,
+          status: "exhibition_only" as const,
+          reasonCode: "CONFORMANCE_MISSING" as const,
+        },
+      }
+    })
+    const identity = createMatchSetIntegrityIdentity(exhibition)
+    expect(identity.normalizedEntrants).toHaveLength(2)
+    expect(identity.normalizedEntrants[0]).not.toHaveProperty(
+      "conformanceCertificateRef",
+    )
+    expect(matchSetExecutionEntrantSqlValues("matchset:exhibition", identity.normalizedEntrants[0]!)).toEqual(
+      expect.arrayContaining([null]),
+    )
+
+    const fabricated = identityInput()
+    fabricated.entrants[0] = {
+      ...fabricated.entrants[0]!,
+      schedulingDecision: {
+        ...fabricated.entrants[0]!.schedulingDecision,
+        status: "exhibition_only",
+        reasonCode: "CONFORMANCE_MISSING",
+      },
+    }
+    expect(() => createMatchSetIntegrityIdentity(fabricated)).toThrow(
+      /must omit conformance/iu,
     )
   })
 

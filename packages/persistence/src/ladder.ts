@@ -1342,9 +1342,10 @@ const assertSchedulingIdentityMatchesInstalledPublication = (
     const containment = certificates.get(
       entrant.containmentCertificateRef.certificateId,
     )
-    const conformance = certificates.get(
-      entrant.conformanceCertificateRef.certificateId,
-    )
+    const conformanceReference = entrant.conformanceCertificateRef
+    const conformance = conformanceReference
+      ? certificates.get(conformanceReference.certificateId)
+      : undefined
     const certificateMatches = (
       certificate: typeof containment,
       kind: "containment" | "conformance",
@@ -1371,11 +1372,13 @@ const assertSchedulingIdentityMatchesInstalledPublication = (
         entrant.containmentCertificateRef,
       ) ||
       (purpose === "counted" &&
-        !certificateMatches(
-          conformance,
-          "conformance",
-          entrant.conformanceCertificateRef,
-        )) ||
+        (!conformanceReference ||
+          !certificateMatches(
+            conformance,
+            "conformance",
+            conformanceReference,
+          ))) ||
+      (purpose !== "counted" && conformanceReference !== undefined) ||
       entrant.schedulingDecision.evaluatedAt !== evaluationInstant ||
       entrant.schedulingDecision.registryGeneration !==
         publication.generation ||

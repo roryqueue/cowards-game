@@ -152,14 +152,14 @@ export const CLAIM_NEXT_MATCH_JOB_SQL = `
      and top_containment.lane_identity_hash = top_entrant.lane_identity_hash
      and top_containment.certificate_kind = 'containment'
      and top_containment.certificate_status = 'passed'
-    join runtime_evidence_certificates bottom_conformance
+    left join runtime_evidence_certificates bottom_conformance
       on bottom_conformance.id = bottom_entrant.conformance_certificate_id
      and bottom_conformance.certificate_record_hash = bottom_entrant.conformance_certificate_hash
      and bottom_conformance.registry_generation = authority.generation::text
      and bottom_conformance.lane_identity_hash = bottom_entrant.lane_identity_hash
      and bottom_conformance.certificate_kind = 'conformance'
      and bottom_conformance.certificate_status = 'passed'
-    join runtime_evidence_certificates top_conformance
+    left join runtime_evidence_certificates top_conformance
       on top_conformance.id = top_entrant.conformance_certificate_id
      and top_conformance.certificate_record_hash = top_entrant.conformance_certificate_hash
      and top_conformance.registry_generation = authority.generation::text
@@ -185,6 +185,28 @@ export const CLAIM_NEXT_MATCH_JOB_SQL = `
      and top_entrant.authority_registry_generation = authority.generation::text
      and bottom_entrant.scheduling_status <> 'disabled'
      and top_entrant.scheduling_status <> 'disabled'
+     and (
+       (bottom_entrant.scheduling_status = 'counted'
+        and bottom_entrant.conformance_certificate_id is not null
+        and bottom_conformance.id is not null)
+       or
+       (bottom_entrant.scheduling_status = 'exhibition_only'
+        and bottom_entrant.conformance_certificate_kind is null
+        and bottom_entrant.conformance_certificate_id is null
+        and bottom_entrant.conformance_certificate_version is null
+        and bottom_entrant.conformance_certificate_hash is null)
+     )
+     and (
+       (top_entrant.scheduling_status = 'counted'
+        and top_entrant.conformance_certificate_id is not null
+        and top_conformance.id is not null)
+       or
+       (top_entrant.scheduling_status = 'exhibition_only'
+        and top_entrant.conformance_certificate_kind is null
+        and top_entrant.conformance_certificate_id is null
+        and top_entrant.conformance_certificate_version is null
+        and top_entrant.conformance_certificate_hash is null)
+     )
      and bottom_containment.issued_at <= $1
      and bottom_containment.fresh_until >= $1
      and top_containment.issued_at <= $1

@@ -179,9 +179,9 @@ export interface RuntimeEntrantExecutionEvidence {
   containmentCertificateRef: ExecutableLaneCertificateReference & {
     kind: "containment"
   }
-  conformanceCertificateRef: ExecutableLaneCertificateReference & {
-    kind: "conformance"
-  }
+  conformanceCertificateRef?:
+    | (ExecutableLaneCertificateReference & { kind: "conformance" })
+    | undefined
   schedulingDecision: RuntimeExecutionSchedulingDecisionSnapshot
 }
 

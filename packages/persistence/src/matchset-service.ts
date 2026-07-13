@@ -136,15 +136,6 @@ export const createFixtureMatchSetEvidenceResolver = (
                   ),
                   registryGeneration,
                 },
-                conformanceCertificateRef: {
-                  kind: "conformance" as const,
-                  certificateId: `fixture:certificate:conformance:${binding.strategyRevisionId}`,
-                  certificateVersion: "fixture-runtime-certificate-v1",
-                  certificateRecordHash: fixtureHash(
-                    `conformance:${binding.strategyRevisionId}`,
-                  ),
-                  registryGeneration,
-                },
                 schedulingDecision: {
                   status: "exhibition_only" as const,
                   reasonCode: "CONFORMANCE_MISSING" as const,

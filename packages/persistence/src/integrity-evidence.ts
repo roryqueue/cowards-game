@@ -313,18 +313,25 @@ const validateEntrant = (
   if (!isRecord(value)) {
     throw new IntegrityEvidenceInputError("Entrant execution evidence is required.")
   }
-  assertExactKeys(
-    value,
-    [
-      "entrantKey",
-      "strategyRevisionId",
-      "laneIdentity",
-      "containmentCertificateRef",
-      "conformanceCertificateRef",
-      "schedulingDecision",
-    ],
-    "Entrant execution evidence",
-  )
+  const requiredEntrantFields = [
+    "entrantKey",
+    "strategyRevisionId",
+    "laneIdentity",
+    "containmentCertificateRef",
+    "schedulingDecision",
+  ] as const
+  const entrantFields = new Set([
+    ...requiredEntrantFields,
+    "conformanceCertificateRef",
+  ])
+  if (
+    requiredEntrantFields.some((field) => !Object.hasOwn(value, field)) ||
+    Object.keys(value).some((field) => !entrantFields.has(field))
+  ) {
+    throw new IntegrityEvidenceInputError(
+      "Entrant execution evidence must use one exact identity shape.",
+    )
+  }
   const entrantKey = requiredString(value.entrantKey, "Entrant key")
   const strategyRevisionId = requiredString(
     value.strategyRevisionId,
@@ -336,12 +343,16 @@ const validateEntrant = (
     "containment",
     registryGeneration,
   )
-  const conformanceCertificateRef = validateCertificateReference(
-    value.conformanceCertificateRef,
-    "conformance",
-    registryGeneration,
-  )
+  const conformanceCertificateRef =
+    value.conformanceCertificateRef === undefined
+      ? undefined
+      : validateCertificateReference(
+          value.conformanceCertificateRef,
+          "conformance",
+          registryGeneration,
+        )
   if (
+    conformanceCertificateRef &&
     containmentCertificateRef.certificateId ===
     conformanceCertificateRef.certificateId
   ) {
@@ -367,6 +378,17 @@ const validateEntrant = (
   ) {
     throw new IntegrityEvidenceInputError("Scheduling decision status or reason is invalid.")
   }
+  if (
+    value.schedulingDecision.status === "counted"
+      ? !conformanceCertificateRef
+      : conformanceCertificateRef !== undefined
+  ) {
+    throw new IntegrityEvidenceInputError(
+      value.schedulingDecision.status === "counted"
+        ? "Counted execution evidence requires conformance."
+        : "Non-counted execution evidence must omit conformance.",
+    )
+  }
   const evaluatedAt = requiredString(
     value.schedulingDecision.evaluatedAt,
     "Scheduling evaluation instant",
@@ -390,7 +412,7 @@ const validateEntrant = (
     strategyRevisionId,
     laneIdentity,
     containmentCertificateRef,
-    conformanceCertificateRef,
+    ...(conformanceCertificateRef ? { conformanceCertificateRef } : {}),
     schedulingDecision: Object.freeze({
       status: value.schedulingDecision.status,
       reasonCode: value.schedulingDecision.reasonCode,
@@ -620,7 +642,7 @@ export const resolveCurrentStandingsIntegrityEvidence = (
         entrant.schedulingDecision.reasonCode !== "EVIDENCE_CURRENT" ||
         entrant.containmentCertificateRef.registryGeneration !==
           identity.registryGeneration ||
-        entrant.conformanceCertificateRef.registryGeneration !==
+        entrant.conformanceCertificateRef?.registryGeneration !==
           identity.registryGeneration,
     )
   ) {
@@ -675,7 +697,9 @@ const entrantHashValues = (
     String(entrant.containmentCertificateRef[field]),
   ),
   ...CERTIFICATE_REFERENCE_FIELDS.map((field) =>
-    String(entrant.conformanceCertificateRef[field]),
+    entrant.conformanceCertificateRef
+      ? String(entrant.conformanceCertificateRef[field])
+      : "",
   ),
   entrant.schedulingDecision.status,
   entrant.schedulingDecision.reasonCode,
@@ -872,10 +896,10 @@ export const matchSetExecutionEntrantSqlValues = (
   entrant.containmentCertificateRef.certificateId,
   entrant.containmentCertificateRef.certificateVersion,
   entrant.containmentCertificateRef.certificateRecordHash,
-  entrant.conformanceCertificateRef.kind,
-  entrant.conformanceCertificateRef.certificateId,
-  entrant.conformanceCertificateRef.certificateVersion,
-  entrant.conformanceCertificateRef.certificateRecordHash,
+  entrant.conformanceCertificateRef?.kind ?? null,
+  entrant.conformanceCertificateRef?.certificateId ?? null,
+  entrant.conformanceCertificateRef?.certificateVersion ?? null,
+  entrant.conformanceCertificateRef?.certificateRecordHash ?? null,
   entrant.schedulingDecision.status,
   entrant.schedulingDecision.reasonCode,
   entrant.schedulingDecision.evaluatedAt,

@@ -457,7 +457,7 @@ describePostgres("PostgreSQL MatchSet integrity identity and zero rows", () => {
         const reference =
           kind === "containment"
             ? evidence.containmentCertificateRef
-            : evidence.conformanceCertificateRef
+            : evidence.conformanceCertificateRef!
         const producer = `${namespace}:producer:${kind}:${index}`
         const command = `${namespace}:command:${kind}:${index}`
         const graphHash = sha256(`${namespace}:graph:${kind}:${index}`)
