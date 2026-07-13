@@ -37,6 +37,8 @@ describe("migrations", () => {
     expect(names).toContain("0002_match_side_completion_stats.sql")
     expect(names).toContain("0011_competition_governance_surfaces.sql")
     expect(names).toContain("0012_integrity_authority.sql")
+    expect(names).toContain("0013_runtime_evidence_authority_publication.sql")
+    expect(names).toContain("0014_matchset_authority_install_receipts.sql")
     expect(names).toEqual([...names].sort())
   })
 
@@ -95,6 +97,23 @@ describe("migrations", () => {
     expect(sql).not.toMatch(
       /compatibility_tuple_id\s+text\s+not null\s+default/iu,
     )
+  })
+
+  it("binds MatchSets to exact installed authority receipts", async () => {
+    const sql = await readFile(
+      new URL("0014_matchset_authority_install_receipts.sql", migrationsDirectory),
+      "utf8",
+    )
+
+    expect(sql).toContain("authority_publication_id")
+    expect(sql).toContain("authority_install_receipt_id")
+    expect(sql).toContain("authority_payload_sha256")
+    expect(sql).toContain("authority_envelope_sha256")
+    expect(sql).toContain("authority_source_manifest_hash")
+    expect(sql).toContain("authority_source_set")
+    expect(sql).toContain("prevent_match_set_authority_receipt_rewrite")
+    expect(sql).toContain("alter column conformance_certificate_id drop not null")
+    expect(sql).toContain("match_set_execution_entrants_purpose_floor")
   })
 })
 
