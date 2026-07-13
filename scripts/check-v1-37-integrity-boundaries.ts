@@ -870,6 +870,15 @@ const analyzePhase257RedSources = (
     const identifiers = new Set<string>()
     const loops: ts.IterationStatement[] = []
     const variableDeclarations = new Map<string, ts.VariableDeclaration>()
+    const schedulerAliases = new Set(["stepMatch", "runActivationFromState"])
+    const schedulerCalls: ts.CallExpression[] = []
+    const allCalls: ts.CallExpression[] = []
+    const functions = new Map<string, ts.FunctionLikeDeclaration>()
+
+    const schedulerReference = (node: ts.Expression): boolean =>
+      (ts.isIdentifier(node) && schedulerAliases.has(node.text)) ||
+      (ts.isPropertyAccessExpression(node) &&
+        schedulerAliases.has(node.name.text))
 
     const visit = (node: ts.Node): void => {
       if (ts.isIdentifier(node)) identifiers.add(node.text)
@@ -884,6 +893,28 @@ const analyzePhase257RedSources = (
       }
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
         variableDeclarations.set(node.name.text, node)
+        if (
+          node.initializer !== undefined &&
+          schedulerReference(node.initializer)
+        ) {
+          schedulerAliases.add(node.name.text)
+        }
+      }
+      if (ts.isCallExpression(node) && schedulerReference(node.expression)) {
+        schedulerCalls.push(node)
+      }
+      if (ts.isCallExpression(node)) allCalls.push(node)
+      if (ts.isFunctionDeclaration(node) && node.name !== undefined) {
+        functions.set(node.name.text, node)
+      }
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.initializer !== undefined &&
+        (ts.isArrowFunction(node.initializer) ||
+          ts.isFunctionExpression(node.initializer))
+      ) {
+        functions.set(node.name.text, node.initializer)
       }
       ts.forEachChild(node, visit)
     }
@@ -933,18 +964,83 @@ const analyzePhase257RedSources = (
       )
     }
 
-    if (
-      !normalizedPath.startsWith("packages/engine/") &&
-      loops.length > 0 &&
-      identifiers.has("resolveRound") &&
-      identifiers.has("resolveContraction")
-    ) {
+    const schedulingFunctions = new Set<string>()
+    for (const [name, declaration] of functions) {
+      if (
+        schedulerCalls.some(
+          (call) => call.pos >= declaration.pos && call.end <= declaration.end,
+        )
+      ) {
+        schedulingFunctions.add(name)
+      }
+    }
+    for (let changed = true; changed; ) {
+      changed = false
+      for (const [name, declaration] of functions) {
+        if (schedulingFunctions.has(name)) continue
+        const reachesScheduler = allCalls.some(
+          (call) =>
+            call.pos >= declaration.pos &&
+            call.end <= declaration.end &&
+            ts.isIdentifier(call.expression) &&
+            schedulingFunctions.has(call.expression.text),
+        )
+        if (reachesScheduler) {
+          schedulingFunctions.add(name)
+          changed = true
+        }
+      }
+    }
+    const repeatedCallIn = (node: ts.Node): boolean =>
+      schedulerCalls.some(
+        (call) => call.pos >= node.pos && call.end <= node.end,
+      ) ||
+      allCalls.some(
+        (call) =>
+          call.pos >= node.pos &&
+          call.end <= node.end &&
+          ts.isIdentifier(call.expression) &&
+          schedulingFunctions.has(call.expression.text),
+      )
+    const combinatorNames = new Set([
+      "forEach",
+      "map",
+      "flatMap",
+      "reduce",
+      "reduceRight",
+      "some",
+      "every",
+    ])
+    const combinatorSite = allCalls.find(
+      (call) =>
+        ts.isPropertyAccessExpression(call.expression) &&
+        combinatorNames.has(call.expression.name.text) &&
+        call.arguments.some(repeatedCallIn),
+    )
+    const recursiveSite = [...functions.entries()].find(
+      ([name, declaration]) =>
+        schedulingFunctions.has(name) &&
+        allCalls.some(
+          (call) =>
+            call.pos >= declaration.pos &&
+            call.end <= declaration.end &&
+            ts.isIdentifier(call.expression) &&
+            call.expression.text === name,
+        ),
+    )?.[1]
+    const copiedSchedulerSite =
+      normalizedPath !== "packages/engine/src/kernel/driver.ts" &&
+      !normalizedPath.endsWith(".test.ts") &&
+      !normalizedPath.endsWith(".spec.ts")
+        ? (loops.find(repeatedCallIn) ?? combinatorSite ?? recursiveSite)
+        : undefined
+    if (copiedSchedulerSite !== undefined) {
       add(
         "PHASE_257_DUPLICATE_LIFECYCLE_LOOP",
         normalizedPath,
         sourceFile,
-        loops[0]!,
-        "A non-engine lifecycle loop advances Round and Contraction behavior.",
+        copiedSchedulerSite,
+        "A non-driver lifecycle loop repeatedly advances candidate kernel scheduling.",
       )
     }
   }

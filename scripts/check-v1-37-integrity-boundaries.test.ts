@@ -260,7 +260,6 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
           "PHASE_257_REPLAY_SCHEDULER",
           "PHASE_257_RUNTIME_REPLAY_EXECUTION",
           "PHASE_257_CONTIGUOUS_ACTIVATION_ENTRY",
-          "PHASE_257_DUPLICATE_LIFECYCLE_LOOP",
         ]),
       )
     })
@@ -273,6 +272,7 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
             export const resolveRoundSummary = () => undefined
             export const resolveContractionPreview = () => undefined
             export const resolveActivationCycle = () => undefined
+            for (let index = 0; index < 1; index += 1) stepMatcher(index)
           `,
         },
         { enforcePhase257RedContracts: true },
@@ -288,6 +288,7 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
           "packages/replay/src/alternate-build.ts": `
             export const buildChronicleFromMatch = (state: unknown) => {
               while (state) {
+                stepMatch(state, { kind: "advance" })
                 state = resolveRound(state)
                 state = resolveContraction(state)
               }
@@ -313,6 +314,27 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
           "PHASE_257_DUPLICATE_LIFECYCLE_LOOP",
         ]),
       )
+    })
+
+    it("rejects variable-agnostic stepMatch loops outside the kernel driver", () => {
+      const result = analyzeV137IntegritySources(
+        {
+          "packages/replay/src/copied-loop.ts": `
+            export const copied = (machine: unknown) => {
+              for (let index = 0; index < 3; index += 1) {
+                stepMatch(machine, { kind: "advance" })
+              }
+            }
+          `,
+        },
+        { enforcePhase257RedContracts: true },
+      )
+      expect(result.findings).toEqual([
+        expect.objectContaining({
+          code: "PHASE_257_DUPLICATE_LIFECYCLE_LOOP",
+          path: "packages/replay/src/copied-loop.ts",
+        }),
+      ])
     })
   })
 
