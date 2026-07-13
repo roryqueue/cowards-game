@@ -1,4 +1,20 @@
-import { assertTypeScriptWorkerEntrypointAllowed } from "./runner.js"
+import {
+  assertTypeScriptWorkerEntrypointAllowed,
+  TypeScriptWorkerRetiredError,
+} from "./runner.js"
 
-assertTypeScriptWorkerEntrypointAllowed(process.env)
-
+try {
+  assertTypeScriptWorkerEntrypointAllowed()
+} catch (error) {
+  const retirement =
+    error instanceof TypeScriptWorkerRetiredError
+      ? error
+      : new TypeScriptWorkerRetiredError()
+  process.stderr.write(
+    `${JSON.stringify({
+      code: retirement.code,
+      message: retirement.message,
+    })}\n`,
+  )
+  process.exitCode = 1
+}

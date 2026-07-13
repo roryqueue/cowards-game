@@ -178,6 +178,14 @@ const firstStatementCalls = (
   return expression ? calledName(expression) === expectedName : false
 }
 
+const statementCalls = (
+  statement: ts.Statement | undefined,
+  expectedName: string,
+): boolean => {
+  if (!statement || !ts.isExpressionStatement(statement)) return false
+  return calledName(statement.expression) === expectedName
+}
+
 const hasDefaultDependency = (node: FunctionLike | undefined): boolean =>
   node?.parameters.some((parameter) => parameter.initializer !== undefined) === true
 
@@ -318,11 +326,14 @@ export const analyzeWorkerRetirement = (
     const firstExecutable = index.statements.find(
       (statement) => !ts.isImportDeclaration(statement),
     )
-    if (
-      !firstExecutable ||
-      !ts.isExpressionStatement(firstExecutable) ||
-      calledName(firstExecutable.expression) !== retiredAssertionName
-    ) {
+    const startupCallsRetirement =
+      firstExecutable !== undefined && ts.isTryStatement(firstExecutable)
+        ? statementCalls(
+            firstExecutable.tryBlock.statements[0],
+            retiredAssertionName,
+          )
+        : statementCalls(firstExecutable, retiredAssertionName)
+    if (!startupCallsRetirement) {
       add("STARTUP_RETIREMENT_NOT_FIRST", "apps/worker/src/index.ts")
     }
   }
