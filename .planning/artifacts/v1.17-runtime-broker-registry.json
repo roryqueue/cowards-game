@@ -25,7 +25,7 @@
       "packagePolicy": "none",
       "readiness": "local-dev-fallback",
       "enabledForNormalPlay": true,
-      "countedResultsAllowed": true
+      "countedResultsAllowed": false
     },
     {
       "languageId": "typescript",
@@ -37,7 +37,7 @@
       "packagePolicy": "none",
       "readiness": "local-dev-fallback",
       "enabledForNormalPlay": true,
-      "countedResultsAllowed": true
+      "countedResultsAllowed": false
     },
     {
       "languageId": "javascript",
@@ -49,7 +49,7 @@
       "packagePolicy": "none",
       "readiness": "prototype",
       "enabledForNormalPlay": true,
-      "countedResultsAllowed": true
+      "countedResultsAllowed": false
     },
     {
       "languageId": "typescript",
@@ -61,7 +61,7 @@
       "packagePolicy": "none",
       "readiness": "prototype",
       "enabledForNormalPlay": true,
-      "countedResultsAllowed": true
+      "countedResultsAllowed": false
     },
     {
       "languageId": "javascript",
@@ -97,7 +97,7 @@
       "packagePolicy": "none",
       "readiness": "production-candidate",
       "enabledForNormalPlay": true,
-      "countedResultsAllowed": true
+      "countedResultsAllowed": false
     },
     {
       "languageId": "rust",
@@ -109,7 +109,7 @@
       "packagePolicy": "none",
       "readiness": "production-candidate",
       "enabledForNormalPlay": true,
-      "countedResultsAllowed": true
+      "countedResultsAllowed": false
     },
     {
       "languageId": "zig",
@@ -121,7 +121,7 @@
       "packagePolicy": "none",
       "readiness": "production-candidate",
       "enabledForNormalPlay": true,
-      "countedResultsAllowed": true
+      "countedResultsAllowed": false
     }
   ],
   "authority": {

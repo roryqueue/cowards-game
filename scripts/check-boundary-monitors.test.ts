@@ -262,7 +262,7 @@ describe("boundary drift monitors", () => {
     )
   })
 
-  it("wires the complete v1.36 proof chain after v1.35 final proof", () => {
+  it("dispatches v1.36 history by tag and active v1.37 checks after v1.35", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
       scripts: Record<string, string>
     }
@@ -273,8 +273,8 @@ describe("boundary drift monitors", () => {
     expect(packageJson.scripts["v1.36:competition-policy:check"]).toBe(
       "pnpm exec tsx scripts/evaluate-v1-36-competition-policy.ts --check",
     )
-    expect(packageJson.scripts["boundary:monitors"]).toContain(
-      "pnpm v1.36:competition-policy:check && pnpm v1.36:competition-boundaries:check && pnpm v1.36:final-proof:check && pnpm exec tsx scripts/check-boundary-monitors.ts",
+    expect(packageJson.scripts["v1.36:historical-proof:check"]).toBe(
+      "pnpm exec tsx scripts/check-v1-36-historical-proof.ts",
     )
     expect(packageJson.scripts["v1.36:competition-boundaries:check"]).toBe(
       "pnpm exec tsx scripts/evaluate-v1-36-competition-boundaries.ts --check",
@@ -282,13 +282,37 @@ describe("boundary drift monitors", () => {
     expect(packageJson.scripts["v1.36:final-proof:check"]).toBe(
       "pnpm exec tsx scripts/evaluate-v1-36-final-proof.ts --check",
     )
+    expect(packageJson.scripts["v1.37:integrity-authority:write"]).toBe(
+      "pnpm exec tsx scripts/generate-v1-37-integrity-authority.ts --write",
+    )
+    expect(packageJson.scripts["v1.37:integrity-authority:check"]).toBe(
+      "pnpm exec tsx scripts/generate-v1-37-integrity-authority.ts --check",
+    )
+    expect(packageJson.scripts["v1.37:worker-retirement:check"]).toBe(
+      "pnpm exec tsx scripts/check-v1-37-worker-retirement.ts",
+    )
+    expect(packageJson.scripts["v1.37:integrity-boundaries:check"]).toBe(
+      "pnpm exec tsx scripts/check-v1-37-integrity-boundaries.ts",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).not.toContain(
+      "pnpm v1.36:competition-policy:check",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).not.toContain(
+      "pnpm v1.36:competition-boundaries:check",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).not.toContain(
+      "pnpm v1.36:final-proof:check",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).toContain(
+      "pnpm v1.36:historical-proof:check && pnpm v1.37:integrity-authority:check && pnpm v1.37:worker-retirement:check && pnpm v1.37:integrity-boundaries:check && pnpm exec tsx scripts/check-boundary-monitors.ts",
+    )
     expect(
       packageJson.scripts["boundary:monitors"].indexOf(
         "pnpm v1.35:final-proof:check",
       ),
     ).toBeLessThan(
       packageJson.scripts["boundary:monitors"].indexOf(
-        "pnpm v1.36:competition-policy:check",
+        "pnpm v1.36:historical-proof:check",
       ),
     )
   })
@@ -1274,18 +1298,20 @@ describe("boundary drift monitors", () => {
         ok: true,
         detail: "v1.35 boundary surface inventory artifacts are current",
       })
-      const v136Policy = checks.find(
-        (check) => check.name === "v1.36 competition policy",
+      const v136History = checks.find(
+        (check) => check.name === "v1.36 immutable historical proof",
       )
-      expect(v136Policy).toMatchObject({
+      expect(v136History).toMatchObject({
         layer: "contract_drift",
         ok: true,
-        detail: "v1.36 competition policy artifacts are current",
+        detail: "validated 8 artifacts against 11 archived source blobs",
       })
       expect(checks.map((check) => check.name)).toEqual(
         expect.arrayContaining([
           "v1.35 boundary surface inventory",
-          "v1.36 competition policy",
+          "v1.36 immutable historical proof",
+          "v1.37 direct worker retirement",
+          "v1.37 integrity creation inventory",
         ]),
       )
     } finally {

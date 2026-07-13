@@ -24,6 +24,8 @@ import {
 } from "./evaluate-v1-35-boundary-surface-inventory.ts"
 import { checkV135AccountProviderEntryProofArtifacts } from "./evaluate-v1-35-account-provider-entry-proof.ts"
 import { analyzeV137IntegrityBoundaries } from "./check-v1-37-integrity-boundaries.ts"
+import { checkV136HistoricalProof } from "./check-v1-36-historical-proof.ts"
+import { analyzeWorkerRetirement } from "./check-v1-37-worker-retirement.ts"
 import {
   checkV136CompetitionPolicyScan,
   checkV136CompetitionSurfaceInventoryArtifacts,
@@ -2589,6 +2591,18 @@ const checkTypeScriptWorkerQuarantineSource = (): string => {
     "utf8",
   )
 
+  if (indexSource.includes("TypeScriptWorkerRetiredError")) {
+    if (
+      !indexSource.includes("assertTypeScriptWorkerEntrypointAllowed") ||
+      indexSource.includes("createDatabasePool") ||
+      indexSource.includes("runWorkerOnce(") ||
+      indexSource.includes("runWorkerLoop(")
+    ) {
+      throw new Error("retired worker entrypoint regained lifecycle reachability")
+    }
+    return "worker entrypoint is permanently retired before lifecycle setup"
+  }
+
   const guardIndex = indexSource.indexOf(
     "assertTypeScriptWorkerEntrypointAllowed",
   )
@@ -2821,14 +2835,10 @@ export const checkRuntimeAdapterBridge = (
   } as const
   const semantics = describeStrategyRuntimeProductSemantics(metadata)
   const eligibility = evaluateStrategyRuntimeCountedEligibility(metadata)
-  if (isContainerCandidate) {
-    if (eligibility.ok || semantics.countedPlayEligible) {
-      throw new Error(
-        "container runtime product semantics must remain non-counted",
-      )
-    }
-  } else if (!eligibility.ok || !semantics.countedPlayEligible) {
-    throw new Error(`${bridge.specAdapterId} product semantics drifted`)
+  if (eligibility.ok || semantics.countedPlayEligible) {
+    throw new Error(
+      `${bridge.specAdapterId} promoted without current executable evidence`,
+    )
   }
   return `${bridge.selector} -> ${bridge.specAdapterId}`
 }
@@ -2866,12 +2876,10 @@ const checkRuntimeAdapters = (): string => {
     } as const
     const semantics = describeStrategyRuntimeProductSemantics(metadata)
     const eligibility = evaluateStrategyRuntimeCountedEligibility(metadata)
-    if (language.countedEligibility === "eligible") {
-      if (!eligibility.ok || !semantics.countedPlayEligible) {
-        throw new Error(`${language.id} product semantics are not counted`)
-      }
-    } else if (eligibility.ok || semantics.countedPlayEligible) {
-      throw new Error(`${language.id} product semantics promoted early`)
+    if (eligibility.ok || semantics.countedPlayEligible) {
+      throw new Error(
+        `${language.id} product semantics promoted without executable evidence`,
+      )
     }
   }
   if (STRATEGY_RUNTIME_ABI_VERSION !== "strategy-runtime-abi-v1.14") {
@@ -2991,9 +2999,14 @@ const checkRuntimeBrokerRegistryArtifact = (): string => {
     }
     if (
       language.countedEligibility === "eligible" &&
-      (!entry.enabledForNormalPlay || !entry.countedResultsAllowed)
+      !entry.enabledForNormalPlay
     ) {
-      throw new Error(`${language.id} runtime broker entry is not counted`)
+      throw new Error(`${language.id} runtime broker entry is unavailable`)
+    }
+    if (entry.countedResultsAllowed) {
+      throw new Error(
+        `${language.id} runtime broker declaration promoted without evidence`,
+      )
     }
   }
   return `${artifact.entries.length} v1.17 runtime broker registry entries checked`
@@ -5508,6 +5521,30 @@ export const runBoundaryMonitorChecks = async (): Promise<
     }
     return `accounted for ${analysis.creationCalls} creation calls and ${analysis.sqlWriters} direct SQL writers`
   }),
+  await check("worker_quarantine", "v1.37 direct worker retirement", () => {
+    const analysis = analyzeWorkerRetirement()
+    if (analysis.findings.length > 0) {
+      throw new Error(
+        analysis.findings
+          .map((finding) => `${finding.code} ${finding.path}`)
+          .join("; "),
+      )
+    }
+    return "direct TypeScript worker remains unreachable for every purpose"
+  }),
+  await check("contract_drift", "v1.36 immutable historical proof", async () => {
+    const result = await checkV136HistoricalProof()
+    if (result.findings.length > 0) {
+      throw new Error(
+        result.findings
+          .map((finding) =>
+            finding.path ? `${finding.code} ${finding.path}` : finding.code,
+          )
+          .join("; "),
+      )
+    }
+    return `validated ${result.artifactCount} artifacts against ${result.sourceCount} archived source blobs`
+  }),
   await check("contract_drift", "OpenAPI public route artifact", () =>
     checkOpenApiContract(),
   ),
@@ -5536,9 +5573,6 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("contract_drift", "v1.35 account provider entry proof", () =>
     checkV135AccountProviderEntryProofMonitor(),
-  ),
-  await check("contract_drift", "v1.36 competition policy", () =>
-    checkV136CompetitionPolicyMonitor(),
   ),
   await check("runtime_adapter", "runtime registry and adapter metadata", () =>
     checkRuntimeAdapters(),

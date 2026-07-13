@@ -297,6 +297,13 @@ describe("runtime evidence authority bundle", () => {
       effectiveStatus: "exhibition_only" as const,
       schedulingDecisionId: `scheduling-decision:${side}`,
       schedulingDecisionHash: `sha256:${"a".repeat(64)}`,
+      schedulingDecision: {
+        status: "exhibition_only" as const,
+        reasonCode: "CONFORMANCE_MISSING" as const,
+        evaluatedAt: "2026-07-13T00:00:00.000Z",
+        freshUntil: "2026-08-13T00:00:00.000Z",
+        registryGeneration: "7",
+      },
       containmentCertificateId: `containment:${side}`,
       containmentCertificateHash: `sha256:${"7".repeat(64)}`,
     })
@@ -307,6 +314,13 @@ describe("runtime evidence authority bundle", () => {
       },
       authorityBundleHash: `sha256:${"9".repeat(64)}`,
       registryGeneration: "7",
+      publication: {
+        publicationId: "publication:authority-bundle-test",
+        installReceiptId: "install-receipt:authority-bundle-test",
+        payloadSha256: `sha256:${"9".repeat(64)}`,
+        envelopeSha256: `sha256:${"b".repeat(64)}`,
+        sourceManifestHash: `sha256:${"c".repeat(64)}`,
+      },
       entrants: {
         bottom: entrant("bottom"),
         top: entrant("top"),
@@ -336,6 +350,11 @@ describe("runtime evidence authority bundle", () => {
           bottom: {
             ...snapshot.entrants.bottom,
             effectiveStatus: "counted",
+            schedulingDecision: {
+              ...snapshot.entrants.bottom.schedulingDecision,
+              status: "counted",
+              reasonCode: "EVIDENCE_CURRENT",
+            },
             conformanceCertificateId: "conformance:bottom",
             conformanceCertificateHash: `sha256:${"8".repeat(64)}`,
           },
@@ -355,6 +374,11 @@ describe("runtime evidence authority bundle", () => {
             schedulingDecisionId: snapshot.entrants.bottom.schedulingDecisionId,
             schedulingDecisionHash:
               snapshot.entrants.bottom.schedulingDecisionHash,
+            schedulingDecision: {
+              ...snapshot.entrants.bottom.schedulingDecision,
+              status: "disabled",
+              reasonCode: "OPERATOR_DISABLED",
+            },
           },
         },
       }).success,

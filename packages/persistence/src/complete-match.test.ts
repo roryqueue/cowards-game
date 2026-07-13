@@ -69,21 +69,21 @@ const entrant = (
     certificateId: `${namespace}:certificate:containment:${side}`,
     certificateVersion: "runtime-certificate-v1",
     certificateRecordHash: sha256(`${namespace}:containment:${side}`),
-    registryGeneration: `${namespace}:generation:1`,
+    registryGeneration: "1",
   },
   conformanceCertificateRef: {
     kind: "conformance",
     certificateId: `${namespace}:certificate:conformance:${side}`,
     certificateVersion: "runtime-certificate-v1",
     certificateRecordHash: sha256(`${namespace}:conformance:${side}`),
-    registryGeneration: `${namespace}:generation:1`,
+    registryGeneration: "1",
   },
   schedulingDecision: {
     status: "counted",
     reasonCode: "EVIDENCE_CURRENT",
     evaluatedAt: "2026-07-12T12:00:00.000Z",
     freshUntil: "2099-08-12T12:00:00.000Z",
-    registryGeneration: `${namespace}:generation:1`,
+    registryGeneration: "1",
   },
 })
 
@@ -92,7 +92,7 @@ const completionIdentity = (namespace: string) => {
   const identity = createMatchSetIntegrityIdentity({
     compatibility: { tupleId: tuple.tupleId, tuple: { ...tuple.tuple } },
     authorityBundleHash: sha256(`${namespace}:bundle`),
-    registryGeneration: `${namespace}:generation:1`,
+    registryGeneration: "1",
     expectedEntrants: entrants.map((entry) => ({
       entrantKey: entry.entrantKey,
       strategyRevisionId: entry.strategyRevisionId,
@@ -275,7 +275,7 @@ describe("Match completion integrity identity", () => {
       },
       {
         ...exact,
-        registryGeneration: "completion:unit:generation:2",
+        registryGeneration: "2",
       },
       {
         ...exact,
@@ -433,6 +433,17 @@ const seedCompletionMatch = async (
   const matchId = `${namespace}:match`
   const jobId = `${namespace}:job`
   const values = matchSetIntegritySqlValues(identity)
+  const publicationId = `${namespace}:publication`
+  const receiptId = `${namespace}:install-receipt`
+  const envelopeSha256 = `sha256:${sha256(`${namespace}:envelope`)}`
+  const sourceManifestHash = `sha256:${sha256(`${namespace}:sources`)}`
+  const sourceSet = {
+    attestationIds: [],
+    certificateIds: [],
+    revocationIds: [],
+    supersessionIds: [],
+    laneControlIds: [],
+  }
   await pool.query(
     "insert into users (id, display_name) values ($1, 'Completion integrity')",
     [`${namespace}:user`],
@@ -461,16 +472,70 @@ const seedCompletionMatch = async (
     [`${namespace}:arena`],
   )
   await pool.query(
+    `insert into runtime_evidence_authority_publications (
+       id, generation, semantic_tuple_manifest_hash, source_manifest_hash,
+       payload_sha256, envelope_sha256, signer_key_id, trust_domain,
+       issued_at, valid_from, valid_until, payload_bytes, envelope_bytes,
+       attestation_ids, certificate_ids, revocation_ids, supersession_ids,
+       lane_control_ids
+     ) values ($1, 1, $2, $3, $4, $5, 'fixture-key', 'fixture',
+       '2026-07-12T12:00:00Z', '2026-07-12T12:00:00Z',
+       '2099-08-12T12:00:00Z', $6, $7, '[]'::jsonb, '[]'::jsonb,
+       '[]'::jsonb, '[]'::jsonb, '[]'::jsonb)`,
+    [
+      publicationId,
+      `sha256:${sha256(`${namespace}:tuple-manifest`)}`,
+      sourceManifestHash,
+      `sha256:${identity.authorityBundleHash}`,
+      envelopeSha256,
+      Buffer.from("fixture payload"),
+      Buffer.from("fixture envelope"),
+    ],
+  )
+  await pool.query(
+    `insert into runtime_evidence_authority_publication_events
+       (id, publication_id, event_kind, attempt_id, envelope_sha256, receipt)
+     values ($1, $2, 'installed', $3, $4, $5::jsonb)`,
+    [
+      receiptId,
+      publicationId,
+      `${namespace}:install-attempt`,
+      envelopeSha256,
+      JSON.stringify({
+        schemaVersion: "v1.37-runtime-evidence-authority-install-receipt-v1",
+        generation: "1",
+        payloadSha256: `sha256:${identity.authorityBundleHash}`,
+        envelopeSha256,
+        sourceManifestHash,
+        sourceIds: sourceSet,
+      }),
+    ],
+  )
+  await pool.query(
     `insert into match_sets (
        id, matrix, compatibility_tuple_id, compatibility_rules_version,
        compatibility_engine_version, compatibility_runtime_abi_version,
        compatibility_chronicle_version, compatibility_arena_catalog_version,
        compatibility_set_policy_version, authority_bundle_hash,
        authority_registry_generation, execution_evidence_set,
-       execution_evidence_set_hash
+       execution_evidence_set_hash, authority_publication_id,
+       authority_install_receipt_id, authority_payload_sha256,
+       authority_envelope_sha256, authority_source_manifest_hash,
+       authority_source_set
      ) values ($1, '[]'::jsonb, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-       $11::jsonb, $12)`,
-    [matchSetId, ...values.slice(0, 9), JSON.stringify(values[9]), values[10]],
+       $11::jsonb, $12, $13, $14, $15, $16, $17, $18::jsonb)`,
+    [
+      matchSetId,
+      ...values.slice(0, 9),
+      JSON.stringify(values[9]),
+      values[10],
+      publicationId,
+      receiptId,
+      `sha256:${identity.authorityBundleHash}`,
+      envelopeSha256,
+      sourceManifestHash,
+      JSON.stringify(sourceSet),
+    ],
   )
   for (const evidence of identity.normalizedEntrants) {
     await pool.query(
@@ -597,7 +662,7 @@ describePostgres("PostgreSQL Match completion integrity identity and system fail
           },
         },
       },
-      { ...exact, registryGeneration: `${namespace}:generation:2` },
+      { ...exact, registryGeneration: "2" },
       {
         ...exact,
         entrants: {
@@ -686,6 +751,9 @@ describePostgres("PostgreSQL Match completion integrity identity and system fail
       `select c.integrity_match_set_id, c.bottom_execution_entrant_key,
               c.top_execution_entrant_key, c.bottom_execution_evidence,
               c.top_execution_evidence, c.execution_evidence_pair_hash,
+              c.authority_publication_id, c.authority_install_receipt_id,
+              c.authority_payload_sha256, c.authority_envelope_sha256,
+              c.authority_source_manifest_hash, c.authority_source_set,
               m.status as match_status, j.status as job_status,
               a.status as attempt_status
          from chronicles c
@@ -702,6 +770,18 @@ describePostgres("PostgreSQL Match completion integrity identity and system fail
       bottom_execution_evidence: pair.bottom,
       top_execution_evidence: pair.top,
       execution_evidence_pair_hash: pair.pairHash,
+      authority_publication_id: `${namespace}:publication`,
+      authority_install_receipt_id: `${namespace}:install-receipt`,
+      authority_payload_sha256: `sha256:${identity.authorityBundleHash}`,
+      authority_envelope_sha256: `sha256:${sha256(`${namespace}:envelope`)}`,
+      authority_source_manifest_hash: `sha256:${sha256(`${namespace}:sources`)}`,
+      authority_source_set: {
+        attestationIds: [],
+        certificateIds: [],
+        revocationIds: [],
+        supersessionIds: [],
+        laneControlIds: [],
+      },
       match_status: "complete",
       job_status: "complete",
       attempt_status: "complete",

@@ -252,13 +252,29 @@ export const createPostgresChronicleStore = (
           id, match_id, schema_version, hash, outcome, event_count,
           snapshot_count, bottom_player_id, top_player_id,
           bottom_strategy_revision_id, top_strategy_revision_id,
-          arena_variant_id, artifact, integrity_match_set_id,
+          arena_variant_id, artifact,
+          compatibility_tuple_id, compatibility_rules_version,
+          compatibility_engine_version, compatibility_runtime_abi_version,
+          compatibility_chronicle_version, compatibility_arena_catalog_version,
+          compatibility_set_policy_version, authority_bundle_hash,
+          authority_registry_generation, authority_publication_id,
+          authority_install_receipt_id, authority_payload_sha256,
+          authority_envelope_sha256, authority_source_manifest_hash,
+          authority_source_set, integrity_match_set_id,
           bottom_execution_entrant_key, top_execution_entrant_key,
           bottom_execution_evidence, top_execution_evidence,
           execution_evidence_pair_hash
         )
         select
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+          ms.compatibility_tuple_id, ms.compatibility_rules_version,
+          ms.compatibility_engine_version, ms.compatibility_runtime_abi_version,
+          ms.compatibility_chronicle_version, ms.compatibility_arena_catalog_version,
+          ms.compatibility_set_policy_version, ms.authority_bundle_hash,
+          ms.authority_registry_generation, ms.authority_publication_id,
+          ms.authority_install_receipt_id, ms.authority_payload_sha256,
+          ms.authority_envelope_sha256, ms.authority_source_manifest_hash,
+          ms.authority_source_set,
           $14, $15, $16, $17, $18, $19
         from match_sets ms
         join match_set_execution_entrants bottom_entrant
@@ -308,8 +324,26 @@ export const createPostgresChronicleStore = (
     )
     if ((result.rowCount ?? 0) === 0) {
       const existingResult = await pool.query<ChronicleRow>(
-        "select * from chronicles where match_id = $1",
-        [metadata.matchId],
+        `select c.* from chronicles c
+         join match_sets ms on ms.id = $2
+         where c.match_id = $1
+           and c.integrity_match_set_id = ms.id
+           and c.compatibility_tuple_id = ms.compatibility_tuple_id
+           and c.compatibility_rules_version = ms.compatibility_rules_version
+           and c.compatibility_engine_version = ms.compatibility_engine_version
+           and c.compatibility_runtime_abi_version = ms.compatibility_runtime_abi_version
+           and c.compatibility_chronicle_version = ms.compatibility_chronicle_version
+           and c.compatibility_arena_catalog_version = ms.compatibility_arena_catalog_version
+           and c.compatibility_set_policy_version = ms.compatibility_set_policy_version
+           and c.authority_bundle_hash = ms.authority_bundle_hash
+           and c.authority_registry_generation = ms.authority_registry_generation
+           and c.authority_publication_id = ms.authority_publication_id
+           and c.authority_install_receipt_id = ms.authority_install_receipt_id
+           and c.authority_payload_sha256 = ms.authority_payload_sha256
+           and c.authority_envelope_sha256 = ms.authority_envelope_sha256
+           and c.authority_source_manifest_hash = ms.authority_source_manifest_hash
+           and c.authority_source_set = ms.authority_source_set`,
+        [metadata.matchId, integrityIdentity.matchSetId],
       )
       const existing = existingResult.rows[0]
       if (

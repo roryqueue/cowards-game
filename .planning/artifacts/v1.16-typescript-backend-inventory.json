@@ -1623,23 +1623,12 @@
       "routePath": "/test-support/run-worker-once",
       "routeFamily": "test-support",
       "goRouteIds": [],
-      "imports": [
-        {
-          "line": 1,
-          "source": "node:child_process",
-          "statementText": "import { execFile } from \"node:child_process\""
-        },
-        {
-          "line": 2,
-          "source": "node:util",
-          "statementText": "import { promisify } from \"node:util\""
-        }
-      ],
+      "imports": [],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [],
-      "usesDatabase": true,
+      "usesDatabase": false,
       "claimsJobs": false,
       "completesMatches": false,
       "persistsChronicles": false,
@@ -2693,6 +2682,7 @@
         "packages/persistence/src/advanced-strategies.ts",
         "packages/persistence/src/competition.ts",
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/ladder.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
@@ -2728,7 +2718,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts, packages/persistence/src/starter-strategies.ts"
+          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts, packages/persistence/src/starter-strategies.ts"
         }
       ]
     },
@@ -2897,18 +2887,28 @@
       "imports": [
         {
           "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
+          "line": 10,
+          "source": "./chronicle-store.js",
+          "statementText": "import {\n  ChronicleValidationSystemFailure,\n  createChronicleMetadata,\n  createMemoryChronicleStoreForTests,\n  createPostgresChronicleStore,\n} from \"./chronicle-store.js\""
+        },
+        {
+          "line": 16,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  createMatchExecutionEvidencePair,\n  createMatchSetIntegrityIdentity,\n} from \"./integrity-evidence.js\""
+        },
+        {
+          "line": 2,
           "source": "vitest",
           "statementText": "import { describe, expect, it } from \"vitest\""
         },
         {
-          "line": 2,
-          "source": "@cowards/spec",
-          "statementText": "import { COMPATIBILITY_VERSIONS, type Chronicle } from \"@cowards/spec\""
-        },
-        {
           "line": 3,
-          "source": "./chronicle-store.js",
-          "statementText": "import {\n  ChronicleValidationSystemFailure,\n  createMemoryChronicleStoreForTests,\n} from \"./chronicle-store.js\""
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  COMPATIBILITY_VERSIONS,\n  type Chronicle,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -2916,6 +2916,8 @@
       "runtimeImports": [],
       "localBackendImports": [
         "packages/persistence/src/chronicle-store.ts",
+        "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/repositories.ts"
       ],
       "usesDatabase": false,
@@ -2938,7 +2940,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/chronicle-store.ts, packages/persistence/src/repositories.ts"
+          "detail": "packages/persistence/src/chronicle-store.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/repositories.ts"
         }
       ]
     },
@@ -2965,16 +2967,26 @@
       "imports": [
         {
           "line": 1,
-          "source": "@cowards/replay",
-          "statementText": "import { createChronicleContentHash, validateChronicle } from \"@cowards/replay\""
+          "source": "node:util",
+          "statementText": "import { isDeepStrictEqual } from \"node:util\""
         },
         {
-          "line": 11,
+          "line": 12,
           "source": "./repositories.js",
           "statementText": "import type { Queryable } from \"./repositories.js\""
         },
         {
+          "line": 13,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  createMatchExecutionEvidencePair,\n  matchSetIntegritySqlValues,\n  type MatchExecutionEvidencePair,\n  type MatchSetIntegrityIdentity,\n} from \"./integrity-evidence.js\""
+        },
+        {
           "line": 2,
+          "source": "@cowards/replay",
+          "statementText": "import { createChronicleContentHash, validateChronicle } from \"@cowards/replay\""
+        },
+        {
+          "line": 3,
           "source": "@cowards/spec",
           "statementText": "import type {\n  ArenaVariantId,\n  Chronicle,\n  ChronicleEvent,\n  JsonValue,\n  MatchId,\n  PlayerId,\n  StrategyRevisionId,\n} from \"@cowards/spec\""
         }
@@ -2983,6 +2995,8 @@
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
+        "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/repositories.ts"
       ],
       "usesDatabase": true,
@@ -3005,7 +3019,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/repositories.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/repositories.ts"
         }
       ]
     },
@@ -3036,6 +3050,16 @@
           "statementText": "import { describe, expect, it } from \"vitest\""
         },
         {
+          "line": 18,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
+        },
+        {
+          "line": 19,
+          "source": "./matchset-service.js",
+          "statementText": "import type { MatchSetExecutionEvidenceResolver } from \"./matchset-service.js\""
+        },
+        {
           "line": 2,
           "source": "node:buffer",
           "statementText": "import { Buffer } from \"node:buffer\""
@@ -3058,7 +3082,7 @@
         {
           "line": 9,
           "source": "./competition.js",
-          "statementText": "import {\n  buildExhibitionDuplicateKey,\n  evaluateRateLimit,\n  generateCompetitionPairwiseMatrix,\n  TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE,\n  runtimeAllowsCountedPlay,\n  validateManualExhibitionRevisionIds,\n} from \"./competition.js\""
+          "statementText": "import {\n  buildExhibitionDuplicateKey,\n  createManualExhibitionMatchSet,\n  evaluateRateLimit,\n  generateCompetitionPairwiseMatrix,\n  TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE,\n  runtimeAllowsCountedPlay,\n  validateManualExhibitionRevisionIds,\n} from \"./competition.js\""
         }
       ],
       "persistenceImports": [],
@@ -3067,6 +3091,7 @@
       "localBackendImports": [
         "packages/persistence/src/competition.ts",
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
         "packages/persistence/src/presets.ts",
@@ -3095,7 +3120,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
+          "detail": "packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
         }
       ]
     },
@@ -3133,35 +3158,35 @@
         {
           "line": 26,
           "source": "./matchset-service.js",
-          "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
+          "statementText": "import {\n  createMatchSetService,\n  resolveMatchSetExecutionEvidence,\n  type MatchSetExecutionEvidenceResolver,\n} from \"./matchset-service.js\""
         },
         {
-          "line": 27,
+          "line": 31,
           "source": "./match-service.js",
-          "statementText": "import type { CreateMatchInput } from \"./match-service.js\""
+          "statementText": "import type { CreateMatchRecordInput } from \"./match-service.js\""
         },
         {
-          "line": 28,
+          "line": 32,
           "source": "./presets.js",
           "statementText": "import { getMatchSetPreset } from \"./presets.js\""
         },
         {
-          "line": 29,
+          "line": 33,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 30,
+          "line": 34,
           "source": "./seed.js",
           "statementText": "import { createDevelopmentSeedData } from \"./seed.js\""
         },
         {
-          "line": 31,
+          "line": 35,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus, MatchStatus } from \"./schema.js\""
         },
         {
-          "line": 32,
+          "line": 36,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetScore } from \"./scoring.js\""
         },
@@ -3181,6 +3206,7 @@
       "runtimeImports": [],
       "localBackendImports": [
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
         "packages/persistence/src/presets.ts",
@@ -3209,7 +3235,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
         }
       ]
     },
@@ -3236,18 +3262,48 @@
       "imports": [
         {
           "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { createHash, randomUUID } from \"node:crypto\""
+        },
+        {
+          "line": 12,
+          "source": "pg",
+          "statementText": "import { Pool } from \"pg\""
+        },
+        {
+          "line": 13,
           "source": "vitest",
-          "statementText": "import { describe, expect, it } from \"vitest\""
+          "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 14,
+          "source": "./complete-match.js",
+          "statementText": "import {\n  MatchCompletionIntegritySystemFailure,\n  completeMatch,\n  deriveMatchCompletionFields,\n  validateCompletionIntegritySnapshot,\n} from \"./complete-match.js\""
         },
         {
           "line": 2,
           "source": "@cowards/engine",
-          "statementText": "import type { GameState } from \"@cowards/engine\""
+          "statementText": "import type { GameState, StrategyRuntime } from \"@cowards/engine\""
+        },
+        {
+          "line": 20,
+          "source": "./migrations.js",
+          "statementText": "import { migrate } from \"./migrations.js\""
+        },
+        {
+          "line": 21,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  createMatchExecutionEvidencePair,\n  createMatchSetIntegrityIdentity,\n  hashEntrantLaneIdentity,\n  matchExecutionEvidencePairSqlValues,\n  matchSetExecutionEntrantSqlValues,\n  matchSetIntegritySqlValues,\n  type MatchExecutionEvidencePair,\n  type MatchSetIntegrityIdentity,\n} from \"./integrity-evidence.js\""
         },
         {
           "line": 3,
-          "source": "./complete-match.js",
-          "statementText": "import { deriveMatchCompletionFields } from \"./complete-match.js\""
+          "source": "@cowards/replay",
+          "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
+        },
+        {
+          "line": 4,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n  type RuntimeExecutionResolvedEvidenceSnapshot,\n  type SoldierBrainInput,\n  type StrategyInput,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -3257,11 +3313,13 @@
         "packages/persistence/src/chronicle-store.ts",
         "packages/persistence/src/complete-match.ts",
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
+        "packages/persistence/src/migrations.ts",
         "packages/persistence/src/repositories.ts"
       ],
-      "usesDatabase": false,
-      "claimsJobs": false,
-      "completesMatches": false,
+      "usesDatabase": true,
+      "claimsJobs": true,
+      "completesMatches": true,
       "persistsChronicles": false,
       "refreshesScoring": false,
       "servesPublicEvidence": false,
@@ -3279,7 +3337,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/chronicle-store.ts, packages/persistence/src/complete-match.ts, packages/persistence/src/db.ts, packages/persistence/src/repositories.ts"
+          "detail": "packages/persistence/src/chronicle-store.ts, packages/persistence/src/complete-match.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/migrations.ts, packages/persistence/src/repositories.ts"
         }
       ]
     },
@@ -3306,28 +3364,38 @@
       "imports": [
         {
           "line": 1,
-          "source": "@cowards/engine",
-          "statementText": "import type { GameState } from \"@cowards/engine\""
+          "source": "node:util",
+          "statementText": "import { isDeepStrictEqual } from \"node:util\""
         },
         {
-          "line": 2,
-          "source": "@cowards/spec",
-          "statementText": "import type { Chronicle, MatchId } from \"@cowards/spec\""
-        },
-        {
-          "line": 3,
-          "source": "pg",
-          "statementText": "import type { Pool } from \"pg\""
-        },
-        {
-          "line": 4,
+          "line": 10,
           "source": "./chronicle-store.js",
           "statementText": "import { createPostgresChronicleStore } from \"./chronicle-store.js\""
         },
         {
-          "line": 5,
+          "line": 11,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
+        },
+        {
+          "line": 12,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  createMatchExecutionEvidencePair,\n  matchSetIntegritySqlValues,\n  parseMatchSetIntegrityIdentityRows,\n  type MatchExecutionEvidencePair,\n  type MatchSetExecutionEntrantRow,\n  type MatchSetIntegrityIdentity,\n  type MatchSetIntegrityRow,\n} from \"./integrity-evidence.js\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/engine",
+          "statementText": "import type { GameState } from \"@cowards/engine\""
+        },
+        {
+          "line": 3,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  RuntimeExecutionResolvedEvidenceSnapshotSchema,\n  type Chronicle,\n  type MatchId,\n  type RuntimeExecutionResolvedEvidenceSnapshot,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 9,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
         }
       ],
       "persistenceImports": [],
@@ -3336,6 +3404,7 @@
       "localBackendImports": [
         "packages/persistence/src/chronicle-store.ts",
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/repositories.ts"
       ],
       "usesDatabase": false,
@@ -3358,7 +3427,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/chronicle-store.ts, packages/persistence/src/db.ts, packages/persistence/src/repositories.ts"
+          "detail": "packages/persistence/src/chronicle-store.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/repositories.ts"
         }
       ]
     },
@@ -3440,13 +3509,23 @@
         },
         {
           "line": 2,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
+        },
+        {
+          "line": 3,
           "source": "./db.js",
           "statementText": "import { defaultDatabaseUrl } from \"./db.js\""
         },
         {
-          "line": 3,
+          "line": 4,
           "source": "./dev-smoke.js",
           "statementText": "import { runDevelopmentMatchSetSmoke } from \"./dev-smoke.js\""
+        },
+        {
+          "line": 5,
+          "source": "./matchset-service.js",
+          "statementText": "import { createFixtureMatchSetEvidenceResolver } from \"./matchset-service.js\""
         }
       ],
       "persistenceImports": [],
@@ -3455,6 +3534,7 @@
       "localBackendImports": [
         "packages/persistence/src/db.ts",
         "packages/persistence/src/dev-smoke.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
         "packages/persistence/src/matchset-status.ts",
@@ -3485,7 +3565,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/dev-smoke.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/dev-smoke.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
         }
       ]
     },
@@ -3516,6 +3596,16 @@
           "statementText": "import type { MatchSetId } from \"@cowards/spec\""
         },
         {
+          "line": 11,
+          "source": "./matchset-status.js",
+          "statementText": "import { refreshMatchSetStatus } from \"./matchset-status.js\""
+        },
+        {
+          "line": 12,
+          "source": "./schema.js",
+          "statementText": "import type { MatchSetStatus } from \"./schema.js\""
+        },
+        {
           "line": 2,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
@@ -3538,17 +3628,7 @@
         {
           "line": 6,
           "source": "./matchset-service.js",
-          "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
-        },
-        {
-          "line": 7,
-          "source": "./matchset-status.js",
-          "statementText": "import { refreshMatchSetStatus } from \"./matchset-status.js\""
-        },
-        {
-          "line": 8,
-          "source": "./schema.js",
-          "statementText": "import type { MatchSetStatus } from \"./schema.js\""
+          "statementText": "import {\n  createMatchSetService,\n  resolveMatchSetExecutionEvidence,\n  type MatchSetExecutionEvidenceResolver,\n} from \"./matchset-service.js\""
         }
       ],
       "persistenceImports": [],
@@ -3556,6 +3636,7 @@
       "runtimeImports": [],
       "localBackendImports": [
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
         "packages/persistence/src/matchset-status.ts",
@@ -3586,7 +3667,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
         }
       ]
     },
@@ -3613,18 +3694,38 @@
       "imports": [
         {
           "line": 1,
-          "source": "vitest",
-          "statementText": "import { describe, expect, it } from \"vitest\""
+          "source": "node:crypto",
+          "statementText": "import { createHash, randomUUID } from \"node:crypto\""
+        },
+        {
+          "line": 15,
+          "source": "./integrity-evidence.js",
+          "statementText": "import { resolveHistoricalIntegrityEvidence } from \"./integrity-evidence.js\""
+        },
+        {
+          "line": 16,
+          "source": "./migrations.js",
+          "statementText": "import { migrate } from \"./migrations.js\""
         },
         {
           "line": 2,
-          "source": "pg",
-          "statementText": "import type { Pool } from \"pg\""
+          "source": "@cowards/spec",
+          "statementText": "import { CANONICAL_COMPATIBILITY_TUPLES, classifyCompetitionCountedState } from \"@cowards/spec\""
         },
         {
           "line": 3,
+          "source": "pg",
+          "statementText": "import { Pool } from \"pg\""
+        },
+        {
+          "line": 4,
+          "source": "vitest",
+          "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 5,
           "source": "./governance.js",
-          "statementText": "import {\n  GovernanceInputError,\n  applyCompetitionGovernanceAction,\n  submitCompetitionReport,\n} from \"./governance.js\""
+          "statementText": "import {\n  GovernanceInputError,\n  applyIntegrityCohortClassification,\n  applyCompetitionGovernanceAction,\n  compensateIntegrityCohortClassification,\n  createIntegrityCohortPreview,\n  foldEffectiveIntegrityClassifications,\n  previewIntegrityCohortClassification,\n  submitCompetitionReport,\n} from \"./governance.js\""
         }
       ],
       "persistenceImports": [],
@@ -3633,9 +3734,13 @@
       "localBackendImports": [
         "packages/persistence/src/db.ts",
         "packages/persistence/src/governance.ts",
-        "packages/persistence/src/schema.ts"
+        "packages/persistence/src/integrity-evidence.ts",
+        "packages/persistence/src/migrations.ts",
+        "packages/persistence/src/schema.ts",
+        "packages/persistence/src/scoring.ts",
+        "packages/persistence/src/standings-recompute.ts"
       ],
-      "usesDatabase": false,
+      "usesDatabase": true,
       "claimsJobs": true,
       "completesMatches": false,
       "persistsChronicles": false,
@@ -3655,7 +3760,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/governance.ts, packages/persistence/src/schema.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/governance.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/migrations.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/standings-recompute.ts"
         }
       ]
     },
@@ -3683,7 +3788,7 @@
         {
           "line": 1,
           "source": "node:crypto",
-          "statementText": "import { randomUUID } from \"node:crypto\""
+          "statementText": "import { createHash, randomUUID } from \"node:crypto\""
         },
         {
           "line": 14,
@@ -3701,6 +3806,11 @@
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
         {
+          "line": 17,
+          "source": "./standings-recompute.js",
+          "statementText": "import {\n  recomputeSeasonStandings,\n  type EffectiveIntegrityClassification,\n} from \"./standings-recompute.js\""
+        },
+        {
           "line": 2,
           "source": "@cowards/spec",
           "statementText": "import {\n  classifyCompetitionCountedState,\n  competitionGovernanceActionPolicy,\n  normalizeCompetitionReportDetail,\n  type CompetitionGovernanceAction,\n  type CompetitionGovernanceCategory,\n  type CompetitionReportCategory,\n  type CompetitionReportSubmissionType,\n  type LadderMatchSetCountedStatus,\n  type LadderNonCountedReason,\n  type UserId,\n} from \"@cowards/spec\""
@@ -3711,7 +3821,10 @@
       "runtimeImports": [],
       "localBackendImports": [
         "packages/persistence/src/db.ts",
-        "packages/persistence/src/schema.ts"
+        "packages/persistence/src/integrity-evidence.ts",
+        "packages/persistence/src/schema.ts",
+        "packages/persistence/src/scoring.ts",
+        "packages/persistence/src/standings-recompute.ts"
       ],
       "usesDatabase": true,
       "claimsJobs": true,
@@ -3733,7 +3846,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/schema.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/standings-recompute.ts"
         }
       ]
     },
@@ -3799,6 +3912,21 @@
           "statementText": "export * from \"./profiles.js\""
         },
         {
+          "line": 17,
+          "source": "./integrity-evidence.js",
+          "statementText": "export * from \"./integrity-evidence.js\""
+        },
+        {
+          "line": 18,
+          "source": "./runtime-evidence-import.js",
+          "statementText": "export * from \"./runtime-evidence-import.js\""
+        },
+        {
+          "line": 19,
+          "source": "./runtime-evidence-authority-publisher.js",
+          "statementText": "export * from \"./runtime-evidence-authority-publisher.js\""
+        },
+        {
           "line": 2,
           "source": "./migrations.js",
           "statementText": "export * from \"./migrations.js\""
@@ -3850,6 +3978,7 @@
         "packages/persistence/src/db.ts",
         "packages/persistence/src/dev-smoke.ts",
         "packages/persistence/src/governance.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/ladder.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
@@ -3858,6 +3987,8 @@
         "packages/persistence/src/presets.ts",
         "packages/persistence/src/profiles.ts",
         "packages/persistence/src/repositories.ts",
+        "packages/persistence/src/runtime-evidence-authority-publisher.ts",
+        "packages/persistence/src/runtime-evidence-import.ts",
         "packages/persistence/src/schema.ts",
         "packages/persistence/src/scoring.ts",
         "packages/persistence/src/seed.ts",
@@ -3886,7 +4017,173 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/account-revisions.ts, packages/persistence/src/advanced-strategies.ts, packages/persistence/src/auth.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/dev-smoke.ts, packages/persistence/src/governance.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/profiles.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop-analytics.ts, packages/persistence/src/workshop.ts"
+          "detail": "packages/persistence/src/account-revisions.ts, packages/persistence/src/advanced-strategies.ts, packages/persistence/src/auth.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/dev-smoke.ts, packages/persistence/src/governance.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/profiles.ts, packages/persistence/src/repositories.ts, packages/persistence/src/runtime-evidence-authority-publisher.ts, packages/persistence/src/runtime-evidence-import.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop-analytics.ts, packages/persistence/src/workshop.ts"
+        }
+      ]
+    },
+    {
+      "id": "packages-persistence-src-integrity-evidence-test",
+      "path": "packages/persistence/src/integrity-evidence.test.ts",
+      "kind": "persistence-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "persistence",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { createHash, randomUUID } from \"node:crypto\""
+        },
+        {
+          "line": 10,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  IntegrityEvidenceInputError,\n  createMatchExecutionEvidencePair,\n  createMatchSetIntegrityIdentity,\n  matchExecutionEvidencePairSqlValues,\n  matchSetIntegritySqlValues,\n  parseMatchSetIntegrityIdentityRows,\n  persistMatchSetIntegrityIdentity,\n  resolveHistoricalIntegrityEvidence,\n  hashHistoricalIntegritySource,\n  resolveCurrentStandingsIntegrityEvidence,\n} from \"./integrity-evidence.js\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 22,
+          "source": "./migrations.js",
+          "statementText": "import { migrate } from \"./migrations.js\""
+        },
+        {
+          "line": 7,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
+        },
+        {
+          "line": 8,
+          "source": "vitest",
+          "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 9,
+          "source": "./db.js",
+          "statementText": "import { createDatabasePool } from \"./db.js\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
+        "packages/persistence/src/migrations.ts"
+      ],
+      "usesDatabase": true,
+      "claimsJobs": true,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": true,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/persistence/src/integrity-evidence.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/migrations.ts"
+        }
+      ]
+    },
+    {
+      "id": "packages-persistence-src-integrity-evidence",
+      "path": "packages/persistence/src/integrity-evidence.ts",
+      "kind": "persistence-module",
+      "role": "parity-only",
+      "retirementAction": "quarantine-for-parity",
+      "owner": "parity_fixture_maintainer",
+      "reason": "TypeScript service or persistence behavior remains as parity oracle or reference fixture, not normal backend behavior.",
+      "gate": "parity fixture generation or monitor-only reference gate",
+      "risk": "parity reference accidentally used as normal product backend",
+      "futureMigration": "Keep only as fixture/parity source until monitors no longer need TypeScript reference output.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "persistence",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
+          "line": 14,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
+        },
+        {
+          "line": 15,
+          "source": "./db.js",
+          "statementText": "import { withTransaction } from \"./db.js\""
+        },
+        {
+          "line": 2,
+          "source": "node:util",
+          "statementText": "import { isDeepStrictEqual } from \"node:util\""
+        },
+        {
+          "line": 3,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLE_FIELDS,\n  EXECUTABLE_LANE_EVIDENCE_REASON_CODES,\n  EXECUTABLE_LANE_EVIDENCE_STATUSES,\n  resolveCanonicalCompatibilityTuple,\n  type CanonicalCompatibilityTuple,\n  type ExecutableLaneCertificateReference,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n  type RuntimeExecutionCompatibilityIdentity,\n} from \"@cowards/spec\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "packages/persistence/src/db.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": true,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/persistence/src/integrity-evidence.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "packages/persistence/src/db.ts"
         }
       ]
     },
@@ -3913,13 +4210,28 @@
       "imports": [
         {
           "line": 1,
-          "source": "vitest",
-          "statementText": "import { describe, expect, it } from \"vitest\""
+          "source": "node:crypto",
+          "statementText": "import { randomUUID } from \"node:crypto\""
         },
         {
           "line": 2,
+          "source": "vitest",
+          "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 3,
+          "source": "pg",
+          "statementText": "import { Pool } from \"pg\""
+        },
+        {
+          "line": 4,
+          "source": "./migrations.js",
+          "statementText": "import { migrate } from \"./migrations.js\""
+        },
+        {
+          "line": 5,
           "source": "./jobs.js",
-          "statementText": "import {\n  CLAIM_NEXT_MATCH_JOB_SQL,\n  DEFAULT_LEASE_MS,\n  shouldExhaustRetries,\n} from \"./jobs.js\""
+          "statementText": "import {\n  CLAIM_NEXT_MATCH_JOB_SQL,\n  DEFAULT_LEASE_MS,\n  claimNextMatchJob,\n  shouldExhaustRetries,\n} from \"./jobs.js\""
         }
       ],
       "persistenceImports": [],
@@ -3927,9 +4239,10 @@
       "runtimeImports": [],
       "localBackendImports": [
         "packages/persistence/src/db.ts",
-        "packages/persistence/src/jobs.ts"
+        "packages/persistence/src/jobs.ts",
+        "packages/persistence/src/migrations.ts"
       ],
-      "usesDatabase": false,
+      "usesDatabase": true,
       "claimsJobs": true,
       "completesMatches": false,
       "persistsChronicles": false,
@@ -3949,7 +4262,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/jobs.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/jobs.ts, packages/persistence/src/migrations.ts"
         }
       ]
     },
@@ -3982,15 +4295,15 @@
         {
           "line": 2,
           "source": "@cowards/spec",
-          "statementText": "import type { JsonValue, MatchId } from \"@cowards/spec\""
+          "statementText": "import type {\n  JsonValue,\n  MatchId,\n  RuntimeEntrantExecutionEvidence,\n  RuntimeExecutionResolvedEvidenceSnapshot,\n} from \"@cowards/spec\""
         },
         {
-          "line": 3,
+          "line": 8,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 4,
+          "line": 9,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
         }
@@ -4052,17 +4365,17 @@
           "statementText": "import { describe, expect, it } from \"vitest\""
         },
         {
-          "line": 13,
+          "line": 14,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 14,
+          "line": 15,
           "source": "node:fs",
           "statementText": "import { readFileSync } from \"node:fs\""
         },
         {
-          "line": 15,
+          "line": 16,
           "source": "./ladder.js",
           "statementText": "import {\n  LadderInputError,\n  assertLadderEligibleRuntime,\n  DEFAULT_LADDER_MINIMUM_ENTRIES,\n  DEFAULT_LADDER_TARGET_POD_SIZE,\n  enterTrialLadderSeason,\n  evaluateCountedEntryEligibility,\n  scheduleTrialLadderSeason,\n  setTrialLadderSeasonStatus,\n  trialLadderStatusLabel,\n} from \"./ladder.js\""
         },
@@ -4079,7 +4392,7 @@
         {
           "line": 4,
           "source": "@cowards/spec",
-          "statementText": "import {\n  COMPATIBILITY_VERSIONS,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  defaultRuntimeMetadata,\n  getCountedEntryEligibilityPublicCopy,\n  type CountedEntryEligibilityCategory,\n  type StrategyRuntimeAdapterId,\n  type StrategyRuntimeMetadata,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  COMPATIBILITY_VERSIONS,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  defaultRuntimeMetadata,\n  describeStrategyRuntimeProductSemantics,\n  getCountedEntryEligibilityPublicCopy,\n  type CountedEntryEligibilityCategory,\n  type StrategyRuntimeAdapterId,\n  type StrategyRuntimeMetadata,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -4088,6 +4401,7 @@
       "localBackendImports": [
         "packages/persistence/src/competition.ts",
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/ladder.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
@@ -4118,7 +4432,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts"
+          "detail": "packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts"
         }
       ]
     },
@@ -4149,52 +4463,52 @@
           "statementText": "import {\n  createHash,\n  createHmac,\n  randomUUID,\n  timingSafeEqual,\n} from \"node:crypto\""
         },
         {
-          "line": 39,
+          "line": 43,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 40,
+          "line": 44,
           "source": "pg",
           "statementText": "import type { PoolClient } from \"pg\""
         },
         {
-          "line": 41,
+          "line": 45,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
         },
         {
-          "line": 42,
+          "line": 46,
           "source": "./competition.js",
           "statementText": "import { generateCompetitionPairwiseMatrix } from \"./competition.js\""
         },
         {
-          "line": 43,
+          "line": 47,
           "source": "./matchset-service.js",
-          "statementText": "import { insertMatchSetWithMatrixOnClient } from \"./matchset-service.js\""
+          "statementText": "import {\n  insertMatchSetWithMatrixOnClient,\n  resolveMatchSetExecutionEvidence,\n  type MatchSetExecutionEvidenceResolver,\n} from \"./matchset-service.js\""
         },
         {
-          "line": 44,
+          "line": 52,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 45,
+          "line": 53,
           "source": "./seed.js",
           "statementText": "import { createDevelopmentSeedData } from \"./seed.js\""
         },
         {
-          "line": 46,
+          "line": 54,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
         {
-          "line": 47,
+          "line": 55,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetStrategyScore } from \"./scoring.js\""
         },
         {
-          "line": 48,
+          "line": 56,
           "source": "./standings-recompute.js",
           "statementText": "import {\n  recomputeSeasonStandings,\n  type ClassifiedSeasonMatchSet,\n} from \"./standings-recompute.js\""
         },
@@ -4206,7 +4520,7 @@
         {
           "line": 8,
           "source": "@cowards/spec",
-          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  assertTrialSeasonTransition,\n  COMPATIBILITY_VERSIONS,\n  classifyCompetitionCountedState,\n  countedEntryEligibilityDecision,\n  describeStrategyRuntimeProductSemantics,\n  EXHIBITION_SCORING_POLICY_V1,\n  evaluateStrategyRuntimeCountedEligibility,\n  getCountedEntryEligibilityPublicCopy,\n  isCountedEntrySupportedLane,\n  normalizeStrategyRuntimeMetadata,\n  projectTrialSeasonWindows,\n  projectPublicCompetitionGovernance,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  trialSeasonOutcome,\n  trialSeasonPublicLinks,\n  validateRuntimeBrokerRegistryMatch,\n  type CompetitionEntrantSnapshot,\n  type CountedEntryEligibilityCategory,\n  type CountedEntryEligibilityDecision,\n  type PublicLadderMatchSetSummaryDto,\n  type PublicStandingDto,\n  type PublicTrialLadderSeasonDto,\n  type StrategyRevisionId,\n  type TrialLadderEntrySnapshot,\n  type TrialLadderEntryStatus,\n  type TrialLadderSeasonStatus,\n  type TrialSeasonOutcomeStatus,\n  type UserId,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  assertPublicMatchSetResultLeakSafe,\n  assertTrialSeasonTransition,\n  COMPATIBILITY_VERSIONS,\n  classifyCompetitionCountedState,\n  countedEntryEligibilityDecision,\n  describeStrategyRuntimeProductSemantics,\n  EXHIBITION_SCORING_POLICY_V1,\n  evaluateStrategyRuntimeCountedEligibility,\n  getCountedEntryEligibilityPublicCopy,\n  hashExecutableLaneIdentity,\n  hashRuntimeEvidenceAuthorityPayload,\n  isCountedEntrySupportedLane,\n  normalizeStrategyRuntimeMetadata,\n  parseRuntimeEvidenceAuthorityPayloadBytes,\n  projectTrialSeasonWindows,\n  projectPublicCompetitionGovernance,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  trialSeasonOutcome,\n  trialSeasonPublicLinks,\n  validateRuntimeBrokerRegistryMatch,\n  type CompetitionEntrantSnapshot,\n  type CountedEntryEligibilityCategory,\n  type CountedEntryEligibilityDecision,\n  type PublicLadderMatchSetSummaryDto,\n  type PublicStandingDto,\n  type PublicTrialLadderSeasonDto,\n  type StrategyRevisionId,\n  type RuntimeEvidenceAuthorityPayload,\n  type TrialLadderEntrySnapshot,\n  type TrialLadderEntryStatus,\n  type TrialLadderSeasonStatus,\n  type TrialSeasonOutcomeStatus,\n  type UserId,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
@@ -4215,6 +4529,7 @@
       "localBackendImports": [
         "packages/persistence/src/competition.ts",
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
         "packages/persistence/src/presets.ts",
@@ -4244,7 +4559,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts"
+          "detail": "packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts"
         }
       ]
     },
@@ -4271,23 +4586,43 @@
       "imports": [
         {
           "line": 1,
-          "source": "vitest",
-          "statementText": "import { describe, expect, it } from \"vitest\""
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
         },
         {
-          "line": 11,
-          "source": "./schema.js",
-          "statementText": "import { DEFAULT_MAX_JOB_ATTEMPTS } from \"./schema.js\""
-        },
-        {
-          "line": 2,
+          "line": 13,
           "source": "./repositories.js",
           "statementText": "import {\n  REVISION_CONTENT_COLUMNS,\n  assertCanUpdateStrategyRevisionContent,\n} from \"./repositories.js\""
         },
         {
-          "line": 6,
+          "line": 17,
           "source": "./match-service.js",
-          "statementText": "import {\n  createMatchJobId,\n  validateCreateMatchInput,\n  type CreateMatchInput,\n} from \"./match-service.js\""
+          "statementText": "import {\n  createMatchJobId,\n  createMatchService,\n  validateCreateMatchInput,\n  type CreateMatchInput,\n  type CreateMatchRecordInput,\n} from \"./match-service.js\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 24,
+          "source": "./schema.js",
+          "statementText": "import { DEFAULT_MAX_JOB_ATTEMPTS } from \"./schema.js\""
+        },
+        {
+          "line": 7,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
+        },
+        {
+          "line": 8,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 9,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  createMatchExecutionEvidencePair,\n  createMatchSetIntegrityIdentity,\n} from \"./integrity-evidence.js\""
         }
       ],
       "persistenceImports": [],
@@ -4295,12 +4630,13 @@
       "runtimeImports": [],
       "localBackendImports": [
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/repositories.ts",
         "packages/persistence/src/schema.ts"
       ],
       "usesDatabase": false,
-      "claimsJobs": false,
+      "claimsJobs": true,
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": false,
@@ -4319,7 +4655,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts"
         }
       ]
     },
@@ -4347,27 +4683,32 @@
         {
           "line": 1,
           "source": "@cowards/spec",
-          "statementText": "import type {\n  ArenaVariantId,\n  MatchId,\n  PlayerId,\n  StrategyRevisionId,\n} from \"@cowards/spec\""
+          "statementText": "import type {\n  ArenaVariantId,\n  MatchId,\n  MatchSetId,\n  PlayerId,\n  StrategyRevisionId,\n} from \"@cowards/spec\""
         },
         {
           "line": 10,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  IntegrityEvidenceInputError,\n  createMatchExecutionEvidencePair,\n  matchExecutionEvidencePairSqlValues,\n  matchSetIntegritySqlValues,\n  type MatchExecutionEvidencePair,\n  type MatchSetIntegrityIdentity,\n} from \"./integrity-evidence.js\""
+        },
+        {
+          "line": 18,
+          "source": "./repositories.js",
+          "statementText": "import { createRepositories } from \"./repositories.js\""
+        },
+        {
+          "line": 19,
           "source": "./schema.js",
           "statementText": "import { DEFAULT_MAX_JOB_ATTEMPTS, type MatchStatus } from \"./schema.js\""
         },
         {
-          "line": 7,
+          "line": 8,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 8,
+          "line": 9,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
-        },
-        {
-          "line": 9,
-          "source": "./repositories.js",
-          "statementText": "import { createRepositories } from \"./repositories.js\""
         }
       ],
       "persistenceImports": [],
@@ -4375,6 +4716,7 @@
       "runtimeImports": [],
       "localBackendImports": [
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/repositories.ts",
         "packages/persistence/src/schema.ts"
       ],
@@ -4398,7 +4740,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts"
         }
       ]
     },
@@ -4425,23 +4767,53 @@
       "imports": [
         {
           "line": 1,
-          "source": "vitest",
-          "statementText": "import { describe, expect, it } from \"vitest\""
+          "source": "node:crypto",
+          "statementText": "import { createHash, randomUUID } from \"node:crypto\""
+        },
+        {
+          "line": 10,
+          "source": "./db.js",
+          "statementText": "import { createDatabasePool } from \"./db.js\""
+        },
+        {
+          "line": 11,
+          "source": "./integrity-evidence.js",
+          "statementText": "import { hashEntrantLaneIdentity } from \"./integrity-evidence.js\""
+        },
+        {
+          "line": 12,
+          "source": "./matchset-service.js",
+          "statementText": "import {\n  createFixtureMatchSetEvidenceResolver,\n  createMatchSetService,\n  generatePresetMatrix,\n  insertMatchSetWithMatrixOnClient,\n  resolveMatchSetExecutionEvidence,\n  type CreateMatchSetFromMatrixInput,\n} from \"./matchset-service.js\""
         },
         {
           "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  type ExecutableLaneIdentity,\n  type MatchId,\n  type RuntimeEntrantExecutionEvidence,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 20,
+          "source": "./match-service.js",
+          "statementText": "import type { CreateMatchRecordInput } from \"./match-service.js\""
+        },
+        {
+          "line": 21,
+          "source": "./migrations.js",
+          "statementText": "import { migrate } from \"./migrations.js\""
+        },
+        {
+          "line": 22,
           "source": "./presets.js",
           "statementText": "import { getMatchSetPreset } from \"./presets.js\""
         },
         {
-          "line": 3,
-          "source": "./matchset-service.js",
-          "statementText": "import { generatePresetMatrix } from \"./matchset-service.js\""
+          "line": 8,
+          "source": "pg",
+          "statementText": "import type { Pool, PoolClient } from \"pg\""
         },
         {
-          "line": 4,
-          "source": "./match-service.js",
-          "statementText": "import type { CreateMatchInput } from \"./match-service.js\""
+          "line": 9,
+          "source": "vitest",
+          "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
         }
       ],
       "persistenceImports": [],
@@ -4449,14 +4821,16 @@
       "runtimeImports": [],
       "localBackendImports": [
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
+        "packages/persistence/src/migrations.ts",
         "packages/persistence/src/presets.ts",
         "packages/persistence/src/repositories.ts",
         "packages/persistence/src/schema.ts"
       ],
-      "usesDatabase": false,
-      "claimsJobs": false,
+      "usesDatabase": true,
+      "claimsJobs": true,
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": false,
@@ -4475,7 +4849,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/migrations.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts"
         }
       ]
     },
@@ -4502,38 +4876,58 @@
       "imports": [
         {
           "line": 1,
-          "source": "@cowards/spec",
-          "statementText": "import type {\n  MatchId,\n  MatchSetId,\n  PlayerId,\n  StrategyRevisionId,\n} from \"@cowards/spec\""
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
         },
         {
           "line": 10,
-          "source": "./match-service.js",
-          "statementText": "import {\n  createMatchJobId,\n  validateCreateMatchInput,\n  type CreateMatchInput,\n} from \"./match-service.js\""
+          "source": "@cowards/spec",
+          "statementText": "import { CANONICAL_COMPATIBILITY_TUPLES } from \"@cowards/spec\""
         },
         {
-          "line": 15,
-          "source": "./presets.js",
-          "statementText": "import { getMatchSetPreset, type MatchSetPresetId } from \"./presets.js\""
-        },
-        {
-          "line": 16,
-          "source": "./schema.js",
-          "statementText": "import type { MatchSetStatus } from \"./schema.js\""
-        },
-        {
-          "line": 7,
+          "line": 11,
           "source": "pg",
           "statementText": "import type { Pool, PoolClient } from \"pg\""
         },
         {
-          "line": 8,
+          "line": 12,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 9,
+          "line": 13,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
+        },
+        {
+          "line": 14,
+          "source": "./match-service.js",
+          "statementText": "import {\n  createMatchJobId,\n  validateCreateMatchInput,\n  validateCreateMatchRecordInput,\n  type CreateMatchRecordInput,\n} from \"./match-service.js\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import type {\n  ExecutableLaneIdentity,\n  MatchId,\n  MatchSetId,\n  PlayerId,\n  StrategyLanguageId,\n  StrategyRevisionId,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 20,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  IntegrityEvidenceInputError,\n  createMatchExecutionEvidencePair,\n  createMatchSetIntegrityIdentity,\n  matchExecutionEvidencePairSqlValues,\n  matchSetExecutionEntrantSqlValues,\n  matchSetIntegritySqlValues,\n  type EntrantExecutionEvidence,\n  type MatchExecutionEvidencePair,\n  type MatchSetIntegrityIdentity,\n} from \"./integrity-evidence.js\""
+        },
+        {
+          "line": 31,
+          "source": "@cowards/spec",
+          "statementText": "import type { RuntimeExecutionCompatibilityIdentity } from \"@cowards/spec\""
+        },
+        {
+          "line": 32,
+          "source": "./presets.js",
+          "statementText": "import { getMatchSetPreset, type MatchSetPresetId } from \"./presets.js\""
+        },
+        {
+          "line": 33,
+          "source": "./schema.js",
+          "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         }
       ],
       "persistenceImports": [],
@@ -4541,6 +4935,7 @@
       "runtimeImports": [],
       "localBackendImports": [
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/presets.ts",
         "packages/persistence/src/repositories.ts",
@@ -4566,7 +4961,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts"
         }
       ]
     },
@@ -4699,7 +5094,7 @@
         "packages/persistence/src/seed.ts"
       ],
       "usesDatabase": false,
-      "claimsJobs": false,
+      "claimsJobs": true,
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": false,
@@ -4967,6 +5362,7 @@
         "packages/persistence/src/competition.ts",
         "packages/persistence/src/complete-match.ts",
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/jobs.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
@@ -4997,7 +5393,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/chronicle-store.ts, packages/persistence/src/competition.ts, packages/persistence/src/complete-match.ts, packages/persistence/src/db.ts, packages/persistence/src/jobs.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
+          "detail": "packages/persistence/src/chronicle-store.ts, packages/persistence/src/competition.ts, packages/persistence/src/complete-match.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/jobs.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts"
         }
       ]
     },
@@ -5060,6 +5456,341 @@
         "packages/persistence/src/repositories.ts"
       ],
       "scannerFindings": []
+    },
+    {
+      "id": "packages-persistence-src-runtime-evidence-authority-publisher-test",
+      "path": "packages/persistence/src/runtime-evidence-authority-publisher.test.ts",
+      "kind": "persistence-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "persistence",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 18,
+          "source": "node:os",
+          "statementText": "import { tmpdir } from \"node:os\""
+        },
+        {
+          "line": 19,
+          "source": "node:path",
+          "statementText": "import path from \"node:path\""
+        },
+        {
+          "line": 2,
+          "source": "node:crypto",
+          "statementText": "import {\n  createHash,\n  generateKeyPairSync,\n  randomUUID,\n  sign,\n  verify,\n} from \"node:crypto\""
+        },
+        {
+          "line": 20,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  encodeRuntimeEvidenceAuthorityPayload,\n  inspectRuntimeEvidenceAuthorityBundle,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 26,
+          "source": "pg",
+          "statementText": "import { Pool } from \"pg\""
+        },
+        {
+          "line": 27,
+          "source": "vitest",
+          "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 28,
+          "source": "./migrations.js",
+          "statementText": "import { migrate } from \"./migrations.js\""
+        },
+        {
+          "line": 29,
+          "source": "./runtime-evidence-authority-publisher.js",
+          "statementText": "import {\n  RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION,\n  encodeRuntimeEvidenceAuthorityImportPayload,\n  importAuthenticatedCertificateRevocation,\n  importAuthenticatedCertificateSupersession,\n  importAuthenticatedRuntimeLaneControl,\n  installRuntimeEvidenceAuthorityPublication,\n  prepareRuntimeEvidenceAuthorityPublication,\n  type RuntimeEvidenceAuthorityInstallFileSystem,\n  type RuntimeEvidenceAuthorityImportEnvelope,\n  type RuntimeEvidenceAuthorityImportPayload,\n  type RuntimeEvidenceAuthorityImportTrustRoot,\n} from \"./runtime-evidence-authority-publisher.js\""
+        },
+        {
+          "line": 9,
+          "source": "node:fs/promises",
+          "statementText": "import {\n  mkdtemp,\n  open,\n  readFile,\n  readdir,\n  rm,\n  stat,\n  writeFile,\n} from \"node:fs/promises\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "packages/persistence/src/db.ts",
+        "packages/persistence/src/migrations.ts",
+        "packages/persistence/src/runtime-evidence-authority-publisher.ts"
+      ],
+      "usesDatabase": true,
+      "claimsJobs": true,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/persistence/src/runtime-evidence-authority-publisher.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/migrations.ts, packages/persistence/src/runtime-evidence-authority-publisher.ts"
+        }
+      ]
+    },
+    {
+      "id": "packages-persistence-src-runtime-evidence-authority-publisher",
+      "path": "packages/persistence/src/runtime-evidence-authority-publisher.ts",
+      "kind": "persistence-module",
+      "role": "deferred",
+      "retirementAction": "defer-to-future-phase",
+      "owner": "future_phase_owner",
+      "reason": "persistence TypeScript behavior is intentionally deferred for a later v1.16 phase and must not become silent fallback.",
+      "gate": "Phase 105-107 persistence migration or relabeling gate",
+      "risk": "deferred persistence path masking missing Go ownership or leaking private data",
+      "futureMigration": "Migrate, delete, or explicitly relabel persistence behavior in Phases 105-107.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-105-107-follow-up",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "persistence",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 10,
+          "source": "node:path",
+          "statementText": "import path from \"node:path\""
+        },
+        {
+          "line": 11,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  buildRuntimeEvidenceAuthorityEnvelope,\n  encodeRuntimeEvidenceAuthorityPayload,\n  hashRuntimeEvidenceAuthorityPayload,\n  inspectRuntimeEvidenceAuthorityBundle,\n  type RuntimeEvidenceAuthorityPayload,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 2,
+          "source": "node:crypto",
+          "statementText": "import {\n  createHash,\n  createPublicKey,\n  randomUUID,\n  verify as verifySignature,\n  type KeyObject,\n} from \"node:crypto\""
+        },
+        {
+          "line": 21,
+          "source": "pg",
+          "statementText": "import type { Pool, PoolClient, QueryResultRow } from \"pg\""
+        },
+        {
+          "line": 9,
+          "source": "node:fs/promises",
+          "statementText": "import { open as openFile, readFile, rename, unlink } from \"node:fs/promises\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": true,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": "Phase 105-107 persistence migration or relabeling gate",
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/persistence/src/runtime-evidence-authority-publisher.ts"
+      ],
+      "scannerFindings": []
+    },
+    {
+      "id": "packages-persistence-src-runtime-evidence-import-test",
+      "path": "packages/persistence/src/runtime-evidence-import.test.ts",
+      "kind": "persistence-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "persistence",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { createHash, generateKeyPairSync, randomUUID, sign } from \"node:crypto\""
+        },
+        {
+          "line": 13,
+          "source": "pg",
+          "statementText": "import { Pool } from \"pg\""
+        },
+        {
+          "line": 14,
+          "source": "vitest",
+          "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 15,
+          "source": "./migrations.js",
+          "statementText": "import { migrate } from \"./migrations.js\""
+        },
+        {
+          "line": 16,
+          "source": "./runtime-evidence-import.js",
+          "statementText": "import { importVerifiedRuntimeEvidenceAttestation } from \"./runtime-evidence-import.js\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  encodeRuntimeEvidenceAttestationPayload,\n  hashExecutableLaneIdentity,\n  hashRuntimeEvidenceGraph,\n  type RuntimeEvidenceAttestation,\n  type RuntimeEvidenceAttestationPayload,\n  type RuntimeEvidenceBytes,\n  type RuntimeEvidenceGraph,\n  type RuntimeEvidenceTrustedProducer,\n} from \"@cowards/spec\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "packages/persistence/src/db.ts",
+        "packages/persistence/src/migrations.ts",
+        "packages/persistence/src/runtime-evidence-import.ts"
+      ],
+      "usesDatabase": true,
+      "claimsJobs": true,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/persistence/src/runtime-evidence-import.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/migrations.ts, packages/persistence/src/runtime-evidence-import.ts"
+        }
+      ]
+    },
+    {
+      "id": "packages-persistence-src-runtime-evidence-import",
+      "path": "packages/persistence/src/runtime-evidence-import.ts",
+      "kind": "persistence-module",
+      "role": "parity-only",
+      "retirementAction": "quarantine-for-parity",
+      "owner": "parity_fixture_maintainer",
+      "reason": "TypeScript service or persistence behavior remains as parity oracle or reference fixture, not normal backend behavior.",
+      "gate": "parity fixture generation or monitor-only reference gate",
+      "risk": "parity reference accidentally used as normal product backend",
+      "futureMigration": "Keep only as fixture/parity source until monitors no longer need TypeScript reference output.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "persistence",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
+          "line": 13,
+          "source": "pg",
+          "statementText": "import type { Pool, PoolClient, QueryResultRow } from \"pg\""
+        },
+        {
+          "line": 14,
+          "source": "./db.js",
+          "statementText": "import { withTransaction } from \"./db.js\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  getVerifiedRuntimeEvidenceAttestationSnapshot,\n  verifyRuntimeEvidenceAttestation,\n  type ExecutableLaneCertificateReference,\n  type RuntimeEvidenceAttestation,\n  type RuntimeEvidenceBytes,\n  type RuntimeEvidenceTrustedProducer,\n  type RuntimeEvidenceVerificationMode,\n  type RuntimeEvidenceVerifiedSnapshot,\n  type VerifyRuntimeEvidenceAttestationInput,\n} from \"@cowards/spec\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "packages/persistence/src/db.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/persistence/src/runtime-evidence-import.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "packages/persistence/src/db.ts"
+        }
+      ]
     },
     {
       "id": "packages-persistence-src-schema",
@@ -5325,30 +6056,42 @@
       "imports": [
         {
           "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
+          "line": 13,
+          "source": "./standings-recompute.js",
+          "statementText": "import {\n  recomputeSeasonStandings,\n  type ClassifiedSeasonMatchSet,\n  type SeasonStandingEntrant,\n} from \"./standings-recompute.js\""
+        },
+        {
+          "line": 2,
           "source": "vitest",
           "statementText": "import { describe, expect, it } from \"vitest\""
         },
         {
-          "line": 2,
+          "line": 3,
           "source": "@cowards/spec",
-          "statementText": "import {\n  classifyCompetitionCountedState,\n  type CompetitionCountedStateProjection,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  classifyCompetitionCountedState,\n  type CompetitionCountedStateProjection,\n} from \"@cowards/spec\""
         },
         {
-          "line": 6,
-          "source": "./standings-recompute.js",
-          "statementText": "import {\n  recomputeSeasonStandings,\n  type ClassifiedSeasonMatchSet,\n  type SeasonStandingEntrant,\n} from \"./standings-recompute.js\""
+          "line": 8,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  resolveCurrentStandingsIntegrityEvidence,\n  resolveHistoricalIntegrityEvidence,\n  type StandingsIntegrityResolution,\n} from \"./integrity-evidence.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
+        "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/schema.ts",
         "packages/persistence/src/scoring.ts",
         "packages/persistence/src/standings-recompute.ts"
       ],
       "usesDatabase": false,
-      "claimsJobs": false,
+      "claimsJobs": true,
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": true,
@@ -5367,7 +6110,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/standings-recompute.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/standings-recompute.ts"
         }
       ]
     },
@@ -5401,12 +6144,19 @@
           "line": 7,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetStrategyScore } from \"./scoring.js\""
+        },
+        {
+          "line": 8,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  isStandingsIntegrityEligible,\n  type StandingsIntegrityResolution,\n} from \"./integrity-evidence.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
       "localBackendImports": [
+        "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/schema.ts",
         "packages/persistence/src/scoring.ts"
       ],
@@ -5430,7 +6180,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts"
+          "detail": "packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts"
         }
       ]
     },
@@ -5538,6 +6288,7 @@
       "localBackendImports": [
         "packages/persistence/src/advanced-strategies.ts",
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
         "packages/persistence/src/matchset-status.ts",
@@ -5570,7 +6321,7 @@
       "scannerFindings": [
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop-analytics.ts, packages/persistence/src/workshop.ts"
+          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop-analytics.ts, packages/persistence/src/workshop.ts"
         }
       ]
     },
@@ -5653,6 +6404,7 @@
       "localBackendImports": [
         "packages/persistence/src/advanced-strategies.ts",
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
         "packages/persistence/src/matchset-status.ts",
@@ -5688,7 +6440,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop.ts"
+          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop.ts"
         }
       ]
     },
@@ -5736,25 +6488,35 @@
         {
           "line": 22,
           "source": "./workshop.js",
-          "statementText": "import {\n  assertWorkshopRevisionCanBeTested,\n  buildWorkshopRevision,\n  GET_WORKSHOP_REVISION_SOURCE_SQL,\n  getWorkshopTestSummary,\n  LIST_WORKSHOP_REVISIONS_SQL,\n  listWorkshopOpponents,\n  listWorkshopPresets,\n  listWorkshopSamples,\n  listWorkshopTemplates,\n  getWorkshopStaticSnapshot,\n  WORKSHOP_STRATEGY_ID,\n  WORKSHOP_MATCH_SET_PREFIX,\n  WORKSHOP_OPPONENTS,\n  workshopTemplateSource,\n} from \"./workshop.js\""
+          "statementText": "import {\n  assertWorkshopRevisionCanBeTested,\n  buildWorkshopRevision,\n  createWorkshopTestMatchSet,\n  GET_WORKSHOP_REVISION_SOURCE_SQL,\n  getWorkshopTestSummary,\n  LIST_WORKSHOP_REVISIONS_SQL,\n  listWorkshopOpponents,\n  listWorkshopPresets,\n  listWorkshopSamples,\n  listWorkshopTemplates,\n  getWorkshopStaticSnapshot,\n  WORKSHOP_STRATEGY_ID,\n  WORKSHOP_MATCH_SET_PREFIX,\n  WORKSHOP_OPPONENTS,\n  workshopTemplateSource,\n} from \"./workshop.js\""
         },
         {
-          "line": 38,
+          "line": 39,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
+        },
+        {
+          "line": 40,
+          "source": "./matchset-service.js",
+          "statementText": "import type { MatchSetExecutionEvidenceResolver } from \"./matchset-service.js\""
+        },
+        {
+          "line": 41,
           "source": "./advanced-strategies.js",
           "statementText": "import {\n  buildAdvancedStrategyRevision,\n  listAdvancedStrategies,\n  type AdvancedStrategySummary,\n} from \"./advanced-strategies.js\""
         },
         {
-          "line": 43,
+          "line": 46,
           "source": "./starter-strategies.js",
           "statementText": "import {\n  buildStarterStrategyRevision,\n  listStarterStrategies,\n  type StarterStrategySummary,\n} from \"./starter-strategies.js\""
         },
         {
-          "line": 48,
+          "line": 51,
           "source": "./schema.js",
           "statementText": "import { MATCH_SET_STATUSES } from \"./schema.js\""
         },
         {
-          "line": 49,
+          "line": 52,
           "source": "./matchset-status.js",
           "statementText": "import {\n  LIST_MATCH_STATUSES_FOR_SET_SQL,\n  mapMatchSetMatchSummaryRow,\n} from \"./matchset-status.js\""
         },
@@ -5776,6 +6538,7 @@
       "localBackendImports": [
         "packages/persistence/src/advanced-strategies.ts",
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
         "packages/persistence/src/matchset-status.ts",
@@ -5811,7 +6574,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop.ts"
+          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts, packages/persistence/src/workshop.ts"
         }
       ]
     },
@@ -5869,50 +6632,45 @@
         {
           "line": 33,
           "source": "./matchset-service.js",
-          "statementText": "import { createMatchSetService } from \"./matchset-service.js\""
+          "statementText": "import {\n  createMatchSetService,\n  generatePresetMatrix,\n  resolveMatchSetExecutionEvidence,\n  type MatchSetExecutionEvidenceResolver,\n} from \"./matchset-service.js\""
         },
         {
-          "line": 34,
-          "source": "./matchset-service.js",
-          "statementText": "import { generatePresetMatrix } from \"./matchset-service.js\""
-        },
-        {
-          "line": 35,
+          "line": 39,
           "source": "./matchset-status.js",
           "statementText": "import {\n  listMatchStatusesForSet,\n  type MatchSetMatchSummary,\n  refreshMatchSetStatus,\n} from \"./matchset-status.js\""
         },
         {
-          "line": 40,
+          "line": 44,
           "source": "./presets.js",
           "statementText": "import { getMatchSetPreset, type MatchSetPresetId } from \"./presets.js\""
         },
         {
-          "line": 41,
+          "line": 45,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 42,
+          "line": 46,
           "source": "./advanced-strategies.js",
           "statementText": "import {\n  listAdvancedStrategies,\n  type AdvancedStrategySummary,\n} from \"./advanced-strategies.js\""
         },
         {
-          "line": 46,
+          "line": 50,
           "source": "./starter-strategies.js",
           "statementText": "import {\n  listStarterStrategies,\n  type StarterStrategySummary,\n} from \"./starter-strategies.js\""
         },
         {
-          "line": 50,
+          "line": 54,
           "source": "./scoring.js",
           "statementText": "import type { MatchSetScore } from \"./scoring.js\""
         },
         {
-          "line": 51,
+          "line": 55,
           "source": "./seed.js",
           "statementText": "import {\n  cautiousSource,\n  createDevelopmentSeedData,\n  recklessSource,\n} from \"./seed.js\""
         },
         {
-          "line": 56,
+          "line": 60,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
@@ -5939,6 +6697,7 @@
       "localBackendImports": [
         "packages/persistence/src/advanced-strategies.ts",
         "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
         "packages/persistence/src/match-service.ts",
         "packages/persistence/src/matchset-service.ts",
         "packages/persistence/src/matchset-status.ts",
@@ -5973,7 +6732,7 @@
         },
         {
           "code": "local_backend_import_chain",
-          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/db.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts"
+          "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/matchset-status.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/starter-strategies.ts"
         }
       ]
     },
@@ -8050,6 +8809,102 @@
       "scannerFindings": []
     },
     {
+      "id": "apps-runtime-service-src-counted-safety-test",
+      "path": "apps/runtime-service/src/counted-safety.test.ts",
+      "kind": "runtime-service-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "typescript_runtime_service_only",
+      "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "runtime-service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it, vi } from \"vitest\""
+        },
+        {
+          "line": 10,
+          "source": "./execute-match.js",
+          "statementText": "import {\n  executeRuntimeServiceRequest,\n  type RuntimeExecutionServiceDependencies,\n} from \"./execute-match.js\""
+        },
+        {
+          "line": 14,
+          "source": "./runtime-execution-evidence.test-support.js",
+          "statementText": "import {\n  createFixtureRuntimeExecutionAuthorityContext,\n  type FixtureRuntimeExecutionAuthorityContext,\n} from \"./runtime-execution-evidence.test-support.js\""
+        },
+        {
+          "line": 18,
+          "source": "./runtime-evidence-authority.js",
+          "statementText": "import {\n  RuntimeEvidenceAuthorityLoadError,\n  type RuntimeEvidenceAuthorityLoader,\n  type VerifiedMountedRuntimeEvidenceAuthority,\n} from \"./runtime-evidence-authority.js\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  DEFAULT_RUNTIME_LIMITS,\n  INITIAL_BOUNDS,\n  RUNTIME_EXECUTION_SERVICE_VERSION,\n  type RuntimeExecutionServiceRequest,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 23,
+          "source": "./runtime-config.js",
+          "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
+        },
+        {
+          "line": 8,
+          "source": "@cowards/runtime-js",
+          "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
+        },
+        {
+          "line": 9,
+          "source": "@cowards/replay",
+          "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [
+        {
+          "line": 8,
+          "source": "@cowards/runtime-js",
+          "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
+        }
+      ],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": true,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/runtime-service/src/counted-safety.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "runtime_import",
+          "detail": "@cowards/runtime-js"
+        }
+      ]
+    },
+    {
       "id": "apps-runtime-service-src-execute-match-test",
       "path": "apps/runtime-service/src/execute-match.test.ts",
       "kind": "runtime-service-module",
@@ -8098,10 +8953,15 @@
         {
           "line": 20,
           "source": "./execute-match.js",
-          "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
+          "statementText": "import {\n  executeRuntimeServiceRequest as executeRuntimeServiceRequestWithAuthority,\n  type RuntimeExecutionServiceDependencies,\n} from \"./execute-match.js\""
         },
         {
-          "line": 21,
+          "line": 24,
+          "source": "./runtime-execution-evidence.test-support.js",
+          "statementText": "import {\n  createFixtureRuntimeEvidenceAuthorityLoader,\n  createFixtureRuntimeExecutionEvidenceSnapshot,\n} from \"./runtime-execution-evidence.test-support.js\""
+        },
+        {
+          "line": 28,
           "source": "./runtime-config.js",
           "statementText": "import {\n  createRuntimeServiceConfig,\n  RuntimeServiceConfigError,\n} from \"./runtime-config.js\""
         },
@@ -8177,24 +9037,19 @@
           "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
-          "line": 16,
+          "line": 17,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 17,
+          "line": 18,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
         },
         {
-          "line": 18,
+          "line": 19,
           "source": "@cowards/runtime-python",
           "statementText": "import { createPythonRuntimeFromRevision } from \"@cowards/runtime-python\""
-        },
-        {
-          "line": 19,
-          "source": "@cowards/runtime-wasm-wasi",
-          "statementText": "import { createWasmWasiRuntimeFromRevision } from \"@cowards/runtime-wasm-wasi\""
         },
         {
           "line": 2,
@@ -8203,40 +9058,50 @@
         },
         {
           "line": 20,
+          "source": "@cowards/runtime-wasm-wasi",
+          "statementText": "import { createWasmWasiRuntimeFromRevision } from \"@cowards/runtime-wasm-wasi\""
+        },
+        {
+          "line": 21,
           "source": "@cowards/replay",
           "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
         },
         {
-          "line": 21,
+          "line": 22,
           "source": "@cowards/engine",
           "statementText": "import {\n  violation,\n  type RunMatchInput,\n  type StrategyRuntime,\n} from \"@cowards/engine\""
         },
         {
-          "line": 26,
+          "line": 27,
           "source": "./runtime-config.js",
           "statementText": "import type { RuntimeServiceConfig } from \"./runtime-config.js\""
         },
         {
-          "line": 27,
+          "line": 28,
           "source": "./redaction.js",
           "statementText": "import { publicSystemFailureMessage, redactedDiagnostics } from \"./redaction.js\""
         },
         {
+          "line": 29,
+          "source": "./runtime-evidence-authority.js",
+          "statementText": "import type {\n  RuntimeEvidenceAuthorityLoader,\n  VerifiedMountedRuntimeEvidenceAuthority,\n} from \"./runtime-evidence-authority.js\""
+        },
+        {
           "line": 3,
           "source": "@cowards/spec",
-          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  validateStrategyLanguageProviderRuntimeCompatibility,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  validateStrategyLanguageProviderRuntimeCompatibility,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type RuntimeEntrantAuthorityReference,\n  type StrategyRevision,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 16,
+          "line": 17,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 17,
+          "line": 18,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
         }
@@ -8326,10 +9191,15 @@
         {
           "line": 30,
           "source": "./execute-match.js",
-          "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
+          "statementText": "import { executeRuntimeServiceRequest as executeRuntimeServiceRequestWithAuthority } from \"./execute-match.js\""
         },
         {
           "line": 31,
+          "source": "./runtime-execution-evidence.test-support.js",
+          "statementText": "import {\n  createFixtureRuntimeEvidenceAuthorityLoader,\n  createFixtureRuntimeExecutionEvidenceSnapshot,\n} from \"./runtime-execution-evidence.test-support.js\""
+        },
+        {
+          "line": 35,
           "source": "./runtime-config.js",
           "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
         }
@@ -8403,6 +9273,11 @@
           "line": 3,
           "source": "./runtime-config.js",
           "statementText": "import {\n  createRuntimeServiceConfig,\n  formatRuntimeServiceConfigLogLines,\n} from \"./runtime-config.js\""
+        },
+        {
+          "line": 7,
+          "source": "./runtime-evidence-authority.js",
+          "statementText": "import {\n  createRuntimeEvidenceAuthorityLoader,\n  runtimeEvidenceAuthorityConfigFromEnvironment,\n} from \"./runtime-evidence-authority.js\""
         }
       ],
       "persistenceImports": [],
@@ -8609,6 +9484,223 @@
       ]
     },
     {
+      "id": "apps-runtime-service-src-runtime-evidence-authority-test",
+      "path": "apps/runtime-service/src/runtime-evidence-authority.test.ts",
+      "kind": "runtime-service-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "typescript_runtime_service_only",
+      "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "runtime-service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { generateKeyPairSync, sign } from \"node:crypto\""
+        },
+        {
+          "line": 10,
+          "source": "node:path",
+          "statementText": "import { join } from \"node:path\""
+        },
+        {
+          "line": 11,
+          "source": "node:child_process",
+          "statementText": "import { spawnSync } from \"node:child_process\""
+        },
+        {
+          "line": 12,
+          "source": "vitest",
+          "statementText": "import { afterEach, describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 13,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  buildRuntimeEvidenceAuthorityEnvelope,\n  encodeRuntimeEvidenceAuthorityPayload,\n  hashRuntimeEvidenceAuthorityPayload,\n  type RuntimeEvidenceAuthorityPayload,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 2,
+          "source": "node:fs",
+          "statementText": "import {\n  existsSync,\n  mkdtempSync,\n  readFileSync,\n  rmSync,\n  writeFileSync,\n} from \"node:fs\""
+        },
+        {
+          "line": 23,
+          "source": "./runtime-evidence-authority.js",
+          "statementText": "import {\n  RUNTIME_EVIDENCE_AUTHORITY_PUBLIC_KEY_SCHEMA_VERSION,\n  RuntimeEvidenceAuthorityLoadError,\n  createNodeRuntimeEvidenceAuthorityFileSystem,\n  createRuntimeEvidenceAuthorityLoader,\n  runtimeEvidenceAuthorityConfigFromEnvironment,\n  type RuntimeEvidenceAuthorityFileSystem,\n} from \"./runtime-evidence-authority.js\""
+        },
+        {
+          "line": 9,
+          "source": "node:os",
+          "statementText": "import { tmpdir } from \"node:os\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/runtime-service/src/runtime-evidence-authority.test.ts"
+      ],
+      "scannerFindings": []
+    },
+    {
+      "id": "apps-runtime-service-src-runtime-evidence-authority",
+      "path": "apps/runtime-service/src/runtime-evidence-authority.ts",
+      "kind": "runtime-service-module",
+      "role": "runtime-service",
+      "retirementAction": "keep-runtime-service-boundary",
+      "owner": "typescript_runtime_service",
+      "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
+      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
+      "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
+      "currentOwner": "typescript_runtime_service",
+      "normalBackendOwner": "typescript_runtime_service_only",
+      "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "runtime-service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:crypto",
+          "statementText": "import {\n  createPublicKey,\n  verify,\n  type KeyObject,\n} from \"node:crypto\""
+        },
+        {
+          "line": 18,
+          "source": "node:path",
+          "statementText": "import { dirname } from \"node:path\""
+        },
+        {
+          "line": 19,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_BOOTSTRAP_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_LIMITS,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  RuntimeEvidenceAuthorityBundleError,\n  assertRuntimeEvidenceAuthorityAnchorInstalled,\n  evaluateRuntimeEvidenceAuthorityAntiRollback,\n  inspectRuntimeEvidenceAuthorityBundle,\n  parseRuntimeEvidenceAuthorityHighWaterRecord,\n  type RuntimeEvidenceAuthorityHighWaterRecord,\n  type RuntimeEvidenceAuthorityPayload,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 6,
+          "source": "node:fs",
+          "statementText": "import {\n  closeSync,\n  fstatSync,\n  fsyncSync,\n  mkdirSync,\n  openSync,\n  readFileSync,\n  renameSync,\n  rmdirSync,\n  unlinkSync,\n  writeFileSync,\n} from \"node:fs\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/runtime-service/src/runtime-evidence-authority.ts",
+        "strategy-runtime-abi-v1.14"
+      ],
+      "scannerFindings": []
+    },
+    {
+      "id": "apps-runtime-service-src-runtime-execution-evidence-test-support",
+      "path": "apps/runtime-service/src/runtime-execution-evidence.test-support.ts",
+      "kind": "runtime-service-module",
+      "role": "runtime-service",
+      "retirementAction": "keep-runtime-service-boundary",
+      "owner": "typescript_runtime_service",
+      "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
+      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
+      "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
+      "currentOwner": "typescript_runtime_service",
+      "normalBackendOwner": "typescript_runtime_service_only",
+      "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "runtime-service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { vi } from \"vitest\""
+        },
+        {
+          "line": 12,
+          "source": "./execute-match.js",
+          "statementText": "import { hashRuntimeAuthoritySchedulingDecisionReference } from \"./execute-match.js\""
+        },
+        {
+          "line": 13,
+          "source": "./runtime-evidence-authority.js",
+          "statementText": "import type {\n  RuntimeEvidenceAuthorityLoader,\n  VerifiedMountedRuntimeEvidenceAuthority,\n} from \"./runtime-evidence-authority.js\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  parseRuntimeEvidenceAuthorityPayload,\n  type ExecutableLaneEvidenceStatus,\n  type RuntimeEntrantAuthorityReference,\n  type RuntimeExecutionEvidenceSnapshot,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/runtime-service/src/runtime-execution-evidence.test-support.ts",
+        "strategy-runtime-abi-v1.14"
+      ],
+      "scannerFindings": []
+    },
+    {
       "id": "apps-runtime-service-src-server-test",
       "path": "apps/runtime-service/src/server.test.ts",
       "kind": "runtime-service-module",
@@ -8738,6 +9830,11 @@
           "line": 35,
           "source": "./redaction.js",
           "statementText": "import { redactedErrorMessage } from \"./redaction.js\""
+        },
+        {
+          "line": 36,
+          "source": "./runtime-evidence-authority.js",
+          "statementText": "import type { RuntimeEvidenceAuthorityLoader } from \"./runtime-evidence-authority.js\""
         },
         {
           "line": 6,
@@ -9571,7 +10668,7 @@
         {
           "line": 7,
           "source": "./route.js",
-          "statementText": "import { GET } from \"./route.js\""
+          "statementText": "import { createReplayFixtureGetHandler } from \"./route.js\""
         }
       ],
       "persistenceImports": [],
@@ -9628,33 +10725,41 @@
       "imports": [
         {
           "line": 1,
+          "source": "node:fs",
+          "statementText": "import { readFileSync } from \"node:fs\""
+        },
+        {
+          "line": 2,
+          "source": "node:path",
+          "statementText": "import path from \"node:path\""
+        },
+        {
+          "line": 3,
           "source": "vitest",
           "statementText": "import { describe, expect, it } from \"vitest\""
         },
         {
-          "line": 2,
+          "line": 4,
           "source": "@cowards/spec",
           "statementText": "import { assertPublicOutputLeakSafe } from \"@cowards/spec\""
         },
         {
-          "line": 3,
+          "line": 5,
           "source": "./route.js",
-          "statementText": "import {\n  createRunWorkerOnceHandler,\n  isWorkerTestSupportEnabled,\n} from \"./route.js\""
+          "statementText": "import { createRunWorkerOnceHandler } from \"./route.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [],
-      "localBackendImports": [
-        "apps/web/app/api/test-support/run-worker-once/route.ts"
-      ],
-      "usesDatabase": false,
+      "localBackendImports": [],
+      "usesDatabase": true,
       "claimsJobs": false,
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": false,
       "servesPublicEvidence": false,
-      "executesStrategy": false,
+      "executesStrategy": true,
       "ownerDebugAccess": false,
       "testOnlyGate": "test-support route or Vitest/Playwright gate only",
       "rollbackGate": null,
@@ -9665,12 +10770,7 @@
         ".planning/artifacts/v1.15-typescript-surface-labels.json",
         "apps/web/app/api/test-support/run-worker-once/route.test.ts"
       ],
-      "scannerFindings": [
-        {
-          "code": "local_backend_import_chain",
-          "detail": "apps/web/app/api/test-support/run-worker-once/route.ts"
-        }
-      ]
+      "scannerFindings": []
     },
     {
       "id": "apps-web-app-api-workshop-analytics-profiles-profileid-compare-route-test",
@@ -16093,51 +17193,24 @@
       "imports": [
         {
           "line": 1,
-          "source": "@cowards/runtime-js/worker",
-          "statementText": "import { runtimeJsWorkerEntrypoint } from \"@cowards/runtime-js/worker\""
-        },
-        {
-          "line": 2,
-          "source": "@cowards/persistence",
-          "statementText": "import { createDatabasePool } from \"@cowards/persistence\""
-        },
-        {
-          "line": 3,
           "source": "./runner.js",
-          "statementText": "import {\n  assertTypeScriptWorkerEntrypointAllowed,\n  formatTypeScriptWorkerOwnershipLogLine,\n  runWorkerLoop,\n} from \"./runner.js\""
-        },
-        {
-          "line": 8,
-          "source": "./runtime-config.js",
-          "statementText": "import {\n  createWorkerRuntimeConfig,\n  formatWorkerRuntimeConfigLogLines,\n} from \"./runtime-config.js\""
+          "statementText": "import {\n  assertTypeScriptWorkerEntrypointAllowed,\n  TypeScriptWorkerRetiredError,\n} from \"./runner.js\""
         }
       ],
-      "persistenceImports": [
-        {
-          "line": 2,
-          "source": "@cowards/persistence",
-          "statementText": "import { createDatabasePool } from \"@cowards/persistence\""
-        }
-      ],
+      "persistenceImports": [],
       "serviceImports": [],
-      "runtimeImports": [
-        {
-          "line": 1,
-          "source": "@cowards/runtime-js/worker",
-          "statementText": "import { runtimeJsWorkerEntrypoint } from \"@cowards/runtime-js/worker\""
-        }
-      ],
+      "runtimeImports": [],
       "localBackendImports": [
         "apps/worker/src/runner.ts",
         "apps/worker/src/runtime-config.ts"
       ],
-      "usesDatabase": true,
+      "usesDatabase": false,
       "claimsJobs": false,
       "completesMatches": false,
       "persistsChronicles": false,
       "refreshesScoring": false,
       "servesPublicEvidence": false,
-      "executesStrategy": true,
+      "executesStrategy": false,
       "ownerDebugAccess": false,
       "testOnlyGate": null,
       "rollbackGate": "explicit rollback operator gate; no mixed Go and TypeScript DB owners",
@@ -16149,14 +17222,6 @@
         "apps/worker/src/index.ts"
       ],
       "scannerFindings": [
-        {
-          "code": "persistence_import",
-          "detail": "@cowards/persistence"
-        },
-        {
-          "code": "runtime_import",
-          "detail": "@cowards/runtime-js/worker"
-        },
         {
           "code": "local_backend_import_chain",
           "detail": "apps/worker/src/runner.ts, apps/worker/src/runtime-config.ts"
@@ -16190,106 +17255,44 @@
           "statementText": "import { readFileSync } from \"node:fs\""
         },
         {
-          "line": 10,
-          "source": "@cowards/runtime-js/worker",
-          "statementText": "import {\n  SubprocessSystemFailure,\n  type StrategyExecutionRequest,\n} from \"@cowards/runtime-js/worker\""
-        },
-        {
-          "line": 14,
-          "source": "@cowards/spec",
-          "statementText": "import { fixtures } from \"@cowards/spec\""
-        },
-        {
-          "line": 15,
-          "source": "@cowards/spec",
-          "statementText": "import type { ArenaVariant, MatchId, StrategyRevision } from \"@cowards/spec\""
-        },
-        {
-          "line": 16,
-          "source": "./runner.js",
-          "statementText": "import type { WorkerRunnerDependencies } from \"./runner.js\""
-        },
-        {
-          "line": 17,
-          "source": "./runner.js",
-          "statementText": "import {\n  assertTypeScriptWorkerEntrypointAllowed,\n  assertTypeScriptWorkerJobOwnershipAllowed,\n  createClaimedMatchJobForTest,\n  createSideDispatchRuntime,\n  createTypeScriptWorkerJobOwnershipConfig,\n  formatTypeScriptWorkerOwnershipLogLine,\n  loadRunMatchInput,\n  runWorkerOnce,\n  TypeScriptWorkerOwnershipError,\n} from \"./runner.js\""
-        },
-        {
           "line": 2,
           "source": "node:url",
           "statementText": "import { fileURLToPath } from \"node:url\""
         },
         {
-          "line": 28,
-          "source": "./runtime-config.js",
-          "statementText": "import {\n  createWorkerRuntimeConfig,\n  formatWorkerRuntimeConfigLogLines,\n  WorkerRuntimeConfigError,\n  type WorkerRuntimeConfig,\n} from \"./runtime-config.js\""
-        },
-        {
           "line": 3,
-          "source": "vitest",
-          "statementText": "import { beforeEach, describe, expect, it, vi } from \"vitest\""
+          "source": "node:child_process",
+          "statementText": "import { spawnSync } from \"node:child_process\""
         },
         {
           "line": 4,
+          "source": "node:path",
+          "statementText": "import path from \"node:path\""
+        },
+        {
+          "line": 5,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it, vi } from \"vitest\""
+        },
+        {
+          "line": 6,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 5,
-          "source": "@cowards/engine",
-          "statementText": "import type { StrategyRuntime } from \"@cowards/engine\""
-        },
-        {
-          "line": 6,
-          "source": "@cowards/persistence/repositories",
-          "statementText": "import { createRepositories } from \"@cowards/persistence/repositories\""
-        },
-        {
           "line": 7,
-          "source": "@cowards/persistence/repositories",
-          "statementText": "import type * as PersistenceRepositories from \"@cowards/persistence/repositories\""
+          "source": "./runner.js",
+          "statementText": "import type { WorkerRunnerDependencies } from \"./runner.js\""
         },
         {
           "line": 8,
-          "source": "@cowards/persistence/quarantine-lifecycle",
-          "statementText": "import type * as PersistenceQuarantine from \"@cowards/persistence/quarantine-lifecycle\""
-        },
-        {
-          "line": 9,
-          "source": "@cowards/runtime-js",
-          "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
+          "source": "./runner.js",
+          "statementText": "import {\n  assertTypeScriptWorkerEntrypointAllowed,\n  assertTypeScriptWorkerJobOwnershipAllowed,\n  runWorkerLoop,\n  runWorkerOnce,\n  TypeScriptWorkerRetiredError,\n} from \"./runner.js\""
         }
       ],
-      "persistenceImports": [
-        {
-          "line": 6,
-          "source": "@cowards/persistence/repositories",
-          "statementText": "import { createRepositories } from \"@cowards/persistence/repositories\""
-        },
-        {
-          "line": 7,
-          "source": "@cowards/persistence/repositories",
-          "statementText": "import type * as PersistenceRepositories from \"@cowards/persistence/repositories\""
-        },
-        {
-          "line": 8,
-          "source": "@cowards/persistence/quarantine-lifecycle",
-          "statementText": "import type * as PersistenceQuarantine from \"@cowards/persistence/quarantine-lifecycle\""
-        }
-      ],
+      "persistenceImports": [],
       "serviceImports": [],
-      "runtimeImports": [
-        {
-          "line": 10,
-          "source": "@cowards/runtime-js/worker",
-          "statementText": "import {\n  SubprocessSystemFailure,\n  type StrategyExecutionRequest,\n} from \"@cowards/runtime-js/worker\""
-        },
-        {
-          "line": 9,
-          "source": "@cowards/runtime-js",
-          "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
-        }
-      ],
+      "runtimeImports": [],
       "localBackendImports": [
         "apps/worker/src/runner.ts",
         "apps/worker/src/runtime-config.ts"
@@ -16300,7 +17303,7 @@
       "persistsChronicles": false,
       "refreshesScoring": false,
       "servesPublicEvidence": false,
-      "executesStrategy": true,
+      "executesStrategy": false,
       "ownerDebugAccess": false,
       "testOnlyGate": "test-support route or Vitest/Playwright gate only",
       "rollbackGate": null,
@@ -16312,14 +17315,6 @@
         "apps/worker/src/runner.test.ts"
       ],
       "scannerFindings": [
-        {
-          "code": "persistence_import",
-          "detail": "@cowards/persistence/repositories, @cowards/persistence/repositories, @cowards/persistence/quarantine-lifecycle"
-        },
-        {
-          "code": "runtime_import",
-          "detail": "@cowards/runtime-js/worker, @cowards/runtime-js"
-        },
         {
           "code": "local_backend_import_chain",
           "detail": "apps/worker/src/runner.ts, apps/worker/src/runtime-config.ts"
@@ -16349,80 +17344,33 @@
       "imports": [
         {
           "line": 1,
-          "source": "@cowards/replay",
-          "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
-        },
-        {
-          "line": 10,
-          "source": "@cowards/runtime-js/worker",
-          "statementText": "import {\n  createRuntimeFromRevision,\n  SubprocessSystemFailure,\n} from \"@cowards/runtime-js/worker\""
-        },
-        {
-          "line": 14,
-          "source": "@cowards/engine",
-          "statementText": "import {\n  violation,\n  type RunMatchInput,\n  type StrategyRuntime,\n} from \"@cowards/engine\""
-        },
-        {
-          "line": 19,
           "source": "@cowards/spec",
-          "statementText": "import type { JsonValue, MatchId, PlayerId } from \"@cowards/spec\""
+          "statementText": "import type { MatchId } from \"@cowards/spec\""
         },
         {
           "line": 2,
-          "source": "node:timers/promises",
-          "statementText": "import { setTimeout as sleep } from \"node:timers/promises\""
-        },
-        {
-          "line": 20,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 21,
+          "line": 3,
           "source": "./runtime-config.js",
-          "statementText": "import {\n  createWorkerRuntimeConfig,\n  type WorkerRuntimeConfig,\n} from \"./runtime-config.js\""
-        },
-        {
-          "line": 3,
-          "source": "@cowards/persistence/repositories",
-          "statementText": "import { createRepositories } from \"@cowards/persistence/repositories\""
-        },
-        {
-          "line": 4,
-          "source": "@cowards/persistence/quarantine-lifecycle",
-          "statementText": "import {\n  claimNextMatchJob,\n  completeMatch,\n  recordAttemptFailure,\n  type ClaimedMatchJob,\n} from \"@cowards/persistence/quarantine-lifecycle\""
+          "statementText": "import type { WorkerRuntimeConfig } from \"./runtime-config.js\""
         }
       ],
-      "persistenceImports": [
-        {
-          "line": 3,
-          "source": "@cowards/persistence/repositories",
-          "statementText": "import { createRepositories } from \"@cowards/persistence/repositories\""
-        },
-        {
-          "line": 4,
-          "source": "@cowards/persistence/quarantine-lifecycle",
-          "statementText": "import {\n  claimNextMatchJob,\n  completeMatch,\n  recordAttemptFailure,\n  type ClaimedMatchJob,\n} from \"@cowards/persistence/quarantine-lifecycle\""
-        }
-      ],
+      "persistenceImports": [],
       "serviceImports": [],
-      "runtimeImports": [
-        {
-          "line": 10,
-          "source": "@cowards/runtime-js/worker",
-          "statementText": "import {\n  createRuntimeFromRevision,\n  SubprocessSystemFailure,\n} from \"@cowards/runtime-js/worker\""
-        }
-      ],
+      "runtimeImports": [],
       "localBackendImports": [
         "apps/worker/src/runtime-config.ts"
       ],
-      "usesDatabase": true,
+      "usesDatabase": false,
       "claimsJobs": true,
       "completesMatches": true,
       "persistsChronicles": false,
       "refreshesScoring": false,
       "servesPublicEvidence": false,
-      "executesStrategy": true,
+      "executesStrategy": false,
       "ownerDebugAccess": false,
       "testOnlyGate": null,
       "rollbackGate": "explicit rollback operator gate; no mixed Go and TypeScript DB owners",
@@ -16434,14 +17382,6 @@
         "apps/worker/src/runner.ts"
       ],
       "scannerFindings": [
-        {
-          "code": "persistence_import",
-          "detail": "@cowards/persistence/repositories, @cowards/persistence/quarantine-lifecycle"
-        },
-        {
-          "code": "runtime_import",
-          "detail": "@cowards/runtime-js/worker"
-        },
         {
           "code": "local_backend_import_chain",
           "detail": "apps/worker/src/runtime-config.ts"
