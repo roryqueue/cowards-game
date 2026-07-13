@@ -30,12 +30,14 @@ import {
 import { executeRuntimeServiceRequest as executeRuntimeServiceRequestWithAuthority } from "./execute-match.js"
 import {
   createFixtureRuntimeEvidenceAuthorityLoader,
+  createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeExecutionEvidenceSnapshot,
 } from "./runtime-execution-evidence.test-support.js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
+  resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
 })
 
 const executeRuntimeServiceRequest = (
@@ -45,6 +47,7 @@ const executeRuntimeServiceRequest = (
   executeRuntimeServiceRequestWithAuthority(request, runtimeConfig, {
     authorityLoader: createFixtureRuntimeEvidenceAuthorityLoader(
       request.evidenceSnapshot,
+      request.strategies,
     ),
   })
 

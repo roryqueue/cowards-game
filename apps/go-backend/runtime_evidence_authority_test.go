@@ -396,12 +396,33 @@ func writeRuntimeAuthorityFiles(t *testing.T, dir string, manifest *integrityAut
 	if options.Generation == "" {
 		options.Generation = "7"
 	}
+	laneIdentity := goExecutableLaneIdentity{
+		ProviderID:       "fixture-provider",
+		LanguageID:       "typescript",
+		RuntimeID:        "node",
+		RuntimeVersion:   "26.0.0",
+		ToolchainID:      "typescript",
+		ToolchainVersion: "6.0.3",
+		AdapterID:        "worker-thread",
+		AdapterVersion:   "1",
+		PolicyID:         "fixture-policy",
+		PolicyVersion:    "1",
+		CorpusID:         "fixture-corpus",
+		CorpusVersion:    "1",
+		ArtifactID:       "fixture-artifact",
+		ArtifactSHA256:   strings.Repeat("3", 64),
+		ImplementationID: "fixture-runtime-service",
+		BuildID:          "fixture-build",
+		SemanticTupleID:  manifest.CompatibilityTuples[0].TupleID,
+		SemanticTuple:    manifest.CompatibilityTuples[0].Tuple,
+	}
 	certificate := runtimeEvidenceAuthorityCertificate{
 		Kind:                  "containment",
 		CertificateID:         "certificate:containment:fixture",
 		CertificateVersion:    "runtime-containment-certificate-v1",
 		CertificateRecordHash: "sha256:" + strings.Repeat("2", 64),
-		LaneIdentityHash:      "sha256:" + strings.Repeat("3", 64),
+		LaneIdentityHash:      "sha256:" + hashCreationLaneIdentity(laneIdentity),
+		LaneIdentity:          laneIdentity,
 		IssuedAt:              "2026-07-12T00:00:00.000Z",
 		FreshUntil:            "2026-08-12T00:00:00.000Z",
 		AttestationIDs:        []string{"attestation:fixture"},

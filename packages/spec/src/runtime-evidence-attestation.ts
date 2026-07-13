@@ -102,8 +102,7 @@ export interface RuntimeEvidenceBoundNode {
   nodeId: string
 }
 
-export interface RuntimeEvidenceVersionedBoundNode
-  extends RuntimeEvidenceBoundNode {
+export interface RuntimeEvidenceVersionedBoundNode extends RuntimeEvidenceBoundNode {
   version: string
 }
 
@@ -152,8 +151,7 @@ export interface RuntimeEvidenceAttestationPayload {
   derivedCertificateVersion: string
 }
 
-export interface RuntimeEvidenceAttestation
-  extends RuntimeEvidenceAttestationPayload {
+export interface RuntimeEvidenceAttestation extends RuntimeEvidenceAttestationPayload {
   signatureBase64: string
 }
 
@@ -183,8 +181,7 @@ export interface RuntimeEvidenceVerifiedSnapshot {
   derivedCertificateVersion: string
 }
 
-export interface VerifiedRuntimeEvidenceAttestation
-  extends RuntimeEvidenceVerifiedSnapshot {}
+export interface VerifiedRuntimeEvidenceAttestation extends RuntimeEvidenceVerifiedSnapshot {}
 
 export interface VerifyRuntimeEvidenceAttestationInput {
   mode: RuntimeEvidenceVerificationMode
@@ -245,7 +242,11 @@ const assertExactKeys: (
 const frame = (parts: readonly string[]): Uint8Array => {
   const encoded = parts.map((part) => encoder.encode(part))
   const length = encoded.reduce(
-    (total, bytes) => total + encoder.encode(String(bytes.byteLength)).byteLength + bytes.byteLength + 2,
+    (total, bytes) =>
+      total +
+      encoder.encode(String(bytes.byteLength)).byteLength +
+      bytes.byteLength +
+      2,
     0,
   )
   const output = new Uint8Array(length)
@@ -274,9 +275,8 @@ const graphParts = (graph: RuntimeEvidenceGraph): string[] => [
   ...graph.edges.flatMap((edge) => [edge.fromNodeId, edge.toNodeId]),
 ]
 
-export const hashRuntimeEvidenceGraph = (
-  graph: RuntimeEvidenceGraph,
-): string => digest(frame(graphParts(graph)))
+export const hashRuntimeEvidenceGraph = (graph: RuntimeEvidenceGraph): string =>
+  digest(frame(graphParts(graph)))
 
 const laneParts = (identity: ExecutableLaneIdentity): string[] => [
   LANE_DOMAIN,
@@ -329,7 +329,11 @@ const payloadParts = (payload: RuntimeEvidenceAttestationPayload): string[] => [
   payload.result.originalEvidenceSha256,
   payload.result.graphSha256,
   String(payload.result.digests.length),
-  ...payload.result.digests.flatMap((entry) => [entry.id, entry.nodeId, entry.sha256]),
+  ...payload.result.digests.flatMap((entry) => [
+    entry.id,
+    entry.nodeId,
+    entry.sha256,
+  ]),
   String(payload.gateResults.length),
   ...payload.gateResults.flatMap((entry) => [
     entry.gateId,
@@ -352,7 +356,7 @@ const cloneTuple = (
   tuple: CanonicalCompatibilityTuple,
 ): Readonly<CanonicalCompatibilityTuple> => Object.freeze({ ...tuple })
 
-const validateLaneIdentity = (
+export const parseExecutableLaneIdentity = (
   value: ExecutableLaneIdentity,
 ): Readonly<ExecutableLaneIdentity> => {
   assertExactKeys(
@@ -387,9 +391,7 @@ const parseInstant = (value: string, label: string): number => {
   return parsed
 }
 
-const validateProducer = (
-  producer: RuntimeEvidenceTrustedProducer,
-): void => {
+const validateProducer = (producer: RuntimeEvidenceTrustedProducer): void => {
   for (const [label, value] of [
     ["producer ID", producer.producerId],
     ["producer key ID", producer.keyId],
@@ -404,7 +406,11 @@ const validateProducer = (
   requireSha256(producer.commandSha256, "Trusted command digest")
   requireSha256(producer.corpusSha256, "Trusted corpus digest")
   requireSha256(producer.policySha256, "Trusted policy digest")
-  if (!(EXECUTABLE_LANE_CERTIFICATE_KINDS as readonly string[]).includes(producer.kind)) {
+  if (
+    !(EXECUTABLE_LANE_CERTIFICATE_KINDS as readonly string[]).includes(
+      producer.kind,
+    )
+  ) {
     fail("Trusted producer kind is invalid.")
   }
   if (producer.requiredGateIds.length === 0) {
@@ -422,7 +428,9 @@ const selectTrustedProducer = (
   input: VerifyRuntimeEvidenceAttestationInput,
 ): RuntimeEvidenceTrustedProducer => {
   if (input.mode === "production" && input.trustedProducers !== undefined) {
-    fail("Production verification cannot accept caller-supplied trusted producers.")
+    fail(
+      "Production verification cannot accept caller-supplied trusted producers.",
+    )
   }
   const producers =
     input.mode === "production"
@@ -459,17 +467,23 @@ const validateGraph = (
   if (!Array.isArray(graph.nodes) || graph.nodes.length === 0) {
     fail("Evidence graph nodes must be a non-empty array.")
   }
-  if (!Array.isArray(graph.edges)) fail("Evidence graph edges must be an array.")
+  if (!Array.isArray(graph.edges))
+    fail("Evidence graph edges must be an array.")
 
   const byId = new Map<string, RuntimeEvidenceGraphNode>()
   for (const node of graph.nodes) {
     assertExactKeys(node, ["nodeId", "kind", "sha256"], "Evidence graph node")
     requireString(node.nodeId, "Evidence node ID")
     requireSha256(node.sha256, `Evidence node ${node.nodeId} digest`)
-    if (!(RUNTIME_EVIDENCE_GRAPH_NODE_KINDS as readonly string[]).includes(node.kind)) {
+    if (
+      !(RUNTIME_EVIDENCE_GRAPH_NODE_KINDS as readonly string[]).includes(
+        node.kind,
+      )
+    ) {
       fail(`Evidence node ${node.nodeId} has an unknown kind.`)
     }
-    if (byId.has(node.nodeId)) fail(`Evidence graph duplicates node ${node.nodeId}.`)
+    if (byId.has(node.nodeId))
+      fail(`Evidence graph duplicates node ${node.nodeId}.`)
     byId.set(node.nodeId, node)
   }
   const root = byId.get(graph.rootNodeId)
@@ -482,11 +496,14 @@ const validateGraph = (
     byteIds.length !== byId.size ||
     byteIds.some((nodeId) => !byId.has(nodeId))
   ) {
-    fail("Evidence bytes must form the exact closed graph with no missing or extra bytes.")
+    fail(
+      "Evidence bytes must form the exact closed graph with no missing or extra bytes.",
+    )
   }
   for (const [nodeId, node] of byId) {
     const value = bytes[nodeId]
-    if (!(value instanceof Uint8Array)) fail(`Evidence bytes are missing for ${nodeId}.`)
+    if (!(value instanceof Uint8Array))
+      fail(`Evidence bytes are missing for ${nodeId}.`)
     if (digest(value!) !== node.sha256) {
       fail(`Evidence node ${nodeId} digest does not match supplied bytes.`)
     }
@@ -499,7 +516,8 @@ const validateGraph = (
     if (!byId.has(edge.fromNodeId) || !byId.has(edge.toNodeId)) {
       fail("Evidence graph has a dangling edge.")
     }
-    if (edge.fromNodeId === edge.toNodeId) fail("Evidence graph has a self edge.")
+    if (edge.fromNodeId === edge.toNodeId)
+      fail("Evidence graph has a self edge.")
     const key = `${edge.fromNodeId}\0${edge.toNodeId}`
     if (edgeKeys.has(key)) fail("Evidence graph has a duplicate edge.")
     edgeKeys.add(key)
@@ -517,7 +535,9 @@ const validateGraph = (
     pending.push(...(adjacency.get(nodeId) ?? []))
   }
   if (reachable.size !== byId.size) {
-    fail("Evidence graph is open: at least one node is unreachable from the signed root.")
+    fail(
+      "Evidence graph is open: at least one node is unreachable from the signed root.",
+    )
   }
   return byId
 }
@@ -530,7 +550,9 @@ const requireBoundNode = (
 ): void => {
   const node = nodes.get(binding.nodeId)
   if (!node || node.kind !== kind || node.sha256 !== binding.sha256) {
-    fail(`${label} is missing from the exact evidence graph or has a digest mismatch.`)
+    fail(
+      `${label} is missing from the exact evidence graph or has a digest mismatch.`,
+    )
   }
 }
 
@@ -544,9 +566,21 @@ const unsignedAttestation = (
 const validateAttestationShape = (
   attestation: RuntimeEvidenceAttestation,
 ): void => {
-  assertExactKeys(attestation.command, ["id", "sha256", "nodeId"], "Command binding")
-  assertExactKeys(attestation.corpus, ["id", "sha256", "nodeId"], "Corpus binding")
-  assertExactKeys(attestation.policy, ["id", "sha256", "nodeId"], "Policy binding")
+  assertExactKeys(
+    attestation.command,
+    ["id", "sha256", "nodeId"],
+    "Command binding",
+  )
+  assertExactKeys(
+    attestation.corpus,
+    ["id", "sha256", "nodeId"],
+    "Corpus binding",
+  )
+  assertExactKeys(
+    attestation.policy,
+    ["id", "sha256", "nodeId"],
+    "Policy binding",
+  )
   assertExactKeys(attestation.runtime, ["id", "version"], "Runtime identity")
   assertExactKeys(
     attestation.toolchain,
@@ -558,7 +592,11 @@ const validateAttestationShape = (
     ["id", "version", "nodeId", "sha256"],
     "Adapter binding",
   )
-  assertExactKeys(attestation.artifact, ["id", "sha256", "nodeId"], "Artifact binding")
+  assertExactKeys(
+    attestation.artifact,
+    ["id", "sha256", "nodeId"],
+    "Artifact binding",
+  )
   assertExactKeys(
     attestation.result,
     [
@@ -582,7 +620,11 @@ const validateAttestationShape = (
     fail("Gate results must be an array.")
   }
   for (const gate of attestation.gateResults) {
-    assertExactKeys(gate, ["gateId", "passed", "nodeId", "sha256"], "Gate result")
+    assertExactKeys(
+      gate,
+      ["gateId", "passed", "nodeId", "sha256"],
+      "Gate result",
+    )
   }
   requireString(attestation.signatureBase64, "Attestation signature")
 }
@@ -630,7 +672,11 @@ export const verifyRuntimeEvidenceAttestation = (
     ],
     "Runtime evidence attestation",
   )
-  if (!(EXECUTABLE_LANE_CERTIFICATE_KINDS as readonly string[]).includes(attestation.kind)) {
+  if (
+    !(EXECUTABLE_LANE_CERTIFICATE_KINDS as readonly string[]).includes(
+      attestation.kind,
+    )
+  ) {
     fail("Attestation certificate kind is invalid.")
   }
   validateAttestationShape(attestation)
@@ -645,12 +691,18 @@ export const verifyRuntimeEvidenceAttestation = (
     [attestation.policy.sha256, producer.policySha256, "policy digest"],
   ] as const
   for (const [actual, expected, label] of exactProducerFields) {
-    if (actual !== expected) fail(`Attestation ${label} does not match its trusted producer.`)
+    if (actual !== expected)
+      fail(`Attestation ${label} does not match its trusted producer.`)
   }
 
-  const laneIdentity = validateLaneIdentity(attestation.laneIdentity)
+  const laneIdentity = parseExecutableLaneIdentity(attestation.laneIdentity)
   requireSha256(attestation.laneIdentitySha256, "Lane identity digest")
-  if (hashExecutableLaneIdentity({ ...laneIdentity, semanticTuple: { ...laneIdentity.semanticTuple } }) !== attestation.laneIdentitySha256) {
+  if (
+    hashExecutableLaneIdentity({
+      ...laneIdentity,
+      semanticTuple: { ...laneIdentity.semanticTuple },
+    }) !== attestation.laneIdentitySha256
+  ) {
     fail("Lane identity digest mismatch.")
   }
   if (
@@ -665,28 +717,44 @@ export const verifyRuntimeEvidenceAttestation = (
     attestation.policy.id !== laneIdentity.policyId ||
     attestation.corpus.id !== laneIdentity.corpusId
   ) {
-    fail("Attestation executable identity drifted from its exact lane identity.")
+    fail(
+      "Attestation executable identity drifted from its exact lane identity.",
+    )
   }
 
   const nodes = validateGraph(attestation.graph, input.evidenceBytes)
-  if (hashRuntimeEvidenceGraph(attestation.graph) !== attestation.result.graphSha256) {
+  if (
+    hashRuntimeEvidenceGraph(attestation.graph) !==
+    attestation.result.graphSha256
+  ) {
     fail("Attestation graph digest mismatch.")
   }
   requireBoundNode(nodes, attestation.command, "command", "Command evidence")
   requireBoundNode(nodes, attestation.corpus, "corpus", "Corpus evidence")
   requireBoundNode(nodes, attestation.policy, "policy", "Policy evidence")
-  requireBoundNode(nodes, attestation.toolchain, "toolchain", "Toolchain evidence")
+  requireBoundNode(
+    nodes,
+    attestation.toolchain,
+    "toolchain",
+    "Toolchain evidence",
+  )
   requireBoundNode(nodes, attestation.adapter, "adapter", "Adapter evidence")
   requireBoundNode(nodes, attestation.artifact, "artifact", "Artifact evidence")
   requireBoundNode(
     nodes,
-    { nodeId: attestation.result.manifestNodeId, sha256: attestation.result.manifestSha256 },
+    {
+      nodeId: attestation.result.manifestNodeId,
+      sha256: attestation.result.manifestSha256,
+    },
     "result-manifest",
     "Result manifest",
   )
   requireBoundNode(
     nodes,
-    { nodeId: attestation.result.originalEvidenceNodeId, sha256: attestation.result.originalEvidenceSha256 },
+    {
+      nodeId: attestation.result.originalEvidenceNodeId,
+      sha256: attestation.result.originalEvidenceSha256,
+    },
     "result-trace",
     "Original evidence",
   )
@@ -697,7 +765,9 @@ export const verifyRuntimeEvidenceAttestation = (
       (gate, index) => gate.gateId !== producer.requiredGateIds[index],
     )
   ) {
-    fail("Attestation gate IDs must exactly match the executable producer gates.")
+    fail(
+      "Attestation gate IDs must exactly match the executable producer gates.",
+    )
   }
   const boundIds = new Set<string>()
   for (const gate of attestation.gateResults) {
@@ -707,24 +777,48 @@ export const verifyRuntimeEvidenceAttestation = (
     requireBoundNode(nodes, gate, "gate-result", `Gate ${gate.gateId}`)
   }
   for (const resultDigest of attestation.result.digests) {
-    if (boundIds.has(resultDigest.nodeId)) fail("Result digest nodes must be independently bound.")
+    if (boundIds.has(resultDigest.nodeId))
+      fail("Result digest nodes must be independently bound.")
     boundIds.add(resultDigest.nodeId)
-    requireBoundNode(nodes, resultDigest, "result-trace", `Result ${resultDigest.id}`)
+    requireBoundNode(
+      nodes,
+      resultDigest,
+      "result-trace",
+      `Result ${resultDigest.id}`,
+    )
   }
   if (attestation.result.digests.length === 0) {
     fail("Attestation must bind executable result digests.")
   }
 
   const issuedAt = parseInstant(attestation.issuedAt, "Attestation issuedAt")
-  const validUntil = parseInstant(attestation.validUntil, "Attestation validUntil")
-  const verificationInstant = parseInstant(input.verificationInstant, "Verification instant")
-  if (validUntil < issuedAt || verificationInstant < issuedAt || verificationInstant > validUntil) {
+  const validUntil = parseInstant(
+    attestation.validUntil,
+    "Attestation validUntil",
+  )
+  const verificationInstant = parseInstant(
+    input.verificationInstant,
+    "Verification instant",
+  )
+  if (
+    validUntil < issuedAt ||
+    verificationInstant < issuedAt ||
+    verificationInstant > validUntil
+  ) {
     fail("Attestation is stale or not yet valid.")
   }
-  requireString(attestation.registryGeneration, "Attestation registry generation")
-  requireString(attestation.derivedCertificateVersion, "Derived certificate version")
+  requireString(
+    attestation.registryGeneration,
+    "Attestation registry generation",
+  )
+  requireString(
+    attestation.derivedCertificateVersion,
+    "Derived certificate version",
+  )
 
-  const payloadBytes = encodeRuntimeEvidenceAttestationPayload(unsignedAttestation(attestation))
+  const payloadBytes = encodeRuntimeEvidenceAttestationPayload(
+    unsignedAttestation(attestation),
+  )
   const signature = Buffer.from(attestation.signatureBase64, "base64")
   if (
     signature.length === 0 ||
@@ -771,7 +865,9 @@ export const getVerifiedRuntimeEvidenceAttestationSnapshot = (
   value: VerifiedRuntimeEvidenceAttestation,
 ): Readonly<RuntimeEvidenceVerifiedSnapshot> => {
   if (!verifiedValues.has(value)) {
-    return fail("Value was not minted by the runtime evidence verified attestation verifier.")
+    return fail(
+      "Value was not minted by the runtime evidence verified attestation verifier.",
+    )
   }
   return value
 }

@@ -5,6 +5,7 @@ import {
   type StrategyExecutionAdapter,
   type StrategyExecutionAdapterMetadata,
 } from "@cowards/runtime-js/worker"
+import type { ExecutableLaneIdentity, StrategyRevision } from "@cowards/spec"
 
 const LOCAL_DEV_STRATEGY_EXECUTION_ADAPTER_ID = "worker-thread"
 
@@ -18,11 +19,17 @@ export class RuntimeServiceConfigError extends Error {
 export interface RuntimeServiceConfigInput {
   strategyExecutionAdapter?: string | undefined
   allowLocalWorkerThreadFallback?: boolean | undefined
+  resolveDeploymentLaneIdentity?:
+    | ((revision: StrategyRevision) => ExecutableLaneIdentity | undefined)
+    | undefined
 }
 
 export interface RuntimeServiceConfig {
   adapter: StrategyExecutionAdapter
   metadata: StrategyExecutionAdapterMetadata
+  resolveDeploymentLaneIdentity(
+    revision: StrategyRevision,
+  ): ExecutableLaneIdentity | undefined
 }
 
 export const createRuntimeServiceConfig = (
@@ -43,18 +50,33 @@ export const createRuntimeServiceConfig = (
     throw new RuntimeServiceConfigError("Strategy execution adapter is empty")
   }
 
+  const resolveDeploymentLaneIdentity =
+    input.resolveDeploymentLaneIdentity ?? (() => undefined)
+
   switch (selectedId) {
     case "worker-thread": {
       const adapter = createWorkerThreadStrategyExecutionAdapter()
-      return { adapter, metadata: adapter.metadata }
+      return {
+        adapter,
+        metadata: adapter.metadata,
+        resolveDeploymentLaneIdentity,
+      }
     }
     case "subprocess": {
       const adapter = createSubprocessStrategyExecutionAdapter()
-      return { adapter, metadata: adapter.metadata }
+      return {
+        adapter,
+        metadata: adapter.metadata,
+        resolveDeploymentLaneIdentity,
+      }
     }
     case "container-subprocess": {
       const adapter = createContainerSubprocessStrategyExecutionAdapter()
-      return { adapter, metadata: adapter.metadata }
+      return {
+        adapter,
+        metadata: adapter.metadata,
+        resolveDeploymentLaneIdentity,
+      }
     }
     default:
       throw new RuntimeServiceConfigError(

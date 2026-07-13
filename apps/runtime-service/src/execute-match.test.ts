@@ -23,6 +23,7 @@ import {
 } from "./execute-match.js"
 import {
   createFixtureRuntimeEvidenceAuthorityLoader,
+  createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeExecutionEvidenceSnapshot,
 } from "./runtime-execution-evidence.test-support.js"
 import {
@@ -32,6 +33,7 @@ import {
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
+  resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
 })
 
 const executeRuntimeServiceRequest = (
@@ -46,6 +48,7 @@ const executeRuntimeServiceRequest = (
       ? {
           authorityLoader: createFixtureRuntimeEvidenceAuthorityLoader(
             parsed.data.evidenceSnapshot,
+            parsed.data.strategies,
           ),
         }
       : {}),

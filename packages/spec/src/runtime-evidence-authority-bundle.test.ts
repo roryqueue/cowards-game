@@ -19,9 +19,30 @@ import {
   parseRuntimeEvidenceAuthorityHighWaterRecord,
   type RuntimeEvidenceAuthorityPayload,
 } from "./runtime-evidence-authority-bundle.js"
+import { hashExecutableLaneIdentity } from "./runtime-evidence-attestation.js"
 
-const semanticTupleManifestHash = `sha256:${"1".repeat(64)}`
-const laneIdentityHash = `sha256:${"2".repeat(64)}`
+const semanticTupleManifestHash = CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId
+const laneIdentity = {
+  providerId: "fixture-provider",
+  languageId: "typescript",
+  runtimeId: "node",
+  runtimeVersion: "26.0.0",
+  toolchainId: "typescript",
+  toolchainVersion: "6.0.3",
+  adapterId: "worker-thread",
+  adapterVersion: "1",
+  policyId: "fixture-policy",
+  policyVersion: "1",
+  corpusId: "fixture-corpus",
+  corpusVersion: "1",
+  artifactId: "fixture-artifact",
+  artifactSha256: "2".repeat(64),
+  implementationId: "fixture-runtime-service",
+  buildId: "fixture-build",
+  semanticTupleId: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+  semanticTuple: CANONICAL_COMPATIBILITY_TUPLES[0]!.tuple,
+}
+const laneIdentityHash = `sha256:${hashExecutableLaneIdentity(laneIdentity)}`
 const attestationHash = `sha256:${"3".repeat(64)}`
 const certificateRecordHash = `sha256:${"4".repeat(64)}`
 
@@ -210,6 +231,7 @@ describe("runtime evidence authority bundle", () => {
       certificateVersion: "containment-v1",
       certificateRecordHash,
       laneIdentityHash,
+      laneIdentity,
       issuedAt: "2026-07-12T00:00:00.000Z",
       freshUntil: "2026-07-13T00:00:00.000Z",
       attestationIds: [attestation.attestationId],
@@ -275,6 +297,7 @@ describe("runtime evidence authority bundle", () => {
       certificateVersion: "containment-v1",
       certificateRecordHash,
       laneIdentityHash,
+      laneIdentity,
       issuedAt: "2026-07-12T00:00:00.000Z",
       freshUntil: "2026-07-13T00:00:00.000Z",
       attestationIds: [attestation.attestationId],

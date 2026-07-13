@@ -5,6 +5,7 @@ import {
   RuntimeExecutionServiceResponseSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
   findRuntimeBrokerRegistryEntry,
+  hashExecutableLaneIdentity,
   validateStrategyLanguageProviderRuntimeCompatibility,
   type MatchId,
   type PlayerId,
@@ -169,8 +170,7 @@ const certificateIsInactive = (
       revocation.certificateRecordHash === certificate.certificateRecordHash,
   ) ||
   authority.payload.supersessions.some(
-    (supersession) =>
-      supersession.certificateId === certificate.certificateId,
+    (supersession) => supersession.certificateId === certificate.certificateId,
   )
 
 const exactCertificate = (input: {
@@ -178,7 +178,12 @@ const exactCertificate = (input: {
   entrant: RuntimeEntrantAuthorityReference
   kind: "containment" | "conformance"
 }):
-  | { ok: true }
+  | {
+      ok: true
+      certificate: Readonly<
+        VerifiedMountedRuntimeEvidenceAuthority["payload"]["certificates"][number]
+      >
+    }
   | { ok: false; code: AuthorityFailureCode } => {
   const certificateId =
     input.kind === "containment"
@@ -205,7 +210,7 @@ const exactCertificate = (input: {
   if (certificateIsInactive(input.authority, certificate)) {
     return { ok: false, code: "EVIDENCE_REVOKED" }
   }
-  return { ok: true }
+  return { ok: true, certificate }
 }
 
 const hasCurrentConformanceForLane = (
@@ -223,6 +228,7 @@ const verifyEntrantAgainstAuthority = (input: {
   request: RuntimeExecutionServiceRequest
   authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>
   side: "bottom" | "top"
+  runtimeConfig: RuntimeServiceConfig
 }): { ok: true } | { ok: false; code: AuthorityFailureCode } => {
   const entrant = input.request.evidenceSnapshot.entrants[input.side]
   if (
@@ -233,16 +239,13 @@ const verifyEntrantAgainstAuthority = (input: {
     return { ok: false, code: "EVIDENCE_REVOKED" }
   }
 
-  const expectedDecisionHash =
-    hashRuntimeAuthoritySchedulingDecisionReference({
-      compatibilityTupleId:
-        input.request.evidenceSnapshot.compatibility.tupleId,
-      authorityBundleHash:
-        input.request.evidenceSnapshot.authorityBundleHash,
-      registryGeneration: input.request.evidenceSnapshot.registryGeneration,
-      publication: input.request.evidenceSnapshot.publication,
-      entrant,
-    })
+  const expectedDecisionHash = hashRuntimeAuthoritySchedulingDecisionReference({
+    compatibilityTupleId: input.request.evidenceSnapshot.compatibility.tupleId,
+    authorityBundleHash: input.request.evidenceSnapshot.authorityBundleHash,
+    registryGeneration: input.request.evidenceSnapshot.registryGeneration,
+    publication: input.request.evidenceSnapshot.publication,
+    entrant,
+  })
   if (entrant.schedulingDecisionHash !== expectedDecisionHash) {
     return { ok: false, code: "EVIDENCE_IDENTITY_MISMATCH" }
   }
@@ -254,14 +257,30 @@ const verifyEntrantAgainstAuthority = (input: {
   })
   if (!containment.ok) return containment
 
+  const deployedIdentity = input.runtimeConfig.resolveDeploymentLaneIdentity(
+    input.request.strategies[input.side],
+  )
+  if (!deployedIdentity) {
+    return { ok: false, code: "EVIDENCE_UNVERIFIABLE" }
+  }
+  let deployedIdentityHash: string
+  try {
+    deployedIdentityHash = `sha256:${hashExecutableLaneIdentity(deployedIdentity)}`
+  } catch {
+    return { ok: false, code: "EVIDENCE_UNVERIFIABLE" }
+  }
+  if (
+    deployedIdentityHash !== entrant.laneIdentityHash ||
+    deployedIdentityHash !== containment.certificate.laneIdentityHash
+  ) {
+    return { ok: false, code: "EVIDENCE_IDENTITY_MISMATCH" }
+  }
+
   if (entrant.effectiveStatus === "exhibition_only") {
     if (
       entrant.conformanceCertificateId !== undefined ||
       entrant.conformanceCertificateHash !== undefined ||
-      hasCurrentConformanceForLane(
-        input.authority,
-        entrant.laneIdentityHash,
-      )
+      hasCurrentConformanceForLane(input.authority, entrant.laneIdentityHash)
     ) {
       return { ok: false, code: "EVIDENCE_IDENTITY_MISMATCH" }
     }
@@ -279,6 +298,7 @@ const verifyEntrantAgainstAuthority = (input: {
 
 const loadAndVerifyRequestAuthority = (input: {
   request: RuntimeExecutionServiceRequest
+  runtimeConfig: RuntimeServiceConfig
   loader: RuntimeEvidenceAuthorityLoader | undefined
   baseline?: Readonly<VerifiedMountedRuntimeEvidenceAuthority> | undefined
 }): AuthorityCheck => {
@@ -313,6 +333,7 @@ const loadAndVerifyRequestAuthority = (input: {
       request: input.request,
       authority,
       side,
+      runtimeConfig: input.runtimeConfig,
     })
     if (!entrant.ok) return entrant
   }
@@ -663,6 +684,7 @@ const executeParsedRequest = (
 ): RuntimeExecutionServiceResponse => {
   const acceptedAuthority = loadAndVerifyRequestAuthority({
     request,
+    runtimeConfig,
     loader: dependencies.authorityLoader,
   })
   if (!acceptedAuthority.ok) {
@@ -698,6 +720,7 @@ const executeParsedRequest = (
 
   const invocationAuthority = loadAndVerifyRequestAuthority({
     request,
+    runtimeConfig,
     loader: dependencies.authorityLoader,
     baseline: acceptedAuthority.authority,
   })
@@ -747,6 +770,7 @@ const executeParsedRequest = (
   const result = dependencies.buildChronicleFromMatch(runMatchInput)
   const completionAuthority = loadAndVerifyRequestAuthority({
     request,
+    runtimeConfig,
     loader: dependencies.authorityLoader,
     baseline: invocationAuthority.authority,
   })

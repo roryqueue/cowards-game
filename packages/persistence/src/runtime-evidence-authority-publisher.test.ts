@@ -21,6 +21,7 @@ import {
   CANONICAL_COMPATIBILITY_TUPLES,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   encodeRuntimeEvidenceAuthorityPayload,
+  hashExecutableLaneIdentity,
   inspectRuntimeEvidenceAuthorityBundle,
 } from "@cowards/spec"
 import { Pool } from "pg"
@@ -300,6 +301,7 @@ describePostgres(
         semanticTupleId: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
         semanticTuple: CANONICAL_COMPATIBILITY_TUPLES[0]!.tuple,
       }
+      const certificateLaneIdentityHash = `sha256:${hashExecutableLaneIdentity(lane)}`
       const common = [
         "passed",
         "containment",
@@ -321,7 +323,7 @@ describePostgres(
         "1",
         lane.artifactId,
         rawHash,
-        laneIdentityHash,
+        certificateLaneIdentityHash,
         lane.semanticTupleId,
         rawHash,
         rawHash,
@@ -365,7 +367,7 @@ describePostgres(
           trustRoot.producerId,
           rawHash,
           lane.artifactId,
-          laneIdentityHash,
+          certificateLaneIdentityHash,
           lane,
           validity.issuedAt ?? "2026-07-12T00:00:00.000Z",
           validity.freshUntil ?? "2026-08-12T00:00:00.000Z",

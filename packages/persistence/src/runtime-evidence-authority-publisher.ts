@@ -10,6 +10,7 @@ import { open as openFile, readFile, rename, unlink } from "node:fs/promises"
 import path from "node:path"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  CANONICAL_COMPATIBILITY_TUPLE_FIELDS,
   RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   buildRuntimeEvidenceAuthorityEnvelope,
@@ -17,6 +18,8 @@ import {
   encodeRuntimeEvidenceAuthoritySignatureMessage,
   hashRuntimeEvidenceAuthorityPayload,
   inspectRuntimeEvidenceAuthorityBundle,
+  parseExecutableLaneIdentity,
+  type ExecutableLaneIdentity,
   type RuntimeEvidenceAuthorityPayload,
 } from "@cowards/spec"
 import type { Pool, PoolClient, QueryResultRow } from "pg"
@@ -250,6 +253,45 @@ const exactPayload = (
     }
   }
   return Object.freeze(payload)
+}
+
+const parseStoredLaneIdentity = (
+  value: unknown,
+): Readonly<ExecutableLaneIdentity> => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    fail("CLOSED_GRAPH", "Stored lane identity must be an object.")
+  }
+  const record = value as Record<string, unknown>
+  const tuple = record.semanticTuple
+  if (tuple === null || typeof tuple !== "object" || Array.isArray(tuple)) {
+    fail("CLOSED_GRAPH", "Stored lane semantic tuple must be an object.")
+  }
+  const tupleRecord = tuple as Record<string, unknown>
+  const tupleKeys = Object.keys(tupleRecord)
+  if (
+    tupleKeys.length !== CANONICAL_COMPATIBILITY_TUPLE_FIELDS.length ||
+    CANONICAL_COMPATIBILITY_TUPLE_FIELDS.some(
+      (field) => !Object.hasOwn(tupleRecord, field),
+    )
+  ) {
+    fail(
+      "CLOSED_GRAPH",
+      "Stored lane semantic tuple has an unknown or missing field.",
+    )
+  }
+  try {
+    return parseExecutableLaneIdentity({
+      ...record,
+      semanticTuple: Object.fromEntries(
+        CANONICAL_COMPATIBILITY_TUPLE_FIELDS.map((field) => [
+          field,
+          tupleRecord[field],
+        ]),
+      ),
+    } as unknown as ExecutableLaneIdentity)
+  } catch {
+    return fail("CLOSED_GRAPH", "Stored lane identity is not canonical.")
+  }
 }
 
 export const encodeRuntimeEvidenceAuthorityImportPayload = (
@@ -723,6 +765,7 @@ interface SnapshotCertificateRow extends QueryResultRow {
   certificate_version: string
   certificate_record_hash: string
   lane_identity_hash: string
+  lane_identity: ExecutableLaneIdentity
   verified_attestation_id: string
   result_graph_hash: string
   issued_at: Date | string
@@ -910,7 +953,7 @@ const loadPublicationSnapshot = async (
 }> => {
   const certificatesResult = await client.query<SnapshotCertificateRow>(
     `select c.id, c.certificate_kind, c.certificate_version,
-            c.certificate_record_hash, c.lane_identity_hash,
+            c.certificate_record_hash, c.lane_identity_hash, c.lane_identity,
             c.verified_attestation_id, c.result_graph_hash,
             c.issued_at, c.fresh_until
        from runtime_evidence_certificates c
@@ -1173,6 +1216,7 @@ const loadPublicationSnapshot = async (
               row.lane_identity_hash,
               "lane identity hash",
             ),
+            laneIdentity: parseStoredLaneIdentity(row.lane_identity),
             issuedAt: isoInstant(row.issued_at, "certificate issuedAt"),
             freshUntil: isoInstant(row.fresh_until, "certificate freshUntil"),
             attestationIds: Object.freeze([row.verified_attestation_id]),

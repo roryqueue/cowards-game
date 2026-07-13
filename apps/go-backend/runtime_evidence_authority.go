@@ -70,14 +70,15 @@ type runtimeEvidenceAuthorityAttestation struct {
 }
 
 type runtimeEvidenceAuthorityCertificate struct {
-	Kind                  string   `json:"kind"`
-	CertificateID         string   `json:"certificateId"`
-	CertificateVersion    string   `json:"certificateVersion"`
-	CertificateRecordHash string   `json:"certificateRecordHash"`
-	LaneIdentityHash      string   `json:"laneIdentityHash"`
-	IssuedAt              string   `json:"issuedAt"`
-	FreshUntil            string   `json:"freshUntil"`
-	AttestationIDs        []string `json:"attestationIds"`
+	Kind                  string                   `json:"kind"`
+	CertificateID         string                   `json:"certificateId"`
+	CertificateVersion    string                   `json:"certificateVersion"`
+	CertificateRecordHash string                   `json:"certificateRecordHash"`
+	LaneIdentityHash      string                   `json:"laneIdentityHash"`
+	LaneIdentity          goExecutableLaneIdentity `json:"laneIdentity"`
+	IssuedAt              string                   `json:"issuedAt"`
+	FreshUntil            string                   `json:"freshUntil"`
+	AttestationIDs        []string                 `json:"attestationIds"`
 }
 
 type runtimeEvidenceAuthorityRevocation struct {
@@ -415,6 +416,9 @@ func validateRuntimeEvidenceAuthorityGraph(payload runtimeEvidenceAuthorityPaylo
 	for _, certificate := range payload.Certificates {
 		if (certificate.Kind != "containment" && certificate.Kind != "conformance") || !validAuthorityIdentifier(certificate.CertificateID) || !validAuthorityIdentifier(certificate.CertificateVersion) || !isPrefixedLowerSHA256(certificate.CertificateRecordHash) || !isPrefixedLowerSHA256(certificate.LaneIdentityHash) || len(certificate.AttestationIDs) == 0 || len(certificate.AttestationIDs) > runtimeEvidenceAuthorityReferenceLimit || hasDuplicateStrings(certificate.AttestationIDs) {
 			return authorityError("INVALID_CERTIFICATE")
+		}
+		if certificate.LaneIdentityHash != "sha256:"+hashCreationLaneIdentity(certificate.LaneIdentity) || certificate.LaneIdentity.SemanticTupleID != payload.SemanticTupleManifestHash {
+			return authorityError("CERTIFICATE_LANE_IDENTITY")
 		}
 		if _, exists := certificates[certificate.CertificateID]; exists {
 			return authorityError("DUPLICATE_ID")

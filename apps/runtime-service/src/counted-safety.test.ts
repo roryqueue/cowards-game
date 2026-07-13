@@ -3,6 +3,7 @@ import {
   DEFAULT_RUNTIME_LIMITS,
   INITIAL_BOUNDS,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  type ExecutableLaneIdentity,
   type RuntimeExecutionServiceRequest,
 } from "@cowards/spec"
 import { buildStrategyRevision } from "@cowards/runtime-js"
@@ -12,6 +13,7 @@ import {
   type RuntimeExecutionServiceDependencies,
 } from "./execute-match.js"
 import {
+  createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeExecutionAuthorityContext,
   type FixtureRuntimeExecutionAuthorityContext,
 } from "./runtime-execution-evidence.test-support.js"
@@ -24,6 +26,7 @@ import { createRuntimeServiceConfig } from "./runtime-config.js"
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
+  resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
 })
 
 const source = `
@@ -247,6 +250,46 @@ describe("runtime-service counted safety", () => {
 
     expectEvidenceFailure(response, "EVIDENCE_IDENTITY_MISMATCH")
     expect(runtimeFactory).not.toHaveBeenCalled()
+  })
+
+  it("binds every deployed lane component before runtime construction", () => {
+    const mutations: Partial<ExecutableLaneIdentity>[] = [
+      { providerId: "other-provider" },
+      { languageId: "other-language" },
+      { runtimeId: "other-runtime" },
+      { runtimeVersion: "other-runtime-version" },
+      { toolchainId: "other-toolchain" },
+      { toolchainVersion: "other-toolchain-version" },
+      { adapterId: "other-adapter" },
+      { adapterVersion: "other-adapter-version" },
+      { policyId: "other-policy" },
+      { policyVersion: "other-policy-version" },
+      { corpusId: "other-corpus" },
+      { corpusVersion: "other-corpus-version" },
+      { artifactId: "other-artifact" },
+      { artifactSha256: "7".repeat(64) },
+      { implementationId: "other-implementation" },
+      { buildId: "other-build" },
+    ]
+    for (const mutation of mutations) {
+      const { request, context } = requestContext()
+      const runtimeFactory = vi.fn(() => {
+        throw new Error("runtime factory must not run")
+      })
+      const mismatchedConfig = createRuntimeServiceConfig({
+        strategyExecutionAdapter: "worker-thread",
+        resolveDeploymentLaneIdentity: (revision) => ({
+          ...createFixtureDeploymentLaneIdentity(revision),
+          ...mutation,
+        }),
+      })
+      const response = executeRuntimeServiceRequest(request, mismatchedConfig, {
+        authorityLoader: context.authorityLoader,
+        createRuntimeForRevision: runtimeFactory,
+      })
+      expectEvidenceFailure(response, "EVIDENCE_IDENTITY_MISMATCH")
+      expect(runtimeFactory).not.toHaveBeenCalled()
+    }
   })
 
   it("rejects a mounted semantic tuple mismatch before runtime creation", () => {

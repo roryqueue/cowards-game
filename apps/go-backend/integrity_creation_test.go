@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -80,6 +81,57 @@ func TestCreateExhibitionMatchSetIntegrityPurposeFloors(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if got := creationPurposeAllowsStatus(test.counted, test.status); got != test.allowed {
 				t.Fatalf("purpose floor returned %v, want %v", got, test.allowed)
+			}
+		})
+	}
+}
+
+func TestCreationLaneMatchesEveryExecutableIdentityComponent(t *testing.T) {
+	tuple := registeredCompatibilityTuple{TupleID: "sha256:" + strings.Repeat("a", 64), Tuple: canonicalCompatibilityTuple{Rules: "rules-v1", Engine: "engine-v1", RuntimeABI: "abi-v1", Chronicle: "chronicle-v1", ArenaCatalog: "arenas-v1", SetPolicy: "set-v1"}}
+	lane := goExecutableLaneIdentity{ProviderID: "provider", LanguageID: "typescript", RuntimeID: "node", RuntimeVersion: "26", ToolchainID: "typescript", ToolchainVersion: "6", AdapterID: "adapter", AdapterVersion: "1", PolicyID: "policy", PolicyVersion: "1", CorpusID: "corpus", CorpusVersion: "1", ArtifactID: "artifact", ArtifactSHA256: strings.Repeat("b", 64), ImplementationID: "runtime-service", BuildID: "build", SemanticTupleID: tuple.TupleID, SemanticTuple: tuple.Tuple}
+	laneBytes, err := json.Marshal(lane)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var laneMap map[string]any
+	if err := json.Unmarshal(laneBytes, &laneMap); err != nil {
+		t.Fatal(err)
+	}
+	entrant := map[string]any{
+		"_creationLaneIdentity": laneMap,
+		"_creationRuntime": map[string]any{
+			"language":   map[string]any{"id": lane.LanguageID},
+			"adapter":    map[string]any{"id": lane.AdapterID, "version": lane.AdapterVersion},
+			"abiVersion": lane.SemanticTuple.RuntimeABI,
+		},
+		"_creationMetadata": map[string]any{
+			"providerValidation": map[string]any{"providerId": lane.ProviderID},
+			"sourceArtifact":     map[string]any{"hash": lane.ArtifactSHA256},
+		},
+	}
+	if !creationLaneMatchesEntrant(lane, entrant, tuple) {
+		t.Fatal("exact configured executable lane was rejected")
+	}
+
+	mutations := map[string]func(*goExecutableLaneIdentity){
+		"runtime-id":        func(value *goExecutableLaneIdentity) { value.RuntimeID = "other" },
+		"runtime-version":   func(value *goExecutableLaneIdentity) { value.RuntimeVersion = "other" },
+		"toolchain-id":      func(value *goExecutableLaneIdentity) { value.ToolchainID = "other" },
+		"toolchain-version": func(value *goExecutableLaneIdentity) { value.ToolchainVersion = "other" },
+		"policy-id":         func(value *goExecutableLaneIdentity) { value.PolicyID = "other" },
+		"policy-version":    func(value *goExecutableLaneIdentity) { value.PolicyVersion = "other" },
+		"corpus-id":         func(value *goExecutableLaneIdentity) { value.CorpusID = "other" },
+		"corpus-version":    func(value *goExecutableLaneIdentity) { value.CorpusVersion = "other" },
+		"artifact-id":       func(value *goExecutableLaneIdentity) { value.ArtifactID = "other" },
+		"implementation-id": func(value *goExecutableLaneIdentity) { value.ImplementationID = "other" },
+		"build-id":          func(value *goExecutableLaneIdentity) { value.BuildID = "other" },
+	}
+	for name, mutate := range mutations {
+		t.Run(name, func(t *testing.T) {
+			candidate := lane
+			mutate(&candidate)
+			if creationLaneMatchesEntrant(candidate, entrant, tuple) {
+				t.Fatal("distinct executable lane matched the configured revision lane")
 			}
 		})
 	}

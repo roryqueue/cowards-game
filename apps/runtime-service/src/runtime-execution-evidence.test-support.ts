@@ -3,10 +3,13 @@ import {
   CANONICAL_COMPATIBILITY_TUPLES,
   RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
+  hashExecutableLaneIdentity,
   parseRuntimeEvidenceAuthorityPayload,
   type ExecutableLaneEvidenceStatus,
+  type ExecutableLaneIdentity,
   type RuntimeEntrantAuthorityReference,
   type RuntimeExecutionEvidenceSnapshot,
+  type RuntimeExecutionServiceRequest,
   type StrategyRevision,
 } from "@cowards/spec"
 import { hashRuntimeAuthoritySchedulingDecisionReference } from "./execute-match.js"
@@ -25,6 +28,50 @@ const FIXTURE_PUBLICATION = {
   sourceManifestHash: `sha256:${"9".repeat(64)}`,
 } as const
 
+export const createFixtureDeploymentLaneIdentity = (
+  revision: StrategyRevision,
+): ExecutableLaneIdentity => {
+  const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
+  const sourceArtifact = revision.metadata.sourceArtifact
+  const compiledArtifact = revision.metadata.compiledArtifact
+  const artifact = sourceArtifact ?? compiledArtifact
+  return {
+    providerId:
+      revision.metadata.providerValidation?.providerId ??
+      `fixture-provider:${revision.runtime.language.id}`,
+    languageId: revision.runtime.language.id,
+    runtimeId:
+      sourceArtifact?.toolchain.runtime ??
+      `fixture-runtime:${revision.runtime.language.id}`,
+    runtimeVersion:
+      sourceArtifact?.toolchain.runtimeVersion ??
+      revision.validation.runtimeVersion,
+    toolchainId:
+      sourceArtifact?.toolchain.language ??
+      compiledArtifact?.toolchain.compiler ??
+      `fixture-toolchain:${revision.runtime.language.id}`,
+    toolchainVersion:
+      sourceArtifact?.toolchain.runtimeVersion ??
+      compiledArtifact?.toolchain.compilerVersion ??
+      revision.runtime.language.version,
+    adapterId: revision.runtime.adapter.id,
+    adapterVersion: revision.runtime.adapter.version,
+    policyId: "fixture-package-none-policy",
+    policyVersion: "v1.37",
+    corpusId: "fixture-four-language-corpus",
+    corpusVersion: "v1.37",
+    artifactId: `fixture-artifact:${revision.id}`,
+    artifactSha256: (artifact?.hash ?? revision.sourceHash).replace(
+      /^sha256:/u,
+      "",
+    ),
+    implementationId: "fixture-runtime-service",
+    buildId: "fixture-runtime-service-build-v1.37",
+    semanticTupleId: tuple.tupleId,
+    semanticTuple: { ...tuple.tuple },
+  }
+}
+
 const fixtureEntrantEvidence = (input: {
   fixtureId: string
   side: "bottom" | "top"
@@ -33,13 +80,11 @@ const fixtureEntrantEvidence = (input: {
   compatibilityTupleId: string
 }): RuntimeEntrantAuthorityReference => {
   const identitySuffix = `${input.fixtureId}:${input.side}:${input.revision.runtime.language.id}`
+  const laneIdentity = createFixtureDeploymentLaneIdentity(input.revision)
   const entrant: RuntimeEntrantAuthorityReference = {
     entrantKey: `fixture-only:entrant:${input.fixtureId}:${input.side}`,
     strategyRevisionId: input.revision.id,
-    laneIdentityHash: `sha256:${input.side === "bottom" ? "a" : "b"}`.padEnd(
-      71,
-      input.side === "bottom" ? "a" : "b",
-    ),
+    laneIdentityHash: `sha256:${hashExecutableLaneIdentity(laneIdentity)}`,
     effectiveStatus: input.effectiveStatus,
     schedulingDecisionId: `fixture-only:scheduling-decision:${identitySuffix}`,
     schedulingDecisionHash: `sha256:${"0".repeat(64)}`,
@@ -76,6 +121,7 @@ const fixtureEntrantEvidence = (input: {
 
 const fixtureAuthorityForSnapshot = (
   snapshot: RuntimeExecutionEvidenceSnapshot,
+  strategies: RuntimeExecutionServiceRequest["strategies"],
 ): Readonly<VerifiedMountedRuntimeEvidenceAuthority> => {
   const attestations = Object.entries(snapshot.entrants).map(
     ([side, entrant]) => ({
@@ -91,6 +137,9 @@ const fixtureAuthorityForSnapshot = (
   const certificates = Object.entries(snapshot.entrants).flatMap(
     ([side, entrant], index) => {
       const attestationId = attestations[index]!.attestationId
+      const laneIdentity = createFixtureDeploymentLaneIdentity(
+        strategies[side as "bottom" | "top"],
+      )
       return [
         {
           kind: "containment" as const,
@@ -98,6 +147,7 @@ const fixtureAuthorityForSnapshot = (
           certificateVersion: "fixture-only-containment-v1",
           certificateRecordHash: entrant.containmentCertificateHash!,
           laneIdentityHash: entrant.laneIdentityHash,
+          laneIdentity,
           issuedAt: "2026-07-12T00:00:00.000Z",
           freshUntil: "2026-07-14T00:00:00.000Z",
           attestationIds: [attestationId],
@@ -110,6 +160,7 @@ const fixtureAuthorityForSnapshot = (
                 certificateVersion: "fixture-only-conformance-v1",
                 certificateRecordHash: entrant.conformanceCertificateHash!,
                 laneIdentityHash: entrant.laneIdentityHash,
+                laneIdentity,
                 issuedAt: "2026-07-12T00:00:00.000Z",
                 freshUntil: "2026-07-14T00:00:00.000Z",
                 attestationIds: [attestationId],
@@ -145,8 +196,9 @@ const fixtureAuthorityForSnapshot = (
 
 export const createFixtureRuntimeEvidenceAuthorityLoader = (
   snapshot: RuntimeExecutionEvidenceSnapshot,
+  strategies: RuntimeExecutionServiceRequest["strategies"],
 ): RuntimeEvidenceAuthorityLoader => {
-  const authority = fixtureAuthorityForSnapshot(snapshot)
+  const authority = fixtureAuthorityForSnapshot(snapshot, strategies)
   let current: Readonly<VerifiedMountedRuntimeEvidenceAuthority> | undefined
   return {
     load: vi.fn(() => {
@@ -196,7 +248,8 @@ export const createFixtureRuntimeExecutionAuthorityContext = (input: {
       }),
     },
   }
-  const authority = fixtureAuthorityForSnapshot(evidenceSnapshot)
+  const strategies = { bottom: input.bottom, top: input.top }
+  const authority = fixtureAuthorityForSnapshot(evidenceSnapshot, strategies)
   let current: Readonly<VerifiedMountedRuntimeEvidenceAuthority> | undefined
   const authorityLoader: RuntimeEvidenceAuthorityLoader = {
     load: vi.fn(() => {

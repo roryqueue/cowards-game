@@ -175,7 +175,7 @@ func (server *LiveServer) resolveCreationEvidence(ctx context.Context, authority
 			return nil, errors.New("creation integrity unavailable")
 		}
 		authorityCertificate, ok := authorityCertificateByID[row.ID]
-		if !ok || authorityCertificate.Kind != row.Kind || authorityCertificate.CertificateVersion != row.Version || authorityCertificate.CertificateRecordHash != "sha256:"+row.RecordHash || authorityCertificate.LaneIdentityHash != "sha256:"+row.LaneHash || row.RegistryGeneration != authority.RegistryGeneration || row.LaneHash != hashCreationLaneIdentity(row.Lane) || now.Before(row.IssuedAt) || now.After(row.FreshUntil) {
+		if !ok || authorityCertificate.Kind != row.Kind || authorityCertificate.CertificateVersion != row.Version || authorityCertificate.CertificateRecordHash != "sha256:"+row.RecordHash || authorityCertificate.LaneIdentityHash != "sha256:"+row.LaneHash || authorityCertificate.LaneIdentity != row.Lane || row.RegistryGeneration != authority.RegistryGeneration || row.LaneHash != hashCreationLaneIdentity(row.Lane) || now.Before(row.IssuedAt) || now.After(row.FreshUntil) {
 			return nil, errors.New("creation integrity unavailable")
 		}
 		certificateRows = append(certificateRows, row)
@@ -237,6 +237,18 @@ func creationCertificateSnapshot(reference runtimeEvidenceCertificateReference) 
 
 func creationLaneMatchesEntrant(lane goExecutableLaneIdentity, entrant map[string]any, tuple registeredCompatibilityTuple) bool {
 	if lane.SemanticTupleID != tuple.TupleID || lane.SemanticTuple != tuple.Tuple {
+		return false
+	}
+	expectedMap := mapValue(entrant, "_creationLaneIdentity")
+	if len(expectedMap) == 0 {
+		return false
+	}
+	expectedBytes, err := json.Marshal(expectedMap)
+	if err != nil {
+		return false
+	}
+	var expected goExecutableLaneIdentity
+	if err := decodeStrictJSON(expectedBytes, &expected); err != nil || expected != lane || hashCreationLaneIdentity(expected) != hashCreationLaneIdentity(lane) {
 		return false
 	}
 	runtime := mapValue(entrant, "_creationRuntime")

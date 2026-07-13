@@ -1,4 +1,9 @@
 import { createHash } from "node:crypto"
+import {
+  hashExecutableLaneIdentity,
+  parseExecutableLaneIdentity,
+} from "./runtime-evidence-attestation.js"
+import type { ExecutableLaneIdentity } from "./runtime-evidence.js"
 
 export const RUNTIME_EVIDENCE_AUTHORITY_ENVELOPE_SCHEMA_VERSION =
   "v1.37-runtime-evidence-authority-envelope-v1" as const
@@ -55,6 +60,7 @@ export interface RuntimeEvidenceAuthorityCertificate {
   certificateVersion: string
   certificateRecordHash: string
   laneIdentityHash: string
+  laneIdentity: ExecutableLaneIdentity
   issuedAt: string
   freshUntil: string
   attestationIds: readonly string[]
@@ -294,6 +300,7 @@ const parseCertificate = (
       "certificateVersion",
       "certificateRecordHash",
       "laneIdentityHash",
+      "laneIdentity",
       "issuedAt",
       "freshUntil",
       "attestationIds",
@@ -327,6 +334,29 @@ const parseCertificate = (
       `certificates[${index}] has an incoherent validity interval.`,
     )
   }
+  let laneIdentity: Readonly<ExecutableLaneIdentity>
+  try {
+    laneIdentity = parseExecutableLaneIdentity(
+      record.laneIdentity as ExecutableLaneIdentity,
+    )
+  } catch {
+    return fail(
+      "CERTIFICATE_LANE_IDENTITY",
+      `certificates[${index}] lane identity expansion is invalid.`,
+    )
+  }
+  const laneIdentityHash = assertHash(
+    record.laneIdentityHash,
+    `certificates[${index}].laneIdentityHash`,
+  )
+  if (
+    `sha256:${hashExecutableLaneIdentity(laneIdentity)}` !== laneIdentityHash
+  ) {
+    fail(
+      "CERTIFICATE_LANE_IDENTITY",
+      `certificates[${index}] lane identity hash does not match its expansion.`,
+    )
+  }
   return Object.freeze({
     kind: record.kind as "containment" | "conformance",
     certificateId: assertString(
@@ -341,10 +371,8 @@ const parseCertificate = (
       record.certificateRecordHash,
       `certificates[${index}].certificateRecordHash`,
     ),
-    laneIdentityHash: assertHash(
-      record.laneIdentityHash,
-      `certificates[${index}].laneIdentityHash`,
-    ),
+    laneIdentityHash,
+    laneIdentity,
     issuedAt,
     freshUntil,
     attestationIds,
