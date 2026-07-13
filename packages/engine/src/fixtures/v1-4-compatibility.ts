@@ -144,7 +144,7 @@ const stateWith = (
   ...overrides,
 })
 
-const clone = <T>(value: T): T => structuredClone(value)
+const clone = <T>(value: T): T => globalThis.structuredClone(value)
 
 const normalize = (value: unknown): unknown => {
   if (Array.isArray(value)) {

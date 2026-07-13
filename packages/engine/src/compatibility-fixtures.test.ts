@@ -260,7 +260,7 @@ describe("compatibility delta approval boundary", () => {
     }
 
     for (const dimension of COMPATIBILITY_DIMENSIONS) {
-      const mutated = structuredClone(fixture.observation)
+      const mutated = globalThis.structuredClone(fixture.observation)
       ;(mutated as unknown as Record<string, unknown>)[dimension] = {
         original: mutated[dimension],
         compatibilityMutation: dimension,
