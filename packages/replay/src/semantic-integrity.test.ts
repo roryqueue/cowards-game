@@ -1,11 +1,8 @@
 import { describe, expect, it } from "vitest"
-import type {
-  SoldierBrainInput,
-  StrategyInput,
-} from "@cowards/spec"
-import type { StrategyRuntime } from "@cowards/engine"
-import { buildChronicleFromMatch } from "./build.js"
-import { validateChronicle } from "./validate.js"
+import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
+import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { recordChronicleFromExecution } from "./record.js"
+import { validateCandidateReplaySemantics } from "./validate.js"
 
 describe("replay semantic integrity", () => {
   it("missing-semantic-enforcement: replay rejects invalid intermediate state", () => {
@@ -34,14 +31,14 @@ describe("replay semantic integrity", () => {
         }
       },
     }
-    const built = buildChronicleFromMatch({
+    const execution = CANDIDATE_MATCH_KERNEL.runMatch({
       matchId: "match:replay-semantic-red",
       seed: "seed:replay-semantic-red",
       arenaVariant: {
         id: "arena:replay-semantic-red",
         name: "Replay semantic RED",
         initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-        terrainStones: [{ x: 2, y: 11 }],
+        terrainStones: [],
       },
       bottomPlayerId: "player:bottom",
       topPlayerId: "player:top",
@@ -49,19 +46,42 @@ describe("replay semantic integrity", () => {
       topStrategyRevisionId: "revision:top",
       runtime,
     })
-    const overlap = built.chronicle.snapshots.find((snapshot) =>
-      snapshot.board.soldiers.some(
-        (soldier) =>
-          soldier.position?.x === 2 && soldier.position.y === 11,
-      ),
+    const recorded = recordChronicleFromExecution({
+      execution,
+      metadata: {
+        schemaVersion: "chronicle-v1.4",
+        semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+        semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+      },
+    })
+    if (!recorded.ok || execution.kind !== "completed") {
+      throw new Error("candidate execution did not complete")
+    }
+    const initialState = structuredClone(
+      execution.recorderMaterial.initialState,
     )
-    expect(overlap?.board.terrainStones).toContainEqual({ x: 2, y: 11 })
+    initialState.arenaVariant.terrainStones.push({ x: 2, y: 11 })
+    const invalidExecution = {
+      ...execution,
+      recorderMaterial: {
+        ...execution.recorderMaterial,
+        initialState,
+      },
+    }
 
     runtimeCalls = 0
-    const validation = validateChronicle(built.chronicle)
-    expect(runtimeCalls, "replay validation must never schedule gameplay").toBe(0)
+    const validation = validateCandidateReplaySemantics({
+      profile: "candidate-v1.37",
+      compatibility: recorded.semanticIdentity,
+      chronicle: recorded.chronicle,
+      boundaryAnchors: recorded.boundaryAnchors,
+      execution: invalidExecution,
+    })
+    expect(runtimeCalls, "replay validation must never schedule gameplay").toBe(
+      0,
+    )
     if (!validation.ok) {
-      expect(validation.errors.map((error) => error.code)).toContain(
+      expect(validation.issues.map((issue) => issue.code)).toContain(
         "ARENA_TERRAIN_START_OVERLAP",
       )
       return

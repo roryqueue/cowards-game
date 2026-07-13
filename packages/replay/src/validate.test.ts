@@ -14,13 +14,15 @@ import {
   createMatchExecutionExactEvidenceV137,
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import type { StrategyRuntime } from "@cowards/engine"
-import { buildChronicleFromMatch } from "./build.js"
+import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { createChronicleContentHash } from "./hash.js"
+import { recordChronicleFromExecution } from "./record.js"
 import {
   migrateChronicle,
   resolveReplayCompatibilityIdentity,
+  validateCandidateReplaySemantics,
   validateChronicle,
+  validateHistoricalV14Chronicle,
   validateReplayInput,
 } from "./validate.js"
 
@@ -49,8 +51,8 @@ const runtime: StrategyRuntime = {
   },
 }
 
-const createChronicle = () =>
-  buildChronicleFromMatch({
+const createCandidateReplayInput = () => {
+  const execution = CANDIDATE_MATCH_KERNEL.runMatch({
     matchId: "validation-match",
     seed: "validation-seed",
     arenaVariant: {
@@ -64,7 +66,26 @@ const createChronicle = () =>
     bottomStrategyRevisionId: "bottom-rev",
     topStrategyRevisionId: "top-rev",
     runtime,
-  }).chronicle
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  return {
+    profile: "candidate-v1.37" as const,
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution,
+  }
+}
+
+const createChronicle = () => createCandidateReplayInput().chronicle
 
 const createExecutionEvidence = (
   matchId: string,
@@ -195,6 +216,87 @@ const grammarErrorCodes = [
 ] as const satisfies readonly ChronicleValidationErrorCode[]
 
 describe("validateChronicle", () => {
+  it("routes exact inactive candidate evidence without making it current or publishable", () => {
+    const input = createCandidateReplayInput()
+
+    expect(validateCandidateReplaySemantics(input)).toEqual({
+      ok: true,
+      profile: "candidate-v1.37",
+      publishable: false,
+      current: false,
+      issues: [],
+      truncated: false,
+    })
+    expect(validateReplayInput(input)).toEqual(
+      validateCandidateReplaySemantics(input),
+    )
+    expect(resolveReplayCompatibilityIdentity(input)).toEqual({
+      status: "candidate_inactive",
+      tupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+      publishable: false,
+      current: false,
+    })
+  })
+
+  it.each([
+    "rules",
+    "engine",
+    "runtimeAbi",
+    "chronicle",
+    "arenaCatalog",
+    "setPolicy",
+  ] as const)(
+    "rejects candidate %s identity drift with candidate-only codes",
+    (field) => {
+      const input = createCandidateReplayInput()
+      const result = validateCandidateReplaySemantics({
+        ...input,
+        compatibility: {
+          ...input.compatibility,
+          tuple: { ...input.compatibility.tuple, [field]: `${field}:wrong` },
+        },
+      })
+
+      expect(result.ok).toBe(false)
+      if (result.ok) return
+      expect(result.issues.map(({ code }) => code)).toEqual([
+        "CANDIDATE_TUPLE_INVALID",
+      ])
+      expect(result).toMatchObject({
+        category: "CANONICAL_INTEGRITY_FAILURE",
+        ownership: "system_integrity",
+        current: false,
+        publishable: false,
+      })
+      expect(JSON.stringify(result)).not.toContain("ChronicleValidationError")
+    },
+  )
+
+  it("rejects the first invalid candidate state with bounded semantic codes", () => {
+    const input = createCandidateReplayInput()
+    if (input.execution.kind !== "completed") throw new Error("not completed")
+    const initialState = structuredClone(
+      input.execution.recorderMaterial.initialState,
+    )
+    initialState.arenaVariant.terrainStones.push({ x: 2, y: 11 })
+    const execution = {
+      ...input.execution,
+      recorderMaterial: {
+        ...input.execution.recorderMaterial,
+        initialState,
+      },
+    }
+    const result = validateCandidateReplaySemantics({ ...input, execution })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.issues.map(({ code }) => code)).toContain(
+      "ARENA_TERRAIN_START_OVERLAP",
+    )
+    expect(result.issues.length).toBeLessThanOrEqual(16)
+    expect(result.issues.every(({ path }) => path.length <= 8)).toBe(true)
+  })
+
   it("atomically validates current tuples while preserving explicit historical dispatch", () => {
     const chronicle = createChronicle()
     const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
@@ -293,6 +395,7 @@ describe("validateChronicle", () => {
     }
     const before = JSON.stringify(historical)
     expect(validateReplayInput(historical)).toEqual({ ok: true })
+    expect(validateHistoricalV14Chronicle(chronicle)).toEqual({ ok: true })
     expect(resolveReplayCompatibilityIdentity(historical)).toEqual({
       status: "historical_original_semantics",
       tupleResolution: "unresolved_legacy",
