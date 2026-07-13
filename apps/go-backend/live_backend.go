@@ -2258,11 +2258,21 @@ func (server *LiveServer) loadIntegrityEvidenceReadModel(ctx context.Context, ma
 		activeGeneration := valueOr(registryGeneration, storedGeneration)
 		if authority != nil {
 			activeGeneration = authority.RegistryGeneration
-			decision = classifyExecutableLaneEvidence(executableLaneEvidenceInput{
+			containmentState := persistedRuntimeEvidenceCertificateState{
+				Reference: containmentReference, Status: containment.Status,
+				IssuedAt: containment.IssuedAt, FreshUntil: containment.FreshUntil,
+			}
+			var conformanceState *persistedRuntimeEvidenceCertificateState
+			if conformanceReference != nil && conformanceStatus != nil && conformanceIssuedAt != nil && conformanceFreshUntil != nil {
+				conformanceState = &persistedRuntimeEvidenceCertificateState{
+					Reference: *conformanceReference, Status: *conformanceStatus,
+					IssuedAt: *conformanceIssuedAt, FreshUntil: *conformanceFreshUntil,
+				}
+			}
+			decision = classifyPersistedExecutableLaneEvidence(executableLaneEvidenceInput{
 				Authority: authority, ExpectedLaneIdentityHash: canonicalSafeEvidenceHash(laneHash),
 				EvaluationInstant: evaluatedAt, ActiveRegistryGeneration: activeGeneration,
-				ContainmentCertificate: &containmentReference, ConformanceCertificate: conformanceReference,
-			})
+			}, &containmentState, conformanceState)
 			if authority.SemanticTupleManifestHash != *tupleID || identity.SemanticTupleID != *tupleID {
 				decision = executableLaneEvidenceResult{Status: executableLaneEvidenceDisabled, ReasonCode: "TUPLE_UNCERTIFIED"}
 			}

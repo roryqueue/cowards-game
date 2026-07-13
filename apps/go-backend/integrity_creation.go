@@ -175,7 +175,7 @@ func (server *LiveServer) resolveCreationEvidence(ctx context.Context, tx pgx.Tx
 			return nil, errors.New("creation integrity unavailable")
 		}
 		authorityCertificate, ok := authorityCertificateByID[row.ID]
-		if !ok || authorityCertificate.Kind != row.Kind || authorityCertificate.CertificateVersion != row.Version || authorityCertificate.CertificateRecordHash != "sha256:"+row.RecordHash || authorityCertificate.LaneIdentityHash != "sha256:"+row.LaneHash || authorityCertificate.LaneIdentity != row.Lane || row.RegistryGeneration != authority.RegistryGeneration || row.LaneHash != hashCreationLaneIdentity(row.Lane) || now.Before(row.IssuedAt) || now.After(row.FreshUntil) {
+		if !ok || authorityCertificate.Kind != row.Kind || authorityCertificate.CertificateVersion != row.Version || authorityCertificate.CertificateRecordHash != "sha256:"+row.RecordHash || authorityCertificate.LaneIdentityHash != "sha256:"+row.LaneHash || authorityCertificate.LaneIdentity != row.Lane || row.RegistryGeneration != authority.RegistryGeneration || row.LaneHash != hashCreationLaneIdentity(row.Lane) {
 			return nil, errors.New("creation integrity unavailable")
 		}
 		certificateRows = append(certificateRows, row)
@@ -213,11 +213,19 @@ func (server *LiveServer) resolveCreationEvidence(ctx context.Context, tx pgx.Tx
 			converted := creationCertificateSnapshot(value)
 			conformanceSnapshot = &converted
 		}
-		result := classifyExecutableLaneEvidence(executableLaneEvidenceInput{
+		containmentState := persistedRuntimeEvidenceCertificateState{
+			Reference: containmentRef, Status: "passed", IssuedAt: containment.IssuedAt, FreshUntil: containment.FreshUntil,
+		}
+		var conformanceState *persistedRuntimeEvidenceCertificateState
+		if len(conformances) == 1 && conformanceRef != nil {
+			conformanceState = &persistedRuntimeEvidenceCertificateState{
+				Reference: *conformanceRef, Status: "passed", IssuedAt: conformances[0].IssuedAt, FreshUntil: conformances[0].FreshUntil,
+			}
+		}
+		result := classifyPersistedExecutableLaneEvidence(executableLaneEvidenceInput{
 			Authority: authority, ExpectedLaneIdentityHash: "sha256:" + containment.LaneHash,
 			EvaluationInstant: evaluatedAt, ActiveRegistryGeneration: authority.RegistryGeneration,
-			ContainmentCertificate: &containmentRef, ConformanceCertificate: conformanceRef,
-		})
+		}, &containmentState, conformanceState)
 		if !creationPurposeAllowsStatus(counted, result.Status) {
 			return nil, errors.New("creation integrity unavailable")
 		}

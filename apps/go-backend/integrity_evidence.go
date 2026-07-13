@@ -99,6 +99,13 @@ type executableLaneEvidenceResult struct {
 	ReasonCode string
 }
 
+type persistedRuntimeEvidenceCertificateState struct {
+	Reference  runtimeEvidenceCertificateReference
+	Status     string
+	IssuedAt   time.Time
+	FreshUntil time.Time
+}
+
 type integrityEvidenceGateResult struct {
 	GateID string `json:"gateId"`
 	Passed bool   `json:"passed"`
@@ -726,6 +733,36 @@ func classifyExecutableLaneEvidence(input executableLaneEvidenceInput) executabl
 		return disabled("EVIDENCE_UNVERIFIABLE")
 	}
 	return executableLaneEvidenceResult{Status: executableLaneEvidenceCounted, ReasonCode: "EVIDENCE_CURRENT"}
+}
+
+func classifyPersistedExecutableLaneEvidence(input executableLaneEvidenceInput, containment *persistedRuntimeEvidenceCertificateState, conformance *persistedRuntimeEvidenceCertificateState) executableLaneEvidenceResult {
+	evaluatedAt, err := parseCanonicalInstant(input.EvaluationInstant)
+	if err != nil {
+		return executableLaneEvidenceResult{Status: executableLaneEvidenceDisabled, ReasonCode: "EVIDENCE_UNVERIFIABLE"}
+	}
+	if containment == nil {
+		input.ContainmentCertificate = nil
+		return classifyExecutableLaneEvidence(input)
+	}
+	if containment.Status != "passed" {
+		return executableLaneEvidenceResult{Status: executableLaneEvidenceDisabled, ReasonCode: "CONTAINMENT_FAILED"}
+	}
+	if evaluatedAt.Before(containment.IssuedAt) || evaluatedAt.After(containment.FreshUntil) {
+		return executableLaneEvidenceResult{Status: executableLaneEvidenceDisabled, ReasonCode: "CONTAINMENT_STALE"}
+	}
+	input.ContainmentCertificate = &containment.Reference
+	if conformance == nil {
+		input.ConformanceCertificate = nil
+		return classifyExecutableLaneEvidence(input)
+	}
+	if conformance.Status != "passed" {
+		return executableLaneEvidenceResult{Status: executableLaneEvidenceExhibitionOnly, ReasonCode: "CONFORMANCE_FAILED"}
+	}
+	if evaluatedAt.Before(conformance.IssuedAt) || evaluatedAt.After(conformance.FreshUntil) {
+		return executableLaneEvidenceResult{Status: executableLaneEvidenceExhibitionOnly, ReasonCode: "CONFORMANCE_STALE"}
+	}
+	input.ConformanceCertificate = &conformance.Reference
+	return classifyExecutableLaneEvidence(input)
 }
 
 func resolveRuntimeEvidenceCertificate(authority *verifiedRuntimeEvidenceAuthority, expectedLaneHash string, kind string, reference *runtimeEvidenceCertificateReference) (*runtimeEvidenceAuthorityCertificate, string) {

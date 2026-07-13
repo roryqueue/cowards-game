@@ -120,6 +120,8 @@ func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
 		"bottom_containment",
 		"top_containment",
 		"scheduling_status = 'counted'",
+		"bottom_containment.fresh_until >= $1",
+		"bottom_execution_entrant.scheduling_fresh_until >= $1",
 	} {
 		if !strings.Contains(claimNextMatchJobSQL, required) {
 			t.Fatalf("integrity claim SQL is missing %q", required)

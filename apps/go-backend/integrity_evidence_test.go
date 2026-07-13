@@ -216,6 +216,23 @@ func TestIntegrityEvidenceClassifierMatchesCanonicalStatusFloor(t *testing.T) {
 	if disabledResult.Status != executableLaneEvidenceDisabled || disabledResult.ReasonCode != "OPERATOR_DISABLED" {
 		t.Fatalf("operator switch promoted evidence: %+v", disabledResult)
 	}
+
+	issuedAt := time.Date(2026, 7, 12, 0, 0, 0, 0, time.UTC)
+	freshUntil := time.Date(2026, 7, 13, 0, 0, 0, 0, time.UTC)
+	containmentState := persistedRuntimeEvidenceCertificateState{Reference: containmentRef, Status: "passed", IssuedAt: issuedAt, FreshUntil: freshUntil}
+	conformanceState := persistedRuntimeEvidenceCertificateState{Reference: conformanceRef, Status: "passed", IssuedAt: issuedAt, FreshUntil: freshUntil}
+	input := executableLaneEvidenceInput{Authority: authority, ExpectedLaneIdentityHash: laneHash, EvaluationInstant: freshUntil.Format(canonicalJSONInstantLayout), ActiveRegistryGeneration: "9"}
+	if result := classifyPersistedExecutableLaneEvidence(input, &containmentState, &conformanceState); result.Status != executableLaneEvidenceCounted {
+		t.Fatalf("persisted evidence closed before its inclusive freshness bound: %+v", result)
+	}
+	input.EvaluationInstant = freshUntil.Add(time.Millisecond).Format(canonicalJSONInstantLayout)
+	if result := classifyPersistedExecutableLaneEvidence(input, &containmentState, &conformanceState); result.Status != executableLaneEvidenceDisabled || result.ReasonCode != "CONTAINMENT_STALE" {
+		t.Fatalf("persisted containment did not close immediately after freshness: %+v", result)
+	}
+	containmentState.FreshUntil = freshUntil.Add(time.Hour)
+	if result := classifyPersistedExecutableLaneEvidence(input, &containmentState, &conformanceState); result.Status != executableLaneEvidenceExhibitionOnly || result.ReasonCode != "CONFORMANCE_STALE" {
+		t.Fatalf("persisted conformance did not close counted readiness at freshness: %+v", result)
+	}
 }
 
 func TestIntegrityEvidencePublicProjectionUsesExactCalmAllowlist(t *testing.T) {
