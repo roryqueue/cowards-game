@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -128,6 +129,94 @@ func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
 	updateIndex := strings.Index(claimNextMatchJobSQL, "update match_jobs")
 	if selectIndex < 0 || (updateIndex >= 0 && updateIndex < selectIndex) {
 		t.Fatal("integrity rejection must precede lifecycle mutation")
+	}
+}
+
+func TestMatchJobLifecycleIntegrityValidation(t *testing.T) {
+	now := time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)
+	if authority, identity := claimedIntegrityFixture(t, now); validateClaimedMatchIntegrity(authority, identity, now) != nil {
+		t.Fatalf("valid heterogeneous claimed identity was rejected: %v", validateClaimedMatchIntegrity(authority, identity, now))
+	}
+	tests := []struct {
+		name   string
+		mutate func(*verifiedRuntimeEvidenceAuthority, *claimedMatchIntegrityIdentity)
+	}{
+		{name: "bundle replacement", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.AuthorityBundleHash = "sha256:" + strings.Repeat("9", 64)
+		}},
+		{name: "generation drift", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.RegistryGeneration = "2"
+		}},
+		{name: "tuple drift", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.CompatibilityTuple.Engine = "engine:drift"
+		}},
+		{name: "ordered pair swap", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.Bottom, identity.Top = identity.Top, identity.Bottom
+		}},
+		{name: "receipt missing", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.InstallReceiptID = ""
+		}},
+		{name: "source set missing", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.SourceSet = nil
+		}},
+		{name: "per-side certificate revoked", mutate: func(authority *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			authority.Payload.Revocations = []runtimeEvidenceAuthorityRevocation{{CertificateID: identity.Top.ContainmentCertificateRef.CertificateID, CertificateRecordHash: "sha256:" + identity.Top.ContainmentCertificateRef.CertificateRecordHash}}
+		}},
+		{name: "decision stale", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.Bottom.SchedulingDecision.FreshUntil = now.Add(-time.Second).Format(canonicalJSONInstantLayout)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			authority, identity := claimedIntegrityFixture(t, now)
+			test.mutate(authority, identity)
+			if err := validateClaimedMatchIntegrity(authority, identity, now); err == nil {
+				t.Fatal("expected claimed integrity drift to be rejected")
+			}
+		})
+	}
+}
+
+func claimedIntegrityFixture(t *testing.T, now time.Time) (*verifiedRuntimeEvidenceAuthority, *claimedMatchIntegrityIdentity) {
+	t.Helper()
+	tuple := registeredCompatibilityTuple{TupleID: "sha256:" + strings.Repeat("a", 64), Tuple: canonicalCompatibilityTuple{Rules: "rules-v1", Engine: "engine-v1", RuntimeABI: "abi-v1", Chronicle: "chronicle-v1", ArenaCatalog: "arenas-v1", SetPolicy: "set-v1"}}
+	authority := &verifiedRuntimeEvidenceAuthority{
+		AuthorityBundleHash: "sha256:" + strings.Repeat("b", 64),
+		EnvelopeSHA256:      "sha256:" + strings.Repeat("c", 64), RegistryGeneration: "1",
+		SemanticTupleManifestHash: tuple.TupleID, CompatibilityTuple: tuple,
+		TrustDomain: runtimeEvidenceAuthorityProductionTrustDomain,
+		Payload: runtimeEvidenceAuthorityPayload{
+			RegistryGeneration: "1", IssuedAt: now.Add(-time.Hour).Format(canonicalJSONInstantLayout),
+			ValidFrom: now.Add(-time.Hour).Format(canonicalJSONInstantLayout), ValidUntil: now.Add(time.Hour).Format(canonicalJSONInstantLayout),
+			SemanticTupleManifestHash: tuple.TupleID,
+		},
+	}
+	entrants := make([]goEntrantExecutionEvidence, 0, 2)
+	for index, language := range []string{"typescript", "python"} {
+		lane := goExecutableLaneIdentity{ProviderID: "provider:" + language, LanguageID: language, RuntimeID: "runtime:" + language, RuntimeVersion: "1", ToolchainID: "toolchain:" + language, ToolchainVersion: "1", AdapterID: "adapter:" + language, AdapterVersion: "1", PolicyID: "policy", PolicyVersion: "1", CorpusID: "corpus", CorpusVersion: "1", ArtifactID: fmt.Sprintf("artifact:%d", index), ArtifactSHA256: fmt.Sprintf("%064x", index+10), ImplementationID: "implementation", BuildID: fmt.Sprintf("build:%d", index), SemanticTupleID: tuple.TupleID, SemanticTuple: tuple.Tuple}
+		laneHash := hashCreationLaneIdentity(lane)
+		certificate := runtimeEvidenceAuthorityCertificate{Kind: "containment", CertificateID: fmt.Sprintf("certificate:containment:%d", index), CertificateVersion: "certificate-v1", CertificateRecordHash: "sha256:" + fmt.Sprintf("%064x", index+20), LaneIdentityHash: "sha256:" + laneHash}
+		authority.Payload.Certificates = append(authority.Payload.Certificates, certificate)
+		entrants = append(entrants, goEntrantExecutionEvidence{
+			EntrantKey: fmt.Sprintf("entrant:%d", index), StrategyRevisionID: fmt.Sprintf("revision:%d", index), LaneIdentity: lane,
+			ContainmentCertificateRef: creationCertificateSnapshot(runtimeEvidenceCertificateReferenceFor(certificate, "1")),
+			SchedulingDecision:        goSchedulingDecision{Status: executableLaneEvidenceExhibitionOnly, ReasonCode: "CONFORMANCE_MISSING", EvaluatedAt: now.Format(canonicalJSONInstantLayout), FreshUntil: now.Add(time.Hour).Format(canonicalJSONInstantLayout), RegistryGeneration: "1"},
+		})
+	}
+	recomputed, err := createGoMatchSetIntegrityIdentity(authority, entrants)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pair, err := recomputed.pair(entrants[0].EntrantKey, entrants[1].EntrantKey, entrants[0].StrategyRevisionID, entrants[1].StrategyRevisionID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return authority, &claimedMatchIntegrityIdentity{
+		MatchSetID: "match-set:integrity", CompatibilityTupleID: tuple.TupleID, CompatibilityTuple: tuple.Tuple,
+		AuthorityBundleHash: authority.AuthorityBundleHash, RegistryGeneration: "1", EvidenceSetHash: recomputed.EvidenceSetHash, PairHash: pair.PairHash,
+		PublicationID: "publication:1", InstallReceiptID: "receipt:1", PayloadSHA256: authority.AuthorityBundleHash, EnvelopeSHA256: authority.EnvelopeSHA256,
+		SourceManifestHash: "sha256:" + strings.Repeat("d", 64), SourceSet: map[string]any{"certificateIds": []any{"certificate:containment:0", "certificate:containment:1"}},
+		Bottom: entrants[0], Top: entrants[1],
 	}
 }
 
@@ -507,6 +596,7 @@ func newTestMatchJobLifecycle(pool *pgxpool.Pool, now time.Time, token string) *
 	lifecycle := newMatchJobLifecycle(pool)
 	lifecycle.now = func() time.Time { return now }
 	lifecycle.newLeaseToken = func() (string, error) { return token, nil }
+	lifecycle.allowLegacyTestClaims = true
 	return lifecycle
 }
 
