@@ -277,8 +277,23 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 	now := time.Date(2026, 7, 13, 16, 0, 0, 0, time.UTC)
 	fixture := seedSemanticCurrentAuthority(t, ctx, pool, now)
 	service := newMatchCompletionService(pool)
+	service.semanticReceiptSecret = "fixture-semantic-receipt-secret-v1"
 	service.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
 	service.now = func() time.Time { return now }
+
+	t.Run("null current receipt is rejected before mutation", func(t *testing.T) {
+		current := fixture.seedMatch(t, ctx, pool, "null-receipt")
+		before := semanticCompletionSnapshot(t, ctx, pool)
+		input := current.input(fixture.identity)
+		input.SemanticReceipt = runtimeSemanticReceipt{}
+		if _, err := service.completeMatch(ctx, input); err == nil {
+			t.Fatal("current completion persisted without a semantic receipt")
+		}
+		after := semanticCompletionSnapshot(t, ctx, pool)
+		if !jsonValuesEqual(before, after) {
+			t.Fatalf("null receipt rejection mutated rows: before=%s after=%s", before, after)
+		}
+	})
 
 	t.Run("early invalidity leaves canonical rows exact", func(t *testing.T) {
 		current := fixture.seedMatch(t, ctx, pool, "early")
@@ -349,6 +364,26 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 		if tupleID != currentCanonicalTupleID || engine != currentCanonicalTuple.Engine || publicationID != fixture.identity.PublicationID {
 			t.Fatalf("persisted Chronicle lost locked current identity: %q %q %q", tupleID, engine, publicationID)
 		}
+		var receipt map[string]any
+		var receiptHash string
+		if err := pool.QueryRow(ctx, `select runtime_semantic_receipt,runtime_semantic_receipt_hash from chronicles where match_id=$1`, candidate.matchID).Scan(&receipt, &receiptHash); err != nil {
+			t.Fatal(err)
+		}
+		if receipt == nil || !isPrefixedLowerSHA256(receiptHash) {
+			t.Fatalf("current completion omitted persisted receipt: receipt=%v hash=%q", receipt, receiptHash)
+		}
+		if _, err := pool.Exec(ctx, `update chronicles set runtime_semantic_receipt_hash=$1 where match_id=$2`, "sha256:"+strings.Repeat("0", 64), candidate.matchID); err == nil {
+			t.Fatal("persisted semantic receipt hash was mutable")
+		}
+		if _, err := pool.Exec(ctx, "alter table chronicles disable trigger chronicles_runtime_semantic_receipt_immutable"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := pool.Exec(ctx, `update chronicles set runtime_semantic_receipt_hash=null where match_id=$1`, candidate.matchID); err == nil {
+			t.Fatal("receipt all-or-none constraint admitted a one-sided value")
+		}
+		if _, err := pool.Exec(ctx, "alter table chronicles enable trigger chronicles_runtime_semantic_receipt_immutable"); err != nil {
+			t.Fatal(err)
+		}
 	})
 
 	t.Run("late installed receipt drift leaves gameplay exact", func(t *testing.T) {
@@ -379,18 +414,20 @@ type semanticCurrentAuthorityFixture struct {
 }
 
 type semanticCurrentMatchFixture struct {
-	matchID    string
-	jobID      string
-	leaseToken string
-	chronicle  map[string]any
-	finalState map[string]any
+	matchID         string
+	jobID           string
+	leaseToken      string
+	chronicle       map[string]any
+	finalState      map[string]any
+	semanticReceipt runtimeSemanticReceipt
 }
 
 func (current semanticCurrentMatchFixture) input(identity *claimedMatchIntegrityIdentity) completeMatchInput {
 	return completeMatchInput{
 		JobID: current.jobID, LeaseToken: current.leaseToken,
 		Chronicle: current.chronicle, FinalState: current.finalState,
-		Integrity: identity,
+		SemanticReceipt: current.semanticReceipt,
+		Integrity:       identity,
 	}
 }
 
@@ -640,6 +677,18 @@ func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx cont
 			map[string]any{"kind": "TERMINAL", "sequence": 3, "context": map[string]any{}, "outcome": outcome, "board": board},
 		},
 	}
+	request.Match.MatchID = matchID
+	request.Match.Seed = seed
+	request.EvidenceSnapshot.Compatibility = runtimeServiceCompatibilityReference{
+		TupleID: fixture.identity.CompatibilityTupleID,
+		Tuple:   fixture.identity.CompatibilityTuple,
+	}
+	request.EvidenceSnapshot.AuthorityBundleHash = fixture.identity.AuthorityBundleHash
+	request.EvidenceSnapshot.RegistryGeneration = fixture.identity.RegistryGeneration
+	finalState = orchestratorFinalStateForRequest(request)
+	chronicle = orchestratorChronicleForRequest(request, false)
+	const semanticReceiptSecret = "fixture-semantic-receipt-secret-v1"
+	semanticReceipt := signedRuntimeServiceSuccessResultForTest(t, request, chronicle, finalState, semanticReceiptSecret).SemanticReceipt
 	if _, err := pool.Exec(ctx, `insert into matches
 		(id,bottom_strategy_revision_id,top_strategy_revision_id,arena_variant_id,seed,status,bottom_player_id,top_player_id,integrity_match_set_id,bottom_execution_entrant_key,top_execution_entrant_key,bottom_execution_evidence,top_execution_evidence,execution_evidence_pair_hash)
 		values ($1,$2,$3,$4,$5,'running',$6,$7,$8,$9,$10,$11,$12,$13)`,
@@ -662,7 +711,7 @@ func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx cont
 	if _, err := pool.Exec(ctx, `insert into match_job_attempts(id,job_id,attempt_number,worker_id,status) values ($1,$2,1,'candidate:worker','running')`, "candidate:attempt:"+suffix, jobID); err != nil {
 		t.Fatal(err)
 	}
-	return semanticCurrentMatchFixture{matchID: matchID, jobID: jobID, leaseToken: leaseToken, chronicle: chronicle, finalState: finalState}
+	return semanticCurrentMatchFixture{matchID: matchID, jobID: jobID, leaseToken: leaseToken, chronicle: chronicle, finalState: finalState, semanticReceipt: semanticReceipt}
 }
 
 func semanticCompletionSnapshot(t *testing.T, ctx context.Context, pool *pgxpool.Pool) map[string]any {

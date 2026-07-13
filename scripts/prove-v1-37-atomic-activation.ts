@@ -1,10 +1,5 @@
 import { Buffer } from "node:buffer"
-import {
-  createHash,
-  generateKeyPairSync,
-  randomUUID,
-  sign,
-} from "node:crypto"
+import { createHash, generateKeyPairSync, randomUUID, sign } from "node:crypto"
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -19,8 +14,14 @@ import {
 import type { Pool as PgPool } from "../packages/persistence/node_modules/@types/pg/index.d.ts"
 import { migrate } from "../packages/persistence/src/migrations.js"
 import {
+  RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION,
+  encodeRuntimeEvidenceAuthorityImportPayload,
+  importAuthenticatedRuntimeLaneControl,
   installRuntimeEvidenceAuthorityPublication,
   prepareRuntimeEvidenceAuthorityPublication,
+  type RuntimeEvidenceAuthorityImportEnvelope,
+  type RuntimeEvidenceAuthorityImportPayload,
+  type RuntimeEvidenceAuthorityImportTrustRoot,
 } from "../packages/persistence/src/runtime-evidence-authority-publisher.js"
 import {
   RUNTIME_EVIDENCE_AUTHORITY_PUBLIC_KEY_SCHEMA_VERSION,
@@ -68,6 +69,17 @@ export interface AtomicActivationProofReport {
   tupleId: string
   selectedCertificateIds: readonly string[]
   excludedCertificateIds: readonly string[]
+  selectedLaneControlIds: readonly string[]
+  excludedLaneControlIds: readonly string[]
+  selectedSourceRows: readonly Readonly<{
+    sourceType: string
+    sourceId: string
+  }>[]
+  operatorLaneDisables: readonly Readonly<{
+    laneIdentityHash: string
+    disabledAt: string
+    reasonCode: string
+  }>[]
   firstGeneration: string
   secondGeneration: string
   installedHeadGeneration: string
@@ -84,7 +96,9 @@ export const parseAtomicActivationProofArgs = (
   const known = new Set(["--write", "--check"])
   const unknown = args.filter((argument) => !known.has(argument))
   if (unknown.length > 0) {
-    throw new Error(`unknown atomic activation proof arguments: ${unknown.join(", ")}`)
+    throw new Error(
+      `unknown atomic activation proof arguments: ${unknown.join(", ")}`,
+    )
   }
   const write = args.includes("--write")
   const check = args.includes("--check")
@@ -110,7 +124,7 @@ const seedCertificate = async (
     suffix: string
     semanticIdentity: SemanticIdentity
   },
-): Promise<void> => {
+): Promise<string> => {
   const rawHash = createHash("sha256")
     .update(`atomic-activation:${input.suffix}`)
     .digest("hex")
@@ -199,6 +213,42 @@ const seedCertificate = async (
        '2026-08-12T00:00:00.000Z')`,
     [input.id, rawHash, attestationId, lane.artifactId, laneHash, lane],
   )
+  return laneHash
+}
+
+const authenticatedLaneControl = (input: {
+  eventId: string
+  laneIdentityHash: string
+  trustRoot: RuntimeEvidenceAuthorityImportTrustRoot
+  privateKey: Parameters<typeof sign>[2]
+}): RuntimeEvidenceAuthorityImportEnvelope => {
+  const payload: RuntimeEvidenceAuthorityImportPayload = {
+    schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION,
+    domain: "lane-control",
+    eventId: input.eventId,
+    producerId: input.trustRoot.producerId,
+    producerKeyId: input.trustRoot.keyId,
+    trustDomain: input.trustRoot.trustDomain,
+    issuedAt: "2026-07-13T11:00:00.000Z",
+    validUntil: PROOF_VALID_UNTIL,
+    action: "disable",
+    laneIdentityHash: input.laneIdentityHash,
+    reasonCode: "atomic-proof-scope",
+    evidenceReferenceHash: sha256(`evidence:${input.eventId}`),
+    compensatesEventId: null,
+    targetCertificateId: null,
+    targetCertificateRecordHash: null,
+    replacementCertificateId: null,
+    replacementCertificateRecordHash: null,
+  }
+  return {
+    payload,
+    signatureBase64: sign(
+      null,
+      encodeRuntimeEvidenceAuthorityImportPayload(payload),
+      input.privateKey,
+    ).toString("base64"),
+  }
 }
 
 const publicationCounts = async (pool: PgPool) => {
@@ -225,7 +275,9 @@ const expectLoadCode = (operation: () => unknown, code: string): void => {
     )
     return
   }
-  throw new Error(`atomic activation proof: loader unexpectedly accepted ${code}`)
+  throw new Error(
+    `atomic activation proof: loader unexpectedly accepted ${code}`,
+  )
 }
 
 export const proveV137AtomicActivation = async (
@@ -234,11 +286,16 @@ export const proveV137AtomicActivation = async (
   assert(options.write && options.check, "write/check mode is mandatory")
   const current = CANONICAL_COMPATIBILITY_TUPLES[0]
   assert(current !== undefined, "current tuple registry is empty")
-  assert(current.tupleId === EXPECTED_CURRENT_TUPLE_ID, "current tuple id drifted")
+  assert(
+    current.tupleId === EXPECTED_CURRENT_TUPLE_ID,
+    "current tuple id drifted",
+  )
 
   const schema = `atomic_activation_${randomUUID().replaceAll("-", "")}`
   const admin = new Pool({ connectionString: options.databaseUrl })
-  const directory = await mkdtemp(path.join(tmpdir(), "cowards-atomic-activation-"))
+  const directory = await mkdtemp(
+    path.join(tmpdir(), "cowards-atomic-activation-"),
+  )
   let pool: PgPool | undefined
   try {
     await admin.query(`create schema ${schema}`)
@@ -255,12 +312,12 @@ export const proveV137AtomicActivation = async (
       "certificate:atomic:partial",
       "certificate:atomic:mixed",
     ] as const
-    await seedCertificate(pool, {
+    const exactLaneIdentityHash = await seedCertificate(pool, {
       id: exactCertificateId,
       suffix: "exact-current",
       semanticIdentity: { tupleId: current.tupleId, tuple: current.tuple },
     })
-    await seedCertificate(pool, {
+    const historicalLaneIdentityHash = await seedCertificate(pool, {
       id: excludedCertificateIds[0],
       suffix: "historical",
       semanticIdentity: {
@@ -268,7 +325,7 @@ export const proveV137AtomicActivation = async (
         tuple: historicalV14Tuple,
       },
     })
-    await seedCertificate(pool, {
+    const partialLaneIdentityHash = await seedCertificate(pool, {
       id: excludedCertificateIds[1],
       suffix: "partial",
       semanticIdentity: {
@@ -282,7 +339,7 @@ export const proveV137AtomicActivation = async (
         },
       },
     })
-    await seedCertificate(pool, {
+    const mixedLaneIdentityHash = await seedCertificate(pool, {
       id: excludedCertificateIds[2],
       suffix: "mixed",
       semanticIdentity: {
@@ -296,6 +353,34 @@ export const proveV137AtomicActivation = async (
     const publicKeyPem = keys.publicKey
       .export({ type: "spki", format: "pem" })
       .toString()
+    const operatorTrustRoot: RuntimeEvidenceAuthorityImportTrustRoot = {
+      producerId: "atomic-proof-operator:v1",
+      keyId: "atomic-proof-operator-key:v1",
+      trustDomain: "fixture:runtime-evidence-authority-import:v1",
+      publicKeyPem,
+    }
+    const exactLaneControlId = "lane-control:atomic:exact-current"
+    const historicalLaneControlId = "lane-control:atomic:historical"
+    const partialLaneControlId = "lane-control:atomic:partial"
+    const mixedLaneControlId = "lane-control:atomic:mixed"
+    for (const [eventId, laneIdentityHash] of [
+      [exactLaneControlId, exactLaneIdentityHash],
+      [historicalLaneControlId, historicalLaneIdentityHash],
+      [partialLaneControlId, partialLaneIdentityHash],
+      [mixedLaneControlId, mixedLaneIdentityHash],
+    ] as const) {
+      await importAuthenticatedRuntimeLaneControl(pool, {
+        envelope: authenticatedLaneControl({
+          eventId,
+          laneIdentityHash,
+          trustRoot: operatorTrustRoot,
+          privateKey: keys.privateKey,
+        }),
+        verificationInstant: PROOF_INSTANT,
+        expectedLaneIdentityHash: laneIdentityHash,
+        trustedOperators: [operatorTrustRoot],
+      })
+    }
     const common = {
       bundleVersion: "v1.37-current-atomic-activation-proof-v1",
       issuedAt: PROOF_INSTANT,
@@ -303,7 +388,7 @@ export const proveV137AtomicActivation = async (
       validUntil: PROOF_VALID_UNTIL,
       trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
       signerKeyId,
-      trustedImportAuthorities: [],
+      trustedImportAuthorities: [operatorTrustRoot],
       signMessage: (bytes: Uint8Array) => sign(null, bytes, keys.privateKey),
     } as const
 
@@ -320,7 +405,10 @@ export const proveV137AtomicActivation = async (
           ? String((error as Error & { code: unknown }).code)
           : ""
     }
-    assert(rejectedCode === "CLOSED_GRAPH", "retained candidate was publishable")
+    assert(
+      rejectedCode === "CLOSED_GRAPH",
+      "retained candidate was publishable",
+    )
     assert(
       JSON.stringify(await publicationCounts(pool)) ===
         JSON.stringify(beforeRejected),
@@ -332,6 +420,16 @@ export const proveV137AtomicActivation = async (
       JSON.stringify(first.sourceIds.certificateIds) ===
         JSON.stringify([exactCertificateId]),
       "partial, mixed, or historical certificate entered current publication",
+    )
+    const excludedLaneControlIds = [
+      historicalLaneControlId,
+      partialLaneControlId,
+      mixedLaneControlId,
+    ] as const
+    assert(
+      JSON.stringify(first.sourceIds.laneControlIds) ===
+        JSON.stringify([exactLaneControlId]),
+      "historical, partial, or mixed lane control entered current publication",
     )
     const targetPath = path.join(directory, "authority.json")
     const publicKeyPath = path.join(directory, "authority-public-key.json")
@@ -365,10 +463,27 @@ export const proveV137AtomicActivation = async (
       expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
       evaluationInstant: () => PROOF_INSTANT,
     }
-    const firstLoaded = createRuntimeEvidenceAuthorityLoader(loaderConfig).load()
-    assert(firstLoaded.registryGeneration === first.generation, "first load drifted")
+    const firstLoaded =
+      createRuntimeEvidenceAuthorityLoader(loaderConfig).load()
+    assert(
+      firstLoaded.registryGeneration === first.generation,
+      "first load drifted",
+    )
+    const selectedSourceRows = await pool.query<{
+      source_type: string
+      source_id: string
+    }>(
+      `select source_type, source_id
+         from runtime_evidence_authority_publication_sources
+        where publication_id = $1
+        order by source_type, source_id`,
+      [first.publicationId],
+    )
 
-    const second = await prepareRuntimeEvidenceAuthorityPublication(pool, common)
+    const second = await prepareRuntimeEvidenceAuthorityPublication(
+      pool,
+      common,
+    )
     await installRuntimeEvidenceAuthorityPublication(pool, {
       publicationId: second.publicationId,
       targetPath,
@@ -392,7 +507,9 @@ export const proveV137AtomicActivation = async (
     }).load()
     assert(restart.registryGeneration === second.generation, "restart drifted")
 
-    await writeFile(targetPath, Buffer.from(first.envelopeBytes), { mode: 0o600 })
+    await writeFile(targetPath, Buffer.from(first.envelopeBytes), {
+      mode: 0o600,
+    })
     let rollbackCode = ""
     try {
       createRuntimeEvidenceAuthorityLoader({
@@ -403,7 +520,10 @@ export const proveV137AtomicActivation = async (
       rollbackCode =
         error instanceof RuntimeEvidenceAuthorityLoadError ? error.code : ""
     }
-    assert(rollbackCode === "ROLLBACK", "older bundle survived high-water restart")
+    assert(
+      rollbackCode === "ROLLBACK",
+      "older bundle survived high-water restart",
+    )
 
     expectLoadCode(
       () =>
@@ -415,7 +535,9 @@ export const proveV137AtomicActivation = async (
         }).load(),
       "ROLLBACK",
     )
-    await writeFile(targetPath, Buffer.from(second.envelopeBytes), { mode: 0o600 })
+    await writeFile(targetPath, Buffer.from(second.envelopeBytes), {
+      mode: 0o600,
+    })
     expectLoadCode(
       () =>
         createRuntimeEvidenceAuthorityLoader({
@@ -455,6 +577,13 @@ export const proveV137AtomicActivation = async (
       tupleId: current.tupleId,
       selectedCertificateIds: first.sourceIds.certificateIds,
       excludedCertificateIds,
+      selectedLaneControlIds: first.sourceIds.laneControlIds,
+      excludedLaneControlIds,
+      selectedSourceRows: selectedSourceRows.rows.map((row) => ({
+        sourceType: row.source_type,
+        sourceId: row.source_id,
+      })),
+      operatorLaneDisables: firstLoaded.payload.operatorLaneDisables,
       firstGeneration: first.generation,
       secondGeneration: second.generation,
       installedHeadGeneration: installedHead.rows[0]!.generation,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
+import * as enginePackage from "./index.js"
 import { getRoundPlayerOrder } from "./activation.js"
 import { MATCH_KERNEL } from "./kernel/driver.js"
 import type { MatchMachine } from "./kernel/types.js"
@@ -85,6 +86,11 @@ const bottomSelectionEffect = (state: GameState) => {
 }
 
 describe("activation selection and runtime inputs", () => {
+  it("does not expose retired contiguous activation lifecycle routes from the package root", () => {
+    expect(enginePackage).not.toHaveProperty("resolveActivationSelection")
+    expect(enginePackage).not.toHaveProperty("resolveActivationCycle")
+  })
+
   it("uses the A B B A snake pattern for Round 2", () => {
     expect(getRoundPlayerOrder("A", "B", 2)).toEqual(["A", "B", "B", "A"])
   })

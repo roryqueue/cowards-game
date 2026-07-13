@@ -25,7 +25,12 @@ import {
 import {
   RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_SEMANTIC_RECEIPT_ALGORITHM,
+  RUNTIME_SEMANTIC_RECEIPT_KEY_ID,
+  RUNTIME_SEMANTIC_RECEIPT_PROFILE,
+  RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
   type RuntimeExecutionFinalState,
+  type RuntimeSemanticReceipt,
   type RuntimeExecutionServiceRequest,
 } from "./runtime-execution-service.js"
 import {
@@ -2844,6 +2849,35 @@ export const RuntimeExecutionFinalStateSchema = z.object({
   outcome: MatchOutcomeSchema.optional(),
 }) satisfies z.ZodType<RuntimeExecutionFinalState>
 
+const PrefixedSha256Schema = z.string().regex(/^sha256:[0-9a-f]{64}$/u)
+
+export const RuntimeSemanticReceiptSchema = z
+  .object({
+    schemaVersion: z.literal(RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION),
+    profile: z.literal(RUNTIME_SEMANTIC_RECEIPT_PROFILE),
+    serviceContractVersion: z.literal(RUNTIME_EXECUTION_SERVICE_VERSION),
+    requestId: z.string().min(1),
+    matchId: z.string().min(1),
+    compatibilityTupleId: PrefixedSha256Schema,
+    rulesVersion: z.string().min(1),
+    engineVersion: z.string().min(1),
+    runtimeAbiVersion: z.string().min(1),
+    chronicleVersion: z.string().min(1),
+    arenaCatalogVersion: z.string().min(1),
+    setPolicyVersion: z.string().min(1),
+    authorityBundleHash: PrefixedSha256Schema,
+    registryGeneration: z.string().regex(/^(?:0|[1-9][0-9]*)$/u),
+    chronicleHash: PrefixedSha256Schema,
+    finalStateHash: PrefixedSha256Schema,
+    reconstructedTerminalStateHash: PrefixedSha256Schema,
+    outcomeHash: PrefixedSha256Schema,
+    runtimeViolationEventCount: z.number().int().nonnegative(),
+    algorithm: z.literal(RUNTIME_SEMANTIC_RECEIPT_ALGORITHM),
+    keyId: z.literal(RUNTIME_SEMANTIC_RECEIPT_KEY_ID),
+    signature: z.string().regex(/^hmac-sha256:[0-9a-f]{64}$/u),
+  })
+  .strict() satisfies z.ZodType<RuntimeSemanticReceipt>
+
 export const RuntimeExecutionServiceSuccessResponseSchema = z.object({
   contractVersion: z.literal(RUNTIME_EXECUTION_SERVICE_VERSION),
   ok: z.literal(true),
@@ -2851,12 +2885,15 @@ export const RuntimeExecutionServiceSuccessResponseSchema = z.object({
   requestId: z.string().min(1),
   matchId: z.string().min(1),
   runtimeAbiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
-  result: z.object({
-    privacy: z.literal("internal_runtime_result"),
-    chronicle: ChronicleSchema,
-    finalState: RuntimeExecutionFinalStateSchema,
-    runtimeViolationEventCount: z.number().int().nonnegative(),
-  }),
+  result: z
+    .object({
+      privacy: z.literal("internal_runtime_result"),
+      chronicle: ChronicleSchema,
+      finalState: RuntimeExecutionFinalStateSchema,
+      runtimeViolationEventCount: z.number().int().nonnegative(),
+      semanticReceipt: RuntimeSemanticReceiptSchema,
+    })
+    .strict(),
 })
 
 export const RuntimeExecutionServiceSystemFailureResponseSchema = z.object({

@@ -19,17 +19,23 @@ import (
 	"unicode/utf8"
 )
 
-const runtimeExecutionServiceVersion = "runtime-execution-service-v1.15"
+const runtimeExecutionServiceVersion = "runtime-execution-service-v1.16"
 const strategyRuntimeABIVersion = "strategy-runtime-abi-v1.14"
 const defaultRuntimeServiceResponseBytes = 8 * 1024 * 1024
 const defaultRuntimeServiceHTTPTimeout = 90 * time.Second
 const runtimeServicePrivateArtifactTokenHeader = "x-cowards-private-artifact-token"
+const runtimeSemanticReceiptSchemaVersion = "runtime-semantic-receipt-v1"
+const runtimeSemanticReceiptProfile = "current-exact"
+const runtimeSemanticReceiptAlgorithm = "hmac-sha256"
+const runtimeSemanticReceiptKeyID = "runtime-service-semantic-receipt:v1"
+const runtimeSemanticReceiptDomain = "cowards-game:runtime-semantic-receipt:v1"
 
 type runtimeServiceClient struct {
-	endpoint             string
-	httpClient           *http.Client
-	maxResponseBytes     int64
-	privateArtifactToken string
+	endpoint              string
+	httpClient            *http.Client
+	maxResponseBytes      int64
+	privateArtifactToken  string
+	semanticReceiptSecret string
 }
 
 type runtimeServiceMatch struct {
@@ -113,6 +119,39 @@ type runtimeServiceEvidenceSnapshot struct {
 	} `json:"entrants"`
 }
 
+type runtimeSemanticReceipt struct {
+	SchemaVersion                  string `json:"schemaVersion"`
+	Profile                        string `json:"profile"`
+	ServiceContractVersion         string `json:"serviceContractVersion"`
+	RequestID                      string `json:"requestId"`
+	MatchID                        string `json:"matchId"`
+	CompatibilityTupleID           string `json:"compatibilityTupleId"`
+	RulesVersion                   string `json:"rulesVersion"`
+	EngineVersion                  string `json:"engineVersion"`
+	RuntimeABIVersion              string `json:"runtimeAbiVersion"`
+	ChronicleVersion               string `json:"chronicleVersion"`
+	ArenaCatalogVersion            string `json:"arenaCatalogVersion"`
+	SetPolicyVersion               string `json:"setPolicyVersion"`
+	AuthorityBundleHash            string `json:"authorityBundleHash"`
+	RegistryGeneration             string `json:"registryGeneration"`
+	ChronicleHash                  string `json:"chronicleHash"`
+	FinalStateHash                 string `json:"finalStateHash"`
+	ReconstructedTerminalStateHash string `json:"reconstructedTerminalStateHash"`
+	OutcomeHash                    string `json:"outcomeHash"`
+	RuntimeViolationEventCount     int    `json:"runtimeViolationEventCount"`
+	Algorithm                      string `json:"algorithm"`
+	KeyID                          string `json:"keyId"`
+	Signature                      string `json:"signature"`
+}
+
+type runtimeServiceSuccessResult struct {
+	Privacy                    string                 `json:"privacy"`
+	Chronicle                  map[string]any         `json:"chronicle"`
+	FinalState                 map[string]any         `json:"finalState"`
+	RuntimeViolationEventCount int                    `json:"runtimeViolationEventCount"`
+	SemanticReceipt            runtimeSemanticReceipt `json:"semanticReceipt"`
+}
+
 type runtimeServiceResponse struct {
 	ContractVersion   string                                `json:"contractVersion"`
 	OK                bool                                  `json:"ok"`
@@ -125,7 +164,7 @@ type runtimeServiceResponse struct {
 	MatchID           string                                `json:"matchId,omitempty"`
 	RuntimeABIVersion string                                `json:"runtimeAbiVersion"`
 	Compatibility     *runtimeServiceCompatibilityReference `json:"compatibility,omitempty"`
-	Result            map[string]any                        `json:"result,omitempty"`
+	Result            *runtimeServiceSuccessResult          `json:"result,omitempty"`
 	SystemFailure     *runtimeServiceFailure                `json:"systemFailure,omitempty"`
 }
 
@@ -160,8 +199,9 @@ func newRuntimeServiceClient(endpoint string) *runtimeServiceClient {
 		httpClient: &http.Client{
 			Timeout: runtimeServiceHTTPTimeout(),
 		},
-		maxResponseBytes:     defaultRuntimeServiceResponseBytes,
-		privateArtifactToken: runtimeServicePrivateArtifactToken(),
+		maxResponseBytes:      defaultRuntimeServiceResponseBytes,
+		privateArtifactToken:  runtimeServicePrivateArtifactToken(),
+		semanticReceiptSecret: runtimeServiceSemanticReceiptSecret(),
 	}
 }
 
@@ -179,6 +219,10 @@ func runtimeServiceHTTPTimeout() time.Duration {
 
 func runtimeServicePrivateArtifactToken() string {
 	return strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN"))
+}
+
+func runtimeServiceSemanticReceiptSecret() string {
+	return strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET"))
 }
 
 func (client *runtimeServiceClient) executeMatch(ctx context.Context, request runtimeServiceRequest) (*runtimeServiceResponse, *runtimeServiceFailure) {
@@ -223,7 +267,7 @@ func (client *runtimeServiceClient) executeMatch(ctx context.Context, request ru
 		return nil, newRuntimeServiceFailure("RuntimeServiceOversizedResponse", "Runtime service response exceeded the configured byte limit", true, map[string]any{"status": response.StatusCode, "capBytes": maxBytes})
 	}
 
-	decoded, failure := decodeRuntimeServiceResponseBytes(request, payload)
+	decoded, failure := decodeRuntimeServiceResponseBytesWithSecret(request, payload, client.semanticReceiptSecret)
 	if failure != nil {
 		return nil, failure
 	}
@@ -560,17 +604,8 @@ func sanitizeRuntimeServiceFailureCode(code string) string {
 }
 
 func isRuntimeServiceContractFailureCode(code string) bool {
-	switch code {
-	case "MALFORMED_REQUEST",
-		"SOURCE_HASH_MISMATCH",
-		"SOURCE_BYTES_MISMATCH",
-		"UNSUPPORTED_RUNTIME_ADAPTER",
-		"EXECUTION_EXCEPTION",
-		"RESPONSE_SCHEMA_INVALID":
-		return true
-	default:
-		return false
-	}
+	_, ok := runtimeServiceContractFailureCodes[code]
+	return ok
 }
 
 func sanitizeRuntimeServiceDetails(details map[string]any) map[string]any {

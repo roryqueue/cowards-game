@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,7 +14,7 @@ import (
 	"time"
 )
 
-func TestRuntimeServiceClientSuccess(t *testing.T) {
+func TestRuntimeServiceClientRejectsShapeOnlySuccessWithoutSemanticReceipt(t *testing.T) {
 	request := validRuntimeServiceRequestForTest()
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, httpRequest *http.Request) {
 		if httpRequest.URL.Path != "/execute-match" {
@@ -24,9 +27,9 @@ func TestRuntimeServiceClientSuccess(t *testing.T) {
 			RequestID:         request.RequestID,
 			MatchID:           request.Match.MatchID,
 			RuntimeABIVersion: strategyRuntimeABIVersion,
-			Result: map[string]any{
-				"chronicle":  map[string]any{"id": "chronicle:test"},
-				"finalState": map[string]any{"matchId": request.Match.MatchID},
+			Result: &runtimeServiceSuccessResult{
+				Chronicle:  map[string]any{"id": "chronicle:test"},
+				FinalState: map[string]any{"matchId": request.Match.MatchID},
 			},
 		})
 	}))
@@ -34,11 +37,30 @@ func TestRuntimeServiceClientSuccess(t *testing.T) {
 	client := newRuntimeServiceClient(server.URL)
 
 	response, failure := client.executeMatch(context.Background(), request)
-	if failure != nil {
-		t.Fatalf("unexpected failure: %s", runtimeServiceFailureJSONSafe(failure))
+	if response != nil || failure == nil || failure.ErrorClass != "RuntimeServiceSemanticIntegrity" || !failure.Retryable {
+		t.Fatalf("shape-only success bypassed semantic receipt admission: response=%+v failure=%+v", response, failure)
 	}
-	if response == nil || !response.OK || response.Kind != "executionResult" {
-		t.Fatalf("expected success response, got %+v", response)
+}
+
+func TestRuntimeServiceFailureCodeParityIncludesEveryV116ContractCode(t *testing.T) {
+	for _, code := range []string{
+		"MALFORMED_REQUEST",
+		"SOURCE_HASH_MISMATCH",
+		"SOURCE_BYTES_MISMATCH",
+		"UNSUPPORTED_RUNTIME_ADAPTER",
+		"MATCH_EXECUTION_FAILED",
+		"CHRONICLE_INTEGRITY_FAILED",
+		"EXECUTION_EXCEPTION",
+		"RESPONSE_SCHEMA_INVALID",
+		"EVIDENCE_STALE",
+		"EVIDENCE_REVOKED",
+		"EVIDENCE_IDENTITY_MISMATCH",
+		"EVIDENCE_UNVERIFIABLE",
+		"EVIDENCE_REGISTRY_DRIFT",
+	} {
+		if !isRuntimeServiceContractFailureCode(code) {
+			t.Fatalf("Go runtime-service failure-code parity omitted %s", code)
+		}
 	}
 }
 
@@ -447,9 +469,9 @@ func TestRuntimeServiceClientRejectsRuntimeABIDriftInResponse(t *testing.T) {
 			RequestID:         request.RequestID,
 			MatchID:           request.Match.MatchID,
 			RuntimeABIVersion: "strategy-runtime-abi-v0",
-			Result: map[string]any{
-				"chronicle":  map[string]any{"id": "chronicle:test"},
-				"finalState": map[string]any{"matchId": request.Match.MatchID},
+			Result: &runtimeServiceSuccessResult{
+				Chronicle:  map[string]any{"id": "chronicle:test"},
+				FinalState: map[string]any{"matchId": request.Match.MatchID},
 			},
 		})
 	}))
@@ -600,7 +622,7 @@ func TestRuntimeServiceClientRejectsResponseContractDrift(t *testing.T) {
 }
 
 func validRuntimeServiceRequestForTest() runtimeServiceRequest {
-	bytes, err := os.ReadFile("../../packages/spec/artifacts/runtime-execution-service-request.v1.15.json")
+	bytes, err := os.ReadFile("../../packages/spec/artifacts/runtime-execution-service-request.v1.16.json")
 	if err != nil {
 		panic(err)
 	}
@@ -624,6 +646,41 @@ func validRuntimeServiceRequestForTest() runtimeServiceRequest {
 		entrant.SchedulingDecisionHash = hashRuntimeServiceSchedulingDecision(request.EvidenceSnapshot, *entrant)
 	}
 	return request
+}
+
+func signedRuntimeServiceSuccessResultForTest(t *testing.T, request runtimeServiceRequest, chronicle map[string]any, finalState map[string]any, secret string) *runtimeServiceSuccessResult {
+	t.Helper()
+	chronicleHash, err := runtimeSemanticChronicleHash(chronicle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	finalStateHash, err := runtimeSemanticFinalStateHash(finalState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outcomeHash, err := runtimeSemanticOutcomeHash(finalState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt := runtimeSemanticReceipt{
+		SchemaVersion: runtimeSemanticReceiptSchemaVersion, Profile: runtimeSemanticReceiptProfile,
+		ServiceContractVersion: runtimeExecutionServiceVersion, RequestID: request.RequestID, MatchID: request.Match.MatchID,
+		CompatibilityTupleID: request.EvidenceSnapshot.Compatibility.TupleID,
+		RulesVersion:         request.EvidenceSnapshot.Compatibility.Tuple.Rules, EngineVersion: request.EvidenceSnapshot.Compatibility.Tuple.Engine,
+		RuntimeABIVersion: request.EvidenceSnapshot.Compatibility.Tuple.RuntimeABI, ChronicleVersion: request.EvidenceSnapshot.Compatibility.Tuple.Chronicle,
+		ArenaCatalogVersion: request.EvidenceSnapshot.Compatibility.Tuple.ArenaCatalog, SetPolicyVersion: request.EvidenceSnapshot.Compatibility.Tuple.SetPolicy,
+		AuthorityBundleHash: request.EvidenceSnapshot.AuthorityBundleHash, RegistryGeneration: request.EvidenceSnapshot.RegistryGeneration,
+		ChronicleHash: chronicleHash, FinalStateHash: finalStateHash,
+		ReconstructedTerminalStateHash: "sha256:" + strings.Repeat("7", 64), OutcomeHash: outcomeHash,
+		RuntimeViolationEventCount: runtimeSemanticViolationCount(chronicle), Algorithm: runtimeSemanticReceiptAlgorithm, KeyID: runtimeSemanticReceiptKeyID,
+	}
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(runtimeSemanticReceiptMessage(receipt))
+	receipt.Signature = "hmac-sha256:" + hex.EncodeToString(mac.Sum(nil))
+	return &runtimeServiceSuccessResult{
+		Privacy: "internal_runtime_result", Chronicle: chronicle, FinalState: finalState,
+		RuntimeViolationEventCount: receipt.RuntimeViolationEventCount, SemanticReceipt: receipt,
+	}
 }
 
 func writeRuntimeServiceTestJSON(t *testing.T, writer http.ResponseWriter, value any) {

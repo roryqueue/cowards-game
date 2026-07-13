@@ -117,6 +117,12 @@ func newLiveServerWithDependencies(ctx context.Context, databaseURL string, depe
 	orchestrationMode := strings.TrimSpace(os.Getenv("COWARDS_GO_ORCHESTRATION"))
 	runtimeServiceURL := strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SERVICE_URL"))
 	if orchestrationMode != "0" && runtimeServiceURL != "" {
+		if err := requireRuntimeSemanticReceiptSecret(); err != nil {
+			pool.Close()
+			return nil, errors.New("live Go orchestration semantic admission unavailable")
+		}
+	}
+	if orchestrationMode != "0" && runtimeServiceURL != "" {
 		server.stopOrchestrator = server.orchestrator.start(ctx)
 	}
 	if orchestrationMode == "1" && runtimeServiceURL == "" {

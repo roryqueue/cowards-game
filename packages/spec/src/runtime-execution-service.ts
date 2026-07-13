@@ -24,7 +24,74 @@ import type {
 } from "./runtime-evidence.js"
 
 export const RUNTIME_EXECUTION_SERVICE_VERSION =
-  "runtime-execution-service-v1.15" as const
+  "runtime-execution-service-v1.16" as const
+
+export const RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION =
+  "runtime-semantic-receipt-v1" as const
+export const RUNTIME_SEMANTIC_RECEIPT_PROFILE = "current-exact" as const
+export const RUNTIME_SEMANTIC_RECEIPT_ALGORITHM = "hmac-sha256" as const
+export const RUNTIME_SEMANTIC_RECEIPT_KEY_ID =
+  "runtime-service-semantic-receipt:v1" as const
+export const RUNTIME_SEMANTIC_RECEIPT_DOMAIN =
+  "cowards-game:runtime-semantic-receipt:v1" as const
+
+export interface RuntimeSemanticReceiptClaims {
+  schemaVersion: typeof RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION
+  profile: typeof RUNTIME_SEMANTIC_RECEIPT_PROFILE
+  serviceContractVersion: typeof RUNTIME_EXECUTION_SERVICE_VERSION
+  requestId: string
+  matchId: MatchId
+  compatibilityTupleId: string
+  rulesVersion: string
+  engineVersion: string
+  runtimeAbiVersion: string
+  chronicleVersion: string
+  arenaCatalogVersion: string
+  setPolicyVersion: string
+  authorityBundleHash: string
+  registryGeneration: string
+  chronicleHash: string
+  finalStateHash: string
+  reconstructedTerminalStateHash: string
+  outcomeHash: string
+  runtimeViolationEventCount: number
+  algorithm: typeof RUNTIME_SEMANTIC_RECEIPT_ALGORITHM
+  keyId: typeof RUNTIME_SEMANTIC_RECEIPT_KEY_ID
+}
+
+export interface RuntimeSemanticReceipt extends RuntimeSemanticReceiptClaims {
+  signature: string
+}
+
+export const encodeRuntimeSemanticReceiptClaims = (
+  claims: RuntimeSemanticReceiptClaims,
+): Uint8Array =>
+  new TextEncoder().encode(
+    [
+      RUNTIME_SEMANTIC_RECEIPT_DOMAIN,
+      claims.schemaVersion,
+      claims.profile,
+      claims.serviceContractVersion,
+      claims.requestId,
+      claims.matchId,
+      claims.compatibilityTupleId,
+      claims.rulesVersion,
+      claims.engineVersion,
+      claims.runtimeAbiVersion,
+      claims.chronicleVersion,
+      claims.arenaCatalogVersion,
+      claims.setPolicyVersion,
+      claims.authorityBundleHash,
+      claims.registryGeneration,
+      claims.chronicleHash,
+      claims.finalStateHash,
+      claims.reconstructedTerminalStateHash,
+      claims.outcomeHash,
+      String(claims.runtimeViolationEventCount),
+      claims.algorithm,
+      claims.keyId,
+    ].join("\n"),
+  )
 
 export const RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME =
   "Strategy Execution Service / Runtime Broker" as const
@@ -295,6 +362,7 @@ export interface RuntimeExecutionServiceSuccessResponse {
     chronicle: Chronicle
     finalState: RuntimeExecutionFinalState
     runtimeViolationEventCount: number
+    semanticReceipt: RuntimeSemanticReceipt
   }
 }
 

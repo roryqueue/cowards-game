@@ -91,6 +91,10 @@ import {
   RUNTIME_EXECUTION_SERVICE_FAILURE_PRIVACY_POLICY,
   RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_SEMANTIC_RECEIPT_ALGORITHM,
+  RUNTIME_SEMANTIC_RECEIPT_KEY_ID,
+  RUNTIME_SEMANTIC_RECEIPT_PROFILE,
+  RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
 } from "./runtime-execution-service.js"
 import { CANONICAL_COMPATIBILITY_TUPLES } from "./integrity-authority.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
@@ -1751,7 +1755,7 @@ describe("Coward's Game spec contracts", () => {
     ).toBe(false)
   })
 
-  it("RuntimeExecutionServiceRequestSchema accepts complete v1.15 Match execution inputs", () => {
+  it("RuntimeExecutionServiceRequestSchema accepts complete v1.16 Match execution inputs", () => {
     const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
     const source =
       "export default { selectActivations() {}, soldierBrain() {} }"
@@ -1859,7 +1863,8 @@ describe("Coward's Game spec contracts", () => {
               bottom: {
                 ...request.evidenceSnapshot.entrants.bottom,
                 schedulingDecision: {
-                  ...request.evidenceSnapshot.entrants.bottom.schedulingDecision,
+                  ...request.evidenceSnapshot.entrants.bottom
+                    .schedulingDecision,
                   evaluatedAt: vector.value,
                   freshUntil: vector.value,
                 },
@@ -2181,6 +2186,7 @@ describe("Coward's Game spec contracts", () => {
   })
 
   it("RuntimeExecutionServiceResponseSchema accepts success and system-failure envelopes", () => {
+    const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
     const board = {
       bounds: fixtures.valid.standardArenaVariant.initialBounds,
       soldiers: fixtures.valid.standardInitialSoldiers.map(
@@ -2262,6 +2268,30 @@ describe("Coward's Game spec contracts", () => {
         chronicle,
         finalState,
         runtimeViolationEventCount: 0,
+        semanticReceipt: {
+          schemaVersion: RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
+          profile: RUNTIME_SEMANTIC_RECEIPT_PROFILE,
+          serviceContractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+          requestId: "runtime-request:spec",
+          matchId: "match:runtime-service-spec",
+          compatibilityTupleId: registered.tupleId,
+          rulesVersion: registered.tuple.rules,
+          engineVersion: registered.tuple.engine,
+          runtimeAbiVersion: registered.tuple.runtimeAbi,
+          chronicleVersion: registered.tuple.chronicle,
+          arenaCatalogVersion: registered.tuple.arenaCatalog,
+          setPolicyVersion: registered.tuple.setPolicy,
+          authorityBundleHash: `sha256:${"a".repeat(64)}`,
+          registryGeneration: "1",
+          chronicleHash: `sha256:${"b".repeat(64)}`,
+          finalStateHash: `sha256:${"c".repeat(64)}`,
+          reconstructedTerminalStateHash: `sha256:${"c".repeat(64)}`,
+          outcomeHash: `sha256:${"d".repeat(64)}`,
+          runtimeViolationEventCount: 0,
+          algorithm: RUNTIME_SEMANTIC_RECEIPT_ALGORITHM,
+          keyId: RUNTIME_SEMANTIC_RECEIPT_KEY_ID,
+          signature: `hmac-sha256:${"e".repeat(64)}`,
+        },
       },
     }
     const systemFailure = {
@@ -2293,12 +2323,12 @@ describe("Coward's Game spec contracts", () => {
 
   it("publishes the v1.16 Strategy Execution Service / Runtime Broker boundary contract", () => {
     expect(RUNTIME_EXECUTION_SERVICE_VERSION).toBe(
-      "runtime-execution-service-v1.15",
+      "runtime-execution-service-v1.16",
     )
     expect(RUNTIME_EXECUTION_SERVICE_BOUNDARY_CONTRACT).toMatchObject({
       publicName: "Strategy Execution Service / Runtime Broker",
       currentImplementationLabel: "isolated JS/TS runtime service",
-      contractVersion: "runtime-execution-service-v1.15",
+      contractVersion: "runtime-execution-service-v1.16",
       runtimeAbiVersion: "strategy-runtime-abi-v1.14",
     })
     expect(RUNTIME_EXECUTION_SERVICE_CURRENT_IMPLEMENTATION).toMatchObject({
@@ -2386,7 +2416,7 @@ describe("Coward's Game spec contracts", () => {
     )
     expect(artifact.transport.currentBinding).toBe("HTTP+JSON")
     expect(artifact.runtimeAbi).toMatchObject({
-      serviceContractVersion: "runtime-execution-service-v1.15",
+      serviceContractVersion: "runtime-execution-service-v1.16",
       strategyRuntimeAbiVersion: "strategy-runtime-abi-v1.14",
       languageSpecificShortcutsAllowed: false,
     })

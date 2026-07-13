@@ -1,10 +1,17 @@
 import { Buffer } from "node:buffer"
 import { createHash, randomUUID } from "node:crypto"
-import { gunzipSync } from "node:zlib"
-import type { GameState } from "@cowards/engine"
+import {
+  MATCH_KERNEL,
+  type GameState,
+  type StrategyRuntime,
+} from "@cowards/engine"
+import {
+  recordChronicleFromExecution,
+  type ChronicleBoundaryAnchor,
+  type ChronicleRecorderExecution,
+} from "@cowards/replay"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
-  COMPATIBILITY_VERSIONS,
   type Chronicle,
   type ExecutableLaneIdentity,
   type RuntimeEntrantExecutionEvidence,
@@ -14,6 +21,7 @@ import { Pool } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import {
   MatchCompletionIntegritySystemFailure,
+  admitCurrentMatchCompletion,
   completeMatch,
   deriveMatchCompletionFields,
   validateCompletionIntegritySnapshot,
@@ -29,7 +37,6 @@ import {
   type MatchExecutionEvidencePair,
   type MatchSetIntegrityIdentity,
 } from "./integrity-evidence.js"
-import { ACTIVE_OLD_COMPLETION_GZIP_BASE64 } from "./active-old-completion.fixture.js"
 
 const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
 const sha256 = (value: string): string =>
@@ -120,34 +127,67 @@ const responseSnapshot = (
   entrants: { bottom: pair.bottom, top: pair.top },
 })
 
-const ACTIVE_OLD_COMPLETION_TEMPLATE = gunzipSync(
-  Buffer.from(ACTIVE_OLD_COMPLETION_GZIP_BASE64, "base64"),
-).toString("utf8")
-
 const builtMatch = (
   namespace: string,
   seed = `${namespace}:seed`,
-): { chronicle: Chronicle; finalState: GameState } => {
-  const built = JSON.parse(
-    ACTIVE_OLD_COMPLETION_TEMPLATE.replaceAll("__NS__", namespace).replaceAll(
-      "__SEED__",
-      seed,
-    ),
-  ) as { chronicle: Chronicle; finalState: GameState }
-  const versions = { ...COMPATIBILITY_VERSIONS }
+): {
+  chronicle: Chronicle
+  finalState: GameState
+  execution: ChronicleRecorderExecution
+  boundaryAnchors: readonly ChronicleBoundaryAnchor[]
+} => {
+  const runtime: StrategyRuntime = {
+    selectActivations(input) {
+      return {
+        ok: true,
+        value: {
+          activationOrders: input.mySoldiers
+            .filter(({ status }) => status === "ACTIVE")
+            .slice(0, input.activationCount)
+            .map(({ id }) => ({ soldierId: id })),
+          strategyMemory: input.strategyMemory,
+        },
+      }
+    },
+    runSoldierBrain(input) {
+      return {
+        ok: true,
+        value: {
+          action: { type: "TURN_TO_STONE" },
+          soldierMemory: input.soldierMemory,
+        },
+      }
+    },
+  }
+  const execution = MATCH_KERNEL.runMatch({
+    matchId: `${namespace}:match`,
+    seed,
+    arenaVariant: {
+      id: `${namespace}:arena`,
+      name: "Completion integrity",
+      initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+      terrainStones: [],
+    },
+    bottomPlayerId: "player:bottom",
+    topPlayerId: "player:top",
+    bottomStrategyRevisionId: `${namespace}:revision:bottom`,
+    topStrategyRevisionId: `${namespace}:revision:top`,
+    runtime,
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: tuple.tupleId,
+      semanticTuple: tuple.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
   return {
-    chronicle: {
-      ...built.chronicle,
-      reproducibility: {
-        ...built.chronicle.reproducibility,
-        arenaVariantVersion: versions.arenaVariant,
-        versions,
-      },
-    },
-    finalState: {
-      ...built.finalState,
-      versions,
-    },
+    chronicle: recorded.chronicle,
+    finalState: recorded.finalState,
+    execution,
+    boundaryAnchors: recorded.boundaryAnchors,
   }
 }
 
@@ -225,6 +265,27 @@ describe("Match completion fields", () => {
       bottomSurvivalTurns: 48,
       topSurvivalTurns: 48,
     })
+  })
+})
+
+describe("current Match completion semantic admission", () => {
+  it("rejects a Chronicle/final-state pair without execution and boundary anchors", () => {
+    const built = builtMatch("completion:semantic-binding")
+    expect(() =>
+      admitCurrentMatchCompletion({
+        chronicle: built.chronicle,
+        finalState: {
+          ...built.finalState,
+          phaseNumber: built.finalState.phaseNumber + 1,
+        },
+        compatibility: {
+          tupleId: tuple.tupleId,
+          tuple: tuple.tuple,
+        },
+        execution: undefined,
+        boundaryAnchors: undefined,
+      }),
+    ).toThrow(/execution|boundary|semantic|reconstruct/iu)
   })
 })
 
@@ -316,7 +377,6 @@ describe("Match completion integrity identity", () => {
       }
     }
   })
-
 })
 
 const seedCertificateAuthority = async (
@@ -684,6 +744,8 @@ describePostgres(
       chronicle: built.chronicle,
       finalState: built.finalState,
       integrityIdentity,
+      execution: built.execution,
+      boundaryAnchors: built.boundaryAnchors,
     })
 
     it("keeps Chronicle, gameplay, outcome, attempt, and player state unchanged for every side's drift", async () => {
@@ -1006,7 +1068,7 @@ describePostgres(
             .finalState,
         }),
       ).rejects.toMatchObject({
-        code: "EVIDENCE_IDENTITY_MISMATCH",
+        code: "CURRENT_CHRONICLE_RECONSTRUCTION_MISMATCH",
         failureCategory: "system_failure",
         playerPenalty: false,
       })
@@ -1077,6 +1139,8 @@ describePostgres("PostgreSQL completion authority-head refusal", () => {
         chronicle: built.chronicle,
         finalState: built.finalState,
         integrityIdentity: responseSnapshot(identity, pair),
+        execution: built.execution,
+        boundaryAnchors: built.boundaryAnchors,
       }),
     ).rejects.toMatchObject({
       code: "MATCH_COMPLETION_OPERATIONAL_FAILURE",

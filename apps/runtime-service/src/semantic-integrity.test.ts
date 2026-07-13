@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   DEFAULT_RUNTIME_LIMITS,
   INITIAL_BOUNDS,
@@ -76,8 +76,88 @@ const passiveRuntime: StrategyRuntime = {
     }
   },
 }
+const semanticReceiptSecret = "fixture-semantic-receipt-secret-v1"
 
 describe("runtime-service semantic integrity", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("binds every successful result to a domain-separated semantic receipt", () => {
+    const response = executeRuntimeServiceRequest(
+      request,
+      createRuntimeServiceConfig({
+        strategyExecutionAdapter: "worker-thread",
+        resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
+        semanticReceiptSecret,
+      }),
+      {
+        authorityLoader: authority.authorityLoader,
+        createRuntimeForRevision: () => ({ ok: true, runtime: passiveRuntime }),
+      },
+    )
+
+    if (!response.ok) {
+      throw new Error(
+        `${response.systemFailure.code}:${JSON.stringify(response.systemFailure.diagnostics)}`,
+      )
+    }
+    expect(response.ok).toBe(true)
+    expect(response.contractVersion).toBe("runtime-execution-service-v1.16")
+    expect(response.result).toHaveProperty("semanticReceipt")
+    expect(response.result).toMatchObject({
+      semanticReceipt: {
+        schemaVersion: "runtime-semantic-receipt-v1",
+        profile: "current-exact",
+        algorithm: "hmac-sha256",
+        keyId: "runtime-service-semantic-receipt:v1",
+        requestId: request.requestId,
+        matchId: request.match.matchId,
+        compatibilityTupleId: request.evidenceSnapshot.compatibility.tupleId,
+        authorityBundleHash: request.evidenceSnapshot.authorityBundleHash,
+        registryGeneration: request.evidenceSnapshot.registryGeneration,
+      },
+    })
+    expect(
+      (response.result as Record<string, unknown>).semanticReceipt,
+    ).toMatchObject({
+      signature: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/u),
+    })
+  })
+
+  it("fails closed when the recorded final state differs from canonical reconstruction", () => {
+    const response = executeRuntimeServiceRequest(
+      request,
+      createRuntimeServiceConfig({
+        strategyExecutionAdapter: "worker-thread",
+        resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
+        semanticReceiptSecret,
+      }),
+      {
+        authorityLoader: authority.authorityLoader,
+        createRuntimeForRevision: () => ({ ok: true, runtime: passiveRuntime }),
+        recordChronicle(input) {
+          const recorded = recordChronicleFromExecution(input)
+          if (!recorded.ok) return recorded
+          return {
+            ...recorded,
+            finalState: {
+              ...recorded.finalState,
+              phaseNumber: recorded.finalState.phaseNumber + 1,
+            },
+          }
+        },
+      },
+    )
+
+    expect(response).toMatchObject({
+      ok: false,
+      kind: "systemFailure",
+      systemFailure: { code: "CHRONICLE_INTEGRITY_FAILED" },
+    })
+    expect(response).not.toHaveProperty("result")
+  })
+
   it("fails closed when current semantic admission rejects a recorded Chronicle", () => {
     const recordChronicle = vi.fn(recordChronicleFromExecution)
     const reconstructChronicle = vi.fn()
@@ -86,6 +166,7 @@ describe("runtime-service semantic integrity", () => {
       createRuntimeServiceConfig({
         strategyExecutionAdapter: "worker-thread",
         resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
+        semanticReceiptSecret,
       }),
       {
         authorityLoader: authority.authorityLoader,

@@ -197,7 +197,11 @@ const createV116NoTypeScriptBackendTopologyArtifact = () =>
 
 const createTempRepo = () => mkdtempSync(path.join(tmpdir(), "cowards-v135-"))
 
-const writeTempFile = (root: string, relativePath: string, text: string): void => {
+const writeTempFile = (
+  root: string,
+  relativePath: string,
+  text: string,
+): void => {
   const absolutePath = path.join(root, relativePath)
   mkdirSync(path.dirname(absolutePath), { recursive: true })
   writeFileSync(absolutePath, text)
@@ -225,7 +229,7 @@ describe("boundary drift monitors", () => {
     expect(packageJson.scripts["v1.35:boundary-inventory"]).toBe(
       "pnpm exec tsx scripts/evaluate-v1-35-boundary-surface-inventory.ts --write",
     )
-  expect(packageJson.scripts["v1.35:boundary-inventory:check"]).toBe(
+    expect(packageJson.scripts["v1.35:boundary-inventory:check"]).toBe(
       "pnpm exec tsx scripts/evaluate-v1-35-boundary-surface-inventory.ts --check",
     )
     expect(packageJson.scripts["v1.35:account-provider-entry-proof"]).toBe(
@@ -448,8 +452,9 @@ describe("boundary drift monitors", () => {
   it("checks v1.36 competition policy artifacts and calibrated public beta trial competition copy", () => {
     const root = createTempRepo()
     try {
-      const rows =
-        generateV136CompetitionSurfaceInventory().rows.map(clearPostureRequirement)
+      const rows = generateV136CompetitionSurfaceInventory().rows.map(
+        clearPostureRequirement,
+      )
       writeV136CompetitionSurfaceInventoryArtifacts({ repoRoot: root, rows })
       writeTempFile(
         root,
@@ -472,17 +477,22 @@ describe("boundary drift monitors", () => {
     const root = createTempRepo()
     try {
       writeV136CompetitionSurfaceInventoryArtifacts({ repoRoot: root })
-      const rows =
-        generateV136CompetitionSurfaceInventory().rows.map(clearPostureRequirement)
+      const rows = generateV136CompetitionSurfaceInventory().rows.map(
+        clearPostureRequirement,
+      )
 
-      writeTempFile(root, "apps/web/app/competitions/page.tsx", [
-        "Coward's Game has durable permanent ratings.",
-        "All runtime lanes provide production sandbox certification.",
-        "Strategies can use the full npm ecosystem.",
-        "TinyGo is a production Strategy lane.",
-        "Public results show raw runtime diagnostics.",
-        "Public pages expose private runtime internals.",
-      ].join("\n"))
+      writeTempFile(
+        root,
+        "apps/web/app/competitions/page.tsx",
+        [
+          "Coward's Game has durable permanent ratings.",
+          "All runtime lanes provide production sandbox certification.",
+          "Strategies can use the full npm ecosystem.",
+          "TinyGo is a production Strategy lane.",
+          "Public results show raw runtime diagnostics.",
+          "Public pages expose private runtime internals.",
+        ].join("\n"),
+      )
 
       expect(() =>
         checkV136CompetitionPolicyMonitor({
@@ -501,8 +511,9 @@ describe("boundary drift monitors", () => {
   it("fails v1.36 competition policy monitor when posture-required inventory references lack required labels", () => {
     const root = createTempRepo()
     try {
-      const rows =
-        generateV136CompetitionSurfaceInventory().rows.map(clearPostureRequirement)
+      const rows = generateV136CompetitionSurfaceInventory().rows.map(
+        clearPostureRequirement,
+      )
       rows[0] = {
         ...rows[0]!,
         references: ["apps/web/app/competitions/page.tsx"],
@@ -520,7 +531,9 @@ describe("boundary drift monitors", () => {
           rows,
           includeDefaultSuppressions: false,
         }),
-      ).toThrow(/public beta trial competition|resettable Season-scoped standings/)
+      ).toThrow(
+        /public beta trial competition|resettable Season-scoped standings/,
+      )
     } finally {
       rmSync(root, { force: true, recursive: true })
     }
@@ -1163,7 +1176,7 @@ describe("boundary drift monitors", () => {
         return new Response(
           JSON.stringify({
             ok: true,
-            service: "runtime-execution-service-v1.15",
+            service: "runtime-execution-service-v1.16",
             runtimeAbiVersion: "strategy-runtime-abi-v1.14",
             adapter: "runtime-js-worker-thread",
           }),

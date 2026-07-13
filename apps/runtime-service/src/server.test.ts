@@ -17,6 +17,7 @@ const PRIVATE_ARTIFACT_TOKEN = "cowards-private-artifact-test-token-v1.35"
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
+  semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
 })
 
 const servers: ReturnType<typeof createRuntimeExecutionHttpServer>[] = []

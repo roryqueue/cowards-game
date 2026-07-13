@@ -9,6 +9,7 @@ import {
   RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,
   RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,
   RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,
+  RUNTIME_EXECUTION_SERVICE_VERSION,
   RuntimeExecutionServiceResponseSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
   getStrategyLanguageProviderRecord,
@@ -81,7 +82,7 @@ const malformedRequestResponse = (
   message: string,
 ): RuntimeExecutionServiceResponse =>
   RuntimeExecutionServiceResponseSchema.parse({
-    contractVersion: "runtime-execution-service-v1.15",
+    contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
     ok: false,
     kind: "systemFailure",
     requestId: "runtime-request:unknown",
@@ -328,7 +329,7 @@ export const createRuntimeExecutionHttpHandler = (
     if (request.method === "GET" && request.url === "/health") {
       writeJson(response, 200, {
         ok: true,
-        service: "runtime-execution-service-v1.15",
+        service: RUNTIME_EXECUTION_SERVICE_VERSION,
         boundaryName: RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,
         implementationLabel: RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,
         transportBinding: RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING.current,

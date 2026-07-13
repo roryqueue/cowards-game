@@ -437,8 +437,8 @@ var semanticBottomStarts = []semanticPosition{{2, 11}, {3, 11}, {4, 11}, {5, 11}
 var semanticTopStarts = []semanticPosition{{2, 0}, {3, 0}, {4, 0}, {5, 0}, {6, 0}, {7, 0}, {8, 0}, {9, 0}}
 
 var semanticCompatibilityVersions = map[string]string{
-	"spec": "cowards-rules-v1.4", "engine": "0.1.4", "runtimeJs": "0.1.0",
-	"chronicle": "chronicle-v1.4", "strategyRevision": "0.1.4", "arenaVariant": "0.1.0",
+	"spec": "cowards-rules-v1.4", "engine": "engine-kernel-v1.37-candidate-1", "runtimeJs": "0.1.0",
+	"chronicle": "chronicle-recorder-current-events-v1.37-candidate-1", "strategyRevision": "0.1.4", "arenaVariant": "semantic-arena-catalog-v1.37-candidate-1",
 }
 
 func validateGoCanonicalArena(arena map[string]any) semanticIntegrityResult {
@@ -892,6 +892,10 @@ func responseHasRetiredProfileFields(object map[string]json.RawMessage) bool {
 }
 
 func decodeRuntimeServiceResponseBytes(request runtimeServiceRequest, payload []byte) (*runtimeServiceResponse, *runtimeServiceFailure) {
+	return decodeRuntimeServiceResponseBytesWithSecret(request, payload, runtimeServiceSemanticReceiptSecret())
+}
+
+func decodeRuntimeServiceResponseBytesWithSecret(request runtimeServiceRequest, payload []byte, secret string) (*runtimeServiceResponse, *runtimeServiceFailure) {
 	object, err := decodeStrictJSONObject(payload)
 	if err != nil {
 		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service response did not match the execution contract", true, map[string]any{"actualBytes": len(payload)})
@@ -907,6 +911,11 @@ func decodeRuntimeServiceResponseBytes(request runtimeServiceRequest, payload []
 	}
 	if failure := validateRuntimeServiceResponse(request, &decoded); failure != nil {
 		return nil, failure
+	}
+	if decoded.OK {
+		if failure := validateRuntimeSemanticReceipt(request, decoded.Result, secret); failure != nil {
+			return nil, failure
+		}
 	}
 	return &decoded, nil
 }

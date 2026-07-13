@@ -1565,7 +1565,7 @@ export const evaluateLocalTopology = async (
           )
           if (
             requireString(health, "service", "runtimeService.health") !==
-            "runtime-execution-service-v1.15"
+            "runtime-execution-service-v1.16"
           ) {
             throw new Error("runtime service contract version drifted")
           }

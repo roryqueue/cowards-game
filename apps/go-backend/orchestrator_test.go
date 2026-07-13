@@ -70,6 +70,7 @@ func TestGoMatchOrchestratorIntegration(t *testing.T) {
 	}
 
 	var runtimeRequest runtimeServiceRequest
+	const semanticReceiptSecret = "fixture-semantic-receipt-secret-v1"
 	runtimeServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Path != "/execute-match" {
 			t.Fatalf("unexpected runtime path %s", request.URL.Path)
@@ -77,6 +78,8 @@ func TestGoMatchOrchestratorIntegration(t *testing.T) {
 		if err := json.NewDecoder(request.Body).Decode(&runtimeRequest); err != nil {
 			t.Fatal(err)
 		}
+		chronicle := orchestratorChronicleForRequest(runtimeRequest, false)
+		finalState := orchestratorFinalStateForRequest(runtimeRequest)
 		writeRuntimeServiceTestJSON(t, writer, runtimeServiceResponse{
 			ContractVersion:   runtimeExecutionServiceVersion,
 			OK:                true,
@@ -84,17 +87,13 @@ func TestGoMatchOrchestratorIntegration(t *testing.T) {
 			RequestID:         runtimeRequest.RequestID,
 			MatchID:           runtimeRequest.Match.MatchID,
 			RuntimeABIVersion: strategyRuntimeABIVersion,
-			Result: map[string]any{
-				"privacy":                    "internal_runtime_result",
-				"chronicle":                  orchestratorChronicleForRequest(runtimeRequest, false),
-				"finalState":                 orchestratorFinalStateForRequest(runtimeRequest),
-				"runtimeViolationEventCount": 0,
-			},
+			Result:            signedRuntimeServiceSuccessResultForTest(t, runtimeRequest, chronicle, finalState, semanticReceiptSecret),
 		})
 	}))
 	defer runtimeServer.Close()
 
 	orchestrator := newGoMatchOrchestrator(pool, runtimeServer.URL)
+	orchestrator.runtime.semanticReceiptSecret = semanticReceiptSecret
 	orchestrator.lifecycle = newTestMatchJobLifecycle(pool, time.Now().UTC().Add(time.Minute), "lease:go:orchestrator")
 	for _, matchID := range matchIDs {
 		result, err := orchestrator.runOnce(ctx, []string{matchID})
@@ -228,20 +227,22 @@ func TestStrategyFailureRevisionIDFromChronicle(t *testing.T) {
 
 func orchestratorFinalStateForRequest(request runtimeServiceRequest) map[string]any {
 	return map[string]any{
-		"matchId":         request.Match.MatchID,
-		"seed":            request.Match.Seed,
-		"phaseNumber":     1,
-		"roundNumber":     1,
-		"activationCount": 1,
+		"matchId": request.Match.MatchID, "seed": request.Match.Seed,
+		"versions":     map[string]any{"spec": semanticCompatibilityVersions["spec"], "engine": semanticCompatibilityVersions["engine"], "runtimeJs": semanticCompatibilityVersions["runtimeJs"], "chronicle": semanticCompatibilityVersions["chronicle"], "strategyRevision": semanticCompatibilityVersions["strategyRevision"], "arenaVariant": semanticCompatibilityVersions["arenaVariant"]},
+		"arenaVariant": request.Match.ArenaVariant, "phase": "COMPLETE",
+		"phaseNumber": 1, "roundNumber": 1, "activationCount": 1,
+		"initiativePlayerId": request.Match.BottomPlayerID,
+		"bounds":             mapValue(request.Match.ArenaVariant, "initialBounds"),
 		"players": []any{
 			map[string]any{"id": request.Match.BottomPlayerID, "side": "bottom", "strategyRevisionId": request.Match.BottomStrategyRevisionID, "strategyMemory": map[string]any{}},
 			map[string]any{"id": request.Match.TopPlayerID, "side": "top", "strategyRevisionId": request.Match.TopStrategyRevisionID, "strategyMemory": map[string]any{}},
 		},
 		"soldiers": []any{
-			map[string]any{"id": "soldier:bottom:" + request.Match.MatchID, "ownerPlayerId": request.Match.BottomPlayerID, "status": "ACTIVE"},
-			map[string]any{"id": "soldier:top:" + request.Match.MatchID, "ownerPlayerId": request.Match.TopPlayerID, "status": "FALLEN"},
+			map[string]any{"id": "soldier:bottom:" + request.Match.MatchID, "ownerPlayerId": request.Match.BottomPlayerID, "status": "ACTIVE", "position": map[string]any{"x": 1, "y": 1}, "facing": "UP", "lastSuccessfulMoveDirection": nil, "soldierMemory": map[string]any{}},
+			map[string]any{"id": "soldier:top:" + request.Match.MatchID, "ownerPlayerId": request.Match.TopPlayerID, "status": "FALLEN", "position": nil, "facing": nil, "lastSuccessfulMoveDirection": nil, "soldierMemory": map[string]any{}},
 		},
-		"outcome": map[string]any{"type": "WIN", "winnerPlayerId": request.Match.BottomPlayerID},
+		"terrainStones": []any{},
+		"outcome":       map[string]any{"type": "WIN", "winnerPlayerId": request.Match.BottomPlayerID},
 	}
 }
 
@@ -271,9 +272,9 @@ func orchestratorChronicleForRequest(request runtimeServiceRequest, includeRunti
 			"matchId":             request.Match.MatchID,
 			"seed":                request.Match.Seed,
 			"arenaVariantId":      stringValue(request.Match.ArenaVariant, "id"),
-			"arenaVariantVersion": "arena-v1",
+			"arenaVariantVersion": semanticCompatibilityVersions["arenaVariant"],
 			"strategyRevisionIds": []any{request.Match.BottomStrategyRevisionID, request.Match.TopStrategyRevisionID},
-			"versions":            map[string]any{"spec": "cowards-rules-v1.4", "engine": "0.1.4", "runtimeJs": "0.1.0", "chronicle": "chronicle-v1.4", "strategyRevision": "0.1.0", "arenaVariant": "arena-v1"},
+			"versions":            map[string]any{"spec": semanticCompatibilityVersions["spec"], "engine": semanticCompatibilityVersions["engine"], "runtimeJs": semanticCompatibilityVersions["runtimeJs"], "chronicle": semanticCompatibilityVersions["chronicle"], "strategyRevision": semanticCompatibilityVersions["strategyRevision"], "arenaVariant": semanticCompatibilityVersions["arenaVariant"]},
 		},
 		"events": events,
 		"snapshots": []any{

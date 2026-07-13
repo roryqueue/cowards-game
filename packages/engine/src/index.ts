@@ -1,4 +1,9 @@
-export * from "./activation.js"
+export {
+  activationStartedEvent,
+  createActivationSlots,
+  getActivationCountForRound,
+  getRoundPlayerOrder,
+} from "./activation.js"
 export * from "./backstab.js"
 export * from "./contraction.js"
 export * from "./match.js"

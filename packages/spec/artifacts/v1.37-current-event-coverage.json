@@ -41,7 +41,7 @@
   "producerFiles": [
     {
       "relativePath": "packages/engine/src/activation.ts",
-      "sha256": "061c1d6687c742948daa1bf1532e6892b09007621f7a21735a09ec373f851509"
+      "sha256": "3c76a651d02417fcf15db37f4fd4300fe961e0457c3bc857b84b9811b4ac2d62"
     },
     {
       "relativePath": "packages/engine/src/backstab.ts",
@@ -207,10 +207,6 @@
       "eventType": "STRATEGY_EVALUATED",
       "producers": [
         {
-          "relativePath": "packages/engine/src/activation.ts",
-          "line": 203
-        },
-        {
           "relativePath": "packages/engine/src/kernel/step.ts",
           "line": 411
         }
@@ -263,7 +259,7 @@
       "producers": [
         {
           "relativePath": "packages/engine/src/activation.ts",
-          "line": 308
+          "line": 83
         }
       ],
       "consumerDispositions": [
@@ -312,10 +308,6 @@
     {
       "eventType": "ACTIVATION_SKIPPED",
       "producers": [
-        {
-          "relativePath": "packages/engine/src/activation.ts",
-          "line": 328
-        },
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
           "line": 503
@@ -368,10 +360,6 @@
       "eventType": "ACTIVATION_ENDED",
       "producers": [
         {
-          "relativePath": "packages/engine/src/activation.ts",
-          "line": 250
-        },
-        {
           "relativePath": "packages/engine/src/kernel/step.ts",
           "line": 155
         }
@@ -422,10 +410,6 @@
     {
       "eventType": "CYCLE_STARTED",
       "producers": [
-        {
-          "relativePath": "packages/engine/src/activation.ts",
-          "line": 349
-        },
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
           "line": 536
@@ -478,10 +462,6 @@
       "eventType": "CYCLE_ENDED",
       "producers": [
         {
-          "relativePath": "packages/engine/src/activation.ts",
-          "line": 511
-        },
-        {
           "relativePath": "packages/engine/src/kernel/step.ts",
           "line": 774
         }
@@ -533,10 +513,6 @@
       "eventType": "AWARENESS_GRID_OBSERVED",
       "producers": [
         {
-          "relativePath": "packages/engine/src/activation.ts",
-          "line": 398
-        },
-        {
           "relativePath": "packages/engine/src/kernel/step.ts",
           "line": 614
         }
@@ -587,10 +563,6 @@
     {
       "eventType": "ACTION_EMITTED",
       "producers": [
-        {
-          "relativePath": "packages/engine/src/activation.ts",
-          "line": 470
-        },
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
           "line": 740
@@ -969,14 +941,6 @@
       "eventType": "SOLDIER_STONED",
       "producers": [
         {
-          "relativePath": "packages/engine/src/activation.ts",
-          "line": 126
-        },
-        {
-          "relativePath": "packages/engine/src/activation.ts",
-          "line": 242
-        },
-        {
           "relativePath": "packages/engine/src/backstab.ts",
           "line": 58
         },
@@ -1208,18 +1172,6 @@
     {
       "eventType": "RUNTIME_VIOLATION",
       "producers": [
-        {
-          "relativePath": "packages/engine/src/activation.ts",
-          "line": 100
-        },
-        {
-          "relativePath": "packages/engine/src/activation.ts",
-          "line": 148
-        },
-        {
-          "relativePath": "packages/engine/src/activation.ts",
-          "line": 169
-        },
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
           "line": 238

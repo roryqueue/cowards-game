@@ -23,6 +23,7 @@ export interface RuntimeServiceConfigInput {
     | ((revision: StrategyRevision) => ExecutableLaneIdentity | undefined)
     | undefined
   deploymentLaneRegistryId?: string | undefined
+  semanticReceiptSecret?: string | undefined
 }
 
 export interface RuntimeServiceConfig {
@@ -32,6 +33,7 @@ export interface RuntimeServiceConfig {
     revision: StrategyRevision,
   ): ExecutableLaneIdentity | undefined
   deploymentLaneRegistryId?: string | undefined
+  semanticReceiptSecret: string
 }
 
 export const createRuntimeServiceConfig = (
@@ -51,6 +53,12 @@ export const createRuntimeServiceConfig = (
   if (!selectedId) {
     throw new RuntimeServiceConfigError("Strategy execution adapter is empty")
   }
+  const semanticReceiptSecret = input.semanticReceiptSecret?.trim()
+  if (!semanticReceiptSecret) {
+    throw new RuntimeServiceConfigError(
+      "Runtime service requires COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET.",
+    )
+  }
 
   const resolveDeploymentLaneIdentity =
     input.resolveDeploymentLaneIdentity ?? (() => undefined)
@@ -63,6 +71,7 @@ export const createRuntimeServiceConfig = (
         metadata: adapter.metadata,
         resolveDeploymentLaneIdentity,
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
+        semanticReceiptSecret,
       }
     }
     case "subprocess": {
@@ -72,6 +81,7 @@ export const createRuntimeServiceConfig = (
         metadata: adapter.metadata,
         resolveDeploymentLaneIdentity,
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
+        semanticReceiptSecret,
       }
     }
     case "container-subprocess": {
@@ -81,6 +91,7 @@ export const createRuntimeServiceConfig = (
         metadata: adapter.metadata,
         resolveDeploymentLaneIdentity,
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
+        semanticReceiptSecret,
       }
     }
     default:

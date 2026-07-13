@@ -1,8 +1,6 @@
 import { runtimeJsWorkerEntrypoint } from "@cowards/runtime-js/worker"
 import { createRuntimeExecutionHttpServer } from "./server.js"
-import {
-  formatRuntimeServiceConfigLogLines,
-} from "./runtime-config.js"
+import { formatRuntimeServiceConfigLogLines } from "./runtime-config.js"
 import { runtimeServiceConfigFromEnvironment } from "./production-runtime-config.js"
 import {
   createRuntimeEvidenceAuthorityLoader,
@@ -24,7 +22,7 @@ const startRuntimeExecutionService = (): void => {
 
   console.log("Coward's Game runtime execution service ready")
   console.log(`${runtimeJsWorkerEntrypoint} ready`)
-  console.log("runtime-execution-service-v1.15 ready")
+  console.log("runtime-execution-service-v1.16 ready")
   for (const line of formatRuntimeServiceConfigLogLines(runtimeConfig)) {
     console.log(line)
   }

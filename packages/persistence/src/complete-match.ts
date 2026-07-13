@@ -2,6 +2,10 @@ import { isDeepStrictEqual } from "node:util"
 import type { GameState } from "@cowards/engine"
 import {
   createChronicleContentHash,
+  validateCurrentChronicle,
+  validateCurrentReplayReconstruction,
+  type ChronicleBoundaryAnchor,
+  type ChronicleRecorderExecution,
 } from "@cowards/replay"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
@@ -13,9 +17,7 @@ import {
   type RuntimeExecutionResolvedEvidenceSnapshot,
 } from "@cowards/spec"
 import type { Pool } from "pg"
-import {
-  createPostgresChronicleStore,
-} from "./chronicle-store.js"
+import { createPostgresChronicleStore } from "./chronicle-store.js"
 import { withTransaction } from "./db.js"
 import {
   createMatchExecutionEvidencePair,
@@ -33,6 +35,8 @@ export interface CompleteMatchInput {
   chronicle: Chronicle
   finalState: GameState
   integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot
+  execution: ChronicleRecorderExecution | undefined
+  boundaryAnchors: readonly ChronicleBoundaryAnchor[] | undefined
 }
 
 export type CompleteMatchRequest = CompleteMatchInput
@@ -103,12 +107,79 @@ interface PreparedCompletion {
   readonly integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot
 }
 
+const currentMatchCompletionAdmissionBrand: unique symbol = Symbol(
+  "current-match-completion-admission",
+)
+
+export interface CurrentMatchCompletionAdmission {
+  readonly chronicle: Chronicle
+  readonly finalState: GameState
+  readonly [currentMatchCompletionAdmissionBrand]: true
+}
+
+export const admitCurrentMatchCompletion = (input: {
+  chronicle: Chronicle
+  finalState: GameState
+  compatibility: RuntimeExecutionResolvedEvidenceSnapshot["compatibility"]
+  execution: ChronicleRecorderExecution | undefined
+  boundaryAnchors: readonly ChronicleBoundaryAnchor[] | undefined
+}): CurrentMatchCompletionAdmission => {
+  const activeCurrent = CANONICAL_COMPATIBILITY_TUPLES[0]
+  if (
+    !activeCurrent ||
+    !exactTupleMatches(input.compatibility, activeCurrent) ||
+    input.execution === undefined ||
+    input.execution.kind !== "completed" ||
+    !Array.isArray(input.boundaryAnchors)
+  ) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "CURRENT_EXECUTION_BOUNDARY_MISSING",
+    )
+  }
+  const candidate = {
+    profile: "current-exact" as const,
+    compatibility: input.compatibility,
+    chronicle: input.chronicle,
+    execution: input.execution,
+    boundaryAnchors: input.boundaryAnchors,
+  }
+  const validation = validateCurrentChronicle(candidate)
+  const reconstruction = validateCurrentReplayReconstruction({
+    chronicle: input.chronicle,
+    execution: input.execution,
+  })
+  const terminalAnchor = input.boundaryAnchors.at(-1)
+  if (
+    !validation.ok ||
+    !reconstruction.ok ||
+    terminalAnchor?.kind !== "TERMINAL" ||
+    terminalAnchor.stateHash !== reconstruction.terminalStateHash ||
+    !isDeepStrictEqual(input.execution.result.state, input.finalState) ||
+    !isDeepStrictEqual(
+      input.execution.recorderMaterial.finalState,
+      input.finalState,
+    ) ||
+    !isDeepStrictEqual(reconstruction.outcome, input.finalState.outcome)
+  ) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "CURRENT_CHRONICLE_RECONSTRUCTION_MISMATCH",
+    )
+  }
+  return {
+    chronicle: globalThis.structuredClone(input.chronicle),
+    finalState: globalThis.structuredClone(input.finalState),
+    [currentMatchCompletionAdmissionBrand]: true,
+  }
+}
+
 const currentCompleteKeys = [
   "jobId",
   "leaseToken",
   "chronicle",
   "finalState",
   "integrityIdentity",
+  "execution",
+  "boundaryAnchors",
 ] as const
 
 const exactTupleMatches = (
@@ -162,10 +233,17 @@ const prepareCompletion = (input: CompleteMatchRequest): PreparedCompletion => {
         finalSemantic.issues[0]?.code ?? "CURRENT_FINAL_STATE_INVALID",
       )
     }
+    const admitted = admitCurrentMatchCompletion({
+      chronicle: current.chronicle,
+      finalState,
+      compatibility: integrityIdentity.compatibility,
+      execution: current.execution,
+      boundaryAnchors: current.boundaryAnchors,
+    })
     return {
       jobId: current.jobId,
       leaseToken: current.leaseToken,
-      chronicle: globalThis.structuredClone(current.chronicle),
+      chronicle: admitted.chronicle,
       finalState,
       integrityIdentity,
     }

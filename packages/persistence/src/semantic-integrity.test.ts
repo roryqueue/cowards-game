@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto"
-import { MATCH_KERNEL, type GameState, type StrategyRuntime } from "@cowards/engine"
+import {
+  MATCH_KERNEL,
+  type GameState,
+  type StrategyRuntime,
+} from "@cowards/engine"
 import { recordChronicleFromExecution } from "@cowards/replay"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
@@ -175,6 +179,8 @@ describe("current persistence semantic integrity", () => {
         chronicle: recorded.chronicle,
         finalState: invalidState,
         integrityIdentity: integrityIdentity(namespace),
+        execution,
+        boundaryAnchors: recorded.boundaryAnchors,
       }),
     ).rejects.toMatchObject({
       code: "POSITION_OCCUPANCY_DUPLICATE",

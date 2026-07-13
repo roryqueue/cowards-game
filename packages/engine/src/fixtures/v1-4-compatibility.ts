@@ -8,11 +8,11 @@ import type {
   SoldierBrainInput,
   StrategyInput,
 } from "@cowards/spec"
+import { createActivationSlots } from "../activation.js"
 import {
-  createActivationSlots,
   resolveActivationCycle,
   resolveActivationSelection,
-} from "../activation.js"
+} from "./v1-4-legacy-activation.js"
 import { resolveBackstabBoundary } from "../backstab.js"
 import { resolveContraction } from "../contraction.js"
 import { MATCH_KERNEL } from "../kernel/driver.js"

@@ -54,6 +54,18 @@ const expectRepositoryContractFinding = (
 }
 
 describe("v1.37 creation inventory and caller bypass monitor", () => {
+  it("requires atomic activation proof to assert exact selected and excluded lane controls", () => {
+    const proof = readFileSync(
+      path.resolve(process.cwd(), "scripts/prove-v1-37-atomic-activation.ts"),
+      "utf8",
+    )
+    expect(proof).toContain("selectedLaneControlIds")
+    expect(proof).toContain("excludedLaneControlIds")
+    expect(proof).toContain("partialLaneControlId")
+    expect(proof).toContain("mixedLaneControlId")
+    expect(proof).toContain("historicalLaneControlId")
+  })
+
   it("accounts for the repository creation inventory", () => {
     const reviewFindings = new Set([
       "CURRENT_GO_SUCCESS_BINDING_DRIFT",
@@ -251,9 +263,7 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
       )
 
       expect(synthetic.findings.map((finding) => finding.code)).toEqual(
-        expect.arrayContaining([
-          "CURRENT_STALE_SURFACE",
-        ]),
+        expect.arrayContaining(["CURRENT_STALE_SURFACE"]),
       )
     })
 
@@ -376,6 +386,14 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
         "public lifecycle wildcard",
         {
           "packages/engine/src/index.ts": 'export * from "./activation.js"',
+        },
+        "CURRENT_PUBLIC_LIFECYCLE_ROUTE",
+      ],
+      [
+        "non-fixture lifecycle implementation",
+        {
+          "packages/engine/src/activation.ts":
+            "export const resolveActivationCycle = () => undefined",
         },
         "CURRENT_PUBLIC_LIFECYCLE_ROUTE",
       ],

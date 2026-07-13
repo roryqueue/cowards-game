@@ -37,6 +37,7 @@ import { createRuntimeServiceConfig } from "./runtime-config.js"
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
+  semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
   resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
 })
 

@@ -400,7 +400,7 @@ const classifySurface = (
     return {
       surfaceLabel: "runtime-service-execution-boundary",
       capabilityGroup: "runtime-service",
-      gate: "runtime-execution-service-v1.15 schema, DB-free boundary, and no backend authority",
+      gate: "runtime-execution-service-v1.16 schema, DB-free boundary, and no backend authority",
       futureMigration:
         "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker.",
       privacyClass: "internal-runtime-redacted",

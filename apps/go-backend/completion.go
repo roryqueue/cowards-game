@@ -21,14 +21,16 @@ type matchCompletionService struct {
 	loadAuthority             func() (*verifiedRuntimeEvidenceAuthority, error)
 	now                       func() time.Time
 	allowLegacyTestCompletion bool
+	semanticReceiptSecret     string
 }
 
 type completeMatchInput struct {
-	JobID      string
-	LeaseToken string
-	Chronicle  map[string]any
-	FinalState map[string]any
-	Integrity  *claimedMatchIntegrityIdentity
+	JobID           string
+	LeaseToken      string
+	Chronicle       map[string]any
+	FinalState      map[string]any
+	SemanticReceipt runtimeSemanticReceipt
+	Integrity       *claimedMatchIntegrityIdentity
 }
 
 type completeMatchResult struct {
@@ -73,12 +75,30 @@ type matchCompletionOwnershipRow struct {
 }
 
 func newMatchCompletionService(pool *pgxpool.Pool) *matchCompletionService {
-	return &matchCompletionService{pool: pool, loadAuthority: loadProductionRuntimeEvidenceAuthorityFromEnvironment, now: time.Now}
+	return &matchCompletionService{pool: pool, loadAuthority: loadProductionRuntimeEvidenceAuthorityFromEnvironment, now: time.Now, semanticReceiptSecret: runtimeServiceSemanticReceiptSecret()}
 }
 
 func (service *matchCompletionService) completeMatch(ctx context.Context, input completeMatchInput) (*completeMatchResult, error) {
 	if service == nil || service.pool == nil {
 		return nil, errors.New("match completion requires a database pool")
+	}
+	if !service.allowLegacyTestCompletion {
+		if err := validateRuntimeSemanticReceiptForCompletion(input, input.Integrity, service.semanticReceiptSecret); err != nil {
+			return nil, err
+		}
+	}
+	semanticReceiptHash := ""
+	var semanticReceiptJSON []byte
+	var err error
+	if !service.allowLegacyTestCompletion {
+		semanticReceiptHash, err = runtimeSemanticReceiptHash(input.SemanticReceipt)
+		if err != nil {
+			return nil, err
+		}
+		semanticReceiptJSON, err = json.Marshal(input.SemanticReceipt)
+		if err != nil {
+			return nil, err
+		}
 	}
 	fields, err := deriveGoMatchCompletionFields(input.FinalState)
 	if err != nil {
@@ -126,7 +146,7 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return nil, err
 		}
-		compatible, chronicleID, err := existingCompatibleChronicle(ctx, tx, metadata)
+		compatible, chronicleID, err := existingCompatibleChronicle(ctx, tx, metadata, semanticReceiptHash)
 		if err != nil {
 			return nil, err
 		}
@@ -152,6 +172,9 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 	if !service.allowLegacyTestCompletion {
 		lockedIntegrity, err = service.lockCompletionIntegrity(ctx, tx, input.JobID, input.LeaseToken, input.Integrity)
 		if err != nil {
+			return nil, err
+		}
+		if err := validateRuntimeSemanticReceiptForCompletion(input, lockedIntegrity, service.semanticReceiptSecret); err != nil {
 			return nil, err
 		}
 	}
@@ -183,11 +206,12 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		  authority_source_set, integrity_match_set_id,
 		  bottom_execution_entrant_key, top_execution_entrant_key,
 		  bottom_execution_evidence, top_execution_evidence,
-		  execution_evidence_pair_hash
+		  execution_evidence_pair_hash, runtime_semantic_receipt,
+		  runtime_semantic_receipt_hash
 		)
 		values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,
 		        $14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,
-		        $29,$30,$31,$32,$33,$34)
+		        $29,$30,$31,$32,$33,$34,$35,$36)
 	`, metadata.ID, metadata.MatchID, metadata.SchemaVersion, metadata.Hash, outcome,
 		metadata.EventCount, metadata.SnapshotCount, metadata.BottomPlayerID, metadata.TopPlayerID,
 		metadata.BottomStrategyRevisionID, metadata.TopStrategyRevisionID, metadata.ArenaVariantID, artifact,
@@ -198,7 +222,8 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		lockedIntegrity.RegistryGeneration, lockedIntegrity.PublicationID, lockedIntegrity.InstallReceiptID,
 		lockedIntegrity.PayloadSHA256, lockedIntegrity.EnvelopeSHA256, lockedIntegrity.SourceManifestHash,
 		lockedIntegrity.SourceSet, lockedIntegrity.MatchSetID, lockedIntegrity.Bottom.EntrantKey,
-		lockedIntegrity.Top.EntrantKey, lockedIntegrity.Bottom, lockedIntegrity.Top, lockedIntegrity.PairHash); err != nil {
+		lockedIntegrity.Top.EntrantKey, lockedIntegrity.Bottom, lockedIntegrity.Top, lockedIntegrity.PairHash,
+		semanticReceiptJSON, semanticReceiptHash); err != nil {
 		return nil, err
 	}
 	tag, err := tx.Exec(ctx, `
@@ -477,17 +502,19 @@ func validateCompletionOwnership(row matchCompletionOwnershipRow, metadata chron
 	}
 }
 
-func existingCompatibleChronicle(ctx context.Context, tx pgx.Tx, metadata chronicleMetadata) (bool, string, error) {
+func existingCompatibleChronicle(ctx context.Context, tx pgx.Tx, metadata chronicleMetadata, expectedSemanticReceiptHash string) (bool, string, error) {
 	var existing chronicleMetadata
 	var outcomeBytes []byte
+	var semanticReceiptHash *string
 	err := tx.QueryRow(ctx, `
 		select c.id, c.match_id, c.schema_version, c.hash, c.outcome, c.event_count,
 		       c.snapshot_count, c.bottom_player_id, c.top_player_id,
-		       c.bottom_strategy_revision_id, c.top_strategy_revision_id, c.arena_variant_id
+		       c.bottom_strategy_revision_id, c.top_strategy_revision_id, c.arena_variant_id,
+		       c.runtime_semantic_receipt_hash
 		from matches m
 		join chronicles c on c.match_id = m.id
 		where m.id = $1 and m.status = 'complete'
-	`, metadata.MatchID).Scan(&existing.ID, &existing.MatchID, &existing.SchemaVersion, &existing.Hash, &outcomeBytes, &existing.EventCount, &existing.SnapshotCount, &existing.BottomPlayerID, &existing.TopPlayerID, &existing.BottomStrategyRevisionID, &existing.TopStrategyRevisionID, &existing.ArenaVariantID)
+	`, metadata.MatchID).Scan(&existing.ID, &existing.MatchID, &existing.SchemaVersion, &existing.Hash, &outcomeBytes, &existing.EventCount, &existing.SnapshotCount, &existing.BottomPlayerID, &existing.TopPlayerID, &existing.BottomStrategyRevisionID, &existing.TopStrategyRevisionID, &existing.ArenaVariantID, &semanticReceiptHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, "", nil
@@ -508,6 +535,8 @@ func existingCompatibleChronicle(ctx context.Context, tx pgx.Tx, metadata chroni
 		existing.BottomStrategyRevisionID == metadata.BottomStrategyRevisionID &&
 		existing.TopStrategyRevisionID == metadata.TopStrategyRevisionID &&
 		existing.ArenaVariantID == metadata.ArenaVariantID &&
+		((expectedSemanticReceiptHash == "" && semanticReceiptHash == nil) ||
+			(semanticReceiptHash != nil && *semanticReceiptHash == expectedSemanticReceiptHash)) &&
 		jsonValuesEqual(existing.Outcome, metadata.Outcome)
 	return compatible, existing.ID, nil
 }

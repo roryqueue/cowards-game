@@ -123,7 +123,7 @@ export interface TypeScriptBackendInventory {
     normalTypeScriptBackendAllowed: false
     fallbackPolicy: "no_silent_typescript_backend_fallback"
     strategyRuntimeAbi: "strategy-runtime-abi-v1.14"
-    runtimeExecutionService: "runtime-execution-service-v1.15"
+    runtimeExecutionService: "runtime-execution-service-v1.16"
     goExecutesStrategyCode: false
     webExecutesStrategyCode: false
     nodeVmSecurityBoundaryAllowed: false
@@ -733,7 +733,7 @@ const gateFor = (role: TypeScriptBackendRole, routeFamily: string): string => {
   if (role === "frontend-only")
     return "Go ownership flags and schema validation"
   if (role === "runtime-service")
-    return "runtime-execution-service-v1.15 schema and DB-free boundary"
+    return "runtime-execution-service-v1.16 schema and DB-free boundary"
   if (role === "runtime-adapter")
     return "strategy-runtime-abi-v1.14 adapter contract"
   if (role === "rollback-only")
@@ -1208,7 +1208,7 @@ export const generateTypeScriptBackendInventory = (
       normalTypeScriptBackendAllowed: false,
       fallbackPolicy: "no_silent_typescript_backend_fallback",
       strategyRuntimeAbi: "strategy-runtime-abi-v1.14",
-      runtimeExecutionService: "runtime-execution-service-v1.15",
+      runtimeExecutionService: "runtime-execution-service-v1.16",
       goExecutesStrategyCode: false,
       webExecutesStrategyCode: false,
       nodeVmSecurityBoundaryAllowed: false,

@@ -162,8 +162,7 @@ const PHASE_256_AUDIT_MARKDOWN_SHA256 =
   "4ebee5c0be4cdb4b554ce8f56483b8c5a11a3e3630c80e3f30460021ad09bdf2"
 const PHASE_257_RED_BASELINE_SHA256 =
   "bd2a7575282ca7df86bf3a6fc2602a9797660b0ab27bdb0f2def203ddba58f0d"
-const PHASE_19_ACTIVATION_COMMIT =
-  "3642493db803a8f68e3863777cc66dd6609ee93d"
+const PHASE_19_ACTIVATION_COMMIT = "3642493db803a8f68e3863777cc66dd6609ee93d"
 const CURRENT_TUPLE_ID =
   "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
 
@@ -613,8 +612,7 @@ export const buildV137Phase257CoreRulesResult = (
     throw new Error("current event coverage drifted")
   }
 
-  const authorityPath =
-    "packages/spec/artifacts/v1.37-integrity-authority.json"
+  const authorityPath = "packages/spec/artifacts/v1.37-integrity-authority.json"
   const eventCoveragePath =
     "packages/spec/artifacts/v1.37-current-event-coverage.json"
   const candidatePath =
@@ -641,8 +639,7 @@ export const buildV137Phase257CoreRulesResult = (
     eventCoverage.tupleId !== CURRENT_TUPLE_ID ||
     !Array.isArray(eventCoverage.currentEventVocabulary) ||
     eventCoverage.currentEventVocabulary.includes("PUSH_ATTEMPTED") ||
-    stableJson(eventCoverage.historicalOnly) !==
-      stableJson(["PUSH_ATTEMPTED"])
+    stableJson(eventCoverage.historicalOnly) !== stableJson(["PUSH_ATTEMPTED"])
   ) {
     throw new Error("current tuple, event, or candidate provenance drifted")
   }
@@ -697,7 +694,8 @@ export const buildV137Phase257CoreRulesResult = (
       structuralAndVersion: [
         {
           decision: "D-13",
-          meaning: "remove contiguous Activation and duplicate scheduler surfaces",
+          meaning:
+            "remove contiguous Activation and duplicate scheduler surfaces",
         },
         {
           decision: "D-14",
@@ -705,7 +703,8 @@ export const buildV137Phase257CoreRulesResult = (
         },
         {
           decision: "D-15",
-          meaning: "activate the exact 922a tuple while preserving historical v1.4",
+          meaning:
+            "activate the exact 922a tuple while preserving historical v1.4",
         },
       ],
       preserved: {
@@ -806,9 +805,7 @@ export const renderV137Phase257CoreRulesResultMarkdown = (
   result: Record<string, unknown>,
 ): string => {
   const activation = isRecord(result.activation) ? result.activation : {}
-  const observations = isRecord(result.observations)
-    ? result.observations
-    : {}
+  const observations = isRecord(result.observations) ? result.observations : {}
   const approvedDelta = isRecord(result.approvedDelta)
     ? result.approvedDelta
     : {}
@@ -837,10 +834,7 @@ ${Object.entries(observations)
 ## Approved Phase 257 delta
 
 ${[...semanticRepairs, ...structural]
-  .map(
-    (entry) =>
-      `- \`${String(entry.decision)}\`: ${String(entry.meaning)}`,
-  )
+  .map((entry) => `- \`${String(entry.decision)}\`: ${String(entry.meaning)}`)
   .join("\n")}
 - \`D-12\`: preserved successful-push pusher history \`RIGHT\`.
 - Phase 258 remains \`threw:RangeError\`; Phase 259 remains legacy-boundary accepted.
@@ -879,8 +873,7 @@ export const analyzeV137Phase257CoreRulesResult = (input: {
     })
   }
   if (
-    input.markdown !==
-    renderV137Phase257CoreRulesResultMarkdown(input.expected)
+    input.markdown !== renderV137Phase257CoreRulesResultMarkdown(input.expected)
   ) {
     findings.push({
       code: "AUDIT_MARKDOWN_DRIFT",
@@ -919,7 +912,10 @@ export const checkV137Phase257CoreRulesResult = (
 ): V137IntegrityBoundaryAnalysis => {
   try {
     const expected = buildV137Phase257CoreRulesResult(repoRoot)
-    const json = readFileSync(path.join(repoRoot, phase257ResultJsonPath), "utf8")
+    const json = readFileSync(
+      path.join(repoRoot, phase257ResultJsonPath),
+      "utf8",
+    )
     const result = JSON.parse(json) as unknown
     const markdown = readFileSync(
       path.join(repoRoot, phase257ResultMarkdownPath),
@@ -1533,7 +1529,8 @@ const analyzePhase257CurrentSources = (
           (isReplayDependency && forbidden.length > 0))
       const violatesPersistence =
         normalizedPath.startsWith("packages/persistence/") &&
-        ((isEngineDependency || isReplayDependency) && forbidden.length > 0)
+        (isEngineDependency || isReplayDependency) &&
+        forbidden.length > 0
       if (violatesReplay || violatesRuntime || violatesPersistence) {
         add(
           "CURRENT_FORBIDDEN_DEPENDENCY",
@@ -1760,6 +1757,23 @@ const analyzePhase257CurrentSources = (
       "activation.js",
       "The package root must not expose resolveActivationSelection or resolveActivationCycle as public lifecycle routes.",
     )
+  }
+  for (const [repoPath, source] of Object.entries(sources)) {
+    if (
+      repoPath.startsWith("packages/engine/src/") &&
+      !repoPath.startsWith("packages/engine/src/fixtures/") &&
+      !repoPath.endsWith(".test.ts") &&
+      /\b(?:export\s+)?(?:const|function)\s+(?:resolveActivationSelection|resolveActivationCycle)\b/u.test(
+        source,
+      )
+    ) {
+      addTextFinding(
+        "CURRENT_PUBLIC_LIFECYCLE_ROUTE",
+        repoPath,
+        "resolveActivation",
+        "Executable historical selection/cycle lifecycle implementations must remain fixture-only.",
+      )
+    }
   }
 
   return findings

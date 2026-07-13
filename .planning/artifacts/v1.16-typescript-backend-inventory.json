@@ -40,7 +40,7 @@
     "normalTypeScriptBackendAllowed": false,
     "fallbackPolicy": "no_silent_typescript_backend_fallback",
     "strategyRuntimeAbi": "strategy-runtime-abi-v1.14",
-    "runtimeExecutionService": "runtime-execution-service-v1.15",
+    "runtimeExecutionService": "runtime-execution-service-v1.16",
     "goExecutesStrategyCode": false,
     "webExecutesStrategyCode": false,
     "nodeVmSecurityBoundaryAllowed": false,
@@ -2626,30 +2626,30 @@
         {
           "line": 15,
           "source": "@cowards/spec",
-          "statementText": "import type {\n  StrategyId,\n  StrategyRevision,\n  StrategyRevisionId,\n  StrategyRuntimeProductSemantics,\n  StrategyRevisionMetadata,\n  UserId,\n} from \"@cowards/spec\""
+          "statementText": "import type {\n  StrategyId,\n  CountedEntryEligibilityCategory,\n  StrategyRevision,\n  StrategyRevisionId,\n  StrategyRuntimeProductSemantics,\n  StrategyRevisionMetadata,\n  UserId,\n} from \"@cowards/spec\""
         },
         {
-          "line": 23,
+          "line": 24,
           "source": "pg",
           "statementText": "import type { Pool } from \"pg\""
         },
         {
-          "line": 24,
+          "line": 25,
           "source": "./advanced-strategies.js",
           "statementText": "import {\n  findAdvancedStrategy,\n  type AdvancedStrategyId,\n} from \"./advanced-strategies.js\""
         },
         {
-          "line": 28,
+          "line": 29,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 29,
+          "line": 30,
           "source": "./starter-strategies.js",
           "statementText": "import {\n  findStarterStrategy,\n  type StarterStrategyId,\n} from \"./starter-strategies.js\""
         },
         {
-          "line": 33,
+          "line": 34,
           "source": "./ladder.js",
           "statementText": "import { evaluateStoredRevisionCountedEligibility } from \"./ladder.js\""
         },
@@ -2721,6 +2721,50 @@
           "detail": "packages/persistence/src/advanced-strategies.ts, packages/persistence/src/competition.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/ladder.ts, packages/persistence/src/match-service.ts, packages/persistence/src/matchset-service.ts, packages/persistence/src/presets.ts, packages/persistence/src/repositories.ts, packages/persistence/src/schema.ts, packages/persistence/src/scoring.ts, packages/persistence/src/seed.ts, packages/persistence/src/standings-recompute.ts, packages/persistence/src/starter-strategies.ts"
         }
       ]
+    },
+    {
+      "id": "packages-persistence-src-active-old-completion-fixture",
+      "path": "packages/persistence/src/active-old-completion.fixture.ts",
+      "kind": "persistence-module",
+      "role": "parity-only",
+      "retirementAction": "quarantine-for-parity",
+      "owner": "parity_fixture_maintainer",
+      "reason": "TypeScript service or persistence behavior remains as parity oracle or reference fixture, not normal backend behavior.",
+      "gate": "parity fixture generation or monitor-only reference gate",
+      "risk": "parity reference accidentally used as normal product backend",
+      "futureMigration": "Keep only as fixture/parity source until monitors no longer need TypeScript reference output.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "go_backend",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "persistence",
+      "goRouteIds": [],
+      "imports": [],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/persistence/src/active-old-completion.fixture.ts"
+      ],
+      "scannerFindings": []
     },
     {
       "id": "packages-persistence-src-advanced-strategies",
@@ -2887,21 +2931,31 @@
       "imports": [
         {
           "line": 1,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 2,
           "source": "node:crypto",
           "statementText": "import { randomUUID } from \"node:crypto\""
         },
         {
-          "line": 2,
+          "line": 3,
+          "source": "node:timers",
+          "statementText": "import { setTimeout } from \"node:timers\""
+        },
+        {
+          "line": 4,
           "source": "vitest",
           "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
         },
         {
-          "line": 3,
+          "line": 5,
           "source": "pg",
           "statementText": "import { Pool, type PoolClient } from \"pg\""
         },
         {
-          "line": 4,
+          "line": 6,
           "source": "./migrations.js",
           "statementText": "import { migrate } from \"./migrations.js\""
         }
@@ -3044,22 +3098,27 @@
           "statementText": "import { isDeepStrictEqual } from \"node:util\""
         },
         {
-          "line": 12,
+          "line": 16,
+          "source": "@cowards/spec",
+          "statementText": "import { CANONICAL_COMPATIBILITY_TUPLES } from \"@cowards/spec\""
+        },
+        {
+          "line": 17,
           "source": "./repositories.js",
           "statementText": "import type { Queryable } from \"./repositories.js\""
         },
         {
-          "line": 13,
+          "line": 18,
           "source": "./integrity-evidence.js",
           "statementText": "import {\n  createMatchExecutionEvidencePair,\n  matchSetIntegritySqlValues,\n  type MatchExecutionEvidencePair,\n  type MatchSetIntegrityIdentity,\n} from \"./integrity-evidence.js\""
         },
         {
           "line": 2,
           "source": "@cowards/replay",
-          "statementText": "import { createChronicleContentHash, validateChronicle } from \"@cowards/replay\""
+          "statementText": "import {\n  createChronicleContentHash,\n  validateChronicle,\n  validateHistoricalV14Chronicle,\n} from \"@cowards/replay\""
         },
         {
-          "line": 3,
+          "line": 7,
           "source": "@cowards/spec",
           "statementText": "import type {\n  ArenaVariantId,\n  Chronicle,\n  ChronicleEvent,\n  JsonValue,\n  MatchId,\n  PlayerId,\n  StrategyRevisionId,\n} from \"@cowards/spec\""
         }
@@ -3335,48 +3394,53 @@
       "imports": [
         {
           "line": 1,
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
+        },
+        {
+          "line": 13,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  type Chronicle,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n  type RuntimeExecutionResolvedEvidenceSnapshot,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 2,
           "source": "node:crypto",
           "statementText": "import { createHash, randomUUID } from \"node:crypto\""
         },
         {
-          "line": 12,
+          "line": 20,
           "source": "pg",
           "statementText": "import { Pool } from \"pg\""
         },
         {
-          "line": 13,
+          "line": 21,
           "source": "vitest",
           "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
         },
         {
-          "line": 14,
+          "line": 22,
           "source": "./complete-match.js",
-          "statementText": "import {\n  MatchCompletionIntegritySystemFailure,\n  completeMatch,\n  deriveMatchCompletionFields,\n  validateCompletionIntegritySnapshot,\n} from \"./complete-match.js\""
+          "statementText": "import {\n  MatchCompletionIntegritySystemFailure,\n  admitCurrentMatchCompletion,\n  completeMatch,\n  deriveMatchCompletionFields,\n  validateCompletionIntegritySnapshot,\n} from \"./complete-match.js\""
         },
         {
-          "line": 2,
-          "source": "@cowards/engine",
-          "statementText": "import type { GameState, StrategyRuntime } from \"@cowards/engine\""
-        },
-        {
-          "line": 20,
+          "line": 29,
           "source": "./migrations.js",
           "statementText": "import { migrate } from \"./migrations.js\""
         },
         {
-          "line": 21,
+          "line": 3,
+          "source": "@cowards/engine",
+          "statementText": "import {\n  MATCH_KERNEL,\n  type GameState,\n  type StrategyRuntime,\n} from \"@cowards/engine\""
+        },
+        {
+          "line": 30,
           "source": "./integrity-evidence.js",
           "statementText": "import {\n  createMatchExecutionEvidencePair,\n  createMatchSetIntegrityIdentity,\n  hashEntrantLaneIdentity,\n  matchExecutionEvidencePairSqlValues,\n  matchSetExecutionEntrantSqlValues,\n  matchSetIntegritySqlValues,\n  type MatchExecutionEvidencePair,\n  type MatchSetIntegrityIdentity,\n} from \"./integrity-evidence.js\""
         },
         {
-          "line": 3,
+          "line": 8,
           "source": "@cowards/replay",
-          "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
-        },
-        {
-          "line": 4,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n  type RuntimeExecutionResolvedEvidenceSnapshot,\n  type SoldierBrainInput,\n  type StrategyInput,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  recordChronicleFromExecution,\n  type ChronicleBoundaryAnchor,\n  type ChronicleRecorderExecution,\n} from \"@cowards/replay\""
         }
       ],
       "persistenceImports": [],
@@ -3442,18 +3506,13 @@
         },
         {
           "line": 10,
-          "source": "./chronicle-store.js",
-          "statementText": "import { createPostgresChronicleStore } from \"./chronicle-store.js\""
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RuntimeExecutionFinalStateSchema,\n  RuntimeExecutionResolvedEvidenceSnapshotSchema,\n  validateCanonicalGameState,\n  type Chronicle,\n  type MatchId,\n  type RuntimeExecutionResolvedEvidenceSnapshot,\n} from \"@cowards/spec\""
         },
         {
-          "line": 11,
-          "source": "./db.js",
-          "statementText": "import { withTransaction } from \"./db.js\""
-        },
-        {
-          "line": 12,
-          "source": "./integrity-evidence.js",
-          "statementText": "import {\n  createMatchExecutionEvidencePair,\n  matchSetIntegritySqlValues,\n  parseMatchSetIntegrityIdentityRows,\n  type MatchExecutionEvidencePair,\n  type MatchSetExecutionEntrantRow,\n  type MatchSetIntegrityIdentity,\n  type MatchSetIntegrityRow,\n} from \"./integrity-evidence.js\""
+          "line": 19,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
         },
         {
           "line": 2,
@@ -3461,14 +3520,24 @@
           "statementText": "import type { GameState } from \"@cowards/engine\""
         },
         {
-          "line": 3,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  RuntimeExecutionResolvedEvidenceSnapshotSchema,\n  type Chronicle,\n  type MatchId,\n  type RuntimeExecutionResolvedEvidenceSnapshot,\n} from \"@cowards/spec\""
+          "line": 20,
+          "source": "./chronicle-store.js",
+          "statementText": "import { createPostgresChronicleStore } from \"./chronicle-store.js\""
         },
         {
-          "line": 9,
-          "source": "pg",
-          "statementText": "import type { Pool } from \"pg\""
+          "line": 21,
+          "source": "./db.js",
+          "statementText": "import { withTransaction } from \"./db.js\""
+        },
+        {
+          "line": 22,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  createMatchExecutionEvidencePair,\n  matchSetIntegritySqlValues,\n  parseMatchSetIntegrityIdentityRows,\n  type MatchExecutionEvidencePair,\n  type MatchSetExecutionEntrantRow,\n  type MatchSetIntegrityIdentity,\n  type MatchSetIntegrityRow,\n} from \"./integrity-evidence.js\""
+        },
+        {
+          "line": 3,
+          "source": "@cowards/replay",
+          "statementText": "import {\n  createChronicleContentHash,\n  validateCurrentChronicle,\n  validateCurrentReplayReconstruction,\n  type ChronicleBoundaryAnchor,\n  type ChronicleRecorderExecution,\n} from \"@cowards/replay\""
         }
       ],
       "persistenceImports": [],
@@ -3810,7 +3879,7 @@
         {
           "line": 2,
           "source": "@cowards/spec",
-          "statementText": "import { CANONICAL_COMPATIBILITY_TUPLES, classifyCompetitionCountedState } from \"@cowards/spec\""
+          "statementText": "import { classifyCompetitionCountedState } from \"@cowards/spec\""
         },
         {
           "line": 3,
@@ -3887,31 +3956,36 @@
       "imports": [
         {
           "line": 1,
-          "source": "node:crypto",
-          "statementText": "import { createHash, randomUUID } from \"node:crypto\""
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
-          "line": 14,
+          "line": 15,
           "source": "pg",
           "statementText": "import type { Pool, PoolClient, QueryResultRow } from \"pg\""
         },
         {
-          "line": 15,
+          "line": 16,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
         },
         {
-          "line": 16,
+          "line": 17,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         },
         {
-          "line": 17,
+          "line": 18,
           "source": "./standings-recompute.js",
           "statementText": "import {\n  recomputeSeasonStandings,\n  type EffectiveIntegrityClassification,\n} from \"./standings-recompute.js\""
         },
         {
           "line": 2,
+          "source": "node:crypto",
+          "statementText": "import { createHash, randomUUID } from \"node:crypto\""
+        },
+        {
+          "line": 3,
           "source": "@cowards/spec",
           "statementText": "import {\n  classifyCompetitionCountedState,\n  competitionGovernanceActionPolicy,\n  normalizeCompetitionReportDetail,\n  type CompetitionGovernanceAction,\n  type CompetitionGovernanceCategory,\n  type CompetitionReportCategory,\n  type CompetitionReportSubmissionType,\n  type LadderMatchSetCountedStatus,\n  type LadderNonCountedReason,\n  type UserId,\n} from \"@cowards/spec\""
         }
@@ -5007,56 +5081,61 @@
       "imports": [
         {
           "line": 1,
-          "source": "node:crypto",
-          "statementText": "import { createHash } from \"node:crypto\""
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
-          "line": 10,
+          "line": 11,
           "source": "@cowards/spec",
           "statementText": "import { CANONICAL_COMPATIBILITY_TUPLES } from \"@cowards/spec\""
         },
         {
-          "line": 11,
+          "line": 12,
           "source": "pg",
           "statementText": "import type { Pool, PoolClient } from \"pg\""
         },
         {
-          "line": 12,
+          "line": 13,
           "source": "./repositories.js",
           "statementText": "import { createRepositories } from \"./repositories.js\""
         },
         {
-          "line": 13,
+          "line": 14,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
         },
         {
-          "line": 14,
+          "line": 15,
           "source": "./match-service.js",
           "statementText": "import {\n  createMatchJobId,\n  validateCreateMatchInput,\n  validateCreateMatchRecordInput,\n  type CreateMatchRecordInput,\n} from \"./match-service.js\""
         },
         {
           "line": 2,
-          "source": "@cowards/spec",
-          "statementText": "import type {\n  ExecutableLaneIdentity,\n  MatchId,\n  MatchSetId,\n  PlayerId,\n  StrategyLanguageId,\n  StrategyRevisionId,\n} from \"@cowards/spec\""
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
         },
         {
-          "line": 20,
+          "line": 21,
           "source": "./integrity-evidence.js",
           "statementText": "import {\n  IntegrityEvidenceInputError,\n  createMatchExecutionEvidencePair,\n  createMatchSetIntegrityIdentity,\n  matchExecutionEvidencePairSqlValues,\n  matchSetExecutionEntrantSqlValues,\n  matchSetIntegritySqlValues,\n  type EntrantExecutionEvidence,\n  type MatchExecutionEvidencePair,\n  type MatchSetIntegrityIdentity,\n} from \"./integrity-evidence.js\""
         },
         {
-          "line": 31,
+          "line": 3,
+          "source": "@cowards/spec",
+          "statementText": "import type {\n  ExecutableLaneIdentity,\n  MatchId,\n  MatchSetId,\n  PlayerId,\n  StrategyLanguageId,\n  StrategyRevisionId,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 32,
           "source": "@cowards/spec",
           "statementText": "import type { RuntimeExecutionCompatibilityIdentity } from \"@cowards/spec\""
         },
         {
-          "line": 32,
+          "line": 33,
           "source": "./presets.js",
           "statementText": "import { getMatchSetPreset, type MatchSetPresetId } from \"./presets.js\""
         },
         {
-          "line": 33,
+          "line": 34,
           "source": "./schema.js",
           "statementText": "import type { MatchSetStatus } from \"./schema.js\""
         }
@@ -5631,26 +5710,31 @@
         },
         {
           "line": 20,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  encodeRuntimeEvidenceAuthorityPayload,\n  hashExecutableLaneIdentity,\n  inspectRuntimeEvidenceAuthorityBundle,\n} from \"@cowards/spec\""
+          "source": "node:url",
+          "statementText": "import { fileURLToPath } from \"node:url\""
         },
         {
-          "line": 27,
+          "line": 21,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,\n  encodeRuntimeEvidenceAuthorityPayload,\n  hashExecutableLaneIdentity,\n  inspectRuntimeEvidenceAuthorityBundle,\n  type CanonicalCompatibilityTuple,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 29,
           "source": "pg",
           "statementText": "import { Pool } from \"pg\""
         },
         {
-          "line": 28,
+          "line": 30,
           "source": "vitest",
           "statementText": "import { afterAll, beforeAll, describe, expect, it } from \"vitest\""
         },
         {
-          "line": 29,
+          "line": 31,
           "source": "./migrations.js",
           "statementText": "import { migrate } from \"./migrations.js\""
         },
         {
-          "line": 30,
+          "line": 32,
           "source": "./runtime-evidence-authority-publisher.js",
           "statementText": "import {\n  RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION,\n  encodeRuntimeEvidenceAuthorityImportPayload,\n  importAuthenticatedCertificateRevocation,\n  importAuthenticatedCertificateSupersession,\n  importAuthenticatedRuntimeLaneControl,\n  installRuntimeEvidenceAuthorityPublication,\n  prepareRuntimeEvidenceAuthorityPublication,\n  type RuntimeEvidenceAuthorityInstallFileSystem,\n  type RuntimeEvidenceAuthorityImportEnvelope,\n  type RuntimeEvidenceAuthorityImportPayload,\n  type RuntimeEvidenceAuthorityImportTrustRoot,\n} from \"./runtime-evidence-authority-publisher.js\""
         },
@@ -5874,21 +5958,26 @@
       "imports": [
         {
           "line": 1,
-          "source": "node:crypto",
-          "statementText": "import { createHash } from \"node:crypto\""
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
-          "line": 13,
+          "line": 14,
           "source": "pg",
           "statementText": "import type { Pool, PoolClient, QueryResultRow } from \"pg\""
         },
         {
-          "line": 14,
+          "line": 15,
           "source": "./db.js",
           "statementText": "import { withTransaction } from \"./db.js\""
         },
         {
           "line": 2,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
+          "line": 3,
           "source": "@cowards/spec",
           "statementText": "import {\n  getVerifiedRuntimeEvidenceAttestationSnapshot,\n  verifyRuntimeEvidenceAttestation,\n  type ExecutableLaneCertificateReference,\n  type RuntimeEvidenceAttestation,\n  type RuntimeEvidenceBytes,\n  type RuntimeEvidenceTrustedProducer,\n  type RuntimeEvidenceVerificationMode,\n  type RuntimeEvidenceVerifiedSnapshot,\n  type VerifyRuntimeEvidenceAttestationInput,\n} from \"@cowards/spec\""
         }
@@ -6161,6 +6250,102 @@
         {
           "code": "runtime_import",
           "detail": "@cowards/runtime-js"
+        }
+      ]
+    },
+    {
+      "id": "packages-persistence-src-semantic-integrity-test",
+      "path": "packages/persistence/src/semantic-integrity.test.ts",
+      "kind": "persistence-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "none",
+      "fallbackPolicy": "no_silent_typescript_backend_fallback",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "persistence",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { createHash } from \"node:crypto\""
+        },
+        {
+          "line": 14,
+          "source": "pg",
+          "statementText": "import type { Pool } from \"pg\""
+        },
+        {
+          "line": 15,
+          "source": "vitest",
+          "statementText": "import { describe, expect, it } from \"vitest\""
+        },
+        {
+          "line": 16,
+          "source": "./complete-match.js",
+          "statementText": "import { completeMatch } from \"./complete-match.js\""
+        },
+        {
+          "line": 17,
+          "source": "./integrity-evidence.js",
+          "statementText": "import {\n  createMatchExecutionEvidencePair,\n  createMatchSetIntegrityIdentity,\n} from \"./integrity-evidence.js\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/engine",
+          "statementText": "import {\n  MATCH_KERNEL,\n  type GameState,\n  type StrategyRuntime,\n} from \"@cowards/engine\""
+        },
+        {
+          "line": 7,
+          "source": "@cowards/replay",
+          "statementText": "import { recordChronicleFromExecution } from \"@cowards/replay\""
+        },
+        {
+          "line": 8,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  CANONICAL_COMPATIBILITY_TUPLES,\n  type ExecutableLaneIdentity,\n  type RuntimeEntrantExecutionEvidence,\n  type RuntimeExecutionResolvedEvidenceSnapshot,\n} from \"@cowards/spec\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [
+        "packages/persistence/src/chronicle-store.ts",
+        "packages/persistence/src/complete-match.ts",
+        "packages/persistence/src/db.ts",
+        "packages/persistence/src/integrity-evidence.ts",
+        "packages/persistence/src/repositories.ts"
+      ],
+      "usesDatabase": false,
+      "claimsJobs": true,
+      "completesMatches": true,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "packages/persistence/src/semantic-integrity.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "local_backend_import_chain",
+          "detail": "packages/persistence/src/chronicle-store.ts, packages/persistence/src/complete-match.ts, packages/persistence/src/db.ts, packages/persistence/src/integrity-evidence.ts, packages/persistence/src/repositories.ts"
         }
       ]
     },
@@ -7706,29 +7891,29 @@
           "statementText": "import { describe, expect, it } from \"vitest\""
         },
         {
-          "line": 10,
+          "line": 12,
+          "source": "@cowards/test-utils",
+          "statementText": "import { createScenarioStateParts } from \"@cowards/test-utils\""
+        },
+        {
+          "line": 13,
+          "source": "./revision.js",
+          "statementText": "import { buildStrategyRevision } from \"./revision.js\""
+        },
+        {
+          "line": 14,
           "source": "./worker.js",
           "statementText": "import { createRuntimeFromRevision } from \"./worker.js\""
         },
         {
           "line": 2,
           "source": "@cowards/engine",
-          "statementText": "import { runMatch, type RunMatchInput } from \"@cowards/engine\""
+          "statementText": "import {\n  MATCH_KERNEL,\n  runMatch,\n  type RunMatchInput,\n} from \"@cowards/engine\""
         },
         {
-          "line": 3,
+          "line": 7,
           "source": "@cowards/replay",
-          "statementText": "import {\n  buildChronicleFromMatch,\n  projectOwnerChronicle,\n  projectPublicChronicle,\n} from \"@cowards/replay\""
-        },
-        {
-          "line": 8,
-          "source": "@cowards/test-utils",
-          "statementText": "import { createScenarioStateParts } from \"@cowards/test-utils\""
-        },
-        {
-          "line": 9,
-          "source": "./revision.js",
-          "statementText": "import { buildStrategyRevision } from \"./revision.js\""
+          "statementText": "import {\n  projectOwnerChronicle,\n  projectPublicChronicle,\n  recordChronicleFromExecution,\n} from \"@cowards/replay\""
         }
       ],
       "persistenceImports": [],
@@ -8972,13 +9157,13 @@
         },
         {
           "line": 15,
-          "source": "@cowards/replay",
-          "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
-        },
-        {
-          "line": 16,
           "source": "./execute-match.js",
           "statementText": "import {\n  executeRuntimeServiceRequest,\n  type RuntimeExecutionServiceDependencies,\n} from \"./execute-match.js\""
+        },
+        {
+          "line": 19,
+          "source": "./runtime-execution-evidence.test-support.js",
+          "statementText": "import {\n  createFixtureDeploymentLaneIdentity,\n  createFixtureRuntimeExecutionAuthorityContext,\n  type FixtureRuntimeExecutionAuthorityContext,\n} from \"./runtime-execution-evidence.test-support.js\""
         },
         {
           "line": 2,
@@ -8986,14 +9171,14 @@
           "statementText": "import { mkdtempSync, rmSync, writeFileSync } from \"node:fs\""
         },
         {
-          "line": 20,
-          "source": "./runtime-execution-evidence.test-support.js",
-          "statementText": "import {\n  createFixtureDeploymentLaneIdentity,\n  createFixtureRuntimeExecutionAuthorityContext,\n  type FixtureRuntimeExecutionAuthorityContext,\n} from \"./runtime-execution-evidence.test-support.js\""
-        },
-        {
-          "line": 25,
+          "line": 24,
           "source": "./runtime-evidence-authority.js",
           "statementText": "import {\n  RuntimeEvidenceAuthorityLoadError,\n  type RuntimeEvidenceAuthorityLoader,\n  type VerifiedMountedRuntimeEvidenceAuthority,\n} from \"./runtime-evidence-authority.js\""
+        },
+        {
+          "line": 29,
+          "source": "./runtime-config.js",
+          "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
         },
         {
           "line": 3,
@@ -9002,21 +9187,16 @@
         },
         {
           "line": 30,
-          "source": "./runtime-config.js",
-          "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
-        },
-        {
-          "line": 31,
           "source": "./deployment-lane-registry.js",
           "statementText": "import {\n  DEPLOYMENT_LANE_REGISTRY_SCHEMA_VERSION,\n  type DeploymentLaneProfile,\n} from \"./deployment-lane-registry.js\""
         },
         {
-          "line": 35,
+          "line": 34,
           "source": "./production-runtime-config.js",
           "statementText": "import { runtimeServiceConfigFromEnvironment } from \"./production-runtime-config.js\""
         },
         {
-          "line": 36,
+          "line": 35,
           "source": "./server.js",
           "statementText": "import { createRuntimeExecutionHttpServer } from \"./server.js\""
         },
@@ -9083,7 +9263,7 @@
       "retirementAction": "keep-runtime-service-boundary",
       "owner": "typescript_runtime_service",
       "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
-      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "gate": "runtime-execution-service-v1.16 schema and DB-free boundary",
       "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
       "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
       "currentOwner": "typescript_runtime_service",
@@ -9260,7 +9440,7 @@
       "retirementAction": "keep-runtime-service-boundary",
       "owner": "typescript_runtime_service",
       "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
-      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "gate": "runtime-execution-service-v1.16 schema and DB-free boundary",
       "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
       "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
       "currentOwner": "typescript_runtime_service",
@@ -9279,71 +9459,81 @@
           "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
-          "line": 18,
-          "source": "@cowards/runtime-js",
-          "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
-        },
-        {
-          "line": 19,
-          "source": "@cowards/runtime-js/worker",
-          "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
-        },
-        {
           "line": 2,
           "source": "node:crypto",
           "statementText": "import { createHash } from \"node:crypto\""
         },
         {
           "line": 20,
+          "source": "@cowards/runtime-js",
+          "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
+        },
+        {
+          "line": 21,
+          "source": "@cowards/runtime-js/worker",
+          "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
+        },
+        {
+          "line": 22,
           "source": "@cowards/runtime-python",
           "statementText": "import { createPythonRuntimeFromRevision } from \"@cowards/runtime-python\""
         },
         {
-          "line": 21,
+          "line": 23,
           "source": "@cowards/runtime-wasm-wasi",
           "statementText": "import { createWasmWasiRuntimeFromRevision } from \"@cowards/runtime-wasm-wasi\""
         },
         {
-          "line": 22,
+          "line": 24,
           "source": "@cowards/replay",
-          "statementText": "import { buildChronicleFromMatch } from \"@cowards/replay\""
+          "statementText": "import {\n  createCurrentReplay,\n  recordChronicleFromExecution,\n  validateCurrentChronicle,\n  validateCurrentReplayReconstruction,\n  type ReplayState,\n} from \"@cowards/replay\""
         },
         {
-          "line": 23,
+          "line": 3,
+          "source": "node:util",
+          "statementText": "import { isDeepStrictEqual } from \"node:util\""
+        },
+        {
+          "line": 31,
           "source": "@cowards/engine",
-          "statementText": "import {\n  violation,\n  type RunMatchInput,\n  type StrategyRuntime,\n} from \"@cowards/engine\""
+          "statementText": "import {\n  MatchExecutionFailure,\n  runMatch,\n  violation,\n  type GameState,\n  type RunMatchInput,\n  type StrategyRuntime,\n} from \"@cowards/engine\""
         },
         {
-          "line": 28,
+          "line": 39,
           "source": "./runtime-config.js",
           "statementText": "import type { RuntimeServiceConfig } from \"./runtime-config.js\""
         },
         {
-          "line": 29,
+          "line": 4,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  hashExecutableLaneIdentity,\n  validateStrategyLanguageProviderRuntimeCompatibility,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type RuntimeEntrantAuthorityReference,\n  type Chronicle,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 40,
           "source": "./redaction.js",
           "statementText": "import { publicSystemFailureMessage, redactedDiagnostics } from \"./redaction.js\""
         },
         {
-          "line": 3,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  hashExecutableLaneIdentity,\n  validateStrategyLanguageProviderRuntimeCompatibility,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type RuntimeEntrantAuthorityReference,\n  type StrategyRevision,\n} from \"@cowards/spec\""
-        },
-        {
-          "line": 30,
+          "line": 41,
           "source": "./runtime-evidence-authority.js",
           "statementText": "import type {\n  RuntimeEvidenceAuthorityLoader,\n  VerifiedMountedRuntimeEvidenceAuthority,\n} from \"./runtime-evidence-authority.js\""
+        },
+        {
+          "line": 45,
+          "source": "./semantic-receipt.js",
+          "statementText": "import { issueRuntimeSemanticReceipt } from \"./semantic-receipt.js\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 18,
+          "line": 20,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 19,
+          "line": 21,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
         }
@@ -9488,7 +9678,7 @@
       "retirementAction": "keep-runtime-service-boundary",
       "owner": "typescript_runtime_service",
       "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
-      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "gate": "runtime-execution-service-v1.16 schema and DB-free boundary",
       "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
       "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
       "currentOwner": "typescript_runtime_service",
@@ -9514,15 +9704,15 @@
         {
           "line": 3,
           "source": "./runtime-config.js",
-          "statementText": "import {\n  formatRuntimeServiceConfigLogLines,\n} from \"./runtime-config.js\""
+          "statementText": "import { formatRuntimeServiceConfigLogLines } from \"./runtime-config.js\""
         },
         {
-          "line": 6,
+          "line": 4,
           "source": "./production-runtime-config.js",
           "statementText": "import { runtimeServiceConfigFromEnvironment } from \"./production-runtime-config.js\""
         },
         {
-          "line": 7,
+          "line": 5,
           "source": "./runtime-evidence-authority.js",
           "statementText": "import {\n  createRuntimeEvidenceAuthorityLoader,\n  runtimeEvidenceAuthorityConfigFromEnvironment,\n} from \"./runtime-evidence-authority.js\""
         }
@@ -9570,7 +9760,7 @@
       "retirementAction": "keep-runtime-service-boundary",
       "owner": "typescript_runtime_service",
       "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
-      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "gate": "runtime-execution-service-v1.16 schema and DB-free boundary",
       "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
       "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
       "currentOwner": "typescript_runtime_service",
@@ -9681,7 +9871,7 @@
       "retirementAction": "keep-runtime-service-boundary",
       "owner": "typescript_runtime_service",
       "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
-      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "gate": "runtime-execution-service-v1.16 schema and DB-free boundary",
       "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
       "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
       "currentOwner": "typescript_runtime_service",
@@ -9732,7 +9922,7 @@
       "retirementAction": "keep-runtime-service-boundary",
       "owner": "typescript_runtime_service",
       "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
-      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "gate": "runtime-execution-service-v1.16 schema and DB-free boundary",
       "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
       "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
       "currentOwner": "typescript_runtime_service",
@@ -9884,7 +10074,7 @@
       "retirementAction": "keep-runtime-service-boundary",
       "owner": "typescript_runtime_service",
       "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
-      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "gate": "runtime-execution-service-v1.16 schema and DB-free boundary",
       "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
       "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
       "currentOwner": "typescript_runtime_service",
@@ -9950,7 +10140,7 @@
       "retirementAction": "keep-runtime-service-boundary",
       "owner": "typescript_runtime_service",
       "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
-      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "gate": "runtime-execution-service-v1.16 schema and DB-free boundary",
       "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
       "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
       "currentOwner": "typescript_runtime_service",
@@ -10009,6 +10199,168 @@
       "scannerFindings": []
     },
     {
+      "id": "apps-runtime-service-src-semantic-integrity-test",
+      "path": "apps/runtime-service/src/semantic-integrity.test.ts",
+      "kind": "runtime-service-module",
+      "role": "test-only",
+      "retirementAction": "quarantine-for-test",
+      "owner": "test_infrastructure",
+      "reason": "This path is test infrastructure gated away from normal product runtime traffic.",
+      "gate": "test-support route or Vitest/Playwright gate only",
+      "risk": "test or fixture path exposed to product runtime",
+      "futureMigration": "Keep gated for tests and fixtures; delete if future monitors no longer require it.",
+      "currentOwner": "typescript_non_normal_reference",
+      "normalBackendOwner": "typescript_runtime_service_only",
+      "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "runtime-service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "vitest",
+          "statementText": "import { beforeEach, describe, expect, it, vi } from \"vitest\""
+        },
+        {
+          "line": 10,
+          "source": "@cowards/engine",
+          "statementText": "import type { StrategyRuntime } from \"@cowards/engine\""
+        },
+        {
+          "line": 11,
+          "source": "@cowards/replay",
+          "statementText": "import { recordChronicleFromExecution } from \"@cowards/replay\""
+        },
+        {
+          "line": 12,
+          "source": "@cowards/runtime-js",
+          "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
+        },
+        {
+          "line": 13,
+          "source": "./execute-match.js",
+          "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
+        },
+        {
+          "line": 14,
+          "source": "./runtime-execution-evidence.test-support.js",
+          "statementText": "import {\n  createFixtureDeploymentLaneIdentity,\n  createFixtureRuntimeExecutionAuthorityContext,\n} from \"./runtime-execution-evidence.test-support.js\""
+        },
+        {
+          "line": 18,
+          "source": "./runtime-config.js",
+          "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  DEFAULT_RUNTIME_LIMITS,\n  INITIAL_BOUNDS,\n  RUNTIME_EXECUTION_SERVICE_VERSION,\n  type RuntimeExecutionServiceRequest,\n  type SoldierBrainInput,\n  type StrategyInput,\n} from \"@cowards/spec\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [
+        {
+          "line": 12,
+          "source": "@cowards/runtime-js",
+          "statementText": "import { buildStrategyRevision } from \"@cowards/runtime-js\""
+        }
+      ],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": true,
+      "ownerDebugAccess": false,
+      "testOnlyGate": "test-support route or Vitest/Playwright gate only",
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/runtime-service/src/semantic-integrity.test.ts"
+      ],
+      "scannerFindings": [
+        {
+          "code": "runtime_import",
+          "detail": "@cowards/runtime-js"
+        }
+      ]
+    },
+    {
+      "id": "apps-runtime-service-src-semantic-receipt",
+      "path": "apps/runtime-service/src/semantic-receipt.ts",
+      "kind": "runtime-service-module",
+      "role": "runtime-service",
+      "retirementAction": "keep-runtime-service-boundary",
+      "owner": "typescript_runtime_service",
+      "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
+      "gate": "runtime-execution-service-v1.16 schema and DB-free boundary",
+      "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
+      "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
+      "currentOwner": "typescript_runtime_service",
+      "normalBackendOwner": "typescript_runtime_service_only",
+      "fallbackPolicy": "no_db_claim_completion_scoring_or_public_backend_ownership",
+      "privacyClass": "source-safe-inventory-only",
+      "enforcementStatus": "phase-103-inventory-now-phase-108-monitor-ready",
+      "routeMethods": [],
+      "routePath": null,
+      "routeFamily": "runtime-service",
+      "goRouteIds": [],
+      "imports": [
+        {
+          "line": 1,
+          "source": "node:crypto",
+          "statementText": "import { createHash, createHmac } from \"node:crypto\""
+        },
+        {
+          "line": 14,
+          "source": "@cowards/replay",
+          "statementText": "import { createChronicleContentHash, stableStringify } from \"@cowards/replay\""
+        },
+        {
+          "line": 15,
+          "source": "@cowards/engine",
+          "statementText": "import type { GameState } from \"@cowards/engine\""
+        },
+        {
+          "line": 2,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  RUNTIME_EXECUTION_SERVICE_VERSION,\n  RUNTIME_SEMANTIC_RECEIPT_ALGORITHM,\n  RUNTIME_SEMANTIC_RECEIPT_KEY_ID,\n  RUNTIME_SEMANTIC_RECEIPT_PROFILE,\n  RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,\n  encodeRuntimeSemanticReceiptClaims,\n  type Chronicle,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeSemanticReceipt,\n  type RuntimeSemanticReceiptClaims,\n} from \"@cowards/spec\""
+        }
+      ],
+      "persistenceImports": [],
+      "serviceImports": [],
+      "runtimeImports": [],
+      "localBackendImports": [],
+      "usesDatabase": false,
+      "claimsJobs": false,
+      "completesMatches": false,
+      "persistsChronicles": false,
+      "refreshesScoring": false,
+      "servesPublicEvidence": false,
+      "executesStrategy": false,
+      "ownerDebugAccess": false,
+      "testOnlyGate": null,
+      "rollbackGate": null,
+      "deferredGate": null,
+      "sourceRefs": [
+        ".planning/artifacts/v1.15-lifecycle-ownership-manifest.json",
+        ".planning/artifacts/v1.15-live-web-go-runtime-topology.json",
+        ".planning/artifacts/v1.15-typescript-surface-labels.json",
+        "apps/runtime-service/src/semantic-receipt.ts",
+        "strategy-runtime-abi-v1.14"
+      ],
+      "scannerFindings": []
+    },
+    {
       "id": "apps-runtime-service-src-server-test",
       "path": "apps/runtime-service/src/server.test.ts",
       "kind": "runtime-service-module",
@@ -10031,38 +10383,43 @@
       "imports": [
         {
           "line": 1,
-          "source": "node:events",
-          "statementText": "import { once } from \"node:events\""
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
           "line": 10,
+          "source": "./runtime-config.js",
+          "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
+        },
+        {
+          "line": 11,
           "source": "./server.js",
           "statementText": "import { createRuntimeExecutionHttpServer, readBody } from \"./server.js\""
         },
         {
           "line": 2,
+          "source": "node:events",
+          "statementText": "import { once } from \"node:events\""
+        },
+        {
+          "line": 3,
           "source": "node:net",
           "statementText": "import type { AddressInfo } from \"node:net\""
         },
         {
-          "line": 3,
+          "line": 4,
           "source": "node:stream",
           "statementText": "import { Readable } from \"node:stream\""
         },
         {
-          "line": 4,
+          "line": 5,
           "source": "vitest",
           "statementText": "import { afterEach, describe, expect, it } from \"vitest\""
         },
         {
-          "line": 5,
+          "line": 6,
           "source": "@cowards/spec",
           "statementText": "import {\n  RUNTIME_EXECUTION_SERVICE_VERSION,\n  RuntimeExecutionServiceResponseSchema,\n} from \"@cowards/spec\""
-        },
-        {
-          "line": 9,
-          "source": "./runtime-config.js",
-          "statementText": "import { createRuntimeServiceConfig } from \"./runtime-config.js\""
         }
       ],
       "persistenceImports": [],
@@ -10096,7 +10453,7 @@
       "retirementAction": "keep-runtime-service-boundary",
       "owner": "typescript_runtime_service",
       "reason": "JS/TS Strategy execution remains isolated behind the runtime execution service boundary.",
-      "gate": "runtime-execution-service-v1.15 schema and DB-free boundary",
+      "gate": "runtime-execution-service-v1.16 schema and DB-free boundary",
       "risk": "runtime boundary drift into DB, job lifecycle, scoring, public API, or unredacted diagnostics",
       "futureMigration": "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker in a future phase.",
       "currentOwner": "typescript_runtime_service",
@@ -10111,65 +10468,70 @@
       "imports": [
         {
           "line": 1,
-          "source": "node:http",
-          "statementText": "import {\n  createServer,\n  type IncomingMessage,\n  type ServerResponse,\n} from \"node:http\""
+          "source": "node:buffer",
+          "statementText": "import { Buffer } from \"node:buffer\""
         },
         {
-          "line": 16,
+          "line": 18,
           "source": "@cowards/runtime-wasm-wasi/validation",
           "statementText": "import {\n  buildZigStrategyRevision,\n  buildRustStrategyRevision,\n  validateZigStrategySource,\n  validateRustStrategySource,\n} from \"@cowards/runtime-wasm-wasi/validation\""
         },
         {
-          "line": 22,
+          "line": 2,
+          "source": "node:http",
+          "statementText": "import {\n  createServer,\n  type IncomingMessage,\n  type ServerResponse,\n} from \"node:http\""
+        },
+        {
+          "line": 24,
           "source": "@cowards/runtime-python/validation",
           "statementText": "import {\n  buildPythonStrategyRevision,\n  validatePythonStrategySource,\n} from \"@cowards/runtime-python/validation\""
         },
         {
-          "line": 26,
+          "line": 28,
           "source": "@cowards/runtime-js",
           "statementText": "import {\n  buildStrategyRevision,\n  validateStrategySource,\n} from \"@cowards/runtime-js\""
         },
         {
-          "line": 30,
+          "line": 32,
           "source": "./runtime-config.js",
           "statementText": "import type { RuntimeServiceConfig } from \"./runtime-config.js\""
         },
         {
-          "line": 31,
+          "line": 33,
           "source": "./production-runtime-config.js",
           "statementText": "import { runtimeServiceConfigFromEnvironment } from \"./production-runtime-config.js\""
         },
         {
-          "line": 32,
+          "line": 34,
           "source": "./execute-match.js",
           "statementText": "import { executeRuntimeServiceRequest } from \"./execute-match.js\""
         },
         {
-          "line": 33,
+          "line": 35,
           "source": "./redaction.js",
           "statementText": "import { redactedErrorMessage } from \"./redaction.js\""
         },
         {
-          "line": 34,
+          "line": 36,
           "source": "./runtime-evidence-authority.js",
           "statementText": "import type { RuntimeEvidenceAuthorityLoader } from \"./runtime-evidence-authority.js\""
         },
         {
-          "line": 6,
+          "line": 7,
           "source": "node:crypto",
           "statementText": "import { createHmac, timingSafeEqual } from \"node:crypto\""
         },
         {
-          "line": 7,
+          "line": 8,
           "source": "@cowards/spec",
-          "statementText": "import {\n  RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,\n  RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,\n  RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  getStrategyLanguageProviderRecord,\n  type RuntimeExecutionServiceResponse,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,\n  RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,\n  RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,\n  RUNTIME_EXECUTION_SERVICE_VERSION,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  getStrategyLanguageProviderRecord,\n  type RuntimeExecutionServiceResponse,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 26,
+          "line": 28,
           "source": "@cowards/runtime-js",
           "statementText": "import {\n  buildStrategyRevision,\n  validateStrategySource,\n} from \"@cowards/runtime-js\""
         }
@@ -10783,7 +11145,7 @@
           "statementText": "import {\n  getCountedEntryEligibilityPublicCopy,\n  type CountedEntryEligibilityCategory,\n  type UserId,\n} from \"@cowards/spec\""
         },
         {
-          "line": 30,
+          "line": 28,
           "source": "./route.js",
           "statementText": "import { POST } from \"./route.js\""
         },
@@ -10796,6 +11158,11 @@
           "line": 8,
           "source": "../../../../../competitive/http.js",
           "statementText": "import { competitiveErrorResponse } from \"../../../../../competitive/http.js\""
+        },
+        {
+          "line": 9,
+          "source": "../../../../../competitive/server.js",
+          "statementText": "import type * as CompetitiveServerModule from \"../../../../../competitive/server.js\""
         }
       ],
       "persistenceImports": [],
@@ -17599,11 +17966,6 @@
         },
         {
           "line": 7,
-          "source": "./runner.js",
-          "statementText": "import type { WorkerRunnerDependencies } from \"./runner.js\""
-        },
-        {
-          "line": 8,
           "source": "./runner.js",
           "statementText": "import {\n  assertTypeScriptWorkerEntrypointAllowed,\n  assertTypeScriptWorkerJobOwnershipAllowed,\n  runWorkerLoop,\n  runWorkerOnce,\n  TypeScriptWorkerRetiredError,\n} from \"./runner.js\""
         }

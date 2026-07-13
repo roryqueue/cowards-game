@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
+import { isDeepStrictEqual } from "node:util"
 import {
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
@@ -24,11 +25,14 @@ import {
   createCurrentReplay,
   recordChronicleFromExecution,
   validateCurrentChronicle,
+  validateCurrentReplayReconstruction,
+  type ReplayState,
 } from "@cowards/replay"
 import {
   MatchExecutionFailure,
   runMatch,
   violation,
+  type GameState,
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
@@ -38,6 +42,7 @@ import type {
   RuntimeEvidenceAuthorityLoader,
   VerifiedMountedRuntimeEvidenceAuthority,
 } from "./runtime-evidence-authority.js"
+import { issueRuntimeSemanticReceipt } from "./semantic-receipt.js"
 
 const readRecord = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === "object" && !Array.isArray(value)
@@ -67,7 +72,7 @@ const systemFailureResponse = (input: {
 }): RuntimeExecutionServiceResponse => {
   const identity = requestIdentity(input.rawRequest)
   const response = {
-    contractVersion: "runtime-execution-service-v1.15",
+    contractVersion: "runtime-execution-service-v1.16",
     ok: false,
     kind: "systemFailure",
     requestId: identity.requestId,
@@ -643,7 +648,8 @@ export interface RuntimeExecutionServiceDependencies {
   runMatch: typeof runMatch
   recordChronicle: typeof recordChronicleFromExecution
   validateChronicle: typeof validateCurrentChronicle
-  reconstructChronicle: typeof createCurrentReplay
+  reconstructChronicle: typeof validateCurrentReplayReconstruction
+  createReplay: typeof createCurrentReplay
   createRuntimeForRevision: typeof createRuntimeForRevision
   authorityLoader?: RuntimeEvidenceAuthorityLoader | undefined
 }
@@ -652,7 +658,8 @@ const defaultDependencies: RuntimeExecutionServiceDependencies = {
   runMatch,
   recordChronicle: recordChronicleFromExecution,
   validateChronicle: validateCurrentChronicle,
-  reconstructChronicle: createCurrentReplay,
+  reconstructChronicle: validateCurrentReplayReconstruction,
+  createReplay: createCurrentReplay,
   createRuntimeForRevision,
 }
 
@@ -684,10 +691,33 @@ export const createSideDispatchRuntime = (
   },
 })
 
-const runtimeViolationEventCount = (
-  chronicle: Chronicle,
-): number =>
+const runtimeViolationEventCount = (chronicle: Chronicle): number =>
   chronicle.events.filter((event) => event.type === "RUNTIME_VIOLATION").length
+
+const projectFinalStateForReplay = (state: GameState): ReplayState => ({
+  board: {
+    bounds: globalThis.structuredClone(state.bounds),
+    soldiers: state.soldiers.map(
+      ({
+        id,
+        ownerPlayerId,
+        status,
+        position,
+        facing,
+        lastSuccessfulMoveDirection,
+      }) => ({
+        id,
+        ownerPlayerId,
+        status,
+        position: position === null ? null : { ...position },
+        facing,
+        lastSuccessfulMoveDirection,
+      }),
+    ),
+    terrainStones: state.terrainStones.map((position) => ({ ...position })),
+  },
+  ...(state.outcome === undefined ? {} : { outcome: state.outcome }),
+})
 
 const executeParsedRequest = (
   request: RuntimeExecutionServiceRequest,
@@ -788,9 +818,7 @@ const executeParsedRequest = (
       code: "MATCH_EXECUTION_FAILED",
       message: "Canonical Match execution failed.",
       retryable:
-        error instanceof MatchExecutionFailure
-          ? error.failure.retryable
-          : true,
+        error instanceof MatchExecutionFailure ? error.failure.retryable : true,
       diagnostics: {
         reason: "match-execution-failed",
         failureCode:
@@ -839,8 +867,11 @@ const executeParsedRequest = (
       },
     })
   }
-  const reconstructed = dependencies.reconstructChronicle(semanticInput)
-  if (!reconstructed.ok) {
+  const reconstructionValidation = dependencies.reconstructChronicle({
+    chronicle: recorded.chronicle,
+    execution: result.execution,
+  })
+  if (!reconstructionValidation.ok) {
     return systemFailureResponse({
       rawRequest: request,
       code: "CHRONICLE_INTEGRITY_FAILED",
@@ -849,6 +880,38 @@ const executeParsedRequest = (
       diagnostics: {
         reason: "chronicle-reconstruction-failed",
       },
+    })
+  }
+  const reconstructed = dependencies.createReplay(semanticInput)
+  const terminalSequence = recorded.chronicle.events.at(-1)?.sequence
+  const reconstructedTerminalState =
+    reconstructed.ok && terminalSequence !== undefined
+      ? reconstructed.replay.stateAt(terminalSequence)
+      : undefined
+  const terminalAnchor = recorded.boundaryAnchors.at(-1)
+  if (
+    result.execution.kind !== "completed" ||
+    !reconstructed.ok ||
+    reconstructedTerminalState === undefined ||
+    !reconstructedTerminalState.ok ||
+    !isDeepStrictEqual(
+      reconstructedTerminalState.state,
+      projectFinalStateForReplay(recorded.finalState),
+    ) ||
+    !isDeepStrictEqual(recorded.finalState, result.execution.result.state) ||
+    !isDeepStrictEqual(
+      reconstructionValidation.outcome,
+      recorded.finalState.outcome,
+    ) ||
+    terminalAnchor?.kind !== "TERMINAL" ||
+    terminalAnchor.stateHash !== reconstructionValidation.terminalStateHash
+  ) {
+    return systemFailureResponse({
+      rawRequest: request,
+      code: "CHRONICLE_INTEGRITY_FAILED",
+      message: "Canonical Chronicle terminal binding failed.",
+      retryable: false,
+      diagnostics: { reason: "chronicle-terminal-binding-failed" },
     })
   }
   const completionAuthority = loadAndVerifyRequestAuthority({
@@ -860,6 +923,15 @@ const executeParsedRequest = (
   if (!completionAuthority.ok) {
     return authorityFailureResponse(request, completionAuthority.code)
   }
+  const violationCount = runtimeViolationEventCount(recorded.chronicle)
+  const semanticReceipt = issueRuntimeSemanticReceipt({
+    request,
+    chronicle: recorded.chronicle,
+    finalState: recorded.finalState,
+    reconstructedTerminalStateHash: reconstructionValidation.terminalStateHash,
+    runtimeViolationEventCount: violationCount,
+    secret: runtimeConfig.semanticReceiptSecret,
+  })
   const response = {
     contractVersion: request.contractVersion,
     ok: true,
@@ -871,9 +943,8 @@ const executeParsedRequest = (
       privacy: "internal_runtime_result",
       chronicle: recorded.chronicle,
       finalState: recorded.finalState,
-      runtimeViolationEventCount: runtimeViolationEventCount(
-        recorded.chronicle,
-      ),
+      runtimeViolationEventCount: violationCount,
+      semanticReceipt,
     },
   } satisfies RuntimeExecutionServiceResponse
 

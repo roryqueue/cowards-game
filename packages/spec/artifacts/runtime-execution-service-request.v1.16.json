@@ -1,7 +1,7 @@
 {
-  "contractVersion": "runtime-execution-service-v1.15",
+  "contractVersion": "runtime-execution-service-v1.16",
   "kind": "executeMatch",
-  "requestId": "runtime-request:golden:v1.15",
+  "requestId": "runtime-request:golden:v1.16",
   "match": {
     "matchId": "match:runtime-service:golden",
     "seed": "seed:runtime-service:golden",
@@ -163,19 +163,19 @@
   "authorityBundleHash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
   "registryGeneration": "0",
   "publication": {
-    "publicationId": "fixture-only:publication:golden-v1.15",
-    "installReceiptId": "fixture-only:install-receipt:golden-v1.15",
+    "publicationId": "fixture-only:publication:golden-v1.16",
+    "installReceiptId": "fixture-only:install-receipt:golden-v1.16",
     "payloadSha256": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
     "envelopeSha256": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
     "sourceManifestHash": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
   },
     "entrants": {
       "bottom": {
-        "entrantKey": "fixture-only:entrant:golden-v1.15:bottom",
+        "entrantKey": "fixture-only:entrant:golden-v1.16:bottom",
         "strategyRevisionId": "strategy-revision:193798ed69b6692a2e05aa330ed457ce4cd02f909f018bb8a56d80791209142c",
         "laneIdentityHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "effectiveStatus": "exhibition_only",
-        "schedulingDecisionId": "fixture-only:scheduling-decision:golden-v1.15:bottom:typescript",
+        "schedulingDecisionId": "fixture-only:scheduling-decision:golden-v1.16:bottom:typescript",
       "schedulingDecisionHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
       "schedulingDecision": {
         "status": "exhibition_only",
@@ -184,15 +184,15 @@
         "freshUntil": "2026-07-14T00:00:00.000Z",
         "registryGeneration": "0"
       },
-        "containmentCertificateId": "fixture-only:untrusted-containment:golden-v1.15:bottom:typescript",
+        "containmentCertificateId": "fixture-only:untrusted-containment:golden-v1.16:bottom:typescript",
         "containmentCertificateHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
       },
       "top": {
-        "entrantKey": "fixture-only:entrant:golden-v1.15:top",
+        "entrantKey": "fixture-only:entrant:golden-v1.16:top",
         "strategyRevisionId": "strategy-revision:3aa6dbe47d9542b6880ed660dd3d15eca34209f61d53e490de4902f2b764365d",
         "laneIdentityHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         "effectiveStatus": "exhibition_only",
-        "schedulingDecisionId": "fixture-only:scheduling-decision:golden-v1.15:top:typescript",
+        "schedulingDecisionId": "fixture-only:scheduling-decision:golden-v1.16:top:typescript",
       "schedulingDecisionHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
       "schedulingDecision": {
         "status": "exhibition_only",
@@ -201,7 +201,7 @@
         "freshUntil": "2026-07-14T00:00:00.000Z",
         "registryGeneration": "0"
       },
-        "containmentCertificateId": "fixture-only:untrusted-containment:golden-v1.15:top:typescript",
+        "containmentCertificateId": "fixture-only:untrusted-containment:golden-v1.16:top:typescript",
         "containmentCertificateHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
       }
     }

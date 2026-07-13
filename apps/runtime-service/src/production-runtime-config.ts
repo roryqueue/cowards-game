@@ -17,5 +17,7 @@ export const runtimeServiceConfigFromEnvironment = (
     resolveDeploymentLaneIdentity:
       createDeploymentLaneIdentityResolver(registry),
     deploymentLaneRegistryId: registry.registryId,
+    semanticReceiptSecret:
+      environment.COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET,
   })
 }

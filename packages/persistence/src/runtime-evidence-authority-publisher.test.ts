@@ -287,7 +287,7 @@ describePostgres(
         tupleId: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
         tuple: CANONICAL_COMPATIBILITY_TUPLES[0]!.tuple,
       },
-    ): Promise<void> => {
+    ): Promise<string> => {
       const attestationId = `attestation:${suffix}`
       const rawHash = recordHash.slice("sha256:".length)
       const lane = {
@@ -382,6 +382,7 @@ describePostgres(
           validity.freshUntil ?? "2026-08-12T00:00:00.000Z",
         ],
       )
+      return certificateLaneIdentityHash
     }
 
     it("appends authenticated disable and compensating enable controls and rejects mutation", async () => {
@@ -538,18 +539,29 @@ describePostgres(
 
     it("builds and signs a deterministic locked snapshot with exact source provenance", async () => {
       const certificateId = "certificate:fixture:snapshot"
-      await seedCertificate(
+      const selectedLaneIdentityHash = await seedCertificate(
         certificateId,
         sha256("certificate:snapshot"),
         "snapshot",
       )
       const disablePayload = lanePayload({
         eventId: "fixture:lane-control:disable:snapshot",
+        laneIdentityHash: selectedLaneIdentityHash,
       })
       await importAuthenticatedRuntimeLaneControl(pool, {
         envelope: envelope(disablePayload),
         verificationInstant,
-        expectedLaneIdentityHash: laneIdentityHash,
+        expectedLaneIdentityHash: selectedLaneIdentityHash,
+        trustedOperators: [trustRoot],
+      })
+      const unrelatedDisablePayload = lanePayload({
+        eventId: "fixture:lane-control:disable:unrelated",
+        laneIdentityHash: sha256("unrelated-lane"),
+      })
+      await importAuthenticatedRuntimeLaneControl(pool, {
+        envelope: envelope(unrelatedDisablePayload),
+        verificationInstant,
+        expectedLaneIdentityHash: unrelatedDisablePayload.laneIdentityHash!,
         trustedOperators: [trustRoot],
       })
 
@@ -581,7 +593,7 @@ describePostgres(
         ),
       ).toBe(true)
       expect(inspected.payload.operatorLaneDisables).toEqual([
-        expect.objectContaining({ laneIdentityHash }),
+        expect.objectContaining({ laneIdentityHash: selectedLaneIdentityHash }),
       ])
       expect(inspected.payload.certificates).not.toContainEqual(
         expect.objectContaining({ kind: "conformance" }),
@@ -599,6 +611,9 @@ describePostgres(
       expect(persisted.rows[0]!.certificate_ids).toContain(certificateId)
       expect(persisted.rows[0]!.lane_control_ids).toContain(
         disablePayload.eventId,
+      )
+      expect(persisted.rows[0]!.lane_control_ids).not.toContain(
+        unrelatedDisablePayload.eventId,
       )
       const sourceRows = await pool.query(
         `select source_type, source_id from runtime_evidence_authority_publication_sources

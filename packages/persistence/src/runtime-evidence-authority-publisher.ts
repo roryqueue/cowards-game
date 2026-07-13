@@ -976,6 +976,9 @@ const loadPublicationSnapshot = async (
   )
   const certificates = certificatesResult.rows
   const certificateIds = certificates.map((row) => row.id)
+  const selectedLaneIdentityHashes = [
+    ...new Set(certificates.map((row) => row.lane_identity_hash)),
+  ].sort((left, right) => left.localeCompare(right))
   const attestationIds = [
     ...new Set(certificates.map((row) => row.verified_attestation_id)),
   ].sort((left, right) => left.localeCompare(right))
@@ -1000,7 +1003,10 @@ const loadPublicationSnapshot = async (
             schema_version, signed_payload, signature_base64, envelope_hash,
             issued_at, valid_until, verification_status
        from runtime_evidence_lane_controls
-      where verification_status = 'passed' order by sequence, id`,
+      where verification_status = 'passed'
+        and lane_identity_hash = any($1::text[])
+      order by sequence, id`,
+    [selectedLaneIdentityHashes],
   )
   for (const row of controlsResult.rows) {
     const verified = parsePersistedImport(

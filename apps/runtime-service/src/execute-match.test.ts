@@ -33,6 +33,7 @@ import {
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
+  semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
   resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
 })
 
@@ -247,14 +248,15 @@ describe("runtime execution service", () => {
     expect(response).not.toHaveProperty("publishable")
   })
 
-
   it("requires an explicit adapter unless local fallback is enabled", () => {
     expect(() => createRuntimeServiceConfig()).toThrow(
       RuntimeServiceConfigError,
     )
     expect(
-      createRuntimeServiceConfig({ allowLocalWorkerThreadFallback: true })
-        .metadata.id,
+      createRuntimeServiceConfig({
+        allowLocalWorkerThreadFallback: true,
+        semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
+      }).metadata.id,
     ).toBe("worker-thread")
   })
 
@@ -298,12 +300,12 @@ describe("runtime execution service", () => {
     expect(response.result.privacy).toBe("internal_runtime_result")
   })
 
-  it("parses the shared v1.15 golden request fixture", () => {
+  it("parses the shared v1.16 golden request fixture", () => {
     const fixture = JSON.parse(
       readFileSync(
         join(
           new URL("../../..", import.meta.url).pathname,
-          "packages/spec/artifacts/runtime-execution-service-request.v1.15.json",
+          "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
         ),
         "utf8",
       ),
@@ -643,7 +645,6 @@ describe("runtime execution service", () => {
     expect(text).not.toContain("stack")
     expect(text).not.toContain("stderr")
   })
-
 
   it("keeps runtime-service imports and dependencies DB-free", () => {
     const appRoot = new URL("..", import.meta.url).pathname

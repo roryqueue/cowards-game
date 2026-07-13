@@ -162,16 +162,17 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		}
 		return &goMatchOrchestrationResult{Status: status, JobID: claimed.JobID, MatchID: claimed.MatchID}, nil
 	}
-	chronicle, finalState, err := runtimeServiceCompletionPayload(response)
+	chronicle, finalState, semanticReceipt, err := runtimeServiceCompletionPayload(response)
 	if err != nil {
 		return nil, err
 	}
 	completed, err := orchestrator.completion.completeMatch(ctx, completeMatchInput{
-		JobID:      claimed.JobID,
-		LeaseToken: claimed.LeaseToken,
-		Chronicle:  chronicle,
-		FinalState: finalState,
-		Integrity:  claimed.Integrity,
+		JobID:           claimed.JobID,
+		LeaseToken:      claimed.LeaseToken,
+		Chronicle:       chronicle,
+		FinalState:      finalState,
+		SemanticReceipt: semanticReceipt,
+		Integrity:       claimed.Integrity,
 	})
 	if err != nil {
 		return nil, err
@@ -376,19 +377,17 @@ func loadRuntimeServiceMatchInput(ctx context.Context, pool *pgxpool.Pool, match
 	return row, nil
 }
 
-func runtimeServiceCompletionPayload(response *runtimeServiceResponse) (map[string]any, map[string]any, error) {
+func runtimeServiceCompletionPayload(response *runtimeServiceResponse) (map[string]any, map[string]any, runtimeSemanticReceipt, error) {
 	if response == nil || !response.OK || response.Result == nil {
-		return nil, nil, errors.New("runtime service response did not include a completion result")
+		return nil, nil, runtimeSemanticReceipt{}, errors.New("runtime service response did not include a completion result")
 	}
-	chronicle, ok := response.Result["chronicle"].(map[string]any)
-	if !ok {
-		return nil, nil, errors.New("runtime service result missing Chronicle")
+	if response.Result.Chronicle == nil {
+		return nil, nil, runtimeSemanticReceipt{}, errors.New("runtime service result missing Chronicle")
 	}
-	finalState, ok := response.Result["finalState"].(map[string]any)
-	if !ok {
-		return nil, nil, errors.New("runtime service result missing final state")
+	if response.Result.FinalState == nil {
+		return nil, nil, runtimeSemanticReceipt{}, errors.New("runtime service result missing final state")
 	}
-	return chronicle, finalState, nil
+	return response.Result.Chronicle, response.Result.FinalState, response.Result.SemanticReceipt, nil
 }
 
 func defaultRuntimeServiceLimits() map[string]any {

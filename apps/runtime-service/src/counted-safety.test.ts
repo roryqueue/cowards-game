@@ -36,6 +36,7 @@ import { createRuntimeExecutionHttpServer } from "./server.js"
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
+  semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
   resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
 })
 
@@ -174,6 +175,8 @@ const executeOverProductionConfiguredHttp = async (input: {
   const runtimeConfig = runtimeServiceConfigFromEnvironment({
     STRATEGY_EXECUTION_ADAPTER: "worker-thread",
     COWARDS_RUNTIME_DEPLOYMENT_LANE_REGISTRY: registryPath,
+    COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET:
+      "fixture-semantic-receipt-secret-v1",
   })
   const server = createRuntimeExecutionHttpServer({
     runtimeConfig,
@@ -465,6 +468,7 @@ describe("runtime-service counted safety", () => {
       })
       const mismatchedConfig = createRuntimeServiceConfig({
         strategyExecutionAdapter: "worker-thread",
+        semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
         resolveDeploymentLaneIdentity: (revision) => ({
           ...createFixtureDeploymentLaneIdentity(revision),
           ...mutation,
