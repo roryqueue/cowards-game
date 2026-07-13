@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -61,6 +62,96 @@ func TestRuntimeServiceFailureCodeParityIncludesEveryV116ContractCode(t *testing
 		if !isRuntimeServiceContractFailureCode(code) {
 			t.Fatalf("Go runtime-service failure-code parity omitted %s", code)
 		}
+	}
+}
+
+func TestRuntimeServiceV116ConsumesTypeScriptIssuedWireGolden(t *testing.T) {
+	payload, err := os.ReadFile("../../packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, marker := range [][]byte{
+		[]byte("<>&"),
+		[]byte("\u2028"),
+		[]byte("\u2029"),
+		[]byte("日本語"),
+		[]byte(`"zLower"`),
+		[]byte(`"AUpper"`),
+		[]byte(`"maxSafeInteger":9007199254740991`),
+		[]byte(`"minSafeInteger":-9007199254740991`),
+		[]byte(`"negativeZero":0`),
+		[]byte(`"tinyDecimal":1e-7`),
+		[]byte(`"exactDecimal":1.25`),
+	} {
+		if !bytes.Contains(payload, marker) {
+			t.Fatalf("TypeScript wire golden omitted %q", marker)
+		}
+	}
+	if bytes.Index(payload, []byte(`"zLower"`)) >= bytes.Index(payload, []byte(`"AUpper"`)) {
+		t.Fatal("TypeScript wire golden did not preserve mixed-case insertion order")
+	}
+	request := validRuntimeServiceRequestForTest()
+	decoded, failure := decodeRuntimeServiceResponseBytesWithSecret(request, payload, "fixture-v1.16-wire-golden-secret")
+	if failure != nil || decoded == nil || !decoded.OK {
+		t.Fatalf("TypeScript-issued wire golden was rejected: decoded=%+v failure=%+v", decoded, failure)
+	}
+	var rewritten any
+	if err := decodeStrictJSONUseNumber(payload, &rewritten); err != nil {
+		t.Fatal(err)
+	}
+	rewrittenPayload, err := json.Marshal(rewritten)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Equal(rewrittenPayload, payload) {
+		t.Fatal("Go rewrite unexpectedly preserved the TypeScript wire bytes")
+	}
+	if decoded, failure := decodeRuntimeServiceResponseBytesWithSecret(request, rewrittenPayload, "fixture-v1.16-wire-golden-secret"); decoded != nil || failure == nil {
+		t.Fatalf("wire-byte rewrite was admitted: decoded=%+v failure=%+v", decoded, failure)
+	}
+}
+
+func TestRuntimeServiceV116RejectsUppercaseSignatureAndForbiddenChronicleMetadata(t *testing.T) {
+	const secret = "fixture-semantic-receipt-secret-v1"
+	request := validRuntimeServiceRequestForTest()
+	chronicle := orchestratorChronicleForRequest(request, false)
+	finalState := orchestratorFinalStateForRequest(request)
+
+	t.Run("uppercase signature", func(t *testing.T) {
+		result := signedRuntimeServiceSuccessResultForTest(t, request, chronicle, finalState, secret)
+		result.SemanticReceipt.Signature = "hmac-sha256:" + strings.ToUpper(strings.TrimPrefix(result.SemanticReceipt.Signature, "hmac-sha256:"))
+		payload, err := json.Marshal(runtimeServiceResponse{
+			ContractVersion: runtimeExecutionServiceVersion, OK: true, Kind: "executionResult",
+			RequestID: request.RequestID, MatchID: request.Match.MatchID, RuntimeABIVersion: strategyRuntimeABIVersion,
+			Result: result,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		decoded, failure := decodeRuntimeServiceResponseBytesWithSecret(request, payload, secret)
+		if decoded != nil || failure == nil {
+			t.Fatalf("uppercase signature was admitted: decoded=%+v failure=%+v", decoded, failure)
+		}
+	})
+
+	for _, field := range []string{"integrity", "storageMetadata"} {
+		t.Run(field, func(t *testing.T) {
+			mutated := semanticCloneValue(t, chronicle).(map[string]any)
+			mutated[field] = map[string]any{"hostPath": "/private/runtime/storage", "algorithm": "sha256"}
+			result := signedRuntimeServiceSuccessResultForTest(t, request, mutated, finalState, secret)
+			payload, err := json.Marshal(runtimeServiceResponse{
+				ContractVersion: runtimeExecutionServiceVersion, OK: true, Kind: "executionResult",
+				RequestID: request.RequestID, MatchID: request.Match.MatchID, RuntimeABIVersion: strategyRuntimeABIVersion,
+				Result: result,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			decoded, failure := decodeRuntimeServiceResponseBytesWithSecret(request, payload, secret)
+			if decoded != nil || failure == nil {
+				t.Fatalf("forbidden Chronicle %s was admitted: decoded=%+v failure=%+v", field, decoded, failure)
+			}
+		})
 	}
 }
 
@@ -650,15 +741,15 @@ func validRuntimeServiceRequestForTest() runtimeServiceRequest {
 
 func signedRuntimeServiceSuccessResultForTest(t *testing.T, request runtimeServiceRequest, chronicle map[string]any, finalState map[string]any, secret string) *runtimeServiceSuccessResult {
 	t.Helper()
-	chronicleHash, err := runtimeSemanticChronicleHash(chronicle)
+	chronicleHash, chronicleJSON, err := runtimeSemanticChronicleWireBytesHash(chronicle)
 	if err != nil {
 		t.Fatal(err)
 	}
-	finalStateHash, err := runtimeSemanticFinalStateHash(finalState)
+	finalStateHash, finalStateJSON, err := runtimeSemanticFinalStateWireBytesHash(finalState)
 	if err != nil {
 		t.Fatal(err)
 	}
-	outcomeHash, err := runtimeSemanticOutcomeHash(finalState)
+	outcomeHash, outcomeJSON, err := runtimeSemanticOutcomeWireBytesHash(finalState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -670,8 +761,8 @@ func signedRuntimeServiceSuccessResultForTest(t *testing.T, request runtimeServi
 		RuntimeABIVersion: request.EvidenceSnapshot.Compatibility.Tuple.RuntimeABI, ChronicleVersion: request.EvidenceSnapshot.Compatibility.Tuple.Chronicle,
 		ArenaCatalogVersion: request.EvidenceSnapshot.Compatibility.Tuple.ArenaCatalog, SetPolicyVersion: request.EvidenceSnapshot.Compatibility.Tuple.SetPolicy,
 		AuthorityBundleHash: request.EvidenceSnapshot.AuthorityBundleHash, RegistryGeneration: request.EvidenceSnapshot.RegistryGeneration,
-		ChronicleHash: chronicleHash, FinalStateHash: finalStateHash,
-		ReconstructedTerminalStateHash: "sha256:" + strings.Repeat("7", 64), OutcomeHash: outcomeHash,
+		ChronicleWireBytesHash: chronicleHash, FinalStateWireBytesHash: finalStateHash,
+		ReconstructedTerminalStateHash: "sha256:" + strings.Repeat("7", 64), OutcomeWireBytesHash: outcomeHash,
 		RuntimeViolationEventCount: runtimeSemanticViolationCount(chronicle), Algorithm: runtimeSemanticReceiptAlgorithm, KeyID: runtimeSemanticReceiptKeyID,
 	}
 	mac := hmac.New(sha256.New, []byte(secret))
@@ -680,6 +771,10 @@ func signedRuntimeServiceSuccessResultForTest(t *testing.T, request runtimeServi
 	return &runtimeServiceSuccessResult{
 		Privacy: "internal_runtime_result", Chronicle: chronicle, FinalState: finalState,
 		RuntimeViolationEventCount: receipt.RuntimeViolationEventCount, SemanticReceipt: receipt,
+		SemanticWireEvidence: runtimeSemanticWireEvidence{
+			ChronicleJSON: chronicleJSON, FinalStateJSON: finalStateJSON, OutcomeJSON: outcomeJSON,
+			ChronicleWireBytesHash: chronicleHash, FinalStateWireBytesHash: finalStateHash, OutcomeWireBytesHash: outcomeHash,
+		},
 	}
 }
 

@@ -2283,10 +2283,10 @@ describe("Coward's Game spec contracts", () => {
           setPolicyVersion: registered.tuple.setPolicy,
           authorityBundleHash: `sha256:${"a".repeat(64)}`,
           registryGeneration: "1",
-          chronicleHash: `sha256:${"b".repeat(64)}`,
-          finalStateHash: `sha256:${"c".repeat(64)}`,
+          chronicleWireBytesHash: `sha256:${"b".repeat(64)}`,
+          finalStateWireBytesHash: `sha256:${"c".repeat(64)}`,
           reconstructedTerminalStateHash: `sha256:${"c".repeat(64)}`,
-          outcomeHash: `sha256:${"d".repeat(64)}`,
+          outcomeWireBytesHash: `sha256:${"d".repeat(64)}`,
           runtimeViolationEventCount: 0,
           algorithm: RUNTIME_SEMANTIC_RECEIPT_ALGORITHM,
           keyId: RUNTIME_SEMANTIC_RECEIPT_KEY_ID,
@@ -2316,6 +2316,19 @@ describe("Coward's Game spec contracts", () => {
     expect(RuntimeExecutionServiceResponseSchema.parse(success)).toEqual(
       success,
     )
+    for (const forbidden of ["integrity", "storageMetadata"] as const) {
+      const injected = globalThis.structuredClone(success)
+      ;(injected.result.chronicle as Record<string, unknown>)[forbidden] =
+        forbidden === "integrity"
+          ? {
+              algorithm: "sha256",
+              normalizedContentHash: `sha256:${"f".repeat(64)}`,
+            }
+          : { hostPath: "/private/runtime/storage" }
+      expect(
+        RuntimeExecutionServiceResponseSchema.safeParse(injected).success,
+      ).toBe(false)
+    }
     expect(RuntimeExecutionServiceResponseSchema.parse(systemFailure)).toEqual(
       systemFailure,
     )

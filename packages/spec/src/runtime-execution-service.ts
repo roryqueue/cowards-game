@@ -34,6 +34,12 @@ export const RUNTIME_SEMANTIC_RECEIPT_KEY_ID =
   "runtime-service-semantic-receipt:v1" as const
 export const RUNTIME_SEMANTIC_RECEIPT_DOMAIN =
   "cowards-game:runtime-semantic-receipt:v1" as const
+export const RUNTIME_SEMANTIC_CHRONICLE_WIRE_DOMAIN =
+  "cowards-game:runtime-semantic-chronicle-json-wire:v1" as const
+export const RUNTIME_SEMANTIC_FINAL_STATE_WIRE_DOMAIN =
+  "cowards-game:runtime-semantic-final-state-json-wire:v1" as const
+export const RUNTIME_SEMANTIC_OUTCOME_WIRE_DOMAIN =
+  "cowards-game:runtime-semantic-outcome-json-wire:v1" as const
 
 export interface RuntimeSemanticReceiptClaims {
   schemaVersion: typeof RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION
@@ -50,10 +56,10 @@ export interface RuntimeSemanticReceiptClaims {
   setPolicyVersion: string
   authorityBundleHash: string
   registryGeneration: string
-  chronicleHash: string
-  finalStateHash: string
+  chronicleWireBytesHash: string
+  finalStateWireBytesHash: string
   reconstructedTerminalStateHash: string
-  outcomeHash: string
+  outcomeWireBytesHash: string
   runtimeViolationEventCount: number
   algorithm: typeof RUNTIME_SEMANTIC_RECEIPT_ALGORITHM
   keyId: typeof RUNTIME_SEMANTIC_RECEIPT_KEY_ID
@@ -83,10 +89,10 @@ export const encodeRuntimeSemanticReceiptClaims = (
       claims.setPolicyVersion,
       claims.authorityBundleHash,
       claims.registryGeneration,
-      claims.chronicleHash,
-      claims.finalStateHash,
+      claims.chronicleWireBytesHash,
+      claims.finalStateWireBytesHash,
       claims.reconstructedTerminalStateHash,
-      claims.outcomeHash,
+      claims.outcomeWireBytesHash,
       String(claims.runtimeViolationEventCount),
       claims.algorithm,
       claims.keyId,
@@ -359,7 +365,10 @@ export interface RuntimeExecutionServiceSuccessResponse {
   runtimeAbiVersion: typeof STRATEGY_RUNTIME_ABI_VERSION
   result: {
     privacy: "internal_runtime_result"
-    chronicle: Chronicle
+    chronicle: Omit<Chronicle, "integrity" | "storageMetadata"> & {
+      integrity?: never
+      storageMetadata?: never
+    }
     finalState: RuntimeExecutionFinalState
     runtimeViolationEventCount: number
     semanticReceipt: RuntimeSemanticReceipt

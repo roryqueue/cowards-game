@@ -3,17 +3,23 @@ import { createHash } from "node:crypto"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { MATCH_KERNEL } from "../packages/engine/src/index.ts"
+import {
+  MATCH_KERNEL,
+  type StrategyRuntime,
+} from "../packages/engine/src/index.ts"
 import {
   projectPublicChronicle,
   recordChronicleFromExecution,
+  validateCurrentReplayReconstruction,
 } from "../packages/replay/src/index.ts"
+import { issueRuntimeSemanticReceipt } from "../apps/runtime-service/src/semantic-receipt.ts"
 import { createChronicleMetadata } from "../packages/persistence/src/chronicle-store.ts"
 import { createWorkshopAnalyticsDemoSnapshot } from "../packages/persistence/src/workshop-analytics.ts"
 import { createCowardsLocalService } from "../packages/service/src/index.ts"
 import { createGoldenMatchInput } from "../packages/golden/src/index.ts"
 import {
   AnalyticsRunSummaryServiceDtoSchema,
+  ChronicleSchema,
   EXHIBITION_SCORING_POLICY_V1,
   PublicLadderPageServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
@@ -29,6 +35,9 @@ import {
   serviceHealthExample,
   SERVICE_API_VERSION,
   RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES,
+  RuntimeExecutionServiceRequestSchema,
+  RuntimeExecutionServiceResponseSchema,
+  RuntimeExecutionFinalStateSchema,
   type AnalyticsRunSummaryServiceDto,
   type PublicLadderPageServiceDto,
   type PublicMatchSetResultDto,
@@ -37,6 +46,8 @@ import {
   type PublicStrategyCardDto,
   type PublicStrategyPageServiceDto,
   type ServiceErrorDto,
+  type SoldierBrainInput,
+  type StrategyInput,
   publicLadderPageExample,
   publicPlayerPageExample,
 } from "../packages/spec/src/index.ts"
@@ -55,7 +66,113 @@ const goRuntimeExecutionContractPath = path.join(
   repoRoot,
   "apps/go-backend/runtime_execution_contract_gen.go",
 )
+const runtimeExecutionWireGoldenPath = path.join(
+  repoRoot,
+  "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
+)
 const staleMessage = "Go parity fixtures are stale; run pnpm go:parity:generate"
+
+const createRuntimeExecutionWireGolden = (): string => {
+  const request = RuntimeExecutionServiceRequestSchema.parse(
+    JSON.parse(
+      readFileSync(
+        path.join(
+          repoRoot,
+          "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
+        ),
+        "utf8",
+      ),
+    ),
+  )
+  const wireValues = () => ({
+    zLower: "<>&",
+    AUpper: "日本語",
+    lineSeparators: "before\u2028middle\u2029after",
+    maxSafeInteger: Number.MAX_SAFE_INTEGER,
+    minSafeInteger: Number.MIN_SAFE_INTEGER,
+    negativeZero: -0,
+    tinyDecimal: 1e-7,
+    exactDecimal: 1.25,
+  })
+  const wireRuntime: StrategyRuntime = {
+    selectActivations(_input: StrategyInput) {
+      return {
+        ok: true,
+        value: { activationOrders: [], strategyMemory: wireValues() },
+      }
+    },
+    runSoldierBrain(_input: SoldierBrainInput) {
+      return {
+        ok: true,
+        value: {
+          action: { type: "TURN_TO_STONE" },
+          soldierMemory: wireValues(),
+        },
+      }
+    },
+  }
+  const execution = MATCH_KERNEL.runMatch({
+    ...request.match,
+    runtime: wireRuntime,
+  })
+  if (execution.kind !== "completed") {
+    throw new Error("Runtime execution wire golden did not complete")
+  }
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: request.evidenceSnapshot.compatibility.tupleId,
+      semanticTuple: request.evidenceSnapshot.compatibility.tuple,
+    },
+  })
+  if (!recorded.ok) {
+    throw new Error(recorded.failure.code)
+  }
+  const reconstructed = validateCurrentReplayReconstruction({
+    chronicle: recorded.chronicle,
+    execution,
+  })
+  if (!reconstructed.ok) {
+    throw new Error("Runtime execution wire golden did not reconstruct")
+  }
+  const runtimeViolationEventCount = recorded.chronicle.events.filter(
+    (event) => event.type === "RUNTIME_VIOLATION",
+  ).length
+  const responseChronicle = ChronicleSchema.omit({
+    integrity: true,
+    storageMetadata: true,
+  })
+    .strict()
+    .parse(recorded.chronicle)
+  const responseFinalState = RuntimeExecutionFinalStateSchema.parse(
+    recorded.finalState,
+  )
+  const semanticReceipt = issueRuntimeSemanticReceipt({
+    request,
+    chronicle: responseChronicle,
+    finalState: responseFinalState,
+    reconstructedTerminalStateHash: reconstructed.terminalStateHash,
+    runtimeViolationEventCount,
+    secret: "fixture-v1.16-wire-golden-secret",
+  })
+  const response = RuntimeExecutionServiceResponseSchema.parse({
+    contractVersion: request.contractVersion,
+    ok: true,
+    kind: "executionResult",
+    requestId: request.requestId,
+    matchId: request.match.matchId,
+    runtimeAbiVersion: request.evidenceSnapshot.compatibility.tuple.runtimeAbi,
+    result: {
+      privacy: "internal_runtime_result",
+      chronicle: responseChronicle,
+      finalState: responseFinalState,
+      runtimeViolationEventCount,
+      semanticReceipt,
+    },
+  })
+  return JSON.stringify(response)
+}
 
 const stableValue = (value: unknown): unknown => {
   if (Array.isArray(value)) {
@@ -550,6 +667,7 @@ for (const [fileName, value] of Object.entries(fixtures)) {
 }
 
 const checkMode = process.argv.includes("--check")
+const runtimeExecutionWireGolden = createRuntimeExecutionWireGolden()
 mkdirSync(fixtureDir, { recursive: true })
 
 let stale = false
@@ -590,12 +708,21 @@ if (checkMode) {
   if (current !== goRuntimeExecutionContractSource) {
     stale = true
   }
+  try {
+    current = readFileSync(runtimeExecutionWireGoldenPath, "utf8")
+  } catch {
+    stale = true
+  }
+  if (current !== runtimeExecutionWireGolden) {
+    stale = true
+  }
 } else {
   writeFileSync(goChecksumSourcePath, goChecksumSource)
   writeFileSync(
     goRuntimeExecutionContractPath,
     goRuntimeExecutionContractSource,
   )
+  writeFileSync(runtimeExecutionWireGoldenPath, runtimeExecutionWireGolden)
 }
 
 if (stale) {

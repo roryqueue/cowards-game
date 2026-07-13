@@ -2867,10 +2867,10 @@ export const RuntimeSemanticReceiptSchema = z
     setPolicyVersion: z.string().min(1),
     authorityBundleHash: PrefixedSha256Schema,
     registryGeneration: z.string().regex(/^(?:0|[1-9][0-9]*)$/u),
-    chronicleHash: PrefixedSha256Schema,
-    finalStateHash: PrefixedSha256Schema,
+    chronicleWireBytesHash: PrefixedSha256Schema,
+    finalStateWireBytesHash: PrefixedSha256Schema,
     reconstructedTerminalStateHash: PrefixedSha256Schema,
-    outcomeHash: PrefixedSha256Schema,
+    outcomeWireBytesHash: PrefixedSha256Schema,
     runtimeViolationEventCount: z.number().int().nonnegative(),
     algorithm: z.literal(RUNTIME_SEMANTIC_RECEIPT_ALGORITHM),
     keyId: z.literal(RUNTIME_SEMANTIC_RECEIPT_KEY_ID),
@@ -2888,7 +2888,10 @@ export const RuntimeExecutionServiceSuccessResponseSchema = z.object({
   result: z
     .object({
       privacy: z.literal("internal_runtime_result"),
-      chronicle: ChronicleSchema,
+      chronicle: ChronicleSchema.omit({
+        integrity: true,
+        storageMetadata: true,
+      }).strict(),
       finalState: RuntimeExecutionFinalStateSchema,
       runtimeViolationEventCount: z.number().int().nonnegative(),
       semanticReceipt: RuntimeSemanticReceiptSchema,

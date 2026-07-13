@@ -9464,27 +9464,27 @@
           "statementText": "import { createHash } from \"node:crypto\""
         },
         {
-          "line": 20,
+          "line": 22,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 21,
+          "line": 23,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
         },
         {
-          "line": 22,
+          "line": 24,
           "source": "@cowards/runtime-python",
           "statementText": "import { createPythonRuntimeFromRevision } from \"@cowards/runtime-python\""
         },
         {
-          "line": 23,
+          "line": 25,
           "source": "@cowards/runtime-wasm-wasi",
           "statementText": "import { createWasmWasiRuntimeFromRevision } from \"@cowards/runtime-wasm-wasi\""
         },
         {
-          "line": 24,
+          "line": 26,
           "source": "@cowards/replay",
           "statementText": "import {\n  createCurrentReplay,\n  recordChronicleFromExecution,\n  validateCurrentChronicle,\n  validateCurrentReplayReconstruction,\n  type ReplayState,\n} from \"@cowards/replay\""
         },
@@ -9494,32 +9494,32 @@
           "statementText": "import { isDeepStrictEqual } from \"node:util\""
         },
         {
-          "line": 31,
+          "line": 33,
           "source": "@cowards/engine",
           "statementText": "import {\n  MatchExecutionFailure,\n  runMatch,\n  violation,\n  type GameState,\n  type RunMatchInput,\n  type StrategyRuntime,\n} from \"@cowards/engine\""
         },
         {
-          "line": 39,
+          "line": 4,
+          "source": "@cowards/spec",
+          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  RuntimeExecutionFinalStateSchema,\n  ChronicleSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  hashExecutableLaneIdentity,\n  validateStrategyLanguageProviderRuntimeCompatibility,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type RuntimeEntrantAuthorityReference,\n  type Chronicle,\n  type StrategyRevision,\n} from \"@cowards/spec\""
+        },
+        {
+          "line": 41,
           "source": "./runtime-config.js",
           "statementText": "import type { RuntimeServiceConfig } from \"./runtime-config.js\""
         },
         {
-          "line": 4,
-          "source": "@cowards/spec",
-          "statementText": "import {\n  RuntimeExecutionServiceRequestSchema,\n  RuntimeExecutionServiceResponseSchema,\n  STRATEGY_RUNTIME_ABI_VERSION,\n  findRuntimeBrokerRegistryEntry,\n  hashExecutableLaneIdentity,\n  validateStrategyLanguageProviderRuntimeCompatibility,\n  type MatchId,\n  type PlayerId,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeExecutionServiceResponse,\n  type RuntimeExecutionServiceSystemFailureCode,\n  type RuntimeEntrantAuthorityReference,\n  type Chronicle,\n  type StrategyRevision,\n} from \"@cowards/spec\""
-        },
-        {
-          "line": 40,
+          "line": 42,
           "source": "./redaction.js",
           "statementText": "import { publicSystemFailureMessage, redactedDiagnostics } from \"./redaction.js\""
         },
         {
-          "line": 41,
+          "line": 43,
           "source": "./runtime-evidence-authority.js",
           "statementText": "import type {\n  RuntimeEvidenceAuthorityLoader,\n  VerifiedMountedRuntimeEvidenceAuthority,\n} from \"./runtime-evidence-authority.js\""
         },
         {
-          "line": 45,
+          "line": 47,
           "source": "./semantic-receipt.js",
           "statementText": "import { issueRuntimeSemanticReceipt } from \"./semantic-receipt.js\""
         }
@@ -9528,12 +9528,12 @@
       "serviceImports": [],
       "runtimeImports": [
         {
-          "line": 20,
+          "line": 22,
           "source": "@cowards/runtime-js",
           "statementText": "import { hashStrategySource } from \"@cowards/runtime-js\""
         },
         {
-          "line": 21,
+          "line": 23,
           "source": "@cowards/runtime-js/worker",
           "statementText": "import { createRuntimeFromRevision } from \"@cowards/runtime-js/worker\""
         }
@@ -10321,19 +10321,14 @@
           "statementText": "import { createHash, createHmac } from \"node:crypto\""
         },
         {
-          "line": 14,
-          "source": "@cowards/replay",
-          "statementText": "import { createChronicleContentHash, stableStringify } from \"@cowards/replay\""
-        },
-        {
-          "line": 15,
+          "line": 17,
           "source": "@cowards/engine",
           "statementText": "import type { GameState } from \"@cowards/engine\""
         },
         {
           "line": 2,
           "source": "@cowards/spec",
-          "statementText": "import {\n  RUNTIME_EXECUTION_SERVICE_VERSION,\n  RUNTIME_SEMANTIC_RECEIPT_ALGORITHM,\n  RUNTIME_SEMANTIC_RECEIPT_KEY_ID,\n  RUNTIME_SEMANTIC_RECEIPT_PROFILE,\n  RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,\n  encodeRuntimeSemanticReceiptClaims,\n  type Chronicle,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeSemanticReceipt,\n  type RuntimeSemanticReceiptClaims,\n} from \"@cowards/spec\""
+          "statementText": "import {\n  RUNTIME_EXECUTION_SERVICE_VERSION,\n  RUNTIME_SEMANTIC_CHRONICLE_WIRE_DOMAIN,\n  RUNTIME_SEMANTIC_FINAL_STATE_WIRE_DOMAIN,\n  RUNTIME_SEMANTIC_OUTCOME_WIRE_DOMAIN,\n  RUNTIME_SEMANTIC_RECEIPT_ALGORITHM,\n  RUNTIME_SEMANTIC_RECEIPT_KEY_ID,\n  RUNTIME_SEMANTIC_RECEIPT_PROFILE,\n  RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,\n  encodeRuntimeSemanticReceiptClaims,\n  type Chronicle,\n  type RuntimeExecutionServiceRequest,\n  type RuntimeSemanticReceipt,\n  type RuntimeSemanticReceiptClaims,\n} from \"@cowards/spec\""
         }
       ],
       "persistenceImports": [],

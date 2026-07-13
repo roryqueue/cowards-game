@@ -29,6 +29,9 @@ const runtimeSemanticReceiptProfile = "current-exact"
 const runtimeSemanticReceiptAlgorithm = "hmac-sha256"
 const runtimeSemanticReceiptKeyID = "runtime-service-semantic-receipt:v1"
 const runtimeSemanticReceiptDomain = "cowards-game:runtime-semantic-receipt:v1"
+const runtimeSemanticChronicleWireDomain = "cowards-game:runtime-semantic-chronicle-json-wire:v1"
+const runtimeSemanticFinalStateWireDomain = "cowards-game:runtime-semantic-final-state-json-wire:v1"
+const runtimeSemanticOutcomeWireDomain = "cowards-game:runtime-semantic-outcome-json-wire:v1"
 
 type runtimeServiceClient struct {
 	endpoint              string
@@ -134,10 +137,10 @@ type runtimeSemanticReceipt struct {
 	SetPolicyVersion               string `json:"setPolicyVersion"`
 	AuthorityBundleHash            string `json:"authorityBundleHash"`
 	RegistryGeneration             string `json:"registryGeneration"`
-	ChronicleHash                  string `json:"chronicleHash"`
-	FinalStateHash                 string `json:"finalStateHash"`
+	ChronicleWireBytesHash         string `json:"chronicleWireBytesHash"`
+	FinalStateWireBytesHash        string `json:"finalStateWireBytesHash"`
 	ReconstructedTerminalStateHash string `json:"reconstructedTerminalStateHash"`
-	OutcomeHash                    string `json:"outcomeHash"`
+	OutcomeWireBytesHash           string `json:"outcomeWireBytesHash"`
 	RuntimeViolationEventCount     int    `json:"runtimeViolationEventCount"`
 	Algorithm                      string `json:"algorithm"`
 	KeyID                          string `json:"keyId"`
@@ -145,11 +148,43 @@ type runtimeSemanticReceipt struct {
 }
 
 type runtimeServiceSuccessResult struct {
-	Privacy                    string                 `json:"privacy"`
-	Chronicle                  map[string]any         `json:"chronicle"`
-	FinalState                 map[string]any         `json:"finalState"`
-	RuntimeViolationEventCount int                    `json:"runtimeViolationEventCount"`
-	SemanticReceipt            runtimeSemanticReceipt `json:"semanticReceipt"`
+	Privacy                    string                      `json:"privacy"`
+	ChronicleWire              json.RawMessage             `json:"chronicle"`
+	FinalStateWire             json.RawMessage             `json:"finalState"`
+	RuntimeViolationEventCount int                         `json:"runtimeViolationEventCount"`
+	SemanticReceipt            runtimeSemanticReceipt      `json:"semanticReceipt"`
+	Chronicle                  map[string]any              `json:"-"`
+	FinalState                 map[string]any              `json:"-"`
+	SemanticWireEvidence       runtimeSemanticWireEvidence `json:"-"`
+}
+
+func (result runtimeServiceSuccessResult) MarshalJSON() ([]byte, error) {
+	chronicle := result.ChronicleWire
+	if len(chronicle) == 0 && result.Chronicle != nil {
+		var err error
+		chronicle, err = json.Marshal(result.Chronicle)
+		if err != nil {
+			return nil, err
+		}
+	}
+	finalState := result.FinalStateWire
+	if len(finalState) == 0 && result.FinalState != nil {
+		var err error
+		finalState, err = json.Marshal(result.FinalState)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(struct {
+		Privacy                    string                 `json:"privacy"`
+		Chronicle                  json.RawMessage        `json:"chronicle"`
+		FinalState                 json.RawMessage        `json:"finalState"`
+		RuntimeViolationEventCount int                    `json:"runtimeViolationEventCount"`
+		SemanticReceipt            runtimeSemanticReceipt `json:"semanticReceipt"`
+	}{
+		Privacy: result.Privacy, Chronicle: chronicle, FinalState: finalState,
+		RuntimeViolationEventCount: result.RuntimeViolationEventCount, SemanticReceipt: result.SemanticReceipt,
+	})
 }
 
 type runtimeServiceResponse struct {

@@ -25,12 +25,13 @@ type matchCompletionService struct {
 }
 
 type completeMatchInput struct {
-	JobID           string
-	LeaseToken      string
-	Chronicle       map[string]any
-	FinalState      map[string]any
-	SemanticReceipt runtimeSemanticReceipt
-	Integrity       *claimedMatchIntegrityIdentity
+	JobID                string
+	LeaseToken           string
+	Chronicle            map[string]any
+	FinalState           map[string]any
+	SemanticReceipt      runtimeSemanticReceipt
+	SemanticWireEvidence runtimeSemanticWireEvidence
+	Integrity            *claimedMatchIntegrityIdentity
 }
 
 type completeMatchResult struct {
@@ -95,7 +96,7 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		if err != nil {
 			return nil, err
 		}
-		semanticReceiptJSON, err = json.Marshal(input.SemanticReceipt)
+		semanticReceiptJSON, err = runtimeSemanticReceiptRecordJSON(input.SemanticReceipt)
 		if err != nil {
 			return nil, err
 		}

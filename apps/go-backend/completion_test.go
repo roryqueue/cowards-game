@@ -295,6 +295,45 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 		}
 	})
 
+	for _, forbidden := range []string{"integrity", "storageMetadata"} {
+		forbidden := forbidden
+		t.Run("forbidden Chronicle "+forbidden+" is rejected before mutation", func(t *testing.T) {
+			current := fixture.seedMatch(t, ctx, pool, "forbidden-"+strings.ToLower(forbidden))
+			before := semanticCompletionSnapshot(t, ctx, pool)
+			input := current.input(fixture.identity)
+			input.Chronicle = semanticCloneValue(t, current.chronicle).(map[string]any)
+			input.Chronicle[forbidden] = map[string]any{"sha256": "sha256:" + strings.Repeat("a", 64)}
+			if _, err := service.completeMatch(ctx, input); err == nil {
+				t.Fatalf("current completion admitted Chronicle %s", forbidden)
+			}
+			after := semanticCompletionSnapshot(t, ctx, pool)
+			if !jsonValuesEqual(before, after) {
+				t.Fatalf("Chronicle %s rejection mutated rows: before=%s after=%s", forbidden, before, after)
+			}
+		})
+	}
+
+	t.Run("uppercase signature is rejected without mutation and lowercase retry succeeds", func(t *testing.T) {
+		current := fixture.seedMatch(t, ctx, pool, "uppercase-signature")
+		before := semanticCompletionSnapshot(t, ctx, pool)
+		input := current.input(fixture.identity)
+		input.SemanticReceipt.Signature = "hmac-sha256:" + strings.ToUpper(strings.TrimPrefix(input.SemanticReceipt.Signature, "hmac-sha256:"))
+		if _, err := service.completeMatch(ctx, input); err == nil {
+			t.Fatal("current completion admitted an uppercase semantic receipt signature")
+		}
+		after := semanticCompletionSnapshot(t, ctx, pool)
+		if !jsonValuesEqual(before, after) {
+			t.Fatalf("uppercase signature rejection mutated rows: before=%s after=%s", before, after)
+		}
+		result, err := service.completeMatch(ctx, current.input(fixture.identity))
+		if err != nil {
+			t.Fatalf("lowercase retry failed after uppercase rejection: %v", err)
+		}
+		if result.Status != "complete" || result.MatchID != current.matchID {
+			t.Fatalf("unexpected lowercase retry result: %+v", result)
+		}
+	})
+
 	t.Run("early invalidity leaves canonical rows exact", func(t *testing.T) {
 		current := fixture.seedMatch(t, ctx, pool, "early")
 		before := semanticCompletionSnapshot(t, ctx, pool)
@@ -414,20 +453,22 @@ type semanticCurrentAuthorityFixture struct {
 }
 
 type semanticCurrentMatchFixture struct {
-	matchID         string
-	jobID           string
-	leaseToken      string
-	chronicle       map[string]any
-	finalState      map[string]any
-	semanticReceipt runtimeSemanticReceipt
+	matchID              string
+	jobID                string
+	leaseToken           string
+	chronicle            map[string]any
+	finalState           map[string]any
+	semanticReceipt      runtimeSemanticReceipt
+	semanticWireEvidence runtimeSemanticWireEvidence
 }
 
 func (current semanticCurrentMatchFixture) input(identity *claimedMatchIntegrityIdentity) completeMatchInput {
 	return completeMatchInput{
 		JobID: current.jobID, LeaseToken: current.leaseToken,
 		Chronicle: current.chronicle, FinalState: current.finalState,
-		SemanticReceipt: current.semanticReceipt,
-		Integrity:       identity,
+		SemanticReceipt:      current.semanticReceipt,
+		SemanticWireEvidence: current.semanticWireEvidence.clone(),
+		Integrity:            identity,
 	}
 }
 
@@ -688,7 +729,8 @@ func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx cont
 	finalState = orchestratorFinalStateForRequest(request)
 	chronicle = orchestratorChronicleForRequest(request, false)
 	const semanticReceiptSecret = "fixture-semantic-receipt-secret-v1"
-	semanticReceipt := signedRuntimeServiceSuccessResultForTest(t, request, chronicle, finalState, semanticReceiptSecret).SemanticReceipt
+	signedResult := signedRuntimeServiceSuccessResultForTest(t, request, chronicle, finalState, semanticReceiptSecret)
+	semanticReceipt := signedResult.SemanticReceipt
 	if _, err := pool.Exec(ctx, `insert into matches
 		(id,bottom_strategy_revision_id,top_strategy_revision_id,arena_variant_id,seed,status,bottom_player_id,top_player_id,integrity_match_set_id,bottom_execution_entrant_key,top_execution_entrant_key,bottom_execution_evidence,top_execution_evidence,execution_evidence_pair_hash)
 		values ($1,$2,$3,$4,$5,'running',$6,$7,$8,$9,$10,$11,$12,$13)`,
@@ -711,7 +753,10 @@ func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx cont
 	if _, err := pool.Exec(ctx, `insert into match_job_attempts(id,job_id,attempt_number,worker_id,status) values ($1,$2,1,'candidate:worker','running')`, "candidate:attempt:"+suffix, jobID); err != nil {
 		t.Fatal(err)
 	}
-	return semanticCurrentMatchFixture{matchID: matchID, jobID: jobID, leaseToken: leaseToken, chronicle: chronicle, finalState: finalState, semanticReceipt: semanticReceipt}
+	return semanticCurrentMatchFixture{
+		matchID: matchID, jobID: jobID, leaseToken: leaseToken, chronicle: chronicle, finalState: finalState,
+		semanticReceipt: semanticReceipt, semanticWireEvidence: signedResult.SemanticWireEvidence.clone(),
+	}
 }
 
 func semanticCompletionSnapshot(t *testing.T, ctx context.Context, pool *pgxpool.Pool) map[string]any {

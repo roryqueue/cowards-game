@@ -4,6 +4,8 @@ import { isDeepStrictEqual } from "node:util"
 import {
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
+  RuntimeExecutionFinalStateSchema,
+  ChronicleSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
   findRuntimeBrokerRegistryEntry,
   hashExecutableLaneIdentity,
@@ -924,10 +926,32 @@ const executeParsedRequest = (
     return authorityFailureResponse(request, completionAuthority.code)
   }
   const violationCount = runtimeViolationEventCount(recorded.chronicle)
+  const responseChronicle = ChronicleSchema.omit({
+    integrity: true,
+    storageMetadata: true,
+  })
+    .strict()
+    .safeParse(recorded.chronicle)
+  const responseFinalState = RuntimeExecutionFinalStateSchema.safeParse(
+    recorded.finalState,
+  )
+  if (!responseChronicle.success || !responseFinalState.success) {
+    return systemFailureResponse({
+      rawRequest: request,
+      code: "RESPONSE_SCHEMA_INVALID",
+      message: "Runtime execution service produced an invalid response.",
+      retryable: true,
+      diagnostics: { reason: "response-wire-payload-invalid" },
+    })
+  }
+  const responseChronicleData = responseChronicle.data as Chronicle & {
+    integrity?: never
+    storageMetadata?: never
+  }
   const semanticReceipt = issueRuntimeSemanticReceipt({
     request,
-    chronicle: recorded.chronicle,
-    finalState: recorded.finalState,
+    chronicle: responseChronicleData,
+    finalState: responseFinalState.data,
     reconstructedTerminalStateHash: reconstructionValidation.terminalStateHash,
     runtimeViolationEventCount: violationCount,
     secret: runtimeConfig.semanticReceiptSecret,
@@ -941,8 +965,8 @@ const executeParsedRequest = (
     runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
     result: {
       privacy: "internal_runtime_result",
-      chronicle: recorded.chronicle,
-      finalState: recorded.finalState,
+      chronicle: responseChronicleData,
+      finalState: responseFinalState.data,
       runtimeViolationEventCount: violationCount,
       semanticReceipt,
     },
