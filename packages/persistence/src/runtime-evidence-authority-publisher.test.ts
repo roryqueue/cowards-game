@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import {
   createHash,
   generateKeyPairSync,
@@ -470,7 +471,8 @@ describePostgres(
         trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
         signerKeyId: trustRoot.keyId,
         trustedImportAuthorities: [trustRoot],
-        signPayload: (payloadBytes) => sign(null, payloadBytes, keys.privateKey),
+        signPayload: (payloadBytes) =>
+          sign(null, payloadBytes, keys.privateKey),
       })
       const inspected = inspectRuntimeEvidenceAuthorityBundle(
         prepared.envelopeBytes,
@@ -505,7 +507,9 @@ describePostgres(
         Buffer.from(encodeRuntimeEvidenceAuthorityPayload(inspected.payload)),
       )
       expect(persisted.rows[0]!.certificate_ids).toContain(certificateId)
-      expect(persisted.rows[0]!.lane_control_ids).toContain(disablePayload.eventId)
+      expect(persisted.rows[0]!.lane_control_ids).toContain(
+        disablePayload.eventId,
+      )
       const sourceRows = await pool.query(
         `select source_type, source_id from runtime_evidence_authority_publication_sources
           where publication_id = $1 order by source_type, source_id`,
@@ -556,9 +560,9 @@ describePostgres(
         }),
       ])
       expect(new Set([left.generation, right.generation]).size).toBe(2)
-      expect(
-        Math.abs(Number(left.generation) - Number(right.generation)),
-      ).toBe(1)
+      expect(Math.abs(Number(left.generation) - Number(right.generation))).toBe(
+        1,
+      )
       expect(left.payloadSha256).not.toBe(right.payloadSha256)
     })
   },

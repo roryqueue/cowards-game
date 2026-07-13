@@ -1,9 +1,19 @@
+import { Buffer } from "node:buffer"
 import {
   createHash,
   createPublicKey,
   verify as verifySignature,
   type KeyObject,
 } from "node:crypto"
+import {
+  CANONICAL_COMPATIBILITY_TUPLES,
+  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
+  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
+  buildRuntimeEvidenceAuthorityEnvelope,
+  encodeRuntimeEvidenceAuthorityPayload,
+  hashRuntimeEvidenceAuthorityPayload,
+  type RuntimeEvidenceAuthorityPayload,
+} from "@cowards/spec"
 import type { Pool, PoolClient, QueryResultRow } from "pg"
 
 export const RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION =
@@ -249,7 +259,7 @@ const verifyImport = (
   verificationInstant: string,
   trustRoots: readonly RuntimeEvidenceAuthorityImportTrustRoot[],
 ): VerifiedImport => {
-  const payload = exactPayload(structuredClone(envelope.payload))
+  const payload = exactPayload(globalThis.structuredClone(envelope.payload))
   if (payload.domain !== expectedDomain) {
     fail("DOMAIN", `Expected ${expectedDomain} signed import domain.`)
   }
@@ -308,18 +318,33 @@ const withSerializableTransaction = async <T>(
   pool: Pool,
   fn: (client: PoolClient) => Promise<T>,
 ): Promise<T> => {
-  const client = await pool.connect()
-  try {
-    await client.query("begin isolation level serializable")
-    const result = await fn(client)
-    await client.query("commit")
-    return result
-  } catch (error) {
-    await client.query("rollback")
-    throw error
-  } finally {
-    client.release()
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const client = await pool.connect()
+    try {
+      await client.query("begin isolation level serializable")
+      const result = await fn(client)
+      await client.query("commit")
+      return result
+    } catch (error) {
+      await client.query("rollback")
+      if (
+        attempt < 3 &&
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "40001"
+      ) {
+        continue
+      }
+      throw error
+    } finally {
+      client.release()
+    }
   }
+  return fail(
+    "SERIALIZATION_FAILURE",
+    "Serializable transaction retry exhausted.",
+  )
 }
 
 const storedHash = (hash: string): string => hash.slice("sha256:".length)
@@ -361,7 +386,7 @@ export const importAuthenticatedRuntimeLaneControl = async (
     input.expectedLaneIdentityHash,
     "expectedLaneIdentityHash",
   )
-  const immutable = structuredClone(input.envelope)
+  const immutable = globalThis.structuredClone(input.envelope)
   const preflight = verifyImport(
     immutable,
     "lane-control",
@@ -509,7 +534,7 @@ const importCertificateStatus = async (
   input: StatusInput,
   domain: "certificate-revocation" | "certificate-supersession",
 ): Promise<Readonly<ImportedCertificateStatus>> => {
-  const immutable = structuredClone(input.envelope)
+  const immutable = globalThis.structuredClone(input.envelope)
   verifyImport(
     immutable,
     domain,
@@ -654,3 +679,660 @@ export const importAuthenticatedCertificateSupersession = (
   input: StatusInput,
 ): Promise<Readonly<ImportedCertificateStatus>> =>
   importCertificateStatus(pool, input, "certificate-supersession")
+
+const PUBLICATION_BUNDLE_VERSION = "v1.37-runtime-evidence-authority-v1"
+const PUBLICATION_SOURCE_DOMAIN =
+  "cowards-game:runtime-evidence-authority-publication-sources:v1"
+const PUBLICATION_ENVELOPE_DOMAIN =
+  "cowards-game:runtime-evidence-authority-publication-envelope:v1"
+
+type PublicationSourceType =
+  | "attestation"
+  | "certificate"
+  | "revocation"
+  | "supersession"
+  | "lane-control"
+
+interface PublicationSource {
+  type: PublicationSourceType
+  id: string
+  recordHash: string
+}
+
+interface SnapshotAttestationRow extends QueryResultRow {
+  id: string
+  attestation_sha256: string
+  trust_domain: string
+  producer_id: string
+  result_graph_hash: string
+}
+
+interface SnapshotCertificateRow extends QueryResultRow {
+  id: string
+  certificate_kind: "containment" | "conformance"
+  certificate_version: string
+  certificate_record_hash: string
+  lane_identity_hash: string
+  verified_attestation_id: string
+  result_graph_hash: string
+}
+
+interface SnapshotControlRow extends QueryResultRow {
+  id: string
+  sequence: string | number
+  action: "disable" | "enable"
+  lane_identity_hash: string
+  reason_code: string
+  compensates_control_id: string | null
+  producer_id: string
+  producer_key_id: string
+  trust_domain: string
+  schema_version: string
+  signed_payload: string
+  signature_base64: string
+  envelope_hash: string
+  issued_at: Date | string
+  valid_until: Date | string
+  verification_status: "passed"
+}
+
+interface SnapshotRevocationRow extends QueryResultRow {
+  id: string
+  target_certificate_id: string
+  target_certificate_record_hash: string
+  verified_attestation_id: string
+  evidence_graph_hash: string
+  reason_code: string
+  producer_id: string
+  producer_key_id: string
+  trust_domain: string
+  schema_version: string
+  signed_payload: string
+  signature_base64: string
+  envelope_hash: string
+  issued_at: Date | string
+  valid_until: Date | string
+  verification_status: "passed"
+}
+
+interface SnapshotSupersessionRow extends QueryResultRow {
+  id: string
+  target_certificate_id: string
+  target_certificate_record_hash: string
+  target_verified_attestation_id: string
+  target_evidence_graph_hash: string
+  replacement_certificate_id: string
+  replacement_certificate_record_hash: string
+  replacement_verified_attestation_id: string
+  replacement_evidence_graph_hash: string
+  reason_code: string
+  producer_id: string
+  producer_key_id: string
+  trust_domain: string
+  schema_version: string
+  signed_payload: string
+  signature_base64: string
+  envelope_hash: string
+  issued_at: Date | string
+  valid_until: Date | string
+  verification_status: "passed"
+}
+
+export interface PrepareRuntimeEvidenceAuthorityPublicationInput {
+  bundleVersion?: string
+  issuedAt: string
+  validFrom: string
+  validUntil: string
+  trustDomain: string
+  signerKeyId: string
+  trustedImportAuthorities: readonly RuntimeEvidenceAuthorityImportTrustRoot[]
+  signPayload(
+    payloadBytes: Uint8Array,
+  ): Uint8Array | Buffer | Promise<Uint8Array | Buffer>
+}
+
+export interface PreparedRuntimeEvidenceAuthorityPublication {
+  publicationId: string
+  generation: string
+  payloadSha256: string
+  envelopeSha256: string
+  sourceManifestHash: string
+  envelopeBytes: Uint8Array
+  sourceIds: Readonly<{
+    attestationIds: readonly string[]
+    certificateIds: readonly string[]
+    revocationIds: readonly string[]
+    supersessionIds: readonly string[]
+    laneControlIds: readonly string[]
+  }>
+}
+
+const prefixedHash = (value: string, label: string): string => {
+  const prefixed = value.startsWith("sha256:") ? value : `sha256:${value}`
+  return assertHash(prefixed, label)
+}
+
+const isoInstant = (value: Date | string, label: string): string =>
+  assertInstant(value instanceof Date ? value.toISOString() : value, label)
+
+const hashPublicationBytes = (domain: string, bytes: Uint8Array): string =>
+  `sha256:${createHash("sha256")
+    .update(domain)
+    .update("\0")
+    .update(bytes)
+    .digest("hex")}`
+
+const parsePersistedImport = (
+  row: {
+    id: string
+    signed_payload: string
+    signature_base64: string
+    envelope_hash: string
+  },
+  domain: ImportDomain,
+  verificationInstant: string,
+  trustRoots: readonly RuntimeEvidenceAuthorityImportTrustRoot[],
+): VerifiedImport => {
+  let payload: unknown
+  try {
+    payload = JSON.parse(row.signed_payload)
+  } catch {
+    return fail(
+      "UNVERIFIED_SOURCE",
+      "Persisted authority source payload is invalid.",
+    )
+  }
+  const verified = verifyImport(
+    {
+      payload: payload as RuntimeEvidenceAuthorityImportPayload,
+      signatureBase64: row.signature_base64,
+    },
+    domain,
+    verificationInstant,
+    trustRoots,
+  )
+  assertExactImportedRow(row as QueryResultRow, verified)
+  return verified
+}
+
+const assertStatusRowMatchesPayload = (
+  row: SnapshotRevocationRow | SnapshotSupersessionRow,
+  verified: VerifiedImport,
+): void => {
+  const payload = verified.payload
+  if (
+    payload.targetCertificateId !== row.target_certificate_id ||
+    storedHash(payload.targetCertificateRecordHash!) !==
+      row.target_certificate_record_hash ||
+    payload.reasonCode !== row.reason_code ||
+    payload.producerId !== row.producer_id ||
+    payload.producerKeyId !== row.producer_key_id ||
+    payload.trustDomain !== row.trust_domain ||
+    payload.schemaVersion !== row.schema_version
+  ) {
+    fail(
+      "UNVERIFIED_SOURCE",
+      "Certificate status source does not match its signed payload.",
+    )
+  }
+  if (
+    "replacement_certificate_id" in row &&
+    (payload.replacementCertificateId !== row.replacement_certificate_id ||
+      storedHash(payload.replacementCertificateRecordHash!) !==
+        row.replacement_certificate_record_hash)
+  ) {
+    fail(
+      "UNVERIFIED_SOURCE",
+      "Supersession replacement does not match its signed payload.",
+    )
+  }
+}
+
+const loadPublicationSnapshot = async (
+  client: PoolClient,
+  input: PrepareRuntimeEvidenceAuthorityPublicationInput,
+): Promise<{
+  payload: Omit<RuntimeEvidenceAuthorityPayload, "registryGeneration">
+  sources: readonly PublicationSource[]
+  sourceIds: PreparedRuntimeEvidenceAuthorityPublication["sourceIds"]
+}> => {
+  const certificatesResult = await client.query<SnapshotCertificateRow>(
+    `select c.id, c.certificate_kind, c.certificate_version,
+            c.certificate_record_hash, c.lane_identity_hash,
+            c.verified_attestation_id, c.result_graph_hash
+       from runtime_evidence_certificates c
+       join runtime_evidence_verified_attestations a
+         on a.id = c.verified_attestation_id
+        and a.verification_status = 'passed'
+        and a.result_graph_hash = c.result_graph_hash
+      where c.certificate_status = 'passed'
+      order by c.id`,
+  )
+  const certificates = certificatesResult.rows
+  const attestationIds = [
+    ...new Set(certificates.map((row) => row.verified_attestation_id)),
+  ].sort((left, right) => left.localeCompare(right))
+  const attestationsResult =
+    attestationIds.length === 0
+      ? { rows: [] as SnapshotAttestationRow[] }
+      : await client.query<SnapshotAttestationRow>(
+          `select id, attestation_sha256, trust_domain, producer_id,
+                  result_graph_hash
+             from runtime_evidence_verified_attestations
+            where id = any($1::text[]) and verification_status = 'passed'
+            order by id`,
+          [attestationIds],
+        )
+  if (attestationsResult.rows.length !== attestationIds.length) {
+    fail("CLOSED_GRAPH", "Certificate snapshot has a dangling attestation.")
+  }
+
+  const controlsResult = await client.query<SnapshotControlRow>(
+    `select id, sequence, action, lane_identity_hash, reason_code,
+            compensates_control_id, producer_id, producer_key_id, trust_domain,
+            schema_version, signed_payload, signature_base64, envelope_hash,
+            issued_at, valid_until, verification_status
+       from runtime_evidence_lane_controls
+      where verification_status = 'passed' order by sequence, id`,
+  )
+  for (const row of controlsResult.rows) {
+    const verified = parsePersistedImport(
+      row,
+      "lane-control",
+      input.validFrom,
+      input.trustedImportAuthorities,
+    )
+    if (
+      verified.payload.laneIdentityHash !== row.lane_identity_hash ||
+      verified.payload.action !== row.action ||
+      verified.payload.compensatesEventId !== row.compensates_control_id ||
+      verified.payload.reasonCode !== row.reason_code
+    ) {
+      fail(
+        "UNVERIFIED_SOURCE",
+        "Lane control does not match its signed payload.",
+      )
+    }
+  }
+
+  const revocationsResult = await client.query<SnapshotRevocationRow>(
+    `select r.* from runtime_evidence_certificate_revocations r
+       join runtime_evidence_certificates c
+         on c.id = r.target_certificate_id
+        and c.certificate_record_hash = r.target_certificate_record_hash
+        and c.verified_attestation_id = r.verified_attestation_id
+        and c.result_graph_hash = r.evidence_graph_hash
+      where r.verification_status = 'passed'
+      order by r.id`,
+  )
+  for (const row of revocationsResult.rows) {
+    const verified = parsePersistedImport(
+      row,
+      "certificate-revocation",
+      input.validFrom,
+      input.trustedImportAuthorities,
+    )
+    assertStatusRowMatchesPayload(row, verified)
+  }
+
+  const supersessionsResult = await client.query<SnapshotSupersessionRow>(
+    `select s.* from runtime_evidence_certificate_supersessions s
+       join runtime_evidence_certificates target
+         on target.id = s.target_certificate_id
+        and target.certificate_record_hash = s.target_certificate_record_hash
+        and target.verified_attestation_id = s.target_verified_attestation_id
+        and target.result_graph_hash = s.target_evidence_graph_hash
+       join runtime_evidence_certificates replacement
+         on replacement.id = s.replacement_certificate_id
+        and replacement.certificate_record_hash = s.replacement_certificate_record_hash
+        and replacement.verified_attestation_id = s.replacement_verified_attestation_id
+        and replacement.result_graph_hash = s.replacement_evidence_graph_hash
+      where s.verification_status = 'passed'
+      order by s.id`,
+  )
+  for (const row of supersessionsResult.rows) {
+    const verified = parsePersistedImport(
+      row,
+      "certificate-supersession",
+      input.validFrom,
+      input.trustedImportAuthorities,
+    )
+    assertStatusRowMatchesPayload(row, verified)
+  }
+
+  const certificateIds = certificates.map((row) => row.id)
+  const certificateIdSet = new Set(certificateIds)
+  for (const row of revocationsResult.rows) {
+    if (!certificateIdSet.has(row.target_certificate_id)) {
+      fail("CLOSED_GRAPH", "Revocation target is absent from the snapshot.")
+    }
+  }
+  const supersededBy = new Map<string, string>()
+  for (const row of supersessionsResult.rows) {
+    if (
+      !certificateIdSet.has(row.target_certificate_id) ||
+      !certificateIdSet.has(row.replacement_certificate_id)
+    ) {
+      fail("CLOSED_GRAPH", "Supersession target is absent from the snapshot.")
+    }
+    supersededBy.set(row.target_certificate_id, row.replacement_certificate_id)
+  }
+  for (const origin of supersededBy.keys()) {
+    const visited = new Set<string>()
+    let cursor: string | undefined = origin
+    while (cursor !== undefined) {
+      if (visited.has(cursor))
+        fail(
+          "SUPERSESSION_CYCLE",
+          "Snapshot supersession graph contains a cycle.",
+        )
+      visited.add(cursor)
+      cursor = supersededBy.get(cursor)
+    }
+  }
+
+  if (
+    input.trustDomain === RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production
+  ) {
+    if (
+      attestationsResult.rows.some(
+        (row) =>
+          row.trust_domain.toLowerCase().includes("fixture") ||
+          row.producer_id.toLowerCase().includes("fixture"),
+      ) ||
+      controlsResult.rows.some(
+        (row) =>
+          row.trust_domain.toLowerCase().includes("fixture") ||
+          row.producer_id.toLowerCase().includes("fixture"),
+      ) ||
+      revocationsResult.rows.some(
+        (row) =>
+          row.trust_domain.toLowerCase().includes("fixture") ||
+          row.producer_id.toLowerCase().includes("fixture"),
+      ) ||
+      supersessionsResult.rows.some(
+        (row) =>
+          row.trust_domain.toLowerCase().includes("fixture") ||
+          row.producer_id.toLowerCase().includes("fixture"),
+      )
+    ) {
+      fail(
+        "PRODUCTION_FIXTURE",
+        "Fixture-domain evidence cannot enter production authority.",
+      )
+    }
+    if (certificates.some((row) => row.certificate_kind === "conformance")) {
+      fail(
+        "CONFORMANCE_NOT_ENABLED",
+        "Production conformance authority is unavailable until Phase 259.",
+      )
+    }
+  }
+
+  const uncompensated = new Map<string, SnapshotControlRow>()
+  for (const row of controlsResult.rows) {
+    if (row.action === "disable") {
+      uncompensated.set(row.id, row)
+    } else if (!uncompensated.delete(row.compensates_control_id!)) {
+      fail("CLOSED_GRAPH", "Lane enable has no selected disable.")
+    }
+  }
+  const activeDisableByLane = new Map<string, SnapshotControlRow>()
+  for (const row of uncompensated.values()) {
+    activeDisableByLane.set(row.lane_identity_hash, row)
+  }
+
+  const sources: PublicationSource[] = [
+    ...attestationsResult.rows.map((row) => ({
+      type: "attestation" as const,
+      id: row.id,
+      recordHash: prefixedHash(row.attestation_sha256, "attestation hash"),
+    })),
+    ...certificates.map((row) => ({
+      type: "certificate" as const,
+      id: row.id,
+      recordHash: prefixedHash(row.certificate_record_hash, "certificate hash"),
+    })),
+    ...revocationsResult.rows.map((row) => ({
+      type: "revocation" as const,
+      id: row.id,
+      recordHash: prefixedHash(row.envelope_hash, "revocation hash"),
+    })),
+    ...supersessionsResult.rows.map((row) => ({
+      type: "supersession" as const,
+      id: row.id,
+      recordHash: prefixedHash(row.envelope_hash, "supersession hash"),
+    })),
+    ...controlsResult.rows.map((row) => ({
+      type: "lane-control" as const,
+      id: row.id,
+      recordHash: prefixedHash(row.envelope_hash, "control hash"),
+    })),
+  ].sort((left, right) =>
+    left.type === right.type
+      ? left.id.localeCompare(right.id)
+      : left.type.localeCompare(right.type),
+  )
+
+  return {
+    payload: {
+      schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
+      bundleVersion: assertString(
+        input.bundleVersion ?? PUBLICATION_BUNDLE_VERSION,
+        "bundleVersion",
+      ),
+      issuedAt: assertInstant(input.issuedAt, "issuedAt"),
+      validFrom: assertInstant(input.validFrom, "validFrom"),
+      validUntil: assertInstant(input.validUntil, "validUntil"),
+      semanticTupleManifestHash: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+      attestations: Object.freeze(
+        attestationsResult.rows.map((row) =>
+          Object.freeze({
+            attestationId: row.id,
+            attestationHash: prefixedHash(
+              row.attestation_sha256,
+              "attestation hash",
+            ),
+            verified: true as const,
+            imports: Object.freeze([] as string[]),
+          }),
+        ),
+      ),
+      certificates: Object.freeze(
+        certificates.map((row) =>
+          Object.freeze({
+            kind: row.certificate_kind,
+            certificateId: row.id,
+            certificateVersion: row.certificate_version,
+            certificateRecordHash: prefixedHash(
+              row.certificate_record_hash,
+              "certificate record hash",
+            ),
+            laneIdentityHash: assertHash(
+              row.lane_identity_hash,
+              "lane identity hash",
+            ),
+            attestationIds: Object.freeze([row.verified_attestation_id]),
+          }),
+        ),
+      ),
+      revocations: Object.freeze(
+        revocationsResult.rows.map((row) =>
+          Object.freeze({
+            certificateId: row.target_certificate_id,
+            certificateRecordHash: prefixedHash(
+              row.target_certificate_record_hash,
+              "revocation certificate hash",
+            ),
+            revokedAt: isoInstant(row.issued_at, "revokedAt"),
+            reasonCode: row.reason_code,
+          }),
+        ),
+      ),
+      supersessions: Object.freeze(
+        supersessionsResult.rows.map((row) =>
+          Object.freeze({
+            certificateId: row.target_certificate_id,
+            supersededByCertificateId: row.replacement_certificate_id,
+          }),
+        ),
+      ),
+      operatorLaneDisables: Object.freeze(
+        [...activeDisableByLane.values()]
+          .sort((left, right) =>
+            left.lane_identity_hash.localeCompare(right.lane_identity_hash),
+          )
+          .map((row) =>
+            Object.freeze({
+              laneIdentityHash: row.lane_identity_hash,
+              disabledAt: isoInstant(row.issued_at, "disabledAt"),
+              reasonCode: row.reason_code,
+            }),
+          ),
+      ),
+    },
+    sources: Object.freeze(sources),
+    sourceIds: Object.freeze({
+      attestationIds: Object.freeze(attestationIds),
+      certificateIds: Object.freeze(certificateIds),
+      revocationIds: Object.freeze(revocationsResult.rows.map((row) => row.id)),
+      supersessionIds: Object.freeze(
+        supersessionsResult.rows.map((row) => row.id),
+      ),
+      laneControlIds: Object.freeze(controlsResult.rows.map((row) => row.id)),
+    }),
+  }
+}
+
+const sourceReferenceColumn = (sourceType: PublicationSourceType): string =>
+  ({
+    attestation: "attestation_id",
+    certificate: "certificate_id",
+    revocation: "revocation_id",
+    supersession: "supersession_id",
+    "lane-control": "lane_control_id",
+  })[sourceType]
+
+export const prepareRuntimeEvidenceAuthorityPublication = async (
+  pool: Pool,
+  input: PrepareRuntimeEvidenceAuthorityPublicationInput,
+): Promise<Readonly<PreparedRuntimeEvidenceAuthorityPublication>> => {
+  assertString(input.trustDomain, "trustDomain")
+  assertString(input.signerKeyId, "signerKeyId")
+  assertInstant(input.issuedAt, "issuedAt")
+  assertInstant(input.validFrom, "validFrom")
+  assertInstant(input.validUntil, "validUntil")
+  return withSerializableTransaction(pool, async (client) => {
+    await client.query(
+      "select pg_advisory_xact_lock(hashtext('runtime-evidence-authority-publication-v1'))",
+    )
+    const head = await client.query<{ next_generation: string | number }>(
+      `select next_generation from runtime_evidence_authority_publication_head
+        where singleton = true for update`,
+    )
+    const generation = String(head.rows[0]?.next_generation ?? "")
+    if (!/^(?:0|[1-9][0-9]{0,15})$/u.test(generation)) {
+      fail("PUBLICATION_HEAD", "Authority publication head is invalid.")
+    }
+    const snapshot = await loadPublicationSnapshot(client, input)
+    const payload: RuntimeEvidenceAuthorityPayload = {
+      ...snapshot.payload,
+      registryGeneration: generation,
+    }
+    const payloadBytes = encodeRuntimeEvidenceAuthorityPayload(payload)
+    let signature: Uint8Array
+    try {
+      signature = new Uint8Array(
+        await input.signPayload(new Uint8Array(payloadBytes)),
+      )
+    } catch {
+      return fail("SIGNER_FAILURE", "External authority signer failed.")
+    }
+    const envelope = buildRuntimeEvidenceAuthorityEnvelope({
+      trustDomain: input.trustDomain,
+      keyId: input.signerKeyId,
+      payloadBytes,
+      signature,
+    })
+    const envelopeBytes = new TextEncoder().encode(JSON.stringify(envelope))
+    const payloadSha256 = hashRuntimeEvidenceAuthorityPayload(payloadBytes)
+    const envelopeSha256 = hashPublicationBytes(
+      PUBLICATION_ENVELOPE_DOMAIN,
+      envelopeBytes,
+    )
+    const sourceManifestHash = hashPublicationBytes(
+      PUBLICATION_SOURCE_DOMAIN,
+      new TextEncoder().encode(JSON.stringify(snapshot.sources)),
+    )
+    const publicationId = `runtime-evidence-authority:${generation}:${payloadSha256.slice("sha256:".length)}`
+    await client.query(
+      `insert into runtime_evidence_authority_publications
+        (id, generation, semantic_tuple_manifest_hash, source_manifest_hash,
+         payload_sha256, envelope_sha256, signer_key_id, trust_domain,
+         issued_at, valid_from, valid_until, payload_bytes, envelope_bytes,
+         attestation_ids, certificate_ids, revocation_ids, supersession_ids,
+         lane_control_ids)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+      [
+        publicationId,
+        generation,
+        payload.semanticTupleManifestHash,
+        sourceManifestHash,
+        payloadSha256,
+        envelopeSha256,
+        input.signerKeyId,
+        input.trustDomain,
+        payload.issuedAt,
+        payload.validFrom,
+        payload.validUntil,
+        Buffer.from(payloadBytes),
+        Buffer.from(envelopeBytes),
+        JSON.stringify(snapshot.sourceIds.attestationIds),
+        JSON.stringify(snapshot.sourceIds.certificateIds),
+        JSON.stringify(snapshot.sourceIds.revocationIds),
+        JSON.stringify(snapshot.sourceIds.supersessionIds),
+        JSON.stringify(snapshot.sourceIds.laneControlIds),
+      ],
+    )
+    for (const source of snapshot.sources) {
+      const referenceColumn = sourceReferenceColumn(source.type)
+      await client.query(
+        `insert into runtime_evidence_authority_publication_sources
+          (publication_id, source_type, source_id, source_record_hash, ${referenceColumn})
+         values ($1,$2,$3,$4,$3)`,
+        [publicationId, source.type, source.id, source.recordHash],
+      )
+    }
+    await client.query(
+      `insert into runtime_evidence_authority_publication_events
+        (id, publication_id, event_kind, attempt_id, envelope_sha256, receipt)
+       values ($1,$2,'prepared',$3,$4,$5)`,
+      [
+        `${publicationId}:prepared`,
+        publicationId,
+        `prepare:${generation}`,
+        envelopeSha256,
+        JSON.stringify({
+          schemaVersion:
+            "v1.37-runtime-evidence-authority-publication-receipt-v1",
+          generation,
+          payloadSha256,
+          sourceManifestHash,
+        }),
+      ],
+    )
+    await client.query(
+      `update runtime_evidence_authority_publication_head
+          set next_generation = next_generation + 1 where singleton = true`,
+    )
+    return Object.freeze({
+      publicationId,
+      generation,
+      payloadSha256,
+      envelopeSha256,
+      sourceManifestHash,
+      envelopeBytes: new Uint8Array(envelopeBytes),
+      sourceIds: snapshot.sourceIds,
+    })
+  })
+}
