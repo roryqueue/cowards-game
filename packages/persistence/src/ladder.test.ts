@@ -5,6 +5,7 @@ import {
   COMPATIBILITY_VERSIONS,
   STRATEGY_RUNTIME_ABI_VERSION,
   defaultRuntimeMetadata,
+  describeStrategyRuntimeProductSemantics,
   getCountedEntryEligibilityPublicCopy,
   type CountedEntryEligibilityCategory,
   type StrategyRuntimeAdapterId,
@@ -415,6 +416,39 @@ const createLifecyclePool = (input: {
   }
 }
 
+const scheduledEntry = (index: number) => {
+  const runtime = runtimeFor(
+    (["typescript", "python", "rust", "zig"] as const)[index % 4]!,
+  )
+  const revisionId = `revision:scheduled:${index}`
+  return {
+    id: `entry:scheduled:${index}`,
+    status: "active",
+    snapshot: {
+      entrantId: `entry:scheduled:${index}`,
+      entrantIndex: index,
+      strategyRevisionId: revisionId,
+      ownerUserId: `user:scheduled:${index}`,
+      ownerHandle: `scheduled-${index}`,
+      displayLabel: `Scheduled ${index}`,
+      sourceHash: `${index}`.repeat(64).slice(0, 64),
+      sourceBytes: 128 + index,
+      runtime,
+      runtimeSemantics: describeStrategyRuntimeProductSemantics(runtime),
+      engineCompatibility: {
+        spec: COMPATIBILITY_VERSIONS.spec,
+        engine: COMPATIBILITY_VERSIONS.engine,
+      },
+      lockedAt: "2026-07-13T00:00:00.000Z",
+      seasonId: "season:trial",
+      entryId: `entry:scheduled:${index}`,
+      status: "active",
+      strategyName: `Scheduled ${index}`,
+      tags: [],
+    },
+  }
+}
+
 describe("trial ladder contracts", () => {
   it("enforces monotonic Season lifecycle changes and closes entry once", async () => {
     const lifecycle = createLifecyclePool({ status: "open" })
@@ -508,6 +542,54 @@ describe("trial ladder contracts", () => {
     })
     expect(
       lifecycle.calls.some((sql) => sql.includes("insert into match_sets")),
+    ).toBe(false)
+  })
+
+  it("ignores caller-declared production authority and requires an installed publication before scheduling", async () => {
+    const lifecycle = createLifecyclePool({
+      status: "open",
+      entries: Array.from({ length: 4 }, (_, index) => scheduledEntry(index)),
+    })
+    let callerResolverReached = false
+
+    await expect(
+      scheduleTrialLadderSeason(lifecycle.pool, {
+        seasonId: "season:trial",
+        now: new Date("2026-07-13T00:00:00.000Z"),
+        evidenceResolver: {
+          trustDomain: "production",
+          async resolve() {
+            callerResolverReached = true
+            throw new Error("caller-declared authority reached")
+          },
+        },
+      }),
+    ).rejects.toThrow(/installed authority publication/iu)
+
+    expect(callerResolverReached).toBe(false)
+    expect(
+      lifecycle.calls.some((sql) =>
+        sql.includes("runtime_evidence_authority_publication_head"),
+      ),
+    ).toBe(true)
+    expect(
+      lifecycle.calls.some(
+        (sql) =>
+          sql.includes("runtime_evidence_authority_publication_events") &&
+          sql.includes("event_kind = 'installed'"),
+      ),
+    ).toBe(true)
+    expect(
+      lifecycle.calls.some((sql) =>
+        sql.includes("runtime_evidence_authority_publication_sources"),
+      ),
+    ).toBe(true)
+    expect(
+      lifecycle.calls.some(
+        (sql) =>
+          sql.includes("insert into match_sets") ||
+          sql.includes("insert into trial_ladder_schedule_runs"),
+      ),
     ).toBe(false)
   })
 
