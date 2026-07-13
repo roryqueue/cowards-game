@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 256
 current_phase_name: Counted Safety and Canonical Authority
 status: executing
-stopped_at: Completed 256-19-PLAN.md; next sequential plan is 256-03
-last_updated: "2026-07-13T02:17:44.374Z"
+stopped_at: Completed 256-03-PLAN.md; next sequential plan is 256-04
+last_updated: "2026-07-13T02:40:11.601Z"
 last_activity: 2026-07-13
-last_activity_desc: Plan 256-19 retired the direct TypeScript Match worker behind executable fail-closed guards
+last_activity_desc: Plan 256-03 bound execution, Match evidence, and replay to one atomic tuple plus ordered entrant proof
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 19
-  completed_plans: 3
-  percent: 16
+  completed_plans: 4
+  percent: 21
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 256 (Counted Safety and Canonical Authority) — EXECUTING
-Plan: 3 of 19
+Plan: 4 of 19
 Status: Ready to execute
-Last activity: 2026-07-13 — Plan 256-19 retired the direct TypeScript Match worker behind executable fail-closed guards
+Last activity: 2026-07-13 — Plan 256-03 bound execution, Match evidence, and replay to one atomic tuple plus ordered entrant proof
 
-Progress: [██░░░░░░░░] 16%
+Progress: [██░░░░░░░░] 21%
 
 ## Durable Decisions
 
@@ -61,8 +61,8 @@ Progress: [██░░░░░░░░] 16%
 
 **Resume file:** None
 
-Last session: 2026-07-13T02:17:44.360Z
-Stopped at: Completed 256-19-PLAN.md; next sequential plan is 256-03
+Last session: 2026-07-13T02:40:11.586Z
+Stopped at: Completed 256-03-PLAN.md; next sequential plan is 256-04
 Next command: `$gsd-execute-phase 256`
 
 ## Performance Metrics
@@ -72,9 +72,13 @@ Next command: `$gsd-execute-phase 256`
 | Phase 256 P01 | 6 min | 2 tasks | 6 files |
 | Phase 256 P02 | 10min | 3 tasks | 10 files |
 | Phase 256 P19 | 10min | 2 tasks | 5 files |
+| Phase 256 P03 | 11min | 3 tasks | 7 files |
 
 ## Decisions
 
+- [Phase 256]: One semantic compatibility tuple is Match-wide, while exact executable lane and certificate identity remains ordered and per entrant. — Language, toolchain, adapter, artifact, and certificate differences stale evidence without inventing a gameplay version.
+- [Phase 256]: Current replay requires an exact registered tuple, while tuple-less v1.4 Chronicles remain explicitly unresolved under original semantics. — Historical evidence is never backfilled, upgraded, or rewritten to satisfy a current identity contract.
+- [Phase 256]: Public Match integrity evidence is an allowlist of tuple, status, freshness, and evidence hashes. — Exact lane, toolchain, artifact, build, and certificate identifiers remain internal rather than leaking through default projections.
 - [Phase 256]: Semantic tuple identity uses fixed-order domain-separated UTF-8 bytes and excludes executable evidence identity. — Toolchain, adapter, artifact, and certificate changes stale conformance evidence without fabricating a gameplay version.
 - [Phase 256]: Executable evidence authorities are runtime-branded and counted use requires exact current containment plus conformance certificates. — Arbitrary certificate-shaped objects, registry labels, and operator intent cannot manufacture counted eligibility.
 - [Phase 256]: The legacy direct TypeScript Match worker has no executable purpose. — Normal, rollback, test, parity, demo, malformed, and emergency labels all fail before startup or Match lifecycle effects.
