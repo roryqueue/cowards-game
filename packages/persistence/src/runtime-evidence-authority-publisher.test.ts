@@ -179,6 +179,59 @@ describe("authenticated runtime evidence authority controls", () => {
     ).rejects.toThrow(/domain/iu)
     expect(fake.calls).toEqual([])
   })
+
+  it("fails closed on a missing publication before any filesystem operation", async () => {
+    const fileSystemCalls: string[] = []
+    const sqlCalls: string[] = []
+    const client = {
+      async query(sql: string) {
+        sqlCalls.push(sql.replace(/\s+/gu, " ").trim())
+        return { rows: [] }
+      },
+      release() {},
+    }
+    const missingPool = {
+      connect: async () => client,
+    } as unknown as Pool
+    const fileSystem: RuntimeEvidenceAuthorityInstallFileSystem = {
+      async readFile() {
+        fileSystemCalls.push("readFile")
+        throw new Error("filesystem must not be reached")
+      },
+      async open() {
+        fileSystemCalls.push("open")
+        throw new Error("filesystem must not be reached")
+      },
+      async rename() {
+        fileSystemCalls.push("rename")
+        throw new Error("filesystem must not be reached")
+      },
+      async unlink() {
+        fileSystemCalls.push("unlink")
+        throw new Error("filesystem must not be reached")
+      },
+    }
+
+    await expect(
+      installRuntimeEvidenceAuthorityPublication(missingPool, {
+        publicationId: "runtime-evidence-authority:missing",
+        targetPath: "/authority-must-not-be-touched.json",
+        attemptId: "install:missing-publication",
+        evaluationInstant: verificationInstant,
+        expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+        signerKeyId: trustRoot.keyId,
+        publicKeyPem: trustRoot.publicKeyPem,
+        fileSystem,
+      }),
+    ).rejects.toMatchObject({
+      code: "UNKNOWN_PUBLICATION",
+      message: "Authority publication does not exist.",
+    })
+    expect(fileSystemCalls).toEqual([])
+    expect(sqlCalls.some((sql) => sql.includes("pg_advisory_unlock"))).toBe(
+      true,
+    )
+  })
 })
 
 const databaseUrl = process.env.DATABASE_URL

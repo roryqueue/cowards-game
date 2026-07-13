@@ -1603,8 +1603,12 @@ export const installRuntimeEvidenceAuthorityPublication = async (
       [publicationId],
     )
     const publication = publicationResult.rows[0]
-    if (!publication)
-      fail("UNKNOWN_PUBLICATION", "Authority publication does not exist.")
+    if (publication === undefined) {
+      throw new RuntimeEvidenceAuthorityPublisherError(
+        "UNKNOWN_PUBLICATION",
+        "Authority publication does not exist.",
+      )
+    }
     verifyInstallPublication(publication, input)
     const expectedBytes = new Uint8Array(publication.envelope_bytes)
     const existingBytes = await readIfPresent(fileSystem, targetPath)
