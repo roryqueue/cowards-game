@@ -18,8 +18,8 @@ const expectPublicSafeAndFramed = async (page: Page) => {
   const body = await page.locator("body").innerText()
   for (const marker of privateMarkers) expect(body).not.toContain(marker)
   const dimensions = await page.evaluate(() => ({
-    scrollWidth: document.documentElement.scrollWidth,
-    viewportWidth: document.documentElement.clientWidth,
+    scrollWidth: globalThis.document.documentElement.scrollWidth,
+    viewportWidth: globalThis.document.documentElement.clientWidth,
   }))
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(
     dimensions.viewportWidth + 1,

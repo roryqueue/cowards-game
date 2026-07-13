@@ -6,6 +6,7 @@ import {
 } from "@cowards/spec"
 import { CompetitiveInputError } from "../../../../../../lib/competitive-errors.js"
 import { competitiveErrorResponse } from "../../../../../competitive/http.js"
+import type * as CompetitiveServerModule from "../../../../../competitive/server.js"
 
 const mocks = vi.hoisted(() => ({
   enterTrialLadderSeason: vi.fn(),
@@ -13,10 +14,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock("../../../../../competitive/server.js", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("../../../../../competitive/server.js")
-    >()
+  const actual = await importOriginal<typeof CompetitiveServerModule>()
   return {
     ...actual,
     competitiveServer: {
@@ -113,9 +111,7 @@ describe("POST /api/ladder/seasons/:seasonId/entries", () => {
     expect(response.status).toBe(422)
     await expect(response.json()).resolves.toEqual({
       ok: false,
-      eligibility: getCountedEntryEligibilityPublicCopy(
-        "provider_proof_stale",
-      ),
+      eligibility: getCountedEntryEligibilityPublicCopy("provider_proof_stale"),
     })
   })
 
@@ -162,9 +158,7 @@ describe("POST /api/ladder/seasons/:seasonId/entries", () => {
 describe("counted entry error projection", () => {
   it("replaces low-level persistence details with canonical public copy", async () => {
     const privateDetails = [
-      ["select * from strategy_revisions where source = '", "secret'"].join(
-        "",
-      ),
+      ["select * from strategy_revisions where source = '", "secret'"].join(""),
       ["trial_ladder_owner_", "unique_idx"].join(""),
       ["provider", "Proof=hmac-secret"].join(""),
       ["artifact", "Bytes=AGFzbQE="].join(""),
