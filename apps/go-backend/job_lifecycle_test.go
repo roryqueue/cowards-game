@@ -130,6 +130,10 @@ func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
 	if selectIndex < 0 || (updateIndex >= 0 && updateIndex < selectIndex) {
 		t.Fatal("integrity rejection must precede lifecycle mutation")
 	}
+	if !strings.Contains(recheckClaimedMatchIntegritySQL, "newer.generation > ms.authority_registry_generation::bigint") ||
+		!strings.Contains(recheckClaimedMatchIntegritySQL, "newer_terminal.event_kind = 'installed'") {
+		t.Fatal("in-flight recheck must reject an older installed authority generation")
+	}
 }
 
 func TestMatchJobLifecycleIntegrityValidation(t *testing.T) {

@@ -94,6 +94,18 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 	if claimed == nil {
 		return &goMatchOrchestrationResult{Status: "idle"}, nil
 	}
+	if err := orchestrator.lifecycle.recheckClaimedMatchIntegrity(ctx, claimed); err != nil {
+		status, recordErr := orchestrator.lifecycle.recordAttemptFailure(ctx, recordAttemptFailureInput{
+			JobID: claimed.JobID, LeaseToken: claimed.LeaseToken,
+			ErrorClass: "RuntimeServiceEvidenceDrift", ErrorMessage: "Runtime execution evidence changed before execution",
+			Retryable: true, Category: matchFailureCategorySystemFailure,
+			Details: map[string]any{"matchId": claimed.MatchID, "workerId": workerID, "cause": "authority evidence drift"},
+		})
+		if recordErr != nil {
+			return nil, recordErr
+		}
+		return &goMatchOrchestrationResult{Status: status, JobID: claimed.JobID, MatchID: claimed.MatchID}, nil
+	}
 
 	request, err := buildRuntimeServiceRequestForClaimedJob(ctx, orchestrator.lifecycle.pool, claimed)
 	if err != nil {

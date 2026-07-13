@@ -291,6 +291,19 @@ const recheckClaimedMatchIntegritySQL = `
     and ms.authority_bundle_hash = top.authority_bundle_hash
     and ms.authority_registry_generation = bottom.authority_registry_generation
     and ms.authority_registry_generation = top.authority_registry_generation
+    and not exists (
+      select 1
+        from runtime_evidence_authority_publications newer
+        join lateral (
+          select terminal.event_kind
+            from runtime_evidence_authority_publication_events terminal
+           where terminal.publication_id = newer.id
+             and terminal.event_kind in ('installed','failed','uncertain')
+           order by terminal.occurred_at desc, terminal.id desc
+           limit 1
+        ) newer_terminal on newer_terminal.event_kind = 'installed'
+       where newer.generation > ms.authority_registry_generation::bigint
+    )
   for share of j, m, ms, bottom, top
 `
 

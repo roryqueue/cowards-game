@@ -312,4 +312,38 @@ func TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropag
 	if err := pool.QueryRow(ctx, "select count(*) from match_sets").Scan(&count); err != nil || count != 1 {
 		t.Fatalf("late failure left %d MatchSets: %v", count, err)
 	}
+
+	newSourceManifestHash := "sha256:" + strings.Repeat("8", 64)
+	newPayloadHash := "sha256:" + strings.Repeat("7", 64)
+	newEnvelopeHash := "sha256:" + strings.Repeat("6", 64)
+	newPublicationID := namespace + ":publication:2"
+	if _, err := pool.Exec(ctx, `insert into runtime_evidence_authority_publications
+		(id,generation,semantic_tuple_manifest_hash,source_manifest_hash,payload_sha256,envelope_sha256,signer_key_id,trust_domain,issued_at,valid_from,valid_until,payload_bytes,envelope_bytes,attestation_ids,certificate_ids,revocation_ids,supersession_ids,lane_control_ids)
+		values ($1,2,$2,$3,$4,$5,'key',$6,$7,$7,$8,'payload-2','envelope-2',$9,$10,'[]','[]','[]')`, newPublicationID, tuple.TupleID, newSourceManifestHash, newPayloadHash, newEnvelopeHash, runtimeEvidenceAuthorityProductionTrustDomain, now.Add(-time.Minute), now.Add(time.Hour), attestationIDs, certificateIDs); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `insert into runtime_evidence_authority_publication_sources
+		(publication_id,source_type,source_id,source_record_hash,attestation_id,certificate_id)
+		select $1,source_type,source_id,source_record_hash,attestation_id,certificate_id
+		from runtime_evidence_authority_publication_sources where publication_id=$2`, newPublicationID, namespace+":publication"); err != nil {
+		t.Fatal(err)
+	}
+	newReceipt := map[string]any{"schemaVersion": "v1.37-runtime-evidence-authority-install-receipt-v1", "generation": "2", "payloadSha256": newPayloadHash, "envelopeSha256": newEnvelopeHash, "sourceManifestHash": newSourceManifestHash, "sourceIds": sourceSet}
+	if _, err := pool.Exec(ctx, `insert into runtime_evidence_authority_publication_events
+		(id,publication_id,event_kind,attempt_id,envelope_sha256,receipt,occurred_at)
+		values ($1,$2,'installed','attempt:3',$3,$4,$5)`, namespace+":event:installed:2", newPublicationID, newEnvelopeHash, newReceipt, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, "update runtime_evidence_authority_publication_head set next_generation=3 where singleton=true"); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt, err := server.lockInstalledAuthorityReceipt(ctx, tx, authority, now); err == nil || receipt != nil {
+		_ = tx.Rollback(ctx)
+		t.Fatalf("older installed generation remained current after generation 2: receipt=%+v err=%v", receipt, err)
+	}
+	_ = tx.Rollback(ctx)
 }

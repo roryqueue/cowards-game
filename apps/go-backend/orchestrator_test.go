@@ -197,9 +197,12 @@ func TestGoMatchOrchestratorIntegrityPostResponseContract(t *testing.T) {
 	}
 	text := string(source)
 	recheckIndex := strings.Index(text, "recheckClaimedMatchIntegrity")
+	lastRecheckIndex := strings.LastIndex(text, "recheckClaimedMatchIntegrity")
+	executionIndex := strings.Index(text, "runtime.executeMatch")
 	completionIndex := strings.Index(text, "completion.completeMatch")
-	if recheckIndex < 0 || completionIndex < 0 || recheckIndex > completionIndex {
-		t.Fatal("orchestrator must recheck exact claimed identity before completion")
+	if recheckIndex < 0 || executionIndex < 0 || lastRecheckIndex < 0 || completionIndex < 0 ||
+		recheckIndex > executionIndex || executionIndex > lastRecheckIndex || lastRecheckIndex > completionIndex {
+		t.Fatal("orchestrator must recheck exact claimed identity before execution and completion")
 	}
 	if !strings.Contains(text, "RuntimeServiceEvidenceDrift") || !strings.Contains(text, "recordAttemptFailure") {
 		t.Fatal("in-flight integrity drift must route through system-failure recording")

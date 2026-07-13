@@ -348,6 +348,19 @@ func (server *LiveServer) lockInstalledAuthorityReceipt(ctx context.Context, tx 
 		     order by occurred_at desc, id desc limit 1
 		  ) e on true
 		 where h.singleton = true and p.issued_at <= $2 and p.valid_from <= $2 and p.valid_until >= $2
+		   and not exists (
+		     select 1
+		       from runtime_evidence_authority_publications newer
+		       join lateral (
+		         select terminal.event_kind
+		           from runtime_evidence_authority_publication_events terminal
+		          where terminal.publication_id = newer.id
+		            and terminal.event_kind in ('installed','failed','uncertain')
+		          order by terminal.occurred_at desc, terminal.id desc
+		          limit 1
+		       ) newer_terminal on newer_terminal.event_kind = 'installed'
+		      where newer.generation > p.generation
+		   )
 		 for share of h, p
 	`, authority.RegistryGeneration, now).Scan(&publicationID, &generation, &tupleID, &sourceHash, &payloadHash, &envelopeHash, &trustDomain, &attestationIDs, &certificateIDs, &revocationIDs, &supersessionIDs, &laneControlIDs, &receiptID, &eventKind, &eventEnvelope, &reasonCode, &receiptJSON)
 	if err != nil || eventKind != "installed" || reasonCode != nil || generation != authority.RegistryGeneration || tupleID != authority.SemanticTupleManifestHash || payloadHash != authority.AuthorityBundleHash || envelopeHash != authority.EnvelopeSHA256 || eventEnvelope != envelopeHash || trustDomain != runtimeEvidenceAuthorityProductionTrustDomain {
