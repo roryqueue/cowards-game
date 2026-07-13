@@ -1,14 +1,19 @@
 import { describe, expect, it, vi } from "vitest"
 import {
+  COMPATIBILITY_VERSIONS,
   DEFAULT_RUNTIME_LIMITS,
   INITIAL_BOUNDS,
+  runtimeCompatibilityKey,
   type SoldierBrainInput,
   type StrategyInput,
   type StrategyRevision,
 } from "@cowards/spec"
 import { CANDIDATE_MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { INACTIVE_V1_37_REPLAY_TUPLE } from "@cowards/replay"
-import { buildStrategyRevision } from "@cowards/runtime-js"
+import {
+  buildStrategyRevision,
+  createStrategyRevisionId,
+} from "@cowards/runtime-js"
 import {
   executeCandidateExhibitionForTest,
   type CandidateExhibitionExecutionRequest,
@@ -32,12 +37,11 @@ export default {
 
 const candidateRevision = (
   strategyId: string,
-  side: "bottom" | "top",
+  _side: "bottom" | "top",
 ): StrategyRevision => {
   const revision = buildStrategyRevision({ source: passiveSource, strategyId })
-  return {
+  const candidate: StrategyRevision = {
     ...revision,
-    id: `${revision.id}:candidate:${side}`,
     engineCompatibility: {
       spec: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
       engine: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
@@ -49,6 +53,26 @@ const candidateRevision = (
         engine: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
       },
     },
+  }
+  const artifact = candidate.metadata.sourceArtifact
+  const runtimeCompatibility = runtimeCompatibilityKey({
+    runtime: candidate.runtime,
+    sourceHash: candidate.sourceHash,
+    ...(artifact === undefined ? {} : { artifactHash: artifact.hash }),
+    specVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
+    engineVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
+  })
+  return {
+    ...candidate,
+    id: createStrategyRevisionId({
+      sourceHash: candidate.sourceHash,
+      runtimeVersion: candidate.runtime.adapter.version,
+      specVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
+      engineVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
+      strategyRevisionVersion: COMPATIBILITY_VERSIONS.strategyRevision,
+      strategyId,
+      runtimeCompatibility,
+    }),
   }
 }
 

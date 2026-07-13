@@ -2,11 +2,13 @@ import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it, vi } from "vitest"
 import {
+  COMPATIBILITY_VERSIONS,
   DEFAULT_RUNTIME_LIMITS,
   INITIAL_BOUNDS,
   RUNTIME_EXECUTION_SERVICE_VERSION,
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
+  runtimeCompatibilityKey,
   type RuntimeExecutionServiceRequest,
   type SoldierBrainInput,
   type StrategyInput,
@@ -22,7 +24,10 @@ import {
   INACTIVE_V1_37_REPLAY_TUPLE,
   validateCandidateReplaySemantics,
 } from "@cowards/replay"
-import { buildStrategyRevision } from "@cowards/runtime-js"
+import {
+  buildStrategyRevision,
+  createStrategyRevisionId,
+} from "@cowards/runtime-js"
 import { buildPythonStrategyRevision } from "@cowards/runtime-python"
 import {
   buildRustStrategyRevision,
@@ -262,22 +267,53 @@ const candidateRuntime: StrategyRuntime = {
 
 const asCandidateRevision = (
   revision: StrategyRevision,
-  side: "bottom" | "top",
-): StrategyRevision => ({
-  ...revision,
-  id: `${revision.id}:candidate:${side}`,
-  engineCompatibility: {
-    spec: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
-    engine: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
-  },
-  validation: {
-    ...revision.validation,
+  _side: "bottom" | "top",
+): StrategyRevision => {
+  const candidate: StrategyRevision = {
+    ...revision,
     engineCompatibility: {
       spec: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
       engine: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
     },
-  },
-})
+    validation: {
+      ...revision.validation,
+      engineCompatibility: {
+        spec: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
+        engine: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
+      },
+    },
+  }
+  const artifact =
+    candidate.metadata.sourceArtifact ?? candidate.metadata.compiledArtifact
+  const runtimeCompatibility = runtimeCompatibilityKey({
+    runtime: candidate.runtime,
+    sourceHash: candidate.sourceHash,
+    ...(artifact === undefined ? {} : { artifactHash: artifact.hash }),
+    ...(candidate.metadata.compiledArtifact === undefined
+      ? {}
+      : {
+          artifactTargetTriple:
+            candidate.metadata.compiledArtifact.targetTriple,
+          artifactWasiProfile: candidate.metadata.compiledArtifact.wasiProfile,
+        }),
+    specVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
+    engineVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
+  })
+  return {
+    ...candidate,
+    id: createStrategyRevisionId({
+      sourceHash: candidate.sourceHash,
+      runtimeVersion: candidate.runtime.adapter.version,
+      specVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.rules,
+      engineVersion: INACTIVE_V1_37_REPLAY_TUPLE.tuple.engine,
+      strategyRevisionVersion: COMPATIBILITY_VERSIONS.strategyRevision,
+      ...(candidate.strategyId === undefined
+        ? {}
+        : { strategyId: candidate.strategyId }),
+      runtimeCompatibility,
+    }),
+  }
+}
 
 const candidateRequestFor = () => {
   const active = requestFor()
@@ -357,6 +393,19 @@ describe("runtime execution service", () => {
     expect(authority.authorityLoader.load).toHaveBeenCalledTimes(3)
     expect(response.result.terminalStateHash).toMatch(/^sha256:[0-9a-f]{64}$/u)
     expect(response.result.chronicle.events.at(-1)?.type).toBe("MATCH_ENDED")
+  })
+
+  it("keeps active-old requests on the unchanged current response route", () => {
+    const response = executeRuntimeServiceRequest(requestFor(), runtimeConfig)
+
+    expect(response.ok).toBe(true)
+    if (!response.ok) throw new Error(response.systemFailure.code)
+    expect(response.contractVersion).toBe(RUNTIME_EXECUTION_SERVICE_VERSION)
+    expect(response.kind).toBe("executionResult")
+    expect(response.result.privacy).toBe("internal_runtime_result")
+    expect(response).not.toHaveProperty("profile")
+    expect(response).not.toHaveProperty("counted")
+    expect(response).not.toHaveProperty("publishable")
   })
 
   it.each([
@@ -463,7 +512,241 @@ describe("runtime execution service", () => {
         playerPenalty: false,
       },
     })
-    expect(authority.authorityLoader.load).toHaveBeenCalledTimes(1)
+    expect(authority.authorityLoader.load).not.toHaveBeenCalled()
+    expect(runCandidateMatch).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [
+      "source hash",
+      (revision: StrategyRevision): StrategyRevision => ({
+        ...revision,
+        sourceHash: "caller-forged-source-hash",
+        metadata: {
+          ...revision.metadata,
+          sourceArtifact: {
+            ...revision.metadata.sourceArtifact!,
+            sourceHash: "caller-forged-source-hash",
+          },
+        },
+      }),
+    ],
+    [
+      "source byte count",
+      (revision: StrategyRevision): StrategyRevision => ({
+        ...revision,
+        sourceBytes: revision.sourceBytes + 1,
+        metadata: {
+          ...revision.metadata,
+          sourceArtifact: {
+            ...revision.metadata.sourceArtifact!,
+            sourceBytes: revision.sourceBytes + 1,
+          },
+        },
+      }),
+    ],
+    [
+      "validation runtime version",
+      (revision: StrategyRevision): StrategyRevision => ({
+        ...revision,
+        validation: {
+          ...revision.validation,
+          runtimeVersion: "caller-forged-runtime-version",
+        },
+      }),
+    ],
+    [
+      "revision id",
+      (revision: StrategyRevision): StrategyRevision => ({
+        ...revision,
+        id: `${revision.id}:caller-forged`,
+      }),
+    ],
+    [
+      "valid bit and errors",
+      (revision: StrategyRevision): StrategyRevision => ({
+        ...revision,
+        validation: {
+          ...revision.validation,
+          valid: false,
+          errors: [
+            {
+              code: "MISSING_DEFAULT_EXPORT",
+              severity: "error",
+              message: "caller-forged validation issue",
+            },
+          ],
+        },
+      }),
+    ],
+    [
+      "warning issues",
+      (revision: StrategyRevision): StrategyRevision => ({
+        ...revision,
+        validation: {
+          ...revision.validation,
+          warnings: [
+            {
+              code: "NON_COUNTED_RUNTIME",
+              severity: "warning",
+              message: "caller-forged validation warning",
+            },
+          ],
+        },
+      }),
+    ],
+  ] as const)(
+    "rejects caller-forged candidate %s before authority or runtime",
+    (_name, mutate) => {
+      const { request, authority } = candidateRequestFor()
+      const bottom = mutate(request.strategies.bottom)
+      const forged: CandidateExhibitionExecutionRequest = {
+        ...request,
+        match: { ...request.match, bottomStrategyRevisionId: bottom.id },
+        strategies: { ...request.strategies, bottom },
+        runtimeAuthority: {
+          ...request.runtimeAuthority,
+          entrants: {
+            ...request.runtimeAuthority.entrants,
+            bottom: {
+              ...request.runtimeAuthority.entrants.bottom,
+              strategyRevisionId: bottom.id,
+            },
+          },
+        },
+      }
+      const dependencies = candidateDependencies(authority.authorityLoader)
+      const runCandidateMatch = vi.fn(CANDIDATE_MATCH_KERNEL.runMatch)
+      const response = executeCandidateExhibitionForTest(
+        forged,
+        runtimeConfig,
+        { ...dependencies, runCandidateMatch },
+      )
+
+      expect(response).toMatchObject({
+        ok: false,
+        failure: {
+          code: "CANDIDATE_REVISION_INCOMPATIBLE",
+          ownership: "system_integrity",
+          playerPenalty: false,
+        },
+      })
+      expect(authority.authorityLoader.load).not.toHaveBeenCalled()
+      expect(dependencies.createRuntimeForRevision).not.toHaveBeenCalled()
+      expect(runCandidateMatch).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    [
+      "empty arena name",
+      (request: CandidateExhibitionExecutionRequest) => ({
+        ...request,
+        match: {
+          ...request.match,
+          arenaVariant: { ...request.match.arenaVariant, name: "" },
+        },
+      }),
+    ],
+    [
+      "same player ids",
+      (request: CandidateExhibitionExecutionRequest) => ({
+        ...request,
+        match: {
+          ...request.match,
+          topPlayerId: request.match.bottomPlayerId,
+        },
+      }),
+    ],
+    [
+      "nonpositive max phases",
+      (request: CandidateExhibitionExecutionRequest) => ({
+        ...request,
+        match: { ...request.match, maxPhases: 0 },
+      }),
+    ],
+  ] as const)(
+    "rejects malformed candidate Match input (%s) before calls",
+    (_name, mutate) => {
+      const { request, authority } = candidateRequestFor()
+      const dependencies = candidateDependencies(authority.authorityLoader)
+      const runCandidateMatch = vi.fn(CANDIDATE_MATCH_KERNEL.runMatch)
+      const response = executeCandidateExhibitionForTest(
+        mutate(request),
+        runtimeConfig,
+        { ...dependencies, runCandidateMatch },
+      )
+
+      expect(response).toMatchObject({
+        ok: false,
+        failure: { code: "CANDIDATE_REQUEST_INVALID", retryable: false },
+      })
+      expect(authority.authorityLoader.load).not.toHaveBeenCalled()
+      expect(dependencies.createRuntimeForRevision).not.toHaveBeenCalled()
+      expect(runCandidateMatch).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    "timeoutMs",
+    "stdoutBytes",
+    "stderrBytes",
+    "sourceBytes",
+    "strategyMemoryBytes",
+    "soldierMemoryBytes",
+    "objectivePayloadBytes",
+  ] as const)(
+    "rejects candidate %s above the canonical budget before calls",
+    (field) => {
+      const { request, authority } = candidateRequestFor()
+      const dependencies = candidateDependencies(authority.authorityLoader)
+      const runCandidateMatch = vi.fn(CANDIDATE_MATCH_KERNEL.runMatch)
+      const response = executeCandidateExhibitionForTest(
+        {
+          ...request,
+          limits: {
+            ...request.limits,
+            [field]: DEFAULT_RUNTIME_LIMITS[field] + 1,
+          },
+        },
+        runtimeConfig,
+        { ...dependencies, runCandidateMatch },
+      )
+
+      expect(response).toMatchObject({
+        ok: false,
+        failure: { code: "CANDIDATE_REQUEST_INVALID", retryable: false },
+      })
+      expect(authority.authorityLoader.load).not.toHaveBeenCalled()
+      expect(dependencies.createRuntimeForRevision).not.toHaveBeenCalled()
+      expect(runCandidateMatch).not.toHaveBeenCalled()
+    },
+  )
+
+  it("short-circuits top runtime construction after bottom adapter failure", () => {
+    const { request, authority } = candidateRequestFor()
+    const createRuntimeForRevision = vi
+      .fn()
+      .mockReturnValueOnce({ ok: false as const, diagnostics: {} })
+      .mockImplementationOnce(() => {
+        throw new Error("top runtime must not be constructed")
+      })
+    const runCandidateMatch = vi.fn(CANDIDATE_MATCH_KERNEL.runMatch)
+    const response = executeCandidateExhibitionForTest(request, runtimeConfig, {
+      authorityLoader: authority.authorityLoader,
+      createRuntimeForRevision,
+      runCandidateMatch,
+    })
+
+    expect(response).toMatchObject({
+      ok: false,
+      failure: {
+        code: "UNSUPPORTED_RUNTIME_ADAPTER",
+        ownership: "runtime_system",
+        retryable: false,
+      },
+    })
+    expect(createRuntimeForRevision).toHaveBeenCalledTimes(1)
     expect(runCandidateMatch).not.toHaveBeenCalled()
   })
 
@@ -507,6 +790,134 @@ describe("runtime execution service", () => {
     expect(validateCandidateReplay).not.toHaveBeenCalled()
     expect(reconstructCandidateReplay).not.toHaveBeenCalled()
     expect(response).not.toHaveProperty("result")
+  })
+
+  it.each([
+    [
+      "final semantic validation",
+      "CANDIDATE_FINAL_STATE_INVALID",
+      {
+        validateFinalState: vi.fn(() => {
+          throw new Error("semantic")
+        }),
+      },
+    ],
+    [
+      "recording",
+      "CANDIDATE_RECORDER_FAILURE",
+      {
+        recordCandidateExecution: vi.fn(() => {
+          throw new Error("recorder")
+        }),
+      },
+    ],
+    [
+      "replay validation",
+      "CANDIDATE_REPLAY_INVALID",
+      {
+        validateCandidateReplay: vi.fn(() => {
+          throw new Error("validator")
+        }),
+      },
+    ],
+    [
+      "reconstruction",
+      "CANDIDATE_REPLAY_INVALID",
+      {
+        reconstructCandidateReplay: vi.fn(() => {
+          throw new Error("reconstruction")
+        }),
+      },
+    ],
+  ] as const)(
+    "classifies thrown %s as bounded system-integrity failure",
+    (_name, code, overrides) => {
+      const { request, authority } = candidateRequestFor()
+      const response = executeCandidateExhibitionForTest(
+        request,
+        runtimeConfig,
+        {
+          ...candidateDependencies(authority.authorityLoader),
+          ...overrides,
+        },
+      )
+
+      expect(response).toMatchObject({
+        ok: false,
+        failure: {
+          code,
+          ownership: "system_integrity",
+          playerPenalty: false,
+        },
+      })
+      expect(response).not.toHaveProperty("result")
+      expect(JSON.stringify(response)).not.toContain("semantic")
+      expect(JSON.stringify(response)).not.toContain("recorder")
+      expect(JSON.stringify(response)).not.toContain("validator")
+      expect(JSON.stringify(response)).not.toContain("reconstruction")
+    },
+  )
+
+  it.each(["factory", "driver"] as const)(
+    "classifies thrown runtime %s as bounded runtime-system failure",
+    (stage) => {
+      const { request, authority } = candidateRequestFor()
+      const dependencies = candidateDependencies(authority.authorityLoader)
+      const response = executeCandidateExhibitionForTest(
+        request,
+        runtimeConfig,
+        {
+          ...dependencies,
+          ...(stage === "factory"
+            ? {
+                createRuntimeForRevision: vi.fn(() => {
+                  throw new Error("private factory detail")
+                }),
+              }
+            : {
+                runCandidateMatch: vi.fn(() => {
+                  throw new Error("private driver detail")
+                }),
+              }),
+        },
+      )
+
+      expect(response).toMatchObject({
+        ok: false,
+        failure: {
+          code: "EXECUTION_EXCEPTION",
+          ownership: "runtime_system",
+          retryable: true,
+          playerPenalty: false,
+        },
+      })
+      expect(response).not.toHaveProperty("result")
+      expect(JSON.stringify(response)).not.toContain("private")
+    },
+  )
+
+  it("classifies an authority load exception as bounded authority-system failure", () => {
+    const { request, authority } = candidateRequestFor()
+    const response = executeCandidateExhibitionForTest(request, runtimeConfig, {
+      ...candidateDependencies({
+        load: vi.fn(() => {
+          throw new Error("private authority detail")
+        }),
+        current: () => authority.authority,
+      }),
+    })
+
+    expect(response).toMatchObject({
+      ok: false,
+      failure: {
+        code: "EVIDENCE_UNVERIFIABLE",
+        ownership: "authority_system",
+        retryable: true,
+        playerPenalty: false,
+      },
+    })
+    expect(response).not.toHaveProperty("result")
+    expect(JSON.stringify(response)).not.toContain("private")
   })
 
   it("keeps player violations in completed gameplay instead of creating a penalty", () => {
