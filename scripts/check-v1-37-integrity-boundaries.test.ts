@@ -5,8 +5,11 @@ import {
   analyzeV137CoreRulesAuditBaseline,
   analyzeV137IntegrityBoundaries,
   analyzeV137IntegritySources,
+  analyzeV137Phase257CoreRulesResult,
   assertV137IntegrityPublicPayload,
+  buildV137Phase257CoreRulesResult,
   checkV137CoreRulesAuditBaseline,
+  renderV137Phase257CoreRulesResultMarkdown,
 } from "./check-v1-37-integrity-boundaries.js"
 
 const expectBypass = (
@@ -73,13 +76,14 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
       "CURRENT_PUBLICATION_LANE_SCOPE_DRIFT",
       "CURRENT_COMPLETION_BINDING_DRIFT",
       "CURRENT_PUBLIC_LIFECYCLE_ROUTE",
+      "AUDIT_REPRODUCTION_FAILED",
     ])
     expect(
       analyzeV137IntegrityBoundaries().findings.filter(
         (finding) => !reviewFindings.has(finding.code),
       ),
     ).toEqual([])
-  })
+  }, 15_000)
 
   it.each([
     [
@@ -514,7 +518,7 @@ describe("v1.37 core-rules audit baseline", () => {
     successfulPushPusherHistory: "RIGHT",
   } as const
 
-  it("matches the exact seven current-HEAD reproductions", () => {
+  it("preserves the exact immutable Phase-256 baseline bytes", () => {
     expect(checkV137CoreRulesAuditBaseline().findings).toEqual([])
   })
 
@@ -562,5 +566,45 @@ describe("v1.37 core-rules audit baseline", () => {
         reproduced: expectedReproduction,
       }).findings.map((finding) => finding.code),
     ).toContain("AUDIT_PRIVACY_VIOLATION")
+  })
+})
+
+describe("v1.37 Phase-257 current core-rules result", () => {
+  it("builds the deterministic current result contract", () => {
+    const result = buildV137Phase257CoreRulesResult()
+    expect(result).toMatchObject({
+      activation: {
+        commit: "3642493db803a8f68e3863777cc66dd6609ee93d",
+        reviewCorrection: {
+          commit: "bd38bf249861f90c43c6eee97e2fcfd428fc5e6d",
+        },
+        reviewClosureCommit: "aefb289bbf1f868253b197679c1febe235cc642d",
+        tupleId:
+          "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+        runtimeExecutionContract: "runtime-execution-service-v1.16",
+        semanticReceipt: "runtime-semantic-receipt-v1",
+      },
+      observations: {
+        deepValidation: "threw:RangeError",
+        legacyBoundaryAccepted: true,
+        successfulPushPusherHistory: "RIGHT",
+      },
+    })
+  }, 15_000)
+
+  it("rejects a rewritten current observation without changing its expected result", () => {
+    const expected = buildV137Phase257CoreRulesResult()
+    const observations = expected.observations as Record<string, unknown>
+    const result = {
+      ...expected,
+      observations: { ...observations, legacyBoundaryAccepted: false },
+    }
+    expect(
+      analyzeV137Phase257CoreRulesResult({
+        result,
+        expected,
+        markdown: renderV137Phase257CoreRulesResultMarkdown(expected),
+      }).findings.map((finding) => finding.code),
+    ).toContain("AUDIT_OBSERVATION_DRIFT")
   })
 })

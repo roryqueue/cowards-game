@@ -162,7 +162,12 @@ const PHASE_256_AUDIT_MARKDOWN_SHA256 =
   "4ebee5c0be4cdb4b554ce8f56483b8c5a11a3e3630c80e3f30460021ad09bdf2"
 const PHASE_257_RED_BASELINE_SHA256 =
   "bd2a7575282ca7df86bf3a6fc2602a9797660b0ab27bdb0f2def203ddba58f0d"
-const PHASE_19_ACTIVATION_COMMIT = "3642493db803a8f68e3863777cc66dd6609ee93d"
+const PHASE_19_ACTIVATION_COMMIT =
+  "3642493db803a8f68e3863777cc66dd6609ee93d"
+const PHASE_19_REVIEW_CORRECTION_COMMIT =
+  "bd38bf249861f90c43c6eee97e2fcfd428fc5e6d"
+const PHASE_19_REVIEW_CLOSURE_COMMIT =
+  "aefb289bbf1f868253b197679c1febe235cc642d"
 const CURRENT_TUPLE_ID =
   "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
 
@@ -567,8 +572,9 @@ const reproduceCurrentAudit = (repoRoot: string): unknown => {
   return JSON.parse(reproduction.stdout) as unknown
 }
 
-const activationSourceManifest = (
+const commitSourceManifest = (
   repoRoot: string,
+  commit: string,
 ): { pathCount: number; sortedPathListSha256: string } => {
   const paths = spawnSync(
     "git",
@@ -577,11 +583,11 @@ const activationSourceManifest = (
       "--no-commit-id",
       "--name-only",
       "-r",
-      PHASE_19_ACTIVATION_COMMIT,
+      commit,
     ],
     { cwd: repoRoot, encoding: "utf8", timeout: 10_000 },
   )
-  if (paths.status !== 0) throw new Error("activation commit is unavailable")
+  if (paths.status !== 0) throw new Error("source commit is unavailable")
   const sorted = paths.stdout.split("\n").filter(Boolean).sort()
   const framed = `${sorted.join("\n")}\n`
   return {
@@ -617,6 +623,18 @@ export const buildV137Phase257CoreRulesResult = (
     "packages/spec/artifacts/v1.37-current-event-coverage.json"
   const candidatePath =
     "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json"
+  const receiptContractPath =
+    "packages/spec/src/runtime-execution-service.ts"
+  const receiptMigrationPath =
+    "packages/persistence/migrations/0017_runtime_semantic_receipts.sql"
+  const receiptContract = readFileSync(
+    path.join(repoRoot, receiptContractPath),
+    "utf8",
+  )
+  const receiptMigration = readFileSync(
+    path.join(repoRoot, receiptMigrationPath),
+    "utf8",
+  )
   const authority = readJson(repoRoot, authorityPath)
   const eventCoverage = readJson(repoRoot, eventCoveragePath)
   const candidate = readJson(repoRoot, candidatePath)
@@ -643,6 +661,14 @@ export const buildV137Phase257CoreRulesResult = (
   ) {
     throw new Error("current tuple, event, or candidate provenance drifted")
   }
+  if (
+    !receiptContract.includes("runtime-execution-service-v1.16") ||
+    !receiptContract.includes("runtime-semantic-receipt-v1") ||
+    !receiptMigration.includes("runtime_semantic_receipt") ||
+    !receiptMigration.includes("runtime_semantic_receipt_hash")
+  ) {
+    throw new Error("v1.16 semantic receipt or migration drifted")
+  }
 
   return {
     schemaVersion: "v1.37-phase-257-core-rules-result-v1",
@@ -664,8 +690,22 @@ export const buildV137Phase257CoreRulesResult = (
     },
     activation: {
       commit: PHASE_19_ACTIVATION_COMMIT,
-      sourceManifest: activationSourceManifest(repoRoot),
+      sourceManifest: commitSourceManifest(
+        repoRoot,
+        PHASE_19_ACTIVATION_COMMIT,
+      ),
+      reviewCorrection: {
+        commit: PHASE_19_REVIEW_CORRECTION_COMMIT,
+        sourceManifest: commitSourceManifest(
+          repoRoot,
+          PHASE_19_REVIEW_CORRECTION_COMMIT,
+        ),
+      },
+      reviewClosureCommit: PHASE_19_REVIEW_CLOSURE_COMMIT,
       tupleId: CURRENT_TUPLE_ID,
+      runtimeExecutionContract: "runtime-execution-service-v1.16",
+      semanticReceipt: "runtime-semantic-receipt-v1",
+      receiptMigration: "0017_runtime_semantic_receipts.sql",
     },
     observations: exactPhase257Observations,
     approvedDelta: {
@@ -781,6 +821,40 @@ export const buildV137Phase257CoreRulesResult = (
         path: candidatePath,
         sha256: fileSha256(repoRoot, candidatePath),
       },
+      {
+        id: "activation-review-closure",
+        path: ".planning/phases/257-canonical-transition-kernel-and-v1-4-semantic-integrity/257-19-ACTIVATION-REVIEW-CLOSURE.md",
+        sha256: fileSha256(
+          repoRoot,
+          ".planning/phases/257-canonical-transition-kernel-and-v1-4-semantic-integrity/257-19-ACTIVATION-REVIEW-CLOSURE.md",
+        ),
+      },
+      {
+        id: "v1.16-semantic-receipt-contract",
+        path: receiptContractPath,
+        sha256: fileSha256(repoRoot, receiptContractPath),
+      },
+      {
+        id: "v1.16-typescript-semantic-receipt",
+        path: "apps/runtime-service/src/semantic-receipt.ts",
+        sha256: fileSha256(
+          repoRoot,
+          "apps/runtime-service/src/semantic-receipt.ts",
+        ),
+      },
+      {
+        id: "v1.16-go-semantic-receipt",
+        path: "apps/go-backend/runtime_semantic_receipt.go",
+        sha256: fileSha256(
+          repoRoot,
+          "apps/go-backend/runtime_semantic_receipt.go",
+        ),
+      },
+      {
+        id: "v1.16-semantic-receipt-migration",
+        path: receiptMigrationPath,
+        sha256: fileSha256(repoRoot, receiptMigrationPath),
+      },
     ],
     checks: [
       "phase256-baseline-immutable",
@@ -793,6 +867,9 @@ export const buildV137Phase257CoreRulesResult = (
       "go-no-scheduler-ast",
       "historical-proof-read-only",
       "recursive-public-payload-privacy",
+      "activation-review-findings-closed",
+      "v1.16-semantic-receipt-bound",
+      "v1.16-semantic-receipt-migration-bound",
     ],
   }
 }
@@ -805,6 +882,9 @@ export const renderV137Phase257CoreRulesResultMarkdown = (
   result: Record<string, unknown>,
 ): string => {
   const activation = isRecord(result.activation) ? result.activation : {}
+  const reviewCorrection = isRecord(activation.reviewCorrection)
+    ? activation.reviewCorrection
+    : {}
   const observations = isRecord(result.observations) ? result.observations : {}
   const approvedDelta = isRecord(result.approvedDelta)
     ? result.approvedDelta
@@ -822,8 +902,12 @@ This is the deterministic current result after the Plan 19 atomic activation. It
 ## Activation identity
 
 - Commit: \`${String(activation.commit)}\`
+- Corrective source commit: \`${String(reviewCorrection.commit)}\`
+- Review-closure commit: \`${String(activation.reviewClosureCommit)}\`
 - Current tuple: \`${String(activation.tupleId)}\`
 - Source manifest: \`${stableJson(activation.sourceManifest)}\`
+- Corrective source manifest: \`${stableJson(reviewCorrection.sourceManifest)}\`
+- Runtime contract / receipt / migration: \`${String(activation.runtimeExecutionContract)}\` / \`${String(activation.semanticReceipt)}\` / \`${String(activation.receiptMigration)}\`
 
 ## Exact seven-probe result
 
@@ -2029,10 +2113,18 @@ export const analyzeV137IntegrityBoundaries = (
     },
   )
   const audit = checkV137CoreRulesAuditBaseline(repoRoot)
+  const currentResult = checkV137Phase257CoreRulesResult(repoRoot)
   return {
     ...structural,
-    findings: [...structural.findings, ...audit.findings],
-    inventoriedFiles: structural.inventoriedFiles + audit.inventoriedFiles,
+    findings: [
+      ...structural.findings,
+      ...audit.findings,
+      ...currentResult.findings,
+    ],
+    inventoriedFiles:
+      structural.inventoriedFiles +
+      audit.inventoriedFiles +
+      currentResult.inventoriedFiles,
   }
 }
 
@@ -2041,6 +2133,9 @@ const isDirectExecution = (): boolean =>
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 
 if (isDirectExecution()) {
+  if (process.argv.includes("--write")) {
+    writeV137Phase257CoreRulesResult()
+  }
   const analysis = analyzeV137IntegrityBoundaries()
   if (analysis.findings.length > 0) {
     for (const finding of analysis.findings) {
