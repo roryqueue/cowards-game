@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -37,6 +38,14 @@ const runtimeEvidenceAuthorityReferenceLimit = 256
 const runtimeEvidenceAuthorityIdentifierByteLimit = 512
 const canonicalJSONInstantLayout = "2006-01-02T15:04:05.000Z"
 const maximumCanonicalGeneration = uint64(9_007_199_254_740_991)
+
+const runtimeEvidenceAuthorityBundlePathEnvironment = "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BUNDLE_PATH"
+const runtimeEvidenceAuthorityPublicKeyPathEnvironment = "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_PUBLIC_KEY_PATH"
+const runtimeEvidenceAuthorityHighWaterPathEnvironment = "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_PATH"
+const runtimeEvidenceAuthorityMinimumGenerationEnvironment = "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_MIN_GENERATION"
+const runtimeEvidenceAuthorityMinimumBundleHashEnvironment = "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_MIN_BUNDLE_HASH"
+const runtimeEvidenceAuthorityBootstrapEnvironment = "COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BOOTSTRAP"
+const integrityAuthorityManifestPathEnvironment = "COWARDS_INTEGRITY_AUTHORITY_MANIFEST_PATH"
 
 var generationPattern = regexp.MustCompile(`^(?:0|[1-9][0-9]{0,15})$`)
 
@@ -159,6 +168,55 @@ func (err *runtimeEvidenceAuthorityError) Error() string {
 
 func authorityError(code string) error {
 	return &runtimeEvidenceAuthorityError{Code: code}
+}
+
+func loadProductionRuntimeEvidenceAuthorityFromEnvironment() (*verifiedRuntimeEvidenceAuthority, error) {
+	manifestPath := strings.TrimSpace(os.Getenv(integrityAuthorityManifestPathEnvironment))
+	if manifestPath == "" {
+		manifestPath = defaultIntegrityAuthorityManifestPath()
+	}
+	manifestBytes, err := os.ReadFile(manifestPath)
+	if err != nil || len(manifestBytes) > runtimeEvidenceAuthorityPayloadByteLimit {
+		return nil, authorityError("CONFIGURATION")
+	}
+	manifest, err := parseIntegrityAuthorityManifest(manifestBytes)
+	if err != nil {
+		return nil, authorityError("CONFIGURATION")
+	}
+	bootstrapValue := strings.TrimSpace(os.Getenv(runtimeEvidenceAuthorityBootstrapEnvironment))
+	if bootstrapValue == "" {
+		bootstrapValue = "0"
+	}
+	if bootstrapValue != "0" && bootstrapValue != "1" {
+		return nil, authorityError("CONFIGURATION")
+	}
+	loader := newRuntimeEvidenceAuthorityLoader(runtimeEvidenceAuthorityLoaderConfig{
+		BundlePath:                strings.TrimSpace(os.Getenv(runtimeEvidenceAuthorityBundlePathEnvironment)),
+		PublicKeyPath:             strings.TrimSpace(os.Getenv(runtimeEvidenceAuthorityPublicKeyPathEnvironment)),
+		HighWaterPath:             strings.TrimSpace(os.Getenv(runtimeEvidenceAuthorityHighWaterPathEnvironment)),
+		MinimumRegistryGeneration: strings.TrimSpace(os.Getenv(runtimeEvidenceAuthorityMinimumGenerationEnvironment)),
+		MinimumBundleHash:         strings.TrimSpace(os.Getenv(runtimeEvidenceAuthorityMinimumBundleHashEnvironment)),
+		Bootstrap:                 bootstrapValue == "1",
+		ExpectedTrustDomain:       runtimeEvidenceAuthorityProductionTrustDomain,
+		EvaluationInstant: func() string {
+			return time.Now().UTC().Format(canonicalJSONInstantLayout)
+		},
+		IntegrityManifest: manifest,
+	})
+	return loader.Load()
+}
+
+func defaultIntegrityAuthorityManifestPath() string {
+	candidates := []string{
+		filepath.Join("..", "..", "packages", "spec", "artifacts", "v1.37-integrity-authority.json"),
+		filepath.Join("packages", "spec", "artifacts", "v1.37-integrity-authority.json"),
+	}
+	for _, candidate := range candidates {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	return candidates[0]
 }
 
 func inspectRuntimeEvidenceAuthorityBundle(serialized []byte, options runtimeEvidenceAuthorityInspectOptions) (*verifiedRuntimeEvidenceAuthority, error) {

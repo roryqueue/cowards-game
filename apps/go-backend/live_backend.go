@@ -35,23 +35,56 @@ type LiveServer struct {
 	pool              *pgxpool.Pool
 	now               func() time.Time
 	strategyArtifacts map[string]strategyArtifact
+	authority         *verifiedRuntimeEvidenceAuthority
 	orchestrator      *goMatchOrchestrator
 	stopOrchestrator  context.CancelFunc
 }
 
+type liveServerDependencies struct {
+	loadAuthority   func() (*verifiedRuntimeEvidenceAuthority, error)
+	connectPool     func(context.Context, string) (*pgxpool.Pool, error)
+	loadArtifacts   func() (map[string]strategyArtifact, error)
+	newOrchestrator func(*pgxpool.Pool, string) *goMatchOrchestrator
+}
+
+func defaultLiveServerDependencies() liveServerDependencies {
+	return liveServerDependencies{
+		loadAuthority: loadProductionRuntimeEvidenceAuthorityFromEnvironment,
+		connectPool: func(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+			pool, err := pgxpool.New(ctx, databaseURL)
+			if err != nil {
+				return nil, err
+			}
+			if err := pool.Ping(ctx); err != nil {
+				pool.Close()
+				return nil, err
+			}
+			return pool, nil
+		},
+		loadArtifacts: func() (map[string]strategyArtifact, error) {
+			return loadStrategyArtifactManifest(defaultStrategyArtifactManifestPath())
+		},
+		newOrchestrator: newGoMatchOrchestrator,
+	}
+}
+
 func NewLiveServer(ctx context.Context, databaseURL string) (*LiveServer, error) {
+	return newLiveServerWithDependencies(ctx, databaseURL, defaultLiveServerDependencies())
+}
+
+func newLiveServerWithDependencies(ctx context.Context, databaseURL string, dependencies liveServerDependencies) (*LiveServer, error) {
+	authority, err := dependencies.loadAuthority()
+	if err != nil || authority == nil {
+		return nil, errors.New("live Go backend authority unavailable")
+	}
 	if strings.TrimSpace(databaseURL) == "" {
 		return nil, errors.New("live Go backend requires DATABASE_URL")
 	}
-	pool, err := pgxpool.New(ctx, databaseURL)
-	if err != nil {
-		return nil, fmt.Errorf("create live database pool")
-	}
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
+	pool, err := dependencies.connectPool(ctx, databaseURL)
+	if err != nil || pool == nil {
 		return nil, fmt.Errorf("connect live database")
 	}
-	artifacts, err := loadStrategyArtifactManifest(defaultStrategyArtifactManifestPath())
+	artifacts, err := dependencies.loadArtifacts()
 	if err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("load strategy artifacts: %w", err)
@@ -60,7 +93,8 @@ func NewLiveServer(ctx context.Context, databaseURL string) (*LiveServer, error)
 		pool:              pool,
 		now:               time.Now,
 		strategyArtifacts: artifacts,
-		orchestrator:      newGoMatchOrchestrator(pool, os.Getenv("COWARDS_RUNTIME_SERVICE_URL")),
+		authority:         authority,
+		orchestrator:      dependencies.newOrchestrator(pool, os.Getenv("COWARDS_RUNTIME_SERVICE_URL")),
 	}
 	orchestrationMode := strings.TrimSpace(os.Getenv("COWARDS_GO_ORCHESTRATION"))
 	runtimeServiceURL := strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SERVICE_URL"))
