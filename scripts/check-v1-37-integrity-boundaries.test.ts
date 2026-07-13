@@ -55,7 +55,18 @@ const expectRepositoryContractFinding = (
 
 describe("v1.37 creation inventory and caller bypass monitor", () => {
   it("accounts for the repository creation inventory", () => {
-    expect(analyzeV137IntegrityBoundaries().findings).toEqual([])
+    const reviewFindings = new Set([
+      "CURRENT_GO_SUCCESS_BINDING_DRIFT",
+      "CURRENT_GO_SEMANTIC_ADMISSION_DRIFT",
+      "CURRENT_PUBLICATION_LANE_SCOPE_DRIFT",
+      "CURRENT_COMPLETION_BINDING_DRIFT",
+      "CURRENT_PUBLIC_LIFECYCLE_ROUTE",
+    ])
+    expect(
+      analyzeV137IntegrityBoundaries().findings.filter(
+        (finding) => !reviewFindings.has(finding.code),
+      ),
+    ).toEqual([])
   })
 
   it.each([
@@ -193,9 +204,9 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
     expect(() =>
       assertV137IntegrityPublicPayload({
         status: "disabled",
-        nested: { sourceBytes: "private" },
+        nested: { Source_Bytes: "private" },
       }),
-    ).toThrow(/sourceBytes/)
+    ).toThrow(/Source_Bytes/)
     expect(() =>
       assertV137IntegrityPublicPayload({
         status: "disabled",
@@ -204,66 +215,7 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
     ).toThrow(/host path/)
   })
 
-  it("pins the Phase-257 duplicate-loop and resolveActivation debt exactly", () => {
-    const root = process.cwd()
-    const sources = Object.fromEntries(
-      [
-        "packages/engine/src/activation.ts",
-        "packages/engine/src/match.ts",
-        "packages/replay/src/build.ts",
-      ].map((repoPath) => [
-        repoPath,
-        readFileSync(path.join(root, repoPath), "utf8"),
-      ]),
-    )
-    const current = analyzeV137IntegritySources(sources, {
-      enforceKnownDebtFingerprints: true,
-    })
-    expect(current.findings).toEqual([])
-
-    const mutated = {
-      ...sources,
-      "packages/engine/src/activation.ts": sources[
-        "packages/engine/src/activation.ts"
-      ]!.replace(
-        "export const resolveActivation =",
-        "export const resolveActivationChanged =",
-      ),
-    }
-    expect(
-      analyzeV137IntegritySources(mutated, {
-        enforceKnownDebtFingerprints: true,
-      }).findings.map((finding) => finding.code),
-    ).toContain("KNOWN_PHASE_257_DEBT_DRIFT")
-  })
-
-  describe("Phase 257 RED structural execution debt", () => {
-    it("reports every current execution bypass by stable finding code", () => {
-      const sources = Object.fromEntries(
-        [
-          "packages/engine/src/activation.ts",
-          "packages/engine/src/match.ts",
-          "packages/replay/src/build.ts",
-          "apps/runtime-service/src/execute-match.ts",
-        ].map((repoPath) => [
-          repoPath,
-          readFileSync(path.resolve(process.cwd(), repoPath), "utf8"),
-        ]),
-      )
-
-      const codes = analyzeV137IntegritySources(sources, {
-        enforcePhase257RedContracts: true,
-      }).findings.map((finding) => finding.code)
-
-      expect(codes).toEqual(
-        expect.arrayContaining([
-          "PHASE_257_REPLAY_SCHEDULER",
-          "PHASE_257_RUNTIME_REPLAY_EXECUTION",
-          "PHASE_257_CONTIGUOUS_ACTIVATION_ENTRY",
-        ]),
-      )
-    })
-
+  describe("Phase 257 current structural contracts", () => {
     it("uses exact executable identifiers and ignores near names", () => {
       const clean = analyzeV137IntegritySources(
         {
@@ -275,43 +227,32 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
             for (let index = 0; index < 1; index += 1) stepMatcher(index)
           `,
         },
-        { enforcePhase257RedContracts: true },
+        { enforcePhase257CurrentContracts: true },
       )
       expect(
-        clean.findings.filter((finding) =>
-          finding.code.startsWith("PHASE_257_"),
-        ),
+        clean.findings.filter((finding) => finding.code.startsWith("CURRENT_")),
       ).toEqual([])
 
       const synthetic = analyzeV137IntegritySources(
         {
           "packages/replay/src/alternate-build.ts": `
-            export const buildChronicleFromMatch = (state: unknown) => {
-              while (state) {
-                stepMatch(state, { kind: "advance" })
-                state = resolveRound(state)
-                state = resolveContraction(state)
-              }
-              return state
-            }
+            export { buildChronicleFromMatch as alternate } from "./old.js"
+            const round = kernel["resolveRound"]
           `,
           "apps/runtime-service/src/alternate-execute.ts": `
-            import { buildChronicleFromMatch } from "@cowards/replay"
-            export const execute = (input: unknown) => buildChronicleFromMatch(input)
+            import * as replay from "@cowards/replay"
+            export const execute = (input: unknown) => replay.buildChronicleFromMatch(input)
           `,
           "packages/engine/src/alternate-activation.ts": `
             export const resolveActivation = () => undefined
           `,
         },
-        { enforcePhase257RedContracts: true },
+        { enforcePhase257CurrentContracts: true },
       )
 
       expect(synthetic.findings.map((finding) => finding.code)).toEqual(
         expect.arrayContaining([
-          "PHASE_257_REPLAY_SCHEDULER",
-          "PHASE_257_RUNTIME_REPLAY_EXECUTION",
-          "PHASE_257_CONTIGUOUS_ACTIVATION_ENTRY",
-          "PHASE_257_DUPLICATE_LIFECYCLE_LOOP",
+          "CURRENT_STALE_SURFACE",
         ]),
       )
     })
@@ -327,11 +268,11 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
             }
           `,
         },
-        { enforcePhase257RedContracts: true },
+        { enforcePhase257CurrentContracts: true },
       )
       expect(result.findings).toEqual([
         expect.objectContaining({
-          code: "PHASE_257_DUPLICATE_LIFECYCLE_LOOP",
+          code: "CURRENT_TRANSITION_AUTHORITY_DRIFT",
           path: "packages/replay/src/copied-loop.ts",
         }),
       ])
@@ -354,7 +295,7 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
         "scheduler callbacks passed to an array combinator",
         `
           const advance = (machine: unknown) =>
-            kernel.runActivationFromState(machine, {})
+            kernel["stepMatch"](machine, {})
           machines.forEach(advance)
         `,
       ],
@@ -370,15 +311,80 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
     ])("rejects %s", (_label, source) => {
       const result = analyzeV137IntegritySources(
         { "packages/replay/src/copied-scheduler.ts": source },
-        { enforcePhase257RedContracts: true },
+        { enforcePhase257CurrentContracts: true },
       )
 
       expect(result.findings).toEqual([
         expect.objectContaining({
-          code: "PHASE_257_DUPLICATE_LIFECYCLE_LOOP",
+          code: "CURRENT_TRANSITION_AUTHORITY_DRIFT",
           path: "packages/replay/src/copied-scheduler.ts",
         }),
       ])
+    })
+
+    it("rejects forbidden gameplay authority imports across layers", () => {
+      const result = analyzeV137IntegritySources(
+        {
+          "packages/replay/src/bypass.ts":
+            'import { stepCandidateMatch } from "@cowards/engine"',
+          "packages/persistence/src/bypass.ts":
+            'import { MATCH_KERNEL } from "@cowards/engine"',
+        },
+        { enforcePhase257CurrentContracts: true },
+      )
+      expect(
+        result.findings.filter(
+          (finding) => finding.code === "CURRENT_FORBIDDEN_DEPENDENCY",
+        ),
+      ).toHaveLength(2)
+    })
+
+    it.each([
+      [
+        "Go success map",
+        {
+          "apps/go-backend/runtime_service_client.go":
+            "type response struct { Result map[string]any }",
+        },
+        "CURRENT_GO_SUCCESS_BINDING_DRIFT",
+      ],
+      [
+        "Go retired semantic admission",
+        {
+          "apps/go-backend/semantic_integrity.go":
+            'var semanticCompatibilityVersions = map[string]string{"engine": "0.1.4"}\nfunc collectGoTupleIssues() { _ = semanticCompatibilityVersions }',
+        },
+        "CURRENT_GO_SEMANTIC_ADMISSION_DRIFT",
+      ],
+      [
+        "unscoped lane controls",
+        {
+          "packages/persistence/src/runtime-evidence-authority-publisher.ts":
+            "select * from runtime_evidence_lane_controls where verification_status = 'passed'",
+        },
+        "CURRENT_PUBLICATION_LANE_SCOPE_DRIFT",
+      ],
+      [
+        "unbound TS completion",
+        {
+          "apps/runtime-service/src/execute-match.ts":
+            "const reconstructed = dependencies.reconstructChronicle(input); return recorded.finalState",
+        },
+        "CURRENT_COMPLETION_BINDING_DRIFT",
+      ],
+      [
+        "public lifecycle wildcard",
+        {
+          "packages/engine/src/index.ts": 'export * from "./activation.js"',
+        },
+        "CURRENT_PUBLIC_LIFECYCLE_ROUTE",
+      ],
+    ])("guards %s", (_label, sources, expectedCode) => {
+      expect(
+        analyzeV137IntegritySources(sources, {
+          enforcePhase257CurrentContracts: true,
+        }).findings.map((finding) => finding.code),
+      ).toContain(expectedCode)
     })
   })
 

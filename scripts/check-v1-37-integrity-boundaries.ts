@@ -1,10 +1,21 @@
 #!/usr/bin/env -S pnpm exec tsx
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs"
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
+import { checkV137ExecutableReferenceInventory } from "./check-v1-37-executable-reference-inventory.js"
+import {
+  checkRetainedCandidateEventCoverageProvenance,
+  checkV137CurrentEventCoverageArtifact,
+} from "./generate-v1-37-event-coverage.js"
 
 const defaultRepoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -34,7 +45,17 @@ export type V137IntegrityBoundaryFindingCode =
   | "AUTHORITY_CHAIN_DRIFT"
   | "RUNTIME_REQUEST_ENVELOPE_DRIFT"
   | "GO_RECEIPT_AUTHORITY_DRIFT"
-  | "KNOWN_PHASE_257_DEBT_DRIFT"
+  | "CURRENT_TRANSITION_AUTHORITY_DRIFT"
+  | "CURRENT_STALE_SURFACE"
+  | "CURRENT_FORBIDDEN_DEPENDENCY"
+  | "CURRENT_EVENT_COVERAGE_DRIFT"
+  | "CURRENT_TUPLE_DRIFT"
+  | "CURRENT_CANDIDATE_PROVENANCE_DRIFT"
+  | "CURRENT_GO_SUCCESS_BINDING_DRIFT"
+  | "CURRENT_GO_SEMANTIC_ADMISSION_DRIFT"
+  | "CURRENT_PUBLICATION_LANE_SCOPE_DRIFT"
+  | "CURRENT_COMPLETION_BINDING_DRIFT"
+  | "CURRENT_PUBLIC_LIFECYCLE_ROUTE"
   | "PHASE_257_REPLAY_SCHEDULER"
   | "PHASE_257_RUNTIME_REPLAY_EXECUTION"
   | "PHASE_257_CONTIGUOUS_ACTIVATION_ENTRY"
@@ -64,36 +85,31 @@ export interface V137IntegrityBoundaryAnalysis {
 
 export interface AnalyzeV137IntegritySourcesOptions {
   enforceRepositoryContracts?: boolean
-  enforceKnownDebtFingerprints?: boolean
-  enforcePhase257RedContracts?: boolean
+  enforcePhase257CurrentContracts?: boolean
 }
 
 const sha256 = (value: string): string =>
   createHash("sha256").update(value).digest("hex")
 
-const knownPhase257DebtFingerprints = {
-  "packages/engine/src/activation.ts#resolveActivation":
-    "368d4edf7b6eef40bf741ef2d60eff069ff241ecd552b92f640018be122b1425",
-  "packages/engine/src/match.ts#runMatch":
-    "d2e1602d5a5525d28ada0947fd40e2b3264c3c900741854aed8f1bf91dcf3036",
-  "packages/replay/src/build.ts#buildChronicleFromMatch":
-    "ca1547295c8efece5e624b8d39cf2fbe7564f1f715d16c2e9c7ecc3796b6fb4a",
-} as const
+const normalizedPrivacyKey = (value: string): string =>
+  value.replaceAll(/[^a-z0-9]/giu, "").toLowerCase()
 
-const restrictedPublicKeys = new Set([
-  "source",
-  "sourceBytes",
-  "artifactBytes",
-  "strategyMemory",
-  "soldierMemory",
-  "objectivePayload",
-  "rawDiagnostics",
-  "hostPath",
-  "privateKey",
-  "certificateBody",
-  "attestationBody",
-  "securityInternals",
-])
+const restrictedPublicKeys = new Set(
+  [
+    "source",
+    "sourceBytes",
+    "artifactBytes",
+    "strategyMemory",
+    "soldierMemory",
+    "objectivePayload",
+    "rawDiagnostics",
+    "hostPath",
+    "privateKey",
+    "certificateBody",
+    "attestationBody",
+    "securityInternals",
+  ].map(normalizedPrivacyKey),
+)
 
 export const assertV137IntegrityPublicPayload = (value: unknown): void => {
   const visit = (candidate: unknown, pathParts: readonly string[]): void => {
@@ -118,7 +134,7 @@ export const assertV137IntegrityPublicPayload = (value: unknown): void => {
     }
     if (!candidate || typeof candidate !== "object") return
     for (const [key, nested] of Object.entries(candidate)) {
-      if (restrictedPublicKeys.has(key)) {
+      if (restrictedPublicKeys.has(normalizedPrivacyKey(key))) {
         throw new Error(
           `public integrity payload contains restricted key ${key}`,
         )
@@ -134,6 +150,22 @@ const auditCommand =
 const auditJsonPath = ".planning/artifacts/v1.37-core-rules-audit-baseline.json"
 const auditMarkdownPath =
   ".planning/artifacts/v1.37-core-rules-audit-baseline.md"
+const phase257RedBaselinePath =
+  ".planning/artifacts/v1.37-phase-257-red-baseline.json"
+const phase257ResultJsonPath =
+  ".planning/artifacts/v1.37-phase-257-core-rules-result.json"
+const phase257ResultMarkdownPath =
+  ".planning/artifacts/v1.37-phase-257-core-rules-result.md"
+const PHASE_256_AUDIT_JSON_SHA256 =
+  "f069de5950030c59a04b9bf671ff7d149a54461690b766f8fd385a2c4dbb1a0b"
+const PHASE_256_AUDIT_MARKDOWN_SHA256 =
+  "4ebee5c0be4cdb4b554ce8f56483b8c5a11a3e3630c80e3f30460021ad09bdf2"
+const PHASE_257_RED_BASELINE_SHA256 =
+  "bd2a7575282ca7df86bf3a6fc2602a9797660b0ab27bdb0f2def203ddba58f0d"
+const PHASE_19_ACTIVATION_COMMIT =
+  "3642493db803a8f68e3863777cc66dd6609ee93d"
+const CURRENT_TUPLE_ID =
+  "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
 
 const exactAuditObservations = {
   noAdvanceLastSoldier: {
@@ -355,14 +387,23 @@ export const checkV137CoreRulesAuditBaseline = (
 ): V137IntegrityBoundaryAnalysis => {
   const jsonAbsolute = path.join(repoRoot, auditJsonPath)
   const markdownAbsolute = path.join(repoRoot, auditMarkdownPath)
-  if (!existsSync(jsonAbsolute) || !existsSync(markdownAbsolute)) {
+  const redBaselineAbsolute = path.join(repoRoot, phase257RedBaselinePath)
+  if (
+    !existsSync(jsonAbsolute) ||
+    !existsSync(markdownAbsolute) ||
+    !existsSync(redBaselineAbsolute)
+  ) {
     return {
       findings: [
         {
           code: "AUDIT_ARTIFACT_MISSING",
-          path: !existsSync(jsonAbsolute) ? auditJsonPath : auditMarkdownPath,
+          path: !existsSync(jsonAbsolute)
+            ? auditJsonPath
+            : !existsSync(markdownAbsolute)
+              ? auditMarkdownPath
+              : phase257RedBaselinePath,
           line: 1,
-          detail: "The current-HEAD core-rules audit baseline is missing.",
+          detail: "An immutable core-rules audit baseline is missing.",
         },
       ],
       inventoriedFiles: 0,
@@ -373,6 +414,8 @@ export const checkV137CoreRulesAuditBaseline = (
   }
   let baseline: unknown
   const baselineJson = readFileSync(jsonAbsolute, "utf8")
+  const baselineMarkdown = readFileSync(markdownAbsolute, "utf8")
+  const redBaseline = readFileSync(redBaselineAbsolute, "utf8")
   try {
     baseline = JSON.parse(baselineJson) as unknown
   } catch {
@@ -391,45 +434,39 @@ export const checkV137CoreRulesAuditBaseline = (
       legacyWorkerConsumers: 0,
     }
   }
-  const reproduction = spawnSync(
-    "pnpm",
-    [
-      "exec",
-      "tsx",
-      ".planning/artifacts/v2.0-core-rules-audit/reproduce-core-rule-gaps.ts",
-    ],
-    { cwd: repoRoot, encoding: "utf8", timeout: 30_000 },
-  )
-  let reproduced: unknown = undefined
-  if (reproduction.status === 0) {
-    try {
-      reproduced = JSON.parse(reproduction.stdout) as unknown
-    } catch {
-      reproduced = undefined
-    }
-  }
-  if (reproduced === undefined) {
-    return {
-      findings: [
-        {
-          code: "AUDIT_REPRODUCTION_FAILED",
-          path: ".planning/artifacts/v2.0-core-rules-audit/reproduce-core-rule-gaps.ts",
-          line: 1,
-          detail:
-            "The committed core-rules reproduction did not return valid JSON.",
-        },
-      ],
-      inventoriedFiles: 2,
-      creationCalls: 0,
-      sqlWriters: 0,
-      legacyWorkerConsumers: 0,
-    }
-  }
   let analysis = analyzeV137CoreRulesAuditBaseline({
     baseline,
-    markdown: readFileSync(markdownAbsolute, "utf8"),
-    reproduced,
+    markdown: baselineMarkdown,
+    reproduced: exactAuditObservations,
   })
+  const immutableHashFindings: V137IntegrityBoundaryFinding[] = []
+  for (const [repoPath, actual, expected] of [
+    [auditJsonPath, sha256(baselineJson), PHASE_256_AUDIT_JSON_SHA256],
+    [
+      auditMarkdownPath,
+      sha256(baselineMarkdown),
+      PHASE_256_AUDIT_MARKDOWN_SHA256,
+    ],
+    [
+      phase257RedBaselinePath,
+      sha256(redBaseline),
+      PHASE_257_RED_BASELINE_SHA256,
+    ],
+  ] as const) {
+    if (actual !== expected) {
+      immutableHashFindings.push({
+        code: "AUDIT_METADATA_DRIFT",
+        path: repoPath,
+        line: 1,
+        detail: "Immutable baseline bytes drifted.",
+      })
+    }
+  }
+  analysis = {
+    ...analysis,
+    findings: [...analysis.findings, ...immutableHashFindings],
+    inventoriedFiles: 3,
+  }
   if (baselineJson !== `${JSON.stringify(baseline, null, 2)}\n`) {
     analysis = {
       ...analysis,
@@ -486,6 +523,444 @@ export const checkV137CoreRulesAuditBaseline = (
     }
   }
   return analysis
+}
+
+const exactPhase257Observations = {
+  noAdvanceLastSoldier: {
+    status: "STONE",
+    outcome: { type: "WIN", winnerPlayerId: "top" },
+    matchEndedEvents: 1,
+  },
+  cycleEndBackstabActor: {
+    status: "STONE",
+    slotEnded: true,
+    terminalReason: "BACKSTABBED",
+  },
+  excessMalformedOrder: {
+    validOrdersRetained: 1,
+    violationEvents: 0,
+  },
+  deepValidation: "threw:RangeError",
+  overlappingArenaAccepted: false,
+  legacyBoundaryAccepted: true,
+  successfulPushPusherHistory: "RIGHT",
+} as const
+
+const readJson = (repoRoot: string, repoPath: string): unknown =>
+  JSON.parse(readFileSync(path.join(repoRoot, repoPath), "utf8")) as unknown
+
+const fileSha256 = (repoRoot: string, repoPath: string): string =>
+  sha256(readFileSync(path.join(repoRoot, repoPath), "utf8"))
+
+const reproduceCurrentAudit = (repoRoot: string): unknown => {
+  const reproduction = spawnSync(
+    "pnpm",
+    [
+      "exec",
+      "tsx",
+      ".planning/artifacts/v2.0-core-rules-audit/reproduce-core-rule-gaps.ts",
+    ],
+    { cwd: repoRoot, encoding: "utf8", timeout: 30_000 },
+  )
+  if (reproduction.status !== 0) {
+    throw new Error("current audit reproduction failed")
+  }
+  return JSON.parse(reproduction.stdout) as unknown
+}
+
+const activationSourceManifest = (
+  repoRoot: string,
+): { pathCount: number; sortedPathListSha256: string } => {
+  const paths = spawnSync(
+    "git",
+    [
+      "diff-tree",
+      "--no-commit-id",
+      "--name-only",
+      "-r",
+      PHASE_19_ACTIVATION_COMMIT,
+    ],
+    { cwd: repoRoot, encoding: "utf8", timeout: 10_000 },
+  )
+  if (paths.status !== 0) throw new Error("activation commit is unavailable")
+  const sorted = paths.stdout.split("\n").filter(Boolean).sort()
+  const framed = `${sorted.join("\n")}\n`
+  return {
+    pathCount: sorted.length,
+    sortedPathListSha256: sha256(framed),
+  }
+}
+
+export const buildV137Phase257CoreRulesResult = (
+  repoRoot = defaultRepoRoot,
+): Record<string, unknown> => {
+  const baseline = checkV137CoreRulesAuditBaseline(repoRoot)
+  if (baseline.findings.length > 0) {
+    throw new Error("immutable audit baseline drifted")
+  }
+  const reproduced = reproduceCurrentAudit(repoRoot)
+  if (stableJson(reproduced) !== stableJson(exactPhase257Observations)) {
+    throw new Error("current audit observations drifted")
+  }
+  const inventory = checkV137ExecutableReferenceInventory("current", repoRoot)
+  if (inventory.findings.length > 0 || inventory.references.length !== 0) {
+    throw new Error("current executable reference inventory is not empty")
+  }
+  if (
+    checkV137CurrentEventCoverageArtifact().length > 0 ||
+    checkRetainedCandidateEventCoverageProvenance().length > 0
+  ) {
+    throw new Error("current event coverage drifted")
+  }
+
+  const authorityPath =
+    "packages/spec/artifacts/v1.37-integrity-authority.json"
+  const eventCoveragePath =
+    "packages/spec/artifacts/v1.37-current-event-coverage.json"
+  const candidatePath =
+    "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json"
+  const authority = readJson(repoRoot, authorityPath)
+  const eventCoverage = readJson(repoRoot, eventCoveragePath)
+  const candidate = readJson(repoRoot, candidatePath)
+  const authorityTuple =
+    isRecord(authority) && Array.isArray(authority.compatibilityTuples)
+      ? authority.compatibilityTuples[0]
+      : undefined
+  const candidateRecord =
+    isRecord(candidate) && isRecord(candidate.candidate)
+      ? candidate.candidate
+      : undefined
+  if (
+    !isRecord(authorityTuple) ||
+    authorityTuple.tupleId !== CURRENT_TUPLE_ID ||
+    !isRecord(candidateRecord) ||
+    candidateRecord.candidateTupleId !== CURRENT_TUPLE_ID ||
+    candidateRecord.status !== "inactive-candidate" ||
+    !isRecord(eventCoverage) ||
+    eventCoverage.status !== "current-exact" ||
+    eventCoverage.tupleId !== CURRENT_TUPLE_ID ||
+    !Array.isArray(eventCoverage.currentEventVocabulary) ||
+    eventCoverage.currentEventVocabulary.includes("PUSH_ATTEMPTED") ||
+    stableJson(eventCoverage.historicalOnly) !==
+      stableJson(["PUSH_ATTEMPTED"])
+  ) {
+    throw new Error("current tuple, event, or candidate provenance drifted")
+  }
+
+  return {
+    schemaVersion: "v1.37-phase-257-core-rules-result-v1",
+    milestone: "v1.37",
+    phase: 257,
+    status: "current-exact",
+    generatedAt: "2026-07-13",
+    immutableBaselines: {
+      phase256Audit: {
+        jsonPath: auditJsonPath,
+        jsonSha256: PHASE_256_AUDIT_JSON_SHA256,
+        markdownPath: auditMarkdownPath,
+        markdownSha256: PHASE_256_AUDIT_MARKDOWN_SHA256,
+      },
+      phase257PreRefactor: {
+        path: phase257RedBaselinePath,
+        sha256: PHASE_257_RED_BASELINE_SHA256,
+      },
+    },
+    activation: {
+      commit: PHASE_19_ACTIVATION_COMMIT,
+      sourceManifest: activationSourceManifest(repoRoot),
+      tupleId: CURRENT_TUPLE_ID,
+    },
+    observations: exactPhase257Observations,
+    approvedDelta: {
+      semanticRepairs: [
+        {
+          decision: "D-09",
+          probe: "excessMalformedOrder",
+          meaning: "cap raw orders before validating the retained prefix",
+        },
+        {
+          decision: "D-10",
+          probe: "cycleEndBackstabActor",
+          meaning: "close a Cycle-end Backstabbed actor before outcome",
+        },
+        {
+          decision: "D-11",
+          probe: "noAdvanceLastSoldier",
+          meaning: "close no-Advance removal before immediate outcome",
+        },
+        {
+          decision: "KERN-03",
+          probe: "overlappingArenaAccepted",
+          meaning: "reject invalid arena occupancy at admission",
+        },
+      ],
+      structuralAndVersion: [
+        {
+          decision: "D-13",
+          meaning: "remove contiguous Activation and duplicate scheduler surfaces",
+        },
+        {
+          decision: "D-14",
+          meaning: "remove PUSH_ATTEMPTED from current vocabulary only",
+        },
+        {
+          decision: "D-15",
+          meaning: "activate the exact 922a tuple while preserving historical v1.4",
+        },
+      ],
+      preserved: {
+        decision: "D-12",
+        probe: "successfulPushPusherHistory",
+        observed: "RIGHT",
+      },
+      deferred: [
+        {
+          probe: "deepValidation",
+          ownerPhase: 258,
+          observed: "threw:RangeError",
+        },
+        {
+          probe: "legacyBoundaryAccepted",
+          ownerPhase: 259,
+          observed: true,
+        },
+      ],
+    },
+    evidence: [
+      {
+        id: "lifecycle-repairs",
+        path: "packages/engine/src/kernel/lifecycle-repairs.test.ts",
+        sha256: fileSha256(
+          repoRoot,
+          "packages/engine/src/kernel/lifecycle-repairs.test.ts",
+        ),
+      },
+      {
+        id: "v1.4-compatibility",
+        path: "packages/engine/src/compatibility-fixtures.test.ts",
+        sha256: fileSha256(
+          repoRoot,
+          "packages/engine/src/compatibility-fixtures.test.ts",
+        ),
+      },
+      {
+        id: "current-event-coverage",
+        path: eventCoveragePath,
+        sha256: fileSha256(repoRoot, eventCoveragePath),
+      },
+      {
+        id: "current-authority",
+        path: authorityPath,
+        sha256: fileSha256(repoRoot, authorityPath),
+      },
+      {
+        id: "executable-reference-inventory",
+        path: "scripts/check-v1-37-executable-reference-inventory.ts",
+        sha256: fileSha256(
+          repoRoot,
+          "scripts/check-v1-37-executable-reference-inventory.ts",
+        ),
+      },
+      {
+        id: "go-no-scheduler-ast",
+        path: "apps/go-backend/semantic_integrity_test.go",
+        sha256: fileSha256(
+          repoRoot,
+          "apps/go-backend/semantic_integrity_test.go",
+        ),
+      },
+      {
+        id: "historical-read-only-dispatch",
+        path: ".planning/artifacts/v1.37-v1.36-historical-proof-dispatch.json",
+        sha256: fileSha256(
+          repoRoot,
+          ".planning/artifacts/v1.37-v1.36-historical-proof-dispatch.json",
+        ),
+      },
+      {
+        id: "inactive-candidate-provenance",
+        path: candidatePath,
+        sha256: fileSha256(repoRoot, candidatePath),
+      },
+    ],
+    checks: [
+      "phase256-baseline-immutable",
+      "phase257-pre-refactor-baseline-immutable",
+      "single-transition-authority",
+      "stale-reference-inventory-empty",
+      "current-event-coverage-closed",
+      "exact-current-tuple",
+      "inactive-candidate-provenance-immutable",
+      "go-no-scheduler-ast",
+      "historical-proof-read-only",
+      "recursive-public-payload-privacy",
+    ],
+  }
+}
+
+export const renderV137Phase257CoreRulesResultJson = (
+  result: Record<string, unknown>,
+): string => `${JSON.stringify(result, null, 2)}\n`
+
+export const renderV137Phase257CoreRulesResultMarkdown = (
+  result: Record<string, unknown>,
+): string => {
+  const activation = isRecord(result.activation) ? result.activation : {}
+  const observations = isRecord(result.observations)
+    ? result.observations
+    : {}
+  const approvedDelta = isRecord(result.approvedDelta)
+    ? result.approvedDelta
+    : {}
+  const semanticRepairs = Array.isArray(approvedDelta.semanticRepairs)
+    ? approvedDelta.semanticRepairs.filter(isRecord)
+    : []
+  const structural = Array.isArray(approvedDelta.structuralAndVersion)
+    ? approvedDelta.structuralAndVersion.filter(isRecord)
+    : []
+  return `# v1.37 Phase 257 Core-Rules Result
+
+This is the deterministic current result after the Plan 19 atomic activation. It is separate from, and does not rewrite, the immutable Phase 256 and Phase 257 pre-refactor baselines.
+
+## Activation identity
+
+- Commit: \`${String(activation.commit)}\`
+- Current tuple: \`${String(activation.tupleId)}\`
+- Source manifest: \`${stableJson(activation.sourceManifest)}\`
+
+## Exact seven-probe result
+
+${Object.entries(observations)
+  .map(([id, observed]) => `- \`${id}\`: \`${stableJson(observed)}\``)
+  .join("\n")}
+
+## Approved Phase 257 delta
+
+${[...semanticRepairs, ...structural]
+  .map(
+    (entry) =>
+      `- \`${String(entry.decision)}\`: ${String(entry.meaning)}`,
+  )
+  .join("\n")}
+- \`D-12\`: preserved successful-push pusher history \`RIGHT\`.
+- Phase 258 remains \`threw:RangeError\`; Phase 259 remains legacy-boundary accepted.
+
+## Guardrails
+
+- The Phase 256 and pre-refactor baseline bytes are immutable.
+- The compact probes are bound to lifecycle, compatibility, event, tuple, inventory, Go AST, and historical evidence; they do not independently prove event order.
+- The result contains only safe scalar observations, relative paths, and hashes. It contains no raw state, Chronicle/events, source/artifact bytes, memory/objectives, diagnostics, host data, credentials, or security evidence.
+`
+}
+
+export const analyzeV137Phase257CoreRulesResult = (input: {
+  result: unknown
+  markdown: string
+  expected: Record<string, unknown>
+}): V137IntegrityBoundaryAnalysis => {
+  const findings: V137IntegrityBoundaryFinding[] = []
+  try {
+    assertV137IntegrityPublicPayload(input.result)
+    assertV137IntegrityPublicPayload({ markdown: input.markdown })
+  } catch {
+    findings.push({
+      code: "AUDIT_PRIVACY_VIOLATION",
+      path: phase257ResultJsonPath,
+      line: 1,
+      detail: "Current result contains restricted public data.",
+    })
+  }
+  if (stableJson(input.result) !== stableJson(input.expected)) {
+    findings.push({
+      code: "AUDIT_OBSERVATION_DRIFT",
+      path: phase257ResultJsonPath,
+      line: 1,
+      detail: "Current Phase-257 result drifted from executable evidence.",
+    })
+  }
+  if (
+    input.markdown !==
+    renderV137Phase257CoreRulesResultMarkdown(input.expected)
+  ) {
+    findings.push({
+      code: "AUDIT_MARKDOWN_DRIFT",
+      path: phase257ResultMarkdownPath,
+      line: 1,
+      detail: "Current result Markdown drifted from the machine result.",
+    })
+  }
+  return {
+    findings,
+    inventoriedFiles: 2,
+    creationCalls: 0,
+    sqlWriters: 0,
+    legacyWorkerConsumers: 0,
+  }
+}
+
+export const writeV137Phase257CoreRulesResult = (
+  repoRoot = defaultRepoRoot,
+): void => {
+  const result = buildV137Phase257CoreRulesResult(repoRoot)
+  writeFileSync(
+    path.join(repoRoot, phase257ResultJsonPath),
+    renderV137Phase257CoreRulesResultJson(result),
+    "utf8",
+  )
+  writeFileSync(
+    path.join(repoRoot, phase257ResultMarkdownPath),
+    renderV137Phase257CoreRulesResultMarkdown(result),
+    "utf8",
+  )
+}
+
+export const checkV137Phase257CoreRulesResult = (
+  repoRoot = defaultRepoRoot,
+): V137IntegrityBoundaryAnalysis => {
+  try {
+    const expected = buildV137Phase257CoreRulesResult(repoRoot)
+    const json = readFileSync(path.join(repoRoot, phase257ResultJsonPath), "utf8")
+    const result = JSON.parse(json) as unknown
+    const markdown = readFileSync(
+      path.join(repoRoot, phase257ResultMarkdownPath),
+      "utf8",
+    )
+    const analysis = analyzeV137Phase257CoreRulesResult({
+      result,
+      markdown,
+      expected,
+    })
+    if (json !== renderV137Phase257CoreRulesResultJson(expected)) {
+      return {
+        ...analysis,
+        findings: [
+          ...analysis.findings,
+          {
+            code: "AUDIT_ARTIFACT_INVALID",
+            path: phase257ResultJsonPath,
+            line: 1,
+            detail: "Current result JSON is not canonical exact-key output.",
+          },
+        ],
+      }
+    }
+    return analysis
+  } catch {
+    return {
+      findings: [
+        {
+          code: "AUDIT_REPRODUCTION_FAILED",
+          path: phase257ResultJsonPath,
+          line: 1,
+          detail: "Current Phase-257 result could not be reproduced.",
+        },
+      ],
+      inventoriedFiles: 0,
+      creationCalls: 0,
+      sqlWriters: 0,
+      legacyWorkerConsumers: 0,
+    }
+  }
 }
 
 const creationNames = new Set([
@@ -778,7 +1253,14 @@ const analyzeSource = (
     /insert\s+into\s+runtime_evidence_(?:verified_attestations|certificates)\b/iu.test(
       source,
     ) &&
-    repoPath !== "packages/persistence/src/runtime-evidence-import.ts"
+    repoPath !== "packages/persistence/src/runtime-evidence-import.ts" &&
+    !(
+      repoPath === "scripts/prove-v1-37-atomic-activation.ts" &&
+      source.includes("atomic_activation_") &&
+      source.includes("RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture") &&
+      source.includes("productionReceiptCount === 0") &&
+      source.includes("drop schema if exists")
+    )
   ) {
     add(
       "RAW_CERTIFICATE_WRITER",
@@ -840,7 +1322,7 @@ const analyzeSource = (
   return { findings, creationCalls, sqlWriters, legacyWorkerConsumers }
 }
 
-const analyzePhase257RedSources = (
+const analyzePhase257CurrentSources = (
   sources: Readonly<Record<string, string>>,
 ): readonly V137IntegrityBoundaryFinding[] => {
   const findings: V137IntegrityBoundaryFinding[] = []
@@ -857,6 +1339,30 @@ const analyzePhase257RedSources = (
     findings.push({ code, path: repoPath, line, detail })
   }
 
+  const productionSchedulerConsumers = new Set<string>()
+  const driverPath = "packages/engine/src/kernel/driver.ts"
+  const staleSymbols = new Set([
+    "resolveActivation",
+    "buildChronicleFromMatch",
+    "resolveRound",
+  ])
+  const schedulerRoots = new Set([
+    "stepCandidateMatch",
+    "stepMatch",
+    "runActivationFromState",
+  ])
+  const forbiddenGameplayImports = new Set([
+    "MATCH_KERNEL",
+    "buildChronicleFromMatch",
+    "resolveAction",
+    "resolveActivation",
+    "resolveContraction",
+    "resolveRound",
+    "runActivationFromState",
+    "stepCandidateMatch",
+    "stepMatch",
+  ])
+
   for (const [repoPath, source] of Object.entries(sources).sort(
     ([left], [right]) => left.localeCompare(right),
   )) {
@@ -867,21 +1373,52 @@ const analyzePhase257RedSources = (
       ts.ScriptTarget.Latest,
       true,
     )
-    const identifiers = new Set<string>()
     const loops: ts.IterationStatement[] = []
-    const variableDeclarations = new Map<string, ts.VariableDeclaration>()
-    const schedulerAliases = new Set(["stepMatch", "runActivationFromState"])
+    const schedulerAliases = new Set(schedulerRoots)
     const schedulerCalls: ts.CallExpression[] = []
     const allCalls: ts.CallExpression[] = []
     const functions = new Map<string, ts.FunctionLikeDeclaration>()
+    const staleSites = new Map<string, ts.Node>()
+    const aliasDeclarations: Array<{
+      name: string
+      initializer: ts.Expression
+    }> = []
+    const imports: ts.ImportDeclaration[] = []
 
-    const schedulerReference = (node: ts.Expression): boolean =>
-      (ts.isIdentifier(node) && schedulerAliases.has(node.text)) ||
-      (ts.isPropertyAccessExpression(node) &&
-        schedulerAliases.has(node.name.text))
+    const expressionName = (node: ts.Expression): string | undefined => {
+      if (ts.isIdentifier(node)) return node.text
+      if (ts.isPropertyAccessExpression(node)) return node.name.text
+      if (
+        ts.isElementAccessExpression(node) &&
+        node.argumentExpression !== undefined &&
+        (ts.isStringLiteral(node.argumentExpression) ||
+          ts.isNoSubstitutionTemplateLiteral(node.argumentExpression))
+      ) {
+        return node.argumentExpression.text
+      }
+      return undefined
+    }
+    const schedulerReference = (node: ts.Expression): boolean => {
+      const name = expressionName(node)
+      return name !== undefined && schedulerAliases.has(name)
+    }
 
     const visit = (node: ts.Node): void => {
-      if (ts.isIdentifier(node)) identifiers.add(node.text)
+      if (ts.isIdentifier(node) && staleSymbols.has(node.text)) {
+        staleSites.set(node.text, staleSites.get(node.text) ?? node)
+      }
+      if (
+        ts.isElementAccessExpression(node) &&
+        node.argumentExpression !== undefined &&
+        (ts.isStringLiteral(node.argumentExpression) ||
+          ts.isNoSubstitutionTemplateLiteral(node.argumentExpression)) &&
+        staleSymbols.has(node.argumentExpression.text)
+      ) {
+        staleSites.set(
+          node.argumentExpression.text,
+          staleSites.get(node.argumentExpression.text) ?? node,
+        )
+      }
       if (
         ts.isForStatement(node) ||
         ts.isForInStatement(node) ||
@@ -892,18 +1429,21 @@ const analyzePhase257RedSources = (
         loops.push(node)
       }
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
-        variableDeclarations.set(node.name.text, node)
-        if (
-          node.initializer !== undefined &&
-          schedulerReference(node.initializer)
-        ) {
+        if (node.initializer !== undefined) {
+          aliasDeclarations.push({
+            name: node.name.text,
+            initializer: node.initializer,
+          })
+        }
+      }
+      if (ts.isCallExpression(node)) allCalls.push(node)
+      if (ts.isImportDeclaration(node)) imports.push(node)
+      if (ts.isImportSpecifier(node)) {
+        const importedName = node.propertyName?.text ?? node.name.text
+        if (schedulerRoots.has(importedName)) {
           schedulerAliases.add(node.name.text)
         }
       }
-      if (ts.isCallExpression(node) && schedulerReference(node.expression)) {
-        schedulerCalls.push(node)
-      }
-      if (ts.isCallExpression(node)) allCalls.push(node)
       if (ts.isFunctionDeclaration(node) && node.name !== undefined) {
         functions.set(node.name.text, node)
       }
@@ -920,48 +1460,89 @@ const analyzePhase257RedSources = (
     }
     visit(sourceFile)
 
-    const contiguous = variableDeclarations.get("resolveActivation")
-    if (contiguous !== undefined) {
+    for (let changed = true; changed; ) {
+      changed = false
+      for (const declaration of aliasDeclarations) {
+        if (
+          !schedulerAliases.has(declaration.name) &&
+          schedulerReference(declaration.initializer)
+        ) {
+          schedulerAliases.add(declaration.name)
+          changed = true
+        }
+      }
+    }
+    for (const call of allCalls) {
+      if (schedulerReference(call.expression)) schedulerCalls.push(call)
+    }
+
+    for (const [symbol, site] of staleSites) {
       add(
-        "PHASE_257_CONTIGUOUS_ACTIVATION_ENTRY",
+        "CURRENT_STALE_SURFACE",
         normalizedPath,
         sourceFile,
-        contiguous,
-        "The stale contiguous resolveActivation entry remains executable.",
+        site,
+        `The stale ${symbol} surface remains executable.`,
       )
     }
 
-    const replayBuilder = variableDeclarations.get("buildChronicleFromMatch")
+    const isProduction =
+      !normalizedPath.endsWith(".test.ts") &&
+      !normalizedPath.endsWith(".test.tsx") &&
+      !normalizedPath.endsWith(".spec.ts") &&
+      !normalizedPath.endsWith(".spec.tsx")
     if (
-      normalizedPath.startsWith("packages/replay/") &&
-      replayBuilder !== undefined &&
-      identifiers.has("resolveRound") &&
-      identifiers.has("resolveContraction")
+      isProduction &&
+      normalizedPath !== "packages/engine/src/kernel/step.ts" &&
+      source.includes("stepCandidateMatch") &&
+      schedulerCalls.length > 0
     ) {
-      add(
-        "PHASE_257_REPLAY_SCHEDULER",
-        normalizedPath,
-        sourceFile,
-        replayBuilder,
-        "Replay still advances gameplay through its own Match scheduler.",
-      )
+      productionSchedulerConsumers.add(normalizedPath)
     }
 
-    if (
-      normalizedPath.startsWith("apps/runtime-service/") &&
-      identifiers.has("buildChronicleFromMatch")
-    ) {
-      const firstReference =
-        sourceFile.statements.find((statement) =>
-          statement.getText(sourceFile).includes("buildChronicleFromMatch"),
-        ) ?? sourceFile
-      add(
-        "PHASE_257_RUNTIME_REPLAY_EXECUTION",
-        normalizedPath,
-        sourceFile,
-        firstReference,
-        "Runtime-service still enters Match execution through replay authority.",
+    for (const importDeclaration of imports) {
+      if (!ts.isStringLiteral(importDeclaration.moduleSpecifier)) continue
+      const moduleName = importDeclaration.moduleSpecifier.text
+      const importedNames = new Set<string>()
+      const clause = importDeclaration.importClause
+      if (clause?.name !== undefined) importedNames.add(clause.name.text)
+      if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+        for (const specifier of clause.namedBindings.elements) {
+          importedNames.add(specifier.propertyName?.text ?? specifier.name.text)
+        }
+      }
+      const isEngineDependency =
+        moduleName === "@cowards/engine" ||
+        moduleName.startsWith("@cowards/engine/") ||
+        /(?:^|\/)engine(?:\/|$)/u.test(moduleName)
+      const isReplayDependency =
+        moduleName === "@cowards/replay" ||
+        moduleName.startsWith("@cowards/replay/") ||
+        /(?:^|\/)replay(?:\/|$)/u.test(moduleName)
+      const forbidden = [...importedNames].filter((name) =>
+        forbiddenGameplayImports.has(name),
       )
+      const violatesReplay =
+        normalizedPath.startsWith("packages/replay/") &&
+        isEngineDependency &&
+        forbidden.length > 0
+      const violatesRuntime =
+        normalizedPath.startsWith("apps/runtime-service/") &&
+        ((isEngineDependency &&
+          forbidden.some((name) => name !== "runMatch")) ||
+          (isReplayDependency && forbidden.length > 0))
+      const violatesPersistence =
+        normalizedPath.startsWith("packages/persistence/") &&
+        ((isEngineDependency || isReplayDependency) && forbidden.length > 0)
+      if (violatesReplay || violatesRuntime || violatesPersistence) {
+        add(
+          "CURRENT_FORBIDDEN_DEPENDENCY",
+          normalizedPath,
+          sourceFile,
+          importDeclaration,
+          `Forbidden gameplay-authority import: ${forbidden.join(", ")}.`,
+        )
+      }
     }
 
     const schedulingFunctions = new Set<string>()
@@ -1034,20 +1615,151 @@ const analyzePhase257RedSources = (
         ),
     )?.[1]
     const copiedSchedulerSite =
-      normalizedPath !== "packages/engine/src/kernel/driver.ts" &&
-      !normalizedPath.endsWith(".test.ts") &&
-      !normalizedPath.endsWith(".spec.ts")
+      normalizedPath !== driverPath && isProduction
         ? (loops.find(repeatedCallIn) ?? combinatorSite ?? recursiveSite)
         : undefined
     if (copiedSchedulerSite !== undefined) {
       add(
-        "PHASE_257_DUPLICATE_LIFECYCLE_LOOP",
+        "CURRENT_TRANSITION_AUTHORITY_DRIFT",
         normalizedPath,
         sourceFile,
         copiedSchedulerSite,
-        "A non-driver lifecycle loop repeatedly advances candidate kernel scheduling.",
+        "A non-driver lifecycle loop repeatedly advances Match scheduling.",
       )
     }
+
+    if (normalizedPath === driverPath) {
+      const driverLoop = loops.find(repeatedCallIn)
+      if (driverLoop === undefined || !source.includes("stepCandidateMatch")) {
+        add(
+          "CURRENT_TRANSITION_AUTHORITY_DRIFT",
+          normalizedPath,
+          sourceFile,
+          sourceFile,
+          "The sole kernel driver must repeatedly consume stepCandidateMatch.",
+        )
+      }
+    }
+  }
+
+  if (Object.hasOwn(sources, driverPath)) {
+    const unexpected = [...productionSchedulerConsumers].filter(
+      (repoPath) => repoPath !== driverPath,
+    )
+    if (
+      !productionSchedulerConsumers.has(driverPath) ||
+      unexpected.length > 0
+    ) {
+      findings.push({
+        code: "CURRENT_TRANSITION_AUTHORITY_DRIFT",
+        path: driverPath,
+        line: 1,
+        detail:
+          unexpected.length === 0
+            ? "The kernel driver is not the executable stepCandidateMatch consumer."
+            : `Additional production scheduler consumers: ${unexpected.join(", ")}.`,
+      })
+    }
+  }
+
+  const addTextFinding = (
+    code: V137IntegrityBoundaryFindingCode,
+    repoPath: string,
+    needle: string,
+    detail: string,
+  ): void => {
+    const source = sources[repoPath]
+    if (source === undefined) return
+    const index = source.indexOf(needle)
+    findings.push({
+      code,
+      path: repoPath,
+      line: index < 0 ? 1 : source.slice(0, index).split("\n").length,
+      detail,
+    })
+  }
+
+  const goClientPath = "apps/go-backend/runtime_service_client.go"
+  const goClient = sources[goClientPath]
+  const goOrchestratorPath = "apps/go-backend/orchestrator.go"
+  const goOrchestrator = sources[goOrchestratorPath]
+  if (
+    goClient !== undefined &&
+    (/Result\s+map\[string\]any/u.test(goClient) ||
+      /response\.Result\s*\[/u.test(goOrchestrator ?? ""))
+  ) {
+    addTextFinding(
+      "CURRENT_GO_SUCCESS_BINDING_DRIFT",
+      goClientPath,
+      "Result",
+      "Go must decode current execution success into an exact typed result and bind Chronicle plus final state before completion.",
+    )
+  }
+
+  const goSemanticPath = "apps/go-backend/semantic_integrity.go"
+  const goSemantic = sources[goSemanticPath]
+  if (
+    goSemantic !== undefined &&
+    /func collectGoTupleIssues[\s\S]{0,2500}?semanticCompatibilityVersions/u.test(
+      goSemantic,
+    ) &&
+    /var semanticCompatibilityVersions[\s\S]{0,400}?"engine":\s*"0\.1\.4"/u.test(
+      goSemantic,
+    )
+  ) {
+    addTextFinding(
+      "CURRENT_GO_SEMANTIC_ADMISSION_DRIFT",
+      goSemanticPath,
+      "semanticCompatibilityVersions",
+      "Go current semantic admission still accepts the retired pre-activation component tuple.",
+    )
+  }
+
+  const publisherPath =
+    "packages/persistence/src/runtime-evidence-authority-publisher.ts"
+  const publisher = sources[publisherPath]
+  if (
+    publisher !== undefined &&
+    (!publisher.includes("selectedLaneIdentityHashes") ||
+      !/runtime_evidence_lane_controls[\s\S]{0,500}lane_identity_hash\s*=\s*any/iu.test(
+        publisher,
+      ))
+  ) {
+    addTextFinding(
+      "CURRENT_PUBLICATION_LANE_SCOPE_DRIFT",
+      publisherPath,
+      "runtime_evidence_lane_controls",
+      "Authority publication controls must be restricted to selected exact-current certificate lane hashes.",
+    )
+  }
+
+  const runtimeExecutionPath = "apps/runtime-service/src/execute-match.ts"
+  const runtimeExecution = sources[runtimeExecutionPath]
+  if (
+    runtimeExecution !== undefined &&
+    (!/reconstructed\.replay\.stateAt\s*\(/u.test(runtimeExecution) ||
+      !/recorded\.finalState/u.test(runtimeExecution))
+  ) {
+    addTextFinding(
+      "CURRENT_COMPLETION_BINDING_DRIFT",
+      runtimeExecutionPath,
+      "reconstructChronicle",
+      "A successful TS completion must compare the reconstructed terminal replay state with the recorded canonical final state.",
+    )
+  }
+
+  const engineIndexPath = "packages/engine/src/index.ts"
+  const engineIndex = sources[engineIndexPath]
+  if (
+    engineIndex !== undefined &&
+    /export\s+\*\s+from\s+["']\.\/activation\.js["']/u.test(engineIndex)
+  ) {
+    addTextFinding(
+      "CURRENT_PUBLIC_LIFECYCLE_ROUTE",
+      engineIndexPath,
+      "activation.js",
+      "The package root must not expose resolveActivationSelection or resolveActivationCycle as public lifecycle routes.",
+    )
   }
 
   return findings
@@ -1061,43 +1773,8 @@ export const analyzeV137IntegritySources = (
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([repoPath, source]) => analyzeSource(normalized(repoPath), source))
   const findings = analyses.flatMap((analysis) => analysis.findings)
-  if (options.enforcePhase257RedContracts) {
-    findings.push(...analyzePhase257RedSources(sources))
-  }
-  if (options.enforceKnownDebtFingerprints) {
-    for (const [key, expected] of Object.entries(
-      knownPhase257DebtFingerprints,
-    )) {
-      const separator = key.lastIndexOf("#")
-      const repoPath = key.slice(0, separator)
-      const symbol = key.slice(separator + 1)
-      const source = sources[repoPath]
-      const file = source
-        ? ts.createSourceFile(repoPath, source, ts.ScriptTarget.Latest, true)
-        : undefined
-      let declarationText: string | undefined
-      if (file) {
-        for (const statement of file.statements) {
-          if (!ts.isVariableStatement(statement)) continue
-          for (const declaration of statement.declarationList.declarations) {
-            if (
-              ts.isIdentifier(declaration.name) &&
-              declaration.name.text === symbol
-            ) {
-              declarationText = declaration.getText(file)
-            }
-          }
-        }
-      }
-      if (!declarationText || sha256(declarationText) !== expected) {
-        findings.push({
-          code: "KNOWN_PHASE_257_DEBT_DRIFT",
-          path: repoPath,
-          line: 1,
-          detail: `Known Phase-257 debt fingerprint changed for ${symbol}.`,
-        })
-      }
-    }
+  if (options.enforcePhase257CurrentContracts) {
+    findings.push(...analyzePhase257CurrentSources(sources))
   }
   if (options.enforceRepositoryContracts) {
     const requireMarkers = (
@@ -1316,6 +1993,9 @@ const collectTypeScriptSources = (
     "apps/runtime-service/src/four-language-parity.test.ts",
     "apps/go-backend/runtime_evidence_authority.go",
     "apps/go-backend/integrity_creation.go",
+    "apps/go-backend/runtime_service_client.go",
+    "apps/go-backend/orchestrator.go",
+    "apps/go-backend/semantic_integrity.go",
   ]) {
     const absolutePath = path.join(repoRoot, repoPath)
     if (existsSync(absolutePath))
@@ -1331,7 +2011,7 @@ export const analyzeV137IntegrityBoundaries = (
     collectTypeScriptSources(repoRoot),
     {
       enforceRepositoryContracts: true,
-      enforceKnownDebtFingerprints: true,
+      enforcePhase257CurrentContracts: true,
     },
   )
   const audit = checkV137CoreRulesAuditBaseline(repoRoot)
