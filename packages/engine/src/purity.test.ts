@@ -44,7 +44,10 @@ describe("engine purity", () => {
 
   it("keeps candidate initial-state admission free of runtime and host effects", () => {
     const source = readFileSync(
-      join(new URL(".", import.meta.url).pathname, "kernel/create-initial-state.ts"),
+      join(
+        new URL(".", import.meta.url).pathname,
+        "kernel/create-initial-state.ts",
+      ),
       "utf8",
     )
     expect(source).not.toMatch(

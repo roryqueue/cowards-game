@@ -4,6 +4,9 @@ import {
   COMPATIBILITY_VERSIONS,
   ROUND_ACTIVATION_COUNTS,
   TOP_STARTING_POSITIONS,
+  semanticIntegrityShapeFailure,
+  validateCanonicalArena,
+  validateCanonicalInitialGameState,
   type ArenaVariant,
   type BoardBounds,
   type CompatibilityVersions,
@@ -89,7 +92,20 @@ const createStartingSoldiers = (
 export const createCandidateInitialGameState = (
   input: CreateInitialGameStateInput,
 ): CandidateInitialGameStateResult => {
-  const arenaVariant = cloneArena(ArenaVariantSchema.parse(input.arenaVariant))
+  const parsedArena = ArenaVariantSchema.safeParse(input.arenaVariant)
+  if (!parsedArena.success) {
+    const failure = semanticIntegrityShapeFailure("ARENA", ["arenaVariant"])
+    if (failure.ok) {
+      throw new Error("Arena shape failure unexpectedly validated.")
+    }
+    return { ok: false, failure }
+  }
+
+  const arenaVariant = cloneArena(parsedArena.data)
+  const arenaAdmission = validateCanonicalArena(arenaVariant)
+  if (!arenaAdmission.ok) {
+    return { ok: false, failure: arenaAdmission }
+  }
   const bottomPlayer = createPlayer(
     input.bottomPlayerId,
     "bottom",
@@ -101,39 +117,41 @@ export const createCandidateInitialGameState = (
     input.topStrategyRevisionId,
   )
 
-  return {
-    ok: true,
-    state: {
-      matchId: input.matchId,
-      seed: input.seed,
-      versions: cloneVersions(COMPATIBILITY_VERSIONS),
-      arenaVariant,
-      players: [bottomPlayer, topPlayer],
-      phase: "ROUND",
-      phaseNumber: 1,
-      roundNumber: 1,
-      activationCount: ROUND_ACTIVATION_COUNTS[1],
-      initiativePlayerId: getInitialInitiativePlayerId(
-        input.seed,
+  const state: GameState = {
+    matchId: input.matchId,
+    seed: input.seed,
+    versions: cloneVersions(COMPATIBILITY_VERSIONS),
+    arenaVariant,
+    players: [bottomPlayer, topPlayer],
+    phase: "ROUND",
+    phaseNumber: 1,
+    roundNumber: 1,
+    activationCount: ROUND_ACTIVATION_COUNTS[1],
+    initiativePlayerId: getInitialInitiativePlayerId(
+      input.seed,
+      input.bottomPlayerId,
+      input.topPlayerId,
+    ),
+    bounds: cloneBounds(arenaVariant.initialBounds),
+    soldiers: [
+      ...createStartingSoldiers(
         input.bottomPlayerId,
-        input.topPlayerId,
+        "bottom",
+        BOTTOM_STARTING_POSITIONS,
+        "UP",
       ),
-      bounds: cloneBounds(arenaVariant.initialBounds),
-      soldiers: [
-        ...createStartingSoldiers(
-          input.bottomPlayerId,
-          "bottom",
-          BOTTOM_STARTING_POSITIONS,
-          "UP",
-        ),
-        ...createStartingSoldiers(
-          input.topPlayerId,
-          "top",
-          TOP_STARTING_POSITIONS,
-          "DOWN",
-        ),
-      ],
-      terrainStones: arenaVariant.terrainStones.map(clonePosition),
-    },
+      ...createStartingSoldiers(
+        input.topPlayerId,
+        "top",
+        TOP_STARTING_POSITIONS,
+        "DOWN",
+      ),
+    ],
+    terrainStones: arenaVariant.terrainStones.map(clonePosition),
   }
+
+  const stateAdmission = validateCanonicalInitialGameState(state)
+  return stateAdmission.ok
+    ? { ok: true, state }
+    : { ok: false, failure: stateAdmission }
 }
