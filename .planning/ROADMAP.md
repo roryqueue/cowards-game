@@ -72,7 +72,7 @@ Plans:
 - [ ] 256-08-PLAN.md — Enforce exact evidence at TypeScript entry, scheduling, and claim boundaries.
 - [ ] 256-09-PLAN.md — Revalidate exact independently signed authority around every runtime-service execution.
 - [ ] 256-10-PLAN.md — Prove Go tuple hashing and exact evidence-classification parity.
-- [ ] 256-16-PLAN.md — Migrate every TypeScript creation caller to complete per-entrant evidence and inventory future bypasses.
+- [x] 256-16-PLAN.md — Migrate every TypeScript creation caller to complete per-entrant evidence and inventory future bypasses.
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
@@ -181,7 +181,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 256. Counted Safety and Canonical Authority | 10/19 | In Progress|  |
+| 256. Counted Safety and Canonical Authority | 12/19 | In Progress|  |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 0/TBD | Not started | - |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 0/TBD | Not started | - |
 | 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |
