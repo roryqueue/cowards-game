@@ -3,6 +3,7 @@ import type { Soldier } from "@cowards/spec"
 import { createFakeRuntime } from "../test/fake-runtime.js"
 import type { GameState, TransitionEventSummary } from "../types.js"
 import {
+  createCandidateActivationMachine,
   createCandidateMatchMachine,
   runCandidateActivationFromState,
 } from "./driver.js"
@@ -290,9 +291,9 @@ describe("candidate-only approved lifecycle repairs", () => {
   )
 
   it("closes a no-Advance invalid move before evaluating the immediate outcome", () => {
-    const machine = createCandidateMatchMachine(baseInput)
+    const seedMachine = createCandidateMatchMachine(baseInput)
     const state: GameState = {
-      ...machine.state,
+      ...seedMachine.state,
       soldiers: [
         soldier({ id: "last-bottom", lastSuccessfulMoveDirection: "UP" }),
         soldier({
@@ -476,5 +477,77 @@ describe("candidate-only approved lifecycle repairs", () => {
         payload: { type: "WIN", winnerPlayerId: "top" },
       },
     ])
+  })
+
+  it("emits every simultaneous Cycle-end Backstab effect before closing the actor", () => {
+    const seedMachine = createCandidateMatchMachine(baseInput)
+    const state: GameState = {
+      ...seedMachine.state,
+      soldiers: [
+        soldier({ id: "actor", position: { x: 5, y: 5 }, facing: "UP" }),
+        soldier({
+          id: "enemy-attacker",
+          ownerPlayerId: "top",
+          position: { x: 4, y: 5 },
+          facing: "DOWN",
+        }),
+        soldier({
+          id: "friendly-attacker",
+          position: { x: 8, y: 6 },
+          facing: "UP",
+        }),
+        soldier({
+          id: "enemy-victim",
+          ownerPlayerId: "top",
+          position: { x: 8, y: 5 },
+          facing: "UP",
+        }),
+      ],
+    }
+    const machine = createCandidateActivationMachine({
+      state,
+      soldierId: "actor",
+    })
+    const ready: MatchMachine = {
+      ...machine,
+      cursor: { ...machine.cursor, stage: "soldier_effect" },
+    }
+    const yielded = stepCandidateMatch(ready, { kind: "advance" })
+    expect(yielded.kind).toBe("effect")
+    if (yielded.kind !== "effect") return
+    const resolved = stepCandidateMatch(yielded.machine, {
+      kind: "runtime_resume",
+      requestId: yielded.request.requestId,
+      effectKind: yielded.request.kind,
+      classification: "success",
+      value: {
+        action: { type: "TURN", direction: "RIGHT" },
+        soldierMemory: {},
+      },
+    })
+    expect(resolved.kind).toBe("transition")
+    if (resolved.kind !== "transition") return
+
+    expect(resolved.record.events.map(({ type }) => type)).toEqual([
+      "ACTION_EMITTED",
+      "TURN_RESOLVED",
+      "BACKSTAB_RESOLVED",
+      "SOLDIER_STONED",
+      "SOLDIER_STONED",
+      "CYCLE_ENDED",
+      "ACTIVATION_ENDED",
+    ])
+    expect(resolved.record.events[2]?.payload).toEqual({
+      boundary: "cycle-end",
+      pairs: [
+        { attackerId: "enemy-attacker", victimId: "actor" },
+        { attackerId: "friendly-attacker", victimId: "enemy-victim" },
+      ],
+    })
+    expect(resolved.record.events.at(-1)?.payload).toEqual({
+      soldierId: "actor",
+      reason: "BACKSTABBED",
+    })
+    expect(resolved.machine.state.outcome).toBeUndefined()
   })
 })
