@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { resolveActivation } from "./activation.js"
 import { CANDIDATE_MATCH_KERNEL } from "./kernel/driver.js"
 import { runMatch } from "./match.js"
-import { createInitialGameState } from "./state.js"
 import { createFakeRuntime } from "./test/fake-runtime.js"
 import {
   COMPATIBILITY_DIMENSIONS,
@@ -66,40 +64,28 @@ describe("v1.4 full-observation compatibility corpus", () => {
   })
 
   it("drives an arbitrary valid activation state through the candidate seam without test-owned scheduling", () => {
-    const baseInput = {
-      matchId: "v1.4-activation-seam",
-      seed: "v1.4-activation-seam-seed",
-      arenaVariant: {
-        id: "v1.4-activation-seam-arena",
-        name: "v1.4 activation seam arena",
-        initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-        terrainStones: [],
-      },
-      bottomPlayerId: "bottom",
-      topPlayerId: "top",
-      bottomStrategyRevisionId: "bottom-revision",
-      topStrategyRevisionId: "top-revision",
+    const legacy = byName().get("terminal-push-emits-one-match-ended")
+    if (!legacy) {
+      throw new Error("missing terminal-push legacy observation")
     }
-    const state = createInitialGameState(baseInput)
-    const active = resolveActivation(
-      state,
-      createFakeRuntime({ action: { type: "TURN_TO_STONE" } }),
-      "bottom-soldier-1",
-    )
     const candidate = CANDIDATE_MATCH_KERNEL.runActivationFromState({
-      state,
-      runtime: createFakeRuntime({ action: { type: "TURN_TO_STONE" } }),
-      soldierId: "bottom-soldier-1",
+      state: legacy.observation.initialState as GameState,
+      runtime: createFakeRuntime({
+        action: { type: "MOVE", direction: "RIGHT" },
+      }),
+      soldierId: "mover",
     })
 
     expect(candidate.kind).toBe("completed")
-    expect(candidate.recorderMaterial?.finalState).toEqual(active.state)
+    expect(candidate.recorderMaterial?.finalState).toEqual(
+      legacy.observation.finalState,
+    )
     expect(
       candidate.recorderMaterial?.events.map((summary) => ({
         ...summary,
         sequence: 0,
       })),
-    ).toEqual(active.events)
+    ).toEqual(legacy.observation.events)
   })
 
   it("locks exactly the 20 independently named audited scenarios", () => {
